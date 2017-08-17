@@ -45,7 +45,8 @@ var _ = Describe("application", func() {
 				Handcraft:       "some-handcraft",
 				Version:         "1.2.3-build.4",
 				FinalVersion:    "1.2.3",
-				Name:            "cool-product",
+				ProductName:     "cool-product-name",
+				FilenamePrefix:  "cool-product-file",
 				OutputDir:       "some-output-dir",
 			}, nil)
 
@@ -61,7 +62,8 @@ var _ = Describe("application", func() {
 				Handcraft:       "some-handcraft",
 				Version:         "1.2.3-build.4",
 				FinalVersion:    "1.2.3",
-				Name:            "cool-product",
+				ProductName:     "cool-product-name",
+				FilenamePrefix:  "cool-product-file",
 				OutputDir:       "some-output-dir",
 			}))
 		})

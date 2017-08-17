@@ -133,7 +133,8 @@ rules:
 			"--handcraft", handcraft,
 			"--version", "1.2.3-build.4",
 			"--final-version", "1.2.3",
-			"--name", "cool-product",
+			"--product-name", "cool-product-name",
+			"--filename-prefix", "cool-product",
 			"--output-dir", tileDir)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -152,7 +153,7 @@ rules:
 
 		var file io.ReadCloser
 		for _, f := range zr.File {
-			if f.Name == "metadata/cool-product.yml" {
+			if f.Name == "metadata/cool-product-name.yml" {
 				file, err = f.Open()
 				Expect(err).NotTo(HaveOccurred())
 				break
@@ -162,7 +163,7 @@ rules:
 		contents, err := ioutil.ReadAll(file)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(contents).To(MatchYAML(`---
-name: cool-product
+name: cool-product-name
 stemcell_criteria:
   os: ubuntu-trusty
   requires_cpi: false
@@ -214,7 +215,8 @@ property_blueprints:
 			"--handcraft", handcraft,
 			"--version", "4.5.6-build.4",
 			"--final-version", "4.5.6",
-			"--name", "cool-product",
+			"--product-name", "cool-product-name",
+			"--filename-prefix", "cool-product",
 			"--output-dir", tileDir)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -268,7 +270,8 @@ property_blueprints:
 			"--migration", migration2,
 			"--version", "7.8.9-build.4",
 			"--final-version", "7.8.9",
-			"--name", "cool-product",
+			"--product-name", "cool-product-name",
+			"--filename-prefix", "cool-product",
 			"--output-dir", tileDir)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -321,7 +324,8 @@ property_blueprints:
 			"--migration", migration2,
 			"--version", "3.2.1-build.4",
 			"--final-version", "3.2.1",
-			"--name", "cool-product",
+			"--product-name", "cool-product-name",
+			"--filename-prefix", "cool-product",
 			"--output-dir", tileDir)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -336,7 +340,7 @@ property_blueprints:
 		Eventually(session.Out).Should(gbytes.Say("Read handcraft"))
 		Eventually(session.Out).Should(gbytes.Say("Marshaling metadata file..."))
 		Eventually(session.Out).Should(gbytes.Say("Building .pivotal file..."))
-		Eventually(session.Out).Should(gbytes.Say("Adding metadata/cool-product.yml to .pivotal..."))
+		Eventually(session.Out).Should(gbytes.Say("Adding metadata/cool-product-name.yml to .pivotal..."))
 		Eventually(session.Out).Should(gbytes.Say("Adding migrations/v1/migration-1.js to .pivotal..."))
 		Eventually(session.Out).Should(gbytes.Say("Adding migrations/v1/migration-2.js to .pivotal..."))
 		Eventually(session.Out).Should(gbytes.Say("Adding releases/cf-release-235.0.0-3215.4.0.tgz to .pivotal..."))
@@ -355,7 +359,8 @@ property_blueprints:
 				"--version", "4.5.6-build.4",
 				"--final-version", "4.5.6",
 				"--stub-releases",
-				"--name", "cool-product",
+				"--product-name", "cool-product-name",
+				"--filename-prefix", "cool-product",
 				"--output-dir", tileDir)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -392,7 +397,8 @@ property_blueprints:
 				"--handcraft", handcraft,
 				"--version", "7.8.9-build.4",
 				"--final-version", "7.8.9",
-				"--name", "cool-product",
+				"--product-name", "cool-product-name",
+				"--filename-prefix", "cool-product",
 				"--output-dir", tileDir)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -431,7 +437,8 @@ property_blueprints:
 				"--base-content-migration", baseContentMigration,
 				"--version", "7.8.9-build.4",
 				"--final-version", "7.8.9",
-				"--name", "cool-product",
+				"--product-name", "cool-product-name",
+				"--filename-prefix", "cool-product",
 				"--output-dir", tileDir)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -480,7 +487,8 @@ migrations:
 					"--stemcell-tarball", "stemcell.tgz",
 					"--version", "6.5.4-build.4",
 					"--final-version", "6.5.4",
-					"--name", "cool-product",
+					"--product-name", "cool-product-name",
+					"--filename-prefix", "cool-product",
 					"--output-dir", tileDir)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -488,129 +496,6 @@ migrations:
 
 				Eventually(session).Should(gexec.Exit(1))
 				Expect(string(session.Err.Contents())).To(ContainSubstring("open missing-file: no such file or directory"))
-			})
-		})
-
-		Context("when no output directory is given", func() {
-			It("prints an error and exits 1", func() {
-				command := exec.Command(pathToMain,
-					"--release-tarball", "missing-file",
-					"--handcraft", "handcraft.yml",
-					"--stemcell-tarball", "stemcell.tgz",
-					"--version", "6.5.4-build.4",
-					"--final-version", "6.5.4",
-					"--name", "cool-product",
-				)
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("--output-dir is a required parameter"))
-			})
-		})
-
-		Context("when no releases are given", func() {
-			It("prints an error and exit 1", func() {
-				command := exec.Command(pathToMain,
-					"--output-dir", tileDir,
-					"--handcraft", "handcraft.yml",
-					"--name", "cool-product",
-					"--stemcell-tarball", "stemcell.tgz")
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("Please specify at least one release tarball with the --release-tarball parameter"))
-			})
-		})
-
-		Context("when the --handcraft flag is not provided", func() {
-			It("prints an error and exits 1", func() {
-				command := exec.Command(pathToMain,
-					"--output-dir", tileDir,
-					"--name", "cool-product",
-					"--version", "1.2.3-build.2",
-					"--final-version", "1.2.3",
-					"--stemcell-tarball", "1.2.3",
-					"--release-tarball", cfReleaseTarball)
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("--handcraft is a required parameter"))
-			})
-		})
-
-		Context("when the --stemcell-tarball flag is not provided", func() {
-			It("prints an error and exits 1", func() {
-				command := exec.Command(pathToMain,
-					"--output-dir", tileDir,
-					"--release-tarball", cfReleaseTarball,
-					"--name", "cool-product",
-					"--handcraft", "handcraft.yml")
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("--stemcell-tarball is a required parameter"))
-			})
-		})
-
-		Context("when the --name flag is not provided", func() {
-			It("prints an error and exits 1", func() {
-				command := exec.Command(pathToMain,
-					"--output-dir", tileDir,
-					"--stemcell-tarball", stemcellTarball,
-					"--release-tarball", cfReleaseTarball,
-					"--version", "1.2.3-build.2",
-					"--final-version", "1.2.3",
-					"--handcraft", "handcraft.yml")
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("--name is a required parameter"))
-			})
-		})
-
-		Context("when the --version flag is not provided", func() {
-			It("prints an error and exits 1", func() {
-				command := exec.Command(pathToMain,
-					"--output-dir", tileDir,
-					"--handcraft", handcraft,
-					"--stemcell-tarball", stemcellTarball,
-					"--name", "cool-product",
-					"--final-version", "5.6.2",
-					"--release-tarball", cfReleaseTarball)
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("--version is a required parameter"))
-			})
-		})
-
-		Context("when the --final-version flag is not provided", func() {
-			It("prints an error and exits 1", func() {
-				command := exec.Command(pathToMain,
-					"--output-dir", tileDir,
-					"--handcraft", handcraft,
-					"--stemcell-tarball", stemcellTarball,
-					"--name", "cool-product",
-					"--version", "5.2.1-build.2",
-					"--release-tarball", cfReleaseTarball)
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("--final-version is a required parameter"))
 			})
 		})
 
@@ -622,7 +507,8 @@ migrations:
 					"--handcraft", handcraft,
 					"--version", "5.5.5-build.4",
 					"--final-version", "5.5.5",
-					"--name", "cool-product",
+					"--product-name", "cool-product-name",
+					"--filename-prefix", "cool-product",
 					"--output-dir", "/path/to/missing/dir")
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -643,7 +529,8 @@ migrations:
 					"--stemcell-tarball", stemcellTarball,
 					"--version", "6.5.4-build.4",
 					"--final-version", "6.5.4",
-					"--name", "cool-product",
+					"--product-name", "cool-product-name",
+					"--filename-prefix", "cool-product",
 					"--output-dir", tileDir)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)

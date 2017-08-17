@@ -27,7 +27,8 @@ var _ = Describe("TileMaker", func() {
 		fakeLogger = &fakes.Logger{}
 
 		config = kiln.ApplicationConfig{
-			Name:                 "cool-product",
+			ProductName:          "cool-product-name",
+			FilenamePrefix:       "cool-product-file",
 			Version:              "1.2.3-build.4",
 			FinalVersion:         "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
@@ -52,13 +53,13 @@ var _ = Describe("TileMaker", func() {
 		Expect(releaseTarballs).To(Equal([]string{"some-release-tarball", "some-other-release-tarball"}))
 		Expect(stemcellTarball).To(Equal("some-stemcell-tarball"))
 		Expect(handcraft).To(Equal("some-handcraft"))
-		Expect(name).To(Equal("cool-product"))
+		Expect(name).To(Equal("cool-product-name"))
 		Expect(version).To(Equal("1.2.3"))
 	})
 
 	It("makes the tile", func() {
 		fakeMetadataBuilder.BuildReturns(builder.Metadata{
-			Name: "cool-product",
+			Name: "cool-product-name",
 			Releases: []builder.MetadataRelease{{
 				Name:    "some-release",
 				File:    "some-release-tarball",
@@ -78,7 +79,7 @@ var _ = Describe("TileMaker", func() {
 
 		metadataContents, writeCfg := fakeTileWriter.WriteArgsForCall(0)
 		Expect(metadataContents).To(MatchYAML(`
-name: cool-product
+name: cool-product-name
 releases:
 - name: some-release
   file: some-release-tarball
@@ -88,7 +89,8 @@ stemcell_criteria:
   os: an-operating-system
   requires_cpi: false`))
 		Expect(writeCfg).To(Equal(builder.WriteConfig{
-			Name:                 "cool-product",
+			ProductName:          "cool-product-name",
+			FilenamePrefix:       "cool-product-file",
 			Version:              "1.2.3-build.4",
 			FinalVersion:         "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",

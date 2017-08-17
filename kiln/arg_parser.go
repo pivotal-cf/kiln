@@ -23,7 +23,8 @@ func (a ArgParser) Parse(args []string) (ApplicationConfig, error) {
 	flagSet.StringVar(&cfg.Handcraft, "handcraft", "", "Path to handcraft.yml")
 	flagSet.StringVar(&cfg.Version, "version", "", "version number to be used for file name")
 	flagSet.StringVar(&cfg.FinalVersion, "final-version", "", "version number to be used in tile metadata")
-	flagSet.StringVar(&cfg.Name, "name", "", "name of the product")
+	flagSet.StringVar(&cfg.ProductName, "product-name", "", "name of the product")
+	flagSet.StringVar(&cfg.FilenamePrefix, "filename-prefix", "", "product filename prefix")
 	flagSet.StringVar(&cfg.OutputDir, "output-dir", "", "Directory where metadata file should be output")
 	flagSet.BoolVar(&cfg.StubReleases, "stub-releases", false, "stubs release tarballs with empty files")
 	flagSet.Parse(args)
@@ -48,8 +49,12 @@ func (a ArgParser) Parse(args []string) (ApplicationConfig, error) {
 		return cfg, errors.New("--final-version is a required parameter")
 	}
 
-	if cfg.Name == "" {
-		return cfg, errors.New("--name is a required parameter")
+	if cfg.ProductName == "" {
+		return cfg, errors.New("--product-name is a required parameter")
+	}
+
+	if cfg.FilenamePrefix == "" {
+		return cfg, errors.New("--filename-prefix is a required parameter")
 	}
 
 	if cfg.OutputDir == "" {

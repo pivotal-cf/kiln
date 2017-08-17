@@ -26,7 +26,8 @@ type WriteConfig struct {
 	Handcraft            string
 	Version              string
 	FinalVersion         string
-	Name                 string
+	ProductName          string
+	FilenamePrefix       string
 	OutputDir            string
 	StubReleases         bool
 }
@@ -63,7 +64,7 @@ func NewTileWriter(filesystem filesystem, zipper zipper, contentMigrationBuilder
 func (e TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
 	e.logger.Println("Building .pivotal file...")
 
-	tileFileName := filepath.Join(writeCfg.OutputDir, fmt.Sprintf("%s-%s.pivotal", writeCfg.Name, writeCfg.Version))
+	tileFileName := filepath.Join(writeCfg.OutputDir, fmt.Sprintf("%s-%s.pivotal", writeCfg.FilenamePrefix, writeCfg.Version))
 
 	err := e.zipper.SetPath(tileFileName)
 	if err != nil {
@@ -72,7 +73,7 @@ func (e TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
 
 	files := map[string]io.Reader{}
 
-	files[filepath.Join("metadata", fmt.Sprintf("%s.yml", writeCfg.Name))] = bytes.NewBuffer(metadataContents)
+	files[filepath.Join("metadata", fmt.Sprintf("%s.yml", writeCfg.ProductName))] = bytes.NewBuffer(metadataContents)
 
 	for _, r := range writeCfg.ReleaseTarballs {
 		var file io.Reader = strings.NewReader("")

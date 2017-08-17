@@ -38,7 +38,7 @@ func (t TileMaker) Make(config ApplicationConfig) error {
 		config.ReleaseTarballs,
 		config.StemcellTarball,
 		config.Handcraft,
-		config.Name,
+		config.ProductName,
 		config.FinalVersion,
 	)
 	if err != nil {
@@ -60,7 +60,8 @@ func (t TileMaker) Make(config ApplicationConfig) error {
 		Handcraft:            config.Handcraft,
 		Version:              config.Version,
 		FinalVersion:         config.FinalVersion,
-		Name:                 config.Name,
+		ProductName:          config.ProductName,
+		FilenamePrefix:       config.FilenamePrefix,
 		OutputDir:            config.OutputDir,
 		StubReleases:         config.StubReleases,
 	})

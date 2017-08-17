@@ -27,7 +27,8 @@ var _ = Describe("arg parser", func() {
 				"--handcraft", "some-handcraft",
 				"--version", "1.2.3-build.4",
 				"--final-version", "1.2.3",
-				"--name", "cool-product",
+				"--product-name", "cool-product-name",
+				"--filename-prefix", "cool-product-file",
 				"--output-dir", "some-output-dir",
 				"--stub-releases",
 			})
@@ -40,7 +41,8 @@ var _ = Describe("arg parser", func() {
 				Handcraft:       "some-handcraft",
 				Version:         "1.2.3-build.4",
 				FinalVersion:    "1.2.3",
-				Name:            "cool-product",
+				ProductName:     "cool-product-name",
+				FilenamePrefix:  "cool-product-file",
 				OutputDir:       "some-output-dir",
 				StubReleases:    true,
 			}))
@@ -58,7 +60,8 @@ var _ = Describe("arg parser", func() {
 					"--handcraft", "some-handcraft",
 					"--version", "1.2.3-build.4",
 					"--final-version", "1.2.3",
-					"--name", "cool-product",
+					"--product-name", "cool-product-name",
+					"--filename-prefix", "cool-product-file",
 					"--output-dir", "some-output-dir",
 					"--stub-releases",
 				})
@@ -72,7 +75,8 @@ var _ = Describe("arg parser", func() {
 					Handcraft:            "some-handcraft",
 					Version:              "1.2.3-build.4",
 					FinalVersion:         "1.2.3",
-					Name:                 "cool-product",
+					ProductName:          "cool-product-name",
+					FilenamePrefix:       "cool-product-file",
 					OutputDir:            "some-output-dir",
 					StubReleases:         true,
 				}))
@@ -89,7 +93,8 @@ var _ = Describe("arg parser", func() {
 						"--handcraft", "some-handcraft",
 						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
-						"--name", "cool-product",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
 						"--output-dir", "some-output-dir",
 						"--stub-releases",
 					})
@@ -111,7 +116,8 @@ var _ = Describe("arg parser", func() {
 						"--handcraft", "some-handcraft",
 						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
-						"--name", "cool-product",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
 						"--output-dir", "some-output-dir",
 						"--stub-releases",
 					})
@@ -133,7 +139,8 @@ var _ = Describe("arg parser", func() {
 						"--handcraft", "some-handcraft",
 						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
-						"--name", "cool-product",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
 						"--output-dir", "some-output-dir",
 						"--stub-releases",
 					})
@@ -155,7 +162,8 @@ var _ = Describe("arg parser", func() {
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
-						"--name", "cool-product",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
 						"--output-dir", "some-output-dir",
 						"--stub-releases",
 					})
@@ -177,7 +185,8 @@ var _ = Describe("arg parser", func() {
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--handcraft", "some-handcraft",
 						"--final-version", "1.2.3",
-						"--name", "cool-product",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
 						"--output-dir", "some-output-dir",
 						"--stub-releases",
 					})
@@ -199,7 +208,8 @@ var _ = Describe("arg parser", func() {
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--handcraft", "some-handcraft",
 						"--version", "1.2.3-build.4",
-						"--name", "cool-product",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
 						"--output-dir", "some-output-dir",
 						"--stub-releases",
 					})
@@ -208,7 +218,7 @@ var _ = Describe("arg parser", func() {
 				})
 			})
 
-			Context("when the name flag is missing", func() {
+			Context("when the product-name flag is missing", func() {
 				It("returns an error", func() {
 					_, err := argParser.Parse([]string{
 						"--release-tarball", "some-release-tarball",
@@ -222,11 +232,35 @@ var _ = Describe("arg parser", func() {
 						"--handcraft", "some-handcraft",
 						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
+						"--filename-prefix", "cool-product-file",
 						"--output-dir", "some-output-dir",
 						"--stub-releases",
 					})
 
-					Expect(err).To(MatchError("--name is a required parameter"))
+					Expect(err).To(MatchError("--product-name is a required parameter"))
+				})
+			})
+
+			Context("when the filename-prefix flag is missing", func() {
+				It("returns an error", func() {
+					_, err := argParser.Parse([]string{
+						"--release-tarball", "some-release-tarball",
+						"--release-tarball", "some-other-release-tarball",
+						"--migration", "some-migration",
+						"--migration", "some-other-migration",
+						"--content-migration", "some-content-migration",
+						"--content-migration", "some-other-content-migration",
+						"--base-content-migration", "some-base-content-migration",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--handcraft", "some-handcraft",
+						"--version", "1.2.3-build.4",
+						"--final-version", "1.2.3",
+						"--product-name", "cool-product-name",
+						"--output-dir", "some-output-dir",
+						"--stub-releases",
+					})
+
+					Expect(err).To(MatchError("--filename-prefix is a required parameter"))
 				})
 			})
 
@@ -244,7 +278,8 @@ var _ = Describe("arg parser", func() {
 						"--handcraft", "some-handcraft",
 						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
-						"--name", "cool-product",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
 						"--stub-releases",
 					})
 
@@ -266,7 +301,8 @@ var _ = Describe("arg parser", func() {
 						"--handcraft", "some-handcraft",
 						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
-						"--name", "cool-product",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
 						"--output-dir", "some-output-dir",
 						"--stub-releases",
 					})
@@ -286,7 +322,8 @@ var _ = Describe("arg parser", func() {
 						"--handcraft", "some-handcraft",
 						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
-						"--name", "cool-product",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
 						"--output-dir", "some-output-dir",
 						"--stub-releases",
 					})

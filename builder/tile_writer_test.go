@@ -38,7 +38,8 @@ var _ = Describe("TileWriter", func() {
 	Describe("Build", func() {
 		DescribeTable("writes tile to disk", func(stubbed bool, release1Content, release2Content string, errorWhenAttemptingToOpenRelease error) {
 			writeCfg := builder.WriteConfig{
-				Name:                 "cool-product",
+				ProductName:          "cool-product-name",
+				FilenamePrefix:       "cool-product-file",
 				ReleaseTarballs:      []string{"/some/path/release-1.tgz", "/some/path/release-2.tgz"},
 				Migrations:           []string{"/some/path/migration-1.js", "/some/path/migration-2.js"},
 				ContentMigrations:    []string{"/some/path/content-migration-1.yml", "/some/path/content-migration-2.yml"},
@@ -76,14 +77,14 @@ var _ = Describe("TileWriter", func() {
 			Expect(contentMigrationBuilder.BuildCall.Receives.Version).To(Equal("1.2.3"))
 
 			Expect(zipper.SetPathCall.CallCount).To(Equal(1))
-			Expect(zipper.SetPathCall.Receives.Path).To(Equal("cool-product-1.2.3-build.4.pivotal"))
+			Expect(zipper.SetPathCall.Receives.Path).To(Equal("cool-product-file-1.2.3-build.4.pivotal"))
 
 			Expect(zipper.AddCall.Calls).To(HaveLen(6))
 
 			Expect(zipper.AddCall.Calls[0].Path).To(Equal(filepath.Join("content_migrations", "migrations.yml")))
 			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[0].File)).Should(gbytes.Say("combined-content-migration-contents"))
 
-			Expect(zipper.AddCall.Calls[1].Path).To(Equal(filepath.Join("metadata", "cool-product.yml")))
+			Expect(zipper.AddCall.Calls[1].Path).To(Equal(filepath.Join("metadata", "cool-product-name.yml")))
 			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[1].File)).Should(gbytes.Say("metadata-contents"))
 
 			Expect(zipper.AddCall.Calls[2].Path).To(Equal(filepath.Join("migrations", "v1", "migration-1.js")))
@@ -104,7 +105,7 @@ var _ = Describe("TileWriter", func() {
 
 			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 				"Adding content_migrations/migrations.yml to .pivotal...",
-				"Adding metadata/cool-product.yml to .pivotal...",
+				"Adding metadata/cool-product-name.yml to .pivotal...",
 				"Adding migrations/v1/migration-1.js to .pivotal...",
 				"Adding migrations/v1/migration-2.js to .pivotal...",
 				"Adding releases/release-1.tgz to .pivotal...",
@@ -113,7 +114,7 @@ var _ = Describe("TileWriter", func() {
 			}))
 
 			Expect(md5Calc.ChecksumCall.CallCount).To(Equal(1))
-			Expect(md5Calc.ChecksumCall.Receives.Path).To(Equal("cool-product-1.2.3-build.4.pivotal"))
+			Expect(md5Calc.ChecksumCall.Receives.Path).To(Equal("cool-product-file-1.2.3-build.4.pivotal"))
 		},
 			Entry("without stubbing releases", false, "release-1", "release-2", nil),
 			Entry("with stubbed releases", true, "", "", errors.New("don't open release")),
@@ -122,7 +123,8 @@ var _ = Describe("TileWriter", func() {
 		Context("when no migrations are provided", func() {
 			It("creates empty migrations/v1 folder", func() {
 				writeCfg := builder.WriteConfig{
-					Name:                 "cool-product",
+					ProductName:          "cool-product-name",
+					FilenamePrefix:       "cool-product-file",
 					ReleaseTarballs:      []string{"/some/path/release-1.tgz", "/some/path/release-2.tgz"},
 					Migrations:           []string{},
 					ContentMigrations:    []string{},
@@ -137,7 +139,7 @@ var _ = Describe("TileWriter", func() {
 
 				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 					"Creating empty migrations folder in .pivotal...",
-					"Adding metadata/cool-product.yml to .pivotal...",
+					"Adding metadata/cool-product-name.yml to .pivotal...",
 					"Adding releases/release-1.tgz to .pivotal...",
 					"Adding releases/release-2.tgz to .pivotal...",
 					"Calculated md5 sum: ",
@@ -151,14 +153,7 @@ var _ = Describe("TileWriter", func() {
 			Context("when the zipper fails to create migrations folder", func() {
 				It("returns an error", func() {
 					writeCfg := builder.WriteConfig{
-						Name:                 "",
-						ReleaseTarballs:      []string{},
-						Migrations:           []string{},
-						ContentMigrations:    []string{},
-						BaseContentMigration: "",
-						Version:              "",
-						FinalVersion:         "",
-						StubReleases:         true,
+						StubReleases: true,
 					}
 
 					zipper.CreateFolderCall.Returns.Error = errors.New("failed to create folder")
@@ -173,14 +168,7 @@ var _ = Describe("TileWriter", func() {
 					filesystem.OpenCall.Returns.Error = errors.New("failed to open release")
 
 					writeCfg := builder.WriteConfig{
-						Name:                 "",
-						ReleaseTarballs:      []string{"/some/path/release-1.tgz"},
-						Migrations:           []string{},
-						ContentMigrations:    []string{},
-						BaseContentMigration: "",
-						Version:              "",
-						FinalVersion:         "",
-						StubReleases:         false,
+						ReleaseTarballs: []string{"/some/path/release-1.tgz"},
 					}
 
 					err := tileWriter.Write([]byte("metadata-contents"), writeCfg)
@@ -199,14 +187,9 @@ var _ = Describe("TileWriter", func() {
 					}
 
 					writeCfg := builder.WriteConfig{
-						Name:                 "",
-						ReleaseTarballs:      []string{"/some/path/release-1.tgz"},
-						Migrations:           []string{"/some/path/migration-1.js"},
-						ContentMigrations:    []string{},
-						BaseContentMigration: "",
-						Version:              "",
-						FinalVersion:         "",
-						StubReleases:         true,
+						ReleaseTarballs: []string{"/some/path/release-1.tgz"},
+						Migrations:      []string{"/some/path/migration-1.js"},
+						StubReleases:    true,
 					}
 
 					err := tileWriter.Write([]byte{}, writeCfg)
@@ -219,14 +202,7 @@ var _ = Describe("TileWriter", func() {
 					zipper.AddCall.Returns.Error = errors.New("failed to add file to zip")
 
 					writeCfg := builder.WriteConfig{
-						Name:                 "",
-						ReleaseTarballs:      []string{},
-						Migrations:           []string{},
-						ContentMigrations:    []string{},
-						BaseContentMigration: "",
-						Version:              "",
-						FinalVersion:         "",
-						StubReleases:         true,
+						StubReleases: true,
 					}
 
 					err := tileWriter.Write([]byte{}, writeCfg)
@@ -239,14 +215,7 @@ var _ = Describe("TileWriter", func() {
 					zipper.CloseCall.Returns.Error = errors.New("failed to close the zip")
 
 					writeCfg := builder.WriteConfig{
-						Name:                 "",
-						ReleaseTarballs:      []string{},
-						Migrations:           []string{},
-						ContentMigrations:    []string{},
-						BaseContentMigration: "",
-						Version:              "",
-						FinalVersion:         "",
-						StubReleases:         true,
+						StubReleases: true,
 					}
 
 					err := tileWriter.Write([]byte{}, writeCfg)
@@ -259,13 +228,8 @@ var _ = Describe("TileWriter", func() {
 					contentMigrationBuilder.BuildCall.Returns.Error = errors.New("builder failed")
 
 					writeCfg := builder.WriteConfig{
-						Name:                 "",
-						ReleaseTarballs:      []string{},
-						Migrations:           []string{},
 						ContentMigrations:    []string{"some-migration-file.yml"},
 						BaseContentMigration: "base-migration-file.yml",
-						Version:              "",
-						FinalVersion:         "",
 						StubReleases:         true,
 					}
 
@@ -279,14 +243,7 @@ var _ = Describe("TileWriter", func() {
 					zipper.SetPathCall.Returns.Error = errors.New("zipper set path failed")
 
 					writeCfg := builder.WriteConfig{
-						Name:                 "",
-						ReleaseTarballs:      []string{},
-						Migrations:           []string{},
-						ContentMigrations:    []string{},
-						BaseContentMigration: "",
-						Version:              "",
-						FinalVersion:         "",
-						StubReleases:         true,
+						StubReleases: true,
 					}
 
 					err := tileWriter.Write([]byte{}, writeCfg)
@@ -299,14 +256,7 @@ var _ = Describe("TileWriter", func() {
 					md5Calc.ChecksumCall.Returns.Error = errors.New("MD5 cannot be calculated")
 
 					writeCfg := builder.WriteConfig{
-						Name:                 "",
-						ReleaseTarballs:      []string{},
-						Migrations:           []string{},
-						ContentMigrations:    []string{},
-						BaseContentMigration: "",
-						Version:              "",
-						FinalVersion:         "",
-						StubReleases:         true,
+						StubReleases: true,
 					}
 
 					err := tileWriter.Write([]byte{}, writeCfg)

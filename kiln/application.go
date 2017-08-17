@@ -14,7 +14,8 @@ type ApplicationConfig struct {
 	Handcraft            string
 	Version              string
 	FinalVersion         string
-	Name                 string
+	ProductName          string
+	FilenamePrefix       string
 	OutputDir            string
 	StubReleases         bool
 }
