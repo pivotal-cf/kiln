@@ -2,7 +2,8 @@ package kiln
 
 import (
 	"errors"
-	"flag"
+
+	"github.com/pivotal-cf/jhanda/flags"
 )
 
 type ArgParser struct{}
@@ -14,20 +15,10 @@ func NewArgParser() ArgParser {
 func (a ArgParser) Parse(args []string) (ApplicationConfig, error) {
 	cfg := ApplicationConfig{}
 
-	flagSet := flag.NewFlagSet("kiln", flag.ExitOnError)
-	flagSet.Var(&cfg.ReleaseTarballs, "release-tarball", "Path to release tarball")
-	flagSet.Var(&cfg.Migrations, "migration", "Path to a migration file")
-	flagSet.Var(&cfg.ContentMigrations, "content-migration", "Path to a content_migration file")
-	flagSet.StringVar(&cfg.BaseContentMigration, "base-content-migration", "", "Path to the base content_migration file")
-	flagSet.StringVar(&cfg.StemcellTarball, "stemcell-tarball", "", "Path to stemcell tarball")
-	flagSet.StringVar(&cfg.Handcraft, "handcraft", "", "Path to handcraft.yml")
-	flagSet.StringVar(&cfg.Version, "version", "", "version number to be used for file name")
-	flagSet.StringVar(&cfg.FinalVersion, "final-version", "", "version number to be used in tile metadata")
-	flagSet.StringVar(&cfg.ProductName, "product-name", "", "name of the product")
-	flagSet.StringVar(&cfg.FilenamePrefix, "filename-prefix", "", "product filename prefix")
-	flagSet.StringVar(&cfg.OutputDir, "output-dir", "", "Directory where metadata file should be output")
-	flagSet.BoolVar(&cfg.StubReleases, "stub-releases", false, "stubs release tarballs with empty files")
-	flagSet.Parse(args)
+	args, err := flags.Parse(&cfg, args)
+	if err != nil {
+		panic(err)
+	}
 
 	if len(cfg.ReleaseTarballs) == 0 {
 		return cfg, errors.New("Please specify at least one release tarball with the --release-tarball parameter")

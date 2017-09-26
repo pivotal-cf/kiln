@@ -16,3 +16,6 @@
 [submodule "vendor/github.com/coreos/go-semver"]
 	path = vendor/github.com/coreos/go-semver
 	url = https://github.com/coreos/go-semver
+[submodule "vendor/github.com/pivotal-cf/jhanda"]
+	path = vendor/github.com/pivotal-cf/jhanda
+	url = https://github.com/pivotal-cf/jhanda
