@@ -22,11 +22,10 @@ func main() {
 	contentMigrationBuilder := builder.NewContentMigrationBuilder(logger)
 	md5SumCalculator := helper.NewFileMD5SumCalculator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, contentMigrationBuilder, logger, md5SumCalculator)
-	argParser := kiln.NewArgParser()
 	tileMaker := kiln.NewTileMaker(metadataBuilder, tileWriter, logger)
 
 	commandSet := commands.Set{}
-	commandSet["bake"] = commands.NewBake(argParser, tileMaker)
+	commandSet["bake"] = commands.NewBake(tileMaker)
 
 	var command string
 	var args []string

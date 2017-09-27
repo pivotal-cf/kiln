@@ -11,45 +11,28 @@ import (
 
 var _ = Describe("bake", func() {
 	var (
-		argParser *fakes.ArgParser
 		tileMaker *fakes.TileMaker
 		bake      commands.Bake
 	)
 
 	BeforeEach(func() {
-		argParser = &fakes.ArgParser{}
 		tileMaker = &fakes.TileMaker{}
-		bake = commands.NewBake(argParser, tileMaker)
+		bake = commands.NewBake(tileMaker)
 	})
 
 	Describe("Execute", func() {
-		It("parses args", func() {
-			err := bake.Execute([]string{
-				"foo", "bar",
-				"gaz", "goo",
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(argParser.ParseCallCount()).To(Equal(1))
-			Expect(argParser.ParseArgsForCall(0)).To(Equal([]string{
-				"foo", "bar",
-				"gaz", "goo",
-			}))
-		})
-
 		It("builds the tile", func() {
-			argParser.ParseReturns(kiln.ApplicationConfig{
-				StemcellTarball: "some-stemcell-tarball",
-				ReleaseTarballs: []string{"some-release-tarball", "some-other-release-tarball"},
-				Handcraft:       "some-handcraft",
-				Version:         "1.2.3-build.4",
-				FinalVersion:    "1.2.3",
-				ProductName:     "cool-product-name",
-				FilenamePrefix:  "cool-product-file",
-				OutputDir:       "some-output-dir",
-			}, nil)
-
-			err := bake.Execute([]string{})
+			err := bake.Execute([]string{
+				"--stemcell-tarball", "some-stemcell-tarball",
+				"--release-tarball", "some-release-tarball",
+				"--release-tarball", "some-other-release-tarball",
+				"--handcraft", "some-handcraft",
+				"--version", "1.2.3-build.4",
+				"--final-version", "1.2.3",
+				"--product-name", "cool-product-name",
+				"--filename-prefix", "cool-product-file",
+				"--output-dir", "some-output-dir",
+			})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(tileMaker.MakeCallCount()).To(Equal(1))
@@ -66,11 +49,260 @@ var _ = Describe("bake", func() {
 				OutputDir:       "some-output-dir",
 			}))
 		})
+
+		Context("failure cases", func() {
+			Context("when content migrations are provided", func() {
+				It("returns an error when base content migration is not provided", func() {
+					err := bake.Execute([]string{
+						"--release-tarball", "some-release-tarball",
+						"--release-tarball", "some-other-release-tarball",
+						"--content-migration", "some-migration",
+						"--content-migration", "some-other-migration",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--handcraft", "some-handcraft",
+						"--version", "1.2.3-build.4",
+						"--final-version", "1.2.3",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
+						"--output-dir", "some-output-dir",
+						"--stub-releases",
+					})
+					Expect(err).To(MatchError("base content migration is required when content migrations are provided"))
+				})
+			})
+
+			Context("when the release-tarball flag is missing", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--migration", "some-migration",
+						"--migration", "some-other-migration",
+						"--content-migration", "some-content-migration",
+						"--content-migration", "some-other-content-migration",
+						"--base-content-migration", "some-base-content-migration",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--handcraft", "some-handcraft",
+						"--version", "1.2.3-build.4",
+						"--final-version", "1.2.3",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
+						"--output-dir", "some-output-dir",
+						"--stub-releases",
+					})
+
+					Expect(err).To(MatchError("Please specify at least one release tarball with the --release-tarball parameter"))
+				})
+			})
+
+			Context("when the stemcell-tarball flag is missing", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--release-tarball", "some-release-tarball",
+						"--release-tarball", "some-other-release-tarball",
+						"--migration", "some-migration",
+						"--migration", "some-other-migration",
+						"--content-migration", "some-content-migration",
+						"--content-migration", "some-other-content-migration",
+						"--base-content-migration", "some-base-content-migration",
+						"--handcraft", "some-handcraft",
+						"--version", "1.2.3-build.4",
+						"--final-version", "1.2.3",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
+						"--output-dir", "some-output-dir",
+						"--stub-releases",
+					})
+
+					Expect(err).To(MatchError("--stemcell-tarball is a required parameter"))
+				})
+			})
+
+			Context("when the handcraft flag is missing", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--release-tarball", "some-release-tarball",
+						"--release-tarball", "some-other-release-tarball",
+						"--migration", "some-migration",
+						"--migration", "some-other-migration",
+						"--content-migration", "some-content-migration",
+						"--content-migration", "some-other-content-migration",
+						"--base-content-migration", "some-base-content-migration",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--version", "1.2.3-build.4",
+						"--final-version", "1.2.3",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
+						"--output-dir", "some-output-dir",
+						"--stub-releases",
+					})
+
+					Expect(err).To(MatchError("--handcraft is a required parameter"))
+				})
+			})
+
+			Context("when the version flag is missing", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--release-tarball", "some-release-tarball",
+						"--release-tarball", "some-other-release-tarball",
+						"--migration", "some-migration",
+						"--migration", "some-other-migration",
+						"--content-migration", "some-content-migration",
+						"--content-migration", "some-other-content-migration",
+						"--base-content-migration", "some-base-content-migration",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--handcraft", "some-handcraft",
+						"--final-version", "1.2.3",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
+						"--output-dir", "some-output-dir",
+						"--stub-releases",
+					})
+
+					Expect(err).To(MatchError("--version is a required parameter"))
+				})
+			})
+
+			Context("when the final-version flag is missing", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--release-tarball", "some-release-tarball",
+						"--release-tarball", "some-other-release-tarball",
+						"--migration", "some-migration",
+						"--migration", "some-other-migration",
+						"--content-migration", "some-content-migration",
+						"--content-migration", "some-other-content-migration",
+						"--base-content-migration", "some-base-content-migration",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--handcraft", "some-handcraft",
+						"--version", "1.2.3-build.4",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
+						"--output-dir", "some-output-dir",
+						"--stub-releases",
+					})
+
+					Expect(err).To(MatchError("--final-version is a required parameter"))
+				})
+			})
+
+			Context("when the product-name flag is missing", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--release-tarball", "some-release-tarball",
+						"--release-tarball", "some-other-release-tarball",
+						"--migration", "some-migration",
+						"--migration", "some-other-migration",
+						"--content-migration", "some-content-migration",
+						"--content-migration", "some-other-content-migration",
+						"--base-content-migration", "some-base-content-migration",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--handcraft", "some-handcraft",
+						"--version", "1.2.3-build.4",
+						"--final-version", "1.2.3",
+						"--filename-prefix", "cool-product-file",
+						"--output-dir", "some-output-dir",
+						"--stub-releases",
+					})
+
+					Expect(err).To(MatchError("--product-name is a required parameter"))
+				})
+			})
+
+			Context("when the filename-prefix flag is missing", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--release-tarball", "some-release-tarball",
+						"--release-tarball", "some-other-release-tarball",
+						"--migration", "some-migration",
+						"--migration", "some-other-migration",
+						"--content-migration", "some-content-migration",
+						"--content-migration", "some-other-content-migration",
+						"--base-content-migration", "some-base-content-migration",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--handcraft", "some-handcraft",
+						"--version", "1.2.3-build.4",
+						"--final-version", "1.2.3",
+						"--product-name", "cool-product-name",
+						"--output-dir", "some-output-dir",
+						"--stub-releases",
+					})
+
+					Expect(err).To(MatchError("--filename-prefix is a required parameter"))
+				})
+			})
+
+			Context("when the output-dir is missing", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--release-tarball", "some-release-tarball",
+						"--release-tarball", "some-other-release-tarball",
+						"--migration", "some-migration",
+						"--migration", "some-other-migration",
+						"--content-migration", "some-content-migration",
+						"--content-migration", "some-other-content-migration",
+						"--base-content-migration", "some-base-content-migration",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--handcraft", "some-handcraft",
+						"--version", "1.2.3-build.4",
+						"--final-version", "1.2.3",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
+						"--stub-releases",
+					})
+
+					Expect(err).To(MatchError("--output-dir is a required parameter"))
+				})
+			})
+
+			Context("when content migrations and migrations are provided", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--release-tarball", "some-release-tarball",
+						"--release-tarball", "some-other-release-tarball",
+						"--migration", "some-migration",
+						"--migration", "some-other-migration",
+						"--content-migration", "some-content-migration",
+						"--content-migration", "some-other-content-migration",
+						"--base-content-migration", "some-base-content-migration",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--handcraft", "some-handcraft",
+						"--version", "1.2.3-build.4",
+						"--final-version", "1.2.3",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
+						"--output-dir", "some-output-dir",
+						"--stub-releases",
+					})
+					Expect(err).To(MatchError("cannot build a tile with content migrations and migrations"))
+				})
+			})
+
+			Context("when base content migrations and migrations are provided", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--release-tarball", "some-release-tarball",
+						"--release-tarball", "some-other-release-tarball",
+						"--migration", "some-migration",
+						"--migration", "some-other-migration",
+						"--base-content-migration", "some-base-content-migration",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--handcraft", "some-handcraft",
+						"--version", "1.2.3-build.4",
+						"--final-version", "1.2.3",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
+						"--output-dir", "some-output-dir",
+						"--stub-releases",
+					})
+					Expect(err).To(MatchError("cannot build a tile with a base content migration and migrations"))
+				})
+			})
+		})
 	})
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			command := commands.NewBake(nil, nil)
+			command := commands.NewBake(nil)
 			Expect(command.Usage()).To(Equal(commands.Usage{
 				Description:      "Builds a tile to be uploaded to OpsMan from provided inputs.",
 				ShortDescription: "builds a tile",
