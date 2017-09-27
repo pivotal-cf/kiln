@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 
+	"github.com/pivotal-cf/jhanda/commands"
 	"github.com/pivotal-cf/jhanda/flags"
 	"github.com/pivotal-cf/kiln/kiln"
 )
@@ -49,8 +50,8 @@ func (b Bake) Execute(args []string) error {
 	return nil
 }
 
-func (b Bake) Usage() Usage {
-	return Usage{
+func (b Bake) Usage() commands.Usage {
+	return commands.Usage{
 		Description:      "Builds a tile to be uploaded to OpsMan from provided inputs.",
 		ShortDescription: "builds a tile",
 		Flags:            b.Options,

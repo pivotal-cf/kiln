@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	jhandacommands "github.com/pivotal-cf/jhanda/commands"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/helper"
@@ -24,7 +25,7 @@ func main() {
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, contentMigrationBuilder, logger, md5SumCalculator)
 	tileMaker := kiln.NewTileMaker(metadataBuilder, tileWriter, logger)
 
-	commandSet := commands.Set{}
+	commandSet := jhandacommands.Set{}
 	commandSet["bake"] = commands.NewBake(tileMaker)
 
 	var command string

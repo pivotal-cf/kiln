@@ -4,6 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	jhandacommands "github.com/pivotal-cf/jhanda/commands"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/kiln"
 	"github.com/pivotal-cf/kiln/kiln/fakes"
@@ -303,7 +304,7 @@ var _ = Describe("bake", func() {
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
 			command := commands.NewBake(nil)
-			Expect(command.Usage()).To(Equal(commands.Usage{
+			Expect(command.Usage()).To(Equal(jhandacommands.Usage{
 				Description:      "Builds a tile to be uploaded to OpsMan from provided inputs.",
 				ShortDescription: "builds a tile",
 				Flags:            command.Options,
