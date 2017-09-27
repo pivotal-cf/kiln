@@ -1,31 +1,30 @@
-package kiln_test
+package commands_test
 
 import (
-	"errors"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/kiln"
 	"github.com/pivotal-cf/kiln/kiln/fakes"
 )
 
-var _ = Describe("application", func() {
+var _ = Describe("bake", func() {
 	var (
 		argParser *fakes.ArgParser
 		tileMaker *fakes.TileMaker
-		app       kiln.Application
+		bake      commands.Bake
 	)
 
 	BeforeEach(func() {
 		argParser = &fakes.ArgParser{}
 		tileMaker = &fakes.TileMaker{}
-		app = kiln.NewApplication(argParser, tileMaker)
+		bake = commands.NewBake(argParser, tileMaker)
 	})
 
-	Describe("Run", func() {
+	Describe("Execute", func() {
 		It("parses args", func() {
-			err := app.Run([]string{
+			err := bake.Execute([]string{
 				"foo", "bar",
 				"gaz", "goo",
 			})
@@ -50,7 +49,7 @@ var _ = Describe("application", func() {
 				OutputDir:       "some-output-dir",
 			}, nil)
 
-			err := app.Run([]string{})
+			err := bake.Execute([]string{})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(tileMaker.MakeCallCount()).To(Equal(1))
@@ -69,23 +68,14 @@ var _ = Describe("application", func() {
 		})
 	})
 
-	Context("failure cases", func() {
-		Context("when the args cannot be parsed", func() {
-			It("returns an error", func() {
-				argParser.ParseReturns(kiln.ApplicationConfig{}, errors.New("a parse error occurred"))
-
-				err := app.Run([]string{"does not matter"})
-				Expect(err).To(MatchError("a parse error occurred"))
-			})
-		})
-
-		Context("when the maker fails", func() {
-			It("returns an error", func() {
-				tileMaker.MakeReturns(errors.New("a maker error occurred"))
-
-				err := app.Run([]string{"does not matter"})
-				Expect(err).To(MatchError("a maker error occurred"))
-			})
+	Describe("Usage", func() {
+		It("returns usage information for the command", func() {
+			command := commands.NewBake(nil, nil)
+			Expect(command.Usage()).To(Equal(commands.Usage{
+				Description:      "Builds a tile to be uploaded to OpsMan from provided inputs.",
+				ShortDescription: "builds a tile",
+				Flags:            command.Options,
+			}))
 		})
 	})
 })

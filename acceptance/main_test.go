@@ -127,6 +127,7 @@ rules:
 
 	It("generates a manifest that includes all the correct metadata", func() {
 		command := exec.Command(pathToMain,
+			"bake",
 			"--stemcell-tarball", stemcellTarball,
 			"--release-tarball", cfReleaseTarball,
 			"--release-tarball", diegoReleaseTarball,
@@ -209,6 +210,7 @@ property_blueprints:
 
 	It("copies the tarballs to the releases directory", func() {
 		command := exec.Command(pathToMain,
+			"bake",
 			"--release-tarball", cfReleaseTarball,
 			"--release-tarball", diegoReleaseTarball,
 			"--stemcell-tarball", stemcellTarball,
@@ -263,6 +265,7 @@ property_blueprints:
 
 	It("copies the migrations to the migrations/v1 directory", func() {
 		command := exec.Command(pathToMain,
+			"bake",
 			"--release-tarball", cfReleaseTarball,
 			"--stemcell-tarball", stemcellTarball,
 			"--handcraft", handcraft,
@@ -316,6 +319,7 @@ property_blueprints:
 
 	It("logs the progress to stdout", func() {
 		command := exec.Command(pathToMain,
+			"bake",
 			"--release-tarball", cfReleaseTarball,
 			"--release-tarball", diegoReleaseTarball,
 			"--stemcell-tarball", stemcellTarball,
@@ -352,6 +356,7 @@ property_blueprints:
 	Context("when the --stub-releases flag is specified", func() {
 		It("creates a tile with empty release tarballs", func() {
 			command := exec.Command(pathToMain,
+				"bake",
 				"--release-tarball", cfReleaseTarball,
 				"--release-tarball", diegoReleaseTarball,
 				"--stemcell-tarball", stemcellTarball,
@@ -392,6 +397,7 @@ property_blueprints:
 	Context("when no migrations are provided", func() {
 		It("creates empty migrations folder", func() {
 			command := exec.Command(pathToMain,
+				"bake",
 				"--release-tarball", cfReleaseTarball,
 				"--stemcell-tarball", stemcellTarball,
 				"--handcraft", handcraft,
@@ -430,6 +436,7 @@ property_blueprints:
 	Context("when content migrations are provided", func() {
 		It("generates the correct content migration file", func() {
 			command := exec.Command(pathToMain,
+				"bake",
 				"--release-tarball", cfReleaseTarball,
 				"--stemcell-tarball", stemcellTarball,
 				"--handcraft", handcraft,
@@ -482,6 +489,7 @@ migrations:
 		Context("when a release tarball does not exist", func() {
 			It("prints an error and exits 1", func() {
 				command := exec.Command(pathToMain,
+					"bake",
 					"--release-tarball", "missing-file",
 					"--handcraft", "handcraft.yml",
 					"--stemcell-tarball", "stemcell.tgz",
@@ -502,6 +510,7 @@ migrations:
 		Context("when the output directory is not writable", func() {
 			It("prints an error and exit 1", func() {
 				command := exec.Command(pathToMain,
+					"bake",
 					"--release-tarball", cfReleaseTarball,
 					"--stemcell-tarball", stemcellTarball,
 					"--handcraft", handcraft,
@@ -522,6 +531,7 @@ migrations:
 		Context("when a content migration does not exist", func() {
 			It("prints an error and exits 1", func() {
 				command := exec.Command(pathToMain,
+					"bake",
 					"--release-tarball", cfReleaseTarball,
 					"--content-migration", "missing-migration",
 					"--base-content-migration", baseContentMigration,

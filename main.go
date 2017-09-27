@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
 	"github.com/pivotal-cf/kiln/builder"
+	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/helper"
 	"github.com/pivotal-cf/kiln/kiln"
 )
@@ -25,14 +25,17 @@ func main() {
 	argParser := kiln.NewArgParser()
 	tileMaker := kiln.NewTileMaker(metadataBuilder, tileWriter, logger)
 
-	app := kiln.NewApplication(argParser, tileMaker)
-	err := app.Run(os.Args[1:])
-	if err != nil {
-		fail(err)
-	}
-}
+	commandSet := commands.Set{}
+	commandSet["bake"] = commands.NewBake(argParser, tileMaker)
 
-func fail(err error) {
-	fmt.Fprintln(os.Stderr, err)
-	os.Exit(1)
+	var command string
+	var args []string
+	if len(os.Args) > 0 {
+		command, args = os.Args[1], os.Args[2:]
+	}
+
+	err := commandSet.Execute(command, args)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
