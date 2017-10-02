@@ -11,18 +11,18 @@ import (
 type Bake struct {
 	tileMaker tileMaker
 	Options   struct {
-		ReleaseTarballs      flags.StringSlice `short:"rt"   long:"release-tarball"         description:""`
-		Migrations           flags.StringSlice `short:"m"    long:"migration"               description:""`
-		ContentMigrations    flags.StringSlice `short:"cm"   long:"content-migration"       description:""`
-		BaseContentMigration string            `short:"bcm"  long:"base-content-migration"  description:""`
-		StemcellTarball      string            `short:"st"   long:"stemcell-tarball"        description:""`
-		Handcraft            string            `short:"h"    long:"handcraft"               description:""`
-		Version              string            `short:"v"    long:"version"                 description:""`
-		FinalVersion         string            `short:"fv"   long:"final-version"           description:""`
-		ProductName          string            `short:"pn"   long:"product-name"            description:""`
-		FilenamePrefix       string            `short:"fp"   long:"filename-prefix"         description:""`
-		OutputDir            string            `short:"o"    long:"output-dir"              description:""`
-		StubReleases         bool              `short:"sr"   long:"stub-releases"           description:""`
+		ReleaseTarballs      flags.StringSlice `short:"rt"   long:"release-tarball"         description:"location of the release tarball"`
+		Migrations           flags.StringSlice `short:"m"    long:"migration"               description:"location of the migration file"`
+		ContentMigrations    flags.StringSlice `short:"cm"   long:"content-migration"       description:"location of the content migration file"`
+		BaseContentMigration string            `short:"bcm"  long:"base-content-migration"  description:"location of the base content migration file"`
+		StemcellTarball      string            `short:"st"   long:"stemcell-tarball"        description:"location of the stemcell tarball"`
+		Handcraft            string            `short:"h"    long:"handcraft"               description:"location of the handcraft file"`
+		Version              string            `short:"v"    long:"version"                 description:"version for the filename"`
+		FinalVersion         string            `short:"fv"   long:"final-version"           description:"final version of the tile"`
+		ProductName          string            `short:"pn"   long:"product-name"            description:"product name"`
+		FilenamePrefix       string            `short:"fp"   long:"filename-prefix"         description:"prefix used for filename"`
+		OutputDir            string            `short:"o"    long:"output-dir"              description:"output directory"`
+		StubReleases         bool              `short:"sr"   long:"stub-releases"           description:"don't include release tarballs"`
 	}
 }
 
