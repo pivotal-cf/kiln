@@ -52,20 +52,7 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 		return err
 	}
 
-	err = t.tileWriter.Write(metadataYAML, commands.BakeConfig{
-		ReleaseTarballs:      config.ReleaseTarballs,
-		MigrationsDirectory:  config.MigrationsDirectory,
-		ContentMigrations:    config.ContentMigrations,
-		BaseContentMigration: config.BaseContentMigration,
-		StemcellTarball:      config.StemcellTarball,
-		Handcraft:            config.Handcraft,
-		Version:              config.Version,
-		FinalVersion:         config.FinalVersion,
-		ProductName:          config.ProductName,
-		FilenamePrefix:       config.FilenamePrefix,
-		OutputDir:            config.OutputDir,
-		StubReleases:         config.StubReleases,
-	})
+	err = t.tileWriter.Write(metadataYAML, config)
 	if err != nil {
 		return err
 	}
