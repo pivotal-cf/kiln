@@ -56,7 +56,7 @@ var _ = Describe("bake", func() {
 					"--stemcell-tarball", "some-stemcell-tarball",
 					"--release-tarball", "some-release-tarball",
 					"--release-tarball", "some-other-release-tarball",
-					"--migrations-dir", "some-migrations-directory",
+					"--migrations-directory", "some-migrations-directory",
 					"--handcraft", "some-handcraft",
 					"--version", "1.2.3-build.4",
 					"--final-version", "1.2.3",
@@ -305,7 +305,7 @@ var _ = Describe("bake", func() {
 					err := bake.Execute([]string{
 						"--release-tarball", "some-release-tarball",
 						"--release-tarball", "some-other-release-tarball",
-						"--migrations-dir", "some-migrations-directory",
+						"--migrations-directory", "some-migrations-directory",
 						"--content-migration", "some-content-migration",
 						"--content-migration", "some-other-content-migration",
 						"--base-content-migration", "some-base-content-migration",
@@ -327,7 +327,7 @@ var _ = Describe("bake", func() {
 					err := bake.Execute([]string{
 						"--release-tarball", "some-release-tarball",
 						"--release-tarball", "some-other-release-tarball",
-						"--migrations-dir", "some-migrations-directory",
+						"--migrations-directory", "some-migrations-directory",
 						"--base-content-migration", "some-base-content-migration",
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--handcraft", "some-handcraft",
