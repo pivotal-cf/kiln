@@ -58,12 +58,12 @@ var _ = Describe("HandcraftReader", func() {
 
 	Describe("Read", func() {
 		It("parses the information from the handcraft", func() {
-			filesystem.OpenCall.Returns.File = NewBuffer(bytes.NewBuffer([]byte(HANDCRAFT)))
+			filesystem.OpenReturns(NewBuffer(bytes.NewBuffer([]byte(HANDCRAFT))), nil)
 
 			handcraft, err := reader.Read("/some/path/handcraft.yml", "1.2.34-build.4")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(filesystem.OpenCall.Receives.Path).To(Equal("/some/path/handcraft.yml"))
+			Expect(filesystem.OpenArgsForCall(0)).To(Equal("/some/path/handcraft.yml"))
 			Expect(handcraft["metadata_version"]).To(Equal("1.7"))
 			Expect(handcraft["provides_product_versions"]).To(Equal([]interface{}{map[interface{}]interface{}{
 				"name":    "cf",
@@ -109,7 +109,7 @@ var _ = Describe("HandcraftReader", func() {
 	Describe("failure cases", func() {
 		Context("when the handcraft file cannot be opened", func() {
 			It("returns an error", func() {
-				filesystem.OpenCall.Returns.Error = errors.New("failed to open handcraft")
+				filesystem.OpenReturns(nil, errors.New("failed to open handcraft"))
 
 				_, err := reader.Read("/some/path/handcraft.yml", "1.2.3-build.9999")
 				Expect(err).To(MatchError("failed to open handcraft"))
@@ -118,10 +118,7 @@ var _ = Describe("HandcraftReader", func() {
 
 		Context("when the handcraft file cannot be read", func() {
 			It("returns an error", func() {
-				file := NewBuffer(bytes.NewBuffer([]byte(HANDCRAFT)))
-				file.Error = errors.New("failed to read")
-				filesystem.OpenCall.Returns.File = file
-
+				filesystem.OpenReturns(nil, errors.New("failed to read"))
 				_, err := reader.Read("/some/path/handcraft.yml", "1.2.3-build.9999")
 				Expect(err).To(MatchError("failed to read"))
 			})
@@ -129,7 +126,7 @@ var _ = Describe("HandcraftReader", func() {
 
 		Context("when the handcraft yaml cannot be unmarshaled", func() {
 			It("returns an error", func() {
-				filesystem.OpenCall.Returns.File = NewBuffer(bytes.NewBuffer([]byte("&&&&&&&&")))
+				filesystem.OpenReturns(NewBuffer(bytes.NewBuffer([]byte("&&&&&&&&"))), nil)
 
 				_, err := reader.Read("/some/path/handcraft.yml", "1.2.3-build.9999")
 				Expect(err).To(MatchError("yaml: did not find expected alphabetic or numeric character"))

@@ -54,7 +54,7 @@ operating_system: centOS
 		err = gw.Close()
 		Expect(err).NotTo(HaveOccurred())
 
-		filesystem.OpenCall.Returns.File = tarball
+		filesystem.OpenReturns(tarball, nil)
 	})
 
 	Describe("Read", func() {
@@ -66,13 +66,13 @@ operating_system: centOS
 				OperatingSystem: "centOS",
 			}))
 
-			Expect(filesystem.OpenCall.Receives.Path).To(Equal("/path/to/stemcell/tarball"))
+			Expect(filesystem.OpenArgsForCall(0)).To(Equal("/path/to/stemcell/tarball"))
 		})
 
 		Context("failure cases", func() {
 			Context("when the tarball cannot be opened", func() {
 				It("returns an error", func() {
-					filesystem.OpenCall.Returns.Error = errors.New("failed to open tarball")
+					filesystem.OpenReturns(nil, errors.New("failed to open tarball"))
 
 					_, err := reader.Read("/path/to/stemcell/tarball")
 					Expect(err).To(MatchError("failed to open tarball"))
@@ -81,7 +81,7 @@ operating_system: centOS
 
 			Context("when the input is not a valid gzip", func() {
 				It("returns an error", func() {
-					filesystem.OpenCall.Returns.File = NewBuffer(bytes.NewBuffer([]byte("I am a banana!")))
+					filesystem.OpenReturns(NewBuffer(bytes.NewBuffer([]byte("I am a banana!"))), nil)
 
 					_, err := reader.Read("/path/to/stemcell/tarball")
 					Expect(err).To(MatchError("gzip: invalid header"))
@@ -99,7 +99,7 @@ operating_system: centOS
 
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
-					filesystem.OpenCall.Returns.File = tarball
+					filesystem.OpenReturns(tarball, nil)
 
 					_, err = reader.Read("/path/to/stemcell/tarball")
 					Expect(err).To(MatchError("could not find stemcell.MF in \"/path/to/stemcell/tarball\""))
@@ -136,7 +136,7 @@ operating_system: centOS
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					filesystem.OpenCall.Returns.File = tarball
+					filesystem.OpenReturns(tarball, nil)
 					_, err = reader.Read("/path/to/stemcell/tarball")
 					Expect(err).To(MatchError("could not find stemcell.MF in \"/path/to/stemcell/tarball\""))
 				})
@@ -157,7 +157,7 @@ operating_system: centOS
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					filesystem.OpenCall.Returns.File = tarball
+					filesystem.OpenReturns(tarball, nil)
 					_, err = reader.Read("/path/to/stemcell/tarball")
 					Expect(err).To(MatchError("error while reading \"/path/to/stemcell/tarball\": unexpected EOF"))
 				})
@@ -190,7 +190,7 @@ operating_system: centOS
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					filesystem.OpenCall.Returns.File = tarball
+					filesystem.OpenReturns(tarball, nil)
 
 					_, err = reader.Read("/path/to/stemcell/tarball")
 					Expect(err).To(MatchError("yaml: could not find expected directive name"))

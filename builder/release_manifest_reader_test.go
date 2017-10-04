@@ -54,7 +54,7 @@ version: 1.2.3
 		err = gw.Close()
 		Expect(err).NotTo(HaveOccurred())
 
-		filesystem.OpenCall.Returns.File = tarball
+		filesystem.OpenReturns(tarball, nil)
 	})
 
 	Describe("Read", func() {
@@ -66,13 +66,13 @@ version: 1.2.3
 				Version: "1.2.3",
 			}))
 
-			Expect(filesystem.OpenCall.Receives.Path).To(Equal("/path/to/release/tarball"))
+			Expect(filesystem.OpenArgsForCall(0)).To(Equal("/path/to/release/tarball"))
 		})
 
 		Context("failure cases", func() {
 			Context("when the tarball cannot be opened", func() {
 				It("returns an error", func() {
-					filesystem.OpenCall.Returns.Error = errors.New("failed to open tarball")
+					filesystem.OpenReturns(nil, errors.New("failed to open tarball"))
 
 					_, err := reader.Read("/path/to/release/tarball")
 					Expect(err).To(MatchError("failed to open tarball"))
@@ -81,7 +81,7 @@ version: 1.2.3
 
 			Context("when the input is not a valid gzip", func() {
 				It("returns an error", func() {
-					filesystem.OpenCall.Returns.File = NewBuffer(bytes.NewBuffer([]byte("I am a banana!")))
+					filesystem.OpenReturns(NewBuffer(bytes.NewBuffer([]byte("I am a banana!"))), nil)
 
 					_, err := reader.Read("/path/to/release/tarball")
 					Expect(err).To(MatchError("gzip: invalid header"))
@@ -99,7 +99,7 @@ version: 1.2.3
 
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
-					filesystem.OpenCall.Returns.File = tarball
+					filesystem.OpenReturns(tarball, nil)
 
 					_, err = reader.Read("/path/to/release/tarball")
 					Expect(err).To(MatchError("could not find release.MF in \"/path/to/release/tarball\""))
@@ -136,7 +136,7 @@ version: 1.2.3
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					filesystem.OpenCall.Returns.File = tarball
+					filesystem.OpenReturns(tarball, nil)
 					_, err = reader.Read("/path/to/release/tarball")
 					Expect(err).To(MatchError("could not find release.MF in \"/path/to/release/tarball\""))
 				})
@@ -157,7 +157,7 @@ version: 1.2.3
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					filesystem.OpenCall.Returns.File = tarball
+					filesystem.OpenReturns(tarball, nil)
 					_, err = reader.Read("/path/to/release/tarball")
 					Expect(err).To(MatchError("error while reading \"/path/to/release/tarball\": unexpected EOF"))
 				})
@@ -190,7 +190,7 @@ version: 1.2.3
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					filesystem.OpenCall.Returns.File = tarball
+					filesystem.OpenReturns(tarball, nil)
 
 					_, err = reader.Read("/path/to/release/tarball")
 					Expect(err).To(MatchError("yaml: could not find expected directive name"))

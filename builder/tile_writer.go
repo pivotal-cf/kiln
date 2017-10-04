@@ -35,6 +35,7 @@ type WriteConfig struct {
 	StubReleases         bool
 }
 
+//go:generate counterfeiter -o ./fakes/filesystem.go --fake-name Filesystem . filesystem
 type filesystem interface {
 	Open(name string) (io.ReadWriteCloser, error)
 	Walk(root string, walkFn filepath.WalkFunc) error

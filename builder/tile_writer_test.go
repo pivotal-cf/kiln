@@ -57,14 +57,14 @@ var _ = Describe("TileWriter", func() {
 			migrationInfo := &fakes.FileInfo{}
 			migrationInfo.IsDirReturns(false)
 
-			filesystem.WalkCall.Stub = func(root string, walkFn filepath.WalkFunc) error {
+			filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 				walkFn("/some/path/migrations", dirInfo, nil)
 				walkFn("/some/path/migrations/migration-1.js", migrationInfo, nil)
 				walkFn("/some/path/migrations/migration-2.js", migrationInfo, nil)
 				return nil
 			}
 
-			filesystem.OpenCall.Stub = func(path string) (io.ReadWriteCloser, error) {
+			filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
 				switch path {
 				case "/some/path/release-1.tgz":
 					return NewBuffer(bytes.NewBuffer([]byte("release-1"))), errorWhenAttemptingToOpenRelease
@@ -167,7 +167,7 @@ var _ = Describe("TileWriter", func() {
 
 				dirInfo := &fakes.FileInfo{}
 				dirInfo.IsDirReturns(true)
-				filesystem.WalkCall.Stub = func(root string, walkFn filepath.WalkFunc) error {
+				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 					walkFn("/some/path/migrations", dirInfo, nil)
 					return nil
 				}
@@ -215,7 +215,7 @@ var _ = Describe("TileWriter", func() {
 
 			Context("when a release file cannot be opened", func() {
 				It("returns an error", func() {
-					filesystem.OpenCall.Returns.Error = errors.New("failed to open release")
+					filesystem.OpenReturns(nil, errors.New("failed to open release"))
 
 					writeCfg := builder.WriteConfig{
 						ReleaseTarballs: []string{"/some/path/release-1.tgz"},
@@ -234,13 +234,13 @@ var _ = Describe("TileWriter", func() {
 					migrationInfo := &fakes.FileInfo{}
 					migrationInfo.IsDirReturns(false)
 
-					filesystem.WalkCall.Stub = func(root string, walkFn filepath.WalkFunc) error {
+					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 						walkFn("/some/path/migrations", dirInfo, nil)
 						err := walkFn("/some/path/migrations/migration-1.js", migrationInfo, nil)
 						return err
 					}
 
-					filesystem.OpenCall.Stub = func(path string) (io.ReadWriteCloser, error) {
+					filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
 						if path == "/some/path/migrations/migration-1.js" {
 							return nil, errors.New("failed to open migration")
 						}
