@@ -75,12 +75,12 @@ func NewTileWriter(filesystem filesystem, zipper zipper, contentMigrationBuilder
 	}
 }
 
-func (e TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
-	e.logger.Println("Building .pivotal file...")
+func (w TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
+	w.logger.Println("Building .pivotal file...")
 
 	tileFileName := filepath.Join(writeCfg.OutputDir, fmt.Sprintf("%s-%s.pivotal", writeCfg.FilenamePrefix, writeCfg.Version))
 
-	err := e.zipper.SetPath(tileFileName)
+	err := w.zipper.SetPath(tileFileName)
 	if err != nil {
 		return err
 	}
@@ -89,20 +89,20 @@ func (e TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
 
 	files[filepath.Join("metadata", fmt.Sprintf("%s.yml", writeCfg.ProductName))] = bytes.NewBuffer(metadataContents)
 
-	err = e.addReleaseTarballs(files, writeCfg.ReleaseTarballs, writeCfg.StubReleases)
+	err = w.addReleaseTarballs(files, writeCfg.ReleaseTarballs, writeCfg.StubReleases)
 	if err != nil {
 		return err
 	}
 
 	if writeCfg.MigrationsDirectory != "" {
-		err = e.addMigrations(files, writeCfg.MigrationsDirectory)
+		err = w.addMigrations(files, writeCfg.MigrationsDirectory)
 		if err != nil {
 			return err
 		}
 	}
 
 	if len(writeCfg.ContentMigrations) > 0 {
-		contentMigrationsContents, err := e.contentMigrationBuilder.Build(
+		contentMigrationsContents, err := w.contentMigrationBuilder.Build(
 			writeCfg.BaseContentMigration,
 			writeCfg.FinalVersion,
 			writeCfg.ContentMigrations)
@@ -121,45 +121,45 @@ func (e TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
 
 	sort.Strings(paths)
 
-	if !e.containsMigrations(paths) {
-		err = e.addEmptyMigrationsDirectory()
+	if !w.containsMigrations(paths) {
+		err = w.addEmptyMigrationsDirectory()
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, path := range paths {
-		e.logger.Printf("Adding %s to .pivotal...", path)
+		w.logger.Printf("Adding %s to .pivotal...", path)
 
-		err := e.zipper.Add(path, files[path])
+		err := w.zipper.Add(path, files[path])
 		if err != nil {
 			return err
 		}
 	}
 
-	err = e.zipper.Close()
+	err = w.zipper.Close()
 	if err != nil {
 		return err
 	}
 
-	e.logger.Println("Calculating md5 sum of .pivotal...")
-	md5Sum, err := e.md5SumCalculator.Checksum(tileFileName)
+	w.logger.Println("Calculating md5 sum of .pivotal...")
+	md5Sum, err := w.md5SumCalculator.Checksum(tileFileName)
 	if err != nil {
 		return err
 	}
 
-	e.logger.Printf("Calculated md5 sum: %s", md5Sum)
+	w.logger.Printf("Calculated md5 sum: %s", md5Sum)
 
 	return nil
 }
 
-func (e TileWriter) addReleaseTarballs(files map[string]io.Reader, releaseTarballs []string, stubReleases bool) error {
+func (w TileWriter) addReleaseTarballs(files map[string]io.Reader, releaseTarballs []string, stubReleases bool) error {
 	for _, r := range releaseTarballs {
 		var file io.Reader = strings.NewReader("")
 		var err error
 
 		if !stubReleases {
-			file, err = e.filesystem.Open(r)
+			file, err = w.filesystem.Open(r)
 			if err != nil {
 				return err
 			}
@@ -170,8 +170,8 @@ func (e TileWriter) addReleaseTarballs(files map[string]io.Reader, releaseTarbal
 	return nil
 }
 
-func (e TileWriter) addMigrations(files map[string]io.Reader, migrationsDir string) error {
-	return e.filesystem.Walk(migrationsDir, func(filePath string, info os.FileInfo, err error) error {
+func (w TileWriter) addMigrations(files map[string]io.Reader, migrationsDir string) error {
+	return w.filesystem.Walk(migrationsDir, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -180,7 +180,7 @@ func (e TileWriter) addMigrations(files map[string]io.Reader, migrationsDir stri
 			return nil
 		}
 
-		file, err := e.filesystem.Open(filePath)
+		file, err := w.filesystem.Open(filePath)
 		if err != nil {
 			return err
 		}
@@ -190,7 +190,7 @@ func (e TileWriter) addMigrations(files map[string]io.Reader, migrationsDir stri
 	})
 }
 
-func (e TileWriter) containsMigrations(entries []string) bool {
+func (w TileWriter) containsMigrations(entries []string) bool {
 	migrationsPrefix := filepath.Join("migrations", "v1")
 	for _, entry := range entries {
 		if strings.HasPrefix(entry, migrationsPrefix) {
@@ -200,9 +200,9 @@ func (e TileWriter) containsMigrations(entries []string) bool {
 	return false
 }
 
-func (e TileWriter) addEmptyMigrationsDirectory() error {
-	e.logger.Printf("Creating empty migrations folder in .pivotal...")
-	err := e.zipper.CreateFolder(filepath.Join("migrations", "v1"))
+func (w TileWriter) addEmptyMigrationsDirectory() error {
+	w.logger.Printf("Creating empty migrations folder in .pivotal...")
+	err := w.zipper.CreateFolder(filepath.Join("migrations", "v1"))
 	if err != nil {
 		return err
 	}
