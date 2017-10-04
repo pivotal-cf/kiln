@@ -4,15 +4,15 @@ package fakes
 import (
 	"sync"
 
-	"github.com/pivotal-cf/kiln/builder"
+	"github.com/pivotal-cf/kiln/commands"
 )
 
 type TileWriter struct {
-	WriteStub        func(metadataContents []byte, config builder.WriteConfig) error
+	WriteStub        func(metadataContents []byte, config commands.BakeConfig) error
 	writeMutex       sync.RWMutex
 	writeArgsForCall []struct {
 		metadataContents []byte
-		config           builder.WriteConfig
+		config           commands.BakeConfig
 	}
 	writeReturns struct {
 		result1 error
@@ -24,7 +24,7 @@ type TileWriter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TileWriter) Write(metadataContents []byte, config builder.WriteConfig) error {
+func (fake *TileWriter) Write(metadataContents []byte, config commands.BakeConfig) error {
 	var metadataContentsCopy []byte
 	if metadataContents != nil {
 		metadataContentsCopy = make([]byte, len(metadataContents))
@@ -34,7 +34,7 @@ func (fake *TileWriter) Write(metadataContents []byte, config builder.WriteConfi
 	ret, specificReturn := fake.writeReturnsOnCall[len(fake.writeArgsForCall)]
 	fake.writeArgsForCall = append(fake.writeArgsForCall, struct {
 		metadataContents []byte
-		config           builder.WriteConfig
+		config           commands.BakeConfig
 	}{metadataContentsCopy, config})
 	fake.recordInvocation("Write", []interface{}{metadataContentsCopy, config})
 	fake.writeMutex.Unlock()
@@ -53,7 +53,7 @@ func (fake *TileWriter) WriteCallCount() int {
 	return len(fake.writeArgsForCall)
 }
 
-func (fake *TileWriter) WriteArgsForCall(i int) ([]byte, builder.WriteConfig) {
+func (fake *TileWriter) WriteArgsForCall(i int) ([]byte, commands.BakeConfig) {
 	fake.writeMutex.RLock()
 	defer fake.writeMutex.RUnlock()
 	return fake.writeArgsForCall[i].metadataContents, fake.writeArgsForCall[i].config

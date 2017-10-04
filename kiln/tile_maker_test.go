@@ -78,7 +78,7 @@ var _ = Describe("TileMaker", func() {
 
 		Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
 
-		metadataContents, writeCfg := fakeTileWriter.WriteArgsForCall(0)
+		metadataContents, config := fakeTileWriter.WriteArgsForCall(0)
 		Expect(metadataContents).To(MatchYAML(`
 name: cool-product-name
 releases:
@@ -89,7 +89,7 @@ stemcell_criteria:
   version: 2.3.4
   os: an-operating-system
   requires_cpi: false`))
-		Expect(writeCfg).To(Equal(builder.WriteConfig{
+		Expect(config).To(Equal(commands.BakeConfig{
 			ProductName:          "cool-product-name",
 			FilenamePrefix:       "cool-product-file",
 			Version:              "1.2.3-build.4",

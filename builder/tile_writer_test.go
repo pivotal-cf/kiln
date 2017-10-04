@@ -9,6 +9,7 @@ import (
 
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/builder/fakes"
+	"github.com/pivotal-cf/kiln/commands"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -37,7 +38,7 @@ var _ = Describe("TileWriter", func() {
 
 	Describe("Build", func() {
 		DescribeTable("writes tile to disk", func(stubbed bool, release1Content, release2Content string, errorWhenAttemptingToOpenRelease error) {
-			writeCfg := builder.WriteConfig{
+			config := commands.BakeConfig{
 				ProductName:          "cool-product-name",
 				FilenamePrefix:       "cool-product-file",
 				ReleaseTarballs:      []string{"/some/path/release-1.tgz", "/some/path/release-2.tgz"},
@@ -81,7 +82,7 @@ var _ = Describe("TileWriter", func() {
 
 			md5Calc.ChecksumCall.Returns.Sum = "THIS-IS-THE-SUM"
 
-			err := tileWriter.Write([]byte("metadata-contents"), writeCfg)
+			err := tileWriter.Write([]byte("metadata-contents"), config)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(contentMigrationBuilder.BuildCall.CallCount).To(Equal(1))
@@ -135,7 +136,7 @@ var _ = Describe("TileWriter", func() {
 
 		Context("when no migrations are provided", func() {
 			It("creates empty migrations/v1 folder", func() {
-				writeCfg := builder.WriteConfig{
+				config := commands.BakeConfig{
 					ProductName:          "cool-product-name",
 					FilenamePrefix:       "cool-product-file",
 					ReleaseTarballs:      []string{"/some/path/release-1.tgz", "/some/path/release-2.tgz"},
@@ -147,7 +148,7 @@ var _ = Describe("TileWriter", func() {
 					StubReleases:         false,
 				}
 
-				err := tileWriter.Write([]byte("metadata-contents"), writeCfg)
+				err := tileWriter.Write([]byte("metadata-contents"), config)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
@@ -172,11 +173,11 @@ var _ = Describe("TileWriter", func() {
 					return nil
 				}
 
-				writeCfg := builder.WriteConfig{
+				config := commands.BakeConfig{
 					ProductName:          "cool-product-name",
 					FilenamePrefix:       "cool-product-file",
 					ReleaseTarballs:      []string{"/some/path/release-1.tgz", "/some/path/release-2.tgz"},
-					Migrations:           []string{},
+					MigrationsDirectory:  "/some/path/migrations",
 					ContentMigrations:    []string{},
 					BaseContentMigration: "",
 					Version:              "1.2.3-build.4",
@@ -184,7 +185,7 @@ var _ = Describe("TileWriter", func() {
 					StubReleases:         false,
 				}
 
-				err := tileWriter.Write([]byte("metadata-contents"), writeCfg)
+				err := tileWriter.Write([]byte("metadata-contents"), config)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
@@ -202,12 +203,12 @@ var _ = Describe("TileWriter", func() {
 		Context("failure cases", func() {
 			Context("when the zipper fails to create migrations folder", func() {
 				It("returns an error", func() {
-					writeCfg := builder.WriteConfig{
+					config := commands.BakeConfig{
 						StubReleases: true,
 					}
 
 					zipper.CreateFolderCall.Returns.Error = errors.New("failed to create folder")
-					err := tileWriter.Write([]byte{}, writeCfg)
+					err := tileWriter.Write([]byte{}, config)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError("failed to create folder"))
 				})
@@ -217,11 +218,11 @@ var _ = Describe("TileWriter", func() {
 				It("returns an error", func() {
 					filesystem.OpenReturns(nil, errors.New("failed to open release"))
 
-					writeCfg := builder.WriteConfig{
+					config := commands.BakeConfig{
 						ReleaseTarballs: []string{"/some/path/release-1.tgz"},
 					}
 
-					err := tileWriter.Write([]byte("metadata-contents"), writeCfg)
+					err := tileWriter.Write([]byte("metadata-contents"), config)
 					Expect(err).To(MatchError("failed to open release"))
 				})
 			})
@@ -248,13 +249,13 @@ var _ = Describe("TileWriter", func() {
 						return NewBuffer(bytes.NewBufferString("release-1")), nil
 					}
 
-					writeCfg := builder.WriteConfig{
+					config := commands.BakeConfig{
 						ReleaseTarballs:     []string{"/some/path/release-1.tgz"},
 						MigrationsDirectory: "/some/path/migrations",
 						StubReleases:        true,
 					}
 
-					err := tileWriter.Write([]byte{}, writeCfg)
+					err := tileWriter.Write([]byte{}, config)
 					Expect(err).To(MatchError("failed to open migration"))
 				})
 			})
@@ -263,11 +264,11 @@ var _ = Describe("TileWriter", func() {
 				It("returns an error", func() {
 					zipper.AddCall.Returns.Error = errors.New("failed to add file to zip")
 
-					writeCfg := builder.WriteConfig{
+					config := commands.BakeConfig{
 						StubReleases: true,
 					}
 
-					err := tileWriter.Write([]byte{}, writeCfg)
+					err := tileWriter.Write([]byte{}, config)
 					Expect(err).To(MatchError("failed to add file to zip"))
 				})
 			})
@@ -276,11 +277,11 @@ var _ = Describe("TileWriter", func() {
 				It("returns an error", func() {
 					zipper.CloseCall.Returns.Error = errors.New("failed to close the zip")
 
-					writeCfg := builder.WriteConfig{
+					config := commands.BakeConfig{
 						StubReleases: true,
 					}
 
-					err := tileWriter.Write([]byte{}, writeCfg)
+					err := tileWriter.Write([]byte{}, config)
 					Expect(err).To(MatchError("failed to close the zip"))
 				})
 			})
@@ -289,13 +290,13 @@ var _ = Describe("TileWriter", func() {
 				It("returns an error", func() {
 					contentMigrationBuilder.BuildCall.Returns.Error = errors.New("builder failed")
 
-					writeCfg := builder.WriteConfig{
+					config := commands.BakeConfig{
 						ContentMigrations:    []string{"some-migration-file.yml"},
 						BaseContentMigration: "base-migration-file.yml",
 						StubReleases:         true,
 					}
 
-					err := tileWriter.Write([]byte{}, writeCfg)
+					err := tileWriter.Write([]byte{}, config)
 					Expect(err).To(MatchError("builder failed"))
 				})
 			})
@@ -304,11 +305,11 @@ var _ = Describe("TileWriter", func() {
 				It("returns an error", func() {
 					zipper.SetPathCall.Returns.Error = errors.New("zipper set path failed")
 
-					writeCfg := builder.WriteConfig{
+					config := commands.BakeConfig{
 						StubReleases: true,
 					}
 
-					err := tileWriter.Write([]byte{}, writeCfg)
+					err := tileWriter.Write([]byte{}, config)
 					Expect(err).To(MatchError("zipper set path failed"))
 				})
 			})
@@ -317,11 +318,11 @@ var _ = Describe("TileWriter", func() {
 
 					md5Calc.ChecksumCall.Returns.Error = errors.New("MD5 cannot be calculated")
 
-					writeCfg := builder.WriteConfig{
+					config := commands.BakeConfig{
 						StubReleases: true,
 					}
 
-					err := tileWriter.Write([]byte{}, writeCfg)
+					err := tileWriter.Write([]byte{}, config)
 					Expect(err).To(MatchError("MD5 cannot be calculated"))
 				})
 			})

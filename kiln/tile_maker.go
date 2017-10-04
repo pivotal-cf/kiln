@@ -8,7 +8,7 @@ import (
 
 //go:generate counterfeiter -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
 type tileWriter interface {
-	Write(metadataContents []byte, config builder.WriteConfig) error
+	Write(metadataContents []byte, config commands.BakeConfig) error
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_builder.go --fake-name MetadataBuilder . metadataBuilder
@@ -52,7 +52,7 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 		return err
 	}
 
-	err = t.tileWriter.Write(metadataYAML, builder.WriteConfig{
+	err = t.tileWriter.Write(metadataYAML, commands.BakeConfig{
 		ReleaseTarballs:      config.ReleaseTarballs,
 		MigrationsDirectory:  config.MigrationsDirectory,
 		ContentMigrations:    config.ContentMigrations,

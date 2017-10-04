@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/pivotal-cf/kiln/commands"
 )
 
 type TileWriter struct {
@@ -17,22 +19,6 @@ type TileWriter struct {
 	logger                  logger
 	md5SumCalculator        md5SumCalculator
 	contentMigrationBuilder contentMigrationBuilder
-}
-
-type WriteConfig struct {
-	ReleaseTarballs      []string
-	Migrations           []string
-	MigrationsDirectory  string
-	ContentMigrations    []string
-	BaseContentMigration string
-	StemcellTarball      string
-	Handcraft            string
-	Version              string
-	FinalVersion         string
-	ProductName          string
-	FilenamePrefix       string
-	OutputDir            string
-	StubReleases         bool
 }
 
 //go:generate counterfeiter -o ./fakes/filesystem.go --fake-name Filesystem . filesystem
@@ -76,10 +62,10 @@ func NewTileWriter(filesystem filesystem, zipper zipper, contentMigrationBuilder
 	}
 }
 
-func (w TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
+func (w TileWriter) Write(metadataContents []byte, config commands.BakeConfig) error {
 	w.logger.Println("Building .pivotal file...")
 
-	tileFileName := filepath.Join(writeCfg.OutputDir, fmt.Sprintf("%s-%s.pivotal", writeCfg.FilenamePrefix, writeCfg.Version))
+	tileFileName := filepath.Join(config.OutputDir, fmt.Sprintf("%s-%s.pivotal", config.FilenamePrefix, config.Version))
 
 	err := w.zipper.SetPath(tileFileName)
 	if err != nil {
@@ -88,25 +74,25 @@ func (w TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
 
 	files := map[string]io.Reader{}
 
-	files[filepath.Join("metadata", fmt.Sprintf("%s.yml", writeCfg.ProductName))] = bytes.NewBuffer(metadataContents)
+	files[filepath.Join("metadata", fmt.Sprintf("%s.yml", config.ProductName))] = bytes.NewBuffer(metadataContents)
 
-	err = w.addReleaseTarballs(files, writeCfg.ReleaseTarballs, writeCfg.StubReleases)
+	err = w.addReleaseTarballs(files, config.ReleaseTarballs, config.StubReleases)
 	if err != nil {
 		return err
 	}
 
-	if writeCfg.MigrationsDirectory != "" {
-		err = w.addMigrations(files, writeCfg.MigrationsDirectory)
+	if config.MigrationsDirectory != "" {
+		err = w.addMigrations(files, config.MigrationsDirectory)
 		if err != nil {
 			return err
 		}
 	}
 
-	if len(writeCfg.ContentMigrations) > 0 {
+	if len(config.ContentMigrations) > 0 {
 		contentMigrationsContents, err := w.contentMigrationBuilder.Build(
-			writeCfg.BaseContentMigration,
-			writeCfg.FinalVersion,
-			writeCfg.ContentMigrations)
+			config.BaseContentMigration,
+			config.FinalVersion,
+			config.ContentMigrations)
 
 		if err != nil {
 			return err
