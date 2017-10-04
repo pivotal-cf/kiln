@@ -6,8 +6,7 @@ import (
 
 	jhandacommands "github.com/pivotal-cf/jhanda/commands"
 	"github.com/pivotal-cf/kiln/commands"
-	"github.com/pivotal-cf/kiln/kiln"
-	"github.com/pivotal-cf/kiln/kiln/fakes"
+	"github.com/pivotal-cf/kiln/commands/fakes"
 )
 
 var _ = Describe("bake", func() {
@@ -39,7 +38,7 @@ var _ = Describe("bake", func() {
 			Expect(tileMaker.MakeCallCount()).To(Equal(1))
 
 			config := tileMaker.MakeArgsForCall(0)
-			Expect(config).To(Equal(kiln.ApplicationConfig{
+			Expect(config).To(Equal(commands.BakeConfig{
 				StemcellTarball: "some-stemcell-tarball",
 				ReleaseTarballs: []string{"some-release-tarball", "some-other-release-tarball"},
 				Handcraft:       "some-handcraft",
@@ -70,7 +69,7 @@ var _ = Describe("bake", func() {
 				Expect(tileMaker.MakeCallCount()).To(Equal(1))
 
 				config := tileMaker.MakeArgsForCall(0)
-				Expect(config).To(Equal(kiln.ApplicationConfig{
+				Expect(config).To(Equal(commands.BakeConfig{
 					StemcellTarball:     "some-stemcell-tarball",
 					ReleaseTarballs:     []string{"some-release-tarball", "some-other-release-tarball"},
 					Handcraft:           "some-handcraft",
@@ -101,7 +100,7 @@ var _ = Describe("bake", func() {
 			Expect(tileMaker.MakeCallCount()).To(Equal(1))
 
 			config := tileMaker.MakeArgsForCall(0)
-			Expect(config).To(Equal(kiln.ApplicationConfig{
+			Expect(config).To(Equal(commands.BakeConfig{
 				StemcellTarball: "some-stemcell-tarball",
 				ReleaseTarballs: []string{"some-release-tarball", "some-other-release-tarball"},
 				Handcraft:       "some-handcraft",

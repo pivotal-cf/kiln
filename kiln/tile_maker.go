@@ -2,6 +2,7 @@ package kiln
 
 import (
 	"github.com/pivotal-cf/kiln/builder"
+	"github.com/pivotal-cf/kiln/commands"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -33,7 +34,7 @@ func NewTileMaker(metadataBuilder metadataBuilder, tileWriter tileWriter, logger
 	}
 }
 
-func (t TileMaker) Make(config ApplicationConfig) error {
+func (t TileMaker) Make(config commands.BakeConfig) error {
 	metadata, err := t.metadataBuilder.Build(
 		config.ReleaseTarballs,
 		config.StemcellTarball,

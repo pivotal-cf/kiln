@@ -5,16 +5,16 @@ import (
 
 	"github.com/pivotal-cf/jhanda/commands"
 	"github.com/pivotal-cf/jhanda/flags"
-	"github.com/pivotal-cf/kiln/kiln"
 )
 
 type Bake struct {
 	tileMaker tileMaker
-	Options   kiln.ApplicationConfig
+	Options   BakeConfig
 }
 
+//go:generate counterfeiter -o ./fakes/tile_maker.go --fake-name TileMaker . tileMaker
 type tileMaker interface {
-	Make(kiln.ApplicationConfig) error
+	Make(BakeConfig) error
 }
 
 func NewBake(tileMaker tileMaker) Bake {
@@ -45,8 +45,8 @@ func (b Bake) Usage() commands.Usage {
 	}
 }
 
-func (b Bake) parseArgs(args []string) (kiln.ApplicationConfig, error) {
-	config := kiln.ApplicationConfig{}
+func (b Bake) parseArgs(args []string) (BakeConfig, error) {
+	config := BakeConfig{}
 
 	args, err := flags.Parse(&config, args)
 	if err != nil {

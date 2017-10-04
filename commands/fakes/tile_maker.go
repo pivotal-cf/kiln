@@ -4,14 +4,14 @@ package fakes
 import (
 	"sync"
 
-	"github.com/pivotal-cf/kiln/kiln"
+	"github.com/pivotal-cf/kiln/commands"
 )
 
 type TileMaker struct {
-	MakeStub        func(kiln.ApplicationConfig) error
+	MakeStub        func(commands.BakeConfig) error
 	makeMutex       sync.RWMutex
 	makeArgsForCall []struct {
-		arg1 kiln.ApplicationConfig
+		arg1 commands.BakeConfig
 	}
 	makeReturns struct {
 		result1 error
@@ -23,11 +23,11 @@ type TileMaker struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TileMaker) Make(arg1 kiln.ApplicationConfig) error {
+func (fake *TileMaker) Make(arg1 commands.BakeConfig) error {
 	fake.makeMutex.Lock()
 	ret, specificReturn := fake.makeReturnsOnCall[len(fake.makeArgsForCall)]
 	fake.makeArgsForCall = append(fake.makeArgsForCall, struct {
-		arg1 kiln.ApplicationConfig
+		arg1 commands.BakeConfig
 	}{arg1})
 	fake.recordInvocation("Make", []interface{}{arg1})
 	fake.makeMutex.Unlock()
@@ -46,7 +46,7 @@ func (fake *TileMaker) MakeCallCount() int {
 	return len(fake.makeArgsForCall)
 }
 
-func (fake *TileMaker) MakeArgsForCall(i int) kiln.ApplicationConfig {
+func (fake *TileMaker) MakeArgsForCall(i int) commands.BakeConfig {
 	fake.makeMutex.RLock()
 	defer fake.makeMutex.RUnlock()
 	return fake.makeArgsForCall[i].arg1

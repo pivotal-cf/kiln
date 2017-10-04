@@ -1,8 +1,8 @@
-package kiln
+package commands
 
 import "github.com/pivotal-cf/jhanda/flags"
 
-type ApplicationConfig struct {
+type BakeConfig struct {
 	ReleaseTarballs      flags.StringSlice `short:"rt"   long:"release-tarball"         description:"location of the release tarball"`
 	MigrationsDirectory  string            `short:"m"    long:"migrations-dir"          description:"path to the migrations directory"`
 	ContentMigrations    flags.StringSlice `short:"cm"   long:"content-migration"       description:"location of the content migration file"`

@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/pivotal-cf/kiln/builder"
+	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/kiln"
 	"github.com/pivotal-cf/kiln/kiln/fakes"
 
@@ -17,7 +18,7 @@ var _ = Describe("TileMaker", func() {
 		fakeTileWriter      *fakes.TileWriter
 		fakeLogger          *fakes.Logger
 
-		config    kiln.ApplicationConfig
+		config    commands.BakeConfig
 		tileMaker kiln.TileMaker
 	)
 
@@ -26,7 +27,7 @@ var _ = Describe("TileMaker", func() {
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
 
-		config = kiln.ApplicationConfig{
+		config = commands.BakeConfig{
 			ProductName:          "cool-product-name",
 			FilenamePrefix:       "cool-product-file",
 			Version:              "1.2.3-build.4",
