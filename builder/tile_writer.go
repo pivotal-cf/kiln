@@ -89,46 +89,24 @@ func (e TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
 
 	files[filepath.Join("metadata", fmt.Sprintf("%s.yml", writeCfg.ProductName))] = bytes.NewBuffer(metadataContents)
 
-	for _, r := range writeCfg.ReleaseTarballs {
-		var file io.Reader = strings.NewReader("")
-		var err error
-
-		if !writeCfg.StubReleases {
-			file, err = e.filesystem.Open(r)
-			if err != nil {
-				return err
-			}
-		}
-
-		files[filepath.Join("releases", filepath.Base(r))] = file
+	err = e.addReleaseTarballs(files, writeCfg.ReleaseTarballs, writeCfg.StubReleases)
+	if err != nil {
+		return err
 	}
 
 	if writeCfg.MigrationsDirectory != "" {
-		err = e.filesystem.Walk(writeCfg.MigrationsDirectory, func(filePath string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if info.IsDir() {
-				return nil
-			}
-
-			file, err := e.filesystem.Open(filePath)
-			if err != nil {
-				return err
-			}
-
-			files[filepath.Join("migrations", "v1", filepath.Base(filePath))] = file
-			return nil
-		})
-
+		err = e.addMigrations(files, writeCfg.MigrationsDirectory)
 		if err != nil {
 			return err
 		}
 	}
 
 	if len(writeCfg.ContentMigrations) > 0 {
-		contentMigrationsContents, err := e.contentMigrationBuilder.Build(writeCfg.BaseContentMigration, writeCfg.FinalVersion, writeCfg.ContentMigrations)
+		contentMigrationsContents, err := e.contentMigrationBuilder.Build(
+			writeCfg.BaseContentMigration,
+			writeCfg.FinalVersion,
+			writeCfg.ContentMigrations)
+
 		if err != nil {
 			return err
 		}
@@ -136,19 +114,21 @@ func (e TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
 		files[filepath.Join("content_migrations", "migrations.yml")] = bytes.NewBuffer(contentMigrationsContents)
 	}
 
-	var keys []string
-	for key := range files {
-		keys = append(keys, key)
+	var paths []string
+	for path := range files {
+		paths = append(paths, path)
 	}
 
-	sort.Strings(keys)
+	sort.Strings(paths)
 
-	err = e.ensureMigrationsDirPresent(keys)
-	if err != nil {
-		return err
+	if !e.containsMigrations(paths) {
+		err = e.addEmptyMigrationsDirectory()
+		if err != nil {
+			return err
+		}
 	}
 
-	for _, path := range keys {
+	for _, path := range paths {
 		e.logger.Printf("Adding %s to .pivotal...", path)
 
 		err := e.zipper.Add(path, files[path])
@@ -173,13 +153,54 @@ func (e TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
 	return nil
 }
 
-func (e TileWriter) ensureMigrationsDirPresent(filenames []string) error {
-	migrationsPrefix := filepath.Join("migrations", "v1")
-	for _, f := range filenames {
-		if strings.HasPrefix(f, migrationsPrefix) {
+func (e TileWriter) addReleaseTarballs(files map[string]io.Reader, releaseTarballs []string, stubReleases bool) error {
+	for _, r := range releaseTarballs {
+		var file io.Reader = strings.NewReader("")
+		var err error
+
+		if !stubReleases {
+			file, err = e.filesystem.Open(r)
+			if err != nil {
+				return err
+			}
+		}
+
+		files[filepath.Join("releases", filepath.Base(r))] = file
+	}
+	return nil
+}
+
+func (e TileWriter) addMigrations(files map[string]io.Reader, migrationsDir string) error {
+	return e.filesystem.Walk(migrationsDir, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
 			return nil
 		}
+
+		file, err := e.filesystem.Open(filePath)
+		if err != nil {
+			return err
+		}
+
+		files[filepath.Join("migrations", "v1", filepath.Base(filePath))] = file
+		return nil
+	})
+}
+
+func (e TileWriter) containsMigrations(entries []string) bool {
+	migrationsPrefix := filepath.Join("migrations", "v1")
+	for _, entry := range entries {
+		if strings.HasPrefix(entry, migrationsPrefix) {
+			return true
+		}
 	}
+	return false
+}
+
+func (e TileWriter) addEmptyMigrationsDirectory() error {
 	e.logger.Printf("Creating empty migrations folder in .pivotal...")
 	err := e.zipper.CreateFolder(filepath.Join("migrations", "v1"))
 	if err != nil {
