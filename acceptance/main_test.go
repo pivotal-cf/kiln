@@ -313,7 +313,7 @@ property_blueprints:
 			"--release-tarball", diegoReleaseTarball,
 			"--stemcell-tarball", stemcellTarball,
 			"--handcraft", handcraft,
-			"--migrations-dir", "/Users/pivotal/go/src/github.com/pivotal-cf/kiln/acceptance/fixtures/migrations",
+			"--migrations-dir", "fixtures/migrations",
 			"--version", "3.2.1-build.4",
 			"--final-version", "3.2.1",
 			"--product-name", "cool-product-name",
