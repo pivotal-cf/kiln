@@ -2,6 +2,8 @@ package helper_test
 
 import (
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/pivotal-cf/kiln/helper"
 
@@ -43,4 +45,27 @@ var _ = Describe("Filesystem", func() {
 			})
 		})
 	})
+
+	Describe("Walk", func() {
+		It("traverses the specified path", func() {
+			tempDir, err := ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+
+			f := filepath.Join(tempDir, "some-file")
+			tempfile, err := os.Create(f)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = tempfile.Close()
+			Expect(err).NotTo(HaveOccurred())
+
+			files := []string{}
+			filesystem.Walk(tempDir, func(filePath string, info os.FileInfo, err error) error {
+				files = append(files, filePath)
+				return nil
+			})
+
+			Expect(files).To(Equal([]string{tempDir, f}))
+		})
+	})
+
 })

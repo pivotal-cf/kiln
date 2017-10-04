@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 type TileWriter struct {
@@ -20,6 +22,7 @@ type TileWriter struct {
 type WriteConfig struct {
 	ReleaseTarballs      []string
 	Migrations           []string
+	MigrationsDirectory  string
 	ContentMigrations    []string
 	BaseContentMigration string
 	StemcellTarball      string
@@ -34,6 +37,7 @@ type WriteConfig struct {
 
 type filesystem interface {
 	Open(name string) (io.ReadWriteCloser, error)
+	Walk(root string, walkFn filepath.WalkFunc) error
 }
 
 type md5SumCalculator interface {
@@ -49,6 +53,16 @@ type zipper interface {
 
 type contentMigrationBuilder interface {
 	Build(baseContentMigration string, version string, contentMigrations []string) ([]byte, error)
+}
+
+//go:generate counterfeiter -o ./fakes/file_info.go --fake-name FileInfo . fileinfo
+type fileinfo interface {
+	Name() string
+	Size() int64
+	Mode() os.FileMode
+	ModTime() time.Time
+	IsDir() bool
+	Sys() interface{}
 }
 
 func NewTileWriter(filesystem filesystem, zipper zipper, contentMigrationBuilder contentMigrationBuilder, logger logger, md5SumCalculator md5SumCalculator) TileWriter {
@@ -89,18 +103,25 @@ func (e TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
 		files[filepath.Join("releases", filepath.Base(r))] = file
 	}
 
-	for _, m := range writeCfg.Migrations {
-		file, err := e.filesystem.Open(m)
-		if err != nil {
-			return err
-		}
+	if writeCfg.MigrationsDirectory != "" {
+		err = e.filesystem.Walk(writeCfg.MigrationsDirectory, func(filePath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 
-		files[filepath.Join("migrations", "v1", filepath.Base(m))] = file
-	}
+			if info.IsDir() {
+				return nil
+			}
 
-	if len(writeCfg.Migrations) == 0 {
-		e.logger.Printf("Creating empty migrations folder in .pivotal...")
-		err := e.zipper.CreateFolder(filepath.Join("migrations", "v1"))
+			file, err := e.filesystem.Open(filePath)
+			if err != nil {
+				return err
+			}
+
+			files[filepath.Join("migrations", "v1", filepath.Base(filePath))] = file
+			return nil
+		})
+
 		if err != nil {
 			return err
 		}
@@ -121,6 +142,11 @@ func (e TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
 	}
 
 	sort.Strings(keys)
+
+	err = e.ensureMigrationsDirPresent(keys)
+	if err != nil {
+		return err
+	}
 
 	for _, path := range keys {
 		e.logger.Printf("Adding %s to .pivotal...", path)
@@ -144,5 +170,20 @@ func (e TileWriter) Write(metadataContents []byte, writeCfg WriteConfig) error {
 
 	e.logger.Printf("Calculated md5 sum: %s", md5Sum)
 
+	return nil
+}
+
+func (e TileWriter) ensureMigrationsDirPresent(filenames []string) error {
+	migrationsPrefix := filepath.Join("migrations", "v1")
+	for _, f := range filenames {
+		if strings.HasPrefix(f, migrationsPrefix) {
+			return nil
+		}
+	}
+	e.logger.Printf("Creating empty migrations folder in .pivotal...")
+	err := e.zipper.CreateFolder(filepath.Join("migrations", "v1"))
+	if err != nil {
+		return err
+	}
 	return nil
 }

@@ -4,7 +4,7 @@ import "github.com/pivotal-cf/jhanda/flags"
 
 type ApplicationConfig struct {
 	ReleaseTarballs      flags.StringSlice `short:"rt"   long:"release-tarball"         description:""`
-	Migrations           flags.StringSlice `short:"m"    long:"migration"               description:""`
+	MigrationsDirectory  string            `short:"m"    long:"migrations-dir"          description:""`
 	ContentMigrations    flags.StringSlice `short:"cm"   long:"content-migration"       description:""`
 	BaseContentMigration string            `short:"bcm"  long:"base-content-migration"  description:""`
 	StemcellTarball      string            `short:"st"   long:"stemcell-tarball"        description:""`

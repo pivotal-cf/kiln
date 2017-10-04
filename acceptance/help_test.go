@@ -1,7 +1,6 @@
 package acceptance
 
 import (
-	"fmt"
 	"os/exec"
 
 	"github.com/onsi/gomega/gexec"
@@ -29,7 +28,7 @@ Usage: kiln [options] bake [<args>]
 
 Command Arguments:
   -rt, --release-tarball          slice   location of the release tarball
-  -m, --migration                 slice   location of the migration file
+  -m, --migrations-dir            string  path to the migrations directory
   -cm, --content-migration        slice   location of the content migration file
   -bcm, --base-content-migration  string  location of the base content migration file
   -st, --stemcell-tarball         string  location of the stemcell tarball
@@ -49,7 +48,6 @@ var _ = Describe("help", func() {
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
-			fmt.Println(string(session.Out.Contents()))
 			Eventually(session).Should(gexec.Exit(0))
 			Expect(string(session.Out.Contents())).To(ContainSubstring(GLOBAL_USAGE))
 		})

@@ -12,7 +12,7 @@ type Bake struct {
 	tileMaker tileMaker
 	Options   struct {
 		ReleaseTarballs      flags.StringSlice `short:"rt"   long:"release-tarball"         description:"location of the release tarball"`
-		Migrations           flags.StringSlice `short:"m"    long:"migration"               description:"location of the migration file"`
+		MigrationsDirectory  string            `short:"m"    long:"migrations-dir"          description:"path to the migrations directory"`
 		ContentMigrations    flags.StringSlice `short:"cm"   long:"content-migration"       description:"location of the content migration file"`
 		BaseContentMigration string            `short:"bcm"  long:"base-content-migration"  description:"location of the base content migration file"`
 		StemcellTarball      string            `short:"st"   long:"stemcell-tarball"        description:"location of the stemcell tarball"`
@@ -98,7 +98,7 @@ func (b Bake) parseArgs(args []string) (kiln.ApplicationConfig, error) {
 		return config, errors.New("--output-dir is a required parameter")
 	}
 
-	if len(config.Migrations) > 0 && len(config.ContentMigrations) > 0 {
+	if config.MigrationsDirectory != "" && len(config.ContentMigrations) > 0 {
 		return config, errors.New("cannot build a tile with content migrations and migrations")
 	}
 
@@ -106,7 +106,7 @@ func (b Bake) parseArgs(args []string) (kiln.ApplicationConfig, error) {
 		return config, errors.New("base content migration is required when content migrations are provided")
 	}
 
-	if len(config.Migrations) > 0 && config.BaseContentMigration != "" {
+	if config.MigrationsDirectory != "" && config.BaseContentMigration != "" {
 		return config, errors.New("cannot build a tile with a base content migration and migrations")
 	}
 

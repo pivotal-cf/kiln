@@ -22,8 +22,6 @@ var _ = Describe("kiln", func() {
 		cfReleaseTarball     string
 		diegoReleaseTarball  string
 		stemcellTarball      string
-		migration1           string
-		migration2           string
 		handcraft            string
 		baseContentMigration string
 		contentMigration     string
@@ -60,14 +58,6 @@ operating_system: ubuntu-trusty
 `
 
 		stemcellTarball, err = createTarball(tempDir, "stemcell.tgz", "stemcell.MF", stemcellManifest)
-		Expect(err).NotTo(HaveOccurred())
-
-		migration1 = filepath.Join(tempDir, "migration-1.js")
-		err = ioutil.WriteFile(migration1, []byte("migration-1"), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		migration2 = filepath.Join(tempDir, "migration-2.js")
-		err = ioutil.WriteFile(migration2, []byte("migration-2"), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		handcraft = filepath.Join(tempDir, "handcraft.yml")
@@ -269,8 +259,7 @@ property_blueprints:
 			"--release-tarball", cfReleaseTarball,
 			"--stemcell-tarball", stemcellTarball,
 			"--handcraft", handcraft,
-			"--migration", migration1,
-			"--migration", migration2,
+			"--migrations-dir", "fixtures/migrations",
 			"--version", "7.8.9-build.4",
 			"--final-version", "7.8.9",
 			"--product-name", "cool-product-name",
@@ -297,12 +286,12 @@ property_blueprints:
 		)
 
 		for _, f := range zr.File {
-			if f.Name == "migrations/v1/migration-1.js" {
+			if f.Name == "migrations/v1/201603041539_custom_buildpacks.js" {
 				archivedMigration1, err = f.Open()
 				Expect(err).NotTo(HaveOccurred())
 			}
 
-			if f.Name == "migrations/v1/migration-2.js" {
+			if f.Name == "migrations/v1/201603071158_auth_enterprise_sso.js" {
 				archivedMigration2, err = f.Open()
 				Expect(err).NotTo(HaveOccurred())
 			}
@@ -310,11 +299,11 @@ property_blueprints:
 
 		contents, err := ioutil.ReadAll(archivedMigration1)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(contents).To(Equal([]byte("migration-1")))
+		Expect(string(contents)).To(Equal("custom-buildpack-migration\n"))
 
 		contents, err = ioutil.ReadAll(archivedMigration2)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(contents).To(Equal([]byte("migration-2")))
+		Expect(string(contents)).To(Equal("auth-enterprise-sso-migration\n"))
 	})
 
 	It("logs the progress to stdout", func() {
@@ -324,8 +313,7 @@ property_blueprints:
 			"--release-tarball", diegoReleaseTarball,
 			"--stemcell-tarball", stemcellTarball,
 			"--handcraft", handcraft,
-			"--migration", migration1,
-			"--migration", migration2,
+			"--migrations-dir", "/Users/pivotal/go/src/github.com/pivotal-cf/kiln/acceptance/fixtures/migrations",
 			"--version", "3.2.1-build.4",
 			"--final-version", "3.2.1",
 			"--product-name", "cool-product-name",
@@ -345,8 +333,8 @@ property_blueprints:
 		Eventually(session.Out).Should(gbytes.Say("Marshaling metadata file..."))
 		Eventually(session.Out).Should(gbytes.Say("Building .pivotal file..."))
 		Eventually(session.Out).Should(gbytes.Say("Adding metadata/cool-product-name.yml to .pivotal..."))
-		Eventually(session.Out).Should(gbytes.Say("Adding migrations/v1/migration-1.js to .pivotal..."))
-		Eventually(session.Out).Should(gbytes.Say("Adding migrations/v1/migration-2.js to .pivotal..."))
+		Eventually(session.Out).Should(gbytes.Say("Adding migrations/v1/201603041539_custom_buildpacks.js to .pivotal..."))
+		Eventually(session.Out).Should(gbytes.Say("Adding migrations/v1/201603071158_auth_enterprise_sso.js to .pivotal..."))
 		Eventually(session.Out).Should(gbytes.Say("Adding releases/cf-release-235.0.0-3215.4.0.tgz to .pivotal..."))
 		Eventually(session.Out).Should(gbytes.Say("Adding releases/diego-release-0.1467.1-3215.4.0.tgz to .pivotal..."))
 		Eventually(session.Out).Should(gbytes.Say("Calculating md5 sum of .pivotal..."))

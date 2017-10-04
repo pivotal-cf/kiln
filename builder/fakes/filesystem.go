@@ -1,6 +1,9 @@
 package fakes
 
-import "io"
+import (
+	"io"
+	"path/filepath"
+)
 
 type Filesystem struct {
 	OpenCall struct {
@@ -13,6 +16,15 @@ type Filesystem struct {
 		}
 		Stub func(path string) (io.ReadWriteCloser, error)
 	}
+	WalkCall struct {
+		Receives struct {
+			Root string
+		}
+		Returns struct {
+			Error error
+		}
+		Stub func(root string, walkFn filepath.WalkFunc) error
+	}
 }
 
 func (f *Filesystem) Open(path string) (io.ReadWriteCloser, error) {
@@ -23,4 +35,14 @@ func (f *Filesystem) Open(path string) (io.ReadWriteCloser, error) {
 	}
 
 	return f.OpenCall.Returns.File, f.OpenCall.Returns.Error
+}
+
+func (f *Filesystem) Walk(root string, walkFn filepath.WalkFunc) error {
+	f.WalkCall.Receives.Root = root
+
+	if f.WalkCall.Stub != nil {
+		return f.WalkCall.Stub(root, walkFn)
+	}
+
+	return f.WalkCall.Returns.Error
 }

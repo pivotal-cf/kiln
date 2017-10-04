@@ -41,7 +41,7 @@ var _ = Describe("TileWriter", func() {
 				ProductName:          "cool-product-name",
 				FilenamePrefix:       "cool-product-file",
 				ReleaseTarballs:      []string{"/some/path/release-1.tgz", "/some/path/release-2.tgz"},
-				Migrations:           []string{"/some/path/migration-1.js", "/some/path/migration-2.js"},
+				MigrationsDirectory:  "/some/path/migrations",
 				ContentMigrations:    []string{"/some/path/content-migration-1.yml", "/some/path/content-migration-2.yml"},
 				BaseContentMigration: "/some/path/base-content-migration.yml",
 				Version:              "1.2.3-build.4",
@@ -51,15 +51,28 @@ var _ = Describe("TileWriter", func() {
 
 			contentMigrationBuilder.BuildCall.Returns.ContentMigration = []byte("combined-content-migration-contents")
 
+			dirInfo := &fakes.FileInfo{}
+			dirInfo.IsDirReturns(true)
+
+			migrationInfo := &fakes.FileInfo{}
+			migrationInfo.IsDirReturns(false)
+
+			filesystem.WalkCall.Stub = func(root string, walkFn filepath.WalkFunc) error {
+				walkFn("/some/path/migrations", dirInfo, nil)
+				walkFn("/some/path/migrations/migration-1.js", migrationInfo, nil)
+				walkFn("/some/path/migrations/migration-2.js", migrationInfo, nil)
+				return nil
+			}
+
 			filesystem.OpenCall.Stub = func(path string) (io.ReadWriteCloser, error) {
 				switch path {
 				case "/some/path/release-1.tgz":
 					return NewBuffer(bytes.NewBuffer([]byte("release-1"))), errorWhenAttemptingToOpenRelease
 				case "/some/path/release-2.tgz":
 					return NewBuffer(bytes.NewBuffer([]byte("release-2"))), errorWhenAttemptingToOpenRelease
-				case "/some/path/migration-1.js":
+				case "/some/path/migrations/migration-1.js":
 					return NewBuffer(bytes.NewBuffer([]byte("migration-1"))), nil
-				case "/some/path/migration-2.js":
+				case "/some/path/migrations/migration-2.js":
 					return NewBuffer(bytes.NewBuffer([]byte("migration-2"))), nil
 				default:
 					return nil, fmt.Errorf("open %s: no such file or directory", path)
@@ -126,6 +139,43 @@ var _ = Describe("TileWriter", func() {
 					ProductName:          "cool-product-name",
 					FilenamePrefix:       "cool-product-file",
 					ReleaseTarballs:      []string{"/some/path/release-1.tgz", "/some/path/release-2.tgz"},
+					MigrationsDirectory:  "",
+					ContentMigrations:    []string{},
+					BaseContentMigration: "",
+					Version:              "1.2.3-build.4",
+					FinalVersion:         "1.2.3",
+					StubReleases:         false,
+				}
+
+				err := tileWriter.Write([]byte("metadata-contents"), writeCfg)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
+					"Creating empty migrations folder in .pivotal...",
+					"Adding metadata/cool-product-name.yml to .pivotal...",
+					"Adding releases/release-1.tgz to .pivotal...",
+					"Adding releases/release-2.tgz to .pivotal...",
+					"Calculated md5 sum: ",
+				}))
+				Expect(zipper.CreateFolderCall.CallCount).To(Equal(1))
+				Expect(zipper.CreateFolderCall.Receives.Path).To(Equal(filepath.Join("migrations", "v1")))
+			})
+		})
+
+		Context("when the migrations directory is empty", func() {
+			It("creates empty migrations/v1 folder", func() {
+
+				dirInfo := &fakes.FileInfo{}
+				dirInfo.IsDirReturns(true)
+				filesystem.WalkCall.Stub = func(root string, walkFn filepath.WalkFunc) error {
+					walkFn("/some/path/migrations", dirInfo, nil)
+					return nil
+				}
+
+				writeCfg := builder.WriteConfig{
+					ProductName:          "cool-product-name",
+					FilenamePrefix:       "cool-product-file",
+					ReleaseTarballs:      []string{"/some/path/release-1.tgz", "/some/path/release-2.tgz"},
 					Migrations:           []string{},
 					ContentMigrations:    []string{},
 					BaseContentMigration: "",
@@ -178,8 +228,20 @@ var _ = Describe("TileWriter", func() {
 
 			Context("when a migration file cannot be opened", func() {
 				It("returns an error", func() {
+					dirInfo := &fakes.FileInfo{}
+					dirInfo.IsDirReturns(true)
+
+					migrationInfo := &fakes.FileInfo{}
+					migrationInfo.IsDirReturns(false)
+
+					filesystem.WalkCall.Stub = func(root string, walkFn filepath.WalkFunc) error {
+						walkFn("/some/path/migrations", dirInfo, nil)
+						err := walkFn("/some/path/migrations/migration-1.js", migrationInfo, nil)
+						return err
+					}
+
 					filesystem.OpenCall.Stub = func(path string) (io.ReadWriteCloser, error) {
-						if path == "/some/path/migration-1.js" {
+						if path == "/some/path/migrations/migration-1.js" {
 							return nil, errors.New("failed to open migration")
 						}
 
@@ -187,9 +249,9 @@ var _ = Describe("TileWriter", func() {
 					}
 
 					writeCfg := builder.WriteConfig{
-						ReleaseTarballs: []string{"/some/path/release-1.tgz"},
-						Migrations:      []string{"/some/path/migration-1.js"},
-						StubReleases:    true,
+						ReleaseTarballs:     []string{"/some/path/release-1.tgz"},
+						MigrationsDirectory: "/some/path/migrations",
+						StubReleases:        true,
 					}
 
 					err := tileWriter.Write([]byte{}, writeCfg)

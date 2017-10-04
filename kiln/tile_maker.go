@@ -53,7 +53,7 @@ func (t TileMaker) Make(config ApplicationConfig) error {
 
 	err = t.tileWriter.Write(metadataYAML, builder.WriteConfig{
 		ReleaseTarballs:      config.ReleaseTarballs,
-		Migrations:           config.Migrations,
+		MigrationsDirectory:  config.MigrationsDirectory,
 		ContentMigrations:    config.ContentMigrations,
 		BaseContentMigration: config.BaseContentMigration,
 		StemcellTarball:      config.StemcellTarball,
