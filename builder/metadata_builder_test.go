@@ -100,14 +100,14 @@ addons:
 				"runtime_configs": []interface{}{
 					map[interface{}]interface{}{
 						"name": "MY-RUNTIME-CONFIG",
-						"runtime_config": `addons:
+						"runtime_config": `releases:
+- name: release-1
+  version: version-1
+addons:
 - jobs:
   - name: MY-RUNTIME-CONFIG-JOB
     release: release-1
   name: MY-ADDON-NAME
-releases:
-- name: release-1
-  version: version-1
 `,
 					},
 				},

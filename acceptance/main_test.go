@@ -542,14 +542,14 @@ releases:
 runtime_configs:
   - name: MY-RUNTIME-CONFIG
     runtime_config: |
+      releases:
+      - name: cf
+        version: "235"
       addons:
       - jobs:
         - name: MY-RUNTIME-CONFIG-JOB
           release: cf
         name: MY-ADDON-NAME
-      releases:
-      - name: cf
-        version: "235"
 `))
 		})
 
