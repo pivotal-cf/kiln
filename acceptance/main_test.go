@@ -473,6 +473,88 @@ migrations:
 		})
 	})
 
+	Context("when the metadata defines a runtime config", func() {
+		It("generates a manifest that specifies the runtime config release version", func() {
+			err := ioutil.WriteFile(handcraft, []byte(`---
+runtime_configs:
+  - name: MY-RUNTIME-CONFIG
+    runtime_config: |
+      releases:
+      - name: cf
+      addons:
+      - name: MY-ADDON-NAME
+        jobs:
+        - name: MY-RUNTIME-CONFIG-JOB
+          release: cf
+`), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			command := exec.Command(pathToMain,
+				"bake",
+				"--stemcell-tarball", stemcellTarball,
+				"--release-tarball", cfReleaseTarball,
+				"--release-tarball", diegoReleaseTarball,
+				"--handcraft", handcraft,
+				"--version", "1.2.3-build.4",
+				"--final-version", "1.2.3",
+				"--product-name", "cool-product-name",
+				"--filename-prefix", "cool-product",
+				"--output-dir", tileDir)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			archive, err := os.Open(filepath.Join(tileDir, "cool-product-1.2.3-build.4.pivotal"))
+			Expect(err).NotTo(HaveOccurred())
+
+			archiveInfo, err := archive.Stat()
+			Expect(err).NotTo(HaveOccurred())
+
+			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			Expect(err).NotTo(HaveOccurred())
+
+			var file io.ReadCloser
+			for _, f := range zr.File {
+				if f.Name == "metadata/cool-product-name.yml" {
+					file, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+					break
+				}
+			}
+
+			contents, err := ioutil.ReadAll(file)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(contents).To(MatchYAML(`---
+name: cool-product-name
+stemcell_criteria:
+  os: ubuntu-trusty
+  requires_cpi: false
+  version: "3215.4"
+releases:
+- name: cf
+  file: cf-release-235.0.0-3215.4.0.tgz
+  version: "235"
+- name: diego
+  file: diego-release-0.1467.1-3215.4.0.tgz
+  version: 0.1467.1
+runtime_configs:
+  - name: MY-RUNTIME-CONFIG
+    runtime_config: |
+      addons:
+      - jobs:
+        - name: MY-RUNTIME-CONFIG-JOB
+          release: cf
+        name: MY-ADDON-NAME
+      releases:
+      - name: cf
+        version: "235"
+`))
+		})
+
+	})
+
 	Context("failure cases", func() {
 		Context("when a release tarball does not exist", func() {
 			It("prints an error and exits 1", func() {

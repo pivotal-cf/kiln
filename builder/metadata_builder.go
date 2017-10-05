@@ -1,6 +1,11 @@
 package builder
 
-import "path/filepath"
+import (
+	"fmt"
+	"path/filepath"
+
+	yaml "gopkg.in/yaml.v2"
+)
 
 type MetadataBuilder struct {
 	releaseManifestReader  releaseManifestReader
@@ -88,6 +93,11 @@ func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToH
 
 	m.logger.Printf("Read handcraft")
 
+	handcraft, err = m.updateRuntimeConfigReleaseVersions(handcraft, releases)
+	if err != nil {
+		return Metadata{}, err
+	}
+
 	return Metadata{
 		Name:     name,
 		Releases: releases,
@@ -98,4 +108,48 @@ func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToH
 		},
 		Handcraft: handcraft,
 	}, nil
+}
+
+func (m MetadataBuilder) updateRuntimeConfigReleaseVersions(handcraft Handcraft, releases []MetadataRelease) (Handcraft, error) {
+	if opsmanRuntimeConfigs, ok := handcraft["runtime_configs"]; ok {
+		for _, opsmanRuntimeConfig := range opsmanRuntimeConfigs.([]interface{}) {
+			runtimeConfig := opsmanRuntimeConfig.(map[interface{}]interface{})
+			var rc map[string]interface{}
+			err := yaml.Unmarshal([]byte(runtimeConfig["runtime_config"].(string)), &rc)
+			if err != nil {
+				return Handcraft{}, fmt.Errorf("runtime config %s contains malformed yaml: %s",
+					runtimeConfig["name"], err)
+			}
+
+			if runtimeConfigReleases, ok := rc["releases"]; ok {
+				for _, runtimeConfigRelease := range runtimeConfigReleases.([]interface{}) {
+					rcr := runtimeConfigRelease.(map[interface{}]interface{})
+
+					found := false
+
+					for _, release := range releases {
+						if release.Name == rcr["name"].(string) {
+							m.logger.Printf("Injecting version %s into runtime config release %s", release.Version, release.Name)
+							rcr["version"] = release.Version
+							found = true
+						}
+					}
+
+					if !found {
+						return Handcraft{}, fmt.Errorf("runtime config %s references unknown release %s",
+							runtimeConfig["name"], rcr["name"])
+					}
+				}
+			}
+
+			newYAML, err := yaml.Marshal(rc)
+			if err != nil {
+				panic(err)
+			}
+
+			runtimeConfig["runtime_config"] = string(newYAML)
+		}
+	}
+
+	return handcraft, nil
 }

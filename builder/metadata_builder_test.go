@@ -55,8 +55,19 @@ var _ = Describe("MetadataBuilder", func() {
 			handcraftReader.ReadCall.Returns.Handcraft = builder.Handcraft{
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
+				"runtime_configs": []interface{}{
+					map[interface{}]interface{}{
+						"name": "MY-RUNTIME-CONFIG",
+						"runtime_config": `releases:
+- name: release-1
+addons:
+- name: MY-ADDON-NAME
+  jobs:
+  - name: MY-RUNTIME-CONFIG-JOB
+    release: release-1`,
+					},
+				},
 			}
-
 			metadata, err := tileBuilder.Build([]string{
 				"/tmp/release-1.tgz",
 				"/tmp/release-2.tgz",
@@ -86,6 +97,20 @@ var _ = Describe("MetadataBuilder", func() {
 			Expect(metadata.Handcraft).To(Equal(builder.Handcraft{
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
+				"runtime_configs": []interface{}{
+					map[interface{}]interface{}{
+						"name": "MY-RUNTIME-CONFIG",
+						"runtime_config": `addons:
+- jobs:
+  - name: MY-RUNTIME-CONFIG-JOB
+    release: release-1
+  name: MY-ADDON-NAME
+releases:
+- name: release-1
+  version: version-1
+`,
+					},
+				},
 			}))
 
 			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
@@ -94,7 +119,61 @@ var _ = Describe("MetadataBuilder", func() {
 				"Read manifest for release release-2",
 				"Read manifest for stemcell version 2332",
 				"Read handcraft",
+				"Injecting version version-1 into runtime config release release-1",
 			}))
+		})
+
+		Context("when the runtime config doesn't contain releases", func() {
+			It("doesn't change the runtime config", func() {
+				releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
+					switch path {
+					case "/tmp/release-1.tgz":
+						return builder.ReleaseManifest{
+							Name:    "release-1",
+							Version: "version-1",
+						}, nil
+					default:
+						return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
+					}
+				}
+				stemcellManifestReader.ReadCall.Returns.StemcellManifest = builder.StemcellManifest{
+					Version:         "2332",
+					OperatingSystem: "ubuntu-trusty",
+				}
+
+				handcraftReader.ReadCall.Returns.Handcraft = builder.Handcraft{
+					"metadata_version":          "some-metadata-version",
+					"provides_product_versions": "some-provides-product-versions",
+					"runtime_configs": []interface{}{
+						map[interface{}]interface{}{
+							"name":           "MY-RUNTIME-CONFIG",
+							"runtime_config": "some-key: some-value",
+						},
+					},
+				}
+				metadata, err := tileBuilder.Build([]string{
+					"/tmp/release-1.tgz",
+				}, "/tmp/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(metadata.Handcraft).To(Equal(builder.Handcraft{
+					"metadata_version":          "some-metadata-version",
+					"provides_product_versions": "some-provides-product-versions",
+					"runtime_configs": []interface{}{
+						map[interface{}]interface{}{
+							"name":           "MY-RUNTIME-CONFIG",
+							"runtime_config": "some-key: some-value\n",
+						},
+					},
+				}))
+
+				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
+					"Creating metadata for .pivotal...",
+					"Read manifest for release release-1",
+					"Read manifest for stemcell version 2332",
+					"Read handcraft",
+				}))
+			})
 		})
 
 		Context("failure cases", func() {
@@ -122,6 +201,84 @@ var _ = Describe("MetadataBuilder", func() {
 
 					_, err := tileBuilder.Build([]string{}, "", "handcraft.yml", "", "")
 					Expect(err).To(MatchError("failed to read handcraft"))
+				})
+			})
+
+			Context("when the runtime config references a non-existent release", func() {
+				It("returns an error", func() {
+					releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
+						switch path {
+						case "/tmp/release-1.tgz":
+							return builder.ReleaseManifest{
+								Name:    "release-1",
+								Version: "version-1",
+							}, nil
+						default:
+							return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
+						}
+					}
+					stemcellManifestReader.ReadCall.Returns.StemcellManifest = builder.StemcellManifest{
+						Version:         "2332",
+						OperatingSystem: "ubuntu-trusty",
+					}
+
+					handcraftReader.ReadCall.Returns.Handcraft = builder.Handcraft{
+						"metadata_version":          "some-metadata-version",
+						"provides_product_versions": "some-provides-product-versions",
+						"runtime_configs": []interface{}{
+							map[interface{}]interface{}{
+								"name": "MY-RUNTIME-CONFIG",
+								"runtime_config": `releases:
+- name: release-2
+addons:
+- name: MY-ADDON-NAME
+  jobs:
+  - name: MY-RUNTIME-CONFIG-JOB
+    release: release-2`,
+							},
+						},
+					}
+
+					_, err := tileBuilder.Build([]string{
+						"/tmp/release-1.tgz",
+					}, "/tmp/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
+					Expect(err).To(MatchError("runtime config MY-RUNTIME-CONFIG references unknown release release-2"))
+				})
+			})
+
+			Context("when the runtime config contains yaml that isn't well-formed", func() {
+				It("returns an error", func() {
+					releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
+						switch path {
+						case "/tmp/release-1.tgz":
+							return builder.ReleaseManifest{
+								Name:    "release-1",
+								Version: "version-1",
+							}, nil
+						default:
+							return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
+						}
+					}
+					stemcellManifestReader.ReadCall.Returns.StemcellManifest = builder.StemcellManifest{
+						Version:         "2332",
+						OperatingSystem: "ubuntu-trusty",
+					}
+
+					handcraftReader.ReadCall.Returns.Handcraft = builder.Handcraft{
+						"metadata_version":          "some-metadata-version",
+						"provides_product_versions": "some-provides-product-versions",
+						"runtime_configs": []interface{}{
+							map[interface{}]interface{}{
+								"name":           "MY-RUNTIME-CONFIG",
+								"runtime_config": `%%%`,
+							},
+						},
+					}
+
+					_, err := tileBuilder.Build([]string{
+						"/tmp/release-1.tgz",
+					}, "/tmp/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
+					Expect(err).To(MatchError("runtime config MY-RUNTIME-CONFIG contains malformed yaml: yaml: could not find expected directive name"))
 				})
 			})
 		})
