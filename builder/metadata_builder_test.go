@@ -33,12 +33,12 @@ var _ = Describe("MetadataBuilder", func() {
 		It("creates a metadata with the correct information", func() {
 			releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
 				switch path {
-				case "/tmp/release-1.tgz":
+				case "/path/to/release-1.tgz":
 					return builder.ReleaseManifest{
 						Name:    "release-1",
 						Version: "version-1",
 					}, nil
-				case "/tmp/release-2.tgz":
+				case "/path/to/release-2.tgz":
 					return builder.ReleaseManifest{
 						Name:    "release-2",
 						Version: "version-2",
@@ -69,11 +69,11 @@ addons:
 				},
 			}
 			metadata, err := tileBuilder.Build([]string{
-				"/tmp/release-1.tgz",
-				"/tmp/release-2.tgz",
-			}, "/tmp/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
+				"/path/to/release-1.tgz",
+				"/path/to/release-2.tgz",
+			}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(stemcellManifestReader.ReadCall.Receives.Path).To(Equal("/tmp/test-stemcell.tgz"))
+			Expect(stemcellManifestReader.ReadCall.Receives.Path).To(Equal("/path/to/test-stemcell.tgz"))
 			Expect(handcraftReader.ReadCall.Receives.Path).To(Equal("/some/path/handcraft.yml"))
 
 			Expect(metadata.Name).To(Equal("cool-product"))
@@ -127,7 +127,7 @@ releases:
 			It("doesn't change the runtime config", func() {
 				releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
 					switch path {
-					case "/tmp/release-1.tgz":
+					case "/path/to/release-1.tgz":
 						return builder.ReleaseManifest{
 							Name:    "release-1",
 							Version: "version-1",
@@ -152,8 +152,8 @@ releases:
 					},
 				}
 				metadata, err := tileBuilder.Build([]string{
-					"/tmp/release-1.tgz",
-				}, "/tmp/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
+					"/path/to/release-1.tgz",
+				}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(metadata.Handcraft).To(Equal(builder.Handcraft{
@@ -208,7 +208,7 @@ releases:
 				It("returns an error", func() {
 					releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
 						switch path {
-						case "/tmp/release-1.tgz":
+						case "/path/to/release-1.tgz":
 							return builder.ReleaseManifest{
 								Name:    "release-1",
 								Version: "version-1",
@@ -240,8 +240,8 @@ addons:
 					}
 
 					_, err := tileBuilder.Build([]string{
-						"/tmp/release-1.tgz",
-					}, "/tmp/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
+						"/path/to/release-1.tgz",
+					}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
 					Expect(err).To(MatchError("runtime config MY-RUNTIME-CONFIG references unknown release release-2"))
 				})
 			})
@@ -250,7 +250,7 @@ addons:
 				It("returns an error", func() {
 					releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
 						switch path {
-						case "/tmp/release-1.tgz":
+						case "/path/to/release-1.tgz":
 							return builder.ReleaseManifest{
 								Name:    "release-1",
 								Version: "version-1",
@@ -276,8 +276,8 @@ addons:
 					}
 
 					_, err := tileBuilder.Build([]string{
-						"/tmp/release-1.tgz",
-					}, "/tmp/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
+						"/path/to/release-1.tgz",
+					}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
 					Expect(err).To(MatchError("runtime config MY-RUNTIME-CONFIG contains malformed yaml: yaml: could not find expected directive name"))
 				})
 			})
