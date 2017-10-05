@@ -26,32 +26,32 @@ var _ = Describe("MetadataBuilder", func() {
 		handcraftReader = &fakes.HandcraftReader{}
 		logger = &fakes.Logger{}
 
+		releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
+			switch path {
+			case "/path/to/release-1.tgz":
+				return builder.ReleaseManifest{
+					Name:    "release-1",
+					Version: "version-1",
+				}, nil
+			case "/path/to/release-2.tgz":
+				return builder.ReleaseManifest{
+					Name:    "release-2",
+					Version: "version-2",
+				}, nil
+			default:
+				return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
+			}
+		}
+		stemcellManifestReader.ReadCall.Returns.StemcellManifest = builder.StemcellManifest{
+			Version:         "2332",
+			OperatingSystem: "ubuntu-trusty",
+		}
+
 		tileBuilder = builder.NewMetadataBuilder(releaseManifestReader, stemcellManifestReader, handcraftReader, logger)
 	})
 
 	Describe("Build", func() {
 		It("creates a metadata with the correct information", func() {
-			releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
-				switch path {
-				case "/path/to/release-1.tgz":
-					return builder.ReleaseManifest{
-						Name:    "release-1",
-						Version: "version-1",
-					}, nil
-				case "/path/to/release-2.tgz":
-					return builder.ReleaseManifest{
-						Name:    "release-2",
-						Version: "version-2",
-					}, nil
-				default:
-					return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
-				}
-			}
-			stemcellManifestReader.ReadCall.Returns.StemcellManifest = builder.StemcellManifest{
-				Version:         "2332",
-				OperatingSystem: "ubuntu-trusty",
-			}
-
 			handcraftReader.ReadCall.Returns.Handcraft = builder.Handcraft{
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
@@ -125,22 +125,6 @@ releases:
 
 		Context("when the runtime config doesn't contain releases", func() {
 			It("doesn't change the runtime config", func() {
-				releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
-					switch path {
-					case "/path/to/release-1.tgz":
-						return builder.ReleaseManifest{
-							Name:    "release-1",
-							Version: "version-1",
-						}, nil
-					default:
-						return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
-					}
-				}
-				stemcellManifestReader.ReadCall.Returns.StemcellManifest = builder.StemcellManifest{
-					Version:         "2332",
-					OperatingSystem: "ubuntu-trusty",
-				}
-
 				handcraftReader.ReadCall.Returns.Handcraft = builder.Handcraft{
 					"metadata_version":          "some-metadata-version",
 					"provides_product_versions": "some-provides-product-versions",
@@ -179,6 +163,7 @@ releases:
 		Context("failure cases", func() {
 			Context("when the release tarball cannot be read", func() {
 				It("returns an error", func() {
+					releaseManifestReader.ReadCall.Stub = nil
 					releaseManifestReader.ReadCall.Returns.Error = errors.New("failed to read release tarball")
 
 					_, err := tileBuilder.Build([]string{"release-1.tgz"}, "", "", "", "")
@@ -206,22 +191,6 @@ releases:
 
 			Context("when the runtime config references a non-existent release", func() {
 				It("returns an error", func() {
-					releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
-						switch path {
-						case "/path/to/release-1.tgz":
-							return builder.ReleaseManifest{
-								Name:    "release-1",
-								Version: "version-1",
-							}, nil
-						default:
-							return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
-						}
-					}
-					stemcellManifestReader.ReadCall.Returns.StemcellManifest = builder.StemcellManifest{
-						Version:         "2332",
-						OperatingSystem: "ubuntu-trusty",
-					}
-
 					handcraftReader.ReadCall.Returns.Handcraft = builder.Handcraft{
 						"metadata_version":          "some-metadata-version",
 						"provides_product_versions": "some-provides-product-versions",
@@ -229,12 +198,12 @@ releases:
 							map[interface{}]interface{}{
 								"name": "MY-RUNTIME-CONFIG",
 								"runtime_config": `releases:
-- name: release-2
+- name: non-existent-release
 addons:
 - name: MY-ADDON-NAME
   jobs:
   - name: MY-RUNTIME-CONFIG-JOB
-    release: release-2`,
+    release: non-existent-release`,
 							},
 						},
 					}
@@ -242,28 +211,12 @@ addons:
 					_, err := tileBuilder.Build([]string{
 						"/path/to/release-1.tgz",
 					}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
-					Expect(err).To(MatchError("runtime config MY-RUNTIME-CONFIG references unknown release release-2"))
+					Expect(err).To(MatchError("runtime config MY-RUNTIME-CONFIG references unknown release non-existent-release"))
 				})
 			})
 
 			Context("when the runtime config contains yaml that isn't well-formed", func() {
 				It("returns an error", func() {
-					releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
-						switch path {
-						case "/path/to/release-1.tgz":
-							return builder.ReleaseManifest{
-								Name:    "release-1",
-								Version: "version-1",
-							}, nil
-						default:
-							return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
-						}
-					}
-					stemcellManifestReader.ReadCall.Returns.StemcellManifest = builder.StemcellManifest{
-						Version:         "2332",
-						OperatingSystem: "ubuntu-trusty",
-					}
-
 					handcraftReader.ReadCall.Returns.Handcraft = builder.Handcraft{
 						"metadata_version":          "some-metadata-version",
 						"provides_product_versions": "some-provides-product-versions",
