@@ -70,16 +70,52 @@ var _ = Describe("bake", func() {
 
 				config := tileMaker.MakeArgsForCall(0)
 				Expect(config).To(Equal(commands.BakeConfig{
-					StemcellTarball:     "some-stemcell-tarball",
-					ReleaseTarballs:     []string{"some-release-tarball", "some-other-release-tarball"},
-					Handcraft:           "some-handcraft",
-					Version:             "1.2.3-build.4",
-					FinalVersion:        "1.2.3",
-					ProductName:         "cool-product-name",
-					FilenamePrefix:      "cool-product-file",
-					OutputDir:           "some-output-dir",
-					MigrationsDirectory: "some-migrations-directory",
+					StemcellTarball:      "some-stemcell-tarball",
+					ReleaseTarballs:      []string{"some-release-tarball", "some-other-release-tarball"},
+					Handcraft:            "some-handcraft",
+					Version:              "1.2.3-build.4",
+					FinalVersion:         "1.2.3",
+					ProductName:          "cool-product-name",
+					FilenamePrefix:       "cool-product-file",
+					OutputDir:            "some-output-dir",
+					MigrationDirectories: []string{"some-migrations-directory"},
 				}))
+			})
+
+			Context("when the migration directory is specified multiple times", func() {
+				It("builds the tile", func() {
+					err := bake.Execute([]string{
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--release-tarball", "some-release-tarball",
+						"--release-tarball", "some-other-release-tarball",
+						"--migrations-directory", "some-migrations-directory",
+						"--migrations-directory", "some-other-migrations-directory",
+						"--handcraft", "some-handcraft",
+						"--version", "1.2.3-build.4",
+						"--final-version", "1.2.3",
+						"--product-name", "cool-product-name",
+						"--filename-prefix", "cool-product-file",
+						"--output-dir", "some-output-dir",
+					})
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(tileMaker.MakeCallCount()).To(Equal(1))
+
+					config := tileMaker.MakeArgsForCall(0)
+					Expect(config).To(Equal(commands.BakeConfig{
+						StemcellTarball:      "some-stemcell-tarball",
+						ReleaseTarballs:      []string{"some-release-tarball", "some-other-release-tarball"},
+						Handcraft:            "some-handcraft",
+						Version:              "1.2.3-build.4",
+						FinalVersion:         "1.2.3",
+						ProductName:          "cool-product-name",
+						FilenamePrefix:       "cool-product-file",
+						OutputDir:            "some-output-dir",
+						MigrationDirectories: []string{"some-migrations-directory", "some-other-migrations-directory"},
+					}))
+
+				})
+
 			})
 		})
 

@@ -85,7 +85,7 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 		return config, errors.New("--output-dir is a required parameter")
 	}
 
-	if config.MigrationsDirectory != "" && len(config.ContentMigrations) > 0 {
+	if len(config.MigrationDirectories) > 0 && len(config.ContentMigrations) > 0 {
 		return config, errors.New("cannot build a tile with content migrations and migrations")
 	}
 
@@ -93,7 +93,7 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 		return config, errors.New("base content migration is required when content migrations are provided")
 	}
 
-	if config.MigrationsDirectory != "" && config.BaseContentMigration != "" {
+	if len(config.MigrationDirectories) > 0 && config.BaseContentMigration != "" {
 		return config, errors.New("cannot build a tile with a base content migration and migrations")
 	}
 

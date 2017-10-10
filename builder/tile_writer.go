@@ -81,10 +81,12 @@ func (w TileWriter) Write(metadataContents []byte, config commands.BakeConfig) e
 		return err
 	}
 
-	if config.MigrationsDirectory != "" {
-		err = w.addMigrations(files, config.MigrationsDirectory)
-		if err != nil {
-			return err
+	if len(config.MigrationDirectories) > 0 {
+		for _, migrationsDir := range config.MigrationDirectories {
+			err = w.addMigrations(files, migrationsDir)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

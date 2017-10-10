@@ -259,6 +259,7 @@ property_blueprints:
 			"--release-tarball", cfReleaseTarball,
 			"--stemcell-tarball", stemcellTarball,
 			"--handcraft", handcraft,
+			"--migrations-directory", "fixtures/extra-migrations",
 			"--migrations-directory", "fixtures/migrations",
 			"--version", "7.8.9-build.4",
 			"--final-version", "7.8.9",
@@ -283,6 +284,7 @@ property_blueprints:
 		var (
 			archivedMigration1 io.ReadCloser
 			archivedMigration2 io.ReadCloser
+			archivedMigration3 io.ReadCloser
 		)
 
 		for _, f := range zr.File {
@@ -295,6 +297,11 @@ property_blueprints:
 				archivedMigration2, err = f.Open()
 				Expect(err).NotTo(HaveOccurred())
 			}
+
+			if f.Name == "migrations/v1/some_migration.js" {
+				archivedMigration3, err = f.Open()
+				Expect(err).NotTo(HaveOccurred())
+			}
 		}
 
 		contents, err := ioutil.ReadAll(archivedMigration1)
@@ -304,6 +311,10 @@ property_blueprints:
 		contents, err = ioutil.ReadAll(archivedMigration2)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("auth-enterprise-sso-migration\n"))
+
+		contents, err = ioutil.ReadAll(archivedMigration3)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(contents)).To(Equal("some_migration\n"))
 	})
 
 	It("logs the progress to stdout", func() {
