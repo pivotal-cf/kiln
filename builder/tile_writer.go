@@ -76,7 +76,7 @@ func (w TileWriter) Write(metadataContents []byte, config commands.BakeConfig) e
 
 	files[filepath.Join("metadata", fmt.Sprintf("%s.yml", config.ProductName))] = bytes.NewBuffer(metadataContents)
 
-	err = w.addReleaseTarballs(files, config.ReleaseTarballs, config.StubReleases)
+	err = w.addReleaseTarballs(files, config.ReleasesDirectory, config.StubReleases)
 	if err != nil {
 		return err
 	}
@@ -142,21 +142,28 @@ func (w TileWriter) Write(metadataContents []byte, config commands.BakeConfig) e
 	return nil
 }
 
-func (w TileWriter) addReleaseTarballs(files map[string]io.Reader, releaseTarballs []string, stubReleases bool) error {
-	for _, r := range releaseTarballs {
+func (w TileWriter) addReleaseTarballs(files map[string]io.Reader, releasesDir string, stubReleases bool) error {
+	return w.filesystem.Walk(releasesDir, func(filePath string, info os.FileInfo, err error) error {
 		var file io.Reader = strings.NewReader("")
-		var err error
+
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
 
 		if !stubReleases {
-			file, err = w.filesystem.Open(r)
+			file, err = w.filesystem.Open(filePath)
 			if err != nil {
 				return err
 			}
 		}
+		files[filepath.Join("releases", filepath.Base(filePath))] = file
 
-		files[filepath.Join("releases", filepath.Base(r))] = file
-	}
-	return nil
+		return nil
+	})
 }
 
 func (w TileWriter) addMigrations(files map[string]io.Reader, migrationsDir string) error {

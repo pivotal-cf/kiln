@@ -2,6 +2,8 @@ package kiln_test
 
 import (
 	"errors"
+	"io/ioutil"
+	"os"
 
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
@@ -18,11 +20,21 @@ var _ = Describe("TileMaker", func() {
 		fakeTileWriter      *fakes.TileWriter
 		fakeLogger          *fakes.Logger
 
-		config    commands.BakeConfig
-		tileMaker kiln.TileMaker
+		config      commands.BakeConfig
+		tileMaker   kiln.TileMaker
+		releasesDir string
+		releases    []string
+		err         error
 	)
 
 	BeforeEach(func() {
+		releasesDir, err = ioutil.TempDir("", "")
+		Expect(err).NotTo(HaveOccurred())
+
+		file, err := ioutil.TempFile(releasesDir, "")
+		Expect(err).NotTo(HaveOccurred())
+		releases = []string{file.Name()}
+
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
@@ -33,7 +45,7 @@ var _ = Describe("TileMaker", func() {
 			Version:              "1.2.3-build.4",
 			FinalVersion:         "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
-			ReleaseTarballs:      []string{"some-release-tarball", "some-other-release-tarball"},
+			ReleasesDirectory:    releasesDir,
 			Handcraft:            "some-handcraft",
 			MigrationDirectories: []string{"some-migrations-directory"},
 			BaseContentMigration: "some-base-content-migration",
@@ -44,6 +56,10 @@ var _ = Describe("TileMaker", func() {
 		tileMaker = kiln.NewTileMaker(fakeMetadataBuilder, fakeTileWriter, fakeLogger)
 	})
 
+	AfterEach(func() {
+		os.Remove(releasesDir)
+	})
+
 	It("builds the metadata", func() {
 		err := tileMaker.Make(config)
 		Expect(err).NotTo(HaveOccurred())
@@ -51,7 +67,7 @@ var _ = Describe("TileMaker", func() {
 		Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 
 		releaseTarballs, stemcellTarball, handcraft, name, version := fakeMetadataBuilder.BuildArgsForCall(0)
-		Expect(releaseTarballs).To(Equal([]string{"some-release-tarball", "some-other-release-tarball"}))
+		Expect(releaseTarballs).To(Equal(releases))
 		Expect(stemcellTarball).To(Equal("some-stemcell-tarball"))
 		Expect(handcraft).To(Equal("some-handcraft"))
 		Expect(name).To(Equal("cool-product-name"))
@@ -95,7 +111,7 @@ stemcell_criteria:
 			Version:              "1.2.3-build.4",
 			FinalVersion:         "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
-			ReleaseTarballs:      []string{"some-release-tarball", "some-other-release-tarball"},
+			ReleasesDirectory:    releasesDir,
 			Handcraft:            "some-handcraft",
 			MigrationDirectories: []string{"some-migrations-directory"},
 			BaseContentMigration: "some-base-content-migration",

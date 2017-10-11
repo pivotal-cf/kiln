@@ -53,8 +53,8 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 		panic(err)
 	}
 
-	if len(config.ReleaseTarballs) == 0 {
-		return config, errors.New("Please specify at least one release tarball with the --release-tarball parameter")
+	if len(config.ReleasesDirectory) == 0 {
+		return config, errors.New("Please specify release tarballs directory with the --releases-directory parameter")
 	}
 
 	if config.StemcellTarball == "" {

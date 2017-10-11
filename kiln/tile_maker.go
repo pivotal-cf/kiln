@@ -1,6 +1,9 @@
 package kiln
 
 import (
+	"io/ioutil"
+	"path/filepath"
+
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	yaml "gopkg.in/yaml.v2"
@@ -35,8 +38,18 @@ func NewTileMaker(metadataBuilder metadataBuilder, tileWriter tileWriter, logger
 }
 
 func (t TileMaker) Make(config commands.BakeConfig) error {
+	files, err := ioutil.ReadDir(config.ReleasesDirectory)
+	if err != nil {
+		return err
+	}
+
+	var releaseTarballs []string
+	for _, file := range files {
+		releaseTarballs = append(releaseTarballs, filepath.Join(config.ReleasesDirectory, file.Name()))
+	}
+
 	metadata, err := t.metadataBuilder.Build(
-		config.ReleaseTarballs,
+		releaseTarballs,
 		config.StemcellTarball,
 		config.Handcraft,
 		config.ProductName,

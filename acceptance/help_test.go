@@ -27,7 +27,7 @@ Usage: kiln [options] bake [<args>]
   -h, --help  bool  prints this usage information (default: false)
 
 Command Arguments:
-  -rt, --release-tarball          slice   location of the release tarball
+  -rd, --releases-directory       string  path to the release tarballs directory
   -m, --migrations-directory      slice   path to the migrations directory
   -cm, --content-migration        slice   location of the content migration file
   -bcm, --base-content-migration  string  location of the base content migration file

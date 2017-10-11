@@ -24,8 +24,7 @@ var _ = Describe("bake", func() {
 		It("builds the tile", func() {
 			err := bake.Execute([]string{
 				"--stemcell-tarball", "some-stemcell-tarball",
-				"--release-tarball", "some-release-tarball",
-				"--release-tarball", "some-other-release-tarball",
+				"--releases-directory", "some-release-tarball-directory",
 				"--handcraft", "some-handcraft",
 				"--version", "1.2.3-build.4",
 				"--final-version", "1.2.3",
@@ -39,14 +38,14 @@ var _ = Describe("bake", func() {
 
 			config := tileMaker.MakeArgsForCall(0)
 			Expect(config).To(Equal(commands.BakeConfig{
-				StemcellTarball: "some-stemcell-tarball",
-				ReleaseTarballs: []string{"some-release-tarball", "some-other-release-tarball"},
-				Handcraft:       "some-handcraft",
-				Version:         "1.2.3-build.4",
-				FinalVersion:    "1.2.3",
-				ProductName:     "cool-product-name",
-				FilenamePrefix:  "cool-product-file",
-				OutputDir:       "some-output-dir",
+				StemcellTarball:   "some-stemcell-tarball",
+				ReleasesDirectory: "some-release-tarball-directory",
+				Handcraft:         "some-handcraft",
+				Version:           "1.2.3-build.4",
+				FinalVersion:      "1.2.3",
+				ProductName:       "cool-product-name",
+				FilenamePrefix:    "cool-product-file",
+				OutputDir:         "some-output-dir",
 			}))
 		})
 
@@ -54,8 +53,7 @@ var _ = Describe("bake", func() {
 			It("builds the tile", func() {
 				err := bake.Execute([]string{
 					"--stemcell-tarball", "some-stemcell-tarball",
-					"--release-tarball", "some-release-tarball",
-					"--release-tarball", "some-other-release-tarball",
+					"--releases-directory", "some-release-tarball-directory",
 					"--migrations-directory", "some-migrations-directory",
 					"--handcraft", "some-handcraft",
 					"--version", "1.2.3-build.4",
@@ -71,7 +69,7 @@ var _ = Describe("bake", func() {
 				config := tileMaker.MakeArgsForCall(0)
 				Expect(config).To(Equal(commands.BakeConfig{
 					StemcellTarball:      "some-stemcell-tarball",
-					ReleaseTarballs:      []string{"some-release-tarball", "some-other-release-tarball"},
+					ReleasesDirectory:    "some-release-tarball-directory",
 					Handcraft:            "some-handcraft",
 					Version:              "1.2.3-build.4",
 					FinalVersion:         "1.2.3",
@@ -86,8 +84,7 @@ var _ = Describe("bake", func() {
 				It("builds the tile", func() {
 					err := bake.Execute([]string{
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--release-tarball", "some-release-tarball",
-						"--release-tarball", "some-other-release-tarball",
+						"--releases-directory", "some-release-tarball-directory",
 						"--migrations-directory", "some-migrations-directory",
 						"--migrations-directory", "some-other-migrations-directory",
 						"--handcraft", "some-handcraft",
@@ -104,7 +101,7 @@ var _ = Describe("bake", func() {
 					config := tileMaker.MakeArgsForCall(0)
 					Expect(config).To(Equal(commands.BakeConfig{
 						StemcellTarball:      "some-stemcell-tarball",
-						ReleaseTarballs:      []string{"some-release-tarball", "some-other-release-tarball"},
+						ReleasesDirectory:    "some-release-tarball-directory",
 						Handcraft:            "some-handcraft",
 						Version:              "1.2.3-build.4",
 						FinalVersion:         "1.2.3",
@@ -122,8 +119,7 @@ var _ = Describe("bake", func() {
 		It("builds the tile", func() {
 			err := bake.Execute([]string{
 				"--stemcell-tarball", "some-stemcell-tarball",
-				"--release-tarball", "some-release-tarball",
-				"--release-tarball", "some-other-release-tarball",
+				"--releases-directory", "some-release-tarball-directory",
 				"--handcraft", "some-handcraft",
 				"--version", "1.2.3-build.4",
 				"--final-version", "1.2.3",
@@ -137,14 +133,14 @@ var _ = Describe("bake", func() {
 
 			config := tileMaker.MakeArgsForCall(0)
 			Expect(config).To(Equal(commands.BakeConfig{
-				StemcellTarball: "some-stemcell-tarball",
-				ReleaseTarballs: []string{"some-release-tarball", "some-other-release-tarball"},
-				Handcraft:       "some-handcraft",
-				Version:         "1.2.3-build.4",
-				FinalVersion:    "1.2.3",
-				ProductName:     "cool-product-name",
-				FilenamePrefix:  "cool-product-file",
-				OutputDir:       "some-output-dir",
+				StemcellTarball:   "some-stemcell-tarball",
+				ReleasesDirectory: "some-release-tarball-directory",
+				Handcraft:         "some-handcraft",
+				Version:           "1.2.3-build.4",
+				FinalVersion:      "1.2.3",
+				ProductName:       "cool-product-name",
+				FilenamePrefix:    "cool-product-file",
+				OutputDir:         "some-output-dir",
 			}))
 		})
 
@@ -152,8 +148,7 @@ var _ = Describe("bake", func() {
 			Context("when content migrations are provided", func() {
 				It("returns an error when base content migration is not provided", func() {
 					err := bake.Execute([]string{
-						"--release-tarball", "some-release-tarball",
-						"--release-tarball", "some-other-release-tarball",
+						"--releases-directory", "some-release-tarball-directory",
 						"--content-migration", "some-migration",
 						"--content-migration", "some-other-migration",
 						"--stemcell-tarball", "some-stemcell-tarball",
@@ -185,15 +180,14 @@ var _ = Describe("bake", func() {
 						"--stub-releases",
 					})
 
-					Expect(err).To(MatchError("Please specify at least one release tarball with the --release-tarball parameter"))
+					Expect(err).To(MatchError("Please specify release tarballs directory with the --releases-directory parameter"))
 				})
 			})
 
 			Context("when the stemcell-tarball flag is missing", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
-						"--release-tarball", "some-release-tarball",
-						"--release-tarball", "some-other-release-tarball",
+						"--releases-directory", "some-release-tarball-directory",
 						"--content-migration", "some-content-migration",
 						"--content-migration", "some-other-content-migration",
 						"--base-content-migration", "some-base-content-migration",
@@ -213,8 +207,7 @@ var _ = Describe("bake", func() {
 			Context("when the handcraft flag is missing", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
-						"--release-tarball", "some-release-tarball",
-						"--release-tarball", "some-other-release-tarball",
+						"--releases-directory", "some-release-tarball-directory",
 						"--content-migration", "some-content-migration",
 						"--content-migration", "some-other-content-migration",
 						"--base-content-migration", "some-base-content-migration",
@@ -234,8 +227,7 @@ var _ = Describe("bake", func() {
 			Context("when the version flag is missing", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
-						"--release-tarball", "some-release-tarball",
-						"--release-tarball", "some-other-release-tarball",
+						"--releases-directory", "some-release-tarball-directory",
 						"--content-migration", "some-content-migration",
 						"--content-migration", "some-other-content-migration",
 						"--base-content-migration", "some-base-content-migration",
@@ -255,8 +247,7 @@ var _ = Describe("bake", func() {
 			Context("when the final-version flag is missing", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
-						"--release-tarball", "some-release-tarball",
-						"--release-tarball", "some-other-release-tarball",
+						"--releases-directory", "some-release-tarball-directory",
 						"--content-migration", "some-content-migration",
 						"--content-migration", "some-other-content-migration",
 						"--base-content-migration", "some-base-content-migration",
@@ -276,8 +267,7 @@ var _ = Describe("bake", func() {
 			Context("when the product-name flag is missing", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
-						"--release-tarball", "some-release-tarball",
-						"--release-tarball", "some-other-release-tarball",
+						"--releases-directory", "some-release-tarball-directory",
 						"--content-migration", "some-content-migration",
 						"--content-migration", "some-other-content-migration",
 						"--base-content-migration", "some-base-content-migration",
@@ -297,8 +287,7 @@ var _ = Describe("bake", func() {
 			Context("when the filename-prefix flag is missing", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
-						"--release-tarball", "some-release-tarball",
-						"--release-tarball", "some-other-release-tarball",
+						"--releases-directory", "some-release-tarball-directory",
 						"--content-migration", "some-content-migration",
 						"--content-migration", "some-other-content-migration",
 						"--base-content-migration", "some-base-content-migration",
@@ -318,8 +307,7 @@ var _ = Describe("bake", func() {
 			Context("when the output-dir is missing", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
-						"--release-tarball", "some-release-tarball",
-						"--release-tarball", "some-other-release-tarball",
+						"--releases-directory", "some-release-tarball-directory",
 						"--content-migration", "some-content-migration",
 						"--content-migration", "some-other-content-migration",
 						"--base-content-migration", "some-base-content-migration",
@@ -339,8 +327,7 @@ var _ = Describe("bake", func() {
 			Context("when content migrations and migrations are provided", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
-						"--release-tarball", "some-release-tarball",
-						"--release-tarball", "some-other-release-tarball",
+						"--releases-directory", "some-release-tarball-directory",
 						"--migrations-directory", "some-migrations-directory",
 						"--content-migration", "some-content-migration",
 						"--content-migration", "some-other-content-migration",
@@ -361,8 +348,7 @@ var _ = Describe("bake", func() {
 			Context("when base content migrations and migrations are provided", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
-						"--release-tarball", "some-release-tarball",
-						"--release-tarball", "some-other-release-tarball",
+						"--releases-directory", "some-release-tarball-directory",
 						"--migrations-directory", "some-migrations-directory",
 						"--base-content-migration", "some-base-content-migration",
 						"--stemcell-tarball", "some-stemcell-tarball",

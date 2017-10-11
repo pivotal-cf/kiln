@@ -41,7 +41,7 @@ var _ = Describe("TileWriter", func() {
 			config := commands.BakeConfig{
 				ProductName:          "cool-product-name",
 				FilenamePrefix:       "cool-product-file",
-				ReleaseTarballs:      []string{"/some/path/release-1.tgz", "/some/path/release-2.tgz"},
+				ReleasesDirectory:    "/some/path/releases",
 				MigrationDirectories: []string{"/some/path/migrations", "/some/other/path/migrations"},
 				ContentMigrations:    []string{"/some/path/content-migration-1.yml", "/some/path/content-migration-2.yml"},
 				BaseContentMigration: "/some/path/base-content-migration.yml",
@@ -55,11 +55,18 @@ var _ = Describe("TileWriter", func() {
 			dirInfo := &fakes.FileInfo{}
 			dirInfo.IsDirReturns(true)
 
+			releaseInfo := &fakes.FileInfo{}
+			releaseInfo.IsDirReturns(false)
+
 			migrationInfo := &fakes.FileInfo{}
 			migrationInfo.IsDirReturns(false)
 
 			filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 				switch root {
+				case "/some/path/releases":
+					walkFn("/some/path/releases", dirInfo, nil)
+					walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
+					walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
 				case "/some/path/migrations":
 					walkFn("/some/path/migrations", dirInfo, nil)
 					walkFn("/some/path/migrations/migration-1.js", migrationInfo, nil)
@@ -75,9 +82,9 @@ var _ = Describe("TileWriter", func() {
 
 			filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
 				switch path {
-				case "/some/path/release-1.tgz":
+				case "/some/path/releases/release-1.tgz":
 					return NewBuffer(bytes.NewBuffer([]byte("release-1"))), errorWhenAttemptingToOpenRelease
-				case "/some/path/release-2.tgz":
+				case "/some/path/releases/release-2.tgz":
 					return NewBuffer(bytes.NewBuffer([]byte("release-2"))), errorWhenAttemptingToOpenRelease
 				case "/some/path/migrations/migration-1.js":
 					return NewBuffer(bytes.NewBuffer([]byte("migration-1"))), nil
@@ -148,69 +155,99 @@ var _ = Describe("TileWriter", func() {
 			Entry("with stubbed releases", true, "", "", errors.New("don't open release")),
 		)
 
-		Context("when no migrations are provided", func() {
-			It("creates empty migrations/v1 folder", func() {
-				config := commands.BakeConfig{
-					ProductName:          "cool-product-name",
-					FilenamePrefix:       "cool-product-file",
-					ReleaseTarballs:      []string{"/some/path/release-1.tgz", "/some/path/release-2.tgz"},
-					MigrationDirectories: []string{},
-					ContentMigrations:    []string{},
-					BaseContentMigration: "",
-					Version:              "1.2.3-build.4",
-					FinalVersion:         "1.2.3",
-					StubReleases:         false,
-				}
-
-				err := tileWriter.Write([]byte("metadata-contents"), config)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-					"Creating empty migrations folder in .pivotal...",
-					"Adding metadata/cool-product-name.yml to .pivotal...",
-					"Adding releases/release-1.tgz to .pivotal...",
-					"Adding releases/release-2.tgz to .pivotal...",
-					"Calculated md5 sum: ",
-				}))
-				Expect(zipper.CreateFolderCall.CallCount).To(Equal(1))
-				Expect(zipper.CreateFolderCall.Receives.Path).To(Equal(filepath.Join("migrations", "v1")))
-			})
-		})
-
-		Context("when the migrations directory is empty", func() {
-			It("creates empty migrations/v1 folder", func() {
-
+		Context("when releases directory is provided", func() {
+			BeforeEach(func() {
 				dirInfo := &fakes.FileInfo{}
 				dirInfo.IsDirReturns(true)
+
+				releaseInfo := &fakes.FileInfo{}
+				releaseInfo.IsDirReturns(false)
+
 				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
-					walkFn("/some/path/migrations", dirInfo, nil)
+					switch root {
+					case "/some/path/releases":
+						walkFn("/some/path/releases", dirInfo, nil)
+						walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
+						walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
+						walkFn(root, dirInfo, nil)
+					case "/some/path/migrations":
+						walkFn("/some/path/migrations", dirInfo, nil)
+					default:
+						return nil
+					}
+
 					return nil
 				}
 
-				config := commands.BakeConfig{
-					ProductName:          "cool-product-name",
-					FilenamePrefix:       "cool-product-file",
-					ReleaseTarballs:      []string{"/some/path/release-1.tgz", "/some/path/release-2.tgz"},
-					MigrationDirectories: []string{"/some/path/migrations"},
-					ContentMigrations:    []string{},
-					BaseContentMigration: "",
-					Version:              "1.2.3-build.4",
-					FinalVersion:         "1.2.3",
-					StubReleases:         false,
+				filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
+					if path == "/some/path/releases/release-1.tgz" {
+						return NewBuffer(bytes.NewBufferString("release-1")), nil
+					}
+
+					if path == "/some/path/releases/release-2.tgz" {
+						return NewBuffer(bytes.NewBufferString("release-1")), nil
+					}
+
+					return nil, nil
 				}
+			})
 
-				err := tileWriter.Write([]byte("metadata-contents"), config)
-				Expect(err).NotTo(HaveOccurred())
+			Context("and no migrations are provided", func() {
+				It("creates empty migrations/v1 folder", func() {
+					config := commands.BakeConfig{
+						ProductName:          "cool-product-name",
+						FilenamePrefix:       "cool-product-file",
+						ReleasesDirectory:    "/some/path/releases",
+						MigrationDirectories: []string{},
+						ContentMigrations:    []string{},
+						BaseContentMigration: "",
+						Version:              "1.2.3-build.4",
+						FinalVersion:         "1.2.3",
+						StubReleases:         false,
+					}
 
-				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-					"Creating empty migrations folder in .pivotal...",
-					"Adding metadata/cool-product-name.yml to .pivotal...",
-					"Adding releases/release-1.tgz to .pivotal...",
-					"Adding releases/release-2.tgz to .pivotal...",
-					"Calculated md5 sum: ",
-				}))
-				Expect(zipper.CreateFolderCall.CallCount).To(Equal(1))
-				Expect(zipper.CreateFolderCall.Receives.Path).To(Equal(filepath.Join("migrations", "v1")))
+					err := tileWriter.Write([]byte("metadata-contents"), config)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
+						"Creating empty migrations folder in .pivotal...",
+						"Adding metadata/cool-product-name.yml to .pivotal...",
+						"Adding releases/release-1.tgz to .pivotal...",
+						"Adding releases/release-2.tgz to .pivotal...",
+						"Calculated md5 sum: ",
+					}))
+					Expect(zipper.CreateFolderCall.CallCount).To(Equal(1))
+					Expect(zipper.CreateFolderCall.Receives.Path).To(Equal(filepath.Join("migrations", "v1")))
+				})
+			})
+
+			Context("and the migrations directory is empty", func() {
+				It("creates empty migrations/v1 folder", func() {
+					config := commands.BakeConfig{
+						ProductName:          "cool-product-name",
+						FilenamePrefix:       "cool-product-file",
+						ReleasesDirectory:    "/some/path/releases",
+						MigrationDirectories: []string{"/some/path/migrations"},
+						ContentMigrations:    []string{},
+						BaseContentMigration: "",
+						Version:              "1.2.3-build.4",
+						FinalVersion:         "1.2.3",
+						StubReleases:         false,
+					}
+
+					err := tileWriter.Write([]byte("metadata-contents"), config)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
+						"Creating empty migrations folder in .pivotal...",
+						"Adding metadata/cool-product-name.yml to .pivotal...",
+						"Adding releases/release-1.tgz to .pivotal...",
+						"Adding releases/release-2.tgz to .pivotal...",
+						"Calculated md5 sum: ",
+					}))
+					Expect(zipper.CreateFolderCall.CallCount).To(Equal(1))
+					Expect(zipper.CreateFolderCall.Receives.Path).To(Equal(filepath.Join("migrations", "v1")))
+				})
 			})
 		})
 
@@ -230,10 +267,29 @@ var _ = Describe("TileWriter", func() {
 
 			Context("when a release file cannot be opened", func() {
 				It("returns an error", func() {
-					filesystem.OpenReturns(nil, errors.New("failed to open release"))
+					dirInfo := &fakes.FileInfo{}
+					dirInfo.IsDirReturns(true)
+
+					releaseInfo := &fakes.FileInfo{}
+					releaseInfo.IsDirReturns(false)
+
+					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
+						walkFn("/some/path/releases", dirInfo, nil)
+						err := walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
+
+						return err
+					}
+
+					filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
+						if path == "/some/path/releases/release-1.tgz" {
+							return nil, errors.New("failed to open release")
+						}
+
+						return nil, nil
+					}
 
 					config := commands.BakeConfig{
-						ReleaseTarballs: []string{"/some/path/release-1.tgz"},
+						ReleasesDirectory: "/some/path/releases",
 					}
 
 					err := tileWriter.Write([]byte("metadata-contents"), config)
@@ -246,12 +302,22 @@ var _ = Describe("TileWriter", func() {
 					dirInfo := &fakes.FileInfo{}
 					dirInfo.IsDirReturns(true)
 
+					releaseInfo := &fakes.FileInfo{}
+					releaseInfo.IsDirReturns(false)
+
 					migrationInfo := &fakes.FileInfo{}
 					migrationInfo.IsDirReturns(false)
 
 					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 						walkFn("/some/path/migrations", dirInfo, nil)
 						err := walkFn("/some/path/migrations/migration-1.js", migrationInfo, nil)
+						if err != nil {
+							return err
+						}
+
+						walkFn("/some/path/releases", dirInfo, nil)
+						err = walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
+
 						return err
 					}
 
@@ -260,11 +326,15 @@ var _ = Describe("TileWriter", func() {
 							return nil, errors.New("failed to open migration")
 						}
 
-						return NewBuffer(bytes.NewBufferString("release-1")), nil
+						if path == "/some/path/releases/release-1.tgz" {
+							return NewBuffer(bytes.NewBufferString("release-1")), nil
+						}
+
+						return nil, nil
 					}
 
 					config := commands.BakeConfig{
-						ReleaseTarballs:      []string{"/some/path/release-1.tgz"},
+						ReleasesDirectory:    "/some/path/releases",
 						MigrationDirectories: []string{"/some/path/migrations"},
 						StubReleases:         true,
 					}

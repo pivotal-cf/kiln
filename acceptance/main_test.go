@@ -19,8 +19,7 @@ var _ = Describe("kiln", func() {
 	var (
 		tileDir              string
 		tempDir              string
-		cfReleaseTarball     string
-		diegoReleaseTarball  string
+		releaseTarballDir    string
 		stemcellTarball      string
 		handcraft            string
 		baseContentMigration string
@@ -32,6 +31,9 @@ var _ = Describe("kiln", func() {
 		tileDir, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
+		releaseTarballDir, err = ioutil.TempDir("", "")
+		Expect(err).NotTo(HaveOccurred())
+
 		tempDir, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -40,7 +42,7 @@ name: cf
 version: 235
 `
 
-		cfReleaseTarball, err = createTarball(tempDir, "cf-release-235.0.0-3215.4.0.tgz", "release.MF", cfReleaseManifest)
+		_, err = createTarball(releaseTarballDir, "cf-release-235.0.0-3215.4.0.tgz", "release.MF", cfReleaseManifest)
 		Expect(err).NotTo(HaveOccurred())
 
 		diegoReleaseManifest := `---
@@ -49,7 +51,7 @@ version: 0.1467.1
 key: value
 `
 
-		diegoReleaseTarball, err = createTarball(tempDir, "diego-release-0.1467.1-3215.4.0.tgz", "release.MF", diegoReleaseManifest)
+		_, err = createTarball(releaseTarballDir, "diego-release-0.1467.1-3215.4.0.tgz", "release.MF", diegoReleaseManifest)
 		Expect(err).NotTo(HaveOccurred())
 
 		stemcellManifest := `---
@@ -119,8 +121,7 @@ rules:
 		command := exec.Command(pathToMain,
 			"bake",
 			"--stemcell-tarball", stemcellTarball,
-			"--release-tarball", cfReleaseTarball,
-			"--release-tarball", diegoReleaseTarball,
+			"--releases-directory", releaseTarballDir,
 			"--handcraft", handcraft,
 			"--version", "1.2.3-build.4",
 			"--final-version", "1.2.3",
@@ -198,65 +199,10 @@ property_blueprints:
 `))
 	})
 
-	It("copies the tarballs to the releases directory", func() {
-		command := exec.Command(pathToMain,
-			"bake",
-			"--release-tarball", cfReleaseTarball,
-			"--release-tarball", diegoReleaseTarball,
-			"--stemcell-tarball", stemcellTarball,
-			"--handcraft", handcraft,
-			"--version", "4.5.6-build.4",
-			"--final-version", "4.5.6",
-			"--product-name", "cool-product-name",
-			"--filename-prefix", "cool-product",
-			"--output-dir", tileDir)
-
-		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(session).Should(gexec.Exit(0))
-
-		archive, err := os.Open(filepath.Join(tileDir, "cool-product-4.5.6-build.4.pivotal"))
-		Expect(err).NotTo(HaveOccurred())
-
-		archiveInfo, err := archive.Stat()
-		Expect(err).NotTo(HaveOccurred())
-
-		zr, err := zip.NewReader(archive, archiveInfo.Size())
-		Expect(err).NotTo(HaveOccurred())
-
-		archivedCFReleaseTarball, err := ioutil.TempFile("", "")
-		Expect(err).NotTo(HaveOccurred())
-
-		archivedDiegoReleaseTarball, err := ioutil.TempFile("", "")
-		Expect(err).NotTo(HaveOccurred())
-
-		for _, f := range zr.File {
-			if f.Name == "releases/cf-release-235.0.0-3215.4.0.tgz" {
-				file, err := f.Open()
-				Expect(err).NotTo(HaveOccurred())
-
-				_, err = io.Copy(archivedCFReleaseTarball, file)
-				Expect(err).NotTo(HaveOccurred())
-			}
-
-			if f.Name == "releases/diego-release-0.1467.1-3215.4.0.tgz" {
-				file, err := f.Open()
-				Expect(err).NotTo(HaveOccurred())
-
-				_, err = io.Copy(archivedDiegoReleaseTarball, file)
-				Expect(err).NotTo(HaveOccurred())
-			}
-		}
-
-		Expect(archivedCFReleaseTarball.Name()).To(MatchSHASumOf(cfReleaseTarball))
-		Expect(archivedDiegoReleaseTarball.Name()).To(MatchSHASumOf(diegoReleaseTarball))
-	})
-
 	It("copies the migrations to the migrations/v1 directory", func() {
 		command := exec.Command(pathToMain,
 			"bake",
-			"--release-tarball", cfReleaseTarball,
+			"--releases-directory", releaseTarballDir,
 			"--stemcell-tarball", stemcellTarball,
 			"--handcraft", handcraft,
 			"--migrations-directory", "fixtures/extra-migrations",
@@ -320,8 +266,7 @@ property_blueprints:
 	It("logs the progress to stdout", func() {
 		command := exec.Command(pathToMain,
 			"bake",
-			"--release-tarball", cfReleaseTarball,
-			"--release-tarball", diegoReleaseTarball,
+			"--releases-directory", releaseTarballDir,
 			"--stemcell-tarball", stemcellTarball,
 			"--handcraft", handcraft,
 			"--migrations-directory", "fixtures/migrations",
@@ -356,8 +301,7 @@ property_blueprints:
 		It("creates a tile with empty release tarballs", func() {
 			command := exec.Command(pathToMain,
 				"bake",
-				"--release-tarball", cfReleaseTarball,
-				"--release-tarball", diegoReleaseTarball,
+				"--releases-directory", releaseTarballDir,
 				"--stemcell-tarball", stemcellTarball,
 				"--handcraft", handcraft,
 				"--version", "4.5.6-build.4",
@@ -397,7 +341,7 @@ property_blueprints:
 		It("creates empty migrations folder", func() {
 			command := exec.Command(pathToMain,
 				"bake",
-				"--release-tarball", cfReleaseTarball,
+				"--releases-directory", releaseTarballDir,
 				"--stemcell-tarball", stemcellTarball,
 				"--handcraft", handcraft,
 				"--version", "7.8.9-build.4",
@@ -436,7 +380,7 @@ property_blueprints:
 		It("generates the correct content migration file", func() {
 			command := exec.Command(pathToMain,
 				"bake",
-				"--release-tarball", cfReleaseTarball,
+				"--releases-directory", releaseTarballDir,
 				"--stemcell-tarball", stemcellTarball,
 				"--handcraft", handcraft,
 				"--content-migration", contentMigration,
@@ -503,8 +447,7 @@ runtime_configs:
 			command := exec.Command(pathToMain,
 				"bake",
 				"--stemcell-tarball", stemcellTarball,
-				"--release-tarball", cfReleaseTarball,
-				"--release-tarball", diegoReleaseTarball,
+				"--releases-directory", releaseTarballDir,
 				"--handcraft", handcraft,
 				"--version", "1.2.3-build.4",
 				"--final-version", "1.2.3",
@@ -571,7 +514,7 @@ runtime_configs:
 			It("prints an error and exits 1", func() {
 				command := exec.Command(pathToMain,
 					"bake",
-					"--release-tarball", "missing-file",
+					"--releases-directory", "missing-directory",
 					"--handcraft", "handcraft.yml",
 					"--stemcell-tarball", "stemcell.tgz",
 					"--version", "6.5.4-build.4",
@@ -584,7 +527,7 @@ runtime_configs:
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("open missing-file: no such file or directory"))
+				Expect(string(session.Err.Contents())).To(ContainSubstring("open missing-directory: no such file or directory"))
 			})
 		})
 
@@ -592,7 +535,7 @@ runtime_configs:
 			It("prints an error and exit 1", func() {
 				command := exec.Command(pathToMain,
 					"bake",
-					"--release-tarball", cfReleaseTarball,
+					"--releases-directory", releaseTarballDir,
 					"--stemcell-tarball", stemcellTarball,
 					"--handcraft", handcraft,
 					"--version", "5.5.5-build.4",
@@ -613,7 +556,7 @@ runtime_configs:
 			It("prints an error and exits 1", func() {
 				command := exec.Command(pathToMain,
 					"bake",
-					"--release-tarball", cfReleaseTarball,
+					"--releases-directory", releaseTarballDir,
 					"--content-migration", "missing-migration",
 					"--base-content-migration", baseContentMigration,
 					"--handcraft", handcraft,
