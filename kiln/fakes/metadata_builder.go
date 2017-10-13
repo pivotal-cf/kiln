@@ -8,7 +8,7 @@ import (
 )
 
 type MetadataBuilder struct {
-	BuildStub        func(releaseTarballs []string, pathToStemcell, pathToHandcraft, name, version string) (builder.Metadata, error)
+	BuildStub        func(releaseTarballs []string, pathToStemcell, pathToHandcraft, name, version, pathToTile string) (builder.Metadata, error)
 	buildMutex       sync.RWMutex
 	buildArgsForCall []struct {
 		releaseTarballs []string
@@ -16,6 +16,7 @@ type MetadataBuilder struct {
 		pathToHandcraft string
 		name            string
 		version         string
+		pathToTile      string
 	}
 	buildReturns struct {
 		result1 builder.Metadata
@@ -29,7 +30,7 @@ type MetadataBuilder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MetadataBuilder) Build(releaseTarballs []string, pathToStemcell string, pathToHandcraft string, name string, version string) (builder.Metadata, error) {
+func (fake *MetadataBuilder) Build(releaseTarballs []string, pathToStemcell string, pathToHandcraft string, name string, version string, pathToTile string) (builder.Metadata, error) {
 	var releaseTarballsCopy []string
 	if releaseTarballs != nil {
 		releaseTarballsCopy = make([]string, len(releaseTarballs))
@@ -43,11 +44,12 @@ func (fake *MetadataBuilder) Build(releaseTarballs []string, pathToStemcell stri
 		pathToHandcraft string
 		name            string
 		version         string
-	}{releaseTarballsCopy, pathToStemcell, pathToHandcraft, name, version})
-	fake.recordInvocation("Build", []interface{}{releaseTarballsCopy, pathToStemcell, pathToHandcraft, name, version})
+		pathToTile      string
+	}{releaseTarballsCopy, pathToStemcell, pathToHandcraft, name, version, pathToTile})
+	fake.recordInvocation("Build", []interface{}{releaseTarballsCopy, pathToStemcell, pathToHandcraft, name, version, pathToTile})
 	fake.buildMutex.Unlock()
 	if fake.BuildStub != nil {
-		return fake.BuildStub(releaseTarballs, pathToStemcell, pathToHandcraft, name, version)
+		return fake.BuildStub(releaseTarballs, pathToStemcell, pathToHandcraft, name, version, pathToTile)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -61,10 +63,10 @@ func (fake *MetadataBuilder) BuildCallCount() int {
 	return len(fake.buildArgsForCall)
 }
 
-func (fake *MetadataBuilder) BuildArgsForCall(i int) ([]string, string, string, string, string) {
+func (fake *MetadataBuilder) BuildArgsForCall(i int) ([]string, string, string, string, string, string) {
 	fake.buildMutex.RLock()
 	defer fake.buildMutex.RUnlock()
-	return fake.buildArgsForCall[i].releaseTarballs, fake.buildArgsForCall[i].pathToStemcell, fake.buildArgsForCall[i].pathToHandcraft, fake.buildArgsForCall[i].name, fake.buildArgsForCall[i].version
+	return fake.buildArgsForCall[i].releaseTarballs, fake.buildArgsForCall[i].pathToStemcell, fake.buildArgsForCall[i].pathToHandcraft, fake.buildArgsForCall[i].name, fake.buildArgsForCall[i].version, fake.buildArgsForCall[i].pathToTile
 }
 
 func (fake *MetadataBuilder) BuildReturns(result1 builder.Metadata, result2 error) {

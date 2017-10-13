@@ -16,7 +16,7 @@ type tileWriter interface {
 
 //go:generate counterfeiter -o ./fakes/metadata_builder.go --fake-name MetadataBuilder . metadataBuilder
 type metadataBuilder interface {
-	Build(releaseTarballs []string, pathToStemcell, pathToHandcraft, name, version string) (builder.Metadata, error)
+	Build(releaseTarballs []string, pathToStemcell, pathToHandcraft, name, version, pathToTile string) (builder.Metadata, error)
 }
 
 type logger interface {
@@ -54,6 +54,7 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 		config.Handcraft,
 		config.ProductName,
 		config.FinalVersion,
+		config.OutputFile,
 	)
 	if err != nil {
 		return err

@@ -41,8 +41,6 @@ var _ = Describe("TileMaker", func() {
 
 		config = commands.BakeConfig{
 			ProductName:          "cool-product-name",
-			FilenamePrefix:       "cool-product-file",
-			Version:              "1.2.3-build.4",
 			FinalVersion:         "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
 			ReleasesDirectory:    releasesDir,
@@ -50,7 +48,7 @@ var _ = Describe("TileMaker", func() {
 			MigrationDirectories: []string{"some-migrations-directory"},
 			BaseContentMigration: "some-base-content-migration",
 			ContentMigrations:    []string{"some-content-migration", "some-other-content-migration"},
-			OutputDir:            "some-output-dir",
+			OutputFile:           "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
 			StubReleases:         true,
 		}
 		tileMaker = kiln.NewTileMaker(fakeMetadataBuilder, fakeTileWriter, fakeLogger)
@@ -66,12 +64,13 @@ var _ = Describe("TileMaker", func() {
 
 		Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 
-		releaseTarballs, stemcellTarball, handcraft, name, version := fakeMetadataBuilder.BuildArgsForCall(0)
+		releaseTarballs, stemcellTarball, handcraft, name, version, outputPath := fakeMetadataBuilder.BuildArgsForCall(0)
 		Expect(releaseTarballs).To(Equal(releases))
 		Expect(stemcellTarball).To(Equal("some-stemcell-tarball"))
 		Expect(handcraft).To(Equal("some-handcraft"))
 		Expect(name).To(Equal("cool-product-name"))
 		Expect(version).To(Equal("1.2.3"))
+		Expect(outputPath).To(Equal("some-output-dir/cool-product-file.1.2.3-build.4.pivotal"))
 	})
 
 	It("makes the tile", func() {
@@ -107,8 +106,6 @@ stemcell_criteria:
   requires_cpi: false`))
 		Expect(config).To(Equal(commands.BakeConfig{
 			ProductName:          "cool-product-name",
-			FilenamePrefix:       "cool-product-file",
-			Version:              "1.2.3-build.4",
 			FinalVersion:         "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
 			ReleasesDirectory:    releasesDir,
@@ -116,7 +113,7 @@ stemcell_criteria:
 			MigrationDirectories: []string{"some-migrations-directory"},
 			BaseContentMigration: "some-base-content-migration",
 			ContentMigrations:    []string{"some-content-migration", "some-other-content-migration"},
-			OutputDir:            "some-output-dir",
+			OutputFile:           "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
 			StubReleases:         true,
 		}))
 	})

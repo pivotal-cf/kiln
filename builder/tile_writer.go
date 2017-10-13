@@ -63,11 +63,9 @@ func NewTileWriter(filesystem filesystem, zipper zipper, contentMigrationBuilder
 }
 
 func (w TileWriter) Write(metadataContents []byte, config commands.BakeConfig) error {
-	w.logger.Println("Building .pivotal file...")
+	w.logger.Printf("Building %s...", config.OutputFile)
 
-	tileFileName := filepath.Join(config.OutputDir, fmt.Sprintf("%s-%s.pivotal", config.FilenamePrefix, config.Version))
-
-	err := w.zipper.SetPath(tileFileName)
+	err := w.zipper.SetPath(config.OutputFile)
 	if err != nil {
 		return err
 	}
@@ -111,14 +109,14 @@ func (w TileWriter) Write(metadataContents []byte, config commands.BakeConfig) e
 	sort.Strings(paths)
 
 	if !w.containsMigrations(paths) {
-		err = w.addEmptyMigrationsDirectory()
+		err = w.addEmptyMigrationsDirectory(config.OutputFile)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, path := range paths {
-		w.logger.Printf("Adding %s to .pivotal...", path)
+		w.logger.Printf("Adding %s to %s...", path, config.OutputFile)
 
 		err := w.zipper.Add(path, files[path])
 		if err != nil {
@@ -131,8 +129,8 @@ func (w TileWriter) Write(metadataContents []byte, config commands.BakeConfig) e
 		return err
 	}
 
-	w.logger.Println("Calculating md5 sum of .pivotal...")
-	md5Sum, err := w.md5SumCalculator.Checksum(tileFileName)
+	w.logger.Printf("Calculating md5 sum of %s...", config.OutputFile)
+	md5Sum, err := w.md5SumCalculator.Checksum(config.OutputFile)
 	if err != nil {
 		return err
 	}
@@ -196,8 +194,8 @@ func (w TileWriter) containsMigrations(entries []string) bool {
 	return false
 }
 
-func (w TileWriter) addEmptyMigrationsDirectory() error {
-	w.logger.Printf("Creating empty migrations folder in .pivotal...")
+func (w TileWriter) addEmptyMigrationsDirectory(outputFile string) error {
+	w.logger.Printf("Creating empty migrations folder in %s...", outputFile)
 	err := w.zipper.CreateFolder(filepath.Join("migrations", "v1"))
 	if err != nil {
 		return err

@@ -2,6 +2,7 @@ package acceptance
 
 import (
 	"archive/zip"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -17,19 +18,21 @@ import (
 
 var _ = Describe("kiln", func() {
 	var (
-		tileDir              string
 		tempDir              string
 		releaseTarballDir    string
 		stemcellTarball      string
 		handcraft            string
 		baseContentMigration string
 		contentMigration     string
+		outputFile           string
 	)
 
 	BeforeEach(func() {
 		var err error
-		tileDir, err = ioutil.TempDir("", "")
+		tileDir, err := ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
+
+		outputFile = filepath.Join(tileDir, "cool-product-1.2.3-build.4.pivotal")
 
 		releaseTarballDir, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
@@ -99,7 +102,7 @@ property_blueprints:
 		baseContentMigrationContents := `---
 product: my-product
 installation_schema_version: "1.6"
-to_version: "7.8.9.0$PRERELEASE_VERSION$"
+to_version: "1.2.3.0$PRERELEASE_VERSION$"
 migrations: []`
 
 		baseContentMigration = filepath.Join(tempDir, "base.yml")
@@ -111,7 +114,7 @@ from_version: 1.6.0-build.315
 rules:
   - type: update
     selector: "product_version"
-    to: "7.8.9.0$PRERELEASE_VERSION$"`
+    to: "1.2.3.0$PRERELEASE_VERSION$"`
 		contentMigration = filepath.Join(tempDir, "content_migration.yml")
 		err = ioutil.WriteFile(contentMigration, []byte(contentMigrationContents), 0644)
 		Expect(err).NotTo(HaveOccurred())
@@ -123,18 +126,17 @@ rules:
 			"--stemcell-tarball", stemcellTarball,
 			"--releases-directory", releaseTarballDir,
 			"--handcraft", handcraft,
-			"--version", "1.2.3-build.4",
 			"--final-version", "1.2.3",
 			"--product-name", "cool-product-name",
-			"--filename-prefix", "cool-product",
-			"--output-dir", tileDir)
+			"--output-file", outputFile,
+		)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(session).Should(gexec.Exit(0))
 
-		archive, err := os.Open(filepath.Join(tileDir, "cool-product-1.2.3-build.4.pivotal"))
+		archive, err := os.Open(outputFile)
 		Expect(err).NotTo(HaveOccurred())
 
 		archiveInfo, err := archive.Stat()
@@ -207,18 +209,17 @@ property_blueprints:
 			"--handcraft", handcraft,
 			"--migrations-directory", "fixtures/extra-migrations",
 			"--migrations-directory", "fixtures/migrations",
-			"--version", "7.8.9-build.4",
-			"--final-version", "7.8.9",
+			"--final-version", "1.2.3",
 			"--product-name", "cool-product-name",
-			"--filename-prefix", "cool-product",
-			"--output-dir", tileDir)
+			"--output-file", outputFile,
+		)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(session).Should(gexec.Exit(0))
 
-		archive, err := os.Open(filepath.Join(tileDir, "cool-product-7.8.9-build.4.pivotal"))
+		archive, err := os.Open(outputFile)
 		Expect(err).NotTo(HaveOccurred())
 
 		archiveInfo, err := archive.Stat()
@@ -270,30 +271,29 @@ property_blueprints:
 			"--stemcell-tarball", stemcellTarball,
 			"--handcraft", handcraft,
 			"--migrations-directory", "fixtures/migrations",
-			"--version", "3.2.1-build.4",
-			"--final-version", "3.2.1",
+			"--final-version", "1.2.3",
 			"--product-name", "cool-product-name",
-			"--filename-prefix", "cool-product",
-			"--output-dir", tileDir)
+			"--output-file", outputFile,
+		)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(session).Should(gexec.Exit(0))
 
-		Eventually(session.Out).Should(gbytes.Say("Creating metadata for .pivotal..."))
+		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Creating metadata for %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say("Read manifest for release cf"))
 		Eventually(session.Out).Should(gbytes.Say("Read manifest for stemcell version 3215.4"))
-		Eventually(session.Out).Should(gbytes.Say("Injecting version \"3.2.1\" into handcraft..."))
+		Eventually(session.Out).Should(gbytes.Say("Injecting version \"1.2.3\" into handcraft..."))
 		Eventually(session.Out).Should(gbytes.Say("Read handcraft"))
 		Eventually(session.Out).Should(gbytes.Say("Marshaling metadata file..."))
-		Eventually(session.Out).Should(gbytes.Say("Building .pivotal file..."))
-		Eventually(session.Out).Should(gbytes.Say("Adding metadata/cool-product-name.yml to .pivotal..."))
-		Eventually(session.Out).Should(gbytes.Say("Adding migrations/v1/201603041539_custom_buildpacks.js to .pivotal..."))
-		Eventually(session.Out).Should(gbytes.Say("Adding migrations/v1/201603071158_auth_enterprise_sso.js to .pivotal..."))
-		Eventually(session.Out).Should(gbytes.Say("Adding releases/cf-release-235.0.0-3215.4.0.tgz to .pivotal..."))
-		Eventually(session.Out).Should(gbytes.Say("Adding releases/diego-release-0.1467.1-3215.4.0.tgz to .pivotal..."))
-		Eventually(session.Out).Should(gbytes.Say("Calculating md5 sum of .pivotal..."))
+		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Building %s", outputFile)))
+		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile)))
+		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603041539_custom_buildpacks.js to %s...", outputFile)))
+		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603071158_auth_enterprise_sso.js to %s...", outputFile)))
+		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding releases/cf-release-235.0.0-3215.4.0.tgz to %s...", outputFile)))
+		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding releases/diego-release-0.1467.1-3215.4.0.tgz to %s...", outputFile)))
+		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Calculating md5 sum of %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say("Calculated md5 sum: [0-9a-f]{32}"))
 	})
 
@@ -304,19 +304,18 @@ property_blueprints:
 				"--releases-directory", releaseTarballDir,
 				"--stemcell-tarball", stemcellTarball,
 				"--handcraft", handcraft,
-				"--version", "4.5.6-build.4",
-				"--final-version", "4.5.6",
+				"--final-version", "1.2.3",
 				"--stub-releases",
 				"--product-name", "cool-product-name",
-				"--filename-prefix", "cool-product",
-				"--output-dir", tileDir)
+				"--output-file", outputFile,
+			)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(session).Should(gexec.Exit(0))
 
-			archive, err := os.Open(filepath.Join(tileDir, "cool-product-4.5.6-build.4.pivotal"))
+			archive, err := os.Open(outputFile)
 			Expect(err).NotTo(HaveOccurred())
 
 			archiveInfo, err := archive.Stat()
@@ -344,18 +343,17 @@ property_blueprints:
 				"--releases-directory", releaseTarballDir,
 				"--stemcell-tarball", stemcellTarball,
 				"--handcraft", handcraft,
-				"--version", "7.8.9-build.4",
-				"--final-version", "7.8.9",
+				"--final-version", "1.2.3",
 				"--product-name", "cool-product-name",
-				"--filename-prefix", "cool-product",
-				"--output-dir", tileDir)
+				"--output-file", outputFile,
+			)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(session).Should(gexec.Exit(0))
 
-			archive, err := os.Open(filepath.Join(tileDir, "cool-product-7.8.9-build.4.pivotal"))
+			archive, err := os.Open(outputFile)
 			Expect(err).NotTo(HaveOccurred())
 
 			archiveInfo, err := archive.Stat()
@@ -372,7 +370,7 @@ property_blueprints:
 				}
 			}
 			Expect(emptyMigrationsFolderMode.IsDir()).To(BeTrue())
-			Eventually(session.Out).Should(gbytes.Say("Creating empty migrations folder in .pivotal..."))
+			Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Creating empty migrations folder in %s...", outputFile)))
 		})
 	})
 
@@ -385,18 +383,17 @@ property_blueprints:
 				"--handcraft", handcraft,
 				"--content-migration", contentMigration,
 				"--base-content-migration", baseContentMigration,
-				"--version", "7.8.9-build.4",
-				"--final-version", "7.8.9",
+				"--final-version", "1.2.3",
 				"--product-name", "cool-product-name",
-				"--filename-prefix", "cool-product",
-				"--output-dir", tileDir)
+				"--output-file", outputFile,
+			)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(session).Should(gexec.Exit(0))
 
-			archive, err := os.Open(filepath.Join(tileDir, "cool-product-7.8.9-build.4.pivotal"))
+			archive, err := os.Open(outputFile)
 			Expect(err).NotTo(HaveOccurred())
 
 			archiveInfo, err := archive.Stat()
@@ -417,12 +414,12 @@ property_blueprints:
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal(`product: my-product
 installation_schema_version: "1.6"
-to_version: 7.8.9
+to_version: 1.2.3
 migrations:
 - from_version: 1.6.0-build.315
   rules:
   - selector: product_version
-    to: 7.8.9
+    to: 1.2.3
     type: update
 `))
 		})
@@ -449,18 +446,17 @@ runtime_configs:
 				"--stemcell-tarball", stemcellTarball,
 				"--releases-directory", releaseTarballDir,
 				"--handcraft", handcraft,
-				"--version", "1.2.3-build.4",
 				"--final-version", "1.2.3",
 				"--product-name", "cool-product-name",
-				"--filename-prefix", "cool-product",
-				"--output-dir", tileDir)
+				"--output-file", outputFile,
+			)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(session).Should(gexec.Exit(0))
 
-			archive, err := os.Open(filepath.Join(tileDir, "cool-product-1.2.3-build.4.pivotal"))
+			archive, err := os.Open(outputFile)
 			Expect(err).NotTo(HaveOccurred())
 
 			archiveInfo, err := archive.Stat()
@@ -517,11 +513,10 @@ runtime_configs:
 					"--releases-directory", "missing-directory",
 					"--handcraft", "handcraft.yml",
 					"--stemcell-tarball", "stemcell.tgz",
-					"--version", "6.5.4-build.4",
-					"--final-version", "6.5.4",
+					"--final-version", "1.2.3",
 					"--product-name", "cool-product-name",
-					"--filename-prefix", "cool-product",
-					"--output-dir", tileDir)
+					"--output-file", outputFile,
+				)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
@@ -538,11 +533,10 @@ runtime_configs:
 					"--releases-directory", releaseTarballDir,
 					"--stemcell-tarball", stemcellTarball,
 					"--handcraft", handcraft,
-					"--version", "5.5.5-build.4",
-					"--final-version", "5.5.5",
+					"--final-version", "1.2.3",
 					"--product-name", "cool-product-name",
-					"--filename-prefix", "cool-product",
-					"--output-dir", "/path/to/missing/dir")
+					"--output-file", "/path/to/missing/dir/product.zip",
+				)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
@@ -561,11 +555,10 @@ runtime_configs:
 					"--base-content-migration", baseContentMigration,
 					"--handcraft", handcraft,
 					"--stemcell-tarball", stemcellTarball,
-					"--version", "6.5.4-build.4",
-					"--final-version", "6.5.4",
+					"--final-version", "1.2.3",
 					"--product-name", "cool-product-name",
-					"--filename-prefix", "cool-product",
-					"--output-dir", tileDir)
+					"--output-file", outputFile,
+				)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())

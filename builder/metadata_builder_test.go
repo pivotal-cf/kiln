@@ -71,7 +71,7 @@ addons:
 			metadata, err := tileBuilder.Build([]string{
 				"/path/to/release-1.tgz",
 				"/path/to/release-2.tgz",
-			}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
+			}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stemcellManifestReader.ReadCall.Receives.Path).To(Equal("/path/to/test-stemcell.tgz"))
 			Expect(handcraftReader.ReadCall.Receives.Path).To(Equal("/some/path/handcraft.yml"))
@@ -114,7 +114,7 @@ addons:
 			}))
 
 			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-				"Creating metadata for .pivotal...",
+				"Creating metadata for /path/to/tile.zip...",
 				"Read manifest for release release-1",
 				"Read manifest for release release-2",
 				"Read manifest for stemcell version 2332",
@@ -137,7 +137,7 @@ addons:
 				}
 				metadata, err := tileBuilder.Build([]string{
 					"/path/to/release-1.tgz",
-				}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
+				}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(metadata.Handcraft).To(Equal(builder.Handcraft{
@@ -152,7 +152,7 @@ addons:
 				}))
 
 				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-					"Creating metadata for .pivotal...",
+					"Creating metadata for /path/to/tile.zip...",
 					"Read manifest for release release-1",
 					"Read manifest for stemcell version 2332",
 					"Read handcraft",
@@ -166,7 +166,7 @@ addons:
 					releaseManifestReader.ReadCall.Stub = nil
 					releaseManifestReader.ReadCall.Returns.Error = errors.New("failed to read release tarball")
 
-					_, err := tileBuilder.Build([]string{"release-1.tgz"}, "", "", "", "")
+					_, err := tileBuilder.Build([]string{"release-1.tgz"}, "", "", "", "", "")
 					Expect(err).To(MatchError("failed to read release tarball"))
 				})
 			})
@@ -175,7 +175,7 @@ addons:
 				It("returns an error", func() {
 					stemcellManifestReader.ReadCall.Returns.Error = errors.New("failed to read stemcell tarball")
 
-					_, err := tileBuilder.Build([]string{}, "stemcell.tgz", "", "", "")
+					_, err := tileBuilder.Build([]string{}, "stemcell.tgz", "", "", "", "")
 					Expect(err).To(MatchError("failed to read stemcell tarball"))
 				})
 			})
@@ -184,7 +184,7 @@ addons:
 				It("returns an error", func() {
 					handcraftReader.ReadCall.Returns.Error = errors.New("failed to read handcraft")
 
-					_, err := tileBuilder.Build([]string{}, "", "handcraft.yml", "", "")
+					_, err := tileBuilder.Build([]string{}, "", "handcraft.yml", "", "", "")
 					Expect(err).To(MatchError("failed to read handcraft"))
 				})
 			})
@@ -210,7 +210,7 @@ addons:
 
 					_, err := tileBuilder.Build([]string{
 						"/path/to/release-1.tgz",
-					}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
+					}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
 					Expect(err).To(MatchError("runtime config MY-RUNTIME-CONFIG references unknown release non-existent-release"))
 				})
 			})
@@ -230,7 +230,7 @@ addons:
 
 					_, err := tileBuilder.Build([]string{
 						"/path/to/release-1.tgz",
-					}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3")
+					}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
 					Expect(err).To(MatchError("runtime config MY-RUNTIME-CONFIG contains malformed yaml: yaml: could not find expected directive name"))
 				})
 			})

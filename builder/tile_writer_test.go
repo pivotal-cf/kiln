@@ -25,6 +25,7 @@ var _ = Describe("TileWriter", func() {
 		contentMigrationBuilder *fakes.ContentMigrationBuilder
 		md5Calc                 *fakes.MD5SumCalculator
 		tileWriter              builder.TileWriter
+		outputFile              string
 	)
 
 	BeforeEach(func() {
@@ -34,19 +35,19 @@ var _ = Describe("TileWriter", func() {
 		md5Calc = &fakes.MD5SumCalculator{}
 		contentMigrationBuilder = &fakes.ContentMigrationBuilder{}
 		tileWriter = builder.NewTileWriter(filesystem, zipper, contentMigrationBuilder, logger, md5Calc)
+		outputFile = "some-output-dir/cool-product-file-1.2.3-build.4.pivotal"
 	})
 
 	Describe("Build", func() {
 		DescribeTable("writes tile to disk", func(stubbed bool, release1Content, release2Content string, errorWhenAttemptingToOpenRelease error) {
 			config := commands.BakeConfig{
 				ProductName:          "cool-product-name",
-				FilenamePrefix:       "cool-product-file",
 				ReleasesDirectory:    "/some/path/releases",
 				MigrationDirectories: []string{"/some/path/migrations", "/some/other/path/migrations"},
 				ContentMigrations:    []string{"/some/path/content-migration-1.yml", "/some/path/content-migration-2.yml"},
 				BaseContentMigration: "/some/path/base-content-migration.yml",
-				Version:              "1.2.3-build.4",
 				FinalVersion:         "1.2.3",
+				OutputFile:           outputFile,
 				StubReleases:         stubbed,
 			}
 
@@ -108,7 +109,7 @@ var _ = Describe("TileWriter", func() {
 			Expect(contentMigrationBuilder.BuildCall.Receives.Version).To(Equal("1.2.3"))
 
 			Expect(zipper.SetPathCall.CallCount).To(Equal(1))
-			Expect(zipper.SetPathCall.Receives.Path).To(Equal("cool-product-file-1.2.3-build.4.pivotal"))
+			Expect(zipper.SetPathCall.Receives.Path).To(Equal("some-output-dir/cool-product-file-1.2.3-build.4.pivotal"))
 
 			Expect(zipper.AddCall.Calls).To(HaveLen(7))
 
@@ -135,21 +136,21 @@ var _ = Describe("TileWriter", func() {
 
 			Expect(zipper.CloseCall.CallCount).To(Equal(1))
 
-			Expect(logger.PrintlnCall.Receives.LogLines).To(Equal([]string{"Building .pivotal file...", "Calculating md5 sum of .pivotal..."}))
-
 			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-				"Adding content_migrations/migrations.yml to .pivotal...",
-				"Adding metadata/cool-product-name.yml to .pivotal...",
-				"Adding migrations/v1/migration-1.js to .pivotal...",
-				"Adding migrations/v1/migration-2.js to .pivotal...",
-				"Adding migrations/v1/other-migration.js to .pivotal...",
-				"Adding releases/release-1.tgz to .pivotal...",
-				"Adding releases/release-2.tgz to .pivotal...",
+				fmt.Sprintf("Building %s...", outputFile),
+				fmt.Sprintf("Adding content_migrations/migrations.yml to %s...", outputFile),
+				fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+				fmt.Sprintf("Adding migrations/v1/migration-1.js to %s...", outputFile),
+				fmt.Sprintf("Adding migrations/v1/migration-2.js to %s...", outputFile),
+				fmt.Sprintf("Adding migrations/v1/other-migration.js to %s...", outputFile),
+				fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
+				fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
+				fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
 				"Calculated md5 sum: THIS-IS-THE-SUM",
 			}))
 
 			Expect(md5Calc.ChecksumCall.CallCount).To(Equal(1))
-			Expect(md5Calc.ChecksumCall.Receives.Path).To(Equal("cool-product-file-1.2.3-build.4.pivotal"))
+			Expect(md5Calc.ChecksumCall.Receives.Path).To(Equal("some-output-dir/cool-product-file-1.2.3-build.4.pivotal"))
 		},
 			Entry("without stubbing releases", false, "release-1", "release-2", nil),
 			Entry("with stubbed releases", true, "", "", errors.New("don't open release")),
@@ -196,13 +197,12 @@ var _ = Describe("TileWriter", func() {
 				It("creates empty migrations/v1 folder", func() {
 					config := commands.BakeConfig{
 						ProductName:          "cool-product-name",
-						FilenamePrefix:       "cool-product-file",
 						ReleasesDirectory:    "/some/path/releases",
 						MigrationDirectories: []string{},
 						ContentMigrations:    []string{},
 						BaseContentMigration: "",
-						Version:              "1.2.3-build.4",
 						FinalVersion:         "1.2.3",
+						OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
 						StubReleases:         false,
 					}
 
@@ -210,10 +210,12 @@ var _ = Describe("TileWriter", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-						"Creating empty migrations folder in .pivotal...",
-						"Adding metadata/cool-product-name.yml to .pivotal...",
-						"Adding releases/release-1.tgz to .pivotal...",
-						"Adding releases/release-2.tgz to .pivotal...",
+						fmt.Sprintf("Building %s...", outputFile),
+						fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
+						fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+						fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
+						fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
+						fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
 						"Calculated md5 sum: ",
 					}))
 					Expect(zipper.CreateFolderCall.CallCount).To(Equal(1))
@@ -225,13 +227,12 @@ var _ = Describe("TileWriter", func() {
 				It("creates empty migrations/v1 folder", func() {
 					config := commands.BakeConfig{
 						ProductName:          "cool-product-name",
-						FilenamePrefix:       "cool-product-file",
 						ReleasesDirectory:    "/some/path/releases",
 						MigrationDirectories: []string{"/some/path/migrations"},
 						ContentMigrations:    []string{},
 						BaseContentMigration: "",
-						Version:              "1.2.3-build.4",
 						FinalVersion:         "1.2.3",
+						OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
 						StubReleases:         false,
 					}
 
@@ -239,10 +240,12 @@ var _ = Describe("TileWriter", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-						"Creating empty migrations folder in .pivotal...",
-						"Adding metadata/cool-product-name.yml to .pivotal...",
-						"Adding releases/release-1.tgz to .pivotal...",
-						"Adding releases/release-2.tgz to .pivotal...",
+						fmt.Sprintf("Building %s...", outputFile),
+						fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
+						fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+						fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
+						fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
+						fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
 						"Calculated md5 sum: ",
 					}))
 					Expect(zipper.CreateFolderCall.CallCount).To(Equal(1))

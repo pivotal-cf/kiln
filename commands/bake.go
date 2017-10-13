@@ -65,10 +65,6 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 		return config, errors.New("--handcraft is a required parameter")
 	}
 
-	if config.Version == "" {
-		return config, errors.New("--version is a required parameter")
-	}
-
 	if config.FinalVersion == "" {
 		return config, errors.New("--final-version is a required parameter")
 	}
@@ -77,20 +73,16 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 		return config, errors.New("--product-name is a required parameter")
 	}
 
-	if config.FilenamePrefix == "" {
-		return config, errors.New("--filename-prefix is a required parameter")
-	}
-
-	if config.OutputDir == "" {
-		return config, errors.New("--output-dir is a required parameter")
-	}
-
 	if len(config.MigrationDirectories) > 0 && len(config.ContentMigrations) > 0 {
 		return config, errors.New("cannot build a tile with content migrations and migrations")
 	}
 
 	if len(config.ContentMigrations) > 0 && config.BaseContentMigration == "" {
 		return config, errors.New("base content migration is required when content migrations are provided")
+	}
+
+	if config.OutputFile == "" {
+		return config, errors.New("--output-file is a required parameter")
 	}
 
 	if len(config.MigrationDirectories) > 0 && config.BaseContentMigration != "" {

@@ -26,11 +26,9 @@ var _ = Describe("bake", func() {
 				"--stemcell-tarball", "some-stemcell-tarball",
 				"--releases-directory", "some-release-tarball-directory",
 				"--handcraft", "some-handcraft",
-				"--version", "1.2.3-build.4",
 				"--final-version", "1.2.3",
 				"--product-name", "cool-product-name",
-				"--filename-prefix", "cool-product-file",
-				"--output-dir", "some-output-dir",
+				"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -41,11 +39,9 @@ var _ = Describe("bake", func() {
 				StemcellTarball:   "some-stemcell-tarball",
 				ReleasesDirectory: "some-release-tarball-directory",
 				Handcraft:         "some-handcraft",
-				Version:           "1.2.3-build.4",
 				FinalVersion:      "1.2.3",
 				ProductName:       "cool-product-name",
-				FilenamePrefix:    "cool-product-file",
-				OutputDir:         "some-output-dir",
+				OutputFile:        "some-output-dir/cool-product-file-1.2.3-build.4",
 			}))
 		})
 
@@ -56,11 +52,9 @@ var _ = Describe("bake", func() {
 					"--releases-directory", "some-release-tarball-directory",
 					"--migrations-directory", "some-migrations-directory",
 					"--handcraft", "some-handcraft",
-					"--version", "1.2.3-build.4",
 					"--final-version", "1.2.3",
 					"--product-name", "cool-product-name",
-					"--filename-prefix", "cool-product-file",
-					"--output-dir", "some-output-dir",
+					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 				})
 
 				Expect(err).NotTo(HaveOccurred())
@@ -71,12 +65,10 @@ var _ = Describe("bake", func() {
 					StemcellTarball:      "some-stemcell-tarball",
 					ReleasesDirectory:    "some-release-tarball-directory",
 					Handcraft:            "some-handcraft",
-					Version:              "1.2.3-build.4",
 					FinalVersion:         "1.2.3",
 					ProductName:          "cool-product-name",
-					FilenamePrefix:       "cool-product-file",
-					OutputDir:            "some-output-dir",
 					MigrationDirectories: []string{"some-migrations-directory"},
+					OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4",
 				}))
 			})
 
@@ -88,11 +80,9 @@ var _ = Describe("bake", func() {
 						"--migrations-directory", "some-migrations-directory",
 						"--migrations-directory", "some-other-migrations-directory",
 						"--handcraft", "some-handcraft",
-						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
 						"--product-name", "cool-product-name",
-						"--filename-prefix", "cool-product-file",
-						"--output-dir", "some-output-dir",
+						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 					})
 
 					Expect(err).NotTo(HaveOccurred())
@@ -103,12 +93,10 @@ var _ = Describe("bake", func() {
 						StemcellTarball:      "some-stemcell-tarball",
 						ReleasesDirectory:    "some-release-tarball-directory",
 						Handcraft:            "some-handcraft",
-						Version:              "1.2.3-build.4",
 						FinalVersion:         "1.2.3",
 						ProductName:          "cool-product-name",
-						FilenamePrefix:       "cool-product-file",
-						OutputDir:            "some-output-dir",
 						MigrationDirectories: []string{"some-migrations-directory", "some-other-migrations-directory"},
+						OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4",
 					}))
 
 				})
@@ -121,11 +109,9 @@ var _ = Describe("bake", func() {
 				"--stemcell-tarball", "some-stemcell-tarball",
 				"--releases-directory", "some-release-tarball-directory",
 				"--handcraft", "some-handcraft",
-				"--version", "1.2.3-build.4",
 				"--final-version", "1.2.3",
 				"--product-name", "cool-product-name",
-				"--filename-prefix", "cool-product-file",
-				"--output-dir", "some-output-dir",
+				"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -136,11 +122,9 @@ var _ = Describe("bake", func() {
 				StemcellTarball:   "some-stemcell-tarball",
 				ReleasesDirectory: "some-release-tarball-directory",
 				Handcraft:         "some-handcraft",
-				Version:           "1.2.3-build.4",
 				FinalVersion:      "1.2.3",
 				ProductName:       "cool-product-name",
-				FilenamePrefix:    "cool-product-file",
-				OutputDir:         "some-output-dir",
+				OutputFile:        "some-output-dir/cool-product-file-1.2.3-build.4",
 			}))
 		})
 
@@ -153,11 +137,9 @@ var _ = Describe("bake", func() {
 						"--content-migration", "some-other-migration",
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--handcraft", "some-handcraft",
-						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
 						"--product-name", "cool-product-name",
-						"--filename-prefix", "cool-product-file",
-						"--output-dir", "some-output-dir",
+						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
 					})
 					Expect(err).To(MatchError("base content migration is required when content migrations are provided"))
@@ -172,11 +154,9 @@ var _ = Describe("bake", func() {
 						"--base-content-migration", "some-base-content-migration",
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--handcraft", "some-handcraft",
-						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
 						"--product-name", "cool-product-name",
-						"--filename-prefix", "cool-product-file",
-						"--output-dir", "some-output-dir",
+						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
 					})
 
@@ -192,11 +172,9 @@ var _ = Describe("bake", func() {
 						"--content-migration", "some-other-content-migration",
 						"--base-content-migration", "some-base-content-migration",
 						"--handcraft", "some-handcraft",
-						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
 						"--product-name", "cool-product-name",
-						"--filename-prefix", "cool-product-file",
-						"--output-dir", "some-output-dir",
+						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
 					})
 
@@ -212,35 +190,13 @@ var _ = Describe("bake", func() {
 						"--content-migration", "some-other-content-migration",
 						"--base-content-migration", "some-base-content-migration",
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
 						"--product-name", "cool-product-name",
-						"--filename-prefix", "cool-product-file",
-						"--output-dir", "some-output-dir",
+						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
 					})
 
 					Expect(err).To(MatchError("--handcraft is a required parameter"))
-				})
-			})
-
-			Context("when the version flag is missing", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--releases-directory", "some-release-tarball-directory",
-						"--content-migration", "some-content-migration",
-						"--content-migration", "some-other-content-migration",
-						"--base-content-migration", "some-base-content-migration",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--handcraft", "some-handcraft",
-						"--final-version", "1.2.3",
-						"--product-name", "cool-product-name",
-						"--filename-prefix", "cool-product-file",
-						"--output-dir", "some-output-dir",
-						"--stub-releases",
-					})
-
-					Expect(err).To(MatchError("--version is a required parameter"))
 				})
 			})
 
@@ -253,10 +209,8 @@ var _ = Describe("bake", func() {
 						"--base-content-migration", "some-base-content-migration",
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--handcraft", "some-handcraft",
-						"--version", "1.2.3-build.4",
 						"--product-name", "cool-product-name",
-						"--filename-prefix", "cool-product-file",
-						"--output-dir", "some-output-dir",
+						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
 					})
 
@@ -273,10 +227,8 @@ var _ = Describe("bake", func() {
 						"--base-content-migration", "some-base-content-migration",
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--handcraft", "some-handcraft",
-						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
-						"--filename-prefix", "cool-product-file",
-						"--output-dir", "some-output-dir",
+						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
 					})
 
@@ -284,7 +236,7 @@ var _ = Describe("bake", func() {
 				})
 			})
 
-			Context("when the filename-prefix flag is missing", func() {
+			Context("when the output-file flag is missing", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--releases-directory", "some-release-tarball-directory",
@@ -293,34 +245,12 @@ var _ = Describe("bake", func() {
 						"--base-content-migration", "some-base-content-migration",
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--handcraft", "some-handcraft",
-						"--version", "1.2.3-build.4",
-						"--final-version", "1.2.3",
 						"--product-name", "cool-product-name",
-						"--output-dir", "some-output-dir",
+						"--final-version", "1.2.3",
 						"--stub-releases",
 					})
 
-					Expect(err).To(MatchError("--filename-prefix is a required parameter"))
-				})
-			})
-
-			Context("when the output-dir is missing", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--releases-directory", "some-release-tarball-directory",
-						"--content-migration", "some-content-migration",
-						"--content-migration", "some-other-content-migration",
-						"--base-content-migration", "some-base-content-migration",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--handcraft", "some-handcraft",
-						"--version", "1.2.3-build.4",
-						"--final-version", "1.2.3",
-						"--product-name", "cool-product-name",
-						"--filename-prefix", "cool-product-file",
-						"--stub-releases",
-					})
-
-					Expect(err).To(MatchError("--output-dir is a required parameter"))
+					Expect(err).To(MatchError("--output-file is a required parameter"))
 				})
 			})
 
@@ -334,11 +264,9 @@ var _ = Describe("bake", func() {
 						"--base-content-migration", "some-base-content-migration",
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--handcraft", "some-handcraft",
-						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
 						"--product-name", "cool-product-name",
-						"--filename-prefix", "cool-product-file",
-						"--output-dir", "some-output-dir",
+						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
 					})
 					Expect(err).To(MatchError("cannot build a tile with content migrations and migrations"))
@@ -353,11 +281,9 @@ var _ = Describe("bake", func() {
 						"--base-content-migration", "some-base-content-migration",
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--handcraft", "some-handcraft",
-						"--version", "1.2.3-build.4",
 						"--final-version", "1.2.3",
 						"--product-name", "cool-product-name",
-						"--filename-prefix", "cool-product-file",
-						"--output-dir", "some-output-dir",
+						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
 					})
 					Expect(err).To(MatchError("cannot build a tile with a base content migration and migrations"))

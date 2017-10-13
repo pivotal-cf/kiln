@@ -65,8 +65,8 @@ func NewMetadataBuilder(releaseManifestReader releaseManifestReader, stemcellMan
 	}
 }
 
-func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToHandcraft, name, version string) (Metadata, error) {
-	m.logger.Printf("Creating metadata for .pivotal...")
+func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToHandcraft, name, version, pathToTile string) (Metadata, error) {
+	m.logger.Printf("Creating metadata for %s...", pathToTile)
 
 	var releases []MetadataRelease
 	for _, releaseTarball := range releaseTarballs {
