@@ -3,7 +3,7 @@ package commands
 import "github.com/pivotal-cf/jhanda/flags"
 
 type BakeConfig struct {
-	ReleasesDirectory    string            `short:"rd"   long:"releases-directory"      description:"path to the release tarballs directory"`
+	ReleaseDirectories   flags.StringSlice `short:"rd"   long:"releases-directory"      description:"path to the release tarballs directory"`
 	MigrationDirectories flags.StringSlice `short:"m"    long:"migrations-directory"    description:"path to the migrations directory"`
 	ContentMigrations    flags.StringSlice `short:"cm"   long:"content-migration"       description:"location of the content migration file"`
 	BaseContentMigration string            `short:"bcm"  long:"base-content-migration"  description:"location of the base content migration file"`

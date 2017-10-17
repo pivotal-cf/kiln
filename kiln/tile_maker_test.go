@@ -20,20 +20,28 @@ var _ = Describe("TileMaker", func() {
 		fakeTileWriter      *fakes.TileWriter
 		fakeLogger          *fakes.Logger
 
-		config      commands.BakeConfig
-		tileMaker   kiln.TileMaker
-		releasesDir string
-		releases    []string
-		err         error
+		config                 commands.BakeConfig
+		tileMaker              kiln.TileMaker
+		someReleasesDirectory  string
+		otherReleasesDirectory string
+		releases               []string
+		err                    error
 	)
 
 	BeforeEach(func() {
-		releasesDir, err = ioutil.TempDir("", "")
+		someReleasesDirectory, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		file, err := ioutil.TempFile(releasesDir, "")
+		otherReleasesDirectory, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		releases = []string{file.Name()}
+
+		someReleaseFile, err := ioutil.TempFile(someReleasesDirectory, "")
+		Expect(err).NotTo(HaveOccurred())
+
+		otherReleaseFile, err := ioutil.TempFile(otherReleasesDirectory, "")
+		Expect(err).NotTo(HaveOccurred())
+
+		releases = []string{someReleaseFile.Name(), otherReleaseFile.Name()}
 
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
 		fakeTileWriter = &fakes.TileWriter{}
@@ -43,7 +51,7 @@ var _ = Describe("TileMaker", func() {
 			ProductName:          "cool-product-name",
 			Version:              "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
-			ReleasesDirectory:    releasesDir,
+			ReleaseDirectories:   []string{someReleasesDirectory, otherReleasesDirectory},
 			Handcraft:            "some-handcraft",
 			MigrationDirectories: []string{"some-migrations-directory"},
 			BaseContentMigration: "some-base-content-migration",
@@ -55,7 +63,8 @@ var _ = Describe("TileMaker", func() {
 	})
 
 	AfterEach(func() {
-		os.Remove(releasesDir)
+		os.Remove(someReleasesDirectory)
+		os.Remove(otherReleasesDirectory)
 	})
 
 	It("builds the metadata", func() {
@@ -108,7 +117,7 @@ stemcell_criteria:
 			ProductName:          "cool-product-name",
 			Version:              "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
-			ReleasesDirectory:    releasesDir,
+			ReleaseDirectories:   []string{someReleasesDirectory, otherReleasesDirectory},
 			Handcraft:            "some-handcraft",
 			MigrationDirectories: []string{"some-migrations-directory"},
 			BaseContentMigration: "some-base-content-migration",

@@ -53,7 +53,7 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 		panic(err)
 	}
 
-	if len(config.ReleasesDirectory) == 0 {
+	if len(config.ReleaseDirectories) == 0 {
 		return config, errors.New("Please specify release tarballs directory with the --releases-directory parameter")
 	}
 

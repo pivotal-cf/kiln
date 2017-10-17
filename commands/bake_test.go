@@ -25,6 +25,7 @@ var _ = Describe("bake", func() {
 			err := bake.Execute([]string{
 				"--stemcell-tarball", "some-stemcell-tarball",
 				"--releases-directory", "some-release-tarball-directory",
+				"--releases-directory", "other-release-tarball-directory",
 				"--handcraft", "some-handcraft",
 				"--version", "1.2.3",
 				"--product-name", "cool-product-name",
@@ -36,12 +37,12 @@ var _ = Describe("bake", func() {
 
 			config := tileMaker.MakeArgsForCall(0)
 			Expect(config).To(Equal(commands.BakeConfig{
-				StemcellTarball:   "some-stemcell-tarball",
-				ReleasesDirectory: "some-release-tarball-directory",
-				Handcraft:         "some-handcraft",
-				Version:           "1.2.3",
-				ProductName:       "cool-product-name",
-				OutputFile:        "some-output-dir/cool-product-file-1.2.3-build.4",
+				StemcellTarball:    "some-stemcell-tarball",
+				ReleaseDirectories: []string{"some-release-tarball-directory", "other-release-tarball-directory"},
+				Handcraft:          "some-handcraft",
+				Version:            "1.2.3",
+				ProductName:        "cool-product-name",
+				OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
 			}))
 		})
 
@@ -63,7 +64,7 @@ var _ = Describe("bake", func() {
 				config := tileMaker.MakeArgsForCall(0)
 				Expect(config).To(Equal(commands.BakeConfig{
 					StemcellTarball:      "some-stemcell-tarball",
-					ReleasesDirectory:    "some-release-tarball-directory",
+					ReleaseDirectories:   []string{"some-release-tarball-directory"},
 					Handcraft:            "some-handcraft",
 					Version:              "1.2.3",
 					ProductName:          "cool-product-name",
@@ -91,7 +92,7 @@ var _ = Describe("bake", func() {
 					config := tileMaker.MakeArgsForCall(0)
 					Expect(config).To(Equal(commands.BakeConfig{
 						StemcellTarball:      "some-stemcell-tarball",
-						ReleasesDirectory:    "some-release-tarball-directory",
+						ReleaseDirectories:   []string{"some-release-tarball-directory"},
 						Handcraft:            "some-handcraft",
 						Version:              "1.2.3",
 						ProductName:          "cool-product-name",
@@ -119,12 +120,12 @@ var _ = Describe("bake", func() {
 
 			config := tileMaker.MakeArgsForCall(0)
 			Expect(config).To(Equal(commands.BakeConfig{
-				StemcellTarball:   "some-stemcell-tarball",
-				ReleasesDirectory: "some-release-tarball-directory",
-				Handcraft:         "some-handcraft",
-				Version:           "1.2.3",
-				ProductName:       "cool-product-name",
-				OutputFile:        "some-output-dir/cool-product-file-1.2.3-build.4",
+				StemcellTarball:    "some-stemcell-tarball",
+				ReleaseDirectories: []string{"some-release-tarball-directory"},
+				Handcraft:          "some-handcraft",
+				Version:            "1.2.3",
+				ProductName:        "cool-product-name",
+				OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
 			}))
 		})
 

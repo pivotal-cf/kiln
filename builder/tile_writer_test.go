@@ -39,10 +39,10 @@ var _ = Describe("TileWriter", func() {
 	})
 
 	Describe("Build", func() {
-		DescribeTable("writes tile to disk", func(stubbed bool, release1Content, release2Content string, errorWhenAttemptingToOpenRelease error) {
+		DescribeTable("writes tile to disk", func(stubbed bool, errorWhenAttemptingToOpenRelease error) {
 			config := commands.BakeConfig{
 				ProductName:          "cool-product-name",
-				ReleasesDirectory:    "/some/path/releases",
+				ReleaseDirectories:   []string{"/some/path/releases", "/some/other/path/releases"},
 				MigrationDirectories: []string{"/some/path/migrations", "/some/other/path/migrations"},
 				ContentMigrations:    []string{"/some/path/content-migration-1.yml", "/some/path/content-migration-2.yml"},
 				BaseContentMigration: "/some/path/base-content-migration.yml",
@@ -68,6 +68,10 @@ var _ = Describe("TileWriter", func() {
 					walkFn("/some/path/releases", dirInfo, nil)
 					walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
 					walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
+				case "/some/other/path/releases":
+					walkFn("/some/other/path/releases", dirInfo, nil)
+					walkFn("/some/other/path/releases/release-3.tgz", releaseInfo, nil)
+					walkFn("/some/other/path/releases/release-4.tgz", releaseInfo, nil)
 				case "/some/path/migrations":
 					walkFn("/some/path/migrations", dirInfo, nil)
 					walkFn("/some/path/migrations/migration-1.js", migrationInfo, nil)
@@ -87,6 +91,10 @@ var _ = Describe("TileWriter", func() {
 					return NewBuffer(bytes.NewBuffer([]byte("release-1"))), errorWhenAttemptingToOpenRelease
 				case "/some/path/releases/release-2.tgz":
 					return NewBuffer(bytes.NewBuffer([]byte("release-2"))), errorWhenAttemptingToOpenRelease
+				case "/some/other/path/releases/release-3.tgz":
+					return NewBuffer(bytes.NewBuffer([]byte("release-3"))), errorWhenAttemptingToOpenRelease
+				case "/some/other/path/releases/release-4.tgz":
+					return NewBuffer(bytes.NewBuffer([]byte("release-4"))), errorWhenAttemptingToOpenRelease
 				case "/some/path/migrations/migration-1.js":
 					return NewBuffer(bytes.NewBuffer([]byte("migration-1"))), nil
 				case "/some/path/migrations/migration-2.js":
@@ -111,7 +119,7 @@ var _ = Describe("TileWriter", func() {
 			Expect(zipper.SetPathCall.CallCount).To(Equal(1))
 			Expect(zipper.SetPathCall.Receives.Path).To(Equal("some-output-dir/cool-product-file-1.2.3-build.4.pivotal"))
 
-			Expect(zipper.AddCall.Calls).To(HaveLen(7))
+			Expect(zipper.AddCall.Calls).To(HaveLen(9))
 
 			Expect(zipper.AddCall.Calls[0].Path).To(Equal(filepath.Join("content_migrations", "migrations.yml")))
 			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[0].File)).Should(gbytes.Say("combined-content-migration-contents"))
@@ -129,10 +137,16 @@ var _ = Describe("TileWriter", func() {
 			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[4].File)).Should(gbytes.Say("other-migration"))
 
 			Expect(zipper.AddCall.Calls[5].Path).To(Equal(filepath.Join("releases", "release-1.tgz")))
-			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[5].File)).Should(gbytes.Say(release1Content))
+			checkReleaseFileContent("release-1", stubbed, zipper.AddCall.Calls[5])
 
 			Expect(zipper.AddCall.Calls[6].Path).To(Equal(filepath.Join("releases", "release-2.tgz")))
-			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[6].File)).Should(gbytes.Say(release2Content))
+			checkReleaseFileContent("release-2", stubbed, zipper.AddCall.Calls[6])
+
+			Expect(zipper.AddCall.Calls[7].Path).To(Equal(filepath.Join("releases", "release-3.tgz")))
+			checkReleaseFileContent("release-3", stubbed, zipper.AddCall.Calls[7])
+
+			Expect(zipper.AddCall.Calls[8].Path).To(Equal(filepath.Join("releases", "release-4.tgz")))
+			checkReleaseFileContent("release-4", stubbed, zipper.AddCall.Calls[8])
 
 			Expect(zipper.CloseCall.CallCount).To(Equal(1))
 
@@ -145,6 +159,8 @@ var _ = Describe("TileWriter", func() {
 				fmt.Sprintf("Adding migrations/v1/other-migration.js to %s...", outputFile),
 				fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
 				fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
+				fmt.Sprintf("Adding releases/release-3.tgz to %s...", outputFile),
+				fmt.Sprintf("Adding releases/release-4.tgz to %s...", outputFile),
 				fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
 				"Calculated md5 sum: THIS-IS-THE-SUM",
 			}))
@@ -152,8 +168,8 @@ var _ = Describe("TileWriter", func() {
 			Expect(md5Calc.ChecksumCall.CallCount).To(Equal(1))
 			Expect(md5Calc.ChecksumCall.Receives.Path).To(Equal("some-output-dir/cool-product-file-1.2.3-build.4.pivotal"))
 		},
-			Entry("without stubbing releases", false, "release-1", "release-2", nil),
-			Entry("with stubbed releases", true, "", "", errors.New("don't open release")),
+			Entry("without stubbing releases", false, nil),
+			Entry("with stubbed releases", true, errors.New("don't open release")),
 		)
 
 		Context("when releases directory is provided", func() {
@@ -197,7 +213,7 @@ var _ = Describe("TileWriter", func() {
 				It("creates empty migrations/v1 folder", func() {
 					config := commands.BakeConfig{
 						ProductName:          "cool-product-name",
-						ReleasesDirectory:    "/some/path/releases",
+						ReleaseDirectories:   []string{"/some/path/releases"},
 						MigrationDirectories: []string{},
 						ContentMigrations:    []string{},
 						BaseContentMigration: "",
@@ -227,7 +243,7 @@ var _ = Describe("TileWriter", func() {
 				It("creates empty migrations/v1 folder", func() {
 					config := commands.BakeConfig{
 						ProductName:          "cool-product-name",
-						ReleasesDirectory:    "/some/path/releases",
+						ReleaseDirectories:   []string{"/some/path/releases"},
 						MigrationDirectories: []string{"/some/path/migrations"},
 						ContentMigrations:    []string{},
 						BaseContentMigration: "",
@@ -292,7 +308,7 @@ var _ = Describe("TileWriter", func() {
 					}
 
 					config := commands.BakeConfig{
-						ReleasesDirectory: "/some/path/releases",
+						ReleaseDirectories: []string{"/some/path/releases"},
 					}
 
 					err := tileWriter.Write([]byte("metadata-contents"), config)
@@ -337,7 +353,7 @@ var _ = Describe("TileWriter", func() {
 					}
 
 					config := commands.BakeConfig{
-						ReleasesDirectory:    "/some/path/releases",
+						ReleaseDirectories:   []string{"/some/path/releases"},
 						MigrationDirectories: []string{"/some/path/migrations"},
 						StubReleases:         true,
 					}
@@ -417,3 +433,11 @@ var _ = Describe("TileWriter", func() {
 		})
 	})
 })
+
+func checkReleaseFileContent(releaseContent string, stubbed bool, call fakes.ZipperAddCall) {
+	if stubbed == false {
+		Eventually(gbytes.BufferReader(call.File)).Should(gbytes.Say(releaseContent))
+	} else {
+		Eventually(gbytes.BufferReader(call.File)).Should(gbytes.Say(""))
+	}
+}

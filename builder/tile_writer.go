@@ -74,9 +74,13 @@ func (w TileWriter) Write(metadataContents []byte, config commands.BakeConfig) e
 
 	files[filepath.Join("metadata", fmt.Sprintf("%s.yml", config.ProductName))] = bytes.NewBuffer(metadataContents)
 
-	err = w.addReleaseTarballs(files, config.ReleasesDirectory, config.StubReleases)
-	if err != nil {
-		return err
+	if len(config.ReleaseDirectories) > 0 {
+		for _, releasesDirectory := range config.ReleaseDirectories {
+			err = w.addReleaseTarballs(files, releasesDirectory, config.StubReleases)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	if len(config.MigrationDirectories) > 0 {

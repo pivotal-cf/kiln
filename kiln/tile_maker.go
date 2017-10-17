@@ -38,14 +38,16 @@ func NewTileMaker(metadataBuilder metadataBuilder, tileWriter tileWriter, logger
 }
 
 func (t TileMaker) Make(config commands.BakeConfig) error {
-	files, err := ioutil.ReadDir(config.ReleasesDirectory)
-	if err != nil {
-		return err
-	}
-
 	var releaseTarballs []string
-	for _, file := range files {
-		releaseTarballs = append(releaseTarballs, filepath.Join(config.ReleasesDirectory, file.Name()))
+	for _, releasesDirectory := range config.ReleaseDirectories {
+		files, err := ioutil.ReadDir(releasesDirectory)
+		if err != nil {
+			return err
+		}
+
+		for _, file := range files {
+			releaseTarballs = append(releaseTarballs, filepath.Join(releasesDirectory, file.Name()))
+		}
 	}
 
 	metadata, err := t.metadataBuilder.Build(
