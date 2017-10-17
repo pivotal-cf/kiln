@@ -53,7 +53,7 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 		config.StemcellTarball,
 		config.Handcraft,
 		config.ProductName,
-		config.FinalVersion,
+		config.Version,
 		config.OutputFile,
 	)
 	if err != nil {

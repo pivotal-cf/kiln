@@ -46,7 +46,7 @@ var _ = Describe("TileWriter", func() {
 				MigrationDirectories: []string{"/some/path/migrations", "/some/other/path/migrations"},
 				ContentMigrations:    []string{"/some/path/content-migration-1.yml", "/some/path/content-migration-2.yml"},
 				BaseContentMigration: "/some/path/base-content-migration.yml",
-				FinalVersion:         "1.2.3",
+				Version:              "1.2.3",
 				OutputFile:           outputFile,
 				StubReleases:         stubbed,
 			}
@@ -201,7 +201,7 @@ var _ = Describe("TileWriter", func() {
 						MigrationDirectories: []string{},
 						ContentMigrations:    []string{},
 						BaseContentMigration: "",
-						FinalVersion:         "1.2.3",
+						Version:              "1.2.3",
 						OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
 						StubReleases:         false,
 					}
@@ -231,7 +231,7 @@ var _ = Describe("TileWriter", func() {
 						MigrationDirectories: []string{"/some/path/migrations"},
 						ContentMigrations:    []string{},
 						BaseContentMigration: "",
-						FinalVersion:         "1.2.3",
+						Version:              "1.2.3",
 						OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
 						StubReleases:         false,
 					}

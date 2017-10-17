@@ -126,7 +126,7 @@ rules:
 			"--stemcell-tarball", stemcellTarball,
 			"--releases-directory", releaseTarballDir,
 			"--handcraft", handcraft,
-			"--final-version", "1.2.3",
+			"--version", "1.2.3",
 			"--product-name", "cool-product-name",
 			"--output-file", outputFile,
 		)
@@ -209,7 +209,7 @@ property_blueprints:
 			"--handcraft", handcraft,
 			"--migrations-directory", "fixtures/extra-migrations",
 			"--migrations-directory", "fixtures/migrations",
-			"--final-version", "1.2.3",
+			"--version", "1.2.3",
 			"--product-name", "cool-product-name",
 			"--output-file", outputFile,
 		)
@@ -271,7 +271,7 @@ property_blueprints:
 			"--stemcell-tarball", stemcellTarball,
 			"--handcraft", handcraft,
 			"--migrations-directory", "fixtures/migrations",
-			"--final-version", "1.2.3",
+			"--version", "1.2.3",
 			"--product-name", "cool-product-name",
 			"--output-file", outputFile,
 		)
@@ -304,7 +304,7 @@ property_blueprints:
 				"--releases-directory", releaseTarballDir,
 				"--stemcell-tarball", stemcellTarball,
 				"--handcraft", handcraft,
-				"--final-version", "1.2.3",
+				"--version", "1.2.3",
 				"--stub-releases",
 				"--product-name", "cool-product-name",
 				"--output-file", outputFile,
@@ -343,7 +343,7 @@ property_blueprints:
 				"--releases-directory", releaseTarballDir,
 				"--stemcell-tarball", stemcellTarball,
 				"--handcraft", handcraft,
-				"--final-version", "1.2.3",
+				"--version", "1.2.3",
 				"--product-name", "cool-product-name",
 				"--output-file", outputFile,
 			)
@@ -383,7 +383,7 @@ property_blueprints:
 				"--handcraft", handcraft,
 				"--content-migration", contentMigration,
 				"--base-content-migration", baseContentMigration,
-				"--final-version", "1.2.3",
+				"--version", "1.2.3",
 				"--product-name", "cool-product-name",
 				"--output-file", outputFile,
 			)
@@ -446,7 +446,7 @@ runtime_configs:
 				"--stemcell-tarball", stemcellTarball,
 				"--releases-directory", releaseTarballDir,
 				"--handcraft", handcraft,
-				"--final-version", "1.2.3",
+				"--version", "1.2.3",
 				"--product-name", "cool-product-name",
 				"--output-file", outputFile,
 			)
@@ -513,7 +513,7 @@ runtime_configs:
 					"--releases-directory", "missing-directory",
 					"--handcraft", "handcraft.yml",
 					"--stemcell-tarball", "stemcell.tgz",
-					"--final-version", "1.2.3",
+					"--version", "1.2.3",
 					"--product-name", "cool-product-name",
 					"--output-file", outputFile,
 				)
@@ -533,7 +533,7 @@ runtime_configs:
 					"--releases-directory", releaseTarballDir,
 					"--stemcell-tarball", stemcellTarball,
 					"--handcraft", handcraft,
-					"--final-version", "1.2.3",
+					"--version", "1.2.3",
 					"--product-name", "cool-product-name",
 					"--output-file", "/path/to/missing/dir/product.zip",
 				)
@@ -555,7 +555,7 @@ runtime_configs:
 					"--base-content-migration", baseContentMigration,
 					"--handcraft", handcraft,
 					"--stemcell-tarball", stemcellTarball,
-					"--final-version", "1.2.3",
+					"--version", "1.2.3",
 					"--product-name", "cool-product-name",
 					"--output-file", outputFile,
 				)

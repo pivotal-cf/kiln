@@ -65,8 +65,8 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 		return config, errors.New("--handcraft is a required parameter")
 	}
 
-	if config.FinalVersion == "" {
-		return config, errors.New("--final-version is a required parameter")
+	if config.Version == "" {
+		return config, errors.New("--version is a required parameter")
 	}
 
 	if config.ProductName == "" {

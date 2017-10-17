@@ -41,7 +41,7 @@ var _ = Describe("TileMaker", func() {
 
 		config = commands.BakeConfig{
 			ProductName:          "cool-product-name",
-			FinalVersion:         "1.2.3",
+			Version:              "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
 			ReleasesDirectory:    releasesDir,
 			Handcraft:            "some-handcraft",
@@ -106,7 +106,7 @@ stemcell_criteria:
   requires_cpi: false`))
 		Expect(config).To(Equal(commands.BakeConfig{
 			ProductName:          "cool-product-name",
-			FinalVersion:         "1.2.3",
+			Version:              "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
 			ReleasesDirectory:    releasesDir,
 			Handcraft:            "some-handcraft",

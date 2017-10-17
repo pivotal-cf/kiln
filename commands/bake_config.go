@@ -9,7 +9,7 @@ type BakeConfig struct {
 	BaseContentMigration string            `short:"bcm"  long:"base-content-migration"  description:"location of the base content migration file"`
 	StemcellTarball      string            `short:"st"   long:"stemcell-tarball"        description:"location of the stemcell tarball"`
 	Handcraft            string            `short:"h"    long:"handcraft"               description:"location of the handcraft file"`
-	FinalVersion         string            `short:"fv"   long:"final-version"           description:"final version of the tile"`
+	Version              string            `short:"v"    long:"version"                 description:"version of the tile"`
 	ProductName          string            `short:"pn"   long:"product-name"            description:"product name"`
 	OutputFile           string            `short:"o"    long:"output-file"             description:"the output path of the tile"`
 	StubReleases         bool              `short:"sr"   long:"stub-releases"           description:"don't include release tarballs"`

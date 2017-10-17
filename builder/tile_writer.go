@@ -91,7 +91,7 @@ func (w TileWriter) Write(metadataContents []byte, config commands.BakeConfig) e
 	if len(config.ContentMigrations) > 0 {
 		contentMigrationsContents, err := w.contentMigrationBuilder.Build(
 			config.BaseContentMigration,
-			config.FinalVersion,
+			config.Version,
 			config.ContentMigrations)
 
 		if err != nil {

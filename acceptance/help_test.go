@@ -33,7 +33,7 @@ Command Arguments:
   -bcm, --base-content-migration  string  location of the base content migration file
   -st, --stemcell-tarball         string  location of the stemcell tarball
   -h, --handcraft                 string  location of the handcraft file
-  -fv, --final-version            string  final version of the tile
+  -v, --version                   string  version of the tile
   -pn, --product-name             string  product name
   -o, --output-file               string  the output path of the tile
   -sr, --stub-releases            bool    don't include release tarballs
