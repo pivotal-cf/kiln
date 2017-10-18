@@ -43,6 +43,7 @@ type releaseManifestReader interface {
 	Read(path string) (ReleaseManifest, error)
 }
 
+//go:generate counterfeiter -o ./fakes/stemcell_manifest_reader.go --fake-name StemcellManifestReader . stemcellManifestReader
 type stemcellManifestReader interface {
 	Read(path string) (StemcellManifest, error)
 }

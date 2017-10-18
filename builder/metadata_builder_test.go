@@ -42,10 +42,12 @@ var _ = Describe("MetadataBuilder", func() {
 				return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
 			}
 		}
-		stemcellManifestReader.ReadCall.Returns.StemcellManifest = builder.StemcellManifest{
+		stemcellManifestReader.ReadReturns(builder.StemcellManifest{
 			Version:         "2332",
 			OperatingSystem: "ubuntu-trusty",
-		}
+		},
+			nil,
+		)
 
 		tileBuilder = builder.NewMetadataBuilder(releaseManifestReader, stemcellManifestReader, metadataReader, logger)
 	})
@@ -75,7 +77,7 @@ addons:
 				"/path/to/release-2.tgz",
 			}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(stemcellManifestReader.ReadCall.Receives.Path).To(Equal("/path/to/test-stemcell.tgz"))
+			Expect(stemcellManifestReader.ReadArgsForCall(0)).To(Equal("/path/to/test-stemcell.tgz"))
 			metadataPath, version := metadataReader.ReadArgsForCall(0)
 			Expect(metadataPath).To(Equal("/some/path/metadata.yml"))
 			Expect(version).To(Equal("1.2.3"))
@@ -179,7 +181,7 @@ addons:
 
 			Context("when the stemcell tarball cannot be read", func() {
 				It("returns an error", func() {
-					stemcellManifestReader.ReadCall.Returns.Error = errors.New("failed to read stemcell tarball")
+					stemcellManifestReader.ReadReturns(builder.StemcellManifest{}, errors.New("failed to read stemcell tarball"))
 
 					_, err := tileBuilder.Build([]string{}, "stemcell.tgz", "", "", "", "")
 					Expect(err).To(MatchError("failed to read stemcell tarball"))
