@@ -25,7 +25,6 @@ var _ = Describe("bake", func() {
 			err := bake.Execute([]string{
 				"--stemcell-tarball", "some-stemcell-tarball",
 				"--releases-directory", "some-release-tarball-directory",
-				"--releases-directory", "other-release-tarball-directory",
 				"--metadata", "some-metadata",
 				"--version", "1.2.3",
 				"--product-name", "cool-product-name",
@@ -38,7 +37,7 @@ var _ = Describe("bake", func() {
 			config := tileMaker.MakeArgsForCall(0)
 			Expect(config).To(Equal(commands.BakeConfig{
 				StemcellTarball:    "some-stemcell-tarball",
-				ReleaseDirectories: []string{"some-release-tarball-directory", "other-release-tarball-directory"},
+				ReleaseDirectories: []string{"some-release-tarball-directory"},
 				Metadata:           "some-metadata",
 				Version:            "1.2.3",
 				ProductName:        "cool-product-name",
@@ -105,28 +104,31 @@ var _ = Describe("bake", func() {
 			})
 		})
 
-		It("builds the tile", func() {
-			err := bake.Execute([]string{
-				"--stemcell-tarball", "some-stemcell-tarball",
-				"--releases-directory", "some-release-tarball-directory",
-				"--metadata", "some-metadata",
-				"--version", "1.2.3",
-				"--product-name", "cool-product-name",
-				"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
+		Context("when there are multiple release directories", func() {
+			It("builds the tile", func() {
+				err := bake.Execute([]string{
+					"--stemcell-tarball", "some-stemcell-tarball",
+					"--releases-directory", "some-release-tarball-directory",
+					"--releases-directory", "other-release-tarball-directory",
+					"--metadata", "some-metadata",
+					"--version", "1.2.3",
+					"--product-name", "cool-product-name",
+					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(tileMaker.MakeCallCount()).To(Equal(1))
+
+				config := tileMaker.MakeArgsForCall(0)
+				Expect(config).To(Equal(commands.BakeConfig{
+					StemcellTarball:    "some-stemcell-tarball",
+					ReleaseDirectories: []string{"some-release-tarball-directory", "other-release-tarball-directory"},
+					Metadata:           "some-metadata",
+					Version:            "1.2.3",
+					ProductName:        "cool-product-name",
+					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
+				}))
 			})
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(tileMaker.MakeCallCount()).To(Equal(1))
-
-			config := tileMaker.MakeArgsForCall(0)
-			Expect(config).To(Equal(commands.BakeConfig{
-				StemcellTarball:    "some-stemcell-tarball",
-				ReleaseDirectories: []string{"some-release-tarball-directory"},
-				Metadata:           "some-metadata",
-				Version:            "1.2.3",
-				ProductName:        "cool-product-name",
-				OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
-			}))
 		})
 
 		Context("failure cases", func() {
