@@ -5,8 +5,6 @@ import "github.com/pivotal-cf/jhanda/flags"
 type BakeConfig struct {
 	ReleaseDirectories   flags.StringSlice `short:"rd"   long:"releases-directory"      description:"path to the release tarballs directory"`
 	MigrationDirectories flags.StringSlice `short:"m"    long:"migrations-directory"    description:"path to the migrations directory"`
-	ContentMigrations    flags.StringSlice `short:"cm"   long:"content-migration"       description:"location of the content migration file"`
-	BaseContentMigration string            `short:"bcm"  long:"base-content-migration"  description:"location of the base content migration file"`
 	StemcellTarball      string            `short:"st"   long:"stemcell-tarball"        description:"location of the stemcell tarball"`
 	Handcraft            string            `short:"h"    long:"handcraft"               description:"location of the handcraft file"`
 	Version              string            `short:"v"    long:"version"                 description:"version of the tile"`

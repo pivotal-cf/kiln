@@ -54,8 +54,6 @@ var _ = Describe("TileMaker", func() {
 			ReleaseDirectories:   []string{someReleasesDirectory, otherReleasesDirectory},
 			Handcraft:            "some-handcraft",
 			MigrationDirectories: []string{"some-migrations-directory"},
-			BaseContentMigration: "some-base-content-migration",
-			ContentMigrations:    []string{"some-content-migration", "some-other-content-migration"},
 			OutputFile:           "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
 			StubReleases:         true,
 		}
@@ -120,8 +118,6 @@ stemcell_criteria:
 			ReleaseDirectories:   []string{someReleasesDirectory, otherReleasesDirectory},
 			Handcraft:            "some-handcraft",
 			MigrationDirectories: []string{"some-migrations-directory"},
-			BaseContentMigration: "some-base-content-migration",
-			ContentMigrations:    []string{"some-content-migration", "some-other-content-migration"},
 			OutputFile:           "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
 			StubReleases:         true,
 		}))

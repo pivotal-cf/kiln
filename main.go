@@ -35,9 +35,8 @@ func main() {
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	handcraftReader := builder.NewHandcraftReader(filesystem, logger)
 	metadataBuilder := builder.NewMetadataBuilder(releaseManifestReader, stemcellManifestReader, handcraftReader, logger)
-	contentMigrationBuilder := builder.NewContentMigrationBuilder(logger)
 	md5SumCalculator := helper.NewFileMD5SumCalculator()
-	tileWriter := builder.NewTileWriter(filesystem, &zipper, contentMigrationBuilder, logger, md5SumCalculator)
+	tileWriter := builder.NewTileWriter(filesystem, &zipper, logger, md5SumCalculator)
 	tileMaker := kiln.NewTileMaker(metadataBuilder, tileWriter, logger)
 
 	commandSet := jhandacommands.Set{}

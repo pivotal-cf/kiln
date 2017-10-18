@@ -14,11 +14,10 @@ import (
 )
 
 type TileWriter struct {
-	filesystem              filesystem
-	zipper                  zipper
-	logger                  logger
-	md5SumCalculator        md5SumCalculator
-	contentMigrationBuilder contentMigrationBuilder
+	filesystem       filesystem
+	zipper           zipper
+	logger           logger
+	md5SumCalculator md5SumCalculator
 }
 
 //go:generate counterfeiter -o ./fakes/filesystem.go --fake-name Filesystem . filesystem
@@ -38,10 +37,6 @@ type zipper interface {
 	Close() error
 }
 
-type contentMigrationBuilder interface {
-	Build(baseContentMigration string, version string, contentMigrations []string) ([]byte, error)
-}
-
 //go:generate counterfeiter -o ./fakes/file_info.go --fake-name FileInfo . fileinfo
 type fileinfo interface {
 	Name() string
@@ -52,13 +47,12 @@ type fileinfo interface {
 	Sys() interface{}
 }
 
-func NewTileWriter(filesystem filesystem, zipper zipper, contentMigrationBuilder contentMigrationBuilder, logger logger, md5SumCalculator md5SumCalculator) TileWriter {
+func NewTileWriter(filesystem filesystem, zipper zipper, logger logger, md5SumCalculator md5SumCalculator) TileWriter {
 	return TileWriter{
-		filesystem:              filesystem,
-		zipper:                  zipper,
-		logger:                  logger,
-		md5SumCalculator:        md5SumCalculator,
-		contentMigrationBuilder: contentMigrationBuilder,
+		filesystem:       filesystem,
+		zipper:           zipper,
+		logger:           logger,
+		md5SumCalculator: md5SumCalculator,
 	}
 }
 
@@ -90,19 +84,6 @@ func (w TileWriter) Write(metadataContents []byte, config commands.BakeConfig) e
 				return err
 			}
 		}
-	}
-
-	if len(config.ContentMigrations) > 0 {
-		contentMigrationsContents, err := w.contentMigrationBuilder.Build(
-			config.BaseContentMigration,
-			config.Version,
-			config.ContentMigrations)
-
-		if err != nil {
-			return err
-		}
-
-		files[filepath.Join("content_migrations", "migrations.yml")] = bytes.NewBuffer(contentMigrationsContents)
 	}
 
 	var paths []string

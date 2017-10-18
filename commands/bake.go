@@ -73,20 +73,8 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 		return config, errors.New("--product-name is a required parameter")
 	}
 
-	if len(config.MigrationDirectories) > 0 && len(config.ContentMigrations) > 0 {
-		return config, errors.New("cannot build a tile with content migrations and migrations")
-	}
-
-	if len(config.ContentMigrations) > 0 && config.BaseContentMigration == "" {
-		return config, errors.New("base content migration is required when content migrations are provided")
-	}
-
 	if config.OutputFile == "" {
 		return config, errors.New("--output-file is a required parameter")
-	}
-
-	if len(config.MigrationDirectories) > 0 && config.BaseContentMigration != "" {
-		return config, errors.New("cannot build a tile with a base content migration and migrations")
 	}
 
 	return config, nil

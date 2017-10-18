@@ -19,13 +19,12 @@ import (
 
 var _ = Describe("TileWriter", func() {
 	var (
-		filesystem              *fakes.Filesystem
-		zipper                  *fakes.Zipper
-		logger                  *fakes.Logger
-		contentMigrationBuilder *fakes.ContentMigrationBuilder
-		md5Calc                 *fakes.MD5SumCalculator
-		tileWriter              builder.TileWriter
-		outputFile              string
+		filesystem *fakes.Filesystem
+		zipper     *fakes.Zipper
+		logger     *fakes.Logger
+		md5Calc    *fakes.MD5SumCalculator
+		tileWriter builder.TileWriter
+		outputFile string
 	)
 
 	BeforeEach(func() {
@@ -33,8 +32,7 @@ var _ = Describe("TileWriter", func() {
 		zipper = &fakes.Zipper{}
 		logger = &fakes.Logger{}
 		md5Calc = &fakes.MD5SumCalculator{}
-		contentMigrationBuilder = &fakes.ContentMigrationBuilder{}
-		tileWriter = builder.NewTileWriter(filesystem, zipper, contentMigrationBuilder, logger, md5Calc)
+		tileWriter = builder.NewTileWriter(filesystem, zipper, logger, md5Calc)
 		outputFile = "some-output-dir/cool-product-file-1.2.3-build.4.pivotal"
 	})
 
@@ -44,14 +42,10 @@ var _ = Describe("TileWriter", func() {
 				ProductName:          "cool-product-name",
 				ReleaseDirectories:   []string{"/some/path/releases", "/some/other/path/releases"},
 				MigrationDirectories: []string{"/some/path/migrations", "/some/other/path/migrations"},
-				ContentMigrations:    []string{"/some/path/content-migration-1.yml", "/some/path/content-migration-2.yml"},
-				BaseContentMigration: "/some/path/base-content-migration.yml",
 				Version:              "1.2.3",
 				OutputFile:           outputFile,
 				StubReleases:         stubbed,
 			}
-
-			contentMigrationBuilder.BuildCall.Returns.ContentMigration = []byte("combined-content-migration-contents")
 
 			dirInfo := &fakes.FileInfo{}
 			dirInfo.IsDirReturns(true)
@@ -111,48 +105,39 @@ var _ = Describe("TileWriter", func() {
 			err := tileWriter.Write([]byte("metadata-contents"), config)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(contentMigrationBuilder.BuildCall.CallCount).To(Equal(1))
-			Expect(contentMigrationBuilder.BuildCall.Receives.BaseContentMigration).To(Equal("/some/path/base-content-migration.yml"))
-			Expect(contentMigrationBuilder.BuildCall.Receives.ContentMigrations).To(Equal([]string{"/some/path/content-migration-1.yml", "/some/path/content-migration-2.yml"}))
-			Expect(contentMigrationBuilder.BuildCall.Receives.Version).To(Equal("1.2.3"))
-
 			Expect(zipper.SetPathCall.CallCount).To(Equal(1))
 			Expect(zipper.SetPathCall.Receives.Path).To(Equal("some-output-dir/cool-product-file-1.2.3-build.4.pivotal"))
 
-			Expect(zipper.AddCall.Calls).To(HaveLen(9))
+			Expect(zipper.AddCall.Calls).To(HaveLen(8))
 
-			Expect(zipper.AddCall.Calls[0].Path).To(Equal(filepath.Join("content_migrations", "migrations.yml")))
-			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[0].File)).Should(gbytes.Say("combined-content-migration-contents"))
+			Expect(zipper.AddCall.Calls[0].Path).To(Equal(filepath.Join("metadata", "cool-product-name.yml")))
+			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[0].File)).Should(gbytes.Say("metadata-contents"))
 
-			Expect(zipper.AddCall.Calls[1].Path).To(Equal(filepath.Join("metadata", "cool-product-name.yml")))
-			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[1].File)).Should(gbytes.Say("metadata-contents"))
+			Expect(zipper.AddCall.Calls[1].Path).To(Equal(filepath.Join("migrations", "v1", "migration-1.js")))
+			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[1].File)).Should(gbytes.Say("migration-1"))
 
-			Expect(zipper.AddCall.Calls[2].Path).To(Equal(filepath.Join("migrations", "v1", "migration-1.js")))
-			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[2].File)).Should(gbytes.Say("migration-1"))
+			Expect(zipper.AddCall.Calls[2].Path).To(Equal(filepath.Join("migrations", "v1", "migration-2.js")))
+			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[2].File)).Should(gbytes.Say("migration-2"))
 
-			Expect(zipper.AddCall.Calls[3].Path).To(Equal(filepath.Join("migrations", "v1", "migration-2.js")))
-			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[3].File)).Should(gbytes.Say("migration-2"))
+			Expect(zipper.AddCall.Calls[3].Path).To(Equal(filepath.Join("migrations", "v1", "other-migration.js")))
+			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[3].File)).Should(gbytes.Say("other-migration"))
 
-			Expect(zipper.AddCall.Calls[4].Path).To(Equal(filepath.Join("migrations", "v1", "other-migration.js")))
-			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[4].File)).Should(gbytes.Say("other-migration"))
+			Expect(zipper.AddCall.Calls[4].Path).To(Equal(filepath.Join("releases", "release-1.tgz")))
+			checkReleaseFileContent("release-1", stubbed, zipper.AddCall.Calls[4])
 
-			Expect(zipper.AddCall.Calls[5].Path).To(Equal(filepath.Join("releases", "release-1.tgz")))
-			checkReleaseFileContent("release-1", stubbed, zipper.AddCall.Calls[5])
+			Expect(zipper.AddCall.Calls[5].Path).To(Equal(filepath.Join("releases", "release-2.tgz")))
+			checkReleaseFileContent("release-2", stubbed, zipper.AddCall.Calls[5])
 
-			Expect(zipper.AddCall.Calls[6].Path).To(Equal(filepath.Join("releases", "release-2.tgz")))
-			checkReleaseFileContent("release-2", stubbed, zipper.AddCall.Calls[6])
+			Expect(zipper.AddCall.Calls[6].Path).To(Equal(filepath.Join("releases", "release-3.tgz")))
+			checkReleaseFileContent("release-3", stubbed, zipper.AddCall.Calls[6])
 
-			Expect(zipper.AddCall.Calls[7].Path).To(Equal(filepath.Join("releases", "release-3.tgz")))
-			checkReleaseFileContent("release-3", stubbed, zipper.AddCall.Calls[7])
-
-			Expect(zipper.AddCall.Calls[8].Path).To(Equal(filepath.Join("releases", "release-4.tgz")))
-			checkReleaseFileContent("release-4", stubbed, zipper.AddCall.Calls[8])
+			Expect(zipper.AddCall.Calls[7].Path).To(Equal(filepath.Join("releases", "release-4.tgz")))
+			checkReleaseFileContent("release-4", stubbed, zipper.AddCall.Calls[7])
 
 			Expect(zipper.CloseCall.CallCount).To(Equal(1))
 
 			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 				fmt.Sprintf("Building %s...", outputFile),
-				fmt.Sprintf("Adding content_migrations/migrations.yml to %s...", outputFile),
 				fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
 				fmt.Sprintf("Adding migrations/v1/migration-1.js to %s...", outputFile),
 				fmt.Sprintf("Adding migrations/v1/migration-2.js to %s...", outputFile),
@@ -215,8 +200,6 @@ var _ = Describe("TileWriter", func() {
 						ProductName:          "cool-product-name",
 						ReleaseDirectories:   []string{"/some/path/releases"},
 						MigrationDirectories: []string{},
-						ContentMigrations:    []string{},
-						BaseContentMigration: "",
 						Version:              "1.2.3",
 						OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
 						StubReleases:         false,
@@ -245,8 +228,6 @@ var _ = Describe("TileWriter", func() {
 						ProductName:          "cool-product-name",
 						ReleaseDirectories:   []string{"/some/path/releases"},
 						MigrationDirectories: []string{"/some/path/migrations"},
-						ContentMigrations:    []string{},
-						BaseContentMigration: "",
 						Version:              "1.2.3",
 						OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
 						StubReleases:         false,
@@ -386,21 +367,6 @@ var _ = Describe("TileWriter", func() {
 
 					err := tileWriter.Write([]byte{}, config)
 					Expect(err).To(MatchError("failed to close the zip"))
-				})
-			})
-
-			Context("when content migration builder fails", func() {
-				It("returns an error", func() {
-					contentMigrationBuilder.BuildCall.Returns.Error = errors.New("builder failed")
-
-					config := commands.BakeConfig{
-						ContentMigrations:    []string{"some-migration-file.yml"},
-						BaseContentMigration: "base-migration-file.yml",
-						StubReleases:         true,
-					}
-
-					err := tileWriter.Write([]byte{}, config)
-					Expect(err).To(MatchError("builder failed"))
 				})
 			})
 

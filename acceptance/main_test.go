@@ -23,8 +23,6 @@ var _ = Describe("kiln", func() {
 		otherReleasesDirectory string
 		stemcellTarball        string
 		handcraft              string
-		baseContentMigration   string
-		contentMigration       string
 		outputFile             string
 	)
 
@@ -101,26 +99,6 @@ property_blueprints:
   configurable: false
   default: *product_version
 `), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		baseContentMigrationContents := `---
-product: my-product
-installation_schema_version: "1.6"
-to_version: "1.2.3.0$PRERELEASE_VERSION$"
-migrations: []`
-
-		baseContentMigration = filepath.Join(tempDir, "base.yml")
-		err = ioutil.WriteFile(baseContentMigration, []byte(baseContentMigrationContents), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		contentMigrationContents := `---
-from_version: 1.6.0-build.315
-rules:
-  - type: update
-    selector: "product_version"
-    to: "1.2.3.0$PRERELEASE_VERSION$"`
-		contentMigration = filepath.Join(tempDir, "content_migration.yml")
-		err = ioutil.WriteFile(contentMigration, []byte(contentMigrationContents), 0644)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -380,57 +358,6 @@ property_blueprints:
 		})
 	})
 
-	Context("when content migrations are provided", func() {
-		It("generates the correct content migration file", func() {
-			command := exec.Command(pathToMain,
-				"bake",
-				"--releases-directory", someReleasesDirectory,
-				"--stemcell-tarball", stemcellTarball,
-				"--handcraft", handcraft,
-				"--content-migration", contentMigration,
-				"--base-content-migration", baseContentMigration,
-				"--version", "1.2.3",
-				"--product-name", "cool-product-name",
-				"--output-file", outputFile,
-			)
-
-			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(session).Should(gexec.Exit(0))
-
-			archive, err := os.Open(outputFile)
-			Expect(err).NotTo(HaveOccurred())
-
-			archiveInfo, err := archive.Stat()
-			Expect(err).NotTo(HaveOccurred())
-
-			zr, err := zip.NewReader(archive, archiveInfo.Size())
-			Expect(err).NotTo(HaveOccurred())
-
-			var archivedContentMigration io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "content_migrations/migrations.yml" {
-					archivedContentMigration, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-				}
-			}
-
-			contents, err := ioutil.ReadAll(archivedContentMigration)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(contents)).To(Equal(`product: my-product
-installation_schema_version: "1.6"
-to_version: 1.2.3
-migrations:
-- from_version: 1.6.0-build.315
-  rules:
-  - selector: product_version
-    to: 1.2.3
-    type: update
-`))
-		})
-	})
-
 	Context("when the metadata defines a runtime config", func() {
 		It("generates a manifest that specifies the runtime config release version", func() {
 			err := ioutil.WriteFile(handcraft, []byte(`---
@@ -550,28 +477,6 @@ runtime_configs:
 
 				Eventually(session).Should(gexec.Exit(1))
 				Expect(string(string(session.Err.Contents()))).To(ContainSubstring("no such file or directory"))
-			})
-		})
-
-		Context("when a content migration does not exist", func() {
-			It("prints an error and exits 1", func() {
-				command := exec.Command(pathToMain,
-					"bake",
-					"--releases-directory", someReleasesDirectory,
-					"--content-migration", "missing-migration",
-					"--base-content-migration", baseContentMigration,
-					"--handcraft", handcraft,
-					"--stemcell-tarball", stemcellTarball,
-					"--version", "1.2.3",
-					"--product-name", "cool-product-name",
-					"--output-file", outputFile,
-				)
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("open missing-migration: no such file or directory"))
 			})
 		})
 	})
