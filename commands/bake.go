@@ -62,7 +62,7 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 	}
 
 	if config.Handcraft == "" {
-		return config, errors.New("--handcraft is a required parameter")
+		return config, errors.New("--metadata is a required parameter")
 	}
 
 	if config.Version == "" {

@@ -27,14 +27,14 @@ Usage: kiln [options] bake [<args>]
   -h, --help  bool  prints this usage information (default: false)
 
 Command Arguments:
-  -rd, --releases-directory   slice   path to the release tarballs directory
-  -m, --migrations-directory  slice   path to the migrations directory
-  -st, --stemcell-tarball     string  location of the stemcell tarball
-  -h, --handcraft             string  location of the handcraft file
-  -v, --version               string  version of the tile
-  -pn, --product-name         string  product name
-  -o, --output-file           string  the output path of the tile
-  -sr, --stub-releases        bool    don't include release tarballs
+  -rd, --releases-directory    slice   path to the release tarballs directory
+  -md, --migrations-directory  slice   path to the migrations directory
+  -st, --stemcell-tarball      string  location of the stemcell tarball
+  -m, --metadata               string  location of the metadata file
+  -v, --version                string  version of the tile
+  -pn, --product-name          string  product name
+  -o, --output-file            string  the output path of the tile
+  -sr, --stub-releases         bool    don't include release tarballs
 `
 
 var _ = Describe("help", func() {

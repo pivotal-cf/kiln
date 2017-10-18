@@ -97,7 +97,7 @@ func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToH
 		return Metadata{}, err
 	}
 
-	m.logger.Printf("Read handcraft")
+	m.logger.Printf("Read metadata")
 
 	handcraft, err = m.updateRuntimeConfigReleaseVersions(handcraft, releases)
 	if err != nil {

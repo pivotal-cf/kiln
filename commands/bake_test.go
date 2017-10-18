@@ -26,7 +26,7 @@ var _ = Describe("bake", func() {
 				"--stemcell-tarball", "some-stemcell-tarball",
 				"--releases-directory", "some-release-tarball-directory",
 				"--releases-directory", "other-release-tarball-directory",
-				"--handcraft", "some-handcraft",
+				"--metadata", "some-metadata",
 				"--version", "1.2.3",
 				"--product-name", "cool-product-name",
 				"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
@@ -39,7 +39,7 @@ var _ = Describe("bake", func() {
 			Expect(config).To(Equal(commands.BakeConfig{
 				StemcellTarball:    "some-stemcell-tarball",
 				ReleaseDirectories: []string{"some-release-tarball-directory", "other-release-tarball-directory"},
-				Handcraft:          "some-handcraft",
+				Handcraft:          "some-metadata",
 				Version:            "1.2.3",
 				ProductName:        "cool-product-name",
 				OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
@@ -52,7 +52,7 @@ var _ = Describe("bake", func() {
 					"--stemcell-tarball", "some-stemcell-tarball",
 					"--releases-directory", "some-release-tarball-directory",
 					"--migrations-directory", "some-migrations-directory",
-					"--handcraft", "some-handcraft",
+					"--metadata", "some-metadata",
 					"--version", "1.2.3",
 					"--product-name", "cool-product-name",
 					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
@@ -65,7 +65,7 @@ var _ = Describe("bake", func() {
 				Expect(config).To(Equal(commands.BakeConfig{
 					StemcellTarball:      "some-stemcell-tarball",
 					ReleaseDirectories:   []string{"some-release-tarball-directory"},
-					Handcraft:            "some-handcraft",
+					Handcraft:            "some-metadata",
 					Version:              "1.2.3",
 					ProductName:          "cool-product-name",
 					MigrationDirectories: []string{"some-migrations-directory"},
@@ -80,7 +80,7 @@ var _ = Describe("bake", func() {
 						"--releases-directory", "some-release-tarball-directory",
 						"--migrations-directory", "some-migrations-directory",
 						"--migrations-directory", "some-other-migrations-directory",
-						"--handcraft", "some-handcraft",
+						"--metadata", "some-metadata",
 						"--version", "1.2.3",
 						"--product-name", "cool-product-name",
 						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
@@ -93,7 +93,7 @@ var _ = Describe("bake", func() {
 					Expect(config).To(Equal(commands.BakeConfig{
 						StemcellTarball:      "some-stemcell-tarball",
 						ReleaseDirectories:   []string{"some-release-tarball-directory"},
-						Handcraft:            "some-handcraft",
+						Handcraft:            "some-metadata",
 						Version:              "1.2.3",
 						ProductName:          "cool-product-name",
 						MigrationDirectories: []string{"some-migrations-directory", "some-other-migrations-directory"},
@@ -109,7 +109,7 @@ var _ = Describe("bake", func() {
 			err := bake.Execute([]string{
 				"--stemcell-tarball", "some-stemcell-tarball",
 				"--releases-directory", "some-release-tarball-directory",
-				"--handcraft", "some-handcraft",
+				"--metadata", "some-metadata",
 				"--version", "1.2.3",
 				"--product-name", "cool-product-name",
 				"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
@@ -122,7 +122,7 @@ var _ = Describe("bake", func() {
 			Expect(config).To(Equal(commands.BakeConfig{
 				StemcellTarball:    "some-stemcell-tarball",
 				ReleaseDirectories: []string{"some-release-tarball-directory"},
-				Handcraft:          "some-handcraft",
+				Handcraft:          "some-metadata",
 				Version:            "1.2.3",
 				ProductName:        "cool-product-name",
 				OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
@@ -134,7 +134,7 @@ var _ = Describe("bake", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--handcraft", "some-handcraft",
+						"--metadata", "some-metadata",
 						"--version", "1.2.3",
 						"--product-name", "cool-product-name",
 						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
@@ -149,7 +149,7 @@ var _ = Describe("bake", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--releases-directory", "some-release-tarball-directory",
-						"--handcraft", "some-handcraft",
+						"--metadata", "some-metadata",
 						"--version", "1.2.3",
 						"--product-name", "cool-product-name",
 						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
@@ -160,7 +160,7 @@ var _ = Describe("bake", func() {
 				})
 			})
 
-			Context("when the handcraft flag is missing", func() {
+			Context("when the metadata flag is missing", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--releases-directory", "some-release-tarball-directory",
@@ -171,7 +171,7 @@ var _ = Describe("bake", func() {
 						"--stub-releases",
 					})
 
-					Expect(err).To(MatchError("--handcraft is a required parameter"))
+					Expect(err).To(MatchError("--metadata is a required parameter"))
 				})
 			})
 
@@ -180,7 +180,7 @@ var _ = Describe("bake", func() {
 					err := bake.Execute([]string{
 						"--releases-directory", "some-release-tarball-directory",
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--handcraft", "some-handcraft",
+						"--metadata", "some-metadata",
 						"--product-name", "cool-product-name",
 						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
@@ -195,7 +195,7 @@ var _ = Describe("bake", func() {
 					err := bake.Execute([]string{
 						"--releases-directory", "some-release-tarball-directory",
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--handcraft", "some-handcraft",
+						"--metadata", "some-metadata",
 						"--version", "1.2.3",
 						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
@@ -210,7 +210,7 @@ var _ = Describe("bake", func() {
 					err := bake.Execute([]string{
 						"--releases-directory", "some-release-tarball-directory",
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--handcraft", "some-handcraft",
+						"--metadata", "some-metadata",
 						"--product-name", "cool-product-name",
 						"--version", "1.2.3",
 						"--stub-releases",

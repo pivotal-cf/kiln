@@ -34,7 +34,7 @@ func (h HandcraftReader) Read(path, version string) (Handcraft, error) {
 
 	versionRegexp := regexp.MustCompile(`\d+.\d+.\d+.[0-9]\$PRERELEASE_VERSION\$`)
 
-	h.logger.Printf("Injecting version %q into handcraft...", version)
+	h.logger.Printf("Injecting version %q into metadata...", version)
 	contents = versionRegexp.ReplaceAll(contents, []byte(version))
 
 	var handcraft Handcraft

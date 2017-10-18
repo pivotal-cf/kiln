@@ -22,7 +22,7 @@ var _ = Describe("kiln", func() {
 		someReleasesDirectory  string
 		otherReleasesDirectory string
 		stemcellTarball        string
-		handcraft              string
+		metadata               string
 		outputFile             string
 	)
 
@@ -67,8 +67,8 @@ operating_system: ubuntu-trusty
 		stemcellTarball, err = createTarball(tempDir, "stemcell.tgz", "stemcell.MF", stemcellManifest)
 		Expect(err).NotTo(HaveOccurred())
 
-		handcraft = filepath.Join(tempDir, "handcraft.yml")
-		err = ioutil.WriteFile(handcraft, []byte(`---
+		metadata = filepath.Join(tempDir, "metadata.yml")
+		err = ioutil.WriteFile(metadata, []byte(`---
 metadata_version: '1.7'
 provides_product_versions:
 - name: cf
@@ -108,7 +108,7 @@ property_blueprints:
 			"--stemcell-tarball", stemcellTarball,
 			"--releases-directory", someReleasesDirectory,
 			"--releases-directory", otherReleasesDirectory,
-			"--handcraft", handcraft,
+			"--metadata", metadata,
 			"--version", "1.2.3",
 			"--product-name", "cool-product-name",
 			"--output-file", outputFile,
@@ -189,7 +189,7 @@ property_blueprints:
 			"bake",
 			"--releases-directory", someReleasesDirectory,
 			"--stemcell-tarball", stemcellTarball,
-			"--handcraft", handcraft,
+			"--metadata", metadata,
 			"--migrations-directory", "fixtures/extra-migrations",
 			"--migrations-directory", "fixtures/migrations",
 			"--version", "1.2.3",
@@ -253,7 +253,7 @@ property_blueprints:
 			"--releases-directory", someReleasesDirectory,
 			"--releases-directory", otherReleasesDirectory,
 			"--stemcell-tarball", stemcellTarball,
-			"--handcraft", handcraft,
+			"--metadata", metadata,
 			"--migrations-directory", "fixtures/migrations",
 			"--version", "1.2.3",
 			"--product-name", "cool-product-name",
@@ -268,8 +268,8 @@ property_blueprints:
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Creating metadata for %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say("Read manifest for release cf"))
 		Eventually(session.Out).Should(gbytes.Say("Read manifest for stemcell version 3215.4"))
-		Eventually(session.Out).Should(gbytes.Say("Injecting version \"1.2.3\" into handcraft..."))
-		Eventually(session.Out).Should(gbytes.Say("Read handcraft"))
+		Eventually(session.Out).Should(gbytes.Say("Injecting version \"1.2.3\" into metadata..."))
+		Eventually(session.Out).Should(gbytes.Say("Read metadata"))
 		Eventually(session.Out).Should(gbytes.Say("Marshaling metadata file..."))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Building %s", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile)))
@@ -287,7 +287,7 @@ property_blueprints:
 				"bake",
 				"--releases-directory", someReleasesDirectory,
 				"--stemcell-tarball", stemcellTarball,
-				"--handcraft", handcraft,
+				"--metadata", metadata,
 				"--version", "1.2.3",
 				"--stub-releases",
 				"--product-name", "cool-product-name",
@@ -326,7 +326,7 @@ property_blueprints:
 				"bake",
 				"--releases-directory", someReleasesDirectory,
 				"--stemcell-tarball", stemcellTarball,
-				"--handcraft", handcraft,
+				"--metadata", metadata,
 				"--version", "1.2.3",
 				"--product-name", "cool-product-name",
 				"--output-file", outputFile,
@@ -360,7 +360,7 @@ property_blueprints:
 
 	Context("when the metadata defines a runtime config", func() {
 		It("generates a manifest that specifies the runtime config release version", func() {
-			err := ioutil.WriteFile(handcraft, []byte(`---
+			err := ioutil.WriteFile(metadata, []byte(`---
 runtime_configs:
   - name: MY-RUNTIME-CONFIG
     runtime_config: |
@@ -379,7 +379,7 @@ runtime_configs:
 				"--stemcell-tarball", stemcellTarball,
 				"--releases-directory", someReleasesDirectory,
 				"--releases-directory", otherReleasesDirectory,
-				"--handcraft", handcraft,
+				"--metadata", metadata,
 				"--version", "1.2.3",
 				"--product-name", "cool-product-name",
 				"--output-file", outputFile,
@@ -445,7 +445,7 @@ runtime_configs:
 				command := exec.Command(pathToMain,
 					"bake",
 					"--releases-directory", "missing-directory",
-					"--handcraft", "handcraft.yml",
+					"--metadata", "metadata.yml",
 					"--stemcell-tarball", "stemcell.tgz",
 					"--version", "1.2.3",
 					"--product-name", "cool-product-name",
@@ -466,7 +466,7 @@ runtime_configs:
 					"bake",
 					"--releases-directory", someReleasesDirectory,
 					"--stemcell-tarball", stemcellTarball,
-					"--handcraft", handcraft,
+					"--metadata", metadata,
 					"--version", "1.2.3",
 					"--product-name", "cool-product-name",
 					"--output-file", "/path/to/missing/dir/product.zip",

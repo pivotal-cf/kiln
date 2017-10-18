@@ -101,7 +101,7 @@ var _ = Describe("HandcraftReader", func() {
 			}}))
 
 			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-				"Injecting version \"1.2.34-build.4\" into handcraft...",
+				"Injecting version \"1.2.34-build.4\" into metadata...",
 			}))
 		})
 	})

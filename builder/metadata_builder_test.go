@@ -118,7 +118,7 @@ addons:
 				"Read manifest for release release-1",
 				"Read manifest for release release-2",
 				"Read manifest for stemcell version 2332",
-				"Read handcraft",
+				"Read metadata",
 				"Injecting version version-1 into runtime config release release-1",
 			}))
 		})
@@ -155,7 +155,7 @@ addons:
 					"Creating metadata for /path/to/tile.zip...",
 					"Read manifest for release release-1",
 					"Read manifest for stemcell version 2332",
-					"Read handcraft",
+					"Read metadata",
 				}))
 			})
 		})
