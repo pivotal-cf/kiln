@@ -47,6 +47,7 @@ type stemcellManifestReader interface {
 	Read(path string) (StemcellManifest, error)
 }
 
+//go:generate counterfeiter -o ./fakes/metadata_reader.go --fake-name MetadataReader . metadataReader
 type metadataReader interface {
 	Read(path, version string) (Metadata, error)
 }

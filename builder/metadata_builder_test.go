@@ -52,7 +52,7 @@ var _ = Describe("MetadataBuilder", func() {
 
 	Describe("Build", func() {
 		It("creates a GeneratedMetadata with the correct information", func() {
-			metadataReader.ReadCall.Returns.Metadata = builder.Metadata{
+			metadataReader.ReadReturns(builder.Metadata{
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
 				"runtime_configs": []interface{}{
@@ -67,14 +67,18 @@ addons:
     release: release-1`,
 					},
 				},
-			}
+			},
+				nil,
+			)
 			generatedMetadata, err := tileBuilder.Build([]string{
 				"/path/to/release-1.tgz",
 				"/path/to/release-2.tgz",
 			}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stemcellManifestReader.ReadCall.Receives.Path).To(Equal("/path/to/test-stemcell.tgz"))
-			Expect(metadataReader.ReadCall.Receives.Path).To(Equal("/some/path/metadata.yml"))
+			metadataPath, version := metadataReader.ReadArgsForCall(0)
+			Expect(metadataPath).To(Equal("/some/path/metadata.yml"))
+			Expect(version).To(Equal("1.2.3"))
 
 			Expect(generatedMetadata.Name).To(Equal("cool-product"))
 			Expect(generatedMetadata.Releases).To(Equal([]builder.Release{
@@ -125,7 +129,7 @@ addons:
 
 		Context("when the runtime config doesn't contain releases", func() {
 			It("doesn't change the runtime config", func() {
-				metadataReader.ReadCall.Returns.Metadata = builder.Metadata{
+				metadataReader.ReadReturns(builder.Metadata{
 					"metadata_version":          "some-metadata-version",
 					"provides_product_versions": "some-provides-product-versions",
 					"runtime_configs": []interface{}{
@@ -134,7 +138,9 @@ addons:
 							"runtime_config": "some-key: some-value",
 						},
 					},
-				}
+				},
+					nil,
+				)
 				generatedMetadata, err := tileBuilder.Build([]string{
 					"/path/to/release-1.tgz",
 				}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
@@ -182,7 +188,7 @@ addons:
 
 			Context("when the metadata cannot be read", func() {
 				It("returns an error", func() {
-					metadataReader.ReadCall.Returns.Error = errors.New("failed to read metadata")
+					metadataReader.ReadReturns(builder.Metadata{}, errors.New("failed to read metadata"))
 
 					_, err := tileBuilder.Build([]string{}, "", "metadata.yml", "", "", "")
 					Expect(err).To(MatchError("failed to read metadata"))
@@ -191,7 +197,7 @@ addons:
 
 			Context("when the runtime config references a non-existent release", func() {
 				It("returns an error", func() {
-					metadataReader.ReadCall.Returns.Metadata = builder.Metadata{
+					metadataReader.ReadReturns(builder.Metadata{
 						"metadata_version":          "some-metadata-version",
 						"provides_product_versions": "some-provides-product-versions",
 						"runtime_configs": []interface{}{
@@ -206,7 +212,9 @@ addons:
     release: non-existent-release`,
 							},
 						},
-					}
+					},
+						nil,
+					)
 
 					_, err := tileBuilder.Build([]string{
 						"/path/to/release-1.tgz",
@@ -217,7 +225,7 @@ addons:
 
 			Context("when the runtime config contains yaml that isn't well-formed", func() {
 				It("returns an error", func() {
-					metadataReader.ReadCall.Returns.Metadata = builder.Metadata{
+					metadataReader.ReadReturns(builder.Metadata{
 						"metadata_version":          "some-metadata-version",
 						"provides_product_versions": "some-provides-product-versions",
 						"runtime_configs": []interface{}{
@@ -226,7 +234,9 @@ addons:
 								"runtime_config": `%%%`,
 							},
 						},
-					}
+					},
+						nil,
+					)
 
 					_, err := tileBuilder.Build([]string{
 						"/path/to/release-1.tgz",
