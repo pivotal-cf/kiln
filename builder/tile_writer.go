@@ -86,6 +86,15 @@ func (w TileWriter) Write(generatedMetadataContents []byte, config commands.Bake
 		}
 	}
 
+	for _, embedPath := range config.EmbedPaths {
+		file, err := w.filesystem.Open(embedPath)
+		if err != nil {
+			return err
+		}
+
+		files[filepath.Join("embed", filepath.Base(embedPath))] = file
+	}
+
 	var paths []string
 	for path := range files {
 		paths = append(paths, path)

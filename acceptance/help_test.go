@@ -29,6 +29,7 @@ Usage: kiln [options] bake [<args>]
 Command Arguments:
   -rd, --releases-directory    slice   path to the release tarballs directory
   -md, --migrations-directory  slice   path to the migrations directory
+  -e, --embed                  slice   path to additional files to embed
   -st, --stemcell-tarball      string  location of the stemcell tarball
   -m, --metadata               string  location of the metadata file
   -v, --version                string  version of the tile

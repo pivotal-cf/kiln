@@ -251,6 +251,66 @@ var _ = Describe("TileWriter", func() {
 			})
 		})
 
+		Context("when a file to embed is provided", func() {
+			BeforeEach(func() {
+				dirInfo := &fakes.FileInfo{}
+				dirInfo.IsDirReturns(true)
+
+				releaseInfo := &fakes.FileInfo{}
+				releaseInfo.IsDirReturns(false)
+
+				embedFileInfo := &fakes.FileInfo{}
+				embedFileInfo.IsDirReturns(false)
+
+				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
+					if root == "/some/path/releases" {
+						walkFn("/some/path/releases", dirInfo, nil)
+						walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
+						walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
+						walkFn(root, dirInfo, nil)
+					}
+
+					return nil
+				}
+
+				filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
+					if path == "/some/path/to-embed/my-file.txt" {
+						return NewBuffer(bytes.NewBufferString("contents-of-embedded-file")), nil
+					}
+
+					return nil, nil
+				}
+			})
+
+			It("embeds the file in the embed directory", func() {
+				config := commands.BakeConfig{
+					ProductName:          "cool-product-name",
+					ReleaseDirectories:   []string{"/some/path/releases"},
+					MigrationDirectories: []string{},
+					EmbedPaths:           []string{"/some/path/to-embed/my-file.txt"},
+					Version:              "1.2.3",
+					OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
+					StubReleases:         false,
+				}
+
+				err := tileWriter.Write([]byte("generated-metadata-contents"), config)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
+					fmt.Sprintf("Building %s...", outputFile),
+					fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
+					fmt.Sprintf("Adding embed/my-file.txt to %s...", outputFile),
+					fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+					fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
+					fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
+					fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
+					"Calculated md5 sum: ",
+				}))
+				Expect(zipper.AddCall.Calls[0].Path).To(Equal(filepath.Join("embed", "my-file.txt")))
+				Eventually(gbytes.BufferReader(zipper.AddCall.Calls[0].File)).Should(gbytes.Say("contents-of-embedded-file"))
+			})
+		})
+
 		Context("failure cases", func() {
 			Context("when the zipper fails to create migrations folder", func() {
 				It("returns an error", func() {

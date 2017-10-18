@@ -439,6 +439,71 @@ runtime_configs:
 
 	})
 
+	Context("when the --embed flag is specified", func() {
+		It("creates a tile with the specified file copied into the embed directory", func() {
+			someFileToEmbed := filepath.Join(tempDir, "some-file-to-embed")
+			otherFileToEmbed := filepath.Join(tempDir, "other-file-to-embed")
+			err := ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0600)
+			Expect(err).NotTo(HaveOccurred())
+			err = ioutil.WriteFile(otherFileToEmbed, []byte("content-of-other-file"), 0600)
+			Expect(err).NotTo(HaveOccurred())
+
+			command := exec.Command(pathToMain,
+				"bake",
+				"--releases-directory", someReleasesDirectory,
+				"--stemcell-tarball", stemcellTarball,
+				"--metadata", metadata,
+				"--version", "1.2.3",
+				"--stub-releases",
+				"--product-name", "cool-product-name",
+				"--embed", someFileToEmbed,
+				"--embed", otherFileToEmbed,
+				"--output-file", outputFile,
+			)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			archive, err := os.Open(outputFile)
+			Expect(err).NotTo(HaveOccurred())
+
+			archiveInfo, err := archive.Stat()
+			Expect(err).NotTo(HaveOccurred())
+
+			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			Expect(err).NotTo(HaveOccurred())
+
+			seenSomeFile := false
+			seenOtherFile := false
+			for _, f := range zr.File {
+				if f.Name == "embed/some-file-to-embed" {
+					seenSomeFile = true
+					r, err := f.Open()
+					Expect(err).NotTo(HaveOccurred())
+
+					content, err := ioutil.ReadAll(r)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(content).To(Equal([]byte("content-of-some-file")))
+				}
+				if f.Name == "embed/other-file-to-embed" {
+					seenOtherFile = true
+					r, err := f.Open()
+					Expect(err).NotTo(HaveOccurred())
+
+					content, err := ioutil.ReadAll(r)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(content).To(Equal([]byte("content-of-other-file")))
+				}
+			}
+			Expect(seenSomeFile).To(BeTrue())
+			Expect(seenOtherFile).To(BeTrue())
+		})
+	})
+
 	Context("failure cases", func() {
 		Context("when a release tarball does not exist", func() {
 			It("prints an error and exits 1", func() {

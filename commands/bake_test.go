@@ -131,6 +131,34 @@ var _ = Describe("bake", func() {
 			})
 		})
 
+		Context("when files to embed are specified", func() {
+			It("builds the tile", func() {
+				err := bake.Execute([]string{
+					"--stemcell-tarball", "some-stemcell-tarball",
+					"--releases-directory", "some-release-tarball-directory",
+					"--embed", "some-file-to-embed",
+					"--metadata", "some-metadata",
+					"--version", "1.2.3",
+					"--product-name", "cool-product-name",
+					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(tileMaker.MakeCallCount()).To(Equal(1))
+
+				config := tileMaker.MakeArgsForCall(0)
+				Expect(config).To(Equal(commands.BakeConfig{
+					StemcellTarball:    "some-stemcell-tarball",
+					ReleaseDirectories: []string{"some-release-tarball-directory"},
+					EmbedPaths:         []string{"some-file-to-embed"},
+					Metadata:           "some-metadata",
+					Version:            "1.2.3",
+					ProductName:        "cool-product-name",
+					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
+				}))
+			})
+		})
+
 		Context("failure cases", func() {
 			Context("when the release-tarball flag is missing", func() {
 				It("returns an error", func() {
