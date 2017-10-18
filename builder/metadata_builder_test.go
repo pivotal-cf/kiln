@@ -15,7 +15,7 @@ var _ = Describe("MetadataBuilder", func() {
 	var (
 		releaseManifestReader  *fakes.ReleaseManifestReader
 		stemcellManifestReader *fakes.StemcellManifestReader
-		handcraftReader        *fakes.HandcraftReader
+		metadataReader         *fakes.MetadataReader
 		logger                 *fakes.Logger
 		tileBuilder            builder.MetadataBuilder
 	)
@@ -23,7 +23,7 @@ var _ = Describe("MetadataBuilder", func() {
 	BeforeEach(func() {
 		releaseManifestReader = &fakes.ReleaseManifestReader{}
 		stemcellManifestReader = &fakes.StemcellManifestReader{}
-		handcraftReader = &fakes.HandcraftReader{}
+		metadataReader = &fakes.MetadataReader{}
 		logger = &fakes.Logger{}
 
 		releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
@@ -47,12 +47,12 @@ var _ = Describe("MetadataBuilder", func() {
 			OperatingSystem: "ubuntu-trusty",
 		}
 
-		tileBuilder = builder.NewMetadataBuilder(releaseManifestReader, stemcellManifestReader, handcraftReader, logger)
+		tileBuilder = builder.NewMetadataBuilder(releaseManifestReader, stemcellManifestReader, metadataReader, logger)
 	})
 
 	Describe("Build", func() {
-		It("creates a metadata with the correct information", func() {
-			handcraftReader.ReadCall.Returns.Handcraft = builder.Handcraft{
+		It("creates a GeneratedMetadata with the correct information", func() {
+			metadataReader.ReadCall.Returns.Metadata = builder.Metadata{
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
 				"runtime_configs": []interface{}{
@@ -68,16 +68,16 @@ addons:
 					},
 				},
 			}
-			metadata, err := tileBuilder.Build([]string{
+			generatedMetadata, err := tileBuilder.Build([]string{
 				"/path/to/release-1.tgz",
 				"/path/to/release-2.tgz",
-			}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
+			}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stemcellManifestReader.ReadCall.Receives.Path).To(Equal("/path/to/test-stemcell.tgz"))
-			Expect(handcraftReader.ReadCall.Receives.Path).To(Equal("/some/path/handcraft.yml"))
+			Expect(metadataReader.ReadCall.Receives.Path).To(Equal("/some/path/metadata.yml"))
 
-			Expect(metadata.Name).To(Equal("cool-product"))
-			Expect(metadata.Releases).To(Equal([]builder.MetadataRelease{
+			Expect(generatedMetadata.Name).To(Equal("cool-product"))
+			Expect(generatedMetadata.Releases).To(Equal([]builder.Release{
 				{
 					Name:    "release-1",
 					Version: "version-1",
@@ -89,12 +89,12 @@ addons:
 					File:    "release-2.tgz",
 				},
 			}))
-			Expect(metadata.StemcellCriteria).To(Equal(builder.MetadataStemcellCriteria{
+			Expect(generatedMetadata.StemcellCriteria).To(Equal(builder.StemcellCriteria{
 				Version:     "2332",
 				OS:          "ubuntu-trusty",
 				RequiresCPI: false,
 			}))
-			Expect(metadata.Handcraft).To(Equal(builder.Handcraft{
+			Expect(generatedMetadata.Metadata).To(Equal(builder.Metadata{
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
 				"runtime_configs": []interface{}{
@@ -125,7 +125,7 @@ addons:
 
 		Context("when the runtime config doesn't contain releases", func() {
 			It("doesn't change the runtime config", func() {
-				handcraftReader.ReadCall.Returns.Handcraft = builder.Handcraft{
+				metadataReader.ReadCall.Returns.Metadata = builder.Metadata{
 					"metadata_version":          "some-metadata-version",
 					"provides_product_versions": "some-provides-product-versions",
 					"runtime_configs": []interface{}{
@@ -135,12 +135,12 @@ addons:
 						},
 					},
 				}
-				metadata, err := tileBuilder.Build([]string{
+				generatedMetadata, err := tileBuilder.Build([]string{
 					"/path/to/release-1.tgz",
-				}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
+				}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(metadata.Handcraft).To(Equal(builder.Handcraft{
+				Expect(generatedMetadata.Metadata).To(Equal(builder.Metadata{
 					"metadata_version":          "some-metadata-version",
 					"provides_product_versions": "some-provides-product-versions",
 					"runtime_configs": []interface{}{
@@ -180,18 +180,18 @@ addons:
 				})
 			})
 
-			Context("when the handcraft cannot be read", func() {
+			Context("when the metadata cannot be read", func() {
 				It("returns an error", func() {
-					handcraftReader.ReadCall.Returns.Error = errors.New("failed to read handcraft")
+					metadataReader.ReadCall.Returns.Error = errors.New("failed to read metadata")
 
-					_, err := tileBuilder.Build([]string{}, "", "handcraft.yml", "", "", "")
-					Expect(err).To(MatchError("failed to read handcraft"))
+					_, err := tileBuilder.Build([]string{}, "", "metadata.yml", "", "", "")
+					Expect(err).To(MatchError("failed to read metadata"))
 				})
 			})
 
 			Context("when the runtime config references a non-existent release", func() {
 				It("returns an error", func() {
-					handcraftReader.ReadCall.Returns.Handcraft = builder.Handcraft{
+					metadataReader.ReadCall.Returns.Metadata = builder.Metadata{
 						"metadata_version":          "some-metadata-version",
 						"provides_product_versions": "some-provides-product-versions",
 						"runtime_configs": []interface{}{
@@ -210,14 +210,14 @@ addons:
 
 					_, err := tileBuilder.Build([]string{
 						"/path/to/release-1.tgz",
-					}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
+					}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
 					Expect(err).To(MatchError("runtime config MY-RUNTIME-CONFIG references unknown release non-existent-release"))
 				})
 			})
 
 			Context("when the runtime config contains yaml that isn't well-formed", func() {
 				It("returns an error", func() {
-					handcraftReader.ReadCall.Returns.Handcraft = builder.Handcraft{
+					metadataReader.ReadCall.Returns.Metadata = builder.Metadata{
 						"metadata_version":          "some-metadata-version",
 						"provides_product_versions": "some-provides-product-versions",
 						"runtime_configs": []interface{}{
@@ -230,7 +230,7 @@ addons:
 
 					_, err := tileBuilder.Build([]string{
 						"/path/to/release-1.tgz",
-					}, "/path/to/test-stemcell.tgz", "/some/path/handcraft.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
+					}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
 					Expect(err).To(MatchError("runtime config MY-RUNTIME-CONFIG contains malformed yaml: yaml: could not find expected directive name"))
 				})
 			})

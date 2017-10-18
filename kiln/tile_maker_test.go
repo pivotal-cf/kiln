@@ -52,7 +52,7 @@ var _ = Describe("TileMaker", func() {
 			Version:              "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
 			ReleaseDirectories:   []string{someReleasesDirectory, otherReleasesDirectory},
-			Handcraft:            "some-handcraft",
+			Metadata:             "some-metadata",
 			MigrationDirectories: []string{"some-migrations-directory"},
 			OutputFile:           "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
 			StubReleases:         true,
@@ -71,24 +71,24 @@ var _ = Describe("TileMaker", func() {
 
 		Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 
-		releaseTarballs, stemcellTarball, handcraft, name, version, outputPath := fakeMetadataBuilder.BuildArgsForCall(0)
+		releaseTarballs, stemcellTarball, metadata, name, version, outputPath := fakeMetadataBuilder.BuildArgsForCall(0)
 		Expect(releaseTarballs).To(Equal(releases))
 		Expect(stemcellTarball).To(Equal("some-stemcell-tarball"))
-		Expect(handcraft).To(Equal("some-handcraft"))
+		Expect(metadata).To(Equal("some-metadata"))
 		Expect(name).To(Equal("cool-product-name"))
 		Expect(version).To(Equal("1.2.3"))
 		Expect(outputPath).To(Equal("some-output-dir/cool-product-file.1.2.3-build.4.pivotal"))
 	})
 
 	It("makes the tile", func() {
-		fakeMetadataBuilder.BuildReturns(builder.Metadata{
+		fakeMetadataBuilder.BuildReturns(builder.GeneratedMetadata{
 			Name: "cool-product-name",
-			Releases: []builder.MetadataRelease{{
+			Releases: []builder.Release{{
 				Name:    "some-release",
 				File:    "some-release-tarball",
 				Version: "1.2.3-build.4",
 			}},
-			StemcellCriteria: builder.MetadataStemcellCriteria{
+			StemcellCriteria: builder.StemcellCriteria{
 				Version:     "2.3.4",
 				OS:          "an-operating-system",
 				RequiresCPI: false,
@@ -100,8 +100,8 @@ var _ = Describe("TileMaker", func() {
 
 		Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
 
-		metadataContents, config := fakeTileWriter.WriteArgsForCall(0)
-		Expect(metadataContents).To(MatchYAML(`
+		generatedMetadataContents, config := fakeTileWriter.WriteArgsForCall(0)
+		Expect(generatedMetadataContents).To(MatchYAML(`
 name: cool-product-name
 releases:
 - name: some-release
@@ -116,7 +116,7 @@ stemcell_criteria:
 			Version:              "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
 			ReleaseDirectories:   []string{someReleasesDirectory, otherReleasesDirectory},
-			Handcraft:            "some-handcraft",
+			Metadata:             "some-metadata",
 			MigrationDirectories: []string{"some-migrations-directory"},
 			OutputFile:           "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
 			StubReleases:         true,
@@ -131,9 +131,9 @@ stemcell_criteria:
 	})
 
 	Context("failure cases", func() {
-		Context("when metadata builder fails", func() {
+		Context("when generated metadata builder fails", func() {
 			It("returns an error", func() {
-				fakeMetadataBuilder.BuildReturns(builder.Metadata{}, errors.New("some-error"))
+				fakeMetadataBuilder.BuildReturns(builder.GeneratedMetadata{}, errors.New("some-error"))
 
 				err := tileMaker.Make(config)
 				Expect(err).To(MatchError("some-error"))

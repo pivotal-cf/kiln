@@ -61,7 +61,7 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 		return config, errors.New("--stemcell-tarball is a required parameter")
 	}
 
-	if config.Handcraft == "" {
+	if config.Metadata == "" {
 		return config, errors.New("--metadata is a required parameter")
 	}
 

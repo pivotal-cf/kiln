@@ -39,7 +39,7 @@ var _ = Describe("bake", func() {
 			Expect(config).To(Equal(commands.BakeConfig{
 				StemcellTarball:    "some-stemcell-tarball",
 				ReleaseDirectories: []string{"some-release-tarball-directory", "other-release-tarball-directory"},
-				Handcraft:          "some-metadata",
+				Metadata:           "some-metadata",
 				Version:            "1.2.3",
 				ProductName:        "cool-product-name",
 				OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
@@ -65,7 +65,7 @@ var _ = Describe("bake", func() {
 				Expect(config).To(Equal(commands.BakeConfig{
 					StemcellTarball:      "some-stemcell-tarball",
 					ReleaseDirectories:   []string{"some-release-tarball-directory"},
-					Handcraft:            "some-metadata",
+					Metadata:             "some-metadata",
 					Version:              "1.2.3",
 					ProductName:          "cool-product-name",
 					MigrationDirectories: []string{"some-migrations-directory"},
@@ -93,7 +93,7 @@ var _ = Describe("bake", func() {
 					Expect(config).To(Equal(commands.BakeConfig{
 						StemcellTarball:      "some-stemcell-tarball",
 						ReleaseDirectories:   []string{"some-release-tarball-directory"},
-						Handcraft:            "some-metadata",
+						Metadata:             "some-metadata",
 						Version:              "1.2.3",
 						ProductName:          "cool-product-name",
 						MigrationDirectories: []string{"some-migrations-directory", "some-other-migrations-directory"},
@@ -122,7 +122,7 @@ var _ = Describe("bake", func() {
 			Expect(config).To(Equal(commands.BakeConfig{
 				StemcellTarball:    "some-stemcell-tarball",
 				ReleaseDirectories: []string{"some-release-tarball-directory"},
-				Handcraft:          "some-metadata",
+				Metadata:           "some-metadata",
 				Version:            "1.2.3",
 				ProductName:        "cool-product-name",
 				OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",

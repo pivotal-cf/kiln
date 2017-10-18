@@ -56,7 +56,7 @@ func NewTileWriter(filesystem filesystem, zipper zipper, logger logger, md5SumCa
 	}
 }
 
-func (w TileWriter) Write(metadataContents []byte, config commands.BakeConfig) error {
+func (w TileWriter) Write(generatedMetadataContents []byte, config commands.BakeConfig) error {
 	w.logger.Printf("Building %s...", config.OutputFile)
 
 	err := w.zipper.SetPath(config.OutputFile)
@@ -66,7 +66,7 @@ func (w TileWriter) Write(metadataContents []byte, config commands.BakeConfig) e
 
 	files := map[string]io.Reader{}
 
-	files[filepath.Join("metadata", fmt.Sprintf("%s.yml", config.ProductName))] = bytes.NewBuffer(metadataContents)
+	files[filepath.Join("metadata", fmt.Sprintf("%s.yml", config.ProductName))] = bytes.NewBuffer(generatedMetadataContents)
 
 	if len(config.ReleaseDirectories) > 0 {
 		for _, releasesDirectory := range config.ReleaseDirectories {

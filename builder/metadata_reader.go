@@ -7,29 +7,29 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type HandcraftReader struct {
+type MetadataReader struct {
 	filesystem filesystem
 	logger     logger
 }
 
-type Handcraft map[string]interface{}
+type Metadata map[string]interface{}
 
-func NewHandcraftReader(filesystem filesystem, logger logger) HandcraftReader {
-	return HandcraftReader{
+func NewMetadataReader(filesystem filesystem, logger logger) MetadataReader {
+	return MetadataReader{
 		filesystem: filesystem,
 		logger:     logger,
 	}
 }
 
-func (h HandcraftReader) Read(path, version string) (Handcraft, error) {
+func (h MetadataReader) Read(path, version string) (Metadata, error) {
 	file, err := h.filesystem.Open(path)
 	if err != nil {
-		return Handcraft{}, err
+		return Metadata{}, err
 	}
 
 	contents, err := ioutil.ReadAll(file)
 	if err != nil {
-		return Handcraft{}, err
+		return Metadata{}, err
 	}
 
 	versionRegexp := regexp.MustCompile(`\d+.\d+.\d+.[0-9]\$PRERELEASE_VERSION\$`)
@@ -37,11 +37,11 @@ func (h HandcraftReader) Read(path, version string) (Handcraft, error) {
 	h.logger.Printf("Injecting version %q into metadata...", version)
 	contents = versionRegexp.ReplaceAll(contents, []byte(version))
 
-	var handcraft Handcraft
-	err = yaml.Unmarshal(contents, &handcraft)
+	var metadata Metadata
+	err = yaml.Unmarshal(contents, &metadata)
 	if err != nil {
-		return Handcraft{}, err
+		return Metadata{}, err
 	}
 
-	return handcraft, nil
+	return metadata, nil
 }

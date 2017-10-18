@@ -10,24 +10,24 @@ import (
 type MetadataBuilder struct {
 	releaseManifestReader  releaseManifestReader
 	stemcellManifestReader stemcellManifestReader
-	handcraftReader        handcraftReader
+	metadataReader         metadataReader
 	logger                 logger
 }
 
-type Metadata struct {
+type GeneratedMetadata struct {
 	Name             string
-	Releases         []MetadataRelease
-	StemcellCriteria MetadataStemcellCriteria `yaml:"stemcell_criteria"`
-	Handcraft        Handcraft                `yaml:",inline"`
+	Releases         []Release
+	StemcellCriteria StemcellCriteria `yaml:"stemcell_criteria"`
+	Metadata         Metadata         `yaml:",inline"`
 }
 
-type MetadataRelease struct {
+type Release struct {
 	Name    string
 	File    string
 	Version string
 }
 
-type MetadataStemcellCriteria struct {
+type StemcellCriteria struct {
 	Version     string
 	OS          string
 	RequiresCPI bool `yaml:"requires_cpi"`
@@ -47,8 +47,8 @@ type stemcellManifestReader interface {
 	Read(path string) (StemcellManifest, error)
 }
 
-type handcraftReader interface {
-	Read(path, version string) (Handcraft, error)
+type metadataReader interface {
+	Read(path, version string) (Metadata, error)
 }
 
 type logger interface {
@@ -56,28 +56,28 @@ type logger interface {
 	Println(v ...interface{})
 }
 
-func NewMetadataBuilder(releaseManifestReader releaseManifestReader, stemcellManifestReader stemcellManifestReader, handcraftReader handcraftReader, logger logger) MetadataBuilder {
+func NewMetadataBuilder(releaseManifestReader releaseManifestReader, stemcellManifestReader stemcellManifestReader, metadataReader metadataReader, logger logger) MetadataBuilder {
 	return MetadataBuilder{
 		releaseManifestReader:  releaseManifestReader,
 		stemcellManifestReader: stemcellManifestReader,
-		handcraftReader:        handcraftReader,
+		metadataReader:         metadataReader,
 		logger:                 logger,
 	}
 }
 
-func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToHandcraft, name, version, pathToTile string) (Metadata, error) {
+func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToMetadata, name, version, pathToTile string) (GeneratedMetadata, error) {
 	m.logger.Printf("Creating metadata for %s...", pathToTile)
 
-	var releases []MetadataRelease
+	var releases []Release
 	for _, releaseTarball := range releaseTarballs {
 		releaseManifest, err := m.releaseManifestReader.Read(releaseTarball)
 		if err != nil {
-			return Metadata{}, err
+			return GeneratedMetadata{}, err
 		}
 
 		m.logger.Printf("Read manifest for release %s", releaseManifest.Name)
 
-		releases = append(releases, MetadataRelease{
+		releases = append(releases, Release{
 			Name:    releaseManifest.Name,
 			Version: releaseManifest.Version,
 			File:    filepath.Base(releaseTarball),
@@ -87,43 +87,43 @@ func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToH
 	stemcellManifest, err := m.stemcellManifestReader.Read(pathToStemcell)
 
 	if err != nil {
-		return Metadata{}, err
+		return GeneratedMetadata{}, err
 	}
 
 	m.logger.Printf("Read manifest for stemcell version %s", stemcellManifest.Version)
 
-	handcraft, err := m.handcraftReader.Read(pathToHandcraft, version)
+	metadata, err := m.metadataReader.Read(pathToMetadata, version)
 	if err != nil {
-		return Metadata{}, err
+		return GeneratedMetadata{}, err
 	}
 
 	m.logger.Printf("Read metadata")
 
-	handcraft, err = m.updateRuntimeConfigReleaseVersions(handcraft, releases)
+	metadata, err = m.updateRuntimeConfigReleaseVersions(metadata, releases)
 	if err != nil {
-		return Metadata{}, err
+		return GeneratedMetadata{}, err
 	}
 
-	return Metadata{
+	return GeneratedMetadata{
 		Name:     name,
 		Releases: releases,
-		StemcellCriteria: MetadataStemcellCriteria{
+		StemcellCriteria: StemcellCriteria{
 			OS:          stemcellManifest.OperatingSystem,
 			Version:     stemcellManifest.Version,
 			RequiresCPI: false,
 		},
-		Handcraft: handcraft,
+		Metadata: metadata,
 	}, nil
 }
 
-func (m MetadataBuilder) updateRuntimeConfigReleaseVersions(handcraft Handcraft, releases []MetadataRelease) (Handcraft, error) {
-	if opsmanRuntimeConfigs, ok := handcraft["runtime_configs"]; ok {
+func (m MetadataBuilder) updateRuntimeConfigReleaseVersions(metadata Metadata, releases []Release) (Metadata, error) {
+	if opsmanRuntimeConfigs, ok := metadata["runtime_configs"]; ok {
 		for _, orc := range opsmanRuntimeConfigs.([]interface{}) {
 			opsmanRuntimeConfig := orc.(map[interface{}]interface{})
 			var boshRuntimeConfig BoshRuntimeConfig
 			err := yaml.Unmarshal([]byte(opsmanRuntimeConfig["runtime_config"].(string)), &boshRuntimeConfig)
 			if err != nil {
-				return Handcraft{}, fmt.Errorf("runtime config %s contains malformed yaml: %s",
+				return Metadata{}, fmt.Errorf("runtime config %s contains malformed yaml: %s",
 					opsmanRuntimeConfig["name"], err)
 			}
 
@@ -140,7 +140,7 @@ func (m MetadataBuilder) updateRuntimeConfigReleaseVersions(handcraft Handcraft,
 					}
 
 					if !found {
-						return Handcraft{}, fmt.Errorf("runtime config %s references unknown release %s",
+						return Metadata{}, fmt.Errorf("runtime config %s references unknown release %s",
 							opsmanRuntimeConfig["name"], runtimeConfigRelease["name"])
 					}
 				}
@@ -148,12 +148,12 @@ func (m MetadataBuilder) updateRuntimeConfigReleaseVersions(handcraft Handcraft,
 
 			newYAML, err := yaml.Marshal(boshRuntimeConfig)
 			if err != nil {
-				return Handcraft{}, err // untested
+				return Metadata{}, err // untested
 			}
 
 			opsmanRuntimeConfig["runtime_config"] = string(newYAML)
 		}
 	}
 
-	return handcraft, nil
+	return metadata, nil
 }

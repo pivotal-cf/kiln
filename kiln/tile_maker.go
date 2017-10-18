@@ -11,12 +11,12 @@ import (
 
 //go:generate counterfeiter -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
 type tileWriter interface {
-	Write(metadataContents []byte, config commands.BakeConfig) error
+	Write(generatedMetadataContents []byte, config commands.BakeConfig) error
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_builder.go --fake-name MetadataBuilder . metadataBuilder
 type metadataBuilder interface {
-	Build(releaseTarballs []string, pathToStemcell, pathToHandcraft, name, version, pathToTile string) (builder.Metadata, error)
+	Build(releaseTarballs []string, pathToStemcell, pathToMetadata, name, version, pathToTile string) (builder.GeneratedMetadata, error)
 }
 
 type logger interface {
@@ -50,10 +50,10 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 		}
 	}
 
-	metadata, err := t.metadataBuilder.Build(
+	generatedMetadata, err := t.metadataBuilder.Build(
 		releaseTarballs,
 		config.StemcellTarball,
-		config.Handcraft,
+		config.Metadata,
 		config.ProductName,
 		config.Version,
 		config.OutputFile,
@@ -63,12 +63,12 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 	}
 
 	t.logger.Println("Marshaling metadata file...")
-	metadataYAML, err := yaml.Marshal(metadata)
+	generatedMetadataYAML, err := yaml.Marshal(generatedMetadata)
 	if err != nil {
 		return err
 	}
 
-	err = t.tileWriter.Write(metadataYAML, config)
+	err = t.tileWriter.Write(generatedMetadataYAML, config)
 	if err != nil {
 		return err
 	}

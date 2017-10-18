@@ -8,29 +8,29 @@ import (
 )
 
 type MetadataBuilder struct {
-	BuildStub        func(releaseTarballs []string, pathToStemcell, pathToHandcraft, name, version, pathToTile string) (builder.Metadata, error)
+	BuildStub        func(releaseTarballs []string, pathToStemcell, pathToMetadata, name, version, pathToTile string) (builder.GeneratedMetadata, error)
 	buildMutex       sync.RWMutex
 	buildArgsForCall []struct {
 		releaseTarballs []string
 		pathToStemcell  string
-		pathToHandcraft string
+		pathToMetadata  string
 		name            string
 		version         string
 		pathToTile      string
 	}
 	buildReturns struct {
-		result1 builder.Metadata
+		result1 builder.GeneratedMetadata
 		result2 error
 	}
 	buildReturnsOnCall map[int]struct {
-		result1 builder.Metadata
+		result1 builder.GeneratedMetadata
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MetadataBuilder) Build(releaseTarballs []string, pathToStemcell string, pathToHandcraft string, name string, version string, pathToTile string) (builder.Metadata, error) {
+func (fake *MetadataBuilder) Build(releaseTarballs []string, pathToStemcell string, pathToMetadata string, name string, version string, pathToTile string) (builder.GeneratedMetadata, error) {
 	var releaseTarballsCopy []string
 	if releaseTarballs != nil {
 		releaseTarballsCopy = make([]string, len(releaseTarballs))
@@ -41,15 +41,15 @@ func (fake *MetadataBuilder) Build(releaseTarballs []string, pathToStemcell stri
 	fake.buildArgsForCall = append(fake.buildArgsForCall, struct {
 		releaseTarballs []string
 		pathToStemcell  string
-		pathToHandcraft string
+		pathToMetadata  string
 		name            string
 		version         string
 		pathToTile      string
-	}{releaseTarballsCopy, pathToStemcell, pathToHandcraft, name, version, pathToTile})
-	fake.recordInvocation("Build", []interface{}{releaseTarballsCopy, pathToStemcell, pathToHandcraft, name, version, pathToTile})
+	}{releaseTarballsCopy, pathToStemcell, pathToMetadata, name, version, pathToTile})
+	fake.recordInvocation("Build", []interface{}{releaseTarballsCopy, pathToStemcell, pathToMetadata, name, version, pathToTile})
 	fake.buildMutex.Unlock()
 	if fake.BuildStub != nil {
-		return fake.BuildStub(releaseTarballs, pathToStemcell, pathToHandcraft, name, version, pathToTile)
+		return fake.BuildStub(releaseTarballs, pathToStemcell, pathToMetadata, name, version, pathToTile)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -66,27 +66,27 @@ func (fake *MetadataBuilder) BuildCallCount() int {
 func (fake *MetadataBuilder) BuildArgsForCall(i int) ([]string, string, string, string, string, string) {
 	fake.buildMutex.RLock()
 	defer fake.buildMutex.RUnlock()
-	return fake.buildArgsForCall[i].releaseTarballs, fake.buildArgsForCall[i].pathToStemcell, fake.buildArgsForCall[i].pathToHandcraft, fake.buildArgsForCall[i].name, fake.buildArgsForCall[i].version, fake.buildArgsForCall[i].pathToTile
+	return fake.buildArgsForCall[i].releaseTarballs, fake.buildArgsForCall[i].pathToStemcell, fake.buildArgsForCall[i].pathToMetadata, fake.buildArgsForCall[i].name, fake.buildArgsForCall[i].version, fake.buildArgsForCall[i].pathToTile
 }
 
-func (fake *MetadataBuilder) BuildReturns(result1 builder.Metadata, result2 error) {
+func (fake *MetadataBuilder) BuildReturns(result1 builder.GeneratedMetadata, result2 error) {
 	fake.BuildStub = nil
 	fake.buildReturns = struct {
-		result1 builder.Metadata
+		result1 builder.GeneratedMetadata
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *MetadataBuilder) BuildReturnsOnCall(i int, result1 builder.Metadata, result2 error) {
+func (fake *MetadataBuilder) BuildReturnsOnCall(i int, result1 builder.GeneratedMetadata, result2 error) {
 	fake.BuildStub = nil
 	if fake.buildReturnsOnCall == nil {
 		fake.buildReturnsOnCall = make(map[int]struct {
-			result1 builder.Metadata
+			result1 builder.GeneratedMetadata
 			result2 error
 		})
 	}
 	fake.buildReturnsOnCall[i] = struct {
-		result1 builder.Metadata
+		result1 builder.GeneratedMetadata
 		result2 error
 	}{result1, result2}
 }

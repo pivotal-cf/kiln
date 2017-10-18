@@ -102,7 +102,7 @@ var _ = Describe("TileWriter", func() {
 
 			md5Calc.ChecksumCall.Returns.Sum = "THIS-IS-THE-SUM"
 
-			err := tileWriter.Write([]byte("metadata-contents"), config)
+			err := tileWriter.Write([]byte("generated-metadata-contents"), config)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(zipper.SetPathCall.CallCount).To(Equal(1))
@@ -111,7 +111,7 @@ var _ = Describe("TileWriter", func() {
 			Expect(zipper.AddCall.Calls).To(HaveLen(8))
 
 			Expect(zipper.AddCall.Calls[0].Path).To(Equal(filepath.Join("metadata", "cool-product-name.yml")))
-			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[0].File)).Should(gbytes.Say("metadata-contents"))
+			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[0].File)).Should(gbytes.Say("generated-metadata-contents"))
 
 			Expect(zipper.AddCall.Calls[1].Path).To(Equal(filepath.Join("migrations", "v1", "migration-1.js")))
 			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[1].File)).Should(gbytes.Say("migration-1"))
@@ -205,7 +205,7 @@ var _ = Describe("TileWriter", func() {
 						StubReleases:         false,
 					}
 
-					err := tileWriter.Write([]byte("metadata-contents"), config)
+					err := tileWriter.Write([]byte("generated-metadata-contents"), config)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
@@ -233,7 +233,7 @@ var _ = Describe("TileWriter", func() {
 						StubReleases:         false,
 					}
 
-					err := tileWriter.Write([]byte("metadata-contents"), config)
+					err := tileWriter.Write([]byte("generated-metadata-contents"), config)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
@@ -292,7 +292,7 @@ var _ = Describe("TileWriter", func() {
 						ReleaseDirectories: []string{"/some/path/releases"},
 					}
 
-					err := tileWriter.Write([]byte("metadata-contents"), config)
+					err := tileWriter.Write([]byte("generated-metadata-contents"), config)
 					Expect(err).To(MatchError("failed to open release"))
 				})
 			})

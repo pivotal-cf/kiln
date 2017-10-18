@@ -43,57 +43,57 @@ property_blueprints:
   default: *product_version
 `
 
-var _ = Describe("HandcraftReader", func() {
+var _ = Describe("MetadataReader", func() {
 	var (
 		filesystem *fakes.Filesystem
 		logger     *fakes.Logger
-		reader     builder.HandcraftReader
+		reader     builder.MetadataReader
 	)
 
 	BeforeEach(func() {
 		filesystem = &fakes.Filesystem{}
 		logger = &fakes.Logger{}
-		reader = builder.NewHandcraftReader(filesystem, logger)
+		reader = builder.NewMetadataReader(filesystem, logger)
 	})
 
 	Describe("Read", func() {
-		It("parses the information from the handcraft", func() {
+		It("parses the information from the metadata", func() {
 			filesystem.OpenReturns(NewBuffer(bytes.NewBuffer([]byte(HANDCRAFT))), nil)
 
-			handcraft, err := reader.Read("/some/path/handcraft.yml", "1.2.34-build.4")
+			metadata, err := reader.Read("/some/path/metadata.yml", "1.2.34-build.4")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(filesystem.OpenArgsForCall(0)).To(Equal("/some/path/handcraft.yml"))
-			Expect(handcraft["metadata_version"]).To(Equal("1.7"))
-			Expect(handcraft["provides_product_versions"]).To(Equal([]interface{}{map[interface{}]interface{}{
+			Expect(filesystem.OpenArgsForCall(0)).To(Equal("/some/path/metadata.yml"))
+			Expect(metadata["metadata_version"]).To(Equal("1.7"))
+			Expect(metadata["provides_product_versions"]).To(Equal([]interface{}{map[interface{}]interface{}{
 				"name":    "cf",
 				"version": "1.7.0.0",
 			}}))
-			Expect(handcraft["product_version"]).To(Equal("1.2.34-build.4"))
-			Expect(handcraft["minimum_version_for_upgrade"]).To(Equal("1.6.9-build.0"))
-			Expect(handcraft["label"]).To(Equal("Pivotal Elastic Runtime"))
-			Expect(handcraft["description"]).To(Equal("this is the description"))
-			Expect(handcraft["icon_image"]).To(Equal("some-image"))
-			Expect(handcraft["rank"]).To(Equal(90))
-			Expect(handcraft["serial"]).To(BeFalse())
-			Expect(handcraft["install_time_verifiers"]).To(Equal([]interface{}{map[interface{}]interface{}{
+			Expect(metadata["product_version"]).To(Equal("1.2.34-build.4"))
+			Expect(metadata["minimum_version_for_upgrade"]).To(Equal("1.6.9-build.0"))
+			Expect(metadata["label"]).To(Equal("Pivotal Elastic Runtime"))
+			Expect(metadata["description"]).To(Equal("this is the description"))
+			Expect(metadata["icon_image"]).To(Equal("some-image"))
+			Expect(metadata["rank"]).To(Equal(90))
+			Expect(metadata["serial"]).To(BeFalse())
+			Expect(metadata["install_time_verifiers"]).To(Equal([]interface{}{map[interface{}]interface{}{
 				"name": "Verifiers::SsoUrlVerifier",
 				"properties": map[interface{}]interface{}{
 					"url": ".properties.uaa.saml.sso_url",
 				},
 			}}))
-			Expect(handcraft["post_deploy_errands"]).To(Equal([]interface{}{map[interface{}]interface{}{
+			Expect(metadata["post_deploy_errands"]).To(Equal([]interface{}{map[interface{}]interface{}{
 				"name": "smoke-tests",
 			}}))
-			Expect(handcraft["form_types"]).To(Equal([]interface{}{map[interface{}]interface{}{
+			Expect(metadata["form_types"]).To(Equal([]interface{}{map[interface{}]interface{}{
 				"name":  "domains",
 				"label": "Domains",
 			}}))
-			Expect(handcraft["job_types"]).To(Equal([]interface{}{map[interface{}]interface{}{
+			Expect(metadata["job_types"]).To(Equal([]interface{}{map[interface{}]interface{}{
 				"name":  "consul_server",
 				"label": "Consul",
 			}}))
-			Expect(handcraft["property_blueprints"]).To(Equal([]interface{}{map[interface{}]interface{}{
+			Expect(metadata["property_blueprints"]).To(Equal([]interface{}{map[interface{}]interface{}{
 				"name":         "product_version",
 				"type":         "string",
 				"configurable": false,
@@ -107,28 +107,28 @@ var _ = Describe("HandcraftReader", func() {
 	})
 
 	Describe("failure cases", func() {
-		Context("when the handcraft file cannot be opened", func() {
+		Context("when the metadata file cannot be opened", func() {
 			It("returns an error", func() {
-				filesystem.OpenReturns(nil, errors.New("failed to open handcraft"))
+				filesystem.OpenReturns(nil, errors.New("failed to open metadata"))
 
-				_, err := reader.Read("/some/path/handcraft.yml", "1.2.3-build.9999")
-				Expect(err).To(MatchError("failed to open handcraft"))
+				_, err := reader.Read("/some/path/metadata.yml", "1.2.3-build.9999")
+				Expect(err).To(MatchError("failed to open metadata"))
 			})
 		})
 
-		Context("when the handcraft file cannot be read", func() {
+		Context("when the metadata file cannot be read", func() {
 			It("returns an error", func() {
 				filesystem.OpenReturns(nil, errors.New("failed to read"))
-				_, err := reader.Read("/some/path/handcraft.yml", "1.2.3-build.9999")
+				_, err := reader.Read("/some/path/metadata.yml", "1.2.3-build.9999")
 				Expect(err).To(MatchError("failed to read"))
 			})
 		})
 
-		Context("when the handcraft yaml cannot be unmarshaled", func() {
+		Context("when the metadata yaml cannot be unmarshaled", func() {
 			It("returns an error", func() {
 				filesystem.OpenReturns(NewBuffer(bytes.NewBuffer([]byte("&&&&&&&&"))), nil)
 
-				_, err := reader.Read("/some/path/handcraft.yml", "1.2.3-build.9999")
+				_, err := reader.Read("/some/path/metadata.yml", "1.2.3-build.9999")
 				Expect(err).To(MatchError("yaml: did not find expected alphabetic or numeric character"))
 			})
 		})

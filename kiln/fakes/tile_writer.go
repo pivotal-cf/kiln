@@ -8,11 +8,11 @@ import (
 )
 
 type TileWriter struct {
-	WriteStub        func(metadataContents []byte, config commands.BakeConfig) error
+	WriteStub        func(generatedMetadataContents []byte, config commands.BakeConfig) error
 	writeMutex       sync.RWMutex
 	writeArgsForCall []struct {
-		metadataContents []byte
-		config           commands.BakeConfig
+		generatedMetadataContents []byte
+		config                    commands.BakeConfig
 	}
 	writeReturns struct {
 		result1 error
@@ -24,22 +24,22 @@ type TileWriter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TileWriter) Write(metadataContents []byte, config commands.BakeConfig) error {
-	var metadataContentsCopy []byte
-	if metadataContents != nil {
-		metadataContentsCopy = make([]byte, len(metadataContents))
-		copy(metadataContentsCopy, metadataContents)
+func (fake *TileWriter) Write(generatedMetadataContents []byte, config commands.BakeConfig) error {
+	var generatedMetadataContentsCopy []byte
+	if generatedMetadataContents != nil {
+		generatedMetadataContentsCopy = make([]byte, len(generatedMetadataContents))
+		copy(generatedMetadataContentsCopy, generatedMetadataContents)
 	}
 	fake.writeMutex.Lock()
 	ret, specificReturn := fake.writeReturnsOnCall[len(fake.writeArgsForCall)]
 	fake.writeArgsForCall = append(fake.writeArgsForCall, struct {
-		metadataContents []byte
-		config           commands.BakeConfig
-	}{metadataContentsCopy, config})
-	fake.recordInvocation("Write", []interface{}{metadataContentsCopy, config})
+		generatedMetadataContents []byte
+		config                    commands.BakeConfig
+	}{generatedMetadataContentsCopy, config})
+	fake.recordInvocation("Write", []interface{}{generatedMetadataContentsCopy, config})
 	fake.writeMutex.Unlock()
 	if fake.WriteStub != nil {
-		return fake.WriteStub(metadataContents, config)
+		return fake.WriteStub(generatedMetadataContents, config)
 	}
 	if specificReturn {
 		return ret.result1
@@ -56,7 +56,7 @@ func (fake *TileWriter) WriteCallCount() int {
 func (fake *TileWriter) WriteArgsForCall(i int) ([]byte, commands.BakeConfig) {
 	fake.writeMutex.RLock()
 	defer fake.writeMutex.RUnlock()
-	return fake.writeArgsForCall[i].metadataContents, fake.writeArgsForCall[i].config
+	return fake.writeArgsForCall[i].generatedMetadataContents, fake.writeArgsForCall[i].config
 }
 
 func (fake *TileWriter) WriteReturns(result1 error) {
