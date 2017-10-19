@@ -268,8 +268,11 @@ var _ = Describe("TileWriter", func() {
 						walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
 						walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
 						walkFn(root, dirInfo, nil)
+					} else if root == "/some/path/to-embed/my-file.txt" {
+						walkFn("/some/path/to-embed", dirInfo, nil)
+						walkFn("/some/path/to-embed/my-file.txt", embedFileInfo, nil)
+						walkFn(root, embedFileInfo, nil)
 					}
-
 					return nil
 				}
 
@@ -308,6 +311,75 @@ var _ = Describe("TileWriter", func() {
 				}))
 				Expect(zipper.AddCall.Calls[0].Path).To(Equal(filepath.Join("embed", "my-file.txt")))
 				Eventually(gbytes.BufferReader(zipper.AddCall.Calls[0].File)).Should(gbytes.Say("contents-of-embedded-file"))
+			})
+		})
+
+		Context("when a directory to embed is provided", func() {
+			BeforeEach(func() {
+				dirInfo := &fakes.FileInfo{}
+				dirInfo.IsDirReturns(true)
+
+				releaseInfo := &fakes.FileInfo{}
+				releaseInfo.IsDirReturns(false)
+
+				embedFileInfo := &fakes.FileInfo{}
+				embedFileInfo.IsDirReturns(false)
+
+				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
+					if root == "/some/path/releases" {
+						walkFn("/some/path/releases", dirInfo, nil)
+						walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
+						walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
+						walkFn(root, dirInfo, nil)
+					} else if root == "/some/path/to-embed" {
+						walkFn("/some/path/to-embed", dirInfo, nil)
+						walkFn("/some/path/to-embed/my-file-1.txt", embedFileInfo, nil)
+						walkFn("/some/path/to-embed/my-file-2.txt", embedFileInfo, nil)
+						walkFn(root, dirInfo, nil)
+					}
+					return nil
+				}
+
+				filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
+					if path == "/some/path/to-embed/my-file-1.txt" {
+						return NewBuffer(bytes.NewBufferString("contents-of-embedded-file-1")), nil
+					} else if path == "/some/path/to-embed/my-file-2.txt" {
+						return NewBuffer(bytes.NewBufferString("contents-of-embedded-file-2")), nil
+					}
+					return nil, nil
+				}
+			})
+
+			It("embeds the directory in the embed directory", func() {
+				config := commands.BakeConfig{
+					ProductName:          "cool-product-name",
+					ReleaseDirectories:   []string{"/some/path/releases"},
+					MigrationDirectories: []string{},
+					EmbedPaths:           []string{"/some/path/to-embed"},
+					Version:              "1.2.3",
+					OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
+					StubReleases:         false,
+				}
+
+				err := tileWriter.Write([]byte("generated-metadata-contents"), config)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
+					fmt.Sprintf("Building %s...", outputFile),
+					fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
+					fmt.Sprintf("Adding embed/to-embed/my-file-1.txt to %s...", outputFile),
+					fmt.Sprintf("Adding embed/to-embed/my-file-2.txt to %s...", outputFile),
+					fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+					fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
+					fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
+					fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
+					"Calculated md5 sum: ",
+				}))
+				Expect(zipper.AddCall.Calls[0].Path).To(Equal(filepath.Join("embed", "to-embed", "my-file-1.txt")))
+				Eventually(gbytes.BufferReader(zipper.AddCall.Calls[0].File)).Should(gbytes.Say("contents-of-embedded-file-1"))
+
+				Expect(zipper.AddCall.Calls[1].Path).To(Equal(filepath.Join("embed", "to-embed", "my-file-2.txt")))
+				Eventually(gbytes.BufferReader(zipper.AddCall.Calls[1].File)).Should(gbytes.Say("contents-of-embedded-file-2"))
 			})
 		})
 
@@ -401,6 +473,38 @@ var _ = Describe("TileWriter", func() {
 
 					err := tileWriter.Write([]byte{}, config)
 					Expect(err).To(MatchError("failed to open migration"))
+				})
+			})
+
+			Context("when an embed file cannt be opened", func() {
+				It("returns an error", func() {
+					dirInfo := &fakes.FileInfo{}
+					dirInfo.IsDirReturns(true)
+
+					embedInfo := &fakes.FileInfo{}
+					embedInfo.IsDirReturns(false)
+
+					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
+						walkFn("/some/path/embed", dirInfo, nil)
+						err := walkFn("/some/path/embed/my-file-1.tgz", embedInfo, nil)
+
+						return err
+					}
+
+					filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
+						if path == "/some/path/embed/my-file-1.tgz" {
+							return nil, errors.New("failed to open embed")
+						}
+
+						return nil, nil
+					}
+
+					config := commands.BakeConfig{
+						EmbedPaths: []string{"/some/path/embed"},
+					}
+
+					err := tileWriter.Write([]byte("generated-metadata-contents"), config)
+					Expect(err).To(MatchError("failed to open embed"))
 				})
 			})
 

@@ -87,12 +87,10 @@ func (w TileWriter) Write(generatedMetadataContents []byte, config commands.Bake
 	}
 
 	for _, embedPath := range config.EmbedPaths {
-		file, err := w.filesystem.Open(embedPath)
+		err = w.addEmbeddedPath(files, embedPath)
 		if err != nil {
 			return err
 		}
-
-		files[filepath.Join("embed", filepath.Base(embedPath))] = file
 	}
 
 	var paths []string
@@ -154,6 +152,33 @@ func (w TileWriter) addReleaseTarballs(files map[string]io.Reader, releasesDir s
 		}
 		files[filepath.Join("releases", filepath.Base(filePath))] = file
 
+		return nil
+	})
+}
+
+func (w TileWriter) addEmbeddedPath(files map[string]io.Reader, pathToEmbed string) error {
+	return w.filesystem.Walk(pathToEmbed, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		file, err := w.filesystem.Open(filePath)
+		if err != nil {
+			return err
+		}
+
+		relativePath, err := filepath.Rel(pathToEmbed, filePath)
+		if err != nil {
+			return err //not tested
+		}
+
+		entryPath := filepath.Join("embed", filepath.Join(filepath.Base(pathToEmbed), relativePath))
+
+		files[entryPath] = file
 		return nil
 	})
 }
