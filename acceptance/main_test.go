@@ -47,6 +47,9 @@ name: cf
 version: 235
 `
 
+		_, err = ioutil.TempFile(someReleasesDirectory, "")
+		Expect(err).NotTo(HaveOccurred())
+
 		_, err = createTarball(someReleasesDirectory, "cf-release-235.0.0-3215.4.0.tgz", "release.MF", cfReleaseManifest)
 		Expect(err).NotTo(HaveOccurred())
 

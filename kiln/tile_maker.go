@@ -3,6 +3,7 @@ package kiln
 import (
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
@@ -46,6 +47,10 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 		}
 
 		for _, file := range files {
+			matchTarballs, _ := regexp.MatchString("tgz$|tar.gz$", file.Name())
+			if !matchTarballs {
+				continue
+			}
 			releaseTarballs = append(releaseTarballs, filepath.Join(releasesDirectory, file.Name()))
 		}
 	}

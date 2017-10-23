@@ -24,7 +24,7 @@ var _ = Describe("TileMaker", func() {
 		tileMaker              kiln.TileMaker
 		someReleasesDirectory  string
 		otherReleasesDirectory string
-		releases               []string
+		validReleases          []string
 		err                    error
 	)
 
@@ -35,13 +35,19 @@ var _ = Describe("TileMaker", func() {
 		otherReleasesDirectory, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		someReleaseFile, err := ioutil.TempFile(someReleasesDirectory, "")
+		tarballRelease := someReleasesDirectory + "/release1.tgz"
+		err = ioutil.WriteFile(tarballRelease, []byte(""), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		otherReleaseFile, err := ioutil.TempFile(otherReleasesDirectory, "")
+		otherTarballRelease := someReleasesDirectory + "/release2.tgz"
+		err = ioutil.WriteFile(otherTarballRelease, []byte(""), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		releases = []string{someReleaseFile.Name(), otherReleaseFile.Name()}
+		nonTarballRelease := someReleasesDirectory + "/some-broken-release"
+		err = ioutil.WriteFile(nonTarballRelease, []byte(""), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		validReleases = []string{tarballRelease, otherTarballRelease}
 
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
 		fakeTileWriter = &fakes.TileWriter{}
@@ -72,7 +78,7 @@ var _ = Describe("TileMaker", func() {
 		Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 
 		releaseTarballs, stemcellTarball, metadata, name, version, outputPath := fakeMetadataBuilder.BuildArgsForCall(0)
-		Expect(releaseTarballs).To(Equal(releases))
+		Expect(releaseTarballs).To(Equal(validReleases))
 		Expect(stemcellTarball).To(Equal("some-stemcell-tarball"))
 		Expect(metadata).To(Equal("some-metadata"))
 		Expect(name).To(Equal("cool-product-name"))
