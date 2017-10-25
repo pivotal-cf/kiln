@@ -7,6 +7,18 @@ import (
 	"github.com/pivotal-cf/jhanda/flags"
 )
 
+type BakeConfig struct {
+	ReleaseDirectories   flags.StringSlice `short:"rd"   long:"releases-directory"      description:"path to a directory containing release tarballs"`
+	MigrationDirectories flags.StringSlice `short:"md"   long:"migrations-directory"    description:"path to a directory containing migrations"`
+	EmbedPaths           flags.StringSlice `short:"e"    long:"embed"                   description:"path to files to include in the tile /embed directory"`
+	StemcellTarball      string            `short:"st"   long:"stemcell-tarball"        description:"path to a stemcell tarball"`
+	Metadata             string            `short:"m"    long:"metadata"                description:"path to the metadata file"`
+	Version              string            `short:"v"    long:"version"                 description:"version of the tile"`
+	ProductName          string            `short:"pn"   long:"product-name"            description:"product name"`
+	OutputFile           string            `short:"o"    long:"output-file"             description:"path to where the tile will be output"`
+	StubReleases         bool              `short:"sr"   long:"stub-releases"           description:"skips importing release tarballs into the tile"`
+}
+
 type Bake struct {
 	tileMaker tileMaker
 	Options   BakeConfig
