@@ -16,26 +16,26 @@ Usage: kiln [options] <command> [<args>]
   -h, --help  bool  prints this usage information (default: false)
 
 Commands:
-  bake  builds a tile
+  bake  bakes a tile
   help  prints this usage information
 `
 
 const BAKE_USAGE = `kiln bake
-Builds a tile to be uploaded to OpsMan from provided inputs.
+Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.
 
 Usage: kiln [options] bake [<args>]
   -h, --help  bool  prints this usage information (default: false)
 
 Command Arguments:
-  -rd, --releases-directory    slice   path to the release tarballs directory
-  -md, --migrations-directory  slice   path to the migrations directory
-  -e, --embed                  slice   path to additional files to embed
-  -st, --stemcell-tarball      string  location of the stemcell tarball
-  -m, --metadata               string  location of the metadata file
+  -rd, --releases-directory    slice   path to a directory containing release tarballs
+  -md, --migrations-directory  slice   path to a directory containing migrations
+  -e, --embed                  slice   path to files to include in the tile /embed directory
+  -st, --stemcell-tarball      string  path to a stemcell tarball
+  -m, --metadata               string  path to the metadata file
   -v, --version                string  version of the tile
   -pn, --product-name          string  product name
-  -o, --output-file            string  the output path of the tile
-  -sr, --stub-releases         bool    don't include release tarballs
+  -o, --output-file            string  path to where the tile will be output
+  -sr, --stub-releases         bool    skips importing release tarballs into the tile
 `
 
 var _ = Describe("help", func() {

@@ -257,7 +257,7 @@ var _ = Describe("bake", func() {
 		It("returns usage information for the command", func() {
 			command := commands.NewBake(nil)
 			Expect(command.Usage()).To(Equal(jhandacommands.Usage{
-				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager",
+				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
 				ShortDescription: "bakes a tile",
 				Flags:            command.Options,
 			}))

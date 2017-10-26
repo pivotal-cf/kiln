@@ -51,8 +51,8 @@ func (b Bake) Execute(args []string) error {
 
 func (b Bake) Usage() commands.Usage {
 	return commands.Usage{
-		Description:      "Builds a tile to be uploaded to OpsMan from provided inputs.",
-		ShortDescription: "builds a tile",
+		Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
+		ShortDescription: "bakes a tile",
 		Flags:            b.Options,
 	}
 }
