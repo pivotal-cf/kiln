@@ -17,8 +17,8 @@ const (
 kiln helps you build ops manager compatible tiles
 
 Usage: kiln [options] <command> [<args>]
-  -?, --query     asks a question
-  -!, --surprise  gives you a present
+  --query, -?     asks a question
+  --surprise, -!  gives you a present
 
 Commands:
   clean  cleans the pot you used
@@ -29,21 +29,21 @@ Commands:
 This command will help you cook a stew.
 
 Usage: kiln [options] cook [<args>]
-  -?, --query     asks a question
-  -!, --surprise  gives you a present
+  --query, -?     asks a question
+  --surprise, -!  gives you a present
 
 Command Arguments:
-  -w, --water  int  cups of water
-  -s, --stock  int  teaspoons of vegan stock
-  -l, --lemon  int  teaspoons of lemon juice
+  --water, -w  int  cups of water
+  --stock, -s  int  teaspoons of vegan stock
+  --lemon, -l  int  teaspoons of lemon juice
 `
 
 	FLAGLESS_USAGE = `kiln cook
 This command will help you cook a stew.
 
 Usage: kiln [options] cook
-  -?, --query     asks a question
-  -!, --surprise  gives you a present
+  --query, -?     asks a question
+  --surprise, -!  gives you a present
 `
 )
 
@@ -56,8 +56,8 @@ var _ = Describe("Help", func() {
 	BeforeEach(func() {
 		output = bytes.NewBuffer([]byte{})
 		flags = strings.TrimSpace(`
--?, --query     asks a question
--!, --surprise  gives you a present
+--query, -?     asks a question
+--surprise, -!  gives you a present
 `)
 	})
 
