@@ -1,11 +1,6 @@
 package builder
 
-import (
-	"fmt"
-	"path/filepath"
-
-	yaml "gopkg.in/yaml.v2"
-)
+import "path/filepath"
 
 type MetadataBuilder struct {
 	releaseManifestReader  releaseManifestReader
@@ -101,11 +96,6 @@ func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToM
 
 	m.logger.Printf("Read metadata")
 
-	metadata, err = m.updateRuntimeConfigReleaseVersions(metadata, releases)
-	if err != nil {
-		return GeneratedMetadata{}, err
-	}
-
 	return GeneratedMetadata{
 		Name:     name,
 		Releases: releases,
@@ -116,46 +106,4 @@ func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToM
 		},
 		Metadata: metadata,
 	}, nil
-}
-
-func (m MetadataBuilder) updateRuntimeConfigReleaseVersions(metadata Metadata, releases []Release) (Metadata, error) {
-	if opsmanRuntimeConfigs, ok := metadata["runtime_configs"]; ok {
-		for _, orc := range opsmanRuntimeConfigs.([]interface{}) {
-			opsmanRuntimeConfig := orc.(map[interface{}]interface{})
-			var boshRuntimeConfig BoshRuntimeConfig
-			err := yaml.Unmarshal([]byte(opsmanRuntimeConfig["runtime_config"].(string)), &boshRuntimeConfig)
-			if err != nil {
-				return Metadata{}, fmt.Errorf("runtime config %s contains malformed yaml: %s",
-					opsmanRuntimeConfig["name"], err)
-			}
-
-			if len(boshRuntimeConfig.Releases) > 0 {
-				for _, runtimeConfigRelease := range boshRuntimeConfig.Releases {
-					found := false
-
-					for _, release := range releases {
-						if release.Name == runtimeConfigRelease["name"] {
-							m.logger.Printf("Injecting version %s into runtime config release %s", release.Version, release.Name)
-							runtimeConfigRelease["version"] = release.Version
-							found = true
-						}
-					}
-
-					if !found {
-						return Metadata{}, fmt.Errorf("runtime config %s references unknown release %s",
-							opsmanRuntimeConfig["name"], runtimeConfigRelease["name"])
-					}
-				}
-			}
-
-			newYAML, err := yaml.Marshal(boshRuntimeConfig)
-			if err != nil {
-				return Metadata{}, err // untested
-			}
-
-			opsmanRuntimeConfig["runtime_config"] = string(newYAML)
-		}
-	}
-
-	return metadata, nil
 }

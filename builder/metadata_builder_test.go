@@ -57,18 +57,6 @@ var _ = Describe("MetadataBuilder", func() {
 			metadataReader.ReadReturns(builder.Metadata{
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
-				"runtime_configs": []interface{}{
-					map[interface{}]interface{}{
-						"name": "MY-RUNTIME-CONFIG",
-						"runtime_config": `releases:
-- name: release-1
-addons:
-- name: MY-ADDON-NAME
-  jobs:
-  - name: MY-RUNTIME-CONFIG-JOB
-    release: release-1`,
-					},
-				},
 			},
 				nil,
 			)
@@ -103,20 +91,6 @@ addons:
 			Expect(generatedMetadata.Metadata).To(Equal(builder.Metadata{
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
-				"runtime_configs": []interface{}{
-					map[interface{}]interface{}{
-						"name": "MY-RUNTIME-CONFIG",
-						"runtime_config": `releases:
-- name: release-1
-  version: version-1
-addons:
-- jobs:
-  - name: MY-RUNTIME-CONFIG-JOB
-    release: release-1
-  name: MY-ADDON-NAME
-`,
-					},
-				},
 			}))
 
 			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
@@ -125,47 +99,7 @@ addons:
 				"Read manifest for release release-2",
 				"Read manifest for stemcell version 2332",
 				"Read metadata",
-				"Injecting version version-1 into runtime config release release-1",
 			}))
-		})
-
-		Context("when the runtime config doesn't contain releases", func() {
-			It("doesn't change the runtime config", func() {
-				metadataReader.ReadReturns(builder.Metadata{
-					"metadata_version":          "some-metadata-version",
-					"provides_product_versions": "some-provides-product-versions",
-					"runtime_configs": []interface{}{
-						map[interface{}]interface{}{
-							"name":           "MY-RUNTIME-CONFIG",
-							"runtime_config": "some-key: some-value",
-						},
-					},
-				},
-					nil,
-				)
-				generatedMetadata, err := tileBuilder.Build([]string{
-					"/path/to/release-1.tgz",
-				}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(generatedMetadata.Metadata).To(Equal(builder.Metadata{
-					"metadata_version":          "some-metadata-version",
-					"provides_product_versions": "some-provides-product-versions",
-					"runtime_configs": []interface{}{
-						map[interface{}]interface{}{
-							"name":           "MY-RUNTIME-CONFIG",
-							"runtime_config": "some-key: some-value\n",
-						},
-					},
-				}))
-
-				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-					"Creating metadata for /path/to/tile.zip...",
-					"Read manifest for release release-1",
-					"Read manifest for stemcell version 2332",
-					"Read metadata",
-				}))
-			})
 		})
 
 		Context("failure cases", func() {
@@ -194,56 +128,6 @@ addons:
 
 					_, err := tileBuilder.Build([]string{}, "", "metadata.yml", "", "", "")
 					Expect(err).To(MatchError("failed to read metadata"))
-				})
-			})
-
-			Context("when the runtime config references a non-existent release", func() {
-				It("returns an error", func() {
-					metadataReader.ReadReturns(builder.Metadata{
-						"metadata_version":          "some-metadata-version",
-						"provides_product_versions": "some-provides-product-versions",
-						"runtime_configs": []interface{}{
-							map[interface{}]interface{}{
-								"name": "MY-RUNTIME-CONFIG",
-								"runtime_config": `releases:
-- name: non-existent-release
-addons:
-- name: MY-ADDON-NAME
-  jobs:
-  - name: MY-RUNTIME-CONFIG-JOB
-    release: non-existent-release`,
-							},
-						},
-					},
-						nil,
-					)
-
-					_, err := tileBuilder.Build([]string{
-						"/path/to/release-1.tgz",
-					}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
-					Expect(err).To(MatchError("runtime config MY-RUNTIME-CONFIG references unknown release non-existent-release"))
-				})
-			})
-
-			Context("when the runtime config contains yaml that isn't well-formed", func() {
-				It("returns an error", func() {
-					metadataReader.ReadReturns(builder.Metadata{
-						"metadata_version":          "some-metadata-version",
-						"provides_product_versions": "some-provides-product-versions",
-						"runtime_configs": []interface{}{
-							map[interface{}]interface{}{
-								"name":           "MY-RUNTIME-CONFIG",
-								"runtime_config": `%%%`,
-							},
-						},
-					},
-						nil,
-					)
-
-					_, err := tileBuilder.Build([]string{
-						"/path/to/release-1.tgz",
-					}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
-					Expect(err).To(MatchError("runtime config MY-RUNTIME-CONFIG contains malformed yaml: yaml: could not find expected directive name"))
 				})
 			})
 		})
