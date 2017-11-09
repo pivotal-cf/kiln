@@ -21,6 +21,7 @@ type TileWriter struct {
 }
 
 //go:generate counterfeiter -o ./fakes/filesystem.go --fake-name Filesystem . filesystem
+
 type filesystem interface {
 	Open(name string) (io.ReadWriteCloser, error)
 	Walk(root string, walkFn filepath.WalkFunc) error
@@ -30,14 +31,18 @@ type md5SumCalculator interface {
 	Checksum(path string) (string, error)
 }
 
+//go:generate counterfeiter -o ./fakes/zipper.go --fake-name Zipper . zipper
+
 type zipper interface {
 	SetPath(path string) error
 	Add(path string, file io.Reader) error
+	AddWithMode(path string, file io.Reader, mode os.FileMode) error
 	CreateFolder(path string) error
 	Close() error
 }
 
 //go:generate counterfeiter -o ./fakes/file_info.go --fake-name FileInfo . fileinfo
+
 type fileinfo interface {
 	Name() string
 	Size() int64
@@ -65,6 +70,7 @@ func (w TileWriter) Write(generatedMetadataContents []byte, config commands.Bake
 	}
 
 	files := map[string]io.Reader{}
+	fileModes := map[string]os.FileMode{}
 
 	files[filepath.Join("metadata", fmt.Sprintf("%s.yml", config.ProductName))] = bytes.NewBuffer(generatedMetadataContents)
 
@@ -87,7 +93,7 @@ func (w TileWriter) Write(generatedMetadataContents []byte, config commands.Bake
 	}
 
 	for _, embedPath := range config.EmbedPaths {
-		err = w.addEmbeddedPath(files, embedPath)
+		err = w.addEmbeddedPath(files, embedPath, fileModes)
 		if err != nil {
 			return err
 		}
@@ -110,7 +116,13 @@ func (w TileWriter) Write(generatedMetadataContents []byte, config commands.Bake
 	for _, path := range paths {
 		w.logger.Printf("Adding %s to %s...", path, config.OutputFile)
 
-		err := w.zipper.Add(path, files[path])
+		var err error
+		if mode, ok := fileModes[path]; ok {
+			err = w.zipper.AddWithMode(path, files[path], mode)
+		} else {
+			err = w.zipper.Add(path, files[path])
+		}
+
 		if err != nil {
 			return err
 		}
@@ -156,7 +168,7 @@ func (w TileWriter) addReleaseTarballs(files map[string]io.Reader, releasesDir s
 	})
 }
 
-func (w TileWriter) addEmbeddedPath(files map[string]io.Reader, pathToEmbed string) error {
+func (w TileWriter) addEmbeddedPath(files map[string]io.Reader, pathToEmbed string, fileModes map[string]os.FileMode) error {
 	return w.filesystem.Walk(pathToEmbed, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -179,6 +191,8 @@ func (w TileWriter) addEmbeddedPath(files map[string]io.Reader, pathToEmbed stri
 		entryPath := filepath.Join("embed", filepath.Join(filepath.Base(pathToEmbed), relativePath))
 
 		files[entryPath] = file
+		fileModes[entryPath] = info.Mode()
+
 		return nil
 	})
 }

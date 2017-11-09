@@ -160,6 +160,7 @@ var _ = Describe("Zipper", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(contents).To(Equal([]byte("file contents")))
+			Expect(reader.File[0].FileHeader.Mode()).To(Equal(os.FileMode(0666)))
 		})
 
 		Context("failure cases", func() {
@@ -183,6 +184,80 @@ var _ = Describe("Zipper", func() {
 					zipper := builder.NewZipper()
 
 					err := zipper.Add("/blah/blah", strings.NewReader("file contents"))
+					Expect(err).To(MatchError("zipper path must be set"))
+				})
+			})
+		})
+	})
+
+	Describe("AddWithMode", func() {
+		var (
+			tmpDir   string
+			tileFile string
+		)
+
+		BeforeEach(func() {
+			var err error
+			tmpDir, err = ioutil.TempDir("", "")
+			Expect(err).ToNot(HaveOccurred())
+
+			tileFile = filepath.Join(tmpDir, "tile.zip")
+		})
+
+		AfterEach(func() {
+			err := os.RemoveAll(tmpDir)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("writes the given file into the path", func() {
+			zipper := builder.NewZipper()
+
+			err := zipper.SetPath(tileFile)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = zipper.AddWithMode("some/path/to/file.txt", strings.NewReader("file contents"), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = zipper.Close()
+			Expect(err).NotTo(HaveOccurred())
+
+			reader, err := zip.OpenReader(tileFile)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(reader.File).To(HaveLen(1))
+			Expect(reader.File[0].Name).To(Equal("some/path/to/file.txt"))
+
+			file, err := reader.File[0].Open()
+			Expect(err).NotTo(HaveOccurred())
+
+			contents, err := ioutil.ReadAll(file)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(contents).To(Equal([]byte("file contents")))
+			Expect(reader.File[0].FileHeader.Mode()).To(Equal(os.FileMode(0644)))
+		})
+
+		Context("failure cases", func() {
+			Context("when the file cannot be copied", func() {
+				It("returns an error", func() {
+					buffer := NewBuffer(bytes.NewBuffer([]byte{}))
+					buffer.Error = errors.New("failed to read file")
+
+					zipper := builder.NewZipper()
+
+					err := zipper.SetPath(tileFile)
+					Expect(err).ToNot(HaveOccurred())
+
+					err = zipper.AddWithMode("file.txt", buffer, 0)
+					Expect(err).To(MatchError("failed to read file"))
+				})
+			})
+
+			Context("when path has not been set", func() {
+				It("returns an error", func() {
+					zipper := builder.NewZipper()
+
+					err := zipper.AddWithMode("/blah/blah", strings.NewReader("file contents"), 0)
 					Expect(err).To(MatchError("zipper path must be set"))
 				})
 			})

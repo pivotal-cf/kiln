@@ -368,7 +368,7 @@ property_blueprints:
 				otherFileToEmbed := filepath.Join(tempDir, "other-file-to-embed")
 				err := ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0600)
 				Expect(err).NotTo(HaveOccurred())
-				err = ioutil.WriteFile(otherFileToEmbed, []byte("content-of-other-file"), 0600)
+				err = ioutil.WriteFile(otherFileToEmbed, []byte("content-of-other-file"), 0755)
 				Expect(err).NotTo(HaveOccurred())
 
 				command := exec.Command(pathToMain,
@@ -418,6 +418,9 @@ property_blueprints:
 
 						content, err := ioutil.ReadAll(r)
 						Expect(err).NotTo(HaveOccurred())
+
+						mode := f.FileHeader.Mode()
+						Expect(mode).To(Equal(os.FileMode(0755)))
 
 						Expect(content).To(Equal([]byte("content-of-other-file")))
 					}

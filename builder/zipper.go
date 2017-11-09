@@ -33,7 +33,28 @@ func (z Zipper) Add(path string, file io.Reader) error {
 		return errors.New("zipper path must be set")
 	}
 
-	f, err := z.writer.Create(path)
+	return z.add(&zip.FileHeader{
+		Name:   path,
+		Method: zip.Deflate,
+	}, file)
+}
+
+func (z Zipper) AddWithMode(path string, file io.Reader, mode os.FileMode) error {
+	if z.writer == nil {
+		return errors.New("zipper path must be set")
+	}
+
+	fh := &zip.FileHeader{
+		Name:   path,
+		Method: zip.Deflate,
+	}
+	fh.SetMode(mode)
+
+	return z.add(fh, file)
+}
+
+func (z Zipper) add(fh *zip.FileHeader, file io.Reader) error {
+	f, err := z.writer.CreateHeader(fh)
 	if err != nil {
 		return err
 	}

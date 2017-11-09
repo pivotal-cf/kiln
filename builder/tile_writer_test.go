@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 
 	"github.com/pivotal-cf/kiln/builder"
@@ -105,36 +106,45 @@ var _ = Describe("TileWriter", func() {
 			err := tileWriter.Write([]byte("generated-metadata-contents"), config)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(zipper.SetPathCall.CallCount).To(Equal(1))
-			Expect(zipper.SetPathCall.Receives.Path).To(Equal("some-output-dir/cool-product-file-1.2.3-build.4.pivotal"))
+			Expect(zipper.SetPathCallCount()).To(Equal(1))
+			path := zipper.SetPathArgsForCall(0)
+			Expect(path).To(Equal("some-output-dir/cool-product-file-1.2.3-build.4.pivotal"))
 
-			Expect(zipper.AddCall.Calls).To(HaveLen(8))
+			Expect(zipper.AddCallCount()).To(Equal(8))
 
-			Expect(zipper.AddCall.Calls[0].Path).To(Equal(filepath.Join("metadata", "cool-product-name.yml")))
-			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[0].File)).Should(gbytes.Say("generated-metadata-contents"))
+			path, file := zipper.AddArgsForCall(0)
+			Expect(path).To(Equal(filepath.Join("metadata", "cool-product-name.yml")))
+			Eventually(gbytes.BufferReader(file)).Should(gbytes.Say("generated-metadata-contents"))
 
-			Expect(zipper.AddCall.Calls[1].Path).To(Equal(filepath.Join("migrations", "v1", "migration-1.js")))
-			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[1].File)).Should(gbytes.Say("migration-1"))
+			path, file = zipper.AddArgsForCall(1)
+			Expect(path).To(Equal(filepath.Join("migrations", "v1", "migration-1.js")))
+			Eventually(gbytes.BufferReader(file)).Should(gbytes.Say("migration-1"))
 
-			Expect(zipper.AddCall.Calls[2].Path).To(Equal(filepath.Join("migrations", "v1", "migration-2.js")))
-			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[2].File)).Should(gbytes.Say("migration-2"))
+			path, file = zipper.AddArgsForCall(2)
+			Expect(path).To(Equal(filepath.Join("migrations", "v1", "migration-2.js")))
+			Eventually(gbytes.BufferReader(file)).Should(gbytes.Say("migration-2"))
 
-			Expect(zipper.AddCall.Calls[3].Path).To(Equal(filepath.Join("migrations", "v1", "other-migration.js")))
-			Eventually(gbytes.BufferReader(zipper.AddCall.Calls[3].File)).Should(gbytes.Say("other-migration"))
+			path, file = zipper.AddArgsForCall(3)
+			Expect(path).To(Equal(filepath.Join("migrations", "v1", "other-migration.js")))
+			Eventually(gbytes.BufferReader(file)).Should(gbytes.Say("other-migration"))
 
-			Expect(zipper.AddCall.Calls[4].Path).To(Equal(filepath.Join("releases", "release-1.tgz")))
-			checkReleaseFileContent("release-1", stubbed, zipper.AddCall.Calls[4])
+			path, file = zipper.AddArgsForCall(4)
+			Expect(path).To(Equal(filepath.Join("releases", "release-1.tgz")))
+			checkReleaseFileContent("release-1", stubbed, file)
 
-			Expect(zipper.AddCall.Calls[5].Path).To(Equal(filepath.Join("releases", "release-2.tgz")))
-			checkReleaseFileContent("release-2", stubbed, zipper.AddCall.Calls[5])
+			path, file = zipper.AddArgsForCall(5)
+			Expect(path).To(Equal(filepath.Join("releases", "release-2.tgz")))
+			checkReleaseFileContent("release-2", stubbed, file)
 
-			Expect(zipper.AddCall.Calls[6].Path).To(Equal(filepath.Join("releases", "release-3.tgz")))
-			checkReleaseFileContent("release-3", stubbed, zipper.AddCall.Calls[6])
+			path, file = zipper.AddArgsForCall(6)
+			Expect(path).To(Equal(filepath.Join("releases", "release-3.tgz")))
+			checkReleaseFileContent("release-3", stubbed, file)
 
-			Expect(zipper.AddCall.Calls[7].Path).To(Equal(filepath.Join("releases", "release-4.tgz")))
-			checkReleaseFileContent("release-4", stubbed, zipper.AddCall.Calls[7])
+			path, file = zipper.AddArgsForCall(7)
+			Expect(path).To(Equal(filepath.Join("releases", "release-4.tgz")))
+			checkReleaseFileContent("release-4", stubbed, file)
 
-			Expect(zipper.CloseCall.CallCount).To(Equal(1))
+			Expect(zipper.CloseCallCount()).To(Equal(1))
 
 			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 				fmt.Sprintf("Building %s...", outputFile),
@@ -217,8 +227,9 @@ var _ = Describe("TileWriter", func() {
 						fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
 						"Calculated md5 sum: ",
 					}))
-					Expect(zipper.CreateFolderCall.CallCount).To(Equal(1))
-					Expect(zipper.CreateFolderCall.Receives.Path).To(Equal(filepath.Join("migrations", "v1")))
+
+					Expect(zipper.CreateFolderCallCount()).To(Equal(1))
+					Expect(zipper.CreateFolderArgsForCall(0)).To(Equal(filepath.Join("migrations", "v1")))
 				})
 			})
 
@@ -245,8 +256,9 @@ var _ = Describe("TileWriter", func() {
 						fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
 						"Calculated md5 sum: ",
 					}))
-					Expect(zipper.CreateFolderCall.CallCount).To(Equal(1))
-					Expect(zipper.CreateFolderCall.Receives.Path).To(Equal(filepath.Join("migrations", "v1")))
+
+					Expect(zipper.CreateFolderCallCount()).To(Equal(1))
+					Expect(zipper.CreateFolderArgsForCall(0)).To(Equal(filepath.Join("migrations", "v1")))
 				})
 			})
 		})
@@ -261,6 +273,7 @@ var _ = Describe("TileWriter", func() {
 
 				embedFileInfo := &fakes.FileInfo{}
 				embedFileInfo.IsDirReturns(false)
+				embedFileInfo.ModeReturns(12345678)
 
 				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 					if root == "/some/path/releases" {
@@ -309,8 +322,12 @@ var _ = Describe("TileWriter", func() {
 					fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
 					"Calculated md5 sum: ",
 				}))
-				Expect(zipper.AddCall.Calls[0].Path).To(Equal(filepath.Join("embed", "my-file.txt")))
-				Eventually(gbytes.BufferReader(zipper.AddCall.Calls[0].File)).Should(gbytes.Say("contents-of-embedded-file"))
+
+				Expect(zipper.AddWithModeCallCount()).To(Equal(1))
+				path, file, mode := zipper.AddWithModeArgsForCall(0)
+				Expect(path).To(Equal(filepath.Join("embed", "my-file.txt")))
+				Eventually(gbytes.BufferReader(file)).Should(gbytes.Say("contents-of-embedded-file"))
+				Expect(mode).To(Equal(os.FileMode(12345678)))
 			})
 		})
 
@@ -324,6 +341,7 @@ var _ = Describe("TileWriter", func() {
 
 				embedFileInfo := &fakes.FileInfo{}
 				embedFileInfo.IsDirReturns(false)
+				embedFileInfo.ModeReturns(87654)
 
 				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 					if root == "/some/path/releases" {
@@ -375,11 +393,16 @@ var _ = Describe("TileWriter", func() {
 					fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
 					"Calculated md5 sum: ",
 				}))
-				Expect(zipper.AddCall.Calls[0].Path).To(Equal(filepath.Join("embed", "to-embed", "my-file-1.txt")))
-				Eventually(gbytes.BufferReader(zipper.AddCall.Calls[0].File)).Should(gbytes.Say("contents-of-embedded-file-1"))
 
-				Expect(zipper.AddCall.Calls[1].Path).To(Equal(filepath.Join("embed", "to-embed", "my-file-2.txt")))
-				Eventually(gbytes.BufferReader(zipper.AddCall.Calls[1].File)).Should(gbytes.Say("contents-of-embedded-file-2"))
+				path, file, mode := zipper.AddWithModeArgsForCall(0)
+				Expect(path).To(Equal(filepath.Join("embed", "to-embed", "my-file-1.txt")))
+				Eventually(gbytes.BufferReader(file)).Should(gbytes.Say("contents-of-embedded-file-1"))
+				Expect(mode).To(Equal(os.FileMode(87654)))
+
+				path, file, mode = zipper.AddWithModeArgsForCall(1)
+				Expect(path).To(Equal(filepath.Join("embed", "to-embed", "my-file-2.txt")))
+				Eventually(gbytes.BufferReader(file)).Should(gbytes.Say("contents-of-embedded-file-2"))
+				Expect(mode).To(Equal(os.FileMode(87654)))
 			})
 		})
 
@@ -390,7 +413,7 @@ var _ = Describe("TileWriter", func() {
 						StubReleases: true,
 					}
 
-					zipper.CreateFolderCall.Returns.Error = errors.New("failed to create folder")
+					zipper.CreateFolderReturns(errors.New("failed to create folder"))
 					err := tileWriter.Write([]byte{}, config)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError("failed to create folder"))
@@ -510,7 +533,7 @@ var _ = Describe("TileWriter", func() {
 
 			Context("when the zipper fails to add a file", func() {
 				It("returns an error", func() {
-					zipper.AddCall.Returns.Error = errors.New("failed to add file to zip")
+					zipper.AddReturns(errors.New("failed to add file to zip"))
 
 					config := commands.BakeConfig{
 						StubReleases: true,
@@ -523,7 +546,7 @@ var _ = Describe("TileWriter", func() {
 
 			Context("when the zipper fails to close", func() {
 				It("returns an error", func() {
-					zipper.CloseCall.Returns.Error = errors.New("failed to close the zip")
+					zipper.CloseReturns(errors.New("failed to close the zip"))
 
 					config := commands.BakeConfig{
 						StubReleases: true,
@@ -536,7 +559,7 @@ var _ = Describe("TileWriter", func() {
 
 			Context("when setting the path on the zipper fails", func() {
 				It("returns an error", func() {
-					zipper.SetPathCall.Returns.Error = errors.New("zipper set path failed")
+					zipper.SetPathReturns(errors.New("zipper set path failed"))
 
 					config := commands.BakeConfig{
 						StubReleases: true,
@@ -546,6 +569,7 @@ var _ = Describe("TileWriter", func() {
 					Expect(err).To(MatchError("zipper set path failed"))
 				})
 			})
+
 			Context("when the MD5 cannot be calculated", func() {
 				It("returns an error", func() {
 
@@ -559,15 +583,14 @@ var _ = Describe("TileWriter", func() {
 					Expect(err).To(MatchError("MD5 cannot be calculated"))
 				})
 			})
-
 		})
 	})
 })
 
-func checkReleaseFileContent(releaseContent string, stubbed bool, call fakes.ZipperAddCall) {
+func checkReleaseFileContent(releaseContent string, stubbed bool, file io.Reader) {
 	if stubbed == false {
-		Eventually(gbytes.BufferReader(call.File)).Should(gbytes.Say(releaseContent))
+		Eventually(gbytes.BufferReader(file)).Should(gbytes.Say(releaseContent))
 	} else {
-		Eventually(gbytes.BufferReader(call.File)).Should(gbytes.Say(""))
+		Eventually(gbytes.BufferReader(file)).Should(gbytes.Say(""))
 	}
 }
