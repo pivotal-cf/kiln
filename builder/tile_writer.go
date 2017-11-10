@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -70,23 +70,19 @@ func (w TileWriter) Write(generatedMetadataContents []byte, config commands.Bake
 		return err
 	}
 
-	files := map[string]io.Reader{}
-	fileModes := map[string]os.FileMode{}
+	err = w.addToZipper(filepath.Join("metadata", fmt.Sprintf("%s.yml", config.ProductName)), bytes.NewBuffer(generatedMetadataContents), config.OutputFile)
+	if err != nil {
+		return err
+	}
 
-	files[filepath.Join("metadata", fmt.Sprintf("%s.yml", config.ProductName))] = bytes.NewBuffer(generatedMetadataContents)
+	err = w.addMigrations(config.MigrationDirectories, config.OutputFile)
+	if err != nil {
+		return err
+	}
 
 	if len(config.ReleaseDirectories) > 0 {
 		for _, releasesDirectory := range config.ReleaseDirectories {
-			err = w.addReleaseTarballs(files, releasesDirectory, config.StubReleases)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(config.MigrationDirectories) > 0 {
-		for _, migrationsDir := range config.MigrationDirectories {
-			err = w.addMigrations(files, migrationsDir)
+			err = w.addReleaseTarballs(releasesDirectory, config.StubReleases, config.OutputFile)
 			if err != nil {
 				return err
 			}
@@ -94,36 +90,7 @@ func (w TileWriter) Write(generatedMetadataContents []byte, config commands.Bake
 	}
 
 	for _, embedPath := range config.EmbedPaths {
-		err = w.addEmbeddedPath(files, embedPath, fileModes)
-		if err != nil {
-			return err
-		}
-	}
-
-	var paths []string
-	for path := range files {
-		paths = append(paths, path)
-	}
-
-	sort.Strings(paths)
-
-	if !w.containsMigrations(paths) {
-		err = w.addEmptyMigrationsDirectory(config.OutputFile)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, path := range paths {
-		w.logger.Printf("Adding %s to %s...", path, config.OutputFile)
-
-		var err error
-		if mode, ok := fileModes[path]; ok {
-			err = w.zipper.AddWithMode(path, files[path], mode)
-		} else {
-			err = w.zipper.Add(path, files[path])
-		}
-
+		err = w.addEmbeddedPath(embedPath, config.OutputFile)
 		if err != nil {
 			return err
 		}
@@ -145,13 +112,12 @@ func (w TileWriter) Write(generatedMetadataContents []byte, config commands.Bake
 	return nil
 }
 
-func (w TileWriter) addReleaseTarballs(files map[string]io.Reader, releasesDir string, stubReleases bool) error {
+func (w TileWriter) addReleaseTarballs(releasesDir string, stubReleases bool, outputFile string) error {
 	return w.filesystem.Walk(releasesDir, func(filePath string, info os.FileInfo, err error) error {
 		isTarball, _ := regexp.MatchString("tgz$|tar.gz$", filePath)
 		if !isTarball {
 			return nil
 		}
-		var file io.Reader = strings.NewReader("")
 
 		if err != nil {
 			return err
@@ -161,19 +127,20 @@ func (w TileWriter) addReleaseTarballs(files map[string]io.Reader, releasesDir s
 			return nil
 		}
 
+		var file io.ReadCloser = ioutil.NopCloser(strings.NewReader(""))
 		if !stubReleases {
 			file, err = w.filesystem.Open(filePath)
 			if err != nil {
 				return err
 			}
+			defer file.Close()
 		}
-		files[filepath.Join("releases", filepath.Base(filePath))] = file
 
-		return nil
+		return w.addToZipper(filepath.Join("releases", filepath.Base(filePath)), file, outputFile)
 	})
 }
 
-func (w TileWriter) addEmbeddedPath(files map[string]io.Reader, pathToEmbed string, fileModes map[string]os.FileMode) error {
+func (w TileWriter) addEmbeddedPath(pathToEmbed, outputFile string) error {
 	return w.filesystem.Walk(pathToEmbed, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -187,6 +154,7 @@ func (w TileWriter) addEmbeddedPath(files map[string]io.Reader, pathToEmbed stri
 		if err != nil {
 			return err
 		}
+		defer file.Close()
 
 		relativePath, err := filepath.Rel(pathToEmbed, filePath)
 		if err != nil {
@@ -194,32 +162,56 @@ func (w TileWriter) addEmbeddedPath(files map[string]io.Reader, pathToEmbed stri
 		}
 
 		entryPath := filepath.Join("embed", filepath.Join(filepath.Base(pathToEmbed), relativePath))
-
-		files[entryPath] = file
-		fileModes[entryPath] = info.Mode()
-
-		return nil
+		return w.addToZipperWithMode(entryPath, file, info.Mode(), outputFile)
 	})
 }
 
-func (w TileWriter) addMigrations(files map[string]io.Reader, migrationsDir string) error {
-	return w.filesystem.Walk(migrationsDir, func(filePath string, info os.FileInfo, err error) error {
+func (w TileWriter) addMigrations(migrationsDir []string, outputFile string) error {
+	var found bool
+
+	for _, migrationDir := range migrationsDir {
+		err := w.filesystem.Walk(migrationDir, func(filePath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if info.IsDir() {
+				return nil
+			}
+
+			found = true
+
+			file, err := w.filesystem.Open(filePath)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			return w.addToZipper(filepath.Join("migrations", "v1", filepath.Base(filePath)), file, outputFile)
+		})
+
 		if err != nil {
 			return err
 		}
+	}
 
-		if info.IsDir() {
-			return nil
-		}
+	if !found {
+		return w.addEmptyMigrationsDirectory(outputFile)
+	}
 
-		file, err := w.filesystem.Open(filePath)
-		if err != nil {
-			return err
-		}
+	return nil
+}
 
-		files[filepath.Join("migrations", "v1", filepath.Base(filePath))] = file
-		return nil
-	})
+func (w TileWriter) addToZipper(path string, contents io.Reader, outputFile string) error {
+	w.logger.Printf("Adding %s to %s...", path, outputFile)
+
+	return w.zipper.Add(path, contents)
+}
+
+func (w TileWriter) addToZipperWithMode(path string, contents io.Reader, mode os.FileMode, outputFile string) error {
+	w.logger.Printf("Adding %s to %s...", path, outputFile)
+
+	return w.zipper.AddWithMode(path, contents, mode)
 }
 
 func (w TileWriter) containsMigrations(entries []string) bool {

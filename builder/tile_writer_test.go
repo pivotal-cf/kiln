@@ -221,8 +221,8 @@ var _ = Describe("TileWriter", func() {
 
 					Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 						fmt.Sprintf("Building %s...", outputFile),
-						fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
 						fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+						fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
 						fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
 						fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
 						fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
@@ -250,8 +250,8 @@ var _ = Describe("TileWriter", func() {
 
 					Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 						fmt.Sprintf("Building %s...", outputFile),
-						fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
 						fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+						fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
 						fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
 						fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
 						fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
@@ -278,13 +278,10 @@ var _ = Describe("TileWriter", func() {
 
 				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 					if root == "/some/path/releases" {
-						walkFn("/some/path/releases", dirInfo, nil)
-						walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
-						walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
 						walkFn(root, dirInfo, nil)
+						walkFn(filepath.Join(root, "release-1.tgz"), releaseInfo, nil)
+						walkFn(filepath.Join(root, "release-2.tgz"), releaseInfo, nil)
 					} else if root == "/some/path/to-embed/my-file.txt" {
-						walkFn("/some/path/to-embed", dirInfo, nil)
-						walkFn("/some/path/to-embed/my-file.txt", embedFileInfo, nil)
 						walkFn(root, embedFileInfo, nil)
 					}
 					return nil
@@ -295,7 +292,7 @@ var _ = Describe("TileWriter", func() {
 						return NewBuffer(bytes.NewBufferString("contents-of-embedded-file")), nil
 					}
 
-					return nil, nil
+					return NewBuffer(bytes.NewBufferString("contents-of-non-embedded-file")), nil
 				}
 			})
 
@@ -315,11 +312,11 @@ var _ = Describe("TileWriter", func() {
 
 				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 					fmt.Sprintf("Building %s...", outputFile),
-					fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
-					fmt.Sprintf("Adding embed/my-file.txt to %s...", outputFile),
 					fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+					fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
 					fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
 					fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
+					fmt.Sprintf("Adding embed/my-file.txt to %s...", outputFile),
 					fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
 					"Calculated md5 sum: ",
 				}))
@@ -346,15 +343,13 @@ var _ = Describe("TileWriter", func() {
 
 				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 					if root == "/some/path/releases" {
-						walkFn("/some/path/releases", dirInfo, nil)
-						walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
-						walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
 						walkFn(root, dirInfo, nil)
+						walkFn(filepath.Join(root, "release-1.tgz"), releaseInfo, nil)
+						walkFn(filepath.Join(root, "release-2.tgz"), releaseInfo, nil)
 					} else if root == "/some/path/to-embed" {
-						walkFn("/some/path/to-embed", dirInfo, nil)
-						walkFn("/some/path/to-embed/my-file-1.txt", embedFileInfo, nil)
-						walkFn("/some/path/to-embed/my-file-2.txt", embedFileInfo, nil)
 						walkFn(root, dirInfo, nil)
+						walkFn(filepath.Join(root, "my-file-1.txt"), embedFileInfo, nil)
+						walkFn(filepath.Join(root, "my-file-2.txt"), embedFileInfo, nil)
 					}
 					return nil
 				}
@@ -365,7 +360,8 @@ var _ = Describe("TileWriter", func() {
 					} else if path == "/some/path/to-embed/my-file-2.txt" {
 						return NewBuffer(bytes.NewBufferString("contents-of-embedded-file-2")), nil
 					}
-					return nil, nil
+
+					return NewBuffer(bytes.NewBufferString("contents-of-non-embedded-file")), nil
 				}
 			})
 
@@ -385,12 +381,12 @@ var _ = Describe("TileWriter", func() {
 
 				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 					fmt.Sprintf("Building %s...", outputFile),
-					fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
-					fmt.Sprintf("Adding embed/to-embed/my-file-1.txt to %s...", outputFile),
-					fmt.Sprintf("Adding embed/to-embed/my-file-2.txt to %s...", outputFile),
 					fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+					fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
 					fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
 					fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
+					fmt.Sprintf("Adding embed/to-embed/my-file-1.txt to %s...", outputFile),
+					fmt.Sprintf("Adding embed/to-embed/my-file-2.txt to %s...", outputFile),
 					fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
 					"Calculated md5 sum: ",
 				}))
