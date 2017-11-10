@@ -62,6 +62,8 @@ key: value
 		_, err = createTarball(otherReleasesDirectory, "diego-release-0.1467.1-3215.4.0.tgz", "release.MF", diegoReleaseManifest)
 		Expect(err).NotTo(HaveOccurred())
 
+		notATarball := filepath.Join(someReleasesDirectory, "not-a-tarball.txt")
+		_ = ioutil.WriteFile(notATarball, []byte(`this is not a tarball`), 0644)
 		stemcellManifest := `---
 version: "3215.4"
 operating_system: ubuntu-trusty
@@ -280,6 +282,7 @@ property_blueprints:
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603071158_auth_enterprise_sso.js to %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding releases/cf-release-235.0.0-3215.4.0.tgz to %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding releases/diego-release-0.1467.1-3215.4.0.tgz to %s...", outputFile)))
+		Eventually(session.Out).ShouldNot(gbytes.Say(fmt.Sprintf("Adding releases/not-a-tarball.txt to %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Calculating md5 sum of %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say("Calculated md5 sum: [0-9a-f]{32}"))
 	})

@@ -181,6 +181,7 @@ var _ = Describe("TileWriter", func() {
 						walkFn("/some/path/releases", dirInfo, nil)
 						walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
 						walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
+						walkFn("/some/path/releases/not-a-release.txt", releaseInfo, nil)
 						walkFn(root, dirInfo, nil)
 					case "/some/path/migrations":
 						walkFn("/some/path/migrations", dirInfo, nil)

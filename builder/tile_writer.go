@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -146,6 +147,10 @@ func (w TileWriter) Write(generatedMetadataContents []byte, config commands.Bake
 
 func (w TileWriter) addReleaseTarballs(files map[string]io.Reader, releasesDir string, stubReleases bool) error {
 	return w.filesystem.Walk(releasesDir, func(filePath string, info os.FileInfo, err error) error {
+		isTarball, _ := regexp.MatchString("tgz$|tar.gz$", filePath)
+		if !isTarball {
+			return nil
+		}
 		var file io.Reader = strings.NewReader("")
 
 		if err != nil {
