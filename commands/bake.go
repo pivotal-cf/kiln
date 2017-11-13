@@ -14,7 +14,6 @@ type BakeConfig struct {
 	StemcellTarball      string            `short:"st"   long:"stemcell-tarball"        description:"path to a stemcell tarball"`
 	Metadata             string            `short:"m"    long:"metadata"                description:"path to the metadata file"`
 	Version              string            `short:"v"    long:"version"                 description:"version of the tile"`
-	ProductName          string            `short:"pn"   long:"product-name"            description:"product name"`
 	OutputFile           string            `short:"o"    long:"output-file"             description:"path to where the tile will be output"`
 	StubReleases         bool              `short:"sr"   long:"stub-releases"           description:"skips importing release tarballs into the tile"`
 }
@@ -79,10 +78,6 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 
 	if config.Version == "" {
 		return config, errors.New("--version is a required parameter")
-	}
-
-	if config.ProductName == "" {
-		return config, errors.New("--product-name is a required parameter")
 	}
 
 	if config.OutputFile == "" {

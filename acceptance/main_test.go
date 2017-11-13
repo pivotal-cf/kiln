@@ -74,6 +74,7 @@ operating_system: ubuntu-trusty
 
 		metadata = filepath.Join(tempDir, "metadata.yml")
 		err = ioutil.WriteFile(metadata, []byte(`---
+name: cool-product-name
 metadata_version: '1.7'
 provides_product_versions:
 - name: cf
@@ -115,7 +116,6 @@ property_blueprints:
 			"--releases-directory", otherReleasesDirectory,
 			"--metadata", metadata,
 			"--version", "1.2.3",
-			"--product-name", "cool-product-name",
 			"--output-file", outputFile,
 		)
 
@@ -142,6 +142,7 @@ property_blueprints:
 			}
 		}
 
+		Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
 		contents, err := ioutil.ReadAll(file)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(contents).To(MatchYAML(`---
@@ -198,7 +199,6 @@ property_blueprints:
 			"--migrations-directory", "fixtures/extra-migrations",
 			"--migrations-directory", "fixtures/migrations",
 			"--version", "1.2.3",
-			"--product-name", "cool-product-name",
 			"--output-file", outputFile,
 		)
 
@@ -261,7 +261,6 @@ property_blueprints:
 			"--metadata", metadata,
 			"--migrations-directory", "fixtures/migrations",
 			"--version", "1.2.3",
-			"--product-name", "cool-product-name",
 			"--output-file", outputFile,
 		)
 
@@ -296,7 +295,6 @@ property_blueprints:
 				"--metadata", metadata,
 				"--version", "1.2.3",
 				"--stub-releases",
-				"--product-name", "cool-product-name",
 				"--output-file", outputFile,
 			)
 
@@ -334,7 +332,6 @@ property_blueprints:
 				"--stemcell-tarball", stemcellTarball,
 				"--metadata", metadata,
 				"--version", "1.2.3",
-				"--product-name", "cool-product-name",
 				"--output-file", outputFile,
 			)
 
@@ -381,7 +378,6 @@ property_blueprints:
 					"--metadata", metadata,
 					"--version", "1.2.3",
 					"--stub-releases",
-					"--product-name", "cool-product-name",
 					"--embed", someFileToEmbed,
 					"--embed", otherFileToEmbed,
 					"--output-file", outputFile,
@@ -450,7 +446,6 @@ property_blueprints:
 					"--metadata", metadata,
 					"--version", "1.2.3",
 					"--stub-releases",
-					"--product-name", "cool-product-name",
 					"--embed", dirToAdd,
 					"--output-file", outputFile,
 				)
@@ -496,7 +491,6 @@ property_blueprints:
 					"--metadata", "metadata.yml",
 					"--stemcell-tarball", "stemcell.tgz",
 					"--version", "1.2.3",
-					"--product-name", "cool-product-name",
 					"--output-file", outputFile,
 				)
 
@@ -516,7 +510,6 @@ property_blueprints:
 					"--stemcell-tarball", stemcellTarball,
 					"--metadata", metadata,
 					"--version", "1.2.3",
-					"--product-name", "cool-product-name",
 					"--output-file", "/path/to/missing/dir/product.zip",
 				)
 

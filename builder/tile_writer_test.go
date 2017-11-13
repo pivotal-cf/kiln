@@ -37,10 +37,9 @@ var _ = Describe("TileWriter", func() {
 		outputFile = "some-output-dir/cool-product-file-1.2.3-build.4.pivotal"
 	})
 
-	Describe("Build", func() {
+	Describe("Write", func() {
 		DescribeTable("writes tile to disk", func(stubbed bool, errorWhenAttemptingToOpenRelease error) {
 			config := commands.BakeConfig{
-				ProductName:          "cool-product-name",
 				ReleaseDirectories:   []string{"/some/path/releases", "/some/other/path/releases"},
 				MigrationDirectories: []string{"/some/path/migrations", "/some/other/path/migrations"},
 				Version:              "1.2.3",
@@ -103,7 +102,7 @@ var _ = Describe("TileWriter", func() {
 
 			md5Calc.ChecksumCall.Returns.Sum = "THIS-IS-THE-SUM"
 
-			err := tileWriter.Write([]byte("generated-metadata-contents"), config)
+			err := tileWriter.Write("cool-product-name", []byte("generated-metadata-contents"), config)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(zipper.SetPathCallCount()).To(Equal(1))
@@ -208,7 +207,6 @@ var _ = Describe("TileWriter", func() {
 			Context("and no migrations are provided", func() {
 				It("creates empty migrations/v1 folder", func() {
 					config := commands.BakeConfig{
-						ProductName:          "cool-product-name",
 						ReleaseDirectories:   []string{"/some/path/releases"},
 						MigrationDirectories: []string{},
 						Version:              "1.2.3",
@@ -216,7 +214,7 @@ var _ = Describe("TileWriter", func() {
 						StubReleases:         false,
 					}
 
-					err := tileWriter.Write([]byte("generated-metadata-contents"), config)
+					err := tileWriter.Write("cool-product-name", []byte("generated-metadata-contents"), config)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
@@ -237,7 +235,6 @@ var _ = Describe("TileWriter", func() {
 			Context("and the migrations directory is empty", func() {
 				It("creates empty migrations/v1 folder", func() {
 					config := commands.BakeConfig{
-						ProductName:          "cool-product-name",
 						ReleaseDirectories:   []string{"/some/path/releases"},
 						MigrationDirectories: []string{"/some/path/migrations"},
 						Version:              "1.2.3",
@@ -245,7 +242,7 @@ var _ = Describe("TileWriter", func() {
 						StubReleases:         false,
 					}
 
-					err := tileWriter.Write([]byte("generated-metadata-contents"), config)
+					err := tileWriter.Write("cool-product-name", []byte("generated-metadata-contents"), config)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
@@ -298,7 +295,6 @@ var _ = Describe("TileWriter", func() {
 
 			It("embeds the file in the embed directory", func() {
 				config := commands.BakeConfig{
-					ProductName:          "cool-product-name",
 					ReleaseDirectories:   []string{"/some/path/releases"},
 					MigrationDirectories: []string{},
 					EmbedPaths:           []string{"/some/path/to-embed/my-file.txt"},
@@ -307,7 +303,7 @@ var _ = Describe("TileWriter", func() {
 					StubReleases:         false,
 				}
 
-				err := tileWriter.Write([]byte("generated-metadata-contents"), config)
+				err := tileWriter.Write("cool-product-name", []byte("generated-metadata-contents"), config)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
@@ -367,7 +363,6 @@ var _ = Describe("TileWriter", func() {
 
 			It("embeds the directory in the embed directory", func() {
 				config := commands.BakeConfig{
-					ProductName:          "cool-product-name",
 					ReleaseDirectories:   []string{"/some/path/releases"},
 					MigrationDirectories: []string{},
 					EmbedPaths:           []string{"/some/path/to-embed"},
@@ -376,7 +371,7 @@ var _ = Describe("TileWriter", func() {
 					StubReleases:         false,
 				}
 
-				err := tileWriter.Write([]byte("generated-metadata-contents"), config)
+				err := tileWriter.Write("cool-product-name", []byte("generated-metadata-contents"), config)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
@@ -411,7 +406,7 @@ var _ = Describe("TileWriter", func() {
 					}
 
 					zipper.CreateFolderReturns(errors.New("failed to create folder"))
-					err := tileWriter.Write([]byte{}, config)
+					err := tileWriter.Write("", []byte{}, config)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError("failed to create folder"))
 				})
@@ -444,7 +439,7 @@ var _ = Describe("TileWriter", func() {
 						ReleaseDirectories: []string{"/some/path/releases"},
 					}
 
-					err := tileWriter.Write([]byte("generated-metadata-contents"), config)
+					err := tileWriter.Write("", []byte("generated-metadata-contents"), config)
 					Expect(err).To(MatchError("failed to open release"))
 				})
 			})
@@ -491,12 +486,12 @@ var _ = Describe("TileWriter", func() {
 						StubReleases:         true,
 					}
 
-					err := tileWriter.Write([]byte{}, config)
+					err := tileWriter.Write("", []byte{}, config)
 					Expect(err).To(MatchError("failed to open migration"))
 				})
 			})
 
-			Context("when an embed file cannt be opened", func() {
+			Context("when an embed file cannot be opened", func() {
 				It("returns an error", func() {
 					dirInfo := &fakes.FileInfo{}
 					dirInfo.IsDirReturns(true)
@@ -523,7 +518,7 @@ var _ = Describe("TileWriter", func() {
 						EmbedPaths: []string{"/some/path/embed"},
 					}
 
-					err := tileWriter.Write([]byte("generated-metadata-contents"), config)
+					err := tileWriter.Write("", []byte("generated-metadata-contents"), config)
 					Expect(err).To(MatchError("failed to open embed"))
 				})
 			})
@@ -536,7 +531,7 @@ var _ = Describe("TileWriter", func() {
 						StubReleases: true,
 					}
 
-					err := tileWriter.Write([]byte{}, config)
+					err := tileWriter.Write("", []byte{}, config)
 					Expect(err).To(MatchError("failed to add file to zip"))
 				})
 			})
@@ -549,7 +544,7 @@ var _ = Describe("TileWriter", func() {
 						StubReleases: true,
 					}
 
-					err := tileWriter.Write([]byte{}, config)
+					err := tileWriter.Write("", []byte{}, config)
 					Expect(err).To(MatchError("failed to close the zip"))
 				})
 			})
@@ -562,7 +557,7 @@ var _ = Describe("TileWriter", func() {
 						StubReleases: true,
 					}
 
-					err := tileWriter.Write([]byte{}, config)
+					err := tileWriter.Write("", []byte{}, config)
 					Expect(err).To(MatchError("zipper set path failed"))
 				})
 			})
@@ -576,7 +571,7 @@ var _ = Describe("TileWriter", func() {
 						StubReleases: true,
 					}
 
-					err := tileWriter.Write([]byte{}, config)
+					err := tileWriter.Write("", []byte{}, config)
 					Expect(err).To(MatchError("MD5 cannot be calculated"))
 				})
 			})

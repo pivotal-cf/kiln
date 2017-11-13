@@ -55,6 +55,7 @@ var _ = Describe("MetadataBuilder", func() {
 	Describe("Build", func() {
 		It("creates a GeneratedMetadata with the correct information", func() {
 			metadataReader.ReadReturns(builder.Metadata{
+				"name":                      "cool-product",
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
 			},
@@ -63,7 +64,7 @@ var _ = Describe("MetadataBuilder", func() {
 			generatedMetadata, err := tileBuilder.Build([]string{
 				"/path/to/release-1.tgz",
 				"/path/to/release-2.tgz",
-			}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "cool-product", "1.2.3", "/path/to/tile.zip")
+			}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "1.2.3", "/path/to/tile.zip")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stemcellManifestReader.ReadArgsForCall(0)).To(Equal("/path/to/test-stemcell.tgz"))
 			metadataPath, version := metadataReader.ReadArgsForCall(0)
@@ -108,7 +109,7 @@ var _ = Describe("MetadataBuilder", func() {
 					releaseManifestReader.ReadCall.Stub = nil
 					releaseManifestReader.ReadCall.Returns.Error = errors.New("failed to read release tarball")
 
-					_, err := tileBuilder.Build([]string{"release-1.tgz"}, "", "", "", "", "")
+					_, err := tileBuilder.Build([]string{"release-1.tgz"}, "", "", "", "")
 					Expect(err).To(MatchError("failed to read release tarball"))
 				})
 			})
@@ -117,7 +118,7 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					stemcellManifestReader.ReadReturns(builder.StemcellManifest{}, errors.New("failed to read stemcell tarball"))
 
-					_, err := tileBuilder.Build([]string{}, "stemcell.tgz", "", "", "", "")
+					_, err := tileBuilder.Build([]string{}, "stemcell.tgz", "", "", "")
 					Expect(err).To(MatchError("failed to read stemcell tarball"))
 				})
 			})
@@ -126,8 +127,22 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					metadataReader.ReadReturns(builder.Metadata{}, errors.New("failed to read metadata"))
 
-					_, err := tileBuilder.Build([]string{}, "", "metadata.yml", "", "", "")
+					_, err := tileBuilder.Build([]string{}, "", "metadata.yml", "", "")
 					Expect(err).To(MatchError("failed to read metadata"))
+				})
+			})
+
+			Context("when the metadata does not contain a product name", func() {
+				It("returns an error", func() {
+					metadataReader.ReadReturns(builder.Metadata{
+						"metadata_version":          "some-metadata-version",
+						"provides_product_versions": "some-provides-product-versions",
+					},
+						nil,
+					)
+
+					_, err := tileBuilder.Build([]string{}, "", "metadata.yml", "", "")
+					Expect(err).To(MatchError(`missing "name" in tile metadata`))
 				})
 			})
 		})

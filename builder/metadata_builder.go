@@ -1,6 +1,9 @@
 package builder
 
-import "path/filepath"
+import (
+	"errors"
+	"path/filepath"
+)
 
 type MetadataBuilder struct {
 	releaseManifestReader  releaseManifestReader
@@ -62,7 +65,7 @@ func NewMetadataBuilder(releaseManifestReader releaseManifestReader, stemcellMan
 	}
 }
 
-func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToMetadata, name, version, pathToTile string) (GeneratedMetadata, error) {
+func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToMetadata, version, pathToTile string) (GeneratedMetadata, error) {
 	m.logger.Printf("Creating metadata for %s...", pathToTile)
 
 	var releases []Release
@@ -94,10 +97,17 @@ func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToM
 		return GeneratedMetadata{}, err
 	}
 
+	productName, ok := metadata["name"].(string)
+	if !ok {
+		return GeneratedMetadata{}, errors.New(`missing "name" in tile metadata`)
+	}
+
+	delete(metadata, "name")
+
 	m.logger.Printf("Read metadata")
 
 	return GeneratedMetadata{
-		Name:     name,
+		Name:     productName,
 		Releases: releases,
 		StemcellCriteria: StemcellCriteria{
 			OS:          stemcellManifest.OperatingSystem,

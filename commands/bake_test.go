@@ -27,7 +27,6 @@ var _ = Describe("bake", func() {
 				"--releases-directory", "some-release-tarball-directory",
 				"--metadata", "some-metadata",
 				"--version", "1.2.3",
-				"--product-name", "cool-product-name",
 				"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 			})
 
@@ -40,7 +39,6 @@ var _ = Describe("bake", func() {
 				ReleaseDirectories: []string{"some-release-tarball-directory"},
 				Metadata:           "some-metadata",
 				Version:            "1.2.3",
-				ProductName:        "cool-product-name",
 				OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
 			}))
 		})
@@ -53,7 +51,6 @@ var _ = Describe("bake", func() {
 					"--migrations-directory", "some-migrations-directory",
 					"--metadata", "some-metadata",
 					"--version", "1.2.3",
-					"--product-name", "cool-product-name",
 					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 				})
 
@@ -66,7 +63,6 @@ var _ = Describe("bake", func() {
 					ReleaseDirectories:   []string{"some-release-tarball-directory"},
 					Metadata:             "some-metadata",
 					Version:              "1.2.3",
-					ProductName:          "cool-product-name",
 					MigrationDirectories: []string{"some-migrations-directory"},
 					OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4",
 				}))
@@ -81,7 +77,6 @@ var _ = Describe("bake", func() {
 						"--migrations-directory", "some-other-migrations-directory",
 						"--metadata", "some-metadata",
 						"--version", "1.2.3",
-						"--product-name", "cool-product-name",
 						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 					})
 
@@ -94,7 +89,6 @@ var _ = Describe("bake", func() {
 						ReleaseDirectories:   []string{"some-release-tarball-directory"},
 						Metadata:             "some-metadata",
 						Version:              "1.2.3",
-						ProductName:          "cool-product-name",
 						MigrationDirectories: []string{"some-migrations-directory", "some-other-migrations-directory"},
 						OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4",
 					}))
@@ -112,7 +106,6 @@ var _ = Describe("bake", func() {
 					"--releases-directory", "other-release-tarball-directory",
 					"--metadata", "some-metadata",
 					"--version", "1.2.3",
-					"--product-name", "cool-product-name",
 					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 				})
 
@@ -125,7 +118,6 @@ var _ = Describe("bake", func() {
 					ReleaseDirectories: []string{"some-release-tarball-directory", "other-release-tarball-directory"},
 					Metadata:           "some-metadata",
 					Version:            "1.2.3",
-					ProductName:        "cool-product-name",
 					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
 				}))
 			})
@@ -139,7 +131,6 @@ var _ = Describe("bake", func() {
 					"--embed", "some-file-to-embed",
 					"--metadata", "some-metadata",
 					"--version", "1.2.3",
-					"--product-name", "cool-product-name",
 					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 				})
 
@@ -153,7 +144,6 @@ var _ = Describe("bake", func() {
 					EmbedPaths:         []string{"some-file-to-embed"},
 					Metadata:           "some-metadata",
 					Version:            "1.2.3",
-					ProductName:        "cool-product-name",
 					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
 				}))
 			})
@@ -166,7 +156,6 @@ var _ = Describe("bake", func() {
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--metadata", "some-metadata",
 						"--version", "1.2.3",
-						"--product-name", "cool-product-name",
 						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
 					})
@@ -181,7 +170,6 @@ var _ = Describe("bake", func() {
 						"--releases-directory", "some-release-tarball-directory",
 						"--metadata", "some-metadata",
 						"--version", "1.2.3",
-						"--product-name", "cool-product-name",
 						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
 					})
@@ -196,7 +184,6 @@ var _ = Describe("bake", func() {
 						"--releases-directory", "some-release-tarball-directory",
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--version", "1.2.3",
-						"--product-name", "cool-product-name",
 						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
 					})
@@ -211,27 +198,11 @@ var _ = Describe("bake", func() {
 						"--releases-directory", "some-release-tarball-directory",
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--metadata", "some-metadata",
-						"--product-name", "cool-product-name",
 						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
 						"--stub-releases",
 					})
 
 					Expect(err).To(MatchError("--version is a required parameter"))
-				})
-			})
-
-			Context("when the product-name flag is missing", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--releases-directory", "some-release-tarball-directory",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--metadata", "some-metadata",
-						"--version", "1.2.3",
-						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-						"--stub-releases",
-					})
-
-					Expect(err).To(MatchError("--product-name is a required parameter"))
 				})
 			})
 
@@ -241,7 +212,6 @@ var _ = Describe("bake", func() {
 						"--releases-directory", "some-release-tarball-directory",
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--metadata", "some-metadata",
-						"--product-name", "cool-product-name",
 						"--version", "1.2.3",
 						"--stub-releases",
 					})

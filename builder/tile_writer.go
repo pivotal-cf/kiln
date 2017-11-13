@@ -62,7 +62,7 @@ func NewTileWriter(filesystem filesystem, zipper zipper, logger logger, md5SumCa
 	}
 }
 
-func (w TileWriter) Write(generatedMetadataContents []byte, config commands.BakeConfig) error {
+func (w TileWriter) Write(productName string, generatedMetadataContents []byte, config commands.BakeConfig) error {
 	w.logger.Printf("Building %s...", config.OutputFile)
 
 	err := w.zipper.SetPath(config.OutputFile)
@@ -70,7 +70,7 @@ func (w TileWriter) Write(generatedMetadataContents []byte, config commands.Bake
 		return err
 	}
 
-	err = w.addToZipper(filepath.Join("metadata", fmt.Sprintf("%s.yml", config.ProductName)), bytes.NewBuffer(generatedMetadataContents), config.OutputFile)
+	err = w.addToZipper(filepath.Join("metadata", fmt.Sprintf("%s.yml", productName)), bytes.NewBuffer(generatedMetadataContents), config.OutputFile)
 	if err != nil {
 		return err
 	}

@@ -12,12 +12,12 @@ import (
 
 //go:generate counterfeiter -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
 type tileWriter interface {
-	Write(generatedMetadataContents []byte, config commands.BakeConfig) error
+	Write(productName string, generatedMetadataContents []byte, config commands.BakeConfig) error
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_builder.go --fake-name MetadataBuilder . metadataBuilder
 type metadataBuilder interface {
-	Build(releaseTarballs []string, pathToStemcell, pathToMetadata, name, version, pathToTile string) (builder.GeneratedMetadata, error)
+	Build(releaseTarballs []string, pathToStemcell, pathToMetadata, version, pathToTile string) (builder.GeneratedMetadata, error)
 }
 
 type logger interface {
@@ -59,7 +59,6 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 		releaseTarballs,
 		config.StemcellTarball,
 		config.Metadata,
-		config.ProductName,
 		config.Version,
 		config.OutputFile,
 	)
@@ -73,7 +72,7 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 		return err
 	}
 
-	err = t.tileWriter.Write(generatedMetadataYAML, config)
+	err = t.tileWriter.Write(generatedMetadata.Name, generatedMetadataYAML, config)
 	if err != nil {
 		return err
 	}

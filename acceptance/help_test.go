@@ -33,7 +33,6 @@ Command Arguments:
   --stemcell-tarball, -st      string             path to a stemcell tarball
   --metadata, -m               string             path to the metadata file
   --version, -v                string             version of the tile
-  --product-name, -pn          string             product name
   --output-file, -o            string             path to where the tile will be output
   --stub-releases, -sr         bool               skips importing release tarballs into the tile
 `

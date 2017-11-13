@@ -54,7 +54,6 @@ var _ = Describe("TileMaker", func() {
 		fakeLogger = &fakes.Logger{}
 
 		config = commands.BakeConfig{
-			ProductName:          "cool-product-name",
 			Version:              "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
 			ReleaseDirectories:   []string{someReleasesDirectory, otherReleasesDirectory},
@@ -77,11 +76,10 @@ var _ = Describe("TileMaker", func() {
 
 		Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 
-		releaseTarballs, stemcellTarball, metadata, name, version, outputPath := fakeMetadataBuilder.BuildArgsForCall(0)
+		releaseTarballs, stemcellTarball, metadata, version, outputPath := fakeMetadataBuilder.BuildArgsForCall(0)
 		Expect(releaseTarballs).To(Equal(validReleases))
 		Expect(stemcellTarball).To(Equal("some-stemcell-tarball"))
 		Expect(metadata).To(Equal("some-metadata"))
-		Expect(name).To(Equal("cool-product-name"))
 		Expect(version).To(Equal("1.2.3"))
 		Expect(outputPath).To(Equal("some-output-dir/cool-product-file.1.2.3-build.4.pivotal"))
 	})
@@ -106,7 +104,8 @@ var _ = Describe("TileMaker", func() {
 
 		Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
 
-		generatedMetadataContents, config := fakeTileWriter.WriteArgsForCall(0)
+		productName, generatedMetadataContents, config := fakeTileWriter.WriteArgsForCall(0)
+		Expect(productName).To(Equal("cool-product-name"))
 		Expect(generatedMetadataContents).To(MatchYAML(`
 name: cool-product-name
 releases:
@@ -118,7 +117,6 @@ stemcell_criteria:
   os: an-operating-system
   requires_cpi: false`))
 		Expect(config).To(Equal(commands.BakeConfig{
-			ProductName:          "cool-product-name",
 			Version:              "1.2.3",
 			StemcellTarball:      "some-stemcell-tarball",
 			ReleaseDirectories:   []string{someReleasesDirectory, otherReleasesDirectory},
