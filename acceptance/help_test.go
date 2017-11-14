@@ -29,6 +29,7 @@ Usage: kiln [options] bake [<args>]
 Command Arguments:
   --releases-directory, -rd    string (variadic)  path to a directory containing release tarballs
   --migrations-directory, -md  string (variadic)  path to a directory containing migrations
+  --variables-directory, -vd   string (variadic)  path to a directory containing variables
   --embed, -e                  string (variadic)  path to files to include in the tile /embed directory
   --stemcell-tarball, -st      string             path to a stemcell tarball
   --metadata, -m               string             path to the metadata file

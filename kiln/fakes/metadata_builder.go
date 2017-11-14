@@ -8,14 +8,15 @@ import (
 )
 
 type MetadataBuilder struct {
-	BuildStub        func(releaseTarballs []string, pathToStemcell, pathToMetadata, version, pathToTile string) (builder.GeneratedMetadata, error)
+	BuildStub        func(releaseTarballs, variableDirectories []string, pathToStemcell, pathToMetadata, version, pathToTile string) (builder.GeneratedMetadata, error)
 	buildMutex       sync.RWMutex
 	buildArgsForCall []struct {
-		releaseTarballs []string
-		pathToStemcell  string
-		pathToMetadata  string
-		version         string
-		pathToTile      string
+		releaseTarballs     []string
+		variableDirectories []string
+		pathToStemcell      string
+		pathToMetadata      string
+		version             string
+		pathToTile          string
 	}
 	buildReturns struct {
 		result1 builder.GeneratedMetadata
@@ -29,25 +30,31 @@ type MetadataBuilder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MetadataBuilder) Build(releaseTarballs []string, pathToStemcell string, pathToMetadata string, version string, pathToTile string) (builder.GeneratedMetadata, error) {
+func (fake *MetadataBuilder) Build(releaseTarballs []string, variableDirectories []string, pathToStemcell string, pathToMetadata string, version string, pathToTile string) (builder.GeneratedMetadata, error) {
 	var releaseTarballsCopy []string
 	if releaseTarballs != nil {
 		releaseTarballsCopy = make([]string, len(releaseTarballs))
 		copy(releaseTarballsCopy, releaseTarballs)
 	}
+	var variableDirectoriesCopy []string
+	if variableDirectories != nil {
+		variableDirectoriesCopy = make([]string, len(variableDirectories))
+		copy(variableDirectoriesCopy, variableDirectories)
+	}
 	fake.buildMutex.Lock()
 	ret, specificReturn := fake.buildReturnsOnCall[len(fake.buildArgsForCall)]
 	fake.buildArgsForCall = append(fake.buildArgsForCall, struct {
-		releaseTarballs []string
-		pathToStemcell  string
-		pathToMetadata  string
-		version         string
-		pathToTile      string
-	}{releaseTarballsCopy, pathToStemcell, pathToMetadata, version, pathToTile})
-	fake.recordInvocation("Build", []interface{}{releaseTarballsCopy, pathToStemcell, pathToMetadata, version, pathToTile})
+		releaseTarballs     []string
+		variableDirectories []string
+		pathToStemcell      string
+		pathToMetadata      string
+		version             string
+		pathToTile          string
+	}{releaseTarballsCopy, variableDirectoriesCopy, pathToStemcell, pathToMetadata, version, pathToTile})
+	fake.recordInvocation("Build", []interface{}{releaseTarballsCopy, variableDirectoriesCopy, pathToStemcell, pathToMetadata, version, pathToTile})
 	fake.buildMutex.Unlock()
 	if fake.BuildStub != nil {
-		return fake.BuildStub(releaseTarballs, pathToStemcell, pathToMetadata, version, pathToTile)
+		return fake.BuildStub(releaseTarballs, variableDirectories, pathToStemcell, pathToMetadata, version, pathToTile)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -61,10 +68,10 @@ func (fake *MetadataBuilder) BuildCallCount() int {
 	return len(fake.buildArgsForCall)
 }
 
-func (fake *MetadataBuilder) BuildArgsForCall(i int) ([]string, string, string, string, string) {
+func (fake *MetadataBuilder) BuildArgsForCall(i int) ([]string, []string, string, string, string, string) {
 	fake.buildMutex.RLock()
 	defer fake.buildMutex.RUnlock()
-	return fake.buildArgsForCall[i].releaseTarballs, fake.buildArgsForCall[i].pathToStemcell, fake.buildArgsForCall[i].pathToMetadata, fake.buildArgsForCall[i].version, fake.buildArgsForCall[i].pathToTile
+	return fake.buildArgsForCall[i].releaseTarballs, fake.buildArgsForCall[i].variableDirectories, fake.buildArgsForCall[i].pathToStemcell, fake.buildArgsForCall[i].pathToMetadata, fake.buildArgsForCall[i].version, fake.buildArgsForCall[i].pathToTile
 }
 
 func (fake *MetadataBuilder) BuildReturns(result1 builder.GeneratedMetadata, result2 error) {
