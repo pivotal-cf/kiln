@@ -24,13 +24,6 @@ $ kiln bake \
 
 #### Options
 
-##### `--product-name`
-
-Provide the `--product-name` flag with the name of your product as you would
-like it to be expressed in the tile metadata. For example, the PAS tile is
-called `cf`. This means that other tiles would reference the PAS tile by
-specifying properties with a `..cf.<property-name>` prefix.
-
 ##### `--version`
 
 The `--version` flag takes the version number you want your tile to become. This
