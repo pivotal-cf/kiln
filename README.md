@@ -74,6 +74,16 @@ If your tile has JavaScript migrations, then you will need to include the
 `--migrations-directory` flag. This flag can be specified multiple times if you
 have organized your migrations into subdirectories for development convenience.
 
+##### `--variables-directory`
+
+The `--variables-directory` flag can be used to include CredHub variable
+declarations. You should prefer the use of variables rather than Ops Manager
+secrets. Each `.yml` file in the directory should define a top-level `variables`
+key.
+
+This flag can be specified multiple times if you have organized your
+variables into subdirectories for development convenience.
+
 ##### `--output-file`
 
 The `--output-file` flag takes a path to the location on the filesystem where
