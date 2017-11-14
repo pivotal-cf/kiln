@@ -13,7 +13,6 @@ OpsMan-compatible tile as its output.
 Here is an example:
 ```
 $ kiln bake \
-    --product-name cf \
     --version 2.0.0 \
     --metadata /path/to/metadata.yml \
     --releases-directory /path/to/releases \
@@ -52,7 +51,6 @@ $ tree /path/to/releases
     └── nats-release-22.tgz
 
 $ kiln bake \
-    --product-name cf \
     --version 2.0.0 \
     --metadata /path/to/metadata.yml \
     --releases-directory /path/to/releases/first \
