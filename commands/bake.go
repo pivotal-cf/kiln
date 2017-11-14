@@ -10,6 +10,7 @@ import (
 type BakeConfig struct {
 	ReleaseDirectories   flags.StringSlice `short:"rd"   long:"releases-directory"      description:"path to a directory containing release tarballs"`
 	MigrationDirectories flags.StringSlice `short:"md"   long:"migrations-directory"    description:"path to a directory containing migrations"`
+	VariableDirectories  flags.StringSlice `short:"vd"   long:"variables-directory"     description:"path to a directory containing variables"`
 	EmbedPaths           flags.StringSlice `short:"e"    long:"embed"                   description:"path to files to include in the tile /embed directory"`
 	StemcellTarball      string            `short:"st"   long:"stemcell-tarball"        description:"path to a stemcell tarball"`
 	Metadata             string            `short:"m"    long:"metadata"                description:"path to the metadata file"`

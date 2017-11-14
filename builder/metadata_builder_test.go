@@ -13,15 +13,17 @@ import (
 
 var _ = Describe("MetadataBuilder", func() {
 	var (
-		releaseManifestReader  *fakes.ReleaseManifestReader
-		stemcellManifestReader *fakes.StemcellManifestReader
-		metadataReader         *fakes.MetadataReader
-		logger                 *fakes.Logger
-		tileBuilder            builder.MetadataBuilder
+		releaseManifestReader    *fakes.ReleaseManifestReader
+		variablesDirectoryReader *fakes.VariablesDirectoryReader
+		stemcellManifestReader   *fakes.StemcellManifestReader
+		metadataReader           *fakes.MetadataReader
+		logger                   *fakes.Logger
+		tileBuilder              builder.MetadataBuilder
 	)
 
 	BeforeEach(func() {
 		releaseManifestReader = &fakes.ReleaseManifestReader{}
+		variablesDirectoryReader = &fakes.VariablesDirectoryReader{}
 		stemcellManifestReader = &fakes.StemcellManifestReader{}
 		metadataReader = &fakes.MetadataReader{}
 		logger = &fakes.Logger{}
@@ -42,6 +44,30 @@ var _ = Describe("MetadataBuilder", func() {
 				return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
 			}
 		}
+		variablesDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
+			switch path {
+			case "/path/to/variables/directory":
+				return []interface{}{
+					map[interface{}]interface{}{
+						"name": "variable-1",
+						"type": "certificate",
+					},
+					map[interface{}]interface{}{
+						"name": "variable-2",
+						"type": "user",
+					},
+				}, nil
+			case "/path/to/other/variables/directory":
+				return []interface{}{
+					map[interface{}]interface{}{
+						"name": "variable-3",
+						"type": "password",
+					},
+				}, nil
+			default:
+				return []interface{}{}, fmt.Errorf("could not read variables directory %q", path)
+			}
+		}
 		stemcellManifestReader.ReadReturns(builder.StemcellManifest{
 			Version:         "2332",
 			OperatingSystem: "ubuntu-trusty",
@@ -49,7 +75,7 @@ var _ = Describe("MetadataBuilder", func() {
 			nil,
 		)
 
-		tileBuilder = builder.NewMetadataBuilder(releaseManifestReader, stemcellManifestReader, metadataReader, logger)
+		tileBuilder = builder.NewMetadataBuilder(releaseManifestReader, variablesDirectoryReader, stemcellManifestReader, metadataReader, logger)
 	})
 
 	Describe("Build", func() {
@@ -61,10 +87,14 @@ var _ = Describe("MetadataBuilder", func() {
 			},
 				nil,
 			)
-			generatedMetadata, err := tileBuilder.Build([]string{
-				"/path/to/release-1.tgz",
-				"/path/to/release-2.tgz",
-			}, "/path/to/test-stemcell.tgz", "/some/path/metadata.yml", "1.2.3", "/path/to/tile.zip")
+			generatedMetadata, err := tileBuilder.Build(
+				[]string{"/path/to/release-1.tgz", "/path/to/release-2.tgz"},
+				[]string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
+				"/path/to/test-stemcell.tgz",
+				"/some/path/metadata.yml",
+				"1.2.3",
+				"/path/to/tile.zip",
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stemcellManifestReader.ReadArgsForCall(0)).To(Equal("/path/to/test-stemcell.tgz"))
 			metadataPath, version := metadataReader.ReadArgsForCall(0)
@@ -84,6 +114,20 @@ var _ = Describe("MetadataBuilder", func() {
 					File:    "release-2.tgz",
 				},
 			}))
+			Expect(generatedMetadata.Variables).To(Equal([]interface{}{
+				map[interface{}]interface{}{
+					"name": "variable-1",
+					"type": "certificate",
+				},
+				map[interface{}]interface{}{
+					"name": "variable-2",
+					"type": "user",
+				},
+				map[interface{}]interface{}{
+					"name": "variable-3",
+					"type": "password",
+				},
+			}))
 			Expect(generatedMetadata.StemcellCriteria).To(Equal(builder.StemcellCriteria{
 				Version:     "2332",
 				OS:          "ubuntu-trusty",
@@ -98,6 +142,8 @@ var _ = Describe("MetadataBuilder", func() {
 				"Creating metadata for /path/to/tile.zip...",
 				"Read manifest for release release-1",
 				"Read manifest for release release-2",
+				"Read variables from /path/to/variables/directory",
+				"Read variables from /path/to/other/variables/directory",
 				"Read manifest for stemcell version 2332",
 				"Read metadata",
 			}))
@@ -109,8 +155,17 @@ var _ = Describe("MetadataBuilder", func() {
 					releaseManifestReader.ReadCall.Stub = nil
 					releaseManifestReader.ReadCall.Returns.Error = errors.New("failed to read release tarball")
 
-					_, err := tileBuilder.Build([]string{"release-1.tgz"}, "", "", "", "")
+					_, err := tileBuilder.Build([]string{"release-1.tgz"}, []string{}, "", "", "", "")
 					Expect(err).To(MatchError("failed to read release tarball"))
+				})
+			})
+
+			Context("when the variables directory cannot be read", func() {
+				It("returns an error", func() {
+					variablesDirectoryReader.ReadReturns([]interface{}{}, errors.New("some error"))
+
+					_, err := tileBuilder.Build([]string{}, []string{"/path/to/missing/variables"}, "", "", "", "")
+					Expect(err).To(MatchError(`error reading from variables directory "/path/to/missing/variables": some error`))
 				})
 			})
 
@@ -118,7 +173,7 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					stemcellManifestReader.ReadReturns(builder.StemcellManifest{}, errors.New("failed to read stemcell tarball"))
 
-					_, err := tileBuilder.Build([]string{}, "stemcell.tgz", "", "", "")
+					_, err := tileBuilder.Build([]string{}, []string{}, "stemcell.tgz", "", "", "")
 					Expect(err).To(MatchError("failed to read stemcell tarball"))
 				})
 			})
@@ -127,7 +182,7 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					metadataReader.ReadReturns(builder.Metadata{}, errors.New("failed to read metadata"))
 
-					_, err := tileBuilder.Build([]string{}, "", "metadata.yml", "", "")
+					_, err := tileBuilder.Build([]string{}, []string{}, "", "metadata.yml", "", "")
 					Expect(err).To(MatchError("failed to read metadata"))
 				})
 			})
@@ -141,7 +196,7 @@ var _ = Describe("MetadataBuilder", func() {
 						nil,
 					)
 
-					_, err := tileBuilder.Build([]string{}, "", "metadata.yml", "", "")
+					_, err := tileBuilder.Build([]string{}, []string{}, "", "metadata.yml", "", "")
 					Expect(err).To(MatchError(`missing "name" in tile metadata`))
 				})
 			})

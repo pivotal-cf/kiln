@@ -32,9 +32,16 @@ func main() {
 	filesystem := helper.NewFilesystem()
 	zipper := builder.NewZipper()
 	releaseManifestReader := builder.NewReleaseManifestReader(filesystem)
+	variablesDirectoryReader := builder.NewVariablesDirectoryReader(filesystem)
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	handcraftReader := builder.NewMetadataReader(filesystem, logger)
-	metadataBuilder := builder.NewMetadataBuilder(releaseManifestReader, stemcellManifestReader, handcraftReader, logger)
+	metadataBuilder := builder.NewMetadataBuilder(
+		releaseManifestReader,
+		variablesDirectoryReader,
+		stemcellManifestReader,
+		handcraftReader,
+		logger,
+	)
 	md5SumCalculator := helper.NewFileMD5SumCalculator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, logger, md5SumCalculator)
 	tileMaker := kiln.NewTileMaker(metadataBuilder, tileWriter, logger)

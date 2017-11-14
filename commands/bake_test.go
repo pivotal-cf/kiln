@@ -43,12 +43,13 @@ var _ = Describe("bake", func() {
 			}))
 		})
 
-		Context("when migrations directory is provided", func() {
+		Context("when there are multiple migrations directories", func() {
 			It("builds the tile", func() {
 				err := bake.Execute([]string{
 					"--stemcell-tarball", "some-stemcell-tarball",
 					"--releases-directory", "some-release-tarball-directory",
 					"--migrations-directory", "some-migrations-directory",
+					"--migrations-directory", "some-other-migrations-directory",
 					"--metadata", "some-metadata",
 					"--version", "1.2.3",
 					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
@@ -63,38 +64,9 @@ var _ = Describe("bake", func() {
 					ReleaseDirectories:   []string{"some-release-tarball-directory"},
 					Metadata:             "some-metadata",
 					Version:              "1.2.3",
-					MigrationDirectories: []string{"some-migrations-directory"},
+					MigrationDirectories: []string{"some-migrations-directory", "some-other-migrations-directory"},
 					OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4",
 				}))
-			})
-
-			Context("when the migration directory is specified multiple times", func() {
-				It("builds the tile", func() {
-					err := bake.Execute([]string{
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--releases-directory", "some-release-tarball-directory",
-						"--migrations-directory", "some-migrations-directory",
-						"--migrations-directory", "some-other-migrations-directory",
-						"--metadata", "some-metadata",
-						"--version", "1.2.3",
-						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-					})
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(tileMaker.MakeCallCount()).To(Equal(1))
-
-					config := tileMaker.MakeArgsForCall(0)
-					Expect(config).To(Equal(commands.BakeConfig{
-						StemcellTarball:      "some-stemcell-tarball",
-						ReleaseDirectories:   []string{"some-release-tarball-directory"},
-						Metadata:             "some-metadata",
-						Version:              "1.2.3",
-						MigrationDirectories: []string{"some-migrations-directory", "some-other-migrations-directory"},
-						OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4",
-					}))
-
-				})
-
 			})
 		})
 
@@ -119,6 +91,33 @@ var _ = Describe("bake", func() {
 					Metadata:           "some-metadata",
 					Version:            "1.2.3",
 					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
+				}))
+			})
+		})
+
+		Context("when there are multiple variables directories", func() {
+			It("builds the tile", func() {
+				err := bake.Execute([]string{
+					"--stemcell-tarball", "some-stemcell-tarball",
+					"--releases-directory", "some-release-tarball-directory",
+					"--variables-directory", "some-variables-directory",
+					"--variables-directory", "some-other-variables-directory",
+					"--metadata", "some-metadata",
+					"--version", "1.2.3",
+					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(tileMaker.MakeCallCount()).To(Equal(1))
+
+				config := tileMaker.MakeArgsForCall(0)
+				Expect(config).To(Equal(commands.BakeConfig{
+					StemcellTarball:     "some-stemcell-tarball",
+					ReleaseDirectories:  []string{"some-release-tarball-directory"},
+					VariableDirectories: []string{"some-variables-directory", "some-other-variables-directory"},
+					Metadata:            "some-metadata",
+					Version:             "1.2.3",
+					OutputFile:          "some-output-dir/cool-product-file-1.2.3-build.4",
 				}))
 			})
 		})
@@ -219,7 +218,6 @@ var _ = Describe("bake", func() {
 					Expect(err).To(MatchError("--output-file is a required parameter"))
 				})
 			})
-
 		})
 	})
 

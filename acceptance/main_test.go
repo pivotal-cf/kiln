@@ -21,6 +21,7 @@ var _ = Describe("kiln", func() {
 		tempDir                string
 		someReleasesDirectory  string
 		otherReleasesDirectory string
+		someVariablesDirectory string
 		stemcellTarball        string
 		metadata               string
 		outputFile             string
@@ -37,6 +38,9 @@ var _ = Describe("kiln", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		otherReleasesDirectory, err = ioutil.TempDir("", "")
+		Expect(err).NotTo(HaveOccurred())
+
+		someVariablesDirectory, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		tempDir, err = ioutil.TempDir("", "")
@@ -70,6 +74,21 @@ operating_system: ubuntu-trusty
 `
 
 		stemcellTarball, err = createTarball(tempDir, "stemcell.tgz", "stemcell.MF", stemcellManifest)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(filepath.Join(someVariablesDirectory, "variable-1.yml"), []byte(`---
+variables:
+- name: variable-1
+  type: certificate
+  options:
+    some_option: Option value
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+		err = ioutil.WriteFile(filepath.Join(someVariablesDirectory, "variable-2.yml"), []byte(`---
+variables:
+- name: variable-2
+  type: password
+`), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		metadata = filepath.Join(tempDir, "metadata.yml")
@@ -114,6 +133,7 @@ property_blueprints:
 			"--stemcell-tarball", stemcellTarball,
 			"--releases-directory", someReleasesDirectory,
 			"--releases-directory", otherReleasesDirectory,
+			"--variables-directory", someVariablesDirectory,
 			"--metadata", metadata,
 			"--version", "1.2.3",
 			"--output-file", outputFile,
@@ -187,6 +207,13 @@ property_blueprints:
   type: string
   configurable: false
   default: "1.2.3"
+variables:
+- name: variable-1
+  type: certificate
+  options:
+    some_option: Option value
+- name: variable-2
+  type: password
 `))
 	})
 

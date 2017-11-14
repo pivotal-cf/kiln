@@ -2,19 +2,22 @@ package builder
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 )
 
 type MetadataBuilder struct {
-	releaseManifestReader  releaseManifestReader
-	stemcellManifestReader stemcellManifestReader
-	metadataReader         metadataReader
-	logger                 logger
+	releaseManifestReader    releaseManifestReader
+	variablesDirectoryReader variablesDirectoryReader
+	stemcellManifestReader   stemcellManifestReader
+	metadataReader           metadataReader
+	logger                   logger
 }
 
 type GeneratedMetadata struct {
 	Name             string
 	Releases         []Release
+	Variables        []interface{}    `yaml:",omitempty"`
 	StemcellCriteria StemcellCriteria `yaml:"stemcell_criteria"`
 	Metadata         Metadata         `yaml:",inline"`
 }
@@ -46,6 +49,11 @@ type stemcellManifestReader interface {
 	Read(path string) (StemcellManifest, error)
 }
 
+//go:generate counterfeiter -o ./fakes/variables_directory_reader.go --fake-name VariablesDirectoryReader . variablesDirectoryReader
+type variablesDirectoryReader interface {
+	Read(path string) ([]interface{}, error)
+}
+
 //go:generate counterfeiter -o ./fakes/metadata_reader.go --fake-name MetadataReader . metadataReader
 type metadataReader interface {
 	Read(path, version string) (Metadata, error)
@@ -56,16 +64,17 @@ type logger interface {
 	Println(v ...interface{})
 }
 
-func NewMetadataBuilder(releaseManifestReader releaseManifestReader, stemcellManifestReader stemcellManifestReader, metadataReader metadataReader, logger logger) MetadataBuilder {
+func NewMetadataBuilder(releaseManifestReader releaseManifestReader, variablesDirectoryReader variablesDirectoryReader, stemcellManifestReader stemcellManifestReader, metadataReader metadataReader, logger logger) MetadataBuilder {
 	return MetadataBuilder{
-		releaseManifestReader:  releaseManifestReader,
-		stemcellManifestReader: stemcellManifestReader,
-		metadataReader:         metadataReader,
-		logger:                 logger,
+		releaseManifestReader:    releaseManifestReader,
+		variablesDirectoryReader: variablesDirectoryReader,
+		stemcellManifestReader:   stemcellManifestReader,
+		metadataReader:           metadataReader,
+		logger:                   logger,
 	}
 }
 
-func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToMetadata, version, pathToTile string) (GeneratedMetadata, error) {
+func (m MetadataBuilder) Build(releaseTarballs, variableDirectories []string, pathToStemcell, pathToMetadata, version, pathToTile string) (GeneratedMetadata, error) {
 	m.logger.Printf("Creating metadata for %s...", pathToTile)
 
 	var releases []Release
@@ -82,6 +91,19 @@ func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToM
 			Version: releaseManifest.Version,
 			File:    filepath.Base(releaseTarball),
 		})
+	}
+
+	var variables []interface{}
+	for _, variablesDirectory := range variableDirectories {
+		v, err := m.variablesDirectoryReader.Read(variablesDirectory)
+		if err != nil {
+			return GeneratedMetadata{},
+				fmt.Errorf("error reading from variables directory %q: %s", variablesDirectory, err)
+		}
+
+		m.logger.Printf("Read variables from %s", variablesDirectory)
+
+		variables = append(variables, v...)
 	}
 
 	stemcellManifest, err := m.stemcellManifestReader.Read(pathToStemcell)
@@ -103,12 +125,14 @@ func (m MetadataBuilder) Build(releaseTarballs []string, pathToStemcell, pathToM
 	}
 
 	delete(metadata, "name")
+	delete(metadata, "variables")
 
 	m.logger.Printf("Read metadata")
 
 	return GeneratedMetadata{
-		Name:     productName,
-		Releases: releases,
+		Name:      productName,
+		Releases:  releases,
+		Variables: variables,
 		StemcellCriteria: StemcellCriteria{
 			OS:          stemcellManifest.OperatingSystem,
 			Version:     stemcellManifest.Version,
