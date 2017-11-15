@@ -27,6 +27,7 @@ func (h MetadataReader) Read(path, version string) (Metadata, error) {
 		return Metadata{}, err
 	}
 
+	defer file.Close()
 	contents, err := ioutil.ReadAll(file)
 	if err != nil {
 		return Metadata{}, err

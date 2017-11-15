@@ -78,7 +78,19 @@ version: 1.2.3
 					Expect(err).To(MatchError("failed to open tarball"))
 				})
 			})
+			Context("when reading from the tarball errors", func() {
+				It("returns an error", func() {
+					erroringReader := &fakes.ReadWriteCloser{}
+					erroringReader.ReadReturns(0, errors.New("cannot read tarball"))
+					filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+						return erroringReader, nil
+					}
 
+					_, err := reader.Read("/path/to/release/tarball")
+					Expect(err).To(MatchError("cannot read tarball"))
+					Expect(erroringReader.CloseCallCount()).To(Equal(1))
+				})
+			})
 			Context("when the input is not a valid gzip", func() {
 				It("returns an error", func() {
 					filesystem.OpenReturns(NewBuffer(bytes.NewBuffer([]byte("I am a banana!"))), nil)

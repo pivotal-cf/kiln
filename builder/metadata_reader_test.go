@@ -3,6 +3,7 @@ package builder_test
 import (
 	"bytes"
 	"errors"
+	"io"
 
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/builder/fakes"
@@ -115,15 +116,19 @@ var _ = Describe("MetadataReader", func() {
 				Expect(err).To(MatchError("failed to open metadata"))
 			})
 		})
-
 		Context("when the metadata file cannot be read", func() {
 			It("returns an error", func() {
-				filesystem.OpenReturns(nil, errors.New("failed to read"))
+				erroringReader := &fakes.ReadWriteCloser{}
+				erroringReader.ReadReturns(0, errors.New("cannot read file"))
+				filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+					return erroringReader, nil
+				}
+
 				_, err := reader.Read("/some/path/metadata.yml", "1.2.3-build.9999")
-				Expect(err).To(MatchError("failed to read"))
+				Expect(err).To(MatchError("cannot read file"))
+				Expect(erroringReader.CloseCallCount()).To(Equal(1))
 			})
 		})
-
 		Context("when the metadata yaml cannot be unmarshaled", func() {
 			It("returns an error", func() {
 				filesystem.OpenReturns(NewBuffer(bytes.NewBuffer([]byte("&&&&&&&&"))), nil)

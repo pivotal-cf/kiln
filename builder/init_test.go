@@ -9,6 +9,8 @@ import (
 	"testing"
 )
 
+//go:generate counterfeiter -o ./fakes/read_write_closer.go --fake-name ReadWriteCloser io.ReadWriteCloser
+
 func TestBuilder(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "builder")
