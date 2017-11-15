@@ -14,8 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-//go:generate counterfeiter -o ./fakes/read_write_closer.go --fake-name ReadWriteCloser io.ReadWriteCloser
-
 var _ = Describe("MetadataPartsDirectoryReader", func() {
 	var (
 		filesystem *fakes.Filesystem
