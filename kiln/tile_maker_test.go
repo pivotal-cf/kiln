@@ -54,14 +54,15 @@ var _ = Describe("TileMaker", func() {
 		fakeLogger = &fakes.Logger{}
 
 		config = commands.BakeConfig{
-			Version:              "1.2.3",
-			StemcellTarball:      "some-stemcell-tarball",
-			ReleaseDirectories:   []string{someReleasesDirectory, otherReleasesDirectory},
-			VariableDirectories:  []string{"some-variables-directory"},
-			Metadata:             "some-metadata",
-			MigrationDirectories: []string{"some-migrations-directory"},
-			OutputFile:           "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
-			StubReleases:         true,
+			Version:                  "1.2.3",
+			StemcellTarball:          "some-stemcell-tarball",
+			ReleaseDirectories:       []string{someReleasesDirectory, otherReleasesDirectory},
+			RuntimeConfigDirectories: []string{"some-runtime-configs-directory"},
+			VariableDirectories:      []string{"some-variables-directory"},
+			Metadata:                 "some-metadata",
+			MigrationDirectories:     []string{"some-migrations-directory"},
+			OutputFile:               "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
+			StubReleases:             true,
 		}
 		tileMaker = kiln.NewTileMaker(fakeMetadataBuilder, fakeTileWriter, fakeLogger)
 	})
@@ -77,8 +78,9 @@ var _ = Describe("TileMaker", func() {
 
 		Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 
-		releaseTarballs, variableDirectories, stemcellTarball, metadata, version, outputPath := fakeMetadataBuilder.BuildArgsForCall(0)
+		releaseTarballs, runtimeConfigDirectories, variableDirectories, stemcellTarball, metadata, version, outputPath := fakeMetadataBuilder.BuildArgsForCall(0)
 		Expect(releaseTarballs).To(Equal(validReleases))
+		Expect(runtimeConfigDirectories).To(Equal([]string{"some-runtime-configs-directory"}))
 		Expect(variableDirectories).To(Equal([]string{"some-variables-directory"}))
 		Expect(stemcellTarball).To(Equal("some-stemcell-tarball"))
 		Expect(metadata).To(Equal("some-metadata"))
@@ -119,14 +121,15 @@ stemcell_criteria:
   os: an-operating-system
   requires_cpi: false`))
 		Expect(config).To(Equal(commands.BakeConfig{
-			Version:              "1.2.3",
-			StemcellTarball:      "some-stemcell-tarball",
-			ReleaseDirectories:   []string{someReleasesDirectory, otherReleasesDirectory},
-			VariableDirectories:  []string{"some-variables-directory"},
-			Metadata:             "some-metadata",
-			MigrationDirectories: []string{"some-migrations-directory"},
-			OutputFile:           "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
-			StubReleases:         true,
+			Version:                  "1.2.3",
+			StemcellTarball:          "some-stemcell-tarball",
+			ReleaseDirectories:       []string{someReleasesDirectory, otherReleasesDirectory},
+			RuntimeConfigDirectories: []string{"some-runtime-configs-directory"},
+			VariableDirectories:      []string{"some-variables-directory"},
+			Metadata:                 "some-metadata",
+			MigrationDirectories:     []string{"some-migrations-directory"},
+			OutputFile:               "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
+			StubReleases:             true,
 		}))
 	})
 
