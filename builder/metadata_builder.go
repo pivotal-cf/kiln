@@ -142,8 +142,14 @@ func (m MetadataBuilder) Build(releaseTarballs, runtimeConfigDirectories, variab
 	}
 
 	delete(metadata, "name")
-	delete(metadata, "runtime_configs")
-	delete(metadata, "variables")
+
+	if _, present := metadata["runtime_configs"]; present {
+		return GeneratedMetadata{}, fmt.Errorf("runtime_config section must be defined using --runtime-configs-directory flag, not in %q", pathToMetadata)
+	}
+
+	if _, present := metadata["variables"]; present {
+		return GeneratedMetadata{}, fmt.Errorf("variables section must be defined using --variables-directory flag, not in %q", pathToMetadata)
+	}
 
 	m.logger.Printf("Read metadata")
 

@@ -259,6 +259,33 @@ var _ = Describe("MetadataBuilder", func() {
 					Expect(err).To(MatchError(`missing "name" in tile metadata`))
 				})
 			})
+
+			Context("when the base metadata contains a runtime_configs section", func() {
+				It("returns an error", func() {
+					metadataReader.ReadReturns(builder.Metadata{
+						"name":            "cool-product",
+						"runtime_configs": "some-runtime-configs",
+					},
+						nil,
+					)
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "metadata.yml", "", "")
+					Expect(err).To(MatchError(`runtime_config section must be defined using --runtime-configs-directory flag, not in "metadata.yml"`))
+				})
+			})
+
+			Context("when the base metadata contains a variables section", func() {
+				It("returns an error", func() {
+					metadataReader.ReadReturns(builder.Metadata{
+						"name":      "cool-product",
+						"variables": "some-variables",
+					},
+						nil,
+					)
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "metadata.yml", "", "")
+					Expect(err).To(MatchError(`variables section must be defined using --variables-directory flag, not in "metadata.yml"`))
+				})
+			})
+
 		})
 	})
 })
