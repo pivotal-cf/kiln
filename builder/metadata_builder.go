@@ -40,6 +40,7 @@ type BoshRuntimeConfig struct {
 	OtherFields BoshRuntimeConfigFields `yaml:",inline"`
 }
 
+//go:generate counterfeiter -o ./fakes/release_manifest_reader.go --fake-name ReleaseManifestReader . releaseManifestReader
 type releaseManifestReader interface {
 	Read(path string) (ReleaseManifest, error)
 }

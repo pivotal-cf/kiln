@@ -28,7 +28,7 @@ var _ = Describe("MetadataBuilder", func() {
 		metadataReader = &fakes.MetadataReader{}
 		logger = &fakes.Logger{}
 
-		releaseManifestReader.ReadCall.Stub = func(path string) (builder.ReleaseManifest, error) {
+		releaseManifestReader.ReadStub = func(path string) (builder.ReleaseManifest, error) {
 			switch path {
 			case "/path/to/release-1.tgz":
 				return builder.ReleaseManifest{
@@ -152,8 +152,7 @@ var _ = Describe("MetadataBuilder", func() {
 		Context("failure cases", func() {
 			Context("when the release tarball cannot be read", func() {
 				It("returns an error", func() {
-					releaseManifestReader.ReadCall.Stub = nil
-					releaseManifestReader.ReadCall.Returns.Error = errors.New("failed to read release tarball")
+					releaseManifestReader.ReadReturns(builder.ReleaseManifest{}, errors.New("failed to read release tarball"))
 
 					_, err := tileBuilder.Build([]string{"release-1.tgz"}, []string{}, "", "", "", "")
 					Expect(err).To(MatchError("failed to read release tarball"))
