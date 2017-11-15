@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-type VariablesDirectoryReader struct {
+type MetadataPartsDirectoryReader struct {
 	ReadStub        func(path string) ([]interface{}, error)
 	readMutex       sync.RWMutex
 	readArgsForCall []struct {
@@ -23,7 +23,7 @@ type VariablesDirectoryReader struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *VariablesDirectoryReader) Read(path string) ([]interface{}, error) {
+func (fake *MetadataPartsDirectoryReader) Read(path string) ([]interface{}, error) {
 	fake.readMutex.Lock()
 	ret, specificReturn := fake.readReturnsOnCall[len(fake.readArgsForCall)]
 	fake.readArgsForCall = append(fake.readArgsForCall, struct {
@@ -40,19 +40,19 @@ func (fake *VariablesDirectoryReader) Read(path string) ([]interface{}, error) {
 	return fake.readReturns.result1, fake.readReturns.result2
 }
 
-func (fake *VariablesDirectoryReader) ReadCallCount() int {
+func (fake *MetadataPartsDirectoryReader) ReadCallCount() int {
 	fake.readMutex.RLock()
 	defer fake.readMutex.RUnlock()
 	return len(fake.readArgsForCall)
 }
 
-func (fake *VariablesDirectoryReader) ReadArgsForCall(i int) string {
+func (fake *MetadataPartsDirectoryReader) ReadArgsForCall(i int) string {
 	fake.readMutex.RLock()
 	defer fake.readMutex.RUnlock()
 	return fake.readArgsForCall[i].path
 }
 
-func (fake *VariablesDirectoryReader) ReadReturns(result1 []interface{}, result2 error) {
+func (fake *MetadataPartsDirectoryReader) ReadReturns(result1 []interface{}, result2 error) {
 	fake.ReadStub = nil
 	fake.readReturns = struct {
 		result1 []interface{}
@@ -60,7 +60,7 @@ func (fake *VariablesDirectoryReader) ReadReturns(result1 []interface{}, result2
 	}{result1, result2}
 }
 
-func (fake *VariablesDirectoryReader) ReadReturnsOnCall(i int, result1 []interface{}, result2 error) {
+func (fake *MetadataPartsDirectoryReader) ReadReturnsOnCall(i int, result1 []interface{}, result2 error) {
 	fake.ReadStub = nil
 	if fake.readReturnsOnCall == nil {
 		fake.readReturnsOnCall = make(map[int]struct {
@@ -74,7 +74,7 @@ func (fake *VariablesDirectoryReader) ReadReturnsOnCall(i int, result1 []interfa
 	}{result1, result2}
 }
 
-func (fake *VariablesDirectoryReader) Invocations() map[string][][]interface{} {
+func (fake *MetadataPartsDirectoryReader) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.readMutex.RLock()
@@ -86,7 +86,7 @@ func (fake *VariablesDirectoryReader) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *VariablesDirectoryReader) recordInvocation(key string, args []interface{}) {
+func (fake *MetadataPartsDirectoryReader) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {

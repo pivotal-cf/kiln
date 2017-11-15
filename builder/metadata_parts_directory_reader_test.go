@@ -16,20 +16,23 @@ import (
 
 //go:generate counterfeiter -o ./fakes/read_write_closer.go --fake-name ReadWriteCloser io.ReadWriteCloser
 
-var _ = Describe("VariableDirectoryReader", func() {
+var _ = Describe("MetadataPartsDirectoryReader", func() {
 	var (
 		filesystem *fakes.Filesystem
-		reader     builder.VariablesDirectoryReader
+		reader     builder.MetadataPartsDirectoryReader
+		dirInfo    *fakes.FileInfo
+		fileInfo   *fakes.FileInfo
 	)
 
 	BeforeEach(func() {
 		filesystem = &fakes.Filesystem{}
 
-		dirInfo := &fakes.FileInfo{}
+		dirInfo = &fakes.FileInfo{}
 		dirInfo.IsDirReturns(true)
 
-		fileInfo := &fakes.FileInfo{}
+		fileInfo = &fakes.FileInfo{}
 		fileInfo.IsDirReturns(false)
+
 		filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 			switch root {
 			case "/some/variables/path":
@@ -61,7 +64,7 @@ variables:
 				return nil, fmt.Errorf("open %s: no such file or directory", name)
 			}
 		}
-		reader = builder.NewVariablesDirectoryReader(filesystem)
+		reader = builder.NewMetadataPartsDirectoryReader(filesystem, "variables")
 	})
 
 	Describe("Read", func() {
@@ -84,17 +87,41 @@ variables:
 			}))
 		})
 
+		It("references the specified top-level key", func() {
+			filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
+				switch root {
+				case "/some/runtime-configs/path":
+					walkFn("/some/runtime-configs/path", dirInfo, nil)
+					return walkFn("/some/runtime-configs/path/runtime-config-1.yml", fileInfo, nil)
+				default:
+					return nil
+				}
+				return nil
+			}
+			filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+				switch name {
+				case "/some/runtime-configs/path/runtime-config-1.yml":
+					return NewBuffer(bytes.NewBufferString(`---
+runtime_configs:
+- name: runtime-config-1
+  runtime_config: the-actual-runtime-config
+`)), nil
+				default:
+					return nil, fmt.Errorf("open %s: no such file or directory", name)
+				}
+			}
+			reader = builder.NewMetadataPartsDirectoryReader(filesystem, "runtime_configs")
+			runtimeConfigs, err := reader.Read("/some/runtime-configs/path")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(runtimeConfigs).To(Equal([]interface{}{
+				map[interface{}]interface{}{
+					"name":           "runtime-config-1",
+					"runtime_config": "the-actual-runtime-config",
+				},
+			}))
+		})
+
 		Context("failure cases", func() {
-			var (
-				dirInfo  *fakes.FileInfo
-				fileInfo *fakes.FileInfo
-			)
-			BeforeEach(func() {
-				dirInfo = &fakes.FileInfo{}
-				dirInfo.IsDirReturns(true)
-				fileInfo = &fakes.FileInfo{}
-				fileInfo.IsDirReturns(false)
-			})
 			Context("when there is an error walking the filesystem", func() {
 				It("errors", func() {
 					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
@@ -150,7 +177,7 @@ variables:
 					Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
 				})
 			})
-			Context("when a yaml file does not contain variables", func() {
+			Context("when a yaml file does not contain the top-level key", func() {
 				It("errors", func() {
 					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 						switch root {
@@ -165,9 +192,29 @@ variables:
 					filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
 						return NewBuffer(bytes.NewBufferString("constants: []")), nil
 					}
+					reader = builder.NewMetadataPartsDirectoryReader(filesystem, "variables")
 					_, err := reader.Read("/some/variables/path")
 					Expect(err).To(MatchError(`not a variables file: "/some/variables/path/not-a-vars-file.yml"`))
 				})
+				It("errors with the correct top-level key", func() {
+					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
+						switch root {
+						case "/some/runtime-configs/path":
+							walkFn("/some/runtime-configs/path", dirInfo, nil)
+							return walkFn("/some/runtime-configs/path/not-a-runtime-configs-file.yml", fileInfo, nil)
+						default:
+							return nil
+						}
+						return nil
+					}
+					filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+						return NewBuffer(bytes.NewBufferString("variables: []")), nil
+					}
+					reader = builder.NewMetadataPartsDirectoryReader(filesystem, "runtime_configs")
+					_, err := reader.Read("/some/runtime-configs/path")
+					Expect(err).To(MatchError(`not a runtime_configs file: "/some/runtime-configs/path/not-a-runtime-configs-file.yml"`))
+				})
+
 			})
 		})
 	})

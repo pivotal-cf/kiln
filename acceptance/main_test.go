@@ -18,13 +18,14 @@ import (
 
 var _ = Describe("kiln", func() {
 	var (
-		tempDir                string
-		someReleasesDirectory  string
-		otherReleasesDirectory string
-		someVariablesDirectory string
-		stemcellTarball        string
-		metadata               string
-		outputFile             string
+		tempDir                     string
+		someReleasesDirectory       string
+		otherReleasesDirectory      string
+		someRuntimeConfigsDirectory string
+		someVariablesDirectory      string
+		stemcellTarball             string
+		metadata                    string
+		outputFile                  string
 	)
 
 	BeforeEach(func() {
@@ -38,6 +39,9 @@ var _ = Describe("kiln", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		otherReleasesDirectory, err = ioutil.TempDir("", "")
+		Expect(err).NotTo(HaveOccurred())
+
+		someRuntimeConfigsDirectory, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		someVariablesDirectory, err = ioutil.TempDir("", "")
@@ -74,6 +78,15 @@ operating_system: ubuntu-trusty
 `
 
 		stemcellTarball, err = createTarball(tempDir, "stemcell.tgz", "stemcell.MF", stemcellManifest)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(filepath.Join(someRuntimeConfigsDirectory, "some-addon.yml"), []byte(`---
+runtime_configs:
+- name: some_addon
+  runtime_config: |
+    releases:
+    - name: some-addon
+`), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = ioutil.WriteFile(filepath.Join(someVariablesDirectory, "variable-1.yml"), []byte(`---
@@ -133,6 +146,7 @@ property_blueprints:
 			"--stemcell-tarball", stemcellTarball,
 			"--releases-directory", someReleasesDirectory,
 			"--releases-directory", otherReleasesDirectory,
+			"--runtime-configs-directory", someRuntimeConfigsDirectory,
 			"--variables-directory", someVariablesDirectory,
 			"--metadata", metadata,
 			"--version", "1.2.3",
@@ -207,6 +221,11 @@ property_blueprints:
   type: string
   configurable: false
   default: "1.2.3"
+runtime_configs:
+- name: some_addon
+  runtime_config: |
+    releases:
+    - name: some-addon
 variables:
 - name: variable-1
   type: certificate

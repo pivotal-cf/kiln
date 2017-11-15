@@ -13,17 +13,19 @@ import (
 
 var _ = Describe("MetadataBuilder", func() {
 	var (
-		releaseManifestReader    *fakes.ReleaseManifestReader
-		variablesDirectoryReader *fakes.VariablesDirectoryReader
-		stemcellManifestReader   *fakes.StemcellManifestReader
-		metadataReader           *fakes.MetadataReader
-		logger                   *fakes.Logger
-		tileBuilder              builder.MetadataBuilder
+		releaseManifestReader         *fakes.ReleaseManifestReader
+		runtimeConfigsDirectoryReader *fakes.MetadataPartsDirectoryReader
+		variablesDirectoryReader      *fakes.MetadataPartsDirectoryReader
+		stemcellManifestReader        *fakes.StemcellManifestReader
+		metadataReader                *fakes.MetadataReader
+		logger                        *fakes.Logger
+		tileBuilder                   builder.MetadataBuilder
 	)
 
 	BeforeEach(func() {
 		releaseManifestReader = &fakes.ReleaseManifestReader{}
-		variablesDirectoryReader = &fakes.VariablesDirectoryReader{}
+		runtimeConfigsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
+		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		stemcellManifestReader = &fakes.StemcellManifestReader{}
 		metadataReader = &fakes.MetadataReader{}
 		logger = &fakes.Logger{}
@@ -44,6 +46,31 @@ var _ = Describe("MetadataBuilder", func() {
 				return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
 			}
 		}
+		runtimeConfigsDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
+			switch path {
+			case "/path/to/runtime-configs/directory":
+				return []interface{}{
+					map[interface{}]interface{}{
+						"name":           "runtime-config-1",
+						"runtime_config": "runtime-config-1-manifest",
+					},
+					map[interface{}]interface{}{
+						"name":           "runtime-config-2",
+						"runtime_config": "runtime-config-2-manifest",
+					},
+				}, nil
+			case "/path/to/other/runtime-configs/directory":
+				return []interface{}{
+					map[interface{}]interface{}{
+						"name":           "runtime-config-3",
+						"runtime_config": "runtime-config-3-manifest",
+					},
+				}, nil
+			default:
+				return []interface{}{}, fmt.Errorf("could not read runtime configs directory %q", path)
+			}
+		}
+
 		variablesDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
 			switch path {
 			case "/path/to/variables/directory":
@@ -75,7 +102,13 @@ var _ = Describe("MetadataBuilder", func() {
 			nil,
 		)
 
-		tileBuilder = builder.NewMetadataBuilder(releaseManifestReader, variablesDirectoryReader, stemcellManifestReader, metadataReader, logger)
+		tileBuilder = builder.NewMetadataBuilder(
+			releaseManifestReader,
+			runtimeConfigsDirectoryReader,
+			variablesDirectoryReader,
+			stemcellManifestReader,
+			metadataReader,
+			logger)
 	})
 
 	Describe("Build", func() {
@@ -89,6 +122,7 @@ var _ = Describe("MetadataBuilder", func() {
 			)
 			generatedMetadata, err := tileBuilder.Build(
 				[]string{"/path/to/release-1.tgz", "/path/to/release-2.tgz"},
+				[]string{"/path/to/runtime-configs/directory", "/path/to/other/runtime-configs/directory"},
 				[]string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
 				"/path/to/test-stemcell.tgz",
 				"/some/path/metadata.yml",
@@ -114,6 +148,21 @@ var _ = Describe("MetadataBuilder", func() {
 					File:    "release-2.tgz",
 				},
 			}))
+			Expect(generatedMetadata.RuntimeConfigs).To(Equal([]interface{}{
+				map[interface{}]interface{}{
+					"name":           "runtime-config-1",
+					"runtime_config": "runtime-config-1-manifest",
+				},
+				map[interface{}]interface{}{
+					"name":           "runtime-config-2",
+					"runtime_config": "runtime-config-2-manifest",
+				},
+				map[interface{}]interface{}{
+					"name":           "runtime-config-3",
+					"runtime_config": "runtime-config-3-manifest",
+				},
+			},
+			))
 			Expect(generatedMetadata.Variables).To(Equal([]interface{}{
 				map[interface{}]interface{}{
 					"name": "variable-1",
@@ -142,6 +191,8 @@ var _ = Describe("MetadataBuilder", func() {
 				"Creating metadata for /path/to/tile.zip...",
 				"Read manifest for release release-1",
 				"Read manifest for release release-2",
+				"Read runtime configs from /path/to/runtime-configs/directory",
+				"Read runtime configs from /path/to/other/runtime-configs/directory",
 				"Read variables from /path/to/variables/directory",
 				"Read variables from /path/to/other/variables/directory",
 				"Read manifest for stemcell version 2332",
@@ -154,8 +205,17 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					releaseManifestReader.ReadReturns(builder.ReleaseManifest{}, errors.New("failed to read release tarball"))
 
-					_, err := tileBuilder.Build([]string{"release-1.tgz"}, []string{}, "", "", "", "")
+					_, err := tileBuilder.Build([]string{"release-1.tgz"}, []string{}, []string{}, "", "", "", "")
 					Expect(err).To(MatchError("failed to read release tarball"))
+				})
+			})
+
+			Context("when the runtime configs directory cannot be read", func() {
+				It("returns an error", func() {
+					runtimeConfigsDirectoryReader.ReadReturns([]interface{}{}, errors.New("some error"))
+
+					_, err := tileBuilder.Build([]string{}, []string{"/path/to/missing/runtime-configs"}, []string{}, "", "", "", "")
+					Expect(err).To(MatchError(`error reading from runtime configs directory "/path/to/missing/runtime-configs": some error`))
 				})
 			})
 
@@ -163,7 +223,7 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					variablesDirectoryReader.ReadReturns([]interface{}{}, errors.New("some error"))
 
-					_, err := tileBuilder.Build([]string{}, []string{"/path/to/missing/variables"}, "", "", "", "")
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{"/path/to/missing/variables"}, "", "", "", "")
 					Expect(err).To(MatchError(`error reading from variables directory "/path/to/missing/variables": some error`))
 				})
 			})
@@ -172,7 +232,7 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					stemcellManifestReader.ReadReturns(builder.StemcellManifest{}, errors.New("failed to read stemcell tarball"))
 
-					_, err := tileBuilder.Build([]string{}, []string{}, "stemcell.tgz", "", "", "")
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "stemcell.tgz", "", "", "")
 					Expect(err).To(MatchError("failed to read stemcell tarball"))
 				})
 			})
@@ -181,7 +241,7 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					metadataReader.ReadReturns(builder.Metadata{}, errors.New("failed to read metadata"))
 
-					_, err := tileBuilder.Build([]string{}, []string{}, "", "metadata.yml", "", "")
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "metadata.yml", "", "")
 					Expect(err).To(MatchError("failed to read metadata"))
 				})
 			})
@@ -195,7 +255,7 @@ var _ = Describe("MetadataBuilder", func() {
 						nil,
 					)
 
-					_, err := tileBuilder.Build([]string{}, []string{}, "", "metadata.yml", "", "")
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "metadata.yml", "", "")
 					Expect(err).To(MatchError(`missing "name" in tile metadata`))
 				})
 			})

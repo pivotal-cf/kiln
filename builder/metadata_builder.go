@@ -7,16 +7,18 @@ import (
 )
 
 type MetadataBuilder struct {
-	releaseManifestReader    releaseManifestReader
-	variablesDirectoryReader variablesDirectoryReader
-	stemcellManifestReader   stemcellManifestReader
-	metadataReader           metadataReader
-	logger                   logger
+	releaseManifestReader         releaseManifestReader
+	runtimeConfigsDirectoryReader metadataPartsDirectoryReader
+	variablesDirectoryReader      metadataPartsDirectoryReader
+	stemcellManifestReader        stemcellManifestReader
+	metadataReader                metadataReader
+	logger                        logger
 }
 
 type GeneratedMetadata struct {
 	Name             string
 	Releases         []Release
+	RuntimeConfigs   []interface{}    `yaml:"runtime_configs,omitempty"`
 	Variables        []interface{}    `yaml:",omitempty"`
 	StemcellCriteria StemcellCriteria `yaml:"stemcell_criteria"`
 	Metadata         Metadata         `yaml:",inline"`
@@ -50,8 +52,8 @@ type stemcellManifestReader interface {
 	Read(path string) (StemcellManifest, error)
 }
 
-//go:generate counterfeiter -o ./fakes/variables_directory_reader.go --fake-name VariablesDirectoryReader . variablesDirectoryReader
-type variablesDirectoryReader interface {
+//go:generate counterfeiter -o ./fakes/metadata_parts_directory_reader.go --fake-name MetadataPartsDirectoryReader . metadataPartsDirectoryReader
+type metadataPartsDirectoryReader interface {
 	Read(path string) ([]interface{}, error)
 }
 
@@ -65,17 +67,18 @@ type logger interface {
 	Println(v ...interface{})
 }
 
-func NewMetadataBuilder(releaseManifestReader releaseManifestReader, variablesDirectoryReader variablesDirectoryReader, stemcellManifestReader stemcellManifestReader, metadataReader metadataReader, logger logger) MetadataBuilder {
+func NewMetadataBuilder(releaseManifestReader releaseManifestReader, runtimeConfigsDirectoryReader, variablesDirectoryReader metadataPartsDirectoryReader, stemcellManifestReader stemcellManifestReader, metadataReader metadataReader, logger logger) MetadataBuilder {
 	return MetadataBuilder{
-		releaseManifestReader:    releaseManifestReader,
-		variablesDirectoryReader: variablesDirectoryReader,
-		stemcellManifestReader:   stemcellManifestReader,
-		metadataReader:           metadataReader,
-		logger:                   logger,
+		releaseManifestReader:         releaseManifestReader,
+		runtimeConfigsDirectoryReader: runtimeConfigsDirectoryReader,
+		variablesDirectoryReader:      variablesDirectoryReader,
+		stemcellManifestReader:        stemcellManifestReader,
+		metadataReader:                metadataReader,
+		logger:                        logger,
 	}
 }
 
-func (m MetadataBuilder) Build(releaseTarballs, variableDirectories []string, pathToStemcell, pathToMetadata, version, pathToTile string) (GeneratedMetadata, error) {
+func (m MetadataBuilder) Build(releaseTarballs, runtimeConfigDirectories, variableDirectories []string, pathToStemcell, pathToMetadata, version, pathToTile string) (GeneratedMetadata, error) {
 	m.logger.Printf("Creating metadata for %s...", pathToTile)
 
 	var releases []Release
@@ -92,6 +95,19 @@ func (m MetadataBuilder) Build(releaseTarballs, variableDirectories []string, pa
 			Version: releaseManifest.Version,
 			File:    filepath.Base(releaseTarball),
 		})
+	}
+
+	var runtimeConfigs []interface{}
+	for _, runtimeConfigsDirectory := range runtimeConfigDirectories {
+		r, err := m.runtimeConfigsDirectoryReader.Read(runtimeConfigsDirectory)
+		if err != nil {
+			return GeneratedMetadata{},
+				fmt.Errorf("error reading from runtime configs directory %q: %s", runtimeConfigsDirectory, err)
+		}
+
+		m.logger.Printf("Read runtime configs from %s", runtimeConfigsDirectory)
+
+		runtimeConfigs = append(runtimeConfigs, r...)
 	}
 
 	var variables []interface{}
@@ -126,14 +142,16 @@ func (m MetadataBuilder) Build(releaseTarballs, variableDirectories []string, pa
 	}
 
 	delete(metadata, "name")
+	delete(metadata, "runtime_configs")
 	delete(metadata, "variables")
 
 	m.logger.Printf("Read metadata")
 
 	return GeneratedMetadata{
-		Name:      productName,
-		Releases:  releases,
-		Variables: variables,
+		Name:           productName,
+		Releases:       releases,
+		RuntimeConfigs: runtimeConfigs,
+		Variables:      variables,
 		StemcellCriteria: StemcellCriteria{
 			OS:          stemcellManifest.OperatingSystem,
 			Version:     stemcellManifest.Version,

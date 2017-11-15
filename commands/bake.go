@@ -8,15 +8,16 @@ import (
 )
 
 type BakeConfig struct {
-	ReleaseDirectories   flags.StringSlice `short:"rd"   long:"releases-directory"      description:"path to a directory containing release tarballs"`
-	MigrationDirectories flags.StringSlice `short:"md"   long:"migrations-directory"    description:"path to a directory containing migrations"`
-	VariableDirectories  flags.StringSlice `short:"vd"   long:"variables-directory"     description:"path to a directory containing variables"`
-	EmbedPaths           flags.StringSlice `short:"e"    long:"embed"                   description:"path to files to include in the tile /embed directory"`
-	StemcellTarball      string            `short:"st"   long:"stemcell-tarball"        description:"path to a stemcell tarball"`
-	Metadata             string            `short:"m"    long:"metadata"                description:"path to the metadata file"`
-	Version              string            `short:"v"    long:"version"                 description:"version of the tile"`
-	OutputFile           string            `short:"o"    long:"output-file"             description:"path to where the tile will be output"`
-	StubReleases         bool              `short:"sr"   long:"stub-releases"           description:"skips importing release tarballs into the tile"`
+	ReleaseDirectories       flags.StringSlice `short:"rd"   long:"releases-directory"         description:"path to a directory containing release tarballs"`
+	MigrationDirectories     flags.StringSlice `short:"md"   long:"migrations-directory"       description:"path to a directory containing migrations"`
+	RuntimeConfigDirectories flags.StringSlice `short:"rcd"  long:"runtime-configs-directory"  description:"path to a directory containing runtime configs"`
+	VariableDirectories      flags.StringSlice `short:"vd"   long:"variables-directory"        description:"path to a directory containing variables"`
+	EmbedPaths               flags.StringSlice `short:"e"    long:"embed"                      description:"path to files to include in the tile /embed directory"`
+	StemcellTarball          string            `short:"st"   long:"stemcell-tarball"           description:"path to a stemcell tarball"`
+	Metadata                 string            `short:"m"    long:"metadata"                   description:"path to the metadata file"`
+	Version                  string            `short:"v"    long:"version"                    description:"version of the tile"`
+	OutputFile               string            `short:"o"    long:"output-file"                description:"path to where the tile will be output"`
+	StubReleases             bool              `short:"sr"   long:"stub-releases"              description:"skips importing release tarballs into the tile"`
 }
 
 type Bake struct {

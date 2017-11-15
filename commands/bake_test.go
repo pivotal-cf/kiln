@@ -95,6 +95,33 @@ var _ = Describe("bake", func() {
 			})
 		})
 
+		Context("when there are multiple runtime-configs directories", func() {
+			It("builds the tile", func() {
+				err := bake.Execute([]string{
+					"--stemcell-tarball", "some-stemcell-tarball",
+					"--releases-directory", "some-release-tarball-directory",
+					"--runtime-configs-directory", "some-runtime-configs-directory",
+					"--runtime-configs-directory", "some-other-runtime-configs-directory",
+					"--metadata", "some-metadata",
+					"--version", "1.2.3",
+					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(tileMaker.MakeCallCount()).To(Equal(1))
+
+				config := tileMaker.MakeArgsForCall(0)
+				Expect(config).To(Equal(commands.BakeConfig{
+					StemcellTarball:          "some-stemcell-tarball",
+					ReleaseDirectories:       []string{"some-release-tarball-directory"},
+					RuntimeConfigDirectories: []string{"some-runtime-configs-directory", "some-other-runtime-configs-directory"},
+					Metadata:                 "some-metadata",
+					Version:                  "1.2.3",
+					OutputFile:               "some-output-dir/cool-product-file-1.2.3-build.4",
+				}))
+			})
+		})
+
 		Context("when there are multiple variables directories", func() {
 			It("builds the tile", func() {
 				err := bake.Execute([]string{

@@ -32,11 +32,13 @@ func main() {
 	filesystem := helper.NewFilesystem()
 	zipper := builder.NewZipper()
 	releaseManifestReader := builder.NewReleaseManifestReader(filesystem)
-	variablesDirectoryReader := builder.NewVariablesDirectoryReader(filesystem)
+	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "runtime_configs")
+	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "variables")
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	handcraftReader := builder.NewMetadataReader(filesystem, logger)
 	metadataBuilder := builder.NewMetadataBuilder(
 		releaseManifestReader,
+		runtimeConfigsDirectoryReader,
 		variablesDirectoryReader,
 		stemcellManifestReader,
 		handcraftReader,
