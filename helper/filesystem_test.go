@@ -38,8 +38,6 @@ var _ = Describe("Filesystem", func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer file.Close()
 
-			Expect(file.Name()).To(Equal(fileToCreate))
-
 			fi, err := os.Stat(fileToCreate)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fi.IsDir()).NotTo(BeTrue())

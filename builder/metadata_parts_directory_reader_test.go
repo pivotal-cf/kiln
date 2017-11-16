@@ -43,7 +43,7 @@ var _ = Describe("MetadataPartsDirectoryReader", func() {
 			}
 			return nil
 		}
-		filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+		filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
 			switch name {
 			case "/some/variables/path/vars-file-1.yml":
 				return NewBuffer(bytes.NewBufferString(`---
@@ -96,7 +96,7 @@ variables:
 				}
 				return nil
 			}
-			filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+			filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
 				switch name {
 				case "/some/runtime-configs/path/runtime-config-1.yml":
 					return NewBuffer(bytes.NewBufferString(`---
@@ -130,6 +130,7 @@ runtime_configs:
 					Expect(err).To(MatchError("problem walking filesystem"))
 				})
 			})
+
 			Context("when a file cannot be opened", func() {
 				It("errors", func() {
 					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
@@ -137,13 +138,14 @@ runtime_configs:
 						err := walkFn("/some/variables/path/unopenable-file.yml", fileInfo, nil)
 						return err
 					}
-					filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+					filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
 						return nil, errors.New("cannot open file")
 					}
 					_, err := reader.Read("/some/variables/path")
 					Expect(err).To(MatchError("cannot open file"))
 				})
 			})
+
 			Context("when there is an error reading from a file", func() {
 				It("errors", func() {
 					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
@@ -152,9 +154,9 @@ runtime_configs:
 						return err
 					}
 
-					erroringReader := &fakes.ReadWriteCloser{}
+					erroringReader := &fakes.ReadCloser{}
 					erroringReader.ReadReturns(0, errors.New("cannot read file"))
-					filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+					filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
 						return erroringReader, nil
 					}
 					_, err := reader.Read("/some/variables/path")
@@ -162,19 +164,21 @@ runtime_configs:
 					Expect(erroringReader.CloseCallCount()).To(Equal(1))
 				})
 			})
+
 			Context("when a yaml file is malformed", func() {
 				It("errors", func() {
 					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 						walkFn("/some/variables/path", dirInfo, nil)
 						return walkFn("/some/variables/path/not-well-formed.yml", fileInfo, nil)
 					}
-					filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+					filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
 						return NewBuffer(bytes.NewBufferString("not-actually-yaml")), nil
 					}
 					_, err := reader.Read("/some/variables/path")
 					Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
 				})
 			})
+
 			Context("when a yaml file does not contain the top-level key", func() {
 				It("errors", func() {
 					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
@@ -187,13 +191,14 @@ runtime_configs:
 						}
 						return nil
 					}
-					filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+					filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
 						return NewBuffer(bytes.NewBufferString("constants: []")), nil
 					}
 					reader = builder.NewMetadataPartsDirectoryReader(filesystem, "variables")
 					_, err := reader.Read("/some/variables/path")
 					Expect(err).To(MatchError(`not a variables file: "/some/variables/path/not-a-vars-file.yml"`))
 				})
+
 				It("errors with the correct top-level key", func() {
 					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 						switch root {
@@ -205,14 +210,13 @@ runtime_configs:
 						}
 						return nil
 					}
-					filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+					filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
 						return NewBuffer(bytes.NewBufferString("variables: []")), nil
 					}
 					reader = builder.NewMetadataPartsDirectoryReader(filesystem, "runtime_configs")
 					_, err := reader.Read("/some/runtime-configs/path")
 					Expect(err).To(MatchError(`not a runtime_configs file: "/some/runtime-configs/path/not-a-runtime-configs-file.yml"`))
 				})
-
 			})
 		})
 	})

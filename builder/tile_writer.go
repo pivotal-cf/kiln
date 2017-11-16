@@ -24,8 +24,8 @@ type TileWriter struct {
 //go:generate counterfeiter -o ./fakes/filesystem.go --fake-name Filesystem . filesystem
 
 type filesystem interface {
-	Create(path string) (*os.File, error)
-	Open(path string) (io.ReadWriteCloser, error)
+	Create(path string) (io.WriteCloser, error)
+	Open(path string) (io.ReadCloser, error)
 	Walk(root string, walkFn filepath.WalkFunc) error
 	Remove(path string) error
 }
