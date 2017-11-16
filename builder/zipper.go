@@ -17,15 +17,8 @@ func NewZipper() Zipper {
 	return Zipper{}
 }
 
-func (z *Zipper) SetPath(path string) error {
-	tileFile, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-
-	z.writer = zip.NewWriter(tileFile)
-
-	return nil
+func (z *Zipper) SetWriter(writer io.Writer) {
+	z.writer = zip.NewWriter(writer)
 }
 
 func (z Zipper) Add(path string, file io.Reader) error {

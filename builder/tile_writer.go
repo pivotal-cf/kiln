@@ -24,7 +24,8 @@ type TileWriter struct {
 //go:generate counterfeiter -o ./fakes/filesystem.go --fake-name Filesystem . filesystem
 
 type filesystem interface {
-	Open(name string) (io.ReadWriteCloser, error)
+	Create(path string) (*os.File, error)
+	Open(path string) (io.ReadWriteCloser, error)
 	Walk(root string, walkFn filepath.WalkFunc) error
 	Remove(path string) error
 }
@@ -36,7 +37,7 @@ type md5SumCalculator interface {
 //go:generate counterfeiter -o ./fakes/zipper.go --fake-name Zipper . zipper
 
 type zipper interface {
-	SetPath(path string) error
+	SetWriter(writer io.Writer)
 	Add(path string, file io.Reader) error
 	AddWithMode(path string, file io.Reader, mode os.FileMode) error
 	CreateFolder(path string) error
@@ -66,10 +67,13 @@ func NewTileWriter(filesystem filesystem, zipper zipper, logger logger, md5SumCa
 func (w TileWriter) Write(productName string, generatedMetadataContents []byte, config commands.BakeConfig) error {
 	w.logger.Printf("Building %s...", config.OutputFile)
 
-	err := w.zipper.SetPath(config.OutputFile)
+	f, err := w.filesystem.Create(config.OutputFile)
 	if err != nil {
 		return err
 	}
+	defer f.Close()
+
+	w.zipper.SetWriter(f)
 
 	err = w.addToZipper(filepath.Join("metadata", fmt.Sprintf("%s.yml", productName)), bytes.NewBuffer(generatedMetadataContents), config.OutputFile)
 	if err != nil {

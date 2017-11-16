@@ -18,6 +18,43 @@ var _ = Describe("Filesystem", func() {
 		filesystem = helper.NewFilesystem()
 	})
 
+	Describe("Create", func() {
+		var tmpDir string
+
+		BeforeEach(func() {
+			var err error
+			tmpDir, err = ioutil.TempDir("", "filesystem-test")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
+		})
+
+		It("creates the specified file", func() {
+			fileToCreate := filepath.Join(tmpDir, "create-me")
+
+			file, err := filesystem.Create(fileToCreate)
+			Expect(err).NotTo(HaveOccurred())
+			defer file.Close()
+
+			Expect(file.Name()).To(Equal(fileToCreate))
+
+			fi, err := os.Stat(fileToCreate)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fi.IsDir()).NotTo(BeTrue())
+		})
+
+		Context("failure cases", func() {
+			Context("when the path is a directory", func() {
+				It("returns an error", func() {
+					_, err := filesystem.Create(tmpDir)
+					Expect(err).To(MatchError(ContainSubstring("is a directory")))
+				})
+			})
+		})
+	})
+
 	Describe("Open", func() {
 		It("opens the specified file", func() {
 			tempFile, err := ioutil.TempFile("", "")

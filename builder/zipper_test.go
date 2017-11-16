@@ -16,61 +16,33 @@ import (
 )
 
 var _ = Describe("Zipper", func() {
-	Describe("SetPath", func() {
-		var tmpDir string
+	var (
+		tmpDir     string
+		pathToTile string
+		tileFile   *os.File
+	)
 
-		BeforeEach(func() {
-			var err error
-			tmpDir, err = ioutil.TempDir("", "")
-			Expect(err).ToNot(HaveOccurred())
-		})
+	BeforeEach(func() {
+		var err error
+		tmpDir, err = ioutil.TempDir("", "")
+		Expect(err).ToNot(HaveOccurred())
 
-		AfterEach(func() {
-			err := os.RemoveAll(tmpDir)
-			Expect(err).ToNot(HaveOccurred())
-		})
+		pathToTile = filepath.Join(tmpDir, "tile.zip")
+		tileFile, err = os.Create(pathToTile)
+		Expect(err).ToNot(HaveOccurred())
+	})
 
-		It("creates and opens zip file for writing", func() {
-			zipFile := filepath.Join(tmpDir, "file.zip")
-
-			zipper := builder.NewZipper()
-
-			err := zipper.SetPath(zipFile)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(zipFile).To(BeARegularFile())
-
-			err = zipper.Close()
-			Expect(err).ToNot(HaveOccurred())
-		})
+	AfterEach(func() {
+		err := os.RemoveAll(tmpDir)
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	Describe("CreateFolder", func() {
-		var (
-			tmpDir     string
-			pathToTile string
-		)
-
-		BeforeEach(func() {
-			var err error
-			tmpDir, err = ioutil.TempDir("", "")
-			Expect(err).ToNot(HaveOccurred())
-
-			pathToTile = filepath.Join(tmpDir, "tile.zip")
-		})
-
-		AfterEach(func() {
-			err := os.RemoveAll(tmpDir)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
 		It("creates the given path", func() {
 			zipper := builder.NewZipper()
+			zipper.SetWriter(tileFile)
 
-			err := zipper.SetPath(pathToTile)
-			Expect(err).ToNot(HaveOccurred())
-
-			err = zipper.CreateFolder("some/path/to/folder")
+			err := zipper.CreateFolder("some/path/to/folder")
 			Expect(err).NotTo(HaveOccurred())
 
 			err = zipper.Close()
@@ -86,11 +58,9 @@ var _ = Describe("Zipper", func() {
 
 		It("does not append separator if already given to the input", func() {
 			zipper := builder.NewZipper()
+			zipper.SetWriter(tileFile)
 
-			err := zipper.SetPath(pathToTile)
-			Expect(err).ToNot(HaveOccurred())
-
-			err = zipper.CreateFolder("some/path/to/folder/")
+			err := zipper.CreateFolder("some/path/to/folder/")
 			Expect(err).NotTo(HaveOccurred())
 
 			err = zipper.Close()
@@ -117,37 +87,17 @@ var _ = Describe("Zipper", func() {
 	})
 
 	Describe("Add", func() {
-		var (
-			tmpDir   string
-			tileFile string
-		)
-
-		BeforeEach(func() {
-			var err error
-			tmpDir, err = ioutil.TempDir("", "")
-			Expect(err).ToNot(HaveOccurred())
-
-			tileFile = filepath.Join(tmpDir, "tile.zip")
-		})
-
-		AfterEach(func() {
-			err := os.RemoveAll(tmpDir)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
 		It("writes the given file into the path", func() {
 			zipper := builder.NewZipper()
+			zipper.SetWriter(tileFile)
 
-			err := zipper.SetPath(tileFile)
-			Expect(err).ToNot(HaveOccurred())
-
-			err = zipper.Add("some/path/to/file.txt", strings.NewReader("file contents"))
+			err := zipper.Add("some/path/to/file.txt", strings.NewReader("file contents"))
 			Expect(err).NotTo(HaveOccurred())
 
 			err = zipper.Close()
 			Expect(err).NotTo(HaveOccurred())
 
-			reader, err := zip.OpenReader(tileFile)
+			reader, err := zip.OpenReader(pathToTile)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(reader.File).To(HaveLen(1))
@@ -170,11 +120,9 @@ var _ = Describe("Zipper", func() {
 					buffer.Error = errors.New("failed to read file")
 
 					zipper := builder.NewZipper()
+					zipper.SetWriter(tileFile)
 
-					err := zipper.SetPath(tileFile)
-					Expect(err).ToNot(HaveOccurred())
-
-					err = zipper.Add("file.txt", buffer)
+					err := zipper.Add("file.txt", buffer)
 					Expect(err).To(MatchError("failed to read file"))
 				})
 			})
@@ -191,37 +139,17 @@ var _ = Describe("Zipper", func() {
 	})
 
 	Describe("AddWithMode", func() {
-		var (
-			tmpDir   string
-			tileFile string
-		)
-
-		BeforeEach(func() {
-			var err error
-			tmpDir, err = ioutil.TempDir("", "")
-			Expect(err).ToNot(HaveOccurred())
-
-			tileFile = filepath.Join(tmpDir, "tile.zip")
-		})
-
-		AfterEach(func() {
-			err := os.RemoveAll(tmpDir)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
 		It("writes the given file into the path", func() {
 			zipper := builder.NewZipper()
+			zipper.SetWriter(tileFile)
 
-			err := zipper.SetPath(tileFile)
-			Expect(err).ToNot(HaveOccurred())
-
-			err = zipper.AddWithMode("some/path/to/file.txt", strings.NewReader("file contents"), 0644)
+			err := zipper.AddWithMode("some/path/to/file.txt", strings.NewReader("file contents"), 0644)
 			Expect(err).NotTo(HaveOccurred())
 
 			err = zipper.Close()
 			Expect(err).NotTo(HaveOccurred())
 
-			reader, err := zip.OpenReader(tileFile)
+			reader, err := zip.OpenReader(pathToTile)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(reader.File).To(HaveLen(1))
@@ -244,11 +172,9 @@ var _ = Describe("Zipper", func() {
 					buffer.Error = errors.New("failed to read file")
 
 					zipper := builder.NewZipper()
+					zipper.SetWriter(tileFile)
 
-					err := zipper.SetPath(tileFile)
-					Expect(err).ToNot(HaveOccurred())
-
-					err = zipper.AddWithMode("file.txt", buffer, 0)
+					err := zipper.AddWithMode("file.txt", buffer, 0)
 					Expect(err).To(MatchError("failed to read file"))
 				})
 			})
