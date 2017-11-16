@@ -26,6 +26,7 @@ type TileWriter struct {
 type filesystem interface {
 	Open(name string) (io.ReadWriteCloser, error)
 	Walk(root string, walkFn filepath.WalkFunc) error
+	Remove(path string) error
 }
 
 type md5SumCalculator interface {
@@ -72,11 +73,13 @@ func (w TileWriter) Write(productName string, generatedMetadataContents []byte, 
 
 	err = w.addToZipper(filepath.Join("metadata", fmt.Sprintf("%s.yml", productName)), bytes.NewBuffer(generatedMetadataContents), config.OutputFile)
 	if err != nil {
+		w.removeOutputFile(config.OutputFile)
 		return err
 	}
 
 	err = w.addMigrations(config.MigrationDirectories, config.OutputFile)
 	if err != nil {
+		w.removeOutputFile(config.OutputFile)
 		return err
 	}
 
@@ -84,6 +87,7 @@ func (w TileWriter) Write(productName string, generatedMetadataContents []byte, 
 		for _, releasesDirectory := range config.ReleaseDirectories {
 			err = w.addReleaseTarballs(releasesDirectory, config.StubReleases, config.OutputFile)
 			if err != nil {
+				w.removeOutputFile(config.OutputFile)
 				return err
 			}
 		}
@@ -92,12 +96,14 @@ func (w TileWriter) Write(productName string, generatedMetadataContents []byte, 
 	for _, embedPath := range config.EmbedPaths {
 		err = w.addEmbeddedPath(embedPath, config.OutputFile)
 		if err != nil {
+			w.removeOutputFile(config.OutputFile)
 			return err
 		}
 	}
 
 	err = w.zipper.Close()
 	if err != nil {
+		w.removeOutputFile(config.OutputFile)
 		return err
 	}
 
@@ -237,4 +243,11 @@ func (w TileWriter) addEmptyMigrationsDirectory(outputFile string) error {
 		return err
 	}
 	return nil
+}
+
+func (w TileWriter) removeOutputFile(path string) {
+	err := w.filesystem.Remove(path)
+	if err != nil {
+		w.logger.Printf("failed cleaning up zip %q: %s", path, err.Error())
+	}
 }

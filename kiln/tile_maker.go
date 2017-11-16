@@ -11,11 +11,13 @@ import (
 )
 
 //go:generate counterfeiter -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
+
 type tileWriter interface {
 	Write(productName string, generatedMetadataContents []byte, config commands.BakeConfig) error
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_builder.go --fake-name MetadataBuilder . metadataBuilder
+
 type metadataBuilder interface {
 	Build(releaseTarballs, runtimeConfigDirectories, variableDirectories []string, pathToStemcell, pathToMetadata, version, pathToTile string) (builder.GeneratedMetadata, error)
 }
@@ -80,5 +82,4 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 	}
 
 	return nil
-
 }

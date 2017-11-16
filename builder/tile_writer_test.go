@@ -406,20 +406,51 @@ var _ = Describe("TileWriter", func() {
 
 		Context("failure cases", func() {
 			Context("when the zipper fails to create migrations folder", func() {
+				BeforeEach(func() {
+					zipper.CreateFolderReturns(errors.New("failed to create folder"))
+				})
+
 				It("returns an error", func() {
 					config := commands.BakeConfig{
 						StubReleases: true,
+						OutputFile:   outputFile,
 					}
 
-					zipper.CreateFolderReturns(errors.New("failed to create folder"))
 					err := tileWriter.Write("", []byte{}, config)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError("failed to create folder"))
+
+					Expect(filesystem.RemoveCallCount()).To(Equal(1))
+					Expect(filesystem.RemoveArgsForCall(0)).To(Equal(outputFile))
+				})
+
+				Context("when removing the zip file fails", func() {
+					BeforeEach(func() {
+						filesystem.RemoveReturns(errors.New("boom!"))
+					})
+
+					It("returns an error", func() {
+						config := commands.BakeConfig{
+							StubReleases: true,
+							OutputFile:   outputFile,
+						}
+
+						err := tileWriter.Write("", []byte{}, config)
+						Expect(err).To(HaveOccurred())
+						Expect(err).To(MatchError("failed to create folder"))
+
+						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom!")
+						Expect(logger.PrintfCall.Receives.LogLines).To(
+							ContainElement(expectedLogLine),
+						)
+					})
 				})
 			})
 
 			Context("when a release file cannot be opened", func() {
-				It("returns an error", func() {
+				var config commands.BakeConfig
+
+				BeforeEach(func() {
 					dirInfo := &fakes.FileInfo{}
 					dirInfo.IsDirReturns(true)
 
@@ -441,17 +472,42 @@ var _ = Describe("TileWriter", func() {
 						return nil, nil
 					}
 
-					config := commands.BakeConfig{
+					config = commands.BakeConfig{
 						ReleaseDirectories: []string{"/some/path/releases"},
+						OutputFile:         outputFile,
 					}
+				})
 
+				It("returns an error", func() {
 					err := tileWriter.Write("", []byte("generated-metadata-contents"), config)
 					Expect(err).To(MatchError("failed to open release"))
+
+					Expect(filesystem.RemoveCallCount()).To(Equal(1))
+					Expect(filesystem.RemoveArgsForCall(0)).To(Equal(outputFile))
+				})
+
+				Context("when removing the zip file fails", func() {
+					BeforeEach(func() {
+						filesystem.RemoveReturns(errors.New("boom!"))
+					})
+
+					It("returns an error", func() {
+						err := tileWriter.Write("", []byte{}, config)
+						Expect(err).To(HaveOccurred())
+						Expect(err).To(MatchError("failed to open release"))
+
+						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom!")
+						Expect(logger.PrintfCall.Receives.LogLines).To(
+							ContainElement(expectedLogLine),
+						)
+					})
 				})
 			})
 
 			Context("when a migration file cannot be opened", func() {
-				It("returns an error", func() {
+				var config commands.BakeConfig
+
+				BeforeEach(func() {
 					dirInfo := &fakes.FileInfo{}
 					dirInfo.IsDirReturns(true)
 
@@ -486,19 +542,44 @@ var _ = Describe("TileWriter", func() {
 						return nil, nil
 					}
 
-					config := commands.BakeConfig{
+					config = commands.BakeConfig{
 						ReleaseDirectories:   []string{"/some/path/releases"},
 						MigrationDirectories: []string{"/some/path/migrations"},
 						StubReleases:         true,
+						OutputFile:           outputFile,
 					}
+				})
 
+				It("returns an error", func() {
 					err := tileWriter.Write("", []byte{}, config)
 					Expect(err).To(MatchError("failed to open migration"))
+
+					Expect(filesystem.RemoveCallCount()).To(Equal(1))
+					Expect(filesystem.RemoveArgsForCall(0)).To(Equal(outputFile))
+				})
+
+				Context("when removing the zip file fails", func() {
+					BeforeEach(func() {
+						filesystem.RemoveReturns(errors.New("boom!"))
+					})
+
+					It("returns an error", func() {
+						err := tileWriter.Write("", []byte{}, config)
+						Expect(err).To(HaveOccurred())
+						Expect(err).To(MatchError("failed to open migration"))
+
+						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom!")
+						Expect(logger.PrintfCall.Receives.LogLines).To(
+							ContainElement(expectedLogLine),
+						)
+					})
 				})
 			})
 
 			Context("when an embed file cannot be opened", func() {
-				It("returns an error", func() {
+				var config commands.BakeConfig
+
+				BeforeEach(func() {
 					dirInfo := &fakes.FileInfo{}
 					dirInfo.IsDirReturns(true)
 
@@ -520,38 +601,114 @@ var _ = Describe("TileWriter", func() {
 						return nil, nil
 					}
 
-					config := commands.BakeConfig{
+					config = commands.BakeConfig{
 						EmbedPaths: []string{"/some/path/embed"},
+						OutputFile: outputFile,
 					}
+				})
 
+				It("returns an error", func() {
 					err := tileWriter.Write("", []byte("generated-metadata-contents"), config)
 					Expect(err).To(MatchError("failed to open embed"))
+
+					Expect(filesystem.RemoveCallCount()).To(Equal(1))
+					Expect(filesystem.RemoveArgsForCall(0)).To(Equal(outputFile))
+				})
+
+				Context("when removing the zip file fails", func() {
+					BeforeEach(func() {
+						filesystem.RemoveReturns(errors.New("boom!"))
+					})
+
+					It("returns an error", func() {
+						err := tileWriter.Write("", []byte{}, config)
+						Expect(err).To(HaveOccurred())
+						Expect(err).To(MatchError("failed to open embed"))
+
+						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom!")
+						Expect(logger.PrintfCall.Receives.LogLines).To(
+							ContainElement(expectedLogLine),
+						)
+					})
 				})
 			})
 
 			Context("when the zipper fails to add a file", func() {
-				It("returns an error", func() {
+				BeforeEach(func() {
 					zipper.AddReturns(errors.New("failed to add file to zip"))
+				})
 
+				It("returns an error", func() {
 					config := commands.BakeConfig{
 						StubReleases: true,
+						OutputFile:   outputFile,
 					}
 
 					err := tileWriter.Write("", []byte{}, config)
 					Expect(err).To(MatchError("failed to add file to zip"))
+
+					Expect(filesystem.RemoveCallCount()).To(Equal(1))
+					Expect(filesystem.RemoveArgsForCall(0)).To(Equal(outputFile))
+				})
+
+				Context("when removing the zip file fails", func() {
+					BeforeEach(func() {
+						filesystem.RemoveReturns(errors.New("boom!"))
+					})
+
+					It("returns an error", func() {
+						config := commands.BakeConfig{
+							StubReleases: true,
+							OutputFile:   outputFile,
+						}
+
+						err := tileWriter.Write("", []byte{}, config)
+						Expect(err).To(HaveOccurred())
+						Expect(err).To(MatchError("failed to add file to zip"))
+
+						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom!")
+						Expect(logger.PrintfCall.Receives.LogLines).To(
+							ContainElement(expectedLogLine),
+						)
+					})
 				})
 			})
 
 			Context("when the zipper fails to close", func() {
-				It("returns an error", func() {
+				var config commands.BakeConfig
+
+				BeforeEach(func() {
 					zipper.CloseReturns(errors.New("failed to close the zip"))
 
-					config := commands.BakeConfig{
+					config = commands.BakeConfig{
 						StubReleases: true,
+						OutputFile:   outputFile,
 					}
+				})
 
+				It("returns an error", func() {
 					err := tileWriter.Write("", []byte{}, config)
 					Expect(err).To(MatchError("failed to close the zip"))
+
+					Expect(filesystem.RemoveCallCount()).To(Equal(1))
+					Expect(filesystem.RemoveArgsForCall(0)).To(Equal(outputFile))
+				})
+
+				Context("when removing the zip file fails", func() {
+					BeforeEach(func() {
+						filesystem.RemoveReturns(errors.New("boom!"))
+					})
+
+					It("returns an error", func() {
+						err := tileWriter.Write("", []byte{}, config)
+						Expect(err).To(HaveOccurred())
+						Expect(err).To(MatchError("failed to close the zip"))
+
+						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom!")
+						Expect(logger.PrintfCall.Receives.LogLines).To(
+							ContainElement(expectedLogLine),
+						)
+					})
 				})
 			})
 
