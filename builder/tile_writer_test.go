@@ -77,6 +77,9 @@ var _ = Describe("TileWriter", func() {
 					walkFn("/some/path/migrations", dirInfo, nil)
 					walkFn("/some/path/migrations/migration-1.js", migrationInfo, nil)
 					walkFn("/some/path/migrations/migration-2.js", migrationInfo, nil)
+					walkFn("/some/path/migrations/tests/migration-2_test.js", migrationInfo, nil)
+					walkFn("/some/path/migrations/tests/migration-2.js", migrationInfo, nil)
+					walkFn("/some/path/migrations/not-a-js-migration.txt", migrationInfo, nil)
 				case "/some/other/path/migrations":
 					walkFn("/some/other/path/migrations", dirInfo, nil)
 					walkFn("/some/other/path/migrations/other-migration.js", migrationInfo, nil)
@@ -100,6 +103,12 @@ var _ = Describe("TileWriter", func() {
 					return NewBuffer(bytes.NewBuffer([]byte("migration-1"))), nil
 				case "/some/path/migrations/migration-2.js":
 					return NewBuffer(bytes.NewBuffer([]byte("migration-2"))), nil
+				case "/some/path/migrations/tests/migration-2_test.js":
+					return NewBuffer(bytes.NewBuffer([]byte("i-am-a-test"))), nil
+				case "/some/path/migrations/not-a-js-migration.txt":
+					return NewBuffer(bytes.NewBuffer([]byte("i-am-not-a-js-migration"))), nil
+				case "/some/path/migrations/tests/migration-2.js":
+					return NewBuffer(bytes.NewBuffer([]byte("some-migration"))), nil
 				case "/some/other/path/migrations/other-migration.js":
 					return NewBuffer(bytes.NewBuffer([]byte("other-migration"))), nil
 				default:
