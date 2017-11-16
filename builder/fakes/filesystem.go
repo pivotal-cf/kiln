@@ -33,6 +33,17 @@ type Filesystem struct {
 	walkReturnsOnCall map[int]struct {
 		result1 error
 	}
+	RemoveStub        func(path string) error
+	removeMutex       sync.RWMutex
+	removeArgsForCall []struct {
+		path string
+	}
+	removeReturns struct {
+		result1 error
+	}
+	removeReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -137,6 +148,54 @@ func (fake *Filesystem) WalkReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *Filesystem) Remove(path string) error {
+	fake.removeMutex.Lock()
+	ret, specificReturn := fake.removeReturnsOnCall[len(fake.removeArgsForCall)]
+	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
+		path string
+	}{path})
+	fake.recordInvocation("Remove", []interface{}{path})
+	fake.removeMutex.Unlock()
+	if fake.RemoveStub != nil {
+		return fake.RemoveStub(path)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.removeReturns.result1
+}
+
+func (fake *Filesystem) RemoveCallCount() int {
+	fake.removeMutex.RLock()
+	defer fake.removeMutex.RUnlock()
+	return len(fake.removeArgsForCall)
+}
+
+func (fake *Filesystem) RemoveArgsForCall(i int) string {
+	fake.removeMutex.RLock()
+	defer fake.removeMutex.RUnlock()
+	return fake.removeArgsForCall[i].path
+}
+
+func (fake *Filesystem) RemoveReturns(result1 error) {
+	fake.RemoveStub = nil
+	fake.removeReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *Filesystem) RemoveReturnsOnCall(i int, result1 error) {
+	fake.RemoveStub = nil
+	if fake.removeReturnsOnCall == nil {
+		fake.removeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.removeReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *Filesystem) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -144,6 +203,8 @@ func (fake *Filesystem) Invocations() map[string][][]interface{} {
 	defer fake.openMutex.RUnlock()
 	fake.walkMutex.RLock()
 	defer fake.walkMutex.RUnlock()
+	fake.removeMutex.RLock()
+	defer fake.removeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

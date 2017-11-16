@@ -68,4 +68,32 @@ var _ = Describe("Filesystem", func() {
 		})
 	})
 
+	Describe("Remove", func() {
+		var file *os.File
+
+		BeforeEach(func() {
+			var err error
+			file, err = ioutil.TempFile("", "")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("removes the specified path", func() {
+			_, err := os.Stat(file.Name())
+			Expect(err).NotTo(HaveOccurred())
+
+			err = filesystem.Remove(file.Name())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = os.Stat(file.Name())
+			Expect(err).To(HaveOccurred())
+			Expect(os.IsNotExist(err)).To(BeTrue())
+		})
+
+		Context("when removing the file fails", func() {
+			It("returns the error", func() {
+				err := filesystem.Remove("this is a bogus file")
+				Expect(err).To(HaveOccurred())
+			})
+		})
+	})
 })
