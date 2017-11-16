@@ -26,6 +26,8 @@ var _ = Describe("TileWriter", func() {
 		md5Calc    *fakes.MD5SumCalculator
 		tileWriter builder.TileWriter
 		outputFile string
+
+		expectedFile *os.File
 	)
 
 	BeforeEach(func() {
@@ -38,6 +40,11 @@ var _ = Describe("TileWriter", func() {
 	})
 
 	Describe("Write", func() {
+		BeforeEach(func() {
+			expectedFile = &os.File{}
+			filesystem.CreateReturns(expectedFile, nil)
+		})
+
 		DescribeTable("writes tile to disk", func(stubbed bool, errorWhenAttemptingToOpenRelease error) {
 			config := commands.BakeConfig{
 				ReleaseDirectories:   []string{"/some/path/releases", "/some/other/path/releases"},
@@ -111,9 +118,9 @@ var _ = Describe("TileWriter", func() {
 			err := tileWriter.Write("cool-product-name", []byte("generated-metadata-contents"), config)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(zipper.SetPathCallCount()).To(Equal(1))
-			path := zipper.SetPathArgsForCall(0)
-			Expect(path).To(Equal("some-output-dir/cool-product-file-1.2.3-build.4.pivotal"))
+			Expect(zipper.SetWriterCallCount()).To(Equal(1))
+			actualFile := zipper.SetWriterArgsForCall(0)
+			Expect(actualFile).To(Equal(expectedFile))
 
 			Expect(zipper.AddCallCount()).To(Equal(8))
 
@@ -405,6 +412,22 @@ var _ = Describe("TileWriter", func() {
 		})
 
 		Context("failure cases", func() {
+			Context("when creating the zip file fails", func() {
+				BeforeEach(func() {
+					filesystem.CreateReturns(nil, errors.New("boom!"))
+				})
+
+				It("returns the error", func() {
+					config := commands.BakeConfig{
+						OutputFile: outputFile,
+					}
+
+					err := tileWriter.Write("", []byte{}, config)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError("boom!"))
+				})
+			})
+
 			Context("when the zipper fails to create migrations folder", func() {
 				BeforeEach(func() {
 					zipper.CreateFolderReturns(errors.New("failed to create folder"))
@@ -709,19 +732,6 @@ var _ = Describe("TileWriter", func() {
 							ContainElement(expectedLogLine),
 						)
 					})
-				})
-			})
-
-			Context("when setting the path on the zipper fails", func() {
-				It("returns an error", func() {
-					zipper.SetPathReturns(errors.New("zipper set path failed"))
-
-					config := commands.BakeConfig{
-						StubReleases: true,
-					}
-
-					err := tileWriter.Write("", []byte{}, config)
-					Expect(err).To(MatchError("zipper set path failed"))
 				})
 			})
 

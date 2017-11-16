@@ -3,15 +3,29 @@ package fakes
 
 import (
 	"io"
+	"os"
 	"path/filepath"
 	"sync"
 )
 
 type Filesystem struct {
-	OpenStub        func(name string) (io.ReadWriteCloser, error)
+	CreateStub        func(path string) (*os.File, error)
+	createMutex       sync.RWMutex
+	createArgsForCall []struct {
+		path string
+	}
+	createReturns struct {
+		result1 *os.File
+		result2 error
+	}
+	createReturnsOnCall map[int]struct {
+		result1 *os.File
+		result2 error
+	}
+	OpenStub        func(path string) (io.ReadWriteCloser, error)
 	openMutex       sync.RWMutex
 	openArgsForCall []struct {
-		name string
+		path string
 	}
 	openReturns struct {
 		result1 io.ReadWriteCloser
@@ -48,16 +62,67 @@ type Filesystem struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Filesystem) Open(name string) (io.ReadWriteCloser, error) {
+func (fake *Filesystem) Create(path string) (*os.File, error) {
+	fake.createMutex.Lock()
+	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
+	fake.createArgsForCall = append(fake.createArgsForCall, struct {
+		path string
+	}{path})
+	fake.recordInvocation("Create", []interface{}{path})
+	fake.createMutex.Unlock()
+	if fake.CreateStub != nil {
+		return fake.CreateStub(path)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.createReturns.result1, fake.createReturns.result2
+}
+
+func (fake *Filesystem) CreateCallCount() int {
+	fake.createMutex.RLock()
+	defer fake.createMutex.RUnlock()
+	return len(fake.createArgsForCall)
+}
+
+func (fake *Filesystem) CreateArgsForCall(i int) string {
+	fake.createMutex.RLock()
+	defer fake.createMutex.RUnlock()
+	return fake.createArgsForCall[i].path
+}
+
+func (fake *Filesystem) CreateReturns(result1 *os.File, result2 error) {
+	fake.CreateStub = nil
+	fake.createReturns = struct {
+		result1 *os.File
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *Filesystem) CreateReturnsOnCall(i int, result1 *os.File, result2 error) {
+	fake.CreateStub = nil
+	if fake.createReturnsOnCall == nil {
+		fake.createReturnsOnCall = make(map[int]struct {
+			result1 *os.File
+			result2 error
+		})
+	}
+	fake.createReturnsOnCall[i] = struct {
+		result1 *os.File
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *Filesystem) Open(path string) (io.ReadWriteCloser, error) {
 	fake.openMutex.Lock()
 	ret, specificReturn := fake.openReturnsOnCall[len(fake.openArgsForCall)]
 	fake.openArgsForCall = append(fake.openArgsForCall, struct {
-		name string
-	}{name})
-	fake.recordInvocation("Open", []interface{}{name})
+		path string
+	}{path})
+	fake.recordInvocation("Open", []interface{}{path})
 	fake.openMutex.Unlock()
 	if fake.OpenStub != nil {
-		return fake.OpenStub(name)
+		return fake.OpenStub(path)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -74,7 +139,7 @@ func (fake *Filesystem) OpenCallCount() int {
 func (fake *Filesystem) OpenArgsForCall(i int) string {
 	fake.openMutex.RLock()
 	defer fake.openMutex.RUnlock()
-	return fake.openArgsForCall[i].name
+	return fake.openArgsForCall[i].path
 }
 
 func (fake *Filesystem) OpenReturns(result1 io.ReadWriteCloser, result2 error) {
@@ -199,6 +264,8 @@ func (fake *Filesystem) RemoveReturnsOnCall(i int, result1 error) {
 func (fake *Filesystem) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.createMutex.RLock()
+	defer fake.createMutex.RUnlock()
 	fake.openMutex.RLock()
 	defer fake.openMutex.RUnlock()
 	fake.walkMutex.RLock()

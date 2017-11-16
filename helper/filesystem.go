@@ -14,6 +14,10 @@ func NewFilesystem() Filesystem {
 	return Filesystem{}
 }
 
+func (f Filesystem) Create(path string) (*os.File, error) {
+	return os.Create(path)
+}
+
 func (f Filesystem) Open(path string) (io.ReadWriteCloser, error) {
 	return os.Open(path)
 }

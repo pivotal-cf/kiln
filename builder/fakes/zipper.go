@@ -8,16 +8,10 @@ import (
 )
 
 type Zipper struct {
-	SetPathStub        func(path string) error
-	setPathMutex       sync.RWMutex
-	setPathArgsForCall []struct {
-		path string
-	}
-	setPathReturns struct {
-		result1 error
-	}
-	setPathReturnsOnCall map[int]struct {
-		result1 error
+	SetWriterStub        func(writer io.Writer)
+	setWriterMutex       sync.RWMutex
+	setWriterArgsForCall []struct {
+		writer io.Writer
 	}
 	AddStub        func(path string, file io.Reader) error
 	addMutex       sync.RWMutex
@@ -68,52 +62,28 @@ type Zipper struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Zipper) SetPath(path string) error {
-	fake.setPathMutex.Lock()
-	ret, specificReturn := fake.setPathReturnsOnCall[len(fake.setPathArgsForCall)]
-	fake.setPathArgsForCall = append(fake.setPathArgsForCall, struct {
-		path string
-	}{path})
-	fake.recordInvocation("SetPath", []interface{}{path})
-	fake.setPathMutex.Unlock()
-	if fake.SetPathStub != nil {
-		return fake.SetPathStub(path)
+func (fake *Zipper) SetWriter(writer io.Writer) {
+	fake.setWriterMutex.Lock()
+	fake.setWriterArgsForCall = append(fake.setWriterArgsForCall, struct {
+		writer io.Writer
+	}{writer})
+	fake.recordInvocation("SetWriter", []interface{}{writer})
+	fake.setWriterMutex.Unlock()
+	if fake.SetWriterStub != nil {
+		fake.SetWriterStub(writer)
 	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.setPathReturns.result1
 }
 
-func (fake *Zipper) SetPathCallCount() int {
-	fake.setPathMutex.RLock()
-	defer fake.setPathMutex.RUnlock()
-	return len(fake.setPathArgsForCall)
+func (fake *Zipper) SetWriterCallCount() int {
+	fake.setWriterMutex.RLock()
+	defer fake.setWriterMutex.RUnlock()
+	return len(fake.setWriterArgsForCall)
 }
 
-func (fake *Zipper) SetPathArgsForCall(i int) string {
-	fake.setPathMutex.RLock()
-	defer fake.setPathMutex.RUnlock()
-	return fake.setPathArgsForCall[i].path
-}
-
-func (fake *Zipper) SetPathReturns(result1 error) {
-	fake.SetPathStub = nil
-	fake.setPathReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *Zipper) SetPathReturnsOnCall(i int, result1 error) {
-	fake.SetPathStub = nil
-	if fake.setPathReturnsOnCall == nil {
-		fake.setPathReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.setPathReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
+func (fake *Zipper) SetWriterArgsForCall(i int) io.Writer {
+	fake.setWriterMutex.RLock()
+	defer fake.setWriterMutex.RUnlock()
+	return fake.setWriterArgsForCall[i].writer
 }
 
 func (fake *Zipper) Add(path string, file io.Reader) error {
@@ -306,8 +276,8 @@ func (fake *Zipper) CloseReturnsOnCall(i int, result1 error) {
 func (fake *Zipper) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.setPathMutex.RLock()
-	defer fake.setPathMutex.RUnlock()
+	fake.setWriterMutex.RLock()
+	defer fake.setWriterMutex.RUnlock()
 	fake.addMutex.RLock()
 	defer fake.addMutex.RUnlock()
 	fake.addWithModeMutex.RLock()
