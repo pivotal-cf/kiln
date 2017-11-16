@@ -116,11 +116,12 @@ var _ = Describe("MetadataReader", func() {
 				Expect(err).To(MatchError("failed to open metadata"))
 			})
 		})
+
 		Context("when the metadata file cannot be read", func() {
 			It("returns an error", func() {
-				erroringReader := &fakes.ReadWriteCloser{}
+				erroringReader := &fakes.ReadCloser{}
 				erroringReader.ReadReturns(0, errors.New("cannot read file"))
-				filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+				filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
 					return erroringReader, nil
 				}
 
@@ -129,6 +130,7 @@ var _ = Describe("MetadataReader", func() {
 				Expect(erroringReader.CloseCallCount()).To(Equal(1))
 			})
 		})
+
 		Context("when the metadata yaml cannot be unmarshaled", func() {
 			It("returns an error", func() {
 				filesystem.OpenReturns(NewBuffer(bytes.NewBuffer([]byte("&&&&&&&&"))), nil)

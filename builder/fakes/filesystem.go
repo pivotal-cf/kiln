@@ -3,36 +3,35 @@ package fakes
 
 import (
 	"io"
-	"os"
 	"path/filepath"
 	"sync"
 )
 
 type Filesystem struct {
-	CreateStub        func(path string) (*os.File, error)
+	CreateStub        func(path string) (io.WriteCloser, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		path string
 	}
 	createReturns struct {
-		result1 *os.File
+		result1 io.WriteCloser
 		result2 error
 	}
 	createReturnsOnCall map[int]struct {
-		result1 *os.File
+		result1 io.WriteCloser
 		result2 error
 	}
-	OpenStub        func(path string) (io.ReadWriteCloser, error)
+	OpenStub        func(path string) (io.ReadCloser, error)
 	openMutex       sync.RWMutex
 	openArgsForCall []struct {
 		path string
 	}
 	openReturns struct {
-		result1 io.ReadWriteCloser
+		result1 io.ReadCloser
 		result2 error
 	}
 	openReturnsOnCall map[int]struct {
-		result1 io.ReadWriteCloser
+		result1 io.ReadCloser
 		result2 error
 	}
 	WalkStub        func(root string, walkFn filepath.WalkFunc) error
@@ -62,7 +61,7 @@ type Filesystem struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Filesystem) Create(path string) (*os.File, error) {
+func (fake *Filesystem) Create(path string) (io.WriteCloser, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
@@ -91,29 +90,29 @@ func (fake *Filesystem) CreateArgsForCall(i int) string {
 	return fake.createArgsForCall[i].path
 }
 
-func (fake *Filesystem) CreateReturns(result1 *os.File, result2 error) {
+func (fake *Filesystem) CreateReturns(result1 io.WriteCloser, result2 error) {
 	fake.CreateStub = nil
 	fake.createReturns = struct {
-		result1 *os.File
+		result1 io.WriteCloser
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *Filesystem) CreateReturnsOnCall(i int, result1 *os.File, result2 error) {
+func (fake *Filesystem) CreateReturnsOnCall(i int, result1 io.WriteCloser, result2 error) {
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
-			result1 *os.File
+			result1 io.WriteCloser
 			result2 error
 		})
 	}
 	fake.createReturnsOnCall[i] = struct {
-		result1 *os.File
+		result1 io.WriteCloser
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *Filesystem) Open(path string) (io.ReadWriteCloser, error) {
+func (fake *Filesystem) Open(path string) (io.ReadCloser, error) {
 	fake.openMutex.Lock()
 	ret, specificReturn := fake.openReturnsOnCall[len(fake.openArgsForCall)]
 	fake.openArgsForCall = append(fake.openArgsForCall, struct {
@@ -142,24 +141,24 @@ func (fake *Filesystem) OpenArgsForCall(i int) string {
 	return fake.openArgsForCall[i].path
 }
 
-func (fake *Filesystem) OpenReturns(result1 io.ReadWriteCloser, result2 error) {
+func (fake *Filesystem) OpenReturns(result1 io.ReadCloser, result2 error) {
 	fake.OpenStub = nil
 	fake.openReturns = struct {
-		result1 io.ReadWriteCloser
+		result1 io.ReadCloser
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *Filesystem) OpenReturnsOnCall(i int, result1 io.ReadWriteCloser, result2 error) {
+func (fake *Filesystem) OpenReturnsOnCall(i int, result1 io.ReadCloser, result2 error) {
 	fake.OpenStub = nil
 	if fake.openReturnsOnCall == nil {
 		fake.openReturnsOnCall = make(map[int]struct {
-			result1 io.ReadWriteCloser
+			result1 io.ReadCloser
 			result2 error
 		})
 	}
 	fake.openReturnsOnCall[i] = struct {
-		result1 io.ReadWriteCloser
+		result1 io.ReadCloser
 		result2 error
 	}{result1, result2}
 }

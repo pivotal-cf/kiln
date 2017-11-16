@@ -88,7 +88,7 @@ var _ = Describe("TileWriter", func() {
 				return nil
 			}
 
-			filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
+			filesystem.OpenStub = func(path string) (io.ReadCloser, error) {
 				switch path {
 				case "/some/path/releases/release-1.tgz":
 					return NewBuffer(bytes.NewBuffer([]byte("release-1"))), errorWhenAttemptingToOpenRelease
@@ -204,7 +204,7 @@ var _ = Describe("TileWriter", func() {
 					return nil
 				}
 
-				filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
+				filesystem.OpenStub = func(path string) (io.ReadCloser, error) {
 					if path == "/some/path/releases/release-1.tgz" {
 						return NewBuffer(bytes.NewBufferString("release-1")), nil
 					}
@@ -297,7 +297,7 @@ var _ = Describe("TileWriter", func() {
 					return nil
 				}
 
-				filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
+				filesystem.OpenStub = func(path string) (io.ReadCloser, error) {
 					if path == "/some/path/to-embed/my-file.txt" {
 						return NewBuffer(bytes.NewBufferString("contents-of-embedded-file")), nil
 					}
@@ -363,7 +363,7 @@ var _ = Describe("TileWriter", func() {
 					return nil
 				}
 
-				filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
+				filesystem.OpenStub = func(path string) (io.ReadCloser, error) {
 					if path == "/some/path/to-embed/my-file-1.txt" {
 						return NewBuffer(bytes.NewBufferString("contents-of-embedded-file-1")), nil
 					} else if path == "/some/path/to-embed/my-file-2.txt" {
@@ -487,7 +487,7 @@ var _ = Describe("TileWriter", func() {
 						return err
 					}
 
-					filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
+					filesystem.OpenStub = func(path string) (io.ReadCloser, error) {
 						if path == "/some/path/releases/release-1.tgz" {
 							return nil, errors.New("failed to open release")
 						}
@@ -553,7 +553,7 @@ var _ = Describe("TileWriter", func() {
 						return err
 					}
 
-					filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
+					filesystem.OpenStub = func(path string) (io.ReadCloser, error) {
 						if path == "/some/path/migrations/migration-1.js" {
 							return nil, errors.New("failed to open migration")
 						}
@@ -616,7 +616,7 @@ var _ = Describe("TileWriter", func() {
 						return err
 					}
 
-					filesystem.OpenStub = func(path string) (io.ReadWriteCloser, error) {
+					filesystem.OpenStub = func(path string) (io.ReadCloser, error) {
 						if path == "/some/path/embed/my-file-1.tgz" {
 							return nil, errors.New("failed to open embed")
 						}

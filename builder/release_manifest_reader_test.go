@@ -80,9 +80,9 @@ version: 1.2.3
 			})
 			Context("when reading from the tarball errors", func() {
 				It("returns an error", func() {
-					erroringReader := &fakes.ReadWriteCloser{}
+					erroringReader := &fakes.ReadCloser{}
 					erroringReader.ReadReturns(0, errors.New("cannot read tarball"))
-					filesystem.OpenStub = func(name string) (io.ReadWriteCloser, error) {
+					filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
 						return erroringReader, nil
 					}
 
