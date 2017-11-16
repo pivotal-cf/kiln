@@ -181,7 +181,7 @@ func (w TileWriter) addMigrations(migrationsDir []string, outputFile string) err
 
 	for _, migrationDir := range migrationsDir {
 		err := w.filesystem.Walk(migrationDir, func(filePath string, info os.FileInfo, err error) error {
-			isTest, _ := regexp.MatchString(`tests\/.+_test.js$`, filePath)
+			isTest, _ := regexp.MatchString(`tests\/`, filePath)
 			isJsFile, _ := regexp.MatchString(`.js$`, filePath)
 			if isTest || !isJsFile {
 				return nil
