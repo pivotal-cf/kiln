@@ -1,0 +1,15 @@
+runtime_configs:
+- name: silk-cni
+  runtime_config: |
+    releases:
+    - name: cf-networking
+      version: 1.8.1
+    addons:
+    - name: c2c-diego-cell-cf
+      include:
+        jobs:
+        - name: my-job
+          release: my-release
+      jobs:
+      - name: iptables-logger
+        release: cf-networking

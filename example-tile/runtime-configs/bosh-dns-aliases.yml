@@ -1,0 +1,24 @@
+runtime_configs:
+- name: bosh-dns-aliases
+  runtime_config: |
+    releases:
+    - name: bosh-dns-aliases
+      version: 0.0.1
+    addons:
+    - name: bosh-dns-aliases
+      include:
+        jobs:
+        - name: my-job
+          release: my-release
+      jobs:
+      - name: bosh-dns-aliases
+        release: bosh-dns-aliases
+        properties:
+          aliases:
+          - domain: something.service.cf.internal
+            targets:
+            - query: "*"
+              instance_group: my-instance
+              deployment: (( .deployment_name ))
+              network: (( .network_name ))
+              domain: bosh
