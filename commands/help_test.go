@@ -33,9 +33,9 @@ Usage: kiln [options] cook [<args>]
   --surprise, -!  gives you a present
 
 Command Arguments:
-  --water, -w  int  cups of water
-  --stock, -s  int  teaspoons of vegan stock
   --lemon, -l  int  teaspoons of lemon juice
+  --stock, -s  int  teaspoons of vegan stock
+  --water, -w  int  cups of water
 `
 
 	FLAGLESS_USAGE = `kiln cook

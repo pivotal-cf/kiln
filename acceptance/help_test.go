@@ -27,16 +27,16 @@ Usage: kiln [options] bake [<args>]
   --help, -h  bool  prints this usage information (default: false)
 
 Command Arguments:
-  --releases-directory, -rd          string (variadic)  path to a directory containing release tarballs
-  --migrations-directory, -md        string (variadic)  path to a directory containing migrations
-  --runtime-configs-directory, -rcd  string (variadic)  path to a directory containing runtime configs
-  --variables-directory, -vd         string (variadic)  path to a directory containing variables
   --embed, -e                        string (variadic)  path to files to include in the tile /embed directory
-  --stemcell-tarball, -st            string             path to a stemcell tarball
   --metadata, -m                     string             path to the metadata file
-  --version, -v                      string             version of the tile
+  --migrations-directory, -md        string (variadic)  path to a directory containing migrations
   --output-file, -o                  string             path to where the tile will be output
+  --releases-directory, -rd          string (variadic)  path to a directory containing release tarballs
+  --runtime-configs-directory, -rcd  string (variadic)  path to a directory containing runtime configs
+  --stemcell-tarball, -st            string             path to a stemcell tarball
   --stub-releases, -sr               bool               skips importing release tarballs into the tile
+  --variables-directory, -vd         string (variadic)  path to a directory containing variables
+  --version, -v                      string             version of the tile
 `
 
 var _ = Describe("help", func() {
