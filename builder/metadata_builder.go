@@ -7,21 +7,23 @@ import (
 )
 
 type MetadataBuilder struct {
+	iconEncoder                   iconEncoder
+	logger                        logger
+	metadataReader                metadataReader
 	releaseManifestReader         releaseManifestReader
 	runtimeConfigsDirectoryReader metadataPartsDirectoryReader
-	variablesDirectoryReader      metadataPartsDirectoryReader
 	stemcellManifestReader        stemcellManifestReader
-	metadataReader                metadataReader
-	logger                        logger
+	variablesDirectoryReader      metadataPartsDirectoryReader
 }
 
 type GeneratedMetadata struct {
+	IconImage        string   `yaml:"icon_image"`
+	Metadata         Metadata `yaml:",inline"`
 	Name             string
 	Releases         []Release
 	RuntimeConfigs   []interface{}    `yaml:"runtime_configs,omitempty"`
-	Variables        []interface{}    `yaml:",omitempty"`
 	StemcellCriteria StemcellCriteria `yaml:"stemcell_criteria"`
-	Metadata         Metadata         `yaml:",inline"`
+	Variables        []interface{}    `yaml:",omitempty"`
 }
 
 type Release struct {
@@ -37,29 +39,40 @@ type StemcellCriteria struct {
 }
 
 type BoshRuntimeConfigFields map[string]interface{}
+
 type BoshRuntimeConfig struct {
 	Releases    []map[string]string     `yaml:",omitempty"`
 	OtherFields BoshRuntimeConfigFields `yaml:",inline"`
 }
 
 //go:generate counterfeiter -o ./fakes/release_manifest_reader.go --fake-name ReleaseManifestReader . releaseManifestReader
+
 type releaseManifestReader interface {
 	Read(path string) (ReleaseManifest, error)
 }
 
 //go:generate counterfeiter -o ./fakes/stemcell_manifest_reader.go --fake-name StemcellManifestReader . stemcellManifestReader
+
 type stemcellManifestReader interface {
 	Read(path string) (StemcellManifest, error)
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_parts_directory_reader.go --fake-name MetadataPartsDirectoryReader . metadataPartsDirectoryReader
+
 type metadataPartsDirectoryReader interface {
 	Read(path string) ([]interface{}, error)
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_reader.go --fake-name MetadataReader . metadataReader
+
 type metadataReader interface {
 	Read(path, version string) (Metadata, error)
+}
+
+//go:generate counterfeiter -o ./fakes/icon_encoder.go --fake-name IconEncoder . iconEncoder
+
+type iconEncoder interface {
+	Encode(path string) (string, error)
 }
 
 type logger interface {
@@ -67,18 +80,36 @@ type logger interface {
 	Println(v ...interface{})
 }
 
-func NewMetadataBuilder(releaseManifestReader releaseManifestReader, runtimeConfigsDirectoryReader, variablesDirectoryReader metadataPartsDirectoryReader, stemcellManifestReader stemcellManifestReader, metadataReader metadataReader, logger logger) MetadataBuilder {
+func NewMetadataBuilder(
+	releaseManifestReader releaseManifestReader,
+	runtimeConfigsDirectoryReader,
+	variablesDirectoryReader metadataPartsDirectoryReader,
+	stemcellManifestReader stemcellManifestReader,
+	metadataReader metadataReader,
+	logger logger,
+	iconEncoder iconEncoder,
+) MetadataBuilder {
 	return MetadataBuilder{
+		iconEncoder:                   iconEncoder,
+		logger:                        logger,
+		metadataReader:                metadataReader,
 		releaseManifestReader:         releaseManifestReader,
 		runtimeConfigsDirectoryReader: runtimeConfigsDirectoryReader,
-		variablesDirectoryReader:      variablesDirectoryReader,
 		stemcellManifestReader:        stemcellManifestReader,
-		metadataReader:                metadataReader,
-		logger:                        logger,
+		variablesDirectoryReader:      variablesDirectoryReader,
 	}
 }
 
-func (m MetadataBuilder) Build(releaseTarballs, runtimeConfigDirectories, variableDirectories []string, pathToStemcell, pathToMetadata, version, pathToTile string) (GeneratedMetadata, error) {
+func (m MetadataBuilder) Build(
+	releaseTarballs,
+	runtimeConfigDirectories,
+	variableDirectories []string,
+	pathToStemcell,
+	pathToMetadata,
+	version,
+	pathToTile,
+	pathToIcon string,
+) (GeneratedMetadata, error) {
 	m.logger.Printf("Creating metadata for %s...", pathToTile)
 
 	var releases []Release
@@ -124,12 +155,16 @@ func (m MetadataBuilder) Build(releaseTarballs, runtimeConfigDirectories, variab
 	}
 
 	stemcellManifest, err := m.stemcellManifestReader.Read(pathToStemcell)
-
 	if err != nil {
 		return GeneratedMetadata{}, err
 	}
 
 	m.logger.Printf("Read manifest for stemcell version %s", stemcellManifest.Version)
+
+	encodedIcon, err := m.iconEncoder.Encode(pathToIcon)
+	if err != nil {
+		return GeneratedMetadata{}, err
+	}
 
 	metadata, err := m.metadataReader.Read(pathToMetadata, version)
 	if err != nil {
@@ -142,6 +177,7 @@ func (m MetadataBuilder) Build(releaseTarballs, runtimeConfigDirectories, variab
 	}
 
 	delete(metadata, "name")
+	delete(metadata, "icon_image")
 
 	if _, present := metadata["runtime_configs"]; present {
 		return GeneratedMetadata{}, fmt.Errorf("runtime_config section must be defined using --runtime-configs-directory flag, not in %q", pathToMetadata)
@@ -154,6 +190,7 @@ func (m MetadataBuilder) Build(releaseTarballs, runtimeConfigDirectories, variab
 	m.logger.Printf("Read metadata")
 
 	return GeneratedMetadata{
+		IconImage:      encodedIcon,
 		Name:           productName,
 		Releases:       releases,
 		RuntimeConfigs: runtimeConfigs,

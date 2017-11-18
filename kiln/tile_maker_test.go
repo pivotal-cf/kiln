@@ -54,15 +54,16 @@ var _ = Describe("TileMaker", func() {
 		fakeLogger = &fakes.Logger{}
 
 		config = commands.BakeConfig{
-			Version:                  "1.2.3",
-			StemcellTarball:          "some-stemcell-tarball",
-			ReleaseDirectories:       []string{someReleasesDirectory, otherReleasesDirectory},
-			RuntimeConfigDirectories: []string{"some-runtime-configs-directory"},
-			VariableDirectories:      []string{"some-variables-directory"},
+			IconPath:                 "some-icon-path",
 			Metadata:                 "some-metadata",
 			MigrationDirectories:     []string{"some-migrations-directory"},
 			OutputFile:               "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
+			ReleaseDirectories:       []string{someReleasesDirectory, otherReleasesDirectory},
+			RuntimeConfigDirectories: []string{"some-runtime-configs-directory"},
+			StemcellTarball:          "some-stemcell-tarball",
 			StubReleases:             true,
+			VariableDirectories:      []string{"some-variables-directory"},
+			Version:                  "1.2.3",
 		}
 		tileMaker = kiln.NewTileMaker(fakeMetadataBuilder, fakeTileWriter, fakeLogger)
 	})
@@ -78,7 +79,7 @@ var _ = Describe("TileMaker", func() {
 
 		Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 
-		releaseTarballs, runtimeConfigDirectories, variableDirectories, stemcellTarball, metadata, version, outputPath := fakeMetadataBuilder.BuildArgsForCall(0)
+		releaseTarballs, runtimeConfigDirectories, variableDirectories, stemcellTarball, metadata, version, outputPath, iconPath := fakeMetadataBuilder.BuildArgsForCall(0)
 		Expect(releaseTarballs).To(Equal(validReleases))
 		Expect(runtimeConfigDirectories).To(Equal([]string{"some-runtime-configs-directory"}))
 		Expect(variableDirectories).To(Equal([]string{"some-variables-directory"}))
@@ -86,11 +87,13 @@ var _ = Describe("TileMaker", func() {
 		Expect(metadata).To(Equal("some-metadata"))
 		Expect(version).To(Equal("1.2.3"))
 		Expect(outputPath).To(Equal("some-output-dir/cool-product-file.1.2.3-build.4.pivotal"))
+		Expect(iconPath).To(Equal("some-icon-path"))
 	})
 
 	It("makes the tile", func() {
 		fakeMetadataBuilder.BuildReturns(builder.GeneratedMetadata{
-			Name: "cool-product-name",
+			IconImage: "some-icon-image",
+			Name:      "cool-product-name",
 			Releases: []builder.Release{{
 				Name:    "some-release",
 				File:    "some-release-tarball",
@@ -108,9 +111,10 @@ var _ = Describe("TileMaker", func() {
 
 		Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
 
-		productName, generatedMetadataContents, config := fakeTileWriter.WriteArgsForCall(0)
+		productName, generatedMetadataContents, actualConfig := fakeTileWriter.WriteArgsForCall(0)
 		Expect(productName).To(Equal("cool-product-name"))
 		Expect(generatedMetadataContents).To(MatchYAML(`
+icon_image: some-icon-image
 name: cool-product-name
 releases:
 - name: some-release
@@ -120,17 +124,7 @@ stemcell_criteria:
   version: 2.3.4
   os: an-operating-system
   requires_cpi: false`))
-		Expect(config).To(Equal(commands.BakeConfig{
-			Version:                  "1.2.3",
-			StemcellTarball:          "some-stemcell-tarball",
-			ReleaseDirectories:       []string{someReleasesDirectory, otherReleasesDirectory},
-			RuntimeConfigDirectories: []string{"some-runtime-configs-directory"},
-			VariableDirectories:      []string{"some-variables-directory"},
-			Metadata:                 "some-metadata",
-			MigrationDirectories:     []string{"some-migrations-directory"},
-			OutputFile:               "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
-			StubReleases:             true,
-		}))
+		Expect(actualConfig).To(Equal(config))
 	})
 
 	It("logs its step", func() {

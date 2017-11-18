@@ -36,6 +36,7 @@ func main() {
 	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "variables")
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	handcraftReader := builder.NewMetadataReader(filesystem, logger)
+	iconEncoder := builder.NewIconEncoder(filesystem)
 	metadataBuilder := builder.NewMetadataBuilder(
 		releaseManifestReader,
 		runtimeConfigsDirectoryReader,
@@ -43,6 +44,7 @@ func main() {
 		stemcellManifestReader,
 		handcraftReader,
 		logger,
+		iconEncoder,
 	)
 	md5SumCalculator := helper.NewFileMD5SumCalculator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, logger, md5SumCalculator)

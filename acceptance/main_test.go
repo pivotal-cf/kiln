@@ -2,6 +2,7 @@ package acceptance
 
 import (
 	"archive/zip"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,14 +19,15 @@ import (
 
 var _ = Describe("kiln", func() {
 	var (
-		tempDir                     string
-		someReleasesDirectory       string
+		metadata                    string
 		otherReleasesDirectory      string
+		outputFile                  string
+		someIconPath                string
+		someReleasesDirectory       string
 		someRuntimeConfigsDirectory string
 		someVariablesDirectory      string
 		stemcellTarball             string
-		metadata                    string
-		outputFile                  string
+		tempDir                     string
 	)
 
 	BeforeEach(func() {
@@ -34,6 +36,15 @@ var _ = Describe("kiln", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		outputFile = filepath.Join(tileDir, "cool-product-1.2.3-build.4.pivotal")
+
+		someIconFile, err := ioutil.TempFile("", "icon")
+		Expect(err).NotTo(HaveOccurred())
+		defer someIconFile.Close()
+		someIconPath = someIconFile.Name()
+
+		someImageData := "i-am-some-image"
+		_, err = someIconFile.Write([]byte(someImageData))
+		Expect(err).NotTo(HaveOccurred())
 
 		someReleasesDirectory, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
@@ -116,7 +127,7 @@ minimum_version_for_upgrade: 1.6.9-build.0
 label: Pivotal Elastic Runtime
 description:
   this is the description
-icon_image: some-image
+icon_image: unused-icon-image
 rank: 90
 serial: false
 install_time_verifiers:
@@ -143,14 +154,15 @@ property_blueprints:
 	It("generates a manifest that includes all the correct metadata", func() {
 		command := exec.Command(pathToMain,
 			"bake",
-			"--stemcell-tarball", stemcellTarball,
-			"--releases-directory", someReleasesDirectory,
-			"--releases-directory", otherReleasesDirectory,
-			"--runtime-configs-directory", someRuntimeConfigsDirectory,
-			"--variables-directory", someVariablesDirectory,
+			"--icon", someIconPath,
 			"--metadata", metadata,
-			"--version", "1.2.3",
 			"--output-file", outputFile,
+			"--releases-directory", otherReleasesDirectory,
+			"--releases-directory", someReleasesDirectory,
+			"--runtime-configs-directory", someRuntimeConfigsDirectory,
+			"--stemcell-tarball", stemcellTarball,
+			"--variables-directory", someVariablesDirectory,
+			"--version", "1.2.3",
 		)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -179,19 +191,21 @@ property_blueprints:
 		Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
 		contents, err := ioutil.ReadAll(file)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(contents).To(MatchYAML(`---
+
+		iconData := base64.StdEncoding.EncodeToString([]byte("i-am-some-image"))
+		expectedYaml := fmt.Sprintf(`---
 name: cool-product-name
 stemcell_criteria:
   os: ubuntu-trusty
   requires_cpi: false
   version: "3215.4"
 releases:
-- name: cf
-  file: cf-release-235.0.0-3215.4.0.tgz
-  version: "235"
 - name: diego
   file: diego-release-0.1467.1-3215.4.0.tgz
   version: 0.1467.1
+- name: cf
+  file: cf-release-235.0.0-3215.4.0.tgz
+  version: "235"
 metadata_version: '1.7'
 provides_product_versions:
 - name: cf
@@ -201,7 +215,7 @@ minimum_version_for_upgrade: 1.6.9-build.0
 label: Pivotal Elastic Runtime
 description:
   this is the description
-icon_image: some-image
+icon_image: %s
 rank: 90
 serial: false
 install_time_verifiers:
@@ -233,19 +247,22 @@ variables:
     some_option: Option value
 - name: variable-2
   type: password
-`))
+`, iconData)
+
+		Expect(contents).To(MatchYAML(expectedYaml))
 	})
 
 	It("copies the migrations to the migrations/v1 directory", func() {
 		command := exec.Command(pathToMain,
 			"bake",
-			"--releases-directory", someReleasesDirectory,
-			"--stemcell-tarball", stemcellTarball,
+			"--icon", someIconPath,
 			"--metadata", metadata,
 			"--migrations-directory", "fixtures/extra-migrations",
 			"--migrations-directory", "fixtures/migrations",
-			"--version", "1.2.3",
 			"--output-file", outputFile,
+			"--releases-directory", someReleasesDirectory,
+			"--stemcell-tarball", stemcellTarball,
+			"--version", "1.2.3",
 		)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -301,13 +318,14 @@ variables:
 	It("logs the progress to stdout", func() {
 		command := exec.Command(pathToMain,
 			"bake",
-			"--releases-directory", someReleasesDirectory,
-			"--releases-directory", otherReleasesDirectory,
-			"--stemcell-tarball", stemcellTarball,
+			"--icon", someIconPath,
 			"--metadata", metadata,
 			"--migrations-directory", "fixtures/migrations",
-			"--version", "1.2.3",
 			"--output-file", outputFile,
+			"--releases-directory", otherReleasesDirectory,
+			"--releases-directory", someReleasesDirectory,
+			"--stemcell-tarball", stemcellTarball,
+			"--version", "1.2.3",
 		)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -325,8 +343,8 @@ variables:
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603041539_custom_buildpacks.js to %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603071158_auth_enterprise_sso.js to %s...", outputFile)))
-		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding releases/cf-release-235.0.0-3215.4.0.tgz to %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding releases/diego-release-0.1467.1-3215.4.0.tgz to %s...", outputFile)))
+		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding releases/cf-release-235.0.0-3215.4.0.tgz to %s...", outputFile)))
 		Eventually(session.Out).ShouldNot(gbytes.Say(fmt.Sprintf("Adding releases/not-a-tarball.txt to %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Calculating md5 sum of %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say("Calculated md5 sum: [0-9a-f]{32}"))
@@ -336,12 +354,13 @@ variables:
 		It("creates a tile with empty release tarballs", func() {
 			command := exec.Command(pathToMain,
 				"bake",
+				"--icon", someIconPath,
+				"--metadata", metadata,
+				"--output-file", outputFile,
 				"--releases-directory", someReleasesDirectory,
 				"--stemcell-tarball", stemcellTarball,
-				"--metadata", metadata,
-				"--version", "1.2.3",
 				"--stub-releases",
-				"--output-file", outputFile,
+				"--version", "1.2.3",
 			)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -374,11 +393,12 @@ variables:
 		It("creates empty migrations folder", func() {
 			command := exec.Command(pathToMain,
 				"bake",
+				"--icon", someIconPath,
+				"--metadata", metadata,
+				"--output-file", outputFile,
 				"--releases-directory", someReleasesDirectory,
 				"--stemcell-tarball", stemcellTarball,
-				"--metadata", metadata,
 				"--version", "1.2.3",
-				"--output-file", outputFile,
 			)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -419,14 +439,15 @@ variables:
 
 				command := exec.Command(pathToMain,
 					"bake",
+					"--embed", otherFileToEmbed,
+					"--embed", someFileToEmbed,
+					"--icon", someIconPath,
+					"--metadata", metadata,
+					"--output-file", outputFile,
 					"--releases-directory", someReleasesDirectory,
 					"--stemcell-tarball", stemcellTarball,
-					"--metadata", metadata,
-					"--version", "1.2.3",
 					"--stub-releases",
-					"--embed", someFileToEmbed,
-					"--embed", otherFileToEmbed,
-					"--output-file", outputFile,
+					"--version", "1.2.3",
 				)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -487,13 +508,14 @@ variables:
 
 				command := exec.Command(pathToMain,
 					"bake",
+					"--embed", dirToAdd,
+					"--icon", someIconPath,
+					"--metadata", metadata,
+					"--output-file", outputFile,
 					"--releases-directory", someReleasesDirectory,
 					"--stemcell-tarball", stemcellTarball,
-					"--metadata", metadata,
-					"--version", "1.2.3",
 					"--stub-releases",
-					"--embed", dirToAdd,
-					"--output-file", outputFile,
+					"--version", "1.2.3",
 				)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -533,11 +555,12 @@ variables:
 			It("prints an error and exits 1", func() {
 				command := exec.Command(pathToMain,
 					"bake",
-					"--releases-directory", "missing-directory",
+					"--icon", someIconPath,
 					"--metadata", "metadata.yml",
+					"--output-file", outputFile,
+					"--releases-directory", "missing-directory",
 					"--stemcell-tarball", "stemcell.tgz",
 					"--version", "1.2.3",
-					"--output-file", outputFile,
 				)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -552,11 +575,12 @@ variables:
 			It("prints an error and exit 1", func() {
 				command := exec.Command(pathToMain,
 					"bake",
+					"--icon", someIconPath,
+					"--metadata", metadata,
+					"--output-file", "/path/to/missing/dir/product.zip",
 					"--releases-directory", someReleasesDirectory,
 					"--stemcell-tarball", stemcellTarball,
-					"--metadata", metadata,
 					"--version", "1.2.3",
-					"--output-file", "/path/to/missing/dir/product.zip",
 				)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
