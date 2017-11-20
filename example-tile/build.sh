@@ -5,15 +5,16 @@ function main() {
   cwd="${1}"
 
   kiln bake \
-    --releases-directory "${cwd}/releases" \
-    --migrations-directory "${cwd}/migrations" \
-    --runtime-configs-directory "${cwd}/runtime-configs" \
-    --variables-directory "${cwd}/variables" \
     --embed "${cwd}/extra" \
-    --stemcell-tarball "${cwd}/stemcell.tgz" \
+    --icon "${cwd}/icon.png" \
     --metadata "${cwd}/base.yml" \
-    --version "1.2.3-build.4" \
-    --output-file "${cwd}/example-1.2.3-build.4.pivotal"
+    --migrations-directory "${cwd}/migrations" \
+    --output-file "${cwd}/example-1.2.3-build.4.pivotal" \
+    --releases-directory "${cwd}/releases" \
+    --runtime-configs-directory "${cwd}/runtime-configs" \
+    --stemcell-tarball "${cwd}/stemcell.tgz" \
+    --variables-directory "${cwd}/variables" \
+    --version "1.2.3-build.4"
 }
 
 main "$(cd "$(dirname "${0}")" && pwd)"
