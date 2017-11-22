@@ -34,10 +34,21 @@ var _ = Describe("MetadataPartsDirectoryReader", func() {
 		filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 			switch root {
 			case "/some/variables/path":
-				walkFn("/some/variables/path", dirInfo, nil)
-				walkFn("/some/variables/path/vars-file-1.yml", fileInfo, nil)
-				walkFn("/some/variables/path/vars-file-2.yml", fileInfo, nil)
-				return walkFn("/some/variables/path/ignores.any-other-extension", fileInfo, nil)
+				if err := walkFn("/some/variables/path", dirInfo, nil); err != nil {
+					return err
+				}
+
+				filesInDir := []string{
+					"/some/variables/path/_order.yml",
+					"/some/variables/path/vars-file-1.yml",
+					"/some/variables/path/vars-file-2.yml",
+					"/some/variables/path/ignores.any-other-extension",
+				}
+				for _, file := range filesInDir {
+					if err := walkFn(file, fileInfo, nil); err != nil {
+						return err
+					}
+				}
 			default:
 				return nil
 			}
@@ -45,6 +56,13 @@ var _ = Describe("MetadataPartsDirectoryReader", func() {
 		}
 		filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
 			switch name {
+			case "/some/variables/path/_order.yml":
+				return NewBuffer(bytes.NewBufferString(`---
+variable_order:
+- variable-3
+- variable-2
+- variable-1
+`)), nil
 			case "/some/variables/path/vars-file-1.yml":
 				return NewBuffer(bytes.NewBufferString(`---
 variables:
@@ -216,6 +234,225 @@ runtime_configs:
 					reader = builder.NewMetadataPartsDirectoryReader(filesystem, "runtime_configs")
 					_, err := reader.Read("/some/runtime-configs/path")
 					Expect(err).To(MatchError(`not a runtime_configs file: "/some/runtime-configs/path/not-a-runtime-configs-file.yml"`))
+				})
+			})
+		})
+
+		Context("when variable file is neither a slice or a map", func() {
+			BeforeEach(func() {
+				filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
+					switch name {
+					case "/some/variables/path/vars-file-1.yml":
+						return NewBuffer(bytes.NewBufferString(`---
+variables: foo
+`)), nil
+					default:
+						return nil, fmt.Errorf("open %s: no such file or directory", name)
+					}
+				}
+			})
+
+			It("returns an error", func() {
+				_, err := reader.Read("/some/variables/path")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("either slice or map"))
+			})
+		})
+
+		Context("when variable file contains an invalid item", func() {
+			BeforeEach(func() {
+				filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
+					switch name {
+					case "/some/variables/path/vars-file-1.yml":
+						return NewBuffer(bytes.NewBufferString(`---
+variables:
+- foo
+`)), nil
+					default:
+						return nil, fmt.Errorf("open %s: no such file or directory", name)
+					}
+				}
+			})
+
+			It("returns an error", func() {
+				_, err := reader.Read("/some/variables/path")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("must be a map"))
+			})
+		})
+
+		Context("when variable file contains an array item without a name", func() {
+			BeforeEach(func() {
+				filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
+					switch name {
+					case "/some/variables/path/vars-file-1.yml":
+						return NewBuffer(bytes.NewBufferString(`---
+variables:
+- foo: bar
+`)), nil
+					default:
+						return nil, fmt.Errorf("open %s: no such file or directory", name)
+					}
+				}
+			})
+
+			It("returns an error", func() {
+				_, err := reader.Read("/some/variables/path")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("name"))
+			})
+		})
+
+		Context("when variable file contains a map item without a name", func() {
+			BeforeEach(func() {
+				filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
+					switch name {
+					case "/some/variables/path/vars-file-1.yml":
+						return NewBuffer(bytes.NewBufferString(`---
+variables:
+  foo: bar
+`)), nil
+					default:
+						return nil, fmt.Errorf("open %s: no such file or directory", name)
+					}
+				}
+			})
+
+			It("returns an error", func() {
+				_, err := reader.Read("/some/variables/path")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("name"))
+			})
+		})
+
+		Context("when specifying an Order key", func() {
+			BeforeEach(func() {
+				reader = builder.NewMetadataPartsDirectoryReaderWithOrder(filesystem, "variables", "variable_order")
+			})
+
+			It("returns the contents of the files in the directory sorted by _order.yml", func() {
+				vars, err := reader.Read("/some/variables/path")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vars).To(Equal([]interface{}{
+					map[interface{}]interface{}{
+						"name": "variable-3",
+						"type": "password",
+					},
+					map[interface{}]interface{}{
+						"name": "variable-2",
+						"type": "user",
+					},
+					map[interface{}]interface{}{
+						"name": "variable-1",
+						"type": "certificate",
+					},
+				}))
+			})
+
+			Context("failure cases", func() {
+				Context("when _order.yml file cannot be read", func() {
+					BeforeEach(func() {
+						filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
+							switch name {
+							case "/some/variables/path/vars-file-1.yml":
+								return NewBuffer(bytes.NewBufferString(`---
+variables:
+- name: variable-1
+  type: certificate
+- name: variable-2
+  type: user
+`)), nil
+							case "/some/variables/path/vars-file-2.yml":
+								return NewBuffer(bytes.NewBufferString(`---
+variables:
+- name: variable-3
+  type: password`)), nil
+							default:
+								return nil, fmt.Errorf("open %s: no such file or directory", name)
+							}
+						}
+					})
+					It("returns an error", func() {
+						_, err := reader.Read("/some/variables/path")
+						Expect(err.Error()).To(ContainSubstring("no such file or directory"))
+					})
+				})
+
+				Context("when _order.yml file is not in valid format", func() {
+					BeforeEach(func() {
+						filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
+							switch name {
+							case "/some/variables/path/_order.yml":
+								return NewBuffer(bytes.NewBufferString(`---
+variable_order: foo
+`)), nil
+							case "/some/variables/path/vars-file-1.yml":
+								return NewBuffer(bytes.NewBufferString(`---
+variables:
+- name: variable-1
+  type: certificate
+- name: variable-2
+  type: user
+`)), nil
+							case "/some/variables/path/vars-file-2.yml":
+								return NewBuffer(bytes.NewBufferString(`---
+variables:
+- name: variable-3
+  type: password`)), nil
+							default:
+								return nil, fmt.Errorf("open %s: no such file or directory", name)
+							}
+						}
+					})
+					It("returns an error", func() {
+						_, err := reader.Read("/some/variables/path")
+						Expect(err.Error()).To(ContainSubstring("Invalid format"))
+					})
+				})
+
+				Context("when _order.yml file does not have the specified orderKey", func() {
+					BeforeEach(func() {
+						reader = builder.NewMetadataPartsDirectoryReaderWithOrder(filesystem, "variables", "bad_order_key")
+					})
+
+					It("returns an error", func() {
+						_, err := reader.Read("/some/variables/path")
+						Expect(err.Error()).To(ContainSubstring("bad_order_key"))
+					})
+				})
+
+				Context("when _order.yml file contains a name that does not exist", func() {
+					BeforeEach(func() {
+						filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
+							switch name {
+							case "/some/variables/path/_order.yml":
+								return NewBuffer(bytes.NewBufferString(`---
+variable_order:
+- does-not-exist
+`)), nil
+							case "/some/variables/path/vars-file-1.yml":
+								return NewBuffer(bytes.NewBufferString(`---
+variables:
+- name: variable-1
+  type: certificate
+- name: variable-2
+  type: user
+`)), nil
+							case "/some/variables/path/vars-file-2.yml":
+								return NewBuffer(bytes.NewBufferString(`---
+variables:
+- name: variable-3
+  type: password`)), nil
+							default:
+								return nil, fmt.Errorf("open %s: no such file or directory", name)
+							}
+						}
+					})
+
+					It("returns an error", func() {
+						_, err := reader.Read("/some/variables/path")
+						Expect(err.Error()).To(ContainSubstring("does-not-exist"))
+					})
 				})
 			})
 		})

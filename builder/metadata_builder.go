@@ -1,12 +1,12 @@
 package builder
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 )
 
 type MetadataBuilder struct {
+	formDirectoryReader           formDirectoryReader
 	iconEncoder                   iconEncoder
 	logger                        logger
 	metadataReader                metadataReader
@@ -17,8 +17,9 @@ type MetadataBuilder struct {
 }
 
 type GeneratedMetadata struct {
-	IconImage        string   `yaml:"icon_image"`
-	Metadata         Metadata `yaml:",inline"`
+	FormTypes        []interface{} `yaml:"form_types,omitempty"`
+	IconImage        string        `yaml:"icon_image"`
+	Metadata         Metadata      `yaml:",inline"`
 	Name             string
 	Releases         []Release
 	RuntimeConfigs   []interface{}    `yaml:"runtime_configs,omitempty"`
@@ -63,6 +64,12 @@ type metadataPartsDirectoryReader interface {
 	Read(path string) ([]interface{}, error)
 }
 
+//go:generate counterfeiter -o ./fakes/form_directory_reader.go --fake-name FormDirectoryReader . formDirectoryReader
+
+type formDirectoryReader interface {
+	Read(path string) ([]interface{}, error)
+}
+
 //go:generate counterfeiter -o ./fakes/metadata_reader.go --fake-name MetadataReader . metadataReader
 
 type metadataReader interface {
@@ -81,6 +88,7 @@ type logger interface {
 }
 
 func NewMetadataBuilder(
+	formDirectoryReader formDirectoryReader,
 	releaseManifestReader releaseManifestReader,
 	runtimeConfigsDirectoryReader,
 	variablesDirectoryReader metadataPartsDirectoryReader,
@@ -90,6 +98,7 @@ func NewMetadataBuilder(
 	iconEncoder iconEncoder,
 ) MetadataBuilder {
 	return MetadataBuilder{
+		formDirectoryReader:           formDirectoryReader,
 		iconEncoder:                   iconEncoder,
 		logger:                        logger,
 		metadataReader:                metadataReader,
@@ -108,7 +117,8 @@ func (m MetadataBuilder) Build(
 	pathToMetadata,
 	version,
 	pathToTile,
-	pathToIcon string,
+	pathToIcon,
+	formDirectory string,
 ) (GeneratedMetadata, error) {
 	m.logger.Printf("Creating metadata for %s...", pathToTile)
 
@@ -173,11 +183,26 @@ func (m MetadataBuilder) Build(
 
 	productName, ok := metadata["name"].(string)
 	if !ok {
-		return GeneratedMetadata{}, errors.New(`missing "name" in tile metadata`)
+		return GeneratedMetadata{}, fmt.Errorf(`missing "name" in tile metadata file '%s'`, pathToMetadata)
+	}
+
+	var formTypes []interface{}
+	if formDirectory != "" {
+		var err error
+		formTypes, err = m.formDirectoryReader.Read(formDirectory)
+		if err != nil {
+			return GeneratedMetadata{},
+				fmt.Errorf("error reading from form directory %q: %s", formDirectory, err)
+		}
+	} else {
+		if ft, ok := metadata["form_types"].([]interface{}); ok {
+			formTypes = ft
+		}
 	}
 
 	delete(metadata, "name")
 	delete(metadata, "icon_image")
+	delete(metadata, "form_types")
 
 	if _, present := metadata["runtime_configs"]; present {
 		return GeneratedMetadata{}, fmt.Errorf("runtime_config section must be defined using --runtime-configs-directory flag, not in %q", pathToMetadata)
@@ -190,6 +215,7 @@ func (m MetadataBuilder) Build(
 	m.logger.Printf("Read metadata")
 
 	return GeneratedMetadata{
+		FormTypes:      formTypes,
 		IconImage:      encodedIcon,
 		Name:           productName,
 		Releases:       releases,

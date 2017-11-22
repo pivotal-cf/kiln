@@ -8,7 +8,7 @@ import (
 )
 
 type MetadataBuilder struct {
-	BuildStub        func(releaseTarballs, runtimeConfigDirectories, variableDirectories []string, pathToStemcell, pathToMetadata, version, pathToTile, iconPath string) (builder.GeneratedMetadata, error)
+	BuildStub        func(releaseTarballs, runtimeConfigDirectories, variableDirectories []string, pathToStemcell, pathToMetadata, version, pathToTile, iconPath, formDirectory string) (builder.GeneratedMetadata, error)
 	buildMutex       sync.RWMutex
 	buildArgsForCall []struct {
 		releaseTarballs          []string
@@ -19,6 +19,7 @@ type MetadataBuilder struct {
 		version                  string
 		pathToTile               string
 		iconPath                 string
+		formDirectory            string
 	}
 	buildReturns struct {
 		result1 builder.GeneratedMetadata
@@ -32,7 +33,7 @@ type MetadataBuilder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MetadataBuilder) Build(releaseTarballs []string, runtimeConfigDirectories []string, variableDirectories []string, pathToStemcell string, pathToMetadata string, version string, pathToTile string, iconPath string) (builder.GeneratedMetadata, error) {
+func (fake *MetadataBuilder) Build(releaseTarballs []string, runtimeConfigDirectories []string, variableDirectories []string, pathToStemcell string, pathToMetadata string, version string, pathToTile string, iconPath string, formDirectory string) (builder.GeneratedMetadata, error) {
 	var releaseTarballsCopy []string
 	if releaseTarballs != nil {
 		releaseTarballsCopy = make([]string, len(releaseTarballs))
@@ -59,11 +60,12 @@ func (fake *MetadataBuilder) Build(releaseTarballs []string, runtimeConfigDirect
 		version                  string
 		pathToTile               string
 		iconPath                 string
-	}{releaseTarballsCopy, runtimeConfigDirectoriesCopy, variableDirectoriesCopy, pathToStemcell, pathToMetadata, version, pathToTile, iconPath})
-	fake.recordInvocation("Build", []interface{}{releaseTarballsCopy, runtimeConfigDirectoriesCopy, variableDirectoriesCopy, pathToStemcell, pathToMetadata, version, pathToTile, iconPath})
+		formDirectory            string
+	}{releaseTarballsCopy, runtimeConfigDirectoriesCopy, variableDirectoriesCopy, pathToStemcell, pathToMetadata, version, pathToTile, iconPath, formDirectory})
+	fake.recordInvocation("Build", []interface{}{releaseTarballsCopy, runtimeConfigDirectoriesCopy, variableDirectoriesCopy, pathToStemcell, pathToMetadata, version, pathToTile, iconPath, formDirectory})
 	fake.buildMutex.Unlock()
 	if fake.BuildStub != nil {
-		return fake.BuildStub(releaseTarballs, runtimeConfigDirectories, variableDirectories, pathToStemcell, pathToMetadata, version, pathToTile, iconPath)
+		return fake.BuildStub(releaseTarballs, runtimeConfigDirectories, variableDirectories, pathToStemcell, pathToMetadata, version, pathToTile, iconPath, formDirectory)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -77,10 +79,10 @@ func (fake *MetadataBuilder) BuildCallCount() int {
 	return len(fake.buildArgsForCall)
 }
 
-func (fake *MetadataBuilder) BuildArgsForCall(i int) ([]string, []string, []string, string, string, string, string, string) {
+func (fake *MetadataBuilder) BuildArgsForCall(i int) ([]string, []string, []string, string, string, string, string, string, string) {
 	fake.buildMutex.RLock()
 	defer fake.buildMutex.RUnlock()
-	return fake.buildArgsForCall[i].releaseTarballs, fake.buildArgsForCall[i].runtimeConfigDirectories, fake.buildArgsForCall[i].variableDirectories, fake.buildArgsForCall[i].pathToStemcell, fake.buildArgsForCall[i].pathToMetadata, fake.buildArgsForCall[i].version, fake.buildArgsForCall[i].pathToTile, fake.buildArgsForCall[i].iconPath
+	return fake.buildArgsForCall[i].releaseTarballs, fake.buildArgsForCall[i].runtimeConfigDirectories, fake.buildArgsForCall[i].variableDirectories, fake.buildArgsForCall[i].pathToStemcell, fake.buildArgsForCall[i].pathToMetadata, fake.buildArgsForCall[i].version, fake.buildArgsForCall[i].pathToTile, fake.buildArgsForCall[i].iconPath, fake.buildArgsForCall[i].formDirectory
 }
 
 func (fake *MetadataBuilder) BuildReturns(result1 builder.GeneratedMetadata, result2 error) {

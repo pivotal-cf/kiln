@@ -12,6 +12,7 @@ import (
 
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	yaml "gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,13 +27,18 @@ var _ = Describe("kiln", func() {
 		someReleasesDirectory       string
 		someRuntimeConfigsDirectory string
 		someVariablesDirectory      string
+		someFormDirectory           string
 		stemcellTarball             string
-		tempDir                     string
+		tmpDir                      string
 	)
 
 	BeforeEach(func() {
 		var err error
-		tileDir, err := ioutil.TempDir("", "")
+
+		tmpDir, err := ioutil.TempDir("", "kiln-main-test")
+		Expect(err).NotTo(HaveOccurred())
+
+		tileDir, err := ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		outputFile = filepath.Join(tileDir, "cool-product-1.2.3-build.4.pivotal")
@@ -46,19 +52,19 @@ var _ = Describe("kiln", func() {
 		_, err = someIconFile.Write([]byte(someImageData))
 		Expect(err).NotTo(HaveOccurred())
 
-		someReleasesDirectory, err = ioutil.TempDir("", "")
+		someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		otherReleasesDirectory, err = ioutil.TempDir("", "")
+		otherReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		someRuntimeConfigsDirectory, err = ioutil.TempDir("", "")
+		someRuntimeConfigsDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		someVariablesDirectory, err = ioutil.TempDir("", "")
+		someVariablesDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		tempDir, err = ioutil.TempDir("", "")
+		someFormDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		cfReleaseManifest := `---
@@ -88,9 +94,32 @@ version: "3215.4"
 operating_system: ubuntu-trusty
 `
 
-		stemcellTarball, err = createTarball(tempDir, "stemcell.tgz", "stemcell.MF", stemcellManifest)
+		stemcellTarball, err = createTarball(tmpDir, "stemcell.tgz", "stemcell.MF", stemcellManifest)
 		Expect(err).NotTo(HaveOccurred())
 
+		err = ioutil.WriteFile(filepath.Join(someFormDirectory, "_order.yml"), []byte(`---
+forms:
+  - some-other-config
+  - some-config
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(filepath.Join(someFormDirectory, "some-config.yml"), []byte(`---
+form:
+  name: some-config
+  label: some-form-label
+  description: some-form-description
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(filepath.Join(someFormDirectory, "some-other-config.yml"), []byte(`---
+form:
+  name: some-other-config
+  label: some-other-form-label
+  description: some-other-form-description
+`), 0644)
+
+		Expect(err).NotTo(HaveOccurred())
 		err = ioutil.WriteFile(filepath.Join(someRuntimeConfigsDirectory, "some-addon.yml"), []byte(`---
 runtime_configs:
 - name: some_addon
@@ -115,7 +144,7 @@ variables:
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		metadata = filepath.Join(tempDir, "metadata.yml")
+		metadata = filepath.Join(tmpDir, "metadata.yml")
 		err = ioutil.WriteFile(metadata, []byte(`---
 name: cool-product-name
 metadata_version: '1.7'
@@ -149,6 +178,10 @@ property_blueprints:
   default: *product_version
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		_ = os.RemoveAll(tmpDir)
 	})
 
 	It("generates a manifest that includes all the correct metadata", func() {
@@ -250,6 +283,68 @@ variables:
 `, iconData)
 
 		Expect(contents).To(MatchYAML(expectedYaml))
+	})
+
+	Context("when the --form-directory flag is provided", func() {
+		It("merges from the given directory into the metadata under form_type key", func() {
+			command := exec.Command(pathToMain,
+				"bake",
+				"--form-directory", someFormDirectory,
+				"--icon", someIconPath,
+				"--metadata", metadata,
+				"--output-file", outputFile,
+				"--releases-directory", otherReleasesDirectory,
+				"--releases-directory", someReleasesDirectory,
+				"--runtime-configs-directory", someRuntimeConfigsDirectory,
+				"--stemcell-tarball", stemcellTarball,
+				"--variables-directory", someVariablesDirectory,
+				"--version", "1.2.3",
+			)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			archive, err := os.Open(outputFile)
+			Expect(err).NotTo(HaveOccurred())
+
+			archiveInfo, err := archive.Stat()
+			Expect(err).NotTo(HaveOccurred())
+
+			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			Expect(err).NotTo(HaveOccurred())
+
+			var file io.ReadCloser
+			for _, f := range zr.File {
+				if f.Name == "metadata/cool-product-name.yml" {
+					file, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+					break
+				}
+			}
+
+			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
+			contents, err := ioutil.ReadAll(file)
+			Expect(err).NotTo(HaveOccurred())
+
+			actualMetadata := map[string]interface{}{}
+			err = yaml.Unmarshal(contents, actualMetadata)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(actualMetadata["form_types"]).To(Equal([]interface{}{
+				map[interface{}]interface{}{
+					"name":        "some-other-config",
+					"label":       "some-other-form-label",
+					"description": "some-other-form-description",
+				},
+				map[interface{}]interface{}{
+					"name":        "some-config",
+					"label":       "some-form-label",
+					"description": "some-form-description",
+				},
+			}))
+		})
 	})
 
 	It("copies the migrations to the migrations/v1 directory", func() {
@@ -430,8 +525,8 @@ variables:
 	Context("when the --embed flag is specified", func() {
 		Context("when only file paths are specified", func() {
 			It("creates a tile with the specified file copied into the embed directory", func() {
-				someFileToEmbed := filepath.Join(tempDir, "some-file-to-embed")
-				otherFileToEmbed := filepath.Join(tempDir, "other-file-to-embed")
+				someFileToEmbed := filepath.Join(tmpDir, "some-file-to-embed")
+				otherFileToEmbed := filepath.Join(tmpDir, "other-file-to-embed")
 				err := ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0600)
 				Expect(err).NotTo(HaveOccurred())
 				err = ioutil.WriteFile(otherFileToEmbed, []byte("content-of-other-file"), 0755)
@@ -498,7 +593,7 @@ variables:
 
 		Context("when a directory is specified", func() {
 			It("embeds the root directory and retains its structure", func() {
-				dirToAdd := filepath.Join(tempDir, "some-dir")
+				dirToAdd := filepath.Join(tmpDir, "some-dir")
 				nestedDir := filepath.Join(dirToAdd, "some-nested-dir")
 				someFileToEmbed := filepath.Join(nestedDir, "some-file-to-embed")
 				err := os.MkdirAll(nestedDir, 0700)
