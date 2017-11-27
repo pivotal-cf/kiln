@@ -76,7 +76,7 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 		config.Version,
 		config.OutputFile,
 		config.IconPath,
-		config.FormDirectory,
+		config.FormsDirectory,
 	)
 	if err != nil {
 		return err

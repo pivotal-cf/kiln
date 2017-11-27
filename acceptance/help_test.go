@@ -28,7 +28,7 @@ Usage: kiln [options] bake [<args>]
 
 Command Arguments:
   --embed, -e                        string (variadic)  path to files to include in the tile /embed directory
-  --form-directory, -f               string             path to a directory containing forms
+  --forms-directory, -f              string             path to a directory containing forms
   --icon, -i                         string             path to icon file
   --metadata, -m                     string             path to the metadata file
   --migrations-directory, -md        string (variadic)  path to a directory containing migrations

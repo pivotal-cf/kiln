@@ -27,7 +27,7 @@ var _ = Describe("kiln", func() {
 		someReleasesDirectory       string
 		someRuntimeConfigsDirectory string
 		someVariablesDirectory      string
-		someFormDirectory           string
+		someFormsDirectory          string
 		stemcellTarball             string
 		tmpDir                      string
 	)
@@ -64,7 +64,7 @@ var _ = Describe("kiln", func() {
 		someVariablesDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		someFormDirectory, err = ioutil.TempDir(tmpDir, "")
+		someFormsDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		cfReleaseManifest := `---
@@ -97,14 +97,14 @@ operating_system: ubuntu-trusty
 		stemcellTarball, err = createTarball(tmpDir, "stemcell.tgz", "stemcell.MF", stemcellManifest)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = ioutil.WriteFile(filepath.Join(someFormDirectory, "_order.yml"), []byte(`---
+		err = ioutil.WriteFile(filepath.Join(someFormsDirectory, "_order.yml"), []byte(`---
 forms:
   - some-other-config
   - some-config
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = ioutil.WriteFile(filepath.Join(someFormDirectory, "some-config.yml"), []byte(`---
+		err = ioutil.WriteFile(filepath.Join(someFormsDirectory, "some-config.yml"), []byte(`---
 form:
   name: some-config
   label: some-form-label
@@ -112,7 +112,7 @@ form:
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = ioutil.WriteFile(filepath.Join(someFormDirectory, "some-other-config.yml"), []byte(`---
+		err = ioutil.WriteFile(filepath.Join(someFormsDirectory, "some-other-config.yml"), []byte(`---
 form:
   name: some-other-config
   label: some-other-form-label
@@ -285,11 +285,11 @@ variables:
 		Expect(contents).To(MatchYAML(expectedYaml))
 	})
 
-	Context("when the --form-directory flag is provided", func() {
+	Context("when the --forms-directory flag is provided", func() {
 		It("merges from the given directory into the metadata under the form_types key", func() {
 			command := exec.Command(pathToMain,
 				"bake",
-				"--form-directory", someFormDirectory,
+				"--forms-directory", someFormsDirectory,
 				"--icon", someIconPath,
 				"--metadata", metadata,
 				"--output-file", outputFile,

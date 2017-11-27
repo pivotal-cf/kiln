@@ -54,7 +54,7 @@ var _ = Describe("TileMaker", func() {
 		fakeLogger = &fakes.Logger{}
 
 		config = commands.BakeConfig{
-			FormDirectory:            "some-form-directory",
+			FormsDirectory:           "some-forms-directory",
 			IconPath:                 "some-icon-path",
 			Metadata:                 "some-metadata",
 			MigrationDirectories:     []string{"some-migrations-directory"},
@@ -80,7 +80,7 @@ var _ = Describe("TileMaker", func() {
 
 		Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 
-		releaseTarballs, runtimeConfigDirectories, variableDirectories, stemcellTarball, metadata, version, outputPath, iconPath, formDirectory := fakeMetadataBuilder.BuildArgsForCall(0)
+		releaseTarballs, runtimeConfigDirectories, variableDirectories, stemcellTarball, metadata, version, outputPath, iconPath, formsDirectory := fakeMetadataBuilder.BuildArgsForCall(0)
 		Expect(releaseTarballs).To(Equal(validReleases))
 		Expect(runtimeConfigDirectories).To(Equal([]string{"some-runtime-configs-directory"}))
 		Expect(variableDirectories).To(Equal([]string{"some-variables-directory"}))
@@ -89,7 +89,7 @@ var _ = Describe("TileMaker", func() {
 		Expect(version).To(Equal("1.2.3"))
 		Expect(outputPath).To(Equal("some-output-dir/cool-product-file.1.2.3-build.4.pivotal"))
 		Expect(iconPath).To(Equal("some-icon-path"))
-		Expect(formDirectory).To(Equal("some-form-directory"))
+		Expect(formsDirectory).To(Equal("some-forms-directory"))
 	})
 
 	It("makes the tile", func() {

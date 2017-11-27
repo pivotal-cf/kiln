@@ -187,10 +187,10 @@ var _ = Describe("bake", func() {
 			})
 		})
 
-		Context("when the form-directory flag is passed in", func() {
+		Context("when the forms-directory flag is passed in", func() {
 			It("builds the tile", func() {
 				err := bake.Execute([]string{
-					"--form-directory", "some-form-directory",
+					"--forms-directory", "some-forms-directory",
 					"--icon", "some-icon-path",
 					"--metadata", "some-metadata",
 					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
@@ -204,7 +204,7 @@ var _ = Describe("bake", func() {
 
 				config := tileMaker.MakeArgsForCall(0)
 				Expect(config).To(Equal(commands.BakeConfig{
-					FormDirectory:      "some-form-directory",
+					FormsDirectory:     "some-forms-directory",
 					IconPath:           "some-icon-path",
 					Metadata:           "some-metadata",
 					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
