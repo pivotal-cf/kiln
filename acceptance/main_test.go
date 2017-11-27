@@ -184,7 +184,7 @@ property_blueprints:
 		_ = os.RemoveAll(tmpDir)
 	})
 
-	It("generates a manifest that includes all the correct metadata", func() {
+	It("generates metadata that includes all the correct information", func() {
 		command := exec.Command(pathToMain,
 			"bake",
 			"--icon", someIconPath,
@@ -286,7 +286,7 @@ variables:
 	})
 
 	Context("when the --form-directory flag is provided", func() {
-		It("merges from the given directory into the metadata under form_type key", func() {
+		It("merges from the given directory into the metadata under the form_types key", func() {
 			command := exec.Command(pathToMain,
 				"bake",
 				"--form-directory", someFormDirectory,
