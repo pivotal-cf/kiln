@@ -204,7 +204,7 @@ var _ = Describe("bake", func() {
 
 				config := tileMaker.MakeArgsForCall(0)
 				Expect(config).To(Equal(commands.BakeConfig{
-					FormsDirectory:     "some-forms-directory",
+					FormDirectories:    []string{"some-forms-directory"},
 					IconPath:           "some-icon-path",
 					Metadata:           "some-metadata",
 					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",

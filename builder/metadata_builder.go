@@ -117,8 +117,8 @@ func (m MetadataBuilder) Build(
 	pathToMetadata,
 	version,
 	pathToTile,
-	pathToIcon,
-	formDirectory string,
+	pathToIcon string,
+	formDirectories []string,
 ) (GeneratedMetadata, error) {
 	m.logger.Printf("Creating metadata for %s...", pathToTile)
 
@@ -187,12 +187,14 @@ func (m MetadataBuilder) Build(
 	}
 
 	var formTypes []interface{}
-	if formDirectory != "" {
-		var err error
-		formTypes, err = m.formDirectoryReader.Read(formDirectory)
-		if err != nil {
-			return GeneratedMetadata{},
-				fmt.Errorf("error reading from form directory %q: %s", formDirectory, err)
+	if len(formDirectories) > 0 {
+		for _, fd := range formDirectories {
+			formTypesInDir, err := m.formDirectoryReader.Read(fd)
+			if err != nil {
+				return GeneratedMetadata{},
+					fmt.Errorf("error reading from form directory %q: %s", fd, err)
+			}
+			formTypes = append(formTypes, formTypesInDir...)
 		}
 	} else {
 		if ft, ok := metadata["form_types"].([]interface{}); ok {

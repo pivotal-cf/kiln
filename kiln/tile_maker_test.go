@@ -54,7 +54,7 @@ var _ = Describe("TileMaker", func() {
 		fakeLogger = &fakes.Logger{}
 
 		config = commands.BakeConfig{
-			FormsDirectory:           "some-forms-directory",
+			FormDirectories:          []string{"some-forms-directory"},
 			IconPath:                 "some-icon-path",
 			Metadata:                 "some-metadata",
 			MigrationDirectories:     []string{"some-migrations-directory"},
@@ -89,7 +89,7 @@ var _ = Describe("TileMaker", func() {
 		Expect(version).To(Equal("1.2.3"))
 		Expect(outputPath).To(Equal("some-output-dir/cool-product-file.1.2.3-build.4.pivotal"))
 		Expect(iconPath).To(Equal("some-icon-path"))
-		Expect(formsDirectory).To(Equal("some-forms-directory"))
+		Expect(formsDirectory).To(Equal([]string{"some-forms-directory"}))
 	})
 
 	It("makes the tile", func() {

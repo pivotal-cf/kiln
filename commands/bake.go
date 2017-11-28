@@ -8,7 +8,7 @@ import (
 )
 
 type BakeConfig struct {
-	FormsDirectory           string            `short:"f"    long:"forms-directory"            description:"path to a directory containing forms"`
+	FormDirectories          flags.StringSlice `short:"f"    long:"forms-directory"            description:"path to a directory containing forms"`
 	EmbedPaths               flags.StringSlice `short:"e"    long:"embed"                      description:"path to files to include in the tile /embed directory"`
 	IconPath                 string            `short:"i"    long:"icon"                       description:"path to icon file"`
 	Metadata                 string            `short:"m"    long:"metadata"                   description:"path to the metadata file"`

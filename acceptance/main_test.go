@@ -28,6 +28,7 @@ var _ = Describe("kiln", func() {
 		someRuntimeConfigsDirectory string
 		someVariablesDirectory      string
 		someFormsDirectory          string
+		someOtherFormsDirectory     string
 		stemcellTarball             string
 		tmpDir                      string
 	)
@@ -65,6 +66,9 @@ var _ = Describe("kiln", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		someFormsDirectory, err = ioutil.TempDir(tmpDir, "")
+		Expect(err).NotTo(HaveOccurred())
+
+		someOtherFormsDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		cfReleaseManifest := `---
@@ -118,8 +122,22 @@ form:
   label: some-other-form-label
   description: some-other-form-description
 `), 0644)
-
 		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(filepath.Join(someOtherFormsDirectory, "_order.yml"), []byte(`---
+forms:
+  - some-more-config
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(filepath.Join(someOtherFormsDirectory, "some-more-config.yml"), []byte(`---
+form:
+  name: some-more-config
+  label: some-form-label
+  description: some-form-description
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
 		err = ioutil.WriteFile(filepath.Join(someRuntimeConfigsDirectory, "some-addon.yml"), []byte(`---
 runtime_configs:
 - name: some_addon
@@ -286,10 +304,11 @@ variables:
 	})
 
 	Context("when the --forms-directory flag is provided", func() {
-		It("merges from the given directory into the metadata under the form_types key", func() {
+		It("merges from the given directories into the metadata under the form_types key", func() {
 			command := exec.Command(pathToMain,
 				"bake",
 				"--forms-directory", someFormsDirectory,
+				"--forms-directory", someOtherFormsDirectory,
 				"--icon", someIconPath,
 				"--metadata", metadata,
 				"--output-file", outputFile,
@@ -340,6 +359,11 @@ variables:
 				},
 				map[interface{}]interface{}{
 					"name":        "some-config",
+					"label":       "some-form-label",
+					"description": "some-form-description",
+				},
+				map[interface{}]interface{}{
+					"name":        "some-more-config",
 					"label":       "some-form-label",
 					"description": "some-form-description",
 				},
