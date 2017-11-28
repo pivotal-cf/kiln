@@ -36,7 +36,7 @@ var _ = Describe("kiln", func() {
 	BeforeEach(func() {
 		var err error
 
-		tmpDir, err := ioutil.TempDir("", "kiln-main-test")
+		tmpDir, err = ioutil.TempDir("", "kiln-main-test")
 		Expect(err).NotTo(HaveOccurred())
 
 		tileDir, err := ioutil.TempDir(tmpDir, "")
