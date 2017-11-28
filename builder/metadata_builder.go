@@ -200,6 +200,7 @@ func (m MetadataBuilder) Build(
 	var formTypes []interface{}
 	if len(formDirectories) > 0 {
 		for _, fd := range formDirectories {
+			m.logger.Printf("Read forms from %s", fd)
 			formTypesInDir, err := m.formDirectoryReader.Read(fd)
 			if err != nil {
 				return GeneratedMetadata{},
@@ -216,6 +217,7 @@ func (m MetadataBuilder) Build(
 	var jobTypes []interface{}
 	if len(instanceGroupDirectories) > 0 {
 		for _, jd := range instanceGroupDirectories {
+			m.logger.Printf("Read instance groups from %s", jd)
 			jobTypesInDir, err := m.instanceGroupDirectoryReader.Read(jd)
 			if err != nil {
 				return GeneratedMetadata{},

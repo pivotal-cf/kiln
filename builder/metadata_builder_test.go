@@ -262,6 +262,8 @@ var _ = Describe("MetadataBuilder", func() {
 				"Read variables from /path/to/variables/directory",
 				"Read variables from /path/to/other/variables/directory",
 				"Read manifest for stemcell version 2332",
+				"Read forms from /path/to/forms/directory",
+				"Read instance groups from /path/to/instance-groups/directory",
 				"Read metadata",
 			}))
 
