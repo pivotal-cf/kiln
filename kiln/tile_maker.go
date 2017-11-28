@@ -29,6 +29,7 @@ type metadataBuilder interface {
 		pathToTile,
 		iconPath string,
 		formDirectories []string,
+		instanceGroupDirectories []string,
 	) (builder.GeneratedMetadata, error)
 }
 
@@ -77,6 +78,7 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 		config.OutputFile,
 		config.IconPath,
 		config.FormDirectories,
+		config.InstanceGroupDirectories,
 	)
 	if err != nil {
 		return err

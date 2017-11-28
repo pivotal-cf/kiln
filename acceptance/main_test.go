@@ -29,6 +29,7 @@ var _ = Describe("kiln", func() {
 		someVariablesDirectory      string
 		someFormsDirectory          string
 		someOtherFormsDirectory     string
+		someInstanceGroupsDirectory string
 		stemcellTarball             string
 		tmpDir                      string
 	)
@@ -69,6 +70,9 @@ var _ = Describe("kiln", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		someOtherFormsDirectory, err = ioutil.TempDir(tmpDir, "")
+		Expect(err).NotTo(HaveOccurred())
+
+		someInstanceGroupsDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		cfReleaseManifest := `---
@@ -138,6 +142,27 @@ form:
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
+		err = ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "_order.yml"), []byte(`---
+job_types:
+  - some-other-instance-group
+  - some-instance-group
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "some-instance-group.yml"), []byte(`---
+job_type:
+  name: some-instance-group
+  label: Some Instance Group
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "some-other-instance-group.yml"), []byte(`---
+job_type:
+  name: some-other-instance-group
+  label: Some Other Instance Group
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
 		err = ioutil.WriteFile(filepath.Join(someRuntimeConfigsDirectory, "some-addon.yml"), []byte(`---
 runtime_configs:
 - name: some_addon
@@ -155,6 +180,7 @@ variables:
     some_option: Option value
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
+
 		err = ioutil.WriteFile(filepath.Join(someVariablesDirectory, "variable-2.yml"), []byte(`---
 variables:
 - name: variable-2
@@ -366,6 +392,66 @@ variables:
 					"name":        "some-more-config",
 					"label":       "some-form-label",
 					"description": "some-form-description",
+				},
+			}))
+		})
+	})
+
+	Context("when the --instance-groups-directory flag is provided", func() {
+		It("merges from the given directory into the metadata under the job_types key", func() {
+			command := exec.Command(pathToMain,
+				"bake",
+				"--instance-groups-directory", someInstanceGroupsDirectory,
+				"--icon", someIconPath,
+				"--metadata", metadata,
+				"--output-file", outputFile,
+				"--releases-directory", otherReleasesDirectory,
+				"--releases-directory", someReleasesDirectory,
+				"--runtime-configs-directory", someRuntimeConfigsDirectory,
+				"--stemcell-tarball", stemcellTarball,
+				"--variables-directory", someVariablesDirectory,
+				"--version", "1.2.3",
+			)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			archive, err := os.Open(outputFile)
+			Expect(err).NotTo(HaveOccurred())
+
+			archiveInfo, err := archive.Stat()
+			Expect(err).NotTo(HaveOccurred())
+
+			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			Expect(err).NotTo(HaveOccurred())
+
+			var file io.ReadCloser
+			for _, f := range zr.File {
+				if f.Name == "metadata/cool-product-name.yml" {
+					file, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+					break
+				}
+			}
+
+			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
+			contents, err := ioutil.ReadAll(file)
+			Expect(err).NotTo(HaveOccurred())
+
+			actualMetadata := map[string]interface{}{}
+			err = yaml.Unmarshal(contents, actualMetadata)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(actualMetadata["job_types"]).To(Equal([]interface{}{
+				map[interface{}]interface{}{
+					"name":  "some-other-instance-group",
+					"label": "Some Other Instance Group",
+				},
+				map[interface{}]interface{}{
+					"name":  "some-instance-group",
+					"label": "Some Instance Group",
 				},
 			}))
 		})

@@ -7,6 +7,7 @@ import (
 
 type MetadataBuilder struct {
 	formDirectoryReader           formDirectoryReader
+	instanceGroupDirectoryReader  instanceGroupDirectoryReader
 	iconEncoder                   iconEncoder
 	logger                        logger
 	metadataReader                metadataReader
@@ -18,6 +19,7 @@ type MetadataBuilder struct {
 
 type GeneratedMetadata struct {
 	FormTypes        []interface{} `yaml:"form_types,omitempty"`
+	JobTypes         []interface{} `yaml:"job_types,omitempty"`
 	IconImage        string        `yaml:"icon_image"`
 	Metadata         Metadata      `yaml:",inline"`
 	Name             string
@@ -70,6 +72,12 @@ type formDirectoryReader interface {
 	Read(path string) ([]interface{}, error)
 }
 
+//go:generate counterfeiter -o ./fakes/instance_group_directory_reader.go --fake-name InstanceGroupDirectoryReader . instanceGroupDirectoryReader
+
+type instanceGroupDirectoryReader interface {
+	Read(path string) ([]interface{}, error)
+}
+
 //go:generate counterfeiter -o ./fakes/metadata_reader.go --fake-name MetadataReader . metadataReader
 
 type metadataReader interface {
@@ -89,6 +97,7 @@ type logger interface {
 
 func NewMetadataBuilder(
 	formDirectoryReader formDirectoryReader,
+	instanceGroupDirectoryReader instanceGroupDirectoryReader,
 	releaseManifestReader releaseManifestReader,
 	runtimeConfigsDirectoryReader,
 	variablesDirectoryReader metadataPartsDirectoryReader,
@@ -99,6 +108,7 @@ func NewMetadataBuilder(
 ) MetadataBuilder {
 	return MetadataBuilder{
 		formDirectoryReader:           formDirectoryReader,
+		instanceGroupDirectoryReader:  instanceGroupDirectoryReader,
 		iconEncoder:                   iconEncoder,
 		logger:                        logger,
 		metadataReader:                metadataReader,
@@ -119,6 +129,7 @@ func (m MetadataBuilder) Build(
 	pathToTile,
 	pathToIcon string,
 	formDirectories []string,
+	instanceGroupDirectories []string,
 ) (GeneratedMetadata, error) {
 	m.logger.Printf("Creating metadata for %s...", pathToTile)
 
@@ -202,9 +213,26 @@ func (m MetadataBuilder) Build(
 		}
 	}
 
+	var jobTypes []interface{}
+	if len(instanceGroupDirectories) > 0 {
+		for _, jd := range instanceGroupDirectories {
+			jobTypesInDir, err := m.instanceGroupDirectoryReader.Read(jd)
+			if err != nil {
+				return GeneratedMetadata{},
+					fmt.Errorf("error reading from instance group directory %q: %s", jd, err)
+			}
+			jobTypes = append(jobTypes, jobTypesInDir...)
+		}
+	} else {
+		if jt, ok := metadata["job_types"].([]interface{}); ok {
+			jobTypes = jt
+		}
+	}
+
 	delete(metadata, "name")
 	delete(metadata, "icon_image")
 	delete(metadata, "form_types")
+	delete(metadata, "job_types")
 
 	if _, present := metadata["runtime_configs"]; present {
 		return GeneratedMetadata{}, fmt.Errorf("runtime_config section must be defined using --runtime-configs-directory flag, not in %q", pathToMetadata)
@@ -218,6 +246,7 @@ func (m MetadataBuilder) Build(
 
 	return GeneratedMetadata{
 		FormTypes:      formTypes,
+		JobTypes:       jobTypes,
 		IconImage:      encodedIcon,
 		Name:           productName,
 		Releases:       releases,

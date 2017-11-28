@@ -32,6 +32,7 @@ func main() {
 	filesystem := helper.NewFilesystem()
 	zipper := builder.NewZipper()
 	formDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder(filesystem, "form", "forms")
+	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder(filesystem, "job_type", "job_types")
 	releaseManifestReader := builder.NewReleaseManifestReader(filesystem)
 	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "runtime_configs")
 	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "variables")
@@ -40,6 +41,7 @@ func main() {
 	iconEncoder := builder.NewIconEncoder(filesystem)
 	metadataBuilder := builder.NewMetadataBuilder(
 		formDirectoryReader,
+		instanceGroupDirectoryReader,
 		releaseManifestReader,
 		runtimeConfigsDirectoryReader,
 		variablesDirectoryReader,

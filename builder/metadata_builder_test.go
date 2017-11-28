@@ -21,6 +21,7 @@ var _ = Describe("MetadataBuilder", func() {
 		stemcellManifestReader        *fakes.StemcellManifestReader
 		variablesDirectoryReader      *fakes.MetadataPartsDirectoryReader
 		formDirectoryReader           *fakes.FormDirectoryReader
+		instanceGroupDirectoryReader  *fakes.InstanceGroupDirectoryReader
 
 		tileBuilder builder.MetadataBuilder
 	)
@@ -32,6 +33,7 @@ var _ = Describe("MetadataBuilder", func() {
 		releaseManifestReader = &fakes.ReleaseManifestReader{}
 		runtimeConfigsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		formDirectoryReader = &fakes.FormDirectoryReader{}
+		instanceGroupDirectoryReader = &fakes.InstanceGroupDirectoryReader{}
 		stemcellManifestReader = &fakes.StemcellManifestReader{}
 		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 
@@ -92,6 +94,21 @@ var _ = Describe("MetadataBuilder", func() {
 				return []interface{}{}, fmt.Errorf("could not read forms directory %q", path)
 			}
 		}
+		instanceGroupDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
+			switch path {
+			case "/path/to/instance-groups/directory":
+				return []interface{}{
+					map[interface{}]interface{}{
+						"some-instance-group-1": "some-value-1",
+					},
+					map[interface{}]interface{}{
+						"some-instance-group-2": "some-value-2",
+					},
+				}, nil
+			default:
+				return []interface{}{}, fmt.Errorf("could not read instance groups directory %q", path)
+			}
+		}
 
 		variablesDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
 			switch path {
@@ -126,6 +143,7 @@ var _ = Describe("MetadataBuilder", func() {
 
 		tileBuilder = builder.NewMetadataBuilder(
 			formDirectoryReader,
+			instanceGroupDirectoryReader,
 			releaseManifestReader,
 			runtimeConfigsDirectoryReader,
 			variablesDirectoryReader,
@@ -159,6 +177,7 @@ var _ = Describe("MetadataBuilder", func() {
 				"/path/to/tile.zip",
 				"some-icon-path",
 				[]string{"/path/to/forms/directory"},
+				[]string{"/path/to/instance-groups/directory"},
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stemcellManifestReader.ReadArgsForCall(0)).To(Equal("/path/to/test-stemcell.tgz"))
@@ -173,6 +192,14 @@ var _ = Describe("MetadataBuilder", func() {
 				},
 				map[interface{}]interface{}{
 					"some-key-2": "some-value-2",
+				},
+			}))
+			Expect(generatedMetadata.JobTypes).To(Equal([]interface{}{
+				map[interface{}]interface{}{
+					"some-instance-group-1": "some-value-1",
+				},
+				map[interface{}]interface{}{
+					"some-instance-group-2": "some-value-2",
 				},
 			}))
 			Expect(generatedMetadata.Releases).To(Equal([]builder.Release{
@@ -249,7 +276,7 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					releaseManifestReader.ReadReturns(builder.ReleaseManifest{}, errors.New("failed to read release tarball"))
 
-					_, err := tileBuilder.Build([]string{"release-1.tgz"}, []string{}, []string{}, "", "", "", "", "", []string{})
+					_, err := tileBuilder.Build([]string{"release-1.tgz"}, []string{}, []string{}, "", "", "", "", "", []string{}, []string{})
 					Expect(err).To(MatchError("failed to read release tarball"))
 				})
 			})
@@ -258,8 +285,17 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					formDirectoryReader.ReadReturns([]interface{}{}, errors.New("some form error"))
 
-					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "", "", "", "", []string{"/path/to/missing/form"})
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "", "", "", "", []string{"/path/to/missing/form"}, []string{})
 					Expect(err).To(MatchError(`error reading from form directory "/path/to/missing/form": some form error`))
+				})
+			})
+
+			Context("when the instance group directory cannot be read", func() {
+				It("returns an error", func() {
+					instanceGroupDirectoryReader.ReadReturns([]interface{}{}, errors.New("some instance group error"))
+
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "", "", "", "", []string{}, []string{"/path/to/missing/instance-group"})
+					Expect(err).To(MatchError(`error reading from instance group directory "/path/to/missing/instance-group": some instance group error`))
 				})
 			})
 
@@ -267,7 +303,7 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					runtimeConfigsDirectoryReader.ReadReturns([]interface{}{}, errors.New("some error"))
 
-					_, err := tileBuilder.Build([]string{}, []string{"/path/to/missing/runtime-configs"}, []string{}, "", "", "", "", "", []string{})
+					_, err := tileBuilder.Build([]string{}, []string{"/path/to/missing/runtime-configs"}, []string{}, "", "", "", "", "", []string{}, []string{})
 					Expect(err).To(MatchError(`error reading from runtime configs directory "/path/to/missing/runtime-configs": some error`))
 				})
 			})
@@ -276,7 +312,7 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					variablesDirectoryReader.ReadReturns([]interface{}{}, errors.New("some error"))
 
-					_, err := tileBuilder.Build([]string{}, []string{}, []string{"/path/to/missing/variables"}, "", "", "", "", "", []string{})
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{"/path/to/missing/variables"}, "", "", "", "", "", []string{}, []string{})
 					Expect(err).To(MatchError(`error reading from variables directory "/path/to/missing/variables": some error`))
 				})
 			})
@@ -285,7 +321,7 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					stemcellManifestReader.ReadReturns(builder.StemcellManifest{}, errors.New("failed to read stemcell tarball"))
 
-					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "stemcell.tgz", "", "", "", "", []string{})
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "stemcell.tgz", "", "", "", "", []string{}, []string{})
 					Expect(err).To(MatchError("failed to read stemcell tarball"))
 				})
 			})
@@ -296,7 +332,7 @@ var _ = Describe("MetadataBuilder", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "stemcell.tgz", "", "", "", "", []string{})
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "stemcell.tgz", "", "", "", "", []string{}, []string{})
 					Expect(err).To(MatchError("failed to encode poncho"))
 				})
 			})
@@ -305,7 +341,7 @@ var _ = Describe("MetadataBuilder", func() {
 				It("returns an error", func() {
 					metadataReader.ReadReturns(builder.Metadata{}, errors.New("failed to read metadata"))
 
-					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "metadata.yml", "", "", "", []string{})
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "metadata.yml", "", "", "", []string{}, []string{})
 					Expect(err).To(MatchError("failed to read metadata"))
 				})
 			})
@@ -319,7 +355,7 @@ var _ = Describe("MetadataBuilder", func() {
 						nil,
 					)
 
-					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "metadata.yml", "", "", "", []string{})
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "metadata.yml", "", "", "", []string{}, []string{})
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring(`missing "name" in tile metadata`))
 				})
@@ -333,7 +369,7 @@ var _ = Describe("MetadataBuilder", func() {
 					},
 						nil,
 					)
-					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "metadata.yml", "", "", "", []string{})
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "metadata.yml", "", "", "", []string{}, []string{})
 					Expect(err).To(MatchError(`runtime_config section must be defined using --runtime-configs-directory flag, not in "metadata.yml"`))
 				})
 			})
@@ -346,7 +382,7 @@ var _ = Describe("MetadataBuilder", func() {
 					},
 						nil,
 					)
-					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "metadata.yml", "", "", "", []string{})
+					_, err := tileBuilder.Build([]string{}, []string{}, []string{}, "", "metadata.yml", "", "", "", []string{}, []string{})
 					Expect(err).To(MatchError(`variables section must be defined using --variables-directory flag, not in "metadata.yml"`))
 				})
 			})

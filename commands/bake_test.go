@@ -215,6 +215,34 @@ var _ = Describe("bake", func() {
 			})
 		})
 
+		Context("when the instance-groups-directory flag is passed in", func() {
+			It("builds the tile", func() {
+				err := bake.Execute([]string{
+					"--instance-groups-directory", "some-instance-groups-directory",
+					"--icon", "some-icon-path",
+					"--metadata", "some-metadata",
+					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
+					"--releases-directory", "some-release-tarball-directory",
+					"--stemcell-tarball", "some-stemcell-tarball",
+					"--version", "1.2.3",
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(tileMaker.MakeCallCount()).To(Equal(1))
+
+				config := tileMaker.MakeArgsForCall(0)
+				Expect(config).To(Equal(commands.BakeConfig{
+					InstanceGroupDirectories: []string{"some-instance-groups-directory"},
+					IconPath:                 "some-icon-path",
+					Metadata:                 "some-metadata",
+					OutputFile:               "some-output-dir/cool-product-file-1.2.3-build.4",
+					ReleaseDirectories:       []string{"some-release-tarball-directory"},
+					StemcellTarball:          "some-stemcell-tarball",
+					Version:                  "1.2.3",
+				}))
+			})
+		})
+
 		Context("failure cases", func() {
 			Context("when the release-tarball flag is missing", func() {
 				It("returns an error", func() {

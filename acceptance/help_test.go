@@ -30,6 +30,7 @@ Command Arguments:
   --embed, -e                        string (variadic)  path to files to include in the tile /embed directory
   --forms-directory, -f              string (variadic)  path to a directory containing forms
   --icon, -i                         string             path to icon file
+  --instance-groups-directory, -ig   string (variadic)  path to a directory containing instance groups
   --metadata, -m                     string             path to the metadata file
   --migrations-directory, -md        string (variadic)  path to a directory containing migrations
   --output-file, -o                  string             path to where the tile will be output
