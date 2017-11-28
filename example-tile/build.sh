@@ -6,6 +6,7 @@ function main() {
 
   kiln bake \
     --embed "${cwd}/extra" \
+    --forms-directory "${cwd}/forms" \
     --icon "${cwd}/icon.png" \
     --metadata "${cwd}/base.yml" \
     --migrations-directory "${cwd}/migrations" \
