@@ -8,19 +8,10 @@ import (
 )
 
 type MetadataBuilder struct {
-	BuildStub        func(releaseTarballs, runtimeConfigDirectories, variableDirectories []string, pathToStemcell, pathToMetadata, version, pathToTile, iconPath string, formDirectories []string, instanceGroupDirectories []string) (builder.GeneratedMetadata, error)
+	BuildStub        func(input builder.BuildInput) (builder.GeneratedMetadata, error)
 	buildMutex       sync.RWMutex
 	buildArgsForCall []struct {
-		releaseTarballs          []string
-		runtimeConfigDirectories []string
-		variableDirectories      []string
-		pathToStemcell           string
-		pathToMetadata           string
-		version                  string
-		pathToTile               string
-		iconPath                 string
-		formDirectories          []string
-		instanceGroupDirectories []string
+		input builder.BuildInput
 	}
 	buildReturns struct {
 		result1 builder.GeneratedMetadata
@@ -34,50 +25,16 @@ type MetadataBuilder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MetadataBuilder) Build(releaseTarballs []string, runtimeConfigDirectories []string, variableDirectories []string, pathToStemcell string, pathToMetadata string, version string, pathToTile string, iconPath string, formDirectories []string, instanceGroupDirectories []string) (builder.GeneratedMetadata, error) {
-	var releaseTarballsCopy []string
-	if releaseTarballs != nil {
-		releaseTarballsCopy = make([]string, len(releaseTarballs))
-		copy(releaseTarballsCopy, releaseTarballs)
-	}
-	var runtimeConfigDirectoriesCopy []string
-	if runtimeConfigDirectories != nil {
-		runtimeConfigDirectoriesCopy = make([]string, len(runtimeConfigDirectories))
-		copy(runtimeConfigDirectoriesCopy, runtimeConfigDirectories)
-	}
-	var variableDirectoriesCopy []string
-	if variableDirectories != nil {
-		variableDirectoriesCopy = make([]string, len(variableDirectories))
-		copy(variableDirectoriesCopy, variableDirectories)
-	}
-	var formDirectoriesCopy []string
-	if formDirectories != nil {
-		formDirectoriesCopy = make([]string, len(formDirectories))
-		copy(formDirectoriesCopy, formDirectories)
-	}
-	var instanceGroupDirectoriesCopy []string
-	if instanceGroupDirectories != nil {
-		instanceGroupDirectoriesCopy = make([]string, len(instanceGroupDirectories))
-		copy(instanceGroupDirectoriesCopy, instanceGroupDirectories)
-	}
+func (fake *MetadataBuilder) Build(input builder.BuildInput) (builder.GeneratedMetadata, error) {
 	fake.buildMutex.Lock()
 	ret, specificReturn := fake.buildReturnsOnCall[len(fake.buildArgsForCall)]
 	fake.buildArgsForCall = append(fake.buildArgsForCall, struct {
-		releaseTarballs          []string
-		runtimeConfigDirectories []string
-		variableDirectories      []string
-		pathToStemcell           string
-		pathToMetadata           string
-		version                  string
-		pathToTile               string
-		iconPath                 string
-		formDirectories          []string
-		instanceGroupDirectories []string
-	}{releaseTarballsCopy, runtimeConfigDirectoriesCopy, variableDirectoriesCopy, pathToStemcell, pathToMetadata, version, pathToTile, iconPath, formDirectoriesCopy, instanceGroupDirectoriesCopy})
-	fake.recordInvocation("Build", []interface{}{releaseTarballsCopy, runtimeConfigDirectoriesCopy, variableDirectoriesCopy, pathToStemcell, pathToMetadata, version, pathToTile, iconPath, formDirectoriesCopy, instanceGroupDirectoriesCopy})
+		input builder.BuildInput
+	}{input})
+	fake.recordInvocation("Build", []interface{}{input})
 	fake.buildMutex.Unlock()
 	if fake.BuildStub != nil {
-		return fake.BuildStub(releaseTarballs, runtimeConfigDirectories, variableDirectories, pathToStemcell, pathToMetadata, version, pathToTile, iconPath, formDirectories, instanceGroupDirectories)
+		return fake.BuildStub(input)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -91,10 +48,10 @@ func (fake *MetadataBuilder) BuildCallCount() int {
 	return len(fake.buildArgsForCall)
 }
 
-func (fake *MetadataBuilder) BuildArgsForCall(i int) ([]string, []string, []string, string, string, string, string, string, []string, []string) {
+func (fake *MetadataBuilder) BuildArgsForCall(i int) builder.BuildInput {
 	fake.buildMutex.RLock()
 	defer fake.buildMutex.RUnlock()
-	return fake.buildArgsForCall[i].releaseTarballs, fake.buildArgsForCall[i].runtimeConfigDirectories, fake.buildArgsForCall[i].variableDirectories, fake.buildArgsForCall[i].pathToStemcell, fake.buildArgsForCall[i].pathToMetadata, fake.buildArgsForCall[i].version, fake.buildArgsForCall[i].pathToTile, fake.buildArgsForCall[i].iconPath, fake.buildArgsForCall[i].formDirectories, fake.buildArgsForCall[i].instanceGroupDirectories
+	return fake.buildArgsForCall[i].input
 }
 
 func (fake *MetadataBuilder) BuildReturns(result1 builder.GeneratedMetadata, result2 error) {

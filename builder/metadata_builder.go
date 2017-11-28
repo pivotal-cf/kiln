@@ -17,6 +17,18 @@ type MetadataBuilder struct {
 	variablesDirectoryReader      metadataPartsDirectoryReader
 }
 
+type BuildInput struct {
+	MetadataPath             string
+	ReleaseTarballs          []string
+	StemcellTarball          string
+	FormDirectories          []string
+	InstanceGroupDirectories []string
+	RuntimeConfigDirectories []string
+	VariableDirectories      []string
+	IconPath                 string
+	Version                  string
+}
+
 type GeneratedMetadata struct {
 	FormTypes        []interface{} `yaml:"form_types,omitempty"`
 	JobTypes         []interface{} `yaml:"job_types,omitempty"`
@@ -119,22 +131,9 @@ func NewMetadataBuilder(
 	}
 }
 
-func (m MetadataBuilder) Build(
-	releaseTarballs,
-	runtimeConfigDirectories,
-	variableDirectories []string,
-	pathToStemcell,
-	pathToMetadata,
-	version,
-	pathToTile,
-	pathToIcon string,
-	formDirectories []string,
-	instanceGroupDirectories []string,
-) (GeneratedMetadata, error) {
-	m.logger.Printf("Creating metadata for %s...", pathToTile)
-
+func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 	var releases []Release
-	for _, releaseTarball := range releaseTarballs {
+	for _, releaseTarball := range input.ReleaseTarballs {
 		releaseManifest, err := m.releaseManifestReader.Read(releaseTarball)
 		if err != nil {
 			return GeneratedMetadata{}, err
@@ -150,7 +149,7 @@ func (m MetadataBuilder) Build(
 	}
 
 	var runtimeConfigs []interface{}
-	for _, runtimeConfigsDirectory := range runtimeConfigDirectories {
+	for _, runtimeConfigsDirectory := range input.RuntimeConfigDirectories {
 		r, err := m.runtimeConfigsDirectoryReader.Read(runtimeConfigsDirectory)
 		if err != nil {
 			return GeneratedMetadata{},
@@ -163,7 +162,7 @@ func (m MetadataBuilder) Build(
 	}
 
 	var variables []interface{}
-	for _, variablesDirectory := range variableDirectories {
+	for _, variablesDirectory := range input.VariableDirectories {
 		v, err := m.variablesDirectoryReader.Read(variablesDirectory)
 		if err != nil {
 			return GeneratedMetadata{},
@@ -175,31 +174,31 @@ func (m MetadataBuilder) Build(
 		variables = append(variables, v...)
 	}
 
-	stemcellManifest, err := m.stemcellManifestReader.Read(pathToStemcell)
+	stemcellManifest, err := m.stemcellManifestReader.Read(input.StemcellTarball)
 	if err != nil {
 		return GeneratedMetadata{}, err
 	}
 
 	m.logger.Printf("Read manifest for stemcell version %s", stemcellManifest.Version)
 
-	encodedIcon, err := m.iconEncoder.Encode(pathToIcon)
+	encodedIcon, err := m.iconEncoder.Encode(input.IconPath)
 	if err != nil {
 		return GeneratedMetadata{}, err
 	}
 
-	metadata, err := m.metadataReader.Read(pathToMetadata, version)
+	metadata, err := m.metadataReader.Read(input.MetadataPath, input.Version)
 	if err != nil {
 		return GeneratedMetadata{}, err
 	}
 
 	productName, ok := metadata["name"].(string)
 	if !ok {
-		return GeneratedMetadata{}, fmt.Errorf(`missing "name" in tile metadata file '%s'`, pathToMetadata)
+		return GeneratedMetadata{}, fmt.Errorf(`missing "name" in tile metadata file '%s'`, input.MetadataPath)
 	}
 
 	var formTypes []interface{}
-	if len(formDirectories) > 0 {
-		for _, fd := range formDirectories {
+	if len(input.FormDirectories) > 0 {
+		for _, fd := range input.FormDirectories {
 			m.logger.Printf("Read forms from %s", fd)
 			formTypesInDir, err := m.formDirectoryReader.Read(fd)
 			if err != nil {
@@ -215,8 +214,8 @@ func (m MetadataBuilder) Build(
 	}
 
 	var jobTypes []interface{}
-	if len(instanceGroupDirectories) > 0 {
-		for _, jd := range instanceGroupDirectories {
+	if len(input.InstanceGroupDirectories) > 0 {
+		for _, jd := range input.InstanceGroupDirectories {
 			m.logger.Printf("Read instance groups from %s", jd)
 			jobTypesInDir, err := m.instanceGroupDirectoryReader.Read(jd)
 			if err != nil {
@@ -237,11 +236,13 @@ func (m MetadataBuilder) Build(
 	delete(metadata, "job_types")
 
 	if _, present := metadata["runtime_configs"]; present {
-		return GeneratedMetadata{}, fmt.Errorf("runtime_config section must be defined using --runtime-configs-directory flag, not in %q", pathToMetadata)
+		return GeneratedMetadata{}, fmt.Errorf(
+			"runtime_config section must be defined using --runtime-configs-directory flag, not in %q", input.MetadataPath)
 	}
 
 	if _, present := metadata["variables"]; present {
-		return GeneratedMetadata{}, fmt.Errorf("variables section must be defined using --variables-directory flag, not in %q", pathToMetadata)
+		return GeneratedMetadata{}, fmt.Errorf(
+			"variables section must be defined using --variables-directory flag, not in %q", input.MetadataPath)
 	}
 
 	m.logger.Printf("Read metadata")

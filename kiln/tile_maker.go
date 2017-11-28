@@ -19,21 +19,11 @@ type tileWriter interface {
 //go:generate counterfeiter -o ./fakes/metadata_builder.go --fake-name MetadataBuilder . metadataBuilder
 
 type metadataBuilder interface {
-	Build(
-		releaseTarballs,
-		runtimeConfigDirectories,
-		variableDirectories []string,
-		pathToStemcell,
-		pathToMetadata,
-		version,
-		pathToTile,
-		iconPath string,
-		formDirectories []string,
-		instanceGroupDirectories []string,
-	) (builder.GeneratedMetadata, error)
+	Build(input builder.BuildInput) (builder.GeneratedMetadata, error)
 }
 
 type logger interface {
+	Printf(format string, v ...interface{})
 	Println(v ...interface{})
 }
 
@@ -68,18 +58,21 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 		}
 	}
 
-	generatedMetadata, err := t.metadataBuilder.Build(
-		releaseTarballs,
-		config.RuntimeConfigDirectories,
-		config.VariableDirectories,
-		config.StemcellTarball,
-		config.Metadata,
-		config.Version,
-		config.OutputFile,
-		config.IconPath,
-		config.FormDirectories,
-		config.InstanceGroupDirectories,
-	)
+	t.logger.Printf("Creating metadata for %s...", config.OutputFile)
+
+	buildInput := builder.BuildInput{
+		MetadataPath:             config.Metadata,
+		ReleaseTarballs:          releaseTarballs,
+		StemcellTarball:          config.StemcellTarball,
+		FormDirectories:          config.FormDirectories,
+		InstanceGroupDirectories: config.InstanceGroupDirectories,
+		RuntimeConfigDirectories: config.RuntimeConfigDirectories,
+		VariableDirectories:      config.VariableDirectories,
+		IconPath:                 config.IconPath,
+		Version:                  config.Version,
+	}
+
+	generatedMetadata, err := t.metadataBuilder.Build(buildInput)
 	if err != nil {
 		return err
 	}

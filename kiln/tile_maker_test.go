@@ -81,17 +81,16 @@ var _ = Describe("TileMaker", func() {
 
 		Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 
-		releaseTarballs, runtimeConfigDirectories, variableDirectories, stemcellTarball, metadata, version, outputPath, iconPath, formsDirectory, instanceGroupsDirectory := fakeMetadataBuilder.BuildArgsForCall(0)
-		Expect(releaseTarballs).To(Equal(validReleases))
-		Expect(runtimeConfigDirectories).To(Equal([]string{"some-runtime-configs-directory"}))
-		Expect(variableDirectories).To(Equal([]string{"some-variables-directory"}))
-		Expect(stemcellTarball).To(Equal("some-stemcell-tarball"))
-		Expect(metadata).To(Equal("some-metadata"))
-		Expect(version).To(Equal("1.2.3"))
-		Expect(outputPath).To(Equal("some-output-dir/cool-product-file.1.2.3-build.4.pivotal"))
-		Expect(iconPath).To(Equal("some-icon-path"))
-		Expect(formsDirectory).To(Equal([]string{"some-forms-directory"}))
-		Expect(instanceGroupsDirectory).To(Equal([]string{"some-instance-groups-directory"}))
+		buildInput := fakeMetadataBuilder.BuildArgsForCall(0)
+		Expect(buildInput.MetadataPath).To(Equal("some-metadata"))
+		Expect(buildInput.ReleaseTarballs).To(Equal(validReleases))
+		Expect(buildInput.StemcellTarball).To(Equal("some-stemcell-tarball"))
+		Expect(buildInput.FormDirectories).To(Equal([]string{"some-forms-directory"}))
+		Expect(buildInput.InstanceGroupDirectories).To(Equal([]string{"some-instance-groups-directory"}))
+		Expect(buildInput.RuntimeConfigDirectories).To(Equal([]string{"some-runtime-configs-directory"}))
+		Expect(buildInput.VariableDirectories).To(Equal([]string{"some-variables-directory"}))
+		Expect(buildInput.IconPath).To(Equal("some-icon-path"))
+		Expect(buildInput.Version).To(Equal("1.2.3"))
 	})
 
 	It("makes the tile", func() {
