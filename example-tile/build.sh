@@ -8,6 +8,7 @@ function main() {
     --embed "${cwd}/extra" \
     --forms-directory "${cwd}/forms" \
     --icon "${cwd}/icon.png" \
+    --instance-groups-directory "${cwd}/instance-groups" \
     --metadata "${cwd}/base.yml" \
     --migrations-directory "${cwd}/migrations" \
     --output-file "${cwd}/example-1.2.3-build.4.pivotal" \
