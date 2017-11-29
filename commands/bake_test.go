@@ -364,6 +364,23 @@ var _ = Describe("bake", func() {
 					Expect(err).To(MatchError("--output-file is a required parameter"))
 				})
 			})
+
+			Context("when the jobs-directory flag is passed without the instance-groups-directory flag", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
+						"--releases-directory", "some-release-tarball-directory",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--jobs-directory", "some-jobs-directory",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(MatchError("--jobs-directory flag requires --instance-groups-directory to also be specified"))
+				})
+			})
+
 		})
 	})
 

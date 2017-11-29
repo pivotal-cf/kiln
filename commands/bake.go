@@ -95,5 +95,9 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 		return config, errors.New("--output-file is a required parameter")
 	}
 
+	if len(config.InstanceGroupDirectories) == 0 && len(config.JobDirectories) > 0 {
+		return config, errors.New("--jobs-directory flag requires --instance-groups-directory to also be specified")
+	}
+
 	return config, nil
 }
