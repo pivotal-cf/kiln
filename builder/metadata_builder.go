@@ -258,8 +258,15 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 	for _, jt := range jobTypes {
 		if templates, ok := jt.(map[interface{}]interface{})["templates"]; ok {
 			for i, template := range templates.([]interface{}) {
-				if job, ok := jobs[template]; ok {
-					templates.([]interface{})[i] = job
+				switch template.(type) {
+				case string:
+					if job, ok := jobs[template]; ok {
+						templates.([]interface{})[i] = job
+					} else {
+						return GeneratedMetadata{}, fmt.Errorf("instance group %q references non-existent job %q",
+							jt.(map[interface{}]interface{})["name"],
+							template)
+					}
 				}
 			}
 		}

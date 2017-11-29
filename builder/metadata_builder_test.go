@@ -358,6 +358,39 @@ var _ = Describe("MetadataBuilder", func() {
 				})
 			})
 
+			Context("when an instance group references a job that cannot be found", func() {
+				BeforeEach(func() {
+					instanceGroupDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
+						switch path {
+						case "/path/to/instance-groups/directory":
+							return []interface{}{
+								map[interface{}]interface{}{
+									"name": "some-instance-group-1",
+									"templates": []interface{}{
+										"some-missing-job",
+									},
+								},
+								map[interface{}]interface{}{
+									"name": "some-instance-group-2",
+									"templates": []interface{}{
+										"some-job-2",
+									},
+								},
+							}, nil
+						default:
+							return []interface{}{}, fmt.Errorf("could not read instance groups directory %q", path)
+						}
+					}
+				})
+				It("returns an error", func() {
+					_, err := tileBuilder.Build(builder.BuildInput{
+						InstanceGroupDirectories: []string{"/path/to/instance-groups/directory"},
+						JobDirectories:           []string{"/path/to/jobs/directory"},
+					})
+					Expect(err).To(MatchError(`instance group "some-instance-group-1" references non-existent job "some-missing-job"`))
+				})
+			})
+
 			Context("when the runtime configs directory cannot be read", func() {
 				It("returns an error", func() {
 					runtimeConfigsDirectoryReader.ReadReturns([]interface{}{}, errors.New("some error"))
