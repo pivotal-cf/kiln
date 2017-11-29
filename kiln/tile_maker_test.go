@@ -57,6 +57,7 @@ var _ = Describe("TileMaker", func() {
 			FormDirectories:          []string{"some-forms-directory"},
 			IconPath:                 "some-icon-path",
 			InstanceGroupDirectories: []string{"some-instance-groups-directory"},
+			JobDirectories:           []string{"some-jobs-directory"},
 			Metadata:                 "some-metadata",
 			MigrationDirectories:     []string{"some-migrations-directory"},
 			OutputFile:               "some-output-dir/cool-product-file.1.2.3-build.4.pivotal",
@@ -87,6 +88,7 @@ var _ = Describe("TileMaker", func() {
 		Expect(buildInput.StemcellTarball).To(Equal("some-stemcell-tarball"))
 		Expect(buildInput.FormDirectories).To(Equal([]string{"some-forms-directory"}))
 		Expect(buildInput.InstanceGroupDirectories).To(Equal([]string{"some-instance-groups-directory"}))
+		Expect(buildInput.JobDirectories).To(Equal([]string{"some-jobs-directory"}))
 		Expect(buildInput.RuntimeConfigDirectories).To(Equal([]string{"some-runtime-configs-directory"}))
 		Expect(buildInput.VariableDirectories).To(Equal([]string{"some-variables-directory"}))
 		Expect(buildInput.IconPath).To(Equal("some-icon-path"))

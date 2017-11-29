@@ -8,6 +8,7 @@ import (
 type MetadataBuilder struct {
 	formDirectoryReader           formDirectoryReader
 	instanceGroupDirectoryReader  instanceGroupDirectoryReader
+	jobsDirectoryReader           jobsDirectoryReader
 	iconEncoder                   iconEncoder
 	logger                        logger
 	metadataReader                metadataReader
@@ -23,6 +24,7 @@ type BuildInput struct {
 	StemcellTarball          string
 	FormDirectories          []string
 	InstanceGroupDirectories []string
+	JobDirectories           []string
 	RuntimeConfigDirectories []string
 	VariableDirectories      []string
 	IconPath                 string
@@ -90,6 +92,12 @@ type instanceGroupDirectoryReader interface {
 	Read(path string) ([]interface{}, error)
 }
 
+//go:generate counterfeiter -o ./fakes/jobs_directory_reader.go --fake-name JobsDirectoryReader . jobsDirectoryReader
+
+type jobsDirectoryReader interface {
+	Read(path string) ([]interface{}, error)
+}
+
 //go:generate counterfeiter -o ./fakes/metadata_reader.go --fake-name MetadataReader . metadataReader
 
 type metadataReader interface {
@@ -110,6 +118,7 @@ type logger interface {
 func NewMetadataBuilder(
 	formDirectoryReader formDirectoryReader,
 	instanceGroupDirectoryReader instanceGroupDirectoryReader,
+	jobsDirectoryReader jobsDirectoryReader,
 	releaseManifestReader releaseManifestReader,
 	runtimeConfigsDirectoryReader,
 	variablesDirectoryReader metadataPartsDirectoryReader,
@@ -121,6 +130,7 @@ func NewMetadataBuilder(
 	return MetadataBuilder{
 		formDirectoryReader:           formDirectoryReader,
 		instanceGroupDirectoryReader:  instanceGroupDirectoryReader,
+		jobsDirectoryReader:           jobsDirectoryReader,
 		iconEncoder:                   iconEncoder,
 		logger:                        logger,
 		metadataReader:                metadataReader,
@@ -227,6 +237,31 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 	} else {
 		if jt, ok := metadata["job_types"].([]interface{}); ok {
 			jobTypes = jt
+		}
+	}
+
+	jobs := map[interface{}]interface{}{}
+	for _, jobDir := range input.JobDirectories {
+		m.logger.Printf("Read jobs from %s", jobDir)
+		jobsInDir, err := m.jobsDirectoryReader.Read(jobDir)
+		if err != nil {
+			return GeneratedMetadata{},
+				fmt.Errorf("error reading from job directory %q: %s", jobDir, err)
+		}
+		for _, j := range jobsInDir {
+			if name, ok := j.(map[interface{}]interface{})["name"]; ok {
+				jobs[name] = j
+			}
+		}
+	}
+
+	for _, jt := range jobTypes {
+		if templates, ok := jt.(map[interface{}]interface{})["templates"]; ok {
+			for i, template := range templates.([]interface{}) {
+				if job, ok := jobs[template]; ok {
+					templates.([]interface{})[i] = job
+				}
+			}
 		}
 	}
 

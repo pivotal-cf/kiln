@@ -33,6 +33,7 @@ func main() {
 	zipper := builder.NewZipper()
 	formDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder(filesystem, "form", "forms")
 	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder(filesystem, "job_type", "job_types")
+	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "job")
 	releaseManifestReader := builder.NewReleaseManifestReader(filesystem)
 	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "runtime_configs")
 	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "variables")
@@ -42,6 +43,7 @@ func main() {
 	metadataBuilder := builder.NewMetadataBuilder(
 		formDirectoryReader,
 		instanceGroupDirectoryReader,
+		jobsDirectoryReader,
 		releaseManifestReader,
 		runtimeConfigsDirectoryReader,
 		variablesDirectoryReader,

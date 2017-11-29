@@ -243,6 +243,37 @@ var _ = Describe("bake", func() {
 			})
 		})
 
+		Context("when there are multiple jobs directories", func() {
+			It("builds the tile", func() {
+				err := bake.Execute([]string{
+					"--icon", "some-icon-path",
+					"--metadata", "some-metadata",
+					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
+					"--releases-directory", "some-release-tarball-directory",
+					"--stemcell-tarball", "some-stemcell-tarball",
+					"--instance-groups-directory", "some-instance-groups-directory",
+					"--jobs-directory", "some-jobs-directory",
+					"--jobs-directory", "some-other-jobs-directory",
+					"--version", "1.2.3",
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(tileMaker.MakeCallCount()).To(Equal(1))
+
+				config := tileMaker.MakeArgsForCall(0)
+				Expect(config).To(Equal(commands.BakeConfig{
+					Metadata:                 "some-metadata",
+					ReleaseDirectories:       []string{"some-release-tarball-directory"},
+					StemcellTarball:          "some-stemcell-tarball",
+					InstanceGroupDirectories: []string{"some-instance-groups-directory"},
+					JobDirectories:           []string{"some-jobs-directory", "some-other-jobs-directory"},
+					IconPath:                 "some-icon-path",
+					Version:                  "1.2.3",
+					OutputFile:               "some-output-dir/cool-product-file-1.2.3-build.4",
+				}))
+			})
+		})
+
 		Context("failure cases", func() {
 			Context("when the release-tarball flag is missing", func() {
 				It("returns an error", func() {

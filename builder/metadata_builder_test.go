@@ -22,6 +22,7 @@ var _ = Describe("MetadataBuilder", func() {
 		variablesDirectoryReader      *fakes.MetadataPartsDirectoryReader
 		formDirectoryReader           *fakes.FormDirectoryReader
 		instanceGroupDirectoryReader  *fakes.InstanceGroupDirectoryReader
+		jobsDirectoryReader           *fakes.JobsDirectoryReader
 
 		tileBuilder builder.MetadataBuilder
 	)
@@ -34,6 +35,7 @@ var _ = Describe("MetadataBuilder", func() {
 		runtimeConfigsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		formDirectoryReader = &fakes.FormDirectoryReader{}
 		instanceGroupDirectoryReader = &fakes.InstanceGroupDirectoryReader{}
+		jobsDirectoryReader = &fakes.JobsDirectoryReader{}
 		stemcellManifestReader = &fakes.StemcellManifestReader{}
 		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 
@@ -94,17 +96,42 @@ var _ = Describe("MetadataBuilder", func() {
 				return []interface{}{}, fmt.Errorf("could not read forms directory %q", path)
 			}
 		}
+
 		instanceGroupDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
 			switch path {
 			case "/path/to/instance-groups/directory":
 				return []interface{}{
 					map[interface{}]interface{}{
-						"some-instance-group-1": "some-value-1",
+						"name": "some-instance-group-1",
+						"templates": []interface{}{
+							"some-job-1",
+						},
 					},
 					map[interface{}]interface{}{
-						"some-instance-group-2": "some-value-2",
+						"name": "some-instance-group-2",
+						"templates": []interface{}{
+							"some-job-2",
+						},
 					},
 				}, nil
+			default:
+				return []interface{}{}, fmt.Errorf("could not read instance groups directory %q", path)
+			}
+		}
+
+		jobsDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
+			switch path {
+			case "/path/to/jobs/directory":
+				return []interface{}{
+						map[interface{}]interface{}{
+							"name":    "some-job-1",
+							"release": "some-release-1",
+						}, map[interface{}]interface{}{
+							"name":    "some-job-2",
+							"release": "some-release-2",
+						},
+					},
+					nil
 			default:
 				return []interface{}{}, fmt.Errorf("could not read instance groups directory %q", path)
 			}
@@ -144,6 +171,7 @@ var _ = Describe("MetadataBuilder", func() {
 		tileBuilder = builder.NewMetadataBuilder(
 			formDirectoryReader,
 			instanceGroupDirectoryReader,
+			jobsDirectoryReader,
 			releaseManifestReader,
 			runtimeConfigsDirectoryReader,
 			variablesDirectoryReader,
@@ -173,6 +201,7 @@ var _ = Describe("MetadataBuilder", func() {
 				StemcellTarball:          "/path/to/test-stemcell.tgz",
 				FormDirectories:          []string{"/path/to/forms/directory"},
 				InstanceGroupDirectories: []string{"/path/to/instance-groups/directory"},
+				JobDirectories:           []string{"/path/to/jobs/directory"},
 				RuntimeConfigDirectories: []string{"/path/to/runtime-configs/directory", "/path/to/other/runtime-configs/directory"},
 				VariableDirectories:      []string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
 				IconPath:                 "some-icon-path",
@@ -195,10 +224,22 @@ var _ = Describe("MetadataBuilder", func() {
 			}))
 			Expect(generatedMetadata.JobTypes).To(Equal([]interface{}{
 				map[interface{}]interface{}{
-					"some-instance-group-1": "some-value-1",
+					"name": "some-instance-group-1",
+					"templates": []interface{}{
+						map[interface{}]interface{}{
+							"name":    "some-job-1",
+							"release": "some-release-1",
+						},
+					},
 				},
 				map[interface{}]interface{}{
-					"some-instance-group-2": "some-value-2",
+					"name": "some-instance-group-2",
+					"templates": []interface{}{
+						map[interface{}]interface{}{
+							"name":    "some-job-2",
+							"release": "some-release-2",
+						},
+					},
 				},
 			}))
 			Expect(generatedMetadata.Releases).To(Equal([]builder.Release{
@@ -262,6 +303,7 @@ var _ = Describe("MetadataBuilder", func() {
 				"Read manifest for stemcell version 2332",
 				"Read forms from /path/to/forms/directory",
 				"Read instance groups from /path/to/instance-groups/directory",
+				"Read jobs from /path/to/jobs/directory",
 				"Read metadata",
 			}))
 
@@ -299,9 +341,20 @@ var _ = Describe("MetadataBuilder", func() {
 					instanceGroupDirectoryReader.ReadReturns([]interface{}{}, errors.New("some instance group error"))
 
 					_, err := tileBuilder.Build(builder.BuildInput{
-						InstanceGroupDirectories: []string{"/path/to/missing/instance-group"},
+						InstanceGroupDirectories: []string{"/path/to/missing/instance-groups"},
 					})
-					Expect(err).To(MatchError(`error reading from instance group directory "/path/to/missing/instance-group": some instance group error`))
+					Expect(err).To(MatchError(`error reading from instance group directory "/path/to/missing/instance-groups": some instance group error`))
+				})
+			})
+
+			Context("when the job directory cannot be read", func() {
+				It("returns an error", func() {
+					jobsDirectoryReader.ReadReturns([]interface{}{}, errors.New("some job error"))
+
+					_, err := tileBuilder.Build(builder.BuildInput{
+						JobDirectories: []string{"/path/to/missing/jobs"},
+					})
+					Expect(err).To(MatchError(`error reading from job directory "/path/to/missing/jobs": some job error`))
 				})
 			})
 

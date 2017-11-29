@@ -66,6 +66,7 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 		StemcellTarball:          config.StemcellTarball,
 		FormDirectories:          config.FormDirectories,
 		InstanceGroupDirectories: config.InstanceGroupDirectories,
+		JobDirectories:           config.JobDirectories,
 		RuntimeConfigDirectories: config.RuntimeConfigDirectories,
 		VariableDirectories:      config.VariableDirectories,
 		IconPath:                 config.IconPath,
