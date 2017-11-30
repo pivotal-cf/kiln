@@ -42,20 +42,9 @@ func NewTileMaker(metadataBuilder metadataBuilder, tileWriter tileWriter, logger
 }
 
 func (t TileMaker) Make(config commands.BakeConfig) error {
-	var releaseTarballs []string
-	for _, releasesDirectory := range config.ReleaseDirectories {
-		files, err := ioutil.ReadDir(releasesDirectory)
-		if err != nil {
-			return err
-		}
-
-		for _, file := range files {
-			matchTarballs, _ := regexp.MatchString("tgz$|tar.gz$", file.Name())
-			if !matchTarballs {
-				continue
-			}
-			releaseTarballs = append(releaseTarballs, filepath.Join(releasesDirectory, file.Name()))
-		}
+	releaseTarballs, err := t.extractReleaseTarballFilenames(config)
+	if err != nil {
+		return err
 	}
 
 	t.logger.Printf("Creating metadata for %s...", config.OutputFile)
@@ -91,4 +80,23 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 	}
 
 	return nil
+}
+
+func (t TileMaker) extractReleaseTarballFilenames(config commands.BakeConfig) ([]string, error) {
+	var releaseTarballs []string
+	for _, releasesDirectory := range config.ReleaseDirectories {
+		files, err := ioutil.ReadDir(releasesDirectory)
+		if err != nil {
+			return []string{}, err
+		}
+
+		for _, file := range files {
+			matchTarballs, _ := regexp.MatchString("tgz$|tar.gz$", file.Name())
+			if !matchTarballs {
+				continue
+			}
+			releaseTarballs = append(releaseTarballs, filepath.Join(releasesDirectory, file.Name()))
+		}
+	}
+	return releaseTarballs, nil
 }
