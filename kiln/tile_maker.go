@@ -79,6 +79,7 @@ func (t TileMaker) Make(config commands.BakeConfig) error {
 	}
 
 	t.logger.Println("Marshaling metadata file...")
+
 	generatedMetadataYAML, err := yaml.Marshal(generatedMetadata)
 	if err != nil {
 		return err

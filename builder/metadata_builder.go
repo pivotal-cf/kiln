@@ -6,9 +6,9 @@ import (
 )
 
 type MetadataBuilder struct {
-	formDirectoryReader           formDirectoryReader
-	instanceGroupDirectoryReader  instanceGroupDirectoryReader
-	jobsDirectoryReader           jobsDirectoryReader
+	formDirectoryReader           metadataPartsDirectoryReader
+	instanceGroupDirectoryReader  metadataPartsDirectoryReader
+	jobsDirectoryReader           metadataPartsDirectoryReader
 	iconEncoder                   iconEncoder
 	logger                        logger
 	metadataReader                metadataReader
@@ -32,15 +32,53 @@ type BuildInput struct {
 }
 
 type GeneratedMetadata struct {
-	FormTypes        []interface{} `yaml:"form_types,omitempty"`
-	JobTypes         []interface{} `yaml:"job_types,omitempty"`
-	IconImage        string        `yaml:"icon_image"`
-	Metadata         Metadata      `yaml:",inline"`
 	Name             string
+	StemcellCriteria StemcellCriteria
 	Releases         []Release
-	RuntimeConfigs   []interface{}    `yaml:"runtime_configs,omitempty"`
-	StemcellCriteria StemcellCriteria `yaml:"stemcell_criteria"`
-	Variables        []interface{}    `yaml:",omitempty"`
+	IconImage        string
+
+	FormTypes      []Part
+	JobTypes       []Part
+	RuntimeConfigs []Part
+	Variables      []Part
+
+	Metadata Metadata
+}
+
+func (gm GeneratedMetadata) MarshalYAML() (interface{}, error) {
+	m := map[string]interface{}{}
+
+	m["name"] = gm.Name
+	m["stemcell_criteria"] = gm.StemcellCriteria
+	m["releases"] = gm.Releases
+	m["icon_image"] = gm.IconImage
+
+	if len(gm.FormTypes) > 0 {
+		m["form_types"] = gm.metadataOnly(gm.FormTypes)
+	}
+	if len(gm.JobTypes) > 0 {
+		m["job_types"] = gm.metadataOnly(gm.JobTypes)
+	}
+	if len(gm.RuntimeConfigs) > 0 {
+		m["runtime_configs"] = gm.metadataOnly(gm.RuntimeConfigs)
+	}
+	if len(gm.Variables) > 0 {
+		m["variables"] = gm.metadataOnly(gm.Variables)
+	}
+
+	for k, v := range gm.Metadata {
+		m[k] = v
+	}
+
+	return m, nil
+}
+
+func (gm GeneratedMetadata) metadataOnly(parts []Part) []interface{} {
+	metadata := []interface{}{}
+	for _, p := range parts {
+		metadata = append(metadata, p.Metadata)
+	}
+	return metadata
 }
 
 type Release struct {
@@ -77,25 +115,7 @@ type stemcellManifestReader interface {
 //go:generate counterfeiter -o ./fakes/metadata_parts_directory_reader.go --fake-name MetadataPartsDirectoryReader . metadataPartsDirectoryReader
 
 type metadataPartsDirectoryReader interface {
-	Read(path string) ([]interface{}, error)
-}
-
-//go:generate counterfeiter -o ./fakes/form_directory_reader.go --fake-name FormDirectoryReader . formDirectoryReader
-
-type formDirectoryReader interface {
-	Read(path string) ([]interface{}, error)
-}
-
-//go:generate counterfeiter -o ./fakes/instance_group_directory_reader.go --fake-name InstanceGroupDirectoryReader . instanceGroupDirectoryReader
-
-type instanceGroupDirectoryReader interface {
-	Read(path string) ([]interface{}, error)
-}
-
-//go:generate counterfeiter -o ./fakes/jobs_directory_reader.go --fake-name JobsDirectoryReader . jobsDirectoryReader
-
-type jobsDirectoryReader interface {
-	Read(path string) ([]interface{}, error)
+	Read(path string) ([]Part, error)
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_reader.go --fake-name MetadataReader . metadataReader
@@ -116,9 +136,9 @@ type logger interface {
 }
 
 func NewMetadataBuilder(
-	formDirectoryReader formDirectoryReader,
-	instanceGroupDirectoryReader instanceGroupDirectoryReader,
-	jobsDirectoryReader jobsDirectoryReader,
+	formDirectoryReader metadataPartsDirectoryReader,
+	instanceGroupDirectoryReader metadataPartsDirectoryReader,
+	jobsDirectoryReader metadataPartsDirectoryReader,
 	releaseManifestReader releaseManifestReader,
 	runtimeConfigsDirectoryReader,
 	variablesDirectoryReader metadataPartsDirectoryReader,
@@ -158,7 +178,7 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		})
 	}
 
-	var runtimeConfigs []interface{}
+	var runtimeConfigs []Part
 	for _, runtimeConfigsDirectory := range input.RuntimeConfigDirectories {
 		r, err := m.runtimeConfigsDirectoryReader.Read(runtimeConfigsDirectory)
 		if err != nil {
@@ -171,7 +191,7 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		runtimeConfigs = append(runtimeConfigs, r...)
 	}
 
-	var variables []interface{}
+	var variables []Part
 	for _, variablesDirectory := range input.VariableDirectories {
 		v, err := m.variablesDirectoryReader.Read(variablesDirectory)
 		if err != nil {
@@ -206,7 +226,7 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		return GeneratedMetadata{}, fmt.Errorf(`missing "name" in tile metadata file '%s'`, input.MetadataPath)
 	}
 
-	var formTypes []interface{}
+	var formTypes []Part
 	if len(input.FormDirectories) > 0 {
 		for _, fd := range input.FormDirectories {
 			m.logger.Printf("Read forms from %s", fd)
@@ -219,11 +239,13 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		}
 	} else {
 		if ft, ok := metadata["form_types"].([]interface{}); ok {
-			formTypes = ft
+			for _, f := range ft {
+				formTypes = append(formTypes, Part{Metadata: f})
+			}
 		}
 	}
 
-	var jobTypes []interface{}
+	var jobTypes []Part
 	if len(input.InstanceGroupDirectories) > 0 {
 		for _, jd := range input.InstanceGroupDirectories {
 			m.logger.Printf("Read instance groups from %s", jd)
@@ -236,11 +258,13 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		}
 	} else {
 		if jt, ok := metadata["job_types"].([]interface{}); ok {
-			jobTypes = jt
+			for _, j := range jt {
+				jobTypes = append(jobTypes, Part{Metadata: j})
+			}
 		}
 	}
 
-	jobs := map[interface{}]interface{}{}
+	jobs := map[interface{}]Part{}
 	for _, jobDir := range input.JobDirectories {
 		m.logger.Printf("Read jobs from %s", jobDir)
 		jobsInDir, err := m.jobsDirectoryReader.Read(jobDir)
@@ -249,23 +273,22 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 				fmt.Errorf("error reading from job directory %q: %s", jobDir, err)
 		}
 		for _, j := range jobsInDir {
-			if name, ok := j.(map[interface{}]interface{})["name"]; ok {
-				jobs[name] = j
-			}
+			jobs[j.File] = j
 		}
 	}
 
 	for _, jt := range jobTypes {
-		if templates, ok := jt.(map[interface{}]interface{})["templates"]; ok {
+		if templates, ok := jt.Metadata.(map[interface{}]interface{})["templates"]; ok {
 			for i, template := range templates.([]interface{}) {
 				switch template.(type) {
 				case string:
 					if job, ok := jobs[template]; ok {
-						templates.([]interface{})[i] = job
+						templates.([]interface{})[i] = job.Metadata
 					} else {
 						return GeneratedMetadata{}, fmt.Errorf("instance group %q references non-existent job %q",
-							jt.(map[interface{}]interface{})["name"],
-							template)
+							jt.Name,
+							template,
+						)
 					}
 				}
 			}

@@ -490,7 +490,7 @@ job_type:
   name: some-instance-group
   label: Some Instance Group
   templates:
-  - some-job
+  - some-job-file.yml
 `), 0644)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -499,20 +499,20 @@ job_type:
   name: some-other-instance-group
   label: Some Other Instance Group
   templates:
-  - some-other-job
+  - some-other-job-file.yml
 `), 0644)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(filepath.Join(someJobsDirectory, "some-job.yml"), []byte(`---
+			err = ioutil.WriteFile(filepath.Join(someJobsDirectory, "some-job-file.yml"), []byte(`---
 job:
-  name: some-job
+  name: some-name
   release: some-release
 `), 0644)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(filepath.Join(someJobsDirectory, "some-other-job.yml"), []byte(`---
+			err = ioutil.WriteFile(filepath.Join(someJobsDirectory, "some-other-job-file.yml"), []byte(`---
 job:
-  name: some-other-job
+  name: some-other-name
   release: some-other-release
 `), 0644)
 			Expect(err).NotTo(HaveOccurred())
@@ -571,7 +571,7 @@ job:
 					"label": "Some Other Instance Group",
 					"templates": []interface{}{
 						map[interface{}]interface{}{
-							"name":    "some-other-job",
+							"name":    "some-other-name",
 							"release": "some-other-release",
 						},
 					},
@@ -581,7 +581,7 @@ job:
 					"label": "Some Instance Group",
 					"templates": []interface{}{
 						map[interface{}]interface{}{
-							"name":    "some-job",
+							"name":    "some-name",
 							"release": "some-release",
 						},
 					},

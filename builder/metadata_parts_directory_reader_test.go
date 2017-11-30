@@ -87,18 +87,30 @@ variables:
 		It("reads the contents of each yml file in the directory", func() {
 			vars, err := reader.Read("/some/variables/path")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(vars).To(Equal([]interface{}{
-				map[interface{}]interface{}{
-					"name": "variable-1",
-					"type": "certificate",
+			Expect(vars).To(Equal([]builder.Part{
+				{
+					File: "vars-file-1.yml",
+					Name: "variable-1",
+					Metadata: map[interface{}]interface{}{
+						"name": "variable-1",
+						"type": "certificate",
+					},
 				},
-				map[interface{}]interface{}{
-					"name": "variable-2",
-					"type": "user",
+				{
+					File: "vars-file-1.yml",
+					Name: "variable-2",
+					Metadata: map[interface{}]interface{}{
+						"name": "variable-2",
+						"type": "user",
+					},
 				},
-				map[interface{}]interface{}{
-					"name": "variable-3",
-					"type": "password",
+				{
+					File: "vars-file-2.yml",
+					Name: "variable-3",
+					Metadata: map[interface{}]interface{}{
+						"name": "variable-3",
+						"type": "password",
+					},
 				},
 			}))
 		})
@@ -129,12 +141,17 @@ runtime_configs:
 			reader = builder.NewMetadataPartsDirectoryReader(filesystem, "runtime_configs")
 			runtimeConfigs, err := reader.Read("/some/runtime-configs/path")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(runtimeConfigs).To(Equal([]interface{}{
-				map[interface{}]interface{}{
-					"name":           "runtime-config-1",
-					"runtime_config": "the-actual-runtime-config",
+			Expect(runtimeConfigs).To(Equal([]builder.Part{
+				{
+					File: "runtime-config-1.yml",
+					Name: "runtime-config-1",
+					Metadata: map[interface{}]interface{}{
+						"name":           "runtime-config-1",
+						"runtime_config": "the-actual-runtime-config",
+					},
 				},
-			}))
+			},
+			))
 		})
 
 		Context("failure cases", func() {
@@ -333,20 +350,33 @@ variables:
 			It("returns the contents of the files in the directory sorted by _order.yml", func() {
 				vars, err := reader.Read("/some/variables/path")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(vars).To(Equal([]interface{}{
-					map[interface{}]interface{}{
-						"name": "variable-3",
-						"type": "password",
+				Expect(vars).To(Equal([]builder.Part{
+					{
+						File: "vars-file-2.yml",
+						Name: "variable-3",
+						Metadata: map[interface{}]interface{}{
+							"name": "variable-3",
+							"type": "password",
+						},
 					},
-					map[interface{}]interface{}{
-						"name": "variable-2",
-						"type": "user",
+					{
+						File: "vars-file-1.yml",
+						Name: "variable-2",
+						Metadata: map[interface{}]interface{}{
+							"name": "variable-2",
+							"type": "user",
+						},
 					},
-					map[interface{}]interface{}{
-						"name": "variable-1",
-						"type": "certificate",
+					{
+						File: "vars-file-1.yml",
+						Name: "variable-1",
+						Metadata: map[interface{}]interface{}{
+							"name": "variable-1",
+							"type": "certificate",
+						},
 					},
-				}))
+				},
+				))
 			})
 
 			Context("failure cases", func() {
@@ -428,7 +458,7 @@ variables:
 							case "/some/variables/path/_order.yml":
 								return NewBuffer(bytes.NewBufferString(`---
 variable_order:
-- does-not-exist
+- some-file
 `)), nil
 							case "/some/variables/path/vars-file-1.yml":
 								return NewBuffer(bytes.NewBufferString(`---
@@ -451,7 +481,7 @@ variables:
 
 					It("returns an error", func() {
 						_, err := reader.Read("/some/variables/path")
-						Expect(err.Error()).To(ContainSubstring("does-not-exist"))
+						Expect(err.Error()).To(ContainSubstring("some-file"))
 					})
 				})
 			})

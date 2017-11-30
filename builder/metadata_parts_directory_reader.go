@@ -18,6 +18,12 @@ type MetadataPartsDirectoryReader struct {
 	orderKey    string
 }
 
+type Part struct {
+	File     string
+	Name     string
+	Metadata interface{}
+}
+
 func NewMetadataPartsDirectoryReader(filesystem filesystem, topLevelKey string) MetadataPartsDirectoryReader {
 	return MetadataPartsDirectoryReader{filesystem: filesystem, topLevelKey: topLevelKey}
 }
@@ -26,21 +32,21 @@ func NewMetadataPartsDirectoryReaderWithOrder(filesystem filesystem, topLevelKey
 	return MetadataPartsDirectoryReader{filesystem: filesystem, topLevelKey: topLevelKey, orderKey: orderKey}
 }
 
-func (r MetadataPartsDirectoryReader) Read(path string) ([]interface{}, error) {
-	metadataFileContents, err := r.readMetadataRecursivelyFromDir(path)
+func (r MetadataPartsDirectoryReader) Read(path string) ([]Part, error) {
+	parts, err := r.readMetadataRecursivelyFromDir(path)
 	if err != nil {
-		return []interface{}{}, err
+		return []Part{}, err
 	}
 
 	if r.orderKey != "" {
-		return r.orderWithOrderFile(path, metadataFileContents)
+		return r.orderWithOrderFile(path, parts)
 	}
 
-	return r.orderAlphabeticallyByName(path, metadataFileContents)
+	return r.orderAlphabeticallyByName(path, parts)
 }
 
-func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string) (map[interface{}]interface{}, error) {
-	parts := map[interface{}]interface{}{}
+func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string) ([]Part, error) {
+	parts := []Part{}
 
 	err := r.filesystem.Walk(path, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -73,7 +79,7 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string
 			return fmt.Errorf("not a %s file: %q", r.topLevelKey, filePath)
 		}
 
-		err = r.readMetadataIntoParts(vars, parts)
+		parts, err = r.readMetadataIntoParts(pathPkg.Base(filePath), vars, parts)
 		if err != nil {
 			return fmt.Errorf("file '%s' with top-level key '%s' has an invalid format: %s", filePath, r.topLevelKey, err)
 		}
@@ -84,83 +90,89 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string
 	return parts, err
 }
 
-func (r MetadataPartsDirectoryReader) readMetadataIntoParts(vars interface{}, parts map[interface{}]interface{}) error {
+func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, vars interface{}, parts []Part) ([]Part, error) {
 	switch v := vars.(type) {
 	case []interface{}:
 		for _, item := range v {
 			i, ok := item.(map[interface{}]interface{})
 			if !ok {
-				return fmt.Errorf("metadata item '%v' must be a map", item)
+				return []Part{}, fmt.Errorf("metadata item '%v' must be a map", item)
 			}
-			name, ok := i["name"]
+			name, ok := i["name"].(string)
 			if !ok {
-				return fmt.Errorf("metadata item '%v' does not have a `name` field", item)
+				return []Part{}, fmt.Errorf("metadata item '%v' does not have a `name` field", item)
 			}
-			parts[name] = item
+			parts = append(parts, Part{File: fileName, Name: name, Metadata: item})
 		}
 	case map[interface{}]interface{}:
-		name, ok := v["name"]
+		name, ok := v["name"].(string)
 		if !ok {
-			return fmt.Errorf("metadata item '%v' does not have a `name` field", v)
+			return []Part{}, fmt.Errorf("metadata item '%v' does not have a `name` field", v)
 		}
-		parts[name] = v
+		parts = append(parts, Part{File: fileName, Name: name, Metadata: v})
 	default:
-		return fmt.Errorf("expected either slice or map value")
+		return []Part{}, fmt.Errorf("expected either slice or map value")
 	}
 
-	return nil
+	return parts, nil
 }
 
-func (r MetadataPartsDirectoryReader) orderWithOrderFile(path string, parts map[interface{}]interface{}) ([]interface{}, error) {
+func (r MetadataPartsDirectoryReader) orderWithOrderFile(path string, parts []Part) ([]Part, error) {
+
 	orderPath := filepath.Join(path, "_order.yml")
 	f, err := r.filesystem.Open(orderPath)
 	if err != nil {
-		return []interface{}{}, err
+		return []Part{}, err
 	}
 	defer f.Close()
 
 	data, err := ioutil.ReadAll(f)
 	if err != nil {
-		return []interface{}{}, err
+		return []Part{}, err
 	}
 
 	var files map[string][]interface{}
 	err = yaml.Unmarshal([]byte(data), &files)
 	if err != nil {
-		return []interface{}{}, fmt.Errorf("Invalid format for '%s': %s", orderPath, err)
+		return []Part{}, fmt.Errorf("Invalid format for '%s': %s", orderPath, err)
 	}
 
 	orderedNames, ok := files[r.orderKey]
 	if !ok {
-		return []interface{}{}, fmt.Errorf("Could not find top-level order key '%s' in '%s'", r.orderKey, orderPath)
+		return []Part{}, fmt.Errorf("Could not find top-level order key '%s' in '%s'", r.orderKey, orderPath)
 	}
 
-	var outputs []interface{}
+	var outputs []Part
 	for _, name := range orderedNames {
-		v, ok := parts[name]
-		if !ok {
-			return []interface{}{}, fmt.Errorf("could not find metadata with `name` '%s' in list: %v", name, parts)
+		found := false
+		for _, part := range parts {
+			if part.Name == name {
+				found = true
+				outputs = append(outputs, part)
+			}
 		}
-		outputs = append(outputs, v)
+		if !found {
+			return []Part{}, fmt.Errorf("file specified in _order.yml %q does not exist in %q", name, path)
+		}
 	}
 
 	return outputs, err
 }
 
-func (r MetadataPartsDirectoryReader) orderAlphabeticallyByName(path string, parts map[interface{}]interface{}) ([]interface{}, error) {
+func (r MetadataPartsDirectoryReader) orderAlphabeticallyByName(path string, parts []Part) ([]Part, error) {
 	var orderedKeys []string
-	for name := range parts {
-		n, ok := name.(string)
-		if !ok {
-			return []interface{}{}, fmt.Errorf("expected `name` to be of type string: '%v'", name)
-		}
-		orderedKeys = append(orderedKeys, n)
+	for _, part := range parts {
+		orderedKeys = append(orderedKeys, part.Name)
 	}
 	sort.Strings(orderedKeys)
 
-	var outputs []interface{}
+	var outputs []Part
 	for _, name := range orderedKeys {
-		outputs = append(outputs, parts[name])
+		for _, part := range parts {
+			if part.Name == name {
+				outputs = append(outputs, part)
+			}
+		}
 	}
 
 	return outputs, nil

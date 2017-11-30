@@ -3,27 +3,29 @@ package fakes
 
 import (
 	"sync"
+
+	"github.com/pivotal-cf/kiln/builder"
 )
 
 type MetadataPartsDirectoryReader struct {
-	ReadStub        func(path string) ([]interface{}, error)
+	ReadStub        func(path string) ([]builder.Part, error)
 	readMutex       sync.RWMutex
 	readArgsForCall []struct {
 		path string
 	}
 	readReturns struct {
-		result1 []interface{}
+		result1 []builder.Part
 		result2 error
 	}
 	readReturnsOnCall map[int]struct {
-		result1 []interface{}
+		result1 []builder.Part
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MetadataPartsDirectoryReader) Read(path string) ([]interface{}, error) {
+func (fake *MetadataPartsDirectoryReader) Read(path string) ([]builder.Part, error) {
 	fake.readMutex.Lock()
 	ret, specificReturn := fake.readReturnsOnCall[len(fake.readArgsForCall)]
 	fake.readArgsForCall = append(fake.readArgsForCall, struct {
@@ -52,24 +54,24 @@ func (fake *MetadataPartsDirectoryReader) ReadArgsForCall(i int) string {
 	return fake.readArgsForCall[i].path
 }
 
-func (fake *MetadataPartsDirectoryReader) ReadReturns(result1 []interface{}, result2 error) {
+func (fake *MetadataPartsDirectoryReader) ReadReturns(result1 []builder.Part, result2 error) {
 	fake.ReadStub = nil
 	fake.readReturns = struct {
-		result1 []interface{}
+		result1 []builder.Part
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *MetadataPartsDirectoryReader) ReadReturnsOnCall(i int, result1 []interface{}, result2 error) {
+func (fake *MetadataPartsDirectoryReader) ReadReturnsOnCall(i int, result1 []builder.Part, result2 error) {
 	fake.ReadStub = nil
 	if fake.readReturnsOnCall == nil {
 		fake.readReturnsOnCall = make(map[int]struct {
-			result1 []interface{}
+			result1 []builder.Part
 			result2 error
 		})
 	}
 	fake.readReturnsOnCall[i] = struct {
-		result1 []interface{}
+		result1 []builder.Part
 		result2 error
 	}{result1, result2}
 }

@@ -20,9 +20,9 @@ var _ = Describe("MetadataBuilder", func() {
 		runtimeConfigsDirectoryReader *fakes.MetadataPartsDirectoryReader
 		stemcellManifestReader        *fakes.StemcellManifestReader
 		variablesDirectoryReader      *fakes.MetadataPartsDirectoryReader
-		formDirectoryReader           *fakes.FormDirectoryReader
-		instanceGroupDirectoryReader  *fakes.InstanceGroupDirectoryReader
-		jobsDirectoryReader           *fakes.JobsDirectoryReader
+		formDirectoryReader           *fakes.MetadataPartsDirectoryReader
+		instanceGroupDirectoryReader  *fakes.MetadataPartsDirectoryReader
+		jobsDirectoryReader           *fakes.MetadataPartsDirectoryReader
 
 		tileBuilder builder.MetadataBuilder
 	)
@@ -33,9 +33,9 @@ var _ = Describe("MetadataBuilder", func() {
 		metadataReader = &fakes.MetadataReader{}
 		releaseManifestReader = &fakes.ReleaseManifestReader{}
 		runtimeConfigsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
-		formDirectoryReader = &fakes.FormDirectoryReader{}
-		instanceGroupDirectoryReader = &fakes.InstanceGroupDirectoryReader{}
-		jobsDirectoryReader = &fakes.JobsDirectoryReader{}
+		formDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
+		instanceGroupDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
+		jobsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		stemcellManifestReader = &fakes.StemcellManifestReader{}
 		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 
@@ -57,108 +57,157 @@ var _ = Describe("MetadataBuilder", func() {
 				return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
 			}
 		}
-		runtimeConfigsDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
+		runtimeConfigsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
 			case "/path/to/runtime-configs/directory":
-				return []interface{}{
-					map[interface{}]interface{}{
-						"name":           "runtime-config-1",
-						"runtime_config": "runtime-config-1-manifest",
+				return []builder.Part{
+					{
+						File: "runtime-config-1.yml",
+						Name: "runtime-config-1",
+						Metadata: map[interface{}]interface{}{
+							"name":           "runtime-config-1",
+							"runtime_config": "runtime-config-1-manifest",
+						},
 					},
-					map[interface{}]interface{}{
-						"name":           "runtime-config-2",
-						"runtime_config": "runtime-config-2-manifest",
+					{
+						File: "runtime-config-2.yml",
+						Name: "runtime-config-2",
+						Metadata: map[interface{}]interface{}{
+							"name":           "runtime-config-2",
+							"runtime_config": "runtime-config-2-manifest",
+						},
 					},
 				}, nil
 			case "/path/to/other/runtime-configs/directory":
-				return []interface{}{
-					map[interface{}]interface{}{
-						"name":           "runtime-config-3",
-						"runtime_config": "runtime-config-3-manifest",
+				return []builder.Part{
+					{
+						File: "runtime-config-3.yml",
+						Name: "runtime-config-3",
+						Metadata: map[interface{}]interface{}{
+							"name":           "runtime-config-3",
+							"runtime_config": "runtime-config-3-manifest",
+						},
 					},
 				}, nil
 			default:
-				return []interface{}{}, fmt.Errorf("could not read runtime configs directory %q", path)
+				return []builder.Part{}, fmt.Errorf("could not read runtime configs directory %q", path)
 			}
 		}
-		formDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
+		formDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
 			case "/path/to/forms/directory":
-				return []interface{}{
-					map[interface{}]interface{}{
-						"some-key-1": "some-value-1",
+				return []builder.Part{
+					{
+						File: "form-1.yml",
+						Name: "form-1",
+						Metadata: map[interface{}]interface{}{
+							"some-key-1": "some-value-1",
+						},
 					},
-					map[interface{}]interface{}{
-						"some-key-2": "some-value-2",
+					{
+						File: "form-2.yml",
+						Name: "form-2",
+						Metadata: map[interface{}]interface{}{
+							"some-key-2": "some-value-2",
+						},
 					},
 				}, nil
 			default:
-				return []interface{}{}, fmt.Errorf("could not read forms directory %q", path)
+				return []builder.Part{}, fmt.Errorf("could not read forms directory %q", path)
 			}
 		}
 
-		instanceGroupDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
+		instanceGroupDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
 			case "/path/to/instance-groups/directory":
-				return []interface{}{
-					map[interface{}]interface{}{
-						"name": "some-instance-group-1",
-						"templates": []interface{}{
-							"some-job-1",
+				return []builder.Part{
+					{
+						File: "some-instance-group-1.yml",
+						Name: "some-instance-group-1",
+						Metadata: map[interface{}]interface{}{
+							"name": "some-instance-group-1",
+							"templates": []interface{}{
+								"some-job-1.yml",
+							},
 						},
 					},
-					map[interface{}]interface{}{
-						"name": "some-instance-group-2",
-						"templates": []interface{}{
-							"some-job-2",
+					{
+						File: "some-instance-group-2.yml",
+						Name: "some-instance-group-2",
+						Metadata: map[interface{}]interface{}{
+							"name": "some-instance-group-2",
+							"templates": []interface{}{
+								"some-job-2.yml",
+							},
 						},
 					},
 				}, nil
 			default:
-				return []interface{}{}, fmt.Errorf("could not read instance groups directory %q", path)
+				return []builder.Part{}, fmt.Errorf("could not read instance groups directory %q", path)
 			}
 		}
 
-		jobsDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
+		jobsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
 			case "/path/to/jobs/directory":
-				return []interface{}{
-						map[interface{}]interface{}{
-							"name":    "some-job-1",
-							"release": "some-release-1",
-						}, map[interface{}]interface{}{
-							"name":    "some-job-2",
-							"release": "some-release-2",
+				return []builder.Part{
+						{
+							File: "some-job-1.yml",
+							Name: "some-job-1",
+							Metadata: map[interface{}]interface{}{
+								"name":    "some-job-1",
+								"release": "some-release-1",
+							},
+						},
+						{
+							File: "some-job-2.yml",
+							Name: "some-job-2",
+							Metadata: map[interface{}]interface{}{
+								"name":    "some-job-2",
+								"release": "some-release-2",
+							},
 						},
 					},
 					nil
 			default:
-				return []interface{}{}, fmt.Errorf("could not read instance groups directory %q", path)
+				return []builder.Part{}, fmt.Errorf("could not read instance groups directory %q", path)
 			}
 		}
 
-		variablesDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
+		variablesDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
 			case "/path/to/variables/directory":
-				return []interface{}{
-					map[interface{}]interface{}{
-						"name": "variable-1",
-						"type": "certificate",
+				return []builder.Part{
+					{
+						File: "variable-1.yml",
+						Name: "variable-1",
+						Metadata: map[interface{}]interface{}{
+							"name": "variable-1",
+							"type": "certificate",
+						},
 					},
-					map[interface{}]interface{}{
-						"name": "variable-2",
-						"type": "user",
+					{
+						File: "variable-2.yml",
+						Name: "variable-2",
+						Metadata: map[interface{}]interface{}{
+							"name": "variable-2",
+							"type": "user",
+						},
 					},
 				}, nil
 			case "/path/to/other/variables/directory":
-				return []interface{}{
-					map[interface{}]interface{}{
-						"name": "variable-3",
-						"type": "password",
+				return []builder.Part{
+					{
+						File: "variable-3.yml",
+						Name: "variable-3",
+						Metadata: map[interface{}]interface{}{
+							"name": "variable-3",
+							"type": "password",
+						},
 					},
 				}, nil
 			default:
-				return []interface{}{}, fmt.Errorf("could not read variables directory %q", path)
+				return []builder.Part{}, fmt.Errorf("could not read variables directory %q", path)
 			}
 		}
 		stemcellManifestReader.ReadReturns(builder.StemcellManifest{
@@ -214,30 +263,46 @@ var _ = Describe("MetadataBuilder", func() {
 			Expect(version).To(Equal("1.2.3"))
 
 			Expect(generatedMetadata.Name).To(Equal("cool-product"))
-			Expect(generatedMetadata.FormTypes).To(Equal([]interface{}{
-				map[interface{}]interface{}{
-					"some-key-1": "some-value-1",
+			Expect(generatedMetadata.FormTypes).To(Equal([]builder.Part{
+				{
+					File: "form-1.yml",
+					Name: "form-1",
+					Metadata: map[interface{}]interface{}{
+						"some-key-1": "some-value-1",
+					},
 				},
-				map[interface{}]interface{}{
-					"some-key-2": "some-value-2",
+				{
+					File: "form-2.yml",
+					Name: "form-2",
+					Metadata: map[interface{}]interface{}{
+						"some-key-2": "some-value-2",
+					},
 				},
 			}))
-			Expect(generatedMetadata.JobTypes).To(Equal([]interface{}{
-				map[interface{}]interface{}{
-					"name": "some-instance-group-1",
-					"templates": []interface{}{
-						map[interface{}]interface{}{
-							"name":    "some-job-1",
-							"release": "some-release-1",
+			Expect(generatedMetadata.JobTypes).To(Equal([]builder.Part{
+				{
+					File: "some-instance-group-1.yml",
+					Name: "some-instance-group-1",
+					Metadata: map[interface{}]interface{}{
+						"name": "some-instance-group-1",
+						"templates": []interface{}{
+							map[interface{}]interface{}{
+								"name":    "some-job-1",
+								"release": "some-release-1",
+							},
 						},
 					},
 				},
-				map[interface{}]interface{}{
-					"name": "some-instance-group-2",
-					"templates": []interface{}{
-						map[interface{}]interface{}{
-							"name":    "some-job-2",
-							"release": "some-release-2",
+				{
+					File: "some-instance-group-2.yml",
+					Name: "some-instance-group-2",
+					Metadata: map[interface{}]interface{}{
+						"name": "some-instance-group-2",
+						"templates": []interface{}{
+							map[interface{}]interface{}{
+								"name":    "some-job-2",
+								"release": "some-release-2",
+							},
 						},
 					},
 				},
@@ -254,33 +319,56 @@ var _ = Describe("MetadataBuilder", func() {
 					File:    "release-2.tgz",
 				},
 			}))
-			Expect(generatedMetadata.RuntimeConfigs).To(Equal([]interface{}{
-				map[interface{}]interface{}{
-					"name":           "runtime-config-1",
-					"runtime_config": "runtime-config-1-manifest",
+			Expect(generatedMetadata.RuntimeConfigs).To(Equal([]builder.Part{
+				{
+					File: "runtime-config-1.yml",
+					Name: "runtime-config-1",
+					Metadata: map[interface{}]interface{}{
+						"name":           "runtime-config-1",
+						"runtime_config": "runtime-config-1-manifest",
+					},
 				},
-				map[interface{}]interface{}{
-					"name":           "runtime-config-2",
-					"runtime_config": "runtime-config-2-manifest",
+				{
+					File: "runtime-config-2.yml",
+					Name: "runtime-config-2",
+					Metadata: map[interface{}]interface{}{
+						"name":           "runtime-config-2",
+						"runtime_config": "runtime-config-2-manifest",
+					},
 				},
-				map[interface{}]interface{}{
-					"name":           "runtime-config-3",
-					"runtime_config": "runtime-config-3-manifest",
+				{
+					File: "runtime-config-3.yml",
+					Name: "runtime-config-3",
+					Metadata: map[interface{}]interface{}{
+						"name":           "runtime-config-3",
+						"runtime_config": "runtime-config-3-manifest",
+					},
 				},
-			},
-			))
-			Expect(generatedMetadata.Variables).To(Equal([]interface{}{
-				map[interface{}]interface{}{
-					"name": "variable-1",
-					"type": "certificate",
+			}))
+			Expect(generatedMetadata.Variables).To(Equal([]builder.Part{
+				{
+					File: "variable-1.yml",
+					Name: "variable-1",
+					Metadata: map[interface{}]interface{}{
+						"name": "variable-1",
+						"type": "certificate",
+					},
 				},
-				map[interface{}]interface{}{
-					"name": "variable-2",
-					"type": "user",
+				{
+					File: "variable-2.yml",
+					Name: "variable-2",
+					Metadata: map[interface{}]interface{}{
+						"name": "variable-2",
+						"type": "user",
+					},
 				},
-				map[interface{}]interface{}{
-					"name": "variable-3",
-					"type": "password",
+				{
+					File: "variable-3.yml",
+					Name: "variable-3",
+					Metadata: map[interface{}]interface{}{
+						"name": "variable-3",
+						"type": "password",
+					},
 				},
 			}))
 			Expect(generatedMetadata.StemcellCriteria).To(Equal(builder.StemcellCriteria{
@@ -327,7 +415,7 @@ var _ = Describe("MetadataBuilder", func() {
 
 			Context("when the form directory cannot be read", func() {
 				It("returns an error", func() {
-					formDirectoryReader.ReadReturns([]interface{}{}, errors.New("some form error"))
+					formDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some form error"))
 
 					_, err := tileBuilder.Build(builder.BuildInput{
 						FormDirectories: []string{"/path/to/missing/form"},
@@ -338,7 +426,7 @@ var _ = Describe("MetadataBuilder", func() {
 
 			Context("when the instance group directory cannot be read", func() {
 				It("returns an error", func() {
-					instanceGroupDirectoryReader.ReadReturns([]interface{}{}, errors.New("some instance group error"))
+					instanceGroupDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some instance group error"))
 
 					_, err := tileBuilder.Build(builder.BuildInput{
 						InstanceGroupDirectories: []string{"/path/to/missing/instance-groups"},
@@ -349,7 +437,7 @@ var _ = Describe("MetadataBuilder", func() {
 
 			Context("when the job directory cannot be read", func() {
 				It("returns an error", func() {
-					jobsDirectoryReader.ReadReturns([]interface{}{}, errors.New("some job error"))
+					jobsDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some job error"))
 
 					_, err := tileBuilder.Build(builder.BuildInput{
 						JobDirectories: []string{"/path/to/missing/jobs"},
@@ -360,25 +448,33 @@ var _ = Describe("MetadataBuilder", func() {
 
 			Context("when an instance group references a job that cannot be found", func() {
 				BeforeEach(func() {
-					instanceGroupDirectoryReader.ReadStub = func(path string) ([]interface{}, error) {
+					instanceGroupDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 						switch path {
 						case "/path/to/instance-groups/directory":
-							return []interface{}{
-								map[interface{}]interface{}{
-									"name": "some-instance-group-1",
-									"templates": []interface{}{
-										"some-missing-job",
+							return []builder.Part{
+								{
+									File: "some-instance-group-1.yml",
+									Name: "some-instance-group-1",
+									Metadata: map[interface{}]interface{}{
+										"name": "some-instance-group-1",
+										"templates": []interface{}{
+											"some-missing-job",
+										},
 									},
 								},
-								map[interface{}]interface{}{
-									"name": "some-instance-group-2",
-									"templates": []interface{}{
-										"some-job-2",
+								{
+									File: "some-instance-group-2.yml",
+									Name: "some-instance-group-2",
+									Metadata: map[interface{}]interface{}{
+										"name": "some-instance-group-2",
+										"templates": []interface{}{
+											"some-job-2",
+										},
 									},
 								},
 							}, nil
 						default:
-							return []interface{}{}, fmt.Errorf("could not read instance groups directory %q", path)
+							return []builder.Part{}, fmt.Errorf("could not read instance groups directory %q", path)
 						}
 					}
 				})
@@ -393,7 +489,7 @@ var _ = Describe("MetadataBuilder", func() {
 
 			Context("when the runtime configs directory cannot be read", func() {
 				It("returns an error", func() {
-					runtimeConfigsDirectoryReader.ReadReturns([]interface{}{}, errors.New("some error"))
+					runtimeConfigsDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some error"))
 
 					_, err := tileBuilder.Build(builder.BuildInput{
 						RuntimeConfigDirectories: []string{"/path/to/missing/runtime-configs"},
@@ -404,7 +500,7 @@ var _ = Describe("MetadataBuilder", func() {
 
 			Context("when the variables directory cannot be read", func() {
 				It("returns an error", func() {
-					variablesDirectoryReader.ReadReturns([]interface{}{}, errors.New("some error"))
+					variablesDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some error"))
 
 					_, err := tileBuilder.Build(builder.BuildInput{
 						VariableDirectories: []string{"/path/to/missing/variables"},
