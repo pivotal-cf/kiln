@@ -118,7 +118,6 @@ func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, var
 }
 
 func (r MetadataPartsDirectoryReader) orderWithOrderFile(path string, parts []Part) ([]Part, error) {
-
 	orderPath := filepath.Join(path, "_order.yml")
 	f, err := r.filesystem.Open(orderPath)
 	if err != nil {
