@@ -87,22 +87,16 @@ func (w TileWriter) Write(productName string, generatedMetadataContents []byte, 
 		return err
 	}
 
-	if len(config.ReleaseDirectories) > 0 {
-		for _, releasesDirectory := range config.ReleaseDirectories {
-			err = w.addReleaseTarballs(releasesDirectory, config.StubReleases, config.OutputFile)
-			if err != nil {
-				w.removeOutputFile(config.OutputFile)
-				return err
-			}
-		}
+	err = w.addReleases(config.ReleaseDirectories, config.StubReleases, config.OutputFile)
+	if err != nil {
+		w.removeOutputFile(config.OutputFile)
+		return err
 	}
 
-	for _, embedPath := range config.EmbedPaths {
-		err = w.addEmbeddedPath(embedPath, config.OutputFile)
-		if err != nil {
-			w.removeOutputFile(config.OutputFile)
-			return err
-		}
+	err = w.addEmbeddedPaths(config.EmbedPaths, config.OutputFile)
+	if err != nil {
+		w.removeOutputFile(config.OutputFile)
+		return err
 	}
 
 	err = w.zipper.Close()
@@ -118,6 +112,17 @@ func (w TileWriter) Write(productName string, generatedMetadataContents []byte, 
 	}
 
 	w.logger.Printf("Calculated md5 sum: %s", md5Sum)
+
+	return nil
+}
+
+func (w TileWriter) addReleases(releasesDirs []string, stubReleases bool, outputFile string) error {
+	for _, releasesDirectory := range releasesDirs {
+		err := w.addReleaseTarballs(releasesDirectory, stubReleases, outputFile)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -148,6 +153,17 @@ func (w TileWriter) addReleaseTarballs(releasesDir string, stubReleases bool, ou
 
 		return w.addToZipper(filepath.Join("releases", filepath.Base(filePath)), file, outputFile)
 	})
+}
+
+func (w TileWriter) addEmbeddedPaths(embedPaths []string, outputFile string) error {
+	for _, embedPath := range embedPaths {
+		err := w.addEmbeddedPath(embedPath, outputFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (w TileWriter) addEmbeddedPath(pathToEmbed, outputFile string) error {

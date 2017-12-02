@@ -1,10 +1,16 @@
 #!/bin/bash -eu
 
+absolute_path() {
+  (cd $1 && pwd)
+}
+
+scripts_path=$(absolute_path `dirname $0`)
+
 function main() {
   local cwd
   cwd="${1}"
 
-  kiln bake \
+  go run ${scripts_path}/../main.go bake \
     --embed "${cwd}/extra" \
     --forms-directory "${cwd}/forms" \
     --icon "${cwd}/icon.png" \

@@ -238,6 +238,8 @@ var _ = Describe("MetadataBuilder", func() {
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
 				"icon_image":                "unused-icon-image-IGNORE-ME",
+				"form_types":                "unused-form-types-IGNORE-ME",
+				"job_types":                 "unused-job-types-IGNORE-ME",
 			},
 				nil,
 			)
@@ -573,7 +575,7 @@ var _ = Describe("MetadataBuilder", func() {
 					_, err := tileBuilder.Build(builder.BuildInput{
 						MetadataPath: "metadata.yml",
 					})
-					Expect(err).To(MatchError(`runtime_config section must be defined using --runtime-configs-directory flag, not in "metadata.yml"`))
+					Expect(err).To(MatchError("runtime_config section must be defined using --runtime-configs-directory flag"))
 				})
 			})
 
@@ -589,7 +591,7 @@ var _ = Describe("MetadataBuilder", func() {
 					_, err := tileBuilder.Build(builder.BuildInput{
 						MetadataPath: "metadata.yml",
 					})
-					Expect(err).To(MatchError(`variables section must be defined using --variables-directory flag, not in "metadata.yml"`))
+					Expect(err).To(MatchError("variables section must be defined using --variables-directory flag"))
 				})
 			})
 		})

@@ -40,20 +40,20 @@ func (r StemcellManifestReader) Read(stemcellTarball string) (StemcellManifest, 
 	defer gr.Close()
 
 	tr := tar.NewReader(gr)
-	header, err := tr.Next()
-	for err == nil {
+
+	for {
+		header, err := tr.Next()
+		if err != nil {
+			if err == io.EOF {
+				return StemcellManifest{}, fmt.Errorf("could not find stemcell.MF in %q", stemcellTarball)
+			}
+
+			return StemcellManifest{}, fmt.Errorf("error while reading %q: %s", stemcellTarball, err)
+		}
+
 		if filepath.Base(header.Name) == "stemcell.MF" {
 			break
 		}
-
-		header, err = tr.Next()
-	}
-	if err != nil {
-		if err == io.EOF {
-			return StemcellManifest{}, fmt.Errorf("could not find stemcell.MF in %q", stemcellTarball)
-		}
-
-		return StemcellManifest{}, fmt.Errorf("error while reading %q: %s", stemcellTarball, err)
 	}
 
 	var stemcellManifest StemcellManifest

@@ -40,20 +40,20 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (ReleaseManifest, err
 	defer gr.Close()
 
 	tr := tar.NewReader(gr)
-	header, err := tr.Next()
-	for err == nil {
+
+	for {
+		header, err := tr.Next()
+		if err != nil {
+			if err == io.EOF {
+				return ReleaseManifest{}, fmt.Errorf("could not find release.MF in %q", releaseTarball)
+			}
+
+			return ReleaseManifest{}, fmt.Errorf("error while reading %q: %s", releaseTarball, err)
+		}
+
 		if filepath.Base(header.Name) == "release.MF" {
 			break
 		}
-
-		header, err = tr.Next()
-	}
-	if err != nil {
-		if err == io.EOF {
-			return ReleaseManifest{}, fmt.Errorf("could not find release.MF in %q", releaseTarball)
-		}
-
-		return ReleaseManifest{}, fmt.Errorf("error while reading %q: %s", releaseTarball, err)
 	}
 
 	var releaseManifest ReleaseManifest

@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 )
@@ -29,75 +30,6 @@ type BuildInput struct {
 	VariableDirectories      []string
 	IconPath                 string
 	Version                  string
-}
-
-type GeneratedMetadata struct {
-	Name             string
-	StemcellCriteria StemcellCriteria
-	Releases         []Release
-	IconImage        string
-
-	FormTypes      []Part
-	JobTypes       []Part
-	RuntimeConfigs []Part
-	Variables      []Part
-
-	Metadata Metadata
-}
-
-func (gm GeneratedMetadata) MarshalYAML() (interface{}, error) {
-	m := map[string]interface{}{}
-
-	m["name"] = gm.Name
-	m["stemcell_criteria"] = gm.StemcellCriteria
-	m["releases"] = gm.Releases
-	m["icon_image"] = gm.IconImage
-
-	if len(gm.FormTypes) > 0 {
-		m["form_types"] = gm.metadataOnly(gm.FormTypes)
-	}
-	if len(gm.JobTypes) > 0 {
-		m["job_types"] = gm.metadataOnly(gm.JobTypes)
-	}
-	if len(gm.RuntimeConfigs) > 0 {
-		m["runtime_configs"] = gm.metadataOnly(gm.RuntimeConfigs)
-	}
-	if len(gm.Variables) > 0 {
-		m["variables"] = gm.metadataOnly(gm.Variables)
-	}
-
-	for k, v := range gm.Metadata {
-		m[k] = v
-	}
-
-	return m, nil
-}
-
-func (gm GeneratedMetadata) metadataOnly(parts []Part) []interface{} {
-	metadata := []interface{}{}
-	for _, p := range parts {
-		metadata = append(metadata, p.Metadata)
-	}
-	return metadata
-}
-
-type Release struct {
-	Name    string
-	File    string
-	Version string
-}
-
-type StemcellCriteria struct {
-	Version     string
-	OS          string
-	RequiresCPI bool `yaml:"requires_cpi"`
-}
-
-type BoshRuntimeConfigFields map[string]interface{}
-
-type BoshRuntimeConfig struct {
-	Releases    []map[string]string     `yaml:",omitempty"`
-	OtherFields BoshRuntimeConfigFields `yaml:",inline"`
 }
 
 //go:generate counterfeiter -o ./fakes/release_manifest_reader.go --fake-name ReleaseManifestReader . releaseManifestReader
@@ -162,60 +94,6 @@ func NewMetadataBuilder(
 }
 
 func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
-	var releases []Release
-	for _, releaseTarball := range input.ReleaseTarballs {
-		releaseManifest, err := m.releaseManifestReader.Read(releaseTarball)
-		if err != nil {
-			return GeneratedMetadata{}, err
-		}
-
-		m.logger.Printf("Read manifest for release %s", releaseManifest.Name)
-
-		releases = append(releases, Release{
-			Name:    releaseManifest.Name,
-			Version: releaseManifest.Version,
-			File:    filepath.Base(releaseTarball),
-		})
-	}
-
-	var runtimeConfigs []Part
-	for _, runtimeConfigsDirectory := range input.RuntimeConfigDirectories {
-		r, err := m.runtimeConfigsDirectoryReader.Read(runtimeConfigsDirectory)
-		if err != nil {
-			return GeneratedMetadata{},
-				fmt.Errorf("error reading from runtime configs directory %q: %s", runtimeConfigsDirectory, err)
-		}
-
-		m.logger.Printf("Read runtime configs from %s", runtimeConfigsDirectory)
-
-		runtimeConfigs = append(runtimeConfigs, r...)
-	}
-
-	var variables []Part
-	for _, variablesDirectory := range input.VariableDirectories {
-		v, err := m.variablesDirectoryReader.Read(variablesDirectory)
-		if err != nil {
-			return GeneratedMetadata{},
-				fmt.Errorf("error reading from variables directory %q: %s", variablesDirectory, err)
-		}
-
-		m.logger.Printf("Read variables from %s", variablesDirectory)
-
-		variables = append(variables, v...)
-	}
-
-	stemcellManifest, err := m.stemcellManifestReader.Read(input.StemcellTarball)
-	if err != nil {
-		return GeneratedMetadata{}, err
-	}
-
-	m.logger.Printf("Read manifest for stemcell version %s", stemcellManifest.Version)
-
-	encodedIcon, err := m.iconEncoder.Encode(input.IconPath)
-	if err != nil {
-		return GeneratedMetadata{}, err
-	}
-
 	metadata, err := m.metadataReader.Read(input.MetadataPath, input.Version)
 	if err != nil {
 		return GeneratedMetadata{}, err
@@ -223,92 +101,49 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 
 	productName, ok := metadata["name"].(string)
 	if !ok {
-		return GeneratedMetadata{}, fmt.Errorf(`missing "name" in tile metadata file '%s'`, input.MetadataPath)
+		return GeneratedMetadata{}, errors.New("missing \"name\" in tile metadata file")
 	}
 
-	var formTypes []Part
-	if len(input.FormDirectories) > 0 {
-		for _, fd := range input.FormDirectories {
-			m.logger.Printf("Read forms from %s", fd)
-			formTypesInDir, err := m.formDirectoryReader.Read(fd)
-			if err != nil {
-				return GeneratedMetadata{},
-					fmt.Errorf("error reading from form directory %q: %s", fd, err)
-			}
-			formTypes = append(formTypes, formTypesInDir...)
-		}
-	} else {
-		if ft, ok := metadata["form_types"].([]interface{}); ok {
-			for _, f := range ft {
-				formTypes = append(formTypes, Part{Metadata: f})
-			}
-		}
+	releases, err := m.buildReleaseMetadata(input.ReleaseTarballs)
+	if err != nil {
+		return GeneratedMetadata{}, err
 	}
 
-	var jobTypes []Part
-	if len(input.InstanceGroupDirectories) > 0 {
-		for _, jd := range input.InstanceGroupDirectories {
-			m.logger.Printf("Read instance groups from %s", jd)
-			jobTypesInDir, err := m.instanceGroupDirectoryReader.Read(jd)
-			if err != nil {
-				return GeneratedMetadata{},
-					fmt.Errorf("error reading from instance group directory %q: %s", jd, err)
-			}
-			jobTypes = append(jobTypes, jobTypesInDir...)
-		}
-	} else {
-		if jt, ok := metadata["job_types"].([]interface{}); ok {
-			for _, j := range jt {
-				jobTypes = append(jobTypes, Part{Metadata: j})
-			}
-		}
+	runtimeConfigs, err := m.buildRuntimeConfigMetadata(input.RuntimeConfigDirectories, metadata)
+	if err != nil {
+		return GeneratedMetadata{}, err
 	}
 
-	jobs := map[interface{}]Part{}
-	for _, jobDir := range input.JobDirectories {
-		m.logger.Printf("Read jobs from %s", jobDir)
-		jobsInDir, err := m.jobsDirectoryReader.Read(jobDir)
-		if err != nil {
-			return GeneratedMetadata{},
-				fmt.Errorf("error reading from job directory %q: %s", jobDir, err)
-		}
-		for _, j := range jobsInDir {
-			jobs[j.File] = j
-		}
+	variables, err := m.buildVariables(input.VariableDirectories, metadata)
+	if err != nil {
+		return GeneratedMetadata{}, err
 	}
 
-	for _, jt := range jobTypes {
-		if templates, ok := jt.Metadata.(map[interface{}]interface{})["templates"]; ok {
-			for i, template := range templates.([]interface{}) {
-				switch template.(type) {
-				case string:
-					if job, ok := jobs[template]; ok {
-						templates.([]interface{})[i] = job.Metadata
-					} else {
-						return GeneratedMetadata{}, fmt.Errorf("instance group %q references non-existent job %q",
-							jt.Name,
-							template,
-						)
-					}
-				}
-			}
-		}
+	stemcellManifest, err := m.stemcellManifestReader.Read(input.StemcellTarball)
+	if err != nil {
+		return GeneratedMetadata{}, err
+	}
+	m.logger.Printf("Read manifest for stemcell version %s", stemcellManifest.Version)
+
+	encodedIcon, err := m.iconEncoder.Encode(input.IconPath)
+	if err != nil {
+		return GeneratedMetadata{}, err
+	}
+
+	formTypes, err := m.buildFormTypes(input.FormDirectories, metadata)
+	if err != nil {
+		return GeneratedMetadata{}, err
+	}
+
+	jobTypes, err := m.buildJobTypes(input.InstanceGroupDirectories, input.JobDirectories, metadata)
+	if err != nil {
+		return GeneratedMetadata{}, err
 	}
 
 	delete(metadata, "name")
 	delete(metadata, "icon_image")
 	delete(metadata, "form_types")
 	delete(metadata, "job_types")
-
-	if _, present := metadata["runtime_configs"]; present {
-		return GeneratedMetadata{}, fmt.Errorf(
-			"runtime_config section must be defined using --runtime-configs-directory flag, not in %q", input.MetadataPath)
-	}
-
-	if _, present := metadata["variables"]; present {
-		return GeneratedMetadata{}, fmt.Errorf(
-			"variables section must be defined using --variables-directory flag, not in %q", input.MetadataPath)
-	}
 
 	m.logger.Printf("Read metadata")
 
@@ -327,4 +162,146 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		},
 		Metadata: metadata,
 	}, nil
+}
+
+func (m MetadataBuilder) buildReleaseMetadata(releaseTarballs []string) ([]Release, error) {
+	var releases []Release
+
+	for _, releaseTarball := range releaseTarballs {
+		releaseManifest, err := m.releaseManifestReader.Read(releaseTarball)
+		if err != nil {
+			return nil, err
+		}
+
+		m.logger.Printf("Read manifest for release %s", releaseManifest.Name)
+
+		releases = append(releases, Release{
+			Name:    releaseManifest.Name,
+			Version: releaseManifest.Version,
+			File:    filepath.Base(releaseTarball),
+		})
+	}
+
+	return releases, nil
+}
+
+func (m MetadataBuilder) buildRuntimeConfigMetadata(dirs []string, metadata Metadata) ([]Part, error) {
+	if _, ok := metadata["runtime_configs"]; ok {
+		return nil, errors.New("runtime_config section must be defined using --runtime-configs-directory flag")
+	}
+
+	var runtimeConfigs []Part
+
+	for _, runtimeConfigsDirectory := range dirs {
+		r, err := m.runtimeConfigsDirectoryReader.Read(runtimeConfigsDirectory)
+		if err != nil {
+			return nil,
+				fmt.Errorf("error reading from runtime configs directory %q: %s", runtimeConfigsDirectory, err)
+		}
+
+		m.logger.Printf("Read runtime configs from %s", runtimeConfigsDirectory)
+
+		runtimeConfigs = append(runtimeConfigs, r...)
+	}
+
+	return runtimeConfigs, nil
+}
+
+func (m MetadataBuilder) buildVariables(vars []string, metadata Metadata) ([]Part, error) {
+	if _, ok := metadata["variables"]; ok {
+		return nil, errors.New("variables section must be defined using --variables-directory flag")
+	}
+
+	var variables []Part
+
+	for _, variablesDirectory := range vars {
+		v, err := m.variablesDirectoryReader.Read(variablesDirectory)
+		if err != nil {
+			return nil,
+				fmt.Errorf("error reading from variables directory %q: %s", variablesDirectory, err)
+		}
+
+		m.logger.Printf("Read variables from %s", variablesDirectory)
+
+		variables = append(variables, v...)
+	}
+
+	return variables, nil
+}
+
+func (m MetadataBuilder) buildFormTypes(dirs []string, metadata Metadata) ([]Part, error) {
+	var formTypes []Part
+
+	if len(dirs) > 0 {
+		for _, fd := range dirs {
+			m.logger.Printf("Read forms from %s", fd)
+			formTypesInDir, err := m.formDirectoryReader.Read(fd)
+			if err != nil {
+				return nil, fmt.Errorf("error reading from form directory %q: %s", fd, err)
+			}
+			formTypes = append(formTypes, formTypesInDir...)
+		}
+	} else {
+		if ft, ok := metadata["form_types"].([]interface{}); ok {
+			for _, f := range ft {
+				formTypes = append(formTypes, Part{Metadata: f})
+			}
+		}
+	}
+
+	return formTypes, nil
+}
+
+func (m MetadataBuilder) buildJobTypes(typeDirs, jobDirs []string, metadata Metadata) ([]Part, error) {
+	var jobTypes []Part
+
+	if len(typeDirs) > 0 {
+		for _, typeDir := range typeDirs {
+			m.logger.Printf("Read instance groups from %s", typeDir)
+			jobTypesInDir, err := m.instanceGroupDirectoryReader.Read(typeDir)
+			if err != nil {
+				return nil, fmt.Errorf("error reading from instance group directory %q: %s", typeDir, err)
+			}
+			jobTypes = append(jobTypes, jobTypesInDir...)
+		}
+	} else {
+		if jt, ok := metadata["job_types"].([]interface{}); ok {
+			for _, j := range jt {
+				jobTypes = append(jobTypes, Part{Metadata: j})
+			}
+		}
+	}
+
+	jobs := map[interface{}]Part{}
+
+	for _, jobDir := range jobDirs {
+		m.logger.Printf("Read jobs from %s", jobDir)
+		jobsInDir, err := m.jobsDirectoryReader.Read(jobDir)
+		if err != nil {
+			return nil, fmt.Errorf("error reading from job directory %q: %s", jobDir, err)
+		}
+		for _, j := range jobsInDir {
+			jobs[j.File] = j
+		}
+	}
+
+	for _, jt := range jobTypes {
+		if templates, ok := jt.Metadata.(map[interface{}]interface{})["templates"]; ok {
+			for i, template := range templates.([]interface{}) {
+				switch template.(type) {
+				case string:
+					if job, ok := jobs[template]; ok {
+						templates.([]interface{})[i] = job.Metadata
+					} else {
+						return nil, fmt.Errorf("instance group %q references non-existent job %q",
+							jt.Name,
+							template,
+						)
+					}
+				}
+			}
+		}
+	}
+
+	return jobTypes, nil
 }

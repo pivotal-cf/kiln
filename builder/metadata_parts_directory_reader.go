@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	pathPkg "path"
+	pathpkg "path"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -39,7 +39,7 @@ func (r MetadataPartsDirectoryReader) Read(path string) ([]Part, error) {
 	}
 
 	if r.orderKey != "" {
-		return r.orderWithOrderFile(path, parts)
+		return r.orderWithOrderFromFile(path, parts)
 	}
 
 	return r.orderAlphabeticallyByName(path, parts)
@@ -53,7 +53,7 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string
 			return err
 		}
 
-		if info.IsDir() || filepath.Ext(filePath) != ".yml" || pathPkg.Base(filePath) == "_order.yml" {
+		if info.IsDir() || filepath.Ext(filePath) != ".yml" || pathpkg.Base(filePath) == "_order.yml" {
 			return nil
 		}
 
@@ -79,7 +79,7 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string
 			return fmt.Errorf("not a %s file: %q", r.topLevelKey, filePath)
 		}
 
-		parts, err = r.readMetadataIntoParts(pathPkg.Base(filePath), vars, parts)
+		parts, err = r.readMetadataIntoParts(pathpkg.Base(filePath), vars, parts)
 		if err != nil {
 			return fmt.Errorf("file '%s' with top-level key '%s' has an invalid format: %s", filePath, r.topLevelKey, err)
 		}
@@ -117,7 +117,7 @@ func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, var
 	return parts, nil
 }
 
-func (r MetadataPartsDirectoryReader) orderWithOrderFile(path string, parts []Part) ([]Part, error) {
+func (r MetadataPartsDirectoryReader) orderWithOrderFromFile(path string, parts []Part) ([]Part, error) {
 	orderPath := filepath.Join(path, "_order.yml")
 	f, err := r.filesystem.Open(orderPath)
 	if err != nil {
