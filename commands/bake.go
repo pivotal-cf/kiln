@@ -56,12 +56,6 @@ type logger interface {
 	Println(v ...interface{})
 }
 
-//go:generate counterfeiter -o ./fakes/tile_maker.go --fake-name TileMaker . tileMaker
-
-type tileMaker interface {
-	Make(BakeConfig) error
-}
-
 func NewBake(metadataBuilder metadataBuilder, tileWriter tileWriter, logger logger) Bake {
 	return Bake{
 		metadataBuilder: metadataBuilder,
