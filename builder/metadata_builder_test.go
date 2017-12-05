@@ -41,60 +41,6 @@ var _ = Describe("MetadataBuilder", func() {
 		stemcellManifestReader = &fakes.StemcellManifestReader{}
 		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 
-		iconEncoder.EncodeReturns("base64-encoded-icon-path", nil)
-
-		releaseManifestReader.ReadStub = func(path string) (builder.ReleaseManifest, error) {
-			switch path {
-			case "/path/to/release-1.tgz":
-				return builder.ReleaseManifest{
-					Name:    "release-1",
-					Version: "version-1",
-				}, nil
-			case "/path/to/release-2.tgz":
-				return builder.ReleaseManifest{
-					Name:    "release-2",
-					Version: "version-2",
-				}, nil
-			default:
-				return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
-			}
-		}
-		runtimeConfigsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
-			switch path {
-			case "/path/to/runtime-configs/directory":
-				return []builder.Part{
-					{
-						File: "runtime-config-1.yml",
-						Name: "runtime-config-1",
-						Metadata: map[interface{}]interface{}{
-							"name":           "runtime-config-1",
-							"runtime_config": "runtime-config-1-manifest",
-						},
-					},
-					{
-						File: "runtime-config-2.yml",
-						Name: "runtime-config-2",
-						Metadata: map[interface{}]interface{}{
-							"name":           "runtime-config-2",
-							"runtime_config": "runtime-config-2-manifest",
-						},
-					},
-				}, nil
-			case "/path/to/other/runtime-configs/directory":
-				return []builder.Part{
-					{
-						File: "runtime-config-3.yml",
-						Name: "runtime-config-3",
-						Metadata: map[interface{}]interface{}{
-							"name":           "runtime-config-3",
-							"runtime_config": "runtime-config-3-manifest",
-						},
-					},
-				}, nil
-			default:
-				return []builder.Part{}, fmt.Errorf("could not read runtime configs directory %q", path)
-			}
-		}
 		formDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
 			case "/path/to/forms/directory":
@@ -118,6 +64,8 @@ var _ = Describe("MetadataBuilder", func() {
 				return []builder.Part{}, fmt.Errorf("could not read forms directory %q", path)
 			}
 		}
+
+		iconEncoder.EncodeReturns("base64-encoded-icon-path", nil)
 
 		instanceGroupDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
@@ -200,6 +148,65 @@ var _ = Describe("MetadataBuilder", func() {
 			}
 		}
 
+		releaseManifestReader.ReadStub = func(path string) (builder.ReleaseManifest, error) {
+			switch path {
+			case "/path/to/release-1.tgz":
+				return builder.ReleaseManifest{
+					Name:    "release-1",
+					Version: "version-1",
+				}, nil
+			case "/path/to/release-2.tgz":
+				return builder.ReleaseManifest{
+					Name:    "release-2",
+					Version: "version-2",
+				}, nil
+			default:
+				return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
+			}
+		}
+
+		runtimeConfigsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
+			switch path {
+			case "/path/to/runtime-configs/directory":
+				return []builder.Part{
+					{
+						File: "runtime-config-1.yml",
+						Name: "runtime-config-1",
+						Metadata: map[interface{}]interface{}{
+							"name":           "runtime-config-1",
+							"runtime_config": "runtime-config-1-manifest",
+						},
+					},
+					{
+						File: "runtime-config-2.yml",
+						Name: "runtime-config-2",
+						Metadata: map[interface{}]interface{}{
+							"name":           "runtime-config-2",
+							"runtime_config": "runtime-config-2-manifest",
+						},
+					},
+				}, nil
+			case "/path/to/other/runtime-configs/directory":
+				return []builder.Part{
+					{
+						File: "runtime-config-3.yml",
+						Name: "runtime-config-3",
+						Metadata: map[interface{}]interface{}{
+							"name":           "runtime-config-3",
+							"runtime_config": "runtime-config-3-manifest",
+						},
+					},
+				}, nil
+			default:
+				return []builder.Part{}, fmt.Errorf("could not read runtime configs directory %q", path)
+			}
+		}
+
+		stemcellManifestReader.ReadReturns(builder.StemcellManifest{
+			Version:         "2332",
+			OperatingSystem: "ubuntu-trusty",
+		}, nil)
+
 		variablesDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
 			case "/path/to/variables/directory":
@@ -236,12 +243,6 @@ var _ = Describe("MetadataBuilder", func() {
 				return []builder.Part{}, fmt.Errorf("could not read variables directory %q", path)
 			}
 		}
-		stemcellManifestReader.ReadReturns(builder.StemcellManifest{
-			Version:         "2332",
-			OperatingSystem: "ubuntu-trusty",
-		},
-			nil,
-		)
 
 		tileBuilder = builder.NewMetadataBuilder(
 			formDirectoryReader,
