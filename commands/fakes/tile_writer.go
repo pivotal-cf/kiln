@@ -4,16 +4,16 @@ package fakes
 import (
 	"sync"
 
-	"github.com/pivotal-cf/kiln/commands"
+	"github.com/pivotal-cf/kiln/builder"
 )
 
 type TileWriter struct {
-	WriteStub        func(productName string, generatedMetadataContents []byte, config commands.BakeConfig) error
+	WriteStub        func(productName string, generatedMetadataContents []byte, input builder.WriteInput) error
 	writeMutex       sync.RWMutex
 	writeArgsForCall []struct {
 		productName               string
 		generatedMetadataContents []byte
-		config                    commands.BakeConfig
+		input                     builder.WriteInput
 	}
 	writeReturns struct {
 		result1 error
@@ -25,7 +25,7 @@ type TileWriter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TileWriter) Write(productName string, generatedMetadataContents []byte, config commands.BakeConfig) error {
+func (fake *TileWriter) Write(productName string, generatedMetadataContents []byte, input builder.WriteInput) error {
 	var generatedMetadataContentsCopy []byte
 	if generatedMetadataContents != nil {
 		generatedMetadataContentsCopy = make([]byte, len(generatedMetadataContents))
@@ -36,12 +36,12 @@ func (fake *TileWriter) Write(productName string, generatedMetadataContents []by
 	fake.writeArgsForCall = append(fake.writeArgsForCall, struct {
 		productName               string
 		generatedMetadataContents []byte
-		config                    commands.BakeConfig
-	}{productName, generatedMetadataContentsCopy, config})
-	fake.recordInvocation("Write", []interface{}{productName, generatedMetadataContentsCopy, config})
+		input                     builder.WriteInput
+	}{productName, generatedMetadataContentsCopy, input})
+	fake.recordInvocation("Write", []interface{}{productName, generatedMetadataContentsCopy, input})
 	fake.writeMutex.Unlock()
 	if fake.WriteStub != nil {
-		return fake.WriteStub(productName, generatedMetadataContents, config)
+		return fake.WriteStub(productName, generatedMetadataContents, input)
 	}
 	if specificReturn {
 		return ret.result1
@@ -55,10 +55,10 @@ func (fake *TileWriter) WriteCallCount() int {
 	return len(fake.writeArgsForCall)
 }
 
-func (fake *TileWriter) WriteArgsForCall(i int) (string, []byte, commands.BakeConfig) {
+func (fake *TileWriter) WriteArgsForCall(i int) (string, []byte, builder.WriteInput) {
 	fake.writeMutex.RLock()
 	defer fake.writeMutex.RUnlock()
-	return fake.writeArgsForCall[i].productName, fake.writeArgsForCall[i].generatedMetadataContents, fake.writeArgsForCall[i].config
+	return fake.writeArgsForCall[i].productName, fake.writeArgsForCall[i].generatedMetadataContents, fake.writeArgsForCall[i].input
 }
 
 func (fake *TileWriter) WriteReturns(result1 error) {

@@ -9,7 +9,6 @@ import (
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/helper"
-	"github.com/pivotal-cf/kiln/kiln"
 )
 
 func main() {
@@ -54,11 +53,10 @@ func main() {
 	)
 	md5SumCalculator := helper.NewFileMD5SumCalculator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, logger, md5SumCalculator)
-	tileMaker := kiln.NewTileMaker(metadataBuilder, tileWriter, logger)
 
 	commandSet := jhandacommands.Set{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
-	commandSet["bake"] = commands.NewBake(tileMaker)
+	commandSet["bake"] = commands.NewBake(metadataBuilder, tileWriter, logger)
 
 	var command string
 	if len(args) > 0 {

@@ -1,318 +1,248 @@
 package commands_test
 
 import (
+	"io/ioutil"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	jhandacommands "github.com/pivotal-cf/jhanda/commands"
+	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 )
 
 var _ = Describe("bake", func() {
 	var (
-		tileMaker *fakes.TileMaker
-		bake      commands.Bake
+		fakeMetadataBuilder *fakes.MetadataBuilder
+		fakeTileWriter      *fakes.TileWriter
+		fakeLogger          *fakes.Logger
+
+		someReleasesDirectory  string
+		otherReleasesDirectory string
+		tarballRelease         string
+		otherTarballRelease    string
+		err                    error
+
+		bake commands.Bake
 	)
 
 	BeforeEach(func() {
-		tileMaker = &fakes.TileMaker{}
-		bake = commands.NewBake(tileMaker)
+		someReleasesDirectory, err = ioutil.TempDir("", "")
+		Expect(err).NotTo(HaveOccurred())
+
+		otherReleasesDirectory, err = ioutil.TempDir("", "")
+		Expect(err).NotTo(HaveOccurred())
+
+		tarballRelease = someReleasesDirectory + "/release1.tgz"
+		err = ioutil.WriteFile(tarballRelease, []byte(""), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		otherTarballRelease = otherReleasesDirectory + "/release2.tgz"
+		err = ioutil.WriteFile(otherTarballRelease, []byte(""), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		nonTarballRelease := someReleasesDirectory + "/some-broken-release"
+		err = ioutil.WriteFile(nonTarballRelease, []byte(""), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		fakeMetadataBuilder = &fakes.MetadataBuilder{}
+		fakeTileWriter = &fakes.TileWriter{}
+		fakeLogger = &fakes.Logger{}
+
+		fakeMetadataBuilder.BuildReturns(builder.GeneratedMetadata{
+			IconImage: "some-icon-image",
+			Name:      "some-product-name",
+			Releases: []builder.Release{{
+				Name:    "some-release",
+				File:    "some-release-tarball",
+				Version: "1.2.3-build.4",
+			}},
+			StemcellCriteria: builder.StemcellCriteria{
+				Version:     "2.3.4",
+				OS:          "an-operating-system",
+				RequiresCPI: false,
+			},
+		}, nil)
+
+		bake = commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger)
 	})
 
 	Describe("Execute", func() {
-		It("builds the tile", func() {
+		It("builds the metadata", func() {
 			err := bake.Execute([]string{
+				"--forms-directory", "some-forms-directory",
 				"--icon", "some-icon-path",
+				"--instance-groups-directory", "some-instance-groups-directory",
+				"--jobs-directory", "some-jobs-directory",
 				"--metadata", "some-metadata",
-				"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-				"--releases-directory", "some-release-tarball-directory",
+				"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+				"--releases-directory", otherReleasesDirectory,
+				"--releases-directory", someReleasesDirectory,
+				"--runtime-configs-directory", "some-other-runtime-configs-directory",
+				"--runtime-configs-directory", "some-runtime-configs-directory",
 				"--stemcell-tarball", "some-stemcell-tarball",
+				"--variables-directory", "some-other-variables-directory",
+				"--variables-directory", "some-variables-directory",
 				"--version", "1.2.3",
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(tileMaker.MakeCallCount()).To(Equal(1))
 
-			config := tileMaker.MakeArgsForCall(0)
-			Expect(config).To(Equal(commands.BakeConfig{
-				IconPath:           "some-icon-path",
-				Metadata:           "some-metadata",
-				OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
-				ReleaseDirectories: []string{"some-release-tarball-directory"},
-				StemcellTarball:    "some-stemcell-tarball",
-				Version:            "1.2.3",
+			Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
+
+			buildInput := fakeMetadataBuilder.BuildArgsForCall(0)
+			Expect(buildInput.FormDirectories).To(Equal([]string{"some-forms-directory"}))
+			Expect(buildInput.IconPath).To(Equal("some-icon-path"))
+			Expect(buildInput.InstanceGroupDirectories).To(Equal([]string{"some-instance-groups-directory"}))
+			Expect(buildInput.JobDirectories).To(Equal([]string{"some-jobs-directory"}))
+			Expect(buildInput.MetadataPath).To(Equal("some-metadata"))
+			Expect(buildInput.ReleaseTarballs).To(Equal([]string{otherTarballRelease, tarballRelease}))
+			Expect(buildInput.RuntimeConfigDirectories).To(Equal([]string{"some-other-runtime-configs-directory", "some-runtime-configs-directory"}))
+			Expect(buildInput.StemcellTarball).To(Equal("some-stemcell-tarball"))
+			Expect(buildInput.VariableDirectories).To(Equal([]string{"some-other-variables-directory", "some-variables-directory"}))
+			Expect(buildInput.Version).To(Equal("1.2.3"))
+		})
+
+		It("calls the tile writer", func() {
+			err := bake.Execute([]string{
+				"--embed", "some-embed-path",
+				"--forms-directory", "some-forms-directory",
+				"--icon", "some-icon-path",
+				"--instance-groups-directory", "some-instance-groups-directory",
+				"--jobs-directory", "some-jobs-directory",
+				"--metadata", "some-metadata",
+				"--migrations-directory", "some-migrations-directory",
+				"--migrations-directory", "some-other-migrations-directory",
+				"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
+				"--releases-directory", otherReleasesDirectory,
+				"--releases-directory", someReleasesDirectory,
+				"--runtime-configs-directory", "some-runtime-configs-directory",
+				"--stemcell-tarball", "some-stemcell-tarball",
+				"--variables-directory", "some-variables-directory",
+				"--version", "1.2.3",
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
+
+			productName, generatedMetadataContents, actualConfig := fakeTileWriter.WriteArgsForCall(0)
+			Expect(productName).To(Equal("some-product-name"))
+			Expect(generatedMetadataContents).To(MatchYAML(`
+icon_image: some-icon-image
+name: some-product-name
+releases:
+- name: some-release
+  file: some-release-tarball
+  version: 1.2.3-build.4
+stemcell_criteria:
+  version: 2.3.4
+  os: an-operating-system
+  requires_cpi: false`))
+			Expect(actualConfig).To(Equal(builder.WriteInput{
+				EmbedPaths:           []string{"some-embed-path"},
+				MigrationDirectories: []string{"some-migrations-directory", "some-other-migrations-directory"},
+				OutputFile:           "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
+				ReleaseDirectories:   []string{otherReleasesDirectory, someReleasesDirectory},
 			}))
 		})
 
-		Context("when there are multiple migrations directories", func() {
-			It("builds the tile", func() {
-				err := bake.Execute([]string{
-					"--icon", "some-icon-path",
-					"--metadata", "some-metadata",
-					"--migrations-directory", "some-migrations-directory",
-					"--migrations-directory", "some-other-migrations-directory",
-					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-					"--releases-directory", "some-release-tarball-directory",
-					"--stemcell-tarball", "some-stemcell-tarball",
-					"--version", "1.2.3",
-				})
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(tileMaker.MakeCallCount()).To(Equal(1))
-
-				config := tileMaker.MakeArgsForCall(0)
-				Expect(config).To(Equal(commands.BakeConfig{
-					IconPath:             "some-icon-path",
-					Metadata:             "some-metadata",
-					MigrationDirectories: []string{"some-migrations-directory", "some-other-migrations-directory"},
-					OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4",
-					ReleaseDirectories:   []string{"some-release-tarball-directory"},
-					StemcellTarball:      "some-stemcell-tarball",
-					Version:              "1.2.3",
-				}))
+		It("logs its step", func() {
+			err := bake.Execute([]string{
+				"--forms-directory", "some-forms-directory",
+				"--icon", "some-icon-path",
+				"--instance-groups-directory", "some-instance-groups-directory",
+				"--jobs-directory", "some-jobs-directory",
+				"--metadata", "some-metadata",
+				"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+				"--releases-directory", otherReleasesDirectory,
+				"--releases-directory", someReleasesDirectory,
+				"--runtime-configs-directory", "some-runtime-configs-directory",
+				"--stemcell-tarball", "some-stemcell-tarball",
+				"--variables-directory", "some-variables-directory",
+				"--version", "1.2.3",
 			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeLogger.PrintlnCallCount()).To(Equal(1))
+
+			logLines := fakeLogger.PrintlnArgsForCall(0)
+
+			Expect(logLines[0]).To(Equal("Marshaling metadata file..."))
 		})
 
-		Context("when there are multiple release directories", func() {
-			It("builds the tile", func() {
+		Context("when the optional flags are not specified", func() {
+			It("builds the metadata", func() {
 				err := bake.Execute([]string{
 					"--icon", "some-icon-path",
 					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-					"--releases-directory", "other-release-tarball-directory",
-					"--releases-directory", "some-release-tarball-directory",
+					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+					"--releases-directory", someReleasesDirectory,
 					"--stemcell-tarball", "some-stemcell-tarball",
 					"--version", "1.2.3",
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(tileMaker.MakeCallCount()).To(Equal(1))
 
-				config := tileMaker.MakeArgsForCall(0)
-				Expect(config).To(Equal(commands.BakeConfig{
-					IconPath:           "some-icon-path",
-					StemcellTarball:    "some-stemcell-tarball",
-					ReleaseDirectories: []string{"other-release-tarball-directory", "some-release-tarball-directory"},
-					Metadata:           "some-metadata",
-					Version:            "1.2.3",
-					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
-				}))
+				Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
+
+				buildInput := fakeMetadataBuilder.BuildArgsForCall(0)
+				Expect(buildInput.FormDirectories).To(BeEmpty())
+				Expect(buildInput.IconPath).To(Equal("some-icon-path"))
+				Expect(buildInput.InstanceGroupDirectories).To(BeEmpty())
+				Expect(buildInput.JobDirectories).To(BeEmpty())
+				Expect(buildInput.MetadataPath).To(Equal("some-metadata"))
+				Expect(buildInput.ReleaseTarballs).To(Equal([]string{tarballRelease}))
+				Expect(buildInput.RuntimeConfigDirectories).To(BeEmpty())
+				Expect(buildInput.StemcellTarball).To(Equal("some-stemcell-tarball"))
+				Expect(buildInput.VariableDirectories).To(BeEmpty())
+				Expect(buildInput.Version).To(Equal("1.2.3"))
 			})
-		})
 
-		Context("when there are multiple runtime-configs directories", func() {
-			It("builds the tile", func() {
+			It("calls the tile writer", func() {
 				err := bake.Execute([]string{
 					"--icon", "some-icon-path",
 					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-					"--releases-directory", "some-release-tarball-directory",
-					"--runtime-configs-directory", "some-other-runtime-configs-directory",
-					"--runtime-configs-directory", "some-runtime-configs-directory",
+					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
+					"--releases-directory", someReleasesDirectory,
 					"--stemcell-tarball", "some-stemcell-tarball",
 					"--version", "1.2.3",
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(tileMaker.MakeCallCount()).To(Equal(1))
 
-				config := tileMaker.MakeArgsForCall(0)
-				Expect(config).To(Equal(commands.BakeConfig{
-					IconPath:                 "some-icon-path",
-					Metadata:                 "some-metadata",
-					OutputFile:               "some-output-dir/cool-product-file-1.2.3-build.4",
-					ReleaseDirectories:       []string{"some-release-tarball-directory"},
-					RuntimeConfigDirectories: []string{"some-other-runtime-configs-directory", "some-runtime-configs-directory"},
-					StemcellTarball:          "some-stemcell-tarball",
-					Version:                  "1.2.3",
-				}))
-			})
-		})
+				Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
 
-		Context("when there are multiple variables directories", func() {
-			It("builds the tile", func() {
-				err := bake.Execute([]string{
-					"--icon", "some-icon-path",
-					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-					"--releases-directory", "some-release-tarball-directory",
-					"--stemcell-tarball", "some-stemcell-tarball",
-					"--variables-directory", "some-other-variables-directory",
-					"--variables-directory", "some-variables-directory",
-					"--version", "1.2.3",
-				})
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(tileMaker.MakeCallCount()).To(Equal(1))
-
-				config := tileMaker.MakeArgsForCall(0)
-				Expect(config).To(Equal(commands.BakeConfig{
-					IconPath:            "some-icon-path",
-					StemcellTarball:     "some-stemcell-tarball",
-					ReleaseDirectories:  []string{"some-release-tarball-directory"},
-					VariableDirectories: []string{"some-other-variables-directory", "some-variables-directory"},
-					Metadata:            "some-metadata",
-					Version:             "1.2.3",
-					OutputFile:          "some-output-dir/cool-product-file-1.2.3-build.4",
-				}))
-			})
-		})
-
-		Context("when files to embed are specified", func() {
-			It("builds the tile", func() {
-				err := bake.Execute([]string{
-					"--embed", "some-file-to-embed",
-					"--icon", "some-icon-path",
-					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-					"--releases-directory", "some-release-tarball-directory",
-					"--stemcell-tarball", "some-stemcell-tarball",
-					"--version", "1.2.3",
-				})
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(tileMaker.MakeCallCount()).To(Equal(1))
-
-				config := tileMaker.MakeArgsForCall(0)
-				Expect(config).To(Equal(commands.BakeConfig{
-					EmbedPaths:         []string{"some-file-to-embed"},
-					IconPath:           "some-icon-path",
-					Metadata:           "some-metadata",
-					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
-					ReleaseDirectories: []string{"some-release-tarball-directory"},
-					StemcellTarball:    "some-stemcell-tarball",
-					Version:            "1.2.3",
-				}))
-			})
-		})
-
-		Context("when the forms-directory flag is passed in", func() {
-			It("builds the tile", func() {
-				err := bake.Execute([]string{
-					"--forms-directory", "some-forms-directory",
-					"--icon", "some-icon-path",
-					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-					"--releases-directory", "some-release-tarball-directory",
-					"--stemcell-tarball", "some-stemcell-tarball",
-					"--version", "1.2.3",
-				})
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(tileMaker.MakeCallCount()).To(Equal(1))
-
-				config := tileMaker.MakeArgsForCall(0)
-				Expect(config).To(Equal(commands.BakeConfig{
-					FormDirectories:    []string{"some-forms-directory"},
-					IconPath:           "some-icon-path",
-					Metadata:           "some-metadata",
-					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4",
-					ReleaseDirectories: []string{"some-release-tarball-directory"},
-					StemcellTarball:    "some-stemcell-tarball",
-					Version:            "1.2.3",
-				}))
-			})
-		})
-
-		Context("when the instance-groups-directory flag is passed in", func() {
-			It("builds the tile", func() {
-				err := bake.Execute([]string{
-					"--instance-groups-directory", "some-instance-groups-directory",
-					"--icon", "some-icon-path",
-					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-					"--releases-directory", "some-release-tarball-directory",
-					"--stemcell-tarball", "some-stemcell-tarball",
-					"--version", "1.2.3",
-				})
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(tileMaker.MakeCallCount()).To(Equal(1))
-
-				config := tileMaker.MakeArgsForCall(0)
-				Expect(config).To(Equal(commands.BakeConfig{
-					InstanceGroupDirectories: []string{"some-instance-groups-directory"},
-					IconPath:                 "some-icon-path",
-					Metadata:                 "some-metadata",
-					OutputFile:               "some-output-dir/cool-product-file-1.2.3-build.4",
-					ReleaseDirectories:       []string{"some-release-tarball-directory"},
-					StemcellTarball:          "some-stemcell-tarball",
-					Version:                  "1.2.3",
-				}))
-			})
-		})
-
-		Context("when there are multiple jobs directories", func() {
-			It("builds the tile", func() {
-				err := bake.Execute([]string{
-					"--icon", "some-icon-path",
-					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-					"--releases-directory", "some-release-tarball-directory",
-					"--stemcell-tarball", "some-stemcell-tarball",
-					"--instance-groups-directory", "some-instance-groups-directory",
-					"--jobs-directory", "some-jobs-directory",
-					"--jobs-directory", "some-other-jobs-directory",
-					"--version", "1.2.3",
-				})
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(tileMaker.MakeCallCount()).To(Equal(1))
-
-				config := tileMaker.MakeArgsForCall(0)
-				Expect(config).To(Equal(commands.BakeConfig{
-					Metadata:                 "some-metadata",
-					ReleaseDirectories:       []string{"some-release-tarball-directory"},
-					StemcellTarball:          "some-stemcell-tarball",
-					InstanceGroupDirectories: []string{"some-instance-groups-directory"},
-					JobDirectories:           []string{"some-jobs-directory", "some-other-jobs-directory"},
-					IconPath:                 "some-icon-path",
-					Version:                  "1.2.3",
-					OutputFile:               "some-output-dir/cool-product-file-1.2.3-build.4",
+				productName, generatedMetadataContents, actualConfig := fakeTileWriter.WriteArgsForCall(0)
+				Expect(productName).To(Equal("some-product-name"))
+				Expect(generatedMetadataContents).To(MatchYAML(`
+icon_image: some-icon-image
+name: some-product-name
+releases:
+- name: some-release
+  file: some-release-tarball
+  version: 1.2.3-build.4
+stemcell_criteria:
+  version: 2.3.4
+  os: an-operating-system
+  requires_cpi: false`))
+				Expect(actualConfig).To(Equal(builder.WriteInput{
+					OutputFile:         "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
+					ReleaseDirectories: []string{someReleasesDirectory},
 				}))
 			})
 		})
 
 		Context("failure cases", func() {
-			Context("when the release-tarball flag is missing", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--version", "1.2.3",
-						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-						"--stub-releases",
-					})
-
-					Expect(err).To(MatchError("Please specify release tarballs directory with the --releases-directory parameter"))
-				})
-			})
-
-			Context("when the stemcell-tarball flag is missing", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--releases-directory", "some-release-tarball-directory",
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--version", "1.2.3",
-						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-						"--stub-releases",
-					})
-
-					Expect(err).To(MatchError("--stemcell-tarball is a required parameter"))
-				})
-			})
-
 			Context("when the icon flag is missing", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-						"--releases-directory", "some-release-tarball-directory",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
+						"--releases-directory", someReleasesDirectory,
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--stub-releases",
 						"--version", "1.2.3",
 					})
 
@@ -324,14 +254,41 @@ var _ = Describe("bake", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
-						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-						"--releases-directory", "some-release-tarball-directory",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
+						"--releases-directory", someReleasesDirectory,
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--stub-releases",
 						"--version", "1.2.3",
 					})
 
 					Expect(err).To(MatchError("--metadata is a required parameter"))
+				})
+			})
+
+			Context("when the release-tarball flag is missing", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(MatchError("Please specify release tarballs directory with the --releases-directory parameter"))
+				})
+			})
+
+			Context("when the stemcell-tarball flag is missing", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
+						"--releases-directory", someReleasesDirectory,
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(MatchError("--stemcell-tarball is a required parameter"))
 				})
 			})
 
@@ -340,10 +297,9 @@ var _ = Describe("bake", func() {
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
 						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-						"--releases-directory", "some-release-tarball-directory",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
+						"--releases-directory", someReleasesDirectory,
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--stub-releases",
 					})
 
 					Expect(err).To(MatchError("--version is a required parameter"))
@@ -355,9 +311,8 @@ var _ = Describe("bake", func() {
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
 						"--metadata", "some-metadata",
-						"--releases-directory", "some-release-tarball-directory",
+						"--releases-directory", someReleasesDirectory,
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--stub-releases",
 						"--version", "1.2.3",
 					})
 
@@ -369,24 +324,23 @@ var _ = Describe("bake", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/cool-product-file-1.2.3-build.4",
-						"--releases-directory", "some-release-tarball-directory",
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--jobs-directory", "some-jobs-directory",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
 						"--version", "1.2.3",
 					})
 
 					Expect(err).To(MatchError("--jobs-directory flag requires --instance-groups-directory to also be specified"))
 				})
 			})
-
 		})
 	})
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			command := commands.NewBake(nil)
+			command := commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger)
 			Expect(command.Usage()).To(Equal(jhandacommands.Usage{
 				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
 				ShortDescription: "bakes a tile",

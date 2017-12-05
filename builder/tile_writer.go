@@ -10,8 +10,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/pivotal-cf/kiln/commands"
 )
 
 type TileWriter struct {
@@ -64,10 +62,18 @@ func NewTileWriter(filesystem filesystem, zipper zipper, logger logger, md5SumCa
 	}
 }
 
-func (w TileWriter) Write(productName string, generatedMetadataContents []byte, config commands.BakeConfig) error {
-	w.logger.Printf("Building %s...", config.OutputFile)
+type WriteInput struct {
+	OutputFile           string
+	StubReleases         bool
+	MigrationDirectories []string
+	ReleaseDirectories   []string
+	EmbedPaths           []string
+}
 
-	f, err := w.filesystem.Create(config.OutputFile)
+func (w TileWriter) Write(productName string, generatedMetadataContents []byte, input WriteInput) error {
+	w.logger.Printf("Building %s...", input.OutputFile)
+
+	f, err := w.filesystem.Create(input.OutputFile)
 	if err != nil {
 		return err
 	}
@@ -75,38 +81,38 @@ func (w TileWriter) Write(productName string, generatedMetadataContents []byte, 
 
 	w.zipper.SetWriter(f)
 
-	err = w.addToZipper(filepath.Join("metadata", fmt.Sprintf("%s.yml", productName)), bytes.NewBuffer(generatedMetadataContents), config.OutputFile)
+	err = w.addToZipper(filepath.Join("metadata", fmt.Sprintf("%s.yml", productName)), bytes.NewBuffer(generatedMetadataContents), input.OutputFile)
 	if err != nil {
-		w.removeOutputFile(config.OutputFile)
+		w.removeOutputFile(input.OutputFile)
 		return err
 	}
 
-	err = w.addMigrations(config.MigrationDirectories, config.OutputFile)
+	err = w.addMigrations(input.MigrationDirectories, input.OutputFile)
 	if err != nil {
-		w.removeOutputFile(config.OutputFile)
+		w.removeOutputFile(input.OutputFile)
 		return err
 	}
 
-	err = w.addReleases(config.ReleaseDirectories, config.StubReleases, config.OutputFile)
+	err = w.addReleases(input.ReleaseDirectories, input.StubReleases, input.OutputFile)
 	if err != nil {
-		w.removeOutputFile(config.OutputFile)
+		w.removeOutputFile(input.OutputFile)
 		return err
 	}
 
-	err = w.addEmbeddedPaths(config.EmbedPaths, config.OutputFile)
+	err = w.addEmbeddedPaths(input.EmbedPaths, input.OutputFile)
 	if err != nil {
-		w.removeOutputFile(config.OutputFile)
+		w.removeOutputFile(input.OutputFile)
 		return err
 	}
 
 	err = w.zipper.Close()
 	if err != nil {
-		w.removeOutputFile(config.OutputFile)
+		w.removeOutputFile(input.OutputFile)
 		return err
 	}
 
-	w.logger.Printf("Calculating md5 sum of %s...", config.OutputFile)
-	md5Sum, err := w.md5SumCalculator.Checksum(config.OutputFile)
+	w.logger.Printf("Calculating md5 sum of %s...", input.OutputFile)
+	md5Sum, err := w.md5SumCalculator.Checksum(input.OutputFile)
 	if err != nil {
 		return err
 	}
