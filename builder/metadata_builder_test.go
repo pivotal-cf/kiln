@@ -237,9 +237,9 @@ var _ = Describe("MetadataBuilder", func() {
 				"name":                      "cool-product",
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
-				"icon_image":                "unused-icon-image-IGNORE-ME",
-				"form_types":                "unused-form-types-IGNORE-ME",
-				"job_types":                 "unused-job-types-IGNORE-ME",
+				"icon_image":                "icon-image-to-be-overridden",
+				"form_types":                "form-types-to-be-overridden",
+				"job_types":                 "job-types-to-be-overridden",
 			},
 				nil,
 			)
@@ -401,6 +401,45 @@ var _ = Describe("MetadataBuilder", func() {
 			Expect(iconEncoder.EncodeArgsForCall(0)).To(Equal("some-icon-path"))
 
 			Expect(generatedMetadata.IconImage).To(Equal("base64-encoded-icon-path"))
+		})
+
+		Context("when no form types directories are specified", func() {
+			BeforeEach(func() {
+				metadataReader.ReadReturns(builder.Metadata{
+					"name":                      "cool-product",
+					"metadata_version":          "some-metadata-version",
+					"provides_product_versions": "some-provides-product-versions",
+					"form_types": []interface{}{
+						map[interface{}]interface{}{
+							"name":  "form-type",
+							"label": "Form Type",
+						},
+					},
+				},
+					nil,
+				)
+			})
+
+			It("includes the form types from the metadata", func() {
+				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
+					MetadataPath:    "/some/path/metadata.yml",
+					ReleaseTarballs: []string{"/path/to/release-1.tgz", "/path/to/release-2.tgz"},
+					StemcellTarball: "/path/to/test-stemcell.tgz",
+					FormDirectories: []string{},
+					IconPath:        "some-icon-path",
+					Version:         "1.2.3",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(generatedMetadata.FormTypes).To(Equal([]builder.Part{
+					{
+						Metadata: map[interface{}]interface{}{
+							"name":  "form-type",
+							"label": "Form Type",
+						},
+					},
+				}))
+			})
 		})
 
 		Context("failure cases", func() {
