@@ -13,9 +13,9 @@ import (
 
 var _ = Describe("MetadataBuilder", func() {
 	var (
-		formDirectoryReader           *fakes.MetadataPartsDirectoryReader
+		formsDirectoryReader          *fakes.MetadataPartsDirectoryReader
 		iconEncoder                   *fakes.IconEncoder
-		instanceGroupDirectoryReader  *fakes.MetadataPartsDirectoryReader
+		instanceGroupsDirectoryReader *fakes.MetadataPartsDirectoryReader
 		jobsDirectoryReader           *fakes.MetadataPartsDirectoryReader
 		logger                        *fakes.Logger
 		metadataReader                *fakes.MetadataReader
@@ -29,9 +29,9 @@ var _ = Describe("MetadataBuilder", func() {
 	)
 
 	BeforeEach(func() {
-		formDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
+		formsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		iconEncoder = &fakes.IconEncoder{}
-		instanceGroupDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
+		instanceGroupsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		jobsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		logger = &fakes.Logger{}
 		metadataReader = &fakes.MetadataReader{}
@@ -41,7 +41,7 @@ var _ = Describe("MetadataBuilder", func() {
 		stemcellManifestReader = &fakes.StemcellManifestReader{}
 		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 
-		formDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
+		formsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
 			case "/path/to/forms/directory":
 				return []builder.Part{
@@ -67,7 +67,7 @@ var _ = Describe("MetadataBuilder", func() {
 
 		iconEncoder.EncodeReturns("base64-encoded-icon-path", nil)
 
-		instanceGroupDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
+		instanceGroupsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
 			case "/path/to/instance-groups/directory":
 				return []builder.Part{
@@ -245,8 +245,8 @@ var _ = Describe("MetadataBuilder", func() {
 		}
 
 		tileBuilder = builder.NewMetadataBuilder(
-			formDirectoryReader,
-			instanceGroupDirectoryReader,
+			formsDirectoryReader,
+			instanceGroupsDirectoryReader,
 			jobsDirectoryReader,
 			propertiesDirectoryReader,
 			releaseManifestReader,
@@ -591,7 +591,7 @@ var _ = Describe("MetadataBuilder", func() {
 
 			Context("when the form directory cannot be read", func() {
 				It("returns an error", func() {
-					formDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some form error"))
+					formsDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some form error"))
 
 					_, err := tileBuilder.Build(builder.BuildInput{
 						FormDirectories: []string{"/path/to/missing/form"},
@@ -602,7 +602,7 @@ var _ = Describe("MetadataBuilder", func() {
 
 			Context("when the instance group directory cannot be read", func() {
 				It("returns an error", func() {
-					instanceGroupDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some instance group error"))
+					instanceGroupsDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some instance group error"))
 
 					_, err := tileBuilder.Build(builder.BuildInput{
 						InstanceGroupDirectories: []string{"/path/to/missing/instance-groups"},
@@ -624,7 +624,7 @@ var _ = Describe("MetadataBuilder", func() {
 
 			Context("when an instance group references a job that cannot be found", func() {
 				BeforeEach(func() {
-					instanceGroupDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
+					instanceGroupsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 						switch path {
 						case "/path/to/instance-groups/directory":
 							return []builder.Part{
