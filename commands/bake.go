@@ -14,14 +14,15 @@ import (
 )
 
 type BakeConfig struct {
+	EmbedPaths               flags.StringSlice `short:"e"    long:"embed"                      description:"path to files to include in the tile /embed directory"`
 	FormDirectories          flags.StringSlice `short:"f"    long:"forms-directory"            description:"path to a directory containing forms"`
+	IconPath                 string            `short:"i"    long:"icon"                       description:"path to icon file"`
 	InstanceGroupDirectories flags.StringSlice `short:"ig"   long:"instance-groups-directory"  description:"path to a directory containing instance groups"`
 	JobDirectories           flags.StringSlice `short:"j"    long:"jobs-directory"             description:"path to a directory containing jobs"`
-	EmbedPaths               flags.StringSlice `short:"e"    long:"embed"                      description:"path to files to include in the tile /embed directory"`
-	IconPath                 string            `short:"i"    long:"icon"                       description:"path to icon file"`
 	Metadata                 string            `short:"m"    long:"metadata"                   description:"path to the metadata file"`
 	MigrationDirectories     flags.StringSlice `short:"md"   long:"migrations-directory"       description:"path to a directory containing migrations"`
 	OutputFile               string            `short:"o"    long:"output-file"                description:"path to where the tile will be output"`
+	PropertyDirectories      flags.StringSlice `short:"pd"   long:"properties-directory"       description:"path to a directory containing property blueprints"`
 	ReleaseDirectories       flags.StringSlice `short:"rd"   long:"releases-directory"         description:"path to a directory containing release tarballs"`
 	RuntimeConfigDirectories flags.StringSlice `short:"rcd"  long:"runtime-configs-directory"  description:"path to a directory containing runtime configs"`
 	StemcellTarball          string            `short:"st"   long:"stemcell-tarball"           description:"path to a stemcell tarball"`
@@ -78,15 +79,16 @@ func (b Bake) Execute(args []string) error {
 	b.logger.Printf("Creating metadata for %s...", config.OutputFile)
 
 	buildInput := builder.BuildInput{
-		MetadataPath:             config.Metadata,
-		ReleaseTarballs:          releaseTarballs,
-		StemcellTarball:          config.StemcellTarball,
 		FormDirectories:          config.FormDirectories,
+		IconPath:                 config.IconPath,
 		InstanceGroupDirectories: config.InstanceGroupDirectories,
 		JobDirectories:           config.JobDirectories,
+		MetadataPath:             config.Metadata,
+		PropertyDirectories:      config.PropertyDirectories,
+		ReleaseTarballs:          releaseTarballs,
 		RuntimeConfigDirectories: config.RuntimeConfigDirectories,
+		StemcellTarball:          config.StemcellTarball,
 		VariableDirectories:      config.VariableDirectories,
-		IconPath:                 config.IconPath,
 		Version:                  config.Version,
 	}
 

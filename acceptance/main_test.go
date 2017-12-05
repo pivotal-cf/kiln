@@ -23,6 +23,7 @@ var _ = Describe("kiln", func() {
 		otherReleasesDirectory      string
 		outputFile                  string
 		someIconPath                string
+		somePropertiesDirectory     string
 		someReleasesDirectory       string
 		someRuntimeConfigsDirectory string
 		someVariablesDirectory      string
@@ -54,6 +55,9 @@ var _ = Describe("kiln", func() {
 		_, err = someIconFile.Write([]byte(someImageData))
 		Expect(err).NotTo(HaveOccurred())
 
+		somePropertiesDirectory, err = ioutil.TempDir(tmpDir, "")
+		Expect(err).NotTo(HaveOccurred())
+
 		someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -82,6 +86,14 @@ var _ = Describe("kiln", func() {
 name: cf
 version: 235
 `
+		err = ioutil.WriteFile(filepath.Join(somePropertiesDirectory, "some-property.yml"), []byte(`---
+property_blueprints:
+- name: some_property_blueprint
+  type: boolean
+  configurable: true
+  default: false
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
 
 		_, err = ioutil.TempFile(someReleasesDirectory, "")
 		Expect(err).NotTo(HaveOccurred())
@@ -204,7 +216,7 @@ metadata_version: '1.7'
 provides_product_versions:
 - name: cf
   version: 1.7.0.0
-product_version: &product_version "1.7.0.0$PRERELEASE_VERSION$"
+product_version: "1.7.0.0$PRERELEASE_VERSION$"
 minimum_version_for_upgrade: 1.6.9-build.0
 label: Pivotal Elastic Runtime
 description:
@@ -224,11 +236,6 @@ form_types:
 job_types:
 - name: consul_server
   label: Consul
-property_blueprints:
-- name: product_version
-  type: string
-  configurable: false
-  default: *product_version
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -249,6 +256,7 @@ property_blueprints:
 			"--migrations-directory", "fixtures/extra-migrations",
 			"--migrations-directory", "fixtures/migrations",
 			"--output-file", outputFile,
+			"--properties-directory", somePropertiesDirectory,
 			"--releases-directory", otherReleasesDirectory,
 			"--releases-directory", someReleasesDirectory,
 			"--runtime-configs-directory", someRuntimeConfigsDirectory,
@@ -321,10 +329,10 @@ post_deploy_errands:
 - name: smoke-tests
 product_version: 1.2.3
 property_blueprints:
-- configurable: false
-  default: 1.2.3
-  name: product_version
-  type: string
+- name: some_property_blueprint
+  type: boolean
+  configurable: true
+  default: false
 provides_product_versions:
 - name: cf
   version: 1.7.0.0

@@ -77,6 +77,7 @@ var _ = Describe("bake", func() {
 				"--jobs-directory", "some-jobs-directory",
 				"--metadata", "some-metadata",
 				"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+				"--properties-directory", "some-properties-directory",
 				"--releases-directory", otherReleasesDirectory,
 				"--releases-directory", someReleasesDirectory,
 				"--runtime-configs-directory", "some-other-runtime-configs-directory",
@@ -97,6 +98,7 @@ var _ = Describe("bake", func() {
 			Expect(buildInput.InstanceGroupDirectories).To(Equal([]string{"some-instance-groups-directory"}))
 			Expect(buildInput.JobDirectories).To(Equal([]string{"some-jobs-directory"}))
 			Expect(buildInput.MetadataPath).To(Equal("some-metadata"))
+			Expect(buildInput.PropertyDirectories).To(Equal([]string{"some-properties-directory"}))
 			Expect(buildInput.ReleaseTarballs).To(Equal([]string{otherTarballRelease, tarballRelease}))
 			Expect(buildInput.RuntimeConfigDirectories).To(Equal([]string{"some-other-runtime-configs-directory", "some-runtime-configs-directory"}))
 			Expect(buildInput.StemcellTarball).To(Equal("some-stemcell-tarball"))

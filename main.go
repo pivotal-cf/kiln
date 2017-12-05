@@ -31,18 +31,20 @@ func main() {
 	filesystem := helper.NewFilesystem()
 	zipper := builder.NewZipper()
 	formDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder(filesystem, "form", "forms")
-	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder(filesystem, "job_type", "job_types")
-	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "job")
-	releaseManifestReader := builder.NewReleaseManifestReader(filesystem)
-	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "runtime_configs")
-	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "variables")
-	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	handcraftReader := builder.NewMetadataReader(filesystem, logger)
 	iconEncoder := builder.NewIconEncoder(filesystem)
+	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder(filesystem, "job_type", "job_types")
+	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "job")
+	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "property_blueprints")
+	releaseManifestReader := builder.NewReleaseManifestReader(filesystem)
+	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "runtime_configs")
+	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
+	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReader(filesystem, "variables")
 	metadataBuilder := builder.NewMetadataBuilder(
 		formDirectoryReader,
 		instanceGroupDirectoryReader,
 		jobsDirectoryReader,
+		propertiesDirectoryReader,
 		releaseManifestReader,
 		runtimeConfigsDirectoryReader,
 		variablesDirectoryReader,

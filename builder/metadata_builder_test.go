@@ -16,13 +16,14 @@ var _ = Describe("MetadataBuilder", func() {
 		iconEncoder                   *fakes.IconEncoder
 		logger                        *fakes.Logger
 		metadataReader                *fakes.MetadataReader
+		formDirectoryReader           *fakes.MetadataPartsDirectoryReader
+		instanceGroupDirectoryReader  *fakes.MetadataPartsDirectoryReader
+		jobsDirectoryReader           *fakes.MetadataPartsDirectoryReader
+		propertiesDirectoryReader     *fakes.MetadataPartsDirectoryReader
 		releaseManifestReader         *fakes.ReleaseManifestReader
 		runtimeConfigsDirectoryReader *fakes.MetadataPartsDirectoryReader
 		stemcellManifestReader        *fakes.StemcellManifestReader
 		variablesDirectoryReader      *fakes.MetadataPartsDirectoryReader
-		formDirectoryReader           *fakes.MetadataPartsDirectoryReader
-		instanceGroupDirectoryReader  *fakes.MetadataPartsDirectoryReader
-		jobsDirectoryReader           *fakes.MetadataPartsDirectoryReader
 
 		tileBuilder builder.MetadataBuilder
 	)
@@ -30,12 +31,13 @@ var _ = Describe("MetadataBuilder", func() {
 	BeforeEach(func() {
 		iconEncoder = &fakes.IconEncoder{}
 		logger = &fakes.Logger{}
-		metadataReader = &fakes.MetadataReader{}
-		releaseManifestReader = &fakes.ReleaseManifestReader{}
-		runtimeConfigsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		formDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		instanceGroupDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		jobsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
+		metadataReader = &fakes.MetadataReader{}
+		propertiesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
+		releaseManifestReader = &fakes.ReleaseManifestReader{}
+		runtimeConfigsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		stemcellManifestReader = &fakes.StemcellManifestReader{}
 		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 
@@ -174,6 +176,30 @@ var _ = Describe("MetadataBuilder", func() {
 			}
 		}
 
+		propertiesDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
+			switch path {
+			case "/path/to/properties/directory":
+				return []builder.Part{
+					{
+						File: "property-1.yml",
+						Name: "property-1",
+						Metadata: map[interface{}]interface{}{
+							"name": "property-1",
+						},
+					},
+					{
+						File: "property-2.yml",
+						Name: "property-2",
+						Metadata: map[interface{}]interface{}{
+							"name": "property-2",
+						},
+					},
+				}, nil
+			default:
+				return []builder.Part{}, fmt.Errorf("could not read properties directory %q", path)
+			}
+		}
+
 		variablesDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
 			case "/path/to/variables/directory":
@@ -221,6 +247,7 @@ var _ = Describe("MetadataBuilder", func() {
 			formDirectoryReader,
 			instanceGroupDirectoryReader,
 			jobsDirectoryReader,
+			propertiesDirectoryReader,
 			releaseManifestReader,
 			runtimeConfigsDirectoryReader,
 			variablesDirectoryReader,
@@ -247,15 +274,16 @@ var _ = Describe("MetadataBuilder", func() {
 
 		It("creates a GeneratedMetadata with the correct information", func() {
 			generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
-				MetadataPath:             "/some/path/metadata.yml",
-				ReleaseTarballs:          []string{"/path/to/release-1.tgz", "/path/to/release-2.tgz"},
-				StemcellTarball:          "/path/to/test-stemcell.tgz",
 				FormDirectories:          []string{"/path/to/forms/directory"},
+				IconPath:                 "some-icon-path",
 				InstanceGroupDirectories: []string{"/path/to/instance-groups/directory"},
 				JobDirectories:           []string{"/path/to/jobs/directory"},
+				MetadataPath:             "/some/path/metadata.yml",
+				PropertyDirectories:      []string{"/path/to/properties/directory"},
+				ReleaseTarballs:          []string{"/path/to/release-1.tgz", "/path/to/release-2.tgz"},
 				RuntimeConfigDirectories: []string{"/path/to/runtime-configs/directory", "/path/to/other/runtime-configs/directory"},
+				StemcellTarball:          "/path/to/test-stemcell.tgz",
 				VariableDirectories:      []string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
-				IconPath:                 "some-icon-path",
 				Version:                  "1.2.3",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -306,6 +334,22 @@ var _ = Describe("MetadataBuilder", func() {
 								"release": "some-release-2",
 							},
 						},
+					},
+				},
+			}))
+			Expect(generatedMetadata.PropertyBlueprints).To(Equal([]builder.Part{
+				{
+					File: "property-1.yml",
+					Name: "property-1",
+					Metadata: map[interface{}]interface{}{
+						"name": "property-1",
+					},
+				},
+				{
+					File: "property-2.yml",
+					Name: "property-2",
+					Metadata: map[interface{}]interface{}{
+						"name": "property-2",
 					},
 				},
 			}))
@@ -394,6 +438,7 @@ var _ = Describe("MetadataBuilder", func() {
 				"Read forms from /path/to/forms/directory",
 				"Read instance groups from /path/to/instance-groups/directory",
 				"Read jobs from /path/to/jobs/directory",
+				"Read property blueprints from /path/to/properties/directory",
 				"Read metadata",
 			}))
 
@@ -401,6 +446,45 @@ var _ = Describe("MetadataBuilder", func() {
 			Expect(iconEncoder.EncodeArgsForCall(0)).To(Equal("some-icon-path"))
 
 			Expect(generatedMetadata.IconImage).To(Equal("base64-encoded-icon-path"))
+		})
+
+		Context("when no property directories are specified", func() {
+			BeforeEach(func() {
+				metadataReader.ReadReturns(builder.Metadata{
+					"name":                      "cool-product",
+					"metadata_version":          "some-metadata-version",
+					"provides_product_versions": "some-provides-product-versions",
+					"property_blueprints": []interface{}{
+						map[interface{}]interface{}{
+							"name": "property-1",
+							"type": "string",
+						},
+					},
+				},
+					nil,
+				)
+			})
+
+			It("includes the property blueprints from the metadata", func() {
+				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
+					MetadataPath:    "/some/path/metadata.yml",
+					ReleaseTarballs: []string{"/path/to/release-1.tgz", "/path/to/release-2.tgz"},
+					StemcellTarball: "/path/to/test-stemcell.tgz",
+					FormDirectories: []string{},
+					IconPath:        "some-icon-path",
+					Version:         "1.2.3",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(generatedMetadata.PropertyBlueprints).To(Equal([]builder.Part{
+					{
+						Metadata: map[interface{}]interface{}{
+							"name": "property-1",
+							"type": "string",
+						},
+					},
+				}))
+			})
 		})
 
 		Context("when no form directories are specified", func() {
@@ -490,6 +574,17 @@ var _ = Describe("MetadataBuilder", func() {
 						ReleaseTarballs: []string{"release-1.tgz"},
 					})
 					Expect(err).To(MatchError("failed to read release tarball"))
+				})
+			})
+
+			Context("when the properties directory cannot be read", func() {
+				It("returns an error", func() {
+					propertiesDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some properties error"))
+
+					_, err := tileBuilder.Build(builder.BuildInput{
+						PropertyDirectories: []string{"/path/to/missing/property"},
+					})
+					Expect(err).To(MatchError(`error reading from properties directory "/path/to/missing/property": some properties error`))
 				})
 			})
 

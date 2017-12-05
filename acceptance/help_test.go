@@ -35,6 +35,7 @@ Command Arguments:
   --metadata, -m                     string             path to the metadata file
   --migrations-directory, -md        string (variadic)  path to a directory containing migrations
   --output-file, -o                  string             path to where the tile will be output
+  --properties-directory, -pd        string (variadic)  path to a directory containing property blueprints
   --releases-directory, -rd          string (variadic)  path to a directory containing release tarballs
   --runtime-configs-directory, -rcd  string (variadic)  path to a directory containing runtime configs
   --stemcell-tarball, -st            string             path to a stemcell tarball

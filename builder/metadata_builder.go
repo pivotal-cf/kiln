@@ -13,6 +13,7 @@ type MetadataBuilder struct {
 	iconEncoder                   iconEncoder
 	logger                        logger
 	metadataReader                metadataReader
+	propertiesDirectoryReader     metadataPartsDirectoryReader
 	releaseManifestReader         releaseManifestReader
 	runtimeConfigsDirectoryReader metadataPartsDirectoryReader
 	stemcellManifestReader        stemcellManifestReader
@@ -20,15 +21,16 @@ type MetadataBuilder struct {
 }
 
 type BuildInput struct {
-	MetadataPath             string
-	ReleaseTarballs          []string
-	StemcellTarball          string
 	FormDirectories          []string
+	IconPath                 string
 	InstanceGroupDirectories []string
 	JobDirectories           []string
+	MetadataPath             string
+	PropertyDirectories      []string
+	ReleaseTarballs          []string
 	RuntimeConfigDirectories []string
+	StemcellTarball          string
 	VariableDirectories      []string
-	IconPath                 string
 	Version                  string
 }
 
@@ -71,6 +73,7 @@ func NewMetadataBuilder(
 	formDirectoryReader metadataPartsDirectoryReader,
 	instanceGroupDirectoryReader metadataPartsDirectoryReader,
 	jobsDirectoryReader metadataPartsDirectoryReader,
+	propertiesDirectoryReader metadataPartsDirectoryReader,
 	releaseManifestReader releaseManifestReader,
 	runtimeConfigsDirectoryReader,
 	variablesDirectoryReader metadataPartsDirectoryReader,
@@ -86,6 +89,7 @@ func NewMetadataBuilder(
 		iconEncoder:                   iconEncoder,
 		logger:                        logger,
 		metadataReader:                metadataReader,
+		propertiesDirectoryReader:     propertiesDirectoryReader,
 		releaseManifestReader:         releaseManifestReader,
 		runtimeConfigsDirectoryReader: runtimeConfigsDirectoryReader,
 		stemcellManifestReader:        stemcellManifestReader,
@@ -140,6 +144,11 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		return GeneratedMetadata{}, err
 	}
 
+	propertyBlueprints, err := m.buildPropertyBlueprints(input.PropertyDirectories, metadata)
+	if err != nil {
+		return GeneratedMetadata{}, err
+	}
+
 	delete(metadata, "name")
 	delete(metadata, "icon_image")
 	delete(metadata, "form_types")
@@ -148,13 +157,14 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 	m.logger.Printf("Read metadata")
 
 	return GeneratedMetadata{
-		FormTypes:      formTypes,
-		JobTypes:       jobTypes,
-		IconImage:      encodedIcon,
-		Name:           productName,
-		Releases:       releases,
-		RuntimeConfigs: runtimeConfigs,
-		Variables:      variables,
+		FormTypes:          formTypes,
+		JobTypes:           jobTypes,
+		IconImage:          encodedIcon,
+		Name:               productName,
+		PropertyBlueprints: propertyBlueprints,
+		Releases:           releases,
+		RuntimeConfigs:     runtimeConfigs,
+		Variables:          variables,
 		StemcellCriteria: StemcellCriteria{
 			OS:          stemcellManifest.OperatingSystem,
 			Version:     stemcellManifest.Version,
@@ -162,6 +172,32 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		},
 		Metadata: metadata,
 	}, nil
+}
+
+func (m MetadataBuilder) buildPropertyBlueprints(dirs []string, metadata Metadata) ([]Part, error) {
+	var propertyBlueprints []Part
+
+	if len(dirs) > 0 {
+		for _, propertiesDirectory := range dirs {
+			p, err := m.propertiesDirectoryReader.Read(propertiesDirectory)
+			if err != nil {
+				return nil,
+					fmt.Errorf("error reading from properties directory %q: %s", propertiesDirectory, err)
+			}
+
+			m.logger.Printf("Read property blueprints from %s", propertiesDirectory)
+
+			propertyBlueprints = append(propertyBlueprints, p...)
+		}
+	} else {
+		if pb, ok := metadata["property_blueprints"].([]interface{}); ok {
+			for _, p := range pb {
+				propertyBlueprints = append(propertyBlueprints, Part{Metadata: p})
+			}
+		}
+	}
+
+	return propertyBlueprints, nil
 }
 
 func (m MetadataBuilder) buildReleaseMetadata(releaseTarballs []string) ([]Release, error) {
