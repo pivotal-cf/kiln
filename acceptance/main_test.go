@@ -12,7 +12,6 @@ import (
 
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	yaml "gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -153,6 +152,26 @@ job_types:
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
+		err = ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "some-instance-group.yml"), []byte(`---
+job_type:
+  name: some-instance-group
+  label: Some Instance Group
+  templates:
+  - name: some-job
+    release: some-release
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "some-other-instance-group.yml"), []byte(`---
+job_type:
+  name: some-other-instance-group
+  label: Some Other Instance Group
+  templates:
+  - name: some-other-job
+    release: some-other-release
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
 		err = ioutil.WriteFile(filepath.Join(someRuntimeConfigsDirectory, "some-addon.yml"), []byte(`---
 runtime_configs:
 - name: some_addon
@@ -218,11 +237,17 @@ property_blueprints:
 		_ = os.RemoveAll(tmpDir)
 	})
 
-	It("generates metadata that includes all the correct information", func() {
+	It("generates a tile with the correct metadata", func() {
 		command := exec.Command(pathToMain,
 			"bake",
+			"--forms-directory", someFormsDirectory,
+			"--forms-directory", someOtherFormsDirectory,
 			"--icon", someIconPath,
+			"--instance-groups-directory", someInstanceGroupsDirectory,
+			"--jobs-directory", someJobsDirectory,
 			"--metadata", metadata,
+			"--migrations-directory", "fixtures/extra-migrations",
+			"--migrations-directory", "fixtures/migrations",
 			"--output-file", outputFile,
 			"--releases-directory", otherReleasesDirectory,
 			"--releases-directory", someReleasesDirectory,
@@ -256,366 +281,81 @@ property_blueprints:
 		}
 
 		Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-		contents, err := ioutil.ReadAll(file)
+		metadataContents, err := ioutil.ReadAll(file)
 		Expect(err).NotTo(HaveOccurred())
 
 		iconData := base64.StdEncoding.EncodeToString([]byte("i-am-some-image"))
 		expectedYaml := fmt.Sprintf(`---
-name: cool-product-name
-stemcell_criteria:
-  os: ubuntu-trusty
-  requires_cpi: false
-  version: "3215.4"
-releases:
-- name: diego
-  file: diego-release-0.1467.1-3215.4.0.tgz
-  version: 0.1467.1
-- name: cf
-  file: cf-release-235.0.0-3215.4.0.tgz
-  version: "235"
-metadata_version: '1.7'
-provides_product_versions:
-- name: cf
-  version: 1.7.0.0
-product_version: "1.2.3"
-minimum_version_for_upgrade: 1.6.9-build.0
-label: Pivotal Elastic Runtime
-description:
-  this is the description
+description: this is the description
+form_types:
+- description: some-other-form-description
+  label: some-other-form-label
+  name: some-other-config
+- description: some-form-description
+  label: some-form-label
+  name: some-config
+- description: some-form-description
+  label: some-form-label
+  name: some-more-config
 icon_image: %s
-rank: 90
-serial: false
 install_time_verifiers:
 - name: Verifiers::SsoUrlVerifier
   properties:
     url: .properties.uaa.saml.sso_url
+job_types:
+- label: Some Other Instance Group
+  name: some-other-instance-group
+  templates:
+  - name: some-other-job
+    release: some-other-release
+- label: Some Instance Group
+  name: some-instance-group
+  templates:
+  - name: some-job
+    release: some-release
+label: Pivotal Elastic Runtime
+metadata_version: "1.7"
+minimum_version_for_upgrade: 1.6.9-build.0
+name: cool-product-name
 post_deploy_errands:
 - name: smoke-tests
-form_types:
-- name: domains
-  label: Domains
-job_types:
-- name: consul_server
-  label: Consul
+product_version: 1.2.3
 property_blueprints:
-- name: product_version
+- configurable: false
+  default: 1.2.3
+  name: product_version
   type: string
-  configurable: false
-  default: "1.2.3"
+provides_product_versions:
+- name: cf
+  version: 1.7.0.0
+rank: 90
+releases:
+- file: diego-release-0.1467.1-3215.4.0.tgz
+  name: diego
+  version: 0.1467.1
+- file: cf-release-235.0.0-3215.4.0.tgz
+  name: cf
+  version: "235"
 runtime_configs:
 - name: some_addon
   runtime_config: |
     releases:
     - name: some-addon
+serial: false
+stemcell_criteria:
+  os: ubuntu-trusty
+  requires_cpi: false
+  version: "3215.4"
 variables:
 - name: variable-1
-  type: certificate
   options:
     some_option: Option value
+  type: certificate
 - name: variable-2
   type: password
 `, iconData)
 
-		Expect(contents).To(MatchYAML(expectedYaml))
-	})
-
-	Context("when the --forms-directory flag is provided", func() {
-		It("merges from the given directories into the metadata under the form_types key", func() {
-			command := exec.Command(pathToMain,
-				"bake",
-				"--forms-directory", someFormsDirectory,
-				"--forms-directory", someOtherFormsDirectory,
-				"--icon", someIconPath,
-				"--metadata", metadata,
-				"--output-file", outputFile,
-				"--releases-directory", otherReleasesDirectory,
-				"--releases-directory", someReleasesDirectory,
-				"--runtime-configs-directory", someRuntimeConfigsDirectory,
-				"--stemcell-tarball", stemcellTarball,
-				"--variables-directory", someVariablesDirectory,
-				"--version", "1.2.3",
-			)
-
-			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(session).Should(gexec.Exit(0))
-
-			archive, err := os.Open(outputFile)
-			Expect(err).NotTo(HaveOccurred())
-
-			archiveInfo, err := archive.Stat()
-			Expect(err).NotTo(HaveOccurred())
-
-			zr, err := zip.NewReader(archive, archiveInfo.Size())
-			Expect(err).NotTo(HaveOccurred())
-
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/cool-product-name.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
-
-			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			contents, err := ioutil.ReadAll(file)
-			Expect(err).NotTo(HaveOccurred())
-
-			actualMetadata := map[string]interface{}{}
-			err = yaml.Unmarshal(contents, actualMetadata)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(actualMetadata["form_types"]).To(Equal([]interface{}{
-				map[interface{}]interface{}{
-					"name":        "some-other-config",
-					"label":       "some-other-form-label",
-					"description": "some-other-form-description",
-				},
-				map[interface{}]interface{}{
-					"name":        "some-config",
-					"label":       "some-form-label",
-					"description": "some-form-description",
-				},
-				map[interface{}]interface{}{
-					"name":        "some-more-config",
-					"label":       "some-form-label",
-					"description": "some-form-description",
-				},
-			}))
-		})
-	})
-
-	Context("when the --instance-groups-directory flag is provided", func() {
-
-		BeforeEach(func() {
-			err := ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "some-instance-group.yml"), []byte(`---
-job_type:
-  name: some-instance-group
-  label: Some Instance Group
-  templates:
-  - name: some-job
-    release: some-release
-`), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "some-other-instance-group.yml"), []byte(`---
-job_type:
-  name: some-other-instance-group
-  label: Some Other Instance Group
-  templates:
-  - name: some-other-job
-    release: some-other-release
-`), 0644)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("merges from the given directory into the metadata under the job_types key", func() {
-			command := exec.Command(pathToMain,
-				"bake",
-				"--instance-groups-directory", someInstanceGroupsDirectory,
-				"--icon", someIconPath,
-				"--metadata", metadata,
-				"--output-file", outputFile,
-				"--releases-directory", otherReleasesDirectory,
-				"--releases-directory", someReleasesDirectory,
-				"--runtime-configs-directory", someRuntimeConfigsDirectory,
-				"--stemcell-tarball", stemcellTarball,
-				"--variables-directory", someVariablesDirectory,
-				"--version", "1.2.3",
-			)
-
-			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(session).Should(gexec.Exit(0))
-
-			archive, err := os.Open(outputFile)
-			Expect(err).NotTo(HaveOccurred())
-
-			archiveInfo, err := archive.Stat()
-			Expect(err).NotTo(HaveOccurred())
-
-			zr, err := zip.NewReader(archive, archiveInfo.Size())
-			Expect(err).NotTo(HaveOccurred())
-
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/cool-product-name.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
-
-			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			contents, err := ioutil.ReadAll(file)
-			Expect(err).NotTo(HaveOccurred())
-
-			actualMetadata := map[string]interface{}{}
-			err = yaml.Unmarshal(contents, actualMetadata)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(actualMetadata["job_types"]).To(Equal([]interface{}{
-				map[interface{}]interface{}{
-					"name":  "some-other-instance-group",
-					"label": "Some Other Instance Group",
-					"templates": []interface{}{
-						map[interface{}]interface{}{
-							"name":    "some-other-job",
-							"release": "some-other-release",
-						},
-					},
-				},
-				map[interface{}]interface{}{
-					"name":  "some-instance-group",
-					"label": "Some Instance Group",
-					"templates": []interface{}{
-						map[interface{}]interface{}{
-							"name":    "some-job",
-							"release": "some-release",
-						},
-					},
-				},
-			}))
-		})
-	})
-
-	Context("when the --instance-groups-directory and --jobs-directory flags are provided", func() {
-
-		BeforeEach(func() {
-			err := ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "some-instance-group.yml"), []byte(`---
-job_type:
-  name: some-instance-group
-  label: Some Instance Group
-  templates:
-  - some-job-file.yml
-`), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "some-other-instance-group.yml"), []byte(`---
-job_type:
-  name: some-other-instance-group
-  label: Some Other Instance Group
-  templates:
-  - some-other-job-file.yml
-`), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = ioutil.WriteFile(filepath.Join(someJobsDirectory, "some-job-file.yml"), []byte(`---
-job:
-  name: some-name
-  release: some-release
-`), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = ioutil.WriteFile(filepath.Join(someJobsDirectory, "some-other-job-file.yml"), []byte(`---
-job:
-  name: some-other-name
-  release: some-other-release
-`), 0644)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("merges from the given directories into the metadata under the job_types key", func() {
-			command := exec.Command(pathToMain,
-				"bake",
-				"--instance-groups-directory", someInstanceGroupsDirectory,
-				"--jobs-directory", someJobsDirectory,
-				"--icon", someIconPath,
-				"--metadata", metadata,
-				"--output-file", outputFile,
-				"--releases-directory", otherReleasesDirectory,
-				"--releases-directory", someReleasesDirectory,
-				"--runtime-configs-directory", someRuntimeConfigsDirectory,
-				"--stemcell-tarball", stemcellTarball,
-				"--variables-directory", someVariablesDirectory,
-				"--version", "1.2.3",
-			)
-
-			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(session).Should(gexec.Exit(0))
-
-			archive, err := os.Open(outputFile)
-			Expect(err).NotTo(HaveOccurred())
-
-			archiveInfo, err := archive.Stat()
-			Expect(err).NotTo(HaveOccurred())
-
-			zr, err := zip.NewReader(archive, archiveInfo.Size())
-			Expect(err).NotTo(HaveOccurred())
-
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/cool-product-name.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
-
-			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			contents, err := ioutil.ReadAll(file)
-			Expect(err).NotTo(HaveOccurred())
-
-			actualMetadata := map[string]interface{}{}
-			err = yaml.Unmarshal(contents, actualMetadata)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(actualMetadata["job_types"]).To(Equal([]interface{}{
-				map[interface{}]interface{}{
-					"name":  "some-other-instance-group",
-					"label": "Some Other Instance Group",
-					"templates": []interface{}{
-						map[interface{}]interface{}{
-							"name":    "some-other-name",
-							"release": "some-other-release",
-						},
-					},
-				},
-				map[interface{}]interface{}{
-					"name":  "some-instance-group",
-					"label": "Some Instance Group",
-					"templates": []interface{}{
-						map[interface{}]interface{}{
-							"name":    "some-name",
-							"release": "some-release",
-						},
-					},
-				},
-			}))
-		})
-	})
-
-	It("copies the migrations to the migrations/v1 directory", func() {
-		command := exec.Command(pathToMain,
-			"bake",
-			"--icon", someIconPath,
-			"--metadata", metadata,
-			"--migrations-directory", "fixtures/extra-migrations",
-			"--migrations-directory", "fixtures/migrations",
-			"--output-file", outputFile,
-			"--releases-directory", someReleasesDirectory,
-			"--stemcell-tarball", stemcellTarball,
-			"--version", "1.2.3",
-		)
-
-		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(session).Should(gexec.Exit(0))
-
-		archive, err := os.Open(outputFile)
-		Expect(err).NotTo(HaveOccurred())
-
-		archiveInfo, err := archive.Stat()
-		Expect(err).NotTo(HaveOccurred())
-
-		zr, err := zip.NewReader(archive, archiveInfo.Size())
-		Expect(err).NotTo(HaveOccurred())
+		Expect(metadataContents).To(MatchYAML(expectedYaml))
 
 		var (
 			archivedMigration1 io.ReadCloser
@@ -651,25 +391,6 @@ job:
 		contents, err = ioutil.ReadAll(archivedMigration3)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("some_migration\n"))
-	})
-
-	It("logs the progress to stdout", func() {
-		command := exec.Command(pathToMain,
-			"bake",
-			"--icon", someIconPath,
-			"--metadata", metadata,
-			"--migrations-directory", "fixtures/migrations",
-			"--output-file", outputFile,
-			"--releases-directory", otherReleasesDirectory,
-			"--releases-directory", someReleasesDirectory,
-			"--stemcell-tarball", stemcellTarball,
-			"--version", "1.2.3",
-		)
-
-		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(session).Should(gexec.Exit(0))
 
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Creating metadata for %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say("Injecting version \"1.2.3\" into metadata..."))
@@ -760,7 +481,9 @@ job:
 					break
 				}
 			}
+
 			Expect(emptyMigrationsFolderMode.IsDir()).To(BeTrue())
+
 			Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Creating empty migrations folder in %s...", outputFile)))
 		})
 	})
@@ -770,8 +493,10 @@ job:
 			It("creates a tile with the specified file copied into the embed directory", func() {
 				someFileToEmbed := filepath.Join(tmpDir, "some-file-to-embed")
 				otherFileToEmbed := filepath.Join(tmpDir, "other-file-to-embed")
+
 				err := ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0600)
 				Expect(err).NotTo(HaveOccurred())
+
 				err = ioutil.WriteFile(otherFileToEmbed, []byte("content-of-other-file"), 0755)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -815,6 +540,7 @@ job:
 
 						Expect(content).To(Equal([]byte("content-of-some-file")))
 					}
+
 					if f.Name == "embed/other-file-to-embed" {
 						seenOtherFile = true
 						r, err := f.Open()
@@ -829,6 +555,7 @@ job:
 						Expect(content).To(Equal([]byte("content-of-other-file")))
 					}
 				}
+
 				Expect(seenSomeFile).To(BeTrue())
 				Expect(seenOtherFile).To(BeTrue())
 			})
@@ -839,8 +566,10 @@ job:
 				dirToAdd := filepath.Join(tmpDir, "some-dir")
 				nestedDir := filepath.Join(dirToAdd, "some-nested-dir")
 				someFileToEmbed := filepath.Join(nestedDir, "some-file-to-embed")
+
 				err := os.MkdirAll(nestedDir, 0700)
 				Expect(err).NotTo(HaveOccurred())
+
 				err = ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0600)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -883,6 +612,7 @@ job:
 						Expect(content).To(Equal([]byte("content-of-some-file")))
 					}
 				}
+
 				Expect(seenFile).To(BeTrue())
 			})
 		})
