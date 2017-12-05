@@ -123,11 +123,12 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		return GeneratedMetadata{}, err
 	}
 
+	m.logger.Printf("Reading stemcell manifest")
 	stemcellManifest, err := m.stemcellManifestReader.Read(input.StemcellTarball)
 	if err != nil {
 		return GeneratedMetadata{}, err
 	}
-	m.logger.Printf("Read manifest for stemcell version %s", stemcellManifest.Version)
+	m.logger.Printf("- version %s", stemcellManifest.Version)
 
 	encodedIcon, err := m.iconEncoder.Encode(input.IconPath)
 	if err != nil {
@@ -154,8 +155,6 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 	delete(metadata, "form_types")
 	delete(metadata, "job_types")
 
-	m.logger.Printf("Read metadata")
-
 	return GeneratedMetadata{
 		FormTypes:          formTypes,
 		JobTypes:           jobTypes,
@@ -179,13 +178,13 @@ func (m MetadataBuilder) buildPropertyBlueprints(dirs []string, metadata Metadat
 
 	if len(dirs) > 0 {
 		for _, propertiesDirectory := range dirs {
+			m.logger.Printf("Reading property blueprints from %s", propertiesDirectory)
+
 			p, err := m.propertiesDirectoryReader.Read(propertiesDirectory)
 			if err != nil {
 				return nil,
 					fmt.Errorf("error reading from properties directory %q: %s", propertiesDirectory, err)
 			}
-
-			m.logger.Printf("Read property blueprints from %s", propertiesDirectory)
 
 			propertyBlueprints = append(propertyBlueprints, p...)
 		}
@@ -203,13 +202,16 @@ func (m MetadataBuilder) buildPropertyBlueprints(dirs []string, metadata Metadat
 func (m MetadataBuilder) buildReleaseMetadata(releaseTarballs []string) ([]Release, error) {
 	var releases []Release
 
+	m.logger.Printf("Reading release manifests")
+
 	for _, releaseTarball := range releaseTarballs {
+
 		releaseManifest, err := m.releaseManifestReader.Read(releaseTarball)
 		if err != nil {
 			return nil, err
 		}
 
-		m.logger.Printf("Read manifest for release %s", releaseManifest.Name)
+		m.logger.Printf("- %s", releaseManifest.Name)
 
 		releases = append(releases, Release{
 			Name:    releaseManifest.Name,
@@ -229,13 +231,13 @@ func (m MetadataBuilder) buildRuntimeConfigMetadata(dirs []string, metadata Meta
 	var runtimeConfigs []Part
 
 	for _, runtimeConfigsDirectory := range dirs {
+		m.logger.Printf("Reading runtime configs from %s", runtimeConfigsDirectory)
+
 		r, err := m.runtimeConfigsDirectoryReader.Read(runtimeConfigsDirectory)
 		if err != nil {
 			return nil,
 				fmt.Errorf("error reading from runtime configs directory %q: %s", runtimeConfigsDirectory, err)
 		}
-
-		m.logger.Printf("Read runtime configs from %s", runtimeConfigsDirectory)
 
 		runtimeConfigs = append(runtimeConfigs, r...)
 	}
@@ -251,13 +253,13 @@ func (m MetadataBuilder) buildVariables(vars []string, metadata Metadata) ([]Par
 	var variables []Part
 
 	for _, variablesDirectory := range vars {
+		m.logger.Printf("Reading variables from %s", variablesDirectory)
+
 		v, err := m.variablesDirectoryReader.Read(variablesDirectory)
 		if err != nil {
 			return nil,
 				fmt.Errorf("error reading from variables directory %q: %s", variablesDirectory, err)
 		}
-
-		m.logger.Printf("Read variables from %s", variablesDirectory)
 
 		variables = append(variables, v...)
 	}
@@ -270,7 +272,8 @@ func (m MetadataBuilder) buildFormTypes(dirs []string, metadata Metadata) ([]Par
 
 	if len(dirs) > 0 {
 		for _, fd := range dirs {
-			m.logger.Printf("Read forms from %s", fd)
+			m.logger.Printf("Reading forms from %s", fd)
+
 			formTypesInDir, err := m.formDirectoryReader.Read(fd)
 			if err != nil {
 				return nil, fmt.Errorf("error reading from form directory %q: %s", fd, err)
@@ -293,7 +296,8 @@ func (m MetadataBuilder) buildJobTypes(typeDirs, jobDirs []string, metadata Meta
 
 	if len(typeDirs) > 0 {
 		for _, typeDir := range typeDirs {
-			m.logger.Printf("Read instance groups from %s", typeDir)
+			m.logger.Printf("Reading instance groups from %s", typeDir)
+
 			jobTypesInDir, err := m.instanceGroupDirectoryReader.Read(typeDir)
 			if err != nil {
 				return nil, fmt.Errorf("error reading from instance group directory %q: %s", typeDir, err)
@@ -311,7 +315,8 @@ func (m MetadataBuilder) buildJobTypes(typeDirs, jobDirs []string, metadata Meta
 	jobs := map[interface{}]Part{}
 
 	for _, jobDir := range jobDirs {
-		m.logger.Printf("Read jobs from %s", jobDir)
+		m.logger.Printf("Reading jobs from %s", jobDir)
+
 		jobsInDir, err := m.jobsDirectoryReader.Read(jobDir)
 		if err != nil {
 			return nil, fmt.Errorf("error reading from job directory %q: %s", jobDir, err)

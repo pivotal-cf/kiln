@@ -402,9 +402,8 @@ variables:
 
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Creating metadata for %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say("Injecting version \"1.2.3\" into metadata..."))
-		Eventually(session.Out).Should(gbytes.Say("Read manifest for release cf"))
-		Eventually(session.Out).Should(gbytes.Say("Read manifest for stemcell version 3215.4"))
-		Eventually(session.Out).Should(gbytes.Say("Read metadata"))
+		Eventually(session.Out).Should(gbytes.Say("Reading release manifests"))
+		Eventually(session.Out).Should(gbytes.Say("Reading stemcell manifest"))
 		Eventually(session.Out).Should(gbytes.Say("Marshaling metadata file..."))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Building %s", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile)))

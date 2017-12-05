@@ -429,18 +429,19 @@ var _ = Describe("MetadataBuilder", func() {
 			}))
 
 			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-				"Read manifest for release release-1",
-				"Read manifest for release release-2",
-				"Read runtime configs from /path/to/runtime-configs/directory",
-				"Read runtime configs from /path/to/other/runtime-configs/directory",
-				"Read variables from /path/to/variables/directory",
-				"Read variables from /path/to/other/variables/directory",
-				"Read manifest for stemcell version 2332",
-				"Read forms from /path/to/forms/directory",
-				"Read instance groups from /path/to/instance-groups/directory",
-				"Read jobs from /path/to/jobs/directory",
-				"Read property blueprints from /path/to/properties/directory",
-				"Read metadata",
+				"Reading release manifests",
+				"- release-1",
+				"- release-2",
+				"Reading runtime configs from /path/to/runtime-configs/directory",
+				"Reading runtime configs from /path/to/other/runtime-configs/directory",
+				"Reading variables from /path/to/variables/directory",
+				"Reading variables from /path/to/other/variables/directory",
+				"Reading stemcell manifest",
+				"- version 2332",
+				"Reading forms from /path/to/forms/directory",
+				"Reading instance groups from /path/to/instance-groups/directory",
+				"Reading jobs from /path/to/jobs/directory",
+				"Reading property blueprints from /path/to/properties/directory",
 			}))
 
 			Expect(iconEncoder.EncodeCallCount()).To(Equal(1))
