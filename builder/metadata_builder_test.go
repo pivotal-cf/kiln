@@ -403,7 +403,7 @@ var _ = Describe("MetadataBuilder", func() {
 			Expect(generatedMetadata.IconImage).To(Equal("base64-encoded-icon-path"))
 		})
 
-		Context("when no form types directories are specified", func() {
+		Context("when no form directories are specified", func() {
 			BeforeEach(func() {
 				metadataReader.ReadReturns(builder.Metadata{
 					"name":                      "cool-product",
@@ -436,6 +436,45 @@ var _ = Describe("MetadataBuilder", func() {
 						Metadata: map[interface{}]interface{}{
 							"name":  "form-type",
 							"label": "Form Type",
+						},
+					},
+				}))
+			})
+		})
+
+		Context("when no job directories are specified", func() {
+			BeforeEach(func() {
+				metadataReader.ReadReturns(builder.Metadata{
+					"name":                      "cool-product",
+					"metadata_version":          "some-metadata-version",
+					"provides_product_versions": "some-provides-product-versions",
+					"job_types": []interface{}{
+						map[interface{}]interface{}{
+							"name":  "job-type",
+							"label": "Job Type",
+						},
+					},
+				},
+					nil,
+				)
+			})
+
+			It("includes the job types from the metadata", func() {
+				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
+					MetadataPath:    "/some/path/metadata.yml",
+					ReleaseTarballs: []string{"/path/to/release-1.tgz", "/path/to/release-2.tgz"},
+					StemcellTarball: "/path/to/test-stemcell.tgz",
+					JobDirectories:  []string{},
+					IconPath:        "some-icon-path",
+					Version:         "1.2.3",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(generatedMetadata.JobTypes).To(Equal([]builder.Part{
+					{
+						Metadata: map[interface{}]interface{}{
+							"name":  "job-type",
+							"label": "Job Type",
 						},
 					},
 				}))
