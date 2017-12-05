@@ -13,12 +13,12 @@ import (
 
 var _ = Describe("MetadataBuilder", func() {
 	var (
-		iconEncoder                   *fakes.IconEncoder
-		logger                        *fakes.Logger
-		metadataReader                *fakes.MetadataReader
 		formDirectoryReader           *fakes.MetadataPartsDirectoryReader
+		iconEncoder                   *fakes.IconEncoder
 		instanceGroupDirectoryReader  *fakes.MetadataPartsDirectoryReader
 		jobsDirectoryReader           *fakes.MetadataPartsDirectoryReader
+		logger                        *fakes.Logger
+		metadataReader                *fakes.MetadataReader
 		propertiesDirectoryReader     *fakes.MetadataPartsDirectoryReader
 		releaseManifestReader         *fakes.ReleaseManifestReader
 		runtimeConfigsDirectoryReader *fakes.MetadataPartsDirectoryReader
@@ -29,11 +29,11 @@ var _ = Describe("MetadataBuilder", func() {
 	)
 
 	BeforeEach(func() {
-		iconEncoder = &fakes.IconEncoder{}
-		logger = &fakes.Logger{}
 		formDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
+		iconEncoder = &fakes.IconEncoder{}
 		instanceGroupDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		jobsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
+		logger = &fakes.Logger{}
 		metadataReader = &fakes.MetadataReader{}
 		propertiesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		releaseManifestReader = &fakes.ReleaseManifestReader{}
