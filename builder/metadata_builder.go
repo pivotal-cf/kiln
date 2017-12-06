@@ -154,6 +154,7 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 	delete(metadata, "icon_image")
 	delete(metadata, "form_types")
 	delete(metadata, "job_types")
+	delete(metadata, "property_blueprints")
 
 	return GeneratedMetadata{
 		FormTypes:          formTypes,
