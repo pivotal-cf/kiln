@@ -31,7 +31,7 @@ type BuildInput struct {
 	RuntimeConfigDirectories []string
 	StemcellTarball          string
 	Variables                map[string]string
-	VariableDirectories      []string
+	BOSHVariableDirectories  []string
 	Version                  string
 }
 
@@ -119,7 +119,7 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		return GeneratedMetadata{}, err
 	}
 
-	variables, err := m.buildVariables(input.VariableDirectories, metadata)
+	variables, err := m.buildVariables(input.BOSHVariableDirectories, metadata)
 	if err != nil {
 		return GeneratedMetadata{}, err
 	}

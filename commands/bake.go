@@ -32,7 +32,7 @@ type BakeConfig struct {
 	StemcellTarball          string            `short:"st"   long:"stemcell-tarball"           description:"path to a stemcell tarball"`
 	StubReleases             bool              `short:"sr"   long:"stub-releases"              description:"skips importing release tarballs into the tile"`
 	Variables                flags.StringSlice `short:"vr"   long:"variable"                   description:"key value pairs of variables to interpolate"`
-	VariableDirectories      flags.StringSlice `short:"vd"   long:"variables-directory"        description:"path to a directory containing variables"`
+	BOSHVariableDirectories  flags.StringSlice `short:"vd"   long:"bosh-variables-directory"   description:"path to a directory containing BOSH variables"`
 	Version                  string            `short:"v"    long:"version"                    description:"version of the tile"`
 }
 
@@ -98,7 +98,7 @@ func (b Bake) Execute(args []string) error {
 		ReleaseTarballs:          releaseTarballs,
 		RuntimeConfigDirectories: config.RuntimeConfigDirectories,
 		StemcellTarball:          config.StemcellTarball,
-		VariableDirectories:      config.VariableDirectories,
+		BOSHVariableDirectories:  config.BOSHVariableDirectories,
 		Version:                  config.Version,
 	}
 

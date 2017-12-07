@@ -85,8 +85,8 @@ var _ = Describe("bake", func() {
 				"--runtime-configs-directory", "some-other-runtime-configs-directory",
 				"--runtime-configs-directory", "some-runtime-configs-directory",
 				"--stemcell-tarball", "some-stemcell-tarball",
-				"--variables-directory", "some-other-variables-directory",
-				"--variables-directory", "some-variables-directory",
+				"--bosh-variables-directory", "some-other-variables-directory",
+				"--bosh-variables-directory", "some-variables-directory",
 				"--version", "1.2.3",
 			})
 
@@ -104,7 +104,7 @@ var _ = Describe("bake", func() {
 			Expect(buildInput.ReleaseTarballs).To(Equal([]string{otherTarballRelease, tarballRelease}))
 			Expect(buildInput.RuntimeConfigDirectories).To(Equal([]string{"some-other-runtime-configs-directory", "some-runtime-configs-directory"}))
 			Expect(buildInput.StemcellTarball).To(Equal("some-stemcell-tarball"))
-			Expect(buildInput.VariableDirectories).To(Equal([]string{"some-other-variables-directory", "some-variables-directory"}))
+			Expect(buildInput.BOSHVariableDirectories).To(Equal([]string{"some-other-variables-directory", "some-variables-directory"}))
 			Expect(buildInput.Version).To(Equal("1.2.3"))
 		})
 
@@ -128,7 +128,7 @@ var _ = Describe("bake", func() {
 				"--releases-directory", someReleasesDirectory,
 				"--runtime-configs-directory", "some-runtime-configs-directory",
 				"--stemcell-tarball", "some-stemcell-tarball",
-				"--variables-directory", "some-variables-directory",
+				"--bosh-variables-directory", "some-variables-directory",
 				"--variable", "some-variable=some-variable-value",
 				"--version", "1.2.3",
 			})
@@ -171,7 +171,7 @@ stemcell_criteria:
 				"--releases-directory", someReleasesDirectory,
 				"--runtime-configs-directory", "some-runtime-configs-directory",
 				"--stemcell-tarball", "some-stemcell-tarball",
-				"--variables-directory", "some-variables-directory",
+				"--bosh-variables-directory", "some-variables-directory",
 				"--version", "1.2.3",
 			})
 
@@ -208,7 +208,7 @@ stemcell_criteria:
 				Expect(buildInput.ReleaseTarballs).To(Equal([]string{tarballRelease}))
 				Expect(buildInput.RuntimeConfigDirectories).To(BeEmpty())
 				Expect(buildInput.StemcellTarball).To(Equal("some-stemcell-tarball"))
-				Expect(buildInput.VariableDirectories).To(BeEmpty())
+				Expect(buildInput.BOSHVariableDirectories).To(BeEmpty())
 				Expect(buildInput.Version).To(Equal("1.2.3"))
 			})
 
@@ -267,8 +267,8 @@ stemcell_criteria:
 						"--runtime-configs-directory", "some-other-runtime-configs-directory",
 						"--runtime-configs-directory", "some-runtime-configs-directory",
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--variables-directory", "some-other-variables-directory",
-						"--variables-directory", "some-variables-directory",
+						"--bosh-variables-directory", "some-other-variables-directory",
+						"--bosh-variables-directory", "some-variables-directory",
 						"--variable", "some-variable=some-value",
 						"--version", "1.2.3",
 					})
@@ -298,8 +298,8 @@ stemcell_criteria:
 						"--runtime-configs-directory", "some-other-runtime-configs-directory",
 						"--runtime-configs-directory", "some-runtime-configs-directory",
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--variables-directory", "some-other-variables-directory",
-						"--variables-directory", "some-variables-directory",
+						"--bosh-variables-directory", "some-other-variables-directory",
+						"--bosh-variables-directory", "some-variables-directory",
 						"--variable", "some-variable=some-value",
 						"--version", "1.2.3",
 					})
@@ -326,8 +326,8 @@ stemcell_criteria:
 						"--runtime-configs-directory", "some-other-runtime-configs-directory",
 						"--runtime-configs-directory", "some-runtime-configs-directory",
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--variables-directory", "some-other-variables-directory",
-						"--variables-directory", "some-variables-directory",
+						"--bosh-variables-directory", "some-other-variables-directory",
+						"--bosh-variables-directory", "some-variables-directory",
 						"--variable", "some-variable",
 						"--version", "1.2.3",
 					})

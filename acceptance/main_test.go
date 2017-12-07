@@ -262,7 +262,7 @@ job_types:
 			"--releases-directory", someReleasesDirectory,
 			"--runtime-configs-directory", someRuntimeConfigsDirectory,
 			"--stemcell-tarball", stemcellTarball,
-			"--variables-directory", someVariablesDirectory,
+			"--bosh-variables-directory", someVariablesDirectory,
 			"--variable", "some-variable=some-variable-value",
 			"--version", "1.2.3",
 		)

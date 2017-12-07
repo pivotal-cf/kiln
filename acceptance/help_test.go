@@ -27,6 +27,7 @@ Usage: kiln [options] bake [<args>]
   --help, -h  bool  prints this usage information (default: false)
 
 Command Arguments:
+  --bosh-variables-directory, -vd    string (variadic)  path to a directory containing BOSH variables
   --embed, -e                        string (variadic)  path to files to include in the tile /embed directory
   --forms-directory, -f              string (variadic)  path to a directory containing forms
   --icon, -i                         string             path to icon file
@@ -41,7 +42,6 @@ Command Arguments:
   --stemcell-tarball, -st            string             path to a stemcell tarball
   --stub-releases, -sr               bool               skips importing release tarballs into the tile
   --variable, -vr                    string (variadic)  key value pairs of variables to interpolate
-  --variables-directory, -vd         string (variadic)  path to a directory containing variables
   --version, -v                      string             version of the tile
 `
 

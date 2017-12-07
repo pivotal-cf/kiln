@@ -284,7 +284,7 @@ var _ = Describe("MetadataBuilder", func() {
 				ReleaseTarballs:          []string{"/path/to/release-1.tgz", "/path/to/release-2.tgz"},
 				RuntimeConfigDirectories: []string{"/path/to/runtime-configs/directory", "/path/to/other/runtime-configs/directory"},
 				StemcellTarball:          "/path/to/test-stemcell.tgz",
-				VariableDirectories:      []string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
+				BOSHVariableDirectories:  []string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
 				Version:                  "1.2.3",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -680,7 +680,7 @@ var _ = Describe("MetadataBuilder", func() {
 					variablesDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some error"))
 
 					_, err := tileBuilder.Build(builder.BuildInput{
-						VariableDirectories: []string{"/path/to/missing/variables"},
+						BOSHVariableDirectories: []string{"/path/to/missing/variables"},
 					})
 					Expect(err).To(MatchError(`error reading from variables directory "/path/to/missing/variables": some error`))
 				})
