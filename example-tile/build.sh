@@ -19,6 +19,7 @@ function main() {
     --metadata "${cwd}/base.yml" \
     --migrations-directory "${cwd}/migrations" \
     --output-file "${cwd}/example-1.2.3-build.4.pivotal" \
+    --properties-directory "${cwd}/properties" \
     --releases-directory "${cwd}/releases" \
     --runtime-configs-directory "${cwd}/runtime-configs" \
     --stemcell-tarball "${cwd}/stemcell.tgz" \

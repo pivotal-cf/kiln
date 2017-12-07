@@ -23,12 +23,5 @@ post_deploy_errands:
   - my-instance/first
 
 property_blueprints:
-- name: element_1
-  type: text
-  configurable: true
-  optional: true
-
-- name: element_2
-  type: text
-  configurable: true
-  optional: false
+- element_1
+- element_2
