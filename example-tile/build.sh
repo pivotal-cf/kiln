@@ -15,6 +15,7 @@ function main() {
     --forms-directory "${cwd}/forms" \
     --icon "${cwd}/icon.png" \
     --instance-groups-directory "${cwd}/instance-groups" \
+    --jobs-directory "${cwd}/jobs" \
     --metadata "${cwd}/base.yml" \
     --migrations-directory "${cwd}/migrations" \
     --output-file "${cwd}/example-1.2.3-build.4.pivotal" \

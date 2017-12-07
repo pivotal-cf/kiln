@@ -5,16 +5,8 @@ job_type:
   description: This is an instance.
 
   templates:
-  - name: my-job
-    release: my-release
-    manifest: |
-      job-properties:
-        example: "example"
-  - name: my-errand
-    release: my-release
-    manifest: |
-      errand-properties:
-        example: "example"
+  - my-job.yml
+  - my-errand.yml
 
   static_ip: 1
   dynamic_ip: 0
