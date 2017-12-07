@@ -18,6 +18,7 @@ import (
 )
 
 type BakeConfig struct {
+	BOSHVariableDirectories  flags.StringSlice `short:"vd"   long:"bosh-variables-directory"   description:"path to a directory containing BOSH variables"`
 	EmbedPaths               flags.StringSlice `short:"e"    long:"embed"                      description:"path to files to include in the tile /embed directory"`
 	FormDirectories          flags.StringSlice `short:"f"    long:"forms-directory"            description:"path to a directory containing forms"`
 	IconPath                 string            `short:"i"    long:"icon"                       description:"path to icon file"`
@@ -31,8 +32,8 @@ type BakeConfig struct {
 	RuntimeConfigDirectories flags.StringSlice `short:"rcd"  long:"runtime-configs-directory"  description:"path to a directory containing runtime configs"`
 	StemcellTarball          string            `short:"st"   long:"stemcell-tarball"           description:"path to a stemcell tarball"`
 	StubReleases             bool              `short:"sr"   long:"stub-releases"              description:"skips importing release tarballs into the tile"`
+	VariableFiles            flags.StringSlice `short:"vf"   long:"variables-file"             description:"path to a file containing variables to interpolate"`
 	Variables                flags.StringSlice `short:"vr"   long:"variable"                   description:"key value pairs of variables to interpolate"`
-	BOSHVariableDirectories  flags.StringSlice `short:"vd"   long:"bosh-variables-directory"   description:"path to a directory containing BOSH variables"`
 	Version                  string            `short:"v"    long:"version"                    description:"version of the tile"`
 }
 
@@ -83,7 +84,15 @@ func (b Bake) Execute(args []string) error {
 
 	b.logger.Printf("Creating metadata for %s...", config.OutputFile)
 
-	variables, err := b.buildVariablesMap(config.Variables)
+	variables := map[string]string{}
+	for _, file := range config.VariableFiles {
+		err := b.readVariableFiles(file, variables)
+		if err != nil {
+			return fmt.Errorf("failed reading variable file: %s", err.Error())
+		}
+	}
+
+	err = b.addVariablesToMap(config.Variables, variables)
 	if err != nil {
 		return err
 	}
@@ -182,17 +191,16 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 	return config, nil
 }
 
-func (b Bake) buildVariablesMap(flagVariables []string) (map[string]string, error) {
-	variables := map[string]string{}
+func (b Bake) addVariablesToMap(flagVariables []string, variables map[string]string) error {
 	for _, variable := range flagVariables {
 		variablePair := strings.SplitN(variable, "=", 2)
 		if len(variablePair) < 2 {
-			return nil, errors.New("variable needs a key value in the form of key=value")
+			return errors.New("variable needs a key value in the form of key=value")
 		}
 		variables[variablePair[0]] = variablePair[1]
 	}
 
-	return variables, nil
+	return nil
 }
 
 func (b Bake) extractReleaseTarballFilenames(config BakeConfig) ([]string, error) {
@@ -243,4 +251,17 @@ func (b Bake) interpolateMetadata(variables map[string]string, generatedMetadata
 		return nil, fmt.Errorf("template execution failed: %s", err)
 	}
 	return buffer.Bytes(), nil
+}
+
+func (b Bake) readVariableFiles(path string, variables map[string]string) error {
+	variableData, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	err = yaml.Unmarshal(variableData, &variables)
+	if err != nil {
+		return err
+	}
+	return nil
 }

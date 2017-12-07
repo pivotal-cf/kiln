@@ -2,9 +2,11 @@ package commands_test
 
 import (
 	"io/ioutil"
+	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	yaml "gopkg.in/yaml.v2"
 
 	jhandacommands "github.com/pivotal-cf/jhanda/commands"
 	"github.com/pivotal-cf/kiln/builder"
@@ -19,20 +21,36 @@ var _ = Describe("bake", func() {
 		fakeLogger          *fakes.Logger
 
 		generatedMetadata      builder.GeneratedMetadata
-		someReleasesDirectory  string
 		otherReleasesDirectory string
-		tarballRelease         string
 		otherTarballRelease    string
-		err                    error
+		someReleasesDirectory  string
+		tarballRelease         string
+		tmpDir                 string
+		variableFile           *os.File
 
 		bake commands.Bake
 	)
 
 	BeforeEach(func() {
-		someReleasesDirectory, err = ioutil.TempDir("", "")
+		var err error
+		tmpDir, err = ioutil.TempDir("", "command-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		otherReleasesDirectory, err = ioutil.TempDir("", "")
+		variableFile, err = ioutil.TempFile(tmpDir, "variables-file")
+		Expect(err).NotTo(HaveOccurred())
+
+		variables := map[string]string{"some-variable-from-file": "some-variable-value-from-file"}
+		data, err := yaml.Marshal(&variables)
+		Expect(err).NotTo(HaveOccurred())
+
+		n, err := variableFile.Write(data)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(data).To(HaveLen(n))
+
+		someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
+		Expect(err).NotTo(HaveOccurred())
+
+		otherReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		tarballRelease = someReleasesDirectory + "/release1.tgz"
@@ -68,6 +86,11 @@ var _ = Describe("bake", func() {
 		fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 
 		bake = commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger)
+	})
+
+	AfterEach(func() {
+		Expect(variableFile.Close()).To(Succeed())
+		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
 	Describe("Execute", func() {
@@ -110,7 +133,8 @@ var _ = Describe("bake", func() {
 
 		It("calls the tile writer", func() {
 			generatedMetadata.Metadata = builder.Metadata{
-				"custom_variable": "$(variable \"some-variable\")",
+				"custom_variable":    "$(variable \"some-variable\")",
+				"variable_from_file": "$(variable \"some-variable-from-file\")",
 			}
 			fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 
@@ -130,6 +154,7 @@ var _ = Describe("bake", func() {
 				"--stemcell-tarball", "some-stemcell-tarball",
 				"--bosh-variables-directory", "some-variables-directory",
 				"--variable", "some-variable=some-variable-value",
+				"--variables-file", variableFile.Name(),
 				"--version", "1.2.3",
 			})
 
@@ -143,6 +168,7 @@ var _ = Describe("bake", func() {
 icon_image: some-icon-image
 name: some-product-name
 custom_variable: some-variable-value
+variable_from_file: some-variable-value-from-file
 releases:
 - name: some-release
   file: some-release-tarball
@@ -246,7 +272,134 @@ stemcell_criteria:
 			})
 		})
 
+		Context("when multiple variable files are provided", func() {
+			var otherVariableFile *os.File
+
+			BeforeEach(func() {
+				var err error
+				otherVariableFile, err = ioutil.TempFile(tmpDir, "variables-file")
+				Expect(err).NotTo(HaveOccurred())
+				defer otherVariableFile.Close()
+
+				variables := map[string]string{
+					"some-variable-from-file":       "override-variable-from-other-file",
+					"some-other-variable-from-file": "some-other-variable-value-from-file",
+				}
+				data, err := yaml.Marshal(&variables)
+				Expect(err).NotTo(HaveOccurred())
+
+				n, err := otherVariableFile.Write(data)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(data).To(HaveLen(n))
+			})
+
+			It("interpolates variables from both files", func() {
+				generatedMetadata.Metadata = builder.Metadata{
+					"custom_variable":               "$(variable \"some-variable\")",
+					"variable_from_file":            "$(variable \"some-variable-from-file\")",
+					"some_other_variable_from_file": "$(variable \"some-other-variable-from-file\")",
+				}
+				fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+
+				err := bake.Execute([]string{
+					"--embed", "some-embed-path",
+					"--forms-directory", "some-forms-directory",
+					"--icon", "some-icon-path",
+					"--instance-groups-directory", "some-instance-groups-directory",
+					"--jobs-directory", "some-jobs-directory",
+					"--metadata", "some-metadata",
+					"--migrations-directory", "some-migrations-directory",
+					"--migrations-directory", "some-other-migrations-directory",
+					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
+					"--releases-directory", otherReleasesDirectory,
+					"--releases-directory", someReleasesDirectory,
+					"--runtime-configs-directory", "some-runtime-configs-directory",
+					"--stemcell-tarball", "some-stemcell-tarball",
+					"--bosh-variables-directory", "some-variables-directory",
+					"--variable", "some-variable=some-variable-value",
+					"--variables-file", variableFile.Name(),
+					"--variables-file", otherVariableFile.Name(),
+					"--version", "1.2.3",
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+
+				_, generatedMetadataContents, _ := fakeTileWriter.WriteArgsForCall(0)
+				Expect(generatedMetadataContents).To(MatchYAML(`
+icon_image: some-icon-image
+name: some-product-name
+custom_variable: some-variable-value
+variable_from_file: override-variable-from-other-file
+some_other_variable_from_file: some-other-variable-value-from-file
+releases:
+- name: some-release
+  file: some-release-tarball
+  version: 1.2.3-build.4
+stemcell_criteria:
+  version: 2.3.4
+  os: an-operating-system
+  requires_cpi: false`))
+			})
+		})
+
 		Context("failure cases", func() {
+			Context("when the variable file does not exist but is provided", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--forms-directory", "some-forms-directory",
+						"--icon", "some-icon-path",
+						"--instance-groups-directory", "some-instance-groups-directory",
+						"--jobs-directory", "some-jobs-directory",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", otherReleasesDirectory,
+						"--releases-directory", someReleasesDirectory,
+						"--runtime-configs-directory", "some-other-runtime-configs-directory",
+						"--runtime-configs-directory", "some-runtime-configs-directory",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--bosh-variables-directory", "some-other-variables-directory",
+						"--bosh-variables-directory", "some-variables-directory",
+						"--variables-file", "bogus",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("no such file or directory"))
+				})
+			})
+
+			Context("when the variable file does not contain valid YAML", func() {
+				BeforeEach(func() {
+					_, err := variableFile.Write([]byte("{{invalid-blah"))
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--forms-directory", "some-forms-directory",
+						"--icon", "some-icon-path",
+						"--instance-groups-directory", "some-instance-groups-directory",
+						"--jobs-directory", "some-jobs-directory",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", otherReleasesDirectory,
+						"--releases-directory", someReleasesDirectory,
+						"--runtime-configs-directory", "some-other-runtime-configs-directory",
+						"--runtime-configs-directory", "some-runtime-configs-directory",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--bosh-variables-directory", "some-other-variables-directory",
+						"--bosh-variables-directory", "some-variables-directory",
+						"--variables-file", variableFile.Name(),
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("failed reading variable file:"))
+				})
+			})
+
 			Context("when template parsing fails", func() {
 				It("returns an error", func() {
 					generatedMetadata.Metadata = builder.Metadata{
@@ -308,7 +461,6 @@ stemcell_criteria:
 					Expect(err.Error()).To(ContainSubstring("template execution failed"))
 					Expect(err.Error()).To(ContainSubstring("could not find variable with key"))
 				})
-
 			})
 
 			Context("when the variable flag contains variable without equal sign", func() {

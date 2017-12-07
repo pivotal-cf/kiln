@@ -42,6 +42,7 @@ Command Arguments:
   --stemcell-tarball, -st            string             path to a stemcell tarball
   --stub-releases, -sr               bool               skips importing release tarballs into the tile
   --variable, -vr                    string (variadic)  key value pairs of variables to interpolate
+  --variables-file, -vf              string (variadic)  path to a file containing variables to interpolate
   --version, -v                      string             version of the tile
 `
 

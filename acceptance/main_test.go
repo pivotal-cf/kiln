@@ -12,6 +12,7 @@ import (
 
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	yaml "gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -629,6 +630,77 @@ variables:
 
 				Expect(seenFile).To(BeTrue())
 			})
+		})
+	})
+
+	Context("when a --variables-file flag is provided", func() {
+		var variableFile *os.File
+
+		BeforeEach(func() {
+			var err error
+			variableFile, err = ioutil.TempFile(tmpDir, "variables-file")
+			Expect(err).NotTo(HaveOccurred())
+			defer variableFile.Close()
+
+			variables := map[string]string{"some-variable": "some-variable-value"}
+			data, err := yaml.Marshal(&variables)
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := variableFile.Write(data)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(data).To(HaveLen(n))
+		})
+
+		It("interpolates variables from the file into the metadata", func() {
+			command := exec.Command(pathToMain,
+				"bake",
+				"--forms-directory", someFormsDirectory,
+				"--forms-directory", someOtherFormsDirectory,
+				"--icon", someIconPath,
+				"--instance-groups-directory", someInstanceGroupsDirectory,
+				"--jobs-directory", someJobsDirectory,
+				"--metadata", metadata,
+				"--migrations-directory", "fixtures/extra-migrations",
+				"--migrations-directory", "fixtures/migrations",
+				"--output-file", outputFile,
+				"--properties-directory", somePropertiesDirectory,
+				"--releases-directory", otherReleasesDirectory,
+				"--releases-directory", someReleasesDirectory,
+				"--runtime-configs-directory", someRuntimeConfigsDirectory,
+				"--stemcell-tarball", stemcellTarball,
+				"--bosh-variables-directory", someVariablesDirectory,
+				"--variables-file", variableFile.Name(),
+				"--version", "1.2.3",
+			)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			archive, err := os.Open(outputFile)
+			Expect(err).NotTo(HaveOccurred())
+
+			archiveInfo, err := archive.Stat()
+			Expect(err).NotTo(HaveOccurred())
+
+			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			Expect(err).NotTo(HaveOccurred())
+
+			var file io.ReadCloser
+			for _, f := range zr.File {
+				if f.Name == "metadata/cool-product-name.yml" {
+					file, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+					break
+				}
+			}
+
+			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
+			metadataContents, err := ioutil.ReadAll(file)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(metadataContents)).To(ContainSubstring("custom_variable: some-variable-value"))
 		})
 	})
 
