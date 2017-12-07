@@ -1,10 +1,14 @@
 package commands
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
+	"strings"
+	"text/template"
 
 	yaml "gopkg.in/yaml.v2"
 
@@ -27,6 +31,7 @@ type BakeConfig struct {
 	RuntimeConfigDirectories flags.StringSlice `short:"rcd"  long:"runtime-configs-directory"  description:"path to a directory containing runtime configs"`
 	StemcellTarball          string            `short:"st"   long:"stemcell-tarball"           description:"path to a stemcell tarball"`
 	StubReleases             bool              `short:"sr"   long:"stub-releases"              description:"skips importing release tarballs into the tile"`
+	Variables                flags.StringSlice `short:"vr"   long:"variable"                   description:"key value pairs of variables to interpolate"`
 	VariableDirectories      flags.StringSlice `short:"vd"   long:"variables-directory"        description:"path to a directory containing variables"`
 	Version                  string            `short:"v"    long:"version"                    description:"version of the tile"`
 }
@@ -78,6 +83,11 @@ func (b Bake) Execute(args []string) error {
 
 	b.logger.Printf("Creating metadata for %s...", config.OutputFile)
 
+	variables, err := b.buildVariablesMap(config.Variables)
+	if err != nil {
+		return err
+	}
+
 	buildInput := builder.BuildInput{
 		FormDirectories:          config.FormDirectories,
 		IconPath:                 config.IconPath,
@@ -112,7 +122,12 @@ func (b Bake) Execute(args []string) error {
 		EmbedPaths:           config.EmbedPaths,
 	}
 
-	err = b.tileWriter.Write(generatedMetadata.Name, generatedMetadataYAML, writeInput)
+	interpolatedMetadata, err := b.interpolateMetadata(variables, generatedMetadataYAML)
+	if err != nil {
+		return err
+	}
+
+	err = b.tileWriter.Write(generatedMetadata.Name, interpolatedMetadata, writeInput)
 	if err != nil {
 		return err
 	}
@@ -167,6 +182,19 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 	return config, nil
 }
 
+func (b Bake) buildVariablesMap(flagVariables []string) (map[string]string, error) {
+	variables := map[string]string{}
+	for _, variable := range flagVariables {
+		variablePair := strings.SplitN(variable, "=", 2)
+		if len(variablePair) < 2 {
+			return nil, errors.New("variable needs a key value in the form of key=value")
+		}
+		variables[variablePair[0]] = variablePair[1]
+	}
+
+	return variables, nil
+}
+
 func (b Bake) extractReleaseTarballFilenames(config BakeConfig) ([]string, error) {
 	var releaseTarballs []string
 
@@ -187,4 +215,32 @@ func (b Bake) extractReleaseTarballFilenames(config BakeConfig) ([]string, error
 	}
 
 	return releaseTarballs, nil
+}
+
+func (b Bake) interpolateMetadata(variables map[string]string, generatedMetadataYAML []byte) ([]byte, error) {
+	templateHelpers := template.FuncMap{
+		"variable": func(key string) (string, error) {
+			val, ok := variables[key]
+			if !ok {
+				return "", fmt.Errorf("could not find variable with key '%s'", key)
+			}
+			return val, nil
+		},
+	}
+
+	t, err := template.New("metadata").
+		Delims("$(", ")").
+		Funcs(templateHelpers).
+		Parse(string(generatedMetadataYAML))
+
+	if err != nil {
+		return nil, fmt.Errorf("template parsing failed: %s", err)
+	}
+
+	var buffer bytes.Buffer
+	err = t.Execute(&buffer, variables)
+	if err != nil {
+		return nil, fmt.Errorf("template execution failed: %s", err)
+	}
+	return buffer.Bytes(), nil
 }

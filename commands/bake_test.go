@@ -18,6 +18,7 @@ var _ = Describe("bake", func() {
 		fakeTileWriter      *fakes.TileWriter
 		fakeLogger          *fakes.Logger
 
+		generatedMetadata      builder.GeneratedMetadata
 		someReleasesDirectory  string
 		otherReleasesDirectory string
 		tarballRelease         string
@@ -50,7 +51,7 @@ var _ = Describe("bake", func() {
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
 
-		fakeMetadataBuilder.BuildReturns(builder.GeneratedMetadata{
+		generatedMetadata = builder.GeneratedMetadata{
 			IconImage: "some-icon-image",
 			Name:      "some-product-name",
 			Releases: []builder.Release{{
@@ -63,7 +64,8 @@ var _ = Describe("bake", func() {
 				OS:          "an-operating-system",
 				RequiresCPI: false,
 			},
-		}, nil)
+		}
+		fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 
 		bake = commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger)
 	})
@@ -107,6 +109,11 @@ var _ = Describe("bake", func() {
 		})
 
 		It("calls the tile writer", func() {
+			generatedMetadata.Metadata = builder.Metadata{
+				"custom_variable": "$(variable \"some-variable\")",
+			}
+			fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+
 			err := bake.Execute([]string{
 				"--embed", "some-embed-path",
 				"--forms-directory", "some-forms-directory",
@@ -122,6 +129,7 @@ var _ = Describe("bake", func() {
 				"--runtime-configs-directory", "some-runtime-configs-directory",
 				"--stemcell-tarball", "some-stemcell-tarball",
 				"--variables-directory", "some-variables-directory",
+				"--variable", "some-variable=some-variable-value",
 				"--version", "1.2.3",
 			})
 
@@ -134,6 +142,7 @@ var _ = Describe("bake", func() {
 			Expect(generatedMetadataContents).To(MatchYAML(`
 icon_image: some-icon-image
 name: some-product-name
+custom_variable: some-variable-value
 releases:
 - name: some-release
   file: some-release-tarball
@@ -238,6 +247,94 @@ stemcell_criteria:
 		})
 
 		Context("failure cases", func() {
+			Context("when template parsing fails", func() {
+				It("returns an error", func() {
+					generatedMetadata.Metadata = builder.Metadata{
+						"custom_variable": "$(variable",
+					}
+					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+
+					err := bake.Execute([]string{
+						"--forms-directory", "some-forms-directory",
+						"--icon", "some-icon-path",
+						"--instance-groups-directory", "some-instance-groups-directory",
+						"--jobs-directory", "some-jobs-directory",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", otherReleasesDirectory,
+						"--releases-directory", someReleasesDirectory,
+						"--runtime-configs-directory", "some-other-runtime-configs-directory",
+						"--runtime-configs-directory", "some-runtime-configs-directory",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--variables-directory", "some-other-variables-directory",
+						"--variables-directory", "some-variables-directory",
+						"--variable", "some-variable=some-value",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("template parsing failed"))
+				})
+			})
+
+			Context("when template execution fails", func() {
+				It("returns an error", func() {
+					generatedMetadata.Metadata = builder.Metadata{
+						"custom_variable": "$(variable \"blah\")",
+					}
+					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+
+					err := bake.Execute([]string{
+						"--forms-directory", "some-forms-directory",
+						"--icon", "some-icon-path",
+						"--instance-groups-directory", "some-instance-groups-directory",
+						"--jobs-directory", "some-jobs-directory",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", otherReleasesDirectory,
+						"--releases-directory", someReleasesDirectory,
+						"--runtime-configs-directory", "some-other-runtime-configs-directory",
+						"--runtime-configs-directory", "some-runtime-configs-directory",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--variables-directory", "some-other-variables-directory",
+						"--variables-directory", "some-variables-directory",
+						"--variable", "some-variable=some-value",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("template execution failed"))
+					Expect(err.Error()).To(ContainSubstring("could not find variable with key"))
+				})
+
+			})
+
+			Context("when the variable flag contains variable without equal sign", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--forms-directory", "some-forms-directory",
+						"--icon", "some-icon-path",
+						"--instance-groups-directory", "some-instance-groups-directory",
+						"--jobs-directory", "some-jobs-directory",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", otherReleasesDirectory,
+						"--releases-directory", someReleasesDirectory,
+						"--runtime-configs-directory", "some-other-runtime-configs-directory",
+						"--runtime-configs-directory", "some-runtime-configs-directory",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--variables-directory", "some-other-variables-directory",
+						"--variables-directory", "some-variables-directory",
+						"--variable", "some-variable",
+						"--version", "1.2.3",
+					})
+					Expect(err).To(MatchError("variable needs a key value in the form of key=value"))
+				})
+			})
+
 			Context("when the icon flag is missing", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{

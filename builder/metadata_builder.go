@@ -30,6 +30,7 @@ type BuildInput struct {
 	ReleaseTarballs          []string
 	RuntimeConfigDirectories []string
 	StemcellTarball          string
+	Variables                map[string]string
 	VariableDirectories      []string
 	Version                  string
 }

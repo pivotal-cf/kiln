@@ -218,6 +218,7 @@ provides_product_versions:
   version: 1.7.0.0
 product_version: "1.7.0.0$PRERELEASE_VERSION$"
 minimum_version_for_upgrade: 1.6.9-build.0
+custom_variable: $(variable "some-variable")
 label: Pivotal Elastic Runtime
 description:
   this is the description
@@ -262,6 +263,7 @@ job_types:
 			"--runtime-configs-directory", someRuntimeConfigsDirectory,
 			"--stemcell-tarball", stemcellTarball,
 			"--variables-directory", someVariablesDirectory,
+			"--variable", "some-variable=some-variable-value",
 			"--version", "1.2.3",
 		)
 
@@ -324,6 +326,7 @@ job_types:
 label: Pivotal Elastic Runtime
 metadata_version: "1.7"
 minimum_version_for_upgrade: 1.6.9-build.0
+custom_variable: some-variable-value
 name: cool-product-name
 post_deploy_errands:
 - name: smoke-tests
@@ -426,6 +429,7 @@ variables:
 				"--releases-directory", someReleasesDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--stub-releases",
+				"--variable", "some-variable=some-variable-value",
 				"--version", "1.2.3",
 			)
 
@@ -464,6 +468,7 @@ variables:
 				"--output-file", outputFile,
 				"--releases-directory", someReleasesDirectory,
 				"--stemcell-tarball", stemcellTarball,
+				"--variable", "some-variable=some-variable-value",
 				"--version", "1.2.3",
 			)
 
@@ -517,6 +522,7 @@ variables:
 					"--releases-directory", someReleasesDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
+					"--variable", "some-variable=some-variable-value",
 					"--version", "1.2.3",
 				)
 
@@ -589,6 +595,7 @@ variables:
 					"--releases-directory", someReleasesDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
+					"--variable", "some-variable=some-variable-value",
 					"--version", "1.2.3",
 				)
 
@@ -655,6 +662,7 @@ variables:
 					"--output-file", "/path/to/missing/dir/product.zip",
 					"--releases-directory", someReleasesDirectory,
 					"--stemcell-tarball", stemcellTarball,
+					"--variable", "some-variable=some-variable-value",
 					"--version", "1.2.3",
 				)
 

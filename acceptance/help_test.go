@@ -40,6 +40,7 @@ Command Arguments:
   --runtime-configs-directory, -rcd  string (variadic)  path to a directory containing runtime configs
   --stemcell-tarball, -st            string             path to a stemcell tarball
   --stub-releases, -sr               bool               skips importing release tarballs into the tile
+  --variable, -vr                    string (variadic)  key value pairs of variables to interpolate
   --variables-directory, -vd         string (variadic)  path to a directory containing variables
   --version, -v                      string             version of the tile
 `
