@@ -1,0 +1,15 @@
+[[constraint]]
+  name = "github.com/onsi/ginkgo"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/onsi/gomega"
+  branch = "master"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/pivotal-cf/jhanda"
+
+[[constraint]]
+  branch = "v2"
+  name = "gopkg.in/yaml.v2"
