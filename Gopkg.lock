@@ -4,7 +4,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/onsi/ginkgo"
-  packages = [".","config","extensions/table","internal/codelocation","internal/containernode","internal/failer","internal/leafnodes","internal/remote","internal/spec","internal/spec_iterator","internal/specrunner","internal/suite","internal/testingtproxy","internal/writer","reporters","reporters/stenographer","reporters/stenographer/support/go-colorable","reporters/stenographer/support/go-isatty","types"]
+  packages = [".","config","extensions/table","ginkgo","ginkgo/convert","ginkgo/interrupthandler","ginkgo/nodot","ginkgo/testrunner","ginkgo/testsuite","ginkgo/watch","internal/codelocation","internal/containernode","internal/failer","internal/leafnodes","internal/remote","internal/spec","internal/spec_iterator","internal/specrunner","internal/suite","internal/testingtproxy","internal/writer","reporters","reporters/stenographer","reporters/stenographer/support/go-colorable","reporters/stenographer/support/go-isatty","types"]
   revision = "cb73bd0f14eb8d91a9801647edbebe6ddb5b4cb4"
 
 [[projects]]
@@ -46,6 +46,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "48fd4f249f66a7741795b743f2d28f9e6a70379cba05c2f6184f54ffb43b89a6"
+  inputs-digest = "64bbd38f3ecfd5da088dda0c694aa999abd1af99537f9b7baa77418e7fd7fca1"
   solver-name = "gps-cdcl"
   solver-version = 1
