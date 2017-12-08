@@ -1,12 +1,12 @@
 required = ["github.com/onsi/ginkgo/ginkgo"]
 
 [[constraint]]
-  name = "github.com/onsi/ginkgo"
   branch = "master"
+  name = "github.com/onsi/ginkgo"
 
 [[constraint]]
-  name = "github.com/onsi/gomega"
   branch = "master"
+  name = "github.com/onsi/gomega"
 
 [[constraint]]
   branch = "master"
