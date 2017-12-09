@@ -45,7 +45,7 @@ job_type:
     type: integer
     label: Persistent Disk
     configurable: false
-    default: 200000
+    default: $( variable "my-instance-persistent-disk-default" )
     constraints:
       min: 10000
 
