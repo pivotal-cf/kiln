@@ -11,6 +11,7 @@ function main() {
   cwd="${1}"
 
   go run ${scripts_path}/../main.go bake \
+    --bosh-variables-directory "${cwd}/variables" \
     --embed "${cwd}/extra" \
     --forms-directory "${cwd}/forms" \
     --icon "${cwd}/icon.png" \
@@ -23,7 +24,7 @@ function main() {
     --releases-directory "${cwd}/releases" \
     --runtime-configs-directory "${cwd}/runtime-configs" \
     --stemcell-tarball "${cwd}/stemcell.tgz" \
-    --bosh-variables-directory "${cwd}/variables" \
+    --variable "some-variable=some-value" \
     --version "1.2.3-build.4"
 }
 

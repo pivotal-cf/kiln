@@ -1,7 +1,7 @@
 ---
 name: example
 label: Example Tile
-description: Serves as an example tile
+description: Serves as an example tile >> $( variable "some-variable" )
 
 metadata_version: '2.0'
 minimum_version_for_upgrade: 1.12.0
