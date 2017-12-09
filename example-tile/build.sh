@@ -23,7 +23,7 @@ function main() {
     --releases-directory "${cwd}/releases" \
     --runtime-configs-directory "${cwd}/runtime-configs" \
     --stemcell-tarball "${cwd}/stemcell.tgz" \
-    --variables-directory "${cwd}/variables" \
+    --bosh-variables-directory "${cwd}/variables" \
     --version "1.2.3-build.4"
 }
 
