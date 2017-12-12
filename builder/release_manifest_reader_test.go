@@ -59,14 +59,15 @@ version: 1.2.3
 
 	Describe("Read", func() {
 		It("extracts the release manifest information from the tarball", func() {
-			releaseManifest, err := reader.Read("/path/to/release/tarball")
+			releaseManifest, err := reader.Read("/path/to/release/tarball.tgz")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(releaseManifest).To(Equal(builder.ReleaseManifest{
 				Name:    "release",
 				Version: "1.2.3",
+				File:    "tarball.tgz",
 			}))
 
-			Expect(filesystem.OpenArgsForCall(0)).To(Equal("/path/to/release/tarball"))
+			Expect(filesystem.OpenArgsForCall(0)).To(Equal("/path/to/release/tarball.tgz"))
 		})
 
 		Context("failure cases", func() {
@@ -74,7 +75,7 @@ version: 1.2.3
 				It("returns an error", func() {
 					filesystem.OpenReturns(nil, errors.New("failed to open tarball"))
 
-					_, err := reader.Read("/path/to/release/tarball")
+					_, err := reader.Read("/path/to/release/tarball.tgz")
 					Expect(err).To(MatchError("failed to open tarball"))
 				})
 			})
@@ -86,7 +87,7 @@ version: 1.2.3
 						return erroringReader, nil
 					}
 
-					_, err := reader.Read("/path/to/release/tarball")
+					_, err := reader.Read("/path/to/release/tarball.tgz")
 					Expect(err).To(MatchError("cannot read tarball"))
 					Expect(erroringReader.CloseCallCount()).To(Equal(1))
 				})
@@ -95,7 +96,7 @@ version: 1.2.3
 				It("returns an error", func() {
 					filesystem.OpenReturns(NewBuffer(bytes.NewBuffer([]byte("I am a banana!"))), nil)
 
-					_, err := reader.Read("/path/to/release/tarball")
+					_, err := reader.Read("/path/to/release/tarball.tgz")
 					Expect(err).To(MatchError("gzip: invalid header"))
 				})
 			})
@@ -113,8 +114,8 @@ version: 1.2.3
 					Expect(err).NotTo(HaveOccurred())
 					filesystem.OpenReturns(tarball, nil)
 
-					_, err = reader.Read("/path/to/release/tarball")
-					Expect(err).To(MatchError("could not find release.MF in \"/path/to/release/tarball\""))
+					_, err = reader.Read("/path/to/release/tarball.tgz")
+					Expect(err).To(MatchError("could not find release.MF in \"/path/to/release/tarball.tgz\""))
 				})
 			})
 
@@ -149,8 +150,8 @@ version: 1.2.3
 					Expect(err).NotTo(HaveOccurred())
 
 					filesystem.OpenReturns(tarball, nil)
-					_, err = reader.Read("/path/to/release/tarball")
-					Expect(err).To(MatchError("could not find release.MF in \"/path/to/release/tarball\""))
+					_, err = reader.Read("/path/to/release/tarball.tgz")
+					Expect(err).To(MatchError("could not find release.MF in \"/path/to/release/tarball.tgz\""))
 				})
 			})
 
@@ -170,8 +171,8 @@ version: 1.2.3
 					Expect(err).NotTo(HaveOccurred())
 
 					filesystem.OpenReturns(tarball, nil)
-					_, err = reader.Read("/path/to/release/tarball")
-					Expect(err).To(MatchError("error while reading \"/path/to/release/tarball\": unexpected EOF"))
+					_, err = reader.Read("/path/to/release/tarball.tgz")
+					Expect(err).To(MatchError("error while reading \"/path/to/release/tarball.tgz\": unexpected EOF"))
 				})
 			})
 
@@ -204,7 +205,7 @@ version: 1.2.3
 
 					filesystem.OpenReturns(tarball, nil)
 
-					_, err = reader.Read("/path/to/release/tarball")
+					_, err = reader.Read("/path/to/release/tarball.tgz")
 					Expect(err).To(MatchError("yaml: could not find expected directive name"))
 				})
 			})

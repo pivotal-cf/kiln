@@ -3,6 +3,9 @@ package acceptance
 var untemplatedMetadata = []byte(`---
 name: cool-product-name
 metadata_version: '1.7'
+releases:
+  - $( release "diego" )
+  - $( release "cf" )
 provides_product_versions:
 - name: cf
   version: 1.7.0.0

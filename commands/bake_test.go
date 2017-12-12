@@ -16,9 +16,10 @@ import (
 
 var _ = Describe("bake", func() {
 	var (
-		fakeMetadataBuilder *fakes.MetadataBuilder
-		fakeTileWriter      *fakes.TileWriter
-		fakeLogger          *fakes.Logger
+		fakeMetadataBuilder       *fakes.MetadataBuilder
+		fakeReleaseManifestReader *fakes.ReleaseManifestReader
+		fakeTileWriter            *fakes.TileWriter
+		fakeLogger                *fakes.Logger
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -66,17 +67,25 @@ var _ = Describe("bake", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
+		fakeReleaseManifestReader = &fakes.ReleaseManifestReader{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
+
+		fakeReleaseManifestReader.ReadReturnsOnCall(0, builder.ReleaseManifest{
+			Name:    "some-release-1",
+			Version: "1.2.3",
+			File:    "release1.tgz",
+		}, nil)
+
+		fakeReleaseManifestReader.ReadReturnsOnCall(1, builder.ReleaseManifest{
+			Name:    "some-release-2",
+			Version: "2.3.4",
+			File:    "release2.tgz",
+		}, nil)
 
 		generatedMetadata = builder.GeneratedMetadata{
 			IconImage: "some-icon-image",
 			Name:      "some-product-name",
-			Releases: []builder.Release{{
-				Name:    "some-release",
-				File:    "some-release-tarball",
-				Version: "1.2.3-build.4",
-			}},
 			StemcellCriteria: builder.StemcellCriteria{
 				Version:     "2.3.4",
 				OS:          "an-operating-system",
@@ -85,7 +94,7 @@ var _ = Describe("bake", func() {
 		}
 		fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 
-		bake = commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger)
+		bake = commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger, fakeReleaseManifestReader)
 	})
 
 	AfterEach(func() {
@@ -124,7 +133,6 @@ var _ = Describe("bake", func() {
 			Expect(buildInput.JobDirectories).To(Equal([]string{"some-jobs-directory"}))
 			Expect(buildInput.MetadataPath).To(Equal("some-metadata"))
 			Expect(buildInput.PropertyDirectories).To(Equal([]string{"some-properties-directory"}))
-			Expect(buildInput.ReleaseTarballs).To(Equal([]string{otherTarballRelease, tarballRelease}))
 			Expect(buildInput.RuntimeConfigDirectories).To(Equal([]string{"some-other-runtime-configs-directory", "some-runtime-configs-directory"}))
 			Expect(buildInput.StemcellTarball).To(Equal("some-stemcell-tarball"))
 			Expect(buildInput.BOSHVariableDirectories).To(Equal([]string{"some-other-variables-directory", "some-variables-directory"}))
@@ -135,6 +143,7 @@ var _ = Describe("bake", func() {
 			generatedMetadata.Metadata = builder.Metadata{
 				"custom_variable":    "$(variable \"some-variable\")",
 				"variable_from_file": "$(variable \"some-variable-from-file\")",
+				"releases":           []string{"$(release \"some-release-1\")", "$(release \"some-release-2\")"},
 			}
 			fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 
@@ -170,9 +179,12 @@ name: some-product-name
 custom_variable: some-variable-value
 variable_from_file: some-variable-value-from-file
 releases:
-- name: some-release
-  file: some-release-tarball
-  version: 1.2.3-build.4
+- name: some-release-1
+  file: release1.tgz
+  version: 1.2.3
+- name: some-release-2
+  file: release2.tgz
+  version: 2.3.4
 stemcell_criteria:
   version: 2.3.4
   os: an-operating-system
@@ -183,31 +195,6 @@ stemcell_criteria:
 				OutputFile:           "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
 				ReleaseDirectories:   []string{otherReleasesDirectory, someReleasesDirectory},
 			}))
-		})
-
-		It("logs its step", func() {
-			err := bake.Execute([]string{
-				"--forms-directory", "some-forms-directory",
-				"--icon", "some-icon-path",
-				"--instance-groups-directory", "some-instance-groups-directory",
-				"--jobs-directory", "some-jobs-directory",
-				"--metadata", "some-metadata",
-				"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-				"--releases-directory", otherReleasesDirectory,
-				"--releases-directory", someReleasesDirectory,
-				"--runtime-configs-directory", "some-runtime-configs-directory",
-				"--stemcell-tarball", "some-stemcell-tarball",
-				"--bosh-variables-directory", "some-variables-directory",
-				"--version", "1.2.3",
-			})
-
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeLogger.PrintlnCallCount()).To(Equal(1))
-
-			logLines := fakeLogger.PrintlnArgsForCall(0)
-
-			Expect(logLines[0]).To(Equal("Marshaling metadata file..."))
 		})
 
 		Context("when the optional flags are not specified", func() {
@@ -231,7 +218,6 @@ stemcell_criteria:
 				Expect(buildInput.InstanceGroupDirectories).To(BeEmpty())
 				Expect(buildInput.JobDirectories).To(BeEmpty())
 				Expect(buildInput.MetadataPath).To(Equal("some-metadata"))
-				Expect(buildInput.ReleaseTarballs).To(Equal([]string{tarballRelease}))
 				Expect(buildInput.RuntimeConfigDirectories).To(BeEmpty())
 				Expect(buildInput.StemcellTarball).To(Equal("some-stemcell-tarball"))
 				Expect(buildInput.BOSHVariableDirectories).To(BeEmpty())
@@ -239,6 +225,11 @@ stemcell_criteria:
 			})
 
 			It("calls the tile writer", func() {
+				generatedMetadata.Metadata = builder.Metadata{
+					"releases": []string{"$(release \"some-release-1\")"},
+				}
+				fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+
 				err := bake.Execute([]string{
 					"--icon", "some-icon-path",
 					"--metadata", "some-metadata",
@@ -258,9 +249,9 @@ stemcell_criteria:
 icon_image: some-icon-image
 name: some-product-name
 releases:
-- name: some-release
-  file: some-release-tarball
-  version: 1.2.3-build.4
+- name: some-release-1
+  file: release1.tgz
+  version: 1.2.3
 stemcell_criteria:
   version: 2.3.4
   os: an-operating-system
@@ -298,6 +289,7 @@ stemcell_criteria:
 					"custom_variable":               "$(variable \"some-variable\")",
 					"variable_from_file":            "$(variable \"some-variable-from-file\")",
 					"some_other_variable_from_file": "$(variable \"some-other-variable-from-file\")",
+					"releases":                      []string{"$(release \"some-release-1\")"},
 				}
 				fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 
@@ -332,9 +324,9 @@ custom_variable: some-variable-value
 variable_from_file: override-variable-from-other-file
 some_other_variable_from_file: some-other-variable-value-from-file
 releases:
-- name: some-release
-  file: some-release-tarball
-  version: 1.2.3-build.4
+- name: some-release-1
+  file: release1.tgz
+  version: 1.2.3
 stemcell_criteria:
   version: 2.3.4
   os: an-operating-system
@@ -366,6 +358,28 @@ stemcell_criteria:
 
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("no such file or directory"))
+				})
+			})
+
+			Context("when the release tgz file does not exist but is provided", func() {
+				It("returns an error", func() {
+					generatedMetadata.Metadata = builder.Metadata{
+						"releases": []string{"$(release \"some-release-does-not-exist\")"},
+					}
+					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("could not find release with name 'some-release-does-not-exist'"))
 				})
 			})
 
@@ -591,7 +605,7 @@ stemcell_criteria:
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			command := commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger)
+			command := commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger, fakeReleaseManifestReader)
 			Expect(command.Usage()).To(Equal(jhandacommands.Usage{
 				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
 				ShortDescription: "bakes a tile",

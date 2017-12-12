@@ -12,8 +12,9 @@ import (
 )
 
 type ReleaseManifest struct {
-	Name    string
-	Version string
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	File    string `json:"file"`
 }
 
 type ReleaseManifestReader struct {
@@ -66,6 +67,8 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (ReleaseManifest, err
 	if err != nil {
 		return ReleaseManifest{}, err
 	}
+
+	releaseManifest.File = filepath.Base(releaseTarball)
 
 	return releaseManifest, nil
 }

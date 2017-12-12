@@ -308,8 +308,8 @@ variables:
 		Expect(string(contents)).To(Equal("some_migration\n"))
 
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Creating metadata for %s...", outputFile)))
-		Eventually(session.Out).Should(gbytes.Say("Injecting version \"1.2.3\" into metadata..."))
 		Eventually(session.Out).Should(gbytes.Say("Reading release manifests"))
+		Eventually(session.Out).Should(gbytes.Say("Injecting version \"1.2.3\" into metadata..."))
 		Eventually(session.Out).Should(gbytes.Say("Reading stemcell manifest"))
 		Eventually(session.Out).Should(gbytes.Say("Marshaling metadata file..."))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Building %s", outputFile)))
@@ -331,6 +331,7 @@ variables:
 				"--metadata", metadata,
 				"--output-file", outputFile,
 				"--releases-directory", someReleasesDirectory,
+				"--releases-directory", otherReleasesDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--stub-releases",
 				"--variable", "some-variable=some-variable-value",
@@ -371,6 +372,7 @@ variables:
 				"--metadata", metadata,
 				"--output-file", outputFile,
 				"--releases-directory", someReleasesDirectory,
+				"--releases-directory", otherReleasesDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--variable", "some-variable=some-variable-value",
 				"--version", "1.2.3",
@@ -424,6 +426,7 @@ variables:
 					"--metadata", metadata,
 					"--output-file", outputFile,
 					"--releases-directory", someReleasesDirectory,
+					"--releases-directory", otherReleasesDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
@@ -497,6 +500,7 @@ variables:
 					"--metadata", metadata,
 					"--output-file", outputFile,
 					"--releases-directory", someReleasesDirectory,
+					"--releases-directory", otherReleasesDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
@@ -636,6 +640,7 @@ variables:
 					"--metadata", metadata,
 					"--output-file", "/path/to/missing/dir/product.zip",
 					"--releases-directory", someReleasesDirectory,
+					"--releases-directory", otherReleasesDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--variable", "some-variable=some-variable-value",
 					"--version", "1.2.3",

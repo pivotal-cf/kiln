@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -38,10 +39,11 @@ type BakeConfig struct {
 }
 
 type Bake struct {
-	metadataBuilder metadataBuilder
-	tileWriter      tileWriter
-	logger          logger
-	Options         BakeConfig
+	metadataBuilder       metadataBuilder
+	tileWriter            tileWriter
+	logger                logger
+	releaseManifestReader releaseManifestReader
+	Options               BakeConfig
 }
 
 //go:generate counterfeiter -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
@@ -56,6 +58,12 @@ type metadataBuilder interface {
 	Build(input builder.BuildInput) (builder.GeneratedMetadata, error)
 }
 
+//go:generate counterfeiter -o ./fakes/release_manifest_reader.go --fake-name ReleaseManifestReader . releaseManifestReader
+
+type releaseManifestReader interface {
+	Read(path string) (builder.ReleaseManifest, error)
+}
+
 //go:generate counterfeiter -o ./fakes/logger.go --fake-name Logger . logger
 
 type logger interface {
@@ -63,21 +71,17 @@ type logger interface {
 	Println(v ...interface{})
 }
 
-func NewBake(metadataBuilder metadataBuilder, tileWriter tileWriter, logger logger) Bake {
+func NewBake(metadataBuilder metadataBuilder, tileWriter tileWriter, logger logger, releaseManifestReader releaseManifestReader) Bake {
 	return Bake{
-		metadataBuilder: metadataBuilder,
-		tileWriter:      tileWriter,
-		logger:          logger,
+		metadataBuilder:       metadataBuilder,
+		tileWriter:            tileWriter,
+		logger:                logger,
+		releaseManifestReader: releaseManifestReader,
 	}
 }
 
 func (b Bake) Execute(args []string) error {
 	config, err := b.parseArgs(args)
-	if err != nil {
-		return err
-	}
-
-	releaseTarballs, err := b.extractReleaseTarballFilenames(config)
 	if err != nil {
 		return err
 	}
@@ -92,6 +96,21 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
+	releaseTarballs, err := b.extractReleaseTarballFilenames(config)
+	if err != nil {
+		return err
+	}
+
+	b.logger.Println("Reading release manifests...")
+	releaseManifests := map[string]builder.ReleaseManifest{}
+	for _, releaseTarball := range releaseTarballs {
+		releaseManifest, err := b.releaseManifestReader.Read(releaseTarball)
+		if err != nil {
+			panic(err)
+		}
+		releaseManifests[releaseManifest.Name] = releaseManifest
+	}
+
 	err = b.addVariablesToMap(config.Variables, variables)
 	if err != nil {
 		return err
@@ -104,7 +123,6 @@ func (b Bake) Execute(args []string) error {
 		JobDirectories:           config.JobDirectories,
 		MetadataPath:             config.Metadata,
 		PropertyDirectories:      config.PropertyDirectories,
-		ReleaseTarballs:          releaseTarballs,
 		RuntimeConfigDirectories: config.RuntimeConfigDirectories,
 		StemcellTarball:          config.StemcellTarball,
 		BOSHVariableDirectories:  config.BOSHVariableDirectories,
@@ -131,7 +149,7 @@ func (b Bake) Execute(args []string) error {
 		EmbedPaths:           config.EmbedPaths,
 	}
 
-	interpolatedMetadata, err := b.interpolateMetadata(variables, generatedMetadataYAML)
+	interpolatedMetadata, err := b.interpolateMetadata(variables, releaseManifests, generatedMetadataYAML)
 	if err != nil {
 		return err
 	}
@@ -225,7 +243,7 @@ func (b Bake) extractReleaseTarballFilenames(config BakeConfig) ([]string, error
 	return releaseTarballs, nil
 }
 
-func (b Bake) interpolateMetadata(variables map[string]string, generatedMetadataYAML []byte) ([]byte, error) {
+func (b Bake) interpolateMetadata(variables map[string]string, releaseManifests map[string]builder.ReleaseManifest, generatedMetadataYAML []byte) ([]byte, error) {
 	templateHelpers := template.FuncMap{
 		"variable": func(key string) (string, error) {
 			val, ok := variables[key]
@@ -233,6 +251,19 @@ func (b Bake) interpolateMetadata(variables map[string]string, generatedMetadata
 				return "", fmt.Errorf("could not find variable with key '%s'", key)
 			}
 			return val, nil
+		},
+		"release": func(name string) (string, error) {
+			val, ok := releaseManifests[name]
+
+			releaseManifest, err := json.Marshal(&val)
+			if err != nil {
+				return "", err
+			}
+
+			if !ok {
+				return "", fmt.Errorf("could not find release with name '%s'", name)
+			}
+			return string(releaseManifest), nil
 		},
 	}
 

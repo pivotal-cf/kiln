@@ -148,23 +148,6 @@ var _ = Describe("MetadataBuilder", func() {
 			}
 		}
 
-		releaseManifestReader.ReadStub = func(path string) (builder.ReleaseManifest, error) {
-			switch path {
-			case "/path/to/release-1.tgz":
-				return builder.ReleaseManifest{
-					Name:    "release-1",
-					Version: "version-1",
-				}, nil
-			case "/path/to/release-2.tgz":
-				return builder.ReleaseManifest{
-					Name:    "release-2",
-					Version: "version-2",
-				}, nil
-			default:
-				return builder.ReleaseManifest{}, fmt.Errorf("could not read release %q", path)
-			}
-		}
-
 		runtimeConfigsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
 			case "/path/to/runtime-configs/directory":
@@ -249,7 +232,6 @@ var _ = Describe("MetadataBuilder", func() {
 			instanceGroupsDirectoryReader,
 			jobsDirectoryReader,
 			propertiesDirectoryReader,
-			releaseManifestReader,
 			runtimeConfigsDirectoryReader,
 			variablesDirectoryReader,
 			stemcellManifestReader,
@@ -281,7 +263,6 @@ var _ = Describe("MetadataBuilder", func() {
 				JobDirectories:           []string{"/path/to/jobs/directory"},
 				MetadataPath:             "/some/path/metadata.yml",
 				PropertyDirectories:      []string{"/path/to/properties/directory"},
-				ReleaseTarballs:          []string{"/path/to/release-1.tgz", "/path/to/release-2.tgz"},
 				RuntimeConfigDirectories: []string{"/path/to/runtime-configs/directory", "/path/to/other/runtime-configs/directory"},
 				StemcellTarball:          "/path/to/test-stemcell.tgz",
 				BOSHVariableDirectories:  []string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
@@ -354,18 +335,6 @@ var _ = Describe("MetadataBuilder", func() {
 					},
 				},
 			}))
-			Expect(generatedMetadata.Releases).To(Equal([]builder.Release{
-				{
-					Name:    "release-1",
-					Version: "version-1",
-					File:    "release-1.tgz",
-				},
-				{
-					Name:    "release-2",
-					Version: "version-2",
-					File:    "release-2.tgz",
-				},
-			}))
 			Expect(generatedMetadata.RuntimeConfigs).To(Equal([]builder.Part{
 				{
 					File: "runtime-config-1.yml",
@@ -429,9 +398,6 @@ var _ = Describe("MetadataBuilder", func() {
 			}))
 
 			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-				"Reading release manifests",
-				"- release-1",
-				"- release-2",
 				"Reading runtime configs from /path/to/runtime-configs/directory",
 				"Reading runtime configs from /path/to/other/runtime-configs/directory",
 				"Reading variables from /path/to/variables/directory",
@@ -470,7 +436,6 @@ var _ = Describe("MetadataBuilder", func() {
 			It("includes the property blueprints from the metadata", func() {
 				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
 					MetadataPath:    "/some/path/metadata.yml",
-					ReleaseTarballs: []string{"/path/to/release-1.tgz", "/path/to/release-2.tgz"},
 					StemcellTarball: "/path/to/test-stemcell.tgz",
 					FormDirectories: []string{},
 					IconPath:        "some-icon-path",
@@ -509,7 +474,6 @@ var _ = Describe("MetadataBuilder", func() {
 			It("includes the form types from the metadata", func() {
 				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
 					MetadataPath:    "/some/path/metadata.yml",
-					ReleaseTarballs: []string{"/path/to/release-1.tgz", "/path/to/release-2.tgz"},
 					StemcellTarball: "/path/to/test-stemcell.tgz",
 					FormDirectories: []string{},
 					IconPath:        "some-icon-path",
@@ -548,7 +512,6 @@ var _ = Describe("MetadataBuilder", func() {
 			It("includes the job types from the metadata", func() {
 				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
 					MetadataPath:    "/some/path/metadata.yml",
-					ReleaseTarballs: []string{"/path/to/release-1.tgz", "/path/to/release-2.tgz"},
 					StemcellTarball: "/path/to/test-stemcell.tgz",
 					JobDirectories:  []string{},
 					IconPath:        "some-icon-path",
@@ -568,17 +531,6 @@ var _ = Describe("MetadataBuilder", func() {
 		})
 
 		Context("failure cases", func() {
-			Context("when the release tarball cannot be read", func() {
-				It("returns an error", func() {
-					releaseManifestReader.ReadReturns(builder.ReleaseManifest{}, errors.New("failed to read release tarball"))
-
-					_, err := tileBuilder.Build(builder.BuildInput{
-						ReleaseTarballs: []string{"release-1.tgz"},
-					})
-					Expect(err).To(MatchError("failed to read release tarball"))
-				})
-			})
-
 			Context("when the properties directory cannot be read", func() {
 				It("returns an error", func() {
 					propertiesDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some properties error"))

@@ -3,7 +3,6 @@ package builder
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 )
 
 type MetadataBuilder struct {
@@ -14,7 +13,6 @@ type MetadataBuilder struct {
 	logger                        logger
 	metadataReader                metadataReader
 	propertiesDirectoryReader     metadataPartsDirectoryReader
-	releaseManifestReader         releaseManifestReader
 	runtimeConfigsDirectoryReader metadataPartsDirectoryReader
 	stemcellManifestReader        stemcellManifestReader
 	variablesDirectoryReader      metadataPartsDirectoryReader
@@ -27,7 +25,6 @@ type BuildInput struct {
 	JobDirectories           []string
 	MetadataPath             string
 	PropertyDirectories      []string
-	ReleaseTarballs          []string
 	RuntimeConfigDirectories []string
 	StemcellTarball          string
 	Variables                map[string]string
@@ -75,7 +72,6 @@ func NewMetadataBuilder(
 	instanceGroupDirectoryReader metadataPartsDirectoryReader,
 	jobsDirectoryReader metadataPartsDirectoryReader,
 	propertiesDirectoryReader metadataPartsDirectoryReader,
-	releaseManifestReader releaseManifestReader,
 	runtimeConfigsDirectoryReader,
 	variablesDirectoryReader metadataPartsDirectoryReader,
 	stemcellManifestReader stemcellManifestReader,
@@ -91,7 +87,6 @@ func NewMetadataBuilder(
 		logger:                        logger,
 		metadataReader:                metadataReader,
 		propertiesDirectoryReader:     propertiesDirectoryReader,
-		releaseManifestReader:         releaseManifestReader,
 		runtimeConfigsDirectoryReader: runtimeConfigsDirectoryReader,
 		stemcellManifestReader:        stemcellManifestReader,
 		variablesDirectoryReader:      variablesDirectoryReader,
@@ -107,11 +102,6 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 	productName, ok := metadata["name"].(string)
 	if !ok {
 		return GeneratedMetadata{}, errors.New("missing \"name\" in tile metadata file")
-	}
-
-	releases, err := m.buildReleaseMetadata(input.ReleaseTarballs)
-	if err != nil {
-		return GeneratedMetadata{}, err
 	}
 
 	runtimeConfigs, err := m.buildRuntimeConfigMetadata(input.RuntimeConfigDirectories, metadata)
@@ -163,7 +153,6 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		IconImage:          encodedIcon,
 		Name:               productName,
 		PropertyBlueprints: propertyBlueprints,
-		Releases:           releases,
 		RuntimeConfigs:     runtimeConfigs,
 		Variables:          variables,
 		StemcellCriteria: StemcellCriteria{
@@ -199,30 +188,6 @@ func (m MetadataBuilder) buildPropertyBlueprints(dirs []string, metadata Metadat
 	}
 
 	return propertyBlueprints, nil
-}
-
-func (m MetadataBuilder) buildReleaseMetadata(releaseTarballs []string) ([]Release, error) {
-	var releases []Release
-
-	m.logger.Printf("Reading release manifests")
-
-	for _, releaseTarball := range releaseTarballs {
-
-		releaseManifest, err := m.releaseManifestReader.Read(releaseTarball)
-		if err != nil {
-			return nil, err
-		}
-
-		m.logger.Printf("- %s", releaseManifest.Name)
-
-		releases = append(releases, Release{
-			Name:    releaseManifest.Name,
-			Version: releaseManifest.Version,
-			File:    filepath.Base(releaseTarball),
-		})
-	}
-
-	return releases, nil
 }
 
 func (m MetadataBuilder) buildRuntimeConfigMetadata(dirs []string, metadata Metadata) ([]Part, error) {
