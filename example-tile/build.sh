@@ -21,6 +21,7 @@ function main() {
     --variable "some-variable=some-value" \
     --variables-file "${cwd}/variables.yml" \
     --version "1.2.3-build.4"
+
 }
 
 main "$(cd "$(dirname "${0}")" && pwd)"
