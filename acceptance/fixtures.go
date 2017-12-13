@@ -6,6 +6,7 @@ metadata_version: '1.7'
 releases:
   - $( release "diego" )
   - $( release "cf" )
+stemcell_criteria: $( stemcell )
 provides_product_versions:
 - name: cf
   version: 1.7.0.0
@@ -84,16 +85,15 @@ releases:
 - file: cf-release-235.0.0-3215.4.0.tgz
   name: cf
   version: "235"
+stemcell_criteria:
+  os: ubuntu-trusty
+  version: "3215.4"
 runtime_configs:
 - name: some_addon
   runtime_config: |
     releases:
     - name: some-addon
 serial: false
-stemcell_criteria:
-  os: ubuntu-trusty
-  requires_cpi: false
-  version: "3215.4"
 variables:
 - name: variable-1
   options:

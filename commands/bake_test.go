@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 
@@ -16,10 +17,11 @@ import (
 
 var _ = Describe("bake", func() {
 	var (
-		fakeMetadataBuilder       *fakes.MetadataBuilder
-		fakeReleaseManifestReader *fakes.ReleaseManifestReader
-		fakeTileWriter            *fakes.TileWriter
-		fakeLogger                *fakes.Logger
+		fakeMetadataBuilder        *fakes.MetadataBuilder
+		fakeReleaseManifestReader  *fakes.ReleaseManifestReader
+		fakeStemcellManifestReader *fakes.StemcellManifestReader
+		fakeTileWriter             *fakes.TileWriter
+		fakeLogger                 *fakes.Logger
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -68,6 +70,7 @@ var _ = Describe("bake", func() {
 
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
 		fakeReleaseManifestReader = &fakes.ReleaseManifestReader{}
+		fakeStemcellManifestReader = &fakes.StemcellManifestReader{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
 
@@ -83,18 +86,22 @@ var _ = Describe("bake", func() {
 			File:    "release2.tgz",
 		}, nil)
 
+		fakeStemcellManifestReader.ReadReturns(builder.StemcellManifest{
+			Version:         "2.3.4",
+			OperatingSystem: "an-operating-system",
+		}, nil)
+
 		generatedMetadata = builder.GeneratedMetadata{
 			IconImage: "some-icon-image",
 			Name:      "some-product-name",
 			StemcellCriteria: builder.StemcellCriteria{
-				Version:     "2.3.4",
-				OS:          "an-operating-system",
-				RequiresCPI: false,
+				Version: "2.3.4",
+				OS:      "an-operating-system",
 			},
 		}
 		fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 
-		bake = commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger, fakeReleaseManifestReader)
+		bake = commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger, fakeReleaseManifestReader, fakeStemcellManifestReader)
 	})
 
 	AfterEach(func() {
@@ -144,6 +151,7 @@ var _ = Describe("bake", func() {
 				"custom_variable":    "$(variable \"some-variable\")",
 				"variable_from_file": "$(variable \"some-variable-from-file\")",
 				"releases":           []string{"$(release \"some-release-1\")", "$(release \"some-release-2\")"},
+				"stemcell_criteria":  "$( stemcell )",
 			}
 			fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 
@@ -188,7 +196,7 @@ releases:
 stemcell_criteria:
   version: 2.3.4
   os: an-operating-system
-  requires_cpi: false`))
+`))
 			Expect(actualConfig).To(Equal(builder.WriteInput{
 				EmbedPaths:           []string{"some-embed-path"},
 				MigrationDirectories: []string{"some-migrations-directory", "some-other-migrations-directory"},
@@ -202,9 +210,8 @@ stemcell_criteria:
 				err := bake.Execute([]string{
 					"--icon", "some-icon-path",
 					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 					"--releases-directory", someReleasesDirectory,
-					"--stemcell-tarball", "some-stemcell-tarball",
+					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 					"--version", "1.2.3",
 				})
 
@@ -219,9 +226,10 @@ stemcell_criteria:
 				Expect(buildInput.JobDirectories).To(BeEmpty())
 				Expect(buildInput.MetadataPath).To(Equal("some-metadata"))
 				Expect(buildInput.RuntimeConfigDirectories).To(BeEmpty())
-				Expect(buildInput.StemcellTarball).To(Equal("some-stemcell-tarball"))
 				Expect(buildInput.BOSHVariableDirectories).To(BeEmpty())
 				Expect(buildInput.Version).To(Equal("1.2.3"))
+
+				Expect(fakeStemcellManifestReader.ReadCallCount()).To(Equal(0))
 			})
 
 			It("calls the tile writer", func() {
@@ -235,7 +243,6 @@ stemcell_criteria:
 					"--metadata", "some-metadata",
 					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
 					"--releases-directory", someReleasesDirectory,
-					"--stemcell-tarball", "some-stemcell-tarball",
 					"--version", "1.2.3",
 				})
 
@@ -255,7 +262,7 @@ releases:
 stemcell_criteria:
   version: 2.3.4
   os: an-operating-system
-  requires_cpi: false`))
+`))
 				Expect(actualConfig).To(Equal(builder.WriteInput{
 					OutputFile:         "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
 					ReleaseDirectories: []string{someReleasesDirectory},
@@ -330,7 +337,7 @@ releases:
 stemcell_criteria:
   version: 2.3.4
   os: an-operating-system
-  requires_cpi: false`))
+`))
 			})
 		})
 
@@ -380,6 +387,63 @@ stemcell_criteria:
 
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("could not find release with name 'some-release-does-not-exist'"))
+				})
+			})
+
+			Context("when the release manifest reader returns an error", func() {
+				It("returns an error", func() {
+					fakeReleaseManifestReader.ReadReturnsOnCall(0, builder.ReleaseManifest{}, errors.New("some-error"))
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("some-error"))
+				})
+			})
+
+			Context("when the stemcell manifest reader returns an error", func() {
+				It("returns an error", func() {
+					fakeStemcellManifestReader.ReadReturns(builder.StemcellManifest{}, errors.New("some-error"))
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("some-error"))
+				})
+			})
+
+			Context("when the stemcell helper is used without providing the stemcell-tarball flag", func() {
+				It("returns an error", func() {
+					generatedMetadata.Metadata = map[string]interface{}{"stemcell": `$( stemcell )`}
+					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "unused",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", someReleasesDirectory,
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("--stemcell-tarball"))
 				})
 			})
 
@@ -543,20 +607,6 @@ stemcell_criteria:
 				})
 			})
 
-			Context("when the stemcell-tarball flag is missing", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-						"--releases-directory", someReleasesDirectory,
-						"--version", "1.2.3",
-					})
-
-					Expect(err).To(MatchError("--stemcell-tarball is a required parameter"))
-				})
-			})
-
 			Context("when the version flag is missing", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
@@ -605,7 +655,7 @@ stemcell_criteria:
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			command := commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger, fakeReleaseManifestReader)
+			command := commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger, fakeReleaseManifestReader, fakeStemcellManifestReader)
 			Expect(command.Usage()).To(Equal(jhandacommands.Usage{
 				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
 				ShortDescription: "bakes a tile",

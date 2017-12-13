@@ -22,9 +22,8 @@ type Release struct {
 }
 
 type StemcellCriteria struct {
-	Version     string
-	OS          string
-	RequiresCPI bool `yaml:"requires_cpi"`
+	Version string
+	OS      string
 }
 
 func (gm GeneratedMetadata) MarshalYAML() (interface{}, error) {

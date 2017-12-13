@@ -39,11 +39,12 @@ type BakeConfig struct {
 }
 
 type Bake struct {
-	metadataBuilder       metadataBuilder
-	tileWriter            tileWriter
-	logger                logger
-	releaseManifestReader releaseManifestReader
-	Options               BakeConfig
+	metadataBuilder        metadataBuilder
+	tileWriter             tileWriter
+	logger                 logger
+	releaseManifestReader  releaseManifestReader
+	stemcellManifestReader stemcellManifestReader
+	Options                BakeConfig
 }
 
 //go:generate counterfeiter -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
@@ -64,6 +65,12 @@ type releaseManifestReader interface {
 	Read(path string) (builder.ReleaseManifest, error)
 }
 
+//go:generate counterfeiter -o ./fakes/stemcell_manifest_reader.go --fake-name StemcellManifestReader . stemcellManifestReader
+
+type stemcellManifestReader interface {
+	Read(path string) (builder.StemcellManifest, error)
+}
+
 //go:generate counterfeiter -o ./fakes/logger.go --fake-name Logger . logger
 
 type logger interface {
@@ -71,12 +78,18 @@ type logger interface {
 	Println(v ...interface{})
 }
 
-func NewBake(metadataBuilder metadataBuilder, tileWriter tileWriter, logger logger, releaseManifestReader releaseManifestReader) Bake {
+func NewBake(metadataBuilder metadataBuilder,
+	tileWriter tileWriter,
+	logger logger,
+	releaseManifestReader releaseManifestReader,
+	stemcellManifestReader stemcellManifestReader,
+) Bake {
 	return Bake{
-		metadataBuilder:       metadataBuilder,
-		tileWriter:            tileWriter,
-		logger:                logger,
-		releaseManifestReader: releaseManifestReader,
+		metadataBuilder:        metadataBuilder,
+		tileWriter:             tileWriter,
+		logger:                 logger,
+		releaseManifestReader:  releaseManifestReader,
+		stemcellManifestReader: stemcellManifestReader,
 	}
 }
 
@@ -106,9 +119,18 @@ func (b Bake) Execute(args []string) error {
 	for _, releaseTarball := range releaseTarballs {
 		releaseManifest, err := b.releaseManifestReader.Read(releaseTarball)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		releaseManifests[releaseManifest.Name] = releaseManifest
+	}
+
+	var stemcellManifest builder.StemcellManifest
+	if config.StemcellTarball != "" {
+		b.logger.Println("Reading stemcell manifests...")
+		stemcellManifest, err = b.stemcellManifestReader.Read(config.StemcellTarball)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = b.addVariablesToMap(config.Variables, variables)
@@ -149,7 +171,11 @@ func (b Bake) Execute(args []string) error {
 		EmbedPaths:           config.EmbedPaths,
 	}
 
-	interpolatedMetadata, err := b.interpolateMetadata(variables, releaseManifests, generatedMetadataYAML)
+	interpolatedMetadata, err := b.interpolateMetadata(
+		variables,
+		releaseManifests,
+		stemcellManifest,
+		generatedMetadataYAML)
 	if err != nil {
 		return err
 	}
@@ -180,10 +206,6 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 
 	if len(config.ReleaseDirectories) == 0 {
 		return config, errors.New("Please specify release tarballs directory with the --releases-directory parameter")
-	}
-
-	if config.StemcellTarball == "" {
-		return config, errors.New("--stemcell-tarball is a required parameter")
 	}
 
 	if config.IconPath == "" {
@@ -243,27 +265,41 @@ func (b Bake) extractReleaseTarballFilenames(config BakeConfig) ([]string, error
 	return releaseTarballs, nil
 }
 
-func (b Bake) interpolateMetadata(variables map[string]string, releaseManifests map[string]builder.ReleaseManifest, generatedMetadataYAML []byte) ([]byte, error) {
+func (b Bake) interpolateMetadata(
+	variables map[string]string,
+	releaseManifests map[string]builder.ReleaseManifest,
+	stemcellManifest builder.StemcellManifest,
+	generatedMetadataYAML []byte) ([]byte, error) {
 	templateHelpers := template.FuncMap{
+		"release": func(name string) (string, error) {
+			val, ok := releaseManifests[name]
+			if !ok {
+				return "", fmt.Errorf("could not find release with name '%s'", name)
+			}
+
+			releaseManifest, err := json.Marshal(&val)
+			if err != nil {
+				return "", err //not tested
+			}
+
+			return string(releaseManifest), nil
+		},
+		"stemcell": func() (string, error) {
+			if stemcellManifest == (builder.StemcellManifest{}) {
+				return "", errors.New("the --stemcell-tarball flag is required in order to use the 'stemcell' interpolation helper")
+			}
+			stemcellJson, err := json.Marshal(&stemcellManifest)
+			if err != nil {
+				return "", err //not tested
+			}
+			return string(stemcellJson), nil
+		},
 		"variable": func(key string) (string, error) {
 			val, ok := variables[key]
 			if !ok {
 				return "", fmt.Errorf("could not find variable with key '%s'", key)
 			}
 			return val, nil
-		},
-		"release": func(name string) (string, error) {
-			val, ok := releaseManifests[name]
-
-			releaseManifest, err := json.Marshal(&val)
-			if err != nil {
-				return "", err
-			}
-
-			if !ok {
-				return "", fmt.Errorf("could not find release with name '%s'", name)
-			}
-			return string(releaseManifest), nil
 		},
 	}
 

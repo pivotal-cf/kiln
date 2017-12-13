@@ -47,7 +47,6 @@ func main() {
 		propertiesDirectoryReader,
 		runtimeConfigsDirectoryReader,
 		variablesDirectoryReader,
-		stemcellManifestReader,
 		handcraftReader,
 		logger,
 		iconEncoder,
@@ -57,7 +56,7 @@ func main() {
 
 	commandSet := jhandacommands.Set{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
-	commandSet["bake"] = commands.NewBake(metadataBuilder, tileWriter, logger, releaseManifestReader)
+	commandSet["bake"] = commands.NewBake(metadataBuilder, tileWriter, logger, releaseManifestReader, stemcellManifestReader)
 
 	var command string
 	if len(args) > 0 {

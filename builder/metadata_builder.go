@@ -14,7 +14,6 @@ type MetadataBuilder struct {
 	metadataReader                metadataReader
 	propertiesDirectoryReader     metadataPartsDirectoryReader
 	runtimeConfigsDirectoryReader metadataPartsDirectoryReader
-	stemcellManifestReader        stemcellManifestReader
 	variablesDirectoryReader      metadataPartsDirectoryReader
 }
 
@@ -27,21 +26,8 @@ type BuildInput struct {
 	PropertyDirectories      []string
 	RuntimeConfigDirectories []string
 	StemcellTarball          string
-	Variables                map[string]string
 	BOSHVariableDirectories  []string
 	Version                  string
-}
-
-//go:generate counterfeiter -o ./fakes/release_manifest_reader.go --fake-name ReleaseManifestReader . releaseManifestReader
-
-type releaseManifestReader interface {
-	Read(path string) (ReleaseManifest, error)
-}
-
-//go:generate counterfeiter -o ./fakes/stemcell_manifest_reader.go --fake-name StemcellManifestReader . stemcellManifestReader
-
-type stemcellManifestReader interface {
-	Read(path string) (StemcellManifest, error)
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_parts_directory_reader.go --fake-name MetadataPartsDirectoryReader . metadataPartsDirectoryReader
@@ -74,7 +60,6 @@ func NewMetadataBuilder(
 	propertiesDirectoryReader metadataPartsDirectoryReader,
 	runtimeConfigsDirectoryReader,
 	variablesDirectoryReader metadataPartsDirectoryReader,
-	stemcellManifestReader stemcellManifestReader,
 	metadataReader metadataReader,
 	logger logger,
 	iconEncoder iconEncoder,
@@ -88,7 +73,6 @@ func NewMetadataBuilder(
 		metadataReader:                metadataReader,
 		propertiesDirectoryReader:     propertiesDirectoryReader,
 		runtimeConfigsDirectoryReader: runtimeConfigsDirectoryReader,
-		stemcellManifestReader:        stemcellManifestReader,
 		variablesDirectoryReader:      variablesDirectoryReader,
 	}
 }
@@ -113,13 +97,6 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 	if err != nil {
 		return GeneratedMetadata{}, err
 	}
-
-	m.logger.Printf("Reading stemcell manifest")
-	stemcellManifest, err := m.stemcellManifestReader.Read(input.StemcellTarball)
-	if err != nil {
-		return GeneratedMetadata{}, err
-	}
-	m.logger.Printf("- version %s", stemcellManifest.Version)
 
 	encodedIcon, err := m.iconEncoder.Encode(input.IconPath)
 	if err != nil {
@@ -155,12 +132,7 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		PropertyBlueprints: propertyBlueprints,
 		RuntimeConfigs:     runtimeConfigs,
 		Variables:          variables,
-		StemcellCriteria: StemcellCriteria{
-			OS:          stemcellManifest.OperatingSystem,
-			Version:     stemcellManifest.Version,
-			RequiresCPI: false,
-		},
-		Metadata: metadata,
+		Metadata:           metadata,
 	}, nil
 }
 

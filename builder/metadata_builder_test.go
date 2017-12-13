@@ -20,9 +20,7 @@ var _ = Describe("MetadataBuilder", func() {
 		logger                        *fakes.Logger
 		metadataReader                *fakes.MetadataReader
 		propertiesDirectoryReader     *fakes.MetadataPartsDirectoryReader
-		releaseManifestReader         *fakes.ReleaseManifestReader
 		runtimeConfigsDirectoryReader *fakes.MetadataPartsDirectoryReader
-		stemcellManifestReader        *fakes.StemcellManifestReader
 		variablesDirectoryReader      *fakes.MetadataPartsDirectoryReader
 
 		tileBuilder builder.MetadataBuilder
@@ -36,9 +34,7 @@ var _ = Describe("MetadataBuilder", func() {
 		logger = &fakes.Logger{}
 		metadataReader = &fakes.MetadataReader{}
 		propertiesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
-		releaseManifestReader = &fakes.ReleaseManifestReader{}
 		runtimeConfigsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
-		stemcellManifestReader = &fakes.StemcellManifestReader{}
 		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 
 		formsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
@@ -185,11 +181,6 @@ var _ = Describe("MetadataBuilder", func() {
 			}
 		}
 
-		stemcellManifestReader.ReadReturns(builder.StemcellManifest{
-			Version:         "2332",
-			OperatingSystem: "ubuntu-trusty",
-		}, nil)
-
 		variablesDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
 			case "/path/to/variables/directory":
@@ -234,7 +225,6 @@ var _ = Describe("MetadataBuilder", func() {
 			propertiesDirectoryReader,
 			runtimeConfigsDirectoryReader,
 			variablesDirectoryReader,
-			stemcellManifestReader,
 			metadataReader,
 			logger,
 			iconEncoder,
@@ -264,12 +254,10 @@ var _ = Describe("MetadataBuilder", func() {
 				MetadataPath:             "/some/path/metadata.yml",
 				PropertyDirectories:      []string{"/path/to/properties/directory"},
 				RuntimeConfigDirectories: []string{"/path/to/runtime-configs/directory", "/path/to/other/runtime-configs/directory"},
-				StemcellTarball:          "/path/to/test-stemcell.tgz",
 				BOSHVariableDirectories:  []string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
 				Version:                  "1.2.3",
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(stemcellManifestReader.ReadArgsForCall(0)).To(Equal("/path/to/test-stemcell.tgz"))
 			metadataPath, version := metadataReader.ReadArgsForCall(0)
 			Expect(metadataPath).To(Equal("/some/path/metadata.yml"))
 			Expect(version).To(Equal("1.2.3"))
@@ -387,11 +375,6 @@ var _ = Describe("MetadataBuilder", func() {
 					},
 				},
 			}))
-			Expect(generatedMetadata.StemcellCriteria).To(Equal(builder.StemcellCriteria{
-				Version:     "2332",
-				OS:          "ubuntu-trusty",
-				RequiresCPI: false,
-			}))
 			Expect(generatedMetadata.Metadata).To(Equal(builder.Metadata{
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
@@ -402,8 +385,6 @@ var _ = Describe("MetadataBuilder", func() {
 				"Reading runtime configs from /path/to/other/runtime-configs/directory",
 				"Reading variables from /path/to/variables/directory",
 				"Reading variables from /path/to/other/variables/directory",
-				"Reading stemcell manifest",
-				"- version 2332",
 				"Reading forms from /path/to/forms/directory",
 				"Reading instance groups from /path/to/instance-groups/directory",
 				"Reading jobs from /path/to/jobs/directory",
@@ -436,7 +417,6 @@ var _ = Describe("MetadataBuilder", func() {
 			It("includes the property blueprints from the metadata", func() {
 				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
 					MetadataPath:    "/some/path/metadata.yml",
-					StemcellTarball: "/path/to/test-stemcell.tgz",
 					FormDirectories: []string{},
 					IconPath:        "some-icon-path",
 					Version:         "1.2.3",
@@ -474,7 +454,6 @@ var _ = Describe("MetadataBuilder", func() {
 			It("includes the form types from the metadata", func() {
 				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
 					MetadataPath:    "/some/path/metadata.yml",
-					StemcellTarball: "/path/to/test-stemcell.tgz",
 					FormDirectories: []string{},
 					IconPath:        "some-icon-path",
 					Version:         "1.2.3",
@@ -511,11 +490,10 @@ var _ = Describe("MetadataBuilder", func() {
 
 			It("includes the job types from the metadata", func() {
 				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
-					MetadataPath:    "/some/path/metadata.yml",
-					StemcellTarball: "/path/to/test-stemcell.tgz",
-					JobDirectories:  []string{},
-					IconPath:        "some-icon-path",
-					Version:         "1.2.3",
+					MetadataPath:   "/some/path/metadata.yml",
+					JobDirectories: []string{},
+					IconPath:       "some-icon-path",
+					Version:        "1.2.3",
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -635,17 +613,6 @@ var _ = Describe("MetadataBuilder", func() {
 						BOSHVariableDirectories: []string{"/path/to/missing/variables"},
 					})
 					Expect(err).To(MatchError(`error reading from variables directory "/path/to/missing/variables": some error`))
-				})
-			})
-
-			Context("when the stemcell tarball cannot be read", func() {
-				It("returns an error", func() {
-					stemcellManifestReader.ReadReturns(builder.StemcellManifest{}, errors.New("failed to read stemcell tarball"))
-
-					_, err := tileBuilder.Build(builder.BuildInput{
-						StemcellTarball: "stemcell.tgz",
-					})
-					Expect(err).To(MatchError("failed to read stemcell tarball"))
 				})
 			})
 
