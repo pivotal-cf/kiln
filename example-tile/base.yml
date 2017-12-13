@@ -22,6 +22,9 @@ post_deploy_errands:
   instances:
   - my-instance/first
 
+releases:
+- $( release "my-release" )
+
 property_blueprints:
 - element_1
 - element_2
