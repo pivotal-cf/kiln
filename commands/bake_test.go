@@ -810,6 +810,24 @@ stemcell_criteria:
 					Expect(err).To(MatchError("--jobs-directory flag requires --instance-groups-directory to also be specified"))
 				})
 			})
+
+			Context("when an invalid flag is passed", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--jobs-directory", "some-jobs-directory",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--version", "1.2.3",
+						"--non-existant-flag",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("non-existant-flag"))
+				})
+			})
 		})
 	})
 

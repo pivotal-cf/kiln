@@ -229,7 +229,7 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 
 	args, err := flags.Parse(&config, args)
 	if err != nil {
-		panic(err)
+		return config, err
 	}
 
 	if len(config.ReleaseDirectories) == 0 {
