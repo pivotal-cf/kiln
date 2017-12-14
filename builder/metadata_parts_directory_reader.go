@@ -23,6 +23,10 @@ type Part struct {
 	Metadata interface{}
 }
 
+func NewMetadataPartsDirectoryReader() MetadataPartsDirectoryReader {
+	return MetadataPartsDirectoryReader{}
+}
+
 func NewMetadataPartsDirectoryReaderWithTopLevelKey(topLevelKey string) MetadataPartsDirectoryReader {
 	return MetadataPartsDirectoryReader{topLevelKey: topLevelKey}
 }
@@ -61,15 +65,24 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string
 			return err
 		}
 
-		var fileVars map[string]interface{}
-		err = yaml.Unmarshal([]byte(data), &fileVars)
-		if err != nil {
-			return err
-		}
+		var vars interface{}
+		if r.topLevelKey != "" {
+			var fileVars map[string]interface{}
+			err = yaml.Unmarshal([]byte(data), &fileVars)
+			if err != nil {
+				return fmt.Errorf("cannot unmarshal: %s", err)
+			}
 
-		vars, ok := fileVars[r.topLevelKey]
-		if !ok {
-			return fmt.Errorf("not a %s file: %q", r.topLevelKey, filePath)
+			var ok bool
+			vars, ok = fileVars[r.topLevelKey]
+			if !ok {
+				return fmt.Errorf("not a %s file: %q", r.topLevelKey, filePath)
+			}
+		} else {
+			err = yaml.Unmarshal([]byte(data), &vars)
+			if err != nil {
+				return fmt.Errorf("cannot unmarshal: %s", err)
+			}
 		}
 
 		parts, err = r.readMetadataIntoParts(pathpkg.Base(filePath), vars, parts)

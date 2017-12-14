@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/builder/fakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -14,48 +13,14 @@ import (
 
 var _ = Describe("MetadataPartsDirectoryReader", func() {
 	var (
-		reader   builder.MetadataPartsDirectoryReader
-		dirInfo  *fakes.FileInfo
-		fileInfo *fakes.FileInfo
-		tempDir  string
+		reader  builder.MetadataPartsDirectoryReader
+		tempDir string
 	)
 
 	BeforeEach(func() {
-		dirInfo = &fakes.FileInfo{}
-		dirInfo.IsDirReturns(true)
-
-		fileInfo = &fakes.FileInfo{}
-		fileInfo.IsDirReturns(false)
-
 		var err error
 		tempDir, err = ioutil.TempDir("", "metadata-parts-directory-reader")
 		Expect(err).ToNot(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(tempDir, "_order.yml"), []byte(`---
-variable_order:
-- variable-3
-- variable-2
-- variable-1
-`), 0755)
-		Expect(err).ToNot(HaveOccurred())
-		err = ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`---
-variables:
-- name: variable-1
-  type: certificate
-- name: variable-2
-  type: user
-`), 0755)
-		Expect(err).ToNot(HaveOccurred())
-		err = ioutil.WriteFile(filepath.Join(tempDir, "vars-file-2.yml"), []byte(`---
-variables:
-- name: variable-3
-  type: password
-`), 0755)
-		Expect(err).ToNot(HaveOccurred())
-		err = ioutil.WriteFile(filepath.Join(tempDir, "ignores.any-other-extension"), []byte("not-yaml"), 0755)
-		Expect(err).ToNot(HaveOccurred())
-
-		reader = builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")
 	})
 
 	AfterEach(func() {
@@ -64,6 +29,25 @@ variables:
 	})
 
 	Describe("Read", func() {
+		BeforeEach(func() {
+			err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`---
+- name: variable-1
+  type: certificate
+- name: variable-2
+  type: user
+`), 0755)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(filepath.Join(tempDir, "vars-file-2.yml"), []byte(`---
+- name: variable-3
+  type: password
+`), 0755)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(filepath.Join(tempDir, "ignores.any-other-extension"), []byte("not-yaml"), 0755)
+			Expect(err).ToNot(HaveOccurred())
+
+			reader = builder.NewMetadataPartsDirectoryReader()
+		})
+
 		It("reads the contents of each yml file in the directory", func() {
 			vars, err := reader.Read(tempDir)
 			Expect(err).NotTo(HaveOccurred())
@@ -95,35 +79,124 @@ variables:
 			}))
 		})
 
+		Context("when the directory does not exist", func() {
+			It("returns an error", func() {
+				_, err := reader.Read("/dir/that/does/not/exist")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("/dir/that/does/not/exist"))
+			})
+		})
+
+		Context("when there is an error reading from a file", func() {
+			It("errors", func() {
+				err := ioutil.WriteFile(filepath.Join(tempDir, "unreadable-file.yml"), []byte(`unused`), 0000)
+				Expect(err).ToNot(HaveOccurred())
+				_, err = reader.Read(tempDir)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("unreadable-file.yml"))
+			})
+		})
+
+		Context("when a yaml file is malformed", func() {
+			It("errors", func() {
+				err := ioutil.WriteFile(filepath.Join(tempDir, "not-valid-yaml.yml"), []byte(`{{`), 0755)
+				Expect(err).ToNot(HaveOccurred())
+
+				_, err = reader.Read(tempDir)
+				Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
+			})
+		})
+
+		Context("when file contains an array item without a name", func() {
+			BeforeEach(func() {
+				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`[{foo: bar}]`), 0755)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("returns an error", func() {
+				_, err := reader.Read(tempDir)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("name"))
+			})
+		})
+
+		Context("when variable file contains a map item without a name", func() {
+			BeforeEach(func() {
+				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`{foo: bar}`), 0755)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("returns an error", func() {
+				_, err := reader.Read(tempDir)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("name"))
+			})
+		})
+	})
+
+	Context("when a top-level key is specified", func() {
+		BeforeEach(func() {
+			err := ioutil.WriteFile(filepath.Join(tempDir, "_order.yml"), []byte(`---
+variable_order:
+- variable-3
+- variable-2
+- variable-1
+`), 0755)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`---
+variables:
+- name: variable-1
+  type: certificate
+- name: variable-2
+  type: user
+`), 0755)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(filepath.Join(tempDir, "vars-file-2.yml"), []byte(`---
+variables:
+- name: variable-3
+  type: password
+`), 0755)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(filepath.Join(tempDir, "ignores.any-other-extension"), []byte("not-yaml"), 0755)
+			Expect(err).ToNot(HaveOccurred())
+
+			reader = builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")
+		})
+
+		Describe("Read", func() {
+			It("reads the contents of each yml file in the directory", func() {
+				vars, err := reader.Read(tempDir)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vars).To(Equal([]builder.Part{
+					{
+						File: "vars-file-1.yml",
+						Name: "variable-1",
+						Metadata: map[interface{}]interface{}{
+							"name": "variable-1",
+							"type": "certificate",
+						},
+					},
+					{
+						File: "vars-file-1.yml",
+						Name: "variable-2",
+						Metadata: map[interface{}]interface{}{
+							"name": "variable-2",
+							"type": "user",
+						},
+					},
+					{
+						File: "vars-file-2.yml",
+						Name: "variable-3",
+						Metadata: map[interface{}]interface{}{
+							"name": "variable-3",
+							"type": "password",
+						},
+					},
+				}))
+			})
+		})
+
 		Context("failure cases", func() {
-			Context("when the directory does not exist", func() {
-				It("returns an error", func() {
-					_, err := reader.Read("/dir/that/does/not/exist")
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("/dir/that/does/not/exist"))
-				})
-			})
-
-			Context("when there is an error reading from a file", func() {
-				It("errors", func() {
-					err := ioutil.WriteFile(filepath.Join(tempDir, "unreadable-file.yml"), []byte(`unused`), 0000)
-					Expect(err).ToNot(HaveOccurred())
-					_, err = reader.Read(tempDir)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("unreadable-file.yml"))
-				})
-			})
-
-			Context("when a yaml file is malformed", func() {
-				It("errors", func() {
-					err := ioutil.WriteFile(filepath.Join(tempDir, "not-valid-yaml.yml"), []byte(`not-actually-yaml`), 0755)
-					Expect(err).ToNot(HaveOccurred())
-
-					_, err = reader.Read(tempDir)
-					Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
-				})
-			})
-
 			Context("when a yaml file does not contain the top-level key", func() {
 				It("errors", func() {
 					err := ioutil.WriteFile(filepath.Join(tempDir, "not-a-vars-file.yml"), []byte(`constants: []`), 0755)
