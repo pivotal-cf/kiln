@@ -13,7 +13,6 @@ import (
 
 var _ = Describe("MetadataBuilder", func() {
 	var (
-		formsDirectoryReader          *fakes.MetadataPartsDirectoryReader
 		iconEncoder                   *fakes.IconEncoder
 		instanceGroupsDirectoryReader *fakes.MetadataPartsDirectoryReader
 		jobsDirectoryReader           *fakes.MetadataPartsDirectoryReader
@@ -27,7 +26,6 @@ var _ = Describe("MetadataBuilder", func() {
 	)
 
 	BeforeEach(func() {
-		formsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		iconEncoder = &fakes.IconEncoder{}
 		instanceGroupsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		jobsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
@@ -36,30 +34,6 @@ var _ = Describe("MetadataBuilder", func() {
 		propertiesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		runtimeConfigsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
-
-		formsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
-			switch path {
-			case "/path/to/forms/directory":
-				return []builder.Part{
-					{
-						File: "form-1.yml",
-						Name: "form-1",
-						Metadata: map[interface{}]interface{}{
-							"some-key-1": "some-value-1",
-						},
-					},
-					{
-						File: "form-2.yml",
-						Name: "form-2",
-						Metadata: map[interface{}]interface{}{
-							"some-key-2": "some-value-2",
-						},
-					},
-				}, nil
-			default:
-				return []builder.Part{}, fmt.Errorf("could not read forms directory %q", path)
-			}
-		}
 
 		iconEncoder.EncodeReturns("base64-encoded-icon-path", nil)
 
@@ -219,7 +193,6 @@ var _ = Describe("MetadataBuilder", func() {
 		}
 
 		tileBuilder = builder.NewMetadataBuilder(
-			formsDirectoryReader,
 			instanceGroupsDirectoryReader,
 			jobsDirectoryReader,
 			propertiesDirectoryReader,
@@ -238,7 +211,6 @@ var _ = Describe("MetadataBuilder", func() {
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
 				"icon_image":                "icon-image-to-be-overridden",
-				"form_types":                "form-types-to-be-overridden",
 				"job_types":                 "job-types-to-be-overridden",
 			},
 				nil,
@@ -247,7 +219,6 @@ var _ = Describe("MetadataBuilder", func() {
 
 		It("creates a GeneratedMetadata with the correct information", func() {
 			generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
-				FormDirectories:          []string{"/path/to/forms/directory"},
 				IconPath:                 "some-icon-path",
 				InstanceGroupDirectories: []string{"/path/to/instance-groups/directory"},
 				JobDirectories:           []string{"/path/to/jobs/directory"},
@@ -263,22 +234,6 @@ var _ = Describe("MetadataBuilder", func() {
 			Expect(version).To(Equal("1.2.3"))
 
 			Expect(generatedMetadata.Name).To(Equal("cool-product"))
-			Expect(generatedMetadata.FormTypes).To(Equal([]builder.Part{
-				{
-					File: "form-1.yml",
-					Name: "form-1",
-					Metadata: map[interface{}]interface{}{
-						"some-key-1": "some-value-1",
-					},
-				},
-				{
-					File: "form-2.yml",
-					Name: "form-2",
-					Metadata: map[interface{}]interface{}{
-						"some-key-2": "some-value-2",
-					},
-				},
-			}))
 			Expect(generatedMetadata.JobTypes).To(Equal([]builder.Part{
 				{
 					File: "some-instance-group-1.yml",
@@ -385,7 +340,6 @@ var _ = Describe("MetadataBuilder", func() {
 				"Reading runtime configs from /path/to/other/runtime-configs/directory",
 				"Reading variables from /path/to/variables/directory",
 				"Reading variables from /path/to/other/variables/directory",
-				"Reading forms from /path/to/forms/directory",
 				"Reading instance groups from /path/to/instance-groups/directory",
 				"Reading jobs from /path/to/jobs/directory",
 				"Reading property blueprints from /path/to/properties/directory",
@@ -428,43 +382,6 @@ var _ = Describe("MetadataBuilder", func() {
 						Metadata: map[interface{}]interface{}{
 							"name": "property-1",
 							"type": "string",
-						},
-					},
-				}))
-			})
-		})
-
-		Context("when no form directories are specified", func() {
-			BeforeEach(func() {
-				metadataReader.ReadReturns(builder.Metadata{
-					"name":                      "cool-product",
-					"metadata_version":          "some-metadata-version",
-					"provides_product_versions": "some-provides-product-versions",
-					"form_types": []interface{}{
-						map[interface{}]interface{}{
-							"name":  "form-type",
-							"label": "Form Type",
-						},
-					},
-				},
-					nil,
-				)
-			})
-
-			It("includes the form types from the metadata", func() {
-				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
-					MetadataPath:    "/some/path/metadata.yml",
-					FormDirectories: []string{},
-					IconPath:        "some-icon-path",
-					Version:         "1.2.3",
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(generatedMetadata.FormTypes).To(Equal([]builder.Part{
-					{
-						Metadata: map[interface{}]interface{}{
-							"name":  "form-type",
-							"label": "Form Type",
 						},
 					},
 				}))
@@ -517,17 +434,6 @@ var _ = Describe("MetadataBuilder", func() {
 						PropertyDirectories: []string{"/path/to/missing/property"},
 					})
 					Expect(err).To(MatchError(`error reading from properties directory "/path/to/missing/property": some properties error`))
-				})
-			})
-
-			Context("when the form directory cannot be read", func() {
-				It("returns an error", func() {
-					formsDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some form error"))
-
-					_, err := tileBuilder.Build(builder.BuildInput{
-						FormDirectories: []string{"/path/to/missing/form"},
-					})
-					Expect(err).To(MatchError(`error reading from form directory "/path/to/missing/form": some form error`))
 				})
 			})
 

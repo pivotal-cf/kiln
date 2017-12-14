@@ -26,8 +26,9 @@ install_time_verifiers:
 post_deploy_errands:
 - name: smoke-tests
 form_types:
-- name: domains
-  label: Domains
+- $( form "some-other-config" )
+- $( form "some-config" )
+- $( form "some-more-config" )
 job_types:
 - name: consul_server
   label: Consul

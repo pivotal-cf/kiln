@@ -44,6 +44,7 @@ type Bake struct {
 	logger                 logger
 	releaseManifestReader  releaseManifestReader
 	stemcellManifestReader stemcellManifestReader
+	formDirectoryReader    formDirectoryReader
 	Options                BakeConfig
 }
 
@@ -71,6 +72,12 @@ type stemcellManifestReader interface {
 	Read(path string) (builder.StemcellManifest, error)
 }
 
+//go:generate counterfeiter -o ./fakes/form_directory_reader.go --fake-name FormDirectoryReader . formDirectoryReader
+
+type formDirectoryReader interface {
+	Read(path string) ([]builder.Part, error)
+}
+
 //go:generate counterfeiter -o ./fakes/logger.go --fake-name Logger . logger
 
 type logger interface {
@@ -83,6 +90,7 @@ func NewBake(metadataBuilder metadataBuilder,
 	logger logger,
 	releaseManifestReader releaseManifestReader,
 	stemcellManifestReader stemcellManifestReader,
+	formDirectoryReader formDirectoryReader,
 ) Bake {
 	return Bake{
 		metadataBuilder:        metadataBuilder,
@@ -90,6 +98,7 @@ func NewBake(metadataBuilder metadataBuilder,
 		logger:                 logger,
 		releaseManifestReader:  releaseManifestReader,
 		stemcellManifestReader: stemcellManifestReader,
+		formDirectoryReader:    formDirectoryReader,
 	}
 }
 
@@ -130,6 +139,29 @@ func (b Bake) Execute(args []string) error {
 		stemcellManifest, err = b.stemcellManifestReader.Read(config.StemcellTarball)
 		if err != nil {
 			return err
+		}
+	}
+
+	var formTypes map[string]map[string]interface{}
+	if config.FormDirectories != nil {
+		b.logger.Println("Reading form files...")
+		formTypes = map[string]map[string]interface{}{}
+		for _, formDir := range config.FormDirectories {
+			forms, err := b.formDirectoryReader.Read(formDir)
+			if err != nil {
+				return err
+			}
+
+			for _, form := range forms {
+				_, ok := form.Metadata.(map[interface{}]interface{})
+				fmt.Printf("Form %#v", form.Metadata)
+				fmt.Printf("Is it okay?: %t", ok)
+				// TODO: test for err
+				if !ok {
+					panic("NOT OKAY")
+				}
+				// formTypes[form.Name] = v
+			}
 		}
 	}
 
@@ -175,6 +207,7 @@ func (b Bake) Execute(args []string) error {
 		variables,
 		releaseManifests,
 		stemcellManifest,
+		formTypes,
 		generatedMetadataYAML)
 	if err != nil {
 		return err
@@ -269,8 +302,24 @@ func (b Bake) interpolateMetadata(
 	variables map[string]string,
 	releaseManifests map[string]builder.ReleaseManifest,
 	stemcellManifest builder.StemcellManifest,
+	formTypes map[string]map[string]interface{},
 	generatedMetadataYAML []byte) ([]byte, error) {
 	templateHelpers := template.FuncMap{
+		"form": func(key string) (string, error) {
+			if formTypes == nil {
+				return "", errors.New("the --forms-directory flag is required in order to use the 'form' interpolation helper")
+			}
+			val, ok := formTypes[key]
+			if !ok {
+				return "", fmt.Errorf("could not find form with key '%s'", key)
+			}
+			formJson, err := json.Marshal(&val)
+			if err != nil {
+				return "", err //not tested
+			}
+
+			return string(formJson), nil
+		},
 		"release": func(name string) (string, error) {
 			val, ok := releaseManifests[name]
 			if !ok {

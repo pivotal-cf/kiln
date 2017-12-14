@@ -6,7 +6,6 @@ import (
 )
 
 type MetadataBuilder struct {
-	formDirectoryReader           metadataPartsDirectoryReader
 	instanceGroupDirectoryReader  metadataPartsDirectoryReader
 	jobsDirectoryReader           metadataPartsDirectoryReader
 	iconEncoder                   iconEncoder
@@ -54,7 +53,6 @@ type logger interface {
 }
 
 func NewMetadataBuilder(
-	formDirectoryReader metadataPartsDirectoryReader,
 	instanceGroupDirectoryReader metadataPartsDirectoryReader,
 	jobsDirectoryReader metadataPartsDirectoryReader,
 	propertiesDirectoryReader metadataPartsDirectoryReader,
@@ -65,7 +63,6 @@ func NewMetadataBuilder(
 	iconEncoder iconEncoder,
 ) MetadataBuilder {
 	return MetadataBuilder{
-		formDirectoryReader:           formDirectoryReader,
 		instanceGroupDirectoryReader:  instanceGroupDirectoryReader,
 		jobsDirectoryReader:           jobsDirectoryReader,
 		iconEncoder:                   iconEncoder,
@@ -103,11 +100,6 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		return GeneratedMetadata{}, err
 	}
 
-	formTypes, err := m.buildFormTypes(input.FormDirectories, metadata)
-	if err != nil {
-		return GeneratedMetadata{}, err
-	}
-
 	jobTypes, err := m.buildJobTypes(input.InstanceGroupDirectories, input.JobDirectories, metadata)
 	if err != nil {
 		return GeneratedMetadata{}, err
@@ -120,12 +112,10 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 
 	delete(metadata, "name")
 	delete(metadata, "icon_image")
-	delete(metadata, "form_types")
 	delete(metadata, "job_types")
 	delete(metadata, "property_blueprints")
 
 	return GeneratedMetadata{
-		FormTypes:          formTypes,
 		JobTypes:           jobTypes,
 		IconImage:          encodedIcon,
 		Name:               productName,
@@ -204,30 +194,6 @@ func (m MetadataBuilder) buildVariables(vars []string, metadata Metadata) ([]Par
 	}
 
 	return variables, nil
-}
-
-func (m MetadataBuilder) buildFormTypes(dirs []string, metadata Metadata) ([]Part, error) {
-	var formTypes []Part
-
-	if len(dirs) > 0 {
-		for _, fd := range dirs {
-			m.logger.Printf("Reading forms from %s", fd)
-
-			formTypesInDir, err := m.formDirectoryReader.Read(fd)
-			if err != nil {
-				return nil, fmt.Errorf("error reading from form directory %q: %s", fd, err)
-			}
-			formTypes = append(formTypes, formTypesInDir...)
-		}
-	} else {
-		if ft, ok := metadata["form_types"].([]interface{}); ok {
-			for _, f := range ft {
-				formTypes = append(formTypes, Part{Metadata: f})
-			}
-		}
-	}
-
-	return formTypes, nil
 }
 
 func (m MetadataBuilder) buildJobTypes(typeDirs, jobDirs []string, metadata Metadata) ([]Part, error) {

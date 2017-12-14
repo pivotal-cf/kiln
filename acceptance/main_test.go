@@ -121,40 +121,24 @@ operating_system: ubuntu-trusty
 		stemcellTarball, err = createTarball(tmpDir, "stemcell.tgz", "stemcell.MF", stemcellManifest)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = ioutil.WriteFile(filepath.Join(someFormsDirectory, "_order.yml"), []byte(`---
-forms:
-  - some-other-config
-  - some-config
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
 		err = ioutil.WriteFile(filepath.Join(someFormsDirectory, "some-config.yml"), []byte(`---
-form:
-  name: some-config
-  label: some-form-label
-  description: some-form-description
+name: some-config
+label: some-form-label
+description: some-form-description
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = ioutil.WriteFile(filepath.Join(someFormsDirectory, "some-other-config.yml"), []byte(`---
-form:
-  name: some-other-config
-  label: some-other-form-label
-  description: some-other-form-description
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(someOtherFormsDirectory, "_order.yml"), []byte(`---
-forms:
-  - some-more-config
+name: some-other-config
+label: some-other-form-label
+description: some-other-form-description
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = ioutil.WriteFile(filepath.Join(someOtherFormsDirectory, "some-more-config.yml"), []byte(`---
-form:
-  name: some-more-config
-  label: some-form-label
-  description: some-form-description
+name: some-more-config
+label: some-form-label
+description: some-form-description
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -327,6 +311,8 @@ variables:
 		It("creates a tile with empty release tarballs", func() {
 			command := exec.Command(pathToMain,
 				"bake",
+				"--forms-directory", someFormsDirectory,
+				"--forms-directory", someOtherFormsDirectory,
 				"--icon", someIconPath,
 				"--metadata", metadata,
 				"--output-file", outputFile,
@@ -368,6 +354,8 @@ variables:
 		It("creates empty migrations folder", func() {
 			command := exec.Command(pathToMain,
 				"bake",
+				"--forms-directory", someFormsDirectory,
+				"--forms-directory", someOtherFormsDirectory,
 				"--icon", someIconPath,
 				"--metadata", metadata,
 				"--output-file", outputFile,
@@ -420,6 +408,8 @@ variables:
 
 				command := exec.Command(pathToMain,
 					"bake",
+					"--forms-directory", someFormsDirectory,
+					"--forms-directory", someOtherFormsDirectory,
 					"--embed", otherFileToEmbed,
 					"--embed", someFileToEmbed,
 					"--icon", someIconPath,
@@ -495,6 +485,8 @@ variables:
 
 				command := exec.Command(pathToMain,
 					"bake",
+					"--forms-directory", someFormsDirectory,
+					"--forms-directory", someOtherFormsDirectory,
 					"--embed", dirToAdd,
 					"--icon", someIconPath,
 					"--metadata", metadata,
@@ -563,6 +555,8 @@ variables:
 				"bake",
 				"--forms-directory", someFormsDirectory,
 				"--forms-directory", someOtherFormsDirectory,
+				"--forms-directory", someFormsDirectory,
+				"--forms-directory", someOtherFormsDirectory,
 				"--icon", someIconPath,
 				"--instance-groups-directory", someInstanceGroupsDirectory,
 				"--jobs-directory", someJobsDirectory,
@@ -616,6 +610,8 @@ variables:
 			It("prints an error and exits 1", func() {
 				command := exec.Command(pathToMain,
 					"bake",
+					"--forms-directory", someFormsDirectory,
+					"--forms-directory", someOtherFormsDirectory,
 					"--icon", someIconPath,
 					"--metadata", "metadata.yml",
 					"--output-file", outputFile,
@@ -636,6 +632,8 @@ variables:
 			It("prints an error and exit 1", func() {
 				command := exec.Command(pathToMain,
 					"bake",
+					"--forms-directory", someFormsDirectory,
+					"--forms-directory", someOtherFormsDirectory,
 					"--icon", someIconPath,
 					"--metadata", metadata,
 					"--output-file", "/path/to/missing/dir/product.zip",

@@ -20,6 +20,7 @@ var _ = Describe("bake", func() {
 		fakeMetadataBuilder        *fakes.MetadataBuilder
 		fakeReleaseManifestReader  *fakes.ReleaseManifestReader
 		fakeStemcellManifestReader *fakes.StemcellManifestReader
+		fakeFormDirectoryReader    *fakes.FormDirectoryReader
 		fakeTileWriter             *fakes.TileWriter
 		fakeLogger                 *fakes.Logger
 
@@ -71,6 +72,7 @@ var _ = Describe("bake", func() {
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
 		fakeReleaseManifestReader = &fakes.ReleaseManifestReader{}
 		fakeStemcellManifestReader = &fakes.StemcellManifestReader{}
+		fakeFormDirectoryReader = &fakes.FormDirectoryReader{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
 
@@ -91,6 +93,16 @@ var _ = Describe("bake", func() {
 			OperatingSystem: "an-operating-system",
 		}, nil)
 
+		fakeFormDirectoryReader.ReadReturns([]builder.Part{
+			{
+				Name: "some-form",
+				Metadata: builder.Metadata{
+					"name":  "some-form",
+					"label": "some-form-label",
+				},
+			},
+		}, nil)
+
 		generatedMetadata = builder.GeneratedMetadata{
 			IconImage: "some-icon-image",
 			Name:      "some-product-name",
@@ -101,7 +113,7 @@ var _ = Describe("bake", func() {
 		}
 		fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 
-		bake = commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger, fakeReleaseManifestReader, fakeStemcellManifestReader)
+		bake = commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger, fakeReleaseManifestReader, fakeStemcellManifestReader, fakeFormDirectoryReader)
 	})
 
 	AfterEach(func() {
@@ -134,7 +146,6 @@ var _ = Describe("bake", func() {
 			Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 
 			buildInput := fakeMetadataBuilder.BuildArgsForCall(0)
-			Expect(buildInput.FormDirectories).To(Equal([]string{"some-forms-directory"}))
 			Expect(buildInput.IconPath).To(Equal("some-icon-path"))
 			Expect(buildInput.InstanceGroupDirectories).To(Equal([]string{"some-instance-groups-directory"}))
 			Expect(buildInput.JobDirectories).To(Equal([]string{"some-jobs-directory"}))
@@ -152,6 +163,7 @@ var _ = Describe("bake", func() {
 				"variable_from_file": "$(variable \"some-variable-from-file\")",
 				"releases":           []string{"$(release \"some-release-1\")", "$(release \"some-release-2\")"},
 				"stemcell_criteria":  "$( stemcell )",
+				"form_types":         []string{`$( form "some-form" )`},
 			}
 			fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 
@@ -178,6 +190,9 @@ var _ = Describe("bake", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
+			Expect(fakeFormDirectoryReader.ReadCallCount()).To(Equal(1))
+			formReadArgs := fakeFormDirectoryReader.ReadArgsForCall(0)
+			Expect(formReadArgs).To(Equal("some-forms-directory"))
 
 			productName, generatedMetadataContents, actualConfig := fakeTileWriter.WriteArgsForCall(0)
 			Expect(productName).To(Equal("some-product-name"))
@@ -196,6 +211,9 @@ releases:
 stemcell_criteria:
   version: 2.3.4
   os: an-operating-system
+form_types:
+- name: some-form
+  label: some-form-label
 `))
 			Expect(actualConfig).To(Equal(builder.WriteInput{
 				EmbedPaths:           []string{"some-embed-path"},
@@ -447,6 +465,66 @@ stemcell_criteria:
 				})
 			})
 
+			Context("when the form directory reader returns an error", func() {
+				It("returns an error", func() {
+					fakeFormDirectoryReader.ReadReturns(nil, errors.New("some-error"))
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--forms-directory", "some-form-directory",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("some-error"))
+				})
+			})
+
+			Context("when the form helper is used without providing the forms-directory flag", func() {
+				It("returns an error", func() {
+					generatedMetadata.Metadata = map[string]interface{}{"form_types": `$( form "some-form" )`}
+					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "unused",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", someReleasesDirectory,
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("--forms-directory"))
+				})
+			})
+
+			Context("when the requested form name is not found", func() {
+				It("returns an error", func() {
+					generatedMetadata.Metadata = map[string]interface{}{"form_types": `$( form "invalid-form" )`}
+					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--forms-directory", "some-form-directory",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid-form"))
+				})
+			})
+
 			Context("when the variable file does not contain valid YAML", func() {
 				BeforeEach(func() {
 					_, err := variableFile.Write([]byte("{{invalid-blah"))
@@ -655,7 +733,7 @@ stemcell_criteria:
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			command := commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger, fakeReleaseManifestReader, fakeStemcellManifestReader)
+			command := commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger, fakeReleaseManifestReader, fakeStemcellManifestReader, fakeFormDirectoryReader)
 			Expect(command.Usage()).To(Equal(jhandacommands.Usage{
 				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
 				ShortDescription: "bakes a tile",
