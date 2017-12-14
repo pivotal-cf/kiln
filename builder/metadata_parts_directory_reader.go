@@ -24,7 +24,7 @@ type Part struct {
 	Metadata interface{}
 }
 
-func NewMetadataPartsDirectoryReader(filesystem filesystem, topLevelKey string) MetadataPartsDirectoryReader {
+func NewMetadataPartsDirectoryReaderWithTopLevelKey(filesystem filesystem, topLevelKey string) MetadataPartsDirectoryReader {
 	return MetadataPartsDirectoryReader{filesystem: filesystem, topLevelKey: topLevelKey}
 }
 

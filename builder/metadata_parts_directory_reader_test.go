@@ -80,7 +80,7 @@ variables:
 				return nil, fmt.Errorf("open %s: no such file or directory", name)
 			}
 		}
-		reader = builder.NewMetadataPartsDirectoryReader(filesystem, "variables")
+		reader = builder.NewMetadataPartsDirectoryReaderWithTopLevelKey(filesystem, "variables")
 	})
 
 	Describe("Read", func() {
@@ -138,7 +138,7 @@ runtime_configs:
 					return nil, fmt.Errorf("open %s: no such file or directory", name)
 				}
 			}
-			reader = builder.NewMetadataPartsDirectoryReader(filesystem, "runtime_configs")
+			reader = builder.NewMetadataPartsDirectoryReaderWithTopLevelKey(filesystem, "runtime_configs")
 			runtimeConfigs, err := reader.Read("/some/runtime-configs/path")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(runtimeConfigs).To(Equal([]builder.Part{
@@ -229,7 +229,7 @@ runtime_configs:
 					filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
 						return NewBuffer(bytes.NewBufferString("constants: []")), nil
 					}
-					reader = builder.NewMetadataPartsDirectoryReader(filesystem, "variables")
+					reader = builder.NewMetadataPartsDirectoryReaderWithTopLevelKey(filesystem, "variables")
 					_, err := reader.Read("/some/variables/path")
 					Expect(err).To(MatchError(`not a variables file: "/some/variables/path/not-a-vars-file.yml"`))
 				})
@@ -248,7 +248,7 @@ runtime_configs:
 					filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
 						return NewBuffer(bytes.NewBufferString("variables: []")), nil
 					}
-					reader = builder.NewMetadataPartsDirectoryReader(filesystem, "runtime_configs")
+					reader = builder.NewMetadataPartsDirectoryReaderWithTopLevelKey(filesystem, "runtime_configs")
 					_, err := reader.Read("/some/runtime-configs/path")
 					Expect(err).To(MatchError(`not a runtime_configs file: "/some/runtime-configs/path/not-a-runtime-configs-file.yml"`))
 				})
