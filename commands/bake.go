@@ -16,6 +16,8 @@ import (
 	"github.com/pivotal-cf/jhanda/commands"
 	"github.com/pivotal-cf/jhanda/flags"
 	"github.com/pivotal-cf/kiln/builder"
+
+	yamlConverter "github.com/ghodss/yaml"
 )
 
 type BakeConfig struct {
@@ -142,10 +144,10 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
-	var formTypes map[string]map[string]interface{}
+	var formTypes map[string]interface{}
 	if config.FormDirectories != nil {
 		b.logger.Println("Reading form files...")
-		formTypes = map[string]map[string]interface{}{}
+		formTypes = map[string]interface{}{}
 		for _, formDir := range config.FormDirectories {
 			forms, err := b.formDirectoryReader.Read(formDir)
 			if err != nil {
@@ -153,14 +155,7 @@ func (b Bake) Execute(args []string) error {
 			}
 
 			for _, form := range forms {
-				_, ok := form.Metadata.(map[interface{}]interface{})
-				fmt.Printf("Form %#v", form.Metadata)
-				fmt.Printf("Is it okay?: %t", ok)
-				// TODO: test for err
-				if !ok {
-					panic("NOT OKAY")
-				}
-				// formTypes[form.Name] = v
+				formTypes[form.Name] = form.Metadata
 			}
 		}
 	}
@@ -302,8 +297,11 @@ func (b Bake) interpolateMetadata(
 	variables map[string]string,
 	releaseManifests map[string]builder.ReleaseManifest,
 	stemcellManifest builder.StemcellManifest,
-	formTypes map[string]map[string]interface{},
+	formTypes map[string]interface{},
 	generatedMetadataYAML []byte) ([]byte, error) {
+
+	var t *template.Template
+
 	templateHelpers := template.FuncMap{
 		"form": func(key string) (string, error) {
 			if formTypes == nil {
@@ -313,12 +311,23 @@ func (b Bake) interpolateMetadata(
 			if !ok {
 				return "", fmt.Errorf("could not find form with key '%s'", key)
 			}
-			formJson, err := json.Marshal(&val)
+
+			initialYaml, err := yaml.Marshal(val)
+			if err != nil {
+				return "", err // should never happen
+			}
+
+			interpolatedYaml, err := b.interpolateMetadata(variables, releaseManifests, stemcellManifest, formTypes, initialYaml)
+			if err != nil {
+				return "", fmt.Errorf("unable to interpolate form '%s': %s", key, err)
+			}
+
+			inlinedYaml, err := b.yamlMarshalOneLine(interpolatedYaml)
 			if err != nil {
 				return "", err //not tested
 			}
 
-			return string(formJson), nil
+			return string(inlinedYaml), nil
 		},
 		"release": func(name string) (string, error) {
 			val, ok := releaseManifests[name]
@@ -380,4 +389,8 @@ func (b Bake) readVariableFiles(path string, variables map[string]string) error 
 		return err
 	}
 	return nil
+}
+
+func (b Bake) yamlMarshalOneLine(yamlContents []byte) ([]byte, error) {
+	return yamlConverter.YAMLToJSON(yamlContents)
 }

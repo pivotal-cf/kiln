@@ -223,6 +223,54 @@ form_types:
 			}))
 		})
 
+		It("allows interpolation helpers inside forms", func() {
+			fakeFormDirectoryReader.ReadReturns([]builder.Part{
+				{
+					Name: "some-form",
+					Metadata: builder.Metadata{
+						"name":        "some-form",
+						"label":       "some-form-label",
+						"description": `$( variable "some-form-variable" )`,
+					},
+				},
+			}, nil)
+
+			generatedMetadata.Metadata = builder.Metadata{
+				"releases":   []string{"$(release \"some-release-1\")"},
+				"form_types": []string{`$( form "some-form" )`},
+			}
+			fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+
+			err := bake.Execute([]string{
+				"--forms-directory", "some-forms-directory",
+				"--icon", "some-icon-path",
+				"--metadata", "some-metadata",
+				"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
+				"--releases-directory", someReleasesDirectory,
+				"--variable", "some-form-variable=some-form-description",
+				"--version", "1.2.3",
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			_, generatedMetadataContents, _ := fakeTileWriter.WriteArgsForCall(0)
+			Expect(generatedMetadataContents).To(MatchYAML(`
+icon_image: some-icon-image
+name: some-product-name
+releases:
+- name: some-release-1
+  file: release1.tgz
+  version: 1.2.3
+stemcell_criteria:
+  version: 2.3.4
+  os: an-operating-system
+form_types:
+- name: some-form
+  label: some-form-label
+  description: some-form-description
+`))
+		})
+
 		Context("when the optional flags are not specified", func() {
 			It("builds the metadata", func() {
 				err := bake.Execute([]string{
@@ -522,6 +570,40 @@ stemcell_criteria:
 
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("invalid-form"))
+				})
+			})
+
+			Context("when the nested form contains invalid templating", func() {
+				It("returns an error", func() {
+					fakeFormDirectoryReader.ReadReturns([]builder.Part{
+						{
+							Name: "some-form",
+							Metadata: builder.Metadata{
+								"name":        "some-form",
+								"label":       "some-form-label",
+								"description": `$( invalid-helper )`,
+							},
+						},
+					}, nil)
+
+					generatedMetadata.Metadata = builder.Metadata{
+						"releases":   []string{"$(release \"some-release-1\")"},
+						"form_types": []string{`$( form "some-form" )`},
+					}
+					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+
+					err := bake.Execute([]string{
+						"--forms-directory", "some-forms-directory",
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
+						"--releases-directory", someReleasesDirectory,
+						"--variable", "some-form-variable=some-form-description",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(MatchRegexp("unable to interpolate.*some-form"))
 				})
 			})
 
