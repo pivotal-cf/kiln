@@ -13,7 +13,6 @@ import (
 )
 
 type MetadataPartsDirectoryReader struct {
-	filesystem  filesystem
 	topLevelKey string
 	orderKey    string
 }
@@ -24,12 +23,12 @@ type Part struct {
 	Metadata interface{}
 }
 
-func NewMetadataPartsDirectoryReaderWithTopLevelKey(filesystem filesystem, topLevelKey string) MetadataPartsDirectoryReader {
-	return MetadataPartsDirectoryReader{filesystem: filesystem, topLevelKey: topLevelKey}
+func NewMetadataPartsDirectoryReaderWithTopLevelKey(topLevelKey string) MetadataPartsDirectoryReader {
+	return MetadataPartsDirectoryReader{topLevelKey: topLevelKey}
 }
 
-func NewMetadataPartsDirectoryReaderWithOrder(filesystem filesystem, topLevelKey, orderKey string) MetadataPartsDirectoryReader {
-	return MetadataPartsDirectoryReader{filesystem: filesystem, topLevelKey: topLevelKey, orderKey: orderKey}
+func NewMetadataPartsDirectoryReaderWithOrder(topLevelKey, orderKey string) MetadataPartsDirectoryReader {
+	return MetadataPartsDirectoryReader{topLevelKey: topLevelKey, orderKey: orderKey}
 }
 
 func (r MetadataPartsDirectoryReader) Read(path string) ([]Part, error) {
@@ -48,7 +47,7 @@ func (r MetadataPartsDirectoryReader) Read(path string) ([]Part, error) {
 func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string) ([]Part, error) {
 	parts := []Part{}
 
-	err := r.filesystem.Walk(path, func(filePath string, info os.FileInfo, err error) error {
+	err := filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -57,13 +56,7 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string
 			return nil
 		}
 
-		f, err := r.filesystem.Open(filePath)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		data, err := ioutil.ReadAll(f)
+		data, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			return err
 		}
@@ -119,7 +112,7 @@ func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, var
 
 func (r MetadataPartsDirectoryReader) orderWithOrderFromFile(path string, parts []Part) ([]Part, error) {
 	orderPath := filepath.Join(path, "_order.yml")
-	f, err := r.filesystem.Open(orderPath)
+	f, err := os.Open(orderPath)
 	if err != nil {
 		return []Part{}, err
 	}

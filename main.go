@@ -30,16 +30,16 @@ func main() {
 
 	filesystem := helper.NewFilesystem()
 	zipper := builder.NewZipper()
-	formDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder(filesystem, "form", "forms")
+	formDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder("form", "forms")
 	handcraftReader := builder.NewMetadataReader(filesystem, logger)
 	iconEncoder := builder.NewIconEncoder(filesystem)
-	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder(filesystem, "job_type", "job_types")
-	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey(filesystem, "job")
-	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey(filesystem, "property_blueprints")
+	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder("job_type", "job_types")
+	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("job")
+	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("property_blueprints")
 	releaseManifestReader := builder.NewReleaseManifestReader(filesystem)
-	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey(filesystem, "runtime_configs")
+	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("runtime_configs")
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
-	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey(filesystem, "variables")
+	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")
 	metadataBuilder := builder.NewMetadataBuilder(
 		formDirectoryReader,
 		instanceGroupDirectoryReader,
