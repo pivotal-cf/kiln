@@ -256,6 +256,9 @@ variables:
 		expectedYaml := fmt.Sprintf(expectedMetadata, iconData)
 		Expect(metadataContents).To(MatchYAML(expectedYaml))
 
+		prettyPrintedValue := "file: diego-release-0.1467.1-3215.4.0.tgz\n"
+		Expect(string(metadataContents)).To(ContainSubstring(prettyPrintedValue))
+
 		var (
 			archivedMigration1 io.ReadCloser
 			archivedMigration2 io.ReadCloser

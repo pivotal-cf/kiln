@@ -207,7 +207,12 @@ func (b Bake) Execute(args []string) error {
 		return err
 	}
 
-	err = b.tileWriter.Write(generatedMetadata.Name, interpolatedMetadata, writeInput)
+	prettyMetadata, err := b.prettyPrint(interpolatedMetadata)
+	if err != nil {
+		return err // un-tested
+	}
+
+	err = b.tileWriter.Write(generatedMetadata.Name, prettyMetadata, writeInput)
 	if err != nil {
 		return err
 	}
@@ -384,6 +389,17 @@ func (b Bake) interpolateValueIntoYAML(input interpolateInput, val interface{}) 
 	return string(inlinedYaml), nil
 }
 
+// Workaround to avoid YAML indentation being incorrect when value is interpolated into the metadata
 func (b Bake) yamlMarshalOneLine(yamlContents []byte) ([]byte, error) {
 	return yamlConverter.YAMLToJSON(yamlContents)
+}
+
+func (b Bake) prettyPrint(inputYAML []byte) ([]byte, error) {
+	var data map[string]interface{}
+	err := yaml.Unmarshal(inputYAML, &data)
+	if err != nil {
+		return []byte{}, err // un-tested
+	}
+
+	return yaml.Marshal(data)
 }
