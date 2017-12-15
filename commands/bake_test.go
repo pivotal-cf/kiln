@@ -581,7 +581,7 @@ stemcell_criteria:
 							Metadata: builder.Metadata{
 								"name":        "some-form",
 								"label":       "some-form-label",
-								"description": `$( invalid-helper )`,
+								"description": `$( invalid_helper )`,
 							},
 						},
 					}, nil)
@@ -603,7 +603,7 @@ stemcell_criteria:
 					})
 
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(MatchRegexp("unable to interpolate.*some-form"))
+					Expect(err.Error()).To(MatchRegexp("unable to interpolate value"))
 				})
 			})
 

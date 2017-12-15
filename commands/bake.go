@@ -2,7 +2,6 @@ package commands
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -198,12 +197,12 @@ func (b Bake) Execute(args []string) error {
 		EmbedPaths:           config.EmbedPaths,
 	}
 
-	interpolatedMetadata, err := b.interpolateMetadata(
-		variables,
-		releaseManifests,
-		stemcellManifest,
-		formTypes,
-		generatedMetadataYAML)
+	interpolatedMetadata, err := b.interpolateMetadata(interpolateInput{
+		variables:        variables,
+		releaseManifests: releaseManifests,
+		stemcellManifest: stemcellManifest,
+		formTypes:        formTypes,
+	}, generatedMetadataYAML)
 	if err != nil {
 		return err
 	}
@@ -293,67 +292,42 @@ func (b Bake) extractReleaseTarballFilenames(config BakeConfig) ([]string, error
 	return releaseTarballs, nil
 }
 
-func (b Bake) interpolateMetadata(
-	variables map[string]string,
-	releaseManifests map[string]builder.ReleaseManifest,
-	stemcellManifest builder.StemcellManifest,
-	formTypes map[string]interface{},
-	generatedMetadataYAML []byte) ([]byte, error) {
+type interpolateInput struct {
+	variables        map[string]string
+	releaseManifests map[string]builder.ReleaseManifest
+	stemcellManifest builder.StemcellManifest
+	formTypes        map[string]interface{}
+}
 
-	var t *template.Template
-
+func (b Bake) interpolateMetadata(input interpolateInput, generatedMetadataYAML []byte) ([]byte, error) {
 	templateHelpers := template.FuncMap{
 		"form": func(key string) (string, error) {
-			if formTypes == nil {
+			if input.formTypes == nil {
 				return "", errors.New("the --forms-directory flag is required in order to use the 'form' interpolation helper")
 			}
-			val, ok := formTypes[key]
+			val, ok := input.formTypes[key]
 			if !ok {
 				return "", fmt.Errorf("could not find form with key '%s'", key)
 			}
 
-			initialYaml, err := yaml.Marshal(val)
-			if err != nil {
-				return "", err // should never happen
-			}
-
-			interpolatedYaml, err := b.interpolateMetadata(variables, releaseManifests, stemcellManifest, formTypes, initialYaml)
-			if err != nil {
-				return "", fmt.Errorf("unable to interpolate form '%s': %s", key, err)
-			}
-
-			inlinedYaml, err := b.yamlMarshalOneLine(interpolatedYaml)
-			if err != nil {
-				return "", err //not tested
-			}
-
-			return string(inlinedYaml), nil
+			return b.interpolateValueIntoYAML(input, val)
 		},
 		"release": func(name string) (string, error) {
-			val, ok := releaseManifests[name]
+			val, ok := input.releaseManifests[name]
 			if !ok {
 				return "", fmt.Errorf("could not find release with name '%s'", name)
 			}
 
-			releaseManifest, err := json.Marshal(&val)
-			if err != nil {
-				return "", err //not tested
-			}
-
-			return string(releaseManifest), nil
+			return b.interpolateValueIntoYAML(input, val)
 		},
 		"stemcell": func() (string, error) {
-			if stemcellManifest == (builder.StemcellManifest{}) {
+			if input.stemcellManifest == (builder.StemcellManifest{}) {
 				return "", errors.New("the --stemcell-tarball flag is required in order to use the 'stemcell' interpolation helper")
 			}
-			stemcellJson, err := json.Marshal(&stemcellManifest)
-			if err != nil {
-				return "", err //not tested
-			}
-			return string(stemcellJson), nil
+			return b.interpolateValueIntoYAML(input, input.stemcellManifest)
 		},
 		"variable": func(key string) (string, error) {
-			val, ok := variables[key]
+			val, ok := input.variables[key]
 			if !ok {
 				return "", fmt.Errorf("could not find variable with key '%s'", key)
 			}
@@ -371,7 +345,7 @@ func (b Bake) interpolateMetadata(
 	}
 
 	var buffer bytes.Buffer
-	err = t.Execute(&buffer, variables)
+	err = t.Execute(&buffer, input.variables)
 	if err != nil {
 		return nil, fmt.Errorf("template execution failed: %s", err)
 	}
@@ -389,6 +363,25 @@ func (b Bake) readVariableFiles(path string, variables map[string]string) error 
 		return err
 	}
 	return nil
+}
+
+func (b Bake) interpolateValueIntoYAML(input interpolateInput, val interface{}) (string, error) {
+	initialYaml, err := yaml.Marshal(val)
+	if err != nil {
+		return "", err // should never happen
+	}
+
+	interpolatedYaml, err := b.interpolateMetadata(input, initialYaml)
+	if err != nil {
+		return "", fmt.Errorf("unable to interpolate value: %s", err)
+	}
+
+	inlinedYaml, err := b.yamlMarshalOneLine(interpolatedYaml)
+	if err != nil {
+		return "", err //not tested
+	}
+
+	return string(inlinedYaml), nil
 }
 
 func (b Bake) yamlMarshalOneLine(yamlContents []byte) ([]byte, error) {

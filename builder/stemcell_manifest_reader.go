@@ -3,7 +3,6 @@ package builder
 import (
 	"archive/tar"
 	"compress/gzip"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,14 +17,14 @@ type StemcellManifest struct {
 }
 
 // the input field in stemcell.MF is called `operating_system` while the output field is `os`
-func (s StemcellManifest) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		Version         string `json:"version"`
-		OperatingSystem string `json:"os"`
+func (s StemcellManifest) MarshalYAML() (interface{}, error) {
+	return struct {
+		Version         string `yaml:"version"`
+		OperatingSystem string `yaml:"os"`
 	}{
 		Version:         s.Version,
 		OperatingSystem: s.OperatingSystem,
-	})
+	}, nil
 }
 
 type StemcellManifestReader struct {
