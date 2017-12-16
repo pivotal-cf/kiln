@@ -1,22 +1,18 @@
 package commands
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"text/template"
 
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/jhanda/commands"
 	"github.com/pivotal-cf/jhanda/flags"
 	"github.com/pivotal-cf/kiln/builder"
-
-	yamlConverter "github.com/ghodss/yaml"
 )
 
 type BakeConfig struct {
@@ -41,12 +37,19 @@ type BakeConfig struct {
 
 type Bake struct {
 	metadataBuilder        metadataBuilder
+	interpolator           interpolator
 	tileWriter             tileWriter
 	logger                 logger
 	releaseManifestReader  releaseManifestReader
 	stemcellManifestReader stemcellManifestReader
 	formDirectoryReader    formDirectoryReader
 	Options                BakeConfig
+}
+
+//go:generate counterfeiter -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
+
+type interpolator interface {
+	Interpolate(input builder.InterpolateInput, templateYAML []byte) ([]byte, error)
 }
 
 //go:generate counterfeiter -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
@@ -87,6 +90,7 @@ type logger interface {
 }
 
 func NewBake(metadataBuilder metadataBuilder,
+	interpolator interpolator,
 	tileWriter tileWriter,
 	logger logger,
 	releaseManifestReader releaseManifestReader,
@@ -95,6 +99,7 @@ func NewBake(metadataBuilder metadataBuilder,
 ) Bake {
 	return Bake{
 		metadataBuilder:        metadataBuilder,
+		interpolator:           interpolator,
 		tileWriter:             tileWriter,
 		logger:                 logger,
 		releaseManifestReader:  releaseManifestReader,
@@ -189,6 +194,16 @@ func (b Bake) Execute(args []string) error {
 		return err
 	}
 
+	interpolatedMetadata, err := b.interpolator.Interpolate(builder.InterpolateInput{
+		Variables:        variables,
+		ReleaseManifests: releaseManifests,
+		StemcellManifest: stemcellManifest,
+		FormTypes:        formTypes,
+	}, generatedMetadataYAML)
+	if err != nil {
+		return err
+	}
+
 	writeInput := builder.WriteInput{
 		OutputFile:           config.OutputFile,
 		StubReleases:         config.StubReleases,
@@ -197,22 +212,7 @@ func (b Bake) Execute(args []string) error {
 		EmbedPaths:           config.EmbedPaths,
 	}
 
-	interpolatedMetadata, err := b.interpolateMetadata(interpolateInput{
-		variables:        variables,
-		releaseManifests: releaseManifests,
-		stemcellManifest: stemcellManifest,
-		formTypes:        formTypes,
-	}, generatedMetadataYAML)
-	if err != nil {
-		return err
-	}
-
-	prettyMetadata, err := b.prettyPrint(interpolatedMetadata)
-	if err != nil {
-		return err // un-tested
-	}
-
-	err = b.tileWriter.Write(generatedMetadata.Name, prettyMetadata, writeInput)
+	err = b.tileWriter.Write(generatedMetadata.Name, interpolatedMetadata, writeInput)
 	if err != nil {
 		return err
 	}
@@ -297,66 +297,6 @@ func (b Bake) extractReleaseTarballFilenames(config BakeConfig) ([]string, error
 	return releaseTarballs, nil
 }
 
-type interpolateInput struct {
-	variables        map[string]string
-	releaseManifests map[string]builder.ReleaseManifest
-	stemcellManifest builder.StemcellManifest
-	formTypes        map[string]interface{}
-}
-
-func (b Bake) interpolateMetadata(input interpolateInput, generatedMetadataYAML []byte) ([]byte, error) {
-	templateHelpers := template.FuncMap{
-		"form": func(key string) (string, error) {
-			if input.formTypes == nil {
-				return "", errors.New("the --forms-directory flag is required in order to use the 'form' interpolation helper")
-			}
-			val, ok := input.formTypes[key]
-			if !ok {
-				return "", fmt.Errorf("could not find form with key '%s'", key)
-			}
-
-			return b.interpolateValueIntoYAML(input, val)
-		},
-		"release": func(name string) (string, error) {
-			val, ok := input.releaseManifests[name]
-			if !ok {
-				return "", fmt.Errorf("could not find release with name '%s'", name)
-			}
-
-			return b.interpolateValueIntoYAML(input, val)
-		},
-		"stemcell": func() (string, error) {
-			if input.stemcellManifest == (builder.StemcellManifest{}) {
-				return "", errors.New("the --stemcell-tarball flag is required in order to use the 'stemcell' interpolation helper")
-			}
-			return b.interpolateValueIntoYAML(input, input.stemcellManifest)
-		},
-		"variable": func(key string) (string, error) {
-			val, ok := input.variables[key]
-			if !ok {
-				return "", fmt.Errorf("could not find variable with key '%s'", key)
-			}
-			return val, nil
-		},
-	}
-
-	t, err := template.New("metadata").
-		Delims("$(", ")").
-		Funcs(templateHelpers).
-		Parse(string(generatedMetadataYAML))
-
-	if err != nil {
-		return nil, fmt.Errorf("template parsing failed: %s", err)
-	}
-
-	var buffer bytes.Buffer
-	err = t.Execute(&buffer, input.variables)
-	if err != nil {
-		return nil, fmt.Errorf("template execution failed: %s", err)
-	}
-	return buffer.Bytes(), nil
-}
-
 func (b Bake) readVariableFiles(path string, variables map[string]string) error {
 	variableData, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -368,38 +308,4 @@ func (b Bake) readVariableFiles(path string, variables map[string]string) error 
 		return err
 	}
 	return nil
-}
-
-func (b Bake) interpolateValueIntoYAML(input interpolateInput, val interface{}) (string, error) {
-	initialYaml, err := yaml.Marshal(val)
-	if err != nil {
-		return "", err // should never happen
-	}
-
-	interpolatedYaml, err := b.interpolateMetadata(input, initialYaml)
-	if err != nil {
-		return "", fmt.Errorf("unable to interpolate value: %s", err)
-	}
-
-	inlinedYaml, err := b.yamlMarshalOneLine(interpolatedYaml)
-	if err != nil {
-		return "", err //not tested
-	}
-
-	return string(inlinedYaml), nil
-}
-
-// Workaround to avoid YAML indentation being incorrect when value is interpolated into the metadata
-func (b Bake) yamlMarshalOneLine(yamlContents []byte) ([]byte, error) {
-	return yamlConverter.YAMLToJSON(yamlContents)
-}
-
-func (b Bake) prettyPrint(inputYAML []byte) ([]byte, error) {
-	var data map[string]interface{}
-	err := yaml.Unmarshal(inputYAML, &data)
-	if err != nil {
-		return []byte{}, err // un-tested
-	}
-
-	return yaml.Marshal(data)
 }

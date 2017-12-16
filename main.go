@@ -51,11 +51,12 @@ func main() {
 		iconEncoder,
 	)
 	md5SumCalculator := helper.NewFileMD5SumCalculator()
+	interpolator := builder.NewInterpolator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, logger, md5SumCalculator)
 
 	commandSet := jhandacommands.Set{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
-	commandSet["bake"] = commands.NewBake(metadataBuilder, tileWriter, logger, releaseManifestReader, stemcellManifestReader, formDirectoryReader)
+	commandSet["bake"] = commands.NewBake(metadataBuilder, interpolator, tileWriter, logger, releaseManifestReader, stemcellManifestReader, formDirectoryReader)
 
 	var command string
 	if len(args) > 0 {

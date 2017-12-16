@@ -21,6 +21,7 @@ var _ = Describe("bake", func() {
 		fakeReleaseManifestReader  *fakes.ReleaseManifestReader
 		fakeStemcellManifestReader *fakes.StemcellManifestReader
 		fakeFormDirectoryReader    *fakes.FormDirectoryReader
+		fakeInterpolator           *fakes.Interpolator
 		fakeTileWriter             *fakes.TileWriter
 		fakeLogger                 *fakes.Logger
 
@@ -73,6 +74,7 @@ var _ = Describe("bake", func() {
 		fakeReleaseManifestReader = &fakes.ReleaseManifestReader{}
 		fakeStemcellManifestReader = &fakes.StemcellManifestReader{}
 		fakeFormDirectoryReader = &fakes.FormDirectoryReader{}
+		fakeInterpolator = &fakes.Interpolator{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
 
@@ -112,8 +114,17 @@ var _ = Describe("bake", func() {
 			},
 		}
 		fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+		fakeInterpolator.InterpolateReturns([]byte("some-interpolated-metadata"), nil)
 
-		bake = commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger, fakeReleaseManifestReader, fakeStemcellManifestReader, fakeFormDirectoryReader)
+		bake = commands.NewBake(
+			fakeMetadataBuilder,
+			fakeInterpolator,
+			fakeTileWriter,
+			fakeLogger,
+			fakeReleaseManifestReader,
+			fakeStemcellManifestReader,
+			fakeFormDirectoryReader,
+		)
 	})
 
 	AfterEach(func() {
@@ -122,8 +133,10 @@ var _ = Describe("bake", func() {
 	})
 
 	Describe("Execute", func() {
-		It("builds the metadata", func() {
+		It("builds the tile", func() {
+
 			err := bake.Execute([]string{
+				"--embed", "some-embed-path",
 				"--forms-directory", "some-forms-directory",
 				"--icon", "some-icon-path",
 				"--instance-groups-directory", "some-instance-groups-directory",
@@ -139,136 +152,18 @@ var _ = Describe("bake", func() {
 				"--bosh-variables-directory", "some-other-variables-directory",
 				"--bosh-variables-directory", "some-variables-directory",
 				"--version", "1.2.3",
+				"--migrations-directory", "some-migrations-directory",
+				"--migrations-directory", "some-other-migrations-directory",
+				"--variable", "some-variable=some-variable-value",
+				"--variables-file", variableFile.Name(),
 			})
-
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 
-			buildInput := fakeMetadataBuilder.BuildArgsForCall(0)
-			Expect(buildInput.IconPath).To(Equal("some-icon-path"))
-			Expect(buildInput.InstanceGroupDirectories).To(Equal([]string{"some-instance-groups-directory"}))
-			Expect(buildInput.JobDirectories).To(Equal([]string{"some-jobs-directory"}))
-			Expect(buildInput.MetadataPath).To(Equal("some-metadata"))
-			Expect(buildInput.PropertyDirectories).To(Equal([]string{"some-properties-directory"}))
-			Expect(buildInput.RuntimeConfigDirectories).To(Equal([]string{"some-other-runtime-configs-directory", "some-runtime-configs-directory"}))
-			Expect(buildInput.StemcellTarball).To(Equal("some-stemcell-tarball"))
-			Expect(buildInput.BOSHVariableDirectories).To(Equal([]string{"some-other-variables-directory", "some-variables-directory"}))
-			Expect(buildInput.Version).To(Equal("1.2.3"))
-		})
-
-		It("calls the tile writer", func() {
-			generatedMetadata.Metadata = builder.Metadata{
-				"custom_variable":    "$(variable \"some-variable\")",
-				"variable_from_file": "$(variable \"some-variable-from-file\")",
-				"releases":           []string{"$(release \"some-release-1\")", "$(release \"some-release-2\")"},
-				"stemcell_criteria":  "$( stemcell )",
-				"form_types":         []string{`$( form "some-form" )`},
-			}
-			fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
-
-			err := bake.Execute([]string{
-				"--embed", "some-embed-path",
-				"--forms-directory", "some-forms-directory",
-				"--icon", "some-icon-path",
-				"--instance-groups-directory", "some-instance-groups-directory",
-				"--jobs-directory", "some-jobs-directory",
-				"--metadata", "some-metadata",
-				"--migrations-directory", "some-migrations-directory",
-				"--migrations-directory", "some-other-migrations-directory",
-				"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-				"--releases-directory", otherReleasesDirectory,
-				"--releases-directory", someReleasesDirectory,
-				"--runtime-configs-directory", "some-runtime-configs-directory",
-				"--stemcell-tarball", "some-stemcell-tarball",
-				"--bosh-variables-directory", "some-variables-directory",
-				"--variable", "some-variable=some-variable-value",
-				"--variables-file", variableFile.Name(),
-				"--version", "1.2.3",
-			})
-
-			Expect(err).NotTo(HaveOccurred())
-
+			Expect(fakeInterpolator.InterpolateCallCount()).To(Equal(1))
 			Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
 			Expect(fakeFormDirectoryReader.ReadCallCount()).To(Equal(1))
-			formReadArgs := fakeFormDirectoryReader.ReadArgsForCall(0)
-			Expect(formReadArgs).To(Equal("some-forms-directory"))
-
-			productName, generatedMetadataContents, actualConfig := fakeTileWriter.WriteArgsForCall(0)
-			Expect(productName).To(Equal("some-product-name"))
-			Expect(generatedMetadataContents).To(MatchYAML(`
-icon_image: some-icon-image
-name: some-product-name
-custom_variable: some-variable-value
-variable_from_file: some-variable-value-from-file
-releases:
-- name: some-release-1
-  file: release1.tgz
-  version: 1.2.3
-- name: some-release-2
-  file: release2.tgz
-  version: 2.3.4
-stemcell_criteria:
-  version: 2.3.4
-  os: an-operating-system
-form_types:
-- name: some-form
-  label: some-form-label
-`))
-			Expect(actualConfig).To(Equal(builder.WriteInput{
-				EmbedPaths:           []string{"some-embed-path"},
-				MigrationDirectories: []string{"some-migrations-directory", "some-other-migrations-directory"},
-				OutputFile:           "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-				ReleaseDirectories:   []string{otherReleasesDirectory, someReleasesDirectory},
-			}))
-		})
-
-		It("allows interpolation helpers inside forms", func() {
-			fakeFormDirectoryReader.ReadReturns([]builder.Part{
-				{
-					Name: "some-form",
-					Metadata: builder.Metadata{
-						"name":        "some-form",
-						"label":       "some-form-label",
-						"description": `$( variable "some-form-variable" )`,
-					},
-				},
-			}, nil)
-
-			generatedMetadata.Metadata = builder.Metadata{
-				"releases":   []string{"$(release \"some-release-1\")"},
-				"form_types": []string{`$( form "some-form" )`},
-			}
-			fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
-
-			err := bake.Execute([]string{
-				"--forms-directory", "some-forms-directory",
-				"--icon", "some-icon-path",
-				"--metadata", "some-metadata",
-				"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-				"--releases-directory", someReleasesDirectory,
-				"--variable", "some-form-variable=some-form-description",
-				"--version", "1.2.3",
-			})
-
-			Expect(err).NotTo(HaveOccurred())
-
-			_, generatedMetadataContents, _ := fakeTileWriter.WriteArgsForCall(0)
-			Expect(generatedMetadataContents).To(MatchYAML(`
-icon_image: some-icon-image
-name: some-product-name
-releases:
-- name: some-release-1
-  file: release1.tgz
-  version: 1.2.3
-stemcell_criteria:
-  version: 2.3.4
-  os: an-operating-system
-form_types:
-- name: some-form
-  label: some-form-label
-  description: some-form-description
-`))
 		})
 
 		Context("when the optional flags are not specified", func() {
@@ -282,57 +177,6 @@ form_types:
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-
-				Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
-
-				buildInput := fakeMetadataBuilder.BuildArgsForCall(0)
-				Expect(buildInput.FormDirectories).To(BeEmpty())
-				Expect(buildInput.IconPath).To(Equal("some-icon-path"))
-				Expect(buildInput.InstanceGroupDirectories).To(BeEmpty())
-				Expect(buildInput.JobDirectories).To(BeEmpty())
-				Expect(buildInput.MetadataPath).To(Equal("some-metadata"))
-				Expect(buildInput.RuntimeConfigDirectories).To(BeEmpty())
-				Expect(buildInput.BOSHVariableDirectories).To(BeEmpty())
-				Expect(buildInput.Version).To(Equal("1.2.3"))
-
-				Expect(fakeStemcellManifestReader.ReadCallCount()).To(Equal(0))
-			})
-
-			It("calls the tile writer", func() {
-				generatedMetadata.Metadata = builder.Metadata{
-					"releases": []string{"$(release \"some-release-1\")"},
-				}
-				fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
-
-				err := bake.Execute([]string{
-					"--icon", "some-icon-path",
-					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-					"--releases-directory", someReleasesDirectory,
-					"--version", "1.2.3",
-				})
-
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
-
-				productName, generatedMetadataContents, actualConfig := fakeTileWriter.WriteArgsForCall(0)
-				Expect(productName).To(Equal("some-product-name"))
-				Expect(generatedMetadataContents).To(MatchYAML(`
-icon_image: some-icon-image
-name: some-product-name
-releases:
-- name: some-release-1
-  file: release1.tgz
-  version: 1.2.3
-stemcell_criteria:
-  version: 2.3.4
-  os: an-operating-system
-`))
-				Expect(actualConfig).To(Equal(builder.WriteInput{
-					OutputFile:         "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-					ReleaseDirectories: []string{someReleasesDirectory},
-				}))
 			})
 		})
 
@@ -390,20 +234,7 @@ stemcell_criteria:
 				Expect(err).NotTo(HaveOccurred())
 
 				_, generatedMetadataContents, _ := fakeTileWriter.WriteArgsForCall(0)
-				Expect(generatedMetadataContents).To(MatchYAML(`
-icon_image: some-icon-image
-name: some-product-name
-custom_variable: some-variable-value
-variable_from_file: override-variable-from-other-file
-some_other_variable_from_file: some-other-variable-value-from-file
-releases:
-- name: some-release-1
-  file: release1.tgz
-  version: 1.2.3
-stemcell_criteria:
-  version: 2.3.4
-  os: an-operating-system
-`))
+				Expect(generatedMetadataContents).To(MatchYAML("some-interpolated-metadata"))
 			})
 		})
 
@@ -431,28 +262,6 @@ stemcell_criteria:
 
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("no such file or directory"))
-				})
-			})
-
-			Context("when the release tgz file does not exist but is provided", func() {
-				It("returns an error", func() {
-					generatedMetadata.Metadata = builder.Metadata{
-						"releases": []string{"$(release \"some-release-does-not-exist\")"},
-					}
-					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
-
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3",
-					})
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("could not find release with name 'some-release-does-not-exist'"))
 				})
 			})
 
@@ -494,25 +303,6 @@ stemcell_criteria:
 				})
 			})
 
-			Context("when the stemcell helper is used without providing the stemcell-tarball flag", func() {
-				It("returns an error", func() {
-					generatedMetadata.Metadata = map[string]interface{}{"stemcell": `$( stemcell )`}
-					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
-
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "unused",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", someReleasesDirectory,
-						"--version", "1.2.3",
-					})
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("--stemcell-tarball"))
-				})
-			})
-
 			Context("when the form directory reader returns an error", func() {
 				It("returns an error", func() {
 					fakeFormDirectoryReader.ReadReturns(nil, errors.New("some-error"))
@@ -533,29 +323,9 @@ stemcell_criteria:
 				})
 			})
 
-			Context("when the form helper is used without providing the forms-directory flag", func() {
-				It("returns an error", func() {
-					generatedMetadata.Metadata = map[string]interface{}{"form_types": `$( form "some-form" )`}
-					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
-
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "unused",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", someReleasesDirectory,
-						"--version", "1.2.3",
-					})
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("--forms-directory"))
-				})
-			})
-
-			Context("when the requested form name is not found", func() {
-				It("returns an error", func() {
-					generatedMetadata.Metadata = map[string]interface{}{"form_types": `$( form "invalid-form" )`}
-					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+			Context("when the template interpolator returns an error", func() {
+				It("returns the error", func() {
+					fakeInterpolator.InterpolateReturns(nil, errors.New("some-error"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -569,41 +339,7 @@ stemcell_criteria:
 					})
 
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("invalid-form"))
-				})
-			})
-
-			Context("when the nested form contains invalid templating", func() {
-				It("returns an error", func() {
-					fakeFormDirectoryReader.ReadReturns([]builder.Part{
-						{
-							Name: "some-form",
-							Metadata: builder.Metadata{
-								"name":        "some-form",
-								"label":       "some-form-label",
-								"description": `$( invalid_helper )`,
-							},
-						},
-					}, nil)
-
-					generatedMetadata.Metadata = builder.Metadata{
-						"releases":   []string{"$(release \"some-release-1\")"},
-						"form_types": []string{`$( form "some-form" )`},
-					}
-					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
-
-					err := bake.Execute([]string{
-						"--forms-directory", "some-forms-directory",
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-						"--releases-directory", someReleasesDirectory,
-						"--variable", "some-form-variable=some-form-description",
-						"--version", "1.2.3",
-					})
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(MatchRegexp("unable to interpolate value"))
+					Expect(err.Error()).To(ContainSubstring("some-error"))
 				})
 			})
 
@@ -635,69 +371,6 @@ stemcell_criteria:
 
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("failed reading variable file:"))
-				})
-			})
-
-			Context("when template parsing fails", func() {
-				It("returns an error", func() {
-					generatedMetadata.Metadata = builder.Metadata{
-						"custom_variable": "$(variable",
-					}
-					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
-
-					err := bake.Execute([]string{
-						"--forms-directory", "some-forms-directory",
-						"--icon", "some-icon-path",
-						"--instance-groups-directory", "some-instance-groups-directory",
-						"--jobs-directory", "some-jobs-directory",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", otherReleasesDirectory,
-						"--releases-directory", someReleasesDirectory,
-						"--runtime-configs-directory", "some-other-runtime-configs-directory",
-						"--runtime-configs-directory", "some-runtime-configs-directory",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--bosh-variables-directory", "some-other-variables-directory",
-						"--bosh-variables-directory", "some-variables-directory",
-						"--variable", "some-variable=some-value",
-						"--version", "1.2.3",
-					})
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("template parsing failed"))
-				})
-			})
-
-			Context("when template execution fails", func() {
-				It("returns an error", func() {
-					generatedMetadata.Metadata = builder.Metadata{
-						"custom_variable": "$(variable \"blah\")",
-					}
-					fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
-
-					err := bake.Execute([]string{
-						"--forms-directory", "some-forms-directory",
-						"--icon", "some-icon-path",
-						"--instance-groups-directory", "some-instance-groups-directory",
-						"--jobs-directory", "some-jobs-directory",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", otherReleasesDirectory,
-						"--releases-directory", someReleasesDirectory,
-						"--runtime-configs-directory", "some-other-runtime-configs-directory",
-						"--runtime-configs-directory", "some-runtime-configs-directory",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--bosh-variables-directory", "some-other-variables-directory",
-						"--bosh-variables-directory", "some-variables-directory",
-						"--variable", "some-variable=some-value",
-						"--version", "1.2.3",
-					})
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("template execution failed"))
-					Expect(err.Error()).To(ContainSubstring("could not find variable with key"))
 				})
 			})
 
@@ -833,7 +506,7 @@ stemcell_criteria:
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			command := commands.NewBake(fakeMetadataBuilder, fakeTileWriter, fakeLogger, fakeReleaseManifestReader, fakeStemcellManifestReader, fakeFormDirectoryReader)
+			command := commands.NewBake(fakeMetadataBuilder, fakeInterpolator, fakeTileWriter, fakeLogger, fakeReleaseManifestReader, fakeStemcellManifestReader, fakeFormDirectoryReader)
 			Expect(command.Usage()).To(Equal(jhandacommands.Usage{
 				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
 				ShortDescription: "bakes a tile",
