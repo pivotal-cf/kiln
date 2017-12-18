@@ -30,3 +30,6 @@ stemcell_criteria: $( stemcell )
 property_blueprints:
 - element_1
 - element_2
+
+form_types:
+- $( form "first" )
