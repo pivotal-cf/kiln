@@ -2,11 +2,11 @@ package builder
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"text/template"
 
+	yamlConverter "github.com/ghodss/yaml"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -109,13 +109,7 @@ func (i Interpolator) interpolateValueIntoYAML(input InterpolateInput, val inter
 
 // Workaround to avoid YAML indentation being incorrect when value is interpolated into the metadata
 func (i Interpolator) yamlMarshalOneLine(yamlContents []byte) ([]byte, error) {
-	contents := map[string]interface{}{}
-	err := yaml.Unmarshal(yamlContents, &contents)
-	if err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(contents)
+	return yamlConverter.YAMLToJSON(yamlContents)
 }
 
 func (i Interpolator) prettyPrint(inputYAML []byte) ([]byte, error) {
