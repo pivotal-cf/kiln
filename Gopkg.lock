@@ -2,12 +2,6 @@
 
 
 [[projects]]
-  name = "github.com/ghodss/yaml"
-  packages = ["."]
-  revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
-  version = "v1.0.0"
-
-[[projects]]
   branch = "master"
   name = "github.com/onsi/ginkgo"
   packages = [".","config","extensions/table","ginkgo","ginkgo/convert","ginkgo/interrupthandler","ginkgo/nodot","ginkgo/testrunner","ginkgo/testsuite","ginkgo/watch","internal/codelocation","internal/containernode","internal/failer","internal/leafnodes","internal/remote","internal/spec","internal/spec_iterator","internal/specrunner","internal/suite","internal/testingtproxy","internal/writer","reporters","reporters/stenographer","reporters/stenographer/support/go-colorable","reporters/stenographer/support/go-isatty","types"]
@@ -52,6 +46,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a69eb249031cbf5f208411ff5a2f2b672bc309868ce3bae025e2e27e9c20c4d3"
+  inputs-digest = "64bbd38f3ecfd5da088dda0c694aa999abd1af99537f9b7baa77418e7fd7fca1"
   solver-name = "gps-cdcl"
   solver-version = 1
