@@ -206,6 +206,7 @@ var _ = Describe("bake", func() {
 					"custom_variable":               "$(variable \"some-variable\")",
 					"variable_from_file":            "$(variable \"some-variable-from-file\")",
 					"some_other_variable_from_file": "$(variable \"some-other-variable-from-file\")",
+					"icon_image":                    "$( icon )",
 					"releases":                      []string{"$(release \"some-release-1\")"},
 				}
 				fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)

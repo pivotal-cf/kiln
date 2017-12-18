@@ -10,6 +10,7 @@ var _ = Describe("interpolator", func() {
 
 	const templateYAML = `
 name: $( variable "some-variable" )
+icon_img: $( icon )
 releases:
 - $(release "some-release")
 stemcell_criteria: $( stemcell )
@@ -41,6 +42,7 @@ form_types:
 					"label": "some-form-label",
 				},
 			},
+			IconImage: "some-icon-image",
 		}
 	})
 
@@ -50,6 +52,7 @@ form_types:
 		Expect(err).NotTo(HaveOccurred())
 		Expect(interpolatedYAML).To(MatchYAML(`
 name: some-value
+icon_img: some-icon-image
 releases:
 - name: some-release
   file: some-release-1.2.3.tgz
@@ -77,6 +80,7 @@ form_types:
 		Expect(err).NotTo(HaveOccurred())
 		Expect(interpolatedYAML).To(MatchYAML(`
 name: some-value
+icon_img: some-icon-image
 releases:
 - name: some-release
   file: some-release-1.2.3.tgz

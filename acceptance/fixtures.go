@@ -16,7 +16,7 @@ custom_variable: $(variable "some-variable")
 label: Pivotal Elastic Runtime
 description:
   this is the description
-icon_image: unused-icon-image
+icon_img: $( icon )
 rank: 90
 serial: false
 install_time_verifiers:
@@ -46,7 +46,7 @@ form_types:
 - description: some-form-description
   label: some-form-label
   name: some-more-config
-icon_image: %s
+icon_img: aS1hbS1zb21lLWltYWdl
 install_time_verifiers:
 - name: Verifiers::SsoUrlVerifier
   properties:

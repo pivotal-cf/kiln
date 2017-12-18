@@ -17,6 +17,7 @@ type InterpolateInput struct {
 	ReleaseManifests map[string]ReleaseManifest
 	StemcellManifest StemcellManifest
 	FormTypes        map[string]interface{}
+	IconImage        string
 }
 
 func NewInterpolator() Interpolator {
@@ -67,6 +68,9 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 				return "", fmt.Errorf("could not find variable with key '%s'", key)
 			}
 			return val, nil
+		},
+		"icon": func() (string, error) {
+			return input.IconImage, nil
 		},
 	}
 

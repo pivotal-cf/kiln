@@ -2,7 +2,6 @@ package acceptance
 
 import (
 	"archive/zip"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -251,10 +250,7 @@ variables:
 		Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
 		metadataContents, err := ioutil.ReadAll(file)
 		Expect(err).NotTo(HaveOccurred())
-
-		iconData := base64.StdEncoding.EncodeToString([]byte("i-am-some-image"))
-		expectedYaml := fmt.Sprintf(expectedMetadata, iconData)
-		Expect(metadataContents).To(MatchYAML(expectedYaml))
+		Expect(metadataContents).To(MatchYAML(expectedMetadata))
 
 		prettyPrintedValue := "file: diego-release-0.1467.1-3215.4.0.tgz\n"
 		Expect(string(metadataContents)).To(ContainSubstring(prettyPrintedValue))

@@ -22,7 +22,6 @@ minimum_version_for_upgrade: 1.6.9-build.0
 label: Pivotal Elastic Runtime
 description:
   this is the description
-icon_image: some-image
 rank: 90
 serial: false
 install_time_verifiers:
@@ -74,7 +73,6 @@ var _ = Describe("MetadataReader", func() {
 			Expect(metadata["minimum_version_for_upgrade"]).To(Equal("1.6.9-build.0"))
 			Expect(metadata["label"]).To(Equal("Pivotal Elastic Runtime"))
 			Expect(metadata["description"]).To(Equal("this is the description"))
-			Expect(metadata["icon_image"]).To(Equal("some-image"))
 			Expect(metadata["rank"]).To(Equal(90))
 			Expect(metadata["serial"]).To(BeFalse())
 			Expect(metadata["install_time_verifiers"]).To(Equal([]interface{}{map[interface{}]interface{}{

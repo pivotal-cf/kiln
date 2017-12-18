@@ -111,7 +111,6 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 	}
 
 	delete(metadata, "name")
-	delete(metadata, "icon_image")
 	delete(metadata, "job_types")
 	delete(metadata, "property_blueprints")
 

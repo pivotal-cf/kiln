@@ -32,7 +32,6 @@ func (gm GeneratedMetadata) MarshalYAML() (interface{}, error) {
 	m["name"] = gm.Name
 	m["stemcell_criteria"] = gm.StemcellCriteria
 	m["releases"] = gm.Releases
-	m["icon_image"] = gm.IconImage
 
 	if len(gm.FormTypes) > 0 {
 		m["form_types"] = gm.metadataOnly(gm.FormTypes)

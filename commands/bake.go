@@ -199,6 +199,7 @@ func (b Bake) Execute(args []string) error {
 		ReleaseManifests: releaseManifests,
 		StemcellManifest: stemcellManifest,
 		FormTypes:        formTypes,
+		IconImage:        generatedMetadata.IconImage,
 	}, generatedMetadataYAML)
 	if err != nil {
 		return err

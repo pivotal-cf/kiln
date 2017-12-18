@@ -210,7 +210,6 @@ var _ = Describe("MetadataBuilder", func() {
 				"name":                      "cool-product",
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
-				"icon_image":                "icon-image-to-be-overridden",
 				"job_types":                 "job-types-to-be-overridden",
 			},
 				nil,
