@@ -25,7 +25,7 @@ install_time_verifiers:
     url: .properties.uaa.saml.sso_url
 post_deploy_errands:
 - name: smoke-tests
-form_types:
+forms:
 - $( form "some-other-config" )
 - $( form "some-config" )
 - $( form "some-more-config" )
@@ -36,7 +36,7 @@ job_types:
 
 var expectedMetadata = `---
 description: this is the description
-form_types:
+forms:
 - description: some-other-form-description
   label: some-other-form-label
   name: some-other-config

@@ -31,9 +31,6 @@ func (gm GeneratedMetadata) MarshalYAML() (interface{}, error) {
 
 	m["name"] = gm.Name
 
-	if len(gm.FormTypes) > 0 {
-		m["form_types"] = gm.metadataOnly(gm.FormTypes)
-	}
 	if len(gm.JobTypes) > 0 {
 		m["job_types"] = gm.metadataOnly(gm.JobTypes)
 	}
