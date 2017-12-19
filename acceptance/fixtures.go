@@ -6,7 +6,7 @@ metadata_version: '1.7'
 some_releases:
   - $( release "diego" )
   - $( release "cf" )
-stemcell_criteria: $( stemcell )
+some_stemcell_criteria: $( stemcell )
 provides_product_versions:
 - name: cf
   version: 1.7.0.0
@@ -79,14 +79,14 @@ provides_product_versions:
 - name: cf
   version: 1.7.0.0
 rank: 90
-releases:
+some_releases:
 - file: diego-release-0.1467.1-3215.4.0.tgz
   name: diego
   version: 0.1467.1
 - file: cf-release-235.0.0-3215.4.0.tgz
   name: cf
   version: "235"
-stemcell_criteria:
+some_stemcell_criteria:
   os: ubuntu-trusty
   version: "3215.4"
 runtime_configs:
