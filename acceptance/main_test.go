@@ -2,6 +2,7 @@ package acceptance
 
 import (
 	"archive/zip"
+	"crypto/sha1"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -33,6 +34,8 @@ var _ = Describe("kiln", func() {
 		someJobsDirectory           string
 		stemcellTarball             string
 		tmpDir                      string
+		diegoSHA1                   string
+		cfSHA1                      string
 	)
 
 	BeforeEach(func() {
@@ -101,6 +104,15 @@ property_blueprints:
 		_, err = createTarball(someReleasesDirectory, "cf-release-235.0.0-3215.4.0.tgz", "release.MF", cfReleaseManifest)
 		Expect(err).NotTo(HaveOccurred())
 
+		f, err := os.Open(filepath.Join(someReleasesDirectory, "cf-release-235.0.0-3215.4.0.tgz"))
+		Expect(err).NotTo(HaveOccurred())
+
+		hash := sha1.New()
+		_, err = io.Copy(hash, f)
+		Expect(err).NotTo(HaveOccurred())
+
+		cfSHA1 = fmt.Sprintf("%x", hash.Sum(nil))
+
 		diegoReleaseManifest := `---
 name: diego
 version: 0.1467.1
@@ -109,6 +121,15 @@ key: value
 
 		_, err = createTarball(otherReleasesDirectory, "diego-release-0.1467.1-3215.4.0.tgz", "release.MF", diegoReleaseManifest)
 		Expect(err).NotTo(HaveOccurred())
+
+		f, err = os.Open(filepath.Join(otherReleasesDirectory, "diego-release-0.1467.1-3215.4.0.tgz"))
+		Expect(err).NotTo(HaveOccurred())
+
+		hash = sha1.New()
+		_, err = io.Copy(hash, f)
+		Expect(err).NotTo(HaveOccurred())
+
+		diegoSHA1 = fmt.Sprintf("%x", hash.Sum(nil))
 
 		notATarball := filepath.Join(someReleasesDirectory, "not-a-tarball.txt")
 		_ = ioutil.WriteFile(notATarball, []byte(`this is not a tarball`), 0644)
@@ -250,10 +271,9 @@ variables:
 		Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
 		metadataContents, err := ioutil.ReadAll(file)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(metadataContents).To(MatchYAML(expectedMetadata))
 
-		prettyPrintedValue := "file: diego-release-0.1467.1-3215.4.0.tgz\n"
-		Expect(string(metadataContents)).To(ContainSubstring(prettyPrintedValue))
+		renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
+		Expect(metadataContents).To(MatchYAML(renderedYAML))
 
 		var (
 			archivedMigration1 io.ReadCloser

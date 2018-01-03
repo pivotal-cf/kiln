@@ -83,9 +83,11 @@ some_releases:
 - file: diego-release-0.1467.1-3215.4.0.tgz
   name: diego
   version: 0.1467.1
+  sha1: %s
 - file: cf-release-235.0.0-3215.4.0.tgz
   name: cf
   version: "235"
+  sha1: %s
 some_stemcell_criteria:
   os: ubuntu-trusty
   version: "3215.4"

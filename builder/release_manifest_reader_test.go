@@ -5,12 +5,15 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
-	"errors"
+	"crypto/sha1"
+	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/builder/fakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,15 +21,18 @@ import (
 
 var _ = Describe("ReleaseManifestReader", func() {
 	var (
-		filesystem *fakes.Filesystem
-		reader     builder.ReleaseManifestReader
+		reader      builder.ReleaseManifestReader
+		releaseSHA1 string
+		tarball     *os.File
+		err         error
 	)
 
 	BeforeEach(func() {
-		filesystem = &fakes.Filesystem{}
-		reader = builder.NewReleaseManifestReader(filesystem)
+		reader = builder.NewReleaseManifestReader()
 
-		tarball := NewBuffer(bytes.NewBuffer([]byte{}))
+		tarball, err = ioutil.TempFile("", "kiln")
+		Expect(err).NotTo(HaveOccurred())
+
 		gw := gzip.NewWriter(tarball)
 		tw := tar.NewWriter(gw)
 
@@ -54,74 +60,97 @@ version: 1.2.3
 		err = gw.Close()
 		Expect(err).NotTo(HaveOccurred())
 
-		filesystem.OpenReturns(tarball, nil)
+		err = tarball.Close()
+		Expect(err).NotTo(HaveOccurred())
+
+		file, err := os.Open(tarball.Name())
+		Expect(err).NotTo(HaveOccurred())
+
+		hash := sha1.New()
+		_, err = io.Copy(hash, file)
+		Expect(err).NotTo(HaveOccurred())
+
+		releaseSHA1 = fmt.Sprintf("%x", hash.Sum(nil))
+
+		err = file.Close()
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		err := os.Remove(tarball.Name())
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Describe("Read", func() {
 		It("extracts the release manifest information from the tarball", func() {
-			releaseManifest, err := reader.Read("/path/to/release/tarball.tgz")
+			releaseManifest, err := reader.Read(tarball.Name())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(releaseManifest).To(Equal(builder.ReleaseManifest{
 				Name:    "release",
 				Version: "1.2.3",
-				File:    "tarball.tgz",
+				File:    filepath.Base(tarball.Name()),
+				SHA1:    releaseSHA1,
 			}))
-
-			Expect(filesystem.OpenArgsForCall(0)).To(Equal("/path/to/release/tarball.tgz"))
 		})
 
 		Context("failure cases", func() {
 			Context("when the tarball cannot be opened", func() {
 				It("returns an error", func() {
-					filesystem.OpenReturns(nil, errors.New("failed to open tarball"))
+					err = os.Chmod(tarball.Name(), 0000)
+					Expect(err).NotTo(HaveOccurred())
 
-					_, err := reader.Read("/path/to/release/tarball.tgz")
-					Expect(err).To(MatchError("failed to open tarball"))
+					_, err := reader.Read(tarball.Name())
+					Expect(err).To(MatchError(ContainSubstring("permission denied")))
 				})
 			})
-			Context("when reading from the tarball errors", func() {
-				It("returns an error", func() {
-					erroringReader := &fakes.ReadCloser{}
-					erroringReader.ReadReturns(0, errors.New("cannot read tarball"))
-					filesystem.OpenStub = func(name string) (io.ReadCloser, error) {
-						return erroringReader, nil
-					}
 
-					_, err := reader.Read("/path/to/release/tarball.tgz")
-					Expect(err).To(MatchError("cannot read tarball"))
-					Expect(erroringReader.CloseCallCount()).To(Equal(1))
-				})
-			})
 			Context("when the input is not a valid gzip", func() {
 				It("returns an error", func() {
-					filesystem.OpenReturns(NewBuffer(bytes.NewBuffer([]byte("I am a banana!"))), nil)
+					var err error
+					tarball, err = os.OpenFile(tarball.Name(), os.O_RDWR, 0666)
+					Expect(err).NotTo(HaveOccurred())
 
-					_, err := reader.Read("/path/to/release/tarball.tgz")
+					_, err = tarball.WriteAt([]byte{}, 10)
+					Expect(err).NotTo(HaveOccurred())
+
+					err = tarball.Close()
+					Expect(err).NotTo(HaveOccurred())
+
+					contents, err := ioutil.ReadFile(tarball.Name())
+					Expect(err).NotTo(HaveOccurred())
+
+					By("corrupting the gzip header contents", func() {
+						contents[0] = 0
+						err = ioutil.WriteFile(tarball.Name(), contents, 0666)
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					_, err = reader.Read(tarball.Name())
 					Expect(err).To(MatchError("gzip: invalid header"))
 				})
 			})
 
 			Context("when the header file is corrupt", func() {
 				It("returns an error", func() {
-					tarball := NewBuffer(bytes.NewBuffer([]byte{}))
+					tarball, err := os.Create(tarball.Name())
+					Expect(err).NotTo(HaveOccurred())
+
 					gw := gzip.NewWriter(tarball)
 					tw := tar.NewWriter(gw)
 
-					err := tw.Close()
-					Expect(err).NotTo(HaveOccurred())
+					Expect(tw.Close()).NotTo(HaveOccurred())
+					Expect(gw.Close()).NotTo(HaveOccurred())
 
-					err = gw.Close()
-					Expect(err).NotTo(HaveOccurred())
-					filesystem.OpenReturns(tarball, nil)
-
-					_, err = reader.Read("/path/to/release/tarball.tgz")
-					Expect(err).To(MatchError("could not find release.MF in \"/path/to/release/tarball.tgz\""))
+					_, err = reader.Read(tarball.Name())
+					Expect(err).To(MatchError(fmt.Sprintf("could not find release.MF in %q", tarball.Name())))
 				})
 			})
 
 			Context("when there is no release.MF", func() {
 				It("returns an error", func() {
-					tarball := NewBuffer(bytes.NewBuffer([]byte{}))
+					tarball, err := os.Create(tarball.Name())
+					Expect(err).NotTo(HaveOccurred())
+
 					gw := gzip.NewWriter(tarball)
 					tw := tar.NewWriter(gw)
 
@@ -137,7 +166,7 @@ version: 1.2.3
 						ModTime: time.Now(),
 					}
 
-					err := tw.WriteHeader(header)
+					err = tw.WriteHeader(header)
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = io.Copy(tw, releaseManifest)
@@ -149,19 +178,20 @@ version: 1.2.3
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					filesystem.OpenReturns(tarball, nil)
-					_, err = reader.Read("/path/to/release/tarball.tgz")
-					Expect(err).To(MatchError("could not find release.MF in \"/path/to/release/tarball.tgz\""))
+					_, err = reader.Read(tarball.Name())
+					Expect(err).To(MatchError(fmt.Sprintf("could not find release.MF in %q", tarball.Name())))
 				})
 			})
 
 			Context("when the tarball is corrupt", func() {
 				It("returns an error", func() {
-					tarball := NewBuffer(bytes.NewBuffer([]byte{}))
+					tarball, err := os.Create(tarball.Name())
+					Expect(err).NotTo(HaveOccurred())
+
 					gw := gzip.NewWriter(tarball)
 					tw := bufio.NewWriter(gw)
 
-					_, err := tw.WriteString("I am a banana!")
+					_, err = tw.WriteString("I am a banana!")
 					Expect(err).NotTo(HaveOccurred())
 
 					err = tw.Flush()
@@ -170,15 +200,16 @@ version: 1.2.3
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					filesystem.OpenReturns(tarball, nil)
-					_, err = reader.Read("/path/to/release/tarball.tgz")
-					Expect(err).To(MatchError("error while reading \"/path/to/release/tarball.tgz\": unexpected EOF"))
+					_, err = reader.Read(tarball.Name())
+					Expect(err).To(MatchError(fmt.Sprintf("error while reading %q: unexpected EOF", tarball.Name())))
 				})
 			})
 
 			Context("when the release manifest is not YAML", func() {
 				It("returns an error", func() {
-					tarball := NewBuffer(bytes.NewBuffer([]byte{}))
+					tarball, err := os.Create(tarball.Name())
+					Expect(err).NotTo(HaveOccurred())
+
 					gw := gzip.NewWriter(tarball)
 					tw := tar.NewWriter(gw)
 
@@ -191,7 +222,7 @@ version: 1.2.3
 						ModTime: time.Now(),
 					}
 
-					err := tw.WriteHeader(header)
+					err = tw.WriteHeader(header)
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = io.Copy(tw, releaseManifest)
@@ -203,9 +234,7 @@ version: 1.2.3
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					filesystem.OpenReturns(tarball, nil)
-
-					_, err = reader.Read("/path/to/release/tarball.tgz")
+					_, err = reader.Read(tarball.Name())
 					Expect(err).To(MatchError("yaml: could not find expected directive name"))
 				})
 			})

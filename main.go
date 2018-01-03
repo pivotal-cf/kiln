@@ -36,7 +36,7 @@ func main() {
 	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder("job_type", "job_types")
 	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("job")
 	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("property_blueprints")
-	releaseManifestReader := builder.NewReleaseManifestReader(filesystem)
+	releaseManifestReader := builder.NewReleaseManifestReader()
 	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("runtime_configs")
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")

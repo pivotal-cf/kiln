@@ -1,11 +1,11 @@
 package builder_test
 
 import (
+	"bytes"
 	"encoding/base64"
 	"errors"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,7 +28,7 @@ var _ = Describe("IconEncoder", func() {
 		sampleData := []byte("this-is-some-data-to-encode")
 		expectedBase64EncodedString = base64.StdEncoding.EncodeToString(sampleData)
 
-		testFile := ioutil.NopCloser(strings.NewReader(string(sampleData)))
+		testFile := NewBuffer(bytes.NewBuffer(sampleData))
 
 		filesystem.OpenReturns(testFile, nil)
 

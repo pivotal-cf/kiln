@@ -42,3 +42,7 @@ func (b *Buffer) Write(p []byte) (int, error) {
 func (b Buffer) Close() error {
 	return nil
 }
+
+func (b Buffer) Seek(offset int64, whence int) (int64, error) {
+	return 0, nil
+}

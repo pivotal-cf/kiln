@@ -30,6 +30,7 @@ form_types:
 					Name:    "some-release",
 					Version: "1.2.3",
 					File:    "some-release-1.2.3.tgz",
+					SHA1:    "123abc",
 				},
 			},
 			StemcellManifest: builder.StemcellManifest{
@@ -57,6 +58,7 @@ releases:
 - name: some-release
   file: some-release-1.2.3.tgz
   version: 1.2.3
+  sha1: 123abc
 stemcell_criteria:
   version: 2.3.4
   os: an-operating-system
@@ -85,6 +87,7 @@ releases:
 - name: some-release
   file: some-release-1.2.3.tgz
   version: 1.2.3
+  sha1: 123abc
 stemcell_criteria:
   version: 2.3.4
   os: an-operating-system
