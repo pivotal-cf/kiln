@@ -150,7 +150,7 @@ form_types:
 			It("returns an error", func() {
 
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(`releases: $(release "some-release-does-not-exist")`))
+				_, err := interpolator.Interpolate(input, []byte(`releases: [$(release "some-release-does-not-exist")]`))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not find release with name 'some-release-does-not-exist'"))
