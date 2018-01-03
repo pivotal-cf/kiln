@@ -96,11 +96,8 @@ version: 1.2.3
 		Context("failure cases", func() {
 			Context("when the tarball cannot be opened", func() {
 				It("returns an error", func() {
-					err = os.Chmod(tarball.Name(), 0000)
-					Expect(err).NotTo(HaveOccurred())
-
-					_, err := reader.Read(tarball.Name())
-					Expect(err).To(MatchError(ContainSubstring("permission denied")))
+					_, err := reader.Read("some-non-existing-file")
+					Expect(err).To(MatchError(ContainSubstring("no such file")))
 				})
 			})
 
