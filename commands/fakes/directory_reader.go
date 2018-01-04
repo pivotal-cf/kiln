@@ -7,7 +7,7 @@ import (
 	"github.com/pivotal-cf/kiln/builder"
 )
 
-type FormDirectoryReader struct {
+type DirectoryReader struct {
 	ReadStub        func(path string) ([]builder.Part, error)
 	readMutex       sync.RWMutex
 	readArgsForCall []struct {
@@ -25,7 +25,7 @@ type FormDirectoryReader struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FormDirectoryReader) Read(path string) ([]builder.Part, error) {
+func (fake *DirectoryReader) Read(path string) ([]builder.Part, error) {
 	fake.readMutex.Lock()
 	ret, specificReturn := fake.readReturnsOnCall[len(fake.readArgsForCall)]
 	fake.readArgsForCall = append(fake.readArgsForCall, struct {
@@ -42,19 +42,19 @@ func (fake *FormDirectoryReader) Read(path string) ([]builder.Part, error) {
 	return fake.readReturns.result1, fake.readReturns.result2
 }
 
-func (fake *FormDirectoryReader) ReadCallCount() int {
+func (fake *DirectoryReader) ReadCallCount() int {
 	fake.readMutex.RLock()
 	defer fake.readMutex.RUnlock()
 	return len(fake.readArgsForCall)
 }
 
-func (fake *FormDirectoryReader) ReadArgsForCall(i int) string {
+func (fake *DirectoryReader) ReadArgsForCall(i int) string {
 	fake.readMutex.RLock()
 	defer fake.readMutex.RUnlock()
 	return fake.readArgsForCall[i].path
 }
 
-func (fake *FormDirectoryReader) ReadReturns(result1 []builder.Part, result2 error) {
+func (fake *DirectoryReader) ReadReturns(result1 []builder.Part, result2 error) {
 	fake.ReadStub = nil
 	fake.readReturns = struct {
 		result1 []builder.Part
@@ -62,7 +62,7 @@ func (fake *FormDirectoryReader) ReadReturns(result1 []builder.Part, result2 err
 	}{result1, result2}
 }
 
-func (fake *FormDirectoryReader) ReadReturnsOnCall(i int, result1 []builder.Part, result2 error) {
+func (fake *DirectoryReader) ReadReturnsOnCall(i int, result1 []builder.Part, result2 error) {
 	fake.ReadStub = nil
 	if fake.readReturnsOnCall == nil {
 		fake.readReturnsOnCall = make(map[int]struct {
@@ -76,7 +76,7 @@ func (fake *FormDirectoryReader) ReadReturnsOnCall(i int, result1 []builder.Part
 	}{result1, result2}
 }
 
-func (fake *FormDirectoryReader) Invocations() map[string][][]interface{} {
+func (fake *DirectoryReader) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.readMutex.RLock()
@@ -88,7 +88,7 @@ func (fake *FormDirectoryReader) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FormDirectoryReader) recordInvocation(key string, args []interface{}) {
+func (fake *DirectoryReader) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {

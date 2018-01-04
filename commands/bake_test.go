@@ -20,8 +20,8 @@ var _ = Describe("bake", func() {
 		fakeMetadataBuilder              *fakes.MetadataBuilder
 		fakeReleaseManifestReader        *fakes.ReleaseManifestReader
 		fakeStemcellManifestReader       *fakes.StemcellManifestReader
-		fakeFormDirectoryReader          *fakes.FormDirectoryReader
-		fakeInstanceGroupDirectoryReader *fakes.InstanceGroupDirectoryReader
+		fakeFormDirectoryReader          *fakes.DirectoryReader
+		fakeInstanceGroupDirectoryReader *fakes.DirectoryReader
 		fakeInterpolator                 *fakes.Interpolator
 		fakeTileWriter                   *fakes.TileWriter
 		fakeLogger                       *fakes.Logger
@@ -74,8 +74,8 @@ var _ = Describe("bake", func() {
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
 		fakeReleaseManifestReader = &fakes.ReleaseManifestReader{}
 		fakeStemcellManifestReader = &fakes.StemcellManifestReader{}
-		fakeFormDirectoryReader = &fakes.FormDirectoryReader{}
-		fakeInstanceGroupDirectoryReader = &fakes.InstanceGroupDirectoryReader{}
+		fakeFormDirectoryReader = &fakes.DirectoryReader{}
+		fakeInstanceGroupDirectoryReader = &fakes.DirectoryReader{}
 		fakeInterpolator = &fakes.Interpolator{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}

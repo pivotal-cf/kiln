@@ -42,8 +42,8 @@ type Bake struct {
 	logger                       logger
 	releaseManifestReader        releaseManifestReader
 	stemcellManifestReader       stemcellManifestReader
-	formDirectoryReader          formDirectoryReader
-	instanceGroupDirectoryReader instanceGroupDirectoryReader
+	formDirectoryReader          directoryReader
+	instanceGroupDirectoryReader directoryReader
 	Options                      BakeConfig
 }
 
@@ -77,15 +77,9 @@ type stemcellManifestReader interface {
 	Read(path string) (builder.StemcellManifest, error)
 }
 
-//go:generate counterfeiter -o ./fakes/form_directory_reader.go --fake-name FormDirectoryReader . formDirectoryReader
+//go:generate counterfeiter -o ./fakes/directory_reader.go --fake-name DirectoryReader . directoryReader
 
-type formDirectoryReader interface {
-	Read(path string) ([]builder.Part, error)
-}
-
-//go:generate counterfeiter -o ./fakes/instance_group_directory_reader.go --fake-name InstanceGroupDirectoryReader . instanceGroupDirectoryReader
-
-type instanceGroupDirectoryReader interface {
+type directoryReader interface {
 	Read(path string) ([]builder.Part, error)
 }
 
@@ -102,8 +96,8 @@ func NewBake(metadataBuilder metadataBuilder,
 	logger logger,
 	releaseManifestReader releaseManifestReader,
 	stemcellManifestReader stemcellManifestReader,
-	formDirectoryReader formDirectoryReader,
-	instanceGroupDirectoryReader instanceGroupDirectoryReader,
+	formDirectoryReader directoryReader,
+	instanceGroupDirectoryReader directoryReader,
 ) Bake {
 	return Bake{
 		metadataBuilder:              metadataBuilder,
