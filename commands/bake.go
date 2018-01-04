@@ -36,14 +36,15 @@ type BakeConfig struct {
 }
 
 type Bake struct {
-	metadataBuilder        metadataBuilder
-	interpolator           interpolator
-	tileWriter             tileWriter
-	logger                 logger
-	releaseManifestReader  releaseManifestReader
-	stemcellManifestReader stemcellManifestReader
-	formDirectoryReader    formDirectoryReader
-	Options                BakeConfig
+	metadataBuilder              metadataBuilder
+	interpolator                 interpolator
+	tileWriter                   tileWriter
+	logger                       logger
+	releaseManifestReader        releaseManifestReader
+	stemcellManifestReader       stemcellManifestReader
+	formDirectoryReader          formDirectoryReader
+	instanceGroupDirectoryReader instanceGroupDirectoryReader
+	Options                      BakeConfig
 }
 
 //go:generate counterfeiter -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
@@ -82,6 +83,12 @@ type formDirectoryReader interface {
 	Read(path string) ([]builder.Part, error)
 }
 
+//go:generate counterfeiter -o ./fakes/instance_group_directory_reader.go --fake-name InstanceGroupDirectoryReader . instanceGroupDirectoryReader
+
+type instanceGroupDirectoryReader interface {
+	Read(path string) ([]builder.Part, error)
+}
+
 //go:generate counterfeiter -o ./fakes/logger.go --fake-name Logger . logger
 
 type logger interface {
@@ -96,15 +103,17 @@ func NewBake(metadataBuilder metadataBuilder,
 	releaseManifestReader releaseManifestReader,
 	stemcellManifestReader stemcellManifestReader,
 	formDirectoryReader formDirectoryReader,
+	instanceGroupDirectoryReader instanceGroupDirectoryReader,
 ) Bake {
 	return Bake{
-		metadataBuilder:        metadataBuilder,
-		interpolator:           interpolator,
-		tileWriter:             tileWriter,
-		logger:                 logger,
-		releaseManifestReader:  releaseManifestReader,
-		stemcellManifestReader: stemcellManifestReader,
-		formDirectoryReader:    formDirectoryReader,
+		metadataBuilder:              metadataBuilder,
+		interpolator:                 interpolator,
+		tileWriter:                   tileWriter,
+		logger:                       logger,
+		releaseManifestReader:        releaseManifestReader,
+		stemcellManifestReader:       stemcellManifestReader,
+		formDirectoryReader:          formDirectoryReader,
+		instanceGroupDirectoryReader: instanceGroupDirectoryReader,
 	}
 }
 
@@ -164,6 +173,22 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
+	var instanceGroups map[string]interface{}
+	if config.InstanceGroupDirectories != nil {
+		b.logger.Println("Reading instance group files...")
+		instanceGroups = map[string]interface{}{}
+		for _, instanceGroupDir := range config.InstanceGroupDirectories {
+			instanceGroupsInDirectory, err := b.instanceGroupDirectoryReader.Read(instanceGroupDir)
+			if err != nil {
+				return err
+			}
+
+			for _, instanceGroup := range instanceGroupsInDirectory {
+				instanceGroups[instanceGroup.Name] = instanceGroup.Metadata
+			}
+		}
+	}
+
 	err = b.addVariablesToMap(config.Variables, variables)
 	if err != nil {
 		return err
@@ -200,6 +225,7 @@ func (b Bake) Execute(args []string) error {
 		StemcellManifest: stemcellManifest,
 		FormTypes:        formTypes,
 		IconImage:        generatedMetadata.IconImage,
+		InstanceGroups:   instanceGroups,
 	}, generatedMetadataYAML)
 	if err != nil {
 		return err

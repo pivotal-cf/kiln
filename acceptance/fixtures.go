@@ -30,8 +30,8 @@ forms:
 - $( form "some-config" )
 - $( form "some-more-config" )
 job_types:
-- name: consul_server
-  label: Consul
+- $( instance_group "some-instance-group" )
+- $( instance_group "some-other-instance-group" )
 `)
 
 var expectedMetadata = `---
@@ -52,16 +52,16 @@ install_time_verifiers:
   properties:
     url: .properties.uaa.saml.sso_url
 job_types:
-- label: Some Other Instance Group
-  name: some-other-instance-group
-  templates:
-  - name: some-other-job
-    release: some-other-release
 - label: Some Instance Group
   name: some-instance-group
   templates:
   - name: some-job
     release: some-release
+- label: Some Other Instance Group
+  name: some-other-instance-group
+  templates:
+  - name: some-other-job
+    release: some-other-release
 label: Pivotal Elastic Runtime
 metadata_version: "1.7"
 minimum_version_for_upgrade: 1.6.9-build.0

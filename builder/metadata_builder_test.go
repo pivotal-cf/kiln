@@ -46,9 +46,6 @@ var _ = Describe("MetadataBuilder", func() {
 						Name: "some-instance-group-1",
 						Metadata: map[interface{}]interface{}{
 							"name": "some-instance-group-1",
-							"templates": []interface{}{
-								"some-job-1.yml",
-							},
 						},
 					},
 					{
@@ -56,9 +53,6 @@ var _ = Describe("MetadataBuilder", func() {
 						Name: "some-instance-group-2",
 						Metadata: map[interface{}]interface{}{
 							"name": "some-instance-group-2",
-							"templates": []interface{}{
-								"some-job-2.yml",
-							},
 						},
 					},
 				}, nil
@@ -239,12 +233,6 @@ var _ = Describe("MetadataBuilder", func() {
 					Name: "some-instance-group-1",
 					Metadata: map[interface{}]interface{}{
 						"name": "some-instance-group-1",
-						"templates": []interface{}{
-							map[interface{}]interface{}{
-								"name":    "some-job-1",
-								"release": "some-release-1",
-							},
-						},
 					},
 				},
 				{
@@ -252,12 +240,6 @@ var _ = Describe("MetadataBuilder", func() {
 					Name: "some-instance-group-2",
 					Metadata: map[interface{}]interface{}{
 						"name": "some-instance-group-2",
-						"templates": []interface{}{
-							map[interface{}]interface{}{
-								"name":    "some-job-2",
-								"release": "some-release-2",
-							},
-						},
 					},
 				},
 			}))
@@ -340,7 +322,6 @@ var _ = Describe("MetadataBuilder", func() {
 				"Reading variables from /path/to/variables/directory",
 				"Reading variables from /path/to/other/variables/directory",
 				"Reading instance groups from /path/to/instance-groups/directory",
-				"Reading jobs from /path/to/jobs/directory",
 				"Reading property blueprints from /path/to/properties/directory",
 			}))
 
@@ -444,58 +425,6 @@ var _ = Describe("MetadataBuilder", func() {
 						InstanceGroupDirectories: []string{"/path/to/missing/instance-groups"},
 					})
 					Expect(err).To(MatchError(`error reading from instance group directory "/path/to/missing/instance-groups": some instance group error`))
-				})
-			})
-
-			Context("when the job directory cannot be read", func() {
-				It("returns an error", func() {
-					jobsDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some job error"))
-
-					_, err := tileBuilder.Build(builder.BuildInput{
-						JobDirectories: []string{"/path/to/missing/jobs"},
-					})
-					Expect(err).To(MatchError(`error reading from job directory "/path/to/missing/jobs": some job error`))
-				})
-			})
-
-			Context("when an instance group references a job that cannot be found", func() {
-				BeforeEach(func() {
-					instanceGroupsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
-						switch path {
-						case "/path/to/instance-groups/directory":
-							return []builder.Part{
-								{
-									File: "some-instance-group-1.yml",
-									Name: "some-instance-group-1",
-									Metadata: map[interface{}]interface{}{
-										"name": "some-instance-group-1",
-										"templates": []interface{}{
-											"some-missing-job",
-										},
-									},
-								},
-								{
-									File: "some-instance-group-2.yml",
-									Name: "some-instance-group-2",
-									Metadata: map[interface{}]interface{}{
-										"name": "some-instance-group-2",
-										"templates": []interface{}{
-											"some-job-2",
-										},
-									},
-								},
-							}, nil
-						default:
-							return []builder.Part{}, fmt.Errorf("could not read instance groups directory %q", path)
-						}
-					}
-				})
-				It("returns an error", func() {
-					_, err := tileBuilder.Build(builder.BuildInput{
-						InstanceGroupDirectories: []string{"/path/to/instance-groups/directory"},
-						JobDirectories:           []string{"/path/to/jobs/directory"},
-					})
-					Expect(err).To(MatchError(`instance group "some-instance-group-1" references non-existent job "some-missing-job"`))
 				})
 			})
 

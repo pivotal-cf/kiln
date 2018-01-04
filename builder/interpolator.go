@@ -18,6 +18,7 @@ type InterpolateInput struct {
 	StemcellManifest StemcellManifest
 	FormTypes        map[string]interface{}
 	IconImage        string
+	InstanceGroups   map[string]interface{}
 }
 
 func NewInterpolator() Interpolator {
@@ -71,6 +72,14 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 		},
 		"icon": func() (string, error) {
 			return input.IconImage, nil
+		},
+		"instance_group": func(name string) (string, error) {
+			val, ok := input.InstanceGroups[name]
+			if !ok {
+				return "", fmt.Errorf("could not find instance_group with name '%s'", name)
+			}
+
+			return i.interpolateValueIntoYAML(input, val)
 		},
 	}
 

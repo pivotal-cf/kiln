@@ -16,6 +16,8 @@ releases:
 stemcell_criteria: $( stemcell )
 form_types:
 - $( form "some-form" )
+job_types:
+- $( instance_group "some-instance-group" )
 `
 
 	var input builder.InterpolateInput
@@ -44,6 +46,14 @@ form_types:
 				},
 			},
 			IconImage: "some-icon-image",
+			InstanceGroups: map[string]interface{}{
+				"some-instance-group": builder.Metadata{
+					"manifest": "some-manifest",
+					"name":     "some-instance-group",
+					"provides": "some-link",
+					"release":  "some-release",
+				},
+			},
 		}
 	})
 
@@ -65,6 +75,11 @@ stemcell_criteria:
 form_types:
 - name: some-form
   label: some-form-label
+job_types:
+- name: some-instance-group
+  manifest: some-manifest
+  provides: some-link
+  release: some-release
 `))
 		Expect(string(interpolatedYAML)).To(ContainSubstring("file: some-release-1.2.3.tgz\n"))
 	})
@@ -94,6 +109,11 @@ stemcell_criteria:
 form_types:
 - name: some-form
   label: variable-form-label
+job_types:
+- name: some-instance-group
+  manifest: some-manifest
+  provides: some-link
+  release: some-release
 `))
 	})
 
@@ -165,6 +185,16 @@ form_types:
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("stemcell-tarball must be specified"))
+			})
+		})
+
+		Context("when a specified instance group is not included in the interpolate input", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				_, err := interpolator.Interpolate(input, []byte(`job_types: [$(instance_group "some-instance-group-does-not-exist")]`))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("could not find instance_group with name 'some-instance-group-does-not-exist'"))
 			})
 		})
 

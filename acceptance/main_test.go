@@ -20,22 +20,22 @@ import (
 
 var _ = Describe("kiln", func() {
 	var (
-		metadata                    string
-		otherReleasesDirectory      string
-		outputFile                  string
-		someIconPath                string
-		somePropertiesDirectory     string
-		someReleasesDirectory       string
-		someRuntimeConfigsDirectory string
-		someVariablesDirectory      string
-		someFormsDirectory          string
-		someOtherFormsDirectory     string
-		someInstanceGroupsDirectory string
-		someJobsDirectory           string
-		stemcellTarball             string
-		tmpDir                      string
-		diegoSHA1                   string
-		cfSHA1                      string
+		metadata                         string
+		otherReleasesDirectory           string
+		outputFile                       string
+		someIconPath                     string
+		somePropertiesDirectory          string
+		someReleasesDirectory            string
+		someRuntimeConfigsDirectory      string
+		someVariablesDirectory           string
+		someFormsDirectory               string
+		someOtherFormsDirectory          string
+		someInstanceGroupsDirectory      string
+		someOtherInstanceGroupsDirectory string
+		stemcellTarball                  string
+		tmpDir                           string
+		diegoSHA1                        string
+		cfSHA1                           string
 	)
 
 	BeforeEach(func() {
@@ -82,7 +82,7 @@ var _ = Describe("kiln", func() {
 		someInstanceGroupsDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		someJobsDirectory, err = ioutil.TempDir(tmpDir, "")
+		someOtherInstanceGroupsDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		cfReleaseManifest := `---
@@ -162,30 +162,21 @@ description: some-form-description
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "_order.yml"), []byte(`---
-job_types:
-  - some-other-instance-group
-  - some-instance-group
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
 		err = ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "some-instance-group.yml"), []byte(`---
-job_type:
-  name: some-instance-group
-  label: Some Instance Group
-  templates:
-  - name: some-job
-    release: some-release
+name: some-instance-group
+label: Some Instance Group
+templates:
+- name: some-job
+  release: some-release
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "some-other-instance-group.yml"), []byte(`---
-job_type:
-  name: some-other-instance-group
-  label: Some Other Instance Group
-  templates:
-  - name: some-other-job
-    release: some-other-release
+		err = ioutil.WriteFile(filepath.Join(someOtherInstanceGroupsDirectory, "some-other-instance-group.yml"), []byte(`---
+name: some-other-instance-group
+label: Some Other Instance Group
+templates:
+- name: some-other-job
+  release: some-other-release
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -230,7 +221,7 @@ variables:
 			"--forms-directory", someOtherFormsDirectory,
 			"--icon", someIconPath,
 			"--instance-groups-directory", someInstanceGroupsDirectory,
-			"--jobs-directory", someJobsDirectory,
+			"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 			"--metadata", metadata,
 			"--migrations-directory", "fixtures/extra-migrations",
 			"--migrations-directory", "fixtures/migrations",
@@ -337,6 +328,8 @@ variables:
 				"--output-file", outputFile,
 				"--releases-directory", someReleasesDirectory,
 				"--releases-directory", otherReleasesDirectory,
+				"--instance-groups-directory", someInstanceGroupsDirectory,
+				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--stub-releases",
 				"--variable", "some-variable=some-variable-value",
@@ -380,6 +373,8 @@ variables:
 				"--output-file", outputFile,
 				"--releases-directory", someReleasesDirectory,
 				"--releases-directory", otherReleasesDirectory,
+				"--instance-groups-directory", someInstanceGroupsDirectory,
+				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--variable", "some-variable=some-variable-value",
 				"--version", "1.2.3",
@@ -436,6 +431,8 @@ variables:
 					"--output-file", outputFile,
 					"--releases-directory", someReleasesDirectory,
 					"--releases-directory", otherReleasesDirectory,
+					"--instance-groups-directory", someInstanceGroupsDirectory,
+					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
@@ -512,6 +509,8 @@ variables:
 					"--output-file", outputFile,
 					"--releases-directory", someReleasesDirectory,
 					"--releases-directory", otherReleasesDirectory,
+					"--instance-groups-directory", someInstanceGroupsDirectory,
+					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
@@ -578,7 +577,6 @@ variables:
 				"--forms-directory", someOtherFormsDirectory,
 				"--icon", someIconPath,
 				"--instance-groups-directory", someInstanceGroupsDirectory,
-				"--jobs-directory", someJobsDirectory,
 				"--metadata", metadata,
 				"--migrations-directory", "fixtures/extra-migrations",
 				"--migrations-directory", "fixtures/migrations",
@@ -586,6 +584,8 @@ variables:
 				"--properties-directory", somePropertiesDirectory,
 				"--releases-directory", otherReleasesDirectory,
 				"--releases-directory", someReleasesDirectory,
+				"--instance-groups-directory", someInstanceGroupsDirectory,
+				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--bosh-variables-directory", someVariablesDirectory,
@@ -658,6 +658,8 @@ variables:
 					"--output-file", "/path/to/missing/dir/product.zip",
 					"--releases-directory", someReleasesDirectory,
 					"--releases-directory", otherReleasesDirectory,
+					"--instance-groups-directory", someInstanceGroupsDirectory,
+					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--variable", "some-variable=some-variable-value",
 					"--version", "1.2.3",

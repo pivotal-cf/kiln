@@ -196,6 +196,7 @@ func (m MetadataBuilder) buildVariables(vars []string, metadata Metadata) ([]Par
 }
 
 func (m MetadataBuilder) buildJobTypes(typeDirs, jobDirs []string, metadata Metadata) ([]Part, error) {
+	// we are not testing this functionality but we plan to rip it out in the next story (#153491107)
 	var jobTypes []Part
 
 	if len(typeDirs) > 0 {
@@ -212,38 +213,6 @@ func (m MetadataBuilder) buildJobTypes(typeDirs, jobDirs []string, metadata Meta
 		if jt, ok := metadata["job_types"].([]interface{}); ok {
 			for _, j := range jt {
 				jobTypes = append(jobTypes, Part{Metadata: j})
-			}
-		}
-	}
-
-	jobs := map[interface{}]Part{}
-
-	for _, jobDir := range jobDirs {
-		m.logger.Printf("Reading jobs from %s", jobDir)
-
-		jobsInDir, err := m.jobsDirectoryReader.Read(jobDir)
-		if err != nil {
-			return nil, fmt.Errorf("error reading from job directory %q: %s", jobDir, err)
-		}
-		for _, j := range jobsInDir {
-			jobs[j.File] = j
-		}
-	}
-
-	for _, jt := range jobTypes {
-		if templates, ok := jt.Metadata.(map[interface{}]interface{})["templates"]; ok {
-			for i, template := range templates.([]interface{}) {
-				switch template.(type) {
-				case string:
-					if job, ok := jobs[template]; ok {
-						templates.([]interface{})[i] = job.Metadata
-					} else {
-						return nil, fmt.Errorf("instance group %q references non-existent job %q",
-							jt.Name,
-							template,
-						)
-					}
-				}
 			}
 		}
 	}

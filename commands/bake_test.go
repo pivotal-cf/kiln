@@ -17,13 +17,14 @@ import (
 
 var _ = Describe("bake", func() {
 	var (
-		fakeMetadataBuilder        *fakes.MetadataBuilder
-		fakeReleaseManifestReader  *fakes.ReleaseManifestReader
-		fakeStemcellManifestReader *fakes.StemcellManifestReader
-		fakeFormDirectoryReader    *fakes.FormDirectoryReader
-		fakeInterpolator           *fakes.Interpolator
-		fakeTileWriter             *fakes.TileWriter
-		fakeLogger                 *fakes.Logger
+		fakeMetadataBuilder              *fakes.MetadataBuilder
+		fakeReleaseManifestReader        *fakes.ReleaseManifestReader
+		fakeStemcellManifestReader       *fakes.StemcellManifestReader
+		fakeFormDirectoryReader          *fakes.FormDirectoryReader
+		fakeInstanceGroupDirectoryReader *fakes.InstanceGroupDirectoryReader
+		fakeInterpolator                 *fakes.Interpolator
+		fakeTileWriter                   *fakes.TileWriter
+		fakeLogger                       *fakes.Logger
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -74,6 +75,7 @@ var _ = Describe("bake", func() {
 		fakeReleaseManifestReader = &fakes.ReleaseManifestReader{}
 		fakeStemcellManifestReader = &fakes.StemcellManifestReader{}
 		fakeFormDirectoryReader = &fakes.FormDirectoryReader{}
+		fakeInstanceGroupDirectoryReader = &fakes.InstanceGroupDirectoryReader{}
 		fakeInterpolator = &fakes.Interpolator{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
@@ -105,6 +107,18 @@ var _ = Describe("bake", func() {
 			},
 		}, nil)
 
+		fakeInstanceGroupDirectoryReader.ReadReturns([]builder.Part{
+			{
+				Name: "some-instance-group",
+				Metadata: builder.Metadata{
+					"name":     "some-instance-group",
+					"manifest": "some-manifest",
+					"provides": "some-link",
+					"release":  "some-release",
+				},
+			},
+		}, nil)
+
 		generatedMetadata = builder.GeneratedMetadata{
 			IconImage: "some-icon-image",
 			Name:      "some-product-name",
@@ -124,6 +138,7 @@ var _ = Describe("bake", func() {
 			fakeReleaseManifestReader,
 			fakeStemcellManifestReader,
 			fakeFormDirectoryReader,
+			fakeInstanceGroupDirectoryReader,
 		)
 	})
 
@@ -162,6 +177,46 @@ var _ = Describe("bake", func() {
 			Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 
 			Expect(fakeInterpolator.InterpolateCallCount()).To(Equal(1))
+
+			input, _ := fakeInterpolator.InterpolateArgsForCall(0)
+			Expect(input).To(Equal(builder.InterpolateInput{
+				Variables: map[string]string{
+					"some-variable-from-file": "some-variable-value-from-file",
+					"some-variable":           "some-variable-value",
+				},
+				ReleaseManifests: map[string]builder.ReleaseManifest{
+					"some-release-1": {
+						Name:    "some-release-1",
+						Version: "1.2.3",
+						File:    "release1.tgz",
+					},
+					"some-release-2": {
+						Name:    "some-release-2",
+						Version: "2.3.4",
+						File:    "release2.tgz",
+					},
+				},
+				StemcellManifest: builder.StemcellManifest{
+					Version:         "2.3.4",
+					OperatingSystem: "an-operating-system",
+				},
+				FormTypes: map[string]interface{}{
+					"some-form": builder.Metadata{
+						"name":  "some-form",
+						"label": "some-form-label",
+					},
+				},
+				IconImage: "some-icon-image",
+				InstanceGroups: map[string]interface{}{
+					"some-instance-group": builder.Metadata{
+						"name":     "some-instance-group",
+						"manifest": "some-manifest",
+						"provides": "some-link",
+						"release":  "some-release",
+					},
+				},
+			}))
+
 			Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
 			Expect(fakeFormDirectoryReader.ReadCallCount()).To(Equal(1))
 		})
@@ -316,6 +371,27 @@ var _ = Describe("bake", func() {
 						"--releases-directory", someReleasesDirectory,
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--forms-directory", "some-form-directory",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("some-error"))
+				})
+			})
+
+			Context("when the instance group directory reader returns an error", func() {
+				It("returns an error", func() {
+					fakeInstanceGroupDirectoryReader.ReadReturns(nil, errors.New("some-error"))
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--forms-directory", "some-form-directory",
+						"--instance-groups-directory", "some-instance-group-directory",
 						"--version", "1.2.3",
 					})
 
@@ -507,7 +583,16 @@ var _ = Describe("bake", func() {
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			command := commands.NewBake(fakeMetadataBuilder, fakeInterpolator, fakeTileWriter, fakeLogger, fakeReleaseManifestReader, fakeStemcellManifestReader, fakeFormDirectoryReader)
+			command := commands.NewBake(
+				fakeMetadataBuilder,
+				fakeInterpolator,
+				fakeTileWriter,
+				fakeLogger,
+				fakeReleaseManifestReader,
+				fakeStemcellManifestReader,
+				fakeFormDirectoryReader,
+				fakeInstanceGroupDirectoryReader,
+			)
 			Expect(command.Usage()).To(Equal(jhandacommands.Usage{
 				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
 				ShortDescription: "bakes a tile",

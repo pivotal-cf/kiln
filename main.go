@@ -33,7 +33,7 @@ func main() {
 	formDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	handcraftReader := builder.NewMetadataReader(filesystem, logger)
 	iconEncoder := builder.NewIconEncoder(filesystem)
-	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithOrder("job_type", "job_types")
+	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("job")
 	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("property_blueprints")
 	releaseManifestReader := builder.NewReleaseManifestReader()
@@ -56,7 +56,16 @@ func main() {
 
 	commandSet := jhandacommands.Set{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
-	commandSet["bake"] = commands.NewBake(metadataBuilder, interpolator, tileWriter, logger, releaseManifestReader, stemcellManifestReader, formDirectoryReader)
+	commandSet["bake"] = commands.NewBake(
+		metadataBuilder,
+		interpolator,
+		tileWriter,
+		logger,
+		releaseManifestReader,
+		stemcellManifestReader,
+		formDirectoryReader,
+		instanceGroupDirectoryReader,
+	)
 
 	var command string
 	if len(args) > 0 {
