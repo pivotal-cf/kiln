@@ -350,10 +350,9 @@ var _ = Describe("MetadataBuilder", func() {
 
 			It("includes the property blueprints from the metadata", func() {
 				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
-					MetadataPath:    "/some/path/metadata.yml",
-					FormDirectories: []string{},
-					IconPath:        "some-icon-path",
-					Version:         "1.2.3",
+					MetadataPath: "/some/path/metadata.yml",
+					IconPath:     "some-icon-path",
+					Version:      "1.2.3",
 				})
 				Expect(err).NotTo(HaveOccurred())
 

@@ -17,14 +17,12 @@ type MetadataBuilder struct {
 }
 
 type BuildInput struct {
-	FormDirectories          []string
 	IconPath                 string
 	InstanceGroupDirectories []string
 	JobDirectories           []string
 	MetadataPath             string
 	PropertyDirectories      []string
 	RuntimeConfigDirectories []string
-	StemcellTarball          string
 	BOSHVariableDirectories  []string
 	Version                  string
 }
