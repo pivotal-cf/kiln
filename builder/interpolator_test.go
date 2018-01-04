@@ -27,7 +27,7 @@ job_types:
 			Variables: map[string]string{
 				"some-variable": "some-value",
 			},
-			ReleaseManifests: map[string]builder.ReleaseManifest{
+			ReleaseManifests: map[string]interface{}{
 				"some-release": builder.ReleaseManifest{
 					Name:    "some-release",
 					Version: "1.2.3",
@@ -180,7 +180,7 @@ job_types:
 		Context("when the stemcell helper is used without providing the stemcell", func() {
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
-				input.StemcellManifest = builder.StemcellManifest{}
+				input.StemcellManifest = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())

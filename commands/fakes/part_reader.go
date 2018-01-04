@@ -7,25 +7,25 @@ import (
 	"github.com/pivotal-cf/kiln/builder"
 )
 
-type ReleaseManifestReader struct {
-	ReadStub        func(path string) (builder.ReleaseManifest, error)
+type PartReader struct {
+	ReadStub        func(path string) (builder.Part, error)
 	readMutex       sync.RWMutex
 	readArgsForCall []struct {
 		path string
 	}
 	readReturns struct {
-		result1 builder.ReleaseManifest
+		result1 builder.Part
 		result2 error
 	}
 	readReturnsOnCall map[int]struct {
-		result1 builder.ReleaseManifest
+		result1 builder.Part
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseManifestReader) Read(path string) (builder.ReleaseManifest, error) {
+func (fake *PartReader) Read(path string) (builder.Part, error) {
 	fake.readMutex.Lock()
 	ret, specificReturn := fake.readReturnsOnCall[len(fake.readArgsForCall)]
 	fake.readArgsForCall = append(fake.readArgsForCall, struct {
@@ -42,41 +42,41 @@ func (fake *ReleaseManifestReader) Read(path string) (builder.ReleaseManifest, e
 	return fake.readReturns.result1, fake.readReturns.result2
 }
 
-func (fake *ReleaseManifestReader) ReadCallCount() int {
+func (fake *PartReader) ReadCallCount() int {
 	fake.readMutex.RLock()
 	defer fake.readMutex.RUnlock()
 	return len(fake.readArgsForCall)
 }
 
-func (fake *ReleaseManifestReader) ReadArgsForCall(i int) string {
+func (fake *PartReader) ReadArgsForCall(i int) string {
 	fake.readMutex.RLock()
 	defer fake.readMutex.RUnlock()
 	return fake.readArgsForCall[i].path
 }
 
-func (fake *ReleaseManifestReader) ReadReturns(result1 builder.ReleaseManifest, result2 error) {
+func (fake *PartReader) ReadReturns(result1 builder.Part, result2 error) {
 	fake.ReadStub = nil
 	fake.readReturns = struct {
-		result1 builder.ReleaseManifest
+		result1 builder.Part
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseManifestReader) ReadReturnsOnCall(i int, result1 builder.ReleaseManifest, result2 error) {
+func (fake *PartReader) ReadReturnsOnCall(i int, result1 builder.Part, result2 error) {
 	fake.ReadStub = nil
 	if fake.readReturnsOnCall == nil {
 		fake.readReturnsOnCall = make(map[int]struct {
-			result1 builder.ReleaseManifest
+			result1 builder.Part
 			result2 error
 		})
 	}
 	fake.readReturnsOnCall[i] = struct {
-		result1 builder.ReleaseManifest
+		result1 builder.Part
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseManifestReader) Invocations() map[string][][]interface{} {
+func (fake *PartReader) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.readMutex.RLock()
@@ -88,7 +88,7 @@ func (fake *ReleaseManifestReader) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *ReleaseManifestReader) recordInvocation(key string, args []interface{}) {
+func (fake *PartReader) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {

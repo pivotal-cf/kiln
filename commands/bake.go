@@ -40,8 +40,8 @@ type Bake struct {
 	interpolator                 interpolator
 	tileWriter                   tileWriter
 	logger                       logger
-	releaseManifestReader        releaseManifestReader
-	stemcellManifestReader       stemcellManifestReader
+	releaseManifestReader        partReader
+	stemcellManifestReader       partReader
 	formDirectoryReader          directoryReader
 	instanceGroupDirectoryReader directoryReader
 	Options                      BakeConfig
@@ -65,16 +65,10 @@ type metadataBuilder interface {
 	Build(input builder.BuildInput) (builder.GeneratedMetadata, error)
 }
 
-//go:generate counterfeiter -o ./fakes/release_manifest_reader.go --fake-name ReleaseManifestReader . releaseManifestReader
+//go:generate counterfeiter -o ./fakes/part_reader.go --fake-name PartReader . partReader
 
-type releaseManifestReader interface {
-	Read(path string) (builder.ReleaseManifest, error)
-}
-
-//go:generate counterfeiter -o ./fakes/stemcell_manifest_reader.go --fake-name StemcellManifestReader . stemcellManifestReader
-
-type stemcellManifestReader interface {
-	Read(path string) (builder.StemcellManifest, error)
+type partReader interface {
+	Read(path string) (builder.Part, error)
 }
 
 //go:generate counterfeiter -o ./fakes/directory_reader.go --fake-name DirectoryReader . directoryReader
@@ -94,8 +88,8 @@ func NewBake(metadataBuilder metadataBuilder,
 	interpolator interpolator,
 	tileWriter tileWriter,
 	logger logger,
-	releaseManifestReader releaseManifestReader,
-	stemcellManifestReader stemcellManifestReader,
+	releaseManifestReader partReader,
+	stemcellManifestReader partReader,
 	formDirectoryReader directoryReader,
 	instanceGroupDirectoryReader directoryReader,
 ) Bake {
@@ -133,22 +127,23 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	b.logger.Println("Reading release manifests...")
-	releaseManifests := map[string]builder.ReleaseManifest{}
+	releaseManifests := map[string]interface{}{}
 	for _, releaseTarball := range releaseTarballs {
 		releaseManifest, err := b.releaseManifestReader.Read(releaseTarball)
 		if err != nil {
 			return err
 		}
-		releaseManifests[releaseManifest.Name] = releaseManifest
+		releaseManifests[releaseManifest.Name] = releaseManifest.Metadata
 	}
 
-	var stemcellManifest builder.StemcellManifest
+	var stemcellManifest interface{}
 	if config.StemcellTarball != "" {
 		b.logger.Println("Reading stemcell manifests...")
-		stemcellManifest, err = b.stemcellManifestReader.Read(config.StemcellTarball)
+		stemcell, err := b.stemcellManifestReader.Read(config.StemcellTarball)
 		if err != nil {
 			return err
 		}
+		stemcellManifest = stemcell.Metadata
 	}
 
 	var formTypes map[string]interface{}

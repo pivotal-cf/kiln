@@ -26,16 +26,16 @@ func NewReleaseManifestReader() ReleaseManifestReader {
 	return ReleaseManifestReader{}
 }
 
-func (r ReleaseManifestReader) Read(releaseTarball string) (ReleaseManifest, error) {
+func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 	file, err := os.Open(releaseTarball)
 	if err != nil {
-		return ReleaseManifest{}, err
+		return Part{}, err
 	}
 	defer file.Close()
 
 	gr, err := gzip.NewReader(file)
 	if err != nil {
-		return ReleaseManifest{}, err
+		return Part{}, err
 	}
 	defer gr.Close()
 
@@ -45,10 +45,10 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (ReleaseManifest, err
 		header, err := tr.Next()
 		if err != nil {
 			if err == io.EOF {
-				return ReleaseManifest{}, fmt.Errorf("could not find release.MF in %q", releaseTarball)
+				return Part{}, fmt.Errorf("could not find release.MF in %q", releaseTarball)
 			}
 
-			return ReleaseManifest{}, fmt.Errorf("error while reading %q: %s", releaseTarball, err)
+			return Part{}, fmt.Errorf("error while reading %q: %s", releaseTarball, err)
 		}
 
 		if filepath.Base(header.Name) == "release.MF" {
@@ -59,28 +59,31 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (ReleaseManifest, err
 	var releaseManifest ReleaseManifest
 	releaseManifestContents, err := ioutil.ReadAll(tr)
 	if err != nil {
-		return ReleaseManifest{}, err // NOTE: cannot replicate this error scenario in a test
+		return Part{}, err // NOTE: cannot replicate this error scenario in a test
 	}
 
 	err = yaml.Unmarshal(releaseManifestContents, &releaseManifest)
 	if err != nil {
-		return ReleaseManifest{}, err
+		return Part{}, err
 	}
 
 	releaseManifest.File = filepath.Base(releaseTarball)
 
 	_, err = file.Seek(0, 0)
 	if err != nil {
-		return ReleaseManifest{}, err // NOTE: cannot replicate this error scenario in a test
+		return Part{}, err // NOTE: cannot replicate this error scenario in a test
 	}
 
 	hash := sha1.New()
 	_, err = io.Copy(hash, file)
 	if err != nil {
-		return ReleaseManifest{}, err // NOTE: cannot replicate this error scenario in a test
+		return Part{}, err // NOTE: cannot replicate this error scenario in a test
 	}
 
 	releaseManifest.SHA1 = fmt.Sprintf("%x", hash.Sum(nil))
 
-	return releaseManifest, nil
+	return Part{
+		Name:     releaseManifest.Name,
+		Metadata: releaseManifest,
+	}, nil
 }

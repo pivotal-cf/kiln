@@ -14,8 +14,8 @@ type Interpolator struct{}
 
 type InterpolateInput struct {
 	Variables        map[string]string
-	ReleaseManifests map[string]ReleaseManifest
-	StemcellManifest StemcellManifest
+	ReleaseManifests map[string]interface{}
+	StemcellManifest interface{}
 	FormTypes        map[string]interface{}
 	IconImage        string
 	InstanceGroups   map[string]interface{}
@@ -58,7 +58,7 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 			return i.interpolateValueIntoYAML(input, val)
 		},
 		"stemcell": func() (string, error) {
-			if input.StemcellManifest == (StemcellManifest{}) {
+			if input.StemcellManifest == nil {
 				return "", errors.New("stemcell-tarball must be specified")
 			}
 			return i.interpolateValueIntoYAML(input, input.StemcellManifest)

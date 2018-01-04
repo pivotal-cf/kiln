@@ -37,16 +37,16 @@ func NewStemcellManifestReader(filesystem filesystem) StemcellManifestReader {
 	}
 }
 
-func (r StemcellManifestReader) Read(stemcellTarball string) (StemcellManifest, error) {
+func (r StemcellManifestReader) Read(stemcellTarball string) (Part, error) {
 	file, err := r.filesystem.Open(stemcellTarball)
 	if err != nil {
-		return StemcellManifest{}, err
+		return Part{}, err
 	}
 	defer file.Close()
 
 	gr, err := gzip.NewReader(file)
 	if err != nil {
-		return StemcellManifest{}, err
+		return Part{}, err
 	}
 	defer gr.Close()
 
@@ -56,10 +56,10 @@ func (r StemcellManifestReader) Read(stemcellTarball string) (StemcellManifest, 
 		header, err := tr.Next()
 		if err != nil {
 			if err == io.EOF {
-				return StemcellManifest{}, fmt.Errorf("could not find stemcell.MF in %q", stemcellTarball)
+				return Part{}, fmt.Errorf("could not find stemcell.MF in %q", stemcellTarball)
 			}
 
-			return StemcellManifest{}, fmt.Errorf("error while reading %q: %s", stemcellTarball, err)
+			return Part{}, fmt.Errorf("error while reading %q: %s", stemcellTarball, err)
 		}
 
 		if filepath.Base(header.Name) == "stemcell.MF" {
@@ -70,13 +70,15 @@ func (r StemcellManifestReader) Read(stemcellTarball string) (StemcellManifest, 
 	var stemcellManifest StemcellManifest
 	stemcellContent, err := ioutil.ReadAll(tr)
 	if err != nil {
-		return StemcellManifest{}, err
+		return Part{}, err
 	}
 
 	err = yaml.Unmarshal(stemcellContent, &stemcellManifest)
 	if err != nil {
-		return StemcellManifest{}, err
+		return Part{}, err
 	}
 
-	return stemcellManifest, nil
+	return Part{
+		Metadata: stemcellManifest,
+	}, nil
 }

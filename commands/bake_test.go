@@ -18,8 +18,8 @@ import (
 var _ = Describe("bake", func() {
 	var (
 		fakeMetadataBuilder              *fakes.MetadataBuilder
-		fakeReleaseManifestReader        *fakes.ReleaseManifestReader
-		fakeStemcellManifestReader       *fakes.StemcellManifestReader
+		fakeReleaseManifestReader        *fakes.PartReader
+		fakeStemcellManifestReader       *fakes.PartReader
 		fakeFormDirectoryReader          *fakes.DirectoryReader
 		fakeInstanceGroupDirectoryReader *fakes.DirectoryReader
 		fakeInterpolator                 *fakes.Interpolator
@@ -72,29 +72,37 @@ var _ = Describe("bake", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
-		fakeReleaseManifestReader = &fakes.ReleaseManifestReader{}
-		fakeStemcellManifestReader = &fakes.StemcellManifestReader{}
+		fakeReleaseManifestReader = &fakes.PartReader{}
+		fakeStemcellManifestReader = &fakes.PartReader{}
 		fakeFormDirectoryReader = &fakes.DirectoryReader{}
 		fakeInstanceGroupDirectoryReader = &fakes.DirectoryReader{}
 		fakeInterpolator = &fakes.Interpolator{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
 
-		fakeReleaseManifestReader.ReadReturnsOnCall(0, builder.ReleaseManifest{
-			Name:    "some-release-1",
-			Version: "1.2.3",
-			File:    "release1.tgz",
+		fakeReleaseManifestReader.ReadReturnsOnCall(0, builder.Part{
+			Name: "some-release-1",
+			Metadata: builder.ReleaseManifest{
+				Name:    "some-release-1",
+				Version: "1.2.3",
+				File:    "release1.tgz",
+			},
 		}, nil)
 
-		fakeReleaseManifestReader.ReadReturnsOnCall(1, builder.ReleaseManifest{
-			Name:    "some-release-2",
-			Version: "2.3.4",
-			File:    "release2.tgz",
+		fakeReleaseManifestReader.ReadReturnsOnCall(1, builder.Part{
+			Name: "some-release-2",
+			Metadata: builder.ReleaseManifest{
+				Name:    "some-release-2",
+				Version: "2.3.4",
+				File:    "release2.tgz",
+			},
 		}, nil)
 
-		fakeStemcellManifestReader.ReadReturns(builder.StemcellManifest{
-			Version:         "2.3.4",
-			OperatingSystem: "an-operating-system",
+		fakeStemcellManifestReader.ReadReturns(builder.Part{
+			Metadata: builder.StemcellManifest{
+				Version:         "2.3.4",
+				OperatingSystem: "an-operating-system",
+			},
 		}, nil)
 
 		fakeFormDirectoryReader.ReadReturns([]builder.Part{
@@ -184,13 +192,13 @@ var _ = Describe("bake", func() {
 					"some-variable-from-file": "some-variable-value-from-file",
 					"some-variable":           "some-variable-value",
 				},
-				ReleaseManifests: map[string]builder.ReleaseManifest{
-					"some-release-1": {
+				ReleaseManifests: map[string]interface{}{
+					"some-release-1": builder.ReleaseManifest{
 						Name:    "some-release-1",
 						Version: "1.2.3",
 						File:    "release1.tgz",
 					},
-					"some-release-2": {
+					"some-release-2": builder.ReleaseManifest{
 						Name:    "some-release-2",
 						Version: "2.3.4",
 						File:    "release2.tgz",
@@ -323,7 +331,7 @@ var _ = Describe("bake", func() {
 
 			Context("when the release manifest reader returns an error", func() {
 				It("returns an error", func() {
-					fakeReleaseManifestReader.ReadReturnsOnCall(0, builder.ReleaseManifest{}, errors.New("some-error"))
+					fakeReleaseManifestReader.ReadReturnsOnCall(0, builder.Part{}, errors.New("some-error"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -342,7 +350,7 @@ var _ = Describe("bake", func() {
 
 			Context("when the stemcell manifest reader returns an error", func() {
 				It("returns an error", func() {
-					fakeStemcellManifestReader.ReadReturns(builder.StemcellManifest{}, errors.New("some-error"))
+					fakeStemcellManifestReader.ReadReturns(builder.Part{}, errors.New("some-error"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",

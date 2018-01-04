@@ -61,9 +61,11 @@ operating_system: centOS
 		It("extracts the stemcell manifest information from the tarball", func() {
 			stemcellManifest, err := reader.Read("/path/to/stemcell/tarball")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(stemcellManifest).To(Equal(builder.StemcellManifest{
-				Version:         "9999",
-				OperatingSystem: "centOS",
+			Expect(stemcellManifest).To(Equal(builder.Part{
+				Metadata: builder.StemcellManifest{
+					Version:         "9999",
+					OperatingSystem: "centOS",
+				},
 			}))
 
 			Expect(filesystem.OpenArgsForCall(0)).To(Equal("/path/to/stemcell/tarball"))

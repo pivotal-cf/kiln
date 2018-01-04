@@ -85,11 +85,14 @@ version: 1.2.3
 		It("extracts the release manifest information from the tarball", func() {
 			releaseManifest, err := reader.Read(tarball.Name())
 			Expect(err).NotTo(HaveOccurred())
-			Expect(releaseManifest).To(Equal(builder.ReleaseManifest{
-				Name:    "release",
-				Version: "1.2.3",
-				File:    filepath.Base(tarball.Name()),
-				SHA1:    releaseSHA1,
+			Expect(releaseManifest).To(Equal(builder.Part{
+				Name: "release",
+				Metadata: builder.ReleaseManifest{
+					Name:    "release",
+					Version: "1.2.3",
+					File:    filepath.Base(tarball.Name()),
+					SHA1:    releaseSHA1,
+				},
 			}))
 		})
 
