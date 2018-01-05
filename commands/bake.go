@@ -204,8 +204,6 @@ func (b Bake) Execute(args []string) error {
 
 	buildInput := builder.BuildInput{
 		IconPath:                 config.IconPath,
-		InstanceGroupDirectories: config.InstanceGroupDirectories,
-		JobDirectories:           config.JobDirectories,
 		MetadataPath:             config.Metadata,
 		PropertyDirectories:      config.PropertyDirectories,
 		RuntimeConfigDirectories: config.RuntimeConfigDirectories,

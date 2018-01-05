@@ -14,8 +14,6 @@ import (
 var _ = Describe("MetadataBuilder", func() {
 	var (
 		iconEncoder                   *fakes.IconEncoder
-		instanceGroupsDirectoryReader *fakes.MetadataPartsDirectoryReader
-		jobsDirectoryReader           *fakes.MetadataPartsDirectoryReader
 		logger                        *fakes.Logger
 		metadataReader                *fakes.MetadataReader
 		propertiesDirectoryReader     *fakes.MetadataPartsDirectoryReader
@@ -27,8 +25,6 @@ var _ = Describe("MetadataBuilder", func() {
 
 	BeforeEach(func() {
 		iconEncoder = &fakes.IconEncoder{}
-		instanceGroupsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
-		jobsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		logger = &fakes.Logger{}
 		metadataReader = &fakes.MetadataReader{}
 		propertiesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
@@ -36,57 +32,6 @@ var _ = Describe("MetadataBuilder", func() {
 		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 
 		iconEncoder.EncodeReturns("base64-encoded-icon-path", nil)
-
-		instanceGroupsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
-			switch path {
-			case "/path/to/instance-groups/directory":
-				return []builder.Part{
-					{
-						File: "some-instance-group-1.yml",
-						Name: "some-instance-group-1",
-						Metadata: map[interface{}]interface{}{
-							"name": "some-instance-group-1",
-						},
-					},
-					{
-						File: "some-instance-group-2.yml",
-						Name: "some-instance-group-2",
-						Metadata: map[interface{}]interface{}{
-							"name": "some-instance-group-2",
-						},
-					},
-				}, nil
-			default:
-				return []builder.Part{}, fmt.Errorf("could not read instance groups directory %q", path)
-			}
-		}
-
-		jobsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
-			switch path {
-			case "/path/to/jobs/directory":
-				return []builder.Part{
-						{
-							File: "some-job-1.yml",
-							Name: "some-job-1",
-							Metadata: map[interface{}]interface{}{
-								"name":    "some-job-1",
-								"release": "some-release-1",
-							},
-						},
-						{
-							File: "some-job-2.yml",
-							Name: "some-job-2",
-							Metadata: map[interface{}]interface{}{
-								"name":    "some-job-2",
-								"release": "some-release-2",
-							},
-						},
-					},
-					nil
-			default:
-				return []builder.Part{}, fmt.Errorf("could not read instance groups directory %q", path)
-			}
-		}
 
 		propertiesDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
@@ -187,8 +132,6 @@ var _ = Describe("MetadataBuilder", func() {
 		}
 
 		tileBuilder = builder.NewMetadataBuilder(
-			instanceGroupsDirectoryReader,
-			jobsDirectoryReader,
 			propertiesDirectoryReader,
 			runtimeConfigsDirectoryReader,
 			variablesDirectoryReader,
@@ -204,7 +147,6 @@ var _ = Describe("MetadataBuilder", func() {
 				"name":                      "cool-product",
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
-				"job_types":                 "job-types-to-be-overridden",
 			},
 				nil,
 			)
@@ -213,8 +155,6 @@ var _ = Describe("MetadataBuilder", func() {
 		It("creates a GeneratedMetadata with the correct information", func() {
 			generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
 				IconPath:                 "some-icon-path",
-				InstanceGroupDirectories: []string{"/path/to/instance-groups/directory"},
-				JobDirectories:           []string{"/path/to/jobs/directory"},
 				MetadataPath:             "/some/path/metadata.yml",
 				PropertyDirectories:      []string{"/path/to/properties/directory"},
 				RuntimeConfigDirectories: []string{"/path/to/runtime-configs/directory", "/path/to/other/runtime-configs/directory"},
@@ -227,22 +167,6 @@ var _ = Describe("MetadataBuilder", func() {
 			Expect(version).To(Equal("1.2.3"))
 
 			Expect(generatedMetadata.Name).To(Equal("cool-product"))
-			Expect(generatedMetadata.JobTypes).To(Equal([]builder.Part{
-				{
-					File: "some-instance-group-1.yml",
-					Name: "some-instance-group-1",
-					Metadata: map[interface{}]interface{}{
-						"name": "some-instance-group-1",
-					},
-				},
-				{
-					File: "some-instance-group-2.yml",
-					Name: "some-instance-group-2",
-					Metadata: map[interface{}]interface{}{
-						"name": "some-instance-group-2",
-					},
-				},
-			}))
 			Expect(generatedMetadata.PropertyBlueprints).To(Equal([]builder.Part{
 				{
 					File: "property-1.yml",
@@ -321,7 +245,6 @@ var _ = Describe("MetadataBuilder", func() {
 				"Reading runtime configs from /path/to/other/runtime-configs/directory",
 				"Reading variables from /path/to/variables/directory",
 				"Reading variables from /path/to/other/variables/directory",
-				"Reading instance groups from /path/to/instance-groups/directory",
 				"Reading property blueprints from /path/to/properties/directory",
 			}))
 
@@ -367,43 +290,6 @@ var _ = Describe("MetadataBuilder", func() {
 			})
 		})
 
-		Context("when no job directories are specified", func() {
-			BeforeEach(func() {
-				metadataReader.ReadReturns(builder.Metadata{
-					"name":                      "cool-product",
-					"metadata_version":          "some-metadata-version",
-					"provides_product_versions": "some-provides-product-versions",
-					"job_types": []interface{}{
-						map[interface{}]interface{}{
-							"name":  "job-type",
-							"label": "Job Type",
-						},
-					},
-				},
-					nil,
-				)
-			})
-
-			It("includes the job types from the metadata", func() {
-				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
-					MetadataPath:   "/some/path/metadata.yml",
-					JobDirectories: []string{},
-					IconPath:       "some-icon-path",
-					Version:        "1.2.3",
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(generatedMetadata.JobTypes).To(Equal([]builder.Part{
-					{
-						Metadata: map[interface{}]interface{}{
-							"name":  "job-type",
-							"label": "Job Type",
-						},
-					},
-				}))
-			})
-		})
-
 		Context("failure cases", func() {
 			Context("when the properties directory cannot be read", func() {
 				It("returns an error", func() {
@@ -413,17 +299,6 @@ var _ = Describe("MetadataBuilder", func() {
 						PropertyDirectories: []string{"/path/to/missing/property"},
 					})
 					Expect(err).To(MatchError(`error reading from properties directory "/path/to/missing/property": some properties error`))
-				})
-			})
-
-			Context("when the instance group directory cannot be read", func() {
-				It("returns an error", func() {
-					instanceGroupsDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some instance group error"))
-
-					_, err := tileBuilder.Build(builder.BuildInput{
-						InstanceGroupDirectories: []string{"/path/to/missing/instance-groups"},
-					})
-					Expect(err).To(MatchError(`error reading from instance group directory "/path/to/missing/instance-groups": some instance group error`))
 				})
 			})
 

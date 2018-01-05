@@ -18,8 +18,6 @@ type MetadataBuilder struct {
 
 type BuildInput struct {
 	IconPath                 string
-	InstanceGroupDirectories []string
-	JobDirectories           []string
 	MetadataPath             string
 	PropertyDirectories      []string
 	RuntimeConfigDirectories []string
@@ -51,8 +49,6 @@ type logger interface {
 }
 
 func NewMetadataBuilder(
-	instanceGroupDirectoryReader metadataPartsDirectoryReader,
-	jobsDirectoryReader metadataPartsDirectoryReader,
 	propertiesDirectoryReader metadataPartsDirectoryReader,
 	runtimeConfigsDirectoryReader,
 	variablesDirectoryReader metadataPartsDirectoryReader,
@@ -61,8 +57,6 @@ func NewMetadataBuilder(
 	iconEncoder iconEncoder,
 ) MetadataBuilder {
 	return MetadataBuilder{
-		instanceGroupDirectoryReader:  instanceGroupDirectoryReader,
-		jobsDirectoryReader:           jobsDirectoryReader,
 		iconEncoder:                   iconEncoder,
 		logger:                        logger,
 		metadataReader:                metadataReader,
@@ -98,22 +92,15 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		return GeneratedMetadata{}, err
 	}
 
-	jobTypes, err := m.buildJobTypes(input.InstanceGroupDirectories, input.JobDirectories, metadata)
-	if err != nil {
-		return GeneratedMetadata{}, err
-	}
-
 	propertyBlueprints, err := m.buildPropertyBlueprints(input.PropertyDirectories, metadata)
 	if err != nil {
 		return GeneratedMetadata{}, err
 	}
 
 	delete(metadata, "name")
-	delete(metadata, "job_types")
 	delete(metadata, "property_blueprints")
 
 	return GeneratedMetadata{
-		JobTypes:           jobTypes,
 		IconImage:          encodedIcon,
 		Name:               productName,
 		PropertyBlueprints: propertyBlueprints,
@@ -191,29 +178,4 @@ func (m MetadataBuilder) buildVariables(vars []string, metadata Metadata) ([]Par
 	}
 
 	return variables, nil
-}
-
-func (m MetadataBuilder) buildJobTypes(typeDirs, jobDirs []string, metadata Metadata) ([]Part, error) {
-	// we are not testing this functionality but we plan to rip it out in the next story (#153491107)
-	var jobTypes []Part
-
-	if len(typeDirs) > 0 {
-		for _, typeDir := range typeDirs {
-			m.logger.Printf("Reading instance groups from %s", typeDir)
-
-			jobTypesInDir, err := m.instanceGroupDirectoryReader.Read(typeDir)
-			if err != nil {
-				return nil, fmt.Errorf("error reading from instance group directory %q: %s", typeDir, err)
-			}
-			jobTypes = append(jobTypes, jobTypesInDir...)
-		}
-	} else {
-		if jt, ok := metadata["job_types"].([]interface{}); ok {
-			for _, j := range jt {
-				jobTypes = append(jobTypes, Part{Metadata: j})
-			}
-		}
-	}
-
-	return jobTypes, nil
 }
