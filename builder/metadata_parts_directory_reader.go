@@ -104,23 +104,34 @@ func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, var
 			if !ok {
 				return []Part{}, fmt.Errorf("metadata item '%v' must be a map", item)
 			}
-			name, ok := i["name"].(string)
-			if !ok {
-				return []Part{}, fmt.Errorf("metadata item '%v' does not have a `name` field", item)
+
+			part, err := r.buildPartFromMetadata(i, fileName)
+			if err != nil {
+				return []Part{}, err
 			}
-			parts = append(parts, Part{File: fileName, Name: name, Metadata: item})
+
+			parts = append(parts, part)
 		}
 	case map[interface{}]interface{}:
-		name, ok := v["name"].(string)
-		if !ok {
-			return []Part{}, fmt.Errorf("metadata item '%v' does not have a `name` field", v)
+		part, err := r.buildPartFromMetadata(v, fileName)
+		if err != nil {
+			return []Part{}, err
 		}
-		parts = append(parts, Part{File: fileName, Name: name, Metadata: v})
+		parts = append(parts, part)
 	default:
 		return []Part{}, fmt.Errorf("expected either slice or map value")
 	}
 
 	return parts, nil
+}
+
+func (r MetadataPartsDirectoryReader) buildPartFromMetadata(metadata map[interface{}]interface{}, legacyFilename string) (Part, error) {
+	name, ok := metadata["name"].(string)
+	if !ok {
+		return Part{}, fmt.Errorf("metadata item '%v' does not have a `name` field", metadata)
+	}
+
+	return Part{File: legacyFilename, Name: name, Metadata: metadata}, nil
 }
 
 func (r MetadataPartsDirectoryReader) orderWithOrderFromFile(path string, parts []Part) ([]Part, error) {
