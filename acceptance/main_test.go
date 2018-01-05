@@ -182,7 +182,7 @@ templates:
 name: some-other-instance-group
 label: Some Other Instance Group
 templates:
-- $( job "some-other-job" )
+- $( job "some-job-alias" )
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -194,6 +194,7 @@ release: some-release
 
 		err = ioutil.WriteFile(filepath.Join(someOtherJobsDirectory, "some-other-job.yml"), []byte(`---
 name: some-other-job
+alias: some-job-alias
 release: some-other-release
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())

@@ -126,10 +126,14 @@ func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, var
 }
 
 func (r MetadataPartsDirectoryReader) buildPartFromMetadata(metadata map[interface{}]interface{}, legacyFilename string) (Part, error) {
-	name, ok := metadata["name"].(string)
+	name, ok := metadata["alias"].(string)
 	if !ok {
-		return Part{}, fmt.Errorf("metadata item '%v' does not have a `name` field", metadata)
+		name, ok = metadata["name"].(string)
+		if !ok {
+			return Part{}, fmt.Errorf("metadata item '%v' does not have a `name` field", metadata)
+		}
 	}
+	delete(metadata, "alias")
 
 	return Part{File: legacyFilename, Name: name, Metadata: metadata}, nil
 }

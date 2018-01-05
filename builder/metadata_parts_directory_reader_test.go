@@ -34,12 +34,13 @@ var _ = Describe("MetadataPartsDirectoryReader", func() {
 - name: variable-1
   type: certificate
 - name: variable-2
+  alias: variable-2-alias
   type: user
 `), 0755)
 			Expect(err).ToNot(HaveOccurred())
 			err = ioutil.WriteFile(filepath.Join(tempDir, "vars-file-2.yml"), []byte(`---
-- name: variable-3
-  type: password
+name: variable-3
+type: password
 `), 0755)
 			Expect(err).ToNot(HaveOccurred())
 			err = ioutil.WriteFile(filepath.Join(tempDir, "ignores.any-other-extension"), []byte("not-yaml"), 0755)
@@ -62,7 +63,7 @@ var _ = Describe("MetadataPartsDirectoryReader", func() {
 				},
 				{
 					File: "vars-file-1.yml",
-					Name: "variable-2",
+					Name: "variable-2-alias",
 					Metadata: map[interface{}]interface{}{
 						"name": "variable-2",
 						"type": "user",
