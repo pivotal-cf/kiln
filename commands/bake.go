@@ -44,6 +44,7 @@ type Bake struct {
 	stemcellManifestReader       partReader
 	formDirectoryReader          directoryReader
 	instanceGroupDirectoryReader directoryReader
+	jobDirectoryReader           directoryReader
 	Options                      BakeConfig
 }
 
@@ -92,6 +93,7 @@ func NewBake(metadataBuilder metadataBuilder,
 	stemcellManifestReader partReader,
 	formDirectoryReader directoryReader,
 	instanceGroupDirectoryReader directoryReader,
+	jobDirectoryReader directoryReader,
 ) Bake {
 	return Bake{
 		metadataBuilder:              metadataBuilder,
@@ -102,6 +104,7 @@ func NewBake(metadataBuilder metadataBuilder,
 		stemcellManifestReader:       stemcellManifestReader,
 		formDirectoryReader:          formDirectoryReader,
 		instanceGroupDirectoryReader: instanceGroupDirectoryReader,
+		jobDirectoryReader:           jobDirectoryReader,
 	}
 }
 
@@ -178,6 +181,22 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
+	var jobs map[string]interface{}
+	if config.JobDirectories != nil {
+		b.logger.Println("Reading jobs files...")
+		jobs = map[string]interface{}{}
+		for _, jobsDir := range config.JobDirectories {
+			jobsInDirectory, err := b.jobDirectoryReader.Read(jobsDir)
+			if err != nil {
+				return err
+			}
+
+			for _, job := range jobsInDirectory {
+				jobs[job.Name] = job.Metadata
+			}
+		}
+	}
+
 	err = b.addVariablesToMap(config.Variables, variables)
 	if err != nil {
 		return err
@@ -213,6 +232,7 @@ func (b Bake) Execute(args []string) error {
 		FormTypes:        formTypes,
 		IconImage:        generatedMetadata.IconImage,
 		InstanceGroups:   instanceGroups,
+		Jobs:             jobs,
 	}, generatedMetadataYAML)
 	if err != nil {
 		return err

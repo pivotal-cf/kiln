@@ -22,6 +22,7 @@ var _ = Describe("bake", func() {
 		fakeStemcellManifestReader       *fakes.PartReader
 		fakeFormDirectoryReader          *fakes.DirectoryReader
 		fakeInstanceGroupDirectoryReader *fakes.DirectoryReader
+		fakeJobsDirectoryReader          *fakes.DirectoryReader
 		fakeInterpolator                 *fakes.Interpolator
 		fakeTileWriter                   *fakes.TileWriter
 		fakeLogger                       *fakes.Logger
@@ -76,6 +77,7 @@ var _ = Describe("bake", func() {
 		fakeStemcellManifestReader = &fakes.PartReader{}
 		fakeFormDirectoryReader = &fakes.DirectoryReader{}
 		fakeInstanceGroupDirectoryReader = &fakes.DirectoryReader{}
+		fakeJobsDirectoryReader = &fakes.DirectoryReader{}
 		fakeInterpolator = &fakes.Interpolator{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
@@ -127,6 +129,17 @@ var _ = Describe("bake", func() {
 			},
 		}, nil)
 
+		fakeJobsDirectoryReader.ReadReturns([]builder.Part{
+			{
+				Name: "some-job",
+				Metadata: builder.Metadata{
+					"name":     "some-job",
+					"release":  "some-release",
+					"consumes": "some-link",
+				},
+			},
+		}, nil)
+
 		generatedMetadata = builder.GeneratedMetadata{
 			IconImage: "some-icon-image",
 			Name:      "some-product-name",
@@ -147,6 +160,7 @@ var _ = Describe("bake", func() {
 			fakeStemcellManifestReader,
 			fakeFormDirectoryReader,
 			fakeInstanceGroupDirectoryReader,
+			fakeJobsDirectoryReader,
 		)
 	})
 
@@ -221,6 +235,13 @@ var _ = Describe("bake", func() {
 						"manifest": "some-manifest",
 						"provides": "some-link",
 						"release":  "some-release",
+					},
+				},
+				Jobs: map[string]interface{}{
+					"some-job": builder.Metadata{
+						"name":     "some-job",
+						"release":  "some-release",
+						"consumes": "some-link",
 					},
 				},
 			}))
@@ -600,6 +621,7 @@ var _ = Describe("bake", func() {
 				fakeStemcellManifestReader,
 				fakeFormDirectoryReader,
 				fakeInstanceGroupDirectoryReader,
+				fakeJobsDirectoryReader,
 			)
 			Expect(command.Usage()).To(Equal(jhandacommands.Usage{
 				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",

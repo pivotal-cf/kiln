@@ -34,7 +34,7 @@ func main() {
 	handcraftReader := builder.NewMetadataReader(filesystem, logger)
 	iconEncoder := builder.NewIconEncoder(filesystem)
 	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("job")
+	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("property_blueprints")
 	releaseManifestReader := builder.NewReleaseManifestReader()
 	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("runtime_configs")
@@ -65,6 +65,7 @@ func main() {
 		stemcellManifestReader,
 		formDirectoryReader,
 		instanceGroupDirectoryReader,
+		jobsDirectoryReader,
 	)
 
 	var command string

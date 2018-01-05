@@ -19,6 +19,7 @@ type InterpolateInput struct {
 	FormTypes        map[string]interface{}
 	IconImage        string
 	InstanceGroups   map[string]interface{}
+	Jobs             map[string]interface{}
 }
 
 func NewInterpolator() Interpolator {
@@ -77,6 +78,14 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 			val, ok := input.InstanceGroups[name]
 			if !ok {
 				return "", fmt.Errorf("could not find instance_group with name '%s'", name)
+			}
+
+			return i.interpolateValueIntoYAML(input, val)
+		},
+		"job": func(name string) (string, error) {
+			val, ok := input.Jobs[name]
+			if !ok {
+				return "", fmt.Errorf("could not find job with name '%s'", name)
 			}
 
 			return i.interpolateValueIntoYAML(input, val)

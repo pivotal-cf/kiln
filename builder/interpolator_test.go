@@ -48,10 +48,16 @@ job_types:
 			IconImage: "some-icon-image",
 			InstanceGroups: map[string]interface{}{
 				"some-instance-group": builder.Metadata{
-					"manifest": "some-manifest",
-					"name":     "some-instance-group",
-					"provides": "some-link",
-					"release":  "some-release",
+					"name": "some-instance-group",
+					"templates": []string{
+						"$( job \"some-job\" )",
+					},
+				},
+			},
+			Jobs: map[string]interface{}{
+				"some-job": builder.Metadata{
+					"name":    "some-job",
+					"release": "some-release",
 				},
 			},
 		}
@@ -77,9 +83,9 @@ form_types:
   label: some-form-label
 job_types:
 - name: some-instance-group
-  manifest: some-manifest
-  provides: some-link
-  release: some-release
+  templates:
+  - name: some-job
+    release: some-release
 `))
 		Expect(string(interpolatedYAML)).To(ContainSubstring("file: some-release-1.2.3.tgz\n"))
 	})
@@ -111,9 +117,9 @@ form_types:
   label: variable-form-label
 job_types:
 - name: some-instance-group
-  manifest: some-manifest
-  provides: some-link
-  release: some-release
+  templates:
+  - name: some-job
+    release: some-release
 `))
 	})
 
@@ -195,6 +201,15 @@ job_types:
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not find instance_group with name 'some-instance-group-does-not-exist'"))
+			})
+		})
+		Context("when a specified job is not included in the interpolate input", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				_, err := interpolator.Interpolate(input, []byte(`job: [$(job "some-job-does-not-exist")]`))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("could not find job with name 'some-job-does-not-exist'"))
 			})
 		})
 

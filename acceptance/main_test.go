@@ -32,6 +32,8 @@ var _ = Describe("kiln", func() {
 		someOtherFormsDirectory          string
 		someInstanceGroupsDirectory      string
 		someOtherInstanceGroupsDirectory string
+		someJobsDirectory                string
+		someOtherJobsDirectory           string
 		stemcellTarball                  string
 		tmpDir                           string
 		diegoSHA1                        string
@@ -83,6 +85,12 @@ var _ = Describe("kiln", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		someOtherInstanceGroupsDirectory, err = ioutil.TempDir(tmpDir, "")
+		Expect(err).NotTo(HaveOccurred())
+
+		someJobsDirectory, err = ioutil.TempDir(tmpDir, "")
+		Expect(err).NotTo(HaveOccurred())
+
+		someOtherJobsDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		cfReleaseManifest := `---
@@ -166,8 +174,7 @@ description: some-form-description
 name: some-instance-group
 label: Some Instance Group
 templates:
-- name: some-job
-  release: some-release
+- $( job "some-job" )
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -175,8 +182,19 @@ templates:
 name: some-other-instance-group
 label: Some Other Instance Group
 templates:
-- name: some-other-job
-  release: some-other-release
+- $( job "some-other-job" )
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(filepath.Join(someJobsDirectory, "some-job.yml"), []byte(`---
+name: some-job
+release: some-release
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(filepath.Join(someOtherJobsDirectory, "some-other-job.yml"), []byte(`---
+name: some-other-job
+release: some-other-release
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -222,6 +240,8 @@ variables:
 			"--icon", someIconPath,
 			"--instance-groups-directory", someInstanceGroupsDirectory,
 			"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+			"--jobs-directory", someJobsDirectory,
+			"--jobs-directory", someOtherJobsDirectory,
 			"--metadata", metadata,
 			"--migrations-directory", "fixtures/extra-migrations",
 			"--migrations-directory", "fixtures/migrations",
@@ -330,6 +350,8 @@ variables:
 				"--releases-directory", otherReleasesDirectory,
 				"--instance-groups-directory", someInstanceGroupsDirectory,
 				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+				"--jobs-directory", someJobsDirectory,
+				"--jobs-directory", someOtherJobsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--stub-releases",
 				"--variable", "some-variable=some-variable-value",
@@ -375,6 +397,8 @@ variables:
 				"--releases-directory", otherReleasesDirectory,
 				"--instance-groups-directory", someInstanceGroupsDirectory,
 				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+				"--jobs-directory", someJobsDirectory,
+				"--jobs-directory", someOtherJobsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--variable", "some-variable=some-variable-value",
 				"--version", "1.2.3",
@@ -433,6 +457,8 @@ variables:
 					"--releases-directory", otherReleasesDirectory,
 					"--instance-groups-directory", someInstanceGroupsDirectory,
 					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+					"--jobs-directory", someJobsDirectory,
+					"--jobs-directory", someOtherJobsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
@@ -511,6 +537,8 @@ variables:
 					"--releases-directory", otherReleasesDirectory,
 					"--instance-groups-directory", someInstanceGroupsDirectory,
 					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+					"--jobs-directory", someJobsDirectory,
+					"--jobs-directory", someOtherJobsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
@@ -586,6 +614,8 @@ variables:
 				"--releases-directory", someReleasesDirectory,
 				"--instance-groups-directory", someInstanceGroupsDirectory,
 				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+				"--jobs-directory", someJobsDirectory,
+				"--jobs-directory", someOtherJobsDirectory,
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--bosh-variables-directory", someVariablesDirectory,
@@ -660,6 +690,8 @@ variables:
 					"--releases-directory", otherReleasesDirectory,
 					"--instance-groups-directory", someInstanceGroupsDirectory,
 					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+					"--jobs-directory", someJobsDirectory,
+					"--jobs-directory", someOtherJobsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--variable", "some-variable=some-variable-value",
 					"--version", "1.2.3",
