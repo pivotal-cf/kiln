@@ -208,7 +208,6 @@ func (b Bake) Execute(args []string) error {
 		PropertyDirectories:      config.PropertyDirectories,
 		RuntimeConfigDirectories: config.RuntimeConfigDirectories,
 		BOSHVariableDirectories:  config.BOSHVariableDirectories,
-		Version:                  config.Version,
 	}
 
 	generatedMetadata, err := b.metadataBuilder.Build(buildInput)
@@ -224,6 +223,7 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	interpolatedMetadata, err := b.interpolator.Interpolate(builder.InterpolateInput{
+		Version:          config.Version,
 		Variables:        variables,
 		ReleaseManifests: releaseManifests,
 		StemcellManifest: stemcellManifest,
@@ -278,10 +278,6 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 
 	if config.Metadata == "" {
 		return config, errors.New("--metadata is a required parameter")
-	}
-
-	if config.Version == "" {
-		return config, errors.New("--version is a required parameter")
 	}
 
 	if config.OutputFile == "" {

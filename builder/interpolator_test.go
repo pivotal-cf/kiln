@@ -18,12 +18,14 @@ form_types:
 - $( form "some-form" )
 job_types:
 - $( instance_group "some-instance-group" )
+version: $( version )
 `
 
 	var input builder.InterpolateInput
 
 	BeforeEach(func() {
 		input = builder.InterpolateInput{
+			Version: "3.4.5",
 			Variables: map[string]string{
 				"some-variable": "some-value",
 			},
@@ -86,6 +88,7 @@ job_types:
   templates:
   - name: some-job
     release: some-release
+version: 3.4.5
 `))
 		Expect(string(interpolatedYAML)).To(ContainSubstring("file: some-release-1.2.3.tgz\n"))
 	})
@@ -120,6 +123,7 @@ job_types:
   templates:
   - name: some-job
     release: some-release
+version: 3.4.5
 `))
 	})
 
@@ -183,6 +187,17 @@ job_types:
 			})
 		})
 
+		Context("when the version helper is used without providing the version flag", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				input.Version = ""
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("version flag must be specified"))
+			})
+		})
+
 		Context("when the stemcell helper is used without providing the stemcell", func() {
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
@@ -190,7 +205,7 @@ job_types:
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("stemcell-tarball must be specified"))
+				Expect(err.Error()).To(ContainSubstring("stemcell-tarball flag must be specified"))
 			})
 		})
 

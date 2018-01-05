@@ -202,6 +202,7 @@ var _ = Describe("bake", func() {
 
 			input, _ := fakeInterpolator.InterpolateArgsForCall(0)
 			Expect(input).To(Equal(builder.InterpolateInput{
+				Version: "1.2.3",
 				Variables: map[string]string{
 					"some-variable-from-file": "some-variable-value-from-file",
 					"some-variable":           "some-variable-value",
@@ -543,20 +544,6 @@ var _ = Describe("bake", func() {
 					})
 
 					Expect(err).To(MatchError("Please specify release tarballs directory with the --releases-directory parameter"))
-				})
-			})
-
-			Context("when the version flag is missing", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-					})
-
-					Expect(err).To(MatchError("--version is a required parameter"))
 				})
 			})
 

@@ -13,6 +13,7 @@ import (
 type Interpolator struct{}
 
 type InterpolateInput struct {
+	Version          string
 	Variables        map[string]string
 	ReleaseManifests map[string]interface{}
 	StemcellManifest interface{}
@@ -60,9 +61,15 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 		},
 		"stemcell": func() (string, error) {
 			if input.StemcellManifest == nil {
-				return "", errors.New("stemcell-tarball must be specified")
+				return "", errors.New("stemcell-tarball flag must be specified")
 			}
 			return i.interpolateValueIntoYAML(input, input.StemcellManifest)
+		},
+		"version": func() (string, error) {
+			if input.Version == "" {
+				return "", errors.New("version flag must be specified")
+			}
+			return i.interpolateValueIntoYAML(input, input.Version)
 		},
 		"variable": func(key string) (string, error) {
 			val, ok := input.Variables[key]

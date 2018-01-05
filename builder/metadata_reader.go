@@ -2,7 +2,6 @@ package builder
 
 import (
 	"io/ioutil"
-	"regexp"
 
 	"gopkg.in/yaml.v2"
 )
@@ -32,11 +31,6 @@ func (h MetadataReader) Read(path, version string) (Metadata, error) {
 	if err != nil {
 		return Metadata{}, err
 	}
-
-	versionRegexp := regexp.MustCompile(`\d+.\d+.\d+.[0-9]\$PRERELEASE_VERSION\$`)
-
-	h.logger.Printf("Injecting version %q into metadata...", version)
-	contents = versionRegexp.ReplaceAll(contents, []byte(version))
 
 	var metadata Metadata
 	err = yaml.Unmarshal(contents, &metadata)

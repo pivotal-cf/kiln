@@ -17,7 +17,7 @@ metadata_version: '1.7'
 provides_product_versions:
 - name: cf
   version: 1.7.0.0
-product_version: &product_version "1.7.0.0$PRERELEASE_VERSION$"
+product_version: &product_version "1.2.3"
 minimum_version_for_upgrade: 1.6.9-build.0
 label: Pivotal Elastic Runtime
 description:
@@ -69,7 +69,7 @@ var _ = Describe("MetadataReader", func() {
 				"name":    "cf",
 				"version": "1.7.0.0",
 			}}))
-			Expect(metadata["product_version"]).To(Equal("1.2.34-build.4"))
+			Expect(metadata["product_version"]).To(Equal("1.2.3"))
 			Expect(metadata["minimum_version_for_upgrade"]).To(Equal("1.6.9-build.0"))
 			Expect(metadata["label"]).To(Equal("Pivotal Elastic Runtime"))
 			Expect(metadata["description"]).To(Equal("this is the description"))
@@ -96,12 +96,8 @@ var _ = Describe("MetadataReader", func() {
 				"name":         "product_version",
 				"type":         "string",
 				"configurable": false,
-				"default":      "1.2.34-build.4",
+				"default":      "1.2.3",
 			}}))
-
-			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-				"Injecting version \"1.2.34-build.4\" into metadata...",
-			}))
 		})
 	})
 
