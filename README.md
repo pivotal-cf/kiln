@@ -93,6 +93,48 @@ $ kiln bake \
     --output-file /path/to/cf-2.0.0-build.4.pivotal
 ```
 
+##### `--runtime-configs-directory`
+
+The `--runtime-configs-directory` flag takes a path to a directory that
+contains one or more runtime config files. The flag can also be specified
+more than once.
+```
+$ tree /path/to/runtime-configs
+/path/to/runtime-configs/
+├── first-runtime-config.yml
+└── second-runtime-config.yml
+
+$ cat /path/to/runtime-configs/first-runtime-config.yml
+---
+name: first-runtime-config
+runtime_config: |
+  releases:
+  - name: first-addon-release
+    version: first-addon-release-version
+  addons:
+  - name: first-addon
+    jobs:
+    - name: first-addon-job
+      release: first-addon-release
+      properties:
+        key: value
+
+$ cat /path/to/metadata
+---
+runtime_configs:
+- $( runtime_config "first-addon-release" )
+
+$ kiln bake \
+    --version 2.0.0 \
+    --metadata /path/to/metadata.yml \
+    --releases-directory /path/to/releases/first \
+    --releases-directory /path/to/releases/second \
+    --stemcell-tarball /path/to/stemcell.tgz \
+    --runtime-configs-directory /path/to/runtime-configs \
+    --migrations-directory /path/to/migrations \
+    --output-file /path/to/cf-2.0.0-build.4.pivotal
+```
+
 ##### `--stemcell-tarball`
 
 The `--stemcell-tarball` flag takes a path to a stemcell. That stemcell will be
