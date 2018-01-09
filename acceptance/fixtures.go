@@ -32,6 +32,8 @@ forms:
 job_types:
 - $( instance_group "some-instance-group" )
 - $( instance_group "some-other-instance-group" )
+property_blueprints:
+- $( property "some_templated_property_blueprint" )
 `)
 
 var expectedMetadata = `---
@@ -71,10 +73,10 @@ post_deploy_errands:
 - name: smoke-tests
 product_version: 1.2.3
 property_blueprints:
-- name: some_property_blueprint
+- name: some_templated_property_blueprint
   type: boolean
-  configurable: true
-  default: false
+  configurable: false
+  default: true
 provides_product_versions:
 - name: cf
   version: 1.7.0.0

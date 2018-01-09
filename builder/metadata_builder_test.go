@@ -156,7 +156,6 @@ var _ = Describe("MetadataBuilder", func() {
 			generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
 				IconPath:                 "some-icon-path",
 				MetadataPath:             "/some/path/metadata.yml",
-				PropertyDirectories:      []string{"/path/to/properties/directory"},
 				RuntimeConfigDirectories: []string{"/path/to/runtime-configs/directory", "/path/to/other/runtime-configs/directory"},
 				BOSHVariableDirectories:  []string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
 				Version:                  "1.2.3",
@@ -167,22 +166,6 @@ var _ = Describe("MetadataBuilder", func() {
 			Expect(version).To(Equal("1.2.3"))
 
 			Expect(generatedMetadata.Name).To(Equal("cool-product"))
-			Expect(generatedMetadata.PropertyBlueprints).To(Equal([]builder.Part{
-				{
-					File: "property-1.yml",
-					Name: "property-1",
-					Metadata: map[interface{}]interface{}{
-						"name": "property-1",
-					},
-				},
-				{
-					File: "property-2.yml",
-					Name: "property-2",
-					Metadata: map[interface{}]interface{}{
-						"name": "property-2",
-					},
-				},
-			}))
 			Expect(generatedMetadata.RuntimeConfigs).To(Equal([]builder.Part{
 				{
 					File: "runtime-config-1.yml",
@@ -245,7 +228,6 @@ var _ = Describe("MetadataBuilder", func() {
 				"Reading runtime configs from /path/to/other/runtime-configs/directory",
 				"Reading variables from /path/to/variables/directory",
 				"Reading variables from /path/to/other/variables/directory",
-				"Reading property blueprints from /path/to/properties/directory",
 			}))
 
 			Expect(iconEncoder.EncodeCallCount()).To(Equal(1))
@@ -270,38 +252,9 @@ var _ = Describe("MetadataBuilder", func() {
 					nil,
 				)
 			})
-
-			It("includes the property blueprints from the metadata", func() {
-				generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
-					MetadataPath: "/some/path/metadata.yml",
-					IconPath:     "some-icon-path",
-					Version:      "1.2.3",
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(generatedMetadata.PropertyBlueprints).To(Equal([]builder.Part{
-					{
-						Metadata: map[interface{}]interface{}{
-							"name": "property-1",
-							"type": "string",
-						},
-					},
-				}))
-			})
 		})
 
 		Context("failure cases", func() {
-			Context("when the properties directory cannot be read", func() {
-				It("returns an error", func() {
-					propertiesDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some properties error"))
-
-					_, err := tileBuilder.Build(builder.BuildInput{
-						PropertyDirectories: []string{"/path/to/missing/property"},
-					})
-					Expect(err).To(MatchError(`error reading from properties directory "/path/to/missing/property": some properties error`))
-				})
-			})
-
 			Context("when the runtime configs directory cannot be read", func() {
 				It("returns an error", func() {
 					runtimeConfigsDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some error"))

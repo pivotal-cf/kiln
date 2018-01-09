@@ -36,17 +36,20 @@ type BakeConfig struct {
 }
 
 type Bake struct {
-	metadataBuilder              metadataBuilder
-	interpolator                 interpolator
-	tileWriter                   tileWriter
-	logger                       logger
-	releaseManifestReader        partReader
-	stemcellManifestReader       partReader
-	formDirectoryReader          directoryReader
-	instanceGroupDirectoryReader directoryReader
-	jobDirectoryReader           directoryReader
-	Options                      BakeConfig
+	metadataBuilder                  metadataBuilder
+	interpolator                     interpolator
+	tileWriter                       tileWriter
+	logger                           logger
+	releaseManifestReader            partReader
+	stemcellManifestReader           partReader
+	formDirectoryReader              directoryReader
+	instanceGroupDirectoryReader     directoryReader
+	jobDirectoryReader               directoryReader
+	propertyBlueprintDirectoryReader directoryReader
+	Options                          BakeConfig
 }
+
+var yamlMarshal = yaml.Marshal
 
 //go:generate counterfeiter -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
 
@@ -94,17 +97,19 @@ func NewBake(metadataBuilder metadataBuilder,
 	formDirectoryReader directoryReader,
 	instanceGroupDirectoryReader directoryReader,
 	jobDirectoryReader directoryReader,
+	propertyBlueprintDirectoryReader directoryReader,
 ) Bake {
 	return Bake{
-		metadataBuilder:              metadataBuilder,
-		interpolator:                 interpolator,
-		tileWriter:                   tileWriter,
-		logger:                       logger,
-		releaseManifestReader:        releaseManifestReader,
-		stemcellManifestReader:       stemcellManifestReader,
-		formDirectoryReader:          formDirectoryReader,
-		instanceGroupDirectoryReader: instanceGroupDirectoryReader,
-		jobDirectoryReader:           jobDirectoryReader,
+		metadataBuilder:                  metadataBuilder,
+		interpolator:                     interpolator,
+		tileWriter:                       tileWriter,
+		logger:                           logger,
+		releaseManifestReader:            releaseManifestReader,
+		stemcellManifestReader:           stemcellManifestReader,
+		formDirectoryReader:              formDirectoryReader,
+		instanceGroupDirectoryReader:     instanceGroupDirectoryReader,
+		jobDirectoryReader:               jobDirectoryReader,
+		propertyBlueprintDirectoryReader: propertyBlueprintDirectoryReader,
 	}
 }
 
@@ -197,6 +202,22 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
+	var propertyBlueprints map[string]interface{}
+	if config.PropertyDirectories != nil {
+		b.logger.Println("Reading property blueprint files...")
+		propertyBlueprints = map[string]interface{}{}
+		for _, propertyBlueprintDir := range config.PropertyDirectories {
+			propertyBlueprintsInDirectory, err := b.propertyBlueprintDirectoryReader.Read(propertyBlueprintDir)
+			if err != nil {
+				return err
+			}
+
+			for _, propertyBlueprint := range propertyBlueprintsInDirectory {
+				propertyBlueprints[propertyBlueprint.Name] = propertyBlueprint.Metadata
+			}
+		}
+	}
+
 	err = b.addVariablesToMap(config.Variables, variables)
 	if err != nil {
 		return err
@@ -205,7 +226,6 @@ func (b Bake) Execute(args []string) error {
 	buildInput := builder.BuildInput{
 		IconPath:                 config.IconPath,
 		MetadataPath:             config.Metadata,
-		PropertyDirectories:      config.PropertyDirectories,
 		RuntimeConfigDirectories: config.RuntimeConfigDirectories,
 		BOSHVariableDirectories:  config.BOSHVariableDirectories,
 	}
@@ -217,20 +237,21 @@ func (b Bake) Execute(args []string) error {
 
 	b.logger.Println("Marshaling metadata file...")
 
-	generatedMetadataYAML, err := yaml.Marshal(generatedMetadata)
+	generatedMetadataYAML, err := yamlMarshal(generatedMetadata)
 	if err != nil {
 		return err
 	}
 
 	interpolatedMetadata, err := b.interpolator.Interpolate(builder.InterpolateInput{
-		Version:          config.Version,
-		Variables:        variables,
-		ReleaseManifests: releaseManifests,
-		StemcellManifest: stemcellManifest,
-		FormTypes:        formTypes,
-		IconImage:        generatedMetadata.IconImage,
-		InstanceGroups:   instanceGroups,
-		Jobs:             jobs,
+		Version:            config.Version,
+		Variables:          variables,
+		ReleaseManifests:   releaseManifests,
+		StemcellManifest:   stemcellManifest,
+		FormTypes:          formTypes,
+		IconImage:          generatedMetadata.IconImage,
+		InstanceGroups:     instanceGroups,
+		Jobs:               jobs,
+		PropertyBlueprints: propertyBlueprints,
 	}, generatedMetadataYAML)
 	if err != nil {
 		return err

@@ -19,11 +19,19 @@ form_types:
 job_types:
 - $( instance_group "some-instance-group" )
 version: $( version )
+property_blueprints:
+- $( property "some-templated-property" )
+- $( property "some-other-templated-property" )
 `
 
-	var input builder.InterpolateInput
+	var (
+		input        builder.InterpolateInput
+		interpolator builder.Interpolator
+	)
 
 	BeforeEach(func() {
+		interpolator = builder.NewInterpolator()
+
 		input = builder.InterpolateInput{
 			Version: "3.4.5",
 			Variables: map[string]string{
@@ -62,11 +70,24 @@ version: $( version )
 					"release": "some-release",
 				},
 			},
+			PropertyBlueprints: map[string]interface{}{
+				"some-templated-property": builder.Metadata{
+					"name":         "some-templated-property",
+					"type":         "boolean",
+					"configurable": true,
+					"default":      false,
+				},
+				"some-other-templated-property": builder.Metadata{
+					"name":         "some-other-templated-property",
+					"type":         "string",
+					"configurable": false,
+					"default":      "some-value",
+				},
+			},
 		}
 	})
 
 	It("interpolates metadata templates", func() {
-		interpolator := builder.NewInterpolator()
 		interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(interpolatedYAML).To(MatchYAML(`
@@ -89,41 +110,43 @@ job_types:
   - name: some-job
     release: some-release
 version: 3.4.5
+property_blueprints:
+- name: some-templated-property
+  type: boolean
+  configurable: true
+  default: false
+- name: some-other-templated-property
+  type: string
+  configurable: false
+  default: some-value
 `))
 		Expect(string(interpolatedYAML)).To(ContainSubstring("file: some-release-1.2.3.tgz\n"))
 	})
 
 	It("allows interpolation helpers inside forms", func() {
-		input.Variables["some-form-variable"] = "variable-form-label"
-		input.FormTypes = map[string]interface{}{
-			"some-form": builder.Metadata{
-				"name":  "some-form",
-				"label": `$( variable "some-form-variable" )`,
+		templateYAML := `
+---
+form_types:
+- $( form "some-form" )`
+
+		input := builder.InterpolateInput{
+			Variables: map[string]string{
+				"some-form-variable": "variable-form-label",
+			},
+			FormTypes: map[string]interface{}{
+				"some-form": builder.Metadata{
+					"name":  "some-form",
+					"label": `$( variable "some-form-variable" )`,
+				},
 			},
 		}
-		interpolator := builder.NewInterpolator()
+
 		interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(interpolatedYAML).To(MatchYAML(`
-name: some-value
-icon_img: some-icon-image
-releases:
-- name: some-release
-  file: some-release-1.2.3.tgz
-  version: 1.2.3
-  sha1: 123abc
-stemcell_criteria:
-  version: 2.3.4
-  os: an-operating-system
 form_types:
 - name: some-form
   label: variable-form-label
-job_types:
-- name: some-instance-group
-  templates:
-  - name: some-job
-    release: some-release
-version: 3.4.5
 `))
 	})
 
@@ -136,6 +159,17 @@ version: 3.4.5
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not find form with key 'some-form'"))
+			})
+		})
+
+		Context("when the requested property blueprint is not found", func() {
+			It("returns an error", func() {
+				input.PropertyBlueprints = map[string]interface{}{}
+				interpolator := builder.NewInterpolator()
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("could not find property blueprint with name 'some-templated-property'"))
 			})
 		})
 

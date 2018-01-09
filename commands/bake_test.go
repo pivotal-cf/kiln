@@ -4,12 +4,14 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	yaml "gopkg.in/yaml.v2"
 
 	jhandacommands "github.com/pivotal-cf/jhanda/commands"
+	"github.com/pivotal-cf/jhanda/flags"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
@@ -23,6 +25,7 @@ var _ = Describe("bake", func() {
 		fakeFormDirectoryReader          *fakes.DirectoryReader
 		fakeInstanceGroupDirectoryReader *fakes.DirectoryReader
 		fakeJobsDirectoryReader          *fakes.DirectoryReader
+		fakePropertyDirectoryReader      *fakes.DirectoryReader
 		fakeInterpolator                 *fakes.Interpolator
 		fakeTileWriter                   *fakes.TileWriter
 		fakeLogger                       *fakes.Logger
@@ -60,15 +63,15 @@ var _ = Describe("bake", func() {
 		otherReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		tarballRelease = someReleasesDirectory + "/release1.tgz"
+		tarballRelease = filepath.Join(someReleasesDirectory, "release1.tgz")
 		err = ioutil.WriteFile(tarballRelease, []byte(""), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		otherTarballRelease = otherReleasesDirectory + "/release2.tgz"
+		otherTarballRelease = filepath.Join(otherReleasesDirectory, "release2.tgz")
 		err = ioutil.WriteFile(otherTarballRelease, []byte(""), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		nonTarballRelease := someReleasesDirectory + "/some-broken-release"
+		nonTarballRelease := filepath.Join(someReleasesDirectory, "some-broken-release")
 		err = ioutil.WriteFile(nonTarballRelease, []byte(""), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -78,9 +81,14 @@ var _ = Describe("bake", func() {
 		fakeFormDirectoryReader = &fakes.DirectoryReader{}
 		fakeInstanceGroupDirectoryReader = &fakes.DirectoryReader{}
 		fakeJobsDirectoryReader = &fakes.DirectoryReader{}
+		fakePropertyDirectoryReader = &fakes.DirectoryReader{}
 		fakeInterpolator = &fakes.Interpolator{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
+
+		commands.SetYamlMarshal(func(interface{}) ([]byte, error) {
+			return []byte("some-yaml"), nil
+		})
 
 		fakeReleaseManifestReader.ReadReturnsOnCall(0, builder.Part{
 			Name: "some-release-1",
@@ -140,6 +148,18 @@ var _ = Describe("bake", func() {
 			},
 		}, nil)
 
+		fakePropertyDirectoryReader.ReadReturns([]builder.Part{
+			{
+				Name: "some-property",
+				Metadata: builder.Metadata{
+					"name":         "some-property",
+					"type":         "boolean",
+					"configurable": true,
+					"default":      false,
+				},
+			},
+		}, nil)
+
 		generatedMetadata = builder.GeneratedMetadata{
 			IconImage: "some-icon-image",
 			Name:      "some-product-name",
@@ -161,17 +181,19 @@ var _ = Describe("bake", func() {
 			fakeFormDirectoryReader,
 			fakeInstanceGroupDirectoryReader,
 			fakeJobsDirectoryReader,
+			fakePropertyDirectoryReader,
 		)
 	})
 
 	AfterEach(func() {
+		commands.ResetYamlMarshal()
+
 		Expect(variableFile.Close()).To(Succeed())
 		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
 	Describe("Execute", func() {
 		It("builds the tile", func() {
-
 			err := bake.Execute([]string{
 				"--embed", "some-embed-path",
 				"--forms-directory", "some-forms-directory",
@@ -196,11 +218,37 @@ var _ = Describe("bake", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
+			Expect(fakeReleaseManifestReader.ReadCallCount()).To(Equal(2))
+			Expect(fakeReleaseManifestReader.ReadArgsForCall(0)).To(Equal(filepath.Join(otherReleasesDirectory, "release2.tgz")))
+			Expect(fakeReleaseManifestReader.ReadArgsForCall(1)).To(Equal(filepath.Join(someReleasesDirectory, "release1.tgz")))
+
+			Expect(fakeStemcellManifestReader.ReadCallCount()).To(Equal(1))
+			Expect(fakeStemcellManifestReader.ReadArgsForCall(0)).To(Equal("some-stemcell-tarball"))
+
+			Expect(fakeFormDirectoryReader.ReadCallCount()).To(Equal(1))
+			Expect(fakeFormDirectoryReader.ReadArgsForCall(0)).To(Equal("some-forms-directory"))
+
+			Expect(fakeInstanceGroupDirectoryReader.ReadCallCount()).To(Equal(1))
+			Expect(fakeInstanceGroupDirectoryReader.ReadArgsForCall(0)).To(Equal("some-instance-groups-directory"))
+
+			Expect(fakeJobsDirectoryReader.ReadCallCount()).To(Equal(1))
+			Expect(fakeJobsDirectoryReader.ReadArgsForCall(0)).To(Equal("some-jobs-directory"))
+
+			Expect(fakePropertyDirectoryReader.ReadCallCount()).To(Equal(1))
+			Expect(fakePropertyDirectoryReader.ReadArgsForCall(0)).To(Equal("some-properties-directory"))
+
 			Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
+			expectedBuildInput := builder.BuildInput{
+				IconPath:                 "some-icon-path",
+				MetadataPath:             "some-metadata",
+				RuntimeConfigDirectories: flags.StringSlice{"some-other-runtime-configs-directory", "some-runtime-configs-directory"},
+				BOSHVariableDirectories:  flags.StringSlice{"some-other-variables-directory", "some-variables-directory"},
+			}
+			Expect(fakeMetadataBuilder.BuildArgsForCall(0)).To(Equal(expectedBuildInput))
 
 			Expect(fakeInterpolator.InterpolateCallCount()).To(Equal(1))
 
-			input, _ := fakeInterpolator.InterpolateArgsForCall(0)
+			input, metadata := fakeInterpolator.InterpolateArgsForCall(0)
 			Expect(input).To(Equal(builder.InterpolateInput{
 				Version: "1.2.3",
 				Variables: map[string]string{
@@ -245,10 +293,29 @@ var _ = Describe("bake", func() {
 						"consumes": "some-link",
 					},
 				},
+				PropertyBlueprints: map[string]interface{}{
+					"some-property": builder.Metadata{
+						"name":         "some-property",
+						"type":         "boolean",
+						"configurable": true,
+						"default":      false,
+					},
+				},
 			}))
 
+			Expect(string(metadata)).To(Equal("some-yaml"))
+
 			Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
-			Expect(fakeFormDirectoryReader.ReadCallCount()).To(Equal(1))
+			metadataName, metadata, writeInput := fakeTileWriter.WriteArgsForCall(0)
+			Expect(string(metadata)).To(Equal("some-interpolated-metadata"))
+			Expect(metadataName).To(Equal(generatedMetadata.Name))
+			Expect(writeInput).To(Equal(builder.WriteInput{
+				OutputFile:           filepath.Join("some-output-dir", "some-product-file-1.2.3-build.4"),
+				StubReleases:         false,
+				MigrationDirectories: []string{"some-migrations-directory", "some-other-migrations-directory"},
+				ReleaseDirectories:   []string{otherReleasesDirectory, someReleasesDirectory},
+				EmbedPaths:           []string{"some-embed-path"},
+			}))
 		})
 
 		Context("when the optional flags are not specified", func() {
@@ -412,6 +479,27 @@ var _ = Describe("bake", func() {
 			Context("when the instance group directory reader returns an error", func() {
 				It("returns an error", func() {
 					fakeInstanceGroupDirectoryReader.ReadReturns(nil, errors.New("some-error"))
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--forms-directory", "some-form-directory",
+						"--instance-groups-directory", "some-instance-group-directory",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("some-error"))
+				})
+			})
+
+			Context("when the property directory reader returns an error", func() {
+				It("returns an error", func() {
+					fakePropertyDirectoryReader.ReadReturns(nil, errors.New("some-error"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -599,21 +687,10 @@ var _ = Describe("bake", func() {
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			command := commands.NewBake(
-				fakeMetadataBuilder,
-				fakeInterpolator,
-				fakeTileWriter,
-				fakeLogger,
-				fakeReleaseManifestReader,
-				fakeStemcellManifestReader,
-				fakeFormDirectoryReader,
-				fakeInstanceGroupDirectoryReader,
-				fakeJobsDirectoryReader,
-			)
-			Expect(command.Usage()).To(Equal(jhandacommands.Usage{
+			Expect(bake.Usage()).To(Equal(jhandacommands.Usage{
 				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
 				ShortDescription: "bakes a tile",
-				Flags:            command.Options,
+				Flags:            bake.Options,
 			}))
 		})
 	})

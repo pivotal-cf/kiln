@@ -64,6 +64,7 @@ func main() {
 		formDirectoryReader,
 		instanceGroupDirectoryReader,
 		jobsDirectoryReader,
+		propertiesDirectoryReader,
 	)
 
 	var command string

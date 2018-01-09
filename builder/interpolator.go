@@ -13,14 +13,15 @@ import (
 type Interpolator struct{}
 
 type InterpolateInput struct {
-	Version          string
-	Variables        map[string]string
-	ReleaseManifests map[string]interface{}
-	StemcellManifest interface{}
-	FormTypes        map[string]interface{}
-	IconImage        string
-	InstanceGroups   map[string]interface{}
-	Jobs             map[string]interface{}
+	Version            string
+	Variables          map[string]string
+	ReleaseManifests   map[string]interface{}
+	StemcellManifest   interface{}
+	FormTypes          map[string]interface{}
+	IconImage          string
+	InstanceGroups     map[string]interface{}
+	Jobs               map[string]interface{}
+	PropertyBlueprints map[string]interface{}
 }
 
 func NewInterpolator() Interpolator {
@@ -49,6 +50,13 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 				return "", fmt.Errorf("could not find form with key '%s'", key)
 			}
 
+			return i.interpolateValueIntoYAML(input, val)
+		},
+		"property": func(name string) (string, error) {
+			val, ok := input.PropertyBlueprints[name]
+			if !ok {
+				return "", fmt.Errorf("could not find property blueprint with name '%s'", name)
+			}
 			return i.interpolateValueIntoYAML(input, val)
 		},
 		"release": func(name string) (string, error) {

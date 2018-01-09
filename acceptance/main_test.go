@@ -97,13 +97,14 @@ var _ = Describe("kiln", func() {
 name: cf
 version: 235
 `
-		err = ioutil.WriteFile(filepath.Join(somePropertiesDirectory, "some-property.yml"), []byte(`---
+		err = ioutil.WriteFile(filepath.Join(somePropertiesDirectory, "some-templated-property.yml"), []byte(`---
 property_blueprints:
-- name: some_property_blueprint
+- name: some_templated_property_blueprint
   type: boolean
-  configurable: true
-  default: false
+  configurable: false
+  default: true
 `), 0644)
+
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = ioutil.TempFile(someReleasesDirectory, "")
@@ -352,6 +353,7 @@ variables:
 				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 				"--jobs-directory", someJobsDirectory,
 				"--jobs-directory", someOtherJobsDirectory,
+				"--properties-directory", somePropertiesDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--stub-releases",
 				"--variable", "some-variable=some-variable-value",
@@ -399,6 +401,7 @@ variables:
 				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 				"--jobs-directory", someJobsDirectory,
 				"--jobs-directory", someOtherJobsDirectory,
+				"--properties-directory", somePropertiesDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--variable", "some-variable=some-variable-value",
 				"--version", "1.2.3",
@@ -459,6 +462,7 @@ variables:
 					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 					"--jobs-directory", someJobsDirectory,
 					"--jobs-directory", someOtherJobsDirectory,
+					"--properties-directory", somePropertiesDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
@@ -539,6 +543,7 @@ variables:
 					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 					"--jobs-directory", someJobsDirectory,
 					"--jobs-directory", someOtherJobsDirectory,
+					"--properties-directory", somePropertiesDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
@@ -616,6 +621,7 @@ variables:
 				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 				"--jobs-directory", someJobsDirectory,
 				"--jobs-directory", someOtherJobsDirectory,
+				"--properties-directory", somePropertiesDirectory,
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--bosh-variables-directory", someVariablesDirectory,
@@ -664,6 +670,7 @@ variables:
 					"--icon", someIconPath,
 					"--metadata", "metadata.yml",
 					"--output-file", outputFile,
+					"--properties-directory", somePropertiesDirectory,
 					"--releases-directory", "missing-directory",
 					"--stemcell-tarball", "stemcell.tgz",
 					"--version", "1.2.3",
@@ -692,6 +699,7 @@ variables:
 					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 					"--jobs-directory", someJobsDirectory,
 					"--jobs-directory", someOtherJobsDirectory,
+					"--properties-directory", somePropertiesDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--variable", "some-variable=some-variable-value",
 					"--version", "1.2.3",

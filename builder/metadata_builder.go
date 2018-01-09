@@ -19,7 +19,6 @@ type MetadataBuilder struct {
 type BuildInput struct {
 	IconPath                 string
 	MetadataPath             string
-	PropertyDirectories      []string
 	RuntimeConfigDirectories []string
 	BOSHVariableDirectories  []string
 	Version                  string
@@ -92,48 +91,15 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		return GeneratedMetadata{}, err
 	}
 
-	propertyBlueprints, err := m.buildPropertyBlueprints(input.PropertyDirectories, metadata)
-	if err != nil {
-		return GeneratedMetadata{}, err
-	}
-
 	delete(metadata, "name")
-	delete(metadata, "property_blueprints")
 
 	return GeneratedMetadata{
-		IconImage:          encodedIcon,
-		Name:               productName,
-		PropertyBlueprints: propertyBlueprints,
-		RuntimeConfigs:     runtimeConfigs,
-		Variables:          variables,
-		Metadata:           metadata,
+		IconImage:      encodedIcon,
+		Name:           productName,
+		RuntimeConfigs: runtimeConfigs,
+		Variables:      variables,
+		Metadata:       metadata,
 	}, nil
-}
-
-func (m MetadataBuilder) buildPropertyBlueprints(dirs []string, metadata Metadata) ([]Part, error) {
-	var propertyBlueprints []Part
-
-	if len(dirs) > 0 {
-		for _, propertiesDirectory := range dirs {
-			m.logger.Printf("Reading property blueprints from %s", propertiesDirectory)
-
-			p, err := m.propertiesDirectoryReader.Read(propertiesDirectory)
-			if err != nil {
-				return nil,
-					fmt.Errorf("error reading from properties directory %q: %s", propertiesDirectory, err)
-			}
-
-			propertyBlueprints = append(propertyBlueprints, p...)
-		}
-	} else {
-		if pb, ok := metadata["property_blueprints"].([]interface{}); ok {
-			for _, p := range pb {
-				propertyBlueprints = append(propertyBlueprints, Part{Metadata: p})
-			}
-		}
-	}
-
-	return propertyBlueprints, nil
 }
 
 func (m MetadataBuilder) buildRuntimeConfigMetadata(dirs []string, metadata Metadata) ([]Part, error) {
