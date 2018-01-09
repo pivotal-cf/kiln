@@ -28,8 +28,11 @@ releases:
 stemcell_criteria: $( stemcell )
 
 property_blueprints:
-- element_1
-- element_2
+- $( property "element_1" )
+- $( property "element_2" )
 
 form_types:
 - $( form "first" )
+
+job_types:
+- $( instance_group "my-instance" )

@@ -1,5 +1,4 @@
-property_blueprints:
-  name: element_1
-  type: text
-  configurable: true
-  optional: true
+name: element_1
+type: text
+configurable: true
+optional: true

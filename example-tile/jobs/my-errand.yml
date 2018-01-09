@@ -1,6 +1,5 @@
-job:
-  name: my-errand
-  release: my-release
-  manifest: |
-    errand-properties:
-      example: "example"
+name: my-errand
+release: my-release
+manifest: |
+  errand-properties:
+    example: "example"
