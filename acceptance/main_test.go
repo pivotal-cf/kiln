@@ -98,11 +98,10 @@ name: cf
 version: 235
 `
 		err = ioutil.WriteFile(filepath.Join(somePropertiesDirectory, "some-templated-property.yml"), []byte(`---
-property_blueprints:
-- name: some_templated_property_blueprint
-  type: boolean
-  configurable: false
-  default: true
+name: some_templated_property_blueprint
+type: boolean
+configurable: false
+default: true
 `), 0644)
 
 		Expect(err).NotTo(HaveOccurred())

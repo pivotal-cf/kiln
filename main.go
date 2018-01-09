@@ -35,7 +35,7 @@ func main() {
 	iconEncoder := builder.NewIconEncoder(filesystem)
 	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("property_blueprints")
+	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	releaseManifestReader := builder.NewReleaseManifestReader()
 	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("runtime_configs")
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
