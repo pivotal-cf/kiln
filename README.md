@@ -60,6 +60,39 @@ $ kiln bake \
     --output-file /path/to/cf-2.0.0-build.4.pivotal
 ```
 
+##### `--properties-directory`
+
+The `--properties-directory` flag takes a path to a directory that contains one
+or more blueprint property files. The flag can also be specified more than once.
+```
+$ tree /path/to/properties
+/path/to/properties/
+└── properties
+    ├── diego_properties.yml
+    └── cloud_controller_properties.yml
+
+$ cat /path/to/properties/diego_properties.yml
+---
+name: rep_password
+type: secret
+configurable: false
+
+$ cat /path/to/metadata
+---
+property_blueprints:
+- $( property "rep_password" )
+
+$ kiln bake \
+    --version 2.0.0 \
+    --metadata /path/to/metadata.yml \
+    --releases-directory /path/to/releases/first \
+    --releases-directory /path/to/releases/second \
+    --stemcell-tarball /path/to/stemcell.tgz \
+    --properties-directory /path/to/properties \
+    --migrations-directory /path/to/migrations \
+    --output-file /path/to/cf-2.0.0-build.4.pivotal
+```
+
 ##### `--stemcell-tarball`
 
 The `--stemcell-tarball` flag takes a path to a stemcell. That stemcell will be
