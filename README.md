@@ -67,9 +67,8 @@ or more blueprint property files. The flag can also be specified more than once.
 ```
 $ tree /path/to/properties
 /path/to/properties/
-└── properties
-    ├── diego_properties.yml
-    └── cloud_controller_properties.yml
+├── diego_properties.yml
+└── cloud_controller_properties.yml
 
 $ cat /path/to/properties/diego_properties.yml
 ---
