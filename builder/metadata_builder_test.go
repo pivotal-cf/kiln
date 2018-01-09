@@ -16,7 +16,6 @@ var _ = Describe("MetadataBuilder", func() {
 		iconEncoder                   *fakes.IconEncoder
 		logger                        *fakes.Logger
 		metadataReader                *fakes.MetadataReader
-		propertiesDirectoryReader     *fakes.MetadataPartsDirectoryReader
 		runtimeConfigsDirectoryReader *fakes.MetadataPartsDirectoryReader
 		variablesDirectoryReader      *fakes.MetadataPartsDirectoryReader
 
@@ -27,35 +26,10 @@ var _ = Describe("MetadataBuilder", func() {
 		iconEncoder = &fakes.IconEncoder{}
 		logger = &fakes.Logger{}
 		metadataReader = &fakes.MetadataReader{}
-		propertiesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		runtimeConfigsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 
 		iconEncoder.EncodeReturns("base64-encoded-icon-path", nil)
-
-		propertiesDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
-			switch path {
-			case "/path/to/properties/directory":
-				return []builder.Part{
-					{
-						File: "property-1.yml",
-						Name: "property-1",
-						Metadata: map[interface{}]interface{}{
-							"name": "property-1",
-						},
-					},
-					{
-						File: "property-2.yml",
-						Name: "property-2",
-						Metadata: map[interface{}]interface{}{
-							"name": "property-2",
-						},
-					},
-				}, nil
-			default:
-				return []builder.Part{}, fmt.Errorf("could not read properties directory %q", path)
-			}
-		}
 
 		runtimeConfigsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
@@ -132,7 +106,6 @@ var _ = Describe("MetadataBuilder", func() {
 		}
 
 		tileBuilder = builder.NewMetadataBuilder(
-			propertiesDirectoryReader,
 			runtimeConfigsDirectoryReader,
 			variablesDirectoryReader,
 			metadataReader,

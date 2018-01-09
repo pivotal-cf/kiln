@@ -6,11 +6,8 @@ type GeneratedMetadata struct {
 	Releases         []Release
 	IconImage        string
 
-	FormTypes          []Part
-	JobTypes           []Part
-	PropertyBlueprints []Part
-	RuntimeConfigs     []Part
-	Variables          []Part
+	RuntimeConfigs []Part
+	Variables      []Part
 
 	Metadata Metadata
 }
@@ -31,12 +28,6 @@ func (gm GeneratedMetadata) MarshalYAML() (interface{}, error) {
 
 	m["name"] = gm.Name
 
-	if len(gm.JobTypes) > 0 {
-		m["job_types"] = gm.metadataOnly(gm.JobTypes)
-	}
-	if len(gm.PropertyBlueprints) > 0 {
-		m["property_blueprints"] = gm.metadataOnly(gm.PropertyBlueprints)
-	}
 	if len(gm.RuntimeConfigs) > 0 {
 		m["runtime_configs"] = gm.metadataOnly(gm.RuntimeConfigs)
 	}

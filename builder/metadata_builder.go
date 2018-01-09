@@ -11,7 +11,6 @@ type MetadataBuilder struct {
 	iconEncoder                   iconEncoder
 	logger                        logger
 	metadataReader                metadataReader
-	propertiesDirectoryReader     metadataPartsDirectoryReader
 	runtimeConfigsDirectoryReader metadataPartsDirectoryReader
 	variablesDirectoryReader      metadataPartsDirectoryReader
 }
@@ -48,7 +47,6 @@ type logger interface {
 }
 
 func NewMetadataBuilder(
-	propertiesDirectoryReader metadataPartsDirectoryReader,
 	runtimeConfigsDirectoryReader,
 	variablesDirectoryReader metadataPartsDirectoryReader,
 	metadataReader metadataReader,
@@ -59,7 +57,6 @@ func NewMetadataBuilder(
 		iconEncoder:                   iconEncoder,
 		logger:                        logger,
 		metadataReader:                metadataReader,
-		propertiesDirectoryReader:     propertiesDirectoryReader,
 		runtimeConfigsDirectoryReader: runtimeConfigsDirectoryReader,
 		variablesDirectoryReader:      variablesDirectoryReader,
 	}

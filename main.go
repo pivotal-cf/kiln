@@ -41,7 +41,6 @@ func main() {
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")
 	metadataBuilder := builder.NewMetadataBuilder(
-		propertiesDirectoryReader,
 		runtimeConfigsDirectoryReader,
 		variablesDirectoryReader,
 		handcraftReader,
