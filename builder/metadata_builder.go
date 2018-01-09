@@ -6,21 +6,19 @@ import (
 )
 
 type MetadataBuilder struct {
-	instanceGroupDirectoryReader  metadataPartsDirectoryReader
-	jobsDirectoryReader           metadataPartsDirectoryReader
-	iconEncoder                   iconEncoder
-	logger                        logger
-	metadataReader                metadataReader
-	runtimeConfigsDirectoryReader metadataPartsDirectoryReader
-	variablesDirectoryReader      metadataPartsDirectoryReader
+	instanceGroupDirectoryReader metadataPartsDirectoryReader
+	jobsDirectoryReader          metadataPartsDirectoryReader
+	iconEncoder                  iconEncoder
+	logger                       logger
+	metadataReader               metadataReader
+	variablesDirectoryReader     metadataPartsDirectoryReader
 }
 
 type BuildInput struct {
-	IconPath                 string
-	MetadataPath             string
-	RuntimeConfigDirectories []string
-	BOSHVariableDirectories  []string
-	Version                  string
+	IconPath                string
+	MetadataPath            string
+	BOSHVariableDirectories []string
+	Version                 string
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_parts_directory_reader.go --fake-name MetadataPartsDirectoryReader . metadataPartsDirectoryReader
@@ -47,18 +45,16 @@ type logger interface {
 }
 
 func NewMetadataBuilder(
-	runtimeConfigsDirectoryReader,
 	variablesDirectoryReader metadataPartsDirectoryReader,
 	metadataReader metadataReader,
 	logger logger,
 	iconEncoder iconEncoder,
 ) MetadataBuilder {
 	return MetadataBuilder{
-		iconEncoder:                   iconEncoder,
-		logger:                        logger,
-		metadataReader:                metadataReader,
-		runtimeConfigsDirectoryReader: runtimeConfigsDirectoryReader,
-		variablesDirectoryReader:      variablesDirectoryReader,
+		iconEncoder:              iconEncoder,
+		logger:                   logger,
+		metadataReader:           metadataReader,
+		variablesDirectoryReader: variablesDirectoryReader,
 	}
 }
 
@@ -71,11 +67,6 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 	productName, ok := metadata["name"].(string)
 	if !ok {
 		return GeneratedMetadata{}, errors.New("missing \"name\" in tile metadata file")
-	}
-
-	runtimeConfigs, err := m.buildRuntimeConfigMetadata(input.RuntimeConfigDirectories, metadata)
-	if err != nil {
-		return GeneratedMetadata{}, err
 	}
 
 	variables, err := m.buildVariables(input.BOSHVariableDirectories, metadata)
@@ -91,34 +82,11 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 	delete(metadata, "name")
 
 	return GeneratedMetadata{
-		IconImage:      encodedIcon,
-		Name:           productName,
-		RuntimeConfigs: runtimeConfigs,
-		Variables:      variables,
-		Metadata:       metadata,
+		IconImage: encodedIcon,
+		Name:      productName,
+		Variables: variables,
+		Metadata:  metadata,
 	}, nil
-}
-
-func (m MetadataBuilder) buildRuntimeConfigMetadata(dirs []string, metadata Metadata) ([]Part, error) {
-	if _, ok := metadata["runtime_configs"]; ok {
-		return nil, errors.New("runtime_config section must be defined using --runtime-configs-directory flag")
-	}
-
-	var runtimeConfigs []Part
-
-	for _, runtimeConfigsDirectory := range dirs {
-		m.logger.Printf("Reading runtime configs from %s", runtimeConfigsDirectory)
-
-		r, err := m.runtimeConfigsDirectoryReader.Read(runtimeConfigsDirectory)
-		if err != nil {
-			return nil,
-				fmt.Errorf("error reading from runtime configs directory %q: %s", runtimeConfigsDirectory, err)
-		}
-
-		runtimeConfigs = append(runtimeConfigs, r...)
-	}
-
-	return runtimeConfigs, nil
 }
 
 func (m MetadataBuilder) buildVariables(vars []string, metadata Metadata) ([]Part, error) {

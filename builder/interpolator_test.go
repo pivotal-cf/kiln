@@ -22,6 +22,8 @@ version: $( version )
 property_blueprints:
 - $( property "some-templated-property" )
 - $( property "some-other-templated-property" )
+some_runtime_configs:
+- $( runtime_config "some-runtime-config" )
 `
 
 	var (
@@ -84,6 +86,12 @@ property_blueprints:
 					"default":      "some-value",
 				},
 			},
+			RuntimeConfigs: map[string]interface{}{
+				"some-runtime-config": builder.Metadata{
+					"name":           "some-runtime-config",
+					"runtime_config": "some-addon-runtime-config",
+				},
+			},
 		}
 	})
 
@@ -119,6 +127,9 @@ property_blueprints:
   type: string
   configurable: false
   default: some-value
+some_runtime_configs:
+- name: some-runtime-config
+  runtime_config: some-addon-runtime-config
 `))
 		Expect(string(interpolatedYAML)).To(ContainSubstring("file: some-release-1.2.3.tgz\n"))
 	})
@@ -170,6 +181,17 @@ form_types:
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not find property blueprint with name 'some-templated-property'"))
+			})
+		})
+
+		Context("when the requested runtime config is not found", func() {
+			It("returns an error", func() {
+				input.RuntimeConfigs = map[string]interface{}{}
+				interpolator := builder.NewInterpolator()
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("could not find runtime_config with name 'some-runtime-config'"))
 			})
 		})
 

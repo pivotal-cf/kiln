@@ -13,11 +13,10 @@ import (
 
 var _ = Describe("MetadataBuilder", func() {
 	var (
-		iconEncoder                   *fakes.IconEncoder
-		logger                        *fakes.Logger
-		metadataReader                *fakes.MetadataReader
-		runtimeConfigsDirectoryReader *fakes.MetadataPartsDirectoryReader
-		variablesDirectoryReader      *fakes.MetadataPartsDirectoryReader
+		iconEncoder              *fakes.IconEncoder
+		logger                   *fakes.Logger
+		metadataReader           *fakes.MetadataReader
+		variablesDirectoryReader *fakes.MetadataPartsDirectoryReader
 
 		tileBuilder builder.MetadataBuilder
 	)
@@ -26,47 +25,9 @@ var _ = Describe("MetadataBuilder", func() {
 		iconEncoder = &fakes.IconEncoder{}
 		logger = &fakes.Logger{}
 		metadataReader = &fakes.MetadataReader{}
-		runtimeConfigsDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
 
 		iconEncoder.EncodeReturns("base64-encoded-icon-path", nil)
-
-		runtimeConfigsDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
-			switch path {
-			case "/path/to/runtime-configs/directory":
-				return []builder.Part{
-					{
-						File: "runtime-config-1.yml",
-						Name: "runtime-config-1",
-						Metadata: map[interface{}]interface{}{
-							"name":           "runtime-config-1",
-							"runtime_config": "runtime-config-1-manifest",
-						},
-					},
-					{
-						File: "runtime-config-2.yml",
-						Name: "runtime-config-2",
-						Metadata: map[interface{}]interface{}{
-							"name":           "runtime-config-2",
-							"runtime_config": "runtime-config-2-manifest",
-						},
-					},
-				}, nil
-			case "/path/to/other/runtime-configs/directory":
-				return []builder.Part{
-					{
-						File: "runtime-config-3.yml",
-						Name: "runtime-config-3",
-						Metadata: map[interface{}]interface{}{
-							"name":           "runtime-config-3",
-							"runtime_config": "runtime-config-3-manifest",
-						},
-					},
-				}, nil
-			default:
-				return []builder.Part{}, fmt.Errorf("could not read runtime configs directory %q", path)
-			}
-		}
 
 		variablesDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
 			switch path {
@@ -106,7 +67,6 @@ var _ = Describe("MetadataBuilder", func() {
 		}
 
 		tileBuilder = builder.NewMetadataBuilder(
-			runtimeConfigsDirectoryReader,
 			variablesDirectoryReader,
 			metadataReader,
 			logger,
@@ -127,11 +87,10 @@ var _ = Describe("MetadataBuilder", func() {
 
 		It("creates a GeneratedMetadata with the correct information", func() {
 			generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
-				IconPath:                 "some-icon-path",
-				MetadataPath:             "/some/path/metadata.yml",
-				RuntimeConfigDirectories: []string{"/path/to/runtime-configs/directory", "/path/to/other/runtime-configs/directory"},
-				BOSHVariableDirectories:  []string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
-				Version:                  "1.2.3",
+				IconPath:                "some-icon-path",
+				MetadataPath:            "/some/path/metadata.yml",
+				BOSHVariableDirectories: []string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
+				Version:                 "1.2.3",
 			})
 			Expect(err).NotTo(HaveOccurred())
 			metadataPath, version := metadataReader.ReadArgsForCall(0)
@@ -139,32 +98,6 @@ var _ = Describe("MetadataBuilder", func() {
 			Expect(version).To(Equal("1.2.3"))
 
 			Expect(generatedMetadata.Name).To(Equal("cool-product"))
-			Expect(generatedMetadata.RuntimeConfigs).To(Equal([]builder.Part{
-				{
-					File: "runtime-config-1.yml",
-					Name: "runtime-config-1",
-					Metadata: map[interface{}]interface{}{
-						"name":           "runtime-config-1",
-						"runtime_config": "runtime-config-1-manifest",
-					},
-				},
-				{
-					File: "runtime-config-2.yml",
-					Name: "runtime-config-2",
-					Metadata: map[interface{}]interface{}{
-						"name":           "runtime-config-2",
-						"runtime_config": "runtime-config-2-manifest",
-					},
-				},
-				{
-					File: "runtime-config-3.yml",
-					Name: "runtime-config-3",
-					Metadata: map[interface{}]interface{}{
-						"name":           "runtime-config-3",
-						"runtime_config": "runtime-config-3-manifest",
-					},
-				},
-			}))
 			Expect(generatedMetadata.Variables).To(Equal([]builder.Part{
 				{
 					File: "variable-1.yml",
@@ -197,8 +130,6 @@ var _ = Describe("MetadataBuilder", func() {
 			}))
 
 			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-				"Reading runtime configs from /path/to/runtime-configs/directory",
-				"Reading runtime configs from /path/to/other/runtime-configs/directory",
 				"Reading variables from /path/to/variables/directory",
 				"Reading variables from /path/to/other/variables/directory",
 			}))
@@ -228,17 +159,6 @@ var _ = Describe("MetadataBuilder", func() {
 		})
 
 		Context("failure cases", func() {
-			Context("when the runtime configs directory cannot be read", func() {
-				It("returns an error", func() {
-					runtimeConfigsDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some error"))
-
-					_, err := tileBuilder.Build(builder.BuildInput{
-						RuntimeConfigDirectories: []string{"/path/to/missing/runtime-configs"},
-					})
-					Expect(err).To(MatchError(`error reading from runtime configs directory "/path/to/missing/runtime-configs": some error`))
-				})
-			})
-
 			Context("when the variables directory cannot be read", func() {
 				It("returns an error", func() {
 					variablesDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some error"))
@@ -288,22 +208,6 @@ var _ = Describe("MetadataBuilder", func() {
 					})
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring(`missing "name" in tile metadata`))
-				})
-			})
-
-			Context("when the base metadata contains a runtime_configs section", func() {
-				It("returns an error", func() {
-					metadataReader.ReadReturns(builder.Metadata{
-						"name":            "cool-product",
-						"runtime_configs": "some-runtime-configs",
-					},
-						nil,
-					)
-
-					_, err := tileBuilder.Build(builder.BuildInput{
-						MetadataPath: "metadata.yml",
-					})
-					Expect(err).To(MatchError("runtime_config section must be defined using --runtime-configs-directory flag"))
 				})
 			})
 

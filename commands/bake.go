@@ -46,6 +46,7 @@ type Bake struct {
 	instanceGroupDirectoryReader     directoryReader
 	jobDirectoryReader               directoryReader
 	propertyBlueprintDirectoryReader directoryReader
+	runtimeConfigsDirectoryReader    directoryReader
 	Options                          BakeConfig
 }
 
@@ -98,6 +99,7 @@ func NewBake(metadataBuilder metadataBuilder,
 	instanceGroupDirectoryReader directoryReader,
 	jobDirectoryReader directoryReader,
 	propertyBlueprintDirectoryReader directoryReader,
+	runtimeConfigsDirectoryReader directoryReader,
 ) Bake {
 	return Bake{
 		metadataBuilder:                  metadataBuilder,
@@ -110,6 +112,7 @@ func NewBake(metadataBuilder metadataBuilder,
 		instanceGroupDirectoryReader:     instanceGroupDirectoryReader,
 		jobDirectoryReader:               jobDirectoryReader,
 		propertyBlueprintDirectoryReader: propertyBlueprintDirectoryReader,
+		runtimeConfigsDirectoryReader:    runtimeConfigsDirectoryReader,
 	}
 }
 
@@ -218,16 +221,31 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
+	var runtimeConfigs map[string]interface{}
+	if config.RuntimeConfigDirectories != nil {
+		b.logger.Println("Reading runtime config files...")
+		runtimeConfigs = map[string]interface{}{}
+		for _, runtimeConfigsDir := range config.RuntimeConfigDirectories {
+			runtimeConfigsInDirectory, err := b.runtimeConfigsDirectoryReader.Read(runtimeConfigsDir)
+			if err != nil {
+				return err
+			}
+
+			for _, runtimeConfig := range runtimeConfigsInDirectory {
+				runtimeConfigs[runtimeConfig.Name] = runtimeConfig.Metadata
+			}
+		}
+	}
+
 	err = b.addVariablesToMap(config.Variables, variables)
 	if err != nil {
 		return err
 	}
 
 	buildInput := builder.BuildInput{
-		IconPath:                 config.IconPath,
-		MetadataPath:             config.Metadata,
-		RuntimeConfigDirectories: config.RuntimeConfigDirectories,
-		BOSHVariableDirectories:  config.BOSHVariableDirectories,
+		IconPath:                config.IconPath,
+		MetadataPath:            config.Metadata,
+		BOSHVariableDirectories: config.BOSHVariableDirectories,
 	}
 
 	generatedMetadata, err := b.metadataBuilder.Build(buildInput)
@@ -252,6 +270,7 @@ func (b Bake) Execute(args []string) error {
 		InstanceGroups:     instanceGroups,
 		Jobs:               jobs,
 		PropertyBlueprints: propertyBlueprints,
+		RuntimeConfigs:     runtimeConfigs,
 	}, generatedMetadataYAML)
 	if err != nil {
 		return err

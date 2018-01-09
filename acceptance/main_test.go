@@ -199,12 +199,12 @@ release: some-other-release
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = ioutil.WriteFile(filepath.Join(someRuntimeConfigsDirectory, "some-addon.yml"), []byte(`---
-runtime_configs:
-- name: some_addon
-  runtime_config: |
-    releases:
-    - name: some-addon
+		err = ioutil.WriteFile(filepath.Join(someRuntimeConfigsDirectory, "some-runtime-config.yml"), []byte(`---
+name: some-runtime-config
+runtime_config: |
+  releases:
+  - name: some-addon
+    version: some-addon-version
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -353,6 +353,7 @@ variables:
 				"--jobs-directory", someJobsDirectory,
 				"--jobs-directory", someOtherJobsDirectory,
 				"--properties-directory", somePropertiesDirectory,
+				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--stub-releases",
 				"--variable", "some-variable=some-variable-value",
@@ -401,6 +402,7 @@ variables:
 				"--jobs-directory", someJobsDirectory,
 				"--jobs-directory", someOtherJobsDirectory,
 				"--properties-directory", somePropertiesDirectory,
+				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--variable", "some-variable=some-variable-value",
 				"--version", "1.2.3",
@@ -462,6 +464,7 @@ variables:
 					"--jobs-directory", someJobsDirectory,
 					"--jobs-directory", someOtherJobsDirectory,
 					"--properties-directory", somePropertiesDirectory,
+					"--runtime-configs-directory", someRuntimeConfigsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
@@ -543,6 +546,7 @@ variables:
 					"--jobs-directory", someJobsDirectory,
 					"--jobs-directory", someOtherJobsDirectory,
 					"--properties-directory", somePropertiesDirectory,
+					"--runtime-configs-directory", someRuntimeConfigsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
@@ -699,6 +703,7 @@ variables:
 					"--jobs-directory", someJobsDirectory,
 					"--jobs-directory", someOtherJobsDirectory,
 					"--properties-directory", somePropertiesDirectory,
+					"--runtime-configs-directory", someRuntimeConfigsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--variable", "some-variable=some-variable-value",
 					"--version", "1.2.3",

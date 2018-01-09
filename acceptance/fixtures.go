@@ -34,6 +34,8 @@ job_types:
 - $( instance_group "some-other-instance-group" )
 property_blueprints:
 - $( property "some_templated_property_blueprint" )
+some_runtime_configs:
+- $( runtime_config "some-runtime-config" )
 `)
 
 var expectedMetadata = `---
@@ -93,11 +95,12 @@ some_releases:
 some_stemcell_criteria:
   os: ubuntu-trusty
   version: "3215.4"
-runtime_configs:
-- name: some_addon
+some_runtime_configs:
+- name: some-runtime-config
   runtime_config: |
     releases:
     - name: some-addon
+      version: some-addon-version
 serial: false
 variables:
 - name: variable-1

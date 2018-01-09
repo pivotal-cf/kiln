@@ -19,16 +19,17 @@ import (
 
 var _ = Describe("bake", func() {
 	var (
-		fakeMetadataBuilder              *fakes.MetadataBuilder
-		fakeReleaseManifestReader        *fakes.PartReader
-		fakeStemcellManifestReader       *fakes.PartReader
-		fakeFormDirectoryReader          *fakes.DirectoryReader
-		fakeInstanceGroupDirectoryReader *fakes.DirectoryReader
-		fakeJobsDirectoryReader          *fakes.DirectoryReader
-		fakePropertyDirectoryReader      *fakes.DirectoryReader
-		fakeInterpolator                 *fakes.Interpolator
-		fakeTileWriter                   *fakes.TileWriter
-		fakeLogger                       *fakes.Logger
+		fakeMetadataBuilder               *fakes.MetadataBuilder
+		fakeReleaseManifestReader         *fakes.PartReader
+		fakeStemcellManifestReader        *fakes.PartReader
+		fakeFormDirectoryReader           *fakes.DirectoryReader
+		fakeInstanceGroupDirectoryReader  *fakes.DirectoryReader
+		fakeJobsDirectoryReader           *fakes.DirectoryReader
+		fakePropertyDirectoryReader       *fakes.DirectoryReader
+		fakeRuntimeConfigsDirectoryReader *fakes.DirectoryReader
+		fakeInterpolator                  *fakes.Interpolator
+		fakeTileWriter                    *fakes.TileWriter
+		fakeLogger                        *fakes.Logger
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -82,6 +83,7 @@ var _ = Describe("bake", func() {
 		fakeInstanceGroupDirectoryReader = &fakes.DirectoryReader{}
 		fakeJobsDirectoryReader = &fakes.DirectoryReader{}
 		fakePropertyDirectoryReader = &fakes.DirectoryReader{}
+		fakeRuntimeConfigsDirectoryReader = &fakes.DirectoryReader{}
 		fakeInterpolator = &fakes.Interpolator{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
@@ -160,6 +162,16 @@ var _ = Describe("bake", func() {
 			},
 		}, nil)
 
+		fakeRuntimeConfigsDirectoryReader.ReadReturns([]builder.Part{
+			{
+				Name: "some-runtime-config",
+				Metadata: builder.Metadata{
+					"name":           "some-runtime-config",
+					"runtime_config": "some-addon-runtime-config",
+				},
+			},
+		}, nil)
+
 		generatedMetadata = builder.GeneratedMetadata{
 			IconImage: "some-icon-image",
 			Name:      "some-product-name",
@@ -182,6 +194,7 @@ var _ = Describe("bake", func() {
 			fakeInstanceGroupDirectoryReader,
 			fakeJobsDirectoryReader,
 			fakePropertyDirectoryReader,
+			fakeRuntimeConfigsDirectoryReader,
 		)
 	})
 
@@ -237,12 +250,15 @@ var _ = Describe("bake", func() {
 			Expect(fakePropertyDirectoryReader.ReadCallCount()).To(Equal(1))
 			Expect(fakePropertyDirectoryReader.ReadArgsForCall(0)).To(Equal("some-properties-directory"))
 
+			Expect(fakeRuntimeConfigsDirectoryReader.ReadCallCount()).To(Equal(2))
+			Expect(fakeRuntimeConfigsDirectoryReader.ReadArgsForCall(0)).To(Equal("some-other-runtime-configs-directory"))
+			Expect(fakeRuntimeConfigsDirectoryReader.ReadArgsForCall(1)).To(Equal("some-runtime-configs-directory"))
+
 			Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 			expectedBuildInput := builder.BuildInput{
-				IconPath:                 "some-icon-path",
-				MetadataPath:             "some-metadata",
-				RuntimeConfigDirectories: flags.StringSlice{"some-other-runtime-configs-directory", "some-runtime-configs-directory"},
-				BOSHVariableDirectories:  flags.StringSlice{"some-other-variables-directory", "some-variables-directory"},
+				IconPath:                "some-icon-path",
+				MetadataPath:            "some-metadata",
+				BOSHVariableDirectories: flags.StringSlice{"some-other-variables-directory", "some-variables-directory"},
 			}
 			Expect(fakeMetadataBuilder.BuildArgsForCall(0)).To(Equal(expectedBuildInput))
 
@@ -299,6 +315,12 @@ var _ = Describe("bake", func() {
 						"type":         "boolean",
 						"configurable": true,
 						"default":      false,
+					},
+				},
+				RuntimeConfigs: map[string]interface{}{
+					"some-runtime-config": builder.Metadata{
+						"name":           "some-runtime-config",
+						"runtime_config": "some-addon-runtime-config",
 					},
 				},
 			}))
@@ -506,6 +528,27 @@ var _ = Describe("bake", func() {
 						"--metadata", "some-metadata",
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--properties-directory", "some-properties-directory",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--forms-directory", "some-form-directory",
+						"--instance-groups-directory", "some-instance-group-directory",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("some-error"))
+				})
+			})
+
+			Context("when the runtime config directory reader returns an error", func() {
+				It("returns an error", func() {
+					fakeRuntimeConfigsDirectoryReader.ReadReturns(nil, errors.New("some-error"))
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--runtime-configs-directory", "some-runtime-configs-directory",
 						"--releases-directory", someReleasesDirectory,
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--forms-directory", "some-form-directory",

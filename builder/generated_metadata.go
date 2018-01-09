@@ -6,8 +6,7 @@ type GeneratedMetadata struct {
 	Releases         []Release
 	IconImage        string
 
-	RuntimeConfigs []Part
-	Variables      []Part
+	Variables []Part
 
 	Metadata Metadata
 }
@@ -28,9 +27,6 @@ func (gm GeneratedMetadata) MarshalYAML() (interface{}, error) {
 
 	m["name"] = gm.Name
 
-	if len(gm.RuntimeConfigs) > 0 {
-		m["runtime_configs"] = gm.metadataOnly(gm.RuntimeConfigs)
-	}
 	if len(gm.Variables) > 0 {
 		m["variables"] = gm.metadataOnly(gm.Variables)
 	}

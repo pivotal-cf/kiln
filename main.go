@@ -36,12 +36,11 @@ func main() {
 	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	releaseManifestReader := builder.NewReleaseManifestReader()
-	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("runtime_configs")
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")
 	metadataBuilder := builder.NewMetadataBuilder(
-		runtimeConfigsDirectoryReader,
 		variablesDirectoryReader,
 		handcraftReader,
 		logger,
@@ -64,6 +63,7 @@ func main() {
 		instanceGroupDirectoryReader,
 		jobsDirectoryReader,
 		propertiesDirectoryReader,
+		runtimeConfigsDirectoryReader,
 	)
 
 	var command string

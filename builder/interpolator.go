@@ -22,6 +22,7 @@ type InterpolateInput struct {
 	InstanceGroups     map[string]interface{}
 	Jobs               map[string]interface{}
 	PropertyBlueprints map[string]interface{}
+	RuntimeConfigs     map[string]interface{}
 }
 
 func NewInterpolator() Interpolator {
@@ -101,6 +102,14 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 			val, ok := input.Jobs[name]
 			if !ok {
 				return "", fmt.Errorf("could not find job with name '%s'", name)
+			}
+
+			return i.interpolateValueIntoYAML(input, val)
+		},
+		"runtime_config": func(name string) (string, error) {
+			val, ok := input.RuntimeConfigs[name]
+			if !ok {
+				return "", fmt.Errorf("could not find runtime_config with name '%s'", name)
 			}
 
 			return i.interpolateValueIntoYAML(input, val)
