@@ -25,14 +25,14 @@ install_time_verifiers:
     url: .properties.uaa.saml.sso_url
 post_deploy_errands:
 - name: smoke-tests
-forms:
+some_forms:
 - $( form "some-other-config" )
 - $( form "some-config" )
 - $( form "some-more-config" )
-job_types:
+some_job_types:
 - $( instance_group "some-instance-group" )
 - $( instance_group "some-other-instance-group" )
-property_blueprints:
+some_property_blueprints:
 - $( property "some_templated_property_blueprint" )
 some_runtime_configs:
 - $( runtime_config "some-runtime-config" )
@@ -40,7 +40,7 @@ some_runtime_configs:
 
 var expectedMetadata = `---
 description: this is the description
-forms:
+some_forms:
 - description: some-other-form-description
   label: some-other-form-label
   name: some-other-config
@@ -55,7 +55,7 @@ install_time_verifiers:
 - name: Verifiers::SsoUrlVerifier
   properties:
     url: .properties.uaa.saml.sso_url
-job_types:
+some_job_types:
 - label: Some Instance Group
   name: some-instance-group
   templates:
@@ -74,7 +74,7 @@ name: cool-product-name
 post_deploy_errands:
 - name: smoke-tests
 product_version: 1.2.3
-property_blueprints:
+some_property_blueprints:
 - name: some_templated_property_blueprint
   type: boolean
   configurable: false

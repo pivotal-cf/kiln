@@ -11,15 +11,15 @@ var _ = Describe("interpolator", func() {
 	const templateYAML = `
 name: $( variable "some-variable" )
 icon_img: $( icon )
-releases:
+some_releases:
 - $(release "some-release")
 stemcell_criteria: $( stemcell )
-form_types:
+some_form_types:
 - $( form "some-form" )
-job_types:
+some_job_types:
 - $( instance_group "some-instance-group" )
 version: $( version )
-property_blueprints:
+some_property_blueprints:
 - $( property "some-templated-property" )
 - $( property "some-other-templated-property" )
 some_runtime_configs:
@@ -101,7 +101,7 @@ some_runtime_configs:
 		Expect(interpolatedYAML).To(MatchYAML(`
 name: some-value
 icon_img: some-icon-image
-releases:
+some_releases:
 - name: some-release
   file: some-release-1.2.3.tgz
   version: 1.2.3
@@ -109,16 +109,16 @@ releases:
 stemcell_criteria:
   version: 2.3.4
   os: an-operating-system
-form_types:
+some_form_types:
 - name: some-form
   label: some-form-label
-job_types:
+some_job_types:
 - name: some-instance-group
   templates:
   - name: some-job
     release: some-release
 version: 3.4.5
-property_blueprints:
+some_property_blueprints:
 - name: some-templated-property
   type: boolean
   configurable: true
@@ -137,7 +137,7 @@ some_runtime_configs:
 	It("allows interpolation helpers inside forms", func() {
 		templateYAML := `
 ---
-form_types:
+some_form_types:
 - $( form "some-form" )`
 
 		input := builder.InterpolateInput{
@@ -155,7 +155,7 @@ form_types:
 		interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(interpolatedYAML).To(MatchYAML(`
-form_types:
+some_form_types:
 - name: some-form
   label: variable-form-label
 `))
