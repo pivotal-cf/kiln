@@ -5,6 +5,7 @@ description: This is an instance.
 
 templates:
 - $( job "my-job" )
+- $( job "my-aliased-job" )
 - $( job "my-errand" )
 
 static_ip: 1
