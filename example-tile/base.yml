@@ -20,7 +20,7 @@ post_deploy_errands:
   colocated: true
   run_default: true
   instances:
-  - my-instance/first
+  - my-instance-group/first
 
 releases:
 - $( release "my-release" )
