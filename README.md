@@ -93,7 +93,7 @@ property_blueprints:
 - $( property "rep_password" )
 ```
 
-Example [properties](properties) directory.
+Example [properties](example-tile/properties) directory.
 
 ##### `--runtime-configs-directory`
 
@@ -111,7 +111,7 @@ runtime_configs:
 - $( runtime_config "first-runtime-config" )
 ```
 
-Example [runtime-configs](runtime-configs) directory.
+Example [runtime-configs](example-tile/runtime-configs) directory.
 
 ##### `--stemcell-tarball`
 
@@ -135,7 +135,7 @@ key.
 This flag can be specified multiple times if you have organized your
 variables into subdirectories for development convenience.
 
-Example [variables](variables) directory.
+Example [variables](example-tile/variables) directory.
 
 Note that currently you do not use a template helper function to include a
 variable, all variables in the directories specified will be included in the
