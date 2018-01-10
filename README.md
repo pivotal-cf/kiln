@@ -121,7 +121,7 @@ runtime_config: |
 $ cat /path/to/metadata
 ---
 runtime_configs:
-- $( runtime_config "first-addon-release" )
+- $( runtime_config "first-runtime-config" )
 
 $ kiln bake \
     --version 2.0.0 \
