@@ -7,7 +7,6 @@ import (
 )
 
 var _ = Describe("interpolator", func() {
-
 	const templateYAML = `
 name: $( variable "some-variable" )
 icon_img: $( icon )
@@ -158,6 +157,41 @@ some_form_types:
 some_form_types:
 - name: some-form
   label: variable-form-label
+`))
+	})
+
+	It("allows interpolation helpers inside runtime_configs", func() {
+		templateYAML := `
+---
+some_runtime_configs:
+- $( runtime_config "some-runtime-config" )`
+
+		input := builder.InterpolateInput{
+			ReleaseManifests: map[string]interface{}{
+				"some-release": builder.ReleaseManifest{
+					Name:    "some-release",
+					Version: "1.2.3",
+					File:    "some-release-1.2.3.tgz",
+					SHA1:    "123abc",
+				},
+			},
+			RuntimeConfigs: map[string]interface{}{
+				"some-runtime-config": builder.Metadata{
+					"name": "some-runtime-config",
+					"runtime_config": `releases:
+- $( release "some-release" )`,
+				},
+			},
+		}
+
+		interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(interpolatedYAML).To(MatchYAML(`
+some_runtime_configs:
+- name: some-runtime-config
+  runtime_config: |-
+    releases:
+    - {"file":"some-release-1.2.3.tgz","name":"some-release","sha1":"123abc","version":"1.2.3"}
 `))
 	})
 
