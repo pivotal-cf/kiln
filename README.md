@@ -10,7 +10,7 @@ The `bake` command will "bake" a tile. It takes release and stemcell tarballs,
 metadata YAML, and JavaScript migrations as inputs and produces an
 OpsMan-compatible tile as its output.
 
-Here is an example:
+Here is an example command line:
 ```
 $ kiln bake \
     --version 2.0.0 \
@@ -20,6 +20,9 @@ $ kiln bake \
     --migrations-directory /path/to/migrations \
     --output-file /path/to/cf-2.0.0-build.4.pivotal
 ```
+
+Refer to the [example-tile](example-tile) for a complete example showing the
+different features kiln supports.
 
 #### Options
 
