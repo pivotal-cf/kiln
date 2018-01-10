@@ -112,7 +112,12 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 				return "", fmt.Errorf("could not find runtime_config with name '%s'", name)
 			}
 
-			return i.interpolateValueIntoYAML(input, val)
+			interpolatedYAML, err := i.interpolateValueIntoYAML(input, val)
+			if err != nil {
+				return "", err
+			}
+
+			return i.prettifyRuntimeConfig(interpolatedYAML)
 		},
 	}
 
@@ -158,8 +163,39 @@ func (i Interpolator) yamlMarshalOneLine(yamlContents []byte) ([]byte, error) {
 	return yamlConverter.YAMLToJSON(yamlContents)
 }
 
+func (i Interpolator) prettifyRuntimeConfig(interpolatedYAML string) (string, error) {
+	var runtimeConfig map[string]interface{}
+	err := yaml.Unmarshal([]byte(interpolatedYAML), &runtimeConfig)
+	if err != nil {
+		return "", err
+	}
+
+	if _, ok := runtimeConfig["runtime_config"]; !ok {
+		return interpolatedYAML, err
+	}
+
+	prettyRuntimeConfig, err := i.prettyPrint([]byte(runtimeConfig["runtime_config"].(string)))
+	if err != nil {
+		return "", err
+	}
+
+	runtimeConfig["runtime_config"] = string(prettyRuntimeConfig)
+
+	prettyInterpolatedYAML, err := yaml.Marshal(runtimeConfig)
+	if err != nil {
+		return "", err // should never happen
+	}
+
+	inlinedYAML, err := i.yamlMarshalOneLine(prettyInterpolatedYAML)
+	if err != nil {
+		return "", err // un-tested
+	}
+
+	return string(inlinedYAML), nil
+}
+
 func (i Interpolator) prettyPrint(inputYAML []byte) ([]byte, error) {
-	var data map[string]interface{}
+	var data interface{}
 	err := yaml.Unmarshal(inputYAML, &data)
 	if err != nil {
 		return []byte{}, err // should never happen

@@ -128,7 +128,8 @@ some_property_blueprints:
   default: some-value
 some_runtime_configs:
 - name: some-runtime-config
-  runtime_config: some-addon-runtime-config
+  runtime_config: |
+    some-addon-runtime-config
 `))
 		Expect(string(interpolatedYAML)).To(ContainSubstring("file: some-release-1.2.3.tgz\n"))
 	})
@@ -160,39 +161,84 @@ some_form_types:
 `))
 	})
 
-	It("allows interpolation helpers inside runtime_configs", func() {
-		templateYAML := `
+	Context("when the runtime config is provided", func() {
+
+		var templateYAML string
+		var input builder.InterpolateInput
+
+		BeforeEach(func() {
+			templateYAML = `
 ---
 some_runtime_configs:
 - $( runtime_config "some-runtime-config" )`
 
-		input := builder.InterpolateInput{
-			ReleaseManifests: map[string]interface{}{
-				"some-release": builder.ReleaseManifest{
-					Name:    "some-release",
-					Version: "1.2.3",
-					File:    "some-release-1.2.3.tgz",
-					SHA1:    "123abc",
+			input = builder.InterpolateInput{
+				ReleaseManifests: map[string]interface{}{
+					"some-release": builder.ReleaseManifest{
+						Name:    "some-release",
+						Version: "1.2.3",
+						File:    "some-release-1.2.3.tgz",
+						SHA1:    "123abc",
+					},
 				},
-			},
-			RuntimeConfigs: map[string]interface{}{
-				"some-runtime-config": builder.Metadata{
-					"name": "some-runtime-config",
-					"runtime_config": `releases:
+				RuntimeConfigs: map[string]interface{}{
+					"some-runtime-config": builder.Metadata{
+						"name": "some-runtime-config",
+						"runtime_config": `releases:
 - $( release "some-release" )`,
+					},
 				},
-			},
-		}
+			}
+		})
 
-		interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(interpolatedYAML).To(MatchYAML(`
+		It("allows interpolation helpers inside runtime_configs", func() {
+			interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(interpolatedYAML).To(MatchYAML(`
 some_runtime_configs:
 - name: some-runtime-config
-  runtime_config: |-
+  runtime_config: |
     releases:
-    - {"file":"some-release-1.2.3.tgz","name":"some-release","sha1":"123abc","version":"1.2.3"}
+    - file: some-release-1.2.3.tgz
+      name: some-release
+      sha1: 123abc
+      version: 1.2.3
 `))
+		})
+
+		Context("when the interpolated runtime config does not have a runtime_config key", func() {
+			JustBeforeEach(func() {
+				input.RuntimeConfigs = map[string]interface{}{
+					"some-runtime-config": builder.Metadata{
+						"name": "some-runtime-config",
+					},
+				}
+			})
+			It("does not error", func() {
+				interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(interpolatedYAML).To(MatchYAML(`
+some_runtime_configs:
+- name: some-runtime-config
+`))
+			})
+		})
+
+		Context("when the interpolated runtime config contains invalid YAML", func() {
+			JustBeforeEach(func() {
+				input.RuntimeConfigs = map[string]interface{}{
+					"some-runtime-config": builder.Metadata{
+						"name":           "some-runtime-config",
+						"runtime_config": "\tinvalid yaml",
+					},
+				}
+			})
+			It("errors", func() {
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
 	})
 
 	Context("failure cases", func() {
