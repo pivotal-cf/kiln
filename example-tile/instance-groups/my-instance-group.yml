@@ -1,7 +1,7 @@
-name: my-instance
-label: My Instance
-resource_label: My Instance
-description: This is an instance.
+name: my-instance-group
+label: My Instance Group
+resource_label: My Instance Group
+description: This is an instance group.
 
 templates:
 - $( job "my-job" )
@@ -45,7 +45,7 @@ resource_definitions:
   type: integer
   label: Persistent Disk
   configurable: false
-  default: $( variable "my-instance-persistent-disk-default" )
+  default: $( variable "my-instance-group-persistent-disk-default" )
   constraints:
     min: 10000
 

@@ -38,4 +38,4 @@ form_types:
 - $( form "first" )
 
 job_types:
-- $( instance_group "my-instance" )
+- $( instance_group "my-instance-group" )
