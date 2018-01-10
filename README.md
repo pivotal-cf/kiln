@@ -44,15 +44,30 @@ The `--releases-directory` flag takes a path to a directory that contains one or
 many release tarballs. The flag can also be specified more than once. This is
 useful if you consume bosh releases as Concourse resources. Each release will
 likely show up in the task as a separate directory. For example:
+
 ```
 $ tree /path/to/releases
-/path/to/releases/
-├── first
-│   ├── cflinuxfs2-release-1.166.0.tgz
-│   └── consul-release-190.tgz
-└── second
-    └── nats-release-22.tgz
+|-- first
+|   |-- cflinuxfs2-release-1.166.0.tgz
+|   `-- consul-release-190.tgz
+`-- second
+    `-- nats-release-22.tgz
+```
 
+To reference a release you can use the `release` template helper:
+
+```
+$ cat /path/to/metadata
+---
+releases:
+- $( release "cflinuxfs2" )
+- $( release "consul" )
+- $( release "nats" )
+```
+
+Example kiln command line:
+
+```
 $ kiln bake \
     --version 2.0.0 \
     --metadata /path/to/metadata.yml \
@@ -67,75 +82,36 @@ $ kiln bake \
 
 The `--properties-directory` flag takes a path to a directory that contains one
 or more blueprint property files. The flag can also be specified more than once.
+
+To reference a properties file in the directory you can use the `property`
+template helper:
+
 ```
-$ tree /path/to/properties
-/path/to/properties/
-├── diego_properties.yml
-└── cloud_controller_properties.yml
-
-$ cat /path/to/properties/diego_properties.yml
----
-name: rep_password
-type: secret
-configurable: false
-
 $ cat /path/to/metadata
 ---
 property_blueprints:
 - $( property "rep_password" )
-
-$ kiln bake \
-    --version 2.0.0 \
-    --metadata /path/to/metadata.yml \
-    --releases-directory /path/to/releases/first \
-    --releases-directory /path/to/releases/second \
-    --stemcell-tarball /path/to/stemcell.tgz \
-    --properties-directory /path/to/properties \
-    --migrations-directory /path/to/migrations \
-    --output-file /path/to/cf-2.0.0-build.4.pivotal
 ```
+
+Example [properties](properties) directory.
 
 ##### `--runtime-configs-directory`
 
 The `--runtime-configs-directory` flag takes a path to a directory that
 contains one or more runtime config files. The flag can also be specified
 more than once.
+
+To reference a runtime config in the directory you can use the `runtime_config`
+template helper:
+
 ```
-$ tree /path/to/runtime-configs
-/path/to/runtime-configs/
-├── first-runtime-config.yml
-└── second-runtime-config.yml
-
-$ cat /path/to/runtime-configs/first-runtime-config.yml
----
-name: first-runtime-config
-runtime_config: |
-  releases:
-  - name: first-addon-release
-    version: first-addon-release-version
-  addons:
-  - name: first-addon
-    jobs:
-    - name: first-addon-job
-      release: first-addon-release
-      properties:
-        key: value
-
 $ cat /path/to/metadata
 ---
 runtime_configs:
 - $( runtime_config "first-runtime-config" )
-
-$ kiln bake \
-    --version 2.0.0 \
-    --metadata /path/to/metadata.yml \
-    --releases-directory /path/to/releases/first \
-    --releases-directory /path/to/releases/second \
-    --stemcell-tarball /path/to/stemcell.tgz \
-    --runtime-configs-directory /path/to/runtime-configs \
-    --migrations-directory /path/to/migrations \
-    --output-file /path/to/cf-2.0.0-build.4.pivotal
 ```
+
+Example [runtime-configs](runtime-configs) directory.
 
 ##### `--stemcell-tarball`
 
@@ -158,6 +134,12 @@ key.
 
 This flag can be specified multiple times if you have organized your
 variables into subdirectories for development convenience.
+
+Example [variables](variables) directory.
+
+Note that currently you do not use a template helper function to include a
+variable, all variables in the directories specified will be included in the
+metadata.
 
 ##### `--output-file`
 
