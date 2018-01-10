@@ -1,25 +1,12 @@
 package builder
 
 type GeneratedMetadata struct {
-	Name             string
-	StemcellCriteria StemcellCriteria
-	Releases         []Release
-	IconImage        string
+	Name      string
+	IconImage string
 
 	Variables []Part
 
 	Metadata Metadata
-}
-
-type Release struct {
-	Name    string
-	File    string
-	Version string
-}
-
-type StemcellCriteria struct {
-	Version string
-	OS      string
 }
 
 func (gm GeneratedMetadata) MarshalYAML() (interface{}, error) {

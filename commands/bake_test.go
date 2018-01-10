@@ -175,10 +175,6 @@ var _ = Describe("bake", func() {
 		generatedMetadata = builder.GeneratedMetadata{
 			IconImage: "some-icon-image",
 			Name:      "some-product-name",
-			StemcellCriteria: builder.StemcellCriteria{
-				Version: "2.3.4",
-				OS:      "an-operating-system",
-			},
 		}
 		fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 		fakeInterpolator.InterpolateReturns([]byte("some-interpolated-metadata"), nil)
