@@ -27,6 +27,9 @@ releases:
 
 stemcell_criteria: $( stemcell )
 
+runtime_configs:
+- $( runtime_config "my-runtime-config" )
+
 property_blueprints:
 - $( property "element_1" )
 - $( property "element_2" )
