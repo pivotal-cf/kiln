@@ -1,14 +1,15 @@
 # Kiln
 
-Bakes tiles.
+Kiln helps tile developers build products for Pivotal Operations Manager. It provides
+an opinionated folder structure and templating capabilities. It is designed to be used
+both in CI environments and in command-line to produce a tile.
 
 ## Subcommands
 
 ### `bake`
 
-The `bake` command will "bake" a tile. It takes release and stemcell tarballs,
-metadata YAML, and JavaScript migrations as inputs and produces an
-OpsMan-compatible tile as its output.
+It takes release and stemcell tarballs, metadata YAML, and JavaScript migrations
+as inputs and produces an OpsMan-compatible tile as its output.
 
 Here is an example command line:
 ```
