@@ -49,6 +49,59 @@ tile. There are very few reasons a tile developer should want to do this, but if
 you do, you can include these extra files here. The flag can be specified
 multiple times to embed multiple files or directories.
 
+##### `--forms-directory`
+
+The `--forms-directory` flag takes a path to a directory that contains one
+or more forms. The flag can be specified more than once.
+
+To reference a form file in the directory you can use the `form`
+template helper:
+
+```
+$ cat /path/to/metadata
+---
+form_types:
+- $( form "first" )
+```
+
+Example [forms](example-tile/forms) directory.
+
+##### `--instance-groups-directory`
+
+The `--instance-groups-directory` flag takes a path to a directory that contains one
+or more instance groups. The flag can be specified more than once.
+
+To reference an instance group in the directory you can use the `instance_group`
+template helper:
+
+```
+$ cat /path/to/metadata
+---
+job_types:
+- $( instance_group "my-instance-group" )
+```
+
+Example [instance-groups](example-tile/instance-groups) directory.
+
+##### `--jobs-directory`
+
+The `--jobs-directory` flag takes a path to a directory that contains one
+or more jobs. The flag can be specified more than once.
+
+To reference a job file in the directory you can use the `job`
+template helper:
+
+```
+$ cat /path/to/instance-group
+---
+templates:
+- $( job "my-job" )
+- $( job "my-aliased-job" )
+- $( job "my-errand" )
+```
+
+Example [jobs](example-tile/jobs) directory.
+
 ##### `--metadata`
 
 Specify a file path to a tile metadata file for the `--metadata` flag. This
@@ -70,7 +123,7 @@ your tile will be created. The flag expects a full file name like
 ##### `--properties-directory`
 
 The `--properties-directory` flag takes a path to a directory that contains one
-or more blueprint property files. The flag can also be specified more than once.
+or more blueprint property files. The flag can be specified more than once.
 
 To reference a properties file in the directory you can use the `property`
 template helper:
@@ -87,7 +140,7 @@ Example [properties](example-tile/properties) directory.
 ##### `--releases-directory`
 
 The `--releases-directory` flag takes a path to a directory that contains one or
-many release tarballs. The flag can also be specified more than once. This is
+many release tarballs. The flag can be specified more than once. This is
 useful if you consume bosh releases as Concourse resources. Each release will
 likely show up in the task as a separate directory. For example:
 
@@ -126,7 +179,7 @@ $ kiln bake \
 ##### `--runtime-configs-directory`
 
 The `--runtime-configs-directory` flag takes a path to a directory that
-contains one or more runtime config files. The flag can also be specified
+contains one or more runtime config files. The flag can be specified
 more than once.
 
 To reference a runtime config in the directory you can use the `runtime_config`
@@ -143,9 +196,16 @@ Example [runtime-configs](example-tile/runtime-configs) directory.
 
 ##### `--stemcell-tarball`
 
-The `--stemcell-tarball` flag takes a path to a stemcell. That stemcell will be
-inspected to specify the version and operating system criteria in your tile
-metadata.
+The `--stemcell-tarball` flag takes a path to a stemcell.
+
+To include information about the stemcell in your metadata you can use the
+`stemcell` template helper:
+
+```
+$ cat /path/to/metadata
+---
+stemcell_criteria: $( stemcell )
+```
 
 ##### `--stub-releases`
 
@@ -153,6 +213,35 @@ For tile developers looking to get some quick feedback about their tile
 metadata, the `--stub-releases` flag will skip including the release tarballs
 into the built tile output. This should result in a much smaller file that
 should upload much more quickly to OpsManager.
+
+##### `--variable`
+
+The `--variable` flag takes a `key=value` argument that allows you to specify
+arbitrary variables for use in your metadata. The flag can be specified
+more than once.
+
+To reference a variable you can use the `variable` template helper:
+
+```
+$ cat /path/to/metadata
+---
+$( variable "some-variable" )
+```
+
+##### `--variables-file`
+
+The `--variables-file` flag takes a path to a YAML file that contains arbitrary
+variables for use in your metadata. The flag can be specified more than once.
+
+To reference a variable you can use the `variable` template helper:
+
+```
+$ cat /path/to/metadata
+---
+$( variable "some-variable" )
+```
+
+Example [variables file](example-tile/variables.yml).
 
 ##### `--version`
 
