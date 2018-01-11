@@ -115,6 +115,17 @@ templates:
 
 Example [jobs](example-tile/jobs) directory.
 
+You may find that you want to define different job files for the same BOSH job
+with different properties. To do this you add an `alias` key to the job which
+will be used in preference to the job name when resolving job references:
+
+```
+$ cat /path/to/my-aliased-job
+---
+name: my-job
+alias: my-aliased-job
+```
+
 ##### `--metadata`
 
 Specify a file path to a tile metadata file for the `--metadata` flag. This
