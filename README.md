@@ -269,6 +269,15 @@ Example [variables file](example-tile/variables.yml).
 
 ##### `--version`
 
-The `--version` flag takes the version number you want your tile to become. This
-version number will show up in the OpsManager UI and will be the version that
-your tile "provides" under the `provides_product_versions` metadata key.
+The `--version` flag takes the version number you want your tile to become.
+
+To reference the version you use the `version` template helper:
+
+```
+$ cat /path/to/metadata
+---
+product_version: $( version )
+provides_product_versions:
+- name: example
+  version: $( version )
+```
