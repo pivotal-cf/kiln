@@ -10,6 +10,8 @@ provides_product_versions:
 - name: example
   version: "0.0.0.0$PRERELEASE_VERSION$"
 
+icon_image: $( icon )
+
 rank: 90
 serial: false
 

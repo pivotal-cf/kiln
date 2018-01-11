@@ -66,6 +66,19 @@ form_types:
 
 Example [forms](example-tile/forms) directory.
 
+##### `--icon`
+
+The `--icon` flag takes a path to an icon file.
+
+To include the base64'd representation of the icon you can use the `icon`
+template helper:
+
+```
+$ cat /path/to/metadata
+---
+icon_image: $( icon )
+```
+
 ##### `--instance-groups-directory`
 
 The `--instance-groups-directory` flag takes a path to a directory that contains one
