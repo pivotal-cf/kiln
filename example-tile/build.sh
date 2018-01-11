@@ -5,7 +5,7 @@ function main() {
   cwd="${1}"
 
   go run "${cwd}/../main.go" bake \
-    --bosh-variables-directory "${cwd}/variables" \
+    --bosh-variables-directory "${cwd}/bosh-variables" \
     --embed "${cwd}/extra" \
     --forms-directory "${cwd}/forms" \
     --icon "${cwd}/icon.png" \
