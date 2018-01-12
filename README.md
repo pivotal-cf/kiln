@@ -1,5 +1,7 @@
 # Kiln
 
+_Kiln bakes tiles_
+
 Kiln helps tile developers build products for Pivotal Operations Manager. It provides
 an opinionated folder structure and templating capabilities. It is designed to be used
 both in CI environments and in command-line to produce a tile.
