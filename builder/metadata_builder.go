@@ -90,10 +90,6 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 }
 
 func (m MetadataBuilder) buildVariables(vars []string, metadata Metadata) ([]Part, error) {
-	if _, ok := metadata["variables"]; ok {
-		return nil, errors.New("variables section must be defined using --variables-directory flag")
-	}
-
 	var variables []Part
 
 	for _, variablesDirectory := range vars {

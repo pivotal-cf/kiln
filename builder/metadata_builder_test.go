@@ -210,22 +210,6 @@ var _ = Describe("MetadataBuilder", func() {
 					Expect(err.Error()).To(ContainSubstring(`missing "name" in tile metadata`))
 				})
 			})
-
-			Context("when the base metadata contains a variables section", func() {
-				It("returns an error", func() {
-					metadataReader.ReadReturns(builder.Metadata{
-						"name":      "cool-product",
-						"variables": "some-variables",
-					},
-						nil,
-					)
-
-					_, err := tileBuilder.Build(builder.BuildInput{
-						MetadataPath: "metadata.yml",
-					})
-					Expect(err).To(MatchError("variables section must be defined using --variables-directory flag"))
-				})
-			})
 		})
 	})
 })
