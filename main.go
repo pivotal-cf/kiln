@@ -4,8 +4,7 @@ import (
 	"log"
 	"os"
 
-	jhandacommands "github.com/pivotal-cf/jhanda/commands"
-	"github.com/pivotal-cf/jhanda/flags"
+	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/helper"
@@ -15,15 +14,15 @@ func main() {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
 	var global struct {
-		Help bool `short:"h" long:"help"                description:"prints this usage information"                        default:"false"`
+		Help bool `short:"h" long:"help" description:"prints this usage information" default:"false"`
 	}
 
-	args, err := flags.Parse(&global, os.Args[1:])
+	args, err := jhanda.Parse(&global, os.Args[1:])
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	globalFlagsUsage, err := flags.Usage(global)
+	globalFlagsUsage, err := jhanda.PrintUsage(global)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,7 +49,7 @@ func main() {
 	interpolator := builder.NewInterpolator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, logger, md5SumCalculator)
 
-	commandSet := jhandacommands.Set{}
+	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["bake"] = commands.NewBake(
 		metadataBuilder,

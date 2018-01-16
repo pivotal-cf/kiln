@@ -22,8 +22,8 @@
 [[projects]]
   branch = "master"
   name = "github.com/pivotal-cf/jhanda"
-  packages = ["commands","flags"]
-  revision = "cd0b97dd71705dd3128a50060d46a8e48d3c96e4"
+  packages = [".","internal/parser"]
+  revision = "db592bc7b08f7fe17128fec1700b27e2435ba38c"
 
 [[projects]]
   branch = "master"
@@ -52,6 +52,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a69eb249031cbf5f208411ff5a2f2b672bc309868ce3bae025e2e27e9c20c4d3"
+  inputs-digest = "bd05a14d8592207255192c3263005768c759246b596513be84f094ad79a2c02f"
   solver-name = "gps-cdcl"
   solver-version = 1

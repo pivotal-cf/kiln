@@ -1,9 +1,9 @@
-package flags_test
+package jhanda_test
 
 import (
 	"strings"
 
-	"github.com/pivotal-cf/jhanda/flags"
+	"github.com/pivotal-cf/jhanda"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -11,10 +11,10 @@ import (
 
 var _ = Describe("Usage", func() {
 	It("returns a formatted version of the flag set usage", func() {
-		usage, err := flags.Usage(struct {
-			Second flags.StringSlice `short:"2" long:"second" default:"true" description:"the second flag"`
-			Third  string            `          long:"third"                 description:"the third flag"`
-			First  bool              `short:"1" long:"first"                 description:"the first flag"`
+		usage, err := jhanda.PrintUsage(struct {
+			Second []string `short:"2" long:"second" default:"true" description:"the second flag"`
+			Third  string   `          long:"third"                 description:"the third flag"`
+			First  bool     `short:"1" long:"first"                 description:"the first flag"`
 		}{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usage).To(Equal(strings.TrimSpace(`
@@ -26,7 +26,7 @@ var _ = Describe("Usage", func() {
 
 	Context("when the receiver passed is not a struct", func() {
 		It("returns an error", func() {
-			_, err := flags.Usage(123)
+			_, err := jhanda.PrintUsage(123)
 			Expect(err).To(MatchError("unexpected pointer to non-struct type int"))
 		})
 	})

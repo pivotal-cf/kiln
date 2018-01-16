@@ -1,10 +1,10 @@
-package commands_test
+package jhanda_test
 
 import (
 	"errors"
 
-	"github.com/pivotal-cf/jhanda/commands"
-	"github.com/pivotal-cf/jhanda/commands/fakes"
+	"github.com/pivotal-cf/jhanda"
+	"github.com/pivotal-cf/jhanda/internal/fakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -14,7 +14,7 @@ var _ = Describe("Set", func() {
 	It("executes the given command", func() {
 		command := &fakes.Command{}
 
-		commandSet := commands.Set{
+		commandSet := jhanda.CommandSet{
 			"my-command": command,
 		}
 
@@ -26,7 +26,7 @@ var _ = Describe("Set", func() {
 
 	Context("when the given command does not exist", func() {
 		It("returns an error", func() {
-			commandSet := commands.Set{}
+			commandSet := jhanda.CommandSet{}
 
 			err := commandSet.Execute("missing-command", []string{})
 			Expect(err).To(MatchError("unknown command: missing-command"))
@@ -39,7 +39,7 @@ var _ = Describe("Set", func() {
 				command := &fakes.Command{}
 				command.ExecuteReturns(errors.New("failed to execute"))
 
-				commandSet := commands.Set{
+				commandSet := jhanda.CommandSet{
 					"erroring-command": command,
 				}
 
@@ -54,7 +54,7 @@ var _ = Describe("Set", func() {
 			command := &fakes.Command{}
 			helpCommand := &fakes.Command{}
 
-			commandSet := commands.Set{
+			commandSet := jhanda.CommandSet{
 				"my-command": command,
 				"help":       helpCommand,
 			}
@@ -72,7 +72,7 @@ var _ = Describe("Set", func() {
 			command := &fakes.Command{}
 			helpCommand := &fakes.Command{}
 
-			commandSet := commands.Set{
+			commandSet := jhanda.CommandSet{
 				"my-command": command,
 				"help":       helpCommand,
 			}
@@ -90,7 +90,7 @@ var _ = Describe("Set", func() {
 			command := &fakes.Command{}
 			helpCommand := &fakes.Command{}
 
-			commandSet := commands.Set{
+			commandSet := jhanda.CommandSet{
 				"my-command": command,
 				"help":       helpCommand,
 			}
@@ -106,21 +106,21 @@ var _ = Describe("Set", func() {
 	Describe("Usage", func() {
 		It("returns the usage information for the given command", func() {
 			command := &fakes.Command{}
-			command.UsageReturns(commands.Usage{Description: "my-command description"})
+			command.UsageReturns(jhanda.Usage{Description: "my-command description"})
 
-			commandSet := commands.Set{
+			commandSet := jhanda.CommandSet{
 				"my-command": command,
 			}
 
 			usage, err := commandSet.Usage("my-command")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(usage).To(Equal(commands.Usage{Description: "my-command description"}))
+			Expect(usage).To(Equal(jhanda.Usage{Description: "my-command description"}))
 		})
 
 		Context("when the given command does not exist", func() {
 			It("returns an error", func() {
-				commandSet := commands.Set{}
+				commandSet := jhanda.CommandSet{}
 
 				_, err := commandSet.Usage("missing-command")
 				Expect(err).To(MatchError("unknown command: missing-command"))

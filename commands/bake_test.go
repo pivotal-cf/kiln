@@ -10,8 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	yaml "gopkg.in/yaml.v2"
 
-	jhandacommands "github.com/pivotal-cf/jhanda/commands"
-	"github.com/pivotal-cf/jhanda/flags"
+	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
@@ -254,7 +253,7 @@ var _ = Describe("bake", func() {
 			expectedBuildInput := builder.BuildInput{
 				IconPath:                "some-icon-path",
 				MetadataPath:            "some-metadata",
-				BOSHVariableDirectories: flags.StringSlice{"some-other-variables-directory", "some-variables-directory"},
+				BOSHVariableDirectories: []string{"some-other-variables-directory", "some-variables-directory"},
 			}
 			Expect(fakeMetadataBuilder.BuildArgsForCall(0)).To(Equal(expectedBuildInput))
 
@@ -726,7 +725,7 @@ var _ = Describe("bake", func() {
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			Expect(bake.Usage()).To(Equal(jhandacommands.Usage{
+			Expect(bake.Usage()).To(Equal(jhanda.Usage{
 				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
 				ShortDescription: "bakes a tile",
 				Flags:            bake.Options,

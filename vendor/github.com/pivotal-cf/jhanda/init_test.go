@@ -1,4 +1,4 @@
-package flags_test
+package jhanda_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestFlags(t *testing.T) {
+func TestJhanda(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "flags")
+	RunSpecs(t, "jhanda")
 }

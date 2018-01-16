@@ -1,18 +1,18 @@
-package commands
+package jhanda
 
 import "fmt"
 
-type Set map[string]Command
+type CommandSet map[string]Command
 
-func (s Set) Execute(command string, args []string) error {
-	cmd, ok := s[command]
+func (cs CommandSet) Execute(command string, args []string) error {
+	cmd, ok := cs[command]
 	if !ok {
 		return fmt.Errorf("unknown command: %s", command)
 	}
 
 	for _, arg := range args {
 		if arg == "--help" || arg == "-h" || arg == "-help" {
-			return s.Execute("help", []string{command})
+			return cs.Execute("help", []string{command})
 		}
 	}
 
@@ -24,8 +24,8 @@ func (s Set) Execute(command string, args []string) error {
 	return nil
 }
 
-func (s Set) Usage(command string) (Usage, error) {
-	cmd, ok := s[command]
+func (cs CommandSet) Usage(command string) (Usage, error) {
+	cmd, ok := cs[command]
 	if !ok {
 		return Usage{}, fmt.Errorf("unknown command: %s", command)
 	}

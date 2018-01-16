@@ -1,4 +1,4 @@
-package flags
+package jhanda
 
 import (
 	"fmt"
@@ -7,7 +7,13 @@ import (
 	"strings"
 )
 
-func Usage(receiver interface{}) (string, error) {
+type Usage struct {
+	Description      string
+	ShortDescription string
+	Flags            interface{}
+}
+
+func PrintUsage(receiver interface{}) (string, error) {
 	v := reflect.ValueOf(receiver)
 	t := v.Type()
 	if t.Kind() != reflect.Struct {
