@@ -254,6 +254,7 @@ variables:
 			"--stemcell-tarball", stemcellTarball,
 			"--bosh-variables-directory", someVariablesDirectory,
 			"--variable", "some-variable=some-variable-value",
+			"--variable", "some-literal-variable=value\nwith\nnewlines\n",
 			"--version", "1.2.3",
 		)
 
@@ -357,6 +358,7 @@ variables:
 				"--stemcell-tarball", stemcellTarball,
 				"--stub-releases",
 				"--variable", "some-variable=some-variable-value",
+				"--variable", "some-literal-variable=value\nwith\nnewlines\n",
 				"--version", "1.2.3",
 			)
 
@@ -405,6 +407,7 @@ variables:
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--variable", "some-variable=some-variable-value",
+				"--variable", "some-literal-variable=value\nwith\nnewlines\n",
 				"--version", "1.2.3",
 			)
 
@@ -468,6 +471,7 @@ variables:
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
+					"--variable", "some-literal-variable=value\nwith\nnewlines\n",
 					"--version", "1.2.3",
 				)
 
@@ -550,6 +554,7 @@ variables:
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
+					"--variable", "some-literal-variable=value\nwith\nnewlines\n",
 					"--version", "1.2.3",
 				)
 
@@ -629,6 +634,7 @@ variables:
 				"--stemcell-tarball", stemcellTarball,
 				"--bosh-variables-directory", someVariablesDirectory,
 				"--variables-file", variableFile.Name(),
+				"--variable", "some-literal-variable=value\nwith\nnewlines\n",
 				"--version", "1.2.3",
 			)
 
@@ -676,6 +682,7 @@ variables:
 					"--properties-directory", somePropertiesDirectory,
 					"--releases-directory", "missing-directory",
 					"--stemcell-tarball", "stemcell.tgz",
+					"--variable", "some-literal-variable=value\nwith\nnewlines\n",
 					"--version", "1.2.3",
 				)
 
@@ -706,6 +713,7 @@ variables:
 					"--runtime-configs-directory", someRuntimeConfigsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--variable", "some-variable=some-variable-value",
+					"--variable", "some-literal-variable=value\nwith\nnewlines\n",
 					"--version", "1.2.3",
 				)
 

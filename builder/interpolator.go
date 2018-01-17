@@ -85,7 +85,7 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 			if !ok {
 				return "", fmt.Errorf("could not find variable with key '%s'", key)
 			}
-			return val, nil
+			return i.interpolateValueIntoYAML(input, val)
 		},
 		"icon": func() (string, error) {
 			return input.IconImage, nil
