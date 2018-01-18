@@ -641,7 +641,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(MatchError("--icon is a required parameter"))
+					Expect(err).To(MatchError("missing required flag \"--icon\""))
 				})
 			})
 
@@ -655,7 +655,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(MatchError("--metadata is a required parameter"))
+					Expect(err).To(MatchError("missing required flag \"--metadata\""))
 				})
 			})
 
@@ -669,7 +669,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(MatchError("Please specify release tarballs directory with the --releases-directory parameter"))
+					Expect(err).To(MatchError("missing required flag \"--releases-directory\""))
 				})
 			})
 
@@ -683,7 +683,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(MatchError("--output-file is a required parameter"))
+					Expect(err).To(MatchError("missing required flag \"--output-file\""))
 				})
 			})
 

@@ -15,23 +15,23 @@ import (
 )
 
 type BakeConfig struct {
-	BOSHVariableDirectories  []string `short:"vd"   long:"bosh-variables-directory"   description:"path to a directory containing BOSH variables"`
-	EmbedPaths               []string `short:"e"    long:"embed"                      description:"path to files to include in the tile /embed directory"`
-	FormDirectories          []string `short:"f"    long:"forms-directory"            description:"path to a directory containing forms"`
-	IconPath                 string   `short:"i"    long:"icon"                       description:"path to icon file"`
-	InstanceGroupDirectories []string `short:"ig"   long:"instance-groups-directory"  description:"path to a directory containing instance groups"`
-	JobDirectories           []string `short:"j"    long:"jobs-directory"             description:"path to a directory containing jobs"`
-	Metadata                 string   `short:"m"    long:"metadata"                   description:"path to the metadata file"`
-	MigrationDirectories     []string `short:"md"   long:"migrations-directory"       description:"path to a directory containing migrations"`
-	OutputFile               string   `short:"o"    long:"output-file"                description:"path to where the tile will be output"`
-	PropertyDirectories      []string `short:"pd"   long:"properties-directory"       description:"path to a directory containing property blueprints"`
-	ReleaseDirectories       []string `short:"rd"   long:"releases-directory"         description:"path to a directory containing release tarballs"`
-	RuntimeConfigDirectories []string `short:"rcd"  long:"runtime-configs-directory"  description:"path to a directory containing runtime configs"`
-	StemcellTarball          string   `short:"st"   long:"stemcell-tarball"           description:"path to a stemcell tarball"`
-	StubReleases             bool     `short:"sr"   long:"stub-releases"              description:"skips importing release tarballs into the tile"`
-	VariableFiles            []string `short:"vf"   long:"variables-file"             description:"path to a file containing variables to interpolate"`
-	Variables                []string `short:"vr"   long:"variable"                   description:"key value pairs of variables to interpolate"`
-	Version                  string   `short:"v"    long:"version"                    description:"version of the tile"`
+	BOSHVariableDirectories  []string `short:"vd"   long:"bosh-variables-directory"                   description:"path to a directory containing BOSH variables"`
+	EmbedPaths               []string `short:"e"    long:"embed"                                      description:"path to files to include in the tile /embed directory"`
+	FormDirectories          []string `short:"f"    long:"forms-directory"                            description:"path to a directory containing forms"`
+	IconPath                 string   `short:"i"    long:"icon"                       required:"true" description:"path to icon file"`
+	InstanceGroupDirectories []string `short:"ig"   long:"instance-groups-directory"                  description:"path to a directory containing instance groups"`
+	JobDirectories           []string `short:"j"    long:"jobs-directory"                             description:"path to a directory containing jobs"`
+	Metadata                 string   `short:"m"    long:"metadata"                   required:"true" description:"path to the metadata file"`
+	MigrationDirectories     []string `short:"md"   long:"migrations-directory"                       description:"path to a directory containing migrations"`
+	OutputFile               string   `short:"o"    long:"output-file"                required:"true" description:"path to where the tile will be output"`
+	PropertyDirectories      []string `short:"pd"   long:"properties-directory"                       description:"path to a directory containing property blueprints"`
+	ReleaseDirectories       []string `short:"rd"   long:"releases-directory"         required:"true" description:"path to a directory containing release tarballs"`
+	RuntimeConfigDirectories []string `short:"rcd"  long:"runtime-configs-directory"                  description:"path to a directory containing runtime configs"`
+	StemcellTarball          string   `short:"st"   long:"stemcell-tarball"                           description:"path to a stemcell tarball"`
+	StubReleases             bool     `short:"sr"   long:"stub-releases"                              description:"skips importing release tarballs into the tile"`
+	VariableFiles            []string `short:"vf"   long:"variables-file"                             description:"path to a file containing variables to interpolate"`
+	Variables                []string `short:"vr"   long:"variable"                                   description:"key value pairs of variables to interpolate"`
+	Version                  string   `short:"v"    long:"version"                                    description:"version of the tile"`
 }
 
 type Bake struct {
@@ -305,22 +305,6 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 	args, err := jhanda.Parse(&config, args)
 	if err != nil {
 		return config, err
-	}
-
-	if len(config.ReleaseDirectories) == 0 {
-		return config, errors.New("Please specify release tarballs directory with the --releases-directory parameter")
-	}
-
-	if config.IconPath == "" {
-		return config, errors.New("--icon is a required parameter")
-	}
-
-	if config.Metadata == "" {
-		return config, errors.New("--metadata is a required parameter")
-	}
-
-	if config.OutputFile == "" {
-		return config, errors.New("--output-file is a required parameter")
 	}
 
 	if len(config.InstanceGroupDirectories) == 0 && len(config.JobDirectories) > 0 {
