@@ -27,23 +27,23 @@ Usage: kiln [options] bake [<args>]
   --help, -h  bool  prints this usage information (default: false)
 
 Command Arguments:
-  --bosh-variables-directory, -vd    string (variadic)  path to a directory containing BOSH variables
-  --embed, -e                        string (variadic)  path to files to include in the tile /embed directory
-  --forms-directory, -f              string (variadic)  path to a directory containing forms
-  --icon, -i                         string             path to icon file
-  --instance-groups-directory, -ig   string (variadic)  path to a directory containing instance groups
-  --jobs-directory, -j               string (variadic)  path to a directory containing jobs
-  --metadata, -m                     string             path to the metadata file
-  --migrations-directory, -md        string (variadic)  path to a directory containing migrations
-  --output-file, -o                  string             path to where the tile will be output
-  --properties-directory, -pd        string (variadic)  path to a directory containing property blueprints
-  --releases-directory, -rd          string (variadic)  path to a directory containing release tarballs
-  --runtime-configs-directory, -rcd  string (variadic)  path to a directory containing runtime configs
-  --stemcell-tarball, -st            string             path to a stemcell tarball
-  --stub-releases, -sr               bool               skips importing release tarballs into the tile
-  --variable, -vr                    string (variadic)  key value pairs of variables to interpolate
-  --variables-file, -vf              string (variadic)  path to a file containing variables to interpolate
-  --version, -v                      string             version of the tile
+  --bosh-variables-directory, -vd    string (variadic)            path to a directory containing BOSH variables
+  --embed, -e                        string (variadic)            path to files to include in the tile /embed directory
+  --forms-directory, -f              string (variadic)            path to a directory containing forms
+  --icon, -i                         string (required)            path to icon file
+  --instance-groups-directory, -ig   string (variadic)            path to a directory containing instance groups
+  --jobs-directory, -j               string (variadic)            path to a directory containing jobs
+  --metadata, -m                     string (required)            path to the metadata file
+  --migrations-directory, -md        string (variadic)            path to a directory containing migrations
+  --output-file, -o                  string (required)            path to where the tile will be output
+  --properties-directory, -pd        string (variadic)            path to a directory containing property blueprints
+  --releases-directory, -rd          string (required, variadic)  path to a directory containing release tarballs
+  --runtime-configs-directory, -rcd  string (variadic)            path to a directory containing runtime configs
+  --stemcell-tarball, -st            string                       path to a stemcell tarball
+  --stub-releases, -sr               bool                         skips importing release tarballs into the tile
+  --variable, -vr                    string (variadic)            key value pairs of variables to interpolate
+  --variables-file, -vf              string (variadic)            path to a file containing variables to interpolate
+  --version, -v                      string                       version of the tile
 `
 
 var _ = Describe("help", func() {
