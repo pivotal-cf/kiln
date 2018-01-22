@@ -123,7 +123,7 @@ func (b Bake) Execute(args []string) error {
 
 	b.logger.Printf("Creating metadata for %s...", config.OutputFile)
 
-	variables := map[string]string{}
+	variables := map[string]interface{}{}
 	for _, file := range config.VariableFiles {
 		err := b.readVariableFiles(file, variables)
 		if err != nil {
@@ -314,7 +314,7 @@ func (b Bake) parseArgs(args []string) (BakeConfig, error) {
 	return config, nil
 }
 
-func (b Bake) addVariablesToMap(flagVariables []string, variables map[string]string) error {
+func (b Bake) addVariablesToMap(flagVariables []string, variables map[string]interface{}) error {
 	for _, variable := range flagVariables {
 		variablePair := strings.SplitN(variable, "=", 2)
 		if len(variablePair) < 2 {
@@ -348,7 +348,7 @@ func (b Bake) extractReleaseTarballFilenames(config BakeConfig) ([]string, error
 	return releaseTarballs, nil
 }
 
-func (b Bake) readVariableFiles(path string, variables map[string]string) error {
+func (b Bake) readVariableFiles(path string, variables map[string]interface{}) error {
 	variableData, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err

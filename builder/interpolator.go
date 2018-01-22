@@ -14,7 +14,7 @@ type Interpolator struct{}
 
 type InterpolateInput struct {
 	Version            string
-	Variables          map[string]string
+	Variables          map[string]interface{}
 	ReleaseManifests   map[string]interface{}
 	StemcellManifest   interface{}
 	FormTypes          map[string]interface{}

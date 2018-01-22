@@ -35,7 +35,7 @@ some_runtime_configs:
 
 		input = builder.InterpolateInput{
 			Version: "3.4.5",
-			Variables: map[string]string{
+			Variables: map[string]interface{}{
 				"some-variable": "some-value",
 			},
 			ReleaseManifests: map[string]interface{}{
@@ -141,7 +141,7 @@ some_form_types:
 - $( form "some-form" )`
 
 		input := builder.InterpolateInput{
-			Variables: map[string]string{
+			Variables: map[string]interface{}{
 				"some-form-variable": "variable-form-label",
 			},
 			FormTypes: map[string]interface{}{

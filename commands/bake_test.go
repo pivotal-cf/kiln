@@ -262,7 +262,7 @@ var _ = Describe("bake", func() {
 			input, metadata := fakeInterpolator.InterpolateArgsForCall(0)
 			Expect(input).To(Equal(builder.InterpolateInput{
 				Version: "1.2.3",
-				Variables: map[string]string{
+				Variables: map[string]interface{}{
 					"some-variable-from-file": "some-variable-value-from-file",
 					"some-variable":           "some-variable-value",
 				},

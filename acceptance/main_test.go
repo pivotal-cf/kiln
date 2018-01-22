@@ -34,6 +34,7 @@ var _ = Describe("kiln", func() {
 		someOtherInstanceGroupsDirectory string
 		someJobsDirectory                string
 		someOtherJobsDirectory           string
+		someVarFile                      string
 		stemcellTarball                  string
 		tmpDir                           string
 		diegoSHA1                        string
@@ -92,6 +93,10 @@ var _ = Describe("kiln", func() {
 
 		someOtherJobsDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
+
+		someVarDir, err := ioutil.TempDir(tmpDir, "")
+		Expect(err).NotTo(HaveOccurred())
+		someVarFile = filepath.Join(someVarDir, "var-file.yml")
 
 		cfReleaseManifest := `---
 name: cf
@@ -224,6 +229,13 @@ variables:
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
+		err = ioutil.WriteFile(someVarFile, []byte(`---
+some-boolean-variable: true
+some-literal-variable: |
+  { "some": "value" }
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
 		metadata = filepath.Join(tmpDir, "metadata.yml")
 		err = ioutil.WriteFile(metadata, untemplatedMetadata, 0644)
 		Expect(err).NotTo(HaveOccurred())
@@ -254,7 +266,7 @@ variables:
 			"--stemcell-tarball", stemcellTarball,
 			"--bosh-variables-directory", someVariablesDirectory,
 			"--variable", "some-variable=some-variable-value",
-			"--variable", "some-literal-variable=value\nwith\nnewlines\n",
+			"--variables-file", filepath.Join(someVarFile),
 			"--version", "1.2.3",
 		)
 
@@ -358,7 +370,7 @@ variables:
 				"--stemcell-tarball", stemcellTarball,
 				"--stub-releases",
 				"--variable", "some-variable=some-variable-value",
-				"--variable", "some-literal-variable=value\nwith\nnewlines\n",
+				"--variables-file", filepath.Join(someVarFile),
 				"--version", "1.2.3",
 			)
 
@@ -407,7 +419,7 @@ variables:
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--variable", "some-variable=some-variable-value",
-				"--variable", "some-literal-variable=value\nwith\nnewlines\n",
+				"--variables-file", filepath.Join(someVarFile),
 				"--version", "1.2.3",
 			)
 
@@ -471,7 +483,7 @@ variables:
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
-					"--variable", "some-literal-variable=value\nwith\nnewlines\n",
+					"--variables-file", filepath.Join(someVarFile),
 					"--version", "1.2.3",
 				)
 
@@ -554,7 +566,7 @@ variables:
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
 					"--variable", "some-variable=some-variable-value",
-					"--variable", "some-literal-variable=value\nwith\nnewlines\n",
+					"--variables-file", filepath.Join(someVarFile),
 					"--version", "1.2.3",
 				)
 
@@ -634,7 +646,7 @@ variables:
 				"--stemcell-tarball", stemcellTarball,
 				"--bosh-variables-directory", someVariablesDirectory,
 				"--variables-file", variableFile.Name(),
-				"--variable", "some-literal-variable=value\nwith\nnewlines\n",
+				"--variables-file", filepath.Join(someVarFile),
 				"--version", "1.2.3",
 			)
 
@@ -682,7 +694,7 @@ variables:
 					"--properties-directory", somePropertiesDirectory,
 					"--releases-directory", "missing-directory",
 					"--stemcell-tarball", "stemcell.tgz",
-					"--variable", "some-literal-variable=value\nwith\nnewlines\n",
+					"--variables-file", filepath.Join(someVarFile),
 					"--version", "1.2.3",
 				)
 
@@ -713,7 +725,7 @@ variables:
 					"--runtime-configs-directory", someRuntimeConfigsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--variable", "some-variable=some-variable-value",
-					"--variable", "some-literal-variable=value\nwith\nnewlines\n",
+					"--variables-file", filepath.Join(someVarFile),
 					"--version", "1.2.3",
 				)
 

@@ -14,6 +14,7 @@ product_version: $( version )
 minimum_version_for_upgrade: 1.6.9-build.0
 custom_variable: $(variable "some-variable")
 literal_variable: $(variable "some-literal-variable")
+boolean_variable: $(variable "some-boolean-variable")
 label: Pivotal Elastic Runtime
 description:
   this is the description
@@ -72,9 +73,8 @@ metadata_version: "1.7"
 minimum_version_for_upgrade: 1.6.9-build.0
 custom_variable: some-variable-value
 literal_variable: |
-  value
-  with
-  newlines
+  { "some": "value" }
+boolean_variable: true
 name: cool-product-name
 post_deploy_errands:
 - name: smoke-tests
