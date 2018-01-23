@@ -112,12 +112,7 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 				return "", fmt.Errorf("could not find runtime_config with name '%s'", name)
 			}
 
-			interpolatedYAML, err := i.interpolateValueIntoYAML(input, val)
-			if err != nil {
-				return "", err
-			}
-
-			return i.prettifyRuntimeConfig(interpolatedYAML)
+			return i.interpolateValueIntoYAML(input, val)
 		},
 	}
 

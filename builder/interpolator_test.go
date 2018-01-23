@@ -4,6 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/builder"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var _ = Describe("interpolator", func() {
@@ -88,7 +89,7 @@ some_runtime_configs:
 			RuntimeConfigs: map[string]interface{}{
 				"some-runtime-config": builder.Metadata{
 					"name":           "some-runtime-config",
-					"runtime_config": "some-addon-runtime-config",
+					"runtime_config": "some-addon-runtime-config\n",
 				},
 			},
 		}
@@ -194,16 +195,24 @@ some_runtime_configs:
 		It("allows interpolation helpers inside runtime_configs", func() {
 			interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(interpolatedYAML).To(MatchYAML(`
-some_runtime_configs:
-- name: some-runtime-config
-  runtime_config: |
-    releases:
-    - file: some-release-1.2.3.tgz
-      name: some-release
-      sha1: 123abc
-      version: 1.2.3
-`))
+
+			var output map[string]interface{}
+			err = yaml.Unmarshal(interpolatedYAML, &output)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(output).To(HaveKey("some_runtime_configs"))
+			configs, ok := output["some_runtime_configs"].([]interface{})
+			Expect(ok).To(BeTrue())
+			config, ok := configs[0].(map[interface{}]interface{})
+			Expect(ok).To(BeTrue())
+
+			Expect(config).To(HaveKeyWithValue("name", "some-runtime-config"))
+			Expect(config["runtime_config"]).To(MatchYAML(`
+releases:
+- file: some-release-1.2.3.tgz
+  name: some-release
+  sha1: 123abc
+  version: 1.2.3`))
 		})
 
 		Context("when the interpolated runtime config does not have a runtime_config key", func() {
@@ -223,22 +232,6 @@ some_runtime_configs:
 `))
 			})
 		})
-
-		Context("when the interpolated runtime config contains invalid YAML", func() {
-			JustBeforeEach(func() {
-				input.RuntimeConfigs = map[string]interface{}{
-					"some-runtime-config": builder.Metadata{
-						"name":           "some-runtime-config",
-						"runtime_config": "\tinvalid yaml",
-					},
-				}
-			})
-			It("errors", func() {
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
-				Expect(err).To(HaveOccurred())
-			})
-		})
-
 	})
 
 	Context("failure cases", func() {
