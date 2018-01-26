@@ -14,26 +14,6 @@ import (
 	"github.com/pivotal-cf/kiln/builder"
 )
 
-type BakeConfig struct {
-	BOSHVariableDirectories  []string `short:"vd"   long:"bosh-variables-directory"                   description:"path to a directory containing BOSH variables"`
-	EmbedPaths               []string `short:"e"    long:"embed"                                      description:"path to files to include in the tile /embed directory"`
-	FormDirectories          []string `short:"f"    long:"forms-directory"                            description:"path to a directory containing forms"`
-	IconPath                 string   `short:"i"    long:"icon"                       required:"true" description:"path to icon file"`
-	InstanceGroupDirectories []string `short:"ig"   long:"instance-groups-directory"                  description:"path to a directory containing instance groups"`
-	JobDirectories           []string `short:"j"    long:"jobs-directory"                             description:"path to a directory containing jobs"`
-	Metadata                 string   `short:"m"    long:"metadata"                   required:"true" description:"path to the metadata file"`
-	MigrationDirectories     []string `short:"md"   long:"migrations-directory"                       description:"path to a directory containing migrations"`
-	OutputFile               string   `short:"o"    long:"output-file"                required:"true" description:"path to where the tile will be output"`
-	PropertyDirectories      []string `short:"pd"   long:"properties-directory"                       description:"path to a directory containing property blueprints"`
-	ReleaseDirectories       []string `short:"rd"   long:"releases-directory"         required:"true" description:"path to a directory containing release tarballs"`
-	RuntimeConfigDirectories []string `short:"rcd"  long:"runtime-configs-directory"                  description:"path to a directory containing runtime configs"`
-	StemcellTarball          string   `short:"st"   long:"stemcell-tarball"                           description:"path to a stemcell tarball"`
-	StubReleases             bool     `short:"sr"   long:"stub-releases"                              description:"skips importing release tarballs into the tile"`
-	VariableFiles            []string `short:"vf"   long:"variables-file"                             description:"path to a file containing variables to interpolate"`
-	Variables                []string `short:"vr"   long:"variable"                                   description:"key value pairs of variables to interpolate"`
-	Version                  string   `short:"v"    long:"version"                                    description:"version of the tile"`
-}
-
 type Bake struct {
 	metadataBuilder                  metadataBuilder
 	interpolator                     interpolator
@@ -47,7 +27,25 @@ type Bake struct {
 	propertyBlueprintDirectoryReader directoryReader
 	runtimeConfigsDirectoryReader    directoryReader
 	yamlMarshal                      func(interface{}) ([]byte, error)
-	Options                          BakeConfig
+	Options                          struct {
+		BOSHVariableDirectories  []string `short:"vd"   long:"bosh-variables-directory"                   description:"path to a directory containing BOSH variables"`
+		EmbedPaths               []string `short:"e"    long:"embed"                                      description:"path to files to include in the tile /embed directory"`
+		FormDirectories          []string `short:"f"    long:"forms-directory"                            description:"path to a directory containing forms"`
+		IconPath                 string   `short:"i"    long:"icon"                       required:"true" description:"path to icon file"`
+		InstanceGroupDirectories []string `short:"ig"   long:"instance-groups-directory"                  description:"path to a directory containing instance groups"`
+		JobDirectories           []string `short:"j"    long:"jobs-directory"                             description:"path to a directory containing jobs"`
+		Metadata                 string   `short:"m"    long:"metadata"                   required:"true" description:"path to the metadata file"`
+		MigrationDirectories     []string `short:"md"   long:"migrations-directory"                       description:"path to a directory containing migrations"`
+		OutputFile               string   `short:"o"    long:"output-file"                required:"true" description:"path to where the tile will be output"`
+		PropertyDirectories      []string `short:"pd"   long:"properties-directory"                       description:"path to a directory containing property blueprints"`
+		ReleaseDirectories       []string `short:"rd"   long:"releases-directory"         required:"true" description:"path to a directory containing release tarballs"`
+		RuntimeConfigDirectories []string `short:"rcd"  long:"runtime-configs-directory"                  description:"path to a directory containing runtime configs"`
+		StemcellTarball          string   `short:"st"   long:"stemcell-tarball"                           description:"path to a stemcell tarball"`
+		StubReleases             bool     `short:"sr"   long:"stub-releases"                              description:"skips importing release tarballs into the tile"`
+		VariableFiles            []string `short:"vf"   long:"variables-file"                             description:"path to a file containing variables to interpolate"`
+		Variables                []string `short:"vr"   long:"variable"                                   description:"key value pairs of variables to interpolate"`
+		Version                  string   `short:"v"    long:"version"                                    description:"version of the tile"`
+	}
 }
 
 //go:generate counterfeiter -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
@@ -118,22 +116,26 @@ func NewBake(
 }
 
 func (b Bake) Execute(args []string) error {
-	config, err := b.parseArgs(args)
+	args, err := jhanda.Parse(&b.Options, args)
 	if err != nil {
 		return err
 	}
 
-	b.logger.Printf("Creating metadata for %s...", config.OutputFile)
+	if len(b.Options.InstanceGroupDirectories) == 0 && len(b.Options.JobDirectories) > 0 {
+		return errors.New("--jobs-directory flag requires --instance-groups-directory to also be specified")
+	}
+
+	b.logger.Printf("Creating metadata for %s...", b.Options.OutputFile)
 
 	variables := map[string]interface{}{}
-	for _, file := range config.VariableFiles {
+	for _, file := range b.Options.VariableFiles {
 		err := b.readVariableFiles(file, variables)
 		if err != nil {
 			return fmt.Errorf("failed reading variable file: %s", err.Error())
 		}
 	}
 
-	releaseTarballs, err := b.extractReleaseTarballFilenames(config)
+	releaseTarballs, err := b.extractReleaseTarballFilenames(b.Options.ReleaseDirectories)
 	if err != nil {
 		return err
 	}
@@ -149,9 +151,9 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	var stemcellManifest interface{}
-	if config.StemcellTarball != "" {
+	if b.Options.StemcellTarball != "" {
 		b.logger.Println("Reading stemcell manifests...")
-		stemcell, err := b.stemcellManifestReader.Read(config.StemcellTarball)
+		stemcell, err := b.stemcellManifestReader.Read(b.Options.StemcellTarball)
 		if err != nil {
 			return err
 		}
@@ -159,10 +161,10 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	var formTypes map[string]interface{}
-	if config.FormDirectories != nil {
+	if b.Options.FormDirectories != nil {
 		b.logger.Println("Reading form files...")
 		formTypes = map[string]interface{}{}
-		for _, formDir := range config.FormDirectories {
+		for _, formDir := range b.Options.FormDirectories {
 			forms, err := b.formDirectoryReader.Read(formDir)
 			if err != nil {
 				return err
@@ -175,10 +177,10 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	var instanceGroups map[string]interface{}
-	if config.InstanceGroupDirectories != nil {
+	if b.Options.InstanceGroupDirectories != nil {
 		b.logger.Println("Reading instance group files...")
 		instanceGroups = map[string]interface{}{}
-		for _, instanceGroupDir := range config.InstanceGroupDirectories {
+		for _, instanceGroupDir := range b.Options.InstanceGroupDirectories {
 			instanceGroupsInDirectory, err := b.instanceGroupDirectoryReader.Read(instanceGroupDir)
 			if err != nil {
 				return err
@@ -191,10 +193,10 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	var jobs map[string]interface{}
-	if config.JobDirectories != nil {
+	if b.Options.JobDirectories != nil {
 		b.logger.Println("Reading jobs files...")
 		jobs = map[string]interface{}{}
-		for _, jobsDir := range config.JobDirectories {
+		for _, jobsDir := range b.Options.JobDirectories {
 			jobsInDirectory, err := b.jobDirectoryReader.Read(jobsDir)
 			if err != nil {
 				return err
@@ -207,10 +209,10 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	var propertyBlueprints map[string]interface{}
-	if config.PropertyDirectories != nil {
+	if b.Options.PropertyDirectories != nil {
 		b.logger.Println("Reading property blueprint files...")
 		propertyBlueprints = map[string]interface{}{}
-		for _, propertyBlueprintDir := range config.PropertyDirectories {
+		for _, propertyBlueprintDir := range b.Options.PropertyDirectories {
 			propertyBlueprintsInDirectory, err := b.propertyBlueprintDirectoryReader.Read(propertyBlueprintDir)
 			if err != nil {
 				return err
@@ -223,10 +225,10 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	var runtimeConfigs map[string]interface{}
-	if config.RuntimeConfigDirectories != nil {
+	if b.Options.RuntimeConfigDirectories != nil {
 		b.logger.Println("Reading runtime config files...")
 		runtimeConfigs = map[string]interface{}{}
-		for _, runtimeConfigsDir := range config.RuntimeConfigDirectories {
+		for _, runtimeConfigsDir := range b.Options.RuntimeConfigDirectories {
 			runtimeConfigsInDirectory, err := b.runtimeConfigsDirectoryReader.Read(runtimeConfigsDir)
 			if err != nil {
 				return err
@@ -238,15 +240,15 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
-	err = b.addVariablesToMap(config.Variables, variables)
+	err = b.addVariablesToMap(b.Options.Variables, variables)
 	if err != nil {
 		return err
 	}
 
 	buildInput := builder.BuildInput{
-		IconPath:                config.IconPath,
-		MetadataPath:            config.Metadata,
-		BOSHVariableDirectories: config.BOSHVariableDirectories,
+		IconPath:                b.Options.IconPath,
+		MetadataPath:            b.Options.Metadata,
+		BOSHVariableDirectories: b.Options.BOSHVariableDirectories,
 	}
 
 	generatedMetadata, err := b.metadataBuilder.Build(buildInput)
@@ -262,7 +264,7 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	interpolatedMetadata, err := b.interpolator.Interpolate(builder.InterpolateInput{
-		Version:            config.Version,
+		Version:            b.Options.Version,
 		Variables:          variables,
 		ReleaseManifests:   releaseManifests,
 		StemcellManifest:   stemcellManifest,
@@ -278,11 +280,11 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	writeInput := builder.WriteInput{
-		OutputFile:           config.OutputFile,
-		StubReleases:         config.StubReleases,
-		MigrationDirectories: config.MigrationDirectories,
-		ReleaseDirectories:   config.ReleaseDirectories,
-		EmbedPaths:           config.EmbedPaths,
+		OutputFile:           b.Options.OutputFile,
+		StubReleases:         b.Options.StubReleases,
+		MigrationDirectories: b.Options.MigrationDirectories,
+		ReleaseDirectories:   b.Options.ReleaseDirectories,
+		EmbedPaths:           b.Options.EmbedPaths,
 	}
 
 	err = b.tileWriter.Write(generatedMetadata.Name, interpolatedMetadata, writeInput)
@@ -301,21 +303,6 @@ func (b Bake) Usage() jhanda.Usage {
 	}
 }
 
-func (b Bake) parseArgs(args []string) (BakeConfig, error) {
-	config := BakeConfig{}
-
-	args, err := jhanda.Parse(&config, args)
-	if err != nil {
-		return config, err
-	}
-
-	if len(config.InstanceGroupDirectories) == 0 && len(config.JobDirectories) > 0 {
-		return config, errors.New("--jobs-directory flag requires --instance-groups-directory to also be specified")
-	}
-
-	return config, nil
-}
-
 func (b Bake) addVariablesToMap(flagVariables []string, variables map[string]interface{}) error {
 	for _, variable := range flagVariables {
 		variablePair := strings.SplitN(variable, "=", 2)
@@ -328,10 +315,10 @@ func (b Bake) addVariablesToMap(flagVariables []string, variables map[string]int
 	return nil
 }
 
-func (b Bake) extractReleaseTarballFilenames(config BakeConfig) ([]string, error) {
+func (b Bake) extractReleaseTarballFilenames(releaseDirectories []string) ([]string, error) {
 	var releaseTarballs []string
 
-	for _, releasesDirectory := range config.ReleaseDirectories {
+	for _, releasesDirectory := range releaseDirectories {
 		files, err := ioutil.ReadDir(releasesDirectory)
 		if err != nil {
 			return []string{}, err
