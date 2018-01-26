@@ -28,58 +28,53 @@ type Bake struct {
 	runtimeConfigsDirectoryReader    directoryReader
 	yamlMarshal                      func(interface{}) ([]byte, error)
 	Options                          struct {
-		BOSHVariableDirectories  []string `short:"vd"   long:"bosh-variables-directory"                   description:"path to a directory containing BOSH variables"`
-		EmbedPaths               []string `short:"e"    long:"embed"                                      description:"path to files to include in the tile /embed directory"`
-		FormDirectories          []string `short:"f"    long:"forms-directory"                            description:"path to a directory containing forms"`
-		IconPath                 string   `short:"i"    long:"icon"                       required:"true" description:"path to icon file"`
-		InstanceGroupDirectories []string `short:"ig"   long:"instance-groups-directory"                  description:"path to a directory containing instance groups"`
-		JobDirectories           []string `short:"j"    long:"jobs-directory"                             description:"path to a directory containing jobs"`
-		Metadata                 string   `short:"m"    long:"metadata"                   required:"true" description:"path to the metadata file"`
-		MigrationDirectories     []string `short:"md"   long:"migrations-directory"                       description:"path to a directory containing migrations"`
-		OutputFile               string   `short:"o"    long:"output-file"                required:"true" description:"path to where the tile will be output"`
-		PropertyDirectories      []string `short:"pd"   long:"properties-directory"                       description:"path to a directory containing property blueprints"`
-		ReleaseDirectories       []string `short:"rd"   long:"releases-directory"         required:"true" description:"path to a directory containing release tarballs"`
-		RuntimeConfigDirectories []string `short:"rcd"  long:"runtime-configs-directory"                  description:"path to a directory containing runtime configs"`
-		StemcellTarball          string   `short:"st"   long:"stemcell-tarball"                           description:"path to a stemcell tarball"`
-		StubReleases             bool     `short:"sr"   long:"stub-releases"                              description:"skips importing release tarballs into the tile"`
-		VariableFiles            []string `short:"vf"   long:"variables-file"                             description:"path to a file containing variables to interpolate"`
-		Variables                []string `short:"vr"   long:"variable"                                   description:"key value pairs of variables to interpolate"`
-		Version                  string   `short:"v"    long:"version"                                    description:"version of the tile"`
+		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
+		OutputFile         string   `short:"o"  long:"output-file"        required:"true" description:"path to where the tile will be output"`
+		IconPath           string   `short:"i"  long:"icon"               required:"true" description:"path to icon file"`
+		ReleaseDirectories []string `short:"rd" long:"releases-directory" required:"true" description:"path to a directory containing release tarballs"`
+
+		BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"  description:"path to a directory containing BOSH variables"`
+		EmbedPaths               []string `short:"e"   long:"embed"                     description:"path to files to include in the tile /embed directory"`
+		FormDirectories          []string `short:"f"   long:"forms-directory"           description:"path to a directory containing forms"`
+		InstanceGroupDirectories []string `short:"ig"  long:"instance-groups-directory" description:"path to a directory containing instance groups"`
+		JobDirectories           []string `short:"j"   long:"jobs-directory"            description:"path to a directory containing jobs"`
+		MigrationDirectories     []string `short:"md"  long:"migrations-directory"      description:"path to a directory containing migrations"`
+		PropertyDirectories      []string `short:"pd"  long:"properties-directory"      description:"path to a directory containing property blueprints"`
+		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory" description:"path to a directory containing runtime configs"`
+		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"          description:"path to a stemcell tarball"`
+		StubReleases             bool     `short:"sr"  long:"stub-releases"             description:"skips importing release tarballs into the tile"`
+		VariableFiles            []string `short:"vf"  long:"variables-file"            description:"path to a file containing variables to interpolate"`
+		Variables                []string `short:"vr"  long:"variable"                  description:"key value pairs of variables to interpolate"`
+		Version                  string   `short:"v"   long:"version"                   description:"version of the tile"`
 	}
 }
 
 //go:generate counterfeiter -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
-
 type interpolator interface {
 	Interpolate(input builder.InterpolateInput, templateYAML []byte) ([]byte, error)
 }
 
 //go:generate counterfeiter -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
-
 type tileWriter interface {
 	Write(productName string, generatedMetadataContents []byte, input builder.WriteInput) error
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_builder.go --fake-name MetadataBuilder . metadataBuilder
-
 type metadataBuilder interface {
 	Build(input builder.BuildInput) (builder.GeneratedMetadata, error)
 }
 
 //go:generate counterfeiter -o ./fakes/part_reader.go --fake-name PartReader . partReader
-
 type partReader interface {
 	Read(path string) (builder.Part, error)
 }
 
 //go:generate counterfeiter -o ./fakes/directory_reader.go --fake-name DirectoryReader . directoryReader
-
 type directoryReader interface {
 	Read(path string) ([]builder.Part, error)
 }
 
 //go:generate counterfeiter -o ./fakes/logger.go --fake-name Logger . logger
-
 type logger interface {
 	Printf(format string, v ...interface{})
 	Println(v ...interface{})
@@ -99,6 +94,7 @@ func NewBake(
 	runtimeConfigsDirectoryReader directoryReader,
 	yamlMarshal func(interface{}) ([]byte, error),
 ) Bake {
+
 	return Bake{
 		metadataBuilder:                  metadataBuilder,
 		interpolator:                     interpolator,
@@ -116,6 +112,7 @@ func NewBake(
 }
 
 func (b Bake) Execute(args []string) error {
+	// NOTE: flag parsing and validation
 	args, err := jhanda.Parse(&b.Options, args)
 	if err != nil {
 		return err
@@ -127,19 +124,39 @@ func (b Bake) Execute(args []string) error {
 
 	b.logger.Printf("Creating metadata for %s...", b.Options.OutputFile)
 
+	// NOTE: parsing variables files
 	variables := map[string]interface{}{}
 	for _, file := range b.Options.VariableFiles {
-		err := b.readVariableFiles(file, variables)
+		variableData, err := ioutil.ReadFile(file)
 		if err != nil {
-			return fmt.Errorf("failed reading variable file: %s", err.Error())
+			return fmt.Errorf("failed reading variable file: %s", err)
+		}
+
+		err = yaml.Unmarshal(variableData, &variables)
+		if err != nil {
+			return fmt.Errorf("failed reading variable file: %s", err)
 		}
 	}
 
-	releaseTarballs, err := b.extractReleaseTarballFilenames(b.Options.ReleaseDirectories)
-	if err != nil {
-		return err
+	// NOTE: finding release tarballs
+	var releaseTarballs []string
+	for _, releasesDirectory := range b.Options.ReleaseDirectories {
+		files, err := ioutil.ReadDir(releasesDirectory)
+		if err != nil {
+			return err
+		}
+
+		for _, file := range files {
+			matchTarballs, _ := regexp.MatchString("tgz$|tar.gz$", file.Name())
+			if !matchTarballs {
+				continue
+			}
+
+			releaseTarballs = append(releaseTarballs, filepath.Join(releasesDirectory, file.Name()))
+		}
 	}
 
+	// NOTE: reading release manifests
 	b.logger.Println("Reading release manifests...")
 	releaseManifests := map[string]interface{}{}
 	for _, releaseTarball := range releaseTarballs {
@@ -150,6 +167,7 @@ func (b Bake) Execute(args []string) error {
 		releaseManifests[releaseManifest.Name] = releaseManifest.Metadata
 	}
 
+	// NOTE: reading stemcell manifest
 	var stemcellManifest interface{}
 	if b.Options.StemcellTarball != "" {
 		b.logger.Println("Reading stemcell manifests...")
@@ -160,6 +178,7 @@ func (b Bake) Execute(args []string) error {
 		stemcellManifest = stemcell.Metadata
 	}
 
+	// NOTE: reading form files
 	var formTypes map[string]interface{}
 	if b.Options.FormDirectories != nil {
 		b.logger.Println("Reading form files...")
@@ -176,6 +195,7 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
+	// NOTE: reading instance group files
 	var instanceGroups map[string]interface{}
 	if b.Options.InstanceGroupDirectories != nil {
 		b.logger.Println("Reading instance group files...")
@@ -192,6 +212,7 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
+	// NOTE: reading job files
 	var jobs map[string]interface{}
 	if b.Options.JobDirectories != nil {
 		b.logger.Println("Reading jobs files...")
@@ -208,6 +229,7 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
+	// NOTE: reading property files
 	var propertyBlueprints map[string]interface{}
 	if b.Options.PropertyDirectories != nil {
 		b.logger.Println("Reading property blueprint files...")
@@ -224,6 +246,7 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
+	// NOTE: reading runtime config files
 	var runtimeConfigs map[string]interface{}
 	if b.Options.RuntimeConfigDirectories != nil {
 		b.logger.Println("Reading runtime config files...")
@@ -240,29 +263,35 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
-	err = b.addVariablesToMap(b.Options.Variables, variables)
-	if err != nil {
-		return err
+	// NOTE: merge variables files with manually passed variables
+	for _, variable := range b.Options.Variables {
+		variablePair := strings.SplitN(variable, "=", 2)
+
+		if len(variablePair) < 2 {
+			return errors.New("variable needs a key value in the form of key=value")
+		}
+
+		variables[variablePair[0]] = variablePair[1]
 	}
 
-	buildInput := builder.BuildInput{
+	// NOTE: generating metadata object representation
+	generatedMetadata, err := b.metadataBuilder.Build(builder.BuildInput{
 		IconPath:                b.Options.IconPath,
 		MetadataPath:            b.Options.Metadata,
 		BOSHVariableDirectories: b.Options.BOSHVariableDirectories,
-	}
-
-	generatedMetadata, err := b.metadataBuilder.Build(buildInput)
+	})
 	if err != nil {
 		return err
 	}
 
+	// NOTE: marshalling metadata object to YAML
 	b.logger.Println("Marshaling metadata file...")
-
 	generatedMetadataYAML, err := b.yamlMarshal(generatedMetadata)
 	if err != nil {
 		return err
 	}
 
+	// NOTE: performing template interpolation on metadata YAML
 	interpolatedMetadata, err := b.interpolator.Interpolate(builder.InterpolateInput{
 		Version:            b.Options.Version,
 		Variables:          variables,
@@ -279,15 +308,14 @@ func (b Bake) Execute(args []string) error {
 		return err
 	}
 
-	writeInput := builder.WriteInput{
+	// NOTE: creating the output tile as a zip
+	err = b.tileWriter.Write(generatedMetadata.Name, interpolatedMetadata, builder.WriteInput{
 		OutputFile:           b.Options.OutputFile,
 		StubReleases:         b.Options.StubReleases,
 		MigrationDirectories: b.Options.MigrationDirectories,
 		ReleaseDirectories:   b.Options.ReleaseDirectories,
 		EmbedPaths:           b.Options.EmbedPaths,
-	}
-
-	err = b.tileWriter.Write(generatedMetadata.Name, interpolatedMetadata, writeInput)
+	})
 	if err != nil {
 		return err
 	}
@@ -301,51 +329,4 @@ func (b Bake) Usage() jhanda.Usage {
 		ShortDescription: "bakes a tile",
 		Flags:            b.Options,
 	}
-}
-
-func (b Bake) addVariablesToMap(flagVariables []string, variables map[string]interface{}) error {
-	for _, variable := range flagVariables {
-		variablePair := strings.SplitN(variable, "=", 2)
-		if len(variablePair) < 2 {
-			return errors.New("variable needs a key value in the form of key=value")
-		}
-		variables[variablePair[0]] = variablePair[1]
-	}
-
-	return nil
-}
-
-func (b Bake) extractReleaseTarballFilenames(releaseDirectories []string) ([]string, error) {
-	var releaseTarballs []string
-
-	for _, releasesDirectory := range releaseDirectories {
-		files, err := ioutil.ReadDir(releasesDirectory)
-		if err != nil {
-			return []string{}, err
-		}
-
-		for _, file := range files {
-			matchTarballs, _ := regexp.MatchString("tgz$|tar.gz$", file.Name())
-			if !matchTarballs {
-				continue
-			}
-
-			releaseTarballs = append(releaseTarballs, filepath.Join(releasesDirectory, file.Name()))
-		}
-	}
-
-	return releaseTarballs, nil
-}
-
-func (b Bake) readVariableFiles(path string, variables map[string]interface{}) error {
-	variableData, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err
-	}
-
-	err = yaml.Unmarshal(variableData, &variables)
-	if err != nil {
-		return err
-	}
-	return nil
 }
