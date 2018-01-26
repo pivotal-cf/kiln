@@ -87,10 +87,6 @@ var _ = Describe("bake", func() {
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
 
-		commands.SetYamlMarshal(func(interface{}) ([]byte, error) {
-			return []byte("some-yaml"), nil
-		})
-
 		fakeReleaseManifestReader.ReadReturnsOnCall(0, builder.Part{
 			Name: "some-release-1",
 			Metadata: builder.ReleaseManifest{
@@ -190,12 +186,11 @@ var _ = Describe("bake", func() {
 			fakeJobsDirectoryReader,
 			fakePropertyDirectoryReader,
 			fakeRuntimeConfigsDirectoryReader,
+			func(interface{}) ([]byte, error) { return []byte("some-yaml"), nil },
 		)
 	})
 
 	AfterEach(func() {
-		commands.ResetYamlMarshal()
-
 		Expect(variableFile.Close()).To(Succeed())
 		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})

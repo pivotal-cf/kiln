@@ -46,10 +46,9 @@ type Bake struct {
 	jobDirectoryReader               directoryReader
 	propertyBlueprintDirectoryReader directoryReader
 	runtimeConfigsDirectoryReader    directoryReader
+	yamlMarshal                      func(interface{}) ([]byte, error)
 	Options                          BakeConfig
 }
-
-var yamlMarshal = yaml.Marshal
 
 //go:generate counterfeiter -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
 
@@ -88,7 +87,8 @@ type logger interface {
 	Println(v ...interface{})
 }
 
-func NewBake(metadataBuilder metadataBuilder,
+func NewBake(
+	metadataBuilder metadataBuilder,
 	interpolator interpolator,
 	tileWriter tileWriter,
 	logger logger,
@@ -99,6 +99,7 @@ func NewBake(metadataBuilder metadataBuilder,
 	jobDirectoryReader directoryReader,
 	propertyBlueprintDirectoryReader directoryReader,
 	runtimeConfigsDirectoryReader directoryReader,
+	yamlMarshal func(interface{}) ([]byte, error),
 ) Bake {
 	return Bake{
 		metadataBuilder:                  metadataBuilder,
@@ -112,6 +113,7 @@ func NewBake(metadataBuilder metadataBuilder,
 		jobDirectoryReader:               jobDirectoryReader,
 		propertyBlueprintDirectoryReader: propertyBlueprintDirectoryReader,
 		runtimeConfigsDirectoryReader:    runtimeConfigsDirectoryReader,
+		yamlMarshal:                      yamlMarshal,
 	}
 }
 
@@ -254,7 +256,7 @@ func (b Bake) Execute(args []string) error {
 
 	b.logger.Println("Marshaling metadata file...")
 
-	generatedMetadataYAML, err := yamlMarshal(generatedMetadata)
+	generatedMetadataYAML, err := b.yamlMarshal(generatedMetadata)
 	if err != nil {
 		return err
 	}

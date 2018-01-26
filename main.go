@@ -8,6 +8,7 @@ import (
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/helper"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func main() {
@@ -63,6 +64,7 @@ func main() {
 		jobsDirectoryReader,
 		propertiesDirectoryReader,
 		runtimeConfigsDirectoryReader,
+		yaml.Marshal,
 	)
 
 	var command string
