@@ -29,6 +29,7 @@ var _ = Describe("bake", func() {
 		fakeInterpolator                  *fakes.Interpolator
 		fakeTileWriter                    *fakes.TileWriter
 		fakeLogger                        *fakes.Logger
+		fakeTemplateVariablesParser       *fakes.TemplateVariablesParser
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -36,7 +37,6 @@ var _ = Describe("bake", func() {
 		someReleasesDirectory  string
 		tarballRelease         string
 		tmpDir                 string
-		variableFile           *os.File
 
 		bake commands.Bake
 	)
@@ -45,17 +45,6 @@ var _ = Describe("bake", func() {
 		var err error
 		tmpDir, err = ioutil.TempDir("", "command-test")
 		Expect(err).NotTo(HaveOccurred())
-
-		variableFile, err = ioutil.TempFile(tmpDir, "variables-file")
-		Expect(err).NotTo(HaveOccurred())
-
-		variables := map[string]string{"some-variable-from-file": "some-variable-value-from-file"}
-		data, err := yaml.Marshal(&variables)
-		Expect(err).NotTo(HaveOccurred())
-
-		n, err := variableFile.Write(data)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(data).To(HaveLen(n))
 
 		someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
@@ -86,6 +75,12 @@ var _ = Describe("bake", func() {
 		fakeInterpolator = &fakes.Interpolator{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
+		fakeTemplateVariablesParser = &fakes.TemplateVariablesParser{}
+
+		fakeTemplateVariablesParser.ExecuteReturns(map[string]interface{}{
+			"some-variable-from-file": "some-variable-value-from-file",
+			"some-variable":           "some-variable-value",
+		}, nil)
 
 		fakeReleaseManifestReader.ReadReturnsOnCall(0, builder.Part{
 			Name: "some-release-1",
@@ -184,11 +179,11 @@ var _ = Describe("bake", func() {
 			fakePropertyDirectoryReader,
 			fakeRuntimeConfigsDirectoryReader,
 			func(interface{}) ([]byte, error) { return []byte("some-yaml"), nil },
+			fakeTemplateVariablesParser,
 		)
 	})
 
 	AfterEach(func() {
-		Expect(variableFile.Close()).To(Succeed())
 		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
@@ -214,9 +209,14 @@ var _ = Describe("bake", func() {
 				"--migrations-directory", "some-migrations-directory",
 				"--migrations-directory", "some-other-migrations-directory",
 				"--variable", "some-variable=some-variable-value",
-				"--variables-file", variableFile.Name(),
+				"--variables-file", "some-variables-file",
 			})
 			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeTemplateVariablesParser.ExecuteCallCount()).To(Equal(1))
+			varFiles, variables := fakeTemplateVariablesParser.ExecuteArgsForCall(0)
+			Expect(varFiles).To(Equal([]string{"some-variables-file"}))
+			Expect(variables).To(Equal([]string{"some-variable=some-variable-value"}))
 
 			Expect(fakeReleaseManifestReader.ReadCallCount()).To(Equal(2))
 			Expect(fakeReleaseManifestReader.ReadArgsForCall(0)).To(Equal(filepath.Join(otherReleasesDirectory, "release2.tgz")))
@@ -387,8 +387,8 @@ var _ = Describe("bake", func() {
 					"--stemcell-tarball", "some-stemcell-tarball",
 					"--bosh-variables-directory", "some-variables-directory",
 					"--variable", "some-variable=some-variable-value",
-					"--variables-file", variableFile.Name(),
-					"--variables-file", otherVariableFile.Name(),
+					"--variables-file", "some-variable-file-1",
+					"--variables-file", "some-variable-file-2",
 					"--version", "1.2.3",
 				})
 
@@ -400,29 +400,17 @@ var _ = Describe("bake", func() {
 		})
 
 		Context("failure cases", func() {
-			Context("when the variable file does not exist but is provided", func() {
+			Context("when the template variables parser errors", func() {
 				It("returns an error", func() {
+					fakeTemplateVariablesParser.ExecuteReturns(nil, errors.New("parsing failed"))
+
 					err := bake.Execute([]string{
-						"--forms-directory", "some-forms-directory",
-						"--icon", "some-icon-path",
-						"--instance-groups-directory", "some-instance-groups-directory",
-						"--jobs-directory", "some-jobs-directory",
 						"--metadata", "some-metadata",
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", otherReleasesDirectory,
+						"--icon", "some-icon-path",
 						"--releases-directory", someReleasesDirectory,
-						"--runtime-configs-directory", "some-other-runtime-configs-directory",
-						"--runtime-configs-directory", "some-runtime-configs-directory",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--bosh-variables-directory", "some-other-variables-directory",
-						"--bosh-variables-directory", "some-variables-directory",
-						"--variables-file", "bogus",
-						"--version", "1.2.3",
 					})
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("no such file or directory"))
+					Expect(err).To(MatchError("failed to parse template variables: parsing failed"))
 				})
 			})
 
@@ -564,61 +552,6 @@ var _ = Describe("bake", func() {
 
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("some-error"))
-				})
-			})
-
-			Context("when the variable file does not contain valid YAML", func() {
-				BeforeEach(func() {
-					_, err := variableFile.Write([]byte("{{invalid-blah"))
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--forms-directory", "some-forms-directory",
-						"--icon", "some-icon-path",
-						"--instance-groups-directory", "some-instance-groups-directory",
-						"--jobs-directory", "some-jobs-directory",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", otherReleasesDirectory,
-						"--releases-directory", someReleasesDirectory,
-						"--runtime-configs-directory", "some-other-runtime-configs-directory",
-						"--runtime-configs-directory", "some-runtime-configs-directory",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--bosh-variables-directory", "some-other-variables-directory",
-						"--bosh-variables-directory", "some-variables-directory",
-						"--variables-file", variableFile.Name(),
-						"--version", "1.2.3",
-					})
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("failed reading variable file:"))
-				})
-			})
-
-			Context("when the variable flag contains variable without equal sign", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--forms-directory", "some-forms-directory",
-						"--icon", "some-icon-path",
-						"--instance-groups-directory", "some-instance-groups-directory",
-						"--jobs-directory", "some-jobs-directory",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", otherReleasesDirectory,
-						"--releases-directory", someReleasesDirectory,
-						"--runtime-configs-directory", "some-other-runtime-configs-directory",
-						"--runtime-configs-directory", "some-runtime-configs-directory",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--bosh-variables-directory", "some-other-variables-directory",
-						"--bosh-variables-directory", "some-variables-directory",
-						"--variable", "some-variable",
-						"--version", "1.2.3",
-					})
-					Expect(err).To(MatchError("variable needs a key value in the form of key=value"))
 				})
 			})
 

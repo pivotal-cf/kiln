@@ -49,6 +49,7 @@ func main() {
 	md5SumCalculator := helper.NewFileMD5SumCalculator()
 	interpolator := builder.NewInterpolator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, logger, md5SumCalculator)
+	templateVariablesParser := commands.NewTemplateVariableParser()
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
@@ -65,6 +66,7 @@ func main() {
 		propertiesDirectoryReader,
 		runtimeConfigsDirectoryReader,
 		yaml.Marshal,
+		templateVariablesParser,
 	)
 
 	var command string
