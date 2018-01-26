@@ -167,10 +167,7 @@ var _ = Describe("bake", func() {
 			},
 		}, nil)
 
-		generatedMetadata = builder.GeneratedMetadata{
-			IconImage: "some-icon-image",
-			Name:      "some-product-name",
-		}
+		generatedMetadata = builder.GeneratedMetadata{IconImage: "some-icon-image"}
 		fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 		fakeInterpolator.InterpolateReturns([]byte("some-interpolated-metadata"), nil)
 
@@ -318,9 +315,8 @@ var _ = Describe("bake", func() {
 			Expect(string(metadata)).To(Equal("some-yaml"))
 
 			Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
-			metadataName, metadata, writeInput := fakeTileWriter.WriteArgsForCall(0)
+			metadata, writeInput := fakeTileWriter.WriteArgsForCall(0)
 			Expect(string(metadata)).To(Equal("some-interpolated-metadata"))
-			Expect(metadataName).To(Equal(generatedMetadata.Name))
 			Expect(writeInput).To(Equal(builder.WriteInput{
 				OutputFile:           filepath.Join("some-output-dir", "some-product-file-1.2.3-build.4"),
 				StubReleases:         false,
@@ -398,7 +394,7 @@ var _ = Describe("bake", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 
-				_, generatedMetadataContents, _ := fakeTileWriter.WriteArgsForCall(0)
+				generatedMetadataContents, _ := fakeTileWriter.WriteArgsForCall(0)
 				Expect(generatedMetadataContents).To(MatchYAML("some-interpolated-metadata"))
 			})
 		})

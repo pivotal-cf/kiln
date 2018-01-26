@@ -2,7 +2,6 @@ package builder
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -69,7 +68,7 @@ type WriteInput struct {
 	EmbedPaths           []string
 }
 
-func (w TileWriter) Write(productName string, generatedMetadataContents []byte, input WriteInput) error {
+func (w TileWriter) Write(generatedMetadataContents []byte, input WriteInput) error {
 	w.logger.Printf("Building %s...", input.OutputFile)
 
 	f, err := w.filesystem.Create(input.OutputFile)
@@ -80,7 +79,7 @@ func (w TileWriter) Write(productName string, generatedMetadataContents []byte, 
 
 	w.zipper.SetWriter(f)
 
-	err = w.addToZipper(filepath.Join("metadata", fmt.Sprintf("%s.yml", productName)), bytes.NewBuffer(generatedMetadataContents), input.OutputFile)
+	err = w.addToZipper(filepath.Join("metadata", "metadata.yml"), bytes.NewBuffer(generatedMetadataContents), input.OutputFile)
 	if err != nil {
 		w.removeOutputFile(input.OutputFile)
 		return err

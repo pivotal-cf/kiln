@@ -77,7 +77,6 @@ var _ = Describe("MetadataBuilder", func() {
 	Describe("Build", func() {
 		BeforeEach(func() {
 			metadataReader.ReadReturns(builder.Metadata{
-				"name":                      "cool-product",
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
 			},
@@ -97,7 +96,6 @@ var _ = Describe("MetadataBuilder", func() {
 			Expect(metadataPath).To(Equal("/some/path/metadata.yml"))
 			Expect(version).To(Equal("1.2.3"))
 
-			Expect(generatedMetadata.Name).To(Equal("cool-product"))
 			Expect(generatedMetadata.Variables).To(Equal([]builder.Part{
 				{
 					File: "variable-1.yml",
@@ -191,23 +189,6 @@ var _ = Describe("MetadataBuilder", func() {
 						MetadataPath: "metadata.yml",
 					})
 					Expect(err).To(MatchError("failed to read metadata"))
-				})
-			})
-
-			Context("when the metadata does not contain a product name", func() {
-				It("returns an error", func() {
-					metadataReader.ReadReturns(builder.Metadata{
-						"metadata_version":          "some-metadata-version",
-						"provides_product_versions": "some-provides-product-versions",
-					},
-						nil,
-					)
-
-					_, err := tileBuilder.Build(builder.BuildInput{
-						MetadataPath: "metadata.yml",
-					})
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring(`missing "name" in tile metadata`))
 				})
 			})
 		})

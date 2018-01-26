@@ -286,7 +286,7 @@ some-literal-variable: |
 
 		var file io.ReadCloser
 		for _, f := range zr.File {
-			if f.Name == "metadata/cool-product-name.yml" {
+			if f.Name == "metadata/metadata.yml" {
 				file, err = f.Open()
 				Expect(err).NotTo(HaveOccurred())
 				break
@@ -340,7 +340,7 @@ some-literal-variable: |
 		Eventually(session.Out).Should(gbytes.Say("Reading stemcell manifest"))
 		Eventually(session.Out).Should(gbytes.Say("Marshaling metadata file..."))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Building %s", outputFile)))
-		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile)))
+		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603041539_custom_buildpacks.js to %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603071158_auth_enterprise_sso.js to %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding releases/diego-release-0.1467.1-3215.4.0.tgz to %s...", outputFile)))
@@ -666,7 +666,7 @@ some-literal-variable: |
 
 			var file io.ReadCloser
 			for _, f := range zr.File {
-				if f.Name == "metadata/cool-product-name.yml" {
+				if f.Name == "metadata/metadata.yml" {
 					file, err = f.Open()
 					Expect(err).NotTo(HaveOccurred())
 					break

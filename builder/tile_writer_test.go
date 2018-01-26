@@ -116,7 +116,7 @@ var _ = Describe("TileWriter", func() {
 
 			md5Calc.ChecksumCall.Returns.Sum = "THIS-IS-THE-SUM"
 
-			err := tileWriter.Write("cool-product-name", []byte("generated-metadata-contents"), input)
+			err := tileWriter.Write([]byte("generated-metadata-contents"), input)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(zipper.SetWriterCallCount()).To(Equal(1))
@@ -126,7 +126,7 @@ var _ = Describe("TileWriter", func() {
 			Expect(zipper.AddCallCount()).To(Equal(8))
 
 			path, file := zipper.AddArgsForCall(0)
-			Expect(path).To(Equal(filepath.Join("metadata", "cool-product-name.yml")))
+			Expect(path).To(Equal(filepath.Join("metadata", "metadata.yml")))
 			Eventually(gbytes.BufferReader(file)).Should(gbytes.Say("generated-metadata-contents"))
 
 			path, file = zipper.AddArgsForCall(1)
@@ -161,7 +161,7 @@ var _ = Describe("TileWriter", func() {
 
 			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 				fmt.Sprintf("Building %s...", outputFile),
-				fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+				fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile),
 				fmt.Sprintf("Adding migrations/v1/migration-1.js to %s...", outputFile),
 				fmt.Sprintf("Adding migrations/v1/migration-2.js to %s...", outputFile),
 				fmt.Sprintf("Adding migrations/v1/other-migration.js to %s...", outputFile),
@@ -227,12 +227,12 @@ var _ = Describe("TileWriter", func() {
 						StubReleases:         false,
 					}
 
-					err := tileWriter.Write("cool-product-name", []byte("generated-metadata-contents"), input)
+					err := tileWriter.Write([]byte("generated-metadata-contents"), input)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 						fmt.Sprintf("Building %s...", outputFile),
-						fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+						fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile),
 						fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
 						fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
 						fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
@@ -254,12 +254,12 @@ var _ = Describe("TileWriter", func() {
 						StubReleases:         false,
 					}
 
-					err := tileWriter.Write("cool-product-name", []byte("generated-metadata-contents"), input)
+					err := tileWriter.Write([]byte("generated-metadata-contents"), input)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 						fmt.Sprintf("Building %s...", outputFile),
-						fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+						fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile),
 						fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
 						fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
 						fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
@@ -314,12 +314,12 @@ var _ = Describe("TileWriter", func() {
 					StubReleases:         false,
 				}
 
-				err := tileWriter.Write("cool-product-name", []byte("generated-metadata-contents"), input)
+				err := tileWriter.Write([]byte("generated-metadata-contents"), input)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 					fmt.Sprintf("Building %s...", outputFile),
-					fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+					fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile),
 					fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
 					fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
 					fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
@@ -381,12 +381,12 @@ var _ = Describe("TileWriter", func() {
 					StubReleases:         false,
 				}
 
-				err := tileWriter.Write("cool-product-name", []byte("generated-metadata-contents"), input)
+				err := tileWriter.Write([]byte("generated-metadata-contents"), input)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
 					fmt.Sprintf("Building %s...", outputFile),
-					fmt.Sprintf("Adding metadata/cool-product-name.yml to %s...", outputFile),
+					fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile),
 					fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
 					fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
 					fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
@@ -419,7 +419,7 @@ var _ = Describe("TileWriter", func() {
 						OutputFile: outputFile,
 					}
 
-					err := tileWriter.Write("", []byte{}, input)
+					err := tileWriter.Write([]byte{}, input)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError("boom!"))
 				})
@@ -436,7 +436,7 @@ var _ = Describe("TileWriter", func() {
 						OutputFile:   outputFile,
 					}
 
-					err := tileWriter.Write("", []byte{}, input)
+					err := tileWriter.Write([]byte{}, input)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError("failed to create folder"))
 
@@ -455,7 +455,7 @@ var _ = Describe("TileWriter", func() {
 							OutputFile:   outputFile,
 						}
 
-						err := tileWriter.Write("", []byte{}, input)
+						err := tileWriter.Write([]byte{}, input)
 						Expect(err).To(HaveOccurred())
 						Expect(err).To(MatchError("failed to create folder"))
 
@@ -499,7 +499,7 @@ var _ = Describe("TileWriter", func() {
 				})
 
 				It("returns an error", func() {
-					err := tileWriter.Write("", []byte("generated-metadata-contents"), input)
+					err := tileWriter.Write([]byte("generated-metadata-contents"), input)
 					Expect(err).To(MatchError("failed to open release"))
 
 					Expect(filesystem.RemoveCallCount()).To(Equal(1))
@@ -512,7 +512,7 @@ var _ = Describe("TileWriter", func() {
 					})
 
 					It("returns an error", func() {
-						err := tileWriter.Write("", []byte{}, input)
+						err := tileWriter.Write([]byte{}, input)
 						Expect(err).To(HaveOccurred())
 						Expect(err).To(MatchError("failed to open release"))
 
@@ -571,7 +571,7 @@ var _ = Describe("TileWriter", func() {
 				})
 
 				It("returns an error", func() {
-					err := tileWriter.Write("", []byte{}, input)
+					err := tileWriter.Write([]byte{}, input)
 					Expect(err).To(MatchError("failed to open migration"))
 
 					Expect(filesystem.RemoveCallCount()).To(Equal(1))
@@ -584,7 +584,7 @@ var _ = Describe("TileWriter", func() {
 					})
 
 					It("returns an error", func() {
-						err := tileWriter.Write("", []byte{}, input)
+						err := tileWriter.Write([]byte{}, input)
 						Expect(err).To(HaveOccurred())
 						Expect(err).To(MatchError("failed to open migration"))
 
@@ -628,7 +628,7 @@ var _ = Describe("TileWriter", func() {
 				})
 
 				It("returns an error", func() {
-					err := tileWriter.Write("", []byte("generated-metadata-contents"), input)
+					err := tileWriter.Write([]byte("generated-metadata-contents"), input)
 					Expect(err).To(MatchError("failed to open embed"))
 
 					Expect(filesystem.RemoveCallCount()).To(Equal(1))
@@ -641,7 +641,7 @@ var _ = Describe("TileWriter", func() {
 					})
 
 					It("returns an error", func() {
-						err := tileWriter.Write("", []byte{}, input)
+						err := tileWriter.Write([]byte{}, input)
 						Expect(err).To(HaveOccurred())
 						Expect(err).To(MatchError("failed to open embed"))
 
@@ -664,7 +664,7 @@ var _ = Describe("TileWriter", func() {
 						OutputFile:   outputFile,
 					}
 
-					err := tileWriter.Write("", []byte{}, input)
+					err := tileWriter.Write([]byte{}, input)
 					Expect(err).To(MatchError("failed to add file to zip"))
 
 					Expect(filesystem.RemoveCallCount()).To(Equal(1))
@@ -682,7 +682,7 @@ var _ = Describe("TileWriter", func() {
 							OutputFile:   outputFile,
 						}
 
-						err := tileWriter.Write("", []byte{}, input)
+						err := tileWriter.Write([]byte{}, input)
 						Expect(err).To(HaveOccurred())
 						Expect(err).To(MatchError("failed to add file to zip"))
 
@@ -707,7 +707,7 @@ var _ = Describe("TileWriter", func() {
 				})
 
 				It("returns an error", func() {
-					err := tileWriter.Write("", []byte{}, input)
+					err := tileWriter.Write([]byte{}, input)
 					Expect(err).To(MatchError("failed to close the zip"))
 
 					Expect(filesystem.RemoveCallCount()).To(Equal(1))
@@ -720,7 +720,7 @@ var _ = Describe("TileWriter", func() {
 					})
 
 					It("returns an error", func() {
-						err := tileWriter.Write("", []byte{}, input)
+						err := tileWriter.Write([]byte{}, input)
 						Expect(err).To(HaveOccurred())
 						Expect(err).To(MatchError("failed to close the zip"))
 
@@ -741,7 +741,7 @@ var _ = Describe("TileWriter", func() {
 						StubReleases: true,
 					}
 
-					err := tileWriter.Write("", []byte{}, input)
+					err := tileWriter.Write([]byte{}, input)
 					Expect(err).To(MatchError("MD5 cannot be calculated"))
 				})
 			})

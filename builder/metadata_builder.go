@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -64,11 +63,6 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		return GeneratedMetadata{}, err
 	}
 
-	productName, ok := metadata["name"].(string)
-	if !ok {
-		return GeneratedMetadata{}, errors.New("missing \"name\" in tile metadata file")
-	}
-
 	variables, err := m.buildVariables(input.BOSHVariableDirectories, metadata)
 	if err != nil {
 		return GeneratedMetadata{}, err
@@ -79,11 +73,8 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		return GeneratedMetadata{}, err
 	}
 
-	delete(metadata, "name")
-
 	return GeneratedMetadata{
 		IconImage: encodedIcon,
-		Name:      productName,
 		Variables: variables,
 		Metadata:  metadata,
 	}, nil

@@ -2,11 +2,10 @@ package builder_test
 
 import (
 	"bytes"
+	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 //go:generate counterfeiter -o ./fakes/read_closer.go --fake-name ReadCloser io.ReadCloser

@@ -1,18 +1,13 @@
 package builder
 
 type GeneratedMetadata struct {
-	Name      string
 	IconImage string
-
 	Variables []Part
-
-	Metadata Metadata
+	Metadata  Metadata
 }
 
 func (gm GeneratedMetadata) MarshalYAML() (interface{}, error) {
 	m := map[string]interface{}{}
-
-	m["name"] = gm.Name
 
 	if len(gm.Variables) > 0 {
 		m["variables"] = gm.metadataOnly(gm.Variables)

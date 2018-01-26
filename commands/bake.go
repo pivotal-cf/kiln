@@ -56,7 +56,7 @@ type interpolator interface {
 
 //go:generate counterfeiter -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
 type tileWriter interface {
-	Write(productName string, generatedMetadataContents []byte, input builder.WriteInput) error
+	Write(generatedMetadataContents []byte, input builder.WriteInput) error
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_builder.go --fake-name MetadataBuilder . metadataBuilder
@@ -136,6 +136,17 @@ func (b Bake) Execute(args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed reading variable file: %s", err)
 		}
+	}
+
+	// NOTE: merge variables files with manually passed variables
+	for _, variable := range b.Options.Variables {
+		variablePair := strings.SplitN(variable, "=", 2)
+
+		if len(variablePair) < 2 {
+			return errors.New("variable needs a key value in the form of key=value")
+		}
+
+		variables[variablePair[0]] = variablePair[1]
 	}
 
 	// NOTE: finding release tarballs
@@ -263,17 +274,6 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
-	// NOTE: merge variables files with manually passed variables
-	for _, variable := range b.Options.Variables {
-		variablePair := strings.SplitN(variable, "=", 2)
-
-		if len(variablePair) < 2 {
-			return errors.New("variable needs a key value in the form of key=value")
-		}
-
-		variables[variablePair[0]] = variablePair[1]
-	}
-
 	// NOTE: generating metadata object representation
 	generatedMetadata, err := b.metadataBuilder.Build(builder.BuildInput{
 		IconPath:                b.Options.IconPath,
@@ -309,7 +309,7 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	// NOTE: creating the output tile as a zip
-	err = b.tileWriter.Write(generatedMetadata.Name, interpolatedMetadata, builder.WriteInput{
+	err = b.tileWriter.Write(interpolatedMetadata, builder.WriteInput{
 		OutputFile:           b.Options.OutputFile,
 		StubReleases:         b.Options.StubReleases,
 		MigrationDirectories: b.Options.MigrationDirectories,
