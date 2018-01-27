@@ -56,7 +56,7 @@ var _ = Describe("bake", func() {
 		err = ioutil.WriteFile(tarballRelease, []byte(""), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		otherTarballRelease = filepath.Join(otherReleasesDirectory, "release2.tgz")
+		otherTarballRelease = filepath.Join(otherReleasesDirectory, "release2.tar.gz")
 		err = ioutil.WriteFile(otherTarballRelease, []byte(""), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -96,7 +96,7 @@ var _ = Describe("bake", func() {
 			Metadata: builder.ReleaseManifest{
 				Name:    "some-release-2",
 				Version: "2.3.4",
-				File:    "release2.tgz",
+				File:    "release2.tar.gz",
 			},
 		}, nil)
 
@@ -219,7 +219,7 @@ var _ = Describe("bake", func() {
 			Expect(variables).To(Equal([]string{"some-variable=some-variable-value"}))
 
 			Expect(fakeReleaseManifestReader.ReadCallCount()).To(Equal(2))
-			Expect(fakeReleaseManifestReader.ReadArgsForCall(0)).To(Equal(filepath.Join(otherReleasesDirectory, "release2.tgz")))
+			Expect(fakeReleaseManifestReader.ReadArgsForCall(0)).To(Equal(filepath.Join(otherReleasesDirectory, "release2.tar.gz")))
 			Expect(fakeReleaseManifestReader.ReadArgsForCall(1)).To(Equal(filepath.Join(someReleasesDirectory, "release1.tgz")))
 
 			Expect(fakeStemcellManifestReader.ReadCallCount()).To(Equal(1))
@@ -267,7 +267,7 @@ var _ = Describe("bake", func() {
 					"some-release-2": builder.ReleaseManifest{
 						Name:    "some-release-2",
 						Version: "2.3.4",
-						File:    "release2.tgz",
+						File:    "release2.tar.gz",
 					},
 				},
 				StemcellManifest: builder.StemcellManifest{

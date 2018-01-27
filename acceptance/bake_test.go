@@ -702,7 +702,7 @@ some-literal-variable: |
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("open missing-directory: no such file or directory"))
+				Expect(string(session.Err.Contents())).To(ContainSubstring("lstat missing-directory: no such file or directory"))
 			})
 		})
 

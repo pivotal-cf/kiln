@@ -3,9 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
-	"regexp"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
@@ -136,33 +133,11 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to parse template variables: %s", err)
 	}
 
-	// NOTE: finding release tarballs
-	var releaseTarballs []string
-	for _, releasesDirectory := range b.Options.ReleaseDirectories {
-		files, err := ioutil.ReadDir(releasesDirectory)
-		if err != nil {
-			return err
-		}
-
-		for _, file := range files {
-			matchTarballs, _ := regexp.MatchString("tgz$|tar.gz$", file.Name())
-			if !matchTarballs {
-				continue
-			}
-
-			releaseTarballs = append(releaseTarballs, filepath.Join(releasesDirectory, file.Name()))
-		}
-	}
-
-	// NOTE: reading release manifests
+	// NOTE: parsing releases
 	b.logger.Println("Reading release manifests...")
-	releaseManifests := map[string]interface{}{}
-	for _, releaseTarball := range releaseTarballs {
-		releaseManifest, err := b.releaseManifestReader.Read(releaseTarball)
-		if err != nil {
-			return err
-		}
-		releaseManifests[releaseManifest.Name] = releaseManifest.Metadata
+	releaseManifests, err := parseReleases(b.releaseManifestReader, b.Options.ReleaseDirectories)
+	if err != nil {
+		return err
 	}
 
 	// NOTE: reading stemcell manifest
@@ -316,4 +291,8 @@ func (b Bake) Usage() jhanda.Usage {
 		ShortDescription: "bakes a tile",
 		Flags:            b.Options,
 	}
+}
+
+func parseReleases(reader partReader, directories []string) (map[string]interface{}, error) {
+	return NewReleaseParser(reader).Execute(directories)
 }
