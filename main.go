@@ -37,7 +37,6 @@ func main() {
 	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	releaseManifestReader := builder.NewReleaseManifestReader()
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")
 	metadataBuilder := builder.NewMetadataBuilder(
@@ -49,7 +48,11 @@ func main() {
 	md5SumCalculator := helper.NewFileMD5SumCalculator()
 	interpolator := builder.NewInterpolator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, logger, md5SumCalculator)
+
 	templateVariablesParser := commands.NewTemplateVariableParser()
+
+	releaseManifestReader := builder.NewReleaseManifestReader()
+	releaseParser := commands.NewReleaseParser(releaseManifestReader)
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
@@ -58,7 +61,6 @@ func main() {
 		interpolator,
 		tileWriter,
 		logger,
-		releaseManifestReader,
 		stemcellManifestReader,
 		formDirectoryReader,
 		instanceGroupDirectoryReader,
@@ -67,6 +69,7 @@ func main() {
 		runtimeConfigsDirectoryReader,
 		yaml.Marshal,
 		templateVariablesParser,
+		releaseParser,
 	)
 
 	var command string

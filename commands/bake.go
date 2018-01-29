@@ -44,12 +44,16 @@ type templateVariablesParser interface {
 	Execute(paths []string, pairs []string) (variables map[string]interface{}, err error)
 }
 
+//go:generate counterfeiter -o ./fakes/release_parser.go --fake-name ReleaseParser . releaseParser
+type releaseParser interface {
+	Execute(directories []string) (releases map[string]interface{}, err error)
+}
+
 type Bake struct {
 	metadataBuilder                  metadataBuilder
 	interpolator                     interpolator
 	tileWriter                       tileWriter
 	logger                           logger
-	releaseManifestReader            partReader
 	stemcellManifestReader           partReader
 	formDirectoryReader              directoryReader
 	instanceGroupDirectoryReader     directoryReader
@@ -58,6 +62,7 @@ type Bake struct {
 	runtimeConfigsDirectoryReader    directoryReader
 	yamlMarshal                      func(interface{}) ([]byte, error)
 	templateVariablesParser          templateVariablesParser
+	releaseParser                    releaseParser
 
 	Options struct {
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
@@ -86,7 +91,6 @@ func NewBake(
 	interpolator interpolator,
 	tileWriter tileWriter,
 	logger logger,
-	releaseManifestReader partReader,
 	stemcellManifestReader partReader,
 	formDirectoryReader directoryReader,
 	instanceGroupDirectoryReader directoryReader,
@@ -95,6 +99,7 @@ func NewBake(
 	runtimeConfigsDirectoryReader directoryReader,
 	yamlMarshal func(interface{}) ([]byte, error),
 	templateVariablesParser templateVariablesParser,
+	releaseParser releaseParser,
 ) Bake {
 
 	return Bake{
@@ -102,7 +107,6 @@ func NewBake(
 		interpolator:                     interpolator,
 		tileWriter:                       tileWriter,
 		logger:                           logger,
-		releaseManifestReader:            releaseManifestReader,
 		stemcellManifestReader:           stemcellManifestReader,
 		formDirectoryReader:              formDirectoryReader,
 		instanceGroupDirectoryReader:     instanceGroupDirectoryReader,
@@ -111,6 +115,7 @@ func NewBake(
 		runtimeConfigsDirectoryReader:    runtimeConfigsDirectoryReader,
 		yamlMarshal:                      yamlMarshal,
 		templateVariablesParser:          templateVariablesParser,
+		releaseParser:                    releaseParser,
 	}
 }
 
@@ -135,9 +140,9 @@ func (b Bake) Execute(args []string) error {
 
 	// NOTE: parsing releases
 	b.logger.Println("Reading release manifests...")
-	releaseManifests, err := parseReleases(b.releaseManifestReader, b.Options.ReleaseDirectories)
+	releaseManifests, err := b.releaseParser.Execute(b.Options.ReleaseDirectories)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse releases: %s", err)
 	}
 
 	// NOTE: reading stemcell manifest

@@ -19,7 +19,6 @@ import (
 var _ = Describe("bake", func() {
 	var (
 		fakeMetadataBuilder               *fakes.MetadataBuilder
-		fakeReleaseManifestReader         *fakes.PartReader
 		fakeStemcellManifestReader        *fakes.PartReader
 		fakeFormDirectoryReader           *fakes.DirectoryReader
 		fakeInstanceGroupDirectoryReader  *fakes.DirectoryReader
@@ -30,6 +29,7 @@ var _ = Describe("bake", func() {
 		fakeTileWriter                    *fakes.TileWriter
 		fakeLogger                        *fakes.Logger
 		fakeTemplateVariablesParser       *fakes.TemplateVariablesParser
+		fakeReleaseParser                 *fakes.ReleaseParser
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -65,7 +65,6 @@ var _ = Describe("bake", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
-		fakeReleaseManifestReader = &fakes.PartReader{}
 		fakeStemcellManifestReader = &fakes.PartReader{}
 		fakeFormDirectoryReader = &fakes.DirectoryReader{}
 		fakeInstanceGroupDirectoryReader = &fakes.DirectoryReader{}
@@ -76,24 +75,20 @@ var _ = Describe("bake", func() {
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
 		fakeTemplateVariablesParser = &fakes.TemplateVariablesParser{}
+		fakeReleaseParser = &fakes.ReleaseParser{}
 
 		fakeTemplateVariablesParser.ExecuteReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
 			"some-variable":           "some-variable-value",
 		}, nil)
 
-		fakeReleaseManifestReader.ReadReturnsOnCall(0, builder.Part{
-			Name: "some-release-1",
-			Metadata: builder.ReleaseManifest{
+		fakeReleaseParser.ExecuteReturns(map[string]interface{}{
+			"some-release-1": builder.ReleaseManifest{
 				Name:    "some-release-1",
 				Version: "1.2.3",
 				File:    "release1.tgz",
 			},
-		}, nil)
-
-		fakeReleaseManifestReader.ReadReturnsOnCall(1, builder.Part{
-			Name: "some-release-2",
-			Metadata: builder.ReleaseManifest{
+			"some-release-2": builder.ReleaseManifest{
 				Name:    "some-release-2",
 				Version: "2.3.4",
 				File:    "release2.tar.gz",
@@ -171,7 +166,6 @@ var _ = Describe("bake", func() {
 			fakeInterpolator,
 			fakeTileWriter,
 			fakeLogger,
-			fakeReleaseManifestReader,
 			fakeStemcellManifestReader,
 			fakeFormDirectoryReader,
 			fakeInstanceGroupDirectoryReader,
@@ -180,6 +174,7 @@ var _ = Describe("bake", func() {
 			fakeRuntimeConfigsDirectoryReader,
 			func(interface{}) ([]byte, error) { return []byte("some-yaml"), nil },
 			fakeTemplateVariablesParser,
+			fakeReleaseParser,
 		)
 	})
 
@@ -218,9 +213,8 @@ var _ = Describe("bake", func() {
 			Expect(varFiles).To(Equal([]string{"some-variables-file"}))
 			Expect(variables).To(Equal([]string{"some-variable=some-variable-value"}))
 
-			Expect(fakeReleaseManifestReader.ReadCallCount()).To(Equal(2))
-			Expect(fakeReleaseManifestReader.ReadArgsForCall(0)).To(Equal(filepath.Join(otherReleasesDirectory, "release2.tar.gz")))
-			Expect(fakeReleaseManifestReader.ReadArgsForCall(1)).To(Equal(filepath.Join(someReleasesDirectory, "release1.tgz")))
+			Expect(fakeReleaseParser.ExecuteCallCount()).To(Equal(1))
+			Expect(fakeReleaseParser.ExecuteArgsForCall(0)).To(Equal([]string{otherReleasesDirectory, someReleasesDirectory}))
 
 			Expect(fakeStemcellManifestReader.ReadCallCount()).To(Equal(1))
 			Expect(fakeStemcellManifestReader.ReadArgsForCall(0)).To(Equal("some-stemcell-tarball"))
@@ -402,7 +396,7 @@ var _ = Describe("bake", func() {
 		Context("failure cases", func() {
 			Context("when the template variables parser errors", func() {
 				It("returns an error", func() {
-					fakeTemplateVariablesParser.ExecuteReturns(nil, errors.New("parsing failed"))
+					fakeTemplateVariablesParser.ExecuteReturns(nil, errors.New("parsing template variables failed"))
 
 					err := bake.Execute([]string{
 						"--metadata", "some-metadata",
@@ -410,26 +404,22 @@ var _ = Describe("bake", func() {
 						"--icon", "some-icon-path",
 						"--releases-directory", someReleasesDirectory,
 					})
-					Expect(err).To(MatchError("failed to parse template variables: parsing failed"))
+					Expect(err).To(MatchError("failed to parse template variables: parsing template variables failed"))
 				})
 			})
 
-			Context("when the release manifest reader returns an error", func() {
+			Context("when the release parser fails", func() {
 				It("returns an error", func() {
-					fakeReleaseManifestReader.ReadReturnsOnCall(0, builder.Part{}, errors.New("some-error"))
+					fakeReleaseParser.ExecuteReturns(nil, errors.New("parsing releases failed"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
 						"--metadata", "some-metadata",
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
 						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3",
 					})
 
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("some-error"))
+					Expect(err).To(MatchError("failed to parse releases: parsing releases failed"))
 				})
 			})
 
@@ -447,8 +437,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("some-error"))
+					Expect(err).To(MatchError(ContainSubstring("some-error")))
 				})
 			})
 
@@ -467,8 +456,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("some-error"))
+					Expect(err).To(MatchError(ContainSubstring("some-error")))
 				})
 			})
 
@@ -488,8 +476,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("some-error"))
+					Expect(err).To(MatchError(ContainSubstring("some-error")))
 				})
 			})
 
@@ -509,8 +496,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("some-error"))
+					Expect(err).To(MatchError(ContainSubstring("some-error")))
 				})
 			})
 
@@ -530,8 +516,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("some-error"))
+					Expect(err).To(MatchError(ContainSubstring("some-error")))
 				})
 			})
 
@@ -550,8 +535,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("some-error"))
+					Expect(err).To(MatchError(ContainSubstring("some-error")))
 				})
 			})
 
@@ -640,8 +624,7 @@ var _ = Describe("bake", func() {
 						"--non-existant-flag",
 					})
 
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("non-existant-flag"))
+					Expect(err).To(MatchError(ContainSubstring("non-existant-flag")))
 				})
 			})
 		})
