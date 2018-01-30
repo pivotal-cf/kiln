@@ -1,4 +1,4 @@
-package commands_test
+package ingest_test
 
 import (
 	"errors"
@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/commands"
-	"github.com/pivotal-cf/kiln/commands/fakes"
+	"github.com/pivotal-cf/kiln/internal/ingest"
+	"github.com/pivotal-cf/kiln/internal/ingest/fakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -19,7 +19,7 @@ var _ = Describe("ReleaseParser", func() {
 		var (
 			tempDir string
 			reader  *fakes.PartReader
-			parser  commands.ReleaseParser
+			parser  ingest.ReleaseParser
 		)
 
 		BeforeEach(func() {
@@ -46,7 +46,7 @@ var _ = Describe("ReleaseParser", func() {
 			Expect(file.Close()).To(Succeed())
 
 			reader = &fakes.PartReader{}
-			parser = commands.NewReleaseParser(reader)
+			parser = ingest.NewReleaseParser(reader)
 		})
 
 		AfterEach(func() {

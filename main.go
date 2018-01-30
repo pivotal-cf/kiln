@@ -8,6 +8,7 @@ import (
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/helper"
+	"github.com/pivotal-cf/kiln/internal/ingest"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -49,10 +50,10 @@ func main() {
 	interpolator := builder.NewInterpolator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, logger, md5SumCalculator)
 
-	templateVariablesParser := commands.NewTemplateVariableParser()
+	templateVariablesParser := ingest.NewTemplateVariableParser()
 
 	releaseManifestReader := builder.NewReleaseManifestReader()
-	releaseParser := commands.NewReleaseParser(releaseManifestReader)
+	releaseParser := ingest.NewReleaseParser(releaseManifestReader)
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)

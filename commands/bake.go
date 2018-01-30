@@ -297,7 +297,3 @@ func (b Bake) Usage() jhanda.Usage {
 		Flags:            b.Options,
 	}
 }
-
-func parseReleases(reader partReader, directories []string) (map[string]interface{}, error) {
-	return NewReleaseParser(reader).Execute(directories)
-}

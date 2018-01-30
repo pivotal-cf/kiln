@@ -1,10 +1,17 @@
-package commands
+package ingest
 
 import (
 	"os"
 	"path/filepath"
 	"regexp"
+
+	"github.com/pivotal-cf/kiln/builder"
 )
+
+//go:generate counterfeiter -o ./fakes/part_reader.go --fake-name PartReader . partReader
+type partReader interface {
+	Read(path string) (builder.Part, error)
+}
 
 type ReleaseParser struct {
 	reader partReader

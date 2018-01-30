@@ -1,10 +1,10 @@
-package commands_test
+package ingest_test
 
 import (
 	"io/ioutil"
 	"os"
 
-	"github.com/pivotal-cf/kiln/commands"
+	"github.com/pivotal-cf/kiln/internal/ingest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,12 +13,12 @@ import (
 var _ = Describe("TemplateVariablesParser", func() {
 	Describe("Execute", func() {
 		var (
-			parser commands.TemplateVariablesParser
+			parser ingest.TemplateVariablesParser
 			path   string
 		)
 
 		BeforeEach(func() {
-			parser = commands.NewTemplateVariableParser()
+			parser = ingest.NewTemplateVariableParser()
 
 			contents := `---
 key-1:

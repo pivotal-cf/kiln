@@ -1,8 +1,9 @@
-package commands
+package commands_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/pivotal-cf/jhanda"
 
 	"testing"

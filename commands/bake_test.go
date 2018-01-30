@@ -33,9 +33,7 @@ var _ = Describe("bake", func() {
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
-		otherTarballRelease    string
 		someReleasesDirectory  string
-		tarballRelease         string
 		tmpDir                 string
 
 		bake commands.Bake
@@ -50,14 +48,6 @@ var _ = Describe("bake", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		otherReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
-
-		tarballRelease = filepath.Join(someReleasesDirectory, "release1.tgz")
-		err = ioutil.WriteFile(tarballRelease, []byte(""), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		otherTarballRelease = filepath.Join(otherReleasesDirectory, "release2.tar.gz")
-		err = ioutil.WriteFile(otherTarballRelease, []byte(""), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		nonTarballRelease := filepath.Join(someReleasesDirectory, "some-broken-release")
