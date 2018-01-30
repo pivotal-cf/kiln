@@ -14,12 +14,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("ReleaseParser", func() {
-	Describe("Execute", func() {
+var _ = Describe("ReleasesService", func() {
+	Describe("FromDirectories", func() {
 		var (
 			tempDir string
 			reader  *fakes.PartReader
-			parser  ingest.ReleaseParser
+			service ingest.ReleasesService
 		)
 
 		BeforeEach(func() {
@@ -46,7 +46,7 @@ var _ = Describe("ReleaseParser", func() {
 			Expect(file.Close()).To(Succeed())
 
 			reader = &fakes.PartReader{}
-			parser = ingest.NewReleaseParser(reader)
+			service = ingest.NewReleasesService(reader)
 		})
 
 		AfterEach(func() {
@@ -66,7 +66,7 @@ var _ = Describe("ReleaseParser", func() {
 				Metadata: "other-metadata",
 			}, nil)
 
-			releases, err := parser.Execute([]string{tempDir})
+			releases, err := service.FromDirectories([]string{tempDir})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(releases).To(Equal(map[string]interface{}{
 				"some-name":  "some-metadata",
@@ -81,7 +81,7 @@ var _ = Describe("ReleaseParser", func() {
 		Context("failure cases", func() {
 			Context("when there is a directory that does not exist", func() {
 				It("returns an error", func() {
-					_, err := parser.Execute([]string{"missing-directory"})
+					_, err := service.FromDirectories([]string{"missing-directory"})
 					Expect(err).To(MatchError("lstat missing-directory: no such file or directory"))
 				})
 			})
@@ -90,7 +90,7 @@ var _ = Describe("ReleaseParser", func() {
 				It("returns an error", func() {
 					reader.ReadReturns(builder.Part{}, errors.New("failed to read release manifest"))
 
-					_, err := parser.Execute([]string{tempDir})
+					_, err := service.FromDirectories([]string{tempDir})
 					Expect(err).To(MatchError("failed to read release manifest"))
 				})
 			})

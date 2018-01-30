@@ -10,15 +10,15 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("TemplateVariablesParser", func() {
-	Describe("Execute", func() {
+var _ = Describe("TemplateVariablesService", func() {
+	Describe("FromPathsAndPairs", func() {
 		var (
-			parser ingest.TemplateVariablesParser
-			path   string
+			service ingest.TemplateVariablesService
+			path    string
 		)
 
 		BeforeEach(func() {
-			parser = ingest.NewTemplateVariableParser()
+			service = ingest.NewTemplateVariablesService()
 
 			contents := `---
 key-1:
@@ -46,7 +46,7 @@ key-3: value-3
 		})
 
 		It("parses template variables from a collection of files", func() {
-			variables, err := parser.Execute([]string{path}, nil)
+			variables, err := service.FromPathsAndPairs([]string{path}, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(variables).To(Equal(map[string]interface{}{
 				"key-1": map[interface{}]interface{}{
@@ -60,7 +60,7 @@ key-3: value-3
 		})
 
 		It("parses template variables from command-line arguments", func() {
-			variables, err := parser.Execute(nil, []string{
+			variables, err := service.FromPathsAndPairs(nil, []string{
 				"key-1=value-1",
 				"key-2=value-2",
 			})
@@ -74,7 +74,7 @@ key-3: value-3
 		Context("failure cases", func() {
 			Context("when the variable file cannot be read", func() {
 				It("returns an error", func() {
-					_, err := parser.Execute([]string{"missing.yml"}, nil)
+					_, err := service.FromPathsAndPairs([]string{"missing.yml"}, nil)
 					Expect(err).To(MatchError(ContainSubstring("open missing.yml: no such file or directory")))
 				})
 			})
@@ -84,14 +84,14 @@ key-3: value-3
 					err := ioutil.WriteFile(path, []byte("\t\t\t"), 0644)
 					Expect(err).NotTo(HaveOccurred())
 
-					_, err = parser.Execute([]string{path}, nil)
+					_, err = service.FromPathsAndPairs([]string{path}, nil)
 					Expect(err).To(MatchError("yaml: found character that cannot start any token"))
 				})
 			})
 
 			Context("when the command-line variables are malformed", func() {
 				It("returns an error", func() {
-					_, err := parser.Execute(nil, []string{"garbage"})
+					_, err := service.FromPathsAndPairs(nil, []string{"garbage"})
 					Expect(err).To(MatchError("could not parse variable \"garbage\": expected variable in \"key=value\" form"))
 				})
 			})

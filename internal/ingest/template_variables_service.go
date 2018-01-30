@@ -8,13 +8,13 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-type TemplateVariablesParser struct{}
+type TemplateVariablesService struct{}
 
-func NewTemplateVariableParser() TemplateVariablesParser {
-	return TemplateVariablesParser{}
+func NewTemplateVariablesService() TemplateVariablesService {
+	return TemplateVariablesService{}
 }
 
-func (p TemplateVariablesParser) Execute(paths []string, pairs []string) (map[string]interface{}, error) {
+func (s TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []string) (map[string]interface{}, error) {
 	variables := map[string]interface{}{}
 
 	for _, path := range paths {

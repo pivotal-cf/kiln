@@ -39,14 +39,14 @@ type logger interface {
 	Println(v ...interface{})
 }
 
-//go:generate counterfeiter -o ./fakes/template_variables_parser.go --fake-name TemplateVariablesParser . templateVariablesParser
-type templateVariablesParser interface {
-	Execute(paths []string, pairs []string) (variables map[string]interface{}, err error)
+//go:generate counterfeiter -o ./fakes/template_variables_service.go --fake-name TemplateVariablesService . templateVariablesService
+type templateVariablesService interface {
+	FromPathsAndPairs(paths []string, pairs []string) (variables map[string]interface{}, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/release_parser.go --fake-name ReleaseParser . releaseParser
-type releaseParser interface {
-	Execute(directories []string) (releases map[string]interface{}, err error)
+//go:generate counterfeiter -o ./fakes/releases_service.go --fake-name ReleasesService . releasesService
+type releasesService interface {
+	FromDirectories(directories []string) (releases map[string]interface{}, err error)
 }
 
 type Bake struct {
@@ -61,8 +61,8 @@ type Bake struct {
 	propertyBlueprintDirectoryReader directoryReader
 	runtimeConfigsDirectoryReader    directoryReader
 	yamlMarshal                      func(interface{}) ([]byte, error)
-	templateVariablesParser          templateVariablesParser
-	releaseParser                    releaseParser
+	templateVariables                templateVariablesService
+	releases                         releasesService
 
 	Options struct {
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
@@ -98,8 +98,8 @@ func NewBake(
 	propertyBlueprintDirectoryReader directoryReader,
 	runtimeConfigsDirectoryReader directoryReader,
 	yamlMarshal func(interface{}) ([]byte, error),
-	templateVariablesParser templateVariablesParser,
-	releaseParser releaseParser,
+	templateVariablesService templateVariablesService,
+	releasesService releasesService,
 ) Bake {
 
 	return Bake{
@@ -114,8 +114,8 @@ func NewBake(
 		propertyBlueprintDirectoryReader: propertyBlueprintDirectoryReader,
 		runtimeConfigsDirectoryReader:    runtimeConfigsDirectoryReader,
 		yamlMarshal:                      yamlMarshal,
-		templateVariablesParser:          templateVariablesParser,
-		releaseParser:                    releaseParser,
+		templateVariables:                templateVariablesService,
+		releases:                         releasesService,
 	}
 }
 
@@ -133,14 +133,14 @@ func (b Bake) Execute(args []string) error {
 	b.logger.Printf("Creating metadata for %s...", b.Options.OutputFile)
 
 	// NOTE: parsing variables files
-	variables, err := b.templateVariablesParser.Execute(b.Options.VariableFiles, b.Options.Variables)
+	variables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
 	if err != nil {
 		return fmt.Errorf("failed to parse template variables: %s", err)
 	}
 
 	// NOTE: parsing releases
 	b.logger.Println("Reading release manifests...")
-	releaseManifests, err := b.releaseParser.Execute(b.Options.ReleaseDirectories)
+	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
 	if err != nil {
 		return fmt.Errorf("failed to parse releases: %s", err)
 	}

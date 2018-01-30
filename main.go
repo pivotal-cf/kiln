@@ -50,10 +50,10 @@ func main() {
 	interpolator := builder.NewInterpolator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, logger, md5SumCalculator)
 
-	templateVariablesParser := ingest.NewTemplateVariableParser()
+	templateVariablesParser := ingest.NewTemplateVariablesService()
 
 	releaseManifestReader := builder.NewReleaseManifestReader()
-	releaseParser := ingest.NewReleaseParser(releaseManifestReader)
+	releasesService := ingest.NewReleasesService(releaseManifestReader)
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
@@ -70,7 +70,7 @@ func main() {
 		runtimeConfigsDirectoryReader,
 		yaml.Marshal,
 		templateVariablesParser,
-		releaseParser,
+		releasesService,
 	)
 
 	var command string

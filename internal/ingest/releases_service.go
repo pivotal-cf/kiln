@@ -13,17 +13,17 @@ type partReader interface {
 	Read(path string) (builder.Part, error)
 }
 
-type ReleaseParser struct {
+type ReleasesService struct {
 	reader partReader
 }
 
-func NewReleaseParser(reader partReader) ReleaseParser {
-	return ReleaseParser{
+func NewReleasesService(reader partReader) ReleasesService {
+	return ReleasesService{
 		reader: reader,
 	}
 }
 
-func (p ReleaseParser) Execute(directories []string) (map[string]interface{}, error) {
+func (s ReleasesService) FromDirectories(directories []string) (map[string]interface{}, error) {
 	var tarballs []string
 	for _, directory := range directories {
 		err := filepath.Walk(directory, filepath.WalkFunc(func(path string, _ os.FileInfo, err error) error {
@@ -45,7 +45,7 @@ func (p ReleaseParser) Execute(directories []string) (map[string]interface{}, er
 
 	manifests := map[string]interface{}{}
 	for _, tarball := range tarballs {
-		manifest, err := p.reader.Read(tarball)
+		manifest, err := s.reader.Read(tarball)
 		if err != nil {
 			return nil, err
 		}

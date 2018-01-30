@@ -28,8 +28,8 @@ var _ = Describe("bake", func() {
 		fakeInterpolator                  *fakes.Interpolator
 		fakeTileWriter                    *fakes.TileWriter
 		fakeLogger                        *fakes.Logger
-		fakeTemplateVariablesParser       *fakes.TemplateVariablesParser
-		fakeReleaseParser                 *fakes.ReleaseParser
+		fakeTemplateVariablesService      *fakes.TemplateVariablesService
+		fakeReleasesService               *fakes.ReleasesService
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -64,15 +64,15 @@ var _ = Describe("bake", func() {
 		fakeInterpolator = &fakes.Interpolator{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
-		fakeTemplateVariablesParser = &fakes.TemplateVariablesParser{}
-		fakeReleaseParser = &fakes.ReleaseParser{}
+		fakeTemplateVariablesService = &fakes.TemplateVariablesService{}
+		fakeReleasesService = &fakes.ReleasesService{}
 
-		fakeTemplateVariablesParser.ExecuteReturns(map[string]interface{}{
+		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
 			"some-variable":           "some-variable-value",
 		}, nil)
 
-		fakeReleaseParser.ExecuteReturns(map[string]interface{}{
+		fakeReleasesService.FromDirectoriesReturns(map[string]interface{}{
 			"some-release-1": builder.ReleaseManifest{
 				Name:    "some-release-1",
 				Version: "1.2.3",
@@ -163,8 +163,8 @@ var _ = Describe("bake", func() {
 			fakePropertyDirectoryReader,
 			fakeRuntimeConfigsDirectoryReader,
 			func(interface{}) ([]byte, error) { return []byte("some-yaml"), nil },
-			fakeTemplateVariablesParser,
-			fakeReleaseParser,
+			fakeTemplateVariablesService,
+			fakeReleasesService,
 		)
 	})
 
@@ -198,13 +198,13 @@ var _ = Describe("bake", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeTemplateVariablesParser.ExecuteCallCount()).To(Equal(1))
-			varFiles, variables := fakeTemplateVariablesParser.ExecuteArgsForCall(0)
+			Expect(fakeTemplateVariablesService.FromPathsAndPairsCallCount()).To(Equal(1))
+			varFiles, variables := fakeTemplateVariablesService.FromPathsAndPairsArgsForCall(0)
 			Expect(varFiles).To(Equal([]string{"some-variables-file"}))
 			Expect(variables).To(Equal([]string{"some-variable=some-variable-value"}))
 
-			Expect(fakeReleaseParser.ExecuteCallCount()).To(Equal(1))
-			Expect(fakeReleaseParser.ExecuteArgsForCall(0)).To(Equal([]string{otherReleasesDirectory, someReleasesDirectory}))
+			Expect(fakeReleasesService.FromDirectoriesCallCount()).To(Equal(1))
+			Expect(fakeReleasesService.FromDirectoriesArgsForCall(0)).To(Equal([]string{otherReleasesDirectory, someReleasesDirectory}))
 
 			Expect(fakeStemcellManifestReader.ReadCallCount()).To(Equal(1))
 			Expect(fakeStemcellManifestReader.ReadArgsForCall(0)).To(Equal("some-stemcell-tarball"))
@@ -384,9 +384,9 @@ var _ = Describe("bake", func() {
 		})
 
 		Context("failure cases", func() {
-			Context("when the template variables parser errors", func() {
+			Context("when the template variables service errors", func() {
 				It("returns an error", func() {
-					fakeTemplateVariablesParser.ExecuteReturns(nil, errors.New("parsing template variables failed"))
+					fakeTemplateVariablesService.FromPathsAndPairsReturns(nil, errors.New("parsing template variables failed"))
 
 					err := bake.Execute([]string{
 						"--metadata", "some-metadata",
@@ -398,9 +398,9 @@ var _ = Describe("bake", func() {
 				})
 			})
 
-			Context("when the release parser fails", func() {
+			Context("when the releases service fails", func() {
 				It("returns an error", func() {
-					fakeReleaseParser.ExecuteReturns(nil, errors.New("parsing releases failed"))
+					fakeReleasesService.FromDirectoriesReturns(nil, errors.New("parsing releases failed"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
