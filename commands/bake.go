@@ -67,12 +67,12 @@ type Bake struct {
 	Options struct {
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
 		OutputFile         string   `short:"o"  long:"output-file"        required:"true" description:"path to where the tile will be output"`
-		IconPath           string   `short:"i"  long:"icon"               required:"true" description:"path to icon file"`
 		ReleaseDirectories []string `short:"rd" long:"releases-directory" required:"true" description:"path to a directory containing release tarballs"`
 
 		BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"  description:"path to a directory containing BOSH variables"`
 		EmbedPaths               []string `short:"e"   long:"embed"                     description:"path to files to include in the tile /embed directory"`
 		FormDirectories          []string `short:"f"   long:"forms-directory"           description:"path to a directory containing forms"`
+		IconPath                 string   `short:"i"   long:"icon"                      description:"path to icon file"`
 		InstanceGroupDirectories []string `short:"ig"  long:"instance-groups-directory" description:"path to a directory containing instance groups"`
 		JobDirectories           []string `short:"j"   long:"jobs-directory"            description:"path to a directory containing jobs"`
 		MigrationDirectories     []string `short:"md"  long:"migrations-directory"      description:"path to a directory containing migrations"`
@@ -143,6 +143,12 @@ func (b Bake) Execute(args []string) error {
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
 	if err != nil {
 		return fmt.Errorf("failed to parse releases: %s", err)
+	}
+
+	var iconPath string
+	if b.Options.IconPath != "" {
+		b.logger.Println("Reading icon...")
+		iconPath = b.Options.IconPath
 	}
 
 	// NOTE: reading stemcell manifest
@@ -243,7 +249,7 @@ func (b Bake) Execute(args []string) error {
 
 	// NOTE: generating metadata object representation
 	generatedMetadata, err := b.metadataBuilder.Build(builder.BuildInput{
-		IconPath:                b.Options.IconPath,
+		IconPath:                iconPath,
 		MetadataPath:            b.Options.Metadata,
 		BOSHVariableDirectories: b.Options.BOSHVariableDirectories,
 	})

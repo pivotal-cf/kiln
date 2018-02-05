@@ -313,7 +313,6 @@ var _ = Describe("bake", func() {
 		Context("when the optional flags are not specified", func() {
 			It("builds the metadata", func() {
 				err := bake.Execute([]string{
-					"--icon", "some-icon-path",
 					"--metadata", "some-metadata",
 					"--releases-directory", someReleasesDirectory,
 					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
@@ -526,20 +525,6 @@ var _ = Describe("bake", func() {
 					})
 
 					Expect(err).To(MatchError(ContainSubstring("some-error")))
-				})
-			})
-
-			Context("when the icon flag is missing", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3",
-					})
-
-					Expect(err).To(MatchError("missing required flag \"--icon\""))
 				})
 			})
 

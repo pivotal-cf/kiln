@@ -30,7 +30,7 @@ Command Arguments:
   --bosh-variables-directory, -vd    string (variadic)            path to a directory containing BOSH variables
   --embed, -e                        string (variadic)            path to files to include in the tile /embed directory
   --forms-directory, -f              string (variadic)            path to a directory containing forms
-  --icon, -i                         string (required)            path to icon file
+  --icon, -i                         string                       path to icon file
   --instance-groups-directory, -ig   string (variadic)            path to a directory containing instance groups
   --jobs-directory, -j               string (variadic)            path to a directory containing jobs
   --metadata, -m                     string (required)            path to the metadata file

@@ -138,6 +138,18 @@ var _ = Describe("MetadataBuilder", func() {
 			Expect(generatedMetadata.IconImage).To(Equal("base64-encoded-icon-path"))
 		})
 
+		Context("when icon filepath is not specified", func() {
+			It("does not error", func() {
+				_, err := tileBuilder.Build(builder.BuildInput{
+					IconPath:                "",
+					MetadataPath:            "/some/path/metadata.yml",
+					BOSHVariableDirectories: []string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
+					Version:                 "1.2.3",
+				})
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
 		Context("when no property directories are specified", func() {
 			BeforeEach(func() {
 				metadataReader.ReadReturns(builder.Metadata{

@@ -18,7 +18,6 @@ boolean_variable: $(variable "some-boolean-variable")
 label: Pivotal Elastic Runtime
 description:
   this is the description
-icon_img: $( icon )
 rank: 90
 serial: false
 install_time_verifiers:

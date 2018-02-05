@@ -246,11 +246,18 @@ some-literal-variable: |
 	})
 
 	It("generates a tile with the correct metadata", func() {
+		f, err := os.OpenFile(metadata, os.O_APPEND|os.O_WRONLY, 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		defer f.Close()
+		_, err = f.WriteString("icon_img: aS1hbS1zb21lLWltYWdl")
+
+		Expect(err).NotTo(HaveOccurred())
+
 		command := exec.Command(pathToMain,
 			"bake",
 			"--forms-directory", someFormsDirectory,
 			"--forms-directory", someOtherFormsDirectory,
-			"--icon", someIconPath,
 			"--instance-groups-directory", someInstanceGroupsDirectory,
 			"--instance-groups-directory", someOtherInstanceGroupsDirectory,
 			"--jobs-directory", someJobsDirectory,
@@ -348,6 +355,72 @@ some-literal-variable: |
 		Eventually(session.Out).ShouldNot(gbytes.Say(fmt.Sprintf("Adding releases/not-a-tarball.txt to %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Calculating md5 sum of %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say("Calculated md5 sum: [0-9a-f]{32}"))
+	})
+
+	Context("when the --icon flag is specified", func() {
+		It("generates a tile with the specified icon", func() {
+			f, err := os.OpenFile(metadata, os.O_APPEND|os.O_WRONLY, 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			defer f.Close()
+			_, err = f.WriteString("icon_img: $( icon )")
+
+			Expect(err).NotTo(HaveOccurred())
+
+			command := exec.Command(pathToMain,
+				"bake",
+				"--forms-directory", someFormsDirectory,
+				"--forms-directory", someOtherFormsDirectory,
+				"--icon", someIconPath,
+				"--instance-groups-directory", someInstanceGroupsDirectory,
+				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+				"--jobs-directory", someJobsDirectory,
+				"--jobs-directory", someOtherJobsDirectory,
+				"--metadata", metadata,
+				"--migrations-directory", "fixtures/extra-migrations",
+				"--migrations-directory", "fixtures/migrations",
+				"--output-file", outputFile,
+				"--properties-directory", somePropertiesDirectory,
+				"--releases-directory", otherReleasesDirectory,
+				"--releases-directory", someReleasesDirectory,
+				"--runtime-configs-directory", someRuntimeConfigsDirectory,
+				"--stemcell-tarball", stemcellTarball,
+				"--bosh-variables-directory", someVariablesDirectory,
+				"--variable", "some-variable=some-variable-value",
+				"--variables-file", filepath.Join(someVarFile),
+				"--version", "1.2.3",
+			)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			archive, err := os.Open(outputFile)
+			Expect(err).NotTo(HaveOccurred())
+
+			archiveInfo, err := archive.Stat()
+			Expect(err).NotTo(HaveOccurred())
+
+			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			Expect(err).NotTo(HaveOccurred())
+
+			var file io.ReadCloser
+			for _, f := range zr.File {
+				if f.Name == "metadata/metadata.yml" {
+					file, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+					break
+				}
+			}
+
+			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
+			metadataContents, err := ioutil.ReadAll(file)
+			Expect(err).NotTo(HaveOccurred())
+
+			renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
+			Expect(metadataContents).To(MatchYAML(renderedYAML))
+		})
 	})
 
 	Context("when the --stub-releases flag is specified", func() {
@@ -688,7 +761,6 @@ some-literal-variable: |
 					"bake",
 					"--forms-directory", someFormsDirectory,
 					"--forms-directory", someOtherFormsDirectory,
-					"--icon", someIconPath,
 					"--metadata", "metadata.yml",
 					"--output-file", outputFile,
 					"--properties-directory", somePropertiesDirectory,
@@ -734,6 +806,34 @@ some-literal-variable: |
 
 				Eventually(session).Should(gexec.Exit(1))
 				Expect(string(string(session.Err.Contents()))).To(ContainSubstring("no such file or directory"))
+			})
+		})
+
+		Context("when icon template function is used but the icon flag is missing", func() {
+			It("generates a tile with the specified icon", func() {
+				f, err := os.OpenFile(metadata, os.O_APPEND|os.O_WRONLY, 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				defer f.Close()
+				_, err = f.WriteString("icon_img: $( icon )")
+
+				Expect(err).NotTo(HaveOccurred())
+
+				command := exec.Command(pathToMain,
+					"bake",
+					"--metadata", metadata,
+					"--output-file", outputFile,
+					"--releases-directory", someReleasesDirectory,
+					"--variable", "some-variable=some-variable-value",
+					"--variables-file", filepath.Join(someVarFile),
+					"--version", "1.2.3",
+				)
+
+				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(session).Should(gexec.Exit(1))
+				Expect(string(string(session.Err.Contents()))).To(ContainSubstring("icon flag"))
 			})
 		})
 	})

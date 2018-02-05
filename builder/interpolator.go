@@ -88,6 +88,9 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 			return i.interpolateValueIntoYAML(input, val)
 		},
 		"icon": func() (string, error) {
+			if input.IconImage == "" {
+				return "", fmt.Errorf("could not find icon, please check your --icon flag")
+			}
 			return input.IconImage, nil
 		},
 		"instance_group": func(name string) (string, error) {

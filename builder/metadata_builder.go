@@ -68,9 +68,12 @@ func (m MetadataBuilder) Build(input BuildInput) (GeneratedMetadata, error) {
 		return GeneratedMetadata{}, err
 	}
 
-	encodedIcon, err := m.iconEncoder.Encode(input.IconPath)
-	if err != nil {
-		return GeneratedMetadata{}, err
+	encodedIcon := ""
+	if input.IconPath != "" {
+		encodedIcon, err = m.iconEncoder.Encode(input.IconPath)
+		if err != nil {
+			return GeneratedMetadata{}, err
+		}
 	}
 
 	return GeneratedMetadata{
