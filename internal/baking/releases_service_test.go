@@ -1,4 +1,4 @@
-package ingest_test
+package baking_test
 
 import (
 	"errors"
@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/internal/ingest"
-	"github.com/pivotal-cf/kiln/internal/ingest/fakes"
+	"github.com/pivotal-cf/kiln/internal/baking"
+	"github.com/pivotal-cf/kiln/internal/baking/fakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -19,7 +19,7 @@ var _ = Describe("ReleasesService", func() {
 		var (
 			tempDir string
 			reader  *fakes.PartReader
-			service ingest.ReleasesService
+			service baking.ReleasesService
 		)
 
 		BeforeEach(func() {
@@ -46,7 +46,7 @@ var _ = Describe("ReleasesService", func() {
 			Expect(file.Close()).To(Succeed())
 
 			reader = &fakes.PartReader{}
-			service = ingest.NewReleasesService(reader)
+			service = baking.NewReleasesService(reader)
 		})
 
 		AfterEach(func() {

@@ -1,4 +1,4 @@
-package ingest_test
+package baking_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestIngest(t *testing.T) {
+func TestBaking(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "internal/ingest")
+	RunSpecs(t, "internal/baking")
 }

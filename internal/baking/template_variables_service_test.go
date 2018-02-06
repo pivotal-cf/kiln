@@ -1,10 +1,10 @@
-package ingest_test
+package baking_test
 
 import (
 	"io/ioutil"
 	"os"
 
-	"github.com/pivotal-cf/kiln/internal/ingest"
+	"github.com/pivotal-cf/kiln/internal/baking"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,12 +13,12 @@ import (
 var _ = Describe("TemplateVariablesService", func() {
 	Describe("FromPathsAndPairs", func() {
 		var (
-			service ingest.TemplateVariablesService
+			service baking.TemplateVariablesService
 			path    string
 		)
 
 		BeforeEach(func() {
-			service = ingest.NewTemplateVariablesService()
+			service = baking.NewTemplateVariablesService()
 
 			contents := `---
 key-1:
