@@ -38,7 +38,6 @@ func main() {
 	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")
 	metadataBuilder := builder.NewMetadataBuilder(
 		variablesDirectoryReader,
@@ -55,6 +54,9 @@ func main() {
 	releaseManifestReader := builder.NewReleaseManifestReader()
 	releasesService := baking.NewReleasesService(releaseManifestReader)
 
+	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
+	stemcellService := baking.NewStemcellService(logger, stemcellManifestReader)
+
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["bake"] = commands.NewBake(
@@ -62,7 +64,6 @@ func main() {
 		interpolator,
 		tileWriter,
 		logger,
-		stemcellManifestReader,
 		formDirectoryReader,
 		instanceGroupDirectoryReader,
 		jobsDirectoryReader,
@@ -71,6 +72,7 @@ func main() {
 		yaml.Marshal,
 		templateVariablesParser,
 		releasesService,
+		stemcellService,
 	)
 
 	var command string

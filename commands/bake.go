@@ -23,11 +23,6 @@ type metadataBuilder interface {
 	Build(input builder.BuildInput) (builder.GeneratedMetadata, error)
 }
 
-//go:generate counterfeiter -o ./fakes/part_reader.go --fake-name PartReader . partReader
-type partReader interface {
-	Read(path string) (builder.Part, error)
-}
-
 //go:generate counterfeiter -o ./fakes/directory_reader.go --fake-name DirectoryReader . directoryReader
 type directoryReader interface {
 	Read(path string) ([]builder.Part, error)
@@ -49,12 +44,16 @@ type releasesService interface {
 	FromDirectories(directories []string) (releases map[string]interface{}, err error)
 }
 
+//go:generate counterfeiter -o ./fakes/stemcell_service.go --fake-name StemcellService . stemcellService
+type stemcellService interface {
+	FromTarball(path string) (stemcell interface{}, err error)
+}
+
 type Bake struct {
 	metadataBuilder                  metadataBuilder
 	interpolator                     interpolator
 	tileWriter                       tileWriter
 	logger                           logger
-	stemcellManifestReader           partReader
 	formDirectoryReader              directoryReader
 	instanceGroupDirectoryReader     directoryReader
 	jobDirectoryReader               directoryReader
@@ -63,6 +62,7 @@ type Bake struct {
 	yamlMarshal                      func(interface{}) ([]byte, error)
 	templateVariables                templateVariablesService
 	releases                         releasesService
+	stemcell                         stemcellService
 
 	Options struct {
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
@@ -91,7 +91,6 @@ func NewBake(
 	interpolator interpolator,
 	tileWriter tileWriter,
 	logger logger,
-	stemcellManifestReader partReader,
 	formDirectoryReader directoryReader,
 	instanceGroupDirectoryReader directoryReader,
 	jobDirectoryReader directoryReader,
@@ -100,6 +99,7 @@ func NewBake(
 	yamlMarshal func(interface{}) ([]byte, error),
 	templateVariablesService templateVariablesService,
 	releasesService releasesService,
+	stemcellService stemcellService,
 ) Bake {
 
 	return Bake{
@@ -107,7 +107,6 @@ func NewBake(
 		interpolator:                     interpolator,
 		tileWriter:                       tileWriter,
 		logger:                           logger,
-		stemcellManifestReader:           stemcellManifestReader,
 		formDirectoryReader:              formDirectoryReader,
 		instanceGroupDirectoryReader:     instanceGroupDirectoryReader,
 		jobDirectoryReader:               jobDirectoryReader,
@@ -116,6 +115,7 @@ func NewBake(
 		yamlMarshal:                      yamlMarshal,
 		templateVariables:                templateVariablesService,
 		releases:                         releasesService,
+		stemcell:                         stemcellService,
 	}
 }
 
@@ -146,14 +146,9 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	// NOTE: reading stemcell manifest
-	var stemcellManifest interface{}
-	if b.Options.StemcellTarball != "" {
-		b.logger.Println("Reading stemcell manifests...")
-		stemcell, err := b.stemcellManifestReader.Read(b.Options.StemcellTarball)
-		if err != nil {
-			return err
-		}
-		stemcellManifest = stemcell.Metadata
+	stemcellManifest, err := b.stemcell.FromTarball(b.Options.StemcellTarball)
+	if err != nil {
+		return fmt.Errorf("failed to parse stemcell: %s", err)
 	}
 
 	// NOTE: reading form files

@@ -19,7 +19,6 @@ import (
 var _ = Describe("bake", func() {
 	var (
 		fakeMetadataBuilder               *fakes.MetadataBuilder
-		fakeStemcellManifestReader        *fakes.PartReader
 		fakeFormDirectoryReader           *fakes.DirectoryReader
 		fakeInstanceGroupDirectoryReader  *fakes.DirectoryReader
 		fakeJobsDirectoryReader           *fakes.DirectoryReader
@@ -30,6 +29,7 @@ var _ = Describe("bake", func() {
 		fakeLogger                        *fakes.Logger
 		fakeTemplateVariablesService      *fakes.TemplateVariablesService
 		fakeReleasesService               *fakes.ReleasesService
+		fakeStemcellService               *fakes.StemcellService
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -55,7 +55,6 @@ var _ = Describe("bake", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
-		fakeStemcellManifestReader = &fakes.PartReader{}
 		fakeFormDirectoryReader = &fakes.DirectoryReader{}
 		fakeInstanceGroupDirectoryReader = &fakes.DirectoryReader{}
 		fakeJobsDirectoryReader = &fakes.DirectoryReader{}
@@ -66,6 +65,7 @@ var _ = Describe("bake", func() {
 		fakeLogger = &fakes.Logger{}
 		fakeTemplateVariablesService = &fakes.TemplateVariablesService{}
 		fakeReleasesService = &fakes.ReleasesService{}
+		fakeStemcellService = &fakes.StemcellService{}
 
 		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
@@ -85,11 +85,9 @@ var _ = Describe("bake", func() {
 			},
 		}, nil)
 
-		fakeStemcellManifestReader.ReadReturns(builder.Part{
-			Metadata: builder.StemcellManifest{
-				Version:         "2.3.4",
-				OperatingSystem: "an-operating-system",
-			},
+		fakeStemcellService.FromTarballReturns(builder.StemcellManifest{
+			Version:         "2.3.4",
+			OperatingSystem: "an-operating-system",
 		}, nil)
 
 		fakeFormDirectoryReader.ReadReturns([]builder.Part{
@@ -156,7 +154,6 @@ var _ = Describe("bake", func() {
 			fakeInterpolator,
 			fakeTileWriter,
 			fakeLogger,
-			fakeStemcellManifestReader,
 			fakeFormDirectoryReader,
 			fakeInstanceGroupDirectoryReader,
 			fakeJobsDirectoryReader,
@@ -165,6 +162,7 @@ var _ = Describe("bake", func() {
 			func(interface{}) ([]byte, error) { return []byte("some-yaml"), nil },
 			fakeTemplateVariablesService,
 			fakeReleasesService,
+			fakeStemcellService,
 		)
 	})
 
@@ -206,8 +204,8 @@ var _ = Describe("bake", func() {
 			Expect(fakeReleasesService.FromDirectoriesCallCount()).To(Equal(1))
 			Expect(fakeReleasesService.FromDirectoriesArgsForCall(0)).To(Equal([]string{otherReleasesDirectory, someReleasesDirectory}))
 
-			Expect(fakeStemcellManifestReader.ReadCallCount()).To(Equal(1))
-			Expect(fakeStemcellManifestReader.ReadArgsForCall(0)).To(Equal("some-stemcell-tarball"))
+			Expect(fakeStemcellService.FromTarballCallCount()).To(Equal(1))
+			Expect(fakeStemcellService.FromTarballArgsForCall(0)).To(Equal("some-stemcell-tarball"))
 
 			Expect(fakeFormDirectoryReader.ReadCallCount()).To(Equal(1))
 			Expect(fakeFormDirectoryReader.ReadArgsForCall(0)).To(Equal("some-forms-directory"))
@@ -412,9 +410,9 @@ var _ = Describe("bake", func() {
 				})
 			})
 
-			Context("when the stemcell manifest reader returns an error", func() {
+			Context("when the stemcell service fails", func() {
 				It("returns an error", func() {
-					fakeStemcellManifestReader.ReadReturns(builder.Part{}, errors.New("some-error"))
+					fakeStemcellService.FromTarballReturns(nil, errors.New("parsing stemcell failed"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -426,7 +424,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(MatchError(ContainSubstring("some-error")))
+					Expect(err).To(MatchError("failed to parse stemcell: parsing stemcell failed"))
 				})
 			})
 
