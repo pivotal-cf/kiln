@@ -145,12 +145,6 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to parse releases: %s", err)
 	}
 
-	var iconPath string
-	if b.Options.IconPath != "" {
-		b.logger.Println("Reading icon...")
-		iconPath = b.Options.IconPath
-	}
-
 	// NOTE: reading stemcell manifest
 	var stemcellManifest interface{}
 	if b.Options.StemcellTarball != "" {
@@ -245,6 +239,13 @@ func (b Bake) Execute(args []string) error {
 				runtimeConfigs[runtimeConfig.Name] = runtimeConfig.Metadata
 			}
 		}
+	}
+
+	// NOTE: parsing icon path
+	var iconPath string
+	if b.Options.IconPath != "" {
+		b.logger.Println("Reading icon...")
+		iconPath = b.Options.IconPath
 	}
 
 	// NOTE: generating metadata object representation
