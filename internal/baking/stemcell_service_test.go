@@ -1,6 +1,8 @@
 package baking_test
 
 import (
+	"errors"
+
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/baking/fakes"
@@ -31,9 +33,9 @@ var _ = Describe("StemcellService", func() {
 		})
 
 		It("parses the stemcell passed as a tarball", func() {
-			manifest, err := service.FromTarball("some-stemcell-tarball")
+			stemcell, err := service.FromTarball("some-stemcell-tarball")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(manifest).To(Equal(builder.StemcellManifest{
+			Expect(stemcell).To(Equal(builder.StemcellManifest{
 				Version:         "some-version",
 				OperatingSystem: "some-os",
 			}))
@@ -43,6 +45,28 @@ var _ = Describe("StemcellService", func() {
 
 			Expect(reader.ReadCallCount()).To(Equal(1))
 			Expect(reader.ReadArgsForCall(0)).To(Equal("some-stemcell-tarball"))
+		})
+
+		Context("when there is no tarball to parse", func() {
+			It("returns nothing", func() {
+				stemcell, err := service.FromTarball("")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stemcell).To(BeNil())
+
+				Expect(logger.PrintlnCallCount()).To(Equal(0))
+				Expect(reader.ReadCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("failure cases", func() {
+			Context("when the reader fails", func() {
+				It("returns an error", func() {
+					reader.ReadReturns(builder.Part{}, errors.New("failed to read"))
+
+					_, err := service.FromTarball("some-stemcell-tarball")
+					Expect(err).To(MatchError("failed to read"))
+				})
+			})
 		})
 	})
 })

@@ -49,12 +49,16 @@ type stemcellService interface {
 	FromTarball(path string) (stemcell interface{}, err error)
 }
 
+//go:generate counterfeiter -o ./fakes/forms_service.go --fake-name FormsService . formsService
+type formsService interface {
+	FromDirectories(directories []string) (forms map[string]interface{}, err error)
+}
+
 type Bake struct {
 	metadataBuilder                  metadataBuilder
 	interpolator                     interpolator
 	tileWriter                       tileWriter
 	logger                           logger
-	formDirectoryReader              directoryReader
 	instanceGroupDirectoryReader     directoryReader
 	jobDirectoryReader               directoryReader
 	propertyBlueprintDirectoryReader directoryReader
@@ -63,6 +67,7 @@ type Bake struct {
 	templateVariables                templateVariablesService
 	releases                         releasesService
 	stemcell                         stemcellService
+	forms                            formsService
 
 	Options struct {
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
@@ -91,7 +96,6 @@ func NewBake(
 	interpolator interpolator,
 	tileWriter tileWriter,
 	logger logger,
-	formDirectoryReader directoryReader,
 	instanceGroupDirectoryReader directoryReader,
 	jobDirectoryReader directoryReader,
 	propertyBlueprintDirectoryReader directoryReader,
@@ -100,14 +104,14 @@ func NewBake(
 	templateVariablesService templateVariablesService,
 	releasesService releasesService,
 	stemcellService stemcellService,
+	formsService formsService,
 ) Bake {
 
 	return Bake{
-		metadataBuilder:                  metadataBuilder,
-		interpolator:                     interpolator,
-		tileWriter:                       tileWriter,
-		logger:                           logger,
-		formDirectoryReader:              formDirectoryReader,
+		metadataBuilder: metadataBuilder,
+		interpolator:    interpolator,
+		tileWriter:      tileWriter,
+		logger:          logger,
 		instanceGroupDirectoryReader:     instanceGroupDirectoryReader,
 		jobDirectoryReader:               jobDirectoryReader,
 		propertyBlueprintDirectoryReader: propertyBlueprintDirectoryReader,
@@ -116,6 +120,7 @@ func NewBake(
 		templateVariables:                templateVariablesService,
 		releases:                         releasesService,
 		stemcell:                         stemcellService,
+		forms:                            formsService,
 	}
 }
 
@@ -152,20 +157,9 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	// NOTE: reading form files
-	var formTypes map[string]interface{}
-	if b.Options.FormDirectories != nil {
-		b.logger.Println("Reading form files...")
-		formTypes = map[string]interface{}{}
-		for _, formDir := range b.Options.FormDirectories {
-			forms, err := b.formDirectoryReader.Read(formDir)
-			if err != nil {
-				return err
-			}
-
-			for _, form := range forms {
-				formTypes[form.Name] = form.Metadata
-			}
-		}
+	forms, err := b.forms.FromDirectories(b.Options.FormDirectories)
+	if err != nil {
+		return fmt.Errorf("failed to parse forms: %s", err)
 	}
 
 	// NOTE: reading instance group files
@@ -266,7 +260,7 @@ func (b Bake) Execute(args []string) error {
 		Variables:          variables,
 		ReleaseManifests:   releaseManifests,
 		StemcellManifest:   stemcellManifest,
-		FormTypes:          formTypes,
+		FormTypes:          forms,
 		IconImage:          generatedMetadata.IconImage,
 		InstanceGroups:     instanceGroups,
 		Jobs:               jobs,

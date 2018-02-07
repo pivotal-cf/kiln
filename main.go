@@ -31,7 +31,6 @@ func main() {
 
 	filesystem := helper.NewFilesystem()
 	zipper := builder.NewZipper()
-	formDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	handcraftReader := builder.NewMetadataReader(filesystem, logger)
 	iconEncoder := builder.NewIconEncoder(filesystem)
 	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReader()
@@ -57,6 +56,9 @@ func main() {
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	stemcellService := baking.NewStemcellService(logger, stemcellManifestReader)
 
+	formDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	formsService := baking.NewFormsService(logger, formDirectoryReader)
+
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["bake"] = commands.NewBake(
@@ -64,7 +66,6 @@ func main() {
 		interpolator,
 		tileWriter,
 		logger,
-		formDirectoryReader,
 		instanceGroupDirectoryReader,
 		jobsDirectoryReader,
 		propertiesDirectoryReader,
@@ -73,6 +74,7 @@ func main() {
 		templateVariablesParser,
 		releasesService,
 		stemcellService,
+		formsService,
 	)
 
 	var command string

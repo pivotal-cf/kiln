@@ -19,7 +19,6 @@ import (
 var _ = Describe("bake", func() {
 	var (
 		fakeMetadataBuilder               *fakes.MetadataBuilder
-		fakeFormDirectoryReader           *fakes.DirectoryReader
 		fakeInstanceGroupDirectoryReader  *fakes.DirectoryReader
 		fakeJobsDirectoryReader           *fakes.DirectoryReader
 		fakePropertyDirectoryReader       *fakes.DirectoryReader
@@ -30,6 +29,7 @@ var _ = Describe("bake", func() {
 		fakeTemplateVariablesService      *fakes.TemplateVariablesService
 		fakeReleasesService               *fakes.ReleasesService
 		fakeStemcellService               *fakes.StemcellService
+		fakeFormsService                  *fakes.FormsService
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -55,7 +55,6 @@ var _ = Describe("bake", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
-		fakeFormDirectoryReader = &fakes.DirectoryReader{}
 		fakeInstanceGroupDirectoryReader = &fakes.DirectoryReader{}
 		fakeJobsDirectoryReader = &fakes.DirectoryReader{}
 		fakePropertyDirectoryReader = &fakes.DirectoryReader{}
@@ -66,6 +65,7 @@ var _ = Describe("bake", func() {
 		fakeTemplateVariablesService = &fakes.TemplateVariablesService{}
 		fakeReleasesService = &fakes.ReleasesService{}
 		fakeStemcellService = &fakes.StemcellService{}
+		fakeFormsService = &fakes.FormsService{}
 
 		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
@@ -90,13 +90,10 @@ var _ = Describe("bake", func() {
 			OperatingSystem: "an-operating-system",
 		}, nil)
 
-		fakeFormDirectoryReader.ReadReturns([]builder.Part{
-			{
-				Name: "some-form",
-				Metadata: builder.Metadata{
-					"name":  "some-form",
-					"label": "some-form-label",
-				},
+		fakeFormsService.FromDirectoriesReturns(map[string]interface{}{
+			"some-form": builder.Metadata{
+				"name":  "some-form",
+				"label": "some-form-label",
 			},
 		}, nil)
 
@@ -154,7 +151,6 @@ var _ = Describe("bake", func() {
 			fakeInterpolator,
 			fakeTileWriter,
 			fakeLogger,
-			fakeFormDirectoryReader,
 			fakeInstanceGroupDirectoryReader,
 			fakeJobsDirectoryReader,
 			fakePropertyDirectoryReader,
@@ -163,6 +159,7 @@ var _ = Describe("bake", func() {
 			fakeTemplateVariablesService,
 			fakeReleasesService,
 			fakeStemcellService,
+			fakeFormsService,
 		)
 	})
 
@@ -207,8 +204,8 @@ var _ = Describe("bake", func() {
 			Expect(fakeStemcellService.FromTarballCallCount()).To(Equal(1))
 			Expect(fakeStemcellService.FromTarballArgsForCall(0)).To(Equal("some-stemcell-tarball"))
 
-			Expect(fakeFormDirectoryReader.ReadCallCount()).To(Equal(1))
-			Expect(fakeFormDirectoryReader.ReadArgsForCall(0)).To(Equal("some-forms-directory"))
+			Expect(fakeFormsService.FromDirectoriesCallCount()).To(Equal(1))
+			Expect(fakeFormsService.FromDirectoriesArgsForCall(0)).To(Equal([]string{"some-forms-directory"}))
 
 			Expect(fakeInstanceGroupDirectoryReader.ReadCallCount()).To(Equal(1))
 			Expect(fakeInstanceGroupDirectoryReader.ReadArgsForCall(0)).To(Equal("some-instance-groups-directory"))
@@ -428,9 +425,9 @@ var _ = Describe("bake", func() {
 				})
 			})
 
-			Context("when the form directory reader returns an error", func() {
+			Context("when the forms service fails", func() {
 				It("returns an error", func() {
-					fakeFormDirectoryReader.ReadReturns(nil, errors.New("some-error"))
+					fakeFormsService.FromDirectoriesReturns(nil, errors.New("parsing forms failed"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -443,7 +440,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(MatchError(ContainSubstring("some-error")))
+					Expect(err).To(MatchError("failed to parse forms: parsing forms failed"))
 				})
 			})
 
