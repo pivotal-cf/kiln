@@ -19,7 +19,6 @@ import (
 var _ = Describe("Bake", func() {
 	var (
 		fakeMetadataBuilder               *fakes.MetadataBuilder
-		fakePropertyDirectoryReader       *fakes.DirectoryReader
 		fakeRuntimeConfigsDirectoryReader *fakes.DirectoryReader
 		fakeInterpolator                  *fakes.Interpolator
 		fakeTileWriter                    *fakes.TileWriter
@@ -30,6 +29,7 @@ var _ = Describe("Bake", func() {
 		fakeFormsService                  *fakes.FormsService
 		fakeInstanceGroupsService         *fakes.InstanceGroupsService
 		fakeJobsService                   *fakes.JobsService
+		fakePropertiesService             *fakes.PropertiesService
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -55,7 +55,6 @@ var _ = Describe("Bake", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
-		fakePropertyDirectoryReader = &fakes.DirectoryReader{}
 		fakeRuntimeConfigsDirectoryReader = &fakes.DirectoryReader{}
 		fakeInterpolator = &fakes.Interpolator{}
 		fakeTileWriter = &fakes.TileWriter{}
@@ -66,6 +65,7 @@ var _ = Describe("Bake", func() {
 		fakeFormsService = &fakes.FormsService{}
 		fakeInstanceGroupsService = &fakes.InstanceGroupsService{}
 		fakeJobsService = &fakes.JobsService{}
+		fakePropertiesService = &fakes.PropertiesService{}
 
 		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
@@ -114,15 +114,12 @@ var _ = Describe("Bake", func() {
 			},
 		}, nil)
 
-		fakePropertyDirectoryReader.ReadReturns([]builder.Part{
-			{
-				Name: "some-property",
-				Metadata: builder.Metadata{
-					"name":         "some-property",
-					"type":         "boolean",
-					"configurable": true,
-					"default":      false,
-				},
+		fakePropertiesService.FromDirectoriesReturns(map[string]interface{}{
+			"some-property": builder.Metadata{
+				"name":         "some-property",
+				"type":         "boolean",
+				"configurable": true,
+				"default":      false,
 			},
 		}, nil)
 
@@ -145,7 +142,6 @@ var _ = Describe("Bake", func() {
 			fakeInterpolator,
 			fakeTileWriter,
 			fakeLogger,
-			fakePropertyDirectoryReader,
 			fakeRuntimeConfigsDirectoryReader,
 			func(interface{}) ([]byte, error) { return []byte("some-yaml"), nil },
 			fakeTemplateVariablesService,
@@ -154,6 +150,7 @@ var _ = Describe("Bake", func() {
 			fakeFormsService,
 			fakeInstanceGroupsService,
 			fakeJobsService,
+			fakePropertiesService,
 		)
 	})
 
@@ -207,8 +204,8 @@ var _ = Describe("Bake", func() {
 			Expect(fakeJobsService.FromDirectoriesCallCount()).To(Equal(1))
 			Expect(fakeJobsService.FromDirectoriesArgsForCall(0)).To(Equal([]string{"some-jobs-directory"}))
 
-			Expect(fakePropertyDirectoryReader.ReadCallCount()).To(Equal(1))
-			Expect(fakePropertyDirectoryReader.ReadArgsForCall(0)).To(Equal("some-properties-directory"))
+			Expect(fakePropertiesService.FromDirectoriesCallCount()).To(Equal(1))
+			Expect(fakePropertiesService.FromDirectoriesArgsForCall(0)).To(Equal([]string{"some-properties-directory"}))
 
 			Expect(fakeRuntimeConfigsDirectoryReader.ReadCallCount()).To(Equal(2))
 			Expect(fakeRuntimeConfigsDirectoryReader.ReadArgsForCall(0)).To(Equal("some-other-runtime-configs-directory"))
@@ -478,9 +475,9 @@ var _ = Describe("Bake", func() {
 				})
 			})
 
-			Context("when the property directory reader returns an error", func() {
+			Context("when the properties service fails", func() {
 				It("returns an error", func() {
-					fakePropertyDirectoryReader.ReadReturns(nil, errors.New("some-error"))
+					fakePropertiesService.FromDirectoriesReturns(nil, errors.New("parsing properties failed"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -494,7 +491,7 @@ var _ = Describe("Bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(MatchError(ContainSubstring("some-error")))
+					Expect(err).To(MatchError("failed to parse properties: parsing properties failed"))
 				})
 			})
 

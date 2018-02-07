@@ -33,7 +33,6 @@ func main() {
 	zipper := builder.NewZipper()
 	handcraftReader := builder.NewMetadataReader(filesystem, logger)
 	iconEncoder := builder.NewIconEncoder(filesystem)
-	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")
 	metadataBuilder := builder.NewMetadataBuilder(
@@ -63,6 +62,9 @@ func main() {
 	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	jobsService := baking.NewJobsService(logger, jobsDirectoryReader)
 
+	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	propertiesService := baking.NewPropertiesService(logger, propertiesDirectoryReader)
+
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["bake"] = commands.NewBake(
@@ -70,7 +72,6 @@ func main() {
 		interpolator,
 		tileWriter,
 		logger,
-		propertiesDirectoryReader,
 		runtimeConfigsDirectoryReader,
 		yaml.Marshal,
 		templateVariablesParser,
@@ -79,6 +80,7 @@ func main() {
 		formsService,
 		instanceGroupsService,
 		jobsService,
+		propertiesService,
 	)
 
 	var command string

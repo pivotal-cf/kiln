@@ -64,20 +64,25 @@ type jobsService interface {
 	FromDirectories(directories []string) (jobs map[string]interface{}, err error)
 }
 
+//go:generate counterfeiter -o ./fakes/properties_service.go --fake-name PropertiesService . propertiesService
+type propertiesService interface {
+	FromDirectories(directories []string) (properties map[string]interface{}, err error)
+}
+
 type Bake struct {
-	metadataBuilder                  metadataBuilder
-	interpolator                     interpolator
-	tileWriter                       tileWriter
-	logger                           logger
-	propertyBlueprintDirectoryReader directoryReader
-	runtimeConfigsDirectoryReader    directoryReader
-	yamlMarshal                      func(interface{}) ([]byte, error)
-	templateVariables                templateVariablesService
-	releases                         releasesService
-	stemcell                         stemcellService
-	forms                            formsService
-	instanceGroups                   instanceGroupsService
-	jobs                             jobsService
+	metadataBuilder               metadataBuilder
+	interpolator                  interpolator
+	tileWriter                    tileWriter
+	logger                        logger
+	runtimeConfigsDirectoryReader directoryReader
+	yamlMarshal                   func(interface{}) ([]byte, error)
+	templateVariables             templateVariablesService
+	releases                      releasesService
+	stemcell                      stemcellService
+	forms                         formsService
+	instanceGroups                instanceGroupsService
+	jobs                          jobsService
+	properties                    propertiesService
 
 	Options struct {
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
@@ -106,7 +111,6 @@ func NewBake(
 	interpolator interpolator,
 	tileWriter tileWriter,
 	logger logger,
-	propertyBlueprintDirectoryReader directoryReader,
 	runtimeConfigsDirectoryReader directoryReader,
 	yamlMarshal func(interface{}) ([]byte, error),
 	templateVariablesService templateVariablesService,
@@ -115,6 +119,7 @@ func NewBake(
 	formsService formsService,
 	instanceGroupsService instanceGroupsService,
 	jobsService jobsService,
+	propertiesService propertiesService,
 ) Bake {
 
 	return Bake{
@@ -122,15 +127,15 @@ func NewBake(
 		interpolator:    interpolator,
 		tileWriter:      tileWriter,
 		logger:          logger,
-		propertyBlueprintDirectoryReader: propertyBlueprintDirectoryReader,
-		runtimeConfigsDirectoryReader:    runtimeConfigsDirectoryReader,
-		yamlMarshal:                      yamlMarshal,
-		templateVariables:                templateVariablesService,
-		releases:                         releasesService,
-		stemcell:                         stemcellService,
-		forms:                            formsService,
-		instanceGroups:                   instanceGroupsService,
-		jobs:                             jobsService,
+		runtimeConfigsDirectoryReader: runtimeConfigsDirectoryReader,
+		yamlMarshal:                   yamlMarshal,
+		templateVariables:             templateVariablesService,
+		releases:                      releasesService,
+		stemcell:                      stemcellService,
+		forms:                         formsService,
+		instanceGroups:                instanceGroupsService,
+		jobs:                          jobsService,
+		properties:                    propertiesService,
 	}
 }
 
@@ -185,20 +190,9 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	// NOTE: reading property files
-	var propertyBlueprints map[string]interface{}
-	if b.Options.PropertyDirectories != nil {
-		b.logger.Println("Reading property blueprint files...")
-		propertyBlueprints = map[string]interface{}{}
-		for _, propertyBlueprintDir := range b.Options.PropertyDirectories {
-			propertyBlueprintsInDirectory, err := b.propertyBlueprintDirectoryReader.Read(propertyBlueprintDir)
-			if err != nil {
-				return err
-			}
-
-			for _, propertyBlueprint := range propertyBlueprintsInDirectory {
-				propertyBlueprints[propertyBlueprint.Name] = propertyBlueprint.Metadata
-			}
-		}
+	propertyBlueprints, err := b.properties.FromDirectories(b.Options.PropertyDirectories)
+	if err != nil {
+		return fmt.Errorf("failed to parse properties: %s", err)
 	}
 
 	// NOTE: reading runtime config files
