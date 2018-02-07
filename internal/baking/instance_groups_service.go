@@ -13,19 +13,21 @@ func NewInstanceGroupsService(logger logger, reader directoryReader) InstanceGro
 }
 
 func (igs InstanceGroupsService) FromDirectories(directories []string) (map[string]interface{}, error) {
-	var instanceGroups map[string]interface{}
-	if directories != nil {
-		igs.logger.Println("Reading instance group files...")
-		instanceGroups = map[string]interface{}{}
-		for _, instanceGroupDir := range directories {
-			instanceGroupsInDirectory, err := igs.reader.Read(instanceGroupDir)
-			if err != nil {
-				return nil, err
-			}
+	if len(directories) == 0 {
+		return nil, nil
+	}
 
-			for _, instanceGroup := range instanceGroupsInDirectory {
-				instanceGroups[instanceGroup.Name] = instanceGroup.Metadata
-			}
+	igs.logger.Println("Reading instance group files...")
+
+	instanceGroups := map[string]interface{}{}
+	for _, directory := range directories {
+		directoryInstanceGroups, err := igs.reader.Read(directory)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, instanceGroup := range directoryInstanceGroups {
+			instanceGroups[instanceGroup.Name] = instanceGroup.Metadata
 		}
 	}
 
