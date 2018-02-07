@@ -4,26 +4,23 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-
-	"github.com/pivotal-cf/kiln/builder"
 )
 
-//go:generate counterfeiter -o ./fakes/part_reader.go --fake-name PartReader . partReader
-type partReader interface {
-	Read(path string) (builder.Part, error)
-}
-
 type ReleasesService struct {
+	logger logger
 	reader partReader
 }
 
-func NewReleasesService(reader partReader) ReleasesService {
+func NewReleasesService(logger logger, reader partReader) ReleasesService {
 	return ReleasesService{
+		logger: logger,
 		reader: reader,
 	}
 }
 
 func (s ReleasesService) FromDirectories(directories []string) (map[string]interface{}, error) {
+	s.logger.Println("Reading release manifests...")
+
 	var tarballs []string
 	for _, directory := range directories {
 		err := filepath.Walk(directory, filepath.WalkFunc(func(path string, _ os.FileInfo, err error) error {

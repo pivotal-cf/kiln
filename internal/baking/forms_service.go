@@ -1,12 +1,5 @@
 package baking
 
-import "github.com/pivotal-cf/kiln/builder"
-
-//go:generate counterfeiter -o ./fakes/directory_reader.go --fake-name DirectoryReader . directoryReader
-type directoryReader interface {
-	Read(path string) ([]builder.Part, error)
-}
-
 type FormsService struct {
 	logger logger
 	reader directoryReader

@@ -150,16 +150,7 @@ func (b Bake) Execute(args []string) error {
 		return errors.New("--jobs-directory flag requires --instance-groups-directory to also be specified")
 	}
 
-	b.logger.Printf("Creating metadata for %s...", b.Options.OutputFile)
-
-	// NOTE: parsing variables files
-	variables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
-	if err != nil {
-		return fmt.Errorf("failed to parse template variables: %s", err)
-	}
-
 	// NOTE: parsing releases
-	b.logger.Println("Reading release manifests...")
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
 	if err != nil {
 		return fmt.Errorf("failed to parse releases: %s", err)
@@ -169,6 +160,12 @@ func (b Bake) Execute(args []string) error {
 	stemcellManifest, err := b.stemcell.FromTarball(b.Options.StemcellTarball)
 	if err != nil {
 		return fmt.Errorf("failed to parse stemcell: %s", err)
+	}
+
+	// NOTE: parsing variables files
+	variables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
+	if err != nil {
+		return fmt.Errorf("failed to parse template variables: %s", err)
 	}
 
 	// NOTE: reading form files
@@ -208,6 +205,7 @@ func (b Bake) Execute(args []string) error {
 		iconPath = b.Options.IconPath
 	}
 
+	b.logger.Printf("Creating metadata for %s...", b.Options.OutputFile)
 	// NOTE: generating metadata object representation
 	generatedMetadata, err := b.metadataBuilder.Build(builder.BuildInput{
 		IconPath:                iconPath,

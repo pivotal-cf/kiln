@@ -18,6 +18,7 @@ var _ = Describe("ReleasesService", func() {
 	Describe("FromDirectories", func() {
 		var (
 			tempDir string
+			logger  *fakes.Logger
 			reader  *fakes.PartReader
 			service baking.ReleasesService
 		)
@@ -45,8 +46,9 @@ var _ = Describe("ReleasesService", func() {
 			Expect(os.Rename(file.Name(), filepath.Join(tempDir, "not-release.banana"))).To(Succeed())
 			Expect(file.Close()).To(Succeed())
 
+			logger = &fakes.Logger{}
 			reader = &fakes.PartReader{}
-			service = baking.NewReleasesService(reader)
+			service = baking.NewReleasesService(logger, reader)
 		})
 
 		AfterEach(func() {
@@ -72,6 +74,9 @@ var _ = Describe("ReleasesService", func() {
 				"some-name":  "some-metadata",
 				"other-name": "other-metadata",
 			}))
+
+			Expect(logger.PrintlnCallCount()).To(Equal(1))
+			Expect(logger.PrintlnArgsForCall(0)).To(Equal([]interface{}{"Reading release manifests..."}))
 
 			Expect(reader.ReadCallCount()).To(Equal(2))
 			Expect(reader.ReadArgsForCall(0)).To(Equal(filepath.Join(tempDir, "other-release.tgz")))

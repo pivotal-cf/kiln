@@ -44,13 +44,13 @@ func main() {
 	interpolator := builder.NewInterpolator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, logger, md5SumCalculator)
 
-	templateVariablesParser := baking.NewTemplateVariablesService()
-
 	releaseManifestReader := builder.NewReleaseManifestReader()
-	releasesService := baking.NewReleasesService(releaseManifestReader)
+	releasesService := baking.NewReleasesService(logger, releaseManifestReader)
 
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	stemcellService := baking.NewStemcellService(logger, stemcellManifestReader)
+
+	templateVariablesService := baking.NewTemplateVariablesService()
 
 	formDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	formsService := baking.NewFormsService(logger, formDirectoryReader)
@@ -75,7 +75,7 @@ func main() {
 		tileWriter,
 		logger,
 		yaml.Marshal,
-		templateVariablesParser,
+		templateVariablesService,
 		releasesService,
 		stemcellService,
 		formsService,

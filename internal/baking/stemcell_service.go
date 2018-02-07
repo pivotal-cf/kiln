@@ -1,10 +1,5 @@
 package baking
 
-//go:generate counterfeiter -o ./fakes/logger.go --fake-name Logger . logger
-type logger interface {
-	Println(v ...interface{})
-}
-
 type StemcellService struct {
 	logger logger
 	reader partReader
