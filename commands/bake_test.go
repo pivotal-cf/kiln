@@ -19,7 +19,6 @@ import (
 var _ = Describe("Bake", func() {
 	var (
 		fakeMetadataBuilder               *fakes.MetadataBuilder
-		fakeJobsDirectoryReader           *fakes.DirectoryReader
 		fakePropertyDirectoryReader       *fakes.DirectoryReader
 		fakeRuntimeConfigsDirectoryReader *fakes.DirectoryReader
 		fakeInterpolator                  *fakes.Interpolator
@@ -30,6 +29,7 @@ var _ = Describe("Bake", func() {
 		fakeStemcellService               *fakes.StemcellService
 		fakeFormsService                  *fakes.FormsService
 		fakeInstanceGroupsService         *fakes.InstanceGroupsService
+		fakeJobsService                   *fakes.JobsService
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -55,7 +55,6 @@ var _ = Describe("Bake", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
-		fakeJobsDirectoryReader = &fakes.DirectoryReader{}
 		fakePropertyDirectoryReader = &fakes.DirectoryReader{}
 		fakeRuntimeConfigsDirectoryReader = &fakes.DirectoryReader{}
 		fakeInterpolator = &fakes.Interpolator{}
@@ -66,6 +65,7 @@ var _ = Describe("Bake", func() {
 		fakeStemcellService = &fakes.StemcellService{}
 		fakeFormsService = &fakes.FormsService{}
 		fakeInstanceGroupsService = &fakes.InstanceGroupsService{}
+		fakeJobsService = &fakes.JobsService{}
 
 		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
@@ -106,14 +106,11 @@ var _ = Describe("Bake", func() {
 			},
 		}, nil)
 
-		fakeJobsDirectoryReader.ReadReturns([]builder.Part{
-			{
-				Name: "some-job",
-				Metadata: builder.Metadata{
-					"name":     "some-job",
-					"release":  "some-release",
-					"consumes": "some-link",
-				},
+		fakeJobsService.FromDirectoriesReturns(map[string]interface{}{
+			"some-job": builder.Metadata{
+				"name":     "some-job",
+				"release":  "some-release",
+				"consumes": "some-link",
 			},
 		}, nil)
 
@@ -148,7 +145,6 @@ var _ = Describe("Bake", func() {
 			fakeInterpolator,
 			fakeTileWriter,
 			fakeLogger,
-			fakeJobsDirectoryReader,
 			fakePropertyDirectoryReader,
 			fakeRuntimeConfigsDirectoryReader,
 			func(interface{}) ([]byte, error) { return []byte("some-yaml"), nil },
@@ -157,6 +153,7 @@ var _ = Describe("Bake", func() {
 			fakeStemcellService,
 			fakeFormsService,
 			fakeInstanceGroupsService,
+			fakeJobsService,
 		)
 	})
 
@@ -207,8 +204,8 @@ var _ = Describe("Bake", func() {
 			Expect(fakeInstanceGroupsService.FromDirectoriesCallCount()).To(Equal(1))
 			Expect(fakeInstanceGroupsService.FromDirectoriesArgsForCall(0)).To(Equal([]string{"some-instance-groups-directory"}))
 
-			Expect(fakeJobsDirectoryReader.ReadCallCount()).To(Equal(1))
-			Expect(fakeJobsDirectoryReader.ReadArgsForCall(0)).To(Equal("some-jobs-directory"))
+			Expect(fakeJobsService.FromDirectoriesCallCount()).To(Equal(1))
+			Expect(fakeJobsService.FromDirectoriesArgsForCall(0)).To(Equal([]string{"some-jobs-directory"}))
 
 			Expect(fakePropertyDirectoryReader.ReadCallCount()).To(Equal(1))
 			Expect(fakePropertyDirectoryReader.ReadArgsForCall(0)).To(Equal("some-properties-directory"))
@@ -441,7 +438,7 @@ var _ = Describe("Bake", func() {
 				})
 			})
 
-			Context("when the instance group directory reader returns an error", func() {
+			Context("when the instance groups service fails", func() {
 				It("returns an error", func() {
 					fakeInstanceGroupsService.FromDirectoriesReturns(nil, errors.New("parsing instance groups failed"))
 
@@ -458,6 +455,26 @@ var _ = Describe("Bake", func() {
 					})
 
 					Expect(err).To(MatchError("failed to parse instance groups: parsing instance groups failed"))
+				})
+			})
+
+			Context("when the jobs service fails", func() {
+				It("returns an error", func() {
+					fakeJobsService.FromDirectoriesReturns(nil, errors.New("parsing jobs failed"))
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--forms-directory", "some-form-directory",
+						"--instance-groups-directory", "some-instance-group-directory",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(MatchError("failed to parse jobs: parsing jobs failed"))
 				})
 			})
 

@@ -59,12 +59,16 @@ type instanceGroupsService interface {
 	FromDirectories(directories []string) (instanceGroups map[string]interface{}, err error)
 }
 
+//go:generate counterfeiter -o ./fakes/jobs_service.go --fake-name JobsService . jobsService
+type jobsService interface {
+	FromDirectories(directories []string) (jobs map[string]interface{}, err error)
+}
+
 type Bake struct {
 	metadataBuilder                  metadataBuilder
 	interpolator                     interpolator
 	tileWriter                       tileWriter
 	logger                           logger
-	jobDirectoryReader               directoryReader
 	propertyBlueprintDirectoryReader directoryReader
 	runtimeConfigsDirectoryReader    directoryReader
 	yamlMarshal                      func(interface{}) ([]byte, error)
@@ -73,6 +77,7 @@ type Bake struct {
 	stemcell                         stemcellService
 	forms                            formsService
 	instanceGroups                   instanceGroupsService
+	jobs                             jobsService
 
 	Options struct {
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
@@ -101,7 +106,6 @@ func NewBake(
 	interpolator interpolator,
 	tileWriter tileWriter,
 	logger logger,
-	jobDirectoryReader directoryReader,
 	propertyBlueprintDirectoryReader directoryReader,
 	runtimeConfigsDirectoryReader directoryReader,
 	yamlMarshal func(interface{}) ([]byte, error),
@@ -110,14 +114,14 @@ func NewBake(
 	stemcellService stemcellService,
 	formsService formsService,
 	instanceGroupsService instanceGroupsService,
+	jobsService jobsService,
 ) Bake {
 
 	return Bake{
-		metadataBuilder:                  metadataBuilder,
-		interpolator:                     interpolator,
-		tileWriter:                       tileWriter,
-		logger:                           logger,
-		jobDirectoryReader:               jobDirectoryReader,
+		metadataBuilder: metadataBuilder,
+		interpolator:    interpolator,
+		tileWriter:      tileWriter,
+		logger:          logger,
 		propertyBlueprintDirectoryReader: propertyBlueprintDirectoryReader,
 		runtimeConfigsDirectoryReader:    runtimeConfigsDirectoryReader,
 		yamlMarshal:                      yamlMarshal,
@@ -126,6 +130,7 @@ func NewBake(
 		stemcell:                         stemcellService,
 		forms:                            formsService,
 		instanceGroups:                   instanceGroupsService,
+		jobs:                             jobsService,
 	}
 }
 
@@ -174,20 +179,9 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	// NOTE: reading job files
-	var jobs map[string]interface{}
-	if b.Options.JobDirectories != nil {
-		b.logger.Println("Reading jobs files...")
-		jobs = map[string]interface{}{}
-		for _, jobsDir := range b.Options.JobDirectories {
-			jobsInDirectory, err := b.jobDirectoryReader.Read(jobsDir)
-			if err != nil {
-				return err
-			}
-
-			for _, job := range jobsInDirectory {
-				jobs[job.Name] = job.Metadata
-			}
-		}
+	jobs, err := b.jobs.FromDirectories(b.Options.JobDirectories)
+	if err != nil {
+		return fmt.Errorf("failed to parse jobs: %s", err)
 	}
 
 	// NOTE: reading property files
