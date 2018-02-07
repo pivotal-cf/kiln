@@ -23,11 +23,6 @@ type metadataBuilder interface {
 	Build(input builder.BuildInput) (builder.GeneratedMetadata, error)
 }
 
-//go:generate counterfeiter -o ./fakes/directory_reader.go --fake-name DirectoryReader . directoryReader
-type directoryReader interface {
-	Read(path string) ([]builder.Part, error)
-}
-
 //go:generate counterfeiter -o ./fakes/logger.go --fake-name Logger . logger
 type logger interface {
 	Printf(format string, v ...interface{})
@@ -69,20 +64,25 @@ type propertiesService interface {
 	FromDirectories(directories []string) (properties map[string]interface{}, err error)
 }
 
+//go:generate counterfeiter -o ./fakes/runtime_configs_service.go --fake-name RuntimeConfigsService . runtimeConfigsService
+type runtimeConfigsService interface {
+	FromDirectories(directories []string) (runtimeConfigs map[string]interface{}, err error)
+}
+
 type Bake struct {
-	metadataBuilder               metadataBuilder
-	interpolator                  interpolator
-	tileWriter                    tileWriter
-	logger                        logger
-	runtimeConfigsDirectoryReader directoryReader
-	yamlMarshal                   func(interface{}) ([]byte, error)
-	templateVariables             templateVariablesService
-	releases                      releasesService
-	stemcell                      stemcellService
-	forms                         formsService
-	instanceGroups                instanceGroupsService
-	jobs                          jobsService
-	properties                    propertiesService
+	metadataBuilder   metadataBuilder
+	interpolator      interpolator
+	tileWriter        tileWriter
+	logger            logger
+	yamlMarshal       func(interface{}) ([]byte, error)
+	templateVariables templateVariablesService
+	releases          releasesService
+	stemcell          stemcellService
+	forms             formsService
+	instanceGroups    instanceGroupsService
+	jobs              jobsService
+	properties        propertiesService
+	runtimeConfigs    runtimeConfigsService
 
 	Options struct {
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
@@ -111,7 +111,6 @@ func NewBake(
 	interpolator interpolator,
 	tileWriter tileWriter,
 	logger logger,
-	runtimeConfigsDirectoryReader directoryReader,
 	yamlMarshal func(interface{}) ([]byte, error),
 	templateVariablesService templateVariablesService,
 	releasesService releasesService,
@@ -120,22 +119,23 @@ func NewBake(
 	instanceGroupsService instanceGroupsService,
 	jobsService jobsService,
 	propertiesService propertiesService,
+	runtimeConfigsService runtimeConfigsService,
 ) Bake {
 
 	return Bake{
-		metadataBuilder: metadataBuilder,
-		interpolator:    interpolator,
-		tileWriter:      tileWriter,
-		logger:          logger,
-		runtimeConfigsDirectoryReader: runtimeConfigsDirectoryReader,
-		yamlMarshal:                   yamlMarshal,
-		templateVariables:             templateVariablesService,
-		releases:                      releasesService,
-		stemcell:                      stemcellService,
-		forms:                         formsService,
-		instanceGroups:                instanceGroupsService,
-		jobs:                          jobsService,
-		properties:                    propertiesService,
+		metadataBuilder:   metadataBuilder,
+		interpolator:      interpolator,
+		tileWriter:        tileWriter,
+		logger:            logger,
+		yamlMarshal:       yamlMarshal,
+		templateVariables: templateVariablesService,
+		releases:          releasesService,
+		stemcell:          stemcellService,
+		forms:             formsService,
+		instanceGroups:    instanceGroupsService,
+		jobs:              jobsService,
+		properties:        propertiesService,
+		runtimeConfigs:    runtimeConfigsService,
 	}
 }
 
@@ -196,20 +196,9 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	// NOTE: reading runtime config files
-	var runtimeConfigs map[string]interface{}
-	if b.Options.RuntimeConfigDirectories != nil {
-		b.logger.Println("Reading runtime config files...")
-		runtimeConfigs = map[string]interface{}{}
-		for _, runtimeConfigsDir := range b.Options.RuntimeConfigDirectories {
-			runtimeConfigsInDirectory, err := b.runtimeConfigsDirectoryReader.Read(runtimeConfigsDir)
-			if err != nil {
-				return err
-			}
-
-			for _, runtimeConfig := range runtimeConfigsInDirectory {
-				runtimeConfigs[runtimeConfig.Name] = runtimeConfig.Metadata
-			}
-		}
+	runtimeConfigs, err := b.runtimeConfigs.FromDirectories(b.Options.RuntimeConfigDirectories)
+	if err != nil {
+		return fmt.Errorf("failed to parse runtime configs: %s", err)
 	}
 
 	// NOTE: parsing icon path

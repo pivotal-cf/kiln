@@ -18,18 +18,18 @@ import (
 
 var _ = Describe("Bake", func() {
 	var (
-		fakeMetadataBuilder               *fakes.MetadataBuilder
-		fakeRuntimeConfigsDirectoryReader *fakes.DirectoryReader
-		fakeInterpolator                  *fakes.Interpolator
-		fakeTileWriter                    *fakes.TileWriter
-		fakeLogger                        *fakes.Logger
-		fakeTemplateVariablesService      *fakes.TemplateVariablesService
-		fakeReleasesService               *fakes.ReleasesService
-		fakeStemcellService               *fakes.StemcellService
-		fakeFormsService                  *fakes.FormsService
-		fakeInstanceGroupsService         *fakes.InstanceGroupsService
-		fakeJobsService                   *fakes.JobsService
-		fakePropertiesService             *fakes.PropertiesService
+		fakeMetadataBuilder          *fakes.MetadataBuilder
+		fakeInterpolator             *fakes.Interpolator
+		fakeTileWriter               *fakes.TileWriter
+		fakeLogger                   *fakes.Logger
+		fakeTemplateVariablesService *fakes.TemplateVariablesService
+		fakeReleasesService          *fakes.ReleasesService
+		fakeStemcellService          *fakes.StemcellService
+		fakeFormsService             *fakes.FormsService
+		fakeInstanceGroupsService    *fakes.InstanceGroupsService
+		fakeJobsService              *fakes.JobsService
+		fakePropertiesService        *fakes.PropertiesService
+		fakeRuntimeConfigsService    *fakes.RuntimeConfigsService
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -55,7 +55,6 @@ var _ = Describe("Bake", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
-		fakeRuntimeConfigsDirectoryReader = &fakes.DirectoryReader{}
 		fakeInterpolator = &fakes.Interpolator{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
@@ -66,6 +65,7 @@ var _ = Describe("Bake", func() {
 		fakeInstanceGroupsService = &fakes.InstanceGroupsService{}
 		fakeJobsService = &fakes.JobsService{}
 		fakePropertiesService = &fakes.PropertiesService{}
+		fakeRuntimeConfigsService = &fakes.RuntimeConfigsService{}
 
 		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
@@ -123,13 +123,10 @@ var _ = Describe("Bake", func() {
 			},
 		}, nil)
 
-		fakeRuntimeConfigsDirectoryReader.ReadReturns([]builder.Part{
-			{
-				Name: "some-runtime-config",
-				Metadata: builder.Metadata{
-					"name":           "some-runtime-config",
-					"runtime_config": "some-addon-runtime-config",
-				},
+		fakeRuntimeConfigsService.FromDirectoriesReturns(map[string]interface{}{
+			"some-runtime-config": builder.Metadata{
+				"name":           "some-runtime-config",
+				"runtime_config": "some-addon-runtime-config",
 			},
 		}, nil)
 
@@ -142,7 +139,6 @@ var _ = Describe("Bake", func() {
 			fakeInterpolator,
 			fakeTileWriter,
 			fakeLogger,
-			fakeRuntimeConfigsDirectoryReader,
 			func(interface{}) ([]byte, error) { return []byte("some-yaml"), nil },
 			fakeTemplateVariablesService,
 			fakeReleasesService,
@@ -151,6 +147,7 @@ var _ = Describe("Bake", func() {
 			fakeInstanceGroupsService,
 			fakeJobsService,
 			fakePropertiesService,
+			fakeRuntimeConfigsService,
 		)
 	})
 
@@ -207,9 +204,11 @@ var _ = Describe("Bake", func() {
 			Expect(fakePropertiesService.FromDirectoriesCallCount()).To(Equal(1))
 			Expect(fakePropertiesService.FromDirectoriesArgsForCall(0)).To(Equal([]string{"some-properties-directory"}))
 
-			Expect(fakeRuntimeConfigsDirectoryReader.ReadCallCount()).To(Equal(2))
-			Expect(fakeRuntimeConfigsDirectoryReader.ReadArgsForCall(0)).To(Equal("some-other-runtime-configs-directory"))
-			Expect(fakeRuntimeConfigsDirectoryReader.ReadArgsForCall(1)).To(Equal("some-runtime-configs-directory"))
+			Expect(fakeRuntimeConfigsService.FromDirectoriesCallCount()).To(Equal(1))
+			Expect(fakeRuntimeConfigsService.FromDirectoriesArgsForCall(0)).To(Equal([]string{
+				"some-other-runtime-configs-directory",
+				"some-runtime-configs-directory",
+			}))
 
 			Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 			expectedBuildInput := builder.BuildInput{
@@ -495,9 +494,9 @@ var _ = Describe("Bake", func() {
 				})
 			})
 
-			Context("when the runtime config directory reader returns an error", func() {
+			Context("when the runtime configs service fails", func() {
 				It("returns an error", func() {
-					fakeRuntimeConfigsDirectoryReader.ReadReturns(nil, errors.New("some-error"))
+					fakeRuntimeConfigsService.FromDirectoriesReturns(nil, errors.New("parsing runtime configs failed"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -511,7 +510,7 @@ var _ = Describe("Bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(MatchError(ContainSubstring("some-error")))
+					Expect(err).To(MatchError("failed to parse runtime configs: parsing runtime configs failed"))
 				})
 			})
 
