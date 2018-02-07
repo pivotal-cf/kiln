@@ -29,11 +29,6 @@ type logger interface {
 	Println(v ...interface{})
 }
 
-//go:generate counterfeiter -o ./fakes/template_variables_service.go --fake-name TemplateVariablesService . templateVariablesService
-type templateVariablesService interface {
-	FromPathsAndPairs(paths []string, pairs []string) (variables map[string]interface{}, err error)
-}
-
 //go:generate counterfeiter -o ./fakes/releases_service.go --fake-name ReleasesService . releasesService
 type releasesService interface {
 	FromDirectories(directories []string) (releases map[string]interface{}, err error)
@@ -42,6 +37,11 @@ type releasesService interface {
 //go:generate counterfeiter -o ./fakes/stemcell_service.go --fake-name StemcellService . stemcellService
 type stemcellService interface {
 	FromTarball(path string) (stemcell interface{}, err error)
+}
+
+//go:generate counterfeiter -o ./fakes/template_variables_service.go --fake-name TemplateVariablesService . templateVariablesService
+type templateVariablesService interface {
+	FromPathsAndPairs(paths []string, pairs []string) (variables map[string]interface{}, err error)
 }
 
 //go:generate counterfeiter -o ./fakes/forms_service.go --fake-name FormsService . formsService

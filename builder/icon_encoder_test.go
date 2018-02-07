@@ -7,10 +7,11 @@ import (
 	"io/ioutil"
 	"os"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/builder/fakes"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("IconEncoder", func() {

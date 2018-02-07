@@ -21,19 +21,16 @@ type BuildInput struct {
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_parts_directory_reader.go --fake-name MetadataPartsDirectoryReader . metadataPartsDirectoryReader
-
 type metadataPartsDirectoryReader interface {
 	Read(path string) ([]Part, error)
 }
 
 //go:generate counterfeiter -o ./fakes/metadata_reader.go --fake-name MetadataReader . metadataReader
-
 type metadataReader interface {
 	Read(path, version string) (Metadata, error)
 }
 
 //go:generate counterfeiter -o ./fakes/icon_encoder.go --fake-name IconEncoder . iconEncoder
-
 type iconEncoder interface {
 	Encode(path string) (string, error)
 }
