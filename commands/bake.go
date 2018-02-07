@@ -41,7 +41,7 @@ type stemcellService interface {
 
 //go:generate counterfeiter -o ./fakes/template_variables_service.go --fake-name TemplateVariablesService . templateVariablesService
 type templateVariablesService interface {
-	FromPathsAndPairs(paths []string, pairs []string) (variables map[string]interface{}, err error)
+	FromPathsAndPairs(paths []string, pairs []string) (templateVariables map[string]interface{}, err error)
 }
 
 //go:generate counterfeiter -o ./fakes/forms_service.go --fake-name FormsService . formsService
@@ -69,6 +69,11 @@ type runtimeConfigsService interface {
 	FromDirectories(directories []string) (runtimeConfigs map[string]interface{}, err error)
 }
 
+//go:generate counterfeiter -o ./fakes/icon_service.go --fake-name IconService . iconService
+type iconService interface {
+	Encode(path string) (encodedIcon string, err error)
+}
+
 type Bake struct {
 	metadataBuilder   metadataBuilder
 	interpolator      interpolator
@@ -83,6 +88,7 @@ type Bake struct {
 	jobs              jobsService
 	properties        propertiesService
 	runtimeConfigs    runtimeConfigsService
+	icon              iconService
 
 	Options struct {
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
@@ -120,6 +126,7 @@ func NewBake(
 	jobsService jobsService,
 	propertiesService propertiesService,
 	runtimeConfigsService runtimeConfigsService,
+	iconService iconService,
 ) Bake {
 
 	return Bake{
@@ -136,6 +143,7 @@ func NewBake(
 		jobs:              jobsService,
 		properties:        propertiesService,
 		runtimeConfigs:    runtimeConfigsService,
+		icon:              iconService,
 	}
 }
 
@@ -162,8 +170,8 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to parse stemcell: %s", err)
 	}
 
-	// NOTE: parsing variables files
-	variables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
+	// NOTE: parsing template variables files
+	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
 	if err != nil {
 		return fmt.Errorf("failed to parse template variables: %s", err)
 	}
@@ -198,19 +206,16 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to parse runtime configs: %s", err)
 	}
 
-	// NOTE: parsing icon path
-	var iconPath string
-	if b.Options.IconPath != "" {
-		b.logger.Println("Reading icon...")
-		iconPath = b.Options.IconPath
+	// NOTE: encoding icon
+	icon, err := b.icon.Encode(b.Options.IconPath)
+	if err != nil {
+		panic(err)
 	}
 
 	b.logger.Printf("Creating metadata for %s...", b.Options.OutputFile)
 	// NOTE: generating metadata object representation
 	generatedMetadata, err := b.metadataBuilder.Build(builder.BuildInput{
-		IconPath:                iconPath,
-		MetadataPath:            b.Options.Metadata,
-		BOSHVariableDirectories: b.Options.BOSHVariableDirectories,
+		MetadataPath: b.Options.Metadata,
 	})
 	if err != nil {
 		return err
@@ -226,11 +231,11 @@ func (b Bake) Execute(args []string) error {
 	// NOTE: performing template interpolation on metadata YAML
 	interpolatedMetadata, err := b.interpolator.Interpolate(builder.InterpolateInput{
 		Version:            b.Options.Version,
-		Variables:          variables,
+		Variables:          templateVariables,
 		ReleaseManifests:   releaseManifests,
 		StemcellManifest:   stemcellManifest,
 		FormTypes:          forms,
-		IconImage:          generatedMetadata.IconImage,
+		IconImage:          icon,
 		InstanceGroups:     instanceGroups,
 		Jobs:               jobs,
 		PropertyBlueprints: propertyBlueprints,

@@ -32,13 +32,9 @@ func main() {
 	filesystem := helper.NewFilesystem()
 	zipper := builder.NewZipper()
 	handcraftReader := builder.NewMetadataReader(filesystem, logger)
-	iconEncoder := builder.NewIconEncoder(filesystem)
-	variablesDirectoryReader := builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")
 	metadataBuilder := builder.NewMetadataBuilder(
-		variablesDirectoryReader,
 		handcraftReader,
 		logger,
-		iconEncoder,
 	)
 	md5SumCalculator := helper.NewFileMD5SumCalculator()
 	interpolator := builder.NewInterpolator()
@@ -67,6 +63,8 @@ func main() {
 	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	runtimeConfigsService := baking.NewRuntimeConfigsService(logger, runtimeConfigsDirectoryReader)
 
+	iconService := baking.NewIconService(logger)
+
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["bake"] = commands.NewBake(
@@ -83,6 +81,7 @@ func main() {
 		jobsService,
 		propertiesService,
 		runtimeConfigsService,
+		iconService,
 	)
 
 	var command string

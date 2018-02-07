@@ -5,8 +5,8 @@ import (
 	"sync"
 )
 
-type IconEncoder struct {
-	EncodeStub        func(path string) (string, error)
+type IconService struct {
+	EncodeStub        func(path string) (encodedIcon string, err error)
 	encodeMutex       sync.RWMutex
 	encodeArgsForCall []struct {
 		path string
@@ -23,7 +23,7 @@ type IconEncoder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *IconEncoder) Encode(path string) (string, error) {
+func (fake *IconService) Encode(path string) (encodedIcon string, err error) {
 	fake.encodeMutex.Lock()
 	ret, specificReturn := fake.encodeReturnsOnCall[len(fake.encodeArgsForCall)]
 	fake.encodeArgsForCall = append(fake.encodeArgsForCall, struct {
@@ -40,19 +40,19 @@ func (fake *IconEncoder) Encode(path string) (string, error) {
 	return fake.encodeReturns.result1, fake.encodeReturns.result2
 }
 
-func (fake *IconEncoder) EncodeCallCount() int {
+func (fake *IconService) EncodeCallCount() int {
 	fake.encodeMutex.RLock()
 	defer fake.encodeMutex.RUnlock()
 	return len(fake.encodeArgsForCall)
 }
 
-func (fake *IconEncoder) EncodeArgsForCall(i int) string {
+func (fake *IconService) EncodeArgsForCall(i int) string {
 	fake.encodeMutex.RLock()
 	defer fake.encodeMutex.RUnlock()
 	return fake.encodeArgsForCall[i].path
 }
 
-func (fake *IconEncoder) EncodeReturns(result1 string, result2 error) {
+func (fake *IconService) EncodeReturns(result1 string, result2 error) {
 	fake.EncodeStub = nil
 	fake.encodeReturns = struct {
 		result1 string
@@ -60,7 +60,7 @@ func (fake *IconEncoder) EncodeReturns(result1 string, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *IconEncoder) EncodeReturnsOnCall(i int, result1 string, result2 error) {
+func (fake *IconService) EncodeReturnsOnCall(i int, result1 string, result2 error) {
 	fake.EncodeStub = nil
 	if fake.encodeReturnsOnCall == nil {
 		fake.encodeReturnsOnCall = make(map[int]struct {
@@ -74,7 +74,7 @@ func (fake *IconEncoder) EncodeReturnsOnCall(i int, result1 string, result2 erro
 	}{result1, result2}
 }
 
-func (fake *IconEncoder) Invocations() map[string][][]interface{} {
+func (fake *IconService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.encodeMutex.RLock()
@@ -86,7 +86,7 @@ func (fake *IconEncoder) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *IconEncoder) recordInvocation(key string, args []interface{}) {
+func (fake *IconService) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {

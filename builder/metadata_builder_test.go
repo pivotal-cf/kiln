@@ -2,7 +2,6 @@ package builder_test
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/builder/fakes"
@@ -13,64 +12,19 @@ import (
 
 var _ = Describe("MetadataBuilder", func() {
 	var (
-		iconEncoder              *fakes.IconEncoder
-		logger                   *fakes.Logger
-		metadataReader           *fakes.MetadataReader
-		variablesDirectoryReader *fakes.MetadataPartsDirectoryReader
+		logger         *fakes.Logger
+		metadataReader *fakes.MetadataReader
 
 		tileBuilder builder.MetadataBuilder
 	)
 
 	BeforeEach(func() {
-		iconEncoder = &fakes.IconEncoder{}
 		logger = &fakes.Logger{}
 		metadataReader = &fakes.MetadataReader{}
-		variablesDirectoryReader = &fakes.MetadataPartsDirectoryReader{}
-
-		iconEncoder.EncodeReturns("base64-encoded-icon-path", nil)
-
-		variablesDirectoryReader.ReadStub = func(path string) ([]builder.Part, error) {
-			switch path {
-			case "/path/to/variables/directory":
-				return []builder.Part{
-					{
-						File: "variable-1.yml",
-						Name: "variable-1",
-						Metadata: map[interface{}]interface{}{
-							"name": "variable-1",
-							"type": "certificate",
-						},
-					},
-					{
-						File: "variable-2.yml",
-						Name: "variable-2",
-						Metadata: map[interface{}]interface{}{
-							"name": "variable-2",
-							"type": "user",
-						},
-					},
-				}, nil
-			case "/path/to/other/variables/directory":
-				return []builder.Part{
-					{
-						File: "variable-3.yml",
-						Name: "variable-3",
-						Metadata: map[interface{}]interface{}{
-							"name": "variable-3",
-							"type": "password",
-						},
-					},
-				}, nil
-			default:
-				return []builder.Part{}, fmt.Errorf("could not read variables directory %q", path)
-			}
-		}
 
 		tileBuilder = builder.NewMetadataBuilder(
-			variablesDirectoryReader,
 			metadataReader,
 			logger,
-			iconEncoder,
 		)
 	})
 
@@ -86,68 +40,18 @@ var _ = Describe("MetadataBuilder", func() {
 
 		It("creates a GeneratedMetadata with the correct information", func() {
 			generatedMetadata, err := tileBuilder.Build(builder.BuildInput{
-				IconPath:                "some-icon-path",
-				MetadataPath:            "/some/path/metadata.yml",
-				BOSHVariableDirectories: []string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
-				Version:                 "1.2.3",
+				MetadataPath: "/some/path/metadata.yml",
+				Version:      "1.2.3",
 			})
 			Expect(err).NotTo(HaveOccurred())
 			metadataPath, version := metadataReader.ReadArgsForCall(0)
 			Expect(metadataPath).To(Equal("/some/path/metadata.yml"))
 			Expect(version).To(Equal("1.2.3"))
 
-			Expect(generatedMetadata.Variables).To(Equal([]builder.Part{
-				{
-					File: "variable-1.yml",
-					Name: "variable-1",
-					Metadata: map[interface{}]interface{}{
-						"name": "variable-1",
-						"type": "certificate",
-					},
-				},
-				{
-					File: "variable-2.yml",
-					Name: "variable-2",
-					Metadata: map[interface{}]interface{}{
-						"name": "variable-2",
-						"type": "user",
-					},
-				},
-				{
-					File: "variable-3.yml",
-					Name: "variable-3",
-					Metadata: map[interface{}]interface{}{
-						"name": "variable-3",
-						"type": "password",
-					},
-				},
-			}))
 			Expect(generatedMetadata.Metadata).To(Equal(builder.Metadata{
 				"metadata_version":          "some-metadata-version",
 				"provides_product_versions": "some-provides-product-versions",
 			}))
-
-			Expect(logger.PrintfCall.Receives.LogLines).To(Equal([]string{
-				"Reading variables from /path/to/variables/directory",
-				"Reading variables from /path/to/other/variables/directory",
-			}))
-
-			Expect(iconEncoder.EncodeCallCount()).To(Equal(1))
-			Expect(iconEncoder.EncodeArgsForCall(0)).To(Equal("some-icon-path"))
-
-			Expect(generatedMetadata.IconImage).To(Equal("base64-encoded-icon-path"))
-		})
-
-		Context("when icon filepath is not specified", func() {
-			It("does not error", func() {
-				_, err := tileBuilder.Build(builder.BuildInput{
-					IconPath:                "",
-					MetadataPath:            "/some/path/metadata.yml",
-					BOSHVariableDirectories: []string{"/path/to/variables/directory", "/path/to/other/variables/directory"},
-					Version:                 "1.2.3",
-				})
-				Expect(err).NotTo(HaveOccurred())
-			})
 		})
 
 		Context("when no property directories are specified", func() {
@@ -169,30 +73,6 @@ var _ = Describe("MetadataBuilder", func() {
 		})
 
 		Context("failure cases", func() {
-			Context("when the variables directory cannot be read", func() {
-				It("returns an error", func() {
-					variablesDirectoryReader.ReadReturns([]builder.Part{}, errors.New("some error"))
-
-					_, err := tileBuilder.Build(builder.BuildInput{
-						BOSHVariableDirectories: []string{"/path/to/missing/variables"},
-					})
-					Expect(err).To(MatchError(`error reading from variables directory "/path/to/missing/variables": some error`))
-				})
-			})
-
-			Context("when the icon cannot be encoded", func() {
-				BeforeEach(func() {
-					iconEncoder.EncodeReturns("", errors.New("failed to encode poncho"))
-				})
-
-				It("returns an error", func() {
-					_, err := tileBuilder.Build(builder.BuildInput{
-						IconPath: "some-icon-path",
-					})
-					Expect(err).To(MatchError("failed to encode poncho"))
-				})
-			})
-
 			Context("when the metadata cannot be read", func() {
 				It("returns an error", func() {
 					metadataReader.ReadReturns(builder.Metadata{}, errors.New("failed to read metadata"))

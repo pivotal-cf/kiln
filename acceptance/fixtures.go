@@ -106,11 +106,4 @@ some_runtime_configs:
     - name: some-addon
       version: some-addon-version
 serial: false
-variables:
-- name: variable-1
-  options:
-    some_option: Option value
-  type: certificate
-- name: variable-2
-  type: password
 `

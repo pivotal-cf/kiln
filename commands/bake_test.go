@@ -30,6 +30,7 @@ var _ = Describe("Bake", func() {
 		fakeJobsService              *fakes.JobsService
 		fakePropertiesService        *fakes.PropertiesService
 		fakeRuntimeConfigsService    *fakes.RuntimeConfigsService
+		fakeIconService              *fakes.IconService
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -66,6 +67,7 @@ var _ = Describe("Bake", func() {
 		fakeJobsService = &fakes.JobsService{}
 		fakePropertiesService = &fakes.PropertiesService{}
 		fakeRuntimeConfigsService = &fakes.RuntimeConfigsService{}
+		fakeIconService = &fakes.IconService{}
 
 		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
@@ -130,7 +132,9 @@ var _ = Describe("Bake", func() {
 			},
 		}, nil)
 
-		generatedMetadata = builder.GeneratedMetadata{IconImage: "some-icon-image"}
+		fakeIconService.EncodeReturns("some-encoded-icon", nil)
+
+		generatedMetadata = builder.GeneratedMetadata{}
 		fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
 		fakeInterpolator.InterpolateReturns([]byte("some-interpolated-metadata"), nil)
 
@@ -148,6 +152,7 @@ var _ = Describe("Bake", func() {
 			fakeJobsService,
 			fakePropertiesService,
 			fakeRuntimeConfigsService,
+			fakeIconService,
 		)
 	})
 
@@ -210,11 +215,12 @@ var _ = Describe("Bake", func() {
 				"some-runtime-configs-directory",
 			}))
 
+			Expect(fakeIconService.EncodeCallCount()).To(Equal(1))
+			Expect(fakeIconService.EncodeArgsForCall(0)).To(Equal("some-icon-path"))
+
 			Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
 			expectedBuildInput := builder.BuildInput{
-				IconPath:                "some-icon-path",
-				MetadataPath:            "some-metadata",
-				BOSHVariableDirectories: []string{"some-other-variables-directory", "some-variables-directory"},
+				MetadataPath: "some-metadata",
 			}
 			Expect(fakeMetadataBuilder.BuildArgsForCall(0)).To(Equal(expectedBuildInput))
 
@@ -249,7 +255,7 @@ var _ = Describe("Bake", func() {
 						"label": "some-form-label",
 					},
 				},
-				IconImage: "some-icon-image",
+				IconImage: "some-encoded-icon",
 				InstanceGroups: map[string]interface{}{
 					"some-instance-group": builder.Metadata{
 						"name":     "some-instance-group",

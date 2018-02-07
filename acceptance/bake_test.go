@@ -385,7 +385,6 @@ some-literal-variable: |
 				"--releases-directory", someReleasesDirectory,
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
-				"--bosh-variables-directory", someVariablesDirectory,
 				"--variable", "some-variable=some-variable-value",
 				"--variables-file", filepath.Join(someVarFile),
 				"--version", "1.2.3",
