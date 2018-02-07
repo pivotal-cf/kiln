@@ -54,12 +54,16 @@ type formsService interface {
 	FromDirectories(directories []string) (forms map[string]interface{}, err error)
 }
 
+//go:generate counterfeiter -o ./fakes/instance_groups_service.go --fake-name InstanceGroupsService . instanceGroupsService
+type instanceGroupsService interface {
+	FromDirectories(directories []string) (instanceGroups map[string]interface{}, err error)
+}
+
 type Bake struct {
 	metadataBuilder                  metadataBuilder
 	interpolator                     interpolator
 	tileWriter                       tileWriter
 	logger                           logger
-	instanceGroupDirectoryReader     directoryReader
 	jobDirectoryReader               directoryReader
 	propertyBlueprintDirectoryReader directoryReader
 	runtimeConfigsDirectoryReader    directoryReader
@@ -68,6 +72,7 @@ type Bake struct {
 	releases                         releasesService
 	stemcell                         stemcellService
 	forms                            formsService
+	instanceGroups                   instanceGroupsService
 
 	Options struct {
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
@@ -96,7 +101,6 @@ func NewBake(
 	interpolator interpolator,
 	tileWriter tileWriter,
 	logger logger,
-	instanceGroupDirectoryReader directoryReader,
 	jobDirectoryReader directoryReader,
 	propertyBlueprintDirectoryReader directoryReader,
 	runtimeConfigsDirectoryReader directoryReader,
@@ -105,14 +109,14 @@ func NewBake(
 	releasesService releasesService,
 	stemcellService stemcellService,
 	formsService formsService,
+	instanceGroupsService instanceGroupsService,
 ) Bake {
 
 	return Bake{
-		metadataBuilder: metadataBuilder,
-		interpolator:    interpolator,
-		tileWriter:      tileWriter,
-		logger:          logger,
-		instanceGroupDirectoryReader:     instanceGroupDirectoryReader,
+		metadataBuilder:                  metadataBuilder,
+		interpolator:                     interpolator,
+		tileWriter:                       tileWriter,
+		logger:                           logger,
 		jobDirectoryReader:               jobDirectoryReader,
 		propertyBlueprintDirectoryReader: propertyBlueprintDirectoryReader,
 		runtimeConfigsDirectoryReader:    runtimeConfigsDirectoryReader,
@@ -121,6 +125,7 @@ func NewBake(
 		releases:                         releasesService,
 		stemcell:                         stemcellService,
 		forms:                            formsService,
+		instanceGroups:                   instanceGroupsService,
 	}
 }
 
@@ -163,20 +168,9 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	// NOTE: reading instance group files
-	var instanceGroups map[string]interface{}
-	if b.Options.InstanceGroupDirectories != nil {
-		b.logger.Println("Reading instance group files...")
-		instanceGroups = map[string]interface{}{}
-		for _, instanceGroupDir := range b.Options.InstanceGroupDirectories {
-			instanceGroupsInDirectory, err := b.instanceGroupDirectoryReader.Read(instanceGroupDir)
-			if err != nil {
-				return err
-			}
-
-			for _, instanceGroup := range instanceGroupsInDirectory {
-				instanceGroups[instanceGroup.Name] = instanceGroup.Metadata
-			}
-		}
+	instanceGroups, err := b.instanceGroups.FromDirectories(b.Options.InstanceGroupDirectories)
+	if err != nil {
+		return fmt.Errorf("failed to parse instance groups: %s", err)
 	}
 
 	// NOTE: reading job files

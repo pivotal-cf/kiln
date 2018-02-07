@@ -16,10 +16,9 @@ import (
 	"github.com/pivotal-cf/kiln/commands/fakes"
 )
 
-var _ = Describe("bake", func() {
+var _ = Describe("Bake", func() {
 	var (
 		fakeMetadataBuilder               *fakes.MetadataBuilder
-		fakeInstanceGroupDirectoryReader  *fakes.DirectoryReader
 		fakeJobsDirectoryReader           *fakes.DirectoryReader
 		fakePropertyDirectoryReader       *fakes.DirectoryReader
 		fakeRuntimeConfigsDirectoryReader *fakes.DirectoryReader
@@ -30,6 +29,7 @@ var _ = Describe("bake", func() {
 		fakeReleasesService               *fakes.ReleasesService
 		fakeStemcellService               *fakes.StemcellService
 		fakeFormsService                  *fakes.FormsService
+		fakeInstanceGroupsService         *fakes.InstanceGroupsService
 
 		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
@@ -55,7 +55,6 @@ var _ = Describe("bake", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeMetadataBuilder = &fakes.MetadataBuilder{}
-		fakeInstanceGroupDirectoryReader = &fakes.DirectoryReader{}
 		fakeJobsDirectoryReader = &fakes.DirectoryReader{}
 		fakePropertyDirectoryReader = &fakes.DirectoryReader{}
 		fakeRuntimeConfigsDirectoryReader = &fakes.DirectoryReader{}
@@ -66,6 +65,7 @@ var _ = Describe("bake", func() {
 		fakeReleasesService = &fakes.ReleasesService{}
 		fakeStemcellService = &fakes.StemcellService{}
 		fakeFormsService = &fakes.FormsService{}
+		fakeInstanceGroupsService = &fakes.InstanceGroupsService{}
 
 		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
@@ -97,15 +97,12 @@ var _ = Describe("bake", func() {
 			},
 		}, nil)
 
-		fakeInstanceGroupDirectoryReader.ReadReturns([]builder.Part{
-			{
-				Name: "some-instance-group",
-				Metadata: builder.Metadata{
-					"name":     "some-instance-group",
-					"manifest": "some-manifest",
-					"provides": "some-link",
-					"release":  "some-release",
-				},
+		fakeInstanceGroupsService.FromDirectoriesReturns(map[string]interface{}{
+			"some-instance-group": builder.Metadata{
+				"name":     "some-instance-group",
+				"manifest": "some-manifest",
+				"provides": "some-link",
+				"release":  "some-release",
 			},
 		}, nil)
 
@@ -151,7 +148,6 @@ var _ = Describe("bake", func() {
 			fakeInterpolator,
 			fakeTileWriter,
 			fakeLogger,
-			fakeInstanceGroupDirectoryReader,
 			fakeJobsDirectoryReader,
 			fakePropertyDirectoryReader,
 			fakeRuntimeConfigsDirectoryReader,
@@ -160,6 +156,7 @@ var _ = Describe("bake", func() {
 			fakeReleasesService,
 			fakeStemcellService,
 			fakeFormsService,
+			fakeInstanceGroupsService,
 		)
 	})
 
@@ -207,8 +204,8 @@ var _ = Describe("bake", func() {
 			Expect(fakeFormsService.FromDirectoriesCallCount()).To(Equal(1))
 			Expect(fakeFormsService.FromDirectoriesArgsForCall(0)).To(Equal([]string{"some-forms-directory"}))
 
-			Expect(fakeInstanceGroupDirectoryReader.ReadCallCount()).To(Equal(1))
-			Expect(fakeInstanceGroupDirectoryReader.ReadArgsForCall(0)).To(Equal("some-instance-groups-directory"))
+			Expect(fakeInstanceGroupsService.FromDirectoriesCallCount()).To(Equal(1))
+			Expect(fakeInstanceGroupsService.FromDirectoriesArgsForCall(0)).To(Equal([]string{"some-instance-groups-directory"}))
 
 			Expect(fakeJobsDirectoryReader.ReadCallCount()).To(Equal(1))
 			Expect(fakeJobsDirectoryReader.ReadArgsForCall(0)).To(Equal("some-jobs-directory"))
@@ -446,7 +443,7 @@ var _ = Describe("bake", func() {
 
 			Context("when the instance group directory reader returns an error", func() {
 				It("returns an error", func() {
-					fakeInstanceGroupDirectoryReader.ReadReturns(nil, errors.New("some-error"))
+					fakeInstanceGroupsService.FromDirectoriesReturns(nil, errors.New("parsing instance groups failed"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -460,7 +457,7 @@ var _ = Describe("bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(MatchError(ContainSubstring("some-error")))
+					Expect(err).To(MatchError("failed to parse instance groups: parsing instance groups failed"))
 				})
 			})
 
