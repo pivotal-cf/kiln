@@ -6,7 +6,7 @@ import (
 )
 
 type TemplateVariablesService struct {
-	FromPathsAndPairsStub        func(paths []string, pairs []string) (variables map[string]interface{}, err error)
+	FromPathsAndPairsStub        func(paths []string, pairs []string) (templateVariables map[string]interface{}, err error)
 	fromPathsAndPairsMutex       sync.RWMutex
 	fromPathsAndPairsArgsForCall []struct {
 		paths []string
@@ -24,7 +24,7 @@ type TemplateVariablesService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []string) (variables map[string]interface{}, err error) {
+func (fake *TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []string) (templateVariables map[string]interface{}, err error) {
 	var pathsCopy []string
 	if paths != nil {
 		pathsCopy = make([]string, len(paths))

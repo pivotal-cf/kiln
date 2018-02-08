@@ -3,40 +3,36 @@ package fakes
 
 import (
 	"sync"
-
-	"github.com/pivotal-cf/kiln/builder"
 )
 
-type MetadataReader struct {
-	ReadStub        func(path, version string) (builder.Metadata, error)
+type MetadataService struct {
+	ReadStub        func(path string) (metadata []byte, err error)
 	readMutex       sync.RWMutex
 	readArgsForCall []struct {
-		path    string
-		version string
+		path string
 	}
 	readReturns struct {
-		result1 builder.Metadata
+		result1 []byte
 		result2 error
 	}
 	readReturnsOnCall map[int]struct {
-		result1 builder.Metadata
+		result1 []byte
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MetadataReader) Read(path string, version string) (builder.Metadata, error) {
+func (fake *MetadataService) Read(path string) (metadata []byte, err error) {
 	fake.readMutex.Lock()
 	ret, specificReturn := fake.readReturnsOnCall[len(fake.readArgsForCall)]
 	fake.readArgsForCall = append(fake.readArgsForCall, struct {
-		path    string
-		version string
-	}{path, version})
-	fake.recordInvocation("Read", []interface{}{path, version})
+		path string
+	}{path})
+	fake.recordInvocation("Read", []interface{}{path})
 	fake.readMutex.Unlock()
 	if fake.ReadStub != nil {
-		return fake.ReadStub(path, version)
+		return fake.ReadStub(path)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -44,41 +40,41 @@ func (fake *MetadataReader) Read(path string, version string) (builder.Metadata,
 	return fake.readReturns.result1, fake.readReturns.result2
 }
 
-func (fake *MetadataReader) ReadCallCount() int {
+func (fake *MetadataService) ReadCallCount() int {
 	fake.readMutex.RLock()
 	defer fake.readMutex.RUnlock()
 	return len(fake.readArgsForCall)
 }
 
-func (fake *MetadataReader) ReadArgsForCall(i int) (string, string) {
+func (fake *MetadataService) ReadArgsForCall(i int) string {
 	fake.readMutex.RLock()
 	defer fake.readMutex.RUnlock()
-	return fake.readArgsForCall[i].path, fake.readArgsForCall[i].version
+	return fake.readArgsForCall[i].path
 }
 
-func (fake *MetadataReader) ReadReturns(result1 builder.Metadata, result2 error) {
+func (fake *MetadataService) ReadReturns(result1 []byte, result2 error) {
 	fake.ReadStub = nil
 	fake.readReturns = struct {
-		result1 builder.Metadata
+		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *MetadataReader) ReadReturnsOnCall(i int, result1 builder.Metadata, result2 error) {
+func (fake *MetadataService) ReadReturnsOnCall(i int, result1 []byte, result2 error) {
 	fake.ReadStub = nil
 	if fake.readReturnsOnCall == nil {
 		fake.readReturnsOnCall = make(map[int]struct {
-			result1 builder.Metadata
+			result1 []byte
 			result2 error
 		})
 	}
 	fake.readReturnsOnCall[i] = struct {
-		result1 builder.Metadata
+		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *MetadataReader) Invocations() map[string][][]interface{} {
+func (fake *MetadataService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.readMutex.RLock()
@@ -90,7 +86,7 @@ func (fake *MetadataReader) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *MetadataReader) recordInvocation(key string, args []interface{}) {
+func (fake *MetadataService) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {

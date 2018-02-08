@@ -18,7 +18,6 @@ import (
 
 var _ = Describe("Bake", func() {
 	var (
-		fakeMetadataBuilder          *fakes.MetadataBuilder
 		fakeInterpolator             *fakes.Interpolator
 		fakeTileWriter               *fakes.TileWriter
 		fakeLogger                   *fakes.Logger
@@ -31,8 +30,8 @@ var _ = Describe("Bake", func() {
 		fakePropertiesService        *fakes.PropertiesService
 		fakeRuntimeConfigsService    *fakes.RuntimeConfigsService
 		fakeIconService              *fakes.IconService
+		fakeMetadataService          *fakes.MetadataService
 
-		generatedMetadata      builder.GeneratedMetadata
 		otherReleasesDirectory string
 		someReleasesDirectory  string
 		tmpDir                 string
@@ -55,7 +54,6 @@ var _ = Describe("Bake", func() {
 		err = ioutil.WriteFile(nonTarballRelease, []byte(""), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		fakeMetadataBuilder = &fakes.MetadataBuilder{}
 		fakeInterpolator = &fakes.Interpolator{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeLogger = &fakes.Logger{}
@@ -68,6 +66,7 @@ var _ = Describe("Bake", func() {
 		fakePropertiesService = &fakes.PropertiesService{}
 		fakeRuntimeConfigsService = &fakes.RuntimeConfigsService{}
 		fakeIconService = &fakes.IconService{}
+		fakeMetadataService = &fakes.MetadataService{}
 
 		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
@@ -134,12 +133,11 @@ var _ = Describe("Bake", func() {
 
 		fakeIconService.EncodeReturns("some-encoded-icon", nil)
 
-		generatedMetadata = builder.GeneratedMetadata{}
-		fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
+		fakeMetadataService.ReadReturns([]byte("some-metadata"), nil)
+
 		fakeInterpolator.InterpolateReturns([]byte("some-interpolated-metadata"), nil)
 
 		bake = commands.NewBake(
-			fakeMetadataBuilder,
 			fakeInterpolator,
 			fakeTileWriter,
 			fakeLogger,
@@ -153,6 +151,7 @@ var _ = Describe("Bake", func() {
 			fakePropertiesService,
 			fakeRuntimeConfigsService,
 			fakeIconService,
+			fakeMetadataService,
 		)
 	})
 
@@ -218,11 +217,8 @@ var _ = Describe("Bake", func() {
 			Expect(fakeIconService.EncodeCallCount()).To(Equal(1))
 			Expect(fakeIconService.EncodeArgsForCall(0)).To(Equal("some-icon-path"))
 
-			Expect(fakeMetadataBuilder.BuildCallCount()).To(Equal(1))
-			expectedBuildInput := builder.BuildInput{
-				MetadataPath: "some-metadata",
-			}
-			Expect(fakeMetadataBuilder.BuildArgsForCall(0)).To(Equal(expectedBuildInput))
+			Expect(fakeMetadataService.ReadCallCount()).To(Equal(1))
+			Expect(fakeMetadataService.ReadArgsForCall(0)).To(Equal("some-metadata"))
 
 			Expect(fakeInterpolator.InterpolateCallCount()).To(Equal(1))
 
@@ -287,7 +283,7 @@ var _ = Describe("Bake", func() {
 				},
 			}))
 
-			Expect(string(metadata)).To(Equal("some-yaml"))
+			Expect(string(metadata)).To(Equal("some-metadata"))
 
 			Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
 			metadata, writeInput := fakeTileWriter.WriteArgsForCall(0)
@@ -336,15 +332,6 @@ var _ = Describe("Bake", func() {
 			})
 
 			It("interpolates variables from both files", func() {
-				generatedMetadata.Metadata = builder.Metadata{
-					"custom_variable":               "$(variable \"some-variable\")",
-					"variable_from_file":            "$(variable \"some-variable-from-file\")",
-					"some_other_variable_from_file": "$(variable \"some-other-variable-from-file\")",
-					"icon_image":                    "$( icon )",
-					"releases":                      []string{"$(release \"some-release-1\")"},
-				}
-				fakeMetadataBuilder.BuildReturns(generatedMetadata, nil)
-
 				err := bake.Execute([]string{
 					"--embed", "some-embed-path",
 					"--forms-directory", "some-forms-directory",
@@ -385,6 +372,36 @@ var _ = Describe("Bake", func() {
 						"--releases-directory", someReleasesDirectory,
 					})
 					Expect(err).To(MatchError("failed to parse template variables: parsing template variables failed"))
+				})
+			})
+
+			Context("when the icon service fails", func() {
+				It("returns an error", func() {
+					fakeIconService.EncodeReturns("", errors.New("encoding icon failed"))
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--releases-directory", someReleasesDirectory,
+					})
+
+					Expect(err).To(MatchError("failed to encode icon: encoding icon failed"))
+				})
+			})
+
+			Context("when the metadata service fails", func() {
+				It("returns an error", func() {
+					fakeMetadataService.ReadReturns(nil, errors.New("reading metadata failed"))
+
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--releases-directory", someReleasesDirectory,
+					})
+
+					Expect(err).To(MatchError("failed to read metadata: reading metadata failed"))
 				})
 			})
 

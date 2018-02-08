@@ -344,8 +344,6 @@ some-literal-variable: |
 
 		Eventually(session.Out).Should(gbytes.Say("Reading release manifests"))
 		Eventually(session.Out).Should(gbytes.Say("Reading stemcell manifest"))
-		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Creating metadata for %s...", outputFile)))
-		Eventually(session.Out).Should(gbytes.Say("Marshaling metadata file..."))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Building %s", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile)))
 		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603041539_custom_buildpacks.js to %s...", outputFile)))
@@ -820,9 +818,19 @@ some-literal-variable: |
 
 				command := exec.Command(pathToMain,
 					"bake",
+					"--forms-directory", someFormsDirectory,
+					"--forms-directory", someOtherFormsDirectory,
 					"--metadata", metadata,
-					"--output-file", outputFile,
+					"--output-file", "/path/to/missing/dir/product.zip",
 					"--releases-directory", someReleasesDirectory,
+					"--releases-directory", otherReleasesDirectory,
+					"--instance-groups-directory", someInstanceGroupsDirectory,
+					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+					"--jobs-directory", someJobsDirectory,
+					"--jobs-directory", someOtherJobsDirectory,
+					"--properties-directory", somePropertiesDirectory,
+					"--runtime-configs-directory", someRuntimeConfigsDirectory,
+					"--stemcell-tarball", stemcellTarball,
 					"--variable", "some-variable=some-variable-value",
 					"--variables-file", filepath.Join(someVarFile),
 					"--version", "1.2.3",

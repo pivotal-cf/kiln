@@ -18,11 +18,6 @@ type tileWriter interface {
 	Write(generatedMetadataContents []byte, input builder.WriteInput) error
 }
 
-//go:generate counterfeiter -o ./fakes/metadata_builder.go --fake-name MetadataBuilder . metadataBuilder
-type metadataBuilder interface {
-	Build(input builder.BuildInput) (builder.GeneratedMetadata, error)
-}
-
 //go:generate counterfeiter -o ./fakes/logger.go --fake-name Logger . logger
 type logger interface {
 	Printf(format string, v ...interface{})
@@ -74,8 +69,12 @@ type iconService interface {
 	Encode(path string) (encodedIcon string, err error)
 }
 
+//go:generate counterfeiter -o ./fakes/metadata_service.go --fake-name MetadataService . metadataService
+type metadataService interface {
+	Read(path string) (metadata []byte, err error)
+}
+
 type Bake struct {
-	metadataBuilder   metadataBuilder
 	interpolator      interpolator
 	tileWriter        tileWriter
 	logger            logger
@@ -89,6 +88,7 @@ type Bake struct {
 	properties        propertiesService
 	runtimeConfigs    runtimeConfigsService
 	icon              iconService
+	metadata          metadataService
 
 	Options struct {
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
@@ -113,7 +113,6 @@ type Bake struct {
 }
 
 func NewBake(
-	metadataBuilder metadataBuilder,
 	interpolator interpolator,
 	tileWriter tileWriter,
 	logger logger,
@@ -127,10 +126,10 @@ func NewBake(
 	propertiesService propertiesService,
 	runtimeConfigsService runtimeConfigsService,
 	iconService iconService,
+	metadataService metadataService,
 ) Bake {
 
 	return Bake{
-		metadataBuilder:   metadataBuilder,
 		interpolator:      interpolator,
 		tileWriter:        tileWriter,
 		logger:            logger,
@@ -144,6 +143,7 @@ func NewBake(
 		properties:        propertiesService,
 		runtimeConfigs:    runtimeConfigsService,
 		icon:              iconService,
+		metadata:          metadataService,
 	}
 }
 
@@ -209,23 +209,13 @@ func (b Bake) Execute(args []string) error {
 	// NOTE: encoding icon
 	icon, err := b.icon.Encode(b.Options.IconPath)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to encode icon: %s", err)
 	}
 
-	b.logger.Printf("Creating metadata for %s...", b.Options.OutputFile)
-	// NOTE: generating metadata object representation
-	generatedMetadata, err := b.metadataBuilder.Build(builder.BuildInput{
-		MetadataPath: b.Options.Metadata,
-	})
+	// NOTE: Reading metadata
+	metadata, err := b.metadata.Read(b.Options.Metadata)
 	if err != nil {
-		return err
-	}
-
-	// NOTE: marshalling metadata object to YAML
-	b.logger.Println("Marshaling metadata file...")
-	generatedMetadataYAML, err := b.yamlMarshal(generatedMetadata)
-	if err != nil {
-		return err
+		return fmt.Errorf("failed to read metadata: %s", err)
 	}
 
 	// NOTE: performing template interpolation on metadata YAML
@@ -240,7 +230,7 @@ func (b Bake) Execute(args []string) error {
 		Jobs:               jobs,
 		PropertyBlueprints: propertyBlueprints,
 		RuntimeConfigs:     runtimeConfigs,
-	}, generatedMetadataYAML)
+	}, metadata)
 	if err != nil {
 		return err
 	}
