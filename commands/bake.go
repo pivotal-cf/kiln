@@ -148,7 +148,6 @@ func NewBake(
 }
 
 func (b Bake) Execute(args []string) error {
-	// NOTE: flag parsing and validation
 	args, err := jhanda.Parse(&b.Options, args)
 	if err != nil {
 		return err
@@ -158,67 +157,56 @@ func (b Bake) Execute(args []string) error {
 		return errors.New("--jobs-directory flag requires --instance-groups-directory to also be specified")
 	}
 
-	// NOTE: parsing releases
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
 	if err != nil {
 		return fmt.Errorf("failed to parse releases: %s", err)
 	}
 
-	// NOTE: reading stemcell manifest
 	stemcellManifest, err := b.stemcell.FromTarball(b.Options.StemcellTarball)
 	if err != nil {
 		return fmt.Errorf("failed to parse stemcell: %s", err)
 	}
 
-	// NOTE: parsing template variables files
 	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
 	if err != nil {
 		return fmt.Errorf("failed to parse template variables: %s", err)
 	}
 
-	// NOTE: reading form files
 	forms, err := b.forms.FromDirectories(b.Options.FormDirectories)
 	if err != nil {
 		return fmt.Errorf("failed to parse forms: %s", err)
 	}
 
-	// NOTE: reading instance group files
 	instanceGroups, err := b.instanceGroups.FromDirectories(b.Options.InstanceGroupDirectories)
 	if err != nil {
 		return fmt.Errorf("failed to parse instance groups: %s", err)
 	}
 
-	// NOTE: reading job files
 	jobs, err := b.jobs.FromDirectories(b.Options.JobDirectories)
 	if err != nil {
 		return fmt.Errorf("failed to parse jobs: %s", err)
 	}
 
-	// NOTE: reading property files
 	propertyBlueprints, err := b.properties.FromDirectories(b.Options.PropertyDirectories)
 	if err != nil {
 		return fmt.Errorf("failed to parse properties: %s", err)
 	}
 
-	// NOTE: reading runtime config files
 	runtimeConfigs, err := b.runtimeConfigs.FromDirectories(b.Options.RuntimeConfigDirectories)
 	if err != nil {
 		return fmt.Errorf("failed to parse runtime configs: %s", err)
 	}
 
-	// NOTE: encoding icon
 	icon, err := b.icon.Encode(b.Options.IconPath)
 	if err != nil {
 		return fmt.Errorf("failed to encode icon: %s", err)
 	}
 
-	// NOTE: Reading metadata
 	metadata, err := b.metadata.Read(b.Options.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to read metadata: %s", err)
 	}
 
-	// NOTE: performing template interpolation on metadata YAML
 	interpolatedMetadata, err := b.interpolator.Interpolate(builder.InterpolateInput{
 		Version:            b.Options.Version,
 		Variables:          templateVariables,
@@ -235,7 +223,6 @@ func (b Bake) Execute(args []string) error {
 		return err
 	}
 
-	// NOTE: creating the output tile as a zip
 	err = b.tileWriter.Write(interpolatedMetadata, builder.WriteInput{
 		OutputFile:           b.Options.OutputFile,
 		StubReleases:         b.Options.StubReleases,
