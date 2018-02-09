@@ -18,23 +18,25 @@ import (
 
 var _ = Describe("Bake", func() {
 	var (
-		fakeInterpolator             *fakes.Interpolator
-		fakeTileWriter               *fakes.TileWriter
-		fakeLogger                   *fakes.Logger
-		fakeTemplateVariablesService *fakes.TemplateVariablesService
-		fakeReleasesService          *fakes.ReleasesService
-		fakeStemcellService          *fakes.StemcellService
+		fakeBOSHVariablesService     *fakes.BOSHVariablesService
 		fakeFormsService             *fakes.FormsService
-		fakeInstanceGroupsService    *fakes.InstanceGroupsService
-		fakeJobsService              *fakes.JobsService
-		fakePropertiesService        *fakes.PropertiesService
-		fakeRuntimeConfigsService    *fakes.RuntimeConfigsService
 		fakeIconService              *fakes.IconService
+		fakeInstanceGroupsService    *fakes.InstanceGroupsService
+		fakeInterpolator             *fakes.Interpolator
+		fakeJobsService              *fakes.JobsService
+		fakeLogger                   *fakes.Logger
 		fakeMetadataService          *fakes.MetadataService
+		fakePropertiesService        *fakes.PropertiesService
+		fakeReleasesService          *fakes.ReleasesService
+		fakeRuntimeConfigsService    *fakes.RuntimeConfigsService
+		fakeStemcellService          *fakes.StemcellService
+		fakeTemplateVariablesService *fakes.TemplateVariablesService
+		fakeTileWriter               *fakes.TileWriter
 
-		otherReleasesDirectory string
-		someReleasesDirectory  string
-		tmpDir                 string
+		otherReleasesDirectory     string
+		someBOSHVariablesDirectory string
+		someReleasesDirectory      string
+		tmpDir                     string
 
 		bake commands.Bake
 	)
@@ -50,23 +52,27 @@ var _ = Describe("Bake", func() {
 		otherReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
+		someBOSHVariablesDirectory, err = ioutil.TempDir(tmpDir, "")
+		Expect(err).NotTo(HaveOccurred())
+
 		nonTarballRelease := filepath.Join(someReleasesDirectory, "some-broken-release")
 		err = ioutil.WriteFile(nonTarballRelease, []byte(""), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		fakeInterpolator = &fakes.Interpolator{}
-		fakeTileWriter = &fakes.TileWriter{}
-		fakeLogger = &fakes.Logger{}
-		fakeTemplateVariablesService = &fakes.TemplateVariablesService{}
-		fakeReleasesService = &fakes.ReleasesService{}
-		fakeStemcellService = &fakes.StemcellService{}
+		fakeBOSHVariablesService = &fakes.BOSHVariablesService{}
 		fakeFormsService = &fakes.FormsService{}
-		fakeInstanceGroupsService = &fakes.InstanceGroupsService{}
-		fakeJobsService = &fakes.JobsService{}
-		fakePropertiesService = &fakes.PropertiesService{}
-		fakeRuntimeConfigsService = &fakes.RuntimeConfigsService{}
 		fakeIconService = &fakes.IconService{}
+		fakeInstanceGroupsService = &fakes.InstanceGroupsService{}
+		fakeInterpolator = &fakes.Interpolator{}
+		fakeJobsService = &fakes.JobsService{}
+		fakeLogger = &fakes.Logger{}
 		fakeMetadataService = &fakes.MetadataService{}
+		fakePropertiesService = &fakes.PropertiesService{}
+		fakeReleasesService = &fakes.ReleasesService{}
+		fakeRuntimeConfigsService = &fakes.RuntimeConfigsService{}
+		fakeStemcellService = &fakes.StemcellService{}
+		fakeTemplateVariablesService = &fakes.TemplateVariablesService{}
+		fakeTileWriter = &fakes.TileWriter{}
 
 		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
@@ -95,6 +101,13 @@ var _ = Describe("Bake", func() {
 			"some-form": builder.Metadata{
 				"name":  "some-form",
 				"label": "some-form-label",
+			},
+		}, nil)
+
+		fakeBOSHVariablesService.FromDirectoriesReturns(map[string]interface{}{
+			"some-secret": builder.Metadata{
+				"name": "some-secret",
+				"type": "password",
 			},
 		}, nil)
 
@@ -143,6 +156,7 @@ var _ = Describe("Bake", func() {
 			fakeLogger,
 			func(interface{}) ([]byte, error) { return []byte("some-yaml"), nil },
 			fakeTemplateVariablesService,
+			fakeBOSHVariablesService,
 			fakeReleasesService,
 			fakeStemcellService,
 			fakeFormsService,
@@ -177,8 +191,7 @@ var _ = Describe("Bake", func() {
 				"--stemcell-tarball", "some-stemcell-tarball",
 				"--bosh-variables-directory", "some-other-variables-directory",
 				"--bosh-variables-directory", "some-variables-directory",
-				"--version", "1.2.3",
-				"--migrations-directory", "some-migrations-directory",
+				"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
 				"--migrations-directory", "some-other-migrations-directory",
 				"--variable", "some-variable=some-variable-value",
 				"--variables-file", "some-variables-file",
@@ -189,6 +202,12 @@ var _ = Describe("Bake", func() {
 			varFiles, variables := fakeTemplateVariablesService.FromPathsAndPairsArgsForCall(0)
 			Expect(varFiles).To(Equal([]string{"some-variables-file"}))
 			Expect(variables).To(Equal([]string{"some-variable=some-variable-value"}))
+
+			Expect(fakeBOSHVariablesService.FromDirectoriesCallCount()).To(Equal(1))
+			Expect(fakeBOSHVariablesService.FromDirectoriesArgsForCall(0)).To(Equal([]string{
+				"some-other-variables-directory",
+				"some-variables-directory",
+			}))
 
 			Expect(fakeReleasesService.FromDirectoriesCallCount()).To(Equal(1))
 			Expect(fakeReleasesService.FromDirectoriesArgsForCall(0)).To(Equal([]string{otherReleasesDirectory, someReleasesDirectory}))
@@ -225,6 +244,12 @@ var _ = Describe("Bake", func() {
 			input, metadata := fakeInterpolator.InterpolateArgsForCall(0)
 			Expect(input).To(Equal(builder.InterpolateInput{
 				Version: "1.2.3",
+				BOSHVariables: map[string]interface{}{
+					"some-secret": builder.Metadata{
+						"name": "some-secret",
+						"type": "password",
+					},
+				},
 				Variables: map[string]interface{}{
 					"some-variable-from-file": "some-variable-value-from-file",
 					"some-variable":           "some-variable-value",

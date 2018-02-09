@@ -43,6 +43,9 @@ func main() {
 
 	templateVariablesService := baking.NewTemplateVariablesService()
 
+	boshVariableDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	boshVariablesService := baking.NewBOSHVariablesService(logger, boshVariableDirectoryReader)
+
 	formDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	formsService := baking.NewFormsService(logger, formDirectoryReader)
 
@@ -70,6 +73,7 @@ func main() {
 		logger,
 		yaml.Marshal,
 		templateVariablesService,
+		boshVariablesService,
 		releasesService,
 		stemcellService,
 		formsService,

@@ -27,7 +27,7 @@ var _ = Describe("kiln", func() {
 		somePropertiesDirectory          string
 		someReleasesDirectory            string
 		someRuntimeConfigsDirectory      string
-		someVariablesDirectory           string
+		someBOSHVariablesDirectory       string
 		someFormsDirectory               string
 		someOtherFormsDirectory          string
 		someInstanceGroupsDirectory      string
@@ -73,7 +73,7 @@ var _ = Describe("kiln", func() {
 		someRuntimeConfigsDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		someVariablesDirectory, err = ioutil.TempDir(tmpDir, "")
+		someBOSHVariablesDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		someFormsDirectory, err = ioutil.TempDir(tmpDir, "")
@@ -213,17 +213,11 @@ runtime_config: |
 `), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = ioutil.WriteFile(filepath.Join(someVariablesDirectory, "variable-1.yml"), []byte(`---
-variables:
+		err = ioutil.WriteFile(filepath.Join(someBOSHVariablesDirectory, "variable-1.yml"), []byte(`---
 - name: variable-1
   type: certificate
   options:
     some_option: Option value
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(someVariablesDirectory, "variable-2.yml"), []byte(`---
-variables:
 - name: variable-2
   type: password
 `), 0644)
@@ -271,7 +265,7 @@ some-literal-variable: |
 			"--releases-directory", someReleasesDirectory,
 			"--runtime-configs-directory", someRuntimeConfigsDirectory,
 			"--stemcell-tarball", stemcellTarball,
-			"--bosh-variables-directory", someVariablesDirectory,
+			"--bosh-variables-directory", someBOSHVariablesDirectory,
 			"--variable", "some-variable=some-variable-value",
 			"--variables-file", filepath.Join(someVarFile),
 			"--version", "1.2.3",
@@ -383,6 +377,7 @@ some-literal-variable: |
 				"--releases-directory", someReleasesDirectory,
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
+				"--bosh-variables-directory", someBOSHVariablesDirectory,
 				"--variable", "some-variable=some-variable-value",
 				"--variables-file", filepath.Join(someVarFile),
 				"--version", "1.2.3",
@@ -439,6 +434,7 @@ some-literal-variable: |
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--stub-releases",
+				"--bosh-variables-directory", someBOSHVariablesDirectory,
 				"--variable", "some-variable=some-variable-value",
 				"--variables-file", filepath.Join(someVarFile),
 				"--version", "1.2.3",
@@ -488,6 +484,7 @@ some-literal-variable: |
 				"--properties-directory", somePropertiesDirectory,
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
+				"--bosh-variables-directory", someBOSHVariablesDirectory,
 				"--variable", "some-variable=some-variable-value",
 				"--variables-file", filepath.Join(someVarFile),
 				"--version", "1.2.3",
@@ -552,6 +549,7 @@ some-literal-variable: |
 					"--runtime-configs-directory", someRuntimeConfigsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
+					"--bosh-variables-directory", someBOSHVariablesDirectory,
 					"--variable", "some-variable=some-variable-value",
 					"--variables-file", filepath.Join(someVarFile),
 					"--version", "1.2.3",
@@ -635,6 +633,7 @@ some-literal-variable: |
 					"--runtime-configs-directory", someRuntimeConfigsDirectory,
 					"--stemcell-tarball", stemcellTarball,
 					"--stub-releases",
+					"--bosh-variables-directory", someBOSHVariablesDirectory,
 					"--variable", "some-variable=some-variable-value",
 					"--variables-file", filepath.Join(someVarFile),
 					"--version", "1.2.3",
@@ -670,6 +669,70 @@ some-literal-variable: |
 
 				Expect(seenFile).To(BeTrue())
 			})
+		})
+	})
+
+	Context("when a --bosh-variables-directory flag is provided", func() {
+		It("interpolates bosh variables from a directory into the metadata", func() {
+			command := exec.Command(pathToMain,
+				"bake",
+				"--forms-directory", someFormsDirectory,
+				"--forms-directory", someOtherFormsDirectory,
+				"--forms-directory", someFormsDirectory,
+				"--forms-directory", someOtherFormsDirectory,
+				"--icon", someIconPath,
+				"--instance-groups-directory", someInstanceGroupsDirectory,
+				"--metadata", metadata,
+				"--migrations-directory", "fixtures/extra-migrations",
+				"--migrations-directory", "fixtures/migrations",
+				"--output-file", outputFile,
+				"--properties-directory", somePropertiesDirectory,
+				"--releases-directory", otherReleasesDirectory,
+				"--releases-directory", someReleasesDirectory,
+				"--instance-groups-directory", someInstanceGroupsDirectory,
+				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+				"--jobs-directory", someJobsDirectory,
+				"--jobs-directory", someOtherJobsDirectory,
+				"--properties-directory", somePropertiesDirectory,
+				"--runtime-configs-directory", someRuntimeConfigsDirectory,
+				"--stemcell-tarball", stemcellTarball,
+				"--bosh-variables-directory", someBOSHVariablesDirectory,
+				"--variable", "some-variable=some-variable-value",
+				"--variables-file", filepath.Join(someVarFile),
+				"--version", "1.2.3",
+			)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			archive, err := os.Open(outputFile)
+			Expect(err).NotTo(HaveOccurred())
+
+			archiveInfo, err := archive.Stat()
+			Expect(err).NotTo(HaveOccurred())
+
+			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			Expect(err).NotTo(HaveOccurred())
+
+			var file io.ReadCloser
+			for _, f := range zr.File {
+				if f.Name == "metadata/metadata.yml" {
+					file, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+					break
+				}
+			}
+
+			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
+			metadataContents, err := ioutil.ReadAll(file)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(metadataContents)).To(ContainSubstring("name: variable-1"))
+			Expect(string(metadataContents)).To(ContainSubstring("name: variable-2"))
+			Expect(string(metadataContents)).To(ContainSubstring("type: certificate"))
+			Expect(string(metadataContents)).To(ContainSubstring("some_option: Option value"))
 		})
 	})
 
@@ -714,7 +777,7 @@ some-literal-variable: |
 				"--properties-directory", somePropertiesDirectory,
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
-				"--bosh-variables-directory", someVariablesDirectory,
+				"--bosh-variables-directory", someBOSHVariablesDirectory,
 				"--variables-file", variableFile.Name(),
 				"--variables-file", filepath.Join(someVarFile),
 				"--version", "1.2.3",
@@ -793,6 +856,7 @@ some-literal-variable: |
 					"--properties-directory", somePropertiesDirectory,
 					"--runtime-configs-directory", someRuntimeConfigsDirectory,
 					"--stemcell-tarball", stemcellTarball,
+					"--bosh-variables-directory", someBOSHVariablesDirectory,
 					"--variable", "some-variable=some-variable-value",
 					"--variables-file", filepath.Join(someVarFile),
 					"--version", "1.2.3",
@@ -831,6 +895,7 @@ some-literal-variable: |
 					"--properties-directory", somePropertiesDirectory,
 					"--runtime-configs-directory", someRuntimeConfigsDirectory,
 					"--stemcell-tarball", stemcellTarball,
+					"--bosh-variables-directory", someBOSHVariablesDirectory,
 					"--variable", "some-variable=some-variable-value",
 					"--variables-file", filepath.Join(someVarFile),
 					"--version", "1.2.3",

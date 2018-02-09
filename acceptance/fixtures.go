@@ -15,6 +15,9 @@ minimum_version_for_upgrade: 1.6.9-build.0
 custom_variable: $(variable "some-variable")
 literal_variable: $(variable "some-literal-variable")
 boolean_variable: $(variable "some-boolean-variable")
+some_bosh_variables:
+- $(bosh_variable "variable-1")
+- $(bosh_variable "variable-2")
 label: Pivotal Elastic Runtime
 description:
   this is the description
@@ -74,6 +77,13 @@ custom_variable: some-variable-value
 literal_variable: |
   { "some": "value" }
 boolean_variable: true
+some_bosh_variables:
+- name: variable-1
+  type: certificate
+  options:
+    some_option: Option value
+- name: variable-2
+  type: password
 name: cool-product-name
 post_deploy_errands:
 - name: smoke-tests

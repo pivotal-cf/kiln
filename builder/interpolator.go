@@ -14,6 +14,7 @@ type Interpolator struct{}
 
 type InterpolateInput struct {
 	Version            string
+	BOSHVariables      map[string]interface{}
 	Variables          map[string]interface{}
 	ReleaseManifests   map[string]interface{}
 	StemcellManifest   interface{}
@@ -45,6 +46,13 @@ func (i Interpolator) Interpolate(input InterpolateInput, templateYAML []byte) (
 
 func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) ([]byte, error) {
 	templateHelpers := template.FuncMap{
+		"bosh_variable": func(key string) (string, error) {
+			val, ok := input.BOSHVariables[key]
+			if !ok {
+				return "", fmt.Errorf("could not find bosh variable with key '%s'", key)
+			}
+			return i.interpolateValueIntoYAML(input, val)
+		},
 		"form": func(key string) (string, error) {
 			val, ok := input.FormTypes[key]
 			if !ok {

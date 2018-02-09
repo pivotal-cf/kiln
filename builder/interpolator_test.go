@@ -24,6 +24,8 @@ some_property_blueprints:
 - $( property "some-other-templated-property" )
 some_runtime_configs:
 - $( runtime_config "some-runtime-config" )
+some_bosh_variables:
+- $( bosh_variable "some-bosh-variable" )
 `
 
 	var (
@@ -36,6 +38,12 @@ some_runtime_configs:
 
 		input = builder.InterpolateInput{
 			Version: "3.4.5",
+			BOSHVariables: map[string]interface{}{
+				"some-bosh-variable": builder.Metadata{
+					"name": "some-bosh-variable",
+					"type": "some-bosh-type",
+				},
+			},
 			Variables: map[string]interface{}{
 				"some-variable": "some-value",
 			},
@@ -131,6 +139,9 @@ some_runtime_configs:
 - name: some-runtime-config
   runtime_config: |
     some-addon-runtime-config
+some_bosh_variables:
+- name: some-bosh-variable
+  type: some-bosh-type
 `))
 		Expect(string(interpolatedYAML)).To(ContainSubstring("file: some-release-1.2.3.tgz\n"))
 	})

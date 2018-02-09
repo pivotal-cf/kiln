@@ -24,6 +24,11 @@ type logger interface {
 	Println(v ...interface{})
 }
 
+//go:generate counterfeiter -o ./fakes/bosh_variables_service.go --fake-name BOSHVariablesService . boshVariablesService
+type boshVariablesService interface {
+	FromDirectories(directories []string) (boshVariables map[string]interface{}, err error)
+}
+
 //go:generate counterfeiter -o ./fakes/releases_service.go --fake-name ReleasesService . releasesService
 type releasesService interface {
 	FromDirectories(directories []string) (releases map[string]interface{}, err error)
@@ -80,6 +85,7 @@ type Bake struct {
 	logger            logger
 	yamlMarshal       func(interface{}) ([]byte, error)
 	templateVariables templateVariablesService
+	boshVariables     boshVariablesService
 	releases          releasesService
 	stemcell          stemcellService
 	forms             formsService
@@ -118,6 +124,7 @@ func NewBake(
 	logger logger,
 	yamlMarshal func(interface{}) ([]byte, error),
 	templateVariablesService templateVariablesService,
+	boshVariablesService boshVariablesService,
 	releasesService releasesService,
 	stemcellService stemcellService,
 	formsService formsService,
@@ -135,6 +142,7 @@ func NewBake(
 		logger:            logger,
 		yamlMarshal:       yamlMarshal,
 		templateVariables: templateVariablesService,
+		boshVariables:     boshVariablesService,
 		releases:          releasesService,
 		stemcell:          stemcellService,
 		forms:             formsService,
@@ -170,6 +178,11 @@ func (b Bake) Execute(args []string) error {
 	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
 	if err != nil {
 		return fmt.Errorf("failed to parse template variables: %s", err)
+	}
+
+	boshVariables, err := b.boshVariables.FromDirectories(b.Options.BOSHVariableDirectories)
+	if err != nil {
+		return fmt.Errorf("failed to parse bosh variables: %s", err)
 	}
 
 	forms, err := b.forms.FromDirectories(b.Options.FormDirectories)
@@ -210,6 +223,7 @@ func (b Bake) Execute(args []string) error {
 	interpolatedMetadata, err := b.interpolator.Interpolate(builder.InterpolateInput{
 		Version:            b.Options.Version,
 		Variables:          templateVariables,
+		BOSHVariables:      boshVariables,
 		ReleaseManifests:   releaseManifests,
 		StemcellManifest:   stemcellManifest,
 		FormTypes:          forms,
