@@ -1,4 +1,3 @@
-variables:
 - name: some-ca-certificate
   type: certificate
   options:
