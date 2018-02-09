@@ -20,25 +20,28 @@ import (
 
 var _ = Describe("kiln", func() {
 	var (
+		cfSHA1                           string
+		diegoSHA1                        string
 		metadata                         string
 		otherReleasesDirectory           string
 		outputFile                       string
+		someBOSHVariablesDirectory       string
+		someFormsDirectory               string
 		someIconPath                     string
+		someInstanceGroupsDirectory      string
+		someJobsDirectory                string
+		someOtherFormsDirectory          string
+		someOtherInstanceGroupsDirectory string
+		someOtherJobsDirectory           string
 		somePropertiesDirectory          string
 		someReleasesDirectory            string
 		someRuntimeConfigsDirectory      string
-		someBOSHVariablesDirectory       string
-		someFormsDirectory               string
-		someOtherFormsDirectory          string
-		someInstanceGroupsDirectory      string
-		someOtherInstanceGroupsDirectory string
-		someJobsDirectory                string
-		someOtherJobsDirectory           string
 		someVarFile                      string
 		stemcellTarball                  string
 		tmpDir                           string
-		diegoSHA1                        string
-		cfSHA1                           string
+		variableFile                     *os.File
+
+		commandWithArgs []string
 	)
 
 	BeforeEach(func() {
@@ -96,6 +99,19 @@ var _ = Describe("kiln", func() {
 
 		someVarDir, err := ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
+
+		variableFile, err = ioutil.TempFile(tmpDir, "variables-file")
+		Expect(err).NotTo(HaveOccurred())
+		defer variableFile.Close()
+
+		variables := map[string]string{"some-variable": "some-variable-value"}
+		data, err := yaml.Marshal(&variables)
+		Expect(err).NotTo(HaveOccurred())
+
+		n, err := variableFile.Write(data)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(data).To(HaveLen(n))
+
 		someVarFile = filepath.Join(someVarDir, "var-file.yml")
 
 		cfReleaseManifest := `---
@@ -233,6 +249,28 @@ some-literal-variable: |
 		metadata = filepath.Join(tmpDir, "metadata.yml")
 		err = ioutil.WriteFile(metadata, untemplatedMetadata, 0644)
 		Expect(err).NotTo(HaveOccurred())
+
+		commandWithArgs = []string{
+			"bake",
+			"--bosh-variables-directory", someBOSHVariablesDirectory,
+			"--forms-directory", someFormsDirectory,
+			"--forms-directory", someOtherFormsDirectory,
+			"--icon", someIconPath,
+			"--instance-groups-directory", someInstanceGroupsDirectory,
+			"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+			"--jobs-directory", someJobsDirectory,
+			"--jobs-directory", someOtherJobsDirectory,
+			"--metadata", metadata,
+			"--output-file", outputFile,
+			"--properties-directory", somePropertiesDirectory,
+			"--releases-directory", otherReleasesDirectory,
+			"--releases-directory", someReleasesDirectory,
+			"--runtime-configs-directory", someRuntimeConfigsDirectory,
+			"--stemcell-tarball", stemcellTarball,
+			"--variable", "some-variable=some-variable-value",
+			"--variables-file", filepath.Join(someVarFile),
+			"--version", "1.2.3",
+		}
 	})
 
 	AfterEach(func() {
@@ -240,36 +278,22 @@ some-literal-variable: |
 	})
 
 	It("generates a tile with the correct metadata", func() {
+		commandWithArgs = append(commandWithArgs, "--migrations-directory",
+			"fixtures/extra-migrations",
+			"--migrations-directory",
+			"fixtures/migrations",
+			"--variables-file",
+			variableFile.Name())
+
 		f, err := os.OpenFile(metadata, os.O_APPEND|os.O_WRONLY, 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		defer f.Close()
-		_, err = f.WriteString("icon_img: aS1hbS1zb21lLWltYWdl")
+		_, err = f.WriteString("icon_img: $( icon )")
 
 		Expect(err).NotTo(HaveOccurred())
 
-		command := exec.Command(pathToMain,
-			"bake",
-			"--forms-directory", someFormsDirectory,
-			"--forms-directory", someOtherFormsDirectory,
-			"--instance-groups-directory", someInstanceGroupsDirectory,
-			"--instance-groups-directory", someOtherInstanceGroupsDirectory,
-			"--jobs-directory", someJobsDirectory,
-			"--jobs-directory", someOtherJobsDirectory,
-			"--metadata", metadata,
-			"--migrations-directory", "fixtures/extra-migrations",
-			"--migrations-directory", "fixtures/migrations",
-			"--output-file", outputFile,
-			"--properties-directory", somePropertiesDirectory,
-			"--releases-directory", otherReleasesDirectory,
-			"--releases-directory", someReleasesDirectory,
-			"--runtime-configs-directory", someRuntimeConfigsDirectory,
-			"--stemcell-tarball", stemcellTarball,
-			"--bosh-variables-directory", someBOSHVariablesDirectory,
-			"--variable", "some-variable=some-variable-value",
-			"--variables-file", filepath.Join(someVarFile),
-			"--version", "1.2.3",
-		)
+		command := exec.Command(pathToMain, commandWithArgs...)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
@@ -300,6 +324,15 @@ some-literal-variable: |
 
 		renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
 		Expect(metadataContents).To(MatchYAML(renderedYAML))
+
+		// Bosh Variables
+		Expect(string(metadataContents)).To(ContainSubstring("name: variable-1"))
+		Expect(string(metadataContents)).To(ContainSubstring("name: variable-2"))
+		Expect(string(metadataContents)).To(ContainSubstring("type: certificate"))
+		Expect(string(metadataContents)).To(ContainSubstring("some_option: Option value"))
+
+		// Template Variables
+		Expect(string(metadataContents)).To(ContainSubstring("custom_variable: some-variable-value"))
 
 		var (
 			archivedMigration1 io.ReadCloser
@@ -349,96 +382,11 @@ some-literal-variable: |
 		Eventually(session.Out).Should(gbytes.Say("Calculated md5 sum: [0-9a-f]{32}"))
 	})
 
-	Context("when the --icon flag is specified", func() {
-		It("generates a tile with the specified icon", func() {
-			f, err := os.OpenFile(metadata, os.O_APPEND|os.O_WRONLY, 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			defer f.Close()
-			_, err = f.WriteString("icon_img: $( icon )")
-
-			Expect(err).NotTo(HaveOccurred())
-
-			command := exec.Command(pathToMain,
-				"bake",
-				"--forms-directory", someFormsDirectory,
-				"--forms-directory", someOtherFormsDirectory,
-				"--icon", someIconPath,
-				"--instance-groups-directory", someInstanceGroupsDirectory,
-				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
-				"--jobs-directory", someJobsDirectory,
-				"--jobs-directory", someOtherJobsDirectory,
-				"--metadata", metadata,
-				"--migrations-directory", "fixtures/extra-migrations",
-				"--migrations-directory", "fixtures/migrations",
-				"--output-file", outputFile,
-				"--properties-directory", somePropertiesDirectory,
-				"--releases-directory", otherReleasesDirectory,
-				"--releases-directory", someReleasesDirectory,
-				"--runtime-configs-directory", someRuntimeConfigsDirectory,
-				"--stemcell-tarball", stemcellTarball,
-				"--bosh-variables-directory", someBOSHVariablesDirectory,
-				"--variable", "some-variable=some-variable-value",
-				"--variables-file", filepath.Join(someVarFile),
-				"--version", "1.2.3",
-			)
-
-			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(session).Should(gexec.Exit(0))
-
-			archive, err := os.Open(outputFile)
-			Expect(err).NotTo(HaveOccurred())
-
-			archiveInfo, err := archive.Stat()
-			Expect(err).NotTo(HaveOccurred())
-
-			zr, err := zip.NewReader(archive, archiveInfo.Size())
-			Expect(err).NotTo(HaveOccurred())
-
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/metadata.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
-
-			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := ioutil.ReadAll(file)
-			Expect(err).NotTo(HaveOccurred())
-
-			renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
-			Expect(metadataContents).To(MatchYAML(renderedYAML))
-		})
-	})
-
 	Context("when the --stub-releases flag is specified", func() {
 		It("creates a tile with empty release tarballs", func() {
-			command := exec.Command(pathToMain,
-				"bake",
-				"--forms-directory", someFormsDirectory,
-				"--forms-directory", someOtherFormsDirectory,
-				"--icon", someIconPath,
-				"--metadata", metadata,
-				"--output-file", outputFile,
-				"--releases-directory", someReleasesDirectory,
-				"--releases-directory", otherReleasesDirectory,
-				"--instance-groups-directory", someInstanceGroupsDirectory,
-				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
-				"--jobs-directory", someJobsDirectory,
-				"--jobs-directory", someOtherJobsDirectory,
-				"--properties-directory", somePropertiesDirectory,
-				"--runtime-configs-directory", someRuntimeConfigsDirectory,
-				"--stemcell-tarball", stemcellTarball,
-				"--stub-releases",
-				"--bosh-variables-directory", someBOSHVariablesDirectory,
-				"--variable", "some-variable=some-variable-value",
-				"--variables-file", filepath.Join(someVarFile),
-				"--version", "1.2.3",
-			)
+			commandWithArgs = append(commandWithArgs, "--stub-releases")
+
+			command := exec.Command(pathToMain, commandWithArgs...)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -468,27 +416,7 @@ some-literal-variable: |
 
 	Context("when no migrations are provided", func() {
 		It("creates empty migrations folder", func() {
-			command := exec.Command(pathToMain,
-				"bake",
-				"--forms-directory", someFormsDirectory,
-				"--forms-directory", someOtherFormsDirectory,
-				"--icon", someIconPath,
-				"--metadata", metadata,
-				"--output-file", outputFile,
-				"--releases-directory", someReleasesDirectory,
-				"--releases-directory", otherReleasesDirectory,
-				"--instance-groups-directory", someInstanceGroupsDirectory,
-				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
-				"--jobs-directory", someJobsDirectory,
-				"--jobs-directory", someOtherJobsDirectory,
-				"--properties-directory", somePropertiesDirectory,
-				"--runtime-configs-directory", someRuntimeConfigsDirectory,
-				"--stemcell-tarball", stemcellTarball,
-				"--bosh-variables-directory", someBOSHVariablesDirectory,
-				"--variable", "some-variable=some-variable-value",
-				"--variables-file", filepath.Join(someVarFile),
-				"--version", "1.2.3",
-			)
+			command := exec.Command(pathToMain, commandWithArgs...)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -530,30 +458,12 @@ some-literal-variable: |
 				err = ioutil.WriteFile(otherFileToEmbed, []byte("content-of-other-file"), 0755)
 				Expect(err).NotTo(HaveOccurred())
 
-				command := exec.Command(pathToMain,
-					"bake",
-					"--forms-directory", someFormsDirectory,
-					"--forms-directory", someOtherFormsDirectory,
+				commandWithArgs = append(commandWithArgs,
 					"--embed", otherFileToEmbed,
 					"--embed", someFileToEmbed,
-					"--icon", someIconPath,
-					"--metadata", metadata,
-					"--output-file", outputFile,
-					"--releases-directory", someReleasesDirectory,
-					"--releases-directory", otherReleasesDirectory,
-					"--instance-groups-directory", someInstanceGroupsDirectory,
-					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
-					"--jobs-directory", someJobsDirectory,
-					"--jobs-directory", someOtherJobsDirectory,
-					"--properties-directory", somePropertiesDirectory,
-					"--runtime-configs-directory", someRuntimeConfigsDirectory,
-					"--stemcell-tarball", stemcellTarball,
-					"--stub-releases",
-					"--bosh-variables-directory", someBOSHVariablesDirectory,
-					"--variable", "some-variable=some-variable-value",
-					"--variables-file", filepath.Join(someVarFile),
-					"--version", "1.2.3",
-				)
+					"--stub-releases")
+
+				command := exec.Command(pathToMain, commandWithArgs...)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
@@ -603,7 +513,7 @@ some-literal-variable: |
 			})
 		})
 
-		Context("when a directory is specified", func() {
+		Context("when an embed directory is specified", func() {
 			It("embeds the root directory and retains its structure", func() {
 				dirToAdd := filepath.Join(tmpDir, "some-dir")
 				nestedDir := filepath.Join(dirToAdd, "some-nested-dir")
@@ -615,29 +525,10 @@ some-literal-variable: |
 				err = ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0600)
 				Expect(err).NotTo(HaveOccurred())
 
-				command := exec.Command(pathToMain,
-					"bake",
-					"--forms-directory", someFormsDirectory,
-					"--forms-directory", someOtherFormsDirectory,
+				commandWithArgs = append(commandWithArgs,
 					"--embed", dirToAdd,
-					"--icon", someIconPath,
-					"--metadata", metadata,
-					"--output-file", outputFile,
-					"--releases-directory", someReleasesDirectory,
-					"--releases-directory", otherReleasesDirectory,
-					"--instance-groups-directory", someInstanceGroupsDirectory,
-					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
-					"--jobs-directory", someJobsDirectory,
-					"--jobs-directory", someOtherJobsDirectory,
-					"--properties-directory", somePropertiesDirectory,
-					"--runtime-configs-directory", someRuntimeConfigsDirectory,
-					"--stemcell-tarball", stemcellTarball,
-					"--stub-releases",
-					"--bosh-variables-directory", someBOSHVariablesDirectory,
-					"--variable", "some-variable=some-variable-value",
-					"--variables-file", filepath.Join(someVarFile),
-					"--version", "1.2.3",
-				)
+					"--stub-releases")
+				command := exec.Command(pathToMain, commandWithArgs...)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
@@ -672,163 +563,11 @@ some-literal-variable: |
 		})
 	})
 
-	Context("when a --bosh-variables-directory flag is provided", func() {
-		It("interpolates bosh variables from a directory into the metadata", func() {
-			command := exec.Command(pathToMain,
-				"bake",
-				"--forms-directory", someFormsDirectory,
-				"--forms-directory", someOtherFormsDirectory,
-				"--forms-directory", someFormsDirectory,
-				"--forms-directory", someOtherFormsDirectory,
-				"--icon", someIconPath,
-				"--instance-groups-directory", someInstanceGroupsDirectory,
-				"--metadata", metadata,
-				"--migrations-directory", "fixtures/extra-migrations",
-				"--migrations-directory", "fixtures/migrations",
-				"--output-file", outputFile,
-				"--properties-directory", somePropertiesDirectory,
-				"--releases-directory", otherReleasesDirectory,
-				"--releases-directory", someReleasesDirectory,
-				"--instance-groups-directory", someInstanceGroupsDirectory,
-				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
-				"--jobs-directory", someJobsDirectory,
-				"--jobs-directory", someOtherJobsDirectory,
-				"--properties-directory", somePropertiesDirectory,
-				"--runtime-configs-directory", someRuntimeConfigsDirectory,
-				"--stemcell-tarball", stemcellTarball,
-				"--bosh-variables-directory", someBOSHVariablesDirectory,
-				"--variable", "some-variable=some-variable-value",
-				"--variables-file", filepath.Join(someVarFile),
-				"--version", "1.2.3",
-			)
-
-			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(session).Should(gexec.Exit(0))
-
-			archive, err := os.Open(outputFile)
-			Expect(err).NotTo(HaveOccurred())
-
-			archiveInfo, err := archive.Stat()
-			Expect(err).NotTo(HaveOccurred())
-
-			zr, err := zip.NewReader(archive, archiveInfo.Size())
-			Expect(err).NotTo(HaveOccurred())
-
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/metadata.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
-
-			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := ioutil.ReadAll(file)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(string(metadataContents)).To(ContainSubstring("name: variable-1"))
-			Expect(string(metadataContents)).To(ContainSubstring("name: variable-2"))
-			Expect(string(metadataContents)).To(ContainSubstring("type: certificate"))
-			Expect(string(metadataContents)).To(ContainSubstring("some_option: Option value"))
-		})
-	})
-
-	Context("when a --variables-file flag is provided", func() {
-		var variableFile *os.File
-
-		BeforeEach(func() {
-			var err error
-			variableFile, err = ioutil.TempFile(tmpDir, "variables-file")
-			Expect(err).NotTo(HaveOccurred())
-			defer variableFile.Close()
-
-			variables := map[string]string{"some-variable": "some-variable-value"}
-			data, err := yaml.Marshal(&variables)
-			Expect(err).NotTo(HaveOccurred())
-
-			n, err := variableFile.Write(data)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(data).To(HaveLen(n))
-		})
-
-		It("interpolates variables from the file into the metadata", func() {
-			command := exec.Command(pathToMain,
-				"bake",
-				"--forms-directory", someFormsDirectory,
-				"--forms-directory", someOtherFormsDirectory,
-				"--forms-directory", someFormsDirectory,
-				"--forms-directory", someOtherFormsDirectory,
-				"--icon", someIconPath,
-				"--instance-groups-directory", someInstanceGroupsDirectory,
-				"--metadata", metadata,
-				"--migrations-directory", "fixtures/extra-migrations",
-				"--migrations-directory", "fixtures/migrations",
-				"--output-file", outputFile,
-				"--properties-directory", somePropertiesDirectory,
-				"--releases-directory", otherReleasesDirectory,
-				"--releases-directory", someReleasesDirectory,
-				"--instance-groups-directory", someInstanceGroupsDirectory,
-				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
-				"--jobs-directory", someJobsDirectory,
-				"--jobs-directory", someOtherJobsDirectory,
-				"--properties-directory", somePropertiesDirectory,
-				"--runtime-configs-directory", someRuntimeConfigsDirectory,
-				"--stemcell-tarball", stemcellTarball,
-				"--bosh-variables-directory", someBOSHVariablesDirectory,
-				"--variables-file", variableFile.Name(),
-				"--variables-file", filepath.Join(someVarFile),
-				"--version", "1.2.3",
-			)
-
-			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(session).Should(gexec.Exit(0))
-
-			archive, err := os.Open(outputFile)
-			Expect(err).NotTo(HaveOccurred())
-
-			archiveInfo, err := archive.Stat()
-			Expect(err).NotTo(HaveOccurred())
-
-			zr, err := zip.NewReader(archive, archiveInfo.Size())
-			Expect(err).NotTo(HaveOccurred())
-
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/metadata.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
-
-			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := ioutil.ReadAll(file)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(string(metadataContents)).To(ContainSubstring("custom_variable: some-variable-value"))
-		})
-	})
-
 	Context("failure cases", func() {
 		Context("when a release tarball does not exist", func() {
 			It("prints an error and exits 1", func() {
-				command := exec.Command(pathToMain,
-					"bake",
-					"--forms-directory", someFormsDirectory,
-					"--forms-directory", someOtherFormsDirectory,
-					"--metadata", "metadata.yml",
-					"--output-file", outputFile,
-					"--properties-directory", somePropertiesDirectory,
-					"--releases-directory", "missing-directory",
-					"--stemcell-tarball", "stemcell.tgz",
-					"--variables-file", filepath.Join(someVarFile),
-					"--version", "1.2.3",
-				)
+				commandWithArgs = append(commandWithArgs, "--releases-directory", "missing-directory")
+				command := exec.Command(pathToMain, commandWithArgs...)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
