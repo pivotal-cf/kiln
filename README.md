@@ -39,7 +39,7 @@ key.
 This flag can be specified multiple times if you have organized your
 variables into subdirectories for development convenience.
 
-Example [variables](example-tile/variables) directory.
+Example [variables](example-tile/bosh-variables) directory.
 
 Note that currently you do not use a template helper function to include a
 variable, all variables in the directories specified will be included in the
