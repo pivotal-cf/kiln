@@ -13,18 +13,21 @@ const GLOBAL_USAGE = `kiln
 kiln helps you build ops manager compatible tiles
 
 Usage: kiln [options] <command> [<args>]
-  --help, -h  bool  prints this usage information (default: false)
+  --help, -h     bool  prints this usage information (default: false)
+  --version, -v  bool  prints the kiln release version (default: false)
 
 Commands:
-  bake  bakes a tile
-  help  prints this usage information
+  bake     bakes a tile
+  help     prints this usage information
+  version  prints the kiln release version
 `
 
 const BAKE_USAGE = `kiln bake
 Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.
 
 Usage: kiln [options] bake [<args>]
-  --help, -h  bool  prints this usage information (default: false)
+  --help, -h     bool  prints this usage information (default: false)
+  --version, -v  bool  prints the kiln release version (default: false)
 
 Command Arguments:
   --bosh-variables-directory, -vd    string (variadic)            path to a directory containing BOSH variables

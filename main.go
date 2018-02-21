@@ -12,11 +12,14 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+var version = "unknown"
+
 func main() {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
 	var global struct {
-		Help bool `short:"h" long:"help" description:"prints this usage information" default:"false"`
+		Help    bool `short:"h" long:"help"    description:"prints this usage information"   default:"false"`
+		Version bool `short:"v" long:"version" description:"prints the kiln release version" default:"false"`
 	}
 
 	args, err := jhanda.Parse(&global, os.Args[1:])
@@ -27,6 +30,23 @@ func main() {
 	globalFlagsUsage, err := jhanda.PrintUsage(global)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	var command string
+	if len(args) > 0 {
+		command, args = args[0], args[1:]
+	}
+
+	if global.Version {
+		command = "version"
+	}
+
+	if global.Help {
+		command = "help"
+	}
+
+	if command == "" {
+		command = "help"
 	}
 
 	filesystem := helper.NewFilesystem()
@@ -67,6 +87,7 @@ func main() {
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
+	commandSet["version"] = commands.NewVersion(logger, version)
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
 		tileWriter,
@@ -84,19 +105,6 @@ func main() {
 		iconService,
 		metadataService,
 	)
-
-	var command string
-	if len(args) > 0 {
-		command, args = args[0], args[1:]
-	}
-
-	if global.Help {
-		command = "help"
-	}
-
-	if command == "" {
-		command = "help"
-	}
 
 	err = commandSet.Execute(command, args)
 	if err != nil {

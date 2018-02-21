@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("kiln", func() {
+var _ = Describe("bake command", func() {
 	var (
 		cfSHA1                           string
 		diegoSHA1                        string
