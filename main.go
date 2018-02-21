@@ -15,7 +15,7 @@ import (
 var version = "unknown"
 
 func main() {
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := log.New(os.Stdout, "", 0)
 
 	var global struct {
 		Help    bool `short:"h" long:"help"    description:"prints this usage information"   default:"false"`
