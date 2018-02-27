@@ -26,6 +26,8 @@ some_runtime_configs:
 - $( runtime_config "some-runtime-config" )
 some_bosh_variables:
 - $( bosh_variable "some-bosh-variable" )
+
+selected_value: $( release "some-release" | select "version" )
 `
 
 	var (
@@ -142,6 +144,8 @@ some_runtime_configs:
 some_bosh_variables:
 - name: some-bosh-variable
   type: some-bosh-type
+
+selected_value: 1.2.3	
 `))
 		Expect(string(interpolatedYAML)).To(ContainSubstring("file: some-release-1.2.3.tgz\n"))
 	})
@@ -358,6 +362,7 @@ some_runtime_configs:
 				Expect(err.Error()).To(ContainSubstring("could not find instance_group with name 'some-instance-group-does-not-exist'"))
 			})
 		})
+
 		Context("when a specified job is not included in the interpolate input", func() {
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
@@ -368,6 +373,24 @@ some_runtime_configs:
 			})
 		})
 
-	})
+		Context("input to the select function cannot be JSON unmarshalled", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				_, err := interpolator.Interpolate(input, []byte(`job: [$( "%%%" | select "value" )]`))
 
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("could not JSON unmarshal \"%%%\": invalid character"))
+			})
+		})
+
+		Context("input to the select function cannot be JSON unmarshalled", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				_, err := interpolator.Interpolate(input, []byte(`release: [$( release "some-release" | select "key-not-there" )]`))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("could not select \"key-not-there\", key does not exist"))
+			})
+		})
+	})
 })

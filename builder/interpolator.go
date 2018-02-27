@@ -2,6 +2,7 @@ package builder
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"text/template"
@@ -124,6 +125,26 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 			}
 
 			return i.interpolateValueIntoYAML(input, val)
+		},
+		"select": func(field, input string) (string, error) {
+			object := map[string]interface{}{}
+
+			err := json.Unmarshal([]byte(input), &object)
+			if err != nil {
+				return "", fmt.Errorf("could not JSON unmarshal %q: %s", input, err)
+			}
+
+			value, ok := object[field]
+			if !ok {
+				return "", fmt.Errorf("could not select %q, key does not exist", field)
+			}
+
+			output, err := json.Marshal(value)
+			if err != nil {
+				return "", fmt.Errorf("could not JSON marshal %q: %s", input, err) // NOTE: this cannot happen because value was unmarshalled from JSON
+			}
+
+			return string(output), nil
 		},
 	}
 

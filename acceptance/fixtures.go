@@ -40,6 +40,7 @@ some_property_blueprints:
 - $( property "some_templated_property_blueprint" )
 some_runtime_configs:
 - $( runtime_config "some-runtime-config" )
+selected_value: $( release "cf" | select "version" )
 `)
 
 var expectedMetadata = `---
@@ -116,4 +117,5 @@ some_runtime_configs:
     - name: some-addon
       version: some-addon-version
 serial: false
+selected_value: "235"
 `
