@@ -6,6 +6,7 @@ description: Serves as an example tile >> $( variable "some-variable" )
 metadata_version: "2.0"
 minimum_version_for_upgrade: 1.12.0
 product_version: $( version )
+my_release_version: $( release "my-release" | select "version" )
 provides_product_versions:
 - name: example
   version: $( version )
