@@ -41,10 +41,6 @@ variables into subdirectories for development convenience.
 
 Example [variables](example-tile/bosh-variables) directory.
 
-Note that currently you do not use a template helper function to include a
-variable, all variables in the directories specified will be included in the
-metadata.
-
 ##### `--embed`
 
 The `--embed` flag is for embedding any extra files or directories into the
@@ -283,4 +279,23 @@ product_version: $( version )
 provides_product_versions:
 - name: example
   version: $( version )
+```
+
+### Template functions
+
+#### `select`
+
+The `select` function allows you to pluck values for nested fields from a
+template helper.
+
+For instance, this section in our example tile:
+
+```
+my_release_version: $( release "my-release" | select "version" 
+```
+
+Results in:
+
+```
+my_release_version: 1.2.3
 ```
