@@ -11,10 +11,10 @@ var _ = Describe("ProvidesProductVersions", func() {
 	var providesProductVersion proofing.ProvidesProductVersion
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		providesProductVersion = metadata.ProvidesProductVersions[0]
+		providesProductVersion = productTemplate.ProvidesProductVersions[0]
 	})
 
 	It("parses their structure", func() {

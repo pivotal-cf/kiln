@@ -28,7 +28,6 @@ type ProductTemplate struct {
 	Description             string                   `yaml:"description"`
 	ProvidesProductVersions []ProvidesProductVersion `yaml:"provides_product_versions"`
 
-	// TODO: property_blueprints can be of differing types: https://github.com/pivotal-cf/installation/blob/b7be08d7b50d305c08d520ee0afe81ae3a98bd9d/web/app/models/persistence/metadata/property_blueprint_builder.rb
 	// TODO: validates_presence_of: https://github.com/pivotal-cf/installation/blob/b7be08d7b50d305c08d520ee0afe81ae3a98bd9d/web/app/models/persistence/metadata/product_template.rb#L20-L25
 	// TODO: version_attribute: https://github.com/pivotal-cf/installation/blob/b7be08d7b50d305c08d520ee0afe81ae3a98bd9d/web/app/models/persistence/metadata/product_template.rb#L30-L32
 	// TODO: cloud and network: https://github.com/pivotal-cf/installation/blob/b7be08d7b50d305c08d520ee0afe81ae3a98bd9d/web/app/models/persistence/metadata/product_template.rb#L36-L37

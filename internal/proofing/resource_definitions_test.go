@@ -11,10 +11,10 @@ var _ = Describe("ResourceDefinitions", func() {
 	var resourceDefinition proofing.ResourceDefinition
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		resourceDefinition = metadata.JobTypes[0].ResourceDefinitions[0]
+		resourceDefinition = productTemplate.JobTypes[0].ResourceDefinitions[0]
 	})
 
 	It("parses their structure", func() {

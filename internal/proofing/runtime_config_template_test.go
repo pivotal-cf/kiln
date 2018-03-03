@@ -11,10 +11,10 @@ var _ = Describe("RuntimeConfigTemplate", func() {
 	var runtimeConfigTemplate proofing.RuntimeConfigTemplate
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		runtimeConfigTemplate = metadata.RuntimeConfigs[0]
+		runtimeConfigTemplate = productTemplate.RuntimeConfigs[0]
 	})
 
 	It("parses their structure", func() {

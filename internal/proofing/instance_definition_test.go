@@ -11,10 +11,10 @@ var _ = Describe("InstanceDefinition", func() {
 	var instanceDefinition proofing.InstanceDefinition
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		instanceDefinition = metadata.JobTypes[0].InstanceDefinition
+		instanceDefinition = productTemplate.JobTypes[0].InstanceDefinition
 	})
 
 	It("parses their structure", func() {

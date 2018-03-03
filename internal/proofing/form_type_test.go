@@ -11,10 +11,10 @@ var _ = Describe("FormType", func() {
 	var formType proofing.FormType
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		formType = metadata.FormTypes[0]
+		formType = productTemplate.FormTypes[0]
 	})
 
 	It("parses their structure", func() {

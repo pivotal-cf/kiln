@@ -11,10 +11,10 @@ var _ = Describe("Template", func() {
 	var template proofing.Template
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		template = metadata.JobTypes[0].Templates[0]
+		template = productTemplate.JobTypes[0].Templates[0]
 	})
 
 	It("parses their structure", func() {

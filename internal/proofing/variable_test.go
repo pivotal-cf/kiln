@@ -11,10 +11,10 @@ var _ = Describe("Variable", func() {
 	var variable proofing.Variable
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		variable = metadata.Variables[0]
+		variable = productTemplate.Variables[0]
 	})
 
 	It("parses their structure", func() {

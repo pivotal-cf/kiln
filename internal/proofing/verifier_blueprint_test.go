@@ -11,10 +11,10 @@ var _ = Describe("VerifierBlueprint", func() {
 	var verifierBlueprint proofing.VerifierBlueprint
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		verifierBlueprint = metadata.FormTypes[0].Verifiers[0]
+		verifierBlueprint = productTemplate.FormTypes[0].Verifiers[0]
 	})
 
 	It("parses their structure", func() {

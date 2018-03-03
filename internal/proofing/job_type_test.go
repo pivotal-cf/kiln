@@ -11,10 +11,10 @@ var _ = Describe("JobType", func() {
 	var jobType proofing.JobType
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		jobType = metadata.JobTypes[0]
+		jobType = productTemplate.JobTypes[0]
 	})
 
 	It("parses their structure", func() {

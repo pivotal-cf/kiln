@@ -11,10 +11,10 @@ var _ = Describe("StemcellCriteria", func() {
 	var stemcellCriteria proofing.StemcellCriteria
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		stemcellCriteria = metadata.StemcellCriteria
+		stemcellCriteria = productTemplate.StemcellCriteria
 	})
 
 	It("parses its structure", func() {

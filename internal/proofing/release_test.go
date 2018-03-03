@@ -11,10 +11,10 @@ var _ = Describe("Release", func() {
 	var release proofing.Release
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		release = metadata.Releases[0]
+		release = productTemplate.Releases[0]
 	})
 
 	It("parses their structure", func() {

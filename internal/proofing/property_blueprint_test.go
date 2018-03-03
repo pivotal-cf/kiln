@@ -11,10 +11,10 @@ var _ = Describe("PropertyBlueprint", func() {
 	var propertyBlueprint proofing.PropertyBlueprint
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		propertyBlueprint = metadata.PropertyBlueprints[0]
+		propertyBlueprint = productTemplate.PropertyBlueprints[0]
 	})
 
 	It("parses their structure", func() {

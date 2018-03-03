@@ -9,9 +9,9 @@ import (
 
 var _ = Describe("Parse", func() {
 	It("can parse a metadata file", func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(metadata).To(BeAssignableToTypeOf(proofing.ProductTemplate{}))
+		Expect(productTemplate).To(BeAssignableToTypeOf(proofing.ProductTemplate{}))
 	})
 
 	Context("failure cases", func() {

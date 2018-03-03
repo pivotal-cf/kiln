@@ -11,10 +11,10 @@ var _ = Describe("InstallTimeVerifier", func() {
 	var installTimeVerifier proofing.InstallTimeVerifier
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		installTimeVerifier = metadata.InstallTimeVerifiers[0]
+		installTimeVerifier = productTemplate.InstallTimeVerifiers[0]
 	})
 
 	It("parses their structure", func() {

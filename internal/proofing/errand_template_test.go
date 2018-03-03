@@ -11,10 +11,10 @@ var _ = Describe("ErrandTemplate", func() {
 	var errandTemplate proofing.ErrandTemplate
 
 	BeforeEach(func() {
-		metadata, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		errandTemplate = metadata.PostDeployErrands[0]
+		errandTemplate = productTemplate.PostDeployErrands[0]
 	})
 
 	It("parses their structure", func() {
