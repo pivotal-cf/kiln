@@ -608,44 +608,5 @@ some-literal-variable: |
 				Expect(string(string(session.Err.Contents()))).To(ContainSubstring("no such file or directory"))
 			})
 		})
-
-		Context("when icon template function is used but the icon flag is missing", func() {
-			It("generates a tile with the specified icon", func() {
-				f, err := os.OpenFile(metadata, os.O_APPEND|os.O_WRONLY, 0644)
-				Expect(err).NotTo(HaveOccurred())
-
-				defer f.Close()
-				_, err = f.WriteString("icon_img: $( icon )")
-
-				Expect(err).NotTo(HaveOccurred())
-
-				command := exec.Command(pathToMain,
-					"bake",
-					"--forms-directory", someFormsDirectory,
-					"--forms-directory", someOtherFormsDirectory,
-					"--metadata", metadata,
-					"--output-file", "/path/to/missing/dir/product.zip",
-					"--releases-directory", someReleasesDirectory,
-					"--releases-directory", otherReleasesDirectory,
-					"--instance-groups-directory", someInstanceGroupsDirectory,
-					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
-					"--jobs-directory", someJobsDirectory,
-					"--jobs-directory", someOtherJobsDirectory,
-					"--properties-directory", somePropertiesDirectory,
-					"--runtime-configs-directory", someRuntimeConfigsDirectory,
-					"--stemcell-tarball", stemcellTarball,
-					"--bosh-variables-directory", someBOSHVariablesDirectory,
-					"--variable", "some-variable=some-variable-value",
-					"--variables-file", filepath.Join(someVarFile),
-					"--version", "1.2.3",
-				)
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(string(session.Err.Contents()))).To(ContainSubstring("icon flag"))
-			})
-		})
 	})
 })

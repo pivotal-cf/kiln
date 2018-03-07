@@ -48,6 +48,9 @@ func (i Interpolator) Interpolate(input InterpolateInput, templateYAML []byte) (
 func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) ([]byte, error) {
 	templateHelpers := template.FuncMap{
 		"bosh_variable": func(key string) (string, error) {
+			if input.BOSHVariables == nil {
+				return "", errors.New("--bosh-variables-directory must be specified")
+			}
 			val, ok := input.BOSHVariables[key]
 			if !ok {
 				return "", fmt.Errorf("could not find bosh variable with key '%s'", key)
@@ -55,6 +58,9 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 			return i.interpolateValueIntoYAML(input, val)
 		},
 		"form": func(key string) (string, error) {
+			if input.FormTypes == nil {
+				return "", errors.New("--forms-directory must be specified")
+			}
 			val, ok := input.FormTypes[key]
 			if !ok {
 				return "", fmt.Errorf("could not find form with key '%s'", key)
@@ -63,6 +69,9 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 			return i.interpolateValueIntoYAML(input, val)
 		},
 		"property": func(name string) (string, error) {
+			if input.PropertyBlueprints == nil {
+				return "", errors.New("--properties-directory must be specified")
+			}
 			val, ok := input.PropertyBlueprints[name]
 			if !ok {
 				return "", fmt.Errorf("could not find property blueprint with name '%s'", name)
@@ -70,6 +79,9 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 			return i.interpolateValueIntoYAML(input, val)
 		},
 		"release": func(name string) (string, error) {
+			if input.ReleaseManifests == nil {
+				return "", errors.New("--releases-directory must be specified")
+			}
 			val, ok := input.ReleaseManifests[name]
 			if !ok {
 				return "", fmt.Errorf("could not find release with name '%s'", name)
@@ -79,17 +91,20 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 		},
 		"stemcell": func() (string, error) {
 			if input.StemcellManifest == nil {
-				return "", errors.New("stemcell-tarball flag must be specified")
+				return "", errors.New("--stemcell-tarball must be specified")
 			}
 			return i.interpolateValueIntoYAML(input, input.StemcellManifest)
 		},
 		"version": func() (string, error) {
 			if input.Version == "" {
-				return "", errors.New("version flag must be specified")
+				return "", errors.New("--version must be specified")
 			}
 			return i.interpolateValueIntoYAML(input, input.Version)
 		},
 		"variable": func(key string) (string, error) {
+			if input.Variables == nil {
+				return "", errors.New("--variable or --variables-file must be specified")
+			}
 			val, ok := input.Variables[key]
 			if !ok {
 				return "", fmt.Errorf("could not find variable with key '%s'", key)
@@ -98,11 +113,14 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 		},
 		"icon": func() (string, error) {
 			if input.IconImage == "" {
-				return "", fmt.Errorf("could not find icon, please check your --icon flag")
+				return "", fmt.Errorf("--icon must be specified")
 			}
 			return input.IconImage, nil
 		},
 		"instance_group": func(name string) (string, error) {
+			if input.InstanceGroups == nil {
+				return "", errors.New("--instance-groups-directory must be specified")
+			}
 			val, ok := input.InstanceGroups[name]
 			if !ok {
 				return "", fmt.Errorf("could not find instance_group with name '%s'", name)
@@ -111,6 +129,9 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 			return i.interpolateValueIntoYAML(input, val)
 		},
 		"job": func(name string) (string, error) {
+			if input.Jobs == nil {
+				return "", errors.New("--jobs-directory must be specified")
+			}
 			val, ok := input.Jobs[name]
 			if !ok {
 				return "", fmt.Errorf("could not find job with name '%s'", name)
@@ -119,6 +140,9 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 			return i.interpolateValueIntoYAML(input, val)
 		},
 		"runtime_config": func(name string) (string, error) {
+			if input.RuntimeConfigs == nil {
+				return "", errors.New("--runtime-configs-directory must be specified")
+			}
 			val, ok := input.RuntimeConfigs[name]
 			if !ok {
 				return "", fmt.Errorf("could not find runtime_config with name '%s'", name)

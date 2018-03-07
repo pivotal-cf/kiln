@@ -331,25 +331,124 @@ some_runtime_configs:
 			})
 		})
 
-		Context("when the version helper is used without providing the version flag", func() {
+		Context("when the bosh_variable helper is used without providing the flag", func() {
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
-				input.Version = ""
+				input.BOSHVariables = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("version flag must be specified"))
+				Expect(err.Error()).To(ContainSubstring("--bosh-variables-directory must be specified"))
 			})
 		})
 
-		Context("when the stemcell helper is used without providing the stemcell", func() {
+		Context("when the form helper is used without providing the flag", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				input.FormTypes = nil
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("--forms-directory must be specified"))
+			})
+		})
+
+		Context("when the property helper is used without providing the flag", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				input.PropertyBlueprints = nil
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("--properties-directory must be specified"))
+			})
+		})
+
+		Context("when the release helper is used without providing the flag", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				input.ReleaseManifests = nil
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("--releases-directory must be specified"))
+			})
+		})
+
+		Context("when the stemcell helper is used without providing the flag", func() {
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.StemcellManifest = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("stemcell-tarball flag must be specified"))
+				Expect(err.Error()).To(ContainSubstring("--stemcell-tarball must be specified"))
+			})
+		})
+
+		Context("when the version helper is used without providing the flag", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				input.Version = ""
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("--version must be specified"))
+			})
+		})
+
+		Context("when the variable helper is used without providing the flag", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				input.Variables = nil
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("--variable or --variables-file must be specified"))
+			})
+		})
+
+		Context("when the icon helper is used without providing the flag", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				input.IconImage = ""
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("--icon must be specified"))
+			})
+		})
+
+		Context("when the instance_group helper is used without providing the flag", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				input.InstanceGroups = nil
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("--instance-groups-directory must be specified"))
+			})
+		})
+
+		Context("when the job helper is used without providing the flag", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				input.Jobs = nil
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("--jobs-directory must be specified"))
+			})
+		})
+
+		Context("when the runtime_config helper is used without providing the flag", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				input.RuntimeConfigs = nil
+				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("--runtime-configs-directory must be specified"))
 			})
 		})
 
