@@ -29,6 +29,9 @@ var _ = Describe("ProductTemplate", func() {
 		Expect(productTemplate.OriginalMetadataVersion).To(Equal("some-original-metadata-version"))
 		Expect(productTemplate.ServiceBroker).To(BeTrue())
 		Expect(productTemplate.DeprecatedTileImage).To(Equal("some-deprecated-tile-image"))
+		Expect(productTemplate.BaseReleasesURL).To(Equal("some-base-releases-url"))
+		Expect(productTemplate.Cloud).To(Equal("some-cloud"))
+		Expect(productTemplate.Network).To(Equal("some-network"))
 
 		Expect(productTemplate.FormTypes).To(HaveLen(1))
 		Expect(productTemplate.InstallTimeVerifiers).To(HaveLen(1))

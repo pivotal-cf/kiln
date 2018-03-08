@@ -1,3 +1,5 @@
+base_releases_url: some-base-releases-url
+cloud: some-cloud
 deprecated_tile_image: some-deprecated-tile-image
 description: some-description
 form_types:
@@ -75,6 +77,7 @@ metadata_version: some-metadata-version
 original_metadata_version: some-original-metadata-version
 minimum_version_for_upgrade: some-minimum-version-for-upgrade
 name: some-name
+network: some-network
 post_deploy_errands:
 - colocated: true
   description: some-description
