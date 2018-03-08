@@ -11,7 +11,7 @@ var _ = Describe("FormType", func() {
 	var formType proofing.FormType
 
 	BeforeEach(func() {
-		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/form_types.yml")
 		Expect(err).NotTo(HaveOccurred())
 
 		formType = productTemplate.FormTypes[0]
