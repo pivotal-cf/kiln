@@ -8,31 +8,49 @@ import (
 )
 
 var _ = Describe("PropertyBlueprint", func() {
-	var propertyBlueprint proofing.PropertyBlueprint
+	var (
+		simplePropertyBlueprint     proofing.SimplePropertyBlueprint
+		selectorPropertyBlueprint   proofing.SelectorPropertyBlueprint
+		collectionPropertyBlueprint proofing.CollectionPropertyBlueprint
+	)
 
 	BeforeEach(func() {
 		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		propertyBlueprint = productTemplate.PropertyBlueprints[0]
+		var ok bool
+		simplePropertyBlueprint, ok = productTemplate.PropertyBlueprints[0].(proofing.SimplePropertyBlueprint)
+		Expect(ok).To(BeTrue())
+
+		selectorPropertyBlueprint, ok = productTemplate.PropertyBlueprints[1].(proofing.SelectorPropertyBlueprint)
+		Expect(ok).To(BeTrue())
+
+		collectionPropertyBlueprint, ok = productTemplate.PropertyBlueprints[2].(proofing.CollectionPropertyBlueprint)
+		Expect(ok).To(BeTrue())
+	})
+
+	It("parses the different types of property blueprints", func() {
+		Expect(simplePropertyBlueprint.Type).To(Equal("some-type"))
+		Expect(selectorPropertyBlueprint.Type).To(Equal("selector"))
+		Expect(collectionPropertyBlueprint.Type).To(Equal("collection"))
 	})
 
 	It("parses their structure", func() {
-		Expect(propertyBlueprint.Configurable).To(BeTrue())
-		Expect(propertyBlueprint.Default).To(Equal("some-default"))
-		Expect(propertyBlueprint.Name).To(Equal("some-name"))
-		Expect(propertyBlueprint.Optional).To(BeTrue())
-		Expect(propertyBlueprint.Type).To(Equal("some-type"))
+		Expect(simplePropertyBlueprint.Configurable).To(BeTrue())
+		Expect(simplePropertyBlueprint.Default).To(Equal("some-default"))
+		Expect(simplePropertyBlueprint.Name).To(Equal("some-name"))
+		Expect(simplePropertyBlueprint.Optional).To(BeTrue())
+		Expect(simplePropertyBlueprint.Type).To(Equal("some-type"))
 
-		Expect(propertyBlueprint.NamedManifests).To(HaveLen(1))
-		Expect(propertyBlueprint.OptionTemplates).To(HaveLen(1))
-		Expect(propertyBlueprint.Options).To(HaveLen(1))
-		Expect(propertyBlueprint.PropertyBlueprints).To(HaveLen(1))
+		Expect(simplePropertyBlueprint.NamedManifests).To(HaveLen(1))
+		Expect(simplePropertyBlueprint.OptionTemplates).To(HaveLen(1))
+		Expect(simplePropertyBlueprint.Options).To(HaveLen(1))
+		Expect(simplePropertyBlueprint.PropertyBlueprints).To(HaveLen(1))
 	})
 
 	Context("named_manifests", func() {
 		It("parses their structure", func() {
-			namedManifest := propertyBlueprint.NamedManifests[0]
+			namedManifest := simplePropertyBlueprint.NamedManifests[0]
 
 			Expect(namedManifest.Manifest).To(Equal("some-manifest"))
 			Expect(namedManifest.Name).To(Equal("some-name"))
@@ -43,7 +61,7 @@ var _ = Describe("PropertyBlueprint", func() {
 		var optionTemplate proofing.PropertyBlueprintOptionTemplate
 
 		BeforeEach(func() {
-			optionTemplate = propertyBlueprint.OptionTemplates[0]
+			optionTemplate = simplePropertyBlueprint.OptionTemplates[0]
 		})
 
 		It("parses their structure", func() {
@@ -95,7 +113,7 @@ var _ = Describe("PropertyBlueprint", func() {
 
 	Context("options", func() {
 		It("parses their structure", func() {
-			option := propertyBlueprint.Options[0]
+			option := simplePropertyBlueprint.Options[0]
 
 			Expect(option.Label).To(Equal("some-label"))
 			Expect(option.Name).To(Equal("some-name"))
@@ -104,7 +122,7 @@ var _ = Describe("PropertyBlueprint", func() {
 
 	Context("property_blueprints", func() {
 		It("parses their structure", func() {
-			internalPropertyBlueprint := propertyBlueprint.PropertyBlueprints[0]
+			internalPropertyBlueprint := simplePropertyBlueprint.PropertyBlueprints[0]
 
 			Expect(internalPropertyBlueprint.Configurable).To(BeTrue())
 			Expect(internalPropertyBlueprint.Default).To(Equal("some-default"))

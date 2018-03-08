@@ -21,7 +21,7 @@ type ProductTemplate struct {
 	Variables               []Variable               `yaml:"variables"`
 	Releases                []Release                `yaml:"releases"`
 	StemcellCriteria        StemcellCriteria         `yaml:"stemcell_criteria"`
-	PropertyBlueprints      []PropertyBlueprint      `yaml:"property_blueprints"`
+	PropertyBlueprints      PropertyBlueprints       `yaml:"property_blueprints"`
 	FormTypes               []FormType               `yaml:"form_types"`
 	JobTypes                []JobType                `yaml:"job_types"`
 	PostDeployErrands       []ErrandTemplate         `yaml:"post_deploy_errands"`

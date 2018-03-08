@@ -38,7 +38,7 @@ var _ = Describe("ProductTemplate", func() {
 		Expect(productTemplate.JobTypes).To(HaveLen(1))
 		Expect(productTemplate.PostDeployErrands).To(HaveLen(1))
 		Expect(productTemplate.PreDeleteErrands).To(HaveLen(1))
-		Expect(productTemplate.PropertyBlueprints).To(HaveLen(1))
+		Expect(productTemplate.PropertyBlueprints).To(HaveLen(3))
 		Expect(productTemplate.ProvidesProductVersions).To(HaveLen(1))
 		Expect(productTemplate.RequiresProductVersions).To(HaveLen(1))
 		Expect(productTemplate.Releases).To(HaveLen(1))
