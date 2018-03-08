@@ -9,7 +9,6 @@ import (
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/helper"
 	"github.com/pivotal-cf/kiln/internal/baking"
-	yaml "gopkg.in/yaml.v2"
 )
 
 var version = "unknown"
@@ -92,7 +91,6 @@ func main() {
 		interpolator,
 		tileWriter,
 		logger,
-		yaml.Marshal,
 		templateVariablesService,
 		boshVariablesService,
 		releasesService,

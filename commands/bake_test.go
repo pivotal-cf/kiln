@@ -154,7 +154,6 @@ var _ = Describe("Bake", func() {
 			fakeInterpolator,
 			fakeTileWriter,
 			fakeLogger,
-			func(interface{}) ([]byte, error) { return []byte("some-yaml"), nil },
 			fakeTemplateVariablesService,
 			fakeBOSHVariablesService,
 			fakeReleasesService,

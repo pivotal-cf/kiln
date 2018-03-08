@@ -83,7 +83,6 @@ type Bake struct {
 	interpolator      interpolator
 	tileWriter        tileWriter
 	logger            logger
-	yamlMarshal       func(interface{}) ([]byte, error)
 	templateVariables templateVariablesService
 	boshVariables     boshVariablesService
 	releases          releasesService
@@ -122,7 +121,6 @@ func NewBake(
 	interpolator interpolator,
 	tileWriter tileWriter,
 	logger logger,
-	yamlMarshal func(interface{}) ([]byte, error),
 	templateVariablesService templateVariablesService,
 	boshVariablesService boshVariablesService,
 	releasesService releasesService,
@@ -140,7 +138,6 @@ func NewBake(
 		interpolator:      interpolator,
 		tileWriter:        tileWriter,
 		logger:            logger,
-		yamlMarshal:       yamlMarshal,
 		templateVariables: templateVariablesService,
 		boshVariables:     boshVariablesService,
 		releases:          releasesService,
