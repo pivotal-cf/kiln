@@ -83,6 +83,14 @@ post_deploy_errands:
   label: some-label
   name: some-name
   run_default: true
+pre_delete_errands:
+- colocated: true
+  description: some-description
+  instances:
+  - control/first
+  label: some-label
+  name: some-name
+  run_default: true
 product_version: some-product-version
 property_blueprints:
 - configurable: true
@@ -126,6 +134,9 @@ releases:
 - file: some-file
   name: some-name
   sha1: some-sha1
+  version: some-version
+requires_product_versions:
+- name: some-name
   version: some-version
 runtime_configs:
 - name: some-name
