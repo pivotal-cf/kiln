@@ -38,12 +38,18 @@ job_types:
   dynamic_ip: 2
   instance_definition:
     configurable: true
-    constraints: some-constraints
+    constraints:
+      min: 1
+      max: 5
+      must_match_regex: some-must-match-regex
+      error_message: some-error-message
     default: 2
     label: some-label
     name: some-name
     type: some-type
-    zero_if: some-zero-if
+    zero_if:
+      property_reference: some-property-reference
+      property_value: some-property-value
   label: some-label
   max_in_flight: some-max-in-flight
   name: some-name
