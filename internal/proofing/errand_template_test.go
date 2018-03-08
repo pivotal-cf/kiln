@@ -11,7 +11,7 @@ var _ = Describe("ErrandTemplate", func() {
 	var errandTemplate proofing.ErrandTemplate
 
 	BeforeEach(func() {
-		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/errands.yml")
 		Expect(err).NotTo(HaveOccurred())
 
 		errandTemplate = productTemplate.PostDeployErrands[0]
