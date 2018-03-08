@@ -1,0 +1,46 @@
+---
+job_types:
+- description: some-description
+  dynamic_ip: 2
+  instance_definition:
+    configurable: true
+    constraints:
+      min: 1
+      max: 5
+      must_match_regex: some-must-match-regex
+      error_message: some-error-message
+    default: 2
+    label: some-label
+    name: some-name
+    type: some-type
+    zero_if:
+      property_reference: some-property-reference
+      property_value: some-property-value
+  label: some-label
+  max_in_flight: some-max-in-flight
+  name: some-name
+  property_blueprints:
+  - configurable: true
+    constraints: some-constraints
+    default: some-default
+    label: some-label
+    name: some-name
+    optional: true
+    type: some-type
+  resource_definitions:
+  - configurable: true
+    constraints: some-constraints
+    default: 1
+    label: some-label
+    name: some-name
+    type: some-type
+  resource_label: some-resource-label
+  serial: true
+  single_az_only: true
+  static_ip: 1
+  templates:
+  - consumes: some-consumes
+    manifest: some-manifest
+    name: some-name
+    provides: some-provides
+    release: some-release

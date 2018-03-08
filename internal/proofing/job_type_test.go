@@ -11,7 +11,7 @@ var _ = Describe("JobType", func() {
 	var jobType proofing.JobType
 
 	BeforeEach(func() {
-		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
+		productTemplate, err := proofing.Parse("fixtures/job_types.yml")
 		Expect(err).NotTo(HaveOccurred())
 
 		jobType = productTemplate.JobTypes[0]
