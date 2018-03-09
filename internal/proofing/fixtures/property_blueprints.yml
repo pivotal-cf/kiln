@@ -82,8 +82,6 @@ property_blueprints:
       placeholder: some-placeholder
       type: some-type
     select_value: some-select-value
-  freeze_on_deploy: true
-  unique: true
   optional: true
   options:
   - label: some-label

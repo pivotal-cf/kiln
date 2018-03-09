@@ -27,8 +27,8 @@ var _ = Describe("CollectionPropertyBlueprint", func() {
 		Expect(collectionPropertyBlueprint.Options).To(HaveLen(1))
 		Expect(collectionPropertyBlueprint.Configurable).To(BeTrue())
 		Expect(collectionPropertyBlueprint.Optional).To(BeTrue())
-		Expect(collectionPropertyBlueprint.FreezeOnDeploy).To(BeTrue())
-		Expect(collectionPropertyBlueprint.Unique).To(BeTrue())
+		Expect(collectionPropertyBlueprint.FreezeOnDeploy).To(BeFalse())
+		Expect(collectionPropertyBlueprint.Unique).To(BeFalse())
 		Expect(collectionPropertyBlueprint.ResourceDefinitions).To(HaveLen(1))
 	})
 
