@@ -1,7 +1,6 @@
 base_releases_url: some-base-releases-url
 cloud: some-cloud
 deprecated_tile_image: some-deprecated-tile-image
-description: some-description
 form_types:
 - description: some-description
   label: some-label
@@ -135,9 +134,6 @@ property_blueprints:
     name: some-name
     type: some-type
   type: some-type
-provides_product_versions:
-- name: some-name
-  version: some-version
 rank: 1
 releases:
 - file: some-file

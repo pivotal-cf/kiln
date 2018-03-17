@@ -12,3 +12,8 @@ type SimplePropertyBlueprint struct {
 	Unique              bool                      `yaml:"unique"`
 	ResourceDefinitions []ResourceDefinition      `yaml:"resource_definitions"`
 }
+
+type PropertyBlueprintOption struct {
+	Label string `yaml:"label"`
+	Name  string `yaml:"name"`
+}

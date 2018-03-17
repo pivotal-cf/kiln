@@ -17,7 +17,6 @@ var _ = Describe("ProductTemplate", func() {
 	})
 
 	It("parses a metadata file", func() {
-		Expect(productTemplate.Description).To(Equal("some-description"))
 		Expect(productTemplate.IconImage).To(Equal("some-icon-image"))
 		Expect(productTemplate.Label).To(Equal("some-label"))
 		Expect(productTemplate.MetadataVersion).To(Equal("some-metadata-version"))
@@ -39,7 +38,6 @@ var _ = Describe("ProductTemplate", func() {
 		Expect(productTemplate.PostDeployErrands).To(HaveLen(1))
 		Expect(productTemplate.PreDeleteErrands).To(HaveLen(1))
 		Expect(productTemplate.PropertyBlueprints).To(HaveLen(1))
-		Expect(productTemplate.ProvidesProductVersions).To(HaveLen(1))
 		Expect(productTemplate.RequiresProductVersions).To(HaveLen(1))
 		Expect(productTemplate.Releases).To(HaveLen(1))
 		Expect(productTemplate.RuntimeConfigs).To(HaveLen(1))
