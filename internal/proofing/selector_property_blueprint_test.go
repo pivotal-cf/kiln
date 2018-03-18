@@ -21,7 +21,7 @@ var _ = Describe("SelectorPropertyBlueprint", func() {
 
 	It("parses their structure", func() {
 		Expect(selectorPropertyBlueprint.Configurable).To(BeTrue())
-		Expect(selectorPropertyBlueprint.Constraints.Min).To(Equal(1))
+		Expect(selectorPropertyBlueprint.Constraints).To(Equal("some-constraints"))
 		Expect(selectorPropertyBlueprint.Default).To(Equal("some-default"))
 		Expect(selectorPropertyBlueprint.FreezeOnDeploy).To(BeTrue())
 		Expect(selectorPropertyBlueprint.Name).To(Equal("some-name"))

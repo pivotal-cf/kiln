@@ -23,7 +23,7 @@ var _ = Describe("CollectionPropertyBlueprint", func() {
 		Expect(collectionPropertyBlueprint.Name).To(Equal("some-name"))
 		Expect(collectionPropertyBlueprint.Type).To(Equal("collection"))
 		Expect(collectionPropertyBlueprint.Default).To(Equal("some-default"))
-		Expect(collectionPropertyBlueprint.Constraints.Min).To(Equal(5))
+		Expect(collectionPropertyBlueprint.Constraints).To(Equal("some-constraints"))
 		Expect(collectionPropertyBlueprint.Options).To(HaveLen(1))
 		Expect(collectionPropertyBlueprint.Configurable).To(BeTrue())
 		Expect(collectionPropertyBlueprint.Optional).To(BeTrue())

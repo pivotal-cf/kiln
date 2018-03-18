@@ -20,10 +20,7 @@ var _ = Describe("InstanceDefinition", func() {
 	It("parses their structure", func() {
 		Expect(instanceDefinition.Configurable).To(BeTrue())
 		Expect(instanceDefinition.Default).To(Equal(2))
-		Expect(instanceDefinition.Label).To(Equal("some-label"))
-		Expect(instanceDefinition.Name).To(Equal("some-name"))
-		Expect(instanceDefinition.Type).To(Equal("some-type"))
 		Expect(instanceDefinition.ZeroIf.PropertyReference).To(Equal("some-property-reference"))
-		Expect(instanceDefinition.Constraints.Min).To(Equal(1))
+		Expect(instanceDefinition.Constraints).To(Equal("some-constraints"))
 	})
 })

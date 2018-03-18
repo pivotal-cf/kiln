@@ -5,8 +5,7 @@ property_blueprints:
 - name: some-name
   type: some-type
   default: some-default
-  constraints:
-    min: 1
+  constraints: some-constraints
   options:
   - label: some-label
     name: some-name
@@ -19,8 +18,7 @@ property_blueprints:
 
 # Selector Property Blueprint
 - configurable: true
-  constraints:
-    min: 1
+  constraints: some-constraints
   default: some-default
   freeze_on_deploy: true
   name: some-name
@@ -42,16 +40,13 @@ property_blueprints:
       options:
       - label: some-label
         name: some-name
-      placeholder: some-placeholder
       type: some-type
     select_value: some-select-value
   resource_definitions:
   - configurable: true
     constraints: some-constraints
     default: 1234
-    label: some-label
     name: some-name
-    type: some-type
   type: selector
   unique: true
 
@@ -60,28 +55,10 @@ property_blueprints:
   default: some-default
   name: some-name
   type: collection
-  constraints:
-    min: 5
+  constraints: some-constraints
   named_manifests:
   - manifest: some-manifest
     name: some-name
-  option_templates:
-  - name: some-name
-    named_manifests:
-    - manifest: some-manifest
-      name: some-name
-    property_blueprints:
-    - configurable: true
-      constraints: some-constraints
-      default: 1
-      name: some-name
-      optional: true
-      options:
-      - label: some-label
-        name: some-name
-      placeholder: some-placeholder
-      type: some-type
-    select_value: some-select-value
   optional: true
   options:
   - label: some-label
@@ -95,6 +72,4 @@ property_blueprints:
   - configurable: true
     constraints: some-constraints
     default: 1234
-    label: some-label
     name: some-name
-    type: some-type

@@ -23,7 +23,7 @@ var _ = Describe("SimplePropertyBlueprint", func() {
 		Expect(simplePropertyBlueprint.Name).To(Equal("some-name"))
 		Expect(simplePropertyBlueprint.Type).To(Equal("some-type"))
 		Expect(simplePropertyBlueprint.Default).To(Equal("some-default"))
-		Expect(simplePropertyBlueprint.Constraints.Min).To(Equal(1))
+		Expect(simplePropertyBlueprint.Constraints).To(Equal("some-constraints"))
 		Expect(simplePropertyBlueprint.Options).To(HaveLen(1))
 		Expect(simplePropertyBlueprint.Configurable).To(BeTrue())
 		Expect(simplePropertyBlueprint.Optional).To(BeTrue())

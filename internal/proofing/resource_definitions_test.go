@@ -21,8 +21,6 @@ var _ = Describe("ResourceDefinitions", func() {
 		Expect(resourceDefinition.Configurable).To(BeTrue())
 		Expect(resourceDefinition.Constraints).To(Equal("some-constraints"))
 		Expect(resourceDefinition.Default).To(Equal(1))
-		Expect(resourceDefinition.Label).To(Equal("some-label"))
 		Expect(resourceDefinition.Name).To(Equal("some-name"))
-		Expect(resourceDefinition.Type).To(Equal("some-type"))
 	})
 })

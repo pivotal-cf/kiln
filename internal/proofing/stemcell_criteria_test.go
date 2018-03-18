@@ -20,5 +20,6 @@ var _ = Describe("StemcellCriteria", func() {
 	It("parses its structure", func() {
 		Expect(stemcellCriteria.OS).To(Equal("some-os"))
 		Expect(stemcellCriteria.Version).To(Equal("some-version"))
+		Expect(stemcellCriteria.EnablePatchSecurityUpdates).To(BeTrue())
 	})
 })

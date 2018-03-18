@@ -10,20 +10,7 @@ form_types:
   - description: some-description
     label: some-label
     placeholder: some-placeholder
-    property_inputs:
-    - description: some-description
-      label: some-label
-      reference: some-reference
     reference: some-reference
-    selector_property_inputs:
-    - description: some-description
-      label: some-label
-      property_inputs:
-      - description: some-description
-        label: some-label
-        placeholder: some-placeholder
-        reference: some-reference
-      reference: some-reference
   verifiers:
   - name: some-name
     properties: some-properties
@@ -33,30 +20,23 @@ install_time_verifiers:
   name: some-name
   properties: some-properties
 job_types:
-- description: some-description
-  dynamic_ip: 2
+- canaries: 1
+  description: some-description
+  errand: true
   instance_definition:
     configurable: true
-    constraints:
-      min: 1
-      max: 5
-      must_match_regex: some-must-match-regex
-      error_message: some-error-message
+    constraints: some-constraints
     default: 2
-    label: some-label
-    name: some-name
-    type: some-type
     zero_if:
       property_reference: some-property-reference
       property_value: some-property-value
-  label: some-label
+  manifest: some-manifest
   max_in_flight: some-max-in-flight
   name: some-name
   property_blueprints:
   - configurable: true
     constraints: some-constraints
     default: some-default
-    label: some-label
     name: some-name
     optional: true
     type: some-type
@@ -64,13 +44,15 @@ job_types:
   - configurable: true
     constraints: some-constraints
     default: 1
-    label: some-label
     name: some-name
-    type: some-type
   resource_label: some-resource-label
+  requires_product_versions:
+  - name: some-name
+    version: some-version
+  run_pre_delete_errand_default: true
+  run_post_deploy_errand_default: true
   serial: true
   single_az_only: true
-  static_ip: 1
   templates:
   - consumes: some-consumes
     manifest: some-manifest
@@ -104,35 +86,10 @@ property_blueprints:
 - configurable: true
   default: some-default
   name: some-name
-  named_manifests:
-  - manifest: some-manifest
-    name: some-name
-  option_templates:
-  - name: some-name
-    named_manifests:
-    - manifest: some-manifest
-      name: some-name
-    property_blueprints:
-    - configurable: true
-      constraints: some-constraints
-      default: 1
-      name: some-name
-      optional: true
-      options:
-      - label: some-label
-        name: some-name
-      placeholder: some-placeholder
-      type: some-type
-    select_value: some-select-value
   optional: true
   options:
   - label: some-label
     name: some-name
-  property_blueprints:
-  - configurable: true
-    default: some-default
-    name: some-name
-    type: some-type
   type: some-type
 rank: 1
 releases:
@@ -151,6 +108,7 @@ service_broker: true
 stemcell_criteria:
   os: some-os
   version: some-version
+  enable_patch_security_updates: true
 variables:
 - name: some-name
   options: some-options

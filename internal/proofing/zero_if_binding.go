@@ -1,6 +1,6 @@
 package proofing
 
-type ZeroIf struct {
+type ZeroIfBinding struct {
 	PropertyReference string `yaml:"property_reference"`
 	PropertyValue     string `yaml:"property_value"`
 }
