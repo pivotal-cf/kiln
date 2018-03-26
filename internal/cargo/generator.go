@@ -122,13 +122,19 @@ func generateInstanceGroups(jobTypes []proofing.JobType, resourceConfigs []opsma
 			})
 		}
 
+		properties, err := evaluateManifestSnippet(jobType.Manifest)
+		if err != nil {
+			panic(err)
+		}
+
 		instanceGroups = append(instanceGroups, InstanceGroup{
-			Name:      jobType.Name,
-			AZs:       availabilityZones,
-			Lifecycle: lifecycle,
-			Stemcell:  stemcellAlias,
-			Instances: instances,
-			Jobs:      jobs,
+			Name:       jobType.Name,
+			AZs:        availabilityZones,
+			Lifecycle:  lifecycle,
+			Stemcell:   stemcellAlias,
+			Instances:  instances,
+			Jobs:       jobs,
+			Properties: properties,
 		})
 	}
 
