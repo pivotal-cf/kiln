@@ -18,6 +18,7 @@ job_types:
 - name: some-job-type-name
   instance_definition:
     default: 0
+
 - name: other-job-type-name
   errand: true
   instance_definition:
