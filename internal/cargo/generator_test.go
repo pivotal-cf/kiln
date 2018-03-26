@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/internal/cargo/bosh"
+	"github.com/pivotal-cf/kiln/internal/cargo/opsman"
 	"github.com/pivotal-cf/kiln/internal/proofing"
 	yaml "gopkg.in/yaml.v2"
 
@@ -25,25 +25,35 @@ var _ = Describe("Generator", func() {
 			template, err := proofing.Parse("fixtures/metadata.yml")
 			Expect(err).NotTo(HaveOccurred())
 
-			stemcells := []bosh.Stemcell{
-				{
-					Name:    "some-stemcell-name",
-					Version: "some-stemcell-version",
-					OS:      "some-stemcell-os",
+			manifest := generator.Execute(template, cargo.OpsManagerConfig{
+				DeploymentName: "some-product-name",
+				AvailabilityZones: []string{
+					"some-az-1",
+					"some-az-2",
 				},
-				{
-					Name:    "other-stemcell-name",
-					Version: "other-stemcell-version",
-					OS:      "other-stemcell-os",
+				Stemcells: []opsman.Stemcell{
+					{
+						Name:    "some-stemcell-name",
+						Version: "some-stemcell-version",
+						OS:      "some-stemcell-os",
+					},
+					{
+						Name:    "other-stemcell-name",
+						Version: "other-stemcell-version",
+						OS:      "other-stemcell-os",
+					},
 				},
-			}
-
-			availabilityZones := []string{
-				"some-az-1",
-				"some-az-2",
-			}
-
-			manifest := generator.Execute("some-product-name", template, stemcells, availabilityZones)
+				ResourceConfigs: []opsman.ResourceConfig{
+					{
+						Name:      "some-job-type-name",
+						Instances: opsman.ResourceConfigInstances{Value: 1},
+					},
+					{
+						Name:      "other-job-type-name",
+						Instances: opsman.ResourceConfigInstances{Value: -1}, // NOTE: negative value indicates "automatic"
+					},
+				},
+			})
 
 			actualManifest, err := yaml.Marshal(manifest)
 			Expect(err).NotTo(HaveOccurred())

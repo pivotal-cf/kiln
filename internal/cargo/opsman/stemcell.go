@@ -1,4 +1,4 @@
-package bosh
+package opsman
 
 type Stemcell struct {
 	File           string

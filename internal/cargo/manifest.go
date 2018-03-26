@@ -40,4 +40,5 @@ type InstanceGroup struct {
 	AZs       []string `yaml:"azs"`
 	Lifecycle string   `yaml:"lifecycle"`
 	Stemcell  string   `yaml:"stemcell"`
+	Instances int      `yaml:"instances"`
 }

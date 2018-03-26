@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/internal/cargo/bosh"
 	"github.com/pivotal-cf/kiln/internal/proofing"
 	yaml "gopkg.in/yaml.v2"
 
@@ -24,10 +23,9 @@ var _ = Describe("Acceptance", func() {
 		productTemplate, err := proofing.Parse("fixtures/acceptance/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		var stemcells []bosh.Stemcell
-		var availabilityZones []string
-
-		manifest := generator.Execute("cf-1234", productTemplate, stemcells, availabilityZones)
+		manifest := generator.Execute(productTemplate, cargo.OpsManagerConfig{
+			DeploymentName: "cf-1234",
+		})
 
 		actualManifest, err := yaml.Marshal(manifest)
 		Expect(err).NotTo(HaveOccurred())
