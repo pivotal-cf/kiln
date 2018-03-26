@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/pivotal-cf-experimental/gomegamatchers"
 )
 
 var _ = Describe("Generator", func() {
@@ -50,7 +51,7 @@ var _ = Describe("Generator", func() {
 			expectedManifest, err := ioutil.ReadFile("fixtures/manifest.yml")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(actualManifest).To(MatchYAML(string(expectedManifest)))
+			Expect(actualManifest).To(HelpfullyMatchYAML(string(expectedManifest)))
 		})
 	})
 })

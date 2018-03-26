@@ -44,9 +44,15 @@ func (g Generator) Execute(name string, template proofing.ProductTemplate, boshS
 
 	var instanceGroups []InstanceGroup
 	for _, jobType := range template.JobTypes {
+		lifecycle := "service"
+		if jobType.Errand {
+			lifecycle = "errand"
+		}
+
 		instanceGroups = append(instanceGroups, InstanceGroup{
-			Name: jobType.Name,
-			AZs:  availabilityZones,
+			Name:      jobType.Name,
+			AZs:       availabilityZones,
+			Lifecycle: lifecycle,
 		})
 	}
 

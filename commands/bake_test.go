@@ -6,14 +6,15 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	yaml "gopkg.in/yaml.v2"
-
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
+	yaml "gopkg.in/yaml.v2"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/pivotal-cf-experimental/gomegamatchers"
 )
 
 var _ = Describe("Bake", func() {
@@ -380,7 +381,7 @@ var _ = Describe("Bake", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				generatedMetadataContents, _ := fakeTileWriter.WriteArgsForCall(0)
-				Expect(generatedMetadataContents).To(MatchYAML("some-interpolated-metadata"))
+				Expect(generatedMetadataContents).To(HelpfullyMatchYAML("some-interpolated-metadata"))
 			})
 		})
 

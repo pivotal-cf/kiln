@@ -1,0 +1,21 @@
+---
+name: Santa Monica
+
+population:
+  1980: {absolute: 88_314, growth_rate: 0.0}
+  1990: {absolute: 86_905, growth_rate: -1.6}
+  2000: {absolute: 84_084, growth_rate: -3.2}
+
+climate: |-
+  Classified as a Subtropical Mediterranean climate, Santa Monica enjoys an average
+  of 310 days of sunshine a year. It is located in USDA plant hardiness zone 11a.
+  Because of its location, nestled on the vast and open Santa Monica Bay, morning
+  fog is a common phenomenon in May, June and early July.
+
+employers:
+- name: City of Santa Monica
+  number_of_employees: 2_528
+- name: UCLA Medical Center
+  number_of_employees: 2_079
+- name: Santa Monica College
+  number_of_employees: 1_953

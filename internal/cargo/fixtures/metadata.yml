@@ -16,3 +16,5 @@ variables:
 
 job_types:
 - name: some-job-type-name
+- name: other-job-type-name
+  errand: true

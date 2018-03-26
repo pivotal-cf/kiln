@@ -1,10 +1,12 @@
 package builder_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/builder"
 	yaml "gopkg.in/yaml.v2"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/pivotal-cf-experimental/gomegamatchers"
 )
 
 var _ = Describe("interpolator", func() {
@@ -108,7 +110,7 @@ selected_value: $( release "some-release" | select "version" )
 	It("interpolates metadata templates", func() {
 		interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(interpolatedYAML).To(MatchYAML(`
+		Expect(interpolatedYAML).To(HelpfullyMatchYAML(`
 name: some-value
 icon_img: some-icon-image
 some_releases:
@@ -170,7 +172,7 @@ some_form_types:
 
 		interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(interpolatedYAML).To(MatchYAML(`
+		Expect(interpolatedYAML).To(HelpfullyMatchYAML(`
 some_form_types:
 - name: some-form
   label: variable-form-label
@@ -222,7 +224,7 @@ some_runtime_configs:
 			Expect(ok).To(BeTrue())
 
 			Expect(config).To(HaveKeyWithValue("name", "some-runtime-config"))
-			Expect(config["runtime_config"]).To(MatchYAML(`
+			Expect(config["runtime_config"]).To(HelpfullyMatchYAML(`
 releases:
 - file: some-release-1.2.3.tgz
   name: some-release
@@ -241,7 +243,7 @@ releases:
 			It("does not error", func() {
 				interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(interpolatedYAML).To(MatchYAML(`
+				Expect(interpolatedYAML).To(HelpfullyMatchYAML(`
 some_runtime_configs:
 - name: some-runtime-config
 `))

@@ -16,6 +16,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/pivotal-cf-experimental/gomegamatchers"
 )
 
 var _ = Describe("bake command", func() {
@@ -323,7 +324,7 @@ some-literal-variable: |
 		Expect(err).NotTo(HaveOccurred())
 
 		renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
-		Expect(metadataContents).To(MatchYAML(renderedYAML))
+		Expect(metadataContents).To(HelpfullyMatchYAML(renderedYAML))
 
 		// Bosh Variables
 		Expect(string(metadataContents)).To(ContainSubstring("name: variable-1"))

@@ -28,3 +28,9 @@ instance_groups:
   azs:
   - some-az-1
   - some-az-2
+  lifecycle: service
+- name: other-job-type-name
+  azs:
+  - some-az-1
+  - some-az-2
+  lifecycle: errand

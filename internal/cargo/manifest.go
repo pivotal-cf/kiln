@@ -36,6 +36,7 @@ type Variable struct {
 }
 
 type InstanceGroup struct {
-	Name string   `yaml:"name"`
-	AZs  []string `yaml:"azs"`
+	Name      string   `yaml:"name"`
+	AZs       []string `yaml:"azs"`
+	Lifecycle string   `yaml:"lifecycle"`
 }
