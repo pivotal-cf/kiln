@@ -3,6 +3,7 @@ package cargo
 import (
 	"github.com/pivotal-cf/kiln/internal/cargo/opsman"
 	"github.com/pivotal-cf/kiln/internal/proofing"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type OpsManagerConfig struct {
@@ -95,16 +96,58 @@ func generateInstanceGroups(jobTypes []proofing.JobType, resourceConfigs []opsma
 			}
 		}
 
+		var jobs []InstanceGroupJob
+		for _, template := range jobType.Templates {
+			provides, err := evaluateManifestSnippet(template.Provides)
+			if err != nil {
+				panic(err)
+			}
+
+			consumes, err := evaluateManifestSnippet(template.Consumes)
+			if err != nil {
+				panic(err)
+			}
+
+			properties, err := evaluateManifestSnippet(template.Manifest)
+			if err != nil {
+				panic(err)
+			}
+
+			jobs = append(jobs, InstanceGroupJob{
+				Name:       template.Name,
+				Release:    template.Release,
+				Provides:   provides,
+				Consumes:   consumes,
+				Properties: properties,
+			})
+		}
+
 		instanceGroups = append(instanceGroups, InstanceGroup{
 			Name:      jobType.Name,
 			AZs:       availabilityZones,
 			Lifecycle: lifecycle,
 			Stemcell:  stemcellAlias,
 			Instances: instances,
+			Jobs:      jobs,
 		})
 	}
 
 	return instanceGroups
+}
+
+func evaluateManifestSnippet(snippet string) (interface{}, error) {
+	var result interface{}
+
+	if snippet == "" {
+		snippet = "{}"
+	}
+
+	err := yaml.Unmarshal([]byte(snippet), &result)
+	if err != nil {
+		panic(err)
+	}
+
+	return result, nil
 }
 
 func generateVariables(templateVariables []proofing.Variable) []Variable {

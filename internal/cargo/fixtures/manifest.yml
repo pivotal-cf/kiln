@@ -31,6 +31,25 @@ instance_groups:
   lifecycle: service
   stemcell: some-stemcell-name
   instances: 1
+  jobs:
+  - name: some-template-name
+    release: some-release-name
+    provides:
+      client:
+        as: some-client
+        shared: true
+      server:
+        as: some-server
+        shared: true
+    consumes:
+      client:
+        from: some-client
+      server:
+        from: some-server
+    properties:
+      key-1: value-1
+      key-2:
+        key-3: value-2
 
 - name: other-job-type-name
   azs:
@@ -39,3 +58,16 @@ instance_groups:
   lifecycle: errand
   stemcell: some-stemcell-name
   instances: 2
+  jobs:
+  - name: other-template-name
+    release: some-release-name
+    provides: {}
+    consumes:
+      client:
+        from: some-client
+      server:
+        from: some-server
+    properties:
+      key-1: value-1
+      key-2:
+        key-3: value-2

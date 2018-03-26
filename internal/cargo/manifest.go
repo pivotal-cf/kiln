@@ -36,9 +36,18 @@ type Variable struct {
 }
 
 type InstanceGroup struct {
-	Name      string   `yaml:"name"`
-	AZs       []string `yaml:"azs"`
-	Lifecycle string   `yaml:"lifecycle"`
-	Stemcell  string   `yaml:"stemcell"`
-	Instances int      `yaml:"instances"`
+	Name      string             `yaml:"name"`
+	AZs       []string           `yaml:"azs"`
+	Lifecycle string             `yaml:"lifecycle"`
+	Stemcell  string             `yaml:"stemcell"`
+	Instances int                `yaml:"instances"`
+	Jobs      []InstanceGroupJob `yaml:"jobs"`
+}
+
+type InstanceGroupJob struct {
+	Name       string      `yaml:"name"`
+	Release    string      `yaml:"release"`
+	Provides   interface{} `yaml:"provides"`
+	Consumes   interface{} `yaml:"consumes"`
+	Properties interface{} `yaml:"properties"`
 }

@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
+	"github.com/pivotal-cf/kiln/internal/cargo/opsman"
 	"github.com/pivotal-cf/kiln/internal/proofing"
 	yaml "gopkg.in/yaml.v2"
 
@@ -25,6 +26,18 @@ var _ = Describe("Acceptance", func() {
 
 		manifest := generator.Execute(productTemplate, cargo.OpsManagerConfig{
 			DeploymentName: "cf-1234",
+			AvailabilityZones: []string{
+				"us-central1-a",
+				"us-central1-b",
+				"us-central1-c",
+			},
+			Stemcells: []opsman.Stemcell{
+				{
+					Name:    "bosh-google-kvm-ubuntu-trusty-go_agent",
+					OS:      "ubuntu-trusty",
+					Version: "3468.27",
+				},
+			},
 		})
 
 		actualManifest, err := yaml.Marshal(manifest)
