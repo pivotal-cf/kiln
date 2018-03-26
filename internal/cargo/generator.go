@@ -96,36 +96,8 @@ func generateInstanceGroups(jobTypes []proofing.JobType, resourceConfigs []opsma
 			}
 		}
 
-		var jobs []InstanceGroupJob
-		for _, template := range jobType.Templates {
-			provides, err := evaluateManifestSnippet(template.Provides)
-			if err != nil {
-				panic(err)
-			}
-
-			consumes, err := evaluateManifestSnippet(template.Consumes)
-			if err != nil {
-				panic(err)
-			}
-
-			properties, err := evaluateManifestSnippet(template.Manifest)
-			if err != nil {
-				panic(err)
-			}
-
-			jobs = append(jobs, InstanceGroupJob{
-				Name:       template.Name,
-				Release:    template.Release,
-				Provides:   provides,
-				Consumes:   consumes,
-				Properties: properties,
-			})
-		}
-
-		properties, err := evaluateManifestSnippet(jobType.Manifest)
-		if err != nil {
-			panic(err)
-		}
+		jobs := generateInstanceGroupJobs(jobType.Templates)
+		properties := evaluateManifestSnippet(jobType.Manifest)
 
 		instanceGroups = append(instanceGroups, InstanceGroup{
 			Name:       jobType.Name,
@@ -141,7 +113,27 @@ func generateInstanceGroups(jobTypes []proofing.JobType, resourceConfigs []opsma
 	return instanceGroups
 }
 
-func evaluateManifestSnippet(snippet string) (interface{}, error) {
+func generateInstanceGroupJobs(templates []proofing.Template) []InstanceGroupJob {
+	var jobs []InstanceGroupJob
+
+	for _, template := range templates {
+		provides := evaluateManifestSnippet(template.Provides)
+		consumes := evaluateManifestSnippet(template.Consumes)
+		properties := evaluateManifestSnippet(template.Manifest)
+
+		jobs = append(jobs, InstanceGroupJob{
+			Name:       template.Name,
+			Release:    template.Release,
+			Provides:   provides,
+			Consumes:   consumes,
+			Properties: properties,
+		})
+	}
+
+	return jobs
+}
+
+func evaluateManifestSnippet(snippet string) interface{} {
 	var result interface{}
 
 	if snippet == "" {
@@ -153,7 +145,7 @@ func evaluateManifestSnippet(snippet string) (interface{}, error) {
 		panic(err)
 	}
 
-	return result, nil
+	return result
 }
 
 func generateVariables(templateVariables []proofing.Variable) []Variable {
