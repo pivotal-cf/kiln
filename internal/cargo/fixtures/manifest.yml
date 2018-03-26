@@ -29,8 +29,11 @@ instance_groups:
   - some-az-1
   - some-az-2
   lifecycle: service
+  stemcell: some-stemcell-name
+
 - name: other-job-type-name
   azs:
   - some-az-1
   - some-az-2
   lifecycle: errand
+  stemcell: some-stemcell-name

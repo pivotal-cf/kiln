@@ -20,15 +20,15 @@ func (g Generator) Execute(name string, template proofing.ProductTemplate, boshS
 		})
 	}
 
-	var stemcells []Stemcell
+	var stemcell Stemcell
 	for _, boshStemcell := range boshStemcells {
 		if boshStemcell.OS == template.StemcellCriteria.OS {
 			if boshStemcell.Version == template.StemcellCriteria.Version {
-				stemcells = append(stemcells, Stemcell{
+				stemcell = Stemcell{
 					Alias:   boshStemcell.Name,
 					OS:      boshStemcell.OS,
 					Version: boshStemcell.Version,
-				})
+				}
 			}
 		}
 	}
@@ -53,6 +53,7 @@ func (g Generator) Execute(name string, template proofing.ProductTemplate, boshS
 			Name:      jobType.Name,
 			AZs:       availabilityZones,
 			Lifecycle: lifecycle,
+			Stemcell:  stemcell.Alias,
 		})
 	}
 
@@ -68,7 +69,7 @@ func (g Generator) Execute(name string, template proofing.ProductTemplate, boshS
 	return Manifest{
 		Name:           name,
 		Releases:       releases,
-		Stemcells:      stemcells,
+		Stemcells:      []Stemcell{stemcell},
 		Update:         update,
 		Variables:      variables,
 		InstanceGroups: instanceGroups,
