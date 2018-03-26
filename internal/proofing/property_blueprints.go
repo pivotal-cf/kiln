@@ -35,7 +35,7 @@ func (pb *PropertyBlueprints) UnmarshalYAML(unmarshal func(v interface{}) error)
 			*pb = append(*pb, propertyBlueprint)
 		}
 		if err != nil {
-			return err
+			return err // NOTE: this cannot happen, the YAML has already been unmarshalled
 		}
 	}
 

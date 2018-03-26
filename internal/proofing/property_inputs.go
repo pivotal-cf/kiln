@@ -40,7 +40,7 @@ func (pi *PropertyInputs) UnmarshalYAML(unmarshal func(v interface{}) error) err
 			*pi = append(*pi, propertyInput)
 		}
 		if err != nil {
-			return err
+			return err // NOTE: this cannot happen, the YAML has already been unmarshalled
 		}
 	}
 

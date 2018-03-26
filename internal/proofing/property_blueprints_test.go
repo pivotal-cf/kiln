@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/pivotal-cf/kiln/internal/proofing"
-	yaml "gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -34,17 +33,6 @@ var _ = Describe("PropertyBlueprints", func() {
 					return errors.New("unmarshal failed")
 				})
 				Expect(err).To(MatchError("unmarshal failed"))
-			})
-		})
-
-		Context("when the YAML contains unknown fields", func() {
-			It("returns an error", func() {
-				propertyBlueprints := proofing.PropertyBlueprints([]proofing.PropertyBlueprint{})
-
-				err := propertyBlueprints.UnmarshalYAML(func(v interface{}) error {
-					return yaml.Unmarshal([]byte(`[foo: bar]`), v)
-				})
-				Expect(err).To(MatchError(ContainSubstring("field foo not found")))
 			})
 		})
 	})
