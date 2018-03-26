@@ -11,7 +11,7 @@ func NewGenerator() Generator {
 	return Generator{}
 }
 
-func (g Generator) Execute(name string, template proofing.ProductTemplate, boshStemcells []bosh.Stemcell) Manifest {
+func (g Generator) Execute(name string, template proofing.ProductTemplate, boshStemcells []bosh.Stemcell, availabilityZones []string) Manifest {
 	var releases []Release
 	for _, release := range template.Releases {
 		releases = append(releases, Release{
@@ -42,10 +42,29 @@ func (g Generator) Execute(name string, template proofing.ProductTemplate, boshS
 		Serial:          template.Serial,
 	}
 
+	var instanceGroups []InstanceGroup
+	for _, jobType := range template.JobTypes {
+		instanceGroups = append(instanceGroups, InstanceGroup{
+			Name: jobType.Name,
+			AZs:  availabilityZones,
+		})
+	}
+
+	var variables []Variable
+	for _, variable := range template.Variables {
+		variables = append(variables, Variable{
+			Name:    variable.Name,
+			Options: variable.Options,
+			Type:    variable.Type,
+		})
+	}
+
 	return Manifest{
-		Name:      name,
-		Releases:  releases,
-		Stemcells: stemcells,
-		Update:    update,
+		Name:           name,
+		Releases:       releases,
+		Stemcells:      stemcells,
+		Update:         update,
+		Variables:      variables,
+		InstanceGroups: instanceGroups,
 	}
 }

@@ -23,9 +23,10 @@ var _ = Describe("Acceptance", func() {
 		productTemplate, err := proofing.Parse("fixtures/acceptance/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		stemcells := []bosh.Stemcell{}
+		var stemcells []bosh.Stemcell
+		var availabilityZones []string
 
-		manifest := generator.Execute("cf-1234", productTemplate, stemcells)
+		manifest := generator.Execute("cf-1234", productTemplate, stemcells, availabilityZones)
 
 		actualManifest, err := yaml.Marshal(manifest)
 		Expect(err).NotTo(HaveOccurred())

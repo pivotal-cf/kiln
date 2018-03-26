@@ -1,10 +1,12 @@
 package cargo
 
 type Manifest struct {
-	Name      string     `yaml:"name"`
-	Releases  []Release  `yaml:"releases"`
-	Stemcells []Stemcell `yaml:"stemcells"`
-	Update    Update     `yaml:"update"`
+	Name           string          `yaml:"name"`
+	Releases       []Release       `yaml:"releases"`
+	Stemcells      []Stemcell      `yaml:"stemcells"`
+	Update         Update          `yaml:"update"`
+	Variables      []Variable      `yaml:"variables"`
+	InstanceGroups []InstanceGroup `yaml:"instance_groups"`
 }
 
 type Release struct {
@@ -25,4 +27,15 @@ type Update struct {
 	MaxInFlight     int    `yaml:"max_in_flight"`
 	MaxErrors       int    `yaml:"max_errors"`
 	Serial          bool   `yaml:"serial"`
+}
+
+type Variable struct {
+	Name    string      `yaml:"name"`
+	Options interface{} `yaml:"options"`
+	Type    string      `yaml:"type"`
+}
+
+type InstanceGroup struct {
+	Name string   `yaml:"name"`
+	AZs  []string `yaml:"azs"`
 }

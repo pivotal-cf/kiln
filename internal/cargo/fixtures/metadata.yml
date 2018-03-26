@@ -8,3 +8,11 @@ stemcell_criteria:
   version: some-stemcell-version
 
 serial: true
+
+variables:
+- name: some-variable-name
+  options: some-variable-options
+  type: some-variable-type
+
+job_types:
+- name: some-job-type-name

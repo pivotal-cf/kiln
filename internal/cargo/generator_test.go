@@ -37,7 +37,12 @@ var _ = Describe("Generator", func() {
 				},
 			}
 
-			manifest := generator.Execute("some-product-name", template, stemcells)
+			availabilityZones := []string{
+				"some-az-1",
+				"some-az-2",
+			}
+
+			manifest := generator.Execute("some-product-name", template, stemcells, availabilityZones)
 
 			actualManifest, err := yaml.Marshal(manifest)
 			Expect(err).NotTo(HaveOccurred())

@@ -17,3 +17,14 @@ update:
   max_in_flight: 1
   max_errors: 2
   serial: true
+
+variables:
+- name: some-variable-name
+  options: some-variable-options
+  type: some-variable-type
+
+instance_groups:
+- name: some-job-type-name
+  azs:
+  - some-az-1
+  - some-az-2
