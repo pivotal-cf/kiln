@@ -13,7 +13,7 @@ func Parse(path string) (ProductTemplate, error) {
 	}
 
 	var productTemplate ProductTemplate
-	err = yaml.UnmarshalStrict(contents, &productTemplate)
+	err = yaml.Unmarshal(contents, &productTemplate)
 	if err != nil {
 		return ProductTemplate{}, err
 	}

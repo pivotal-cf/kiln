@@ -28,15 +28,15 @@ func (pi *PropertyInputs) UnmarshalYAML(unmarshal func(v interface{}) error) err
 		switch {
 		case contains(sniff, "selector_property_inputs"):
 			var propertyInput SelectorPropertyInput
-			err = yaml.UnmarshalStrict(contents, &propertyInput)
+			err = yaml.Unmarshal(contents, &propertyInput)
 			*pi = append(*pi, propertyInput)
 		case contains(sniff, "property_inputs"):
 			var propertyInput CollectionPropertyInput
-			err = yaml.UnmarshalStrict(contents, &propertyInput)
+			err = yaml.Unmarshal(contents, &propertyInput)
 			*pi = append(*pi, propertyInput)
 		default:
 			var propertyInput SimplePropertyInput
-			err = yaml.UnmarshalStrict(contents, &propertyInput)
+			err = yaml.Unmarshal(contents, &propertyInput)
 			*pi = append(*pi, propertyInput)
 		}
 		if err != nil {

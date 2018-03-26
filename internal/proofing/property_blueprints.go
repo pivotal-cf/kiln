@@ -23,15 +23,15 @@ func (pb *PropertyBlueprints) UnmarshalYAML(unmarshal func(v interface{}) error)
 		switch sniff["type"] {
 		case "selector":
 			var propertyBlueprint SelectorPropertyBlueprint
-			err = yaml.UnmarshalStrict(contents, &propertyBlueprint)
+			err = yaml.Unmarshal(contents, &propertyBlueprint)
 			*pb = append(*pb, propertyBlueprint)
 		case "collection":
 			var propertyBlueprint CollectionPropertyBlueprint
-			err = yaml.UnmarshalStrict(contents, &propertyBlueprint)
+			err = yaml.Unmarshal(contents, &propertyBlueprint)
 			*pb = append(*pb, propertyBlueprint)
 		default:
 			var propertyBlueprint SimplePropertyBlueprint
-			err = yaml.UnmarshalStrict(contents, &propertyBlueprint)
+			err = yaml.Unmarshal(contents, &propertyBlueprint)
 			*pb = append(*pb, propertyBlueprint)
 		}
 		if err != nil {
