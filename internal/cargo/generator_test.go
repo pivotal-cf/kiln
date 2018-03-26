@@ -1,9 +1,12 @@
 package cargo_test
 
 import (
+	"io/ioutil"
+
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/internal/cargo/bosh"
 	"github.com/pivotal-cf/kiln/internal/proofing"
+	yaml "gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,19 +21,8 @@ var _ = Describe("Generator", func() {
 
 	Describe("Execute", func() {
 		It("generates a well-formed manifest", func() {
-			template := proofing.ProductTemplate{
-				Releases: []proofing.Release{
-					{
-						Name:    "some-release-name",
-						Version: "some-release-version",
-					},
-				},
-				StemcellCriteria: proofing.StemcellCriteria{
-					OS:      "some-stemcell-os",
-					Version: "some-stemcell-version",
-				},
-				Serial: true,
-			}
+			template, err := proofing.Parse("fixtures/metadata.yml")
+			Expect(err).NotTo(HaveOccurred())
 
 			stemcells := []bosh.Stemcell{
 				{
@@ -46,30 +38,14 @@ var _ = Describe("Generator", func() {
 			}
 
 			manifest := generator.Execute("some-product-name", template, stemcells)
-			Expect(manifest).To(Equal(cargo.Manifest{
-				Name: "some-product-name",
-				Releases: []cargo.Release{
-					{
-						Name:    "some-release-name",
-						Version: "some-release-version",
-					},
-				},
-				Stemcells: []cargo.Stemcell{
-					{
-						Alias:   "some-stemcell-name",
-						OS:      "some-stemcell-os",
-						Version: "some-stemcell-version",
-					},
-				},
-				Update: cargo.Update{
-					Canaries:        1,
-					CanaryWatchTime: "30000-300000",
-					UpdateWatchTime: "30000-300000",
-					MaxInFlight:     1,
-					MaxErrors:       2,
-					Serial:          true,
-				},
-			}))
+
+			actualManifest, err := yaml.Marshal(manifest)
+			Expect(err).NotTo(HaveOccurred())
+
+			expectedManifest, err := ioutil.ReadFile("fixtures/manifest.yml")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(actualManifest).To(MatchYAML(string(expectedManifest)))
 		})
 	})
 })

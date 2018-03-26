@@ -1,0 +1,10 @@
+---
+releases:
+- name: some-release-name
+  version: some-release-version
+
+stemcell_criteria:
+  os: some-stemcell-os
+  version: some-stemcell-version
+
+serial: true

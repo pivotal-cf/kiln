@@ -1,28 +1,28 @@
 package cargo
 
 type Manifest struct {
-	Name      string
-	Releases  []Release
-	Stemcells []Stemcell
-	Update    Update
+	Name      string     `yaml:"name"`
+	Releases  []Release  `yaml:"releases"`
+	Stemcells []Stemcell `yaml:"stemcells"`
+	Update    Update     `yaml:"update"`
 }
 
 type Release struct {
-	Name    string
-	Version string
+	Name    string `yaml:"name"`
+	Version string `yaml:"version"`
 }
 
 type Stemcell struct {
-	Alias   string
-	OS      string
-	Version string
+	Alias   string `yaml:"alias"`
+	OS      string `yaml:"os"`
+	Version string `yaml:"version"`
 }
 
 type Update struct {
-	Canaries        int
-	CanaryWatchTime string
-	UpdateWatchTime string
-	MaxInFlight     int
-	MaxErrors       int
-	Serial          bool
+	Canaries        int    `yaml:"canaries"`
+	CanaryWatchTime string `yaml:"canary_watch_time"`
+	UpdateWatchTime string `yaml:"update_watch_time"`
+	MaxInFlight     int    `yaml:"max_in_flight"`
+	MaxErrors       int    `yaml:"max_errors"`
+	Serial          bool   `yaml:"serial"`
 }
