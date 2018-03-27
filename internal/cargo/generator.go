@@ -2,7 +2,7 @@ package cargo
 
 import (
 	"github.com/pivotal-cf/kiln/internal/cargo/opsman"
-	"github.com/pivotal-cf/kiln/internal/proofing"
+	"github.com/pivotal-cf/kiln/proofing"
 	yaml "gopkg.in/yaml.v2"
 )
 

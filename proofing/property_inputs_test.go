@@ -3,7 +3,7 @@ package proofing_test
 import (
 	"errors"
 
-	"github.com/pivotal-cf/kiln/internal/proofing"
+	"github.com/pivotal-cf/kiln/proofing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -9,5 +9,5 @@ import (
 
 func TestProofing(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "internal/proofing")
+	RunSpecs(t, "proofing")
 }
