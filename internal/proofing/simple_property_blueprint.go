@@ -1,5 +1,7 @@
 package proofing
 
+import "fmt"
+
 type SimplePropertyBlueprint struct {
 	Name           string                    `yaml:"name"`
 	Type           string                    `yaml:"type"`
@@ -15,6 +17,10 @@ type SimplePropertyBlueprint struct {
 	ResourceDefinitions []ResourceDefinition `yaml:"resource_definitions"`
 
 	// TODO: validations: https://github.com/pivotal-cf/installation/blob/039a2ef3f751ef5915c425da8150a29af4b764dd/web/app/models/persistence/metadata/property_blueprint.rb#L27-L39
+}
+
+func (sp SimplePropertyBlueprint) FullName(prefix string) string {
+	return fmt.Sprintf("%s.%s", prefix, sp.Name)
 }
 
 type PropertyBlueprintOption struct {

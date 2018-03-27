@@ -2,7 +2,7 @@
 property_blueprints:
 
 # Simple Property Blueprint
-- name: some-name
+- name: some-simple-name
   type: some-type
   default: some-default
   constraints: some-constraints
@@ -21,13 +21,13 @@ property_blueprints:
   constraints: some-constraints
   default: some-default
   freeze_on_deploy: true
-  name: some-name
+  name: some-selector-name
   optional: true
   options:
   - label: some-label
     name: some-name
   option_templates:
-  - name: some-name
+  - name: some-option-template-name
     named_manifests:
     - manifest: some-manifest
       name: some-name
@@ -35,7 +35,7 @@ property_blueprints:
     - configurable: true
       constraints: some-constraints
       default: 1
-      name: some-name
+      name: some-nested-simple-name
       optional: true
       options:
       - label: some-label
@@ -53,7 +53,7 @@ property_blueprints:
 # Collection Property Blueprint
 - configurable: true
   default: some-default
-  name: some-name
+  name: some-collection-name
   type: collection
   constraints: some-constraints
   named_manifests:
@@ -66,10 +66,21 @@ property_blueprints:
   property_blueprints:
   - configurable: true
     default: some-default
-    name: some-name
+    name: some-nested-simple-name
     type: some-type
   resource_definitions:
   - configurable: true
     constraints: some-constraints
     default: 1234
     name: some-name
+
+# Instance Group Property Blueprint
+job_types:
+- name: some-job-type-name
+  property_blueprints:
+  - configurable: true
+    constraints: some-constraints
+    default: some-default
+    name: some-name
+    optional: true
+    type: some-type

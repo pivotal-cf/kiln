@@ -44,4 +44,50 @@ var _ = Describe("ProductTemplate", func() {
 		Expect(productTemplate.StemcellCriteria).To(BeAssignableToTypeOf(proofing.StemcellCriteria{}))
 		Expect(productTemplate.Variables).To(HaveLen(1))
 	})
+
+	Describe("AllPropertyBlueprints", func() {
+		BeforeEach(func() {
+			var err error
+			productTemplate, err = proofing.Parse("fixtures/property_blueprints.yml")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns all property blueprints as a list", func() {
+			propertyBlueprints := productTemplate.AllPropertyBlueprints()
+
+			Expect(propertyBlueprints).To(HaveLen(6))
+
+			Expect(propertyBlueprints).To(HaveKey(".properties.some-simple-name"))
+			simplePB, ok := propertyBlueprints[".properties.some-simple-name"].(proofing.SimplePropertyBlueprint)
+			Expect(ok).To(BeTrue())
+			Expect(simplePB.Name).To(Equal("some-simple-name"))
+
+			Expect(propertyBlueprints).To(HaveKey(".properties.some-selector-name"))
+			selectorPB, ok := propertyBlueprints[".properties.some-selector-name"].(proofing.SelectorPropertyBlueprint)
+			Expect(ok).To(BeTrue())
+			Expect(selectorPB.Name).To(Equal("some-selector-name"))
+
+			Expect(propertyBlueprints).To(HaveKey(".properties.some-selector-name.some-option-template-name.some-nested-simple-name"))
+			nestedSimplePB, ok :=
+				propertyBlueprints[".properties.some-selector-name.some-option-template-name.some-nested-simple-name"].(proofing.SimplePropertyBlueprint)
+			Expect(ok).To(BeTrue())
+			Expect(nestedSimplePB.Name).To(Equal("some-nested-simple-name"))
+
+			Expect(propertyBlueprints).To(HaveKey(".properties.some-collection-name"))
+			collectionPB, ok := propertyBlueprints[".properties.some-collection-name"].(proofing.CollectionPropertyBlueprint)
+			Expect(ok).To(BeTrue())
+			Expect(collectionPB.Name).To(Equal("some-collection-name"))
+
+			Expect(propertyBlueprints).To(HaveKey(".properties.some-collection-name.some-nested-simple-name"))
+			nestedSimplePB, ok =
+				propertyBlueprints[".properties.some-collection-name.some-nested-simple-name"].(proofing.SimplePropertyBlueprint)
+			Expect(ok).To(BeTrue())
+			Expect(nestedSimplePB.Name).To(Equal("some-nested-simple-name"))
+
+			Expect(propertyBlueprints).To(HaveKey(".some-job-type-name.some-name"))
+			jobTypePB, ok := propertyBlueprints[".some-job-type-name.some-name"].(proofing.SimplePropertyBlueprint)
+			Expect(ok).To(BeTrue())
+			Expect(jobTypePB.Name).To(Equal("some-name"))
+		})
+	})
 })

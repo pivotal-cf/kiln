@@ -2,7 +2,9 @@ package proofing
 
 import yaml "gopkg.in/yaml.v2"
 
-type PropertyBlueprint interface{}
+type PropertyBlueprint interface {
+	FullName(prefix string) string
+}
 
 type PropertyBlueprints []PropertyBlueprint
 

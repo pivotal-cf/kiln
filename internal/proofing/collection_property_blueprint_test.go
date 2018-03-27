@@ -20,7 +20,7 @@ var _ = Describe("CollectionPropertyBlueprint", func() {
 	})
 
 	It("parses their structure", func() {
-		Expect(collectionPropertyBlueprint.Name).To(Equal("some-name"))
+		Expect(collectionPropertyBlueprint.Name).To(Equal("some-collection-name"))
 		Expect(collectionPropertyBlueprint.Type).To(Equal("collection"))
 		Expect(collectionPropertyBlueprint.Default).To(Equal("some-default"))
 		Expect(collectionPropertyBlueprint.Constraints).To(Equal("some-constraints"))
