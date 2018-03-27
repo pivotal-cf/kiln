@@ -26,7 +26,6 @@ var _ = Describe("SelectorPropertyBlueprint", func() {
 		Expect(selectorPropertyBlueprint.FreezeOnDeploy).To(BeTrue())
 		Expect(selectorPropertyBlueprint.Name).To(Equal("some-selector-name"))
 		Expect(selectorPropertyBlueprint.Optional).To(BeTrue())
-		Expect(selectorPropertyBlueprint.Options).To(HaveLen(1))
 		Expect(selectorPropertyBlueprint.Type).To(Equal("selector"))
 		Expect(selectorPropertyBlueprint.Unique).To(BeTrue())
 		Expect(selectorPropertyBlueprint.ResourceDefinitions).To(HaveLen(1))

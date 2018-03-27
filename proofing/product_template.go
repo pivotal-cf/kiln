@@ -68,7 +68,21 @@ func (pt ProductTemplate) AllPropertyBlueprints() map[string]PropertyBlueprint {
 
 	for _, jobType := range pt.JobTypes {
 		for _, pb := range jobType.PropertyBlueprints {
-			propertyBlueprints[pb.FullName(fmt.Sprintf(".%s", jobType.Name))] = pb
+			prefix := fmt.Sprintf(".%s", jobType.Name)
+			propertyBlueprints[pb.FullName(prefix)] = pb
+			switch nestedPB := pb.(type) {
+			case SelectorPropertyBlueprint:
+				for _, optionTemplate := range nestedPB.OptionTemplates {
+					for _, otpb := range optionTemplate.PropertyBlueprints {
+						propertyBlueprints[otpb.FullName(fmt.Sprintf("%s.%s", pb.FullName(prefix), optionTemplate.Name))] = otpb
+					}
+				}
+			case CollectionPropertyBlueprint:
+				for _, cpb := range nestedPB.PropertyBlueprints {
+					propertyBlueprints[cpb.FullName(pb.FullName(prefix))] = cpb
+				}
+			}
+
 		}
 	}
 

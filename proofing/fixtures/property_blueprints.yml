@@ -23,9 +23,6 @@ property_blueprints:
   freeze_on_deploy: true
   name: some-selector-name
   optional: true
-  options:
-  - label: some-label
-    name: some-name
   option_templates:
   - name: some-option-template-name
     named_manifests:
@@ -60,9 +57,6 @@ property_blueprints:
   - manifest: some-manifest
     name: some-name
   optional: true
-  options:
-  - label: some-label
-    name: some-name
   property_blueprints:
   - configurable: true
     default: some-default
@@ -84,3 +78,27 @@ job_types:
     name: some-name
     optional: true
     type: some-type
+  - configurable: true
+    default: some-default
+    name: some-nested-collection-name
+    type: collection
+    property_blueprints:
+    - configurable: true
+      default: some-default
+      name: some-nested-simple-name
+      type: some-type
+  - configurable: true
+    default: some-default
+    name: some-nested-selector-name
+    optional: true
+    option_templates:
+    - name: some-option-template-name
+      property_blueprints:
+      - configurable: true
+        constraints: some-constraints
+        default: 1
+        name: some-nested-simple-name
+        optional: true
+        type: some-type
+      select_value: some-select-value
+    type: selector
