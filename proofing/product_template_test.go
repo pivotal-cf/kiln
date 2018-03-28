@@ -63,63 +63,47 @@ var _ = Describe("ProductTemplate", func() {
 		It("returns all property blueprints as a list", func() {
 			propertyBlueprints := productTemplate.AllPropertyBlueprints()
 
-			Expect(propertyBlueprints).To(HaveLen(10))
+			Expect(propertyBlueprints).To(HaveLen(8))
 
-			Expect(propertyBlueprints).To(HaveKey(".properties.some-simple-name"))
-			simplePB, ok := propertyBlueprints[".properties.some-simple-name"].(proofing.SimplePropertyBlueprint)
-			Expect(ok).To(BeTrue())
-			Expect(simplePB.Name).To(Equal("some-simple-name"))
+			simpleBlueprint := propertyBlueprints[0]
+			Expect(simpleBlueprint.Property).To(Equal(".properties.some-simple-name"))
+			Expect(simpleBlueprint.Default).To(Equal("some-default"))
+			Expect(simpleBlueprint.Configurable).To(BeTrue())
 
-			Expect(propertyBlueprints).To(HaveKey(".properties.some-selector-name"))
-			selectorPB, ok := propertyBlueprints[".properties.some-selector-name"].(proofing.SelectorPropertyBlueprint)
-			Expect(ok).To(BeTrue())
-			Expect(selectorPB.Name).To(Equal("some-selector-name"))
+			selectorBlueprint := propertyBlueprints[1]
+			Expect(selectorBlueprint.Property).To(Equal(".properties.some-selector-name"))
+			Expect(selectorBlueprint.Configurable).To(BeTrue())
 
-			Expect(propertyBlueprints).To(HaveKey(".properties.some-selector-name.some-option-template-name.some-nested-simple-name"))
-			nestedSimplePB, ok :=
-				propertyBlueprints[".properties.some-selector-name.some-option-template-name.some-nested-simple-name"].(proofing.SimplePropertyBlueprint)
-			Expect(ok).To(BeTrue())
-			Expect(nestedSimplePB.Name).To(Equal("some-nested-simple-name"))
+			selectorOptionBlueprint := propertyBlueprints[2]
+			Expect(selectorOptionBlueprint.Property).To(Equal(
+				".properties.some-selector-name.some-option-template-name.some-nested-simple-name"))
+			Expect(selectorOptionBlueprint.Default).To(Equal(1))
+			Expect(selectorOptionBlueprint.Configurable).To(BeTrue())
 
-			Expect(propertyBlueprints).To(HaveKey(".properties.some-collection-name"))
-			collectionPB, ok := propertyBlueprints[".properties.some-collection-name"].(proofing.CollectionPropertyBlueprint)
-			Expect(ok).To(BeTrue())
-			Expect(collectionPB.Name).To(Equal("some-collection-name"))
+			collection := propertyBlueprints[3]
+			Expect(collection.Property).To(Equal(".properties.some-collection-name"))
+			Expect(collection.Configurable).To(BeTrue())
 
-			Expect(propertyBlueprints).To(HaveKey(".properties.some-collection-name.some-nested-simple-name"))
-			nestedSimplePB, ok =
-				propertyBlueprints[".properties.some-collection-name.some-nested-simple-name"].(proofing.SimplePropertyBlueprint)
-			Expect(ok).To(BeTrue())
-			Expect(nestedSimplePB.Name).To(Equal("some-nested-simple-name"))
+			instanceGroupBlueprint := propertyBlueprints[4]
+			Expect(instanceGroupBlueprint.Property).To(Equal(".some-job-type-name.some-name"))
+			Expect(instanceGroupBlueprint.Default).To(Equal("some-default"))
+			Expect(instanceGroupBlueprint.Configurable).To(BeTrue())
 
-			Expect(propertyBlueprints).To(HaveKey(".some-job-type-name.some-name"))
-			jobTypePB, ok := propertyBlueprints[".some-job-type-name.some-name"].(proofing.SimplePropertyBlueprint)
-			Expect(ok).To(BeTrue())
-			Expect(jobTypePB.Name).To(Equal("some-name"))
+			instanceGroupCollection := propertyBlueprints[5]
+			Expect(instanceGroupCollection.Property).To(Equal(
+				".some-job-type-name.some-nested-collection-name"))
+			Expect(instanceGroupCollection.Configurable).To(BeTrue())
 
-			Expect(propertyBlueprints).To(HaveKey(".some-job-type-name.some-nested-collection-name"))
-			nestedCollectionPB, ok :=
-				propertyBlueprints[".some-job-type-name.some-nested-collection-name"].(proofing.CollectionPropertyBlueprint)
-			Expect(ok).To(BeTrue())
-			Expect(nestedCollectionPB.Name).To(Equal("some-nested-collection-name"))
+			instanceGroupSelector := propertyBlueprints[6]
+			Expect(instanceGroupSelector.Property).To(Equal(
+				".some-job-type-name.some-nested-selector-name"))
+			Expect(instanceGroupSelector.Configurable).To(BeTrue())
 
-			Expect(propertyBlueprints).To(HaveKey(".some-job-type-name.some-nested-collection-name.some-nested-simple-name"))
-			nestedSimplePB, ok =
-				propertyBlueprints[".some-job-type-name.some-nested-collection-name.some-nested-simple-name"].(proofing.SimplePropertyBlueprint)
-			Expect(ok).To(BeTrue())
-			Expect(nestedSimplePB.Name).To(Equal("some-nested-simple-name"))
-
-			Expect(propertyBlueprints).To(HaveKey(".some-job-type-name.some-nested-selector-name"))
-			selectorPB, ok = propertyBlueprints[".some-job-type-name.some-nested-selector-name"].(proofing.SelectorPropertyBlueprint)
-			Expect(ok).To(BeTrue())
-			Expect(selectorPB.Name).To(Equal("some-nested-selector-name"))
-
-			Expect(propertyBlueprints).To(HaveKey(".some-job-type-name.some-nested-selector-name.some-option-template-name.some-nested-simple-name"))
-			nestedSimplePB, ok =
-				propertyBlueprints[".some-job-type-name.some-nested-selector-name.some-option-template-name.some-nested-simple-name"].(proofing.SimplePropertyBlueprint)
-			Expect(ok).To(BeTrue())
-			Expect(nestedSimplePB.Name).To(Equal("some-nested-simple-name"))
-
+			instanceGroupSelectorOptionBlueprint := propertyBlueprints[7]
+			Expect(instanceGroupSelectorOptionBlueprint.Property).To(Equal(
+				".some-job-type-name.some-nested-selector-name.some-option-template-name.some-nested-simple-name"))
+			Expect(instanceGroupSelectorOptionBlueprint.Default).To(Equal(1))
+			Expect(instanceGroupSelectorOptionBlueprint.Configurable).To(BeTrue())
 		})
 	})
 })

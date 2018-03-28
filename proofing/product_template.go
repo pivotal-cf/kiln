@@ -44,45 +44,19 @@ type ProductTemplate struct {
 	// TODO: find_object: https://github.com/pivotal-cf/installation/blob/039a2ef3f751ef5915c425da8150a29af4b764dd/web/app/models/persistence/metadata/product_template.rb#L84-L86
 }
 
-func (pt ProductTemplate) AllPropertyBlueprints() map[string]PropertyBlueprint {
-	var propertyBlueprints map[string]PropertyBlueprint
+func (pt ProductTemplate) AllPropertyBlueprints() []NormalizedPropertyBlueprint {
+	var propertyBlueprints []NormalizedPropertyBlueprint
 
-	propertyBlueprints = make(map[string]PropertyBlueprint)
+	propertyBlueprints = make([]NormalizedPropertyBlueprint, 0, len(pt.PropertyBlueprints))
 
 	for _, pb := range pt.PropertyBlueprints {
-		propertyBlueprints[pb.FullName(".properties")] = pb
-
-		switch nestedPB := pb.(type) {
-		case SelectorPropertyBlueprint:
-			for _, optionTemplate := range nestedPB.OptionTemplates {
-				for _, otpb := range optionTemplate.PropertyBlueprints {
-					propertyBlueprints[otpb.FullName(fmt.Sprintf("%s.%s", pb.FullName(".properties"), optionTemplate.Name))] = otpb
-				}
-			}
-		case CollectionPropertyBlueprint:
-			for _, cpb := range nestedPB.PropertyBlueprints {
-				propertyBlueprints[cpb.FullName(pb.FullName(".properties"))] = cpb
-			}
-		}
+		propertyBlueprints = append(propertyBlueprints, pb.Normalize(".properties")...)
 	}
 
 	for _, jobType := range pt.JobTypes {
 		for _, pb := range jobType.PropertyBlueprints {
 			prefix := fmt.Sprintf(".%s", jobType.Name)
-			propertyBlueprints[pb.FullName(prefix)] = pb
-			switch nestedPB := pb.(type) {
-			case SelectorPropertyBlueprint:
-				for _, optionTemplate := range nestedPB.OptionTemplates {
-					for _, otpb := range optionTemplate.PropertyBlueprints {
-						propertyBlueprints[otpb.FullName(fmt.Sprintf("%s.%s", pb.FullName(prefix), optionTemplate.Name))] = otpb
-					}
-				}
-			case CollectionPropertyBlueprint:
-				for _, cpb := range nestedPB.PropertyBlueprints {
-					propertyBlueprints[cpb.FullName(pb.FullName(prefix))] = cpb
-				}
-			}
-
+			propertyBlueprints = append(propertyBlueprints, pb.Normalize(prefix)...)
 		}
 	}
 

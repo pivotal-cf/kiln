@@ -38,6 +38,20 @@ var _ = Describe("SimplePropertyBlueprint", func() {
 		Expect(simplePropertyBlueprint.ResourceDefinitions).To(HaveLen(1))
 	})
 
+	Describe("Normalize", func() {
+		It("returns a list of normalized property blueprints", func() {
+			normalized := simplePropertyBlueprint.Normalize("some-prefix")
+
+			Expect(normalized).To(ConsistOf([]proofing.NormalizedPropertyBlueprint{
+				{
+					Property:     "some-prefix.some-simple-name",
+					Configurable: true,
+					Default:      "some-default",
+				},
+			}))
+		})
+	})
+
 	Context("options", func() {
 		It("parses their structure", func() {
 			option := simplePropertyBlueprint.Options[0]

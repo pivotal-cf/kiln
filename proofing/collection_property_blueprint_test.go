@@ -37,4 +37,18 @@ var _ = Describe("CollectionPropertyBlueprint", func() {
 		Expect(collectionPropertyBlueprint.ResourceDefinitions).To(HaveLen(1))
 	})
 
+	Describe("Normalize", func() {
+		It("returns a list of normalized property blueprints", func() {
+			normalized := collectionPropertyBlueprint.Normalize("some-prefix")
+
+			Expect(normalized).To(ConsistOf([]proofing.NormalizedPropertyBlueprint{
+				{
+					Property:     "some-prefix.some-collection-name",
+					Configurable: true,
+					Default:      "some-default",
+				},
+			}))
+		})
+	})
+
 })
