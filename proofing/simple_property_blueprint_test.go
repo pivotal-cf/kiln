@@ -47,8 +47,18 @@ var _ = Describe("SimplePropertyBlueprint", func() {
 					Property:     "some-prefix.some-simple-name",
 					Configurable: true,
 					Default:      "some-default",
+					Required:     false,
 				},
 			}))
+		})
+
+		Context("when the property blueprint is not optional", func() {
+			It("marks the property blueprint as required", func() {
+				simplePropertyBlueprint.Optional = false
+
+				normalized := simplePropertyBlueprint.Normalize("some-prefix")
+				Expect(normalized[0].Required).To(BeTrue())
+			})
 		})
 	})
 

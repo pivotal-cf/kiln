@@ -47,13 +47,24 @@ var _ = Describe("SelectorPropertyBlueprint", func() {
 					Property:     "some-prefix.some-selector-name",
 					Configurable: true,
 					Default:      "some-default",
+					Required:     false,
 				},
 				{
 					Property:     "some-prefix.some-selector-name.some-option-template-name.some-nested-simple-name",
 					Configurable: true,
 					Default:      1,
+					Required:     false,
 				},
 			}))
+		})
+
+		Context("when the property blueprint is not optional", func() {
+			It("marks the property blueprint as required", func() {
+				selectorPropertyBlueprint.Optional = false
+
+				normalized := selectorPropertyBlueprint.Normalize("some-prefix")
+				Expect(normalized[0].Required).To(BeTrue())
+			})
 		})
 	})
 })

@@ -46,8 +46,18 @@ var _ = Describe("CollectionPropertyBlueprint", func() {
 					Property:     "some-prefix.some-collection-name",
 					Configurable: true,
 					Default:      "some-default",
+					Required:     false,
 				},
 			}))
+		})
+
+		Context("when the property blueprint is not optional", func() {
+			It("marks the property blueprint as required", func() {
+				collectionPropertyBlueprint.Optional = false
+
+				normalized := collectionPropertyBlueprint.Normalize("some-prefix")
+				Expect(normalized[0].Required).To(BeTrue())
+			})
 		})
 	})
 

@@ -25,6 +25,7 @@ func (sp SimplePropertyBlueprint) Normalize(prefix string) []NormalizedPropertyB
 			Property:     fmt.Sprintf("%s.%s", prefix, sp.Name),
 			Configurable: sp.Configurable,
 			Default:      sp.Default,
+			Required:     !sp.Optional,
 		},
 	}
 }
