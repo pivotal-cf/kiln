@@ -1,6 +1,8 @@
 package proofing_test
 
 import (
+	"os"
+
 	"github.com/pivotal-cf/kiln/proofing"
 
 	. "github.com/onsi/ginkgo"
@@ -11,8 +13,11 @@ var _ = Describe("ProductTemplate", func() {
 	var productTemplate proofing.ProductTemplate
 
 	BeforeEach(func() {
-		var err error
-		productTemplate, err = proofing.Parse("fixtures/metadata.yml")
+		f, err := os.Open("fixtures/metadata.yml")
+		defer f.Close()
+		Expect(err).NotTo(HaveOccurred())
+
+		productTemplate, err = proofing.Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -47,8 +52,11 @@ var _ = Describe("ProductTemplate", func() {
 
 	Describe("AllPropertyBlueprints", func() {
 		BeforeEach(func() {
-			var err error
-			productTemplate, err = proofing.Parse("fixtures/property_blueprints.yml")
+			f, err := os.Open("fixtures/property_blueprints.yml")
+			defer f.Close()
+			Expect(err).NotTo(HaveOccurred())
+
+			productTemplate, err = proofing.Parse(f)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

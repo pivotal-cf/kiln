@@ -2,6 +2,7 @@ package proofing_test
 
 import (
 	"errors"
+	"os"
 
 	"github.com/pivotal-cf/kiln/proofing"
 
@@ -13,7 +14,11 @@ var _ = Describe("PropertyInputs", func() {
 	var formType proofing.FormType
 
 	BeforeEach(func() {
-		productTemplate, err := proofing.Parse("fixtures/form_types.yml")
+		f, err := os.Open("fixtures/form_types.yml")
+		defer f.Close()
+		Expect(err).NotTo(HaveOccurred())
+
+		productTemplate, err := proofing.Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		formType = productTemplate.FormTypes[0]

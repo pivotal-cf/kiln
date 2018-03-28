@@ -2,6 +2,7 @@ package cargo_test
 
 import (
 	"io/ioutil"
+	"os"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/internal/cargo/opsman"
@@ -22,7 +23,11 @@ var _ = Describe("Generator", func() {
 
 	Describe("Execute", func() {
 		It("generates a well-formed manifest", func() {
-			template, err := proofing.Parse("fixtures/metadata.yml")
+			f, err := os.Open("fixtures/metadata.yml")
+			defer f.Close()
+			Expect(err).NotTo(HaveOccurred())
+
+			template, err := proofing.Parse(f)
 			Expect(err).NotTo(HaveOccurred())
 
 			manifest := generator.Execute(template, cargo.OpsManagerConfig{

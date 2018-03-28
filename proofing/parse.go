@@ -1,13 +1,14 @@
 package proofing
 
 import (
+	"io"
 	"io/ioutil"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
-func Parse(path string) (ProductTemplate, error) {
-	contents, err := ioutil.ReadFile(path)
+func Parse(r io.Reader) (ProductTemplate, error) {
+	contents, err := ioutil.ReadAll(r)
 	if err != nil {
 		return ProductTemplate{}, err
 	}

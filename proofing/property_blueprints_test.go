@@ -2,6 +2,7 @@ package proofing_test
 
 import (
 	"errors"
+	"os"
 
 	"github.com/pivotal-cf/kiln/proofing"
 
@@ -13,8 +14,11 @@ var _ = Describe("PropertyBlueprints", func() {
 	var productTemplate proofing.ProductTemplate
 
 	BeforeEach(func() {
-		var err error
-		productTemplate, err = proofing.Parse("fixtures/property_blueprints.yml")
+		f, err := os.Open("fixtures/property_blueprints.yml")
+		defer f.Close()
+		Expect(err).NotTo(HaveOccurred())
+
+		productTemplate, err = proofing.Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

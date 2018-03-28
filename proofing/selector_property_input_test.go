@@ -1,6 +1,8 @@
 package proofing_test
 
 import (
+	"os"
+
 	"github.com/pivotal-cf/kiln/proofing"
 
 	. "github.com/onsi/ginkgo"
@@ -11,7 +13,11 @@ var _ = Describe("SelectorPropertyInput", func() {
 	var selectorPropertyInput proofing.SelectorPropertyInput
 
 	BeforeEach(func() {
-		productTemplate, err := proofing.Parse("fixtures/form_types.yml")
+		f, err := os.Open("fixtures/form_types.yml")
+		defer f.Close()
+		Expect(err).NotTo(HaveOccurred())
+
+		productTemplate, err := proofing.Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		var ok bool

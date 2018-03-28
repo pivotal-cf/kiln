@@ -1,6 +1,8 @@
 package proofing_test
 
 import (
+	"os"
+
 	"github.com/pivotal-cf/kiln/proofing"
 
 	. "github.com/onsi/ginkgo"
@@ -11,7 +13,11 @@ var _ = Describe("StemcellCriteria", func() {
 	var stemcellCriteria proofing.StemcellCriteria
 
 	BeforeEach(func() {
-		productTemplate, err := proofing.Parse("fixtures/metadata.yml")
+		f, err := os.Open("fixtures/metadata.yml")
+		defer f.Close()
+		Expect(err).NotTo(HaveOccurred())
+
+		productTemplate, err := proofing.Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		stemcellCriteria = productTemplate.StemcellCriteria
