@@ -47,6 +47,7 @@ var _ = Describe("CollectionPropertyBlueprint", func() {
 					Configurable: true,
 					Default:      "some-default",
 					Required:     false,
+					Type:         "collection",
 				},
 			}))
 		})

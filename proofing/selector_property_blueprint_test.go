@@ -48,12 +48,14 @@ var _ = Describe("SelectorPropertyBlueprint", func() {
 					Configurable: true,
 					Default:      "some-default",
 					Required:     false,
+					Type:         "selector",
 				},
 				{
 					Property:     "some-prefix.some-selector-name.some-option-template-name.some-nested-simple-name",
 					Configurable: true,
 					Default:      1,
 					Required:     false,
+					Type:         "some-type",
 				},
 			}))
 		})

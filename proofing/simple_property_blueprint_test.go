@@ -48,6 +48,7 @@ var _ = Describe("SimplePropertyBlueprint", func() {
 					Configurable: true,
 					Default:      "some-default",
 					Required:     false,
+					Type:         "some-type",
 				},
 			}))
 		})
