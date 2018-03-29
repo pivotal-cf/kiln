@@ -8,19 +8,11 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/onsi/ginkgo"
   packages = [
     ".",
     "config",
     "extensions/table",
-    "ginkgo",
-    "ginkgo/convert",
-    "ginkgo/interrupthandler",
-    "ginkgo/nodot",
-    "ginkgo/testrunner",
-    "ginkgo/testsuite",
-    "ginkgo/watch",
     "internal/codelocation",
     "internal/containernode",
     "internal/failer",
@@ -38,10 +30,10 @@
     "reporters/stenographer/support/go-isatty",
     "types"
   ]
-  revision = "cb73bd0f14eb8d91a9801647edbebe6ddb5b4cb4"
+  revision = "9eda700730cba42af70d53180f9dcce9266bc2bc"
+  version = "v1.4.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/onsi/gomega"
   packages = [
     ".",
@@ -59,7 +51,8 @@
     "matchers/support/goraph/util",
     "types"
   ]
-  revision = "1a443264e57b3ff208ddbd539dc0e1b05db1d88f"
+  revision = "003f63b7f4cff3fc95357005358af2de0f5fe152"
+  version = "v1.3.0"
 
 [[projects]]
   branch = "master"
@@ -79,7 +72,7 @@
     ".",
     "internal/parser"
   ]
-  revision = "47a4615ac02d8453da48bd7e8456ee532dbbcbe6"
+  revision = "138431ae704a43b314d1fa808cd8f6725ae16866"
 
 [[projects]]
   branch = "master"
@@ -89,16 +82,15 @@
     "html/atom",
     "html/charset"
   ]
-  revision = "dc871a5d77e227f5bbf6545176ef3eeebf87e76e"
+  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "a0f4589a76f1f83070cb9e5613809e1d07b97c13"
+  revision = "378d26f46672a356c46195c28f61bdb4c0a781dd"
 
 [[projects]]
-  branch = "master"
   name = "golang.org/x/text"
   packages = [
     "encoding",
@@ -119,17 +111,18 @@
     "transform",
     "unicode/cldr"
   ]
-  revision = "be25de41fadfae372d6470bda81ca6beb55ef551"
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
 
 [[projects]]
-  branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "287cf08546ab5e7e37d55a84f7ed3fd1db036de5"
+  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
+  version = "v2.2.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2a2e5ca562a669a73209102a77d49714883bd81474d054faf91e043820532380"
+  inputs-digest = "6d9ce41cee072429999624a2125f5588fbf74697b0b584132fd48439e8478151"
   solver-name = "gps-cdcl"
   solver-version = 1
