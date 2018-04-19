@@ -70,7 +70,7 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string
 			var fileVars map[string]interface{}
 			err = yaml.Unmarshal([]byte(data), &fileVars)
 			if err != nil {
-				return fmt.Errorf("cannot unmarshal: %s", err)
+				return fmt.Errorf("cannot unmarshal '%s': %s", filePath, err)
 			}
 
 			var ok bool
@@ -81,7 +81,7 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string
 		} else {
 			err = yaml.Unmarshal([]byte(data), &vars)
 			if err != nil {
-				return fmt.Errorf("cannot unmarshal: %s", err)
+				return fmt.Errorf("cannot unmarshal '%s': %s", filePath, err)
 			}
 		}
 
