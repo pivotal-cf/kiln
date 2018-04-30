@@ -75,6 +75,8 @@ var _ = Describe("TileWriter", func() {
 					walkFn("/some/path/migrations", dirInfo, nil)
 					walkFn("/some/path/migrations/migration-1.js", migrationInfo, nil)
 					walkFn("/some/path/migrations/migration-2.js", migrationInfo, nil)
+					walkFn("/some/path/migrations/node_modules/random-1.js", migrationInfo, nil)
+					walkFn("/some/path/migrations/node_modules/random-2.js", migrationInfo, nil)
 					walkFn("/some/path/migrations/tests/migration-2_test.js", migrationInfo, nil)
 					walkFn("/some/path/migrations/tests/migration-2.js", migrationInfo, nil)
 					walkFn("/some/path/migrations/not-a-js-migration.txt", migrationInfo, nil)
@@ -101,12 +103,16 @@ var _ = Describe("TileWriter", func() {
 					return NewBuffer(bytes.NewBuffer([]byte("migration-1"))), nil
 				case "/some/path/migrations/migration-2.js":
 					return NewBuffer(bytes.NewBuffer([]byte("migration-2"))), nil
+				case "/some/path/migrations/node_modules/random-1.js":
+					return NewBuffer(bytes.NewBuffer([]byte("i-am-a-random-node-js-file"))), nil
+				case "/some/path/migrations/node_modules/random-2.js":
+					return NewBuffer(bytes.NewBuffer([]byte("i-am-another-random-node-js-file"))), nil
 				case "/some/path/migrations/tests/migration-2_test.js":
 					return NewBuffer(bytes.NewBuffer([]byte("i-am-a-test"))), nil
-				case "/some/path/migrations/not-a-js-migration.txt":
-					return NewBuffer(bytes.NewBuffer([]byte("i-am-not-a-js-migration"))), nil
 				case "/some/path/migrations/tests/migration-2.js":
 					return NewBuffer(bytes.NewBuffer([]byte("some-migration"))), nil
+				case "/some/path/migrations/not-a-js-migration.txt":
+					return NewBuffer(bytes.NewBuffer([]byte("i-am-not-a-js-migration"))), nil
 				case "/some/other/path/migrations/other-migration.js":
 					return NewBuffer(bytes.NewBuffer([]byte("other-migration"))), nil
 				default:
