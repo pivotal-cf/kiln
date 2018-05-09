@@ -131,6 +131,10 @@ Specify a file path to a tile metadata file for the `--metadata` flag. This
 metadata file will contain the contents of your tile configuration as specified
 in the OpsManager tile development documentation.
 
+##### `--metadata-only`
+
+Output the generated metadata to stdout. Cannot be used with `--output-file`.
+
 ##### `--migrations-directory`
 
 If your tile has JavaScript migrations, then you will need to include the
@@ -142,6 +146,8 @@ have organized your migrations into subdirectories for development convenience.
 The `--output-file` flag takes a path to the location on the filesystem where
 your tile will be created. The flag expects a full file name like
 `tiles/my-tile-1.2.3-build.4.pivotal`.
+
+Cannot be used with `--metadata-only`.
 
 ##### `--properties-directory`
 
