@@ -619,7 +619,23 @@ var _ = Describe("Bake", func() {
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(MatchError("missing required flag \"--output-file\""))
+					Expect(err).To(MatchError("--output-file must be provided unless using --metadata-only"))
+				})
+			})
+
+			Context("when both the output-file and metadata-only flags are provided", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--metadata-only",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--version", "1.2.3",
+					})
+
+					Expect(err).To(MatchError("--output-file cannot be provided when using --metadata-only"))
 				})
 			})
 

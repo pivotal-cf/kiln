@@ -10,6 +10,7 @@ some_stemcell_criteria: $( stemcell )
 provides_product_versions:
 - name: cf
   version: 1.7.0.0
+icon_img: $( icon )
 product_version: $( version )
 minimum_version_for_upgrade: 1.6.9-build.0
 custom_variable: $(variable "some-variable")

@@ -91,7 +91,7 @@ func main() {
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
 		tileWriter,
-		errLogger,
+		outLogger,
 		templateVariablesService,
 		boshVariablesService,
 		releasesService,

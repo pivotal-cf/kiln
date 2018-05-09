@@ -82,7 +82,7 @@ type metadataService interface {
 type Bake struct {
 	interpolator      interpolator
 	tileWriter        tileWriter
-	logger            logger
+	output            logger
 	templateVariables templateVariablesService
 	boshVariables     boshVariablesService
 	releases          releasesService
@@ -97,7 +97,7 @@ type Bake struct {
 
 	Options struct {
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
-		OutputFile         string   `short:"o"  long:"output-file"        required:"true" description:"path to where the tile will be output"`
+		OutputFile         string   `short:"o"  long:"output-file"                        description:"path to where the tile will be output"`
 		ReleaseDirectories []string `short:"rd" long:"releases-directory" required:"true" description:"path to a directory containing release tarballs"`
 
 		BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"  description:"path to a directory containing BOSH variables"`
@@ -106,6 +106,7 @@ type Bake struct {
 		IconPath                 string   `short:"i"   long:"icon"                      description:"path to icon file"`
 		InstanceGroupDirectories []string `short:"ig"  long:"instance-groups-directory" description:"path to a directory containing instance groups"`
 		JobDirectories           []string `short:"j"   long:"jobs-directory"            description:"path to a directory containing jobs"`
+		MetadataOnly             bool     `short:"mo"  long:"metadata-only"             description:"don't build a tile, output the metadata to stdout"`
 		MigrationDirectories     []string `short:"md"  long:"migrations-directory"      description:"path to a directory containing migrations"`
 		PropertyDirectories      []string `short:"pd"  long:"properties-directory"      description:"path to a directory containing property blueprints"`
 		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory" description:"path to a directory containing runtime configs"`
@@ -120,7 +121,7 @@ type Bake struct {
 func NewBake(
 	interpolator interpolator,
 	tileWriter tileWriter,
-	logger logger,
+	output logger,
 	templateVariablesService templateVariablesService,
 	boshVariablesService boshVariablesService,
 	releasesService releasesService,
@@ -137,7 +138,7 @@ func NewBake(
 	return Bake{
 		interpolator:      interpolator,
 		tileWriter:        tileWriter,
-		logger:            logger,
+		output:            output,
 		templateVariables: templateVariablesService,
 		boshVariables:     boshVariablesService,
 		releases:          releasesService,
@@ -160,6 +161,14 @@ func (b Bake) Execute(args []string) error {
 
 	if len(b.Options.InstanceGroupDirectories) == 0 && len(b.Options.JobDirectories) > 0 {
 		return errors.New("--jobs-directory flag requires --instance-groups-directory to also be specified")
+	}
+
+	if len(b.Options.OutputFile) == 0 && !b.Options.MetadataOnly {
+		return errors.New("--output-file must be provided unless using --metadata-only")
+	}
+
+	if len(b.Options.OutputFile) > 0 && b.Options.MetadataOnly {
+		return errors.New("--output-file cannot be provided when using --metadata-only")
 	}
 
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
@@ -234,15 +243,19 @@ func (b Bake) Execute(args []string) error {
 		return err
 	}
 
-	err = b.tileWriter.Write(interpolatedMetadata, builder.WriteInput{
-		OutputFile:           b.Options.OutputFile,
-		StubReleases:         b.Options.StubReleases,
-		MigrationDirectories: b.Options.MigrationDirectories,
-		ReleaseDirectories:   b.Options.ReleaseDirectories,
-		EmbedPaths:           b.Options.EmbedPaths,
-	})
-	if err != nil {
-		return err
+	if len(b.Options.OutputFile) > 0 {
+		err = b.tileWriter.Write(interpolatedMetadata, builder.WriteInput{
+			OutputFile:           b.Options.OutputFile,
+			StubReleases:         b.Options.StubReleases,
+			MigrationDirectories: b.Options.MigrationDirectories,
+			ReleaseDirectories:   b.Options.ReleaseDirectories,
+			EmbedPaths:           b.Options.EmbedPaths,
+		})
+		if err != nil {
+			return err
+		}
+	} else if b.Options.MetadataOnly {
+		b.output.Printf("%s", interpolatedMetadata)
 	}
 
 	return nil

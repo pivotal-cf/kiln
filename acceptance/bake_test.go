@@ -286,14 +286,6 @@ some-literal-variable: |
 			"--variables-file",
 			variableFile.Name())
 
-		f, err := os.OpenFile(metadata, os.O_APPEND|os.O_WRONLY, 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		defer f.Close()
-		_, err = f.WriteString("icon_img: $( icon )")
-
-		Expect(err).NotTo(HaveOccurred())
-
 		command := exec.Command(pathToMain, commandWithArgs...)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -381,6 +373,44 @@ some-literal-variable: |
 		Eventually(session.Err).ShouldNot(gbytes.Say(fmt.Sprintf("Adding releases/not-a-tarball.txt to %s...", outputFile)))
 		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Calculating md5 sum of %s...", outputFile)))
 		Eventually(session.Err).Should(gbytes.Say("Calculated md5 sum: [0-9a-f]{32}"))
+	})
+
+	Context("when the --metadata-only flag is specified", func() {
+		BeforeEach(func() {
+			commandWithArgs = []string{
+				"bake",
+				"--bosh-variables-directory", someBOSHVariablesDirectory,
+				"--forms-directory", someFormsDirectory,
+				"--forms-directory", someOtherFormsDirectory,
+				"--icon", someIconPath,
+				"--instance-groups-directory", someInstanceGroupsDirectory,
+				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+				"--jobs-directory", someJobsDirectory,
+				"--jobs-directory", someOtherJobsDirectory,
+				"--metadata", metadata,
+				"--metadata-only",
+				"--properties-directory", somePropertiesDirectory,
+				"--releases-directory", otherReleasesDirectory,
+				"--releases-directory", someReleasesDirectory,
+				"--runtime-configs-directory", someRuntimeConfigsDirectory,
+				"--stemcell-tarball", stemcellTarball,
+				"--variable", "some-variable=some-variable-value",
+				"--variables-file", filepath.Join(someVarFile),
+				"--version", "1.2.3",
+			}
+		})
+
+		It("outputs the generated metadata to stdout", func() {
+			command := exec.Command(pathToMain, commandWithArgs...)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
+			Eventually(session.Out.Contents).Should(HelpfullyMatchYAML(renderedYAML))
+		})
 	})
 
 	Context("when the --stub-releases flag is specified", func() {
