@@ -14,7 +14,8 @@ import (
 var version = "unknown"
 
 func main() {
-	logger := log.New(os.Stdout, "", 0)
+	errLogger := log.New(os.Stderr, "", 0)
+	outLogger := log.New(os.Stdout, "", 0)
 
 	var global struct {
 		Help    bool `short:"h" long:"help"    description:"prints this usage information"   default:"false"`
@@ -52,45 +53,45 @@ func main() {
 	zipper := builder.NewZipper()
 	md5SumCalculator := helper.NewFileMD5SumCalculator()
 	interpolator := builder.NewInterpolator()
-	tileWriter := builder.NewTileWriter(filesystem, &zipper, logger, md5SumCalculator)
+	tileWriter := builder.NewTileWriter(filesystem, &zipper, errLogger, md5SumCalculator)
 
 	releaseManifestReader := builder.NewReleaseManifestReader()
-	releasesService := baking.NewReleasesService(logger, releaseManifestReader)
+	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
 
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
-	stemcellService := baking.NewStemcellService(logger, stemcellManifestReader)
+	stemcellService := baking.NewStemcellService(errLogger, stemcellManifestReader)
 
 	templateVariablesService := baking.NewTemplateVariablesService()
 
 	boshVariableDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	boshVariablesService := baking.NewBOSHVariablesService(logger, boshVariableDirectoryReader)
+	boshVariablesService := baking.NewBOSHVariablesService(errLogger, boshVariableDirectoryReader)
 
 	formDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	formsService := baking.NewFormsService(logger, formDirectoryReader)
+	formsService := baking.NewFormsService(errLogger, formDirectoryReader)
 
 	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	instanceGroupsService := baking.NewInstanceGroupsService(logger, instanceGroupDirectoryReader)
+	instanceGroupsService := baking.NewInstanceGroupsService(errLogger, instanceGroupDirectoryReader)
 
 	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	jobsService := baking.NewJobsService(logger, jobsDirectoryReader)
+	jobsService := baking.NewJobsService(errLogger, jobsDirectoryReader)
 
 	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	propertiesService := baking.NewPropertiesService(logger, propertiesDirectoryReader)
+	propertiesService := baking.NewPropertiesService(errLogger, propertiesDirectoryReader)
 
 	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	runtimeConfigsService := baking.NewRuntimeConfigsService(logger, runtimeConfigsDirectoryReader)
+	runtimeConfigsService := baking.NewRuntimeConfigsService(errLogger, runtimeConfigsDirectoryReader)
 
-	iconService := baking.NewIconService(logger)
+	iconService := baking.NewIconService(errLogger)
 
 	metadataService := baking.NewMetadataService()
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
-	commandSet["version"] = commands.NewVersion(logger, version)
+	commandSet["version"] = commands.NewVersion(outLogger, version)
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
 		tileWriter,
-		logger,
+		errLogger,
 		templateVariablesService,
 		boshVariablesService,
 		releasesService,

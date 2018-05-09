@@ -370,17 +370,17 @@ some-literal-variable: |
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("some_migration\n"))
 
-		Eventually(session.Out).Should(gbytes.Say("Reading release manifests"))
-		Eventually(session.Out).Should(gbytes.Say("Reading stemcell manifest"))
-		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Building %s", outputFile)))
-		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile)))
-		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603041539_custom_buildpacks.js to %s...", outputFile)))
-		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603071158_auth_enterprise_sso.js to %s...", outputFile)))
-		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding releases/diego-release-0.1467.1-3215.4.0.tgz to %s...", outputFile)))
-		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Adding releases/cf-release-235.0.0-3215.4.0.tgz to %s...", outputFile)))
-		Eventually(session.Out).ShouldNot(gbytes.Say(fmt.Sprintf("Adding releases/not-a-tarball.txt to %s...", outputFile)))
-		Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Calculating md5 sum of %s...", outputFile)))
-		Eventually(session.Out).Should(gbytes.Say("Calculated md5 sum: [0-9a-f]{32}"))
+		Eventually(session.Err).Should(gbytes.Say("Reading release manifests"))
+		Eventually(session.Err).Should(gbytes.Say("Reading stemcell manifest"))
+		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Building %s", outputFile)))
+		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile)))
+		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603041539_custom_buildpacks.js to %s...", outputFile)))
+		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603071158_auth_enterprise_sso.js to %s...", outputFile)))
+		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding releases/diego-release-0.1467.1-3215.4.0.tgz to %s...", outputFile)))
+		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding releases/cf-release-235.0.0-3215.4.0.tgz to %s...", outputFile)))
+		Eventually(session.Err).ShouldNot(gbytes.Say(fmt.Sprintf("Adding releases/not-a-tarball.txt to %s...", outputFile)))
+		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Calculating md5 sum of %s...", outputFile)))
+		Eventually(session.Err).Should(gbytes.Say("Calculated md5 sum: [0-9a-f]{32}"))
 	})
 
 	Context("when the --stub-releases flag is specified", func() {
@@ -443,7 +443,7 @@ some-literal-variable: |
 
 			Expect(emptyMigrationsFolderMode.IsDir()).To(BeTrue())
 
-			Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("Creating empty migrations folder in %s...", outputFile)))
+			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Creating empty migrations folder in %s...", outputFile)))
 		})
 	})
 
