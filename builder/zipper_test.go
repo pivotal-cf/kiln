@@ -13,6 +13,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"time"
 )
 
 var _ = Describe("Zipper", func() {
@@ -54,6 +55,7 @@ var _ = Describe("Zipper", func() {
 			Expect(reader.File).To(HaveLen(1))
 			Expect(reader.File[0].Name).To(Equal("some/path/to/folder/"))
 			Expect(reader.File[0].Mode().IsDir()).To(BeTrue())
+			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", time.Now(), time.Minute))
 		})
 
 		It("does not append separator if already given to the input", func() {
@@ -111,6 +113,7 @@ var _ = Describe("Zipper", func() {
 
 			Expect(contents).To(Equal([]byte("file contents")))
 			Expect(reader.File[0].FileHeader.Mode()).To(Equal(os.FileMode(0666)))
+			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", time.Now(), time.Minute))
 		})
 
 		Context("failure cases", func() {
@@ -163,6 +166,7 @@ var _ = Describe("Zipper", func() {
 
 			Expect(contents).To(Equal([]byte("file contents")))
 			Expect(reader.File[0].FileHeader.Mode()).To(Equal(os.FileMode(0644)))
+			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", time.Now(), time.Minute))
 		})
 
 		Context("failure cases", func() {

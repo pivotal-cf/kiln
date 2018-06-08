@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
+	"time"
 )
 
 var _ = Describe("bake command", func() {
@@ -464,14 +465,17 @@ some-literal-variable: |
 			Expect(err).NotTo(HaveOccurred())
 
 			var emptyMigrationsFolderMode os.FileMode
+			var emptyMigrationsFolderModified time.Time
 			for _, f := range zr.File {
 				if f.Name == "migrations/v1/" {
 					emptyMigrationsFolderMode = f.Mode()
+					emptyMigrationsFolderModified = f.FileHeader.Modified
 					break
 				}
 			}
 
 			Expect(emptyMigrationsFolderMode.IsDir()).To(BeTrue())
+			Expect(emptyMigrationsFolderModified).To(BeTemporally("~", time.Now(), time.Minute))
 
 			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Creating empty migrations folder in %s...", outputFile)))
 		})
@@ -537,6 +541,8 @@ some-literal-variable: |
 
 						Expect(content).To(Equal([]byte("content-of-other-file")))
 					}
+
+					Expect(f.FileHeader.Modified).To(BeTemporally("~", time.Now(), time.Minute))
 				}
 
 				Expect(seenSomeFile).To(BeTrue())
