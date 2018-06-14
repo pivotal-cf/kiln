@@ -17,6 +17,7 @@ type StemcellManifest struct {
 }
 
 // the input field in stemcell.MF is called `operating_system` while the output field is `os`
+
 func (s StemcellManifest) MarshalYAML() (interface{}, error) {
 	return struct {
 		Version         string `yaml:"version"`

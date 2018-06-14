@@ -7,6 +7,7 @@ type PropertyInput interface{}
 type PropertyInputs []PropertyInput
 
 // TODO: Less ugly.
+
 func (pi *PropertyInputs) UnmarshalYAML(unmarshal func(v interface{}) error) error {
 	var sniffs []map[string]interface{}
 	err := unmarshal(&sniffs)
