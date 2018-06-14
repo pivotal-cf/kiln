@@ -3,6 +3,5 @@ builder/interpolator.go:48::warning: cyclomatic complexity 25 of function (Inter
 builder/metadata_parts_directory_reader.go:51::warning: cyclomatic complexity 11 of function (MetadataPartsDirectoryReader).readMetadataRecursivelyFromDir() is high (> 10) (gocyclo)
 builder/release_manifest_reader.go:29::warning: cyclomatic complexity 11 of function (ReleaseManifestReader).Read() is high (> 10) (gocyclo)
 builder/stemcell_manifest_reader.go:19:1:warning: comment on exported method StemcellManifest.MarshalYAML should be of the form "MarshalYAML ..." (golint)
-builder/tile_writer.go:45:1:warning: fileinfo is unused (deadcode)
 commands/bake.go:156::warning: cyclomatic complexity 23 of function (Bake).Execute() is high (> 10) (gocyclo)
 proofing/property_inputs.go:9:1:warning: comment on exported method PropertyInputs.UnmarshalYAML should be of the form "UnmarshalYAML ..." (golint)

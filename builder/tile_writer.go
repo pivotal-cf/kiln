@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 )
 
 type TileWriter struct {
@@ -40,16 +39,7 @@ type zipper interface {
 	Close() error
 }
 
-//go:generate counterfeiter -o ./fakes/file_info.go --fake-name FileInfo . fileinfo
-
-type fileinfo interface {
-	Name() string
-	Size() int64
-	Mode() os.FileMode
-	ModTime() time.Time
-	IsDir() bool
-	Sys() interface{}
-}
+//go:generate counterfeiter -o ./fakes/file_info.go --fake-name FileInfo os.FileInfo
 
 func NewTileWriter(filesystem filesystem, zipper zipper, logger logger, md5SumCalculator md5SumCalculator) TileWriter {
 	return TileWriter{
