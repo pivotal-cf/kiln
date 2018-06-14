@@ -17,6 +17,7 @@ type NormalizedPropertyBlueprint struct {
 }
 
 // TODO: Less ugly.
+
 func (pb *PropertyBlueprints) UnmarshalYAML(unmarshal func(v interface{}) error) error {
 	var sniffs []map[string]interface{}
 	err := unmarshal(&sniffs)

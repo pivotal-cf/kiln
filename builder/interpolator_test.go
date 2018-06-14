@@ -107,6 +107,27 @@ selected_value: $( release "some-release" | select "version" )
 		}
 	})
 
+	It("interpolates yaml correctly", func() {
+
+		type namedThing struct {
+			Name string `yaml:"name"`
+		}
+
+		var t namedThing
+
+		badYamlWithName := `templates:
+  $(if ert)
+  - foo
+  $(end)
+name: foo
+`
+
+		err := yaml.Unmarshal([]byte(badYamlWithName), &t)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(t.Name).To(Equal("foo"))
+	})
+
 	It("interpolates metadata templates", func() {
 		interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
 		Expect(err).NotTo(HaveOccurred())
@@ -158,7 +179,7 @@ selected_value: 1.2.3
 some_form_types:
 - $( form "some-form" )`
 
-		input := builder.InterpolateInput{
+		input = builder.InterpolateInput{
 			Variables: map[string]interface{}{
 				"some-form-variable": "variable-form-label",
 			},
@@ -180,9 +201,7 @@ some_form_types:
 	})
 
 	Context("when the runtime config is provided", func() {
-
 		var templateYAML string
-		var input builder.InterpolateInput
 
 		BeforeEach(func() {
 			templateYAML = `

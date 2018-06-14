@@ -48,7 +48,7 @@ version: 1.2.3
 			ModTime: time.Now(),
 		}
 
-		err := tw.WriteHeader(header)
+		err = tw.WriteHeader(header)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = io.Copy(tw, releaseManifest)
@@ -63,7 +63,8 @@ version: 1.2.3
 		err = tarball.Close()
 		Expect(err).NotTo(HaveOccurred())
 
-		file, err := os.Open(tarball.Name())
+		var file *os.File
+		file, err = os.Open(tarball.Name())
 		Expect(err).NotTo(HaveOccurred())
 
 		hash := sha1.New()
@@ -77,13 +78,14 @@ version: 1.2.3
 	})
 
 	AfterEach(func() {
-		err := os.Remove(tarball.Name())
+		err = os.Remove(tarball.Name())
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Describe("Read", func() {
 		It("extracts the release manifest information from the tarball", func() {
-			releaseManifest, err := reader.Read(tarball.Name())
+			var releaseManifest builder.Part
+			releaseManifest, err = reader.Read(tarball.Name())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(releaseManifest).To(Equal(builder.Part{
 				Name: "release",
@@ -99,14 +101,13 @@ version: 1.2.3
 		Context("failure cases", func() {
 			Context("when the tarball cannot be opened", func() {
 				It("returns an error", func() {
-					_, err := reader.Read("some-non-existing-file")
+					_, err = reader.Read("some-non-existing-file")
 					Expect(err).To(MatchError(ContainSubstring("no such file")))
 				})
 			})
 
 			Context("when the input is not a valid gzip", func() {
 				It("returns an error", func() {
-					var err error
 					tarball, err = os.OpenFile(tarball.Name(), os.O_RDWR, 0666)
 					Expect(err).NotTo(HaveOccurred())
 
@@ -116,7 +117,8 @@ version: 1.2.3
 					err = tarball.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					contents, err := ioutil.ReadFile(tarball.Name())
+					var contents []byte
+					contents, err = ioutil.ReadFile(tarball.Name())
 					Expect(err).NotTo(HaveOccurred())
 
 					By("corrupting the gzip header contents", func() {
@@ -132,7 +134,7 @@ version: 1.2.3
 
 			Context("when the header file is corrupt", func() {
 				It("returns an error", func() {
-					tarball, err := os.Create(tarball.Name())
+					tarball, err = os.Create(tarball.Name())
 					Expect(err).NotTo(HaveOccurred())
 
 					gw := gzip.NewWriter(tarball)
@@ -148,7 +150,7 @@ version: 1.2.3
 
 			Context("when there is no release.MF", func() {
 				It("returns an error", func() {
-					tarball, err := os.Create(tarball.Name())
+					tarball, err = os.Create(tarball.Name())
 					Expect(err).NotTo(HaveOccurred())
 
 					gw := gzip.NewWriter(tarball)
@@ -185,7 +187,7 @@ version: 1.2.3
 
 			Context("when the tarball is corrupt", func() {
 				It("returns an error", func() {
-					tarball, err := os.Create(tarball.Name())
+					tarball, err = os.Create(tarball.Name())
 					Expect(err).NotTo(HaveOccurred())
 
 					gw := gzip.NewWriter(tarball)
@@ -207,7 +209,7 @@ version: 1.2.3
 
 			Context("when the release manifest is not YAML", func() {
 				It("returns an error", func() {
-					tarball, err := os.Create(tarball.Name())
+					tarball, err = os.Create(tarball.Name())
 					Expect(err).NotTo(HaveOccurred())
 
 					gw := gzip.NewWriter(tarball)

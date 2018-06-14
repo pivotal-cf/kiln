@@ -1,4 +1,4 @@
-package acceptance
+package acceptance_test
 
 var untemplatedMetadata = []byte(`---
 name: cool-product-name

@@ -86,7 +86,7 @@ func (h Help) buildGlobalContext() TemplateContext {
 		names  []string
 	)
 
-	for name, _ := range h.commands {
+	for name := range h.commands {
 		names = append(names, name)
 		if len(name) > length {
 			length = len(name)
