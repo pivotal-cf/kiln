@@ -146,7 +146,7 @@ func (w TileWriter) addReleaseTarballs(releasesDir string, stubReleases bool, ou
 			return nil
 		}
 
-		var file io.ReadCloser = ioutil.NopCloser(strings.NewReader(""))
+		file := ioutil.NopCloser(strings.NewReader(""))
 		if !stubReleases {
 			file, err = w.filesystem.Open(filePath)
 			if err != nil {

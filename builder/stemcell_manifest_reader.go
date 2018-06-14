@@ -52,8 +52,9 @@ func (r StemcellManifestReader) Read(stemcellTarball string) (Part, error) {
 
 	tr := tar.NewReader(gr)
 
+	var header *tar.Header
 	for {
-		header, err := tr.Next()
+		header, err = tr.Next()
 		if err != nil {
 			if err == io.EOF {
 				return Part{}, fmt.Errorf("could not find stemcell.MF in %q", stemcellTarball)

@@ -17,7 +17,7 @@ type ReleaseManifest struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 	File    string `json:"file"`
-	SHA1    string `json: "sha1"`
+	SHA1    string `json:"sha1"`
 }
 
 type ReleaseManifestReader struct{}
@@ -41,8 +41,9 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 
 	tr := tar.NewReader(gr)
 
+	var header *tar.Header
 	for {
-		header, err := tr.Next()
+		header, err = tr.Next()
 		if err != nil {
 			if err == io.EOF {
 				return Part{}, fmt.Errorf("could not find release.MF in %q", releaseTarball)
