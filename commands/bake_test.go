@@ -33,6 +33,7 @@ var _ = Describe("Bake", func() {
 		fakeStemcellService          *fakes.StemcellService
 		fakeTemplateVariablesService *fakes.TemplateVariablesService
 		fakeTileWriter               *fakes.TileWriter
+		fakeChecksummer              *fakes.Checksummer
 
 		otherReleasesDirectory     string
 		someBOSHVariablesDirectory string
@@ -74,6 +75,7 @@ var _ = Describe("Bake", func() {
 		fakeStemcellService = &fakes.StemcellService{}
 		fakeTemplateVariablesService = &fakes.TemplateVariablesService{}
 		fakeTileWriter = &fakes.TileWriter{}
+		fakeChecksummer = &fakes.Checksummer{}
 
 		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
@@ -166,6 +168,7 @@ var _ = Describe("Bake", func() {
 			fakeRuntimeConfigsService,
 			fakeIconService,
 			fakeMetadataService,
+			fakeChecksummer,
 		)
 	})
 
@@ -195,6 +198,7 @@ var _ = Describe("Bake", func() {
 				"--migrations-directory", "some-other-migrations-directory",
 				"--variable", "some-variable=some-variable-value",
 				"--variables-file", "some-variables-file",
+				"--sha256",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -320,6 +324,39 @@ var _ = Describe("Bake", func() {
 				ReleaseDirectories:   []string{otherReleasesDirectory, someReleasesDirectory},
 				EmbedPaths:           []string{"some-embed-path"},
 			}))
+
+			Expect(fakeChecksummer.SumCallCount()).To(Equal(1))
+			outputFilePath := fakeChecksummer.SumArgsForCall(0)
+			Expect(outputFilePath).To(Equal(filepath.Join("some-output-dir", "some-product-file-1.2.3-build.4")))
+		})
+
+		Context("when the --sha256 flag is not specified", func() {
+			It("does not calculate a checksum", func() {
+				err := bake.Execute([]string{
+					"--embed", "some-embed-path",
+					"--forms-directory", "some-forms-directory",
+					"--icon", "some-icon-path",
+					"--instance-groups-directory", "some-instance-groups-directory",
+					"--jobs-directory", "some-jobs-directory",
+					"--metadata", "some-metadata",
+					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+					"--properties-directory", "some-properties-directory",
+					"--releases-directory", otherReleasesDirectory,
+					"--releases-directory", someReleasesDirectory,
+					"--runtime-configs-directory", "some-other-runtime-configs-directory",
+					"--runtime-configs-directory", "some-runtime-configs-directory",
+					"--stemcell-tarball", "some-stemcell-tarball",
+					"--bosh-variables-directory", "some-other-variables-directory",
+					"--bosh-variables-directory", "some-variables-directory",
+					"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
+					"--migrations-directory", "some-other-migrations-directory",
+					"--variable", "some-variable=some-variable-value",
+					"--variables-file", "some-variables-file",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeChecksummer.SumCallCount()).To(Equal(0))
+			})
 		})
 
 		Context("when the optional flags are not specified", func() {
@@ -669,6 +706,37 @@ var _ = Describe("Bake", func() {
 					})
 
 					Expect(err).To(MatchError(ContainSubstring("non-existant-flag")))
+				})
+			})
+
+			Context("when the checksummer returns an error", func() {
+				It("returns an error", func() {
+					fakeChecksummer.SumReturns(errors.New("failed"))
+
+					err := bake.Execute([]string{
+						"--embed", "some-embed-path",
+						"--forms-directory", "some-forms-directory",
+						"--icon", "some-icon-path",
+						"--instance-groups-directory", "some-instance-groups-directory",
+						"--jobs-directory", "some-jobs-directory",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", otherReleasesDirectory,
+						"--releases-directory", someReleasesDirectory,
+						"--runtime-configs-directory", "some-other-runtime-configs-directory",
+						"--runtime-configs-directory", "some-runtime-configs-directory",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--bosh-variables-directory", "some-other-variables-directory",
+						"--bosh-variables-directory", "some-variables-directory",
+						"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
+						"--migrations-directory", "some-other-migrations-directory",
+						"--variable", "some-variable=some-variable-value",
+						"--variables-file", "some-variables-file",
+						"--sha256",
+					})
+
+					Expect(err).To(MatchError(ContainSubstring("failed to calculate checksum: failed")))
 				})
 			})
 		})

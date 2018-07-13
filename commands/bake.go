@@ -79,8 +79,14 @@ type metadataService interface {
 	Read(path string) (metadata []byte, err error)
 }
 
+//go:generate counterfeiter -o ./fakes/checksummer.go --fake-name Checksummer . checksummer
+type checksummer interface {
+	Sum(path string) error
+}
+
 type Bake struct {
 	interpolator      interpolator
+	checksummer       checksummer
 	tileWriter        tileWriter
 	output            logger
 	templateVariables templateVariablesService
@@ -110,6 +116,7 @@ type Bake struct {
 		MigrationDirectories     []string `short:"md"  long:"migrations-directory"      description:"path to a directory containing migrations"`
 		PropertyDirectories      []string `short:"pd"  long:"properties-directory"      description:"path to a directory containing property blueprints"`
 		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory" description:"path to a directory containing runtime configs"`
+		Sha256                   bool     `            long:"sha256"                    description:"calculates a SHA256 checksum of the output file"`
 		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"          description:"path to a stemcell tarball"`
 		StubReleases             bool     `short:"sr"  long:"stub-releases"             description:"skips importing release tarballs into the tile"`
 		VariableFiles            []string `short:"vf"  long:"variables-file"            description:"path to a file containing variables to interpolate"`
@@ -133,11 +140,13 @@ func NewBake(
 	runtimeConfigsService runtimeConfigsService,
 	iconService iconService,
 	metadataService metadataService,
+	checksummer checksummer,
 ) Bake {
 
 	return Bake{
 		interpolator:      interpolator,
 		tileWriter:        tileWriter,
+		checksummer:       checksummer,
 		output:            output,
 		templateVariables: templateVariablesService,
 		boshVariables:     boshVariablesService,
@@ -243,19 +252,27 @@ func (b Bake) Execute(args []string) error {
 		return err
 	}
 
-	if len(b.Options.OutputFile) > 0 {
-		err = b.tileWriter.Write(interpolatedMetadata, builder.WriteInput{
-			OutputFile:           b.Options.OutputFile,
-			StubReleases:         b.Options.StubReleases,
-			MigrationDirectories: b.Options.MigrationDirectories,
-			ReleaseDirectories:   b.Options.ReleaseDirectories,
-			EmbedPaths:           b.Options.EmbedPaths,
-		})
-		if err != nil {
-			return err
-		}
-	} else if b.Options.MetadataOnly {
+	if b.Options.MetadataOnly {
 		b.output.Printf("%s", interpolatedMetadata)
+		return nil
+	}
+
+	err = b.tileWriter.Write(interpolatedMetadata, builder.WriteInput{
+		OutputFile:           b.Options.OutputFile,
+		StubReleases:         b.Options.StubReleases,
+		MigrationDirectories: b.Options.MigrationDirectories,
+		ReleaseDirectories:   b.Options.ReleaseDirectories,
+		EmbedPaths:           b.Options.EmbedPaths,
+	})
+	if err != nil {
+		return err
+	}
+
+	if b.Options.Sha256 {
+		err = b.checksummer.Sum(b.Options.OutputFile)
+		if err != nil {
+			return fmt.Errorf("failed to calculate checksum: %s", err)
+		}
 	}
 
 	return nil

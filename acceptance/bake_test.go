@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
@@ -371,8 +372,32 @@ some-literal-variable: |
 		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding releases/diego-release-0.1467.1-3215.4.0.tgz to %s...", outputFile)))
 		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding releases/cf-release-235.0.0-3215.4.0.tgz to %s...", outputFile)))
 		Eventually(session.Err).ShouldNot(gbytes.Say(fmt.Sprintf("Adding releases/not-a-tarball.txt to %s...", outputFile)))
-		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Calculating md5 sum of %s...", outputFile)))
-		Eventually(session.Err).Should(gbytes.Say("Calculated md5 sum: [0-9a-f]{32}"))
+	})
+
+	Context("when the --sha256 flag is provided", func() {
+		BeforeEach(func() {
+			commandWithArgs = append(commandWithArgs, "--sha256")
+		})
+
+		It("outputs a sha256 checksum of the file to stderr", func() {
+			command := exec.Command(pathToMain, commandWithArgs...)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			Expect(session.Err).To(gbytes.Say(fmt.Sprintf("Calculating SHA256 checksum of %s...", outputFile)))
+			Expect(session.Err).To(gbytes.Say("SHA256 checksum: [0-9a-f]{64}"))
+
+			contents, err := ioutil.ReadFile(fmt.Sprintf("%s.sha256", outputFile))
+			Expect(err).NotTo(HaveOccurred())
+
+			re := regexp.MustCompile("SHA256 checksum: ([0-9a-f]{64})")
+			expectedChecksum := re.FindStringSubmatch(string(session.Err.Contents()))[1]
+
+			Expect(string(contents)).To(Equal(expectedChecksum))
+		})
 	})
 
 	Context("when the --metadata-only flag is specified", func() {

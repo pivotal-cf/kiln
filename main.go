@@ -51,9 +51,8 @@ func main() {
 
 	filesystem := helper.NewFilesystem()
 	zipper := builder.NewZipper()
-	md5SumCalculator := helper.NewFileMD5SumCalculator()
 	interpolator := builder.NewInterpolator()
-	tileWriter := builder.NewTileWriter(filesystem, &zipper, errLogger, md5SumCalculator)
+	tileWriter := builder.NewTileWriter(filesystem, &zipper, errLogger)
 
 	releaseManifestReader := builder.NewReleaseManifestReader()
 	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
@@ -84,6 +83,7 @@ func main() {
 	iconService := baking.NewIconService(errLogger)
 
 	metadataService := baking.NewMetadataService()
+	checksummer := baking.NewChecksummer(errLogger)
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
@@ -103,6 +103,7 @@ func main() {
 		runtimeConfigsService,
 		iconService,
 		metadataService,
+		checksummer,
 	)
 
 	err = commandSet.Execute(command, args)

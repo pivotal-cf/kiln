@@ -20,7 +20,8 @@ function main() {
     --stemcell-tarball "${cwd}/stemcell.tgz" \
     --variable "some-variable=some-value" \
     --variables-file "${cwd}/variables.yml" \
-    --version "1.2.3-build.4"
+    --version "1.2.3-build.4" \
+    --sha256
 }
 
 main "$(cd "$(dirname "${0}")" && pwd)"
