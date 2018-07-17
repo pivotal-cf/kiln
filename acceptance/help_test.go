@@ -43,6 +43,7 @@ Command Arguments:
   --properties-directory, -pd        string (variadic)            path to a directory containing property blueprints
   --releases-directory, -rd          string (required, variadic)  path to a directory containing release tarballs
   --runtime-configs-directory, -rcd  string (variadic)            path to a directory containing runtime configs
+  --sha256                           bool                         calculates a SHA256 checksum of the output file
   --stemcell-tarball, -st            string                       path to a stemcell tarball
   --stub-releases, -sr               bool                         skips importing release tarballs into the tile
   --variable, -vr                    string (variadic)            key value pairs of variables to interpolate

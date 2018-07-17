@@ -22,7 +22,6 @@ var _ = Describe("TileWriter", func() {
 		filesystem *fakes.Filesystem
 		zipper     *fakes.Zipper
 		logger     *fakes.Logger
-		md5Calc    *fakes.MD5SumCalculator
 		tileWriter builder.TileWriter
 		outputFile string
 
@@ -33,8 +32,7 @@ var _ = Describe("TileWriter", func() {
 		filesystem = &fakes.Filesystem{}
 		zipper = &fakes.Zipper{}
 		logger = &fakes.Logger{}
-		md5Calc = &fakes.MD5SumCalculator{}
-		tileWriter = builder.NewTileWriter(filesystem, zipper, logger, md5Calc)
+		tileWriter = builder.NewTileWriter(filesystem, zipper, logger)
 		outputFile = "some-output-dir/cool-product-file-1.2.3-build.4.pivotal"
 	})
 
@@ -120,8 +118,6 @@ var _ = Describe("TileWriter", func() {
 				}
 			}
 
-			md5Calc.ChecksumCall.Returns.Sum = "THIS-IS-THE-SUM"
-
 			err := tileWriter.Write([]byte("generated-metadata-contents"), input)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -175,12 +171,8 @@ var _ = Describe("TileWriter", func() {
 				fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
 				fmt.Sprintf("Adding releases/release-3.tgz to %s...", outputFile),
 				fmt.Sprintf("Adding releases/release-4.tgz to %s...", outputFile),
-				fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
-				"Calculated md5 sum: THIS-IS-THE-SUM",
 			}))
 
-			Expect(md5Calc.ChecksumCall.CallCount).To(Equal(1))
-			Expect(md5Calc.ChecksumCall.Receives.Path).To(Equal("some-output-dir/cool-product-file-1.2.3-build.4.pivotal"))
 		},
 			Entry("without stubbing releases", false, nil),
 			Entry("with stubbed releases", true, errors.New("don't open release")),
@@ -242,8 +234,6 @@ var _ = Describe("TileWriter", func() {
 						fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
 						fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
 						fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
-						fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
-						"Calculated md5 sum: ",
 					}))
 
 					Expect(zipper.CreateFolderCallCount()).To(Equal(1))
@@ -269,8 +259,6 @@ var _ = Describe("TileWriter", func() {
 						fmt.Sprintf("Creating empty migrations folder in %s...", outputFile),
 						fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
 						fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
-						fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
-						"Calculated md5 sum: ",
 					}))
 
 					Expect(zipper.CreateFolderCallCount()).To(Equal(1))
@@ -330,8 +318,6 @@ var _ = Describe("TileWriter", func() {
 					fmt.Sprintf("Adding releases/release-1.tgz to %s...", outputFile),
 					fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
 					fmt.Sprintf("Adding embed/my-file.txt to %s...", outputFile),
-					fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
-					"Calculated md5 sum: ",
 				}))
 
 				Expect(zipper.AddWithModeCallCount()).To(Equal(1))
@@ -398,8 +384,6 @@ var _ = Describe("TileWriter", func() {
 					fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
 					fmt.Sprintf("Adding embed/to-embed/my-file-1.txt to %s...", outputFile),
 					fmt.Sprintf("Adding embed/to-embed/my-file-2.txt to %s...", outputFile),
-					fmt.Sprintf("Calculating md5 sum of %s...", outputFile),
-					"Calculated md5 sum: ",
 				}))
 
 				path, file, mode := zipper.AddWithModeArgsForCall(0)
@@ -735,20 +719,6 @@ var _ = Describe("TileWriter", func() {
 							ContainElement(expectedLogLine),
 						)
 					})
-				})
-			})
-
-			Context("when the MD5 cannot be calculated", func() {
-				It("returns an error", func() {
-
-					md5Calc.ChecksumCall.Returns.Error = errors.New("MD5 cannot be calculated")
-
-					input := builder.WriteInput{
-						StubReleases: true,
-					}
-
-					err := tileWriter.Write([]byte{}, input)
-					Expect(err).To(MatchError("MD5 cannot be calculated"))
 				})
 			})
 		})

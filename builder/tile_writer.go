@@ -11,10 +11,9 @@ import (
 )
 
 type TileWriter struct {
-	filesystem       filesystem
-	zipper           zipper
-	logger           logger
-	md5SumCalculator md5SumCalculator
+	filesystem filesystem
+	zipper     zipper
+	logger     logger
 }
 
 //go:generate counterfeiter -o ./fakes/filesystem.go --fake-name Filesystem . filesystem
@@ -23,10 +22,6 @@ type filesystem interface {
 	Open(path string) (io.ReadCloser, error)
 	Walk(root string, walkFn filepath.WalkFunc) error
 	Remove(path string) error
-}
-
-type md5SumCalculator interface {
-	Checksum(path string) (string, error)
 }
 
 //go:generate counterfeiter -o ./fakes/zipper.go --fake-name Zipper . zipper
@@ -41,12 +36,11 @@ type zipper interface {
 
 //go:generate counterfeiter -o ./fakes/file_info.go --fake-name FileInfo os.FileInfo
 
-func NewTileWriter(filesystem filesystem, zipper zipper, logger logger, md5SumCalculator md5SumCalculator) TileWriter {
+func NewTileWriter(filesystem filesystem, zipper zipper, logger logger) TileWriter {
 	return TileWriter{
-		filesystem:       filesystem,
-		zipper:           zipper,
-		logger:           logger,
-		md5SumCalculator: md5SumCalculator,
+		filesystem: filesystem,
+		zipper:     zipper,
+		logger:     logger,
 	}
 }
 
@@ -98,14 +92,6 @@ func (w TileWriter) Write(generatedMetadataContents []byte, input WriteInput) er
 		w.removeOutputFile(input.OutputFile)
 		return err
 	}
-
-	w.logger.Printf("Calculating md5 sum of %s...", input.OutputFile)
-	md5Sum, err := w.md5SumCalculator.Checksum(input.OutputFile)
-	if err != nil {
-		return err
-	}
-
-	w.logger.Printf("Calculated md5 sum: %s", md5Sum)
 
 	return nil
 }

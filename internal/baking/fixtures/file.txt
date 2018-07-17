@@ -1,0 +1,1 @@
+This is a file used to calculate a SHA256 checksum.
