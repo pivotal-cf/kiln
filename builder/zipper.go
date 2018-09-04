@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type Zipper struct {
@@ -29,6 +30,7 @@ func (z Zipper) Add(path string, file io.Reader) error {
 	return z.add(&zip.FileHeader{
 		Name:   path,
 		Method: zip.Deflate,
+		Modified: time.Now(),
 	}, file)
 }
 
@@ -40,6 +42,7 @@ func (z Zipper) AddWithMode(path string, file io.Reader, mode os.FileMode) error
 	fh := &zip.FileHeader{
 		Name:   path,
 		Method: zip.Deflate,
+		Modified: time.Now(),
 	}
 	fh.SetMode(mode)
 
@@ -71,7 +74,11 @@ func (z Zipper) CreateFolder(path string) error {
 
 	path = fmt.Sprintf("%s%c", filepath.Clean(path), filepath.Separator)
 
-	_, err := z.writer.Create(path)
+	fh := &zip.FileHeader{
+		Name:   path,
+		Modified: time.Now(),
+	}
+	_, err := z.writer.CreateHeader(fh)
 	if err != nil {
 		return err
 	}
