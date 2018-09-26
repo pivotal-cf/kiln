@@ -35,10 +35,9 @@ var _ = Describe("Bake", func() {
 		fakeTileWriter               *fakes.TileWriter
 		fakeChecksummer              *fakes.Checksummer
 
-		otherReleasesDirectory     string
-		someBOSHVariablesDirectory string
-		someReleasesDirectory      string
-		tmpDir                     string
+		otherReleasesDirectory string
+		someReleasesDirectory  string
+		tmpDir                 string
 
 		bake commands.Bake
 	)
@@ -52,9 +51,6 @@ var _ = Describe("Bake", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		otherReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
-
-		someBOSHVariablesDirectory, err = ioutil.TempDir(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		nonTarballRelease := filepath.Join(someReleasesDirectory, "some-broken-release")
