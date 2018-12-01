@@ -15,10 +15,11 @@ import (
 	"github.com/onsi/gomega/gexec"
 	yaml "gopkg.in/yaml.v2"
 
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
-	"time"
 )
 
 var _ = Describe("bake command", func() {
@@ -576,15 +577,23 @@ some-literal-variable: |
 		})
 
 		Context("when an embed directory is specified", func() {
-			It("embeds the root directory and retains its structure", func() {
+			It("embeds the root directory (excluding .git) and retains its structure", func() {
 				dirToAdd := filepath.Join(tmpDir, "some-dir")
 				nestedDir := filepath.Join(dirToAdd, "some-nested-dir")
+				nestedGitDir := filepath.Join(dirToAdd, ".git")
 				someFileToEmbed := filepath.Join(nestedDir, "some-file-to-embed")
+				gitFileNotToEmbed := filepath.Join(nestedGitDir, "config")
 
 				err := os.MkdirAll(nestedDir, 0700)
 				Expect(err).NotTo(HaveOccurred())
 
+				err = os.MkdirAll(nestedGitDir, 0700)
+				Expect(err).NotTo(HaveOccurred())
+
 				err = ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0600)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = ioutil.WriteFile(gitFileNotToEmbed, []byte("content-of-git-config-file"), 0600)
 				Expect(err).NotTo(HaveOccurred())
 
 				commandWithArgs = append(commandWithArgs,
@@ -607,6 +616,7 @@ some-literal-variable: |
 				Expect(err).NotTo(HaveOccurred())
 
 				seenFile := false
+				seenGitFile := false
 				for _, f := range zr.File {
 					if f.Name == "embed/some-dir/some-nested-dir/some-file-to-embed" {
 						seenFile = true
@@ -618,9 +628,14 @@ some-literal-variable: |
 
 						Expect(content).To(Equal([]byte("content-of-some-file")))
 					}
+
+					if f.Name == "embed/some-dir/.git/config" {
+						seenGitFile = true
+					}
 				}
 
 				Expect(seenFile).To(BeTrue())
+				Expect(seenGitFile).To(BeFalse())
 			})
 		})
 	})
