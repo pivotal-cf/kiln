@@ -399,6 +399,8 @@ var _ = Describe("TileWriter", func() {
 					fmt.Sprintf("Skipping embed/to-embed/.git/config..."),
 				}))
 
+				Expect(zipper.AddWithModeCallCount()).To(Equal(2))
+
 				path, file, mode := zipper.AddWithModeArgsForCall(0)
 				Expect(path).To(Equal(filepath.Join("embed", "to-embed", "my-file-1.txt")))
 				Eventually(gbytes.BufferReader(file)).Should(gbytes.Say("contents-of-embedded-file-1"))
