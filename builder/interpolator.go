@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"text/template"
 
 	yamlConverter "github.com/ghodss/yaml"
@@ -77,6 +78,15 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 				return "", fmt.Errorf("could not find property blueprint with name '%s'", name)
 			}
 			return i.interpolateValueIntoYAML(input, val)
+		},
+		"regexReplaceAll": func(regex, inputString, replaceString string) (string, error) {
+			re, err := regexp.Compile(regex)
+			if err != nil {
+				return "", err
+			}
+			outputString := re.ReplaceAllString(inputString, replaceString)
+
+			return i.interpolateValueIntoYAML(input, outputString)
 		},
 		"release": func(name string) (string, error) {
 			if input.ReleaseManifests == nil {

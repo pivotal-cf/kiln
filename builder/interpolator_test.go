@@ -28,6 +28,8 @@ some_runtime_configs:
 - $( runtime_config "some-runtime-config" )
 some_bosh_variables:
 - $( bosh_variable "some-bosh-variable" )
+some_regex_replace:
+- $( regexReplaceAll "^\"?([0-9]+)\\.([0-9]+)\\.([0-9]+).*$" version "${1}-${2}-${3}" )
 
 selected_value: $( release "some-release" | select "version" )
 `
@@ -167,6 +169,8 @@ some_runtime_configs:
 some_bosh_variables:
 - name: some-bosh-variable
   type: some-bosh-type
+some_regex_replace:
+- 3-4-5
 
 selected_value: 1.2.3	
 `))
@@ -510,6 +514,16 @@ some_runtime_configs:
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not select \"key-not-there\", key does not exist"))
+			})
+		})
+
+		Context("input to regexReplaceAll is not valid regex", func() {
+			It("returns an error", func() {
+				interpolator := builder.NewInterpolator()
+				_, err := interpolator.Interpolate(input, []byte(`regex: $( regexReplaceAll "**" "" "" )`))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("regex"))
 			})
 		})
 	})
