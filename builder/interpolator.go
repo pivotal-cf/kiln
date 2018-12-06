@@ -84,9 +84,7 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 			if err != nil {
 				return "", err
 			}
-			outputString := re.ReplaceAllString(inputString, replaceString)
-
-			return i.interpolateValueIntoYAML(input, outputString)
+			return re.ReplaceAllString(inputString, replaceString), nil
 		},
 		"release": func(name string) (string, error) {
 			if input.ReleaseManifests == nil {

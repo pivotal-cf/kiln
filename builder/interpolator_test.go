@@ -29,7 +29,7 @@ some_runtime_configs:
 some_bosh_variables:
 - $( bosh_variable "some-bosh-variable" )
 some_regex_replace:
-- $( regexReplaceAll "^\"?([0-9]+)\\.([0-9]+)\\.([0-9]+).*$" version "${1}-${2}-${3}" )
+- https://some-link/$( regexReplaceAll "^\"?([0-9]+)\\.([0-9]+)\\.([0-9]+).*$" version "${1}-${2}-${3}" )/index.html
 
 selected_value: $( release "some-release" | select "version" )
 `
@@ -170,7 +170,7 @@ some_bosh_variables:
 - name: some-bosh-variable
   type: some-bosh-type
 some_regex_replace:
-- 3-4-5
+- https://some-link/3-4-5/index.html
 
 selected_value: 1.2.3	
 `))
