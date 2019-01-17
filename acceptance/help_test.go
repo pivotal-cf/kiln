@@ -18,6 +18,7 @@ Usage: kiln [options] <command> [<args>]
 
 Commands:
   bake     bakes a tile
+  fetch    fetches releases
   help     prints this usage information
   version  prints the kiln release version
 `
@@ -49,6 +50,18 @@ Command Arguments:
   --variable, -vr                    string (variadic)            key value pairs of variables to interpolate
   --variables-file, -vf              string (variadic)            path to a file containing variables to interpolate
   --version, -v                      string                       version of the tile
+`
+
+const FETCH_USAGE = `kiln fetch
+Fetches releases listed in assets file from S3 and downloads it locally
+
+Usage: kiln [options] fetch [<args>]
+  --help, -h     bool  prints this usage information (default: false)
+  --version, -v  bool  prints the kiln release version (default: false)
+
+Command Arguments:
+  --assets-file, -a          string (required)  path to assets file
+  --releases-directory, -rd  string (required)  path to a directory to download releases into
 `
 
 var _ = Describe("help", func() {
@@ -104,6 +117,15 @@ var _ = Describe("help", func() {
 
 			Eventually(session).Should(gexec.Exit(0))
 			Expect(string(session.Out.Contents())).To(ContainSubstring(BAKE_USAGE))
+		})
+
+		It("prints the usage for that command", func() {
+			command := exec.Command(pathToMain, "help", "fetch")
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+			Expect(string(session.Out.Contents())).To(ContainSubstring(FETCH_USAGE))
 		})
 	})
 })

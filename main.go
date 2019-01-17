@@ -88,6 +88,7 @@ func main() {
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
+	commandSet["fetch"] = commands.NewFetch()
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
 		tileWriter,
