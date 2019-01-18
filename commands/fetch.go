@@ -64,7 +64,8 @@ func (f Fetch) Execute(args []string) error {
 		Region:      aws.String(compiledReleases.S3.Region),
 		Credentials: credentials.NewStaticCredentials(compiledReleases.S3.AccessKeyId, compiledReleases.S3.SecretAccessKey, ""),
 	}))
-	downloader := s3manager.NewDownloader(sess)
+	s3Svc := s3.New(sess)
+	downloader := s3manager.NewDownloaderWithClient(s3Svc)
 
 	fmt.Println("looping over all releases")
 	for _, release := range releases {
