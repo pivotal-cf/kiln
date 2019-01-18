@@ -68,12 +68,11 @@ func (f Fetch) Execute(args []string) error {
 
 	fmt.Println("looping over all releases")
 	for _, release := range releases {
-		err = os.MkdirAll(fmt.Sprintf("%s/%s", f.ReleasesDir, release.Name), os.ModePerm)
 		if err != nil {
 			return fmt.Errorf("failed to create filepath %v", err)
 		}
 		filename := fmt.Sprintf("2.5/%s/%s-%s-%s.tgz", release.Name, release.Name, release.Version, stemcell.Version)
-		outputFile := fmt.Sprintf("%s/%s/%s-%s-%s.tgz", f.ReleasesDir, release.Name, release.Name, release.Version, stemcell.Version)
+		outputFile := fmt.Sprintf("%s/%s-%s-%s.tgz", f.ReleasesDir, release.Name, release.Version, stemcell.Version)
 
 		file, err := os.Create(outputFile)
 		if err != nil {
@@ -81,17 +80,17 @@ func (f Fetch) Execute(args []string) error {
 		}
 
 		fmt.Printf("downloading %s-%s-%s...\n", release.Name, release.Version, stemcell.Version)
-		fmt.Printf("s3 path: %s", filename)
+		fmt.Printf("s3 path: %s\n", filename)
 		n, err := downloader.Download(file, &s3.GetObjectInput{
 			Bucket: aws.String(compiledReleases.S3.Bucket),
 			Key:    aws.String(filename),
 		})
 
 		if err != nil {
-			return fmt.Errorf("failed to download file, %v", err)
+			return fmt.Errorf("failed to download file, %v\n", err)
 		}
 
-		fmt.Printf("release downloaded, %d bytes\n", n)
+		fmt.Printf("release downloaded to %s directory, %d bytes\n", f.ReleasesDir, n)
 	}
 
 	return nil
