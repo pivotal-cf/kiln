@@ -19,11 +19,11 @@ type AssetsLock struct {
 	Stemcell Stemcell  `yaml:"stemcell_criteria"`
 }
 
-type CompiledReleases struct {
-	S3 S3 `yaml:"compiled_releases"`
+type Assets struct {
+	CompiledReleases CompiledReleases `yaml:"compiled_releases"`
 }
 
-type S3 struct {
+type CompiledReleases struct {
 	Type            string `yaml:"type"`
 	Bucket          string `yaml:"bucket"`
 	Region          string `yaml:"region"`

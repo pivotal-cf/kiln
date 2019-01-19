@@ -2,15 +2,14 @@ package commands
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	yaml "gopkg.in/yaml.v2"
@@ -35,64 +34,95 @@ func (f Fetch) Execute(args []string) error {
 	}
 
 	fmt.Println("getting S3 information from assets.yml")
-	data, err := ioutil.ReadFile(f.AssetsFile)
+	file, err := os.Open(f.AssetsFile)
 	if err != nil {
 		return err
 	}
-	compiledReleases := cargo.CompiledReleases{}
-	err = yaml.UnmarshalStrict([]byte(data), &compiledReleases)
+	defer file.Close()
+
+	var assets cargo.Assets
+	err = yaml.NewDecoder(file).Decode(&assets)
+	if err != nil {
+		return err
+	}
+
+	regex, err := regexp.Compile(assets.CompiledReleases.Regex)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("getting release information from assets.lock")
-	assetsLockFile := fmt.Sprintf("%s.lock", strings.TrimSuffix(f.AssetsFile, ".yml"))
-	data, err = ioutil.ReadFile(assetsLockFile)
+	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.AssetsFile, ".yml")))
 	if err != nil {
 		return err
 	}
-	assetsLock := &cargo.AssetsLock{}
-	err = yaml.Unmarshal([]byte(data), assetsLock)
+	defer assetsLockFile.Close()
+
+	var assetsLock cargo.AssetsLock
+	err = yaml.NewDecoder(assetsLockFile).Decode(&assetsLock)
 	if err != nil {
 		return err
 	}
-	releases := assetsLock.Releases
-	stemcell := assetsLock.Stemcell
+	// releases := assetsLock.Releases
+	// stemcell := assetsLock.Stemcell
 
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region:      aws.String(compiledReleases.S3.Region),
-		Credentials: credentials.NewStaticCredentials(compiledReleases.S3.AccessKeyId, compiledReleases.S3.SecretAccessKey, ""),
+		Region:      aws.String(assets.CompiledReleases.Region),
+		Credentials: credentials.NewStaticCredentials(assets.CompiledReleases.AccessKeyId, assets.CompiledReleases.SecretAccessKey, ""),
 	}))
-	s3Svc := s3.New(sess)
-	downloader := s3manager.NewDownloaderWithClient(s3Svc)
+	s3Client := s3.New(sess)
+	// downloader := s3manager.NewDownloaderWithClient(s3Svc)
 
-	fmt.Println("looping over all releases")
-	for _, release := range releases {
-		if err != nil {
-			return fmt.Errorf("failed to create filepath %v", err)
-		}
-		filename := fmt.Sprintf("2.5/%s/%s-%s-%s.tgz", release.Name, release.Name, release.Version, stemcell.Version)
-		outputFile := fmt.Sprintf("%s/%s-%s-%s.tgz", f.ReleasesDir, release.Name, release.Version, stemcell.Version)
+	// fmt.Println("looping over all releases")
+	// for _, release := range releases {
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to create filepath %v", err)
+	// 	}
+	// 	filename := fmt.Sprintf("2.5/%s/%s-%s-%s.tgz", release.Name, release.Name, release.Version, stemcell.Version)
+	// 	outputFile := fmt.Sprintf("%s/%s-%s-%s.tgz", f.ReleasesDir, release.Name, release.Version, stemcell.Version)
 
-		file, err := os.Create(outputFile)
-		if err != nil {
-			return fmt.Errorf("failed to create file %q, %v", outputFile, err)
-		}
+	// 	file, err := os.Create(outputFile)
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to create file %q, %v", outputFile, err)
+	// 	}
 
-		fmt.Printf("downloading %s-%s-%s...\n", release.Name, release.Version, stemcell.Version)
-		fmt.Printf("s3 path: %s\n", filename)
-		n, err := downloader.Download(file, &s3.GetObjectInput{
-			Bucket: aws.String(compiledReleases.S3.Bucket),
-			Key:    aws.String(filename),
-		})
+	// 	fmt.Printf("downloading %s-%s-%s...\n", release.Name, release.Version, stemcell.Version)
+	// 	fmt.Printf("s3 path: %s\n", filename)
+	// 	n, err := downloader.Download(file, &s3.GetObjectInput{
+	// 		Bucket: aws.String(compiledReleases.S3.Bucket),
+	// 		Key:    aws.String(filename),
+	// 	})
 
-		if err != nil {
-			return fmt.Errorf("failed to download file, %v\n", err)
-		}
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to download file, %v\n", err)
+	// 	}
 
-		fmt.Printf("release downloaded to %s directory, %d bytes\n", f.ReleasesDir, n)
-	}
+	// 	fmt.Printf("release downloaded to %s directory, %d bytes\n", f.ReleasesDir, n)
+	// }
+
+	// return nil
+
+	// list contents of bucket
+	s3Client.ListObjectsPages(
+		&s3.ListObjectsInput{
+			Bucket: aws.String(assets.CompiledReleases.Bucket),
+		},
+		func(page *s3.ListObjectsOutput, lastPage bool) bool {
+			for _, s3Object := range page.Contents {
+				if s3Object.Key == nil {
+					continue
+				}
+
+				if !regex.MatchString(*s3Object.Key) {
+					continue
+				}
+
+				regex.FindStringSubmatch(*s3Object.Key)
+			}
+			return false
+		},
+	)
 
 	return nil
 }
