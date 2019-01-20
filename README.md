@@ -297,7 +297,7 @@ template helper.
 For instance, this section in our example tile:
 
 ```
-my_release_version: $( release "my-release" | select "version" 
+my_release_version: $( release "my-release" | select "version" )
 ```
 
 Results in:
