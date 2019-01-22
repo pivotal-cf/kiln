@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -10,9 +11,17 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	yaml "gopkg.in/yaml.v2"
+)
+
+const (
+	ReleaseName     = "release_name"
+	ReleaseVersion  = "release_version"
+	StemcellOS      = "stemcell_os"
+	StemcellVersion = "stemcell_version"
 )
 
 type Fetch struct {
@@ -50,6 +59,7 @@ func (f Fetch) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+	// TODO: Check the capture group names
 
 	fmt.Println("getting release information from assets.lock")
 	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.AssetsFile, ".yml")))
@@ -63,8 +73,6 @@ func (f Fetch) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	// releases := assetsLock.Releases
-	// stemcell := assetsLock.Stemcell
 
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
 	sess := session.Must(session.NewSession(&aws.Config{
@@ -72,39 +80,17 @@ func (f Fetch) Execute(args []string) error {
 		Credentials: credentials.NewStaticCredentials(assets.CompiledReleases.AccessKeyId, assets.CompiledReleases.SecretAccessKey, ""),
 	}))
 	s3Client := s3.New(sess)
-	// downloader := s3manager.NewDownloaderWithClient(s3Svc)
 
-	// fmt.Println("looping over all releases")
-	// for _, release := range releases {
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to create filepath %v", err)
-	// 	}
-	// 	filename := fmt.Sprintf("2.5/%s/%s-%s-%s.tgz", release.Name, release.Name, release.Version, stemcell.Version)
-	// 	outputFile := fmt.Sprintf("%s/%s-%s-%s.tgz", f.ReleasesDir, release.Name, release.Version, stemcell.Version)
+	type CompiledRelease struct {
+		Name    string
+		Version string
+		// StemcellOS      string
+		StemcellVersion string
+	}
 
-	// 	file, err := os.Create(outputFile)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to create file %q, %v", outputFile, err)
-	// 	}
+	MatchedS3Objects := make(map[CompiledRelease]string)
 
-	// 	fmt.Printf("downloading %s-%s-%s...\n", release.Name, release.Version, stemcell.Version)
-	// 	fmt.Printf("s3 path: %s\n", filename)
-	// 	n, err := downloader.Download(file, &s3.GetObjectInput{
-	// 		Bucket: aws.String(compiledReleases.S3.Bucket),
-	// 		Key:    aws.String(filename),
-	// 	})
-
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to download file, %v\n", err)
-	// 	}
-
-	// 	fmt.Printf("release downloaded to %s directory, %d bytes\n", f.ReleasesDir, n)
-	// }
-
-	// return nil
-
-	// list contents of bucket
-	s3Client.ListObjectsPages(
+	err = s3Client.ListObjectsPages(
 		&s3.ListObjectsInput{
 			Bucket: aws.String(assets.CompiledReleases.Bucket),
 		},
@@ -118,11 +104,63 @@ func (f Fetch) Execute(args []string) error {
 					continue
 				}
 
-				regex.FindStringSubmatch(*s3Object.Key)
+				matches := regex.FindStringSubmatch(*s3Object.Key)
+				subgroup := make(map[string]string)
+				for i, name := range regex.SubexpNames() {
+					if i != 0 && name != "" {
+						subgroup[name] = matches[i]
+					}
+				}
+
+				MatchedS3Objects[CompiledRelease{
+					Name:    subgroup[ReleaseName],
+					Version: subgroup[ReleaseVersion],
+					// StemcellOS:      subgroup[StemcellOS],
+					StemcellVersion: subgroup[StemcellVersion],
+				}] = *s3Object.Key
 			}
-			return false
+			return true
 		},
 	)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Number of matched S3 objects: %d\n", len(MatchedS3Objects))
+
+	releases := assetsLock.Releases
+	stemcell := assetsLock.Stemcell
+
+	downloader := s3manager.NewDownloaderWithClient(s3Client)
+	for _, release := range releases {
+		s3Key, ok := MatchedS3Objects[CompiledRelease{
+			Name:    release.Name,
+			Version: release.Version,
+			// StemcellOS:      stemcell.OS,
+			StemcellVersion: stemcell.Version,
+		}]
+
+		if !ok {
+			return fmt.Errorf("Compiled release: %s, version: %s, stemcell OS: %s, stemcell version: %s, not found", release.Name, release.Version, stemcell.OS, stemcell.Version)
+		}
+
+		// outputFile := filepath.Join(f.ReleasesDir, fmt.Sprintf("%s-%s-%s-%s.tgz", release.Name, release.Version, stemcell.OS, stemcell.Version))
+		outputFile := filepath.Join(f.ReleasesDir, fmt.Sprintf("%s-%s-%s.tgz", release.Name, release.Version, stemcell.Version))
+		file, err := os.Create(outputFile)
+		if err != nil {
+			return fmt.Errorf("failed to create file %q, %v", outputFile, err)
+		}
+
+		fmt.Printf("downloading %s...\n", s3Key)
+		_, err = downloader.Download(file, &s3.GetObjectInput{
+			Bucket: aws.String(assets.CompiledReleases.Bucket),
+			Key:    aws.String(s3Key),
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to download file, %v\n", err)
+		}
+	}
 
 	return nil
 }
