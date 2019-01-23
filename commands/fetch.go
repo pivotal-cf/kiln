@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/cargo"
@@ -34,6 +35,85 @@ func NewFetch(assetsFile string, releasesDir string) Fetch {
 		AssetsFile:  assetsFile,
 		ReleasesDir: releasesDir,
 	}
+}
+
+func ListObjects(bucket string, regex regexp.Regexp, s3Client s3iface.S3API) (map[cargo.CompiledRelease]string, error) {
+	MatchedS3Objects := make(map[cargo.CompiledRelease]string)
+
+	err := s3Client.ListObjectsPages(
+		&s3.ListObjectsInput{
+			Bucket: aws.String(bucket),
+		},
+		func(page *s3.ListObjectsOutput, lastPage bool) bool {
+			for _, s3Object := range page.Contents {
+				if s3Object.Key == nil {
+					continue
+				}
+
+				if !regex.MatchString(*s3Object.Key) {
+					continue
+				}
+
+				matches := regex.FindStringSubmatch(*s3Object.Key)
+				subgroup := make(map[string]string)
+				for i, name := range regex.SubexpNames() {
+					if i != 0 && name != "" {
+						subgroup[name] = matches[i]
+					}
+				}
+
+				MatchedS3Objects[cargo.CompiledRelease{
+					Name:    subgroup[ReleaseName],
+					Version: subgroup[ReleaseVersion],
+					// StemcellOS:      subgroup[StemcellOS],
+					StemcellVersion: subgroup[StemcellVersion],
+				}] = *s3Object.Key
+			}
+			return true
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return MatchedS3Objects, nil
+}
+
+func DownloadReleases(releases []cargo.Release, stemcell cargo.Stemcell, bucket string, releasesDir string, matchedS3objects map[cargo.CompiledRelease]string, s3Client s3iface.S3API) error {
+	downloader := s3manager.NewDownloaderWithClient(s3Client)
+
+	for _, release := range releases {
+		s3Key, ok := matchedS3objects[cargo.CompiledRelease{
+			Name:    release.Name,
+			Version: release.Version,
+			// StemcellOS:      stemcell.OS,
+			StemcellVersion: stemcell.Version,
+		}]
+
+		if !ok {
+			return fmt.Errorf("Compiled release: %s, version: %s, stemcell OS: %s, stemcell version: %s, not found", release.Name, release.Version, stemcell.OS, stemcell.Version)
+		}
+
+		// outputFile := filepath.Join(f.ReleasesDir, fmt.Sprintf("%s-%s-%s-%s.tgz", release.Name, release.Version, stemcell.OS, stemcell.Version))
+		outputFile := filepath.Join(releasesDir, fmt.Sprintf("%s-%s-%s.tgz", release.Name, release.Version, stemcell.Version))
+		file, err := os.Create(outputFile)
+		if err != nil {
+			return fmt.Errorf("failed to create file %q, %v", outputFile, err)
+		}
+
+		fmt.Printf("downloading %s...\n", s3Key)
+		_, err = downloader.Download(file, &s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(s3Key),
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to download file, %v\n", err)
+		}
+	}
+
+	return nil
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -81,85 +161,19 @@ func (f Fetch) Execute(args []string) error {
 	}))
 	s3Client := s3.New(sess)
 
-	type CompiledRelease struct {
-		Name    string
-		Version string
-		// StemcellOS      string
-		StemcellVersion string
-	}
-
-	MatchedS3Objects := make(map[CompiledRelease]string)
-
-	err = s3Client.ListObjectsPages(
-		&s3.ListObjectsInput{
-			Bucket: aws.String(assets.CompiledReleases.Bucket),
-		},
-		func(page *s3.ListObjectsOutput, lastPage bool) bool {
-			for _, s3Object := range page.Contents {
-				if s3Object.Key == nil {
-					continue
-				}
-
-				if !regex.MatchString(*s3Object.Key) {
-					continue
-				}
-
-				matches := regex.FindStringSubmatch(*s3Object.Key)
-				subgroup := make(map[string]string)
-				for i, name := range regex.SubexpNames() {
-					if i != 0 && name != "" {
-						subgroup[name] = matches[i]
-					}
-				}
-
-				MatchedS3Objects[CompiledRelease{
-					Name:    subgroup[ReleaseName],
-					Version: subgroup[ReleaseVersion],
-					// StemcellOS:      subgroup[StemcellOS],
-					StemcellVersion: subgroup[StemcellVersion],
-				}] = *s3Object.Key
-			}
-			return true
-		},
-	)
+	MatchedS3Objects, err := ListObjects(assets.CompiledReleases.Bucket, *regex, s3Client)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Number of matched S3 objects: %d\n", len(MatchedS3Objects))
+	fmt.Printf("number of matched S3 objects: %d\n", len(MatchedS3Objects))
 
 	releases := assetsLock.Releases
 	stemcell := assetsLock.Stemcell
 
-	downloader := s3manager.NewDownloaderWithClient(s3Client)
-	for _, release := range releases {
-		s3Key, ok := MatchedS3Objects[CompiledRelease{
-			Name:    release.Name,
-			Version: release.Version,
-			// StemcellOS:      stemcell.OS,
-			StemcellVersion: stemcell.Version,
-		}]
-
-		if !ok {
-			return fmt.Errorf("Compiled release: %s, version: %s, stemcell OS: %s, stemcell version: %s, not found", release.Name, release.Version, stemcell.OS, stemcell.Version)
-		}
-
-		// outputFile := filepath.Join(f.ReleasesDir, fmt.Sprintf("%s-%s-%s-%s.tgz", release.Name, release.Version, stemcell.OS, stemcell.Version))
-		outputFile := filepath.Join(f.ReleasesDir, fmt.Sprintf("%s-%s-%s.tgz", release.Name, release.Version, stemcell.Version))
-		file, err := os.Create(outputFile)
-		if err != nil {
-			return fmt.Errorf("failed to create file %q, %v", outputFile, err)
-		}
-
-		fmt.Printf("downloading %s...\n", s3Key)
-		_, err = downloader.Download(file, &s3.GetObjectInput{
-			Bucket: aws.String(assets.CompiledReleases.Bucket),
-			Key:    aws.String(s3Key),
-		})
-
-		if err != nil {
-			return fmt.Errorf("failed to download file, %v\n", err)
-		}
+	DownloadReleases(releases, stemcell, assets.CompiledReleases.Bucket, f.ReleasesDir, MatchedS3Objects, s3Client)
+	if err != nil {
+		return err
 	}
 
 	return nil

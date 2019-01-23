@@ -32,6 +32,12 @@ type CompiledReleases struct {
 	Regex           string `yaml:"regex"`
 }
 
+type CompiledRelease struct {
+	Name    string
+	Version string
+	// StemcellOS      string
+	StemcellVersion string
+}
 type Stemcell struct {
 	Alias   string `yaml:"alias"`
 	OS      string `yaml:"os"`
