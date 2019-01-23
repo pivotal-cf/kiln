@@ -6,10 +6,10 @@ import (
 )
 
 type MetadataService struct {
-	ReadStub        func(path string) (metadata []byte, err error)
+	ReadStub        func(string) ([]byte, error)
 	readMutex       sync.RWMutex
 	readArgsForCall []struct {
-		path string
+		arg1 string
 	}
 	readReturns struct {
 		result1 []byte
@@ -23,21 +23,22 @@ type MetadataService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MetadataService) Read(path string) (metadata []byte, err error) {
+func (fake *MetadataService) Read(arg1 string) ([]byte, error) {
 	fake.readMutex.Lock()
 	ret, specificReturn := fake.readReturnsOnCall[len(fake.readArgsForCall)]
 	fake.readArgsForCall = append(fake.readArgsForCall, struct {
-		path string
-	}{path})
-	fake.recordInvocation("Read", []interface{}{path})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("Read", []interface{}{arg1})
 	fake.readMutex.Unlock()
 	if fake.ReadStub != nil {
-		return fake.ReadStub(path)
+		return fake.ReadStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.readReturns.result1, fake.readReturns.result2
+	fakeReturns := fake.readReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *MetadataService) ReadCallCount() int {
@@ -46,13 +47,22 @@ func (fake *MetadataService) ReadCallCount() int {
 	return len(fake.readArgsForCall)
 }
 
+func (fake *MetadataService) ReadCalls(stub func(string) ([]byte, error)) {
+	fake.readMutex.Lock()
+	defer fake.readMutex.Unlock()
+	fake.ReadStub = stub
+}
+
 func (fake *MetadataService) ReadArgsForCall(i int) string {
 	fake.readMutex.RLock()
 	defer fake.readMutex.RUnlock()
-	return fake.readArgsForCall[i].path
+	argsForCall := fake.readArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *MetadataService) ReadReturns(result1 []byte, result2 error) {
+	fake.readMutex.Lock()
+	defer fake.readMutex.Unlock()
 	fake.ReadStub = nil
 	fake.readReturns = struct {
 		result1 []byte
@@ -61,6 +71,8 @@ func (fake *MetadataService) ReadReturns(result1 []byte, result2 error) {
 }
 
 func (fake *MetadataService) ReadReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.readMutex.Lock()
+	defer fake.readMutex.Unlock()
 	fake.ReadStub = nil
 	if fake.readReturnsOnCall == nil {
 		fake.readReturnsOnCall = make(map[int]struct {

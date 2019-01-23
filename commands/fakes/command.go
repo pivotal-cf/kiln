@@ -8,10 +8,10 @@ import (
 )
 
 type Command struct {
-	ExecuteStub        func(args []string) error
+	ExecuteStub        func([]string) error
 	executeMutex       sync.RWMutex
 	executeArgsForCall []struct {
-		args []string
+		arg1 []string
 	}
 	executeReturns struct {
 		result1 error
@@ -21,8 +21,9 @@ type Command struct {
 	}
 	UsageStub        func() jhanda.Usage
 	usageMutex       sync.RWMutex
-	usageArgsForCall []struct{}
-	usageReturns     struct {
+	usageArgsForCall []struct {
+	}
+	usageReturns struct {
 		result1 jhanda.Usage
 	}
 	usageReturnsOnCall map[int]struct {
@@ -32,26 +33,27 @@ type Command struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Command) Execute(args []string) error {
-	var argsCopy []string
-	if args != nil {
-		argsCopy = make([]string, len(args))
-		copy(argsCopy, args)
+func (fake *Command) Execute(arg1 []string) error {
+	var arg1Copy []string
+	if arg1 != nil {
+		arg1Copy = make([]string, len(arg1))
+		copy(arg1Copy, arg1)
 	}
 	fake.executeMutex.Lock()
 	ret, specificReturn := fake.executeReturnsOnCall[len(fake.executeArgsForCall)]
 	fake.executeArgsForCall = append(fake.executeArgsForCall, struct {
-		args []string
-	}{argsCopy})
-	fake.recordInvocation("Execute", []interface{}{argsCopy})
+		arg1 []string
+	}{arg1Copy})
+	fake.recordInvocation("Execute", []interface{}{arg1Copy})
 	fake.executeMutex.Unlock()
 	if fake.ExecuteStub != nil {
-		return fake.ExecuteStub(args)
+		return fake.ExecuteStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.executeReturns.result1
+	fakeReturns := fake.executeReturns
+	return fakeReturns.result1
 }
 
 func (fake *Command) ExecuteCallCount() int {
@@ -60,13 +62,22 @@ func (fake *Command) ExecuteCallCount() int {
 	return len(fake.executeArgsForCall)
 }
 
+func (fake *Command) ExecuteCalls(stub func([]string) error) {
+	fake.executeMutex.Lock()
+	defer fake.executeMutex.Unlock()
+	fake.ExecuteStub = stub
+}
+
 func (fake *Command) ExecuteArgsForCall(i int) []string {
 	fake.executeMutex.RLock()
 	defer fake.executeMutex.RUnlock()
-	return fake.executeArgsForCall[i].args
+	argsForCall := fake.executeArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *Command) ExecuteReturns(result1 error) {
+	fake.executeMutex.Lock()
+	defer fake.executeMutex.Unlock()
 	fake.ExecuteStub = nil
 	fake.executeReturns = struct {
 		result1 error
@@ -74,6 +85,8 @@ func (fake *Command) ExecuteReturns(result1 error) {
 }
 
 func (fake *Command) ExecuteReturnsOnCall(i int, result1 error) {
+	fake.executeMutex.Lock()
+	defer fake.executeMutex.Unlock()
 	fake.ExecuteStub = nil
 	if fake.executeReturnsOnCall == nil {
 		fake.executeReturnsOnCall = make(map[int]struct {
@@ -88,7 +101,8 @@ func (fake *Command) ExecuteReturnsOnCall(i int, result1 error) {
 func (fake *Command) Usage() jhanda.Usage {
 	fake.usageMutex.Lock()
 	ret, specificReturn := fake.usageReturnsOnCall[len(fake.usageArgsForCall)]
-	fake.usageArgsForCall = append(fake.usageArgsForCall, struct{}{})
+	fake.usageArgsForCall = append(fake.usageArgsForCall, struct {
+	}{})
 	fake.recordInvocation("Usage", []interface{}{})
 	fake.usageMutex.Unlock()
 	if fake.UsageStub != nil {
@@ -97,7 +111,8 @@ func (fake *Command) Usage() jhanda.Usage {
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.usageReturns.result1
+	fakeReturns := fake.usageReturns
+	return fakeReturns.result1
 }
 
 func (fake *Command) UsageCallCount() int {
@@ -106,7 +121,15 @@ func (fake *Command) UsageCallCount() int {
 	return len(fake.usageArgsForCall)
 }
 
+func (fake *Command) UsageCalls(stub func() jhanda.Usage) {
+	fake.usageMutex.Lock()
+	defer fake.usageMutex.Unlock()
+	fake.UsageStub = stub
+}
+
 func (fake *Command) UsageReturns(result1 jhanda.Usage) {
+	fake.usageMutex.Lock()
+	defer fake.usageMutex.Unlock()
 	fake.UsageStub = nil
 	fake.usageReturns = struct {
 		result1 jhanda.Usage
@@ -114,6 +137,8 @@ func (fake *Command) UsageReturns(result1 jhanda.Usage) {
 }
 
 func (fake *Command) UsageReturnsOnCall(i int, result1 jhanda.Usage) {
+	fake.usageMutex.Lock()
+	defer fake.usageMutex.Unlock()
 	fake.UsageStub = nil
 	if fake.usageReturnsOnCall == nil {
 		fake.usageReturnsOnCall = make(map[int]struct {

@@ -8,11 +8,11 @@ import (
 )
 
 type Interpolator struct {
-	InterpolateStub        func(input builder.InterpolateInput, templateYAML []byte) ([]byte, error)
+	InterpolateStub        func(builder.InterpolateInput, []byte) ([]byte, error)
 	interpolateMutex       sync.RWMutex
 	interpolateArgsForCall []struct {
-		input        builder.InterpolateInput
-		templateYAML []byte
+		arg1 builder.InterpolateInput
+		arg2 []byte
 	}
 	interpolateReturns struct {
 		result1 []byte
@@ -26,27 +26,28 @@ type Interpolator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Interpolator) Interpolate(input builder.InterpolateInput, templateYAML []byte) ([]byte, error) {
-	var templateYAMLCopy []byte
-	if templateYAML != nil {
-		templateYAMLCopy = make([]byte, len(templateYAML))
-		copy(templateYAMLCopy, templateYAML)
+func (fake *Interpolator) Interpolate(arg1 builder.InterpolateInput, arg2 []byte) ([]byte, error) {
+	var arg2Copy []byte
+	if arg2 != nil {
+		arg2Copy = make([]byte, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.interpolateMutex.Lock()
 	ret, specificReturn := fake.interpolateReturnsOnCall[len(fake.interpolateArgsForCall)]
 	fake.interpolateArgsForCall = append(fake.interpolateArgsForCall, struct {
-		input        builder.InterpolateInput
-		templateYAML []byte
-	}{input, templateYAMLCopy})
-	fake.recordInvocation("Interpolate", []interface{}{input, templateYAMLCopy})
+		arg1 builder.InterpolateInput
+		arg2 []byte
+	}{arg1, arg2Copy})
+	fake.recordInvocation("Interpolate", []interface{}{arg1, arg2Copy})
 	fake.interpolateMutex.Unlock()
 	if fake.InterpolateStub != nil {
-		return fake.InterpolateStub(input, templateYAML)
+		return fake.InterpolateStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.interpolateReturns.result1, fake.interpolateReturns.result2
+	fakeReturns := fake.interpolateReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *Interpolator) InterpolateCallCount() int {
@@ -55,13 +56,22 @@ func (fake *Interpolator) InterpolateCallCount() int {
 	return len(fake.interpolateArgsForCall)
 }
 
+func (fake *Interpolator) InterpolateCalls(stub func(builder.InterpolateInput, []byte) ([]byte, error)) {
+	fake.interpolateMutex.Lock()
+	defer fake.interpolateMutex.Unlock()
+	fake.InterpolateStub = stub
+}
+
 func (fake *Interpolator) InterpolateArgsForCall(i int) (builder.InterpolateInput, []byte) {
 	fake.interpolateMutex.RLock()
 	defer fake.interpolateMutex.RUnlock()
-	return fake.interpolateArgsForCall[i].input, fake.interpolateArgsForCall[i].templateYAML
+	argsForCall := fake.interpolateArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *Interpolator) InterpolateReturns(result1 []byte, result2 error) {
+	fake.interpolateMutex.Lock()
+	defer fake.interpolateMutex.Unlock()
 	fake.InterpolateStub = nil
 	fake.interpolateReturns = struct {
 		result1 []byte
@@ -70,6 +80,8 @@ func (fake *Interpolator) InterpolateReturns(result1 []byte, result2 error) {
 }
 
 func (fake *Interpolator) InterpolateReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.interpolateMutex.Lock()
+	defer fake.interpolateMutex.Unlock()
 	fake.InterpolateStub = nil
 	if fake.interpolateReturnsOnCall == nil {
 		fake.interpolateReturnsOnCall = make(map[int]struct {

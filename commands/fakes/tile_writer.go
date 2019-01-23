@@ -8,11 +8,11 @@ import (
 )
 
 type TileWriter struct {
-	WriteStub        func(generatedMetadataContents []byte, input builder.WriteInput) error
+	WriteStub        func([]byte, builder.WriteInput) error
 	writeMutex       sync.RWMutex
 	writeArgsForCall []struct {
-		generatedMetadataContents []byte
-		input                     builder.WriteInput
+		arg1 []byte
+		arg2 builder.WriteInput
 	}
 	writeReturns struct {
 		result1 error
@@ -24,27 +24,28 @@ type TileWriter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TileWriter) Write(generatedMetadataContents []byte, input builder.WriteInput) error {
-	var generatedMetadataContentsCopy []byte
-	if generatedMetadataContents != nil {
-		generatedMetadataContentsCopy = make([]byte, len(generatedMetadataContents))
-		copy(generatedMetadataContentsCopy, generatedMetadataContents)
+func (fake *TileWriter) Write(arg1 []byte, arg2 builder.WriteInput) error {
+	var arg1Copy []byte
+	if arg1 != nil {
+		arg1Copy = make([]byte, len(arg1))
+		copy(arg1Copy, arg1)
 	}
 	fake.writeMutex.Lock()
 	ret, specificReturn := fake.writeReturnsOnCall[len(fake.writeArgsForCall)]
 	fake.writeArgsForCall = append(fake.writeArgsForCall, struct {
-		generatedMetadataContents []byte
-		input                     builder.WriteInput
-	}{generatedMetadataContentsCopy, input})
-	fake.recordInvocation("Write", []interface{}{generatedMetadataContentsCopy, input})
+		arg1 []byte
+		arg2 builder.WriteInput
+	}{arg1Copy, arg2})
+	fake.recordInvocation("Write", []interface{}{arg1Copy, arg2})
 	fake.writeMutex.Unlock()
 	if fake.WriteStub != nil {
-		return fake.WriteStub(generatedMetadataContents, input)
+		return fake.WriteStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.writeReturns.result1
+	fakeReturns := fake.writeReturns
+	return fakeReturns.result1
 }
 
 func (fake *TileWriter) WriteCallCount() int {
@@ -53,13 +54,22 @@ func (fake *TileWriter) WriteCallCount() int {
 	return len(fake.writeArgsForCall)
 }
 
+func (fake *TileWriter) WriteCalls(stub func([]byte, builder.WriteInput) error) {
+	fake.writeMutex.Lock()
+	defer fake.writeMutex.Unlock()
+	fake.WriteStub = stub
+}
+
 func (fake *TileWriter) WriteArgsForCall(i int) ([]byte, builder.WriteInput) {
 	fake.writeMutex.RLock()
 	defer fake.writeMutex.RUnlock()
-	return fake.writeArgsForCall[i].generatedMetadataContents, fake.writeArgsForCall[i].input
+	argsForCall := fake.writeArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *TileWriter) WriteReturns(result1 error) {
+	fake.writeMutex.Lock()
+	defer fake.writeMutex.Unlock()
 	fake.WriteStub = nil
 	fake.writeReturns = struct {
 		result1 error
@@ -67,6 +77,8 @@ func (fake *TileWriter) WriteReturns(result1 error) {
 }
 
 func (fake *TileWriter) WriteReturnsOnCall(i int, result1 error) {
+	fake.writeMutex.Lock()
+	defer fake.writeMutex.Unlock()
 	fake.WriteStub = nil
 	if fake.writeReturnsOnCall == nil {
 		fake.writeReturnsOnCall = make(map[int]struct {

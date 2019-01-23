@@ -6,11 +6,11 @@ import (
 )
 
 type TemplateVariablesService struct {
-	FromPathsAndPairsStub        func(paths []string, pairs []string) (templateVariables map[string]interface{}, err error)
+	FromPathsAndPairsStub        func([]string, []string) (map[string]interface{}, error)
 	fromPathsAndPairsMutex       sync.RWMutex
 	fromPathsAndPairsArgsForCall []struct {
-		paths []string
-		pairs []string
+		arg1 []string
+		arg2 []string
 	}
 	fromPathsAndPairsReturns struct {
 		result1 map[string]interface{}
@@ -24,32 +24,33 @@ type TemplateVariablesService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []string) (templateVariables map[string]interface{}, err error) {
-	var pathsCopy []string
-	if paths != nil {
-		pathsCopy = make([]string, len(paths))
-		copy(pathsCopy, paths)
+func (fake *TemplateVariablesService) FromPathsAndPairs(arg1 []string, arg2 []string) (map[string]interface{}, error) {
+	var arg1Copy []string
+	if arg1 != nil {
+		arg1Copy = make([]string, len(arg1))
+		copy(arg1Copy, arg1)
 	}
-	var pairsCopy []string
-	if pairs != nil {
-		pairsCopy = make([]string, len(pairs))
-		copy(pairsCopy, pairs)
+	var arg2Copy []string
+	if arg2 != nil {
+		arg2Copy = make([]string, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.fromPathsAndPairsMutex.Lock()
 	ret, specificReturn := fake.fromPathsAndPairsReturnsOnCall[len(fake.fromPathsAndPairsArgsForCall)]
 	fake.fromPathsAndPairsArgsForCall = append(fake.fromPathsAndPairsArgsForCall, struct {
-		paths []string
-		pairs []string
-	}{pathsCopy, pairsCopy})
-	fake.recordInvocation("FromPathsAndPairs", []interface{}{pathsCopy, pairsCopy})
+		arg1 []string
+		arg2 []string
+	}{arg1Copy, arg2Copy})
+	fake.recordInvocation("FromPathsAndPairs", []interface{}{arg1Copy, arg2Copy})
 	fake.fromPathsAndPairsMutex.Unlock()
 	if fake.FromPathsAndPairsStub != nil {
-		return fake.FromPathsAndPairsStub(paths, pairs)
+		return fake.FromPathsAndPairsStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.fromPathsAndPairsReturns.result1, fake.fromPathsAndPairsReturns.result2
+	fakeReturns := fake.fromPathsAndPairsReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *TemplateVariablesService) FromPathsAndPairsCallCount() int {
@@ -58,13 +59,22 @@ func (fake *TemplateVariablesService) FromPathsAndPairsCallCount() int {
 	return len(fake.fromPathsAndPairsArgsForCall)
 }
 
+func (fake *TemplateVariablesService) FromPathsAndPairsCalls(stub func([]string, []string) (map[string]interface{}, error)) {
+	fake.fromPathsAndPairsMutex.Lock()
+	defer fake.fromPathsAndPairsMutex.Unlock()
+	fake.FromPathsAndPairsStub = stub
+}
+
 func (fake *TemplateVariablesService) FromPathsAndPairsArgsForCall(i int) ([]string, []string) {
 	fake.fromPathsAndPairsMutex.RLock()
 	defer fake.fromPathsAndPairsMutex.RUnlock()
-	return fake.fromPathsAndPairsArgsForCall[i].paths, fake.fromPathsAndPairsArgsForCall[i].pairs
+	argsForCall := fake.fromPathsAndPairsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *TemplateVariablesService) FromPathsAndPairsReturns(result1 map[string]interface{}, result2 error) {
+	fake.fromPathsAndPairsMutex.Lock()
+	defer fake.fromPathsAndPairsMutex.Unlock()
 	fake.FromPathsAndPairsStub = nil
 	fake.fromPathsAndPairsReturns = struct {
 		result1 map[string]interface{}
@@ -73,6 +83,8 @@ func (fake *TemplateVariablesService) FromPathsAndPairsReturns(result1 map[strin
 }
 
 func (fake *TemplateVariablesService) FromPathsAndPairsReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
+	fake.fromPathsAndPairsMutex.Lock()
+	defer fake.fromPathsAndPairsMutex.Unlock()
 	fake.FromPathsAndPairsStub = nil
 	if fake.fromPathsAndPairsReturnsOnCall == nil {
 		fake.fromPathsAndPairsReturnsOnCall = make(map[int]struct {

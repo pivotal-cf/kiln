@@ -6,10 +6,10 @@ import (
 )
 
 type BOSHVariablesService struct {
-	FromDirectoriesStub        func(directories []string) (boshVariables map[string]interface{}, err error)
+	FromDirectoriesStub        func([]string) (map[string]interface{}, error)
 	fromDirectoriesMutex       sync.RWMutex
 	fromDirectoriesArgsForCall []struct {
-		directories []string
+		arg1 []string
 	}
 	fromDirectoriesReturns struct {
 		result1 map[string]interface{}
@@ -23,26 +23,27 @@ type BOSHVariablesService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *BOSHVariablesService) FromDirectories(directories []string) (boshVariables map[string]interface{}, err error) {
-	var directoriesCopy []string
-	if directories != nil {
-		directoriesCopy = make([]string, len(directories))
-		copy(directoriesCopy, directories)
+func (fake *BOSHVariablesService) FromDirectories(arg1 []string) (map[string]interface{}, error) {
+	var arg1Copy []string
+	if arg1 != nil {
+		arg1Copy = make([]string, len(arg1))
+		copy(arg1Copy, arg1)
 	}
 	fake.fromDirectoriesMutex.Lock()
 	ret, specificReturn := fake.fromDirectoriesReturnsOnCall[len(fake.fromDirectoriesArgsForCall)]
 	fake.fromDirectoriesArgsForCall = append(fake.fromDirectoriesArgsForCall, struct {
-		directories []string
-	}{directoriesCopy})
-	fake.recordInvocation("FromDirectories", []interface{}{directoriesCopy})
+		arg1 []string
+	}{arg1Copy})
+	fake.recordInvocation("FromDirectories", []interface{}{arg1Copy})
 	fake.fromDirectoriesMutex.Unlock()
 	if fake.FromDirectoriesStub != nil {
-		return fake.FromDirectoriesStub(directories)
+		return fake.FromDirectoriesStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.fromDirectoriesReturns.result1, fake.fromDirectoriesReturns.result2
+	fakeReturns := fake.fromDirectoriesReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *BOSHVariablesService) FromDirectoriesCallCount() int {
@@ -51,13 +52,22 @@ func (fake *BOSHVariablesService) FromDirectoriesCallCount() int {
 	return len(fake.fromDirectoriesArgsForCall)
 }
 
+func (fake *BOSHVariablesService) FromDirectoriesCalls(stub func([]string) (map[string]interface{}, error)) {
+	fake.fromDirectoriesMutex.Lock()
+	defer fake.fromDirectoriesMutex.Unlock()
+	fake.FromDirectoriesStub = stub
+}
+
 func (fake *BOSHVariablesService) FromDirectoriesArgsForCall(i int) []string {
 	fake.fromDirectoriesMutex.RLock()
 	defer fake.fromDirectoriesMutex.RUnlock()
-	return fake.fromDirectoriesArgsForCall[i].directories
+	argsForCall := fake.fromDirectoriesArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *BOSHVariablesService) FromDirectoriesReturns(result1 map[string]interface{}, result2 error) {
+	fake.fromDirectoriesMutex.Lock()
+	defer fake.fromDirectoriesMutex.Unlock()
 	fake.FromDirectoriesStub = nil
 	fake.fromDirectoriesReturns = struct {
 		result1 map[string]interface{}
@@ -66,6 +76,8 @@ func (fake *BOSHVariablesService) FromDirectoriesReturns(result1 map[string]inte
 }
 
 func (fake *BOSHVariablesService) FromDirectoriesReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
+	fake.fromDirectoriesMutex.Lock()
+	defer fake.fromDirectoriesMutex.Unlock()
 	fake.FromDirectoriesStub = nil
 	if fake.fromDirectoriesReturnsOnCall == nil {
 		fake.fromDirectoriesReturnsOnCall = make(map[int]struct {
