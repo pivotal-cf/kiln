@@ -82,12 +82,15 @@ func ListObjects(bucket string, regex *regexp.Regexp, s3Client s3iface.S3API) (m
 	return MatchedS3Objects, nil
 }
 
-//go:generate counterfeiter -o ./fakes/downloader.go --fake-name Downloader github.com/pivotal-cf/kiln/commands.Downloader
+//go:generate counterfeiter -o ./fakes/downloader.go --fake-name Downloader . Downloader
 type Downloader interface {
 	Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
 }
 
-func DownloadReleases(releases []cargo.Release, stemcell cargo.Stemcell, bucket string, releasesDir string, matchedS3Objects map[cargo.CompiledRelease]string, fileCreator func(string) (io.WriterAt, error), downloader Downloader) error {
+func DownloadReleases(assetsLock cargo.AssetsLock, bucket string, releasesDir string, matchedS3Objects map[cargo.CompiledRelease]string, fileCreator func(string) (io.WriterAt, error), downloader Downloader) error {
+	releases := assetsLock.Releases
+	stemcell := assetsLock.Stemcell
+
 	for _, release := range releases {
 		s3Key, ok := matchedS3Objects[cargo.CompiledRelease{
 			Name:    release.Name,
@@ -173,20 +176,12 @@ func (f Fetch) Execute(args []string) error {
 
 	fmt.Printf("number of matched S3 objects: %d\n", len(MatchedS3Objects))
 
-	releases := assetsLock.Releases
-	stemcell := assetsLock.Stemcell
-
 	fileCreator := func(filepath string) (io.WriterAt, error) {
 		return os.Create(filepath)
 	}
 
 	downloader := s3manager.NewDownloaderWithClient(s3Client)
-	err = DownloadReleases(releases, stemcell, assets.CompiledReleases.Bucket, f.ReleasesDir, MatchedS3Objects, fileCreator, downloader)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return DownloadReleases(assetsLock, assets.CompiledReleases.Bucket, f.ReleasesDir, MatchedS3Objects, fileCreator, downloader)
 }
 
 func (f Fetch) Usage() jhanda.Usage {

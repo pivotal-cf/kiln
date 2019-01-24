@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -69,8 +70,7 @@ var _ = Describe("Fetch", func() {
 
 	Describe("DownloadReleases", func() {
 		var (
-			releases         []cargo.Release
-			stemcell         cargo.Stemcell
+			assetsLock       cargo.AssetsLock
 			bucket           string
 			releasesDir      string
 			matchedS3Objects map[cargo.CompiledRelease]string
@@ -84,11 +84,13 @@ var _ = Describe("Fetch", func() {
 		)
 
 		BeforeEach(func() {
-			releases = []cargo.Release{
-				{Name: "uaa", Version: "1.2.3"},
-				{Name: "bpm", Version: "1.2.3"},
+			assetsLock = cargo.AssetsLock{
+				Releases: []cargo.Release{
+					{Name: "uaa", Version: "1.2.3"},
+					{Name: "bpm", Version: "1.2.3"},
+				},
+				Stemcell: cargo.Stemcell{OS: "ubuntu-trusty", Version: "1234"},
 			}
-			stemcell = cargo.Stemcell{OS: "ubuntu-trusty", Version: "1234"}
 			bucket = "some-bucket"
 			releasesDir = "releases"
 
@@ -108,7 +110,7 @@ var _ = Describe("Fetch", func() {
 					return fakeBPMFile, nil
 				}
 
-				return &os.File{}, nil
+				return nil, errors.New("unknown filepath")
 			}
 
 			bpmInput = &s3.GetObjectInput{Bucket: aws.String("some-bucket"), Key: aws.String("some-bpm-key")}
@@ -117,8 +119,13 @@ var _ = Describe("Fetch", func() {
 			fakeDownloader = new(fakes.Downloader)
 		})
 
+		AfterEach(func() {
+			Expect(os.Remove(fakeBPMFile.Name())).To(Succeed())
+			Expect(os.Remove(fakeUAAFile.Name())).To(Succeed())
+		})
+
 		It("downloads the appropriate versions of releases listed in the assets.lock", func() {
-			err = commands.DownloadReleases(releases, stemcell, bucket, releasesDir, matchedS3Objects, fileCreator, fakeDownloader)
+			err = commands.DownloadReleases(assetsLock, bucket, releasesDir, matchedS3Objects, fileCreator, fakeDownloader)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeDownloader.DownloadCallCount()).To(Equal(2))
 
@@ -132,11 +139,11 @@ var _ = Describe("Fetch", func() {
 		})
 
 		It("returns an error if the release does not exist", func() {
-			releases = []cargo.Release{
+			assetsLock.Releases = []cargo.Release{
 				{Name: "not-real", Version: "1.2.3"},
 			}
 
-			err = commands.DownloadReleases(releases, stemcell, bucket, releasesDir, matchedS3Objects, fileCreator, fakeDownloader)
+			err = commands.DownloadReleases(assetsLock, bucket, releasesDir, matchedS3Objects, fileCreator, fakeDownloader)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("Compiled release: not-real, version: 1.2.3, stemcell OS: ubuntu-trusty, stemcell version: 1234, not found"))
 		})
