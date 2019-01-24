@@ -130,6 +130,16 @@ var _ = Describe("Fetch", func() {
 			Expect(w2).To(Equal(fakeBPMFile))
 			Expect(input2).To(Equal(bpmInput))
 		})
+
+		It("returns an error if the release does not exist", func() {
+			releases = []cargo.Release{
+				{Name: "not-real", Version: "1.2.3"},
+			}
+
+			err = commands.DownloadReleases(releases, stemcell, bucket, releasesDir, matchedS3Objects, fileCreator, fakeDownloader)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("Compiled release: not-real, version: 1.2.3, stemcell OS: ubuntu-trusty, stemcell version: 1234, not found"))
+		})
 	})
 
 	Describe("Usage", func() {

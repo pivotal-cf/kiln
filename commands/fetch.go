@@ -88,7 +88,6 @@ type Downloader interface {
 }
 
 func DownloadReleases(releases []cargo.Release, stemcell cargo.Stemcell, bucket string, releasesDir string, matchedS3Objects map[cargo.CompiledRelease]string, fileCreator func(string) (io.WriterAt, error), downloader Downloader) error {
-
 	for _, release := range releases {
 		s3Key, ok := matchedS3Objects[cargo.CompiledRelease{
 			Name:    release.Name,
@@ -182,7 +181,7 @@ func (f Fetch) Execute(args []string) error {
 	}
 
 	downloader := s3manager.NewDownloaderWithClient(s3Client)
-	DownloadReleases(releases, stemcell, assets.CompiledReleases.Bucket, f.ReleasesDir, MatchedS3Objects, fileCreator, downloader)
+	err = DownloadReleases(releases, stemcell, assets.CompiledReleases.Bucket, f.ReleasesDir, MatchedS3Objects, fileCreator, downloader)
 	if err != nil {
 		return err
 	}
