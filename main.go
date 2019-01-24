@@ -12,6 +12,8 @@ import (
 )
 
 var version = "unknown"
+var assetsFile = "unknown"
+var releasesDir = "unknown"
 
 func main() {
 	errLogger := log.New(os.Stderr, "", 0)
@@ -88,6 +90,7 @@ func main() {
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
+	commandSet["fetch"] = commands.NewFetch(assetsFile, releasesDir)
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
 		tileWriter,

@@ -6,10 +6,10 @@ import (
 )
 
 type Checksummer struct {
-	SumStub        func(path string) error
+	SumStub        func(string) error
 	sumMutex       sync.RWMutex
 	sumArgsForCall []struct {
-		path string
+		arg1 string
 	}
 	sumReturns struct {
 		result1 error
@@ -21,21 +21,22 @@ type Checksummer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Checksummer) Sum(path string) error {
+func (fake *Checksummer) Sum(arg1 string) error {
 	fake.sumMutex.Lock()
 	ret, specificReturn := fake.sumReturnsOnCall[len(fake.sumArgsForCall)]
 	fake.sumArgsForCall = append(fake.sumArgsForCall, struct {
-		path string
-	}{path})
-	fake.recordInvocation("Sum", []interface{}{path})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("Sum", []interface{}{arg1})
 	fake.sumMutex.Unlock()
 	if fake.SumStub != nil {
-		return fake.SumStub(path)
+		return fake.SumStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.sumReturns.result1
+	fakeReturns := fake.sumReturns
+	return fakeReturns.result1
 }
 
 func (fake *Checksummer) SumCallCount() int {
@@ -44,13 +45,22 @@ func (fake *Checksummer) SumCallCount() int {
 	return len(fake.sumArgsForCall)
 }
 
+func (fake *Checksummer) SumCalls(stub func(string) error) {
+	fake.sumMutex.Lock()
+	defer fake.sumMutex.Unlock()
+	fake.SumStub = stub
+}
+
 func (fake *Checksummer) SumArgsForCall(i int) string {
 	fake.sumMutex.RLock()
 	defer fake.sumMutex.RUnlock()
-	return fake.sumArgsForCall[i].path
+	argsForCall := fake.sumArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *Checksummer) SumReturns(result1 error) {
+	fake.sumMutex.Lock()
+	defer fake.sumMutex.Unlock()
 	fake.SumStub = nil
 	fake.sumReturns = struct {
 		result1 error
@@ -58,6 +68,8 @@ func (fake *Checksummer) SumReturns(result1 error) {
 }
 
 func (fake *Checksummer) SumReturnsOnCall(i int, result1 error) {
+	fake.sumMutex.Lock()
+	defer fake.sumMutex.Unlock()
 	fake.SumStub = nil
 	if fake.sumReturnsOnCall == nil {
 		fake.sumReturnsOnCall = make(map[int]struct {

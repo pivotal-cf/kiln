@@ -6,10 +6,10 @@ import (
 )
 
 type IconService struct {
-	EncodeStub        func(path string) (encodedIcon string, err error)
+	EncodeStub        func(string) (string, error)
 	encodeMutex       sync.RWMutex
 	encodeArgsForCall []struct {
-		path string
+		arg1 string
 	}
 	encodeReturns struct {
 		result1 string
@@ -23,21 +23,22 @@ type IconService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *IconService) Encode(path string) (encodedIcon string, err error) {
+func (fake *IconService) Encode(arg1 string) (string, error) {
 	fake.encodeMutex.Lock()
 	ret, specificReturn := fake.encodeReturnsOnCall[len(fake.encodeArgsForCall)]
 	fake.encodeArgsForCall = append(fake.encodeArgsForCall, struct {
-		path string
-	}{path})
-	fake.recordInvocation("Encode", []interface{}{path})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("Encode", []interface{}{arg1})
 	fake.encodeMutex.Unlock()
 	if fake.EncodeStub != nil {
-		return fake.EncodeStub(path)
+		return fake.EncodeStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.encodeReturns.result1, fake.encodeReturns.result2
+	fakeReturns := fake.encodeReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *IconService) EncodeCallCount() int {
@@ -46,13 +47,22 @@ func (fake *IconService) EncodeCallCount() int {
 	return len(fake.encodeArgsForCall)
 }
 
+func (fake *IconService) EncodeCalls(stub func(string) (string, error)) {
+	fake.encodeMutex.Lock()
+	defer fake.encodeMutex.Unlock()
+	fake.EncodeStub = stub
+}
+
 func (fake *IconService) EncodeArgsForCall(i int) string {
 	fake.encodeMutex.RLock()
 	defer fake.encodeMutex.RUnlock()
-	return fake.encodeArgsForCall[i].path
+	argsForCall := fake.encodeArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *IconService) EncodeReturns(result1 string, result2 error) {
+	fake.encodeMutex.Lock()
+	defer fake.encodeMutex.Unlock()
 	fake.EncodeStub = nil
 	fake.encodeReturns = struct {
 		result1 string
@@ -61,6 +71,8 @@ func (fake *IconService) EncodeReturns(result1 string, result2 error) {
 }
 
 func (fake *IconService) EncodeReturnsOnCall(i int, result1 string, result2 error) {
+	fake.encodeMutex.Lock()
+	defer fake.encodeMutex.Unlock()
 	fake.EncodeStub = nil
 	if fake.encodeReturnsOnCall == nil {
 		fake.encodeReturnsOnCall = make(map[int]struct {

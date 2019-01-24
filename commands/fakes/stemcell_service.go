@@ -6,10 +6,10 @@ import (
 )
 
 type StemcellService struct {
-	FromTarballStub        func(path string) (stemcell interface{}, err error)
+	FromTarballStub        func(string) (interface{}, error)
 	fromTarballMutex       sync.RWMutex
 	fromTarballArgsForCall []struct {
-		path string
+		arg1 string
 	}
 	fromTarballReturns struct {
 		result1 interface{}
@@ -23,21 +23,22 @@ type StemcellService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *StemcellService) FromTarball(path string) (stemcell interface{}, err error) {
+func (fake *StemcellService) FromTarball(arg1 string) (interface{}, error) {
 	fake.fromTarballMutex.Lock()
 	ret, specificReturn := fake.fromTarballReturnsOnCall[len(fake.fromTarballArgsForCall)]
 	fake.fromTarballArgsForCall = append(fake.fromTarballArgsForCall, struct {
-		path string
-	}{path})
-	fake.recordInvocation("FromTarball", []interface{}{path})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("FromTarball", []interface{}{arg1})
 	fake.fromTarballMutex.Unlock()
 	if fake.FromTarballStub != nil {
-		return fake.FromTarballStub(path)
+		return fake.FromTarballStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.fromTarballReturns.result1, fake.fromTarballReturns.result2
+	fakeReturns := fake.fromTarballReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *StemcellService) FromTarballCallCount() int {
@@ -46,13 +47,22 @@ func (fake *StemcellService) FromTarballCallCount() int {
 	return len(fake.fromTarballArgsForCall)
 }
 
+func (fake *StemcellService) FromTarballCalls(stub func(string) (interface{}, error)) {
+	fake.fromTarballMutex.Lock()
+	defer fake.fromTarballMutex.Unlock()
+	fake.FromTarballStub = stub
+}
+
 func (fake *StemcellService) FromTarballArgsForCall(i int) string {
 	fake.fromTarballMutex.RLock()
 	defer fake.fromTarballMutex.RUnlock()
-	return fake.fromTarballArgsForCall[i].path
+	argsForCall := fake.fromTarballArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *StemcellService) FromTarballReturns(result1 interface{}, result2 error) {
+	fake.fromTarballMutex.Lock()
+	defer fake.fromTarballMutex.Unlock()
 	fake.FromTarballStub = nil
 	fake.fromTarballReturns = struct {
 		result1 interface{}
@@ -61,6 +71,8 @@ func (fake *StemcellService) FromTarballReturns(result1 interface{}, result2 err
 }
 
 func (fake *StemcellService) FromTarballReturnsOnCall(i int, result1 interface{}, result2 error) {
+	fake.fromTarballMutex.Lock()
+	defer fake.fromTarballMutex.Unlock()
 	fake.FromTarballStub = nil
 	if fake.fromTarballReturnsOnCall == nil {
 		fake.fromTarballReturnsOnCall = make(map[int]struct {

@@ -14,6 +14,30 @@ type Release struct {
 	Version string `yaml:"version"`
 }
 
+type AssetsLock struct {
+	Releases []Release `yaml:"releases"`
+	Stemcell Stemcell  `yaml:"stemcell_criteria"`
+}
+
+type Assets struct {
+	CompiledReleases CompiledReleases `yaml:"compiled_releases"`
+}
+
+type CompiledReleases struct {
+	Type            string `yaml:"type"`
+	Bucket          string `yaml:"bucket"`
+	Region          string `yaml:"region"`
+	AccessKeyId     string `yaml:"access_key_id"`
+	SecretAccessKey string `yaml:"secret_access_key"`
+	Regex           string `yaml:"regex"`
+}
+
+type CompiledRelease struct {
+	Name    string
+	Version string
+	// StemcellOS      string
+	StemcellVersion string
+}
 type Stemcell struct {
 	Alias   string `yaml:"alias"`
 	OS      string `yaml:"os"`

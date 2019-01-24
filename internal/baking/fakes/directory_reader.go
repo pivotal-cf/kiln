@@ -8,10 +8,10 @@ import (
 )
 
 type DirectoryReader struct {
-	ReadStub        func(path string) ([]builder.Part, error)
+	ReadStub        func(string) ([]builder.Part, error)
 	readMutex       sync.RWMutex
 	readArgsForCall []struct {
-		path string
+		arg1 string
 	}
 	readReturns struct {
 		result1 []builder.Part
@@ -25,21 +25,22 @@ type DirectoryReader struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *DirectoryReader) Read(path string) ([]builder.Part, error) {
+func (fake *DirectoryReader) Read(arg1 string) ([]builder.Part, error) {
 	fake.readMutex.Lock()
 	ret, specificReturn := fake.readReturnsOnCall[len(fake.readArgsForCall)]
 	fake.readArgsForCall = append(fake.readArgsForCall, struct {
-		path string
-	}{path})
-	fake.recordInvocation("Read", []interface{}{path})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("Read", []interface{}{arg1})
 	fake.readMutex.Unlock()
 	if fake.ReadStub != nil {
-		return fake.ReadStub(path)
+		return fake.ReadStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.readReturns.result1, fake.readReturns.result2
+	fakeReturns := fake.readReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *DirectoryReader) ReadCallCount() int {
@@ -48,13 +49,22 @@ func (fake *DirectoryReader) ReadCallCount() int {
 	return len(fake.readArgsForCall)
 }
 
+func (fake *DirectoryReader) ReadCalls(stub func(string) ([]builder.Part, error)) {
+	fake.readMutex.Lock()
+	defer fake.readMutex.Unlock()
+	fake.ReadStub = stub
+}
+
 func (fake *DirectoryReader) ReadArgsForCall(i int) string {
 	fake.readMutex.RLock()
 	defer fake.readMutex.RUnlock()
-	return fake.readArgsForCall[i].path
+	argsForCall := fake.readArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *DirectoryReader) ReadReturns(result1 []builder.Part, result2 error) {
+	fake.readMutex.Lock()
+	defer fake.readMutex.Unlock()
 	fake.ReadStub = nil
 	fake.readReturns = struct {
 		result1 []builder.Part
@@ -63,6 +73,8 @@ func (fake *DirectoryReader) ReadReturns(result1 []builder.Part, result2 error) 
 }
 
 func (fake *DirectoryReader) ReadReturnsOnCall(i int, result1 []builder.Part, result2 error) {
+	fake.readMutex.Lock()
+	defer fake.readMutex.Unlock()
 	fake.ReadStub = nil
 	if fake.readReturnsOnCall == nil {
 		fake.readReturnsOnCall = make(map[int]struct {
