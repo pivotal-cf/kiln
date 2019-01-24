@@ -74,7 +74,6 @@ var _ = Describe("Fetch", func() {
 			logger           *log.Logger
 			assetsLock       cargo.AssetsLock
 			bucket           string
-			releasesDir      string
 			matchedS3Objects map[cargo.CompiledRelease]string
 			fileCreator      func(string) (io.WriterAt, error)
 			fakeDownloader   *fakes.Downloader
@@ -95,7 +94,6 @@ var _ = Describe("Fetch", func() {
 				Stemcell: cargo.Stemcell{OS: "ubuntu-trusty", Version: "1234"},
 			}
 			bucket = "some-bucket"
-			releasesDir = "releases"
 
 			matchedS3Objects = make(map[cargo.CompiledRelease]string)
 			matchedS3Objects[cargo.CompiledRelease{Name: "uaa", Version: "1.2.3", StemcellVersion: "1234"}] = "some-uaa-key"
@@ -128,7 +126,7 @@ var _ = Describe("Fetch", func() {
 		})
 
 		It("downloads the appropriate versions of releases listed in the assets.lock", func() {
-			err = commands.DownloadReleases(logger, assetsLock, bucket, releasesDir, matchedS3Objects, fileCreator, fakeDownloader)
+			err = commands.DownloadReleases(logger, assetsLock, bucket, matchedS3Objects, fileCreator, fakeDownloader)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeDownloader.DownloadCallCount()).To(Equal(2))
 
@@ -146,7 +144,7 @@ var _ = Describe("Fetch", func() {
 				{Name: "not-real", Version: "1.2.3"},
 			}
 
-			err = commands.DownloadReleases(logger, assetsLock, bucket, releasesDir, matchedS3Objects, fileCreator, fakeDownloader)
+			err = commands.DownloadReleases(logger, assetsLock, bucket, matchedS3Objects, fileCreator, fakeDownloader)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("Compiled release: not-real, version: 1.2.3, stemcell OS: ubuntu-trusty, stemcell version: 1234, not found"))
 		})

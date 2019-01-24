@@ -91,7 +91,7 @@ type Downloader interface {
 	Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
 }
 
-func DownloadReleases(logger *log.Logger, assetsLock cargo.AssetsLock, bucket string, releasesDir string, matchedS3Objects map[cargo.CompiledRelease]string, fileCreator func(string) (io.WriterAt, error), downloader Downloader) error {
+func DownloadReleases(logger *log.Logger, assetsLock cargo.AssetsLock, bucket string, matchedS3Objects map[cargo.CompiledRelease]string, fileCreator func(string) (io.WriterAt, error), downloader Downloader) error {
 	releases := assetsLock.Releases
 	stemcell := assetsLock.Stemcell
 
@@ -107,8 +107,8 @@ func DownloadReleases(logger *log.Logger, assetsLock cargo.AssetsLock, bucket st
 			return fmt.Errorf("Compiled release: %s, version: %s, stemcell OS: %s, stemcell version: %s, not found", release.Name, release.Version, stemcell.OS, stemcell.Version)
 		}
 
-		// outputFile := filepath.Join(f.ReleasesDir, fmt.Sprintf("%s-%s-%s-%s.tgz", release.Name, release.Version, stemcell.OS, stemcell.Version))
-		outputFile := filepath.Join(releasesDir, fmt.Sprintf("%s-%s-%s.tgz", release.Name, release.Version, stemcell.Version))
+		// outputFile := fmt.Sprintf("%s-%s-%s-%s.tgz", release.Name, release.Version, stemcell.OS, stemcell.Version)
+		outputFile := fmt.Sprintf("%s-%s-%s.tgz", release.Name, release.Version, stemcell.Version)
 		file, err := fileCreator(outputFile)
 		if err != nil {
 			return fmt.Errorf("failed to create file %q, %v", outputFile, err)
@@ -180,12 +180,12 @@ func (f Fetch) Execute(args []string) error {
 
 	f.logger.Printf("number of matched S3 objects: %d\n", len(MatchedS3Objects))
 
-	fileCreator := func(filepath string) (io.WriterAt, error) {
-		return os.Create(filepath)
+	fileCreator := func(filename string) (io.WriterAt, error) {
+		return os.Create(filepath.Join(f.Options.ReleasesDir, filename))
 	}
 
 	downloader := s3manager.NewDownloaderWithClient(s3Client)
-	return DownloadReleases(f.logger, assetsLock, assets.CompiledReleases.Bucket, f.Options.ReleasesDir, MatchedS3Objects, fileCreator, downloader)
+	return DownloadReleases(f.logger, assetsLock, assets.CompiledReleases.Bucket, MatchedS3Objects, fileCreator, downloader)
 }
 
 func (f Fetch) Usage() jhanda.Usage {
