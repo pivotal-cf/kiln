@@ -1,9 +1,11 @@
 package commands_test
 
 import (
+	"log"
+	"strings"
+
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/commands"
-	"github.com/pivotal-cf/kiln/commands/fakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -11,12 +13,13 @@ import (
 
 var _ = Describe("Version", func() {
 	var (
-		logger  *fakes.Logger
+		writer  strings.Builder
+		logger  *log.Logger
 		version commands.Version
 	)
 
 	BeforeEach(func() {
-		logger = &fakes.Logger{}
+		logger = log.New(&writer, "", 0)
 		version = commands.NewVersion(logger, "1.2.3-build.4")
 	})
 
@@ -25,10 +28,7 @@ var _ = Describe("Version", func() {
 			err := version.Execute(nil)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(logger.PrintfCallCount()).To(Equal(1))
-			format, args := logger.PrintfArgsForCall(0)
-			Expect(format).To(Equal("kiln version %s\n"))
-			Expect(args).To(Equal([]interface{}{"1.2.3-build.4"}))
+			Expect((&writer).String()).To(Equal("kiln version 1.2.3-build.4\n"))
 		})
 	})
 

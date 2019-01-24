@@ -3,6 +3,7 @@ package commands_test
 import (
 	"errors"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -25,7 +26,7 @@ var _ = Describe("Bake", func() {
 		fakeInstanceGroupsService    *fakes.InstanceGroupsService
 		fakeInterpolator             *fakes.Interpolator
 		fakeJobsService              *fakes.JobsService
-		fakeLogger                   *fakes.Logger
+		fakeLogger                   *log.Logger
 		fakeMetadataService          *fakes.MetadataService
 		fakePropertiesService        *fakes.PropertiesService
 		fakeReleasesService          *fakes.ReleasesService
@@ -63,7 +64,7 @@ var _ = Describe("Bake", func() {
 		fakeInstanceGroupsService = &fakes.InstanceGroupsService{}
 		fakeInterpolator = &fakes.Interpolator{}
 		fakeJobsService = &fakes.JobsService{}
-		fakeLogger = &fakes.Logger{}
+		fakeLogger = log.New(GinkgoWriter, "", 0)
 		fakeMetadataService = &fakes.MetadataService{}
 		fakePropertiesService = &fakes.PropertiesService{}
 		fakeReleasesService = &fakes.ReleasesService{}

@@ -192,6 +192,6 @@ func (f Fetch) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Fetches releases listed in assets file from S3 and downloads it locally",
 		ShortDescription: "fetches releases",
-		Flags:            f,
+		Flags:            f.Options,
 	}
 }

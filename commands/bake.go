@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
@@ -16,12 +17,6 @@ type interpolator interface {
 //go:generate counterfeiter -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
 type tileWriter interface {
 	Write(generatedMetadataContents []byte, input builder.WriteInput) error
-}
-
-//go:generate counterfeiter -o ./fakes/logger.go --fake-name Logger . logger
-type logger interface {
-	Printf(format string, v ...interface{})
-	Println(v ...interface{})
 }
 
 //go:generate counterfeiter -o ./fakes/bosh_variables_service.go --fake-name BOSHVariablesService . boshVariablesService
@@ -88,7 +83,7 @@ type Bake struct {
 	interpolator      interpolator
 	checksummer       checksummer
 	tileWriter        tileWriter
-	output            logger
+	output            *log.Logger
 	templateVariables templateVariablesService
 	boshVariables     boshVariablesService
 	releases          releasesService
@@ -128,7 +123,7 @@ type Bake struct {
 func NewBake(
 	interpolator interpolator,
 	tileWriter tileWriter,
-	output logger,
+	output *log.Logger,
 	templateVariablesService templateVariablesService,
 	boshVariablesService boshVariablesService,
 	releasesService releasesService,

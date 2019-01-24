@@ -157,7 +157,7 @@ var _ = Describe("Fetch", func() {
 			Expect(fetch.Usage()).To(Equal(jhanda.Usage{
 				Description:      "Fetches releases listed in assets file from S3 and downloads it locally",
 				ShortDescription: "fetches releases",
-				Flags:            fetch,
+				Flags:            fetch.Options,
 			}))
 		})
 	})
