@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,14 +28,17 @@ const (
 )
 
 type Fetch struct {
-	AssetsFile  string `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
-	ReleasesDir string `short:"rd" long:"releases-directory" required:"true" description:"path to a directory to download releases into"`
+	logger *log.Logger
+
+	Options struct {
+		AssetsFile  string `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
+		ReleasesDir string `short:"rd" long:"releases-directory" required:"true" description:"path to a directory to download releases into"`
+	}
 }
 
-func NewFetch(assetsFile string, releasesDir string) Fetch {
+func NewFetch(logger *log.Logger) Fetch {
 	return Fetch{
-		AssetsFile:  assetsFile,
-		ReleasesDir: releasesDir,
+		logger: logger,
 	}
 }
 
@@ -87,7 +91,7 @@ type Downloader interface {
 	Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
 }
 
-func DownloadReleases(assetsLock cargo.AssetsLock, bucket string, releasesDir string, matchedS3Objects map[cargo.CompiledRelease]string, fileCreator func(string) (io.WriterAt, error), downloader Downloader) error {
+func DownloadReleases(logger *log.Logger, assetsLock cargo.AssetsLock, bucket string, releasesDir string, matchedS3Objects map[cargo.CompiledRelease]string, fileCreator func(string) (io.WriterAt, error), downloader Downloader) error {
 	releases := assetsLock.Releases
 	stemcell := assetsLock.Stemcell
 
@@ -110,7 +114,7 @@ func DownloadReleases(assetsLock cargo.AssetsLock, bucket string, releasesDir st
 			return fmt.Errorf("failed to create file %q, %v", outputFile, err)
 		}
 
-		fmt.Printf("downloading %s...\n", s3Key)
+		logger.Printf("downloading %s...\n", s3Key)
 		_, err = downloader.Download(file, &s3.GetObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(s3Key),
@@ -125,13 +129,13 @@ func DownloadReleases(assetsLock cargo.AssetsLock, bucket string, releasesDir st
 }
 
 func (f Fetch) Execute(args []string) error {
-	args, err := jhanda.Parse(&f, args)
+	args, err := jhanda.Parse(&f.Options, args)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("getting S3 information from assets.yml")
-	file, err := os.Open(f.AssetsFile)
+	f.logger.Println("getting S3 information from assets.yml")
+	file, err := os.Open(f.Options.AssetsFile)
 	if err != nil {
 		return err
 	}
@@ -149,8 +153,8 @@ func (f Fetch) Execute(args []string) error {
 	}
 	// TODO: Check the capture group names
 
-	fmt.Println("getting release information from assets.lock")
-	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.AssetsFile, ".yml")))
+	f.logger.Println("getting release information from assets.lock")
+	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, ".yml")))
 	if err != nil {
 		return err
 	}
@@ -174,14 +178,14 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	fmt.Printf("number of matched S3 objects: %d\n", len(MatchedS3Objects))
+	f.logger.Printf("number of matched S3 objects: %d\n", len(MatchedS3Objects))
 
 	fileCreator := func(filepath string) (io.WriterAt, error) {
 		return os.Create(filepath)
 	}
 
 	downloader := s3manager.NewDownloaderWithClient(s3Client)
-	return DownloadReleases(assetsLock, assets.CompiledReleases.Bucket, f.ReleasesDir, MatchedS3Objects, fileCreator, downloader)
+	return DownloadReleases(f.logger, assetsLock, assets.CompiledReleases.Bucket, f.Options.ReleasesDir, MatchedS3Objects, fileCreator, downloader)
 }
 
 func (f Fetch) Usage() jhanda.Usage {

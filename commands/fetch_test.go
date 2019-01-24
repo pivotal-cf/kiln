@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -70,6 +71,7 @@ var _ = Describe("Fetch", func() {
 
 	Describe("DownloadReleases", func() {
 		var (
+			logger           *log.Logger
 			assetsLock       cargo.AssetsLock
 			bucket           string
 			releasesDir      string
@@ -84,6 +86,7 @@ var _ = Describe("Fetch", func() {
 		)
 
 		BeforeEach(func() {
+			logger = log.New(GinkgoWriter, "", 0)
 			assetsLock = cargo.AssetsLock{
 				Releases: []cargo.Release{
 					{Name: "uaa", Version: "1.2.3"},
@@ -125,7 +128,7 @@ var _ = Describe("Fetch", func() {
 		})
 
 		It("downloads the appropriate versions of releases listed in the assets.lock", func() {
-			err = commands.DownloadReleases(assetsLock, bucket, releasesDir, matchedS3Objects, fileCreator, fakeDownloader)
+			err = commands.DownloadReleases(logger, assetsLock, bucket, releasesDir, matchedS3Objects, fileCreator, fakeDownloader)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeDownloader.DownloadCallCount()).To(Equal(2))
 
@@ -143,7 +146,7 @@ var _ = Describe("Fetch", func() {
 				{Name: "not-real", Version: "1.2.3"},
 			}
 
-			err = commands.DownloadReleases(assetsLock, bucket, releasesDir, matchedS3Objects, fileCreator, fakeDownloader)
+			err = commands.DownloadReleases(logger, assetsLock, bucket, releasesDir, matchedS3Objects, fileCreator, fakeDownloader)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("Compiled release: not-real, version: 1.2.3, stemcell OS: ubuntu-trusty, stemcell version: 1234, not found"))
 		})
