@@ -69,9 +69,9 @@ func ListObjects(bucket string, regex *regexp.Regexp, s3Client s3iface.S3API) (m
 				}
 
 				MatchedS3Objects[cargo.CompiledRelease{
-					Name:    subgroup[ReleaseName],
-					Version: subgroup[ReleaseVersion],
-					// StemcellOS:      subgroup[StemcellOS],
+					Name:            subgroup[ReleaseName],
+					Version:         subgroup[ReleaseVersion],
+					StemcellOS:      subgroup[StemcellOS],
 					StemcellVersion: subgroup[StemcellVersion],
 				}] = *s3Object.Key
 			}
@@ -97,9 +97,9 @@ func DownloadReleases(logger *log.Logger, assetsLock cargo.AssetsLock, bucket st
 
 	for _, release := range releases {
 		s3Key, ok := matchedS3Objects[cargo.CompiledRelease{
-			Name:    release.Name,
-			Version: release.Version,
-			// StemcellOS:      stemcell.OS,
+			Name:            release.Name,
+			Version:         release.Version,
+			StemcellOS:      stemcell.OS,
 			StemcellVersion: stemcell.Version,
 		}]
 
@@ -107,8 +107,7 @@ func DownloadReleases(logger *log.Logger, assetsLock cargo.AssetsLock, bucket st
 			return fmt.Errorf("Compiled release: %s, version: %s, stemcell OS: %s, stemcell version: %s, not found", release.Name, release.Version, stemcell.OS, stemcell.Version)
 		}
 
-		// outputFile := fmt.Sprintf("%s-%s-%s-%s.tgz", release.Name, release.Version, stemcell.OS, stemcell.Version)
-		outputFile := fmt.Sprintf("%s-%s-%s.tgz", release.Name, release.Version, stemcell.Version)
+		outputFile := fmt.Sprintf("%s-%s-%s-%s.tgz", release.Name, release.Version, stemcell.OS, stemcell.Version)
 		file, err := fileCreator(outputFile)
 		if err != nil {
 			return fmt.Errorf("failed to create file %q, %v", outputFile, err)

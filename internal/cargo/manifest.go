@@ -33,9 +33,9 @@ type CompiledReleases struct {
 }
 
 type CompiledRelease struct {
-	Name    string
-	Version string
-	// StemcellOS      string
+	Name            string
+	Version         string
+	StemcellOS      string
 	StemcellVersion string
 }
 type Stemcell struct {

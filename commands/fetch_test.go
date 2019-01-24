@@ -34,7 +34,7 @@ var _ = Describe("Fetch", func() {
 
 		BeforeEach(func() {
 			bucket = "some-bucket"
-			regex, err = regexp.Compile(`^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`)
+			regex, err = regexp.Compile(`^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`)
 			Expect(err).NotTo(HaveOccurred())
 
 			fakeS3Client = new(fakes.S3Client)
@@ -42,8 +42,8 @@ var _ = Describe("Fetch", func() {
 
 		It("lists all objects that match the given regex", func() {
 			key1 := "some-key"
-			key2 := "1.10/uaa/uaa-1.2.3-190.0.0.tgz"
-			key3 := "2.5/bpm/bpm-1.2.3-190.0.0.tgz"
+			key2 := "1.10/uaa/uaa-1.2.3-ubuntu-xenial-190.0.0.tgz"
+			key3 := "2.5/bpm/bpm-1.2.3-ubuntu-xenial-190.0.0.tgz"
 			fakeS3Client.ListObjectsPagesStub = func(input *s3.ListObjectsInput, fn func(*s3.ListObjectsOutput, bool) bool) error {
 				shouldContinue := fn(&s3.ListObjectsOutput{
 					Contents: []*s3.Object{
@@ -65,7 +65,7 @@ var _ = Describe("Fetch", func() {
 			Expect(input.Bucket).To(Equal(aws.String("some-bucket")))
 
 			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellVersion: "190.0.0"}, key3))
+			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, key3))
 		})
 	})
 
@@ -96,8 +96,8 @@ var _ = Describe("Fetch", func() {
 			bucket = "some-bucket"
 
 			matchedS3Objects = make(map[cargo.CompiledRelease]string)
-			matchedS3Objects[cargo.CompiledRelease{Name: "uaa", Version: "1.2.3", StemcellVersion: "1234"}] = "some-uaa-key"
-			matchedS3Objects[cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellVersion: "1234"}] = "some-bpm-key"
+			matchedS3Objects[cargo.CompiledRelease{Name: "uaa", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "1234"}] = "some-uaa-key"
+			matchedS3Objects[cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "1234"}] = "some-bpm-key"
 
 			fakeBPMFile, err = ioutil.TempFile("", "bpm-release")
 			Expect(err).NotTo(HaveOccurred())
