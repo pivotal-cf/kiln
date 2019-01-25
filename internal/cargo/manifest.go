@@ -38,6 +38,7 @@ type CompiledRelease struct {
 	StemcellOS      string
 	StemcellVersion string
 }
+
 type Stemcell struct {
 	Alias   string `yaml:"alias"`
 	OS      string `yaml:"os"`
