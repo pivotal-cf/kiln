@@ -87,7 +87,7 @@ func (crr *CompiledReleasesRegexp) Convert(s3Key string) (cargo.CompiledRelease,
 }
 
 //go:generate counterfeiter -o ./fakes/s3client.go --fake-name S3Client github.com/pivotal-cf/kiln/vendor/github.com/aws/aws-sdk-go/service/s3/s3iface.S3API
-func ListObjects(bucket string, regex *regexp.Regexp, s3Client s3iface.S3API) (map[cargo.CompiledRelease]string, error) {
+func ListObjects(bucket string, regex *CompiledReleasesRegexp, s3Client s3iface.S3API) (map[cargo.CompiledRelease]string, error) {
 	MatchedS3Objects := make(map[cargo.CompiledRelease]string)
 
 	err := s3Client.ListObjectsPages(
@@ -100,24 +100,12 @@ func ListObjects(bucket string, regex *regexp.Regexp, s3Client s3iface.S3API) (m
 					continue
 				}
 
-				if !regex.MatchString(*s3Object.Key) {
+				compiledRelease, err := regex.Convert(*s3Object.Key)
+				if err != nil {
 					continue
 				}
 
-				matches := regex.FindStringSubmatch(*s3Object.Key)
-				subgroup := make(map[string]string)
-				for i, name := range regex.SubexpNames() {
-					if i != 0 && name != "" {
-						subgroup[name] = matches[i]
-					}
-				}
-
-				MatchedS3Objects[cargo.CompiledRelease{
-					Name:            subgroup[ReleaseName],
-					Version:         subgroup[ReleaseVersion],
-					StemcellOS:      subgroup[StemcellOS],
-					StemcellVersion: subgroup[StemcellVersion],
-				}] = *s3Object.Key
+				MatchedS3Objects[compiledRelease] = *s3Object.Key
 			}
 			return true
 		},
@@ -190,20 +178,9 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	regex, err := regexp.Compile(assets.CompiledReleases.Regex)
+	compiledRegex, err := NewCompiledReleasesRegexp(assets.CompiledReleases.Regex)
 	if err != nil {
 		return err
-	}
-
-	// TODO: test this
-	var count int
-	for _, name := range regex.SubexpNames() {
-		if name == ReleaseName || name == ReleaseVersion || name == StemcellOS || name == StemcellVersion {
-			count++
-		}
-	}
-	if count != 4 {
-		return fmt.Errorf("Missing some capture group. Required capture groups: %s, %s, %s, %s", ReleaseName, ReleaseVersion, StemcellOS, StemcellVersion)
 	}
 
 	f.logger.Println("getting release information from assets.lock")
@@ -226,7 +203,7 @@ func (f Fetch) Execute(args []string) error {
 	}))
 	s3Client := s3.New(sess)
 
-	MatchedS3Objects, err := ListObjects(assets.CompiledReleases.Bucket, regex, s3Client)
+	MatchedS3Objects, err := ListObjects(assets.CompiledReleases.Bucket, compiledRegex, s3Client)
 	if err != nil {
 		return err
 	}

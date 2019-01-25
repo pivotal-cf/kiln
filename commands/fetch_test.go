@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -59,16 +58,13 @@ var _ = Describe("Fetch", func() {
 	Describe("ListObjects", func() {
 		var (
 			bucket       string
-			regex        *regexp.Regexp
 			fakeS3Client *fakes.S3Client
 			err          error
 		)
 
 		BeforeEach(func() {
 			bucket = "some-bucket"
-			regex, err = regexp.Compile(`^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`)
 			Expect(err).NotTo(HaveOccurred())
-
 			fakeS3Client = new(fakes.S3Client)
 		})
 
@@ -90,7 +86,10 @@ var _ = Describe("Fetch", func() {
 				return nil
 			}
 
-			matchedS3Objects, err := commands.ListObjects(bucket, regex, fakeS3Client)
+			compiledRegex, err := commands.NewCompiledReleasesRegexp(`^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`)
+			Expect(err).NotTo(HaveOccurred())
+
+			matchedS3Objects, err := commands.ListObjects(bucket, compiledRegex, fakeS3Client)
 			Expect(err).NotTo(HaveOccurred())
 
 			input, _ := fakeS3Client.ListObjectsPagesArgsForCall(0)
