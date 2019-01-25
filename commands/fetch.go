@@ -150,7 +150,17 @@ func (f Fetch) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	// TODO: Check the capture group names
+
+	// TODO: test this
+	var count int
+	for _, name := range regex.SubexpNames() {
+		if name == ReleaseName || name == ReleaseVersion || name == StemcellOS || name == StemcellVersion {
+			count++
+		}
+	}
+	if count != 4 {
+		return fmt.Errorf("Missing some capture group. Required capture groups: %s, %s, %s, %s", ReleaseName, ReleaseVersion, StemcellOS, StemcellVersion)
+	}
 
 	f.logger.Println("getting release information from assets.lock")
 	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, ".yml")))
