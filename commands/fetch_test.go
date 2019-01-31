@@ -11,7 +11,9 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/jhanda"
@@ -46,7 +48,8 @@ var _ = Describe("Fetch", func() {
 		someAssetsLockPath    string
 		someReleasesDirectory string
 		err                   error
-		fakeS3ClientProvider  *fakes.S3ClientProvider
+		fakeS3ClientProvider  func(*session.Session, ...*aws.Config) s3iface.S3API
+		sessionArg            *session.Session
 		fakeS3Client          *fakes.S3Client
 	)
 
@@ -67,8 +70,11 @@ var _ = Describe("Fetch", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeS3Client = new(fakes.S3Client)
-		fakeS3ClientProvider = new(fakes.S3ClientProvider)
-		fakeS3ClientProvider.GetReturns(fakeS3Client)
+
+		fakeS3ClientProvider = func(sess *session.Session, cfgs ...*aws.Config) s3iface.S3API {
+			sessionArg = sess
+			return fakeS3Client
+		}
 	})
 
 	AfterEach(func() {
@@ -77,8 +83,7 @@ var _ = Describe("Fetch", func() {
 
 	Describe("Execute", func() {
 		BeforeEach(func() {
-			fetch = commands.NewFetch(logger)
-			fetch.S3Provider = fakeS3ClientProvider
+			fetch = commands.NewFetch(logger, fakeS3ClientProvider)
 		})
 		Context("happy case", func() {
 			It("works", func() {
@@ -151,12 +156,11 @@ compiled_releases:
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				session, _ := fakeS3ClientProvider.GetArgsForCall(0)
-				creds, err := session.Config.Credentials.Get()
+				creds, err := sessionArg.Config.Credentials.Get()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(creds.AccessKeyID).To(Equal("newkey"))
 				Expect(creds.SecretAccessKey).To(Equal("newsecret"))
-				Expect(session.Config.Region).To(Equal(aws.String("north-east-1")))
+				Expect(sessionArg.Config.Region).To(Equal(aws.String("north-east-1")))
 			})
 		})
 		Context("failure cases", func() {

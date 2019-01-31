@@ -30,19 +30,14 @@ const (
 	StemcellVersion = "stemcell_version"
 )
 
-//go:generate counterfeiter -o ./fakes/s3client_provider.go --fake-name S3ClientProvider . S3ClientProvider
-type S3ClientProvider interface {
-	Get(session *session.Session, cfgs ...*aws.Config) s3iface.S3API
-}
-
-type s3ClientProvider struct{}
-
-func (g *s3ClientProvider) Get(session *session.Session, cfgs ...*aws.Config) s3iface.S3API {
+func S3ClientProvider(session *session.Session, cfgs ...*aws.Config) s3iface.S3API {
 	return s3.New(session, cfgs...)
 }
 
 type Fetch struct {
 	logger *log.Logger
+
+	S3Provider func(*session.Session, ...*aws.Config) s3iface.S3API
 
 	Options struct {
 		AssetsFile     string   `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
@@ -50,13 +45,12 @@ type Fetch struct {
 		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
 		ReleasesDir    string   `short:"rd" long:"releases-directory" required:"true" description:"path to a directory to download releases into"`
 	}
-	S3Provider S3ClientProvider
 }
 
-func NewFetch(logger *log.Logger) Fetch {
+func NewFetch(logger *log.Logger, s3Provider func(*session.Session, ...*aws.Config) s3iface.S3API) Fetch {
 	return Fetch{
 		logger:     logger,
-		S3Provider: &s3ClientProvider{},
+		S3Provider: s3Provider,
 	}
 }
 
@@ -233,7 +227,7 @@ func (f Fetch) Execute(args []string) error {
 		Region:      aws.String(assets.CompiledReleases.Region),
 		Credentials: credentials.NewStaticCredentials(assets.CompiledReleases.AccessKeyId, assets.CompiledReleases.SecretAccessKey, ""),
 	}))
-	s3Client := f.S3Provider.Get(sess)
+	s3Client := f.S3Provider(sess)
 
 	MatchedS3Objects, err := ListObjects(assets.CompiledReleases.Bucket, compiledRegex, s3Client)
 	if err != nil {
