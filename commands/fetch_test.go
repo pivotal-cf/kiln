@@ -2,10 +2,12 @@ package commands_test
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -18,10 +20,101 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
+const MinimalAssetsYMLContents = `
+---
+compiled_releases:
+  type: s3
+  bucket: compiled-releases
+  region: us-west-1
+  access_key_id: mykey
+  secret_access_key: mysecret
+  regex: ^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$
+`
+
+const MinimalAssetsLockContents = `
+---
+releases: []
+`
+
 var _ = Describe("Fetch", func() {
 	var (
-		fetch commands.Fetch
+		fetch                 commands.Fetch
+		logger                *log.Logger
+		tmpDir                string
+		someAssetsFilePath    string
+		someAssetsLockPath    string
+		someReleasesDirectory string
+		err                   error
+		fakeS3ClientProvider  *fakes.S3ClientProvider
+		fakeS3Client          *fakes.S3Client
 	)
+
+	BeforeEach(func() {
+		logger = log.New(GinkgoWriter, "", 0)
+
+		tmpDir, err = ioutil.TempDir("", "fetch-test")
+
+		someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
+		Expect(err).NotTo(HaveOccurred())
+
+		someAssetsFilePath = filepath.Join(tmpDir, "assets.yml")
+		err = ioutil.WriteFile(someAssetsFilePath, []byte(MinimalAssetsYMLContents), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		someAssetsLockPath = filepath.Join(tmpDir, "assets.lock")
+		err = ioutil.WriteFile(someAssetsLockPath, []byte(MinimalAssetsLockContents), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		fakeS3Client = new(fakes.S3Client)
+		fakeS3ClientProvider = new(fakes.S3ClientProvider)
+		fakeS3ClientProvider.GetReturns(fakeS3Client)
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(tmpDir)).To(Succeed())
+	})
+
+	Describe("Execute", func() {
+		BeforeEach(func() {
+			fetch = commands.NewFetch(logger)
+			fetch.S3Provider = fakeS3ClientProvider
+		})
+		Context("happy case", func() {
+			It("works", func() {
+				err := fetch.Execute([]string{
+					"--releases-directory", someReleasesDirectory,
+					"--assets-file", someAssetsFilePath,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeS3Client.ListObjectsPagesCallCount()).To(Equal(1))
+			})
+		})
+
+		Context("failure cases", func() {
+			Context("the assets-file flag is missing", func() {
+				It("returns a flag error", func() {
+					err := fetch.Execute([]string{"--releases-directory", "reldir"})
+					Expect(err).To(MatchError("missing required flag \"--assets-file\""))
+				})
+			})
+			Context("the releases-directory flag is missing", func() {
+				It("returns a flag error", func() {
+					err := fetch.Execute([]string{"--assets-file", "assets.yml"})
+					Expect(err).To(MatchError("missing required flag \"--releases-directory\""))
+				})
+			})
+			Context("required files are missing", func() {
+				It("returns an error when assets.yml file isn't present", func() {
+					badAssetsFilePath := filepath.Join(tmpDir, "non-existent-assets.yml")
+					err := fetch.Execute([]string{
+						"--releases-directory", someReleasesDirectory,
+						"--assets-file", badAssetsFilePath,
+					})
+					Expect(err).To(MatchError(fmt.Sprintf("open %s: no such file or directory", badAssetsFilePath)))
+				})
+			})
+		})
+	})
 
 	Describe("CompiledReleasesRegexp", func() {
 		var (
@@ -57,9 +150,8 @@ var _ = Describe("Fetch", func() {
 
 	Describe("ListObjects", func() {
 		var (
-			bucket       string
-			fakeS3Client *fakes.S3Client
-			err          error
+			bucket string
+			err    error
 		)
 
 		BeforeEach(func() {
@@ -102,7 +194,6 @@ var _ = Describe("Fetch", func() {
 
 	Describe("DownloadReleases", func() {
 		var (
-			logger           *log.Logger
 			assetsLock       cargo.AssetsLock
 			bucket           string
 			matchedS3Objects map[cargo.CompiledRelease]string
@@ -116,7 +207,6 @@ var _ = Describe("Fetch", func() {
 		)
 
 		BeforeEach(func() {
-			logger = log.New(GinkgoWriter, "", 0)
 			assetsLock = cargo.AssetsLock{
 				Releases: []cargo.Release{
 					{Name: "uaa", Version: "1.2.3"},
