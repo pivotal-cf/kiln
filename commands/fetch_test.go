@@ -18,6 +18,7 @@ import (
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	"github.com/pivotal-cf/kiln/internal/cargo"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const MinimalAssetsYMLContents = `
@@ -90,6 +91,74 @@ var _ = Describe("Fetch", func() {
 			})
 		})
 
+		Context("when multiple variable files are provided", func() {
+			var someVariableFile, otherVariableFile *os.File
+			const TemplatizedAssetsYMLContents = `
+---
+compiled_releases:
+  type: s3
+  bucket: $( variable "bucket" )
+  region: $( variable "region" )
+  access_key_id: $( variable "access_key" )
+  secret_access_key: $( variable "secret_key" )
+  regex: $( variable "regex" )
+`
+
+			BeforeEach(func() {
+				var err error
+
+				someAssetsFilePath = filepath.Join(tmpDir, "assets.yml")
+				err = ioutil.WriteFile(someAssetsFilePath, []byte(TemplatizedAssetsYMLContents), 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				someVariableFile, err = ioutil.TempFile(tmpDir, "variables-file1")
+				Expect(err).NotTo(HaveOccurred())
+				defer someVariableFile.Close()
+
+				variables := map[string]string{
+					"bucket": "my-releases",
+				}
+				data, err := yaml.Marshal(&variables)
+				Expect(err).NotTo(HaveOccurred())
+				n, err := someVariableFile.Write(data)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(data).To(HaveLen(n))
+
+				otherVariableFile, err = ioutil.TempFile(tmpDir, "variables-file2")
+				Expect(err).NotTo(HaveOccurred())
+				defer otherVariableFile.Close()
+
+				variables = map[string]string{
+					"access_key": "newkey",
+					"secret_key": "newsecret",
+					"regex":      `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
+				}
+				data, err = yaml.Marshal(&variables)
+				Expect(err).NotTo(HaveOccurred())
+
+				n, err = otherVariableFile.Write(data)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(data).To(HaveLen(n))
+			})
+
+			It("interpolates variables from both files", func() {
+				err := fetch.Execute([]string{
+					"--releases-directory", someReleasesDirectory,
+					"--assets-file", someAssetsFilePath,
+					"--variables-file", someVariableFile.Name(),
+					"--variables-file", otherVariableFile.Name(),
+					"--variable", "region=north-east-1",
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				session, _ := fakeS3ClientProvider.GetArgsForCall(0)
+				creds, err := session.Config.Credentials.Get()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(creds.AccessKeyID).To(Equal("newkey"))
+				Expect(creds.SecretAccessKey).To(Equal("newsecret"))
+				Expect(session.Config.Region).To(Equal(aws.String("north-east-1")))
+			})
+		})
 		Context("failure cases", func() {
 			Context("the assets-file flag is missing", func() {
 				It("returns a flag error", func() {

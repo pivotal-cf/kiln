@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,6 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pivotal-cf/jhanda"
+	"github.com/pivotal-cf/kiln/builder"
+	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -42,8 +45,10 @@ type Fetch struct {
 	logger *log.Logger
 
 	Options struct {
-		AssetsFile  string `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
-		ReleasesDir string `short:"rd" long:"releases-directory" required:"true" description:"path to a directory to download releases into"`
+		AssetsFile     string   `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
+		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
+		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
+		ReleasesDir    string   `short:"rd" long:"releases-directory" required:"true" description:"path to a directory to download releases into"`
 	}
 	S3Provider S3ClientProvider
 }
@@ -178,15 +183,29 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	f.logger.Println("getting S3 information from assets.yml")
-	file, err := os.Open(f.Options.AssetsFile)
+	templateVariablesService := baking.NewTemplateVariablesService()
+	templateVariables, err := templateVariablesService.FromPathsAndPairs(f.Options.VariablesFiles, f.Options.Variables)
+	if err != nil {
+		return fmt.Errorf("failed to parse template variables: %s", err)
+	}
+
+	assetsYAML, err := ioutil.ReadFile(f.Options.AssetsFile)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+
+	interpolator := builder.NewInterpolator()
+	interpolatedMetadata, err := interpolator.Interpolate(builder.InterpolateInput{
+		Variables: templateVariables,
+	}, assetsYAML)
+	if err != nil {
+		return err
+	}
+
+	f.logger.Println("getting S3 information from assets.yml")
 
 	var assets cargo.Assets
-	err = yaml.NewDecoder(file).Decode(&assets)
+	err = yaml.Unmarshal(interpolatedMetadata, &assets)
 	if err != nil {
 		return err
 	}
