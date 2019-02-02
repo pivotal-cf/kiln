@@ -168,11 +168,6 @@ func (w TileWriter) addEmbeddedPath(pathToEmbed, outputFile string) error {
 		}
 
 		entryPath := filepath.Join("embed", filepath.Join(filepath.Base(pathToEmbed), relativePath))
-
-		if strings.Contains(entryPath, ".git") {
-			return w.skipAddingToZipper(entryPath)
-		}
-
 		return w.addToZipperWithMode(entryPath, file, info.Mode(), outputFile)
 	})
 }
@@ -217,12 +212,6 @@ func (w TileWriter) addMigrations(migrationsDir []string, outputFile string) err
 	if !found {
 		return w.addEmptyMigrationsDirectory(outputFile)
 	}
-
-	return nil
-}
-
-func (w TileWriter) skipAddingToZipper(path string) error {
-	w.logger.Printf("Skipping %s...", path)
 
 	return nil
 }

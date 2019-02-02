@@ -340,13 +340,6 @@ var _ = Describe("TileWriter", func() {
 				embedFileInfo.IsDirReturns(false)
 				embedFileInfo.ModeReturns(87654)
 
-				gitDirInfo := &fakes.FileInfo{}
-				gitDirInfo.IsDirReturns(true)
-
-				embedGitFileInfo := &fakes.FileInfo{}
-				embedGitFileInfo.IsDirReturns(false)
-				embedGitFileInfo.ModeReturns(87654)
-
 				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 					if root == "/some/path/releases" {
 						walkFn(root, dirInfo, nil)
@@ -356,9 +349,6 @@ var _ = Describe("TileWriter", func() {
 						walkFn(root, dirInfo, nil)
 						walkFn(filepath.Join(root, "my-file-1.txt"), embedFileInfo, nil)
 						walkFn(filepath.Join(root, "my-file-2.txt"), embedFileInfo, nil)
-
-						nestedGitDir := filepath.Join(root, ".git")
-						walkFn(filepath.Join(nestedGitDir, "config"), embedGitFileInfo, nil)
 					}
 					return nil
 				}
@@ -368,15 +358,13 @@ var _ = Describe("TileWriter", func() {
 						return NewBuffer(bytes.NewBufferString("contents-of-embedded-file-1")), nil
 					} else if path == "/some/path/to-embed/my-file-2.txt" {
 						return NewBuffer(bytes.NewBufferString("contents-of-embedded-file-2")), nil
-					} else if path == "/some/path/to-embed/.git/config" {
-						return NewBuffer(bytes.NewBufferString("contents-of-git-file")), nil
 					}
 
 					return NewBuffer(bytes.NewBufferString("contents-of-non-embedded-file")), nil
 				}
 			})
 
-			It("embeds the directory (excluding .git) in the embed directory", func() {
+			It("embeds the directory in the embed directory", func() {
 				input := builder.WriteInput{
 					ReleaseDirectories:   []string{"/some/path/releases"},
 					MigrationDirectories: []string{},
@@ -396,7 +384,6 @@ var _ = Describe("TileWriter", func() {
 					fmt.Sprintf("Adding releases/release-2.tgz to %s...", outputFile),
 					fmt.Sprintf("Adding embed/to-embed/my-file-1.txt to %s...", outputFile),
 					fmt.Sprintf("Adding embed/to-embed/my-file-2.txt to %s...", outputFile),
-					fmt.Sprintf("Skipping embed/to-embed/.git/config..."),
 				}))
 
 				Expect(zipper.AddWithModeCallCount()).To(Equal(2))
