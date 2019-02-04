@@ -40,10 +40,11 @@ type Fetch struct {
 	S3Provider func(*session.Session, ...*aws.Config) s3iface.S3API
 
 	Options struct {
-		AssetsFile     string   `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
-		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
-		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
-		ReleasesDir    string   `short:"rd" long:"releases-directory" required:"true" description:"path to a directory to download releases into"`
+		AssetsFile      string   `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
+		VariablesFiles  []string `short:"vf" long:"variables-file" description:"path to variables file"`
+		Variables       []string `short:"vr" long:"variable" description:"variable in key=value format"`
+		ReleasesDir     string   `short:"rd" long:"releases-directory" required:"true" description:"path to a directory to download releases into"`
+		DownloadThreads int      `short:"dt" long:"download-threads" description:"number of parallel threads to download parts from S3"`
 	}
 }
 
@@ -135,9 +136,15 @@ type Downloader interface {
 	Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
 }
 
-func DownloadReleases(logger *log.Logger, assetsLock cargo.AssetsLock, bucket string, matchedS3Objects map[cargo.CompiledRelease]string, fileCreator func(string) (io.WriterAt, error), downloader Downloader) error {
+func DownloadReleases(logger *log.Logger, assetsLock cargo.AssetsLock, bucket string, matchedS3Objects map[cargo.CompiledRelease]string, fileCreator func(string) (io.WriterAt, error), downloader Downloader, downloadThreads int) error {
 	releases := assetsLock.Releases
 	stemcell := assetsLock.Stemcell
+
+	setConcurrency := func(dl *s3manager.Downloader) {
+		if downloadThreads > 0 {
+			dl.Concurrency = downloadThreads
+		}
+	}
 
 	for _, release := range releases {
 		s3Key, ok := matchedS3Objects[cargo.CompiledRelease{
@@ -161,7 +168,7 @@ func DownloadReleases(logger *log.Logger, assetsLock cargo.AssetsLock, bucket st
 		_, err = downloader.Download(file, &s3.GetObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(s3Key),
-		})
+		}, setConcurrency)
 
 		if err != nil {
 			return fmt.Errorf("failed to download file, %v\n", err)
@@ -241,7 +248,7 @@ func (f Fetch) Execute(args []string) error {
 	}
 
 	downloader := s3manager.NewDownloaderWithClient(s3Client)
-	return DownloadReleases(f.logger, assetsLock, assets.CompiledReleases.Bucket, MatchedS3Objects, fileCreator, downloader)
+	return DownloadReleases(f.logger, assetsLock, assets.CompiledReleases.Bucket, MatchedS3Objects, fileCreator, downloader, f.Options.DownloadThreads)
 }
 
 func (f Fetch) Usage() jhanda.Usage {

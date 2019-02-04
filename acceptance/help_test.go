@@ -61,6 +61,7 @@ Usage: kiln [options] fetch [<args>]
 
 Command Arguments:
   --assets-file, -a          string (required)  path to assets file
+  --download-threads, -dt    int                number of parallel threads to download parts from S3
   --releases-directory, -rd  string (required)  path to a directory to download releases into
 `
 

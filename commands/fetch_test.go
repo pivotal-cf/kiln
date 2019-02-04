@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/jhanda"
@@ -34,10 +35,7 @@ compiled_releases:
   regex: ^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$
 `
 
-const MinimalAssetsLockContents = `
----
-releases: []
-`
+const MinimalAssetsLockContents = `---`
 
 var _ = Describe("Fetch", func() {
 	var (
@@ -163,6 +161,7 @@ compiled_releases:
 				Expect(sessionArg.Config.Region).To(Equal(aws.String("north-east-1")))
 			})
 		})
+
 		Context("failure cases", func() {
 			Context("the assets-file flag is missing", func() {
 				It("returns a flag error", func() {
@@ -320,17 +319,48 @@ compiled_releases:
 		})
 
 		It("downloads the appropriate versions of releases listed in the assets.lock", func() {
-			err = commands.DownloadReleases(logger, assetsLock, bucket, matchedS3Objects, fileCreator, fakeDownloader)
+			err = commands.DownloadReleases(logger, assetsLock, bucket, matchedS3Objects, fileCreator, fakeDownloader, 7)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeDownloader.DownloadCallCount()).To(Equal(2))
 
-			w1, input1, _ := fakeDownloader.DownloadArgsForCall(0)
+			w1, input1, opts := fakeDownloader.DownloadArgsForCall(0)
 			Expect(w1).To(Equal(fakeUAAFile))
 			Expect(input1).To(Equal(uaaInput))
+			Expect(opts).To(HaveLen(1))
 
-			w2, input2, _ := fakeDownloader.DownloadArgsForCall(1)
+			downloader := &s3manager.Downloader{
+				Concurrency: s3manager.DefaultDownloadConcurrency,
+			}
+
+			opts[0](downloader)
+
+			Expect(downloader.Concurrency).To(Equal(7))
+
+			w2, input2, opts := fakeDownloader.DownloadArgsForCall(1)
 			Expect(w2).To(Equal(fakeBPMFile))
 			Expect(input2).To(Equal(bpmInput))
+			Expect(opts).To(HaveLen(1))
+		})
+
+		Context("when number of threads is not specified", func() {
+			It("uses the s3manager package's default download concurrency", func() {
+				err = commands.DownloadReleases(logger, assetsLock, bucket, matchedS3Objects, fileCreator, fakeDownloader, 0)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeDownloader.DownloadCallCount()).To(Equal(2))
+
+				w1, input1, opts := fakeDownloader.DownloadArgsForCall(0)
+				Expect(w1).To(Equal(fakeUAAFile))
+				Expect(input1).To(Equal(uaaInput))
+				Expect(opts).To(HaveLen(1))
+
+				downloader := &s3manager.Downloader{
+					Concurrency: s3manager.DefaultDownloadConcurrency,
+				}
+
+				opts[0](downloader)
+
+				Expect(downloader.Concurrency).To(Equal(s3manager.DefaultDownloadConcurrency))
+			})
 		})
 
 		It("returns an error if the release does not exist", func() {
@@ -338,7 +368,7 @@ compiled_releases:
 				{Name: "not-real", Version: "1.2.3"},
 			}
 
-			err = commands.DownloadReleases(logger, assetsLock, bucket, matchedS3Objects, fileCreator, fakeDownloader)
+			err = commands.DownloadReleases(logger, assetsLock, bucket, matchedS3Objects, fileCreator, fakeDownloader, 0)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("Compiled release: not-real, version: 1.2.3, stemcell OS: ubuntu-trusty, stemcell version: 1234, not found"))
 		})
