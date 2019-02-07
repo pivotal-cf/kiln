@@ -100,8 +100,8 @@ func (crr *CompiledReleasesRegexp) Convert(s3Key string) (cargo.CompiledRelease,
 }
 
 //go:generate counterfeiter -o ./fakes/s3client.go --fake-name S3Client github.com/pivotal-cf/kiln/vendor/github.com/aws/aws-sdk-go/service/s3/s3iface.S3API
-func ListObjects(bucket string, regex *CompiledReleasesRegexp, s3Client s3iface.S3API) (map[cargo.CompiledRelease]string, error) {
-	MatchedS3Objects := make(map[cargo.CompiledRelease]string)
+func ListObjects(bucket string, regex *CompiledReleasesRegexp, s3Client s3iface.S3API, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, error) {
+	matchedS3Objects := make(map[cargo.CompiledRelease]string)
 
 	err := s3Client.ListObjectsPages(
 		&s3.ListObjectsInput{
@@ -118,17 +118,42 @@ func ListObjects(bucket string, regex *CompiledReleasesRegexp, s3Client s3iface.
 					continue
 				}
 
-				MatchedS3Objects[compiledRelease] = *s3Object.Key
+				matchedS3Objects[compiledRelease] = *s3Object.Key
 			}
 			return true
 		},
 	)
-
 	if err != nil {
 		return nil, err
 	}
 
-	return MatchedS3Objects, nil
+	missingReleases := make([]cargo.CompiledRelease, 0)
+	for _, release := range assetsLock.Releases {
+		expectedRelease := cargo.CompiledRelease{
+			Name:            release.Name,
+			Version:         release.Version,
+			StemcellOS:      assetsLock.Stemcell.OS,
+			StemcellVersion: assetsLock.Stemcell.Version,
+		}
+		_, ok := matchedS3Objects[expectedRelease]
+
+		if !ok {
+			missingReleases = append(missingReleases, expectedRelease)
+		}
+	}
+	if len(missingReleases) > 0 {
+		formattedMissingReleases := make([]string, 0)
+
+		for _, missingRelease := range missingReleases {
+			formattedMissingReleases = append(formattedMissingReleases, fmt.Sprintf(
+				"%+v", missingRelease,
+			))
+
+		}
+		return nil, fmt.Errorf("Expected releases were not matched by the regex:\n%s", strings.Join(formattedMissingReleases, "\n"))
+	}
+
+	return matchedS3Objects, nil
 }
 
 //go:generate counterfeiter -o ./fakes/downloader.go --fake-name Downloader . Downloader
@@ -236,7 +261,7 @@ func (f Fetch) Execute(args []string) error {
 	}))
 	s3Client := f.S3Provider(sess)
 
-	MatchedS3Objects, err := ListObjects(assets.CompiledReleases.Bucket, compiledRegex, s3Client)
+	MatchedS3Objects, err := ListObjects(assets.CompiledReleases.Bucket, compiledRegex, s3Client, assetsLock)
 	if err != nil {
 		return err
 	}

@@ -250,10 +250,20 @@ compiled_releases:
 				return nil
 			}
 
+			assetsLock := cargo.AssetsLock{
+				Releases: []cargo.Release{
+					{Name: "bpm", Version: "1.2.3"},
+				},
+				Stemcell: cargo.Stemcell{
+					OS:      "ubuntu-xenial",
+					Version: "190.0.0",
+				},
+			}
+
 			compiledRegex, err := commands.NewCompiledReleasesRegexp(`^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`)
 			Expect(err).NotTo(HaveOccurred())
 
-			matchedS3Objects, err := commands.ListObjects(bucket, compiledRegex, fakeS3Client)
+			matchedS3Objects, err := commands.ListObjects(bucket, compiledRegex, fakeS3Client, assetsLock)
 			Expect(err).NotTo(HaveOccurred())
 
 			input, _ := fakeS3Client.ListObjectsPagesArgsForCall(0)
@@ -261,6 +271,45 @@ compiled_releases:
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, key3))
+		})
+
+		It("returns error if any do not match what's in asset.lock", func() {
+			key1 := "1.10/uaa/uaa-1.2.3-ubuntu-xenial-190.0.0.tgz"
+			key2 := "2.5/bpm/bpm-1.2.3-ubuntu-xenial-190.0.0.tgz"
+			fakeS3Client.ListObjectsPagesStub = func(input *s3.ListObjectsInput, fn func(*s3.ListObjectsOutput, bool) bool) error {
+				shouldContinue := fn(&s3.ListObjectsOutput{
+					Contents: []*s3.Object{
+						{Key: &key1},
+						{Key: &key2},
+					},
+				},
+					true,
+				)
+				Expect(shouldContinue).To(BeTrue())
+				return nil
+			}
+
+			compiledRegex, err := commands.NewCompiledReleasesRegexp(`^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`)
+			Expect(err).NotTo(HaveOccurred())
+
+			assetsLock := cargo.AssetsLock{
+				Releases: []cargo.Release{
+					{Name: "bpm", Version: "1.2.3"},
+					{Name: "some-release", Version: "1.2.3"},
+					{Name: "another-missing-release", Version: "4.5.6"},
+				},
+				Stemcell: cargo.Stemcell{
+					OS:      "ubuntu-xenial",
+					Version: "190.0.0",
+				},
+			}
+			_, err = commands.ListObjects(bucket, compiledRegex, fakeS3Client, assetsLock)
+			Expect(err).To(MatchError(`Expected releases were not matched by the regex:
+{Name:some-release Version:1.2.3 StemcellOS:ubuntu-xenial StemcellVersion:190.0.0}
+{Name:another-missing-release Version:4.5.6 StemcellOS:ubuntu-xenial StemcellVersion:190.0.0}`))
+
+			input, _ := fakeS3Client.ListObjectsPagesArgsForCall(0)
+			Expect(input.Bucket).To(Equal(aws.String("some-bucket")))
 		})
 	})
 
