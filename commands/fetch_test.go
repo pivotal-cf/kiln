@@ -220,7 +220,7 @@ compiled_releases:
 		})
 	})
 
-	Describe("ListObjects", func() {
+	Describe("GetMatchedReleases", func() {
 		var (
 			bucket string
 			err    error
@@ -263,7 +263,7 @@ compiled_releases:
 			compiledRegex, err := commands.NewCompiledReleasesRegexp(`^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`)
 			Expect(err).NotTo(HaveOccurred())
 
-			matchedS3Objects, err := commands.ListObjects(bucket, compiledRegex, fakeS3Client, assetsLock)
+			matchedS3Objects, err := commands.GetMatchedReleases(bucket, compiledRegex, fakeS3Client, assetsLock)
 			Expect(err).NotTo(HaveOccurred())
 
 			input, _ := fakeS3Client.ListObjectsPagesArgsForCall(0)
@@ -303,7 +303,7 @@ compiled_releases:
 					Version: "190.0.0",
 				},
 			}
-			_, err = commands.ListObjects(bucket, compiledRegex, fakeS3Client, assetsLock)
+			_, err = commands.GetMatchedReleases(bucket, compiledRegex, fakeS3Client, assetsLock)
 			Expect(err).To(MatchError(`Expected releases were not matched by the regex:
 {Name:some-release Version:1.2.3 StemcellOS:ubuntu-xenial StemcellVersion:190.0.0}
 {Name:another-missing-release Version:4.5.6 StemcellOS:ubuntu-xenial StemcellVersion:190.0.0}`))

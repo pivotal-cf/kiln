@@ -100,7 +100,7 @@ func (crr *CompiledReleasesRegexp) Convert(s3Key string) (cargo.CompiledRelease,
 }
 
 //go:generate counterfeiter -o ./fakes/s3client.go --fake-name S3Client github.com/pivotal-cf/kiln/vendor/github.com/aws/aws-sdk-go/service/s3/s3iface.S3API
-func ListObjects(bucket string, regex *CompiledReleasesRegexp, s3Client s3iface.S3API, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, error) {
+func GetMatchedReleases(bucket string, regex *CompiledReleasesRegexp, s3Client s3iface.S3API, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, error) {
 	matchedS3Objects := make(map[cargo.CompiledRelease]string)
 
 	err := s3Client.ListObjectsPages(
@@ -261,7 +261,7 @@ func (f Fetch) Execute(args []string) error {
 	}))
 	s3Client := f.S3Provider(sess)
 
-	MatchedS3Objects, err := ListObjects(assets.CompiledReleases.Bucket, compiledRegex, s3Client, assetsLock)
+	MatchedS3Objects, err := GetMatchedReleases(assets.CompiledReleases.Bucket, compiledRegex, s3Client, assetsLock)
 	if err != nil {
 		return err
 	}
