@@ -32,6 +32,7 @@ type releasesService interface {
 //go:generate counterfeiter -o ./fakes/stemcell_service.go --fake-name StemcellService . stemcellService
 type stemcellService interface {
 	FromTarball(path string) (stemcell interface{}, err error)
+	FromAssetsFile(path string) (stemcell interface{}, err error)
 }
 
 //go:generate counterfeiter -o ./fakes/template_variables_service.go --fake-name TemplateVariablesService . templateVariablesService
@@ -97,6 +98,7 @@ type Bake struct {
 	metadata          metadataService
 
 	Options struct {
+		AssetsFile         string   `short:"a"  long:"assets-file"                        description:"path to assets file"`
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
 		OutputFile         string   `short:"o"  long:"output-file"                        description:"path to where the tile will be output"`
 		ReleaseDirectories []string `short:"rd" long:"releases-directory" required:"true" description:"path to a directory containing release tarballs"`
@@ -171,6 +173,10 @@ func (b Bake) Execute(args []string) error {
 		return errors.New("--output-file must be provided unless using --metadata-only")
 	}
 
+	if b.Options.AssetsFile != "" && b.Options.StemcellTarball != "" {
+		return errors.New("--assets-file cannot be provided when using --stemcell-tarball")
+	}
+
 	if len(b.Options.OutputFile) > 0 && b.Options.MetadataOnly {
 		return errors.New("--output-file cannot be provided when using --metadata-only")
 	}
@@ -180,7 +186,12 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to parse releases: %s", err)
 	}
 
-	stemcellManifest, err := b.stemcell.FromTarball(b.Options.StemcellTarball)
+	var stemcellManifest interface{}
+	if b.Options.StemcellTarball != "" {
+		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
+	} else {
+		stemcellManifest, err = b.stemcell.FromAssetsFile(b.Options.AssetsFile)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to parse stemcell: %s", err)
 	}

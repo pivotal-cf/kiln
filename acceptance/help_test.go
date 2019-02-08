@@ -31,6 +31,7 @@ Usage: kiln [options] bake [<args>]
   --version, -v  bool  prints the kiln release version (default: false)
 
 Command Arguments:
+  --assets-file, -a                  string                       path to assets file
   --bosh-variables-directory, -vd    string (variadic)            path to a directory containing BOSH variables
   --embed, -e                        string (variadic)            path to files to include in the tile /embed directory
   --forms-directory, -f              string (variadic)            path to a directory containing forms

@@ -407,7 +407,7 @@ some_runtime_configs:
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("--stemcell-tarball must be specified"))
+				Expect(err.Error()).To(ContainSubstring("stemcell specification must be provided through either --stemcell-tarball or --assets-file"))
 			})
 		})
 

@@ -15,10 +15,11 @@ import (
 	"github.com/onsi/gomega/gexec"
 	yaml "gopkg.in/yaml.v2"
 
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
-	"time"
 )
 
 var _ = Describe("bake command", func() {
@@ -39,6 +40,8 @@ var _ = Describe("bake command", func() {
 		somePropertiesDirectory          string
 		someReleasesDirectory            string
 		someRuntimeConfigsDirectory      string
+		someAssetsYMLPath                string
+		someAssetsLockPath               string
 		someVarFile                      string
 		stemcellTarball                  string
 		tmpDir                           string
@@ -128,6 +131,21 @@ configurable: false
 default: true
 `), 0644)
 
+		Expect(err).NotTo(HaveOccurred())
+
+		someAssetsYMLPath = filepath.Join(tmpDir, "assets.yml")
+		err = ioutil.WriteFile(someAssetsYMLPath, []byte(`---`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		someAssetsLockPath = filepath.Join(tmpDir, "assets.lock")
+		err = ioutil.WriteFile(someAssetsLockPath, []byte(`---
+stemcell_criteria:
+  os: ubuntu-trusty
+  version: 3215.4
+`), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = ioutil.WriteFile(filepath.Join(tmpDir, "assets.yml"), []byte(`---`), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = ioutil.TempFile(someReleasesDirectory, "")
@@ -401,6 +419,164 @@ some-literal-variable: |
 		})
 	})
 
+	Context("when the --assets-file flag is provided", func() {
+
+		It("generates a tile with the correct metadata including the stemcell criteria from the asset file", func() {
+			commandWithArgs = []string{
+				"bake",
+				"--bosh-variables-directory", someBOSHVariablesDirectory,
+				"--forms-directory", someFormsDirectory,
+				"--forms-directory", someOtherFormsDirectory,
+				"--icon", someIconPath,
+				"--instance-groups-directory", someInstanceGroupsDirectory,
+				"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+				"--jobs-directory", someJobsDirectory,
+				"--jobs-directory", someOtherJobsDirectory,
+				"--metadata", metadata,
+				"--output-file", outputFile,
+				"--properties-directory", somePropertiesDirectory,
+				"--releases-directory", otherReleasesDirectory,
+				"--releases-directory", someReleasesDirectory,
+				"--runtime-configs-directory", someRuntimeConfigsDirectory,
+				"--variable", "some-variable=some-variable-value",
+				"--variables-file", filepath.Join(someVarFile),
+				"--version", "1.2.3",
+				"--assets-file", someAssetsYMLPath,
+			}
+			commandWithArgs = append(commandWithArgs, "--migrations-directory",
+				"fixtures/extra-migrations",
+				"--migrations-directory",
+				"fixtures/migrations",
+				"--variables-file",
+				variableFile.Name())
+
+			command := exec.Command(pathToMain, commandWithArgs...)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			archive, err := os.Open(outputFile)
+			Expect(err).NotTo(HaveOccurred())
+
+			archiveInfo, err := archive.Stat()
+			Expect(err).NotTo(HaveOccurred())
+
+			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			Expect(err).NotTo(HaveOccurred())
+
+			var file io.ReadCloser
+			for _, f := range zr.File {
+				if f.Name == "metadata/metadata.yml" {
+					file, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+					break
+				}
+			}
+
+			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
+			metadataContents, err := ioutil.ReadAll(file)
+			Expect(err).NotTo(HaveOccurred())
+
+			renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
+			Expect(metadataContents).To(HelpfullyMatchYAML(renderedYAML))
+
+			// Bosh Variables
+			Expect(string(metadataContents)).To(ContainSubstring("name: variable-1"))
+			Expect(string(metadataContents)).To(ContainSubstring("name: variable-2"))
+			Expect(string(metadataContents)).To(ContainSubstring("type: certificate"))
+			Expect(string(metadataContents)).To(ContainSubstring("some_option: Option value"))
+
+			// Template Variables
+			Expect(string(metadataContents)).To(ContainSubstring("custom_variable: some-variable-value"))
+
+			var (
+				archivedMigration1 io.ReadCloser
+				archivedMigration2 io.ReadCloser
+				archivedMigration3 io.ReadCloser
+			)
+
+			for _, f := range zr.File {
+				if f.Name == "migrations/v1/201603041539_custom_buildpacks.js" {
+					archivedMigration1, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+				if f.Name == "migrations/v1/201603071158_auth_enterprise_sso.js" {
+					archivedMigration2, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+				if f.Name == "migrations/v1/some_migration.js" {
+					archivedMigration3, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+				}
+			}
+
+			contents, err := ioutil.ReadAll(archivedMigration1)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(contents)).To(Equal("custom-buildpack-migration\n"))
+
+			contents, err = ioutil.ReadAll(archivedMigration2)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(contents)).To(Equal("auth-enterprise-sso-migration\n"))
+
+			contents, err = ioutil.ReadAll(archivedMigration3)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(contents)).To(Equal("some_migration\n"))
+
+			Eventually(session.Err).Should(gbytes.Say("Reading release manifests"))
+			Eventually(session.Err).Should(gbytes.Say("Reading stemcell criteria from assets.lock"))
+			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Building %s", outputFile)))
+			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile)))
+			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603041539_custom_buildpacks.js to %s...", outputFile)))
+			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603071158_auth_enterprise_sso.js to %s...", outputFile)))
+			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding releases/diego-release-0.1467.1-3215.4.0.tgz to %s...", outputFile)))
+			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding releases/cf-release-235.0.0-3215.4.0.tgz to %s...", outputFile)))
+			Eventually(session.Err).ShouldNot(gbytes.Say(fmt.Sprintf("Adding releases/not-a-tarball.txt to %s...", outputFile)))
+		})
+
+		Context("failure cases", func() {
+			It("assets.lock does not exist", func() {
+				commandWithArgs = []string{
+					"bake",
+					"--instance-groups-directory", someInstanceGroupsDirectory,
+					"--metadata", metadata,
+					"--output-file", outputFile,
+					"--releases-directory", someReleasesDirectory,
+					"--assets-file", "non-existent-assets.yml",
+				}
+
+				command := exec.Command(pathToMain, commandWithArgs...)
+				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(session.Err).Should(gbytes.Say("non-existent-assets.lock: no such file or directory"))
+			})
+		})
+		It("errors out when assets.lock cannot be unmarshalled", func() {
+			commandWithArgs = []string{
+				"bake",
+				"--instance-groups-directory", someInstanceGroupsDirectory,
+				"--metadata", metadata,
+				"--output-file", outputFile,
+				"--releases-directory", someReleasesDirectory,
+				"--assets-file", someAssetsYMLPath,
+			}
+
+			someAssetsLockPath = filepath.Join(tmpDir, "assets.lock")
+			err := ioutil.WriteFile(someAssetsLockPath, []byte(`-= not yaml =-`), 644)
+			Expect(err).NotTo(HaveOccurred())
+
+			command := exec.Command(pathToMain, commandWithArgs...)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(1))
+			Eventually(session.Err).Should(gbytes.Say("cannot unmarshal"))
+		})
+	})
 	Context("when the --metadata-only flag is specified", func() {
 		BeforeEach(func() {
 			commandWithArgs = []string{
@@ -636,6 +812,38 @@ some-literal-variable: |
 
 				Eventually(session).Should(gexec.Exit(1))
 				Expect(string(session.Err.Contents())).To(ContainSubstring("lstat missing-directory: no such file or directory"))
+			})
+		})
+
+		Context("when a assets file does not exist", func() {
+			It("prints an error and exits 1", func() {
+				commandWithArgs := []string{"bake",
+					"--bosh-variables-directory", someBOSHVariablesDirectory,
+					"--forms-directory", someFormsDirectory,
+					"--forms-directory", someOtherFormsDirectory,
+					"--icon", someIconPath,
+					"--instance-groups-directory", someInstanceGroupsDirectory,
+					"--instance-groups-directory", someOtherInstanceGroupsDirectory,
+					"--jobs-directory", someJobsDirectory,
+					"--jobs-directory", someOtherJobsDirectory,
+					"--metadata", metadata,
+					"--output-file", outputFile,
+					"--properties-directory", somePropertiesDirectory,
+					"--releases-directory", otherReleasesDirectory,
+					"--releases-directory", someReleasesDirectory,
+					"--runtime-configs-directory", someRuntimeConfigsDirectory,
+					"--assets-file", "non-existent-assets.yml",
+					"--variable", "some-variable=some-variable-value",
+					"--variables-file", filepath.Join(someVarFile),
+					"--version", "1.2.3",
+				}
+				command := exec.Command(pathToMain, commandWithArgs...)
+
+				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(session).Should(gexec.Exit(1))
+				Expect(string(session.Err.Contents())).To(ContainSubstring("non-existent-assets.lock: no such file or directory"))
 			})
 		})
 

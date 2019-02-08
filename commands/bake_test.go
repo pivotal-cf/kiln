@@ -419,6 +419,28 @@ var _ = Describe("Bake", func() {
 			})
 		})
 
+		Context("when assets file is specified", func() {
+			It("renders the stemcell criteria in tile metadata from that specified the assets.lock", func() {
+				outputFile := "some-output-dir/some-product-file-1.2.3-build.4"
+				err := bake.Execute([]string{
+					"--forms-directory", "some-forms-directory",
+					"--instance-groups-directory", "some-instance-groups-directory",
+					"--jobs-directory", "some-jobs-directory",
+					"--metadata", "some-metadata",
+					"--output-file", outputFile,
+					"--properties-directory", "some-properties-directory",
+					"--releases-directory", someReleasesDirectory,
+					"--runtime-configs-directory", "some-other-runtime-configs-directory",
+					"--assets-file", "assets.yml",
+					"--bosh-variables-directory", "some-variables-directory",
+					"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
+					"--migrations-directory", "some-other-migrations-directory",
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeStemcellService.FromAssetsFileCallCount()).To(Equal(1))
+				Expect(fakeStemcellService.FromAssetsFileArgsForCall(0)).To(Equal("assets.yml"))
+			})
+		})
 		Context("failure cases", func() {
 			Context("when the template variables service errors", func() {
 				It("returns an error", func() {
@@ -654,6 +676,21 @@ var _ = Describe("Bake", func() {
 					})
 
 					Expect(err).To(MatchError("--output-file must be provided unless using --metadata-only"))
+				})
+			})
+
+			Context("when both the --stemcell-tarball and --assets-file are provided", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--icon", "some-icon-path",
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--releases-directory", someReleasesDirectory,
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--assets-file", "assets.yml",
+						"--version", "1.2.3",
+					})
+					Expect(err).To(MatchError("--assets-file cannot be provided when using --stemcell-tarball"))
 				})
 			})
 

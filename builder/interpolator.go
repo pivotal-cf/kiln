@@ -99,7 +99,7 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 		},
 		"stemcell": func() (string, error) {
 			if input.StemcellManifest == nil {
-				return "", errors.New("--stemcell-tarball must be specified")
+				return "", errors.New("stemcell specification must be provided through either --stemcell-tarball or --assets-file")
 			}
 			return i.interpolateValueIntoYAML(input, input.StemcellManifest)
 		},
