@@ -6,23 +6,10 @@ import (
 )
 
 type StemcellService struct {
-	FromTarballStub        func(path string) (stemcell interface{}, err error)
-	fromTarballMutex       sync.RWMutex
-	fromTarballArgsForCall []struct {
-		path string
-	}
-	fromTarballReturns struct {
-		result1 interface{}
-		result2 error
-	}
-	fromTarballReturnsOnCall map[int]struct {
-		result1 interface{}
-		result2 error
-	}
-	FromAssetsFileStub        func(path string) (stemcell interface{}, err error)
+	FromAssetsFileStub        func(string) (interface{}, error)
 	fromAssetsFileMutex       sync.RWMutex
 	fromAssetsFileArgsForCall []struct {
-		path string
+		arg1 string
 	}
 	fromAssetsFileReturns struct {
 		result1 interface{}
@@ -32,76 +19,39 @@ type StemcellService struct {
 		result1 interface{}
 		result2 error
 	}
+	FromTarballStub        func(string) (interface{}, error)
+	fromTarballMutex       sync.RWMutex
+	fromTarballArgsForCall []struct {
+		arg1 string
+	}
+	fromTarballReturns struct {
+		result1 interface{}
+		result2 error
+	}
+	fromTarballReturnsOnCall map[int]struct {
+		result1 interface{}
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *StemcellService) FromTarball(path string) (stemcell interface{}, err error) {
-	fake.fromTarballMutex.Lock()
-	ret, specificReturn := fake.fromTarballReturnsOnCall[len(fake.fromTarballArgsForCall)]
-	fake.fromTarballArgsForCall = append(fake.fromTarballArgsForCall, struct {
-		path string
-	}{path})
-	fake.recordInvocation("FromTarball", []interface{}{path})
-	fake.fromTarballMutex.Unlock()
-	if fake.FromTarballStub != nil {
-		return fake.FromTarballStub(path)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.fromTarballReturns.result1, fake.fromTarballReturns.result2
-}
-
-func (fake *StemcellService) FromTarballCallCount() int {
-	fake.fromTarballMutex.RLock()
-	defer fake.fromTarballMutex.RUnlock()
-	return len(fake.fromTarballArgsForCall)
-}
-
-func (fake *StemcellService) FromTarballArgsForCall(i int) string {
-	fake.fromTarballMutex.RLock()
-	defer fake.fromTarballMutex.RUnlock()
-	return fake.fromTarballArgsForCall[i].path
-}
-
-func (fake *StemcellService) FromTarballReturns(result1 interface{}, result2 error) {
-	fake.FromTarballStub = nil
-	fake.fromTarballReturns = struct {
-		result1 interface{}
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *StemcellService) FromTarballReturnsOnCall(i int, result1 interface{}, result2 error) {
-	fake.FromTarballStub = nil
-	if fake.fromTarballReturnsOnCall == nil {
-		fake.fromTarballReturnsOnCall = make(map[int]struct {
-			result1 interface{}
-			result2 error
-		})
-	}
-	fake.fromTarballReturnsOnCall[i] = struct {
-		result1 interface{}
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *StemcellService) FromAssetsFile(path string) (stemcell interface{}, err error) {
+func (fake *StemcellService) FromAssetsFile(arg1 string) (interface{}, error) {
 	fake.fromAssetsFileMutex.Lock()
 	ret, specificReturn := fake.fromAssetsFileReturnsOnCall[len(fake.fromAssetsFileArgsForCall)]
 	fake.fromAssetsFileArgsForCall = append(fake.fromAssetsFileArgsForCall, struct {
-		path string
-	}{path})
-	fake.recordInvocation("FromAssetsFile", []interface{}{path})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("FromAssetsFile", []interface{}{arg1})
 	fake.fromAssetsFileMutex.Unlock()
 	if fake.FromAssetsFileStub != nil {
-		return fake.FromAssetsFileStub(path)
+		return fake.FromAssetsFileStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.fromAssetsFileReturns.result1, fake.fromAssetsFileReturns.result2
+	fakeReturns := fake.fromAssetsFileReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *StemcellService) FromAssetsFileCallCount() int {
@@ -110,13 +60,22 @@ func (fake *StemcellService) FromAssetsFileCallCount() int {
 	return len(fake.fromAssetsFileArgsForCall)
 }
 
+func (fake *StemcellService) FromAssetsFileCalls(stub func(string) (interface{}, error)) {
+	fake.fromAssetsFileMutex.Lock()
+	defer fake.fromAssetsFileMutex.Unlock()
+	fake.FromAssetsFileStub = stub
+}
+
 func (fake *StemcellService) FromAssetsFileArgsForCall(i int) string {
 	fake.fromAssetsFileMutex.RLock()
 	defer fake.fromAssetsFileMutex.RUnlock()
-	return fake.fromAssetsFileArgsForCall[i].path
+	argsForCall := fake.fromAssetsFileArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *StemcellService) FromAssetsFileReturns(result1 interface{}, result2 error) {
+	fake.fromAssetsFileMutex.Lock()
+	defer fake.fromAssetsFileMutex.Unlock()
 	fake.FromAssetsFileStub = nil
 	fake.fromAssetsFileReturns = struct {
 		result1 interface{}
@@ -125,6 +84,8 @@ func (fake *StemcellService) FromAssetsFileReturns(result1 interface{}, result2 
 }
 
 func (fake *StemcellService) FromAssetsFileReturnsOnCall(i int, result1 interface{}, result2 error) {
+	fake.fromAssetsFileMutex.Lock()
+	defer fake.fromAssetsFileMutex.Unlock()
 	fake.FromAssetsFileStub = nil
 	if fake.fromAssetsFileReturnsOnCall == nil {
 		fake.fromAssetsFileReturnsOnCall = make(map[int]struct {
@@ -138,13 +99,76 @@ func (fake *StemcellService) FromAssetsFileReturnsOnCall(i int, result1 interfac
 	}{result1, result2}
 }
 
+func (fake *StemcellService) FromTarball(arg1 string) (interface{}, error) {
+	fake.fromTarballMutex.Lock()
+	ret, specificReturn := fake.fromTarballReturnsOnCall[len(fake.fromTarballArgsForCall)]
+	fake.fromTarballArgsForCall = append(fake.fromTarballArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("FromTarball", []interface{}{arg1})
+	fake.fromTarballMutex.Unlock()
+	if fake.FromTarballStub != nil {
+		return fake.FromTarballStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.fromTarballReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *StemcellService) FromTarballCallCount() int {
+	fake.fromTarballMutex.RLock()
+	defer fake.fromTarballMutex.RUnlock()
+	return len(fake.fromTarballArgsForCall)
+}
+
+func (fake *StemcellService) FromTarballCalls(stub func(string) (interface{}, error)) {
+	fake.fromTarballMutex.Lock()
+	defer fake.fromTarballMutex.Unlock()
+	fake.FromTarballStub = stub
+}
+
+func (fake *StemcellService) FromTarballArgsForCall(i int) string {
+	fake.fromTarballMutex.RLock()
+	defer fake.fromTarballMutex.RUnlock()
+	argsForCall := fake.fromTarballArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *StemcellService) FromTarballReturns(result1 interface{}, result2 error) {
+	fake.fromTarballMutex.Lock()
+	defer fake.fromTarballMutex.Unlock()
+	fake.FromTarballStub = nil
+	fake.fromTarballReturns = struct {
+		result1 interface{}
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *StemcellService) FromTarballReturnsOnCall(i int, result1 interface{}, result2 error) {
+	fake.fromTarballMutex.Lock()
+	defer fake.fromTarballMutex.Unlock()
+	fake.FromTarballStub = nil
+	if fake.fromTarballReturnsOnCall == nil {
+		fake.fromTarballReturnsOnCall = make(map[int]struct {
+			result1 interface{}
+			result2 error
+		})
+	}
+	fake.fromTarballReturnsOnCall[i] = struct {
+		result1 interface{}
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *StemcellService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.fromTarballMutex.RLock()
-	defer fake.fromTarballMutex.RUnlock()
 	fake.fromAssetsFileMutex.RLock()
 	defer fake.fromAssetsFileMutex.RUnlock()
+	fake.fromTarballMutex.RLock()
+	defer fake.fromTarballMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
