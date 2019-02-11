@@ -98,7 +98,7 @@ type Bake struct {
 	metadata          metadataService
 
 	Options struct {
-		AssetsFile         string   `short:"a"  long:"assets-file"                        description:"path to assets file"`
+		AssetsFile         string   `short:"a"  long:"assets-file"                        description:"path to assets file  (NOTE: mutually exclusive with --stemcell-tarball)"`
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
 		OutputFile         string   `short:"o"  long:"output-file"                        description:"path to where the tile will be output"`
 		ReleaseDirectories []string `short:"rd" long:"releases-directory" required:"true" description:"path to a directory containing release tarballs"`
@@ -114,7 +114,7 @@ type Bake struct {
 		PropertyDirectories      []string `short:"pd"  long:"properties-directory"      description:"path to a directory containing property blueprints"`
 		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory" description:"path to a directory containing runtime configs"`
 		Sha256                   bool     `            long:"sha256"                    description:"calculates a SHA256 checksum of the output file"`
-		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"          description:"path to a stemcell tarball"`
+		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"          description:"path to a stemcell tarball  (NOTE: mutually exclusive with --assets-file)"`
 		StubReleases             bool     `short:"sr"  long:"stub-releases"             description:"skips importing release tarballs into the tile"`
 		VariableFiles            []string `short:"vf"  long:"variables-file"            description:"path to a file containing variables to interpolate"`
 		Variables                []string `short:"vr"  long:"variable"                  description:"key value pairs of variables to interpolate"`
