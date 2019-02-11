@@ -242,7 +242,7 @@ func (f Fetch) Execute(args []string) error {
 	}
 
 	f.logger.Println("getting release information from assets.lock")
-	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, ".yml")))
+	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, filepath.Ext(f.Options.AssetsFile))))
 	if err != nil {
 		return err
 	}

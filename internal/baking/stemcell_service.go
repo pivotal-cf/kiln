@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/pivotal-cf/kiln/builder"
@@ -40,7 +41,7 @@ func (ss StemcellService) FromTarball(path string) (interface{}, error) {
 
 func (ss StemcellService) FromAssetsFile(assetsFilePath string) (interface{}, error) {
 	var stemcellManifest builder.StemcellManifest
-	assetsLockFilePath := fmt.Sprintf("%s.lock", strings.TrimSuffix(assetsFilePath, ".yml"))
+	assetsLockFilePath := fmt.Sprintf("%s.lock", strings.TrimSuffix(assetsFilePath, filepath.Ext(assetsFilePath)))
 	assetsLockBasename := path.Base(assetsLockFilePath)
 	ss.logger.Println(fmt.Sprintf("Reading stemcell criteria from %s", assetsLockBasename))
 	assetsLockFile, err := os.Open(assetsLockFilePath)
