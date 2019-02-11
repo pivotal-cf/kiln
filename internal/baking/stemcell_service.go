@@ -12,14 +12,14 @@ import (
 )
 
 type StemcellService struct {
-	logger logger
-	reader partReader
+	logger        logger
+	tarballReader partReader
 }
 
-func NewStemcellService(logger logger, reader partReader) StemcellService {
+func NewStemcellService(logger logger, tarballReader partReader) StemcellService {
 	return StemcellService{
-		logger: logger,
-		reader: reader,
+		logger:        logger,
+		tarballReader: tarballReader,
 	}
 }
 
@@ -30,7 +30,7 @@ func (ss StemcellService) FromTarball(path string) (interface{}, error) {
 
 	ss.logger.Println("Reading stemcell manifest...")
 
-	stemcell, err := ss.reader.Read(path)
+	stemcell, err := ss.tarballReader.Read(path)
 	if err != nil {
 		return nil, err
 	}
