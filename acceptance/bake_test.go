@@ -2,7 +2,6 @@ package acceptance_test
 
 import (
 	"archive/zip"
-	"crypto/sha1"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	yaml "gopkg.in/yaml.v2"
 
 	"time"
 
@@ -41,11 +39,10 @@ var _ = Describe("bake command", func() {
 		someReleasesDirectory            string
 		someRuntimeConfigsDirectory      string
 		someAssetsYMLPath                string
-		someAssetsLockPath               string
 		someVarFile                      string
 		stemcellTarball                  string
 		tmpDir                           string
-		variableFile                     *os.File
+		variableFile                     string
 
 		commandWithArgs []string
 	)
@@ -61,215 +58,43 @@ var _ = Describe("bake command", func() {
 
 		outputFile = filepath.Join(tileDir, "cool-product-1.2.3-build.4.pivotal")
 
-		someIconFile, err := ioutil.TempFile("", "icon")
-		Expect(err).NotTo(HaveOccurred())
-		defer someIconFile.Close()
-		someIconPath = someIconFile.Name()
+		someIconPath = "fixtures/icon"
 
-		someImageData := "i-am-some-image"
-		_, err = someIconFile.Write([]byte(someImageData))
-		Expect(err).NotTo(HaveOccurred())
+		somePropertiesDirectory = "fixtures/properties"
 
-		somePropertiesDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
+		someReleasesDirectory = "fixtures/releases"
 
-		someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
+		otherReleasesDirectory = "fixtures/releases2"
 
-		otherReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
+		someRuntimeConfigsDirectory = "fixtures/runtime-config"
 
-		someRuntimeConfigsDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
+		someBOSHVariablesDirectory = "fixtures/bosh-vars"
 
-		someBOSHVariablesDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
+		someFormsDirectory = "fixtures/forms"
 
-		someFormsDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
+		someOtherFormsDirectory = "fixtures/forms2"
 
-		someOtherFormsDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
+		someInstanceGroupsDirectory = "fixtures/instance-groups"
 
-		someInstanceGroupsDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
+		someOtherInstanceGroupsDirectory = "fixtures/instance-groups2"
 
-		someOtherInstanceGroupsDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
+		someJobsDirectory = "fixtures/jobs"
 
-		someJobsDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
+		someOtherJobsDirectory = "fixtures/jobs2"
 
-		someOtherJobsDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
+		variableFile = "fixtures/variables-file"
 
-		someVarDir, err := ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
+		someVarFile = "fixtures/var-dir/var-file.yml"
 
-		variableFile, err = ioutil.TempFile(tmpDir, "variables-file")
-		Expect(err).NotTo(HaveOccurred())
-		defer variableFile.Close()
+		someAssetsYMLPath = "fixtures/assets.yml"
 
-		variables := map[string]string{"some-variable": "some-variable-value"}
-		data, err := yaml.Marshal(&variables)
-		Expect(err).NotTo(HaveOccurred())
+		cfSHA1 = "b383f3177e4fc4f0386b7a06ddbc3f57e7dbf09f"
 
-		n, err := variableFile.Write(data)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(data).To(HaveLen(n))
+		diegoSHA1 = "ade2a81b4bfda4eb7062cb1a9314f8941ae11d06"
 
-		someVarFile = filepath.Join(someVarDir, "var-file.yml")
+		stemcellTarball = "fixtures/stemcell.tgz"
 
-		cfReleaseManifest := `---
-name: cf
-version: 235
-`
-		err = ioutil.WriteFile(filepath.Join(somePropertiesDirectory, "some-templated-property.yml"), []byte(`---
-name: some_templated_property_blueprint
-type: boolean
-configurable: false
-default: true
-`), 0644)
-
-		Expect(err).NotTo(HaveOccurred())
-
-		someAssetsYMLPath = filepath.Join(tmpDir, "assets.yml")
-		err = ioutil.WriteFile(someAssetsYMLPath, []byte(`---`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		someAssetsLockPath = filepath.Join(tmpDir, "assets.lock")
-		err = ioutil.WriteFile(someAssetsLockPath, []byte(`---
-stemcell_criteria:
-  os: ubuntu-trusty
-  version: 3215.4
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(tmpDir, "assets.yml"), []byte(`---`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = ioutil.TempFile(someReleasesDirectory, "")
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = createTarball(someReleasesDirectory, "cf-release-235.0.0-3215.4.0.tgz", "release.MF", cfReleaseManifest)
-		Expect(err).NotTo(HaveOccurred())
-
-		f, err := os.Open(filepath.Join(someReleasesDirectory, "cf-release-235.0.0-3215.4.0.tgz"))
-		Expect(err).NotTo(HaveOccurred())
-
-		hash := sha1.New()
-		_, err = io.Copy(hash, f)
-		Expect(err).NotTo(HaveOccurred())
-
-		cfSHA1 = fmt.Sprintf("%x", hash.Sum(nil))
-
-		diegoReleaseManifest := `---
-name: diego
-version: 0.1467.1
-key: value
-`
-
-		_, err = createTarball(otherReleasesDirectory, "diego-release-0.1467.1-3215.4.0.tgz", "release.MF", diegoReleaseManifest)
-		Expect(err).NotTo(HaveOccurred())
-
-		f, err = os.Open(filepath.Join(otherReleasesDirectory, "diego-release-0.1467.1-3215.4.0.tgz"))
-		Expect(err).NotTo(HaveOccurred())
-
-		hash = sha1.New()
-		_, err = io.Copy(hash, f)
-		Expect(err).NotTo(HaveOccurred())
-
-		diegoSHA1 = fmt.Sprintf("%x", hash.Sum(nil))
-
-		notATarball := filepath.Join(someReleasesDirectory, "not-a-tarball.txt")
-		_ = ioutil.WriteFile(notATarball, []byte(`this is not a tarball`), 0644)
-		stemcellManifest := `---
-version: "3215.4"
-operating_system: ubuntu-trusty
-`
-
-		stemcellTarball, err = createTarball(tmpDir, "stemcell.tgz", "stemcell.MF", stemcellManifest)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(someFormsDirectory, "some-config.yml"), []byte(`---
-name: some-config
-label: some-form-label
-description: some-form-description
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(someFormsDirectory, "some-other-config.yml"), []byte(`---
-name: some-other-config
-label: some-other-form-label
-description: some-other-form-description
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(someOtherFormsDirectory, "some-more-config.yml"), []byte(`---
-name: some-more-config
-label: some-form-label
-description: some-form-description
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(someInstanceGroupsDirectory, "some-instance-group.yml"), []byte(`---
-name: some-instance-group
-label: Some Instance Group
-templates:
-- $( job "some-job" )
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(someOtherInstanceGroupsDirectory, "some-other-instance-group.yml"), []byte(`---
-name: some-other-instance-group
-label: Some Other Instance Group
-templates:
-- $( job "some-job-alias" )
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(someJobsDirectory, "some-job.yml"), []byte(`---
-name: some-job
-release: some-release
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(someOtherJobsDirectory, "some-other-job.yml"), []byte(`---
-name: some-other-job
-alias: some-job-alias
-release: some-other-release
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(someRuntimeConfigsDirectory, "some-runtime-config.yml"), []byte(`---
-name: some-runtime-config
-runtime_config: |
-  releases:
-  - name: some-addon
-    version: some-addon-version
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(filepath.Join(someBOSHVariablesDirectory, "variable-1.yml"), []byte(`---
-- name: variable-1
-  type: certificate
-  options:
-    some_option: Option value
-- name: variable-2
-  type: password
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = ioutil.WriteFile(someVarFile, []byte(`---
-some-boolean-variable: true
-some-literal-variable: |
-  { "some": "value" }
-`), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		metadata = filepath.Join(tmpDir, "metadata.yml")
-		err = ioutil.WriteFile(metadata, untemplatedMetadata, 0644)
-		Expect(err).NotTo(HaveOccurred())
+		metadata = "fixtures/metadata.yml"
 
 		commandWithArgs = []string{
 			"bake",
@@ -289,7 +114,7 @@ some-literal-variable: |
 			"--runtime-configs-directory", someRuntimeConfigsDirectory,
 			"--stemcell-tarball", stemcellTarball,
 			"--variable", "some-variable=some-variable-value",
-			"--variables-file", filepath.Join(someVarFile),
+			"--variables-file", someVarFile,
 			"--version", "1.2.3",
 		}
 	})
@@ -304,7 +129,7 @@ some-literal-variable: |
 			"--migrations-directory",
 			"fixtures/migrations",
 			"--variables-file",
-			variableFile.Name())
+			variableFile)
 
 		command := exec.Command(pathToMain, commandWithArgs...)
 
@@ -439,7 +264,7 @@ some-literal-variable: |
 				"--releases-directory", someReleasesDirectory,
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--variable", "some-variable=some-variable-value",
-				"--variables-file", filepath.Join(someVarFile),
+				"--variables-file", someVarFile,
 				"--version", "1.2.3",
 				"--assets-file", someAssetsYMLPath,
 			}
@@ -448,7 +273,7 @@ some-literal-variable: |
 				"--migrations-directory",
 				"fixtures/migrations",
 				"--variables-file",
-				variableFile.Name())
+				variableFile)
 
 			command := exec.Command(pathToMain, commandWithArgs...)
 
@@ -561,12 +386,8 @@ some-literal-variable: |
 				"--metadata", metadata,
 				"--output-file", outputFile,
 				"--releases-directory", someReleasesDirectory,
-				"--assets-file", someAssetsYMLPath,
+				"--assets-file", "fixtures/bad-assets.yml",
 			}
-
-			someAssetsLockPath = filepath.Join(tmpDir, "assets.lock")
-			err := ioutil.WriteFile(someAssetsLockPath, []byte(`-= not yaml =-`), 644)
-			Expect(err).NotTo(HaveOccurred())
 
 			command := exec.Command(pathToMain, commandWithArgs...)
 
@@ -597,7 +418,7 @@ some-literal-variable: |
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcell-tarball", stemcellTarball,
 				"--variable", "some-variable=some-variable-value",
-				"--variables-file", filepath.Join(someVarFile),
+				"--variables-file", someVarFile,
 				"--version", "1.2.3",
 			}
 		})
@@ -834,7 +655,7 @@ some-literal-variable: |
 					"--runtime-configs-directory", someRuntimeConfigsDirectory,
 					"--assets-file", "non-existent-assets.yml",
 					"--variable", "some-variable=some-variable-value",
-					"--variables-file", filepath.Join(someVarFile),
+					"--variables-file", someVarFile,
 					"--version", "1.2.3",
 				}
 				command := exec.Command(pathToMain, commandWithArgs...)
@@ -867,7 +688,7 @@ some-literal-variable: |
 					"--stemcell-tarball", stemcellTarball,
 					"--bosh-variables-directory", someBOSHVariablesDirectory,
 					"--variable", "some-variable=some-variable-value",
-					"--variables-file", filepath.Join(someVarFile),
+					"--variables-file", someVarFile,
 					"--version", "1.2.3",
 				)
 

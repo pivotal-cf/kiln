@@ -1,0 +1,6 @@
+---
+name: some_templated_property_blueprint
+type: boolean
+configurable: false
+default: true
+

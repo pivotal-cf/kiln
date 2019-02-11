@@ -1,0 +1,5 @@
+---
+name: some-other-job
+alias: some-job-alias
+release: some-other-release
+

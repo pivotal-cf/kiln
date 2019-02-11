@@ -1,0 +1,7 @@
+---
+name: some-runtime-config
+runtime_config: |
+  releases:
+  - name: some-addon
+    version: some-addon-version
+

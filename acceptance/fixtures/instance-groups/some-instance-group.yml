@@ -1,0 +1,6 @@
+---
+name: some-instance-group
+label: Some Instance Group
+templates:
+- $( job "some-job" )
+

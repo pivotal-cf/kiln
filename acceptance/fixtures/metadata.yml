@@ -1,0 +1,43 @@
+---
+name: cool-product-name
+metadata_version: '1.7'
+some_releases:
+  - $( release "diego" )
+  - $( release "cf" )
+some_stemcell_criteria: $( stemcell )
+provides_product_versions:
+- name: cf
+  version: 1.7.0.0
+icon_img: $( icon )
+product_version: $( version )
+minimum_version_for_upgrade: 1.6.9-build.0
+custom_variable: $(variable "some-variable")
+literal_variable: $(variable "some-literal-variable")
+boolean_variable: $(variable "some-boolean-variable")
+some_bosh_variables:
+- $(bosh_variable "variable-1")
+- $(bosh_variable "variable-2")
+label: Pivotal Elastic Runtime
+description:
+  this is the description
+rank: 90
+serial: false
+install_time_verifiers:
+- name: Verifiers::SsoUrlVerifier
+  properties:
+    url: .properties.uaa.saml.sso_url
+post_deploy_errands:
+- name: smoke-tests
+some_forms:
+- $( form "some-other-config" )
+- $( form "some-config" )
+- $( form "some-more-config" )
+some_job_types:
+- $( instance_group "some-instance-group" )
+- $( instance_group "some-other-instance-group" )
+some_property_blueprints:
+- $( property "some_templated_property_blueprint" )
+some_runtime_configs:
+- $( runtime_config "some-runtime-config" )
+selected_value: $( release "cf" | select "version" )
+

@@ -1,0 +1,8 @@
+---
+- name: variable-1
+  type: certificate
+  options:
+    some_option: Option value
+- name: variable-2
+  type: password
+

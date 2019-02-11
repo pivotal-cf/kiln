@@ -1,0 +1,5 @@
+---
+some-boolean-variable: true
+some-literal-variable: |
+  { "some": "value" }
+
