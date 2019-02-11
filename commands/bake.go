@@ -169,7 +169,7 @@ func (b Bake) Execute(args []string) error {
 		return errors.New("--jobs-directory flag requires --instance-groups-directory to also be specified")
 	}
 
-	if len(b.Options.OutputFile) == 0 && !b.Options.MetadataOnly {
+	if b.Options.OutputFile == "" && !b.Options.MetadataOnly {
 		return errors.New("--output-file must be provided unless using --metadata-only")
 	}
 
@@ -177,7 +177,7 @@ func (b Bake) Execute(args []string) error {
 		return errors.New("--assets-file cannot be provided when using --stemcell-tarball")
 	}
 
-	if len(b.Options.OutputFile) > 0 && b.Options.MetadataOnly {
+	if b.Options.OutputFile != "" && b.Options.MetadataOnly {
 		return errors.New("--output-file cannot be provided when using --metadata-only")
 	}
 

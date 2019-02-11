@@ -128,7 +128,7 @@ func (h Help) buildCommandContext(command string) (TemplateContext, error) {
 		}
 
 		for _, flag := range strings.Split(flagUsage, "\n") {
-			if len(flag) != 0 {
+			if flag != "" {
 				flagList = append(flagList, flag)
 			}
 		}
