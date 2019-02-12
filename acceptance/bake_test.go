@@ -22,29 +22,32 @@ import (
 
 var _ = Describe("bake command", func() {
 	var (
-		cfSHA1                           string
-		diegoSHA1                        string
-		metadata                         string
-		otherReleasesDirectory           string
-		outputFile                       string
-		someBOSHVariablesDirectory       string
-		someFormsDirectory               string
-		someIconPath                     string
-		someInstanceGroupsDirectory      string
-		someJobsDirectory                string
-		someOtherFormsDirectory          string
-		someOtherInstanceGroupsDirectory string
-		someOtherJobsDirectory           string
-		somePropertiesDirectory          string
-		someReleasesDirectory            string
-		someRuntimeConfigsDirectory      string
-		someAssetsYMLPath                string
-		someVarFile                      string
-		stemcellTarball                  string
-		tmpDir                           string
-		variableFile                     string
+		outputFile string
+		tmpDir     string
 
 		commandWithArgs []string
+	)
+
+	const (
+		someIconPath                     = "fixtures/icon"
+		somePropertiesDirectory          = "fixtures/properties"
+		someReleasesDirectory            = "fixtures/releases"
+		otherReleasesDirectory           = "fixtures/releases2"
+		someRuntimeConfigsDirectory      = "fixtures/runtime-config"
+		someBOSHVariablesDirectory       = "fixtures/bosh-vars"
+		someFormsDirectory               = "fixtures/forms"
+		someOtherFormsDirectory          = "fixtures/forms2"
+		someInstanceGroupsDirectory      = "fixtures/instance-groups"
+		someOtherInstanceGroupsDirectory = "fixtures/instance-groups2"
+		someJobsDirectory                = "fixtures/jobs"
+		someOtherJobsDirectory           = "fixtures/jobs2"
+		variableFile                     = "fixtures/variables-file"
+		someVarFile                      = "fixtures/var-dir/var-file.yml"
+		someAssetsYMLPath                = "fixtures/assets.yml"
+		cfSHA1                           = "b383f3177e4fc4f0386b7a06ddbc3f57e7dbf09f"
+		diegoSHA1                        = "ade2a81b4bfda4eb7062cb1a9314f8941ae11d06"
+		stemcellTarball                  = "fixtures/stemcell.tgz"
+		metadata                         = "fixtures/metadata.yml"
 	)
 
 	BeforeEach(func() {
@@ -57,44 +60,6 @@ var _ = Describe("bake command", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		outputFile = filepath.Join(tileDir, "cool-product-1.2.3-build.4.pivotal")
-
-		someIconPath = "fixtures/icon"
-
-		somePropertiesDirectory = "fixtures/properties"
-
-		someReleasesDirectory = "fixtures/releases"
-
-		otherReleasesDirectory = "fixtures/releases2"
-
-		someRuntimeConfigsDirectory = "fixtures/runtime-config"
-
-		someBOSHVariablesDirectory = "fixtures/bosh-vars"
-
-		someFormsDirectory = "fixtures/forms"
-
-		someOtherFormsDirectory = "fixtures/forms2"
-
-		someInstanceGroupsDirectory = "fixtures/instance-groups"
-
-		someOtherInstanceGroupsDirectory = "fixtures/instance-groups2"
-
-		someJobsDirectory = "fixtures/jobs"
-
-		someOtherJobsDirectory = "fixtures/jobs2"
-
-		variableFile = "fixtures/variables-file"
-
-		someVarFile = "fixtures/var-dir/var-file.yml"
-
-		someAssetsYMLPath = "fixtures/assets.yml"
-
-		cfSHA1 = "b383f3177e4fc4f0386b7a06ddbc3f57e7dbf09f"
-
-		diegoSHA1 = "ade2a81b4bfda4eb7062cb1a9314f8941ae11d06"
-
-		stemcellTarball = "fixtures/stemcell.tgz"
-
-		metadata = "fixtures/metadata.yml"
 
 		commandWithArgs = []string{
 			"bake",
