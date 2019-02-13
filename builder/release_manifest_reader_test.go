@@ -19,6 +19,53 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func createReleaseTarball(releaseMetadata string) (*os.File, string) {
+	tarball, err := ioutil.TempFile("", "kiln")
+	Expect(err).NotTo(HaveOccurred())
+
+	gw := gzip.NewWriter(tarball)
+	tw := tar.NewWriter(gw)
+
+	releaseManifest := bytes.NewBuffer([]byte(releaseMetadata))
+
+	header := &tar.Header{
+		Name:    "./release.MF",
+		Size:    int64(releaseManifest.Len()),
+		Mode:    int64(0644),
+		ModTime: time.Now(),
+	}
+
+	err = tw.WriteHeader(header)
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = io.Copy(tw, releaseManifest)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = tw.Close()
+	Expect(err).NotTo(HaveOccurred())
+
+	err = gw.Close()
+	Expect(err).NotTo(HaveOccurred())
+
+	err = tarball.Close()
+	Expect(err).NotTo(HaveOccurred())
+
+	var file *os.File
+	file, err = os.Open(tarball.Name())
+	Expect(err).NotTo(HaveOccurred())
+
+	hash := sha1.New()
+	_, err = io.Copy(hash, file)
+	Expect(err).NotTo(HaveOccurred())
+
+	releaseSHA1 := fmt.Sprintf("%x", hash.Sum(nil))
+
+	err = file.Close()
+	Expect(err).NotTo(HaveOccurred())
+
+	return tarball, releaseSHA1
+}
+
 var _ = Describe("ReleaseManifestReader", func() {
 	var (
 		reader      builder.ReleaseManifestReader
@@ -29,52 +76,13 @@ var _ = Describe("ReleaseManifestReader", func() {
 
 	BeforeEach(func() {
 		reader = builder.NewReleaseManifestReader()
-
-		tarball, err = ioutil.TempFile("", "kiln")
-		Expect(err).NotTo(HaveOccurred())
-
-		gw := gzip.NewWriter(tarball)
-		tw := tar.NewWriter(gw)
-
-		releaseManifest := bytes.NewBuffer([]byte(`---
+		tarball, releaseSHA1 = createReleaseTarball(`
 name: release
 version: 1.2.3
-`))
-
-		header := &tar.Header{
-			Name:    "./release.MF",
-			Size:    int64(releaseManifest.Len()),
-			Mode:    int64(0644),
-			ModTime: time.Now(),
-		}
-
-		err = tw.WriteHeader(header)
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = io.Copy(tw, releaseManifest)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = tw.Close()
-		Expect(err).NotTo(HaveOccurred())
-
-		err = gw.Close()
-		Expect(err).NotTo(HaveOccurred())
-
-		err = tarball.Close()
-		Expect(err).NotTo(HaveOccurred())
-
-		var file *os.File
-		file, err = os.Open(tarball.Name())
-		Expect(err).NotTo(HaveOccurred())
-
-		hash := sha1.New()
-		_, err = io.Copy(hash, file)
-		Expect(err).NotTo(HaveOccurred())
-
-		releaseSHA1 = fmt.Sprintf("%x", hash.Sum(nil))
-
-		err = file.Close()
-		Expect(err).NotTo(HaveOccurred())
+compiled_packages:
+- name: some-package
+  stemcell: ubuntu-xenial/170.25
+`)
 	})
 
 	AfterEach(func() {
@@ -90,12 +98,40 @@ version: 1.2.3
 			Expect(releaseManifest).To(Equal(builder.Part{
 				Name: "release",
 				Metadata: builder.ReleaseManifest{
-					Name:    "release",
-					Version: "1.2.3",
-					File:    filepath.Base(tarball.Name()),
-					SHA1:    releaseSHA1,
+					Name:            "release",
+					Version:         "1.2.3",
+					File:            filepath.Base(tarball.Name()),
+					SHA1:            releaseSHA1,
+					StemcellOS:      "ubuntu-xenial",
+					StemcellVersion: "170.25",
 				},
 			}))
+		})
+
+		Context("when the release is not pre-compiled", func() {
+			BeforeEach(func() {
+				tarball, releaseSHA1 = createReleaseTarball(`
+name: release
+version: 1.2.3
+`)
+			})
+
+			It("extracts the release manifest information from the tarball", func() {
+				var releaseManifest builder.Part
+				releaseManifest, err = reader.Read(tarball.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(releaseManifest).To(Equal(builder.Part{
+					Name: "release",
+					Metadata: builder.ReleaseManifest{
+						Name:            "release",
+						Version:         "1.2.3",
+						File:            filepath.Base(tarball.Name()),
+						SHA1:            releaseSHA1,
+						StemcellOS:      "",
+						StemcellVersion: "",
+					},
+				}))
+			})
 		})
 
 		Context("failure cases", func() {
@@ -239,6 +275,24 @@ version: 1.2.3
 					_, err = reader.Read(tarball.Name())
 					Expect(err).To(MatchError("yaml: could not find expected directive name"))
 				})
+			})
+		})
+
+		Context("when the release has a malformed stemcell string", func() {
+			BeforeEach(func() {
+				tarball, releaseSHA1 = createReleaseTarball(`
+name: release
+version: 1.2.3
+compiled_packages:
+- name: some-package
+  stemcell: invalid
+`)
+			})
+
+			It("extracts the release manifest information from the tarball", func() {
+				_, err := reader.Read(tarball.Name())
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("invalid"))
 			})
 		})
 	})

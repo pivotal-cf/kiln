@@ -1,12 +1,14 @@
 package main
 
 import (
+	"io"
 	"log"
 	"os"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
+	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/helper"
 	"github.com/pivotal-cf/kiln/internal/baking"
 )
@@ -87,10 +89,18 @@ func main() {
 	metadataService := baking.NewMetadataService()
 	checksummer := baking.NewChecksummer(errLogger)
 
+	s3Provider := fetcher.NewS3Provider()
+
+	fileCreator := func(filename string) (io.WriterAt, error) {
+		return os.Create(filename)
+	}
+	downloader := fetcher.NewDownloader(outLogger, s3Provider, fileCreator) // TODO: do we need file creator?
+	releaseMatcher := fetcher.NewReleaseMatcher(s3Provider)
+
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
-	commandSet["fetch"] = commands.NewFetch(outLogger, commands.S3ClientProvider)
+	commandSet["fetch"] = commands.NewFetch(outLogger, downloader, releaseMatcher)
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
 		tileWriter,

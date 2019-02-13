@@ -2,104 +2,99 @@
 package fakes
 
 import (
-	"io"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pivotal-cf/kiln/commands"
+	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 type Downloader struct {
-	DownloadStub        func(io.WriterAt, *s3.GetObjectInput, ...func(*s3manager.Downloader)) (int64, error)
-	downloadMutex       sync.RWMutex
-	downloadArgsForCall []struct {
-		arg1 io.WriterAt
-		arg2 *s3.GetObjectInput
-		arg3 []func(*s3manager.Downloader)
+	DownloadReleasesStub        func(string, cargo.CompiledReleases, map[cargo.CompiledRelease]string, int) error
+	downloadReleasesMutex       sync.RWMutex
+	downloadReleasesArgsForCall []struct {
+		arg1 string
+		arg2 cargo.CompiledReleases
+		arg3 map[cargo.CompiledRelease]string
+		arg4 int
 	}
-	downloadReturns struct {
-		result1 int64
-		result2 error
+	downloadReleasesReturns struct {
+		result1 error
 	}
-	downloadReturnsOnCall map[int]struct {
-		result1 int64
-		result2 error
+	downloadReleasesReturnsOnCall map[int]struct {
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Downloader) Download(arg1 io.WriterAt, arg2 *s3.GetObjectInput, arg3 ...func(*s3manager.Downloader)) (int64, error) {
-	fake.downloadMutex.Lock()
-	ret, specificReturn := fake.downloadReturnsOnCall[len(fake.downloadArgsForCall)]
-	fake.downloadArgsForCall = append(fake.downloadArgsForCall, struct {
-		arg1 io.WriterAt
-		arg2 *s3.GetObjectInput
-		arg3 []func(*s3manager.Downloader)
-	}{arg1, arg2, arg3})
-	fake.recordInvocation("Download", []interface{}{arg1, arg2, arg3})
-	fake.downloadMutex.Unlock()
-	if fake.DownloadStub != nil {
-		return fake.DownloadStub(arg1, arg2, arg3...)
+func (fake *Downloader) DownloadReleases(arg1 string, arg2 cargo.CompiledReleases, arg3 map[cargo.CompiledRelease]string, arg4 int) error {
+	fake.downloadReleasesMutex.Lock()
+	ret, specificReturn := fake.downloadReleasesReturnsOnCall[len(fake.downloadReleasesArgsForCall)]
+	fake.downloadReleasesArgsForCall = append(fake.downloadReleasesArgsForCall, struct {
+		arg1 string
+		arg2 cargo.CompiledReleases
+		arg3 map[cargo.CompiledRelease]string
+		arg4 int
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("DownloadReleases", []interface{}{arg1, arg2, arg3, arg4})
+	fake.downloadReleasesMutex.Unlock()
+	if fake.DownloadReleasesStub != nil {
+		return fake.DownloadReleasesStub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1
 	}
-	fakeReturns := fake.downloadReturns
-	return fakeReturns.result1, fakeReturns.result2
+	fakeReturns := fake.downloadReleasesReturns
+	return fakeReturns.result1
 }
 
-func (fake *Downloader) DownloadCallCount() int {
-	fake.downloadMutex.RLock()
-	defer fake.downloadMutex.RUnlock()
-	return len(fake.downloadArgsForCall)
+func (fake *Downloader) DownloadReleasesCallCount() int {
+	fake.downloadReleasesMutex.RLock()
+	defer fake.downloadReleasesMutex.RUnlock()
+	return len(fake.downloadReleasesArgsForCall)
 }
 
-func (fake *Downloader) DownloadCalls(stub func(io.WriterAt, *s3.GetObjectInput, ...func(*s3manager.Downloader)) (int64, error)) {
-	fake.downloadMutex.Lock()
-	defer fake.downloadMutex.Unlock()
-	fake.DownloadStub = stub
+func (fake *Downloader) DownloadReleasesCalls(stub func(string, cargo.CompiledReleases, map[cargo.CompiledRelease]string, int) error) {
+	fake.downloadReleasesMutex.Lock()
+	defer fake.downloadReleasesMutex.Unlock()
+	fake.DownloadReleasesStub = stub
 }
 
-func (fake *Downloader) DownloadArgsForCall(i int) (io.WriterAt, *s3.GetObjectInput, []func(*s3manager.Downloader)) {
-	fake.downloadMutex.RLock()
-	defer fake.downloadMutex.RUnlock()
-	argsForCall := fake.downloadArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+func (fake *Downloader) DownloadReleasesArgsForCall(i int) (string, cargo.CompiledReleases, map[cargo.CompiledRelease]string, int) {
+	fake.downloadReleasesMutex.RLock()
+	defer fake.downloadReleasesMutex.RUnlock()
+	argsForCall := fake.downloadReleasesArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
-func (fake *Downloader) DownloadReturns(result1 int64, result2 error) {
-	fake.downloadMutex.Lock()
-	defer fake.downloadMutex.Unlock()
-	fake.DownloadStub = nil
-	fake.downloadReturns = struct {
-		result1 int64
-		result2 error
-	}{result1, result2}
+func (fake *Downloader) DownloadReleasesReturns(result1 error) {
+	fake.downloadReleasesMutex.Lock()
+	defer fake.downloadReleasesMutex.Unlock()
+	fake.DownloadReleasesStub = nil
+	fake.downloadReleasesReturns = struct {
+		result1 error
+	}{result1}
 }
 
-func (fake *Downloader) DownloadReturnsOnCall(i int, result1 int64, result2 error) {
-	fake.downloadMutex.Lock()
-	defer fake.downloadMutex.Unlock()
-	fake.DownloadStub = nil
-	if fake.downloadReturnsOnCall == nil {
-		fake.downloadReturnsOnCall = make(map[int]struct {
-			result1 int64
-			result2 error
+func (fake *Downloader) DownloadReleasesReturnsOnCall(i int, result1 error) {
+	fake.downloadReleasesMutex.Lock()
+	defer fake.downloadReleasesMutex.Unlock()
+	fake.DownloadReleasesStub = nil
+	if fake.downloadReleasesReturnsOnCall == nil {
+		fake.downloadReleasesReturnsOnCall = make(map[int]struct {
+			result1 error
 		})
 	}
-	fake.downloadReturnsOnCall[i] = struct {
-		result1 int64
-		result2 error
-	}{result1, result2}
+	fake.downloadReleasesReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *Downloader) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.downloadMutex.RLock()
-	defer fake.downloadMutex.RUnlock()
+	fake.downloadReleasesMutex.RLock()
+	defer fake.downloadReleasesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

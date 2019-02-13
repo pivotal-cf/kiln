@@ -9,15 +9,28 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type ReleaseManifest struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	File    string `json:"file"`
-	SHA1    string `json:"sha1"`
+	Name            string
+	Version         string
+	File            string
+	SHA1            string
+	StemcellOS      string `yaml:"-"`
+	StemcellVersion string `yaml:"-"`
+}
+
+type inputReleaseManifest struct {
+	Name             string            `yaml:"name"`
+	Version          string            `yaml:"version"`
+	CompiledPackages []compiledPackage `yaml:"compiled_packages"`
+}
+
+type compiledPackage struct {
+	Stemcell string `yaml:"stemcell"`
 }
 
 type ReleaseManifestReader struct{}
@@ -57,18 +70,37 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 		}
 	}
 
-	var releaseManifest ReleaseManifest
-	releaseManifestContents, err := ioutil.ReadAll(tr)
+	var inputReleaseManifest inputReleaseManifest
+	inputReleaseManifestContents, err := ioutil.ReadAll(tr)
 	if err != nil {
 		return Part{}, err // NOTE: cannot replicate this error scenario in a test
 	}
 
-	err = yaml.Unmarshal(releaseManifestContents, &releaseManifest)
+	err = yaml.Unmarshal(inputReleaseManifestContents, &inputReleaseManifest)
 	if err != nil {
 		return Part{}, err
 	}
 
-	releaseManifest.File = filepath.Base(releaseTarball)
+	var stemcellOS, stemcellVersion string
+	compiledPackages := inputReleaseManifest.CompiledPackages
+	if len(compiledPackages) > 0 {
+		inputStemcell := inputReleaseManifest.CompiledPackages[0].Stemcell
+		stemcellParts := strings.Split(inputStemcell, "/")
+		if len(stemcellParts) != 2 {
+			return Part{}, fmt.Errorf("Invalid format for compiled package stemcell inside release.MF (expected 'os/version'): %s", inputStemcell)
+		}
+		stemcellOS = stemcellParts[0]
+		stemcellVersion = stemcellParts[1]
+	}
+
+	outputReleaseManifest := ReleaseManifest{
+		Name:            inputReleaseManifest.Name,
+		Version:         inputReleaseManifest.Version,
+		StemcellOS:      stemcellOS,
+		StemcellVersion: stemcellVersion,
+	}
+
+	outputReleaseManifest.File = filepath.Base(releaseTarball)
 
 	_, err = file.Seek(0, 0)
 	if err != nil {
@@ -81,10 +113,10 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 		return Part{}, err // NOTE: cannot replicate this error scenario in a test
 	}
 
-	releaseManifest.SHA1 = fmt.Sprintf("%x", hash.Sum(nil))
+	outputReleaseManifest.SHA1 = fmt.Sprintf("%x", hash.Sum(nil))
 
 	return Part{
-		Name:     releaseManifest.Name,
-		Metadata: releaseManifest,
+		Name:     inputReleaseManifest.Name,
+		Metadata: outputReleaseManifest,
 	}, nil
 }

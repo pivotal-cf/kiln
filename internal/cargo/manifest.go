@@ -9,6 +9,17 @@ type Manifest struct {
 	InstanceGroups []InstanceGroup `yaml:"instance_groups"`
 }
 
+type ReleaseManifest struct {
+	CompiledPackages []CompiledPackage `yaml:"compiled_packages"`
+	Name             string            `yaml:"name"`
+	Version          string            `yaml:"version"`
+}
+
+type CompiledPackage struct {
+	Name     string `yaml:"name"`
+	Stemcell string `yaml:"stemcell"`
+}
+
 type Release struct {
 	Name    string `yaml:"name"`
 	Version string `yaml:"version"`
