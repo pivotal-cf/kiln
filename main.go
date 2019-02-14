@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"log"
 	"os"
 
@@ -92,10 +91,7 @@ func main() {
 
 	s3Provider := providers.NewS3Provider()
 
-	fileCreator := func(filename string) (io.WriterAt, error) {
-		return os.Create(filename)
-	}
-	downloader := fetcher.NewDownloader(outLogger, s3Provider, fileCreator) // TODO: do we need file creator?
+	downloader := fetcher.NewDownloader(outLogger, s3Provider)
 	releaseMatcher := fetcher.NewReleaseMatcher(s3Provider)
 
 	commandSet := jhanda.CommandSet{}

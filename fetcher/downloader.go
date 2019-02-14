@@ -2,8 +2,8 @@ package fetcher
 
 import (
 	"fmt"
-	"io"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -21,16 +21,14 @@ type s3Provider interface {
 }
 
 type Downloader struct {
-	logger      *log.Logger
-	s3Provider  s3Provider
-	fileCreator func(string) (io.WriterAt, error)
+	logger     *log.Logger
+	s3Provider s3Provider
 }
 
-func NewDownloader(logger *log.Logger, s3Provider s3Provider, fileCreator func(string) (io.WriterAt, error)) Downloader {
+func NewDownloader(logger *log.Logger, s3Provider s3Provider) Downloader {
 	return Downloader{
-		logger:      logger,
-		s3Provider:  s3Provider,
-		fileCreator: fileCreator,
+		logger:     logger,
+		s3Provider: s3Provider,
 	}
 }
 
@@ -47,7 +45,7 @@ func (d Downloader) DownloadReleases(releaseDir string, compiledReleases cargo.C
 
 	for release, path := range matchedS3Objects {
 		outputFile := fmt.Sprintf("%s-%s-%s-%s.tgz", release.Name, release.Version, release.StemcellOS, release.StemcellVersion)
-		file, err := d.fileCreator(filepath.Join(releaseDir, outputFile))
+		file, err := os.Create(filepath.Join(releaseDir, outputFile))
 		if err != nil {
 			return fmt.Errorf("failed to create file %q, %v", outputFile, err)
 		}
