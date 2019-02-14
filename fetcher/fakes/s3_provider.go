@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-	"github.com/pivotal-cf/kiln/fetcher"
+	"github.com/pivotal-cf/kiln/internal/providers"
 )
 
 type S3Provider struct {
@@ -22,7 +22,7 @@ type S3Provider struct {
 	getS3ClientReturnsOnCall map[int]struct {
 		result1 s3iface.S3API
 	}
-	GetS3DownloaderStub        func(string, string, string) fetcher.S3Downloader
+	GetS3DownloaderStub        func(string, string, string) providers.S3Downloader
 	getS3DownloaderMutex       sync.RWMutex
 	getS3DownloaderArgsForCall []struct {
 		arg1 string
@@ -30,10 +30,10 @@ type S3Provider struct {
 		arg3 string
 	}
 	getS3DownloaderReturns struct {
-		result1 fetcher.S3Downloader
+		result1 providers.S3Downloader
 	}
 	getS3DownloaderReturnsOnCall map[int]struct {
-		result1 fetcher.S3Downloader
+		result1 providers.S3Downloader
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -101,7 +101,7 @@ func (fake *S3Provider) GetS3ClientReturnsOnCall(i int, result1 s3iface.S3API) {
 	}{result1}
 }
 
-func (fake *S3Provider) GetS3Downloader(arg1 string, arg2 string, arg3 string) fetcher.S3Downloader {
+func (fake *S3Provider) GetS3Downloader(arg1 string, arg2 string, arg3 string) providers.S3Downloader {
 	fake.getS3DownloaderMutex.Lock()
 	ret, specificReturn := fake.getS3DownloaderReturnsOnCall[len(fake.getS3DownloaderArgsForCall)]
 	fake.getS3DownloaderArgsForCall = append(fake.getS3DownloaderArgsForCall, struct {
@@ -127,7 +127,7 @@ func (fake *S3Provider) GetS3DownloaderCallCount() int {
 	return len(fake.getS3DownloaderArgsForCall)
 }
 
-func (fake *S3Provider) GetS3DownloaderCalls(stub func(string, string, string) fetcher.S3Downloader) {
+func (fake *S3Provider) GetS3DownloaderCalls(stub func(string, string, string) providers.S3Downloader) {
 	fake.getS3DownloaderMutex.Lock()
 	defer fake.getS3DownloaderMutex.Unlock()
 	fake.GetS3DownloaderStub = stub
@@ -140,26 +140,26 @@ func (fake *S3Provider) GetS3DownloaderArgsForCall(i int) (string, string, strin
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *S3Provider) GetS3DownloaderReturns(result1 fetcher.S3Downloader) {
+func (fake *S3Provider) GetS3DownloaderReturns(result1 providers.S3Downloader) {
 	fake.getS3DownloaderMutex.Lock()
 	defer fake.getS3DownloaderMutex.Unlock()
 	fake.GetS3DownloaderStub = nil
 	fake.getS3DownloaderReturns = struct {
-		result1 fetcher.S3Downloader
+		result1 providers.S3Downloader
 	}{result1}
 }
 
-func (fake *S3Provider) GetS3DownloaderReturnsOnCall(i int, result1 fetcher.S3Downloader) {
+func (fake *S3Provider) GetS3DownloaderReturnsOnCall(i int, result1 providers.S3Downloader) {
 	fake.getS3DownloaderMutex.Lock()
 	defer fake.getS3DownloaderMutex.Unlock()
 	fake.GetS3DownloaderStub = nil
 	if fake.getS3DownloaderReturnsOnCall == nil {
 		fake.getS3DownloaderReturnsOnCall = make(map[int]struct {
-			result1 fetcher.S3Downloader
+			result1 providers.S3Downloader
 		})
 	}
 	fake.getS3DownloaderReturnsOnCall[i] = struct {
-		result1 fetcher.S3Downloader
+		result1 providers.S3Downloader
 	}{result1}
 }
 

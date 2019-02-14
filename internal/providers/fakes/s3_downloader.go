@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/pivotal-cf/kiln/fetcher"
+	"github.com/pivotal-cf/kiln/internal/providers"
 )
 
 type S3Downloader struct {
@@ -119,4 +119,4 @@ func (fake *S3Downloader) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ fetcher.S3Downloader = new(S3Downloader)
+var _ providers.S3Downloader = new(S3Downloader)

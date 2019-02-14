@@ -15,6 +15,7 @@ import (
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/fetcher/fakes"
 	"github.com/pivotal-cf/kiln/internal/cargo"
+	providerfakes "github.com/pivotal-cf/kiln/internal/providers/fakes"
 )
 
 var _ = Describe("Downloader", func() {
@@ -28,7 +29,7 @@ var _ = Describe("Downloader", func() {
 		matchedS3Objects map[cargo.CompiledRelease]string
 		bpmInput         *s3.GetObjectInput
 		uaaInput         *s3.GetObjectInput
-		fakeS3Downloader *fakes.S3Downloader
+		fakeS3Downloader *providerfakes.S3Downloader
 	)
 
 	BeforeEach(func() {
@@ -61,7 +62,7 @@ var _ = Describe("Downloader", func() {
 		}
 
 		logger = log.New(GinkgoWriter, "", 0)
-		fakeS3Downloader = new(fakes.S3Downloader)
+		fakeS3Downloader = new(providerfakes.S3Downloader)
 		fakeS3Provider := new(fakes.S3Provider)
 		fakeS3Provider.GetS3DownloaderReturns(fakeS3Downloader)
 		downloader = fetcher.NewDownloader(logger, fakeS3Provider, fileCreator)

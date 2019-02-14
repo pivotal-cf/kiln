@@ -11,6 +11,7 @@ import (
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/helper"
 	"github.com/pivotal-cf/kiln/internal/baking"
+	"github.com/pivotal-cf/kiln/internal/providers"
 )
 
 var version = "unknown"
@@ -89,7 +90,7 @@ func main() {
 	metadataService := baking.NewMetadataService()
 	checksummer := baking.NewChecksummer(errLogger)
 
-	s3Provider := fetcher.NewS3Provider()
+	s3Provider := providers.NewS3Provider()
 
 	fileCreator := func(filename string) (io.WriterAt, error) {
 		return os.Create(filename)
