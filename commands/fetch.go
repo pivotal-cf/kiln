@@ -61,7 +61,7 @@ type ReleaseMatcher interface {
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
 	GetLocalReleases(releasesDir string) (map[cargo.CompiledRelease]string, error)
-	DeleteExtraReleases(releasesDir string, extraReleases map[cargo.CompiledRelease]string) error
+	DeleteExtraReleases(releasesDir string, extraReleases map[cargo.CompiledRelease]string, noConfirm bool) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -126,7 +126,7 @@ func (f Fetch) Execute(args []string) error {
 
 	missingReleases, extraReleases := f.getMissingReleases(matchedS3Objects, localReleaseSet)
 
-	f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleases)
+	f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleases, f.Options.NoConfirm)
 
 	f.logger.Printf("downloading %d objects from S3...", len(missingReleases))
 

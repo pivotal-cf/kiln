@@ -215,9 +215,10 @@ var _ = Describe("Fetch", func() {
 					}, "some-other-s3-key")))
 
 					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
-					releaseDir, extras := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
+					releaseDir, extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
 					Expect(releaseDir).To(Equal(someReleasesDirectory))
 					Expect(extras).To(HaveLen(1))
+					Expect(noConfirm).To(Equal(true))
 					Expect(extras).To(HaveKeyWithValue(cargo.CompiledRelease{
 						Name:            "some-extra-release",
 						Version:         "1.2.3",

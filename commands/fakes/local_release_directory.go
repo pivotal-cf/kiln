@@ -9,11 +9,12 @@ import (
 )
 
 type LocalReleaseDirectory struct {
-	DeleteExtraReleasesStub        func(string, map[cargo.CompiledRelease]string) error
+	DeleteExtraReleasesStub        func(string, map[cargo.CompiledRelease]string, bool) error
 	deleteExtraReleasesMutex       sync.RWMutex
 	deleteExtraReleasesArgsForCall []struct {
 		arg1 string
 		arg2 map[cargo.CompiledRelease]string
+		arg3 bool
 	}
 	deleteExtraReleasesReturns struct {
 		result1 error
@@ -38,17 +39,18 @@ type LocalReleaseDirectory struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *LocalReleaseDirectory) DeleteExtraReleases(arg1 string, arg2 map[cargo.CompiledRelease]string) error {
+func (fake *LocalReleaseDirectory) DeleteExtraReleases(arg1 string, arg2 map[cargo.CompiledRelease]string, arg3 bool) error {
 	fake.deleteExtraReleasesMutex.Lock()
 	ret, specificReturn := fake.deleteExtraReleasesReturnsOnCall[len(fake.deleteExtraReleasesArgsForCall)]
 	fake.deleteExtraReleasesArgsForCall = append(fake.deleteExtraReleasesArgsForCall, struct {
 		arg1 string
 		arg2 map[cargo.CompiledRelease]string
-	}{arg1, arg2})
-	fake.recordInvocation("DeleteExtraReleases", []interface{}{arg1, arg2})
+		arg3 bool
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("DeleteExtraReleases", []interface{}{arg1, arg2, arg3})
 	fake.deleteExtraReleasesMutex.Unlock()
 	if fake.DeleteExtraReleasesStub != nil {
-		return fake.DeleteExtraReleasesStub(arg1, arg2)
+		return fake.DeleteExtraReleasesStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -63,17 +65,17 @@ func (fake *LocalReleaseDirectory) DeleteExtraReleasesCallCount() int {
 	return len(fake.deleteExtraReleasesArgsForCall)
 }
 
-func (fake *LocalReleaseDirectory) DeleteExtraReleasesCalls(stub func(string, map[cargo.CompiledRelease]string) error) {
+func (fake *LocalReleaseDirectory) DeleteExtraReleasesCalls(stub func(string, map[cargo.CompiledRelease]string, bool) error) {
 	fake.deleteExtraReleasesMutex.Lock()
 	defer fake.deleteExtraReleasesMutex.Unlock()
 	fake.DeleteExtraReleasesStub = stub
 }
 
-func (fake *LocalReleaseDirectory) DeleteExtraReleasesArgsForCall(i int) (string, map[cargo.CompiledRelease]string) {
+func (fake *LocalReleaseDirectory) DeleteExtraReleasesArgsForCall(i int) (string, map[cargo.CompiledRelease]string, bool) {
 	fake.deleteExtraReleasesMutex.RLock()
 	defer fake.deleteExtraReleasesMutex.RUnlock()
 	argsForCall := fake.deleteExtraReleasesArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *LocalReleaseDirectory) DeleteExtraReleasesReturns(result1 error) {

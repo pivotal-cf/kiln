@@ -17,6 +17,7 @@ import (
 var _ = Describe("LocalReleaseDirectory", func() {
 	var (
 		localReleaseDirectory fetcher.LocalReleaseDirectory
+		noConfirm             bool
 		releasesDir           string
 		releaseFile           string
 		fakeLogger            *log.Logger
@@ -25,6 +26,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 	BeforeEach(func() {
 		var err error
 		releasesDir, err = ioutil.TempDir("", "releases")
+		noConfirm = true
 		Expect(err).NotTo(HaveOccurred())
 
 		releaseFile = filepath.Join(releasesDir, "some-release.tgz")
@@ -99,7 +101,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			extraReleases := map[cargo.CompiledRelease]string{}
 			extraReleases[extraRelease] = extraFileName
 
-			err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases)
+			err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = os.Stat(extraFile.Name())
@@ -118,7 +120,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				extraReleases := map[cargo.CompiledRelease]string{}
 				extraReleases[extraRelease] = "file-does-not-exist"
 
-				err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases)
+				err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
 				Expect(err).To(MatchError("failed to delete extra release extra-release-that-cannot-be-deleted"))
 			})
 		})

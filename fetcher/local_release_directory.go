@@ -41,13 +41,36 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (map[cargo.C
 	return outputReleases, nil
 }
 
-func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraReleases map[cargo.CompiledRelease]string) error {
-	for release, path := range extraReleases {
-		err := os.Remove(path)
+func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraReleases map[cargo.CompiledRelease]string, noConfirm bool) error {
+	var doDeletion byte
 
-		if err != nil {
-			fmt.Printf("error removing extra release %s: %v\n", release.Name, err)
-			return fmt.Errorf("failed to delete extra release %s", release.Name)
+	if len(extraReleases) == 0 {
+		return nil
+	}
+
+	if noConfirm {
+		doDeletion = 'y'
+	} else {
+		fmt.Println("Warning: kiln will delete the following files:")
+
+		for _, path := range extraReleases {
+			fmt.Printf("- %s\n", path)
+		}
+
+		fmt.Printf("Are you sure you want to delete these files? [yN]")
+
+		fmt.Scanf("%c", &doDeletion)
+	}
+
+	if doDeletion == 'y' || doDeletion == 'Y' {
+		for release, path := range extraReleases {
+			fmt.Printf("going to remove extra release %s\n", release.Name)
+			err := os.Remove(path)
+
+			if err != nil {
+				fmt.Printf("error removing extra release %s: %v\n", release.Name, err)
+				return fmt.Errorf("failed to delete extra release %s", release.Name)
+			}
 		}
 	}
 	return nil
