@@ -78,6 +78,14 @@ var _ = Describe("Downloader", func() {
 		verifySetsConcurrency(opts, 7)
 	})
 
+	Context("when the matchedS3Objects argument is empty", func() {
+		It("does not download anything from S3", func() {
+			err := downloader.DownloadReleases(releaseDir, compiledReleases, map[cargo.CompiledRelease]string{}, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(0))
+		})
+	})
+
 	Context("when number of threads is not specified", func() {
 		It("uses the s3manager package's default download concurrency", func() {
 			err := downloader.DownloadReleases(releaseDir, compiledReleases, matchedS3Objects, 0)

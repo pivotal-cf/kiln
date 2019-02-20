@@ -55,6 +55,7 @@ func (r ReleaseMatcher) GetMatchedReleases(compiledReleases cargo.CompiledReleas
 	}
 
 	missingReleases := make([]cargo.CompiledRelease, 0)
+	matchingReleases := make(map[cargo.CompiledRelease]string, 0)
 	for _, release := range assetsLock.Releases {
 		expectedRelease := cargo.CompiledRelease{
 			Name:            release.Name,
@@ -62,10 +63,12 @@ func (r ReleaseMatcher) GetMatchedReleases(compiledReleases cargo.CompiledReleas
 			StemcellOS:      assetsLock.Stemcell.OS,
 			StemcellVersion: assetsLock.Stemcell.Version,
 		}
-		_, ok := matchedS3Objects[expectedRelease]
+		s3Key, ok := matchedS3Objects[expectedRelease]
 
 		if !ok {
 			missingReleases = append(missingReleases, expectedRelease)
+		} else {
+			matchingReleases[expectedRelease] = s3Key
 		}
 	}
 	if len(missingReleases) > 0 {
@@ -80,5 +83,5 @@ func (r ReleaseMatcher) GetMatchedReleases(compiledReleases cargo.CompiledReleas
 		return nil, fmt.Errorf("Expected releases were not matched by the regex:\n%s", strings.Join(formattedMissingReleases, "\n"))
 	}
 
-	return matchedS3Objects, nil
+	return matchingReleases, nil
 }

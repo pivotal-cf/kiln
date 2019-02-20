@@ -82,6 +82,60 @@ var _ = Describe("GetMatchedReleases", func() {
 		Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
 	})
 
+	Context("if any objects in S3 do not match a release specified in assets.lock", func() {
+		BeforeEach(func() {
+			wrongReleaseVersionKey := "2.5/bpm/bpm-4.5.6-ubuntu-xenial-190.0.0.tgz"
+			wrongReleaseNameKey := "2.5/diego/diego-1.2.3-ubuntu-xenial-190.0.0.tgz"
+			fakeS3Client.ListObjectsPagesStub = func(input *s3.ListObjectsInput, fn func(*s3.ListObjectsOutput, bool) bool) error {
+				shouldContinue := fn(&s3.ListObjectsOutput{
+					Contents: []*s3.Object{
+						{Key: &wrongReleaseVersionKey},
+						{Key: &wrongReleaseNameKey},
+						{Key: &bpmKey},
+					},
+				},
+					true,
+				)
+				Expect(shouldContinue).To(BeTrue())
+				return nil
+			}
+		})
+		It("does not return them", func() {
+			matchedS3Objects, err := releaseMatcher.GetMatchedReleases(compiledReleases, assetsLock)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(matchedS3Objects).To(HaveLen(1))
+			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+		})
+	})
+
+	Context("if any objects in S3 do not match the provided stemcell criterion", func() {
+		BeforeEach(func() {
+			wrongStemcellVersionKey := "2.5/capi/capi-1.2.3-ubuntu-xenial-190.30.0.tgz"
+			wrongStemcellOSKey := "2.5/diego/diego-1.2.3-windows-1803.0.0.tgz"
+			fakeS3Client.ListObjectsPagesStub = func(input *s3.ListObjectsInput, fn func(*s3.ListObjectsOutput, bool) bool) error {
+				shouldContinue := fn(&s3.ListObjectsOutput{
+					Contents: []*s3.Object{
+						{Key: &wrongStemcellVersionKey},
+						{Key: &wrongStemcellOSKey},
+						{Key: &bpmKey},
+					},
+				},
+					true,
+				)
+				Expect(shouldContinue).To(BeTrue())
+				return nil
+			}
+		})
+		It("does not return them", func() {
+			matchedS3Objects, err := releaseMatcher.GetMatchedReleases(compiledReleases, assetsLock)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(matchedS3Objects).To(HaveLen(1))
+			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+		})
+	})
+
 	Context("if any objects in assets.lock don't have matches in S3", func() {
 		BeforeEach(func() {
 			assetsLock.Releases = []cargo.Release{

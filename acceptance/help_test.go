@@ -63,7 +63,10 @@ Usage: kiln [options] fetch [<args>]
 Command Arguments:
   --assets-file, -a          string (required)  path to assets file
   --download-threads, -dt    int                number of parallel threads to download parts from S3
+  --no-confirm, -n           bool               non-interactive mode, will delete extra releases in releases dir without prompting
   --releases-directory, -rd  string (required)  path to a directory to download releases into
+  --variable, -vr            string (variadic)  variable in key=value format
+  --variables-file, -vf      string (variadic)  path to variables file
 `
 
 var _ = Describe("help", func() {

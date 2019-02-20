@@ -25,8 +25,9 @@ const (
 type Fetch struct {
 	logger *log.Logger
 
-	downloader     Downloader
-	releaseMatcher ReleaseMatcher
+	downloader            Downloader
+	releaseMatcher        ReleaseMatcher
+	localReleaseDirectory LocalReleaseDirectory
 
 	Options struct {
 		AssetsFile      string   `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
@@ -34,14 +35,16 @@ type Fetch struct {
 		Variables       []string `short:"vr" long:"variable" description:"variable in key=value format"`
 		ReleasesDir     string   `short:"rd" long:"releases-directory" required:"true" description:"path to a directory to download releases into"`
 		DownloadThreads int      `short:"dt" long:"download-threads" description:"number of parallel threads to download parts from S3"`
+		NoConfirm       bool     `short:"n" long:"no-confirm" description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
 	}
 }
 
-func NewFetch(logger *log.Logger, downloader Downloader, releaseMatcher ReleaseMatcher) Fetch {
+func NewFetch(logger *log.Logger, downloader Downloader, releaseMatcher ReleaseMatcher, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
-		logger:         logger,
-		downloader:     downloader,
-		releaseMatcher: releaseMatcher,
+		logger:                logger,
+		downloader:            downloader,
+		releaseMatcher:        releaseMatcher,
+		localReleaseDirectory: localReleaseDirectory,
 	}
 }
 
@@ -53,6 +56,12 @@ type Downloader interface {
 //go:generate counterfeiter -o ./fakes/release_matcher.go --fake-name ReleaseMatcher . ReleaseMatcher
 type ReleaseMatcher interface {
 	GetMatchedReleases(compiledReleases cargo.CompiledReleases, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, error)
+}
+
+//go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
+type LocalReleaseDirectory interface {
+	GetLocalReleases(releasesDir string) (map[cargo.CompiledRelease]string, error)
+	DeleteExtraReleases(releasesDir string, extraReleases map[cargo.CompiledRelease]string) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -106,9 +115,60 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	f.logger.Printf("number of matched S3 objects: %d\n", len(matchedS3Objects))
+	f.logger.Printf("found %d remote releases", len(matchedS3Objects))
 
-	return f.downloader.DownloadReleases(f.Options.ReleasesDir, assets.CompiledReleases, matchedS3Objects, f.Options.DownloadThreads)
+	localReleases, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
+	if err != nil {
+		return err
+	}
+
+	localReleaseSet := f.hydrateLocalReleases(localReleases, assetsLock)
+
+	missingReleases, extraReleases := f.getMissingReleases(matchedS3Objects, localReleaseSet)
+
+	f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleases)
+
+	f.logger.Printf("downloading %d objects from S3...", len(missingReleases))
+
+	return f.downloader.DownloadReleases(f.Options.ReleasesDir, assets.CompiledReleases, missingReleases, f.Options.DownloadThreads)
+}
+
+func (f Fetch) hydrateLocalReleases(localReleases map[cargo.CompiledRelease]string, assetsLock cargo.AssetsLock) map[cargo.CompiledRelease]string {
+	hydratedLocalReleases := make(map[cargo.CompiledRelease]string)
+
+	for localRelease, path := range localReleases {
+		if localRelease.StemcellOS == "" {
+			localRelease.StemcellOS = assetsLock.Stemcell.OS
+			localRelease.StemcellVersion = assetsLock.Stemcell.Version
+		}
+
+		hydratedLocalReleases[localRelease] = path
+	}
+
+	return hydratedLocalReleases
+}
+
+func (f Fetch) getMissingReleases(remoteReleases map[cargo.CompiledRelease]string, localReleases map[cargo.CompiledRelease]string) (map[cargo.CompiledRelease]string, map[cargo.CompiledRelease]string) {
+	desiredReleases := make(map[cargo.CompiledRelease]string)
+
+	for key, value := range remoteReleases {
+		desiredReleases[key] = value
+	}
+
+	for remoteRelease, _ := range remoteReleases {
+		if _, ok := localReleases[remoteRelease]; ok {
+			delete(remoteReleases, remoteRelease)
+		}
+	}
+
+	for localRelease, _ := range localReleases {
+		if _, ok := desiredReleases[localRelease]; ok {
+			delete(localReleases, localRelease)
+		}
+	}
+
+	// first return value is releases missing from local. second return value is extra releases present locally.
+	return remoteReleases, localReleases
 }
 
 func (f Fetch) Usage() jhanda.Usage {
