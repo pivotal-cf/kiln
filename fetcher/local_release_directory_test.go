@@ -35,7 +35,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		releaseManifestReader := builder.NewReleaseManifestReader()
 		releasesService := baking.NewReleasesService(fakeLogger, releaseManifestReader)
 
-		localReleaseDirectory = fetcher.NewLocalReleaseDirectory(releasesService)
+		localReleaseDirectory = fetcher.NewLocalReleaseDirectory(fakeLogger, releasesService)
 	})
 
 	AfterEach(func() {

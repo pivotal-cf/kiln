@@ -93,7 +93,7 @@ func main() {
 
 	downloader := fetcher.NewDownloader(outLogger, s3Provider)
 	releaseMatcher := fetcher.NewReleaseMatcher(s3Provider)
-	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(releasesService)
+	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(outLogger, releasesService)
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)

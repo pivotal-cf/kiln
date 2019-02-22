@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -14,11 +15,13 @@ import (
 )
 
 type LocalReleaseDirectory struct {
+	logger          *log.Logger
 	releasesService baking.ReleasesService
 }
 
-func NewLocalReleaseDirectory(releasesService baking.ReleasesService) LocalReleaseDirectory {
+func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.ReleasesService) LocalReleaseDirectory {
 	return LocalReleaseDirectory{
+		logger:          logger,
 		releasesService: releasesService,
 	}
 }
@@ -54,13 +57,13 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 	if noConfirm {
 		doDeletion = 'y'
 	} else {
-		fmt.Println("Warning: kiln will delete the following files:")
+		l.logger.Println("Warning: kiln will delete the following files:")
 
 		for _, path := range extraReleases {
-			fmt.Printf("- %s\n", path)
+			l.logger.Printf("- %s\n", path)
 		}
 
-		fmt.Printf("Are you sure you want to delete these files? [yN]")
+		l.logger.Printf("Are you sure you want to delete these files? [yN]")
 
 		fmt.Scanf("%c", &doDeletion)
 	}
@@ -76,11 +79,11 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 
 func (l LocalReleaseDirectory) DeleteReleases(releasesToDelete map[cargo.CompiledRelease]string) error {
 	for release, path := range releasesToDelete {
-		fmt.Printf("going to remove release %s\n", release.Name)
+		l.logger.Printf("going to remove release %s\n", release.Name)
 		err := os.Remove(path)
 
 		if err != nil {
-			fmt.Printf("error removing release %s: %v\n", release.Name, err)
+			l.logger.Printf("error removing release %s: %v\n", release.Name, err)
 			return fmt.Errorf("failed to delete release %s", release.Name)
 		}
 	}
@@ -89,7 +92,7 @@ func (l LocalReleaseDirectory) DeleteReleases(releasesToDelete map[cargo.Compile
 }
 
 func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleases map[cargo.CompiledRelease]string, assetsLock cargo.AssetsLock) error {
-	fmt.Printf("verifying checksums")
+	l.logger.Printf("verifying checksums")
 	for release, path := range downloadedReleases {
 		f, err := os.Open(path)
 		if err != nil {
