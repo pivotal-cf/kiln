@@ -14,8 +14,6 @@ import (
 )
 
 var version = "unknown"
-var assetsFile = "unknown"
-var releasesDir = "unknown"
 
 func main() {
 	errLogger := log.New(os.Stderr, "", 0)
