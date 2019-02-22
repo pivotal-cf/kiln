@@ -43,6 +43,7 @@ func generateReleases(templateReleases []proofing.Release) []Release {
 		releases = append(releases, Release{
 			Name:    release.Name,
 			Version: release.Version,
+			SHA1:    release.SHA1,
 		})
 	}
 

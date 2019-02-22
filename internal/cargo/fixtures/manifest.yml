@@ -4,6 +4,7 @@ name: some-product-name
 releases:
 - name: some-release-name
   version: some-release-version
+  sha1: some-sha
 
 stemcells:
 - alias: some-stemcell-name

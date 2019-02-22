@@ -62,6 +62,7 @@ type ReleaseMatcher interface {
 type LocalReleaseDirectory interface {
 	GetLocalReleases(releasesDir string) (map[cargo.CompiledRelease]string, error)
 	DeleteExtraReleases(releasesDir string, extraReleases map[cargo.CompiledRelease]string, noConfirm bool) error
+	VerifyChecksums(downloadedRelases map[cargo.CompiledRelease]string, assetsLock cargo.AssetsLock) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -130,7 +131,9 @@ func (f Fetch) Execute(args []string) error {
 
 	f.logger.Printf("downloading %d objects from S3...", len(missingReleases))
 
-	return f.downloader.DownloadReleases(f.Options.ReleasesDir, assets.CompiledReleases, missingReleases, f.Options.DownloadThreads)
+	f.downloader.DownloadReleases(f.Options.ReleasesDir, assets.CompiledReleases, missingReleases, f.Options.DownloadThreads)
+
+	return f.localReleaseDirectory.VerifyChecksums(missingReleases, assetsLock)
 }
 
 func (f Fetch) hydrateLocalReleases(localReleases map[cargo.CompiledRelease]string, assetsLock cargo.AssetsLock) map[cargo.CompiledRelease]string {
