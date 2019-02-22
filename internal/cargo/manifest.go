@@ -22,6 +22,7 @@ type CompiledPackage struct {
 
 type Release struct {
 	Name    string `yaml:"name"`
+	SHA1    string `yaml:"sha1"`
 	Version string `yaml:"version"`
 }
 

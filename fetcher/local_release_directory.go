@@ -1,7 +1,10 @@
 package fetcher
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -63,14 +66,65 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 	}
 
 	if doDeletion == 'y' || doDeletion == 'Y' {
-		for release, path := range extraReleases {
-			fmt.Printf("going to remove extra release %s\n", release.Name)
-			err := os.Remove(path)
+		err := l.DeleteReleases(extraReleases)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-			if err != nil {
-				fmt.Printf("error removing extra release %s: %v\n", release.Name, err)
-				return fmt.Errorf("failed to delete extra release %s", release.Name)
+func (l LocalReleaseDirectory) DeleteReleases(releasesToDelete map[cargo.CompiledRelease]string) error {
+	for release, path := range releasesToDelete {
+		fmt.Printf("going to remove release %s\n", release.Name)
+		err := os.Remove(path)
+
+		if err != nil {
+			fmt.Printf("error removing release %s: %v\n", release.Name, err)
+			return fmt.Errorf("failed to delete release %s", release.Name)
+		}
+	}
+
+	return nil
+}
+
+func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleases map[cargo.CompiledRelease]string, assetsLock cargo.AssetsLock) error {
+	fmt.Printf("verifying checksums")
+	for release, path := range downloadedReleases {
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		h := sha1.New()
+		_, err = io.Copy(h, f)
+		if err != nil {
+			return err
+		}
+
+		sum := hex.EncodeToString(h.Sum(nil))
+		expectedSum := ""
+
+		for _, r := range assetsLock.Releases {
+			if r.Name == release.Name {
+				expectedSum = r.SHA1
+				break
 			}
+		}
+
+		if expectedSum == "" {
+			return fmt.Errorf("release %s is not in assets file", release.Name)
+		}
+
+		if expectedSum != sum {
+
+			releaseToDelete := map[cargo.CompiledRelease]string{
+				release: path,
+			}
+
+			l.DeleteReleases(releaseToDelete)
+			return fmt.Errorf("download release %s does not match SHA1 %s. Got: %s. Deleting release.", release.Name, expectedSum, sum)
 		}
 	}
 	return nil

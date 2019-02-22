@@ -121,7 +121,82 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				extraReleases[extraRelease] = "file-does-not-exist"
 
 				err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
-				Expect(err).To(MatchError("failed to delete extra release extra-release-that-cannot-be-deleted"))
+				Expect(err).To(MatchError("failed to delete release extra-release-that-cannot-be-deleted"))
+			})
+		})
+	})
+
+	Describe("VerifyChecksums", func() {
+		var (
+			downloadedReleases map[cargo.CompiledRelease]string
+			assetsLock         cargo.AssetsLock
+			goodFile           *os.File
+			badFile            *os.File
+			err                error
+		)
+
+		BeforeEach(func() {
+			goodFile, err = ioutil.TempFile(releasesDir, "good-release")
+			Expect(err).NotTo(HaveOccurred())
+			goodFile.Write([]byte("abc"))
+			goodFile.Close()
+
+			badFile, err = ioutil.TempFile(releasesDir, "bad-release")
+			Expect(err).NotTo(HaveOccurred())
+			badFile.Write([]byte("some bad sha file"))
+			badFile.Close()
+
+			assetsLock = cargo.AssetsLock{
+				Releases: []cargo.Release{
+					{
+						Name:    "good",
+						Version: "1.2.3",
+						SHA1:    "a9993e364706816aba3e25717850c26c9cd0d89d", // sha1 for string "abc"
+					},
+					{
+						Name:    "bad",
+						Version: "1.2.3",
+						SHA1:    "a9993e364706816aba3e25717850c26c9cd0d89d", // sha1 for string "abc"
+					},
+				},
+				Stemcell: cargo.Stemcell{
+					OS:      "ubuntu-xenial",
+					Version: "190.0.0",
+				},
+			}
+		})
+
+		Context("when all the checksums on the downloaded releases match their checksums in assets.lock", func() {
+			It("succeeds", func() {
+				downloadedReleases = map[cargo.CompiledRelease]string{
+					{
+						Name:            "good",
+						Version:         "1.2.3",
+						StemcellOS:      "ubuntu-xenial",
+						StemcellVersion: "190.0.0",
+					}: goodFile.Name(),
+				}
+				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, assetsLock)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("when at least one checksum on the downloaded releases does not match the checksum in assets.lock", func() {
+			It("returns an error and deletse the bad release", func() {
+				downloadedReleases = map[cargo.CompiledRelease]string{
+					{
+						Name:            "bad",
+						Version:         "1.2.3",
+						StemcellOS:      "ubuntu-xenial",
+						StemcellVersion: "190.0.0",
+					}: badFile.Name(),
+				}
+				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, assetsLock)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("does not match SHA1"))
+
+				_, err = os.Stat(badFile.Name())
+				Expect(os.IsNotExist(err)).To(BeTrue())
 			})
 		})
 	})
