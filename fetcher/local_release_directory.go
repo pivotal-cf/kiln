@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
@@ -102,6 +103,9 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 	}
 
 	l.logger.Printf("verifying checksums")
+
+	var badReleases []string
+
 	for release, _ := range downloadedReleases {
 		localBasename := ConvertToLocalBasename(release)
 		completeLocalPath := filepath.Join(releasesDir, localBasename)
@@ -137,10 +141,16 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 				release: completeLocalPath,
 			}
 
-			l.logger.Printf("checksums do not match")
+			badReleases = append(badReleases, fmt.Sprintf(
+				"%+v", completeLocalPath,
+			))
 			l.DeleteReleases(releaseToDelete)
-			return fmt.Errorf("the SHA1 of release %s does not match %s. Got: %s.", release.Name, expectedSum, sum)
 		}
 	}
+
+	if len(badReleases) != 0 {
+		return fmt.Errorf("These downloaded releases do not match the checksum and were removed:\n%s", strings.Join(badReleases, "\n"))
+	}
+
 	return nil
 }

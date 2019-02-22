@@ -191,7 +191,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				}
 				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, assetsLock)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("the SHA1 of release"))
+				Expect(err.Error()).To(ContainSubstring("These downloaded releases do not match the checksum:"))
 
 				_, err = os.Stat(badFilePath)
 				Expect(os.IsNotExist(err)).To(BeTrue())
