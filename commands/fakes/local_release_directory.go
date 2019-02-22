@@ -35,11 +35,12 @@ type LocalReleaseDirectory struct {
 		result1 map[cargo.CompiledRelease]string
 		result2 error
 	}
-	VerifyChecksumsStub        func(map[cargo.CompiledRelease]string, cargo.AssetsLock) error
+	VerifyChecksumsStub        func(string, map[cargo.CompiledRelease]string, cargo.AssetsLock) error
 	verifyChecksumsMutex       sync.RWMutex
 	verifyChecksumsArgsForCall []struct {
-		arg1 map[cargo.CompiledRelease]string
-		arg2 cargo.AssetsLock
+		arg1 string
+		arg2 map[cargo.CompiledRelease]string
+		arg3 cargo.AssetsLock
 	}
 	verifyChecksumsReturns struct {
 		result1 error
@@ -176,17 +177,18 @@ func (fake *LocalReleaseDirectory) GetLocalReleasesReturnsOnCall(i int, result1 
 	}{result1, result2}
 }
 
-func (fake *LocalReleaseDirectory) VerifyChecksums(arg1 map[cargo.CompiledRelease]string, arg2 cargo.AssetsLock) error {
+func (fake *LocalReleaseDirectory) VerifyChecksums(arg1 string, arg2 map[cargo.CompiledRelease]string, arg3 cargo.AssetsLock) error {
 	fake.verifyChecksumsMutex.Lock()
 	ret, specificReturn := fake.verifyChecksumsReturnsOnCall[len(fake.verifyChecksumsArgsForCall)]
 	fake.verifyChecksumsArgsForCall = append(fake.verifyChecksumsArgsForCall, struct {
-		arg1 map[cargo.CompiledRelease]string
-		arg2 cargo.AssetsLock
-	}{arg1, arg2})
-	fake.recordInvocation("VerifyChecksums", []interface{}{arg1, arg2})
+		arg1 string
+		arg2 map[cargo.CompiledRelease]string
+		arg3 cargo.AssetsLock
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("VerifyChecksums", []interface{}{arg1, arg2, arg3})
 	fake.verifyChecksumsMutex.Unlock()
 	if fake.VerifyChecksumsStub != nil {
-		return fake.VerifyChecksumsStub(arg1, arg2)
+		return fake.VerifyChecksumsStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -201,17 +203,17 @@ func (fake *LocalReleaseDirectory) VerifyChecksumsCallCount() int {
 	return len(fake.verifyChecksumsArgsForCall)
 }
 
-func (fake *LocalReleaseDirectory) VerifyChecksumsCalls(stub func(map[cargo.CompiledRelease]string, cargo.AssetsLock) error) {
+func (fake *LocalReleaseDirectory) VerifyChecksumsCalls(stub func(string, map[cargo.CompiledRelease]string, cargo.AssetsLock) error) {
 	fake.verifyChecksumsMutex.Lock()
 	defer fake.verifyChecksumsMutex.Unlock()
 	fake.VerifyChecksumsStub = stub
 }
 
-func (fake *LocalReleaseDirectory) VerifyChecksumsArgsForCall(i int) (map[cargo.CompiledRelease]string, cargo.AssetsLock) {
+func (fake *LocalReleaseDirectory) VerifyChecksumsArgsForCall(i int) (string, map[cargo.CompiledRelease]string, cargo.AssetsLock) {
 	fake.verifyChecksumsMutex.RLock()
 	defer fake.verifyChecksumsMutex.RUnlock()
 	argsForCall := fake.verifyChecksumsArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *LocalReleaseDirectory) VerifyChecksumsReturns(result1 error) {

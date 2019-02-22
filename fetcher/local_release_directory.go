@@ -79,22 +79,34 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 
 func (l LocalReleaseDirectory) DeleteReleases(releasesToDelete map[cargo.CompiledRelease]string) error {
 	for release, path := range releasesToDelete {
-		l.logger.Printf("going to remove release %s\n", release.Name)
 		err := os.Remove(path)
 
 		if err != nil {
 			l.logger.Printf("error removing release %s: %v\n", release.Name, err)
 			return fmt.Errorf("failed to delete release %s", release.Name)
 		}
+
+		l.logger.Printf("removed release %s\n", release.Name)
 	}
 
 	return nil
 }
 
-func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleases map[cargo.CompiledRelease]string, assetsLock cargo.AssetsLock) error {
+func ConvertToLocalBasename(compiledRelease cargo.CompiledRelease) string {
+	return fmt.Sprintf("%s-%s-%s-%s.tgz", compiledRelease.Name, compiledRelease.Version, compiledRelease.StemcellOS, compiledRelease.StemcellVersion)
+}
+
+func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedReleases map[cargo.CompiledRelease]string, assetsLock cargo.AssetsLock) error {
+	if len(downloadedReleases) == 0 {
+		return nil
+	}
+
 	l.logger.Printf("verifying checksums")
-	for release, path := range downloadedReleases {
-		f, err := os.Open(path)
+	for release, _ := range downloadedReleases {
+		localBasename := ConvertToLocalBasename(release)
+		completeLocalPath := filepath.Join(releasesDir, localBasename)
+
+		f, err := os.Open(completeLocalPath)
 		if err != nil {
 			return err
 		}
@@ -121,13 +133,13 @@ func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleases map[cargo.Comp
 		}
 
 		if expectedSum != sum {
-
 			releaseToDelete := map[cargo.CompiledRelease]string{
-				release: path,
+				release: completeLocalPath,
 			}
 
+			l.logger.Printf("checksums do not match")
 			l.DeleteReleases(releaseToDelete)
-			return fmt.Errorf("download release %s does not match SHA1 %s. Got: %s. Deleting release.", release.Name, expectedSum, sum)
+			return fmt.Errorf("the SHA1 of release %s does not match %s. Got: %s.", release.Name, expectedSum, sum)
 		}
 	}
 	return nil

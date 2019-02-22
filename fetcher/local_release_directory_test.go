@@ -130,21 +130,19 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		var (
 			downloadedReleases map[cargo.CompiledRelease]string
 			assetsLock         cargo.AssetsLock
-			goodFile           *os.File
-			badFile            *os.File
+			goodFilePath       string
+			badFilePath        string
 			err                error
 		)
 
 		BeforeEach(func() {
-			goodFile, err = ioutil.TempFile(releasesDir, "good-release")
+			goodFilePath = filepath.Join(releasesDir, "good-1.2.3-ubuntu-xenial-190.0.0.tgz")
+			err = ioutil.WriteFile(goodFilePath, []byte("abc"), 0644)
 			Expect(err).NotTo(HaveOccurred())
-			goodFile.Write([]byte("abc"))
-			goodFile.Close()
 
-			badFile, err = ioutil.TempFile(releasesDir, "bad-release")
+			badFilePath = filepath.Join(releasesDir, "bad-1.2.3-ubuntu-xenial-190.0.0.tgz")
+			err = ioutil.WriteFile(badFilePath, []byte("some bad sha file"), 0644)
 			Expect(err).NotTo(HaveOccurred())
-			badFile.Write([]byte("some bad sha file"))
-			badFile.Close()
 
 			assetsLock = cargo.AssetsLock{
 				Releases: []cargo.Release{
@@ -174,28 +172,28 @@ var _ = Describe("LocalReleaseDirectory", func() {
 						Version:         "1.2.3",
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
-					}: goodFile.Name(),
+					}: goodFilePath,
 				}
-				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, assetsLock)
+				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, assetsLock)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
 		Context("when at least one checksum on the downloaded releases does not match the checksum in assets.lock", func() {
-			It("returns an error and deletse the bad release", func() {
+			It("returns an error and deletes the bad release", func() {
 				downloadedReleases = map[cargo.CompiledRelease]string{
 					{
 						Name:            "bad",
 						Version:         "1.2.3",
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
-					}: badFile.Name(),
+					}: badFilePath,
 				}
-				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, assetsLock)
+				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, assetsLock)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("does not match SHA1"))
+				Expect(err.Error()).To(ContainSubstring("the SHA1 of release"))
 
-				_, err = os.Stat(badFile.Name())
+				_, err = os.Stat(badFilePath)
 				Expect(os.IsNotExist(err)).To(BeTrue())
 			})
 		})

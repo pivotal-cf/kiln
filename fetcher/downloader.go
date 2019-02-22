@@ -44,7 +44,8 @@ func (d Downloader) DownloadReleases(releaseDir string, compiledReleases cargo.C
 	s3Downloader := d.s3Provider.GetS3Downloader(compiledReleases.Region, compiledReleases.AccessKeyId, compiledReleases.SecretAccessKey)
 
 	for release, path := range matchedS3Objects {
-		outputFile := fmt.Sprintf("%s-%s-%s-%s.tgz", release.Name, release.Version, release.StemcellOS, release.StemcellVersion)
+		outputFile := ConvertToLocalBasename(release)
+
 		file, err := os.Create(filepath.Join(releaseDir, outputFile))
 		if err != nil {
 			return fmt.Errorf("failed to create file %q, %v", outputFile, err)
