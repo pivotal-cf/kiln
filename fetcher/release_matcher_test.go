@@ -39,7 +39,6 @@ var _ = Describe("GetMatchedReleases", func() {
 			SecretAccessKey: "newsecret",
 			Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
 		}
-		Expect(err).NotTo(HaveOccurred())
 		fakeS3Client = new(fakes.S3Client)
 
 		irrelevantKey := "some-key"
