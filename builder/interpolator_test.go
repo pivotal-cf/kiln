@@ -274,6 +274,20 @@ some_runtime_configs:
 		})
 	})
 
+	Context("when release tgz file does not exist and stub releases is true", func() {
+		It("sets version to unknown", func() {
+
+			interpolator := builder.NewInterpolator()
+			input.StubReleases = true
+			interpolatedYAML, err := interpolator.Interpolate(input, []byte(`releases: [$(release "stub-release")]`))
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(interpolatedYAML).To(HelpfullyMatchYAML(`releases:
+- name: stub-release
+  version: UNKNOWN`))
+		})
+	})
+
 	Context("failure cases", func() {
 		Context("when the requested form name is not found", func() {
 			It("returns an error", func() {
@@ -396,7 +410,7 @@ some_runtime_configs:
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("--releases-directory must be specified"))
+				Expect(err.Error()).To(ContainSubstring("missing ReleaseManifests"))
 			})
 		})
 

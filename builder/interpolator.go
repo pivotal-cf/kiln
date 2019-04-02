@@ -26,6 +26,7 @@ type InterpolateInput struct {
 	Jobs               map[string]interface{}
 	PropertyBlueprints map[string]interface{}
 	RuntimeConfigs     map[string]interface{}
+	StubReleases       bool
 }
 
 func NewInterpolator() Interpolator {
@@ -88,11 +89,20 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 		},
 		"release": func(name string) (string, error) {
 			if input.ReleaseManifests == nil {
-				return "", errors.New("--releases-directory must be specified")
+				return "", errors.New("missing ReleaseManifests")
 			}
+
 			val, ok := input.ReleaseManifests[name]
+
 			if !ok {
-				return "", fmt.Errorf("could not find release with name '%s'", name)
+				if input.StubReleases {
+					val = map[string]interface{}{
+						"name":    name,
+						"version": "UNKNOWN",
+					}
+				} else {
+					return "", fmt.Errorf("could not find release with name '%s'", name)
+				}
 			}
 
 			return i.interpolateValueIntoYAML(input, val)

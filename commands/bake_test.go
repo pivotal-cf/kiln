@@ -651,17 +651,19 @@ var _ = Describe("Bake", func() {
 				})
 			})
 
-			Context("when the release-tarball flag is missing", func() {
+			Context("when the release-tarball flag is missing and we are stubbing releases", func() {
 				It("returns an error", func() {
+					bake.Options.StubReleases = true
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
 						"--metadata", "some-metadata",
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
 						"--stemcell-tarball", "some-stemcell-tarball",
+						"--stub-releases",
 						"--version", "1.2.3",
 					})
 
-					Expect(err).To(MatchError("missing required flag \"--releases-directory\""))
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 

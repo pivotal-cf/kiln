@@ -101,7 +101,7 @@ type Bake struct {
 		AssetsFile         string   `short:"a"  long:"assets-file"                        description:"path to assets file  (NOTE: mutually exclusive with --stemcell-tarball)"`
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
 		OutputFile         string   `short:"o"  long:"output-file"                        description:"path to where the tile will be output"`
-		ReleaseDirectories []string `short:"rd" long:"releases-directory" required:"true" description:"path to a directory containing release tarballs"`
+		ReleaseDirectories []string `short:"rd" long:"releases-directory"               description:"path to a directory containing release tarballs"`
 
 		BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"  description:"path to a directory containing BOSH variables"`
 		EmbedPaths               []string `short:"e"   long:"embed"                     description:"path to files to include in the tile /embed directory"`
@@ -253,6 +253,7 @@ func (b Bake) Execute(args []string) error {
 		Jobs:               jobs,
 		PropertyBlueprints: propertyBlueprints,
 		RuntimeConfigs:     runtimeConfigs,
+		StubReleases:       b.Options.StubReleases,
 	}, metadata)
 	if err != nil {
 		return err
