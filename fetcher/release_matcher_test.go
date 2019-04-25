@@ -24,7 +24,7 @@ var _ = Describe("GetMatchedReleases", func() {
 	BeforeEach(func() {
 		assetsLock = cargo.AssetsLock{
 			Releases: []cargo.Release{
-				{Name: "bpm", Version: "1.2.3"},
+				{Name: "bpm", Version: "1.2.3-lts"},
 			},
 			Stemcell: cargo.Stemcell{
 				OS:      "ubuntu-xenial",
@@ -37,13 +37,13 @@ var _ = Describe("GetMatchedReleases", func() {
 			Region:          "north-east-1",
 			AccessKeyId:     "newkey",
 			SecretAccessKey: "newsecret",
-			Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
+			Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+(-\w+(\.[0-9]+)?)?)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
 		}
 		fakeS3Client = new(fakes.S3Client)
 
 		irrelevantKey := "some-key"
 		uaaKey := "1.10/uaa/uaa-1.2.3-ubuntu-xenial-190.0.0.tgz"
-		bpmKey = "2.5/bpm/bpm-1.2.3-ubuntu-xenial-190.0.0.tgz"
+		bpmKey = "2.5/bpm/bpm-1.2.3-lts-ubuntu-xenial-190.0.0.tgz"
 		fakeS3Client.ListObjectsPagesStub = func(input *s3.ListObjectsInput, fn func(*s3.ListObjectsOutput, bool) bool) error {
 			shouldContinue := fn(&s3.ListObjectsOutput{
 				Contents: []*s3.Object{
@@ -78,7 +78,7 @@ var _ = Describe("GetMatchedReleases", func() {
 		Expect(input.Bucket).To(Equal(aws.String("some-bucket")))
 
 		Expect(matchedS3Objects).To(HaveLen(1))
-		Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+		Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
 	})
 
 	Context("if any objects in S3 do not match a release specified in assets.lock", func() {
@@ -104,7 +104,7 @@ var _ = Describe("GetMatchedReleases", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
 		})
 	})
 
@@ -131,14 +131,14 @@ var _ = Describe("GetMatchedReleases", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
 		})
 	})
 
 	Context("if any objects in assets.lock don't have matches in S3", func() {
 		BeforeEach(func() {
 			assetsLock.Releases = []cargo.Release{
-				{Name: "bpm", Version: "1.2.3"},
+				{Name: "bpm", Version: "1.2.3-lts"},
 				{Name: "some-release", Version: "1.2.3"},
 				{Name: "another-missing-release", Version: "4.5.6"},
 			}

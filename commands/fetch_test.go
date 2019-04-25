@@ -344,7 +344,7 @@ compiled_releases:
 							"--assets-file", someAssetsFilePath,
 							"--download-threads", "not-a-number",
 						})
-						Expect(err).To(MatchError(fmt.Sprintf("invalid value \"not-a-number\" for flag -download-threads: strconv.ParseInt: parsing \"not-a-number\": invalid syntax")))
+						Expect(err).To(MatchError(fmt.Sprintf("invalid value \"not-a-number\" for flag -download-threads: parse error")))
 					})
 				})
 
