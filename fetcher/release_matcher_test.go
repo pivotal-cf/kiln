@@ -37,7 +37,7 @@ var _ = Describe("GetMatchedReleases", func() {
 			Region:          "north-east-1",
 			AccessKeyId:     "newkey",
 			SecretAccessKey: "newsecret",
-			Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+(-\w+(\.[0-9]+)?)?)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
+			PASVersion:      "2.5",
 		}
 		fakeS3Client = new(fakes.S3Client)
 

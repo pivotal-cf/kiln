@@ -41,7 +41,7 @@ type CompiledReleases struct {
 	Region          string `yaml:"region"`
 	AccessKeyId     string `yaml:"access_key_id"`
 	SecretAccessKey string `yaml:"secret_access_key"`
-	Regex           string `yaml:"regex"`
+	PASVersion      string `yaml:"pas_version"`
 }
 
 type CompiledRelease struct {
