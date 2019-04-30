@@ -29,7 +29,7 @@ func (z Zipper) Add(path string, file io.Reader) error {
 
 	return z.add(&zip.FileHeader{
 		Name:   path,
-		Method: zip.Deflate,
+		Method: zip.Store,
 		Modified: time.Now(),
 	}, file)
 }
@@ -41,7 +41,7 @@ func (z Zipper) AddWithMode(path string, file io.Reader, mode os.FileMode) error
 
 	fh := &zip.FileHeader{
 		Name:   path,
-		Method: zip.Deflate,
+		Method: zip.Store,
 		Modified: time.Now(),
 	}
 	fh.SetMode(mode)
