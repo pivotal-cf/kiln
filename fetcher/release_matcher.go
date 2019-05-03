@@ -9,7 +9,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
-const baseRegex = `^.+/.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+(-\w+)??)-(?P<stemcell_os>([a-z_]*-?){1,2})-(?P<stemcell_version>\d+\.\d+)(\.0)?\.tgz$`
+const baseRegex = `^.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+(-\w+)??)-(?P<stemcell_os>([a-z_]*-?){1,2})-(?P<stemcell_version>\d+\.\d+)(\.0)?\.tgz$`
 
 type ReleaseMatcher struct {
 	s3Provider s3Provider
