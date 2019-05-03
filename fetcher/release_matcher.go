@@ -82,7 +82,7 @@ func (r ReleaseMatcher) GetMatchedReleases(compiledReleases cargo.CompiledReleas
 			))
 
 		}
-		return nil, fmt.Errorf("Expected releases were not matched by the regex:\n%s", strings.Join(formattedMissingReleases, "\n"))
+		return nil, fmt.Errorf("Expected releases were not matched by the regex\n Regex: %q\n Releases: %s", baseRegex, strings.Join(formattedMissingReleases, "\n"))
 	}
 
 	return matchingReleases, nil
