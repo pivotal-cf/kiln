@@ -37,7 +37,6 @@ var _ = Describe("GetMatchedReleases", func() {
 			Region:          "north-east-1",
 			AccessKeyId:     "newkey",
 			SecretAccessKey: "newsecret",
-			PASVersion:      "2.5",
 		}
 		fakeS3Client = new(fakes.S3Client)
 
