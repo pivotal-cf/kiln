@@ -9,6 +9,8 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
+const baseRegex = `^.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+(-\w+)??)-(?P<stemcell_os>([a-z_]*-?){1,2})-(?P<stemcell_version>\d+\.\d+)(\.0)?\.tgz$`
+
 type ReleaseMatcher struct {
 	s3Provider s3Provider
 }
@@ -23,7 +25,7 @@ func NewReleaseMatcher(s3Provider s3Provider) ReleaseMatcher {
 func (r ReleaseMatcher) GetMatchedReleases(compiledReleases cargo.CompiledReleases, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, error) {
 	matchedS3Objects := make(map[cargo.CompiledRelease]string)
 
-	regex, err := NewCompiledReleasesRegexp(compiledReleases.Regex)
+	regex, err := NewCompiledReleasesRegexp(baseRegex)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +82,7 @@ func (r ReleaseMatcher) GetMatchedReleases(compiledReleases cargo.CompiledReleas
 			))
 
 		}
-		return nil, fmt.Errorf("Expected releases were not matched by the regex:\n%s", strings.Join(formattedMissingReleases, "\n"))
+		return nil, fmt.Errorf("Expected releases were not matched by the regex\n Regex: %q\n Releases: %s", baseRegex, strings.Join(formattedMissingReleases, "\n"))
 	}
 
 	return matchingReleases, nil
