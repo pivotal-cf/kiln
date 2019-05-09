@@ -441,6 +441,20 @@ var _ = Describe("Bake", func() {
 				Expect(fakeStemcellService.FromAssetsFileArgsForCall(0)).To(Equal("assets.yml"))
 			})
 		})
+
+		Context("when neither the --assets-file nor --stemcell-tarball flags are provided", func() {
+			It("does not error", func() {
+				err := bake.Execute([]string{
+					"--metadata", "some-metadata",
+					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+					"--releases-directory", otherReleasesDirectory,
+					"--releases-directory", someReleasesDirectory,
+					"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
+				})
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
 		Context("failure cases", func() {
 			Context("when the template variables service errors", func() {
 				It("returns an error", func() {

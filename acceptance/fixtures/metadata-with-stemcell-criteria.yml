@@ -1,0 +1,14 @@
+---
+name: cool-product-name
+metadata_version: '1.7'
+some_releases:
+  - $( release "diego" )
+  - $( release "cf" )
+icon_img: $( icon )
+product_version: $( version )
+label: Pivotal Elastic Runtime
+stemcell_criteria:
+  os: ubuntu-xenial
+  version: 250.21
+  requires_cpi: false
+  enable_patch_security_updates: true

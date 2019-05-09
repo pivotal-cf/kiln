@@ -189,7 +189,7 @@ func (b Bake) Execute(args []string) error {
 	var stemcellManifest interface{}
 	if b.Options.StemcellTarball != "" {
 		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
-	} else {
+	} else if b.Options.AssetsFile != "" {
 		stemcellManifest, err = b.stemcell.FromAssetsFile(b.Options.AssetsFile)
 	}
 	if err != nil {
