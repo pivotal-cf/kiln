@@ -25,6 +25,7 @@ compiled_releases:
   region: us-west-1
   access_key_id: mykey
   secret_access_key: mysecret
+  regex: ^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$
 `
 
 const MinimalAssetsLockContents = `
@@ -99,6 +100,7 @@ var _ = Describe("Fetch", func() {
 					Region:          "us-west-1",
 					AccessKeyId:     "mykey",
 					SecretAccessKey: "mysecret",
+					Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
 				}
 				Expect(fakeReleaseMatcher.GetMatchedReleasesCallCount()).To(Equal(1))
 				compiledReleases, assetsLock := fakeReleaseMatcher.GetMatchedReleasesArgsForCall(0)
@@ -236,6 +238,7 @@ compiled_releases:
   region: $( variable "region" )
   access_key_id: $( variable "access_key" )
   secret_access_key: $( variable "secret_key" )
+  regex: $( variable "regex" )
 `
 
 				BeforeEach(func() {
@@ -265,6 +268,7 @@ compiled_releases:
 					variables = map[string]string{
 						"access_key": "newkey",
 						"secret_key": "newsecret",
+						"regex":      `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
 					}
 					data, err = yaml.Marshal(&variables)
 					Expect(err).NotTo(HaveOccurred())
@@ -292,6 +296,7 @@ compiled_releases:
 						Region:          "north-east-1",
 						AccessKeyId:     "newkey",
 						SecretAccessKey: "newsecret",
+						Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
 					}))
 				})
 			})
