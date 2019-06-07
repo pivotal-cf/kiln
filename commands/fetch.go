@@ -55,7 +55,7 @@ type Downloader interface {
 
 //go:generate counterfeiter -o ./fakes/release_matcher.go --fake-name ReleaseMatcher . ReleaseMatcher
 type ReleaseMatcher interface {
-	GetMatchedReleases(compiledReleases cargo.CompiledReleases, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, error)
+	GetMatchedReleases(compiledReleases cargo.CompiledReleases, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error)
 }
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
@@ -111,9 +111,23 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	matchedS3Objects, err := f.releaseMatcher.GetMatchedReleases(assets.CompiledReleases, assetsLock)
+	//TODO: Add returned slice missingReleases, listing out releases not in S3
+	matchedS3Objects, unmatchedObjects, err := f.releaseMatcher.GetMatchedReleases(assets.CompiledReleases, assetsLock)
 	if err != nil {
 		return err
+	}
+
+	if len(unmatchedObjects) > 0 {
+		formattedMissingReleases := make([]string, 0)
+
+		for _, missingRelease := range unmatchedObjects {
+			formattedMissingReleases = append(
+				formattedMissingReleases,
+				fmt.Sprintf("%+v", missingRelease,),
+			)
+
+		}
+		return fmt.Errorf("Expected releases were not matched by the regex:\n%s", strings.Join(formattedMissingReleases, "\n"))
 	}
 
 	f.logger.Printf("found %d remote releases", len(matchedS3Objects))
@@ -125,6 +139,7 @@ func (f Fetch) Execute(args []string) error {
 
 	localReleaseSet := f.hydrateLocalReleases(localReleases, assetsLock)
 
+	//missingReleases are the releases not in local dir, to be fetched from S3
 	missingReleases, extraReleases := f.getMissingReleases(matchedS3Objects, localReleaseSet)
 
 	f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleases, f.Options.NoConfirm)

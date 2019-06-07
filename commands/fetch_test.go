@@ -14,7 +14,7 @@ import (
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	"github.com/pivotal-cf/kiln/internal/cargo"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 const MinimalAssetsYMLContents = `
@@ -72,7 +72,7 @@ var _ = Describe("Fetch", func() {
 		fakeReleaseMatcher = new(fakes.ReleaseMatcher)
 		fakeReleaseMatcher.GetMatchedReleasesReturns(map[cargo.CompiledRelease]string{
 			cargo.CompiledRelease{Name: "some-release", Version: "1.2.3", StemcellOS: "some-os", StemcellVersion: "4.5.6"}: "some-s3-key",
-		}, nil)
+		}, nil, nil)
 
 		fakeLocalReleaseDirectory = new(fakes.LocalReleaseDirectory)
 		fakeLocalReleaseDirectory.GetLocalReleasesReturns(map[cargo.CompiledRelease]string{}, nil)
@@ -83,9 +83,10 @@ var _ = Describe("Fetch", func() {
 	})
 
 	Describe("Execute", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			fetch = commands.NewFetch(logger, fakeDownloader, fakeReleaseMatcher, fakeLocalReleaseDirectory)
 		})
+
 		Context("happy case", func() {
 			It("works", func() {
 				err := fetch.Execute([]string{
@@ -132,6 +133,36 @@ var _ = Describe("Fetch", func() {
 			})
 		})
 
+		Context("when one or more releases are not available on S3", func() {
+			BeforeEach(func() {
+				fakeReleaseMatcher.GetMatchedReleasesReturns(map[cargo.CompiledRelease]string{
+					cargo.CompiledRelease{
+						Name:            "some-release",
+						Version:         "1.2.3",
+						StemcellOS:      "some-os",
+						StemcellVersion: "4.5.6",
+					}: "some-s3-key",
+				},
+					[]cargo.CompiledRelease{
+						{
+							Name:            "some-other-release",
+							Version:         "4.5.6",
+							StemcellOS:      "some-os",
+							StemcellVersion: "4.5.6",
+						},
+					}, nil)
+
+			})
+			It("reports an error", func() {
+				err := fetch.Execute([]string{
+					"--releases-directory", someReleasesDirectory,
+					"--assets-file", someAssetsFilePath,
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(MatchRegexp(`Name:some-other-release Version:4.5.6 StemcellOS:some-os StemcellVersion:4.5.6`))
+			})
+		})
+
 		Context("when all releases are already present in output directory", func() {
 			BeforeEach(func() {
 				fakeLocalReleaseDirectory.GetLocalReleasesReturns(map[cargo.CompiledRelease]string{
@@ -165,7 +196,7 @@ var _ = Describe("Fetch", func() {
 					{Name: "some-release", Version: "1.2.3", StemcellOS: "some-os", StemcellVersion: "4.5.6"}:         "some-s3-key",
 					{Name: "some-tiny-release", Version: "1.2.3", StemcellOS: "some-os", StemcellVersion: "4.5.6"}:    "some-different-s3-key",
 					{Name: "some-missing-release", Version: "4.5.6", StemcellOS: "some-os", StemcellVersion: "4.5.6"}: "some-other-s3-key",
-				}, nil)
+				}, nil, nil)
 			})
 
 			It("downloads only the missing release", func() {
@@ -348,7 +379,7 @@ compiled_releases:
 					})
 				})
 
-				Context("when local releases cannot be fetched", func() {
+				Context("when local releases cannot be accessed", func() {
 					BeforeEach(func() {
 						fakeLocalReleaseDirectory.GetLocalReleasesReturns(nil, errors.New("some-error"))
 					})

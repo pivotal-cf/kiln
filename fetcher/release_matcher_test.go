@@ -18,7 +18,6 @@ var _ = Describe("GetMatchedReleases", func() {
 		compiledReleases cargo.CompiledReleases
 		assetsLock       cargo.AssetsLock
 		bpmKey           string
-		err              error
 	)
 
 	BeforeEach(func() {
@@ -65,7 +64,7 @@ var _ = Describe("GetMatchedReleases", func() {
 	})
 
 	It("lists all objects that match the given regex", func() {
-		matchedS3Objects, err := releaseMatcher.GetMatchedReleases(compiledReleases, assetsLock)
+		matchedS3Objects, _, err := releaseMatcher.GetMatchedReleases(compiledReleases, assetsLock)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(fakeS3Provider.GetS3ClientCallCount()).To(Equal(1))
@@ -100,7 +99,7 @@ var _ = Describe("GetMatchedReleases", func() {
 			}
 		})
 		It("does not return them", func() {
-			matchedS3Objects, err := releaseMatcher.GetMatchedReleases(compiledReleases, assetsLock)
+			matchedS3Objects, _, err := releaseMatcher.GetMatchedReleases(compiledReleases, assetsLock)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
@@ -127,7 +126,7 @@ var _ = Describe("GetMatchedReleases", func() {
 			}
 		})
 		It("does not return them", func() {
-			matchedS3Objects, err := releaseMatcher.GetMatchedReleases(compiledReleases, assetsLock)
+			matchedS3Objects, _, err := releaseMatcher.GetMatchedReleases(compiledReleases, assetsLock)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
@@ -135,7 +134,7 @@ var _ = Describe("GetMatchedReleases", func() {
 		})
 	})
 
-	Context("if any objects in assets.lock don't have matches in S3", func() {
+	Context("if any objects in assets.lock don't have matches in S3,", func() {
 		BeforeEach(func() {
 			assetsLock.Releases = []cargo.Release{
 				{Name: "bpm", Version: "1.2.3-lts"},
@@ -144,14 +143,27 @@ var _ = Describe("GetMatchedReleases", func() {
 			}
 		})
 
-		It("returns an error", func() {
-			_, err = releaseMatcher.GetMatchedReleases(compiledReleases, assetsLock)
-			Expect(err).To(MatchError(`Expected releases were not matched by the regex:
-{Name:some-release Version:1.2.3 StemcellOS:ubuntu-xenial StemcellVersion:190.0.0}
-{Name:another-missing-release Version:4.5.6 StemcellOS:ubuntu-xenial StemcellVersion:190.0.0}`))
+		It("the missing objects return in `missingReleases`", func() {
+			_, missingReleases, err := releaseMatcher.GetMatchedReleases(compiledReleases, assetsLock)
 
-			input, _ := fakeS3Client.ListObjectsPagesArgsForCall(0)
-			Expect(input.Bucket).To(Equal(aws.String("some-bucket")))
+			Expect(err).ToNot(HaveOccurred())
+
+			someReleaseMissingRelease := cargo.CompiledRelease{
+				Name:            "some-release",
+				Version:         "1.2.3",
+				StemcellOS:      "ubuntu-xenial",
+				StemcellVersion: "190.0.0",
+			}
+			anotherReleaseMissingRelease := cargo.CompiledRelease{
+				Name:            "another-missing-release",
+				Version:         "4.5.6",
+				StemcellOS:      "ubuntu-xenial",
+				StemcellVersion: "190.0.0",
+			}
+			Expect(len(missingReleases)).To(Equal(2))
+			Expect(missingReleases).Should(ConsistOf(someReleaseMissingRelease, anotherReleaseMissingRelease))
+
 		})
+
 	})
 })
