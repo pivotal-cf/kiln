@@ -204,6 +204,108 @@ some_form_types:
 `))
 	})
 
+	Context("when multiple stemcells are specified", func() {
+		var templateYAML string
+
+		BeforeEach(func() {
+			input = builder.InterpolateInput{
+				ReleaseManifests: map[string]interface{}{
+					"some-release": builder.ReleaseManifest{
+						Name:    "some-release",
+						Version: "1.2.3",
+						File:    "some-release-1.2.3.tgz",
+						SHA1:    "123abc",
+					},
+				},
+				StemcellManifests: map[string]interface{}{
+					"windows": builder.StemcellManifest{
+						OperatingSystem: "windows",
+						Version: "2019.4",
+					},
+					"centOS": builder.StemcellManifest{
+						OperatingSystem: "centOS",
+						Version: "5.4",
+					},
+				},
+			}
+		})
+
+		It("interpolates stemcell keys properly", func() {
+			templateYAML = `
+---
+stemcell_criteria: $( stemcell "centOS" )
+additional_stemcells_criteria:
+- $( stemcell "windows")
+`
+
+			interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(interpolatedYAML).To(HelpfullyMatchYAML(`
+---
+stemcell_criteria:
+  os: centOS
+  version: "5.4"
+additional_stemcells_criteria:
+- os: windows
+  version: "2019.4"`,
+			))
+		})
+
+		It("returns error because stemcell helper needs an argument", func() {
+			templateYAML = `
+---
+stemcell_criteria: $( stemcell )
+additional_stemcells_criteria:
+- $( stemcell )
+`
+
+			_, err := interpolator.Interpolate(input, []byte(templateYAML))
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("stemcell template helper requires osname argument if multiple stemcells are specified"))
+		})
+	})
+
+	Context("when only one stemcell is specified", func(){
+		var templateYAML string
+
+		BeforeEach(func() {
+			templateYAML = `
+---
+stemcell_criteria: $( stemcell )`
+
+			input = builder.InterpolateInput{
+				ReleaseManifests: map[string]interface{}{
+					"some-release": builder.ReleaseManifest{
+						Name:    "some-release",
+						Version: "1.2.3",
+						File:    "some-release-1.2.3.tgz",
+						SHA1:    "123abc",
+					},
+				},
+				StemcellManifests: map[string]interface{}{
+					"centOS": builder.StemcellManifest{
+						OperatingSystem: "centOS",
+						Version: "5.4",
+					},
+				},
+			}
+		})
+
+
+		It("interpolates stemcell key properly", func() {
+			interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(interpolatedYAML).To(HelpfullyMatchYAML(`
+---
+stemcell_criteria:
+  os: centOS
+  version: "5.4"
+`,
+			))
+		})
+
+	})
+
 	Context("when the runtime config is provided", func() {
 		var templateYAML string
 
@@ -414,14 +516,29 @@ some_runtime_configs:
 			})
 		})
 
-		Context("when the stemcell helper is used without providing the flag", func() {
+		Context("when the stemcell helper is used without any stemcells", func() {
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.StemcellManifest = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("stemcell specification must be provided through either --stemcell-tarball or --assets-file"))
+				Expect(err.Error()).To(ContainSubstring("stemcell specification must be provided through either --stemcells-directory or --assets-file"))
+			})
+		})
+
+		Context("when the stemcell named helper is used and no stemcell directories", func() {
+			It("returns an error", func() {
+				const templateWithStemcellName = `
+some_releases:
+- $(release "some-release")
+stemcell_criteria: $( stemcell "windows" )
+`
+				interpolator := builder.NewInterpolator()
+				_, err := interpolator.Interpolate(input, []byte(templateWithStemcellName))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("$( stemcell \"<osname>\" ) cannot be used without --stemcells-directory being provided"))
 			})
 		})
 

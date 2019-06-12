@@ -17,7 +17,7 @@ function main() {
     --properties-directory "${cwd}/properties" \
     --releases-directory "${cwd}/releases" \
     --runtime-configs-directory "${cwd}/runtime-configs" \
-    --stemcell-tarball "${cwd}/stemcell.tgz" \
+    --stemcells-directory "${cwd}/stemcells" \
     --variable "some-variable=some-value" \
     --variables-file "${cwd}/variables.yml" \
     --version "1.2.3-build.4" \

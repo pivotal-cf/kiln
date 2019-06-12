@@ -41,14 +41,17 @@ var _ = Describe("bake command", func() {
 		someOtherInstanceGroupsDirectory = "fixtures/instance-groups2"
 		someJobsDirectory                = "fixtures/jobs"
 		someOtherJobsDirectory           = "fixtures/jobs2"
+		multiStemcellDirectory           = "fixtures/multiple-stemcells"
+		singleStemcellDirectory          = "fixtures/single-stemcell"
 		variableFile                     = "fixtures/variables-file"
 		someVarFile                      = "fixtures/var-dir/var-file.yml"
 		someAssetsYMLPath                = "fixtures/assets.yml"
 		cfSHA1                           = "b383f3177e4fc4f0386b7a06ddbc3f57e7dbf09f"
 		diegoSHA1                        = "ade2a81b4bfda4eb7062cb1a9314f8941ae11d06"
-		stemcellTarball                  = "fixtures/stemcell.tgz"
 		metadata                         = "fixtures/metadata.yml"
 		metadataWithStemcellCriteria     = "fixtures/metadata-with-stemcell-criteria.yml"
+		metadataWithMultipleStemcells    = "fixtures/metadata-with-multiple-stemcells.yml"
+		metadataWithStemcellTarball      = "fixtures/metadata-with-stemcell-tarball.yml"
 	)
 
 	BeforeEach(func() {
@@ -78,7 +81,6 @@ var _ = Describe("bake command", func() {
 			"--releases-directory", otherReleasesDirectory,
 			"--releases-directory", someReleasesDirectory,
 			"--runtime-configs-directory", someRuntimeConfigsDirectory,
-			"--stemcell-tarball", stemcellTarball,
 			"--variable", "some-variable=some-variable-value",
 			"--variables-file", someVarFile,
 			"--version", "1.2.3",
@@ -90,12 +92,12 @@ var _ = Describe("bake command", func() {
 	})
 
 	It("generates a tile with the correct metadata", func() {
-		commandWithArgs = append(commandWithArgs, "--migrations-directory",
-			"fixtures/extra-migrations",
-			"--migrations-directory",
-			"fixtures/migrations",
-			"--variables-file",
-			variableFile)
+		commandWithArgs = append(commandWithArgs,
+			"--migrations-directory", "fixtures/extra-migrations",
+			"--migrations-directory", "fixtures/migrations",
+			"--variables-file", variableFile,
+			"--stemcells-directory", singleStemcellDirectory,
+		)
 
 		command := exec.Command(pathToMain, commandWithArgs...)
 
@@ -174,7 +176,7 @@ var _ = Describe("bake command", func() {
 		Expect(string(contents)).To(Equal("some_migration\n"))
 
 		Eventually(session.Err).Should(gbytes.Say("Reading release manifests"))
-		Eventually(session.Err).Should(gbytes.Say("Reading stemcell manifest"))
+		Eventually(session.Err).Should(gbytes.Say("Reading stemcells from directories"))
 		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Building %s", outputFile)))
 		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile)))
 		Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603041539_custom_buildpacks.js to %s...", outputFile)))
@@ -184,9 +186,108 @@ var _ = Describe("bake command", func() {
 		Eventually(session.Err).ShouldNot(gbytes.Say(fmt.Sprintf("Adding releases/not-a-tarball.txt to %s...", outputFile)))
 	})
 
+	Context("when multiple stemcells are provided", func() {
+		BeforeEach(func() {
+			commandWithArgs = []string{
+				"bake",
+				"--releases-directory", someReleasesDirectory,
+				"--icon", someIconPath,
+				"--metadata", metadataWithMultipleStemcells,
+				"--stemcells-directory", multiStemcellDirectory,
+				"--output-file", outputFile,
+				"--version", "1.2.3",
+			}
+		})
+
+		It("interpolates metadata file using multiple stemcells", func() {
+			command := exec.Command(pathToMain, commandWithArgs...)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			archive, err := os.Open(outputFile)
+			Expect(err).NotTo(HaveOccurred())
+
+			archiveInfo, err := archive.Stat()
+			Expect(err).NotTo(HaveOccurred())
+
+			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			Expect(err).NotTo(HaveOccurred())
+
+			var file io.ReadCloser
+			for _, f := range zr.File {
+				if f.Name == "metadata/metadata.yml" {
+					file, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+					break
+				}
+			}
+
+			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
+			metadataContents, err := ioutil.ReadAll(file)
+			Expect(err).NotTo(HaveOccurred())
+
+			renderedYAML := fmt.Sprintf(expectedMetadataWithMultipleStemcells, cfSHA1)
+			Expect(metadataContents).To(HelpfullyMatchYAML(renderedYAML))
+		})
+	})
+
+	Context("when the --stemcell-tarball flag is provided", func() {
+		BeforeEach(func() {
+			commandWithArgs = []string{
+				"bake",
+				"--releases-directory", someReleasesDirectory,
+				"--icon", someIconPath,
+				"--metadata", metadataWithStemcellTarball,
+				"--stemcell-tarball", singleStemcellDirectory + "/stemcell.tgz",
+				"--output-file", outputFile,
+				"--version", "1.2.3",
+			}
+		})
+
+		It("interpolates metadata file using a single stemcell", func() {
+			command := exec.Command(pathToMain, commandWithArgs...)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			archive, err := os.Open(outputFile)
+			Expect(err).NotTo(HaveOccurred())
+
+			archiveInfo, err := archive.Stat()
+			Expect(err).NotTo(HaveOccurred())
+
+			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			Expect(err).NotTo(HaveOccurred())
+
+			var file io.ReadCloser
+			for _, f := range zr.File {
+				if f.Name == "metadata/metadata.yml" {
+					file, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+					break
+				}
+			}
+
+			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
+			metadataContents, err := ioutil.ReadAll(file)
+			Expect(err).NotTo(HaveOccurred())
+
+			renderedYAML := fmt.Sprintf(expectedMetadataWithStemcellTarball, cfSHA1)
+			Expect(metadataContents).To(HelpfullyMatchYAML(renderedYAML))
+		})
+	})
+
 	Context("when the --sha256 flag is provided", func() {
 		BeforeEach(func() {
-			commandWithArgs = append(commandWithArgs, "--sha256")
+			commandWithArgs = append(commandWithArgs,
+				"--sha256",
+				"--stemcells-directory", singleStemcellDirectory,
+			)
 		})
 
 		It("outputs a sha256 checksum of the file to stderr", func() {
@@ -234,12 +335,11 @@ var _ = Describe("bake command", func() {
 				"--version", "1.2.3",
 				"--assets-file", someAssetsYMLPath,
 			}
-			commandWithArgs = append(commandWithArgs, "--migrations-directory",
-				"fixtures/extra-migrations",
-				"--migrations-directory",
-				"fixtures/migrations",
-				"--variables-file",
-				variableFile)
+			commandWithArgs = append(commandWithArgs,
+				"--migrations-directory", "fixtures/extra-migrations",
+				"--migrations-directory", "fixtures/migrations",
+				"--variables-file", variableFile,
+			)
 
 			command := exec.Command(pathToMain, commandWithArgs...)
 
@@ -364,6 +464,7 @@ var _ = Describe("bake command", func() {
 			Eventually(session.Err).Should(gbytes.Say("cannot unmarshal"))
 		})
 	})
+
 	Context("when the --metadata-only flag is specified", func() {
 		BeforeEach(func() {
 			commandWithArgs = []string{
@@ -382,7 +483,7 @@ var _ = Describe("bake command", func() {
 				"--releases-directory", otherReleasesDirectory,
 				"--releases-directory", someReleasesDirectory,
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
-				"--stemcell-tarball", stemcellTarball,
+				"--stemcells-directory", singleStemcellDirectory,
 				"--variable", "some-variable=some-variable-value",
 				"--variables-file", someVarFile,
 				"--version", "1.2.3",
@@ -404,7 +505,10 @@ var _ = Describe("bake command", func() {
 
 	Context("when the --stub-releases flag is specified", func() {
 		It("creates a tile with empty release tarballs", func() {
-			commandWithArgs = append(commandWithArgs, "--stub-releases")
+			commandWithArgs = append(commandWithArgs,
+				"--stemcells-directory", singleStemcellDirectory,
+				"--stub-releases",
+			)
 
 			command := exec.Command(pathToMain, commandWithArgs...)
 
@@ -436,6 +540,10 @@ var _ = Describe("bake command", func() {
 
 	Context("when no migrations are provided", func() {
 		It("creates empty migrations folder", func() {
+			commandWithArgs = append(commandWithArgs,
+				"--stemcells-directory", singleStemcellDirectory,
+			)
+
 			command := exec.Command(pathToMain, commandWithArgs...)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -484,7 +592,9 @@ var _ = Describe("bake command", func() {
 				commandWithArgs = append(commandWithArgs,
 					"--embed", otherFileToEmbed,
 					"--embed", someFileToEmbed,
-					"--stub-releases")
+					"--stub-releases",
+					"--stemcells-directory", singleStemcellDirectory,
+				)
 
 				command := exec.Command(pathToMain, commandWithArgs...)
 
@@ -552,7 +662,9 @@ var _ = Describe("bake command", func() {
 
 				commandWithArgs = append(commandWithArgs,
 					"--embed", dirToAdd,
-					"--stub-releases")
+					"--stub-releases",
+					"--stemcells-directory", singleStemcellDirectory,
+				)
 				command := exec.Command(pathToMain, commandWithArgs...)
 
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -588,7 +700,7 @@ var _ = Describe("bake command", func() {
 		})
 	})
 
-	Context("when neither --assets-file nor --stemcell-tarball are provided", func() {
+	Context("when neither --assets-file nor --stemcells-directory are provided", func() {
 		It("generates a tile with unchanged stemcell criteria", func() {
 			commandWithArgs = []string{
 				"bake",
@@ -705,7 +817,7 @@ var _ = Describe("bake command", func() {
 					"--jobs-directory", someOtherJobsDirectory,
 					"--properties-directory", somePropertiesDirectory,
 					"--runtime-configs-directory", someRuntimeConfigsDirectory,
-					"--stemcell-tarball", stemcellTarball,
+					"--stemcells-directory", singleStemcellDirectory,
 					"--bosh-variables-directory", someBOSHVariablesDirectory,
 					"--variable", "some-variable=some-variable-value",
 					"--variables-file", someVarFile,

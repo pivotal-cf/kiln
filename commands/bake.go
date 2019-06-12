@@ -31,8 +31,9 @@ type releasesService interface {
 
 //go:generate counterfeiter -o ./fakes/stemcell_service.go --fake-name StemcellService . stemcellService
 type stemcellService interface {
+	FromDirectories(directories []string) (stemcell map[string]interface{}, err error)
+	FromAssetsFile(path string) (stemcell map[string]interface{}, err error)
 	FromTarball(path string) (stemcell interface{}, err error)
-	FromAssetsFile(path string) (stemcell interface{}, err error)
 }
 
 //go:generate counterfeiter -o ./fakes/template_variables_service.go --fake-name TemplateVariablesService . templateVariablesService
@@ -98,7 +99,7 @@ type Bake struct {
 	metadata          metadataService
 
 	Options struct {
-		AssetsFile         string   `short:"a"  long:"assets-file"                        description:"path to assets file  (NOTE: mutually exclusive with --stemcell-tarball)"`
+		AssetsFile         string   `short:"a"  long:"assets-file"                        description:"path to assets file  (NOTE: mutually exclusive with --stemcell-directory)"`
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
 		OutputFile         string   `short:"o"  long:"output-file"                        description:"path to where the tile will be output"`
 		ReleaseDirectories []string `short:"rd" long:"releases-directory"               description:"path to a directory containing release tarballs"`
@@ -114,7 +115,8 @@ type Bake struct {
 		PropertyDirectories      []string `short:"pd"  long:"properties-directory"      description:"path to a directory containing property blueprints"`
 		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory" description:"path to a directory containing runtime configs"`
 		Sha256                   bool     `            long:"sha256"                    description:"calculates a SHA256 checksum of the output file"`
-		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"          description:"path to a stemcell tarball  (NOTE: mutually exclusive with --assets-file)"`
+		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"          description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --assets-file)"`
+		StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"       description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --assets-file or --stemcell-tarball)"`
 		StubReleases             bool     `short:"sr"  long:"stub-releases"             description:"skips importing release tarballs into the tile"`
 		VariableFiles            []string `short:"vf"  long:"variables-file"            description:"path to a file containing variables to interpolate"`
 		Variables                []string `short:"vr"  long:"variable"                  description:"key value pairs of variables to interpolate"`
@@ -177,8 +179,21 @@ func (b Bake) Execute(args []string) error {
 		return errors.New("--assets-file cannot be provided when using --stemcell-tarball")
 	}
 
+	if b.Options.AssetsFile != "" && len(b.Options.StemcellsDirectories) > 0 {
+		return errors.New("--assets-file cannot be provided when using --stemcells-directory")
+	}
+
+	if b.Options.StemcellTarball != "" && len(b.Options.StemcellsDirectories) > 0 {
+		return errors.New("--stemcell-tarball cannot be provided when using --stemcells-directory")
+	}
+
 	if b.Options.OutputFile != "" && b.Options.MetadataOnly {
 		return errors.New("--output-file cannot be provided when using --metadata-only")
+	}
+
+	// TODO: Remove check after deprecation of --stemcell-tarball
+	if b.Options.StemcellTarball != "" {
+		b.output.Println("warning: --stemcell-tarball is being deprecated in favor of --stemcells-directory")
 	}
 
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
@@ -186,11 +201,15 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to parse releases: %s", err)
 	}
 
+	var stemcellManifests map[string]interface{}
 	var stemcellManifest interface{}
 	if b.Options.StemcellTarball != "" {
+		// TODO remove when stemcell tarball is deprecated
 		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
 	} else if b.Options.AssetsFile != "" {
-		stemcellManifest, err = b.stemcell.FromAssetsFile(b.Options.AssetsFile)
+		stemcellManifests, err = b.stemcell.FromAssetsFile(b.Options.AssetsFile)
+	} else if len(b.Options.StemcellsDirectories) > 0 {
+		stemcellManifests, err = b.stemcell.FromDirectories(b.Options.StemcellsDirectories)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to parse stemcell: %s", err)
@@ -246,7 +265,8 @@ func (b Bake) Execute(args []string) error {
 		Variables:          templateVariables,
 		BOSHVariables:      boshVariables,
 		ReleaseManifests:   releaseManifests,
-		StemcellManifest:   stemcellManifest,
+		StemcellManifests:  stemcellManifests,
+		StemcellManifest:   stemcellManifest, //TODO Remove when --stemcell-tarball is deprecated
 		FormTypes:          forms,
 		IconImage:          icon,
 		InstanceGroups:     instanceGroups,

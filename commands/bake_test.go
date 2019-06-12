@@ -2,16 +2,15 @@ package commands_test
 
 import (
 	"errors"
-	"io/ioutil"
-	"log"
-	"os"
-	"path/filepath"
-
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -419,6 +418,25 @@ var _ = Describe("Bake", func() {
 			})
 		})
 
+		Context("when stemcells-directory flag is specified", func() {
+			It("correcty parses stemcell directory arguments", func() {
+				err := bake.Execute([]string{
+					"--metadata", "some-metadata",
+					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+					"--stemcells-directory", "some-stemcells-directory",
+					"--stemcells-directory", "some-other-stemcells-directory",
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeStemcellService.FromDirectoriesCallCount()).To(Equal(1))
+				Expect(fakeStemcellService.FromDirectoriesArgsForCall(0)).To(Equal([]string{
+					"some-stemcells-directory",
+					"some-other-stemcells-directory",
+				}))
+			})
+		})
+
 		Context("when assets file is specified", func() {
 			It("renders the stemcell criteria in tile metadata from that specified the assets.lock", func() {
 				outputFile := "some-output-dir/some-product-file-1.2.3-build.4"
@@ -695,18 +713,41 @@ var _ = Describe("Bake", func() {
 				})
 			})
 
+			Context("when both the --assets-file and --stemcells-directory are provided", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--stemcells-directory", "some-stemcell-directory",
+						"--assets-file", "assets.yml",
+					})
+					Expect(err).To(MatchError("--assets-file cannot be provided when using --stemcells-directory"))
+				})
+			})
+
+			//todo: When --stemcell-tarball is removed, delete this test
 			Context("when both the --stemcell-tarball and --assets-file are provided", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
 						"--metadata", "some-metadata",
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--releases-directory", someReleasesDirectory,
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--assets-file", "assets.yml",
-						"--version", "1.2.3",
 					})
 					Expect(err).To(MatchError("--assets-file cannot be provided when using --stemcell-tarball"))
+				})
+			})
+
+			//todo: When --stemcell-tarball is remove, delete this test
+			Context("when both the --stemcell-tarball and --stemcells-directory are provided", func() {
+				It("returns an error", func() {
+					err := bake.Execute([]string{
+						"--metadata", "some-metadata",
+						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
+						"--stemcell-tarball", "some-stemcell-tarball",
+						"--stemcells-directory", "some-stemcell-directory",
+					})
+					Expect(err).To(MatchError("--stemcell-tarball cannot be provided when using --stemcells-directory"))
 				})
 			})
 

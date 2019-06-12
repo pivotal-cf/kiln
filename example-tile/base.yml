@@ -28,7 +28,7 @@ post_deploy_errands:
 releases:
 - $( release "my-release" )
 
-stemcell_criteria: $( stemcell )
+stemcell_criteria: $( stemcell "ubuntu-trusty" )
 
 runtime_configs:
 - $( runtime_config "my-runtime-config" )
