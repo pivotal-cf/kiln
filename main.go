@@ -88,15 +88,13 @@ func main() {
 	checksummer := baking.NewChecksummer(errLogger)
 
 	s3Provider := providers.NewS3Provider()
-
-	downloader := fetcher.NewDownloader(outLogger, s3Provider)
-	releaseMatcher := fetcher.NewReleaseMatcher(s3Provider)
+	s3Connecter := fetcher.NewS3Connecter(s3Provider, outLogger)
 	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(outLogger, releasesService)
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
-	commandSet["fetch"] = commands.NewFetch(outLogger, downloader, releaseMatcher, localReleaseDirectory)
+	commandSet["fetch"] = commands.NewFetch(outLogger, s3Connecter, localReleaseDirectory)
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
 		tileWriter,

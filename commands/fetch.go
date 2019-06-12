@@ -12,7 +12,7 @@ import (
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/cargo"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -25,8 +25,8 @@ const (
 type Fetch struct {
 	logger *log.Logger
 
-	downloader            Downloader
-	releaseMatcher        ReleaseMatcher
+	s3Connecter           Connecter
+	releaseSource         ReleaseSource
 	localReleaseDirectory LocalReleaseDirectory
 
 	Options struct {
@@ -39,23 +39,23 @@ type Fetch struct {
 	}
 }
 
-func NewFetch(logger *log.Logger, downloader Downloader, releaseMatcher ReleaseMatcher, localReleaseDirectory LocalReleaseDirectory) Fetch {
+func NewFetch(logger *log.Logger, s3Connecter Connecter, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
 		logger:                logger,
-		downloader:            downloader,
-		releaseMatcher:        releaseMatcher,
+		s3Connecter:           s3Connecter,
 		localReleaseDirectory: localReleaseDirectory,
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/downloader.go --fake-name Downloader . Downloader
-type Downloader interface {
-	DownloadReleases(releasesDir string, compiledReleases cargo.CompiledReleases, matchedS3Objects map[cargo.CompiledRelease]string, downloadThreads int) error
+//go:generate counterfeiter -o ./fakes/connecter.go --fake-name Connecter . Connecter
+type Connecter interface {
+	Connect(compiledReleases cargo.CompiledReleases) ReleaseSource
 }
 
-//go:generate counterfeiter -o ./fakes/release_matcher.go --fake-name ReleaseMatcher . ReleaseMatcher
-type ReleaseMatcher interface {
+//go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
+type ReleaseSource interface {
 	GetMatchedReleases(compiledReleases cargo.CompiledReleases, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error)
+	DownloadReleases(releasesDir string, compiledReleases cargo.CompiledReleases, matchedS3Objects map[cargo.CompiledRelease]string, downloadThreads int) error
 }
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
@@ -98,6 +98,8 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
+	s3ReleaseSource := f.s3Connecter.Connect(assets.CompiledReleases)
+
 	f.logger.Println("getting release information from assets.lock")
 	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, filepath.Ext(f.Options.AssetsFile))))
 	if err != nil {
@@ -112,7 +114,7 @@ func (f Fetch) Execute(args []string) error {
 	}
 
 	//TODO: Add returned slice missingReleases, listing out releases not in S3
-	matchedS3Objects, unmatchedObjects, err := f.releaseMatcher.GetMatchedReleases(assets.CompiledReleases, assetsLock)
+	matchedS3Objects, unmatchedObjects, err := s3ReleaseSource.GetMatchedReleases(assets.CompiledReleases, assetsLock)
 	if err != nil {
 		return err
 	}
@@ -123,7 +125,7 @@ func (f Fetch) Execute(args []string) error {
 		for _, missingRelease := range unmatchedObjects {
 			formattedMissingReleases = append(
 				formattedMissingReleases,
-				fmt.Sprintf("%+v", missingRelease,),
+				fmt.Sprintf("%+v", missingRelease),
 			)
 
 		}
@@ -146,7 +148,7 @@ func (f Fetch) Execute(args []string) error {
 
 	f.logger.Printf("downloading %d objects from S3...", len(missingReleases))
 
-	f.downloader.DownloadReleases(f.Options.ReleasesDir, assets.CompiledReleases, missingReleases, f.Options.DownloadThreads)
+	s3ReleaseSource.DownloadReleases(f.Options.ReleasesDir, assets.CompiledReleases, missingReleases, f.Options.DownloadThreads)
 
 	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, missingReleases, assetsLock)
 }

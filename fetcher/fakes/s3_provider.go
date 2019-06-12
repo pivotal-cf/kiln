@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/providers"
 )
 
@@ -188,3 +189,5 @@ func (fake *S3Provider) recordInvocation(key string, args []interface{}) {
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
+
+var _ fetcher.S3Provider = new(S3Provider)
