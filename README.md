@@ -19,7 +19,8 @@ $ kiln bake \
     --version 2.0.0 \
     --metadata /path/to/metadata.yml \
     --releases-directory /path/to/releases \
-    --stemcell-tarball /path/to/stemcell.tgz \
+    --stemcells-directory /path/to/stemcells/first \
+    --stemcells-directory /path/to/stemcells/second \
     --migrations-directory /path/to/migrations \
     --output-file /path/to/cf-2.0.0-build.4.pivotal
 ```
@@ -201,7 +202,8 @@ $ kiln bake \
     --metadata /path/to/metadata.yml \
     --releases-directory /path/to/releases/first \
     --releases-directory /path/to/releases/second \
-    --stemcell-tarball /path/to/stemcell.tgz \
+    --stemcells-directory /path/to/stemcells/first \
+    --stemcells-directory /path/to/stemcells/second \
     --output-file /path/to/cf-2.0.0-build.4.pivotal
 ```
 
@@ -223,7 +225,30 @@ runtime_configs:
 
 Example [runtime-configs](example-tile/runtime-configs) directory.
 
-##### `--stemcell-tarball`
+##### `--stemcells-directory`
+
+The `--stemcell-directory` flag takes a path to a directory containing one
+or more stemcells.
+
+To include information about the stemcell in your metadata you can use the
+`stemcell` template helper. It takes a single argument that specifies which
+stemcell os.
+
+The `stemcell` helper does not support multiple versions of the same operating
+system currently.
+
+```
+$ cat /path/to/metadata
+---
+stemcell_criteria: $( stemcell "ubuntu-xenial" )
+additional_stemcells_criteria:
+- $( stemcell "windows" )
+```
+
+##### `--stemcell-tarball` (Deprecated)
+
+*Warning: `--stemcell-tarball` will be removed in a future version of kiln. 
+Use `--stemcells-directory` in the future.*
 
 The `--stemcell-tarball` flag takes a path to a stemcell.
 

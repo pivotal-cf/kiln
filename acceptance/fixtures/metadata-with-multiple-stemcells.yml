@@ -1,0 +1,11 @@
+---
+name: cool-product-name
+metadata_version: '1.7'
+some_releases:
+  - $( release "cf" )
+icon_img: $( icon )
+product_version: $( version )
+label: Pivotal Elastic Runtime
+stemcell_criteria: $( stemcell "ubuntu-trusty" )
+additional_stemcells_criteria:
+- $( stemcell "windows" )

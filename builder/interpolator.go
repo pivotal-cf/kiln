@@ -19,6 +19,7 @@ type InterpolateInput struct {
 	BOSHVariables      map[string]interface{}
 	Variables          map[string]interface{}
 	ReleaseManifests   map[string]interface{}
+	StemcellManifests  map[string]interface{}
 	StemcellManifest   interface{}
 	FormTypes          map[string]interface{}
 	IconImage          string
@@ -107,10 +108,29 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 
 			return i.interpolateValueIntoYAML(input, val)
 		},
-		"stemcell": func() (string, error) {
-			if input.StemcellManifest == nil {
-				return "", errors.New("stemcell specification must be provided through either --stemcell-tarball or --assets-file")
+		"stemcell": func(osname ...string) (string, error) {
+			if input.StemcellManifest == nil && len(input.StemcellManifests) == 0 {
+				return "", errors.New("stemcell specification must be provided through either --stemcells-directory or --assets-file")
 			}
+
+			if len(input.StemcellManifests) == 0 && len(osname) > 0 {
+				return "", errors.New("$( stemcell \"<osname>\" ) cannot be used without --stemcells-directory being provided")
+			}
+
+			if len(input.StemcellManifests) > 1 && len(osname) == 0 {
+				return "", errors.New("stemcell template helper requires osname argument if multiple stemcells are specified")
+			}
+
+			if len(osname) > 0 {
+				return i.interpolateValueIntoYAML(input, input.StemcellManifests[osname[0]])
+			}
+
+			if len(input.StemcellManifests) == 1 {
+				for _, stemcell := range input.StemcellManifests {
+					return i.interpolateValueIntoYAML(input, stemcell)
+				}
+			}
+
 			return i.interpolateValueIntoYAML(input, input.StemcellManifest)
 		},
 		"version": func() (string, error) {

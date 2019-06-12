@@ -31,7 +31,7 @@ Usage: kiln [options] bake [<args>]
   --version, -v  bool  prints the kiln release version (default: false)
 
 Command Arguments:
-  --assets-file, -a                  string             path to assets file  (NOTE: mutually exclusive with --stemcell-tarball)
+  --assets-file, -a                  string             path to assets file  (NOTE: mutually exclusive with --stemcell-directory)
   --bosh-variables-directory, -vd    string (variadic)  path to a directory containing BOSH variables
   --embed, -e                        string (variadic)  path to files to include in the tile /embed directory
   --forms-directory, -f              string (variadic)  path to a directory containing forms
@@ -46,7 +46,8 @@ Command Arguments:
   --releases-directory, -rd          string (variadic)  path to a directory containing release tarballs
   --runtime-configs-directory, -rcd  string (variadic)  path to a directory containing runtime configs
   --sha256                           bool               calculates a SHA256 checksum of the output file
-  --stemcell-tarball, -st            string             path to a stemcell tarball  (NOTE: mutually exclusive with --assets-file)
+  --stemcell-tarball, -st            string             deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --assets-file)
+  --stemcells-directory, -sd         string (variadic)  path to a directory containing stemcells  (NOTE: mutually exclusive with --assets-file or --stemcell-tarball)
   --stub-releases, -sr               bool               skips importing release tarballs into the tile
   --variable, -vr                    string (variadic)  key value pairs of variables to interpolate
   --variables-file, -vf              string (variadic)  path to a file containing variables to interpolate

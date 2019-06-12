@@ -98,3 +98,39 @@ stemcell_criteria:
   requires_cpi: false
   enable_patch_security_updates: true
 `
+
+var expectedMetadataWithMultipleStemcells = `---
+icon_img: aS1hbS1zb21lLWltYWdl
+label: Pivotal Elastic Runtime
+metadata_version: "1.7"
+name: cool-product-name
+product_version: 1.2.3
+some_releases:
+- file: cf-release-235.0.0-3215.4.0.tgz
+  name: cf
+  version: "235"
+  sha1: %s
+stemcell_criteria:
+  os: ubuntu-trusty
+  version: "3215.4"
+additional_stemcells_criteria:
+- os: windows
+  version: "2019.4"
+`
+
+var expectedMetadataWithStemcellTarball = `---
+icon_img: aS1hbS1zb21lLWltYWdl
+label: Pivotal Elastic Runtime
+metadata_version: "1.7"
+name: cool-product-name
+product_version: 1.2.3
+some_releases:
+- file: cf-release-235.0.0-3215.4.0.tgz
+  name: cf
+  version: "235"
+  sha1: %s
+stemcell_criteria:
+  os: ubuntu-trusty
+  version: "3215.4"
+`
+
