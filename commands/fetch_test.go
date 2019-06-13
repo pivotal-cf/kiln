@@ -49,7 +49,7 @@ var _ = Describe("Fetch", func() {
 		err                       error
 		fakeReleaseSource         *fakes.ReleaseSource
 		fakeLocalReleaseDirectory *fakes.LocalReleaseDirectory
-		connecter                 *fakes.Connecter
+		provider                 *fakes.S3Provider
 	)
 
 	BeforeEach(func() {
@@ -73,8 +73,8 @@ var _ = Describe("Fetch", func() {
 			cargo.CompiledRelease{Name: "some-release", Version: "1.2.3", StemcellOS: "some-os", StemcellVersion: "4.5.6"}: "some-s3-key",
 		}, nil, nil)
 
-		connecter = new(fakes.Connecter)
-		connecter.ConnectReturns(fakeReleaseSource)
+		provider = new(fakes.S3Provider)
+		provider.ConnectReturns(fakeReleaseSource)
 
 		fakeLocalReleaseDirectory = new(fakes.LocalReleaseDirectory)
 		fakeLocalReleaseDirectory.GetLocalReleasesReturns(map[cargo.CompiledRelease]string{}, nil)
@@ -86,7 +86,7 @@ var _ = Describe("Fetch", func() {
 
 	Describe("Execute", func() {
 		JustBeforeEach(func() {
-			fetch = commands.NewFetch(logger, connecter, fakeLocalReleaseDirectory)
+			fetch = commands.NewFetch(logger, provider, fakeLocalReleaseDirectory)
 		})
 
 		Context("happy case", func() {

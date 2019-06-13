@@ -2,6 +2,9 @@ package fetcher
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,48 +13,69 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/internal/providers"
 )
 
-type S3Connecter struct {
+type S3Provider struct {
 	logger     *log.Logger
-	s3Provider S3Provider
 }
 
-func NewS3Connecter(s3Provider S3Provider, logger *log.Logger) S3Connecter {
-	return S3Connecter{
-		logger:     logger,
-		s3Provider: s3Provider,
-	}
+func NewS3Provider(logger *log.Logger) S3Provider {
+	return S3Provider{logger:  logger}
 }
 
-func (c S3Connecter) Connect(compiledReleases cargo.CompiledReleases) commands.ReleaseSource {
-	s3Client := c.s3Provider.GetS3Client(compiledReleases.Region, compiledReleases.AccessKeyId, compiledReleases.SecretAccessKey)
-	s3Downloader := c.s3Provider.GetS3Downloader(compiledReleases.Region, compiledReleases.AccessKeyId, compiledReleases.SecretAccessKey)
+// rename: Connect --> GetS3ReleaseSource
+func (sp S3Provider) Connect(compiledReleases cargo.CompiledReleases) S3ReleaseSource {
+	s3Client := sp.GetS3Client(compiledReleases.Region, compiledReleases.AccessKeyId, compiledReleases.SecretAccessKey)
+	s3Downloader := sp.GetS3Downloader(compiledReleases.Region, compiledReleases.AccessKeyId, compiledReleases.SecretAccessKey)
 
-	return S3ReleaseSource{
-		logger:       c.logger,
+	return S3ReleaseSource {
+		logger:       sp.logger,
 		s3Client:     s3Client,
 		s3Downloader: s3Downloader,
 	}
 }
 
+
+//go:generate counterfeiter -o ./fakes/s3_downloader.go --fake-name S3Downloader . S3Downloader
+type S3Downloader interface {
+	Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
+}
+
+
+func (sp S3Provider) GetS3Downloader(region, accessKeyID, secretAccessKey string) S3Downloader {
+	return s3manager.NewDownloaderWithClient(sp.GetS3Client(region, accessKeyID, secretAccessKey))
+}
+
+func (sp S3Provider) GetS3Client(region, accessKeyID, secretAccessKey string) s3iface.S3API {
+	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region:      aws.String(region),
+		Credentials: credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),
+	}))
+	return s3.New(sess)
+}
+
 type S3ReleaseSource struct {
 	logger       *log.Logger
-	s3Provider   S3Provider //<--- No More (remove later)
 	s3Client     s3iface.S3API
-	s3Downloader providers.S3Downloader
+	s3Downloader S3Downloader
 }
 
-//go:generate counterfeiter -o ./fakes/s3_provider.go --fake-name S3Provider . S3Provider
-type S3Provider interface {
-	GetS3Downloader(region, accessKeyID, secretAccessKey string) providers.S3Downloader
-	GetS3Client(region, accessKeyID, secretAccessKey string) s3iface.S3API
+func NewS3ReleaseSource() S3ReleaseSource {
+	return S3ReleaseSource {
+		logger:       sp.logger,
+		s3Client:     s3Client,
+		s3Downloader: s3Downloader,
+	}
 }
 
-//go:generate counterfeiter -o ./fakes/s3client.go --fake-name S3Thingie github.com/pivotal-cf/kiln/vendor/github.com/aws/aws-sdk-go/service/s3/s3iface.S3API
+func (r S3ReleaseSource) SetS3Client(sp S3Provider, compiledReleases cargo.CompiledReleases) {
+	r.s3Client = sp.GetS3Client(compiledReleases.Region, compiledReleases.AccessKeyId, compiledReleases.SecretAccessKey)
+	r.s3Downloader = sp.GetS3Downloader(compiledReleases.Region, compiledReleases.AccessKeyId, compiledReleases.SecretAccessKey)
+}
+
+
 func (r S3ReleaseSource) GetMatchedReleases(compiledReleases cargo.CompiledReleases, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
 	matchedS3Objects := make(map[cargo.CompiledRelease]string)
 

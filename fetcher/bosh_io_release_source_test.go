@@ -45,7 +45,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 
 		foundReleases, _, err := releaseSource.GetMatchedReleases(compiledReleases, assetsLock)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(foundReleases).To(BeNil())
+		Expect(foundReleases).ToNot(BeNil())
 	})
 
 })

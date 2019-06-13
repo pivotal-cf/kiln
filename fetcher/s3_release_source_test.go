@@ -18,7 +18,6 @@ import (
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/fetcher/fakes"
 	"github.com/pivotal-cf/kiln/internal/cargo"
-	providerfakes "github.com/pivotal-cf/kiln/internal/providers/fakes"
 )
 
 func verifySetsConcurrency(opts []func(*s3manager.Downloader), concurrency int) {
@@ -33,20 +32,20 @@ func verifySetsConcurrency(opts []func(*s3manager.Downloader), concurrency int) 
 	Expect(downloader.Concurrency).To(Equal(concurrency))
 }
 
-var _ = Describe("S3Connecter.Connect()", func() {
+var _ = Describe("S3Provider.Connect()", func() {
 	var fakeS3Provider *fakes.S3Provider
 
 	It("returns a new S3ReleaseSource", func() {
 		fakeS3Provider = new(fakes.S3Provider)
 		logger := log.New(nil, "", 0)
-		s3Connecter := fetcher.NewS3Connecter(fakeS3Provider, logger)
+		s3Provider := fetcher.NewS3Provider(logger)
 
 		//Here we should use the s3Client Fake instead of making a
 		//s3Client and s3Downloader with the Connect function.
 		//However, I think that means that we would have to
 		//write a new Connect function that takes in the fake client
 		//and fake downloader(?). But the purpose of this test was to
-		//test the connect on an s3Connecter... and if we fake it out
+		//test the connect on an s3Provider... and if we fake it out
 		//are we really testing what we want to test.
 		compiledReleases := cargo.CompiledReleases{
 			Bucket:          "some-bucket",
@@ -55,7 +54,7 @@ var _ = Describe("S3Connecter.Connect()", func() {
 			SecretAccessKey: "newsecret",
 			Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+(-\w+(\.[0-9]+)?)?)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
 		}
-		s3ReleaseSource := s3Connecter.Connect(compiledReleases)
+		s3ReleaseSource := s3Provider.Connect(compiledReleases)
 		Expect(s3ReleaseSource).ToNot(BeNil())
 	})
 
@@ -101,7 +100,7 @@ var _ = Describe("S3Connecter.Connect()", func() {
 		fakeS3Provider.GetS3ClientReturns(fakeS3Client)
 
 		logger := log.New(nil, "", 0)
-		s3Connecter := fetcher.NewS3Connecter(fakeS3Provider, logger)
+		s3Provider := fetcher.NewS3Provider(logger)
 
 		compiledReleases = cargo.CompiledReleases{
 			Bucket:          "some-bucket",
@@ -111,7 +110,7 @@ var _ = Describe("S3Connecter.Connect()", func() {
 			Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+(-\w+(\.[0-9]+)?)?)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
 		}
 
-		releaseSource = s3Connecter.Connect(compiledReleases)
+		releaseSource = s3Provider.Connect(compiledReleases)
 
 		matchedS3Objects, _, err := releaseSource.GetMatchedReleases(compiledReleases, assetsLock)
 		Expect(err).NotTo(HaveOccurred())
@@ -174,7 +173,7 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 		fakeS3Provider.GetS3ClientReturns(fakeS3Client)
 
 		logger := log.New(nil, "", 0)
-		s3Connecter := fetcher.NewS3Connecter(fakeS3Provider, logger)
+		s3Provider := fetcher.NewS3Provider(logger)
 
 		compiledReleases = cargo.CompiledReleases{
 			Bucket:          "some-bucket",
@@ -184,7 +183,7 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 			Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+(-\w+(\.[0-9]+)?)?)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
 		}
 
-		releaseSource = s3Connecter.Connect(compiledReleases)
+		releaseSource = s3Provider.Connect(compiledReleases)
 	})
 
 	It("lists all objects that match the given regex", func() {
@@ -327,7 +326,7 @@ var _ = Describe("S3ReleaseSource DownloadReleases", func() {
 		}
 		fakeS3Provider := new(fakes.S3Provider)
 		fakeS3Provider.GetS3DownloaderReturns(fakeS3Downloader)
-		releaseSource = fetcher.NewS3Connecter(fakeS3Provider, logger).Connect(compiledReleases)
+		releaseSource = fetcher.NewS3Provider(logger).Connect(compiledReleases)
 
 	})
 

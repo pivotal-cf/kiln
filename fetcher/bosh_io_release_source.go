@@ -3,8 +3,6 @@ package fetcher
 import (
 	"log"
 
-	"github.com/pivotal-cf/kiln/commands"
-
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
@@ -12,7 +10,7 @@ type BOSHIOReleaseSource struct {
 	logger *log.Logger
 }
 
-func NewBOSHIOReleaseSource(logger *log.Logger) commands.ReleaseSource {
+func NewBOSHIOReleaseSource(logger *log.Logger) BOSHIOReleaseSource {
 	return BOSHIOReleaseSource{logger}
 }
 

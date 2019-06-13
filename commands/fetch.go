@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/pivotal-cf/kiln/fetcher"
 	"io/ioutil"
 	"log"
 	"os"
@@ -25,7 +27,7 @@ const (
 type Fetch struct {
 	logger *log.Logger
 
-	s3Connecter           Connecter
+	s3Provider            S3Provider
 	releaseSource         ReleaseSource
 	localReleaseDirectory LocalReleaseDirectory
 
@@ -39,17 +41,19 @@ type Fetch struct {
 	}
 }
 
-func NewFetch(logger *log.Logger, s3Connecter Connecter, localReleaseDirectory LocalReleaseDirectory) Fetch {
+func NewFetch(logger *log.Logger, s3ReleaseSource S3ReleaseSource, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
 		logger:                logger,
-		s3Connecter:           s3Connecter,
+		s3Provider:            s3Provider,
 		localReleaseDirectory: localReleaseDirectory,
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/connecter.go --fake-name Connecter . Connecter
-type Connecter interface {
-	Connect(compiledReleases cargo.CompiledReleases) ReleaseSource
+//go:generate counterfeiter -o ./fakes/s3_provider.go --fake-name S3Provider . S3Provider
+type S3Provider interface {
+	Connect(compiledReleases cargo.CompiledReleases) fetcher.S3ReleaseSource
+	GetS3Downloader(region, accessKeyID, secretAccessKey string) fetcher.S3Downloader
+	GetS3Client(region, accessKeyID, secretAccessKey string) s3iface.S3API
 }
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
@@ -98,7 +102,7 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	s3ReleaseSource := f.s3Connecter.Connect(assets.CompiledReleases)
+	s3ReleaseSource := f.s3Provider.Connect(assets.CompiledReleases)
 
 	f.logger.Println("getting release information from assets.lock")
 	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, filepath.Ext(f.Options.AssetsFile))))
@@ -112,6 +116,8 @@ func (f Fetch) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+
+	// 2. Determine whether releases are available at the release source
 
 	//TODO: Add returned slice missingReleases, listing out releases not in S3
 	matchedS3Objects, unmatchedObjects, err := s3ReleaseSource.GetMatchedReleases(assets.CompiledReleases, assetsLock)
@@ -134,6 +140,7 @@ func (f Fetch) Execute(args []string) error {
 
 	f.logger.Printf("found %d remote releases", len(matchedS3Objects))
 
+	// 3. Check to see what releases are already present.
 	localReleases, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
 	if err != nil {
 		return err
@@ -144,6 +151,7 @@ func (f Fetch) Execute(args []string) error {
 	//missingReleases are the releases not in local dir, to be fetched from S3
 	missingReleases, extraReleases := f.getMissingReleases(matchedS3Objects, localReleaseSet)
 
+	// 4. Reconcile releases
 	f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleases, f.Options.NoConfirm)
 
 	f.logger.Printf("downloading %d objects from S3...", len(missingReleases))
