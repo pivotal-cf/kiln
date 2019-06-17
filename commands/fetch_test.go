@@ -49,7 +49,6 @@ var _ = Describe("Fetch", func() {
 		err                       error
 		fakeReleaseSource         *fakes.ReleaseSource
 		fakeLocalReleaseDirectory *fakes.LocalReleaseDirectory
-		provider                 *fakes.S3Provider
 	)
 
 	BeforeEach(func() {
@@ -73,9 +72,6 @@ var _ = Describe("Fetch", func() {
 			cargo.CompiledRelease{Name: "some-release", Version: "1.2.3", StemcellOS: "some-os", StemcellVersion: "4.5.6"}: "some-s3-key",
 		}, nil, nil)
 
-		provider = new(fakes.S3Provider)
-		provider.ConnectReturns(fakeReleaseSource)
-
 		fakeLocalReleaseDirectory = new(fakes.LocalReleaseDirectory)
 		fakeLocalReleaseDirectory.GetLocalReleasesReturns(map[cargo.CompiledRelease]string{}, nil)
 	})
@@ -86,7 +82,7 @@ var _ = Describe("Fetch", func() {
 
 	Describe("Execute", func() {
 		JustBeforeEach(func() {
-			fetch = commands.NewFetch(logger, provider, fakeLocalReleaseDirectory)
+			fetch = commands.NewFetch(logger, fakeReleaseSource, fakeLocalReleaseDirectory)
 		})
 
 		Context("happy case", func() {
@@ -97,17 +93,8 @@ var _ = Describe("Fetch", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				expectedCompiledReleases := cargo.CompiledReleases{
-					Type:            "s3",
-					Bucket:          "compiled-releases",
-					Region:          "us-west-1",
-					AccessKeyId:     "mykey",
-					SecretAccessKey: "mysecret",
-					Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
-				}
 				Expect(fakeReleaseSource.GetMatchedReleasesCallCount()).To(Equal(1))
-				compiledReleases, assetsLock := fakeReleaseSource.GetMatchedReleasesArgsForCall(0)
-				Expect(compiledReleases).To(Equal(expectedCompiledReleases))
+				assetsLock := fakeReleaseSource.GetMatchedReleasesArgsForCall(0)
 				Expect(assetsLock).To(Equal(cargo.AssetsLock{
 					Releases: []cargo.Release{
 						{
@@ -122,9 +109,8 @@ var _ = Describe("Fetch", func() {
 				}))
 
 				Expect(fakeReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-				releasesDir, compiledReleases, objects, threads := fakeReleaseSource.DownloadReleasesArgsForCall(0)
+				releasesDir, objects, threads := fakeReleaseSource.DownloadReleasesArgsForCall(0)
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
-				Expect(compiledReleases).To(Equal(expectedCompiledReleases))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(HaveKeyWithValue(cargo.CompiledRelease{
 					Name:            "some-release",
@@ -180,7 +166,7 @@ var _ = Describe("Fetch", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-				_, _, objects, _ := fakeReleaseSource.DownloadReleasesArgsForCall(0)
+				_, objects, _ := fakeReleaseSource.DownloadReleasesArgsForCall(0)
 				Expect(objects).To(HaveLen(0))
 			})
 		})
@@ -209,7 +195,7 @@ var _ = Describe("Fetch", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-				_, _, objects, _ := fakeReleaseSource.DownloadReleasesArgsForCall(0)
+				_, objects, _ := fakeReleaseSource.DownloadReleasesArgsForCall(0)
 				Expect(objects).To(HaveLen(1))
 				Expect(objects).To(HaveKeyWithValue(cargo.CompiledRelease{
 					Name:            "some-missing-release",
@@ -238,7 +224,7 @@ var _ = Describe("Fetch", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(fakeReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-					_, _, objects, _ := fakeReleaseSource.DownloadReleasesArgsForCall(0)
+					_, objects, _ := fakeReleaseSource.DownloadReleasesArgsForCall(0)
 					Expect(objects).To(HaveLen(0))
 					Expect(objects).To(Not(HaveKeyWithValue(cargo.CompiledRelease{
 						Name:            "some-extra-release",
@@ -322,15 +308,7 @@ compiled_releases:
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(fakeReleaseSource.GetMatchedReleasesCallCount()).To(Equal(1))
-					compiledReleases, _ := fakeReleaseSource.GetMatchedReleasesArgsForCall(0)
-					Expect(compiledReleases).To(Equal(cargo.CompiledReleases{
-						Type:            "s3",
-						Bucket:          "my-releases",
-						Region:          "north-east-1",
-						AccessKeyId:     "newkey",
-						SecretAccessKey: "newsecret",
-						Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
-					}))
+					_ = fakeReleaseSource.GetMatchedReleasesArgsForCall(0)
 				})
 			})
 
@@ -342,7 +320,7 @@ compiled_releases:
 						"--download-threads", "10",
 					})
 					Expect(err).NotTo(HaveOccurred())
-					_, _, _, threads := fakeReleaseSource.DownloadReleasesArgsForCall(0)
+					_, _, threads := fakeReleaseSource.DownloadReleasesArgsForCall(0)
 					Expect(threads).To(Equal(10))
 				})
 			})

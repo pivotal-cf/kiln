@@ -2,8 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-	"github.com/pivotal-cf/kiln/fetcher"
 	"io/ioutil"
 	"log"
 	"os"
@@ -27,7 +25,6 @@ const (
 type Fetch struct {
 	logger *log.Logger
 
-	s3Provider            S3Provider
 	releaseSource         ReleaseSource
 	localReleaseDirectory LocalReleaseDirectory
 
@@ -41,25 +38,19 @@ type Fetch struct {
 	}
 }
 
-func NewFetch(logger *log.Logger, s3ReleaseSource S3ReleaseSource, localReleaseDirectory LocalReleaseDirectory) Fetch {
+func NewFetch(logger *log.Logger, releaseSource ReleaseSource, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
 		logger:                logger,
-		s3Provider:            s3Provider,
+		releaseSource:         releaseSource,
 		localReleaseDirectory: localReleaseDirectory,
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/s3_provider.go --fake-name S3Provider . S3Provider
-type S3Provider interface {
-	Connect(compiledReleases cargo.CompiledReleases) fetcher.S3ReleaseSource
-	GetS3Downloader(region, accessKeyID, secretAccessKey string) fetcher.S3Downloader
-	GetS3Client(region, accessKeyID, secretAccessKey string) s3iface.S3API
-}
-
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedReleases(compiledReleases cargo.CompiledReleases, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error)
-	DownloadReleases(releasesDir string, compiledReleases cargo.CompiledReleases, matchedS3Objects map[cargo.CompiledRelease]string, downloadThreads int) error
+	GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error)
+	DownloadReleases(releasesDir string, matchedS3Objects map[cargo.CompiledRelease]string, downloadThreads int) error
+	Configure(cargo.Assets)
 }
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
@@ -102,7 +93,7 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	s3ReleaseSource := f.s3Provider.Connect(assets.CompiledReleases)
+	f.releaseSource.Configure(assets)
 
 	f.logger.Println("getting release information from assets.lock")
 	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, filepath.Ext(f.Options.AssetsFile))))
@@ -120,7 +111,7 @@ func (f Fetch) Execute(args []string) error {
 	// 2. Determine whether releases are available at the release source
 
 	//TODO: Add returned slice missingReleases, listing out releases not in S3
-	matchedS3Objects, unmatchedObjects, err := s3ReleaseSource.GetMatchedReleases(assets.CompiledReleases, assetsLock)
+	matchedS3Objects, unmatchedObjects, err := f.releaseSource.GetMatchedReleases(assetsLock)
 	if err != nil {
 		return err
 	}
@@ -156,7 +147,7 @@ func (f Fetch) Execute(args []string) error {
 
 	f.logger.Printf("downloading %d objects from S3...", len(missingReleases))
 
-	s3ReleaseSource.DownloadReleases(f.Options.ReleasesDir, assets.CompiledReleases, missingReleases, f.Options.DownloadThreads)
+	f.releaseSource.DownloadReleases(f.Options.ReleasesDir, missingReleases, f.Options.DownloadThreads)
 
 	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, missingReleases, assetsLock)
 }

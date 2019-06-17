@@ -86,13 +86,13 @@ func main() {
 	metadataService := baking.NewMetadataService()
 	checksummer := baking.NewChecksummer(errLogger)
 
-	s3Provider := fetcher.NewS3Provider(outLogger)
+	s3ReleaseSource := fetcher.S3ReleaseSource{Logger: outLogger}
 	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(outLogger, releasesService)
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
-	commandSet["fetch"] = commands.NewFetch(outLogger, s3Provider, localReleaseDirectory)
+	commandSet["fetch"] = commands.NewFetch(outLogger, s3ReleaseSource, localReleaseDirectory)
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
 		tileWriter,

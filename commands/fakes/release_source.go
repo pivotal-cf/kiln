@@ -9,13 +9,17 @@ import (
 )
 
 type ReleaseSource struct {
-	DownloadReleasesStub        func(string, cargo.CompiledReleases, map[cargo.CompiledRelease]string, int) error
+	ConfigureStub        func(cargo.Assets)
+	configureMutex       sync.RWMutex
+	configureArgsForCall []struct {
+		arg1 cargo.Assets
+	}
+	DownloadReleasesStub        func(string, map[cargo.CompiledRelease]string, int) error
 	downloadReleasesMutex       sync.RWMutex
 	downloadReleasesArgsForCall []struct {
 		arg1 string
-		arg2 cargo.CompiledReleases
-		arg3 map[cargo.CompiledRelease]string
-		arg4 int
+		arg2 map[cargo.CompiledRelease]string
+		arg3 int
 	}
 	downloadReleasesReturns struct {
 		result1 error
@@ -23,11 +27,10 @@ type ReleaseSource struct {
 	downloadReleasesReturnsOnCall map[int]struct {
 		result1 error
 	}
-	GetMatchedReleasesStub        func(cargo.CompiledReleases, cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error)
+	GetMatchedReleasesStub        func(cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error)
 	getMatchedReleasesMutex       sync.RWMutex
 	getMatchedReleasesArgsForCall []struct {
-		arg1 cargo.CompiledReleases
-		arg2 cargo.AssetsLock
+		arg1 cargo.AssetsLock
 	}
 	getMatchedReleasesReturns struct {
 		result1 map[cargo.CompiledRelease]string
@@ -43,19 +46,49 @@ type ReleaseSource struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseSource) DownloadReleases(arg1 string, arg2 cargo.CompiledReleases, arg3 map[cargo.CompiledRelease]string, arg4 int) error {
+func (fake *ReleaseSource) Configure(arg1 cargo.Assets) {
+	fake.configureMutex.Lock()
+	fake.configureArgsForCall = append(fake.configureArgsForCall, struct {
+		arg1 cargo.Assets
+	}{arg1})
+	fake.recordInvocation("Configure", []interface{}{arg1})
+	fake.configureMutex.Unlock()
+	if fake.ConfigureStub != nil {
+		fake.ConfigureStub(arg1)
+	}
+}
+
+func (fake *ReleaseSource) ConfigureCallCount() int {
+	fake.configureMutex.RLock()
+	defer fake.configureMutex.RUnlock()
+	return len(fake.configureArgsForCall)
+}
+
+func (fake *ReleaseSource) ConfigureCalls(stub func(cargo.Assets)) {
+	fake.configureMutex.Lock()
+	defer fake.configureMutex.Unlock()
+	fake.ConfigureStub = stub
+}
+
+func (fake *ReleaseSource) ConfigureArgsForCall(i int) cargo.Assets {
+	fake.configureMutex.RLock()
+	defer fake.configureMutex.RUnlock()
+	argsForCall := fake.configureArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *ReleaseSource) DownloadReleases(arg1 string, arg2 map[cargo.CompiledRelease]string, arg3 int) error {
 	fake.downloadReleasesMutex.Lock()
 	ret, specificReturn := fake.downloadReleasesReturnsOnCall[len(fake.downloadReleasesArgsForCall)]
 	fake.downloadReleasesArgsForCall = append(fake.downloadReleasesArgsForCall, struct {
 		arg1 string
-		arg2 cargo.CompiledReleases
-		arg3 map[cargo.CompiledRelease]string
-		arg4 int
-	}{arg1, arg2, arg3, arg4})
-	fake.recordInvocation("DownloadReleases", []interface{}{arg1, arg2, arg3, arg4})
+		arg2 map[cargo.CompiledRelease]string
+		arg3 int
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("DownloadReleases", []interface{}{arg1, arg2, arg3})
 	fake.downloadReleasesMutex.Unlock()
 	if fake.DownloadReleasesStub != nil {
-		return fake.DownloadReleasesStub(arg1, arg2, arg3, arg4)
+		return fake.DownloadReleasesStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -70,17 +103,17 @@ func (fake *ReleaseSource) DownloadReleasesCallCount() int {
 	return len(fake.downloadReleasesArgsForCall)
 }
 
-func (fake *ReleaseSource) DownloadReleasesCalls(stub func(string, cargo.CompiledReleases, map[cargo.CompiledRelease]string, int) error) {
+func (fake *ReleaseSource) DownloadReleasesCalls(stub func(string, map[cargo.CompiledRelease]string, int) error) {
 	fake.downloadReleasesMutex.Lock()
 	defer fake.downloadReleasesMutex.Unlock()
 	fake.DownloadReleasesStub = stub
 }
 
-func (fake *ReleaseSource) DownloadReleasesArgsForCall(i int) (string, cargo.CompiledReleases, map[cargo.CompiledRelease]string, int) {
+func (fake *ReleaseSource) DownloadReleasesArgsForCall(i int) (string, map[cargo.CompiledRelease]string, int) {
 	fake.downloadReleasesMutex.RLock()
 	defer fake.downloadReleasesMutex.RUnlock()
 	argsForCall := fake.downloadReleasesArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *ReleaseSource) DownloadReleasesReturns(result1 error) {
@@ -106,17 +139,16 @@ func (fake *ReleaseSource) DownloadReleasesReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *ReleaseSource) GetMatchedReleases(arg1 cargo.CompiledReleases, arg2 cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
+func (fake *ReleaseSource) GetMatchedReleases(arg1 cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
 	fake.getMatchedReleasesMutex.Lock()
 	ret, specificReturn := fake.getMatchedReleasesReturnsOnCall[len(fake.getMatchedReleasesArgsForCall)]
 	fake.getMatchedReleasesArgsForCall = append(fake.getMatchedReleasesArgsForCall, struct {
-		arg1 cargo.CompiledReleases
-		arg2 cargo.AssetsLock
-	}{arg1, arg2})
-	fake.recordInvocation("GetMatchedReleases", []interface{}{arg1, arg2})
+		arg1 cargo.AssetsLock
+	}{arg1})
+	fake.recordInvocation("GetMatchedReleases", []interface{}{arg1})
 	fake.getMatchedReleasesMutex.Unlock()
 	if fake.GetMatchedReleasesStub != nil {
-		return fake.GetMatchedReleasesStub(arg1, arg2)
+		return fake.GetMatchedReleasesStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -131,17 +163,17 @@ func (fake *ReleaseSource) GetMatchedReleasesCallCount() int {
 	return len(fake.getMatchedReleasesArgsForCall)
 }
 
-func (fake *ReleaseSource) GetMatchedReleasesCalls(stub func(cargo.CompiledReleases, cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error)) {
+func (fake *ReleaseSource) GetMatchedReleasesCalls(stub func(cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error)) {
 	fake.getMatchedReleasesMutex.Lock()
 	defer fake.getMatchedReleasesMutex.Unlock()
 	fake.GetMatchedReleasesStub = stub
 }
 
-func (fake *ReleaseSource) GetMatchedReleasesArgsForCall(i int) (cargo.CompiledReleases, cargo.AssetsLock) {
+func (fake *ReleaseSource) GetMatchedReleasesArgsForCall(i int) cargo.AssetsLock {
 	fake.getMatchedReleasesMutex.RLock()
 	defer fake.getMatchedReleasesMutex.RUnlock()
 	argsForCall := fake.getMatchedReleasesArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1
 }
 
 func (fake *ReleaseSource) GetMatchedReleasesReturns(result1 map[cargo.CompiledRelease]string, result2 []cargo.CompiledRelease, result3 error) {
@@ -176,6 +208,8 @@ func (fake *ReleaseSource) GetMatchedReleasesReturnsOnCall(i int, result1 map[ca
 func (fake *ReleaseSource) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.configureMutex.RLock()
+	defer fake.configureMutex.RUnlock()
 	fake.downloadReleasesMutex.RLock()
 	defer fake.downloadReleasesMutex.RUnlock()
 	fake.getMatchedReleasesMutex.RLock()

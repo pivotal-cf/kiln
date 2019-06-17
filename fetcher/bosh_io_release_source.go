@@ -14,7 +14,7 @@ func NewBOSHIOReleaseSource(logger *log.Logger) BOSHIOReleaseSource {
 	return BOSHIOReleaseSource{logger}
 }
 
-func (r BOSHIOReleaseSource) GetMatchedReleases(compiledReleases cargo.CompiledReleases, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
+func (r BOSHIOReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
 	matchedBOSHIOReleases := make(map[cargo.CompiledRelease]string)
 
 	compiledRelease := cargo.CompiledRelease{"bpm", "1.2.3-lts", "ubuntu-xenial", "190.0.0"}

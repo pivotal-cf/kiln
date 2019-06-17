@@ -7,14 +7,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 var _ = Describe("GetMatchedReleases from bosh.io", func() {
 	var (
-		releaseSource    commands.ReleaseSource
-		compiledReleases cargo.CompiledReleases
+		releaseSource    fetcher.BOSHIOReleaseSource
 		assetsLock       cargo.AssetsLock //list of required Bosh releases
 	)
 
@@ -26,13 +24,6 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 		logger := log.New(nil, "", 0)
 		releaseSource = fetcher.NewBOSHIOReleaseSource(logger)
 
-		compiledReleases = cargo.CompiledReleases{
-			Bucket:          "some-bucket",
-			Region:          "north-east-1",
-			AccessKeyId:     "newkey",
-			SecretAccessKey: "newsecret",
-		}
-
 		assetsLock = cargo.AssetsLock{
 			Releases: []cargo.Release{
 				{Name: "bpm", Version: "1.2.3-lts"},
@@ -43,7 +34,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			},
 		}
 
-		foundReleases, _, err := releaseSource.GetMatchedReleases(compiledReleases, assetsLock)
+		foundReleases, _, err := releaseSource.GetMatchedReleases(assetsLock)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(foundReleases).ToNot(BeNil())
 	})
