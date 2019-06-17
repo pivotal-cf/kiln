@@ -33,13 +33,13 @@ type S3ReleaseSource struct {
 	Regex        string
 }
 
-func (r S3ReleaseSource) Configure(beeboobop cargo.Assets) {
+func (r S3ReleaseSource) Configure(assets cargo.Assets) {
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(beeboobop.CompiledReleases.Region),
+		Region: aws.String(assets.CompiledReleases.Region),
 		Credentials: credentials.NewStaticCredentials(
-			beeboobop.CompiledReleases.AccessKeyId,
-			beeboobop.CompiledReleases.SecretAccessKey,
+			assets.CompiledReleases.AccessKeyId,
+			assets.CompiledReleases.SecretAccessKey,
 			"",
 		),
 	}))
@@ -48,8 +48,8 @@ func (r S3ReleaseSource) Configure(beeboobop cargo.Assets) {
 	r.S3Client = client
 	r.S3Downloader = s3manager.NewDownloaderWithClient(client)
 
-	r.Bucket = beeboobop.CompiledReleases.Bucket
-	r.Regex = beeboobop.CompiledReleases.Regex
+	r.Bucket = assets.CompiledReleases.Bucket
+	r.Regex = assets.CompiledReleases.Regex
 }
 
 func (r S3ReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
