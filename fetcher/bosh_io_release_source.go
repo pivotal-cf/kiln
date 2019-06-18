@@ -8,10 +8,15 @@ import (
 
 type BOSHIOReleaseSource struct {
 	logger *log.Logger
+
 }
 
 func NewBOSHIOReleaseSource(logger *log.Logger) BOSHIOReleaseSource {
 	return BOSHIOReleaseSource{logger}
+}
+
+func (r BOSHIOReleaseSource) Configure(assets cargo.Assets) {
+	return
 }
 
 func (r BOSHIOReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
@@ -24,6 +29,6 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (ma
 	return matchedBOSHIOReleases, nil, nil
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, compiledReleases cargo.CompiledReleases, matchedBOSHObjects map[cargo.CompiledRelease]string, downloadThreads int) error {
+func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects map[cargo.CompiledRelease]string, downloadThreads int) error {
 	return nil
 }

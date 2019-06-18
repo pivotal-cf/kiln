@@ -26,6 +26,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 
 		assetsLock = cargo.AssetsLock{
 			Releases: []cargo.Release{
+				{Name:"cloudFoundry/uaa-release", Version: "73.3.0"},
 				{Name: "bpm", Version: "1.2.3-lts"},
 			},
 			Stemcell: cargo.Stemcell{
@@ -34,9 +35,14 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			},
 		}
 
+
+		boshURL := "https://bosh.io/d/github.com/cloudfoundry/uaa-release?v=73.3.0"
+
 		foundReleases, _, err := releaseSource.GetMatchedReleases(assetsLock)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(foundReleases).ToNot(BeNil())
+		Expect(foundReleases).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+
 	})
 
 })
