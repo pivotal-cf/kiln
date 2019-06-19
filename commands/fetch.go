@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pivotal-cf/kiln/fetcher"
+
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
@@ -111,22 +113,9 @@ func (f Fetch) Execute(args []string) error {
 	// 2. Determine whether releases are available at the release source
 
 	//TODO: Add returned slice missingReleases, listing out releases not in S3
-	matchedS3Objects, unmatchedObjects, err := f.releaseSource.GetMatchedReleases(assetsLock)
+	matchedS3Objects, unmatchedReleases, err := f.releaseSource.GetMatchedReleases(assetsLock)
 	if err != nil {
 		return err
-	}
-
-	if len(unmatchedObjects) > 0 {
-		formattedMissingReleases := make([]string, 0)
-
-		for _, missingRelease := range unmatchedObjects {
-			formattedMissingReleases = append(
-				formattedMissingReleases,
-				fmt.Sprintf("%+v", missingRelease),
-			)
-
-		}
-		return fmt.Errorf("Expected releases were not matched by the regex:\n%s", strings.Join(formattedMissingReleases, "\n"))
 	}
 
 	f.logger.Printf("found %d remote releases", len(matchedS3Objects))
@@ -140,16 +129,55 @@ func (f Fetch) Execute(args []string) error {
 	localReleaseSet := f.hydrateLocalReleases(localReleases, assetsLock)
 
 	//missingReleases are the releases not in local dir, to be fetched from S3
-	missingReleases, extraReleases := f.getMissingReleases(matchedS3Objects, localReleaseSet)
+	missingLocalReleases, extraReleases := f.getMissingReleases(matchedS3Objects, localReleaseSet)
 
 	// 4. Reconcile releases
 	f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleases, f.Options.NoConfirm)
 
-	f.logger.Printf("downloading %d objects from S3...", len(missingReleases))
+	f.logger.Printf("downloading %d objects from S3...", len(missingLocalReleases))
 
-	f.releaseSource.DownloadReleases(f.Options.ReleasesDir, missingReleases, f.Options.DownloadThreads)
+	f.releaseSource.DownloadReleases(f.Options.ReleasesDir, missingLocalReleases, f.Options.DownloadThreads)
 
-	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, missingReleases, assetsLock)
+	// 5. Check bosh.io for unmatched releases
+	if len(unmatchedReleases) > 0 {
+
+		// Construct assetsLock struct for input to bosh GetMatchedReleases
+		var newAssetsLock cargo.AssetsLock
+		for _, rel := range unmatchedReleases {
+			newAssetsLock.Releases = append(newAssetsLock.Releases, cargo.Release{
+				Name:    rel.Name,
+				Version: rel.Version,
+			})
+			newAssetsLock.Stemcell = cargo.Stemcell{
+				OS:      rel.StemcellOS,
+				Version: rel.StemcellVersion,
+			}
+		}
+
+		boshIoReleaseSource := fetcher.NewBOSHIOReleaseSource(f.logger)
+
+		boshReleases, missingReleases, _ := boshIoReleaseSource.GetMatchedReleases(newAssetsLock)
+
+		if len(missingReleases) > 0 {
+			formattedMissingReleases := make([]string, 0)
+
+			for _, missingRelease := range missingReleases {
+				formattedMissingReleases = append(
+					formattedMissingReleases,
+					fmt.Sprintf("%+v", missingRelease),
+				)
+
+			}
+			return fmt.Errorf("Expected releases were not matched by the regex:\n%s", strings.Join(formattedMissingReleases, "\n"))
+		}
+		// If there are no Missing releases, then download from bosh.io
+		err := boshIoReleaseSource.DownloadReleases(f.Options.ReleasesDir, boshReleases, 0)
+		if err != nil {
+			f.logger.Fatalf("There was an error downloading the releases from Bosh.io: %v", err)
+		}
+	}
+
+	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, missingLocalReleases, assetsLock)
 }
 
 func (f Fetch) hydrateLocalReleases(localReleases map[cargo.CompiledRelease]string, assetsLock cargo.AssetsLock) map[cargo.CompiledRelease]string {

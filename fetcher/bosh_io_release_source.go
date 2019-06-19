@@ -2,10 +2,13 @@ package fetcher
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
@@ -90,7 +93,8 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (ma
 				fullName := repo + "/" + release.Name + suf
 				exists = ReleaseExistOnBoshio(fullName)
 				if exists {
-					matchedBOSHIOReleases[compRelease] = "https://bosh.io/api/v1/releases/github.com/" + fullName
+					downloadURL := "https://bosh.io/d/github.com/" + fullName + "?v=" + release.Version
+					matchedBOSHIOReleases[compRelease] = downloadURL
 					break found
 				}
 			}
@@ -104,5 +108,29 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (ma
 }
 
 func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects map[cargo.CompiledRelease]string, downloadThreads int) error {
+
+	for _, downloadURL := range matchedBOSHObjects {
+
+		// Get the data
+		resp, err := http.Get(downloadURL)
+		if err != nil {
+			return err
+		}
+
+		// Create the file
+		fileName := strings.Split(resp.Header["Content-Disposition"][0], "=")[1]
+		out, err := os.Create(filepath.Join(releaseDir, fileName))
+		if err != nil {
+			return err
+		}
+
+		// Write the body to file
+		_, err = io.Copy(out, resp.Body)
+		resp.Body.Close()
+		out.Close()
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }

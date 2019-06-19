@@ -45,8 +45,8 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 		}
 
 		foundReleases, missingReleases, err := releaseSource.GetMatchedReleases(assetsLock)
-		uaaURL := "https://bosh.io/api/v1/releases/github.com/cloudfoundry/uaa-release"
-		cfRabbitURL := "https://bosh.io/api/v1/releases/github.com/pivotal-cf/cf-rabbitmq-release"
+		uaaURL := "https://bosh.io/d/github.com/cloudfoundry/uaa-release?v=73.3.0"
+		cfRabbitURL := "https://bosh.io/d/github.com/pivotal-cf/cf-rabbitmq-release?v=268.0.0"
 
 		Expect(err).ToNot(HaveOccurred())
 		Expect(foundReleases).To(HaveLen(2))
@@ -55,5 +55,4 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 
 		Expect(missingReleases).Should(ConsistOf(cargo.CompiledRelease{Name: "zzz", Version: "999", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}))
 	})
-
 })

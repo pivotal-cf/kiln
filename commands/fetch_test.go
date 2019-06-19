@@ -141,7 +141,7 @@ var _ = Describe("Fetch", func() {
 					}, nil)
 
 			})
-			It("reports an error", func() {
+			It("if not available on S3 nor bosh.io, reports an error", func() {
 				err := fetch.Execute([]string{
 					"--releases-directory", someReleasesDirectory,
 					"--assets-file", someAssetsFilePath,
