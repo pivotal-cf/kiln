@@ -10,15 +10,23 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
+var _ = Describe("ReleaseExistOnBoshio", func() {
+	It("returns true if the release can be found on bosh.io", func() {
+		Expect(fetcher.ReleaseExistOnBoshio("cloudfoundry/uaa-release")).To(BeTrue())
+	})
+
+	It("returns false if the release can not be found on bosh.io", func() {
+		Expect(fetcher.ReleaseExistOnBoshio("foo")).To(BeFalse())
+	})
+})
+
 var _ = Describe("GetMatchedReleases from bosh.io", func() {
 	var (
-		releaseSource    fetcher.BOSHIOReleaseSource
-		assetsLock       cargo.AssetsLock //list of required Bosh releases
+		releaseSource fetcher.BOSHIOReleaseSource
+		assetsLock    cargo.AssetsLock //list of required Bosh releases
 	)
 
-	It("Given a list of required BOSH releases; "+
-		"Given bosh.io has those releases; "+
-		"then those BOSH releases are included in `foundReleases`", func() {
+	It("returns releases which exists on bosh.io", func() {
 		//var boshioReleaseSource fetcher.BOSHIOReleaseSource
 
 		logger := log.New(nil, "", 0)
@@ -26,8 +34,9 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 
 		assetsLock = cargo.AssetsLock{
 			Releases: []cargo.Release{
-				{Name:"cloudFoundry/uaa-release", Version: "73.3.0"},
-				{Name: "bpm", Version: "1.2.3-lts"},
+				{Name: "uaa", Version: "73.3.0"},
+				{Name: "zzz", Version: "999"},
+				{Name: "cf-rabbitmq", Version: "268.0.0"},
 			},
 			Stemcell: cargo.Stemcell{
 				OS:      "ubuntu-xenial",
@@ -35,14 +44,16 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			},
 		}
 
+		foundReleases, missingReleases, err := releaseSource.GetMatchedReleases(assetsLock)
+		uaaURL := "https://bosh.io/api/v1/releases/github.com/cloudfoundry/uaa-release"
+		cfRabbitURL := "https://bosh.io/api/v1/releases/github.com/pivotal-cf/cf-rabbitmq-release"
 
-		boshURL := "https://bosh.io/d/github.com/cloudfoundry/uaa-release?v=73.3.0"
-
-		foundReleases, _, err := releaseSource.GetMatchedReleases(assetsLock)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(foundReleases).ToNot(BeNil())
-		Expect(foundReleases).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+		Expect(foundReleases).To(HaveLen(2))
+		Expect(foundReleases).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "uaa", Version: "73.3.0", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, uaaURL))
+		Expect(foundReleases).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, cfRabbitURL))
 
+		Expect(missingReleases).Should(ConsistOf(cargo.CompiledRelease{Name: "zzz", Version: "999", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}))
 	})
 
 })
