@@ -47,9 +47,10 @@ var _ = Describe("Fetch", func() {
 		someAssetsLockPath        string
 		someReleasesDirectory     string
 		err                       error
-		fakeReleaseSource         *fakes.ReleaseSource
+		fakeS3ReleaseSource       *fakes.ReleaseSource
+		fakeBoshIOReleaseSource   *fakes.ReleaseSource
+		fakeReleaseSources        []commands.ReleaseSource
 		fakeLocalReleaseDirectory *fakes.LocalReleaseDirectory
-		connecter                 *fakes.Connecter
 	)
 
 	BeforeEach(func() {
@@ -68,13 +69,12 @@ var _ = Describe("Fetch", func() {
 		err = ioutil.WriteFile(someAssetsLockPath, []byte(MinimalAssetsLockContents), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		fakeReleaseSource = new(fakes.ReleaseSource)
-		fakeReleaseSource.GetMatchedReleasesReturns(map[cargo.CompiledRelease]string{
+		fakeS3ReleaseSource = new(fakes.ReleaseSource)
+		fakeBoshIOReleaseSource = new(fakes.ReleaseSource)
+		fakeReleaseSources = []commands.ReleaseSource{fakeS3ReleaseSource, fakeBoshIOReleaseSource}
+		fakeS3ReleaseSource.GetMatchedReleasesReturns(map[cargo.CompiledRelease]string{
 			cargo.CompiledRelease{Name: "some-release", Version: "1.2.3", StemcellOS: "some-os", StemcellVersion: "4.5.6"}: "some-s3-key",
 		}, nil, nil)
-
-		connecter = new(fakes.Connecter)
-		connecter.ConnectReturns(fakeReleaseSource)
 
 		fakeLocalReleaseDirectory = new(fakes.LocalReleaseDirectory)
 		fakeLocalReleaseDirectory.GetLocalReleasesReturns(map[cargo.CompiledRelease]string{}, nil)
@@ -86,7 +86,7 @@ var _ = Describe("Fetch", func() {
 
 	Describe("Execute", func() {
 		JustBeforeEach(func() {
-			fetch = commands.NewFetch(logger, connecter, fakeLocalReleaseDirectory)
+			fetch = commands.NewFetch(logger, fakeReleaseSources, fakeLocalReleaseDirectory)
 		})
 
 		Context("happy case", func() {
@@ -97,17 +97,8 @@ var _ = Describe("Fetch", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				expectedCompiledReleases := cargo.CompiledReleases{
-					Type:            "s3",
-					Bucket:          "compiled-releases",
-					Region:          "us-west-1",
-					AccessKeyId:     "mykey",
-					SecretAccessKey: "mysecret",
-					Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
-				}
-				Expect(fakeReleaseSource.GetMatchedReleasesCallCount()).To(Equal(1))
-				compiledReleases, assetsLock := fakeReleaseSource.GetMatchedReleasesArgsForCall(0)
-				Expect(compiledReleases).To(Equal(expectedCompiledReleases))
+				Expect(fakeS3ReleaseSource.GetMatchedReleasesCallCount()).To(Equal(1))
+				assetsLock := fakeS3ReleaseSource.GetMatchedReleasesArgsForCall(0)
 				Expect(assetsLock).To(Equal(cargo.AssetsLock{
 					Releases: []cargo.Release{
 						{
@@ -121,10 +112,9 @@ var _ = Describe("Fetch", func() {
 					},
 				}))
 
-				Expect(fakeReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-				releasesDir, compiledReleases, objects, threads := fakeReleaseSource.DownloadReleasesArgsForCall(0)
+				Expect(fakeS3ReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+				releasesDir, objects, threads := fakeS3ReleaseSource.DownloadReleasesArgsForCall(0)
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
-				Expect(compiledReleases).To(Equal(expectedCompiledReleases))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(HaveKeyWithValue(cargo.CompiledRelease{
 					Name:            "some-release",
@@ -137,31 +127,35 @@ var _ = Describe("Fetch", func() {
 
 		Context("when one or more releases are not available on S3", func() {
 			BeforeEach(func() {
-				fakeReleaseSource.GetMatchedReleasesReturns(map[cargo.CompiledRelease]string{
-					cargo.CompiledRelease{
-						Name:            "some-release",
-						Version:         "1.2.3",
-						StemcellOS:      "some-os",
-						StemcellVersion: "4.5.6",
-					}: "some-s3-key",
-				},
+				fakeS3ReleaseSource.GetMatchedReleasesReturns(
+					map[cargo.CompiledRelease]string{},
 					[]cargo.CompiledRelease{
 						{
-							Name:            "some-other-release",
-							Version:         "4.5.6",
+							Name:            "some-release",
+							Version:         "1.2.3",
 							StemcellOS:      "some-os",
 							StemcellVersion: "4.5.6",
 						},
 					}, nil)
 
+				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
+					map[cargo.CompiledRelease]string{},
+					[]cargo.CompiledRelease{
+						{
+							Name:            "some-release",
+							Version:         "1.2.3",
+							StemcellOS:      "some-os",
+							StemcellVersion: "4.5.6",
+						},
+					}, nil)
 			})
-			It("reports an error", func() {
+			It("if not available on S3 nor bosh.io, reports an error", func() {
 				err := fetch.Execute([]string{
 					"--releases-directory", someReleasesDirectory,
 					"--assets-file", someAssetsFilePath,
 				})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(MatchRegexp(`Name:some-other-release Version:4.5.6 StemcellOS:some-os StemcellVersion:4.5.6`))
+				Expect(err.Error()).To(MatchRegexp(`Name:some-release Version:1.2.3 StemcellOS:some-os StemcellVersion:4.5.6`))
 			})
 		})
 
@@ -179,8 +173,8 @@ var _ = Describe("Fetch", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(fakeReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-				_, _, objects, _ := fakeReleaseSource.DownloadReleasesArgsForCall(0)
+				Expect(fakeS3ReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+				_, objects, _ := fakeS3ReleaseSource.DownloadReleasesArgsForCall(0)
 				Expect(objects).To(HaveLen(0))
 			})
 		})
@@ -194,7 +188,7 @@ var _ = Describe("Fetch", func() {
 					{Name: "some-tiny-release", Version: "1.2.3"}: "path/to/some/tiny/release",
 				}, nil)
 
-				fakeReleaseSource.GetMatchedReleasesReturns(map[cargo.CompiledRelease]string{
+				fakeS3ReleaseSource.GetMatchedReleasesReturns(map[cargo.CompiledRelease]string{
 					{Name: "some-release", Version: "1.2.3", StemcellOS: "some-os", StemcellVersion: "4.5.6"}:         "some-s3-key",
 					{Name: "some-tiny-release", Version: "1.2.3", StemcellOS: "some-os", StemcellVersion: "4.5.6"}:    "some-different-s3-key",
 					{Name: "some-missing-release", Version: "4.5.6", StemcellOS: "some-os", StemcellVersion: "4.5.6"}: "some-other-s3-key",
@@ -208,8 +202,8 @@ var _ = Describe("Fetch", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(fakeReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-				_, _, objects, _ := fakeReleaseSource.DownloadReleasesArgsForCall(0)
+				Expect(fakeS3ReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+				_, objects, _ := fakeS3ReleaseSource.DownloadReleasesArgsForCall(0)
 				Expect(objects).To(HaveLen(1))
 				Expect(objects).To(HaveKeyWithValue(cargo.CompiledRelease{
 					Name:            "some-missing-release",
@@ -237,8 +231,8 @@ var _ = Describe("Fetch", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(fakeReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-					_, _, objects, _ := fakeReleaseSource.DownloadReleasesArgsForCall(0)
+					Expect(fakeS3ReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+					_, objects, _ := fakeS3ReleaseSource.DownloadReleasesArgsForCall(0)
 					Expect(objects).To(HaveLen(0))
 					Expect(objects).To(Not(HaveKeyWithValue(cargo.CompiledRelease{
 						Name:            "some-extra-release",
@@ -321,16 +315,8 @@ compiled_releases:
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(fakeReleaseSource.GetMatchedReleasesCallCount()).To(Equal(1))
-					compiledReleases, _ := fakeReleaseSource.GetMatchedReleasesArgsForCall(0)
-					Expect(compiledReleases).To(Equal(cargo.CompiledReleases{
-						Type:            "s3",
-						Bucket:          "my-releases",
-						Region:          "north-east-1",
-						AccessKeyId:     "newkey",
-						SecretAccessKey: "newsecret",
-						Regex:           `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
-					}))
+					Expect(fakeS3ReleaseSource.GetMatchedReleasesCallCount()).To(Equal(1))
+					_ = fakeS3ReleaseSource.GetMatchedReleasesArgsForCall(0)
 				})
 			})
 
@@ -342,7 +328,7 @@ compiled_releases:
 						"--download-threads", "10",
 					})
 					Expect(err).NotTo(HaveOccurred())
-					_, _, _, threads := fakeReleaseSource.DownloadReleasesArgsForCall(0)
+					_, _, threads := fakeS3ReleaseSource.DownloadReleasesArgsForCall(0)
 					Expect(threads).To(Equal(10))
 				})
 			})

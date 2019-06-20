@@ -10,7 +10,6 @@ import (
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/helper"
 	"github.com/pivotal-cf/kiln/internal/baking"
-	"github.com/pivotal-cf/kiln/internal/providers"
 )
 
 var version = "unknown"
@@ -87,14 +86,16 @@ func main() {
 	metadataService := baking.NewMetadataService()
 	checksummer := baking.NewChecksummer(errLogger)
 
-	s3Provider := providers.NewS3Provider()
-	s3Connecter := fetcher.NewS3Connecter(s3Provider, outLogger)
+	s3ReleaseSource := &fetcher.S3ReleaseSource{Logger: outLogger}
+	boshIoReleaseSource := fetcher.NewBOSHIOReleaseSource(outLogger)
+	releaseSources := []commands.ReleaseSource{s3ReleaseSource, boshIoReleaseSource}
+
 	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(outLogger, releasesService)
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
-	commandSet["fetch"] = commands.NewFetch(outLogger, s3Connecter, localReleaseDirectory)
+	commandSet["fetch"] = commands.NewFetch(outLogger, releaseSources, localReleaseDirectory)
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
 		tileWriter,

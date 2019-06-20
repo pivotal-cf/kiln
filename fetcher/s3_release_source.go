@@ -2,69 +2,68 @@ package fetcher
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/internal/providers"
 )
 
-type S3Connecter struct {
-	logger     *log.Logger
-	s3Provider S3Provider
+//go:generate counterfeiter -o ./fakes/s3_downloader.go --fake-name S3Downloader . S3Downloader
+type S3Downloader interface {
+	Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
 }
 
-func NewS3Connecter(s3Provider S3Provider, logger *log.Logger) S3Connecter {
-	return S3Connecter{
-		logger:     logger,
-		s3Provider: s3Provider,
-	}
-}
-
-func (c S3Connecter) Connect(compiledReleases cargo.CompiledReleases) commands.ReleaseSource {
-	s3Client := c.s3Provider.GetS3Client(compiledReleases.Region, compiledReleases.AccessKeyId, compiledReleases.SecretAccessKey)
-	s3Downloader := c.s3Provider.GetS3Downloader(compiledReleases.Region, compiledReleases.AccessKeyId, compiledReleases.SecretAccessKey)
-
-	return S3ReleaseSource{
-		logger:       c.logger,
-		s3Client:     s3Client,
-		s3Downloader: s3Downloader,
-	}
+//go:generate counterfeiter -o ./fakes/s3_object_lister.go --fake-name S3ObjectLister . S3ObjectLister
+type S3ObjectLister interface {
+	ListObjectsPages(*s3.ListObjectsInput, func(*s3.ListObjectsOutput, bool) bool) error
 }
 
 type S3ReleaseSource struct {
-	logger       *log.Logger
-	s3Provider   S3Provider //<--- No More (remove later)
-	s3Client     s3iface.S3API
-	s3Downloader providers.S3Downloader
+	Logger       *log.Logger
+	S3Client     S3ObjectLister
+	S3Downloader S3Downloader
+	Bucket       string
+	Regex        string
 }
 
-//go:generate counterfeiter -o ./fakes/s3_provider.go --fake-name S3Provider . S3Provider
-type S3Provider interface {
-	GetS3Downloader(region, accessKeyID, secretAccessKey string) providers.S3Downloader
-	GetS3Client(region, accessKeyID, secretAccessKey string) s3iface.S3API
+func (r *S3ReleaseSource) Configure(assets cargo.Assets) {
+	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region: aws.String(assets.CompiledReleases.Region),
+		Credentials: credentials.NewStaticCredentials(
+			assets.CompiledReleases.AccessKeyId,
+			assets.CompiledReleases.SecretAccessKey,
+			"",
+		),
+	}))
+	client := s3.New(sess)
+
+	r.S3Client = client
+	r.S3Downloader = s3manager.NewDownloaderWithClient(client)
+
+	r.Bucket = assets.CompiledReleases.Bucket
+	r.Regex = assets.CompiledReleases.Regex
 }
 
-//go:generate counterfeiter -o ./fakes/s3client.go --fake-name S3Thingie github.com/pivotal-cf/kiln/vendor/github.com/aws/aws-sdk-go/service/s3/s3iface.S3API
-func (r S3ReleaseSource) GetMatchedReleases(compiledReleases cargo.CompiledReleases, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
+func (r S3ReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
 	matchedS3Objects := make(map[cargo.CompiledRelease]string)
 
-	regex, err := NewCompiledReleasesRegexp(compiledReleases.Regex)
+	regex, err := NewCompiledReleasesRegexp(r.Regex)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	s3Client := r.s3Client
-
-	err = s3Client.ListObjectsPages(
+	err = r.S3Client.ListObjectsPages(
 		&s3.ListObjectsInput{
-			Bucket: aws.String(compiledReleases.Bucket),
+			Bucket: aws.String(r.Bucket),
 		},
 		func(page *s3.ListObjectsOutput, lastPage bool) bool {
 			for _, s3Object := range page.Contents {
@@ -107,7 +106,9 @@ func (r S3ReleaseSource) GetMatchedReleases(compiledReleases cargo.CompiledRelea
 	return matchingReleases, missingReleases, nil
 }
 
-func (r S3ReleaseSource) DownloadReleases(releaseDir string, compiledReleases cargo.CompiledReleases, matchedS3Objects map[cargo.CompiledRelease]string, downloadThreads int) error {
+func (r S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects map[cargo.CompiledRelease]string,
+	downloadThreads int) error {
+	r.Logger.Printf("downloading %d objects from s3...", len(matchedS3Objects))
 	setConcurrency := func(dl *s3manager.Downloader) {
 		if downloadThreads > 0 {
 			dl.Concurrency = downloadThreads
@@ -115,8 +116,6 @@ func (r S3ReleaseSource) DownloadReleases(releaseDir string, compiledReleases ca
 			dl.Concurrency = s3manager.DefaultDownloadConcurrency
 		}
 	}
-
-	s3Downloader := r.s3Downloader
 
 	for release, path := range matchedS3Objects {
 		outputFile := ConvertToLocalBasename(release)
@@ -126,9 +125,9 @@ func (r S3ReleaseSource) DownloadReleases(releaseDir string, compiledReleases ca
 			return fmt.Errorf("failed to create file %q, %v", outputFile, err)
 		}
 
-		r.logger.Printf("downloading %s...\n", path)
-		_, err = s3Downloader.Download(file, &s3.GetObjectInput{
-			Bucket: aws.String(compiledReleases.Bucket),
+		r.Logger.Printf("downloading %s...\n", path)
+		_, err = r.S3Downloader.Download(file, &s3.GetObjectInput{
+			Bucket: aws.String(r.Bucket),
 			Key:    aws.String(path),
 		}, setConcurrency)
 

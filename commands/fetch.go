@@ -25,8 +25,7 @@ const (
 type Fetch struct {
 	logger *log.Logger
 
-	s3Connecter           Connecter
-	releaseSource         ReleaseSource
+	releaseSources        []ReleaseSource
 	localReleaseDirectory LocalReleaseDirectory
 
 	Options struct {
@@ -39,23 +38,19 @@ type Fetch struct {
 	}
 }
 
-func NewFetch(logger *log.Logger, s3Connecter Connecter, localReleaseDirectory LocalReleaseDirectory) Fetch {
+func NewFetch(logger *log.Logger, releaseSources []ReleaseSource, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
 		logger:                logger,
-		s3Connecter:           s3Connecter,
+		releaseSources:        releaseSources,
 		localReleaseDirectory: localReleaseDirectory,
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/connecter.go --fake-name Connecter . Connecter
-type Connecter interface {
-	Connect(compiledReleases cargo.CompiledReleases) ReleaseSource
-}
-
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedReleases(compiledReleases cargo.CompiledReleases, assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error)
-	DownloadReleases(releasesDir string, compiledReleases cargo.CompiledReleases, matchedS3Objects map[cargo.CompiledRelease]string, downloadThreads int) error
+	GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error)
+	DownloadReleases(releasesDir string, matchedS3Objects map[cargo.CompiledRelease]string, downloadThreads int) error
+	Configure(cargo.Assets)
 }
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
@@ -98,8 +93,6 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	s3ReleaseSource := f.s3Connecter.Connect(assets.CompiledReleases)
-
 	f.logger.Println("getting release information from assets.lock")
 	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, filepath.Ext(f.Options.AssetsFile))))
 	if err != nil {
@@ -113,44 +106,66 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	//TODO: Add returned slice missingReleases, listing out releases not in S3
-	matchedS3Objects, unmatchedObjects, err := s3ReleaseSource.GetMatchedReleases(assets.CompiledReleases, assetsLock)
-	if err != nil {
-		return err
+	workingAssetsLock := assetsLock
+
+	allMatchedObjects := make(map[cargo.CompiledRelease]string)
+	var extraReleases map[cargo.CompiledRelease]string
+	var missingReleases []cargo.CompiledRelease
+
+	for _, releaseSource := range f.releaseSources {
+		releaseSource.Configure(assets)
+
+		var (
+			matchedObjects map[cargo.CompiledRelease]string
+			err            error
+		)
+
+		localReleases, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
+		if err != nil {
+			return err
+		}
+		localReleaseSet := f.hydrateLocalReleases(localReleases, assetsLock)
+
+		matchedObjects, missingReleases, err = releaseSource.GetMatchedReleases(workingAssetsLock)
+		if err != nil {
+			return err
+		}
+		for k, v := range matchedObjects {
+			allMatchedObjects[k] = v
+		}
+
+		f.logger.Printf("found %d remote releases", len(matchedObjects))
+		var missingLocalReleases map[cargo.CompiledRelease]string
+		missingLocalReleases, extraReleases = f.getMissingReleases(allMatchedObjects, localReleaseSet)
+		releaseSource.DownloadReleases(f.Options.ReleasesDir, missingLocalReleases, f.Options.DownloadThreads)
+
+		// remove matched releases from workingAssetsLock
+		for compiledRelease, _ := range matchedObjects {
+			for i, release := range workingAssetsLock.Releases {
+				if release.Name == compiledRelease.Name && release.Version == compiledRelease.Version {
+					workingAssetsLock.Releases = append(workingAssetsLock.Releases[:i], workingAssetsLock.Releases[i+1:]...)
+				}
+			}
+		}
 	}
 
-	if len(unmatchedObjects) > 0 {
+	// Reconcile releases
+	f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleases, f.Options.NoConfirm)
+
+	if len(missingReleases) > 0 {
 		formattedMissingReleases := make([]string, 0)
 
-		for _, missingRelease := range unmatchedObjects {
+		for _, missingRelease := range missingReleases {
 			formattedMissingReleases = append(
 				formattedMissingReleases,
 				fmt.Sprintf("%+v", missingRelease),
 			)
 
 		}
-		return fmt.Errorf("Expected releases were not matched by the regex:\n%s", strings.Join(formattedMissingReleases, "\n"))
+		return fmt.Errorf("Could not find the following releases:\n%s", strings.Join(formattedMissingReleases, "\n"))
 	}
 
-	f.logger.Printf("found %d remote releases", len(matchedS3Objects))
-
-	localReleases, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
-	if err != nil {
-		return err
-	}
-
-	localReleaseSet := f.hydrateLocalReleases(localReleases, assetsLock)
-
-	//missingReleases are the releases not in local dir, to be fetched from S3
-	missingReleases, extraReleases := f.getMissingReleases(matchedS3Objects, localReleaseSet)
-
-	f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleases, f.Options.NoConfirm)
-
-	f.logger.Printf("downloading %d objects from S3...", len(missingReleases))
-
-	s3ReleaseSource.DownloadReleases(f.Options.ReleasesDir, assets.CompiledReleases, missingReleases, f.Options.DownloadThreads)
-
-	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, missingReleases, assetsLock)
+	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, extraReleases, assetsLock)
 }
 
 func (f Fetch) hydrateLocalReleases(localReleases map[cargo.CompiledRelease]string, assetsLock cargo.AssetsLock) map[cargo.CompiledRelease]string {
@@ -169,26 +184,35 @@ func (f Fetch) hydrateLocalReleases(localReleases map[cargo.CompiledRelease]stri
 }
 
 func (f Fetch) getMissingReleases(remoteReleases map[cargo.CompiledRelease]string, localReleases map[cargo.CompiledRelease]string) (map[cargo.CompiledRelease]string, map[cargo.CompiledRelease]string) {
+	remoteReleasesCopy := make(map[cargo.CompiledRelease]string)
+	localReleasesCopy := make(map[cargo.CompiledRelease]string)
+
+	for k, v := range remoteReleases {
+		remoteReleasesCopy[k] = v
+	}
+	for k, v := range localReleases {
+		localReleasesCopy[k] = v
+	}
 	desiredReleases := make(map[cargo.CompiledRelease]string)
 
-	for key, value := range remoteReleases {
+	for key, value := range remoteReleasesCopy {
 		desiredReleases[key] = value
 	}
 
-	for remoteRelease, _ := range remoteReleases {
+	for remoteRelease, _ := range remoteReleasesCopy {
 		if _, ok := localReleases[remoteRelease]; ok {
-			delete(remoteReleases, remoteRelease)
+			delete(remoteReleasesCopy, remoteRelease)
 		}
 	}
 
-	for localRelease, _ := range localReleases {
+	for localRelease, _ := range localReleasesCopy {
 		if _, ok := desiredReleases[localRelease]; ok {
-			delete(localReleases, localRelease)
+			delete(localReleasesCopy, localRelease)
 		}
 	}
 
 	// first return value is releases missing from local. second return value is extra releases present locally.
-	return remoteReleases, localReleases
+	return remoteReleasesCopy, localReleasesCopy
 }
 
 func (f Fetch) Usage() jhanda.Usage {
