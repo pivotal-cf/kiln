@@ -69,11 +69,11 @@ func NewBOSHIOReleaseSource(logger *log.Logger) BOSHIOReleaseSource {
 	return BOSHIOReleaseSource{logger}
 }
 
-func (r BOSHIOReleaseSource) Configure(assets cargo.Assets) {
+func (r *BOSHIOReleaseSource) Configure(assets cargo.Assets) {
 	return
 }
 
-func (r BOSHIOReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
+func (r *BOSHIOReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
 	matchedBOSHIOReleases := make(map[cargo.CompiledRelease]string)
 	releases := assetsLock.Releases
 
@@ -107,7 +107,7 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (ma
 	return matchedBOSHIOReleases, missingReleases, nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects map[cargo.CompiledRelease]string, downloadThreads int) error {
+func (r *BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects map[cargo.CompiledRelease]string, downloadThreads int) error {
 
 	for _, downloadURL := range matchedBOSHObjects {
 

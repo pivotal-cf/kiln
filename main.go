@@ -92,7 +92,7 @@ func main() {
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
-	commandSet["fetch"] = commands.NewFetch(outLogger, s3ReleaseSource, localReleaseDirectory)
+	commandSet["fetch"] = commands.NewFetch(outLogger, &s3ReleaseSource, localReleaseDirectory)
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
 		tileWriter,

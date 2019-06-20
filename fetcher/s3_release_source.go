@@ -2,12 +2,13 @@ package fetcher
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -33,7 +34,7 @@ type S3ReleaseSource struct {
 	Regex        string
 }
 
-func (r S3ReleaseSource) Configure(assets cargo.Assets) {
+func (r *S3ReleaseSource) Configure(assets cargo.Assets) {
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(assets.CompiledReleases.Region),
@@ -52,7 +53,7 @@ func (r S3ReleaseSource) Configure(assets cargo.Assets) {
 	r.Regex = assets.CompiledReleases.Regex
 }
 
-func (r S3ReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
+func (r *S3ReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
 	matchedS3Objects := make(map[cargo.CompiledRelease]string)
 
 	regex, err := NewCompiledReleasesRegexp(r.Regex)
@@ -105,7 +106,7 @@ func (r S3ReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (map[ca
 	return matchingReleases, missingReleases, nil
 }
 
-func (r S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects map[cargo.CompiledRelease]string,
+func (r *S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects map[cargo.CompiledRelease]string,
 	downloadThreads int) error {
 	setConcurrency := func(dl *s3manager.Downloader) {
 		if downloadThreads > 0 {
