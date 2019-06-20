@@ -107,6 +107,8 @@ func (f Fetch) Execute(args []string) error {
 	}
 
 	workingAssetsLock := assetsLock
+	workingAssetsLock.Releases = make([]cargo.Release, len(assetsLock.Releases))
+	copy(workingAssetsLock.Releases, assetsLock.Releases)
 
 	allMatchedObjects := make(map[cargo.CompiledRelease]string)
 	var extraReleases map[cargo.CompiledRelease]string
@@ -165,7 +167,7 @@ func (f Fetch) Execute(args []string) error {
 		return fmt.Errorf("Could not find the following releases:\n%s", strings.Join(formattedMissingReleases, "\n"))
 	}
 
-	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, extraReleases, assetsLock)
+	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, allMatchedObjects, assetsLock)
 }
 
 func (f Fetch) hydrateLocalReleases(localReleases map[cargo.CompiledRelease]string, assetsLock cargo.AssetsLock) map[cargo.CompiledRelease]string {
