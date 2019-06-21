@@ -73,41 +73,28 @@ func (r *BOSHIOReleaseSource) Configure(assets cargo.Assets) {
 	return
 }
 
-func (r BOSHIOReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
-	matchedBOSHIOReleases := make(map[cargo.CompiledRelease]string)
-	releases := assetsLock.Releases
+func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet cargo.CompiledReleaseSet) (cargo.CompiledReleaseSet, error) {
+	matchedBOSHIOReleases := make(cargo.CompiledReleaseSet)
 
-	missingReleases := make([]cargo.CompiledRelease, 0)
-
-	for _, release := range releases {
-		compRelease := cargo.CompiledRelease{
-			Name:            release.Name,
-			Version:         release.Version,
-			StemcellOS:      assetsLock.Stemcell.OS,
-			StemcellVersion: assetsLock.Stemcell.Version,
-		}
-		exists := false
+	for compRelease := range desiredReleaseSet {
 	found:
 		for _, repo := range repos {
 			for _, suf := range suffixes {
-				fullName := repo + "/" + release.Name + suf
-				exists = ReleaseExistOnBoshio(fullName)
+				fullName := repo + "/" + compRelease.Name + suf
+				exists := ReleaseExistOnBoshio(fullName)
 				if exists {
-					downloadURL := "https://bosh.io/d/github.com/" + fullName + "?v=" + release.Version
+					downloadURL := "https://bosh.io/d/github.com/" + fullName + "?v=" + compRelease.Version
 					matchedBOSHIOReleases[compRelease] = downloadURL
 					break found
 				}
 			}
 		}
-		if !exists {
-			missingReleases = append(missingReleases, compRelease)
-		}
 	}
 
-	return matchedBOSHIOReleases, missingReleases, nil //no foreseen error to return to a higher level
+	return matchedBOSHIOReleases, nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects map[cargo.CompiledRelease]string, downloadThreads int) error {
+func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects cargo.CompiledReleaseSet, downloadThreads int) error {
 	r.logger.Printf("downloading %d objects from bosh.io...", len(matchedBOSHObjects))
 
 	for _, downloadURL := range matchedBOSHObjects {

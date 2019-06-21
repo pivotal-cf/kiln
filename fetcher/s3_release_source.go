@@ -53,12 +53,12 @@ func (r *S3ReleaseSource) Configure(assets cargo.Assets) {
 	r.Regex = assets.CompiledReleases.Regex
 }
 
-func (r S3ReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error) {
-	matchedS3Objects := make(map[cargo.CompiledRelease]string)
+func (r S3ReleaseSource) GetMatchedReleases(desiredReleaseSet cargo.CompiledReleaseSet) (cargo.CompiledReleaseSet, error) {
+	matchedS3Objects := make(cargo.CompiledReleaseSet)
 
 	regex, err := NewCompiledReleasesRegexp(r.Regex)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	err = r.S3Client.ListObjectsPages(
@@ -82,31 +82,22 @@ func (r S3ReleaseSource) GetMatchedReleases(assetsLock cargo.AssetsLock) (map[ca
 		},
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	missingReleases := make([]cargo.CompiledRelease, 0)
-	matchingReleases := make(map[cargo.CompiledRelease]string, 0)
-	for _, release := range assetsLock.Releases {
-		expectedRelease := cargo.CompiledRelease{
-			Name:            release.Name,
-			Version:         release.Version,
-			StemcellOS:      assetsLock.Stemcell.OS,
-			StemcellVersion: assetsLock.Stemcell.Version,
-		}
+	matchingReleases := make(cargo.CompiledReleaseSet, 0)
+	for expectedRelease := range desiredReleaseSet {
 		s3Key, ok := matchedS3Objects[expectedRelease]
 
-		if !ok {
-			missingReleases = append(missingReleases, expectedRelease)
-		} else {
+		if ok {
 			matchingReleases[expectedRelease] = s3Key
 		}
 	}
 
-	return matchingReleases, missingReleases, nil
+	return matchingReleases, nil
 }
 
-func (r S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects map[cargo.CompiledRelease]string,
+func (r S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects cargo.CompiledReleaseSet,
 	downloadThreads int) error {
 	r.Logger.Printf("downloading %d objects from s3...", len(matchedS3Objects))
 	setConcurrency := func(dl *s3manager.Downloader) {

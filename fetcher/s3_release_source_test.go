@@ -34,21 +34,15 @@ func verifySetsConcurrency(opts []func(*s3manager.Downloader), concurrency int) 
 
 var _ = Describe("GetMatchedReleases from S3", func() {
 	var (
-		releaseSource fetcher.S3ReleaseSource
-		fakeS3Client  *fakes.S3ObjectLister
-		assetsLock    cargo.AssetsLock
-		bpmKey        string
+		releaseSource     fetcher.S3ReleaseSource
+		fakeS3Client      *fakes.S3ObjectLister
+		desiredReleaseSet cargo.CompiledReleaseSet
+		bpmKey            string
 	)
 
 	BeforeEach(func() {
-		assetsLock = cargo.AssetsLock{
-			Releases: []cargo.Release{
-				{Name: "bpm", Version: "1.2.3-lts"},
-			},
-			Stemcell: cargo.Stemcell{
-				OS:      "ubuntu-xenial",
-				Version: "190.0.0",
-			},
+		desiredReleaseSet = cargo.CompiledReleaseSet{
+			{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}: "",
 		}
 
 		fakeS3Client = new(fakes.S3ObjectLister)
@@ -81,7 +75,7 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 	})
 
 	It("lists all objects that match the given regex", func() {
-		matchedS3Objects, _, err := releaseSource.GetMatchedReleases(assetsLock)
+		matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 		Expect(err).NotTo(HaveOccurred())
 
 		input, _ := fakeS3Client.ListObjectsPagesArgsForCall(0)
@@ -111,7 +105,7 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 		})
 
 		It("does not return them", func() {
-			matchedS3Objects, _, err := releaseSource.GetMatchedReleases(assetsLock)
+			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
@@ -139,45 +133,12 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 		})
 
 		It("does not return them", func() {
-			matchedS3Objects, _, err := releaseSource.GetMatchedReleases(assetsLock)
+			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
 		})
-	})
-
-	Context("if any objects in assets.lock don't have matches in S3,", func() {
-		BeforeEach(func() {
-			assetsLock.Releases = []cargo.Release{
-				{Name: "bpm", Version: "1.2.3-lts"},
-				{Name: "some-release", Version: "1.2.3"},
-				{Name: "another-missing-release", Version: "4.5.6"},
-			}
-		})
-
-		It("the missing objects return in `missingReleases`", func() {
-			_, missingReleases, err := releaseSource.GetMatchedReleases(assetsLock)
-
-			Expect(err).ToNot(HaveOccurred())
-
-			someReleaseMissingRelease := cargo.CompiledRelease{
-				Name:            "some-release",
-				Version:         "1.2.3",
-				StemcellOS:      "ubuntu-xenial",
-				StemcellVersion: "190.0.0",
-			}
-			anotherReleaseMissingRelease := cargo.CompiledRelease{
-				Name:            "another-missing-release",
-				Version:         "4.5.6",
-				StemcellOS:      "ubuntu-xenial",
-				StemcellVersion: "190.0.0",
-			}
-			Expect(len(missingReleases)).To(Equal(2))
-			Expect(missingReleases).Should(ConsistOf(someReleaseMissingRelease, anotherReleaseMissingRelease))
-
-		})
-
 	})
 })
 

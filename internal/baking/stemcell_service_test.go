@@ -14,7 +14,7 @@ import (
 )
 
 var _ = Describe("StemcellService", func() {
-	Describe("FromDirectories", func () {
+	Describe("FromDirectories", func() {
 		var (
 			tempDir string
 			logger  *fakes.Logger

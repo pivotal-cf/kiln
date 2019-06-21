@@ -48,16 +48,16 @@ func NewFetch(logger *log.Logger, releaseSources []ReleaseSource, localReleaseDi
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedReleases(assetsLock cargo.AssetsLock) (map[cargo.CompiledRelease]string, []cargo.CompiledRelease, error)
-	DownloadReleases(releasesDir string, matchedS3Objects map[cargo.CompiledRelease]string, downloadThreads int) error
+	GetMatchedReleases(assetsLock cargo.CompiledReleaseSet) (cargo.CompiledReleaseSet, error)
+	DownloadReleases(releasesDir string, matchedS3Objects cargo.CompiledReleaseSet, downloadThreads int) error
 	Configure(cargo.Assets)
 }
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
-	GetLocalReleases(releasesDir string) (map[cargo.CompiledRelease]string, error)
-	DeleteExtraReleases(releasesDir string, extraReleases map[cargo.CompiledRelease]string, noConfirm bool) error
-	VerifyChecksums(releasesDir string, downloadedRelases map[cargo.CompiledRelease]string, assetsLock cargo.AssetsLock) error
+	GetLocalReleases(releasesDir string) (cargo.CompiledReleaseSet, error)
+	DeleteExtraReleases(releasesDir string, extraReleases cargo.CompiledReleaseSet, noConfirm bool) error
+	VerifyChecksums(releasesDir string, downloadedRelases cargo.CompiledReleaseSet, assetsLock cargo.AssetsLock) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -85,7 +85,7 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	f.logger.Println("getting S3 information from assets.yml")
+	f.logger.Println("getting release information from assets.yml")
 
 	var assets cargo.Assets
 	err = yaml.Unmarshal(interpolatedMetadata, &assets)
@@ -106,58 +106,42 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	workingAssetsLock := assetsLock
-	workingAssetsLock.Releases = make([]cargo.Release, len(assetsLock.Releases))
-	copy(workingAssetsLock.Releases, assetsLock.Releases)
+	availableLocalReleaseSet, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
+	if err != nil {
+		return err
+	}
+	existingReleaseSet := f.hydrateLocalReleases(availableLocalReleaseSet, assetsLock.Stemcell)
 
-	allMatchedObjects := make(map[cargo.CompiledRelease]string)
-	var extraReleases map[cargo.CompiledRelease]string
-	var missingReleases []cargo.CompiledRelease
+	desiredReleaseSet := cargo.NewCompiledReleaseSet(assetsLock)
+	extraReleaseSet := existingReleaseSet.Without(desiredReleaseSet)
 
-	for _, releaseSource := range f.releaseSources {
-		releaseSource.Configure(assets)
+	f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleaseSet, f.Options.NoConfirm)
 
-		var (
-			matchedObjects map[cargo.CompiledRelease]string
-			err            error
-		)
+	unsatisfiedReleaseSet := desiredReleaseSet.Without(existingReleaseSet)
+	satisfiedReleaseSet := existingReleaseSet.Without(extraReleaseSet)
 
-		localReleases, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
-		if err != nil {
-			return err
-		}
-		localReleaseSet := f.hydrateLocalReleases(localReleases, assetsLock)
+	if len(unsatisfiedReleaseSet) > 0 {
+		f.logger.Printf("Found %d missing releases to download", len(unsatisfiedReleaseSet))
 
-		matchedObjects, missingReleases, err = releaseSource.GetMatchedReleases(workingAssetsLock)
-		if err != nil {
-			return err
-		}
-		for k, v := range matchedObjects {
-			allMatchedObjects[k] = v
-		}
+		for _, releaseSource := range f.releaseSources {
+			releaseSource.Configure(assets)
 
-		f.logger.Printf("found %d remote releases", len(matchedObjects))
-		var missingLocalReleases map[cargo.CompiledRelease]string
-		missingLocalReleases, extraReleases = f.getMissingReleases(allMatchedObjects, localReleaseSet)
-		releaseSource.DownloadReleases(f.Options.ReleasesDir, missingLocalReleases, f.Options.DownloadThreads)
-
-		// remove matched releases from workingAssetsLock
-		for compiledRelease, _ := range matchedObjects {
-			for i, release := range workingAssetsLock.Releases {
-				if release.Name == compiledRelease.Name && release.Version == compiledRelease.Version {
-					workingAssetsLock.Releases = append(workingAssetsLock.Releases[:i], workingAssetsLock.Releases[i+1:]...)
-				}
+			matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet)
+			if err != nil {
+				return err
 			}
+
+			releaseSource.DownloadReleases(f.Options.ReleasesDir, matchedReleaseSet, f.Options.DownloadThreads)
+
+			satisfiedReleaseSet.Add(matchedReleaseSet)
+			unsatisfiedReleaseSet = unsatisfiedReleaseSet.Without(matchedReleaseSet)
 		}
 	}
 
-	// Reconcile releases
-	f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleases, f.Options.NoConfirm)
-
-	if len(missingReleases) > 0 {
+	if len(unsatisfiedReleaseSet) > 0 {
 		formattedMissingReleases := make([]string, 0)
 
-		for _, missingRelease := range missingReleases {
+		for missingRelease := range unsatisfiedReleaseSet {
 			formattedMissingReleases = append(
 				formattedMissingReleases,
 				fmt.Sprintf("%+v", missingRelease),
@@ -167,54 +151,22 @@ func (f Fetch) Execute(args []string) error {
 		return fmt.Errorf("Could not find the following releases:\n%s", strings.Join(formattedMissingReleases, "\n"))
 	}
 
-	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, allMatchedObjects, assetsLock)
+	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, assetsLock)
 }
 
-func (f Fetch) hydrateLocalReleases(localReleases map[cargo.CompiledRelease]string, assetsLock cargo.AssetsLock) map[cargo.CompiledRelease]string {
-	hydratedLocalReleases := make(map[cargo.CompiledRelease]string)
+func (f Fetch) hydrateLocalReleases(localReleases cargo.CompiledReleaseSet, stemcell cargo.Stemcell) cargo.CompiledReleaseSet {
+	hydratedLocalReleases := make(cargo.CompiledReleaseSet)
 
 	for localRelease, path := range localReleases {
 		if localRelease.StemcellOS == "" {
-			localRelease.StemcellOS = assetsLock.Stemcell.OS
-			localRelease.StemcellVersion = assetsLock.Stemcell.Version
+			localRelease.StemcellOS = stemcell.OS
+			localRelease.StemcellVersion = stemcell.Version
 		}
 
 		hydratedLocalReleases[localRelease] = path
 	}
 
 	return hydratedLocalReleases
-}
-
-func (f Fetch) getMissingReleases(remoteReleases map[cargo.CompiledRelease]string, localReleases map[cargo.CompiledRelease]string) (map[cargo.CompiledRelease]string, map[cargo.CompiledRelease]string) {
-	remoteReleasesCopy := make(map[cargo.CompiledRelease]string)
-	localReleasesCopy := make(map[cargo.CompiledRelease]string)
-
-	for k, v := range remoteReleases {
-		remoteReleasesCopy[k] = v
-	}
-	for k, v := range localReleases {
-		localReleasesCopy[k] = v
-	}
-	desiredReleases := make(map[cargo.CompiledRelease]string)
-
-	for key, value := range remoteReleasesCopy {
-		desiredReleases[key] = value
-	}
-
-	for remoteRelease, _ := range remoteReleasesCopy {
-		if _, ok := localReleases[remoteRelease]; ok {
-			delete(remoteReleasesCopy, remoteRelease)
-		}
-	}
-
-	for localRelease, _ := range localReleasesCopy {
-		if _, ok := desiredReleases[localRelease]; ok {
-			delete(localReleasesCopy, localRelease)
-		}
-	}
-
-	// first return value is releases missing from local. second return value is extra releases present locally.
-	return remoteReleasesCopy, localReleasesCopy
 }
 
 func (f Fetch) Usage() jhanda.Usage {

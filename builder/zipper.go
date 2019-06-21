@@ -28,8 +28,8 @@ func (z Zipper) Add(path string, file io.Reader) error {
 	}
 
 	return z.add(&zip.FileHeader{
-		Name:   path,
-		Method: zip.Store,
+		Name:     path,
+		Method:   zip.Store,
 		Modified: time.Now(),
 	}, file)
 }
@@ -40,8 +40,8 @@ func (z Zipper) AddWithMode(path string, file io.Reader, mode os.FileMode) error
 	}
 
 	fh := &zip.FileHeader{
-		Name:   path,
-		Method: zip.Store,
+		Name:     path,
+		Method:   zip.Store,
 		Modified: time.Now(),
 	}
 	fh.SetMode(mode)
@@ -75,7 +75,7 @@ func (z Zipper) CreateFolder(path string) error {
 	path = fmt.Sprintf("%s%c", filepath.Clean(path), filepath.Separator)
 
 	fh := &zip.FileHeader{
-		Name:   path,
+		Name:     path,
 		Modified: time.Now(),
 	}
 	_, err := z.writer.CreateHeader(fh)

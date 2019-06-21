@@ -89,3 +89,48 @@ type InstanceGroupJob struct {
 	Consumes   interface{} `yaml:"consumes"`
 	Properties interface{} `yaml:"properties"`
 }
+
+type CompiledReleaseSet map[CompiledRelease]string
+
+func (crs CompiledReleaseSet) Add(toAdd CompiledReleaseSet) {
+	for k, v := range toAdd {
+		crs[k] = v
+	}
+}
+
+func (crs CompiledReleaseSet) Without(other CompiledReleaseSet) CompiledReleaseSet {
+	result := crs.copy()
+	for release := range result {
+		if _, ok := other[release]; ok {
+			delete(result, release)
+		}
+	}
+	return result
+}
+
+func (crs CompiledReleaseSet) copy() CompiledReleaseSet {
+	dup := make(CompiledReleaseSet)
+	for release, path := range crs {
+		dup[release] = path
+	}
+	return dup
+}
+
+func newCompiledRelease(release Release, stemcell Stemcell) CompiledRelease {
+	return CompiledRelease{
+		Name:            release.Name,
+		Version:         release.Version,
+		StemcellOS:      stemcell.OS,
+		StemcellVersion: stemcell.Version,
+	}
+}
+
+func NewCompiledReleaseSet(assetsLock AssetsLock) CompiledReleaseSet {
+	set := make(CompiledReleaseSet)
+	stemcell := assetsLock.Stemcell
+	for _, release := range assetsLock.Releases {
+		compiledRelease := newCompiledRelease(release, stemcell)
+		set[compiledRelease] = ""
+	}
+	return set
+}

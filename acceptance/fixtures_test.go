@@ -133,4 +133,3 @@ stemcell_criteria:
   os: ubuntu-trusty
   version: "3215.4"
 `
-

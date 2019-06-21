@@ -220,11 +220,11 @@ some_form_types:
 				StemcellManifests: map[string]interface{}{
 					"windows": builder.StemcellManifest{
 						OperatingSystem: "windows",
-						Version: "2019.4",
+						Version:         "2019.4",
 					},
 					"centOS": builder.StemcellManifest{
 						OperatingSystem: "centOS",
-						Version: "5.4",
+						Version:         "5.4",
 					},
 				},
 			}
@@ -265,7 +265,7 @@ additional_stemcells_criteria:
 		})
 	})
 
-	Context("when only one stemcell is specified", func(){
+	Context("when only one stemcell is specified", func() {
 		var templateYAML string
 
 		BeforeEach(func() {
@@ -285,12 +285,11 @@ stemcell_criteria: $( stemcell )`
 				StemcellManifests: map[string]interface{}{
 					"centOS": builder.StemcellManifest{
 						OperatingSystem: "centOS",
-						Version: "5.4",
+						Version:         "5.4",
 					},
 				},
 			}
 		})
-
 
 		It("interpolates stemcell key properly", func() {
 			interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
