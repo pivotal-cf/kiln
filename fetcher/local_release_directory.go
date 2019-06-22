@@ -107,44 +107,26 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 	var badReleases []string
 
 	for release, _ := range downloadedReleaseSet {
+		expectedSum, found := findExpectedSum(release, assetsLock.Releases)
+
+		if !found {
+			return fmt.Errorf("release %s is not in assets file", release.Name)
+		}
+		if expectedSum == "" {
+			continue
+		}
+
 		localBasename := ConvertToLocalBasename(release)
 		completeLocalPath := filepath.Join(releasesDir, localBasename)
 
-		f, err := os.Open(completeLocalPath)
+		sum, err := calculateSum(completeLocalPath)
 		if err != nil {
 			return err
-		}
-		defer f.Close()
-
-		h := sha1.New()
-		_, err = io.Copy(h, f)
-		if err != nil {
-			return err
-		}
-
-		sum := hex.EncodeToString(h.Sum(nil))
-		expectedSum := ""
-
-		for _, r := range assetsLock.Releases {
-			if r.Name == release.Name {
-				expectedSum = r.SHA1
-				break
-			}
-		}
-
-		if expectedSum == "" {
-			return fmt.Errorf("release %s is not in assets file", release.Name)
 		}
 
 		if expectedSum != sum {
-			releaseToDelete := map[cargo.CompiledRelease]string{
-				release: completeLocalPath,
-			}
-
-			badReleases = append(badReleases, fmt.Sprintf(
-				"%+v", completeLocalPath,
-			))
-			l.DeleteReleases(releaseToDelete)
+			l.DeleteReleases(cargo.CompiledReleaseSet{release: completeLocalPath})
+			badReleases = append(badReleases, fmt.Sprintf("%+v", completeLocalPath))
 		}
 	}
 
@@ -153,4 +135,30 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 	}
 
 	return nil
+}
+
+func findExpectedSum(release cargo.CompiledRelease, desiredReleases []cargo.Release) (string, bool) {
+	for _, r := range desiredReleases {
+		if r.Name == release.Name {
+			return r.SHA1, true
+		}
+	}
+
+	return "", false
+}
+
+func calculateSum(releasePath string) (string, error) {
+	f, err := os.Open(releasePath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha1.New()
+	_, err = io.Copy(h, f)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

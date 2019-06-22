@@ -197,5 +197,50 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				Expect(os.IsNotExist(err)).To(BeTrue())
 			})
 		})
+
+		Context("when no checksum is specified for a release (and the release file is not in the normal place)", func() {
+			var (
+				nonStandardFilePath string
+			)
+
+			BeforeEach(func() {
+				nonStandardFilePath = filepath.Join(releasesDir, "uaa-release-73.0.0.tgz") // bosh.io name, different from s3
+				err = ioutil.WriteFile(nonStandardFilePath, []byte("some release file"), 0644)
+				Expect(err).NotTo(HaveOccurred())
+				assetsLock = cargo.AssetsLock{
+					Releases: []cargo.Release{
+						{
+							Name:    "good",
+							Version: "1.2.3",
+							SHA1:    "a9993e364706816aba3e25717850c26c9cd0d89d",
+						},
+						{Name: "uaa", Version: "7.3.0"},
+					},
+					Stemcell: cargo.Stemcell{
+						OS:      "ubuntu-xenial",
+						Version: "190.0.0",
+					},
+				}
+			})
+
+			It("does not validate its checksum", func() {
+				downloadedReleases = map[cargo.CompiledRelease]string{
+					{
+						Name:            "good",
+						Version:         "1.2.3",
+						StemcellOS:      "ubuntu-xenial",
+						StemcellVersion: "190.0.0",
+					}: goodFilePath,
+					{
+						Name:            "uaa",
+						Version:         "7.3.0",
+						StemcellOS:      "ubuntu-xenial",
+						StemcellVersion: "190.0.0",
+					}: nonStandardFilePath,
+				}
+				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, assetsLock)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
 })
