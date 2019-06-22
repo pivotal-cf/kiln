@@ -92,10 +92,12 @@ type InstanceGroupJob struct {
 
 type CompiledReleaseSet map[CompiledRelease]string
 
-func (crs CompiledReleaseSet) Add(toAdd CompiledReleaseSet) {
-	for k, v := range toAdd {
-		crs[k] = v
+func (crs CompiledReleaseSet) With(toAdd CompiledReleaseSet) CompiledReleaseSet {
+	result := crs.copy()
+	for release, path := range toAdd {
+		result[release] = path
 	}
+	return result
 }
 
 func (crs CompiledReleaseSet) Without(other CompiledReleaseSet) CompiledReleaseSet {

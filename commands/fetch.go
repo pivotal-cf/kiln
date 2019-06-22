@@ -111,30 +111,20 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 	existingReleaseSet := f.hydrateLocalReleases(availableLocalReleaseSet, assetsLock.Stemcell)
-
 	desiredReleaseSet := cargo.NewCompiledReleaseSet(assetsLock)
 	extraReleaseSet := existingReleaseSet.Without(desiredReleaseSet)
 
 	f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleaseSet, f.Options.NoConfirm)
 
-	unsatisfiedReleaseSet := desiredReleaseSet.Without(existingReleaseSet)
 	satisfiedReleaseSet := existingReleaseSet.Without(extraReleaseSet)
+	unsatisfiedReleaseSet := desiredReleaseSet.Without(existingReleaseSet)
 
 	if len(unsatisfiedReleaseSet) > 0 {
 		f.logger.Printf("Found %d missing releases to download", len(unsatisfiedReleaseSet))
 
-		for _, releaseSource := range f.releaseSources {
-			releaseSource.Configure(assets)
-
-			matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet)
-			if err != nil {
-				return err
-			}
-
-			releaseSource.DownloadReleases(f.Options.ReleasesDir, matchedReleaseSet, f.Options.DownloadThreads)
-
-			satisfiedReleaseSet.Add(matchedReleaseSet)
-			unsatisfiedReleaseSet = unsatisfiedReleaseSet.Without(matchedReleaseSet)
+		satisfiedReleaseSet, unsatisfiedReleaseSet, err = f.downloadMissingReleases(assets, satisfiedReleaseSet, unsatisfiedReleaseSet)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -152,6 +142,24 @@ func (f Fetch) Execute(args []string) error {
 	}
 
 	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, assetsLock)
+}
+
+func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet, unsatisfiedReleaseSet cargo.CompiledReleaseSet) (satisfied, unsatisfied cargo.CompiledReleaseSet, err error) {
+	for _, releaseSource := range f.releaseSources {
+		releaseSource.Configure(assets)
+
+		matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		releaseSource.DownloadReleases(f.Options.ReleasesDir, matchedReleaseSet, f.Options.DownloadThreads)
+
+		satisfiedReleaseSet = satisfiedReleaseSet.With(matchedReleaseSet)
+		unsatisfiedReleaseSet = unsatisfiedReleaseSet.Without(matchedReleaseSet)
+	}
+
+	return satisfiedReleaseSet, unsatisfiedReleaseSet, nil
 }
 
 func (f Fetch) hydrateLocalReleases(localReleases cargo.CompiledReleaseSet, stemcell cargo.Stemcell) cargo.CompiledReleaseSet {
