@@ -114,7 +114,10 @@ func (f Fetch) Execute(args []string) error {
 	desiredReleaseSet := cargo.NewCompiledReleaseSet(assetsLock)
 	extraReleaseSet := existingReleaseSet.Without(desiredReleaseSet)
 
-	f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleaseSet, f.Options.NoConfirm)
+	err = f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleaseSet, f.Options.NoConfirm)
+	if err != nil {
+		f.logger.Println("failed deleting some releases: ", err.Error())
+	}
 
 	satisfiedReleaseSet := existingReleaseSet.Without(extraReleaseSet)
 	unsatisfiedReleaseSet := desiredReleaseSet.Without(existingReleaseSet)
@@ -153,7 +156,10 @@ func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet,
 			return nil, nil, err
 		}
 
-		releaseSource.DownloadReleases(f.Options.ReleasesDir, matchedReleaseSet, f.Options.DownloadThreads)
+		err = releaseSource.DownloadReleases(f.Options.ReleasesDir, matchedReleaseSet, f.Options.DownloadThreads)
+		if err != nil {
+			return nil, nil, err
+		}
 
 		satisfiedReleaseSet = satisfiedReleaseSet.With(matchedReleaseSet)
 		unsatisfiedReleaseSet = unsatisfiedReleaseSet.Without(matchedReleaseSet)

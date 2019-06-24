@@ -217,6 +217,22 @@ stemcell_criteria:
 				Expect(objects).To(HaveLen(1))
 				Expect(objects).To(HaveKeyWithValue(missingReleaseBoshIO, missingReleaseBoshIOPath))
 			})
+
+			Context("when download fails", func() {
+				BeforeEach(func() {
+					fakeS3ReleaseSource.DownloadReleasesReturns(
+						errors.New("download failed"),
+					)
+				})
+
+				It("returns an error", func() {
+					err := fetch.Execute([]string{
+						"--releases-directory", someReleasesDirectory,
+						"--assets-file", someAssetsFilePath,
+					})
+					Expect(err).To(HaveOccurred())
+				})
+			})
 		})
 
 		Context("when there are extra releases locally that are not in the assets.lock", func() {
