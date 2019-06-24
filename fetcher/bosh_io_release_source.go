@@ -46,21 +46,6 @@ var suffixes = []string{
 	"",
 }
 
-func (r BOSHIOReleaseSource) releaseExistOnBoshio(name string) bool {
-	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/github.com/%s", r.serverURI, name))
-	if err != nil {
-		fmt.Errorf("Bosh.io API is down with error: %v", err)
-		os.Exit(1)
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if string(body) == "null" {
-		return false
-	} else {
-		return true
-	}
-}
-
 type BOSHIOReleaseSource struct {
 	serverURI string
 	logger    *log.Logger
@@ -130,4 +115,19 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObje
 		}
 	}
 	return nil
+}
+
+func (r BOSHIOReleaseSource) releaseExistOnBoshio(name string) bool {
+	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/github.com/%s", r.serverURI, name))
+	if err != nil {
+		fmt.Errorf("Bosh.io API is down with error: %v", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if string(body) == "null" {
+		return false
+	} else {
+		return true
+	}
 }
