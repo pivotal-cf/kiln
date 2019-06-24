@@ -2,8 +2,11 @@ package fetcher_test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -133,5 +136,87 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			Entry("frodenas org, -bosh-release suffix", "frodenas", "-bosh-release"),
 			Entry("frodenas org, -boshrelease suffix", "frodenas", "-boshrelease"),
 		)
+	})
+})
+
+var _ = Describe("DownloadReleases", func() {
+	var (
+		releaseDir    string
+		releaseSource *fetcher.BOSHIOReleaseSource
+		testServer    *ghttp.Server
+
+		release1                   cargo.CompiledRelease
+		release1ServerPath         string
+		release1Filename           string
+		release1ServerFileContents string
+
+		release2                   cargo.CompiledRelease
+		release2ServerPath         string
+		release2Filename           string
+		release2ServerFileContents string
+	)
+
+	BeforeEach(func() {
+		var err error
+		releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
+		Expect(err).NotTo(HaveOccurred())
+
+		testServer = ghttp.NewServer()
+
+		releaseSource = fetcher.NewBOSHIOReleaseSource(
+			log.New(GinkgoWriter, "", 0),
+			testServer.URL(),
+		)
+
+		release1 = cargo.CompiledRelease{Name: "some-release", Version: "1.2.3"}
+		release1ServerPath = "/some-release"
+		release1Filename = "some-release.tgz"
+		release1ServerFileContents = "totes-a-real-release"
+
+		release2 = cargo.CompiledRelease{Name: "another-release", Version: "2.3.4"}
+		release2ServerPath = "/releases/another/release/2.3.4"
+		release2Filename = "release-2.3.4.tgz"
+		release2ServerFileContents = "blah-blah-blah deploy instructions blah blah"
+
+		testServer.RouteToHandler("GET", release1ServerPath,
+			ghttp.RespondWith(http.StatusOK, release1ServerFileContents,
+				http.Header{"Content-Disposition": []string{"attachment; filename=" + release1Filename}},
+			),
+		)
+		testServer.RouteToHandler("GET", release2ServerPath,
+			ghttp.RespondWith(http.StatusOK, release2ServerFileContents,
+				http.Header{"Content-Disposition": []string{"attachment; filename=" + release2Filename}},
+			),
+		)
+	})
+
+	AfterEach(func() {
+		testServer.Close()
+		_ = os.RemoveAll(releaseDir)
+	})
+
+	It("downloads the given releases into the release dir", func() {
+		err := releaseSource.DownloadReleases(releaseDir,
+			cargo.CompiledReleaseSet{
+				release1: testServer.URL() + release1ServerPath,
+				release2: testServer.URL() + release2ServerPath,
+			},
+			1,
+		)
+
+		Expect(err).NotTo(HaveOccurred())
+
+		fullRelease1Path := filepath.Join(releaseDir, release1Filename)
+		fullRelease2Path := filepath.Join(releaseDir, release2Filename)
+		Expect(fullRelease1Path).To(BeAnExistingFile())
+		Expect(fullRelease2Path).To(BeAnExistingFile())
+
+		release1DiskContents, err := ioutil.ReadFile(fullRelease1Path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(release1DiskContents).To(BeEquivalentTo(release1ServerFileContents))
+
+		release2DiskContents, err := ioutil.ReadFile(fullRelease2Path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(release2DiskContents).To(BeEquivalentTo(release2ServerFileContents))
 	})
 })
