@@ -23,7 +23,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 	)
 
 	BeforeEach(func() {
-		logger := log.New(nil, "", 0)
+		logger := log.New(GinkgoWriter, "", 0)
 		testServer = ghttp.NewServer()
 
 		path, _ := regexp.Compile("/api/v1/releases/github.com/pivotal-cf/cf-rabbitmq.*")
