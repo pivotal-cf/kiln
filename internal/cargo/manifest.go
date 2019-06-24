@@ -32,10 +32,10 @@ type AssetsLock struct {
 }
 
 type Assets struct {
-	CompiledReleases CompiledReleases `yaml:"compiled_releases"`
+	CompiledReleases S3ReleaseConfig `yaml:"compiled_releases"`
 }
 
-type CompiledReleases struct {
+type S3ReleaseConfig struct {
 	Type            string `yaml:"type"`
 	Bucket          string `yaml:"bucket"`
 	Region          string `yaml:"region"`

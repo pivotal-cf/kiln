@@ -110,7 +110,7 @@ func (f Fetch) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	existingReleaseSet := f.hydrateLocalReleases(availableLocalReleaseSet, assetsLock.Stemcell)
+	existingReleaseSet := f.ensureStemcellFieldsSet(availableLocalReleaseSet, assetsLock.Stemcell)
 	desiredReleaseSet := cargo.NewCompiledReleaseSet(assetsLock)
 	extraReleaseSet := existingReleaseSet.Without(desiredReleaseSet)
 
@@ -162,7 +162,7 @@ func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet,
 	return satisfiedReleaseSet, unsatisfiedReleaseSet, nil
 }
 
-func (f Fetch) hydrateLocalReleases(localReleases cargo.CompiledReleaseSet, stemcell cargo.Stemcell) cargo.CompiledReleaseSet {
+func (f Fetch) ensureStemcellFieldsSet(localReleases cargo.CompiledReleaseSet, stemcell cargo.Stemcell) cargo.CompiledReleaseSet {
 	hydratedLocalReleases := make(cargo.CompiledReleaseSet)
 
 	for localRelease, path := range localReleases {
