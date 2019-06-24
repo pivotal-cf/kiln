@@ -1,7 +1,12 @@
 package fetcher_test
 
 import (
+	"fmt"
 	"log"
+	"net/http"
+	"regexp"
+
+	"github.com/onsi/gomega/ghttp"
 
 	"github.com/pivotal-cf/kiln/fetcher"
 
@@ -10,26 +15,40 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
-var _ = Describe("ReleaseExistOnBoshio", func() {
-	It("returns true if the release can be found on bosh.io", func() {
-		Expect(fetcher.ReleaseExistOnBoshio("cloudfoundry/uaa-release")).To(BeTrue())
-	})
-
-	It("returns false if the release can not be found on bosh.io", func() {
-		Expect(fetcher.ReleaseExistOnBoshio("foo")).To(BeFalse())
-	})
-})
-
 var _ = Describe("GetMatchedReleases from bosh.io", func() {
 	var (
 		releaseSource             *fetcher.BOSHIOReleaseSource
 		desiredCompiledReleaseSet cargo.CompiledReleaseSet
+		testServer                *ghttp.Server
 	)
 
-	It("returns releases which exists on bosh.io", func() {
+	BeforeEach(func() {
 		logger := log.New(nil, "", 0)
-		releaseSource = fetcher.NewBOSHIOReleaseSource(logger)
+		testServer = ghttp.NewServer()
 
+		path, _ := regexp.Compile("/api/v1/releases/github.com/pivotal-cf/cf-rabbitmq.*")
+		testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, ``))
+
+		path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/cf-rabbitmq.*")
+		testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
+
+		path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/uaa.*")
+		testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, ``))
+
+		path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/zzz.*")
+		testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
+
+		releaseSource = fetcher.NewBOSHIOReleaseSource(
+			logger,
+			testServer.URL(),
+		)
+	})
+
+	AfterEach(func() {
+		testServer.Close()
+	})
+
+	It("returns releases which exists on bosh.io", func() {
 		os := "ubuntu-xenial"
 		version := "190.0.0"
 		desiredCompiledReleaseSet = cargo.CompiledReleaseSet{
@@ -39,8 +58,8 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 		}
 
 		foundReleases, err := releaseSource.GetMatchedReleases(desiredCompiledReleaseSet)
-		uaaURL := "https://bosh.io/d/github.com/cloudfoundry/uaa-release?v=73.3.0"
-		cfRabbitURL := "https://bosh.io/d/github.com/pivotal-cf/cf-rabbitmq-release?v=268.0.0"
+		uaaURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/uaa-release?v=73.3.0", testServer.URL())
+		cfRabbitURL := fmt.Sprintf("%s/d/github.com/pivotal-cf/cf-rabbitmq-release?v=268.0.0", testServer.URL())
 
 		Expect(err).ToNot(HaveOccurred())
 		Expect(foundReleases).To(HaveLen(2))

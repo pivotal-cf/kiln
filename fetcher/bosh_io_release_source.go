@@ -46,8 +46,8 @@ var suffixes = []string{
 	"",
 }
 
-func ReleaseExistOnBoshio(name string) bool {
-	resp, err := http.Get("https://bosh.io/api/v1/releases/github.com/" + name)
+func (r BOSHIOReleaseSource) releaseExistOnBoshio(name string) bool {
+	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/github.com/%s", r.serverURI, name))
 	if err != nil {
 		fmt.Errorf("Bosh.io API is down with error: %v", err)
 		os.Exit(1)
@@ -62,11 +62,19 @@ func ReleaseExistOnBoshio(name string) bool {
 }
 
 type BOSHIOReleaseSource struct {
-	logger *log.Logger
+	serverURI string
+	logger    *log.Logger
 }
 
-func NewBOSHIOReleaseSource(logger *log.Logger) *BOSHIOReleaseSource {
-	return &BOSHIOReleaseSource{logger}
+func NewBOSHIOReleaseSource(logger *log.Logger, customServerURI string) *BOSHIOReleaseSource {
+	if customServerURI == "" {
+		customServerURI = "https://bosh.io"
+	}
+
+	return &BOSHIOReleaseSource{
+		logger:    logger,
+		serverURI: customServerURI,
+	}
 }
 
 func (r *BOSHIOReleaseSource) Configure(assets cargo.Assets) {
@@ -81,9 +89,9 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet cargo.Compiled
 		for _, repo := range repos {
 			for _, suf := range suffixes {
 				fullName := repo + "/" + compRelease.Name + suf
-				exists := ReleaseExistOnBoshio(fullName)
+				exists := r.releaseExistOnBoshio(fullName)
 				if exists {
-					downloadURL := "https://bosh.io/d/github.com/" + fullName + "?v=" + compRelease.Version
+					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, compRelease.Version)
 					matchedBOSHIOReleases[compRelease] = downloadURL
 					break found
 				}

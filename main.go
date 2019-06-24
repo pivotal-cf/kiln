@@ -87,7 +87,7 @@ func main() {
 	checksummer := baking.NewChecksummer(errLogger)
 
 	s3ReleaseSource := &fetcher.S3ReleaseSource{Logger: outLogger}
-	boshIoReleaseSource := fetcher.NewBOSHIOReleaseSource(outLogger)
+	boshIoReleaseSource := fetcher.NewBOSHIOReleaseSource(outLogger, "")
 	releaseSources := []commands.ReleaseSource{s3ReleaseSource, boshIoReleaseSource}
 
 	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(outLogger, releasesService)
