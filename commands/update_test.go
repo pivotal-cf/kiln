@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/commands"
+	"github.com/pivotal-cf/kiln/commands/fakes"
 )
 
 var _ = Describe("Update", func() {
@@ -19,7 +20,7 @@ var _ = Describe("Update", func() {
 		var (
 			update                                                 *commands.Update
 			tmpDir, someAssetsSpecFilePath, someAssetsLockFilePath string
-			stemcellsVersionsService                               getVersionsMock
+			stemcellsVersionsService                               fakes.VersionsService
 		)
 		BeforeEach(func() {
 			var err error
@@ -32,7 +33,7 @@ var _ = Describe("Update", func() {
 				ioutil.WriteFile(someAssetsSpecFilePath, []byte(initallAssetsYAMLFileContents), 0644),
 			).NotTo(HaveOccurred())
 
-			stemcellsVersionsService = getVersionsMock{}
+			stemcellsVersionsService = fakes.VersionsService{}
 			stemcellsVersionsService.Returns.Versions = []string{
 				"3580.0",
 				"3586.7",
@@ -42,7 +43,7 @@ var _ = Describe("Update", func() {
 				"3587.1",
 			}
 			update = &commands.Update{
-				StemcellVersionsService: &stemcellsVersionsService,
+				VersionsService: &stemcellsVersionsService,
 			}
 		})
 		AfterEach(func() {
@@ -216,20 +217,3 @@ stemcell_criteria:
   version: "3586.1"
 `
 )
-
-type getVersionsMock struct {
-	CallCount int
-	Receives  struct {
-		StemcellOS string
-	}
-	Returns struct {
-		Versions []string
-		Err      error
-	}
-}
-
-func (mock *getVersionsMock) GetStemcellVersions(stemcellOS string) ([]string, error) {
-	mock.CallCount++
-	mock.Receives.StemcellOS = stemcellOS
-	return mock.Returns.Versions, mock.Returns.Err
-}

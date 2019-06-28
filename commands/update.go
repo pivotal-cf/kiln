@@ -15,13 +15,19 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+const (
+	StemcellSlugWindows = "stemcells-windows-server"
+	StemcellSlugXenial  = "stemcells-ubuntu-xenial"
+	StemcellSlugTrusty  = "stemcells"
+)
+
 // Update wraps the dependancies and flag options for the `kiln update` command
 type Update struct {
 	Options struct {
 		AssetsFile string `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
 	}
-	StemcellVersionsService interface {
-		GetStemcellVersions(stemcellOS string) ([]string, error)
+	VersionsService interface {
+		Versions(string) ([]string, error)
 	}
 }
 
@@ -54,7 +60,20 @@ func (update Update) Execute(args []string) error {
 	if err != nil {
 		return fmt.Errorf("stemcell_constraint version error: %s", err)
 	}
-	stemcellVersionsStrings, err := update.StemcellVersionsService.GetStemcellVersions(assetsSpec.Stemcell.OS)
+
+	var stemcellSlug string
+	switch assetsSpec.Stemcell.OS {
+	case "windows":
+		stemcellSlug = StemcellSlugWindows
+	case "ubuntu-xenial":
+		stemcellSlug = StemcellSlugXenial
+	case "ubuntu-trusty":
+		stemcellSlug = StemcellSlugTrusty
+	default:
+		return fmt.Errorf("stemcell_constraint os not supported: %s", assetsSpec.Stemcell.OS)
+	}
+
+	stemcellVersionsStrings, err := update.VersionsService.Versions(stemcellSlug)
 	if err != nil {
 		return fmt.Errorf("could not get stemcell versions: %s", err)
 	}
