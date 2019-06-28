@@ -26,7 +26,7 @@ type Update struct {
 	Options struct {
 		AssetsFile string `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
 	}
-	VersionsService interface {
+	StemcellsVersionsService interface {
 		Versions(string) ([]string, error)
 	}
 }
@@ -73,7 +73,7 @@ func (update Update) Execute(args []string) error {
 		return fmt.Errorf("stemcell_constraint os not supported: %s", assetsSpec.Stemcell.OS)
 	}
 
-	stemcellVersionsStrings, err := update.VersionsService.Versions(stemcellSlug)
+	stemcellVersionsStrings, err := update.StemcellsVersionsService.Versions(stemcellSlug)
 	if err != nil {
 		return fmt.Errorf("could not get stemcell versions: %s", err)
 	}

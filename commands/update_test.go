@@ -43,7 +43,7 @@ var _ = Describe("Update", func() {
 				"3587.1",
 			}
 			update = &commands.Update{
-				VersionsService: &stemcellsVersionsService,
+				StemcellsVersionsService: &stemcellsVersionsService,
 			}
 		})
 		AfterEach(func() {

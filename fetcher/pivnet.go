@@ -2,6 +2,7 @@ package fetcher
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -51,6 +52,9 @@ func (pivnet *Pivnet) Versions(slug string) ([]string, error) {
 	response, err := pivnet.Do(req)
 	if err != nil {
 		return nil, err
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return nil, fmt.Errorf("request was not successful, response had status %s (%d)", response.Status, response.StatusCode)
 	}
 
 	responesBody, err := ioutil.ReadAll(response.Body)

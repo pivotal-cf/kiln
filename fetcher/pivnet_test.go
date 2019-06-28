@@ -99,6 +99,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 			When("the json parsing fails", func() {
 				BeforeEach(func() {
 					serverMock.Results.Res.Body = fakes.NewReadCloser("{")
+					serverMock.Results.Res.StatusCode = http.StatusOK
 					serverMock.Results.Err = nil
 				})
 				It("returns an error", func() {
@@ -110,15 +111,28 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 					rc := &fakes.ReadCloser{}
 					rc.ReadCall.Returns.Err = errors.New("some-error")
 					serverMock.Results.Res.Body = rc
+					serverMock.Results.Res.StatusCode = http.StatusOK
 					serverMock.Results.Err = nil
 				})
 				It("returns an error", func() {
 					Expect(gotErr).To(MatchError(ContainSubstring("some-error")))
 				})
 			})
+			When("the request is not a success", func() {
+				BeforeEach(func() {
+					serverMock.Results.Res.Body = fakes.NewReadCloser(`foo`)
+					serverMock.Results.Res.StatusCode = http.StatusTeapot
+					serverMock.Results.Res.Status = http.StatusText(http.StatusTeapot)
+					serverMock.Results.Err = nil
+				})
+				It("returns an error", func() {
+					Expect(gotErr).To(MatchError(ContainSubstring("request was not successful, response had status")))
+				})
+			})
 			When("the json parsing fails", func() {
 				BeforeEach(func() {
 					serverMock.Results.Res.Body = fakes.NewReadCloser(`{"releases": [{"version": "1.0"}, {"version": "2.1"}]}`)
+					serverMock.Results.Res.StatusCode = http.StatusOK
 					serverMock.Results.Err = nil
 				})
 				It("returns the versions", func() {
