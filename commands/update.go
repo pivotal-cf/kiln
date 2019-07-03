@@ -51,6 +51,10 @@ func (update Update) Execute(args []string) error {
 		return fmt.Errorf("could not parse yaml in assets-file: %s", err)
 	}
 
+	if assetsSpec.Stemcell.OS == "" && assetsSpec.Stemcell.Version == "" {
+		return fmt.Errorf("stemcell OS (%q) and/or version constraint (%q) are not set", assetsSpec.Stemcell.OS, assetsSpec.Stemcell.Version)
+	}
+
 	assetsLockPath := filepath.Join(filepath.Dir(update.Options.AssetsFile), "assets.lock")
 	assetsLockYAML, err := ioutil.ReadFile(assetsLockPath)
 	if err != nil && !os.IsNotExist(err) {

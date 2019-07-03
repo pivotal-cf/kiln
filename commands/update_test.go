@@ -88,7 +88,7 @@ var _ = Describe("Update", func() {
 			})
 		})
 
-		When("given correct assets.lock", func() {
+		When("given an assets.yml", func() {
 			var (
 				updateErr error
 			)
@@ -106,6 +106,16 @@ var _ = Describe("Update", func() {
 				It("returns a descriptive error", func() {
 					Expect(updateErr).To(HaveOccurred())
 					Expect(updateErr).To(MatchError("could not read assets-file"))
+				})
+			})
+			When("assets.yaml is missing", func() {
+				BeforeEach(func() {
+					os.Remove(someAssetsSpecFilePath)
+					ioutil.WriteFile(someAssetsSpecFilePath, []byte(initallAssetsYAMLWithoutStemcellCriteraFileContents), 0644)
+				})
+				It("returns a descriptive error", func() {
+					Expect(updateErr).To(HaveOccurred())
+					Expect(updateErr).To(MatchError(`stemcell OS ("") and/or version constraint ("") are not set`))
 				})
 			})
 			When("the StemcellVersionsService returns an error", func() {
@@ -210,6 +220,8 @@ const (
 stemcell_criteria:
   os: ubuntu-trusty
   version: "3586.*"
+`
+	initallAssetsYAMLWithoutStemcellCriteraFileContents = `---
 `
 	initallAssetsLockFileContents = `---
 stemcell_criteria:
