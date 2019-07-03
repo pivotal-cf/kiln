@@ -196,7 +196,7 @@ var _ = Describe("Update", func() {
 						})
 						It("returns a descriptive error", func() {
 							Expect(updateErr).To(HaveOccurred())
-							Expect(updateErr.Error()).To(ContainSubstring("could not parse yaml in assets.lock"))
+							Expect(updateErr.Error()).To(ContainSubstring("did not find expected key"))
 						})
 					})
 				})

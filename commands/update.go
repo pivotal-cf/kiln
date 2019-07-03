@@ -11,20 +11,24 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/pivotal-cf/jhanda"
+	"github.com/pivotal-cf/kiln/builder"
+	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	yaml "gopkg.in/yaml.v2"
 )
 
 const (
-	StemcellSlugWindows = "stemcells-windows-server"
-	StemcellSlugXenial  = "stemcells-ubuntu-xenial"
-	StemcellSlugTrusty  = "stemcells"
+	stemcellSlugWindows = "stemcells-windows-server"
+	stemcellSlugXenial  = "stemcells-ubuntu-xenial"
+	stemcellSlugTrusty  = "stemcells"
 )
 
 // Update wraps the dependancies and flag options for the `kiln update` command
 type Update struct {
 	Options struct {
-		AssetsFile string `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
+		AssetsFile     string   `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
+		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
+		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
 	}
 	StemcellsVersionsService interface {
 		Versions(string) ([]string, error)
@@ -37,6 +41,7 @@ func (update Update) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+
 	assetsSpecYAML, err := ioutil.ReadFile(update.Options.AssetsFile)
 	if err != nil {
 		return errors.New("could not read assets-file")
@@ -51,8 +56,21 @@ func (update Update) Execute(args []string) error {
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("could not read assets-file: %s", err)
 	}
+	templateVariablesService := baking.NewTemplateVariablesService()
+	templateVariables, err := templateVariablesService.FromPathsAndPairs(update.Options.VariablesFiles, update.Options.Variables)
+	if err != nil {
+		return fmt.Errorf("failed to parse template variables: %s", err)
+	}
+	interpolator := builder.NewInterpolator()
+	interpolatedMetadata, err := interpolator.Interpolate(builder.InterpolateInput{
+		Variables: templateVariables,
+	}, assetsLockYAML)
+	if err != nil {
+		return err
+	}
+
 	var assetsLock cargo.AssetsLock
-	if err := yaml.Unmarshal(assetsLockYAML, &assetsLock); err != nil {
+	if err := yaml.Unmarshal(interpolatedMetadata, &assetsLock); err != nil {
 		return fmt.Errorf("could not parse yaml in assets.lock: %s", err)
 	}
 
@@ -64,11 +82,11 @@ func (update Update) Execute(args []string) error {
 	var stemcellSlug string
 	switch assetsSpec.Stemcell.OS {
 	case "windows":
-		stemcellSlug = StemcellSlugWindows
+		stemcellSlug = stemcellSlugWindows
 	case "ubuntu-xenial":
-		stemcellSlug = StemcellSlugXenial
+		stemcellSlug = stemcellSlugXenial
 	case "ubuntu-trusty":
-		stemcellSlug = StemcellSlugTrusty
+		stemcellSlug = stemcellSlugTrusty
 	default:
 		return fmt.Errorf("stemcell_constraint os not supported: %s", assetsSpec.Stemcell.OS)
 	}
