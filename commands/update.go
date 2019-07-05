@@ -134,8 +134,8 @@ func (update Update) Execute(args []string) error {
 // Usage implements the Usage part of the jhanda.Command interface
 func (update Update) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Updates stemcell_criteria and releases.",
-		ShortDescription: "Updates stemcell_criteria and releases",
+		Description:      "updates stemcell_criteria and releases.",
+		ShortDescription: "updates stemcell_criteria and releases",
 		Flags:            update.Options,
 	}
 }

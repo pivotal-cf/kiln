@@ -8,6 +8,10 @@ both in CI environments and in command-line to produce a tile.
 
 ## Subcommands
 
+### `help`
+
+
+
 ### `bake`
 
 It takes release and stemcell tarballs, metadata YAML, and JavaScript migrations
