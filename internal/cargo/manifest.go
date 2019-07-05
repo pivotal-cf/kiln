@@ -27,12 +27,13 @@ type Release struct {
 }
 
 type AssetsLock struct {
-	Releases []Release `yaml:"releases"`
+	Releases []Release `yaml:"releases,omitempty"`
 	Stemcell Stemcell  `yaml:"stemcell_criteria"`
 }
 
 type Assets struct {
 	CompiledReleases S3ReleaseConfig `yaml:"compiled_releases"`
+	Stemcell         Stemcell        `yaml:"stemcell_criteria"`
 }
 
 type S3ReleaseConfig struct {
@@ -52,7 +53,7 @@ type CompiledRelease struct {
 }
 
 type Stemcell struct {
-	Alias   string `yaml:"alias"`
+	Alias   string `yaml:"alias,omitempty"`
 	OS      string `yaml:"os"`
 	Version string `yaml:"version"`
 }
