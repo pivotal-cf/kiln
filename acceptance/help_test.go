@@ -13,13 +13,15 @@ const GLOBAL_USAGE = `kiln
 kiln helps you build ops manager compatible tiles
 
 Usage: kiln [options] <command> [<args>]
-  --help, -h     bool  prints this usage information (default: false)
-  --version, -v  bool  prints the kiln release version (default: false)
+  --help, -h                                               bool    prints this usage information (default: false)
+  --pivotal-network-token, -pt, PIVOTAL_NETWORK_API_TOKEN  string  uaa access token for network.pivotal.io
+  --version, -v                                            bool    prints the kiln release version (default: false)
 
 Commands:
   bake     bakes a tile
   fetch    fetches releases
   help     prints this usage information
+  update   Updates stemcell_criteria and releases
   version  prints the kiln release version
 `
 
@@ -27,8 +29,9 @@ const BAKE_USAGE = `kiln bake
 Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.
 
 Usage: kiln [options] bake [<args>]
-  --help, -h     bool  prints this usage information (default: false)
-  --version, -v  bool  prints the kiln release version (default: false)
+  --help, -h                                               bool    prints this usage information (default: false)
+  --pivotal-network-token, -pt, PIVOTAL_NETWORK_API_TOKEN  string  uaa access token for network.pivotal.io
+  --version, -v                                            bool    prints the kiln release version (default: false)
 
 Command Arguments:
   --assets-file, -a                  string             path to assets file  (NOTE: mutually exclusive with --stemcell-directory)
@@ -58,8 +61,9 @@ const FETCH_USAGE = `kiln fetch
 Fetches releases listed in assets file from S3 and downloads it locally
 
 Usage: kiln [options] fetch [<args>]
-  --help, -h     bool  prints this usage information (default: false)
-  --version, -v  bool  prints the kiln release version (default: false)
+  --help, -h                                               bool    prints this usage information (default: false)
+  --pivotal-network-token, -pt, PIVOTAL_NETWORK_API_TOKEN  string  uaa access token for network.pivotal.io
+  --version, -v                                            bool    prints the kiln release version (default: false)
 
 Command Arguments:
   --assets-file, -a          string (required)  path to assets file
