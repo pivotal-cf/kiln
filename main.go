@@ -21,8 +21,6 @@ func main() {
 	var global struct {
 		Help    bool `short:"h" long:"help"    description:"prints this usage information"   default:"false"`
 		Version bool `short:"v" long:"version" description:"prints the kiln release version" default:"false"`
-
-		PivNetToken string `short:"pt" env:"PIVOTAL_NETWORK_API_TOKEN" long:"pivotal-network-token" description:"uaa access token for network.pivotal.io"`
 	}
 
 	args, err := jhanda.Parse(&global, os.Args[1:])
@@ -115,9 +113,6 @@ func main() {
 		metadataService,
 		checksummer,
 	)
-	commandSet["update"] = commands.Update{
-		StemcellsVersionsService: &fetcher.Pivnet{UAAAPIToken: global.PivNetToken},
-	}
 
 	err = commandSet.Execute(command, args)
 	if err != nil {
