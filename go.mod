@@ -5,7 +5,6 @@ go 1.12
 require (
 	github.com/Masterminds/semver v1.4.2
 	github.com/aws/aws-sdk-go v1.20.11
-	github.com/blang/semver v3.5.1+incompatible
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.3.1 // indirect
