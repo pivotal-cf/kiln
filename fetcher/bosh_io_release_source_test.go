@@ -22,9 +22,9 @@ import (
 var _ = Describe("GetMatchedReleases from bosh.io", func() {
 	Context("happy path", func() {
 		var (
-			releaseSource             *fetcher.BOSHIOReleaseSource
-			desiredCompiledReleaseSet fetcher.CompiledReleaseSet
-			testServer                *ghttp.Server
+			releaseSource     *fetcher.BOSHIOReleaseSource
+			desiredReleaseSet fetcher.CompiledReleaseSet
+			testServer        *ghttp.Server
 		)
 
 		BeforeEach(func() {
@@ -56,20 +56,20 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 		It("returns built releases which exist on bosh.io", func() {
 			os := "ubuntu-xenial"
 			version := "190.0.0"
-			desiredCompiledReleaseSet = fetcher.CompiledReleaseSet{
+			desiredReleaseSet = fetcher.CompiledReleaseSet{
 				{Name: "uaa", Version: "73.3.0", StemcellOS: os, StemcellVersion: version}:          "",
 				{Name: "zzz", Version: "999", StemcellOS: os, StemcellVersion: version}:             "",
 				{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: os, StemcellVersion: version}: "",
 			}
 
-			foundReleases, err := releaseSource.GetMatchedReleases(desiredCompiledReleaseSet)
+			foundReleases, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 			uaaURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/uaa-release?v=73.3.0", testServer.URL())
 			cfRabbitURL := fmt.Sprintf("%s/d/github.com/pivotal-cf/cf-rabbitmq-release?v=268.0.0", testServer.URL())
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(foundReleases).To(HaveLen(2))
-			Expect(foundReleases).To(HaveKeyWithValue(fetcher.CompiledRelease{Name: "uaa", Version: "73.3.0", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, uaaURL))
-			Expect(foundReleases).To(HaveKeyWithValue(fetcher.CompiledRelease{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, cfRabbitURL))
+			Expect(foundReleases).To(HaveKeyWithValue(fetcher.CompiledRelease{Name: "uaa", Version: "73.3.0", StemcellOS: "", StemcellVersion: ""}, uaaURL))
+			Expect(foundReleases).To(HaveKeyWithValue(fetcher.CompiledRelease{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: "", StemcellVersion: ""}, cfRabbitURL))
 		})
 	})
 
@@ -119,7 +119,12 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 					suffix,
 					releaseVersion,
 				)
-				Expect(foundReleases).To(HaveKeyWithValue(compiledRelease, expectedPath))
+
+				expectedRelease := compiledRelease
+				expectedRelease.StemcellOS = ""
+				expectedRelease.StemcellVersion = ""
+
+				Expect(foundReleases).To(HaveKeyWithValue(expectedRelease, expectedPath))
 			},
 
 			Entry("cloudfoundry org, no suffix", "cloudfoundry", ""),

@@ -77,7 +77,8 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet CompiledReleas
 				exists := r.releaseExistOnBoshio(fullName)
 				if exists {
 					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, compRelease.Version)
-					matchedBOSHIOReleases[compRelease] = downloadURL
+					builtRelease := CompiledRelease{Name: compRelease.Name, Version: compRelease.Version}
+					matchedBOSHIOReleases[builtRelease] = downloadURL
 					break found
 				}
 			}
