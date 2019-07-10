@@ -34,13 +34,13 @@ type S3ReleaseSource struct {
 	Regex        string
 }
 
-func (r *S3ReleaseSource) Configure(assets cargo.Assets) {
+func (r *S3ReleaseSource) Configure(config cargo.S3ReleaseConfig) {
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(assets.CompiledReleases.Region),
+		Region: aws.String(config.Region),
 		Credentials: credentials.NewStaticCredentials(
-			assets.CompiledReleases.AccessKeyId,
-			assets.CompiledReleases.SecretAccessKey,
+			config.AccessKeyId,
+			config.SecretAccessKey,
 			"",
 		),
 	}))
@@ -49,12 +49,12 @@ func (r *S3ReleaseSource) Configure(assets cargo.Assets) {
 	r.S3Client = client
 	r.S3Downloader = s3manager.NewDownloaderWithClient(client)
 
-	r.Bucket = assets.CompiledReleases.Bucket
-	r.Regex = assets.CompiledReleases.Regex
+	r.Bucket = config.Bucket
+	r.Regex = config.Regex
 }
 
-func (r S3ReleaseSource) GetMatchedReleases(desiredReleaseSet cargo.CompiledReleaseSet) (cargo.CompiledReleaseSet, error) {
-	matchedS3Objects := make(cargo.CompiledReleaseSet)
+func (r S3ReleaseSource) GetMatchedReleases(desiredReleaseSet CompiledReleaseSet) (CompiledReleaseSet, error) {
+	matchedS3Objects := make(CompiledReleaseSet)
 
 	regex, err := NewCompiledReleasesRegexp(r.Regex)
 	if err != nil {
@@ -85,7 +85,7 @@ func (r S3ReleaseSource) GetMatchedReleases(desiredReleaseSet cargo.CompiledRele
 		return nil, err
 	}
 
-	matchingReleases := make(cargo.CompiledReleaseSet, 0)
+	matchingReleases := make(CompiledReleaseSet, 0)
 	for expectedRelease := range desiredReleaseSet {
 		s3Key, ok := matchedS3Objects[expectedRelease]
 
@@ -97,7 +97,7 @@ func (r S3ReleaseSource) GetMatchedReleases(desiredReleaseSet cargo.CompiledRele
 	return matchingReleases, nil
 }
 
-func (r S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects cargo.CompiledReleaseSet,
+func (r S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects CompiledReleaseSet,
 	downloadThreads int) error {
 	r.Logger.Printf("downloading %d objects from s3...", len(matchedS3Objects))
 	setConcurrency := func(dl *s3manager.Downloader) {

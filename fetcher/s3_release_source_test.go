@@ -17,7 +17,6 @@ import (
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/fetcher/fakes"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 func verifySetsConcurrency(opts []func(*s3manager.Downloader), concurrency int) {
@@ -36,12 +35,12 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 	var (
 		releaseSource     fetcher.S3ReleaseSource
 		fakeS3Client      *fakes.S3ObjectLister
-		desiredReleaseSet cargo.CompiledReleaseSet
+		desiredReleaseSet fetcher.CompiledReleaseSet
 		bpmKey            string
 	)
 
 	BeforeEach(func() {
-		desiredReleaseSet = cargo.CompiledReleaseSet{
+		desiredReleaseSet = fetcher.CompiledReleaseSet{
 			{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}: "",
 		}
 
@@ -82,7 +81,7 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 		Expect(input.Bucket).To(Equal(aws.String("some-bucket")))
 
 		Expect(matchedS3Objects).To(HaveLen(1))
-		Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+		Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
 	})
 
 	Context("if any objects in S3 do not match a release specified in assets.lock", func() {
@@ -109,7 +108,7 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+			Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
 		})
 	})
 
@@ -137,7 +136,7 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+			Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
 		})
 	})
 })
@@ -147,7 +146,7 @@ var _ = Describe("S3ReleaseSource DownloadReleases", func() {
 		logger           *log.Logger
 		releaseSource    commands.ReleaseSource
 		releaseDir       string
-		matchedS3Objects map[cargo.CompiledRelease]string
+		matchedS3Objects map[fetcher.CompiledRelease]string
 		fakeS3Downloader *fakes.S3Downloader
 	)
 
@@ -157,9 +156,9 @@ var _ = Describe("S3ReleaseSource DownloadReleases", func() {
 		releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		matchedS3Objects = make(map[cargo.CompiledRelease]string)
-		matchedS3Objects[cargo.CompiledRelease{Name: "uaa", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "1234"}] = "some-uaa-key"
-		matchedS3Objects[cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "1234"}] = "some-bpm-key"
+		matchedS3Objects = make(map[fetcher.CompiledRelease]string)
+		matchedS3Objects[fetcher.CompiledRelease{Name: "uaa", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "1234"}] = "some-uaa-key"
+		matchedS3Objects[fetcher.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "1234"}] = "some-bpm-key"
 
 		logger = log.New(GinkgoWriter, "", 0)
 		fakeS3Downloader = new(fakes.S3Downloader)
@@ -200,7 +199,7 @@ var _ = Describe("S3ReleaseSource DownloadReleases", func() {
 
 	Context("when the matchedS3Objects argument is empty", func() {
 		It("does not download anything from S3", func() {
-			err := releaseSource.DownloadReleases(releaseDir, map[cargo.CompiledRelease]string{}, 0)
+			err := releaseSource.DownloadReleases(releaseDir, map[fetcher.CompiledRelease]string{}, 0)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(0))
 		})

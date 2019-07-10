@@ -66,8 +66,8 @@ func (r *BOSHIOReleaseSource) Configure(assets cargo.Assets) {
 	return
 }
 
-func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet cargo.CompiledReleaseSet) (cargo.CompiledReleaseSet, error) {
-	matchedBOSHIOReleases := make(cargo.CompiledReleaseSet)
+func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet CompiledReleaseSet) (CompiledReleaseSet, error) {
+	matchedBOSHIOReleases := make(CompiledReleaseSet)
 
 	for compRelease := range desiredReleaseSet {
 	found:
@@ -87,7 +87,7 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet cargo.Compiled
 	return matchedBOSHIOReleases, nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects cargo.CompiledReleaseSet, downloadThreads int) error {
+func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects CompiledReleaseSet, downloadThreads int) error {
 	r.logger.Printf("downloading %d objects from bosh.io...", len(matchedBOSHObjects))
 
 	for _, downloadURL := range matchedBOSHObjects {

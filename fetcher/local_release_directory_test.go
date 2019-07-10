@@ -55,7 +55,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				releases, err := localReleaseDirectory.GetLocalReleases(releasesDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(releases).To(HaveLen(1))
-				Expect(releases).To(HaveKeyWithValue(cargo.CompiledRelease{
+				Expect(releases).To(HaveKeyWithValue(fetcher.CompiledRelease{
 					Name:            "some-release",
 					Version:         "1.2.3",
 					StemcellOS:      "some-os",
@@ -90,7 +90,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		})
 
 		It("deletes specified files", func() {
-			extraRelease := cargo.CompiledRelease{
+			extraRelease := fetcher.CompiledRelease{
 				Name:            "extra-release",
 				Version:         "v0.0",
 				StemcellOS:      "os-0",
@@ -98,7 +98,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			}
 
 			extraFileName := extraFile.Name()
-			extraReleases := map[cargo.CompiledRelease]string{}
+			extraReleases := map[fetcher.CompiledRelease]string{}
 			extraReleases[extraRelease] = extraFileName
 
 			err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
@@ -110,14 +110,14 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when a file cannot be removed", func() {
 			It("returns an error", func() {
-				extraRelease := cargo.CompiledRelease{
+				extraRelease := fetcher.CompiledRelease{
 					Name:            "extra-release-that-cannot-be-deleted",
 					Version:         "v0.0",
 					StemcellOS:      "os-0",
 					StemcellVersion: "v0.0.0",
 				}
 
-				extraReleases := map[cargo.CompiledRelease]string{}
+				extraReleases := map[fetcher.CompiledRelease]string{}
 				extraReleases[extraRelease] = "file-does-not-exist"
 
 				err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
@@ -128,7 +128,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 	Describe("VerifyChecksums", func() {
 		var (
-			downloadedReleases map[cargo.CompiledRelease]string
+			downloadedReleases map[fetcher.CompiledRelease]string
 			assetsLock         cargo.AssetsLock
 			goodFilePath       string
 			badFilePath        string
@@ -166,7 +166,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when all the checksums on the downloaded releases match their checksums in assets.lock", func() {
 			It("succeeds", func() {
-				downloadedReleases = map[cargo.CompiledRelease]string{
+				downloadedReleases = map[fetcher.CompiledRelease]string{
 					{
 						Name:            "good",
 						Version:         "1.2.3",
@@ -181,7 +181,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when at least one checksum on the downloaded releases does not match the checksum in assets.lock", func() {
 			It("returns an error and deletes the bad release", func() {
-				downloadedReleases = map[cargo.CompiledRelease]string{
+				downloadedReleases = map[fetcher.CompiledRelease]string{
 					{
 						Name:            "bad",
 						Version:         "1.2.3",
@@ -224,7 +224,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			})
 
 			It("does not validate its checksum", func() {
-				downloadedReleases = map[cargo.CompiledRelease]string{
+				downloadedReleases = map[fetcher.CompiledRelease]string{
 					{
 						Name:            "good",
 						Version:         "1.2.3",

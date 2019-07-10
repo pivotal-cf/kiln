@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/fetcher"
 	"io/ioutil"
 	"log"
 	"os"
@@ -25,7 +26,7 @@ const (
 type Fetch struct {
 	logger *log.Logger
 
-	releaseSources        []ReleaseSource
+	releaseSourcesFactory func(cargo.Assets) []ReleaseSource
 	localReleaseDirectory LocalReleaseDirectory
 
 	Options struct {
@@ -38,26 +39,25 @@ type Fetch struct {
 	}
 }
 
-func NewFetch(logger *log.Logger, releaseSources []ReleaseSource, localReleaseDirectory LocalReleaseDirectory) Fetch {
+func NewFetch(logger *log.Logger, releaseSourcesFactory func(cargo.Assets) []ReleaseSource, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
 		logger:                logger,
-		releaseSources:        releaseSources,
 		localReleaseDirectory: localReleaseDirectory,
+		releaseSourcesFactory: releaseSourcesFactory,
 	}
 }
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedReleases(assetsLock cargo.CompiledReleaseSet) (cargo.CompiledReleaseSet, error)
-	DownloadReleases(releasesDir string, matchedS3Objects cargo.CompiledReleaseSet, downloadThreads int) error
-	Configure(cargo.Assets)
+	GetMatchedReleases(assetsLock fetcher.CompiledReleaseSet) (fetcher.CompiledReleaseSet, error)
+	DownloadReleases(releasesDir string, matchedS3Objects fetcher.CompiledReleaseSet, downloadThreads int) error
 }
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
-	GetLocalReleases(releasesDir string) (cargo.CompiledReleaseSet, error)
-	DeleteExtraReleases(releasesDir string, extraReleases cargo.CompiledReleaseSet, noConfirm bool) error
-	VerifyChecksums(releasesDir string, downloadedRelases cargo.CompiledReleaseSet, assetsLock cargo.AssetsLock) error
+	GetLocalReleases(releasesDir string) (fetcher.CompiledReleaseSet, error)
+	DeleteExtraReleases(releasesDir string, extraReleases fetcher.CompiledReleaseSet, noConfirm bool) error
+	VerifyChecksums(releasesDir string, downloadedRelases fetcher.CompiledReleaseSet, assetsLock cargo.AssetsLock) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -111,7 +111,7 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 	existingReleaseSet := f.ensureStemcellFieldsSet(availableLocalReleaseSet, assetsLock.Stemcell)
-	desiredReleaseSet := cargo.NewCompiledReleaseSet(assetsLock)
+	desiredReleaseSet := fetcher.NewCompiledReleaseSet(assetsLock)
 	extraReleaseSet := existingReleaseSet.Without(desiredReleaseSet)
 
 	err = f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleaseSet, f.Options.NoConfirm)
@@ -147,10 +147,9 @@ func (f Fetch) Execute(args []string) error {
 	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, assetsLock)
 }
 
-func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet, unsatisfiedReleaseSet cargo.CompiledReleaseSet) (satisfied, unsatisfied cargo.CompiledReleaseSet, err error) {
-	for _, releaseSource := range f.releaseSources {
-		releaseSource.Configure(assets)
-
+func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet, unsatisfiedReleaseSet fetcher.CompiledReleaseSet) (satisfied, unsatisfied fetcher.CompiledReleaseSet, err error) {
+	releaseSources := f.releaseSourcesFactory(assets)
+	for _, releaseSource := range releaseSources {
 		matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet)
 		if err != nil {
 			return nil, nil, err
@@ -161,15 +160,14 @@ func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet,
 			return nil, nil, err
 		}
 
-		satisfiedReleaseSet = satisfiedReleaseSet.With(matchedReleaseSet)
-		unsatisfiedReleaseSet = unsatisfiedReleaseSet.Without(matchedReleaseSet)
+		unsatisfiedReleaseSet, satisfiedReleaseSet = unsatisfiedReleaseSet.TransferElements(matchedReleaseSet, satisfiedReleaseSet)
 	}
 
 	return satisfiedReleaseSet, unsatisfiedReleaseSet, nil
 }
 
-func (f Fetch) ensureStemcellFieldsSet(localReleases cargo.CompiledReleaseSet, stemcell cargo.Stemcell) cargo.CompiledReleaseSet {
-	hydratedLocalReleases := make(cargo.CompiledReleaseSet)
+func (f Fetch) ensureStemcellFieldsSet(localReleases fetcher.CompiledReleaseSet, stemcell cargo.Stemcell) fetcher.CompiledReleaseSet {
+	hydratedLocalReleases := make(fetcher.CompiledReleaseSet)
 
 	for localRelease, path := range localReleases {
 		if localRelease.StemcellOS == "" {

@@ -17,14 +17,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 var _ = Describe("GetMatchedReleases from bosh.io", func() {
 	Context("happy path", func() {
 		var (
 			releaseSource             *fetcher.BOSHIOReleaseSource
-			desiredCompiledReleaseSet cargo.CompiledReleaseSet
+			desiredCompiledReleaseSet fetcher.CompiledReleaseSet
 			testServer                *ghttp.Server
 		)
 
@@ -54,10 +53,10 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			testServer.Close()
 		})
 
-		It("returns releases which exists on bosh.io", func() {
+		It("returns built releases which exist on bosh.io", func() {
 			os := "ubuntu-xenial"
 			version := "190.0.0"
-			desiredCompiledReleaseSet = cargo.CompiledReleaseSet{
+			desiredCompiledReleaseSet = fetcher.CompiledReleaseSet{
 				{Name: "uaa", Version: "73.3.0", StemcellOS: os, StemcellVersion: version}:          "",
 				{Name: "zzz", Version: "999", StemcellOS: os, StemcellVersion: version}:             "",
 				{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: os, StemcellVersion: version}: "",
@@ -69,8 +68,8 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(foundReleases).To(HaveLen(2))
-			Expect(foundReleases).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "uaa", Version: "73.3.0", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, uaaURL))
-			Expect(foundReleases).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, cfRabbitURL))
+			Expect(foundReleases).To(HaveKeyWithValue(fetcher.CompiledRelease{Name: "uaa", Version: "73.3.0", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, uaaURL))
+			Expect(foundReleases).To(HaveKeyWithValue(fetcher.CompiledRelease{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, cfRabbitURL))
 		})
 	})
 
@@ -103,14 +102,14 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 				pathRegex, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/.*")
 				testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `null`))
 
-				compiledRelease := cargo.CompiledRelease{
+				compiledRelease := fetcher.CompiledRelease{
 					Name:            releaseName,
 					Version:         releaseVersion,
 					StemcellOS:      "generic-os",
 					StemcellVersion: "4.5.6",
 				}
 
-				foundReleases, err := releaseSource.GetMatchedReleases(cargo.CompiledReleaseSet{compiledRelease: ""})
+				foundReleases, err := releaseSource.GetMatchedReleases(fetcher.CompiledReleaseSet{compiledRelease: ""})
 
 				Expect(err).NotTo(HaveOccurred())
 				expectedPath := fmt.Sprintf("%s/d/github.com/%s/%s%s?v=%s",
@@ -145,12 +144,12 @@ var _ = Describe("DownloadReleases", func() {
 		releaseSource *fetcher.BOSHIOReleaseSource
 		testServer    *ghttp.Server
 
-		release1                   cargo.CompiledRelease
+		release1                   fetcher.CompiledRelease
 		release1ServerPath         string
 		release1Filename           string
 		release1ServerFileContents string
 
-		release2                   cargo.CompiledRelease
+		release2                   fetcher.CompiledRelease
 		release2ServerPath         string
 		release2Filename           string
 		release2ServerFileContents string
@@ -168,12 +167,12 @@ var _ = Describe("DownloadReleases", func() {
 			testServer.URL(),
 		)
 
-		release1 = cargo.CompiledRelease{Name: "some-release", Version: "1.2.3"}
+		release1 = fetcher.CompiledRelease{Name: "some-release", Version: "1.2.3"}
 		release1ServerPath = "/some-release"
 		release1Filename = "some-release.tgz"
 		release1ServerFileContents = "totes-a-real-release"
 
-		release2 = cargo.CompiledRelease{Name: "another-release", Version: "2.3.4"}
+		release2 = fetcher.CompiledRelease{Name: "another-release", Version: "2.3.4"}
 		release2ServerPath = "/releases/another/release/2.3.4"
 		release2Filename = "release-2.3.4.tgz"
 		release2ServerFileContents = "blah-blah-blah deploy instructions blah blah"
@@ -197,7 +196,7 @@ var _ = Describe("DownloadReleases", func() {
 
 	It("downloads the given releases into the release dir", func() {
 		err := releaseSource.DownloadReleases(releaseDir,
-			cargo.CompiledReleaseSet{
+			fetcher.CompiledReleaseSet{
 				release1: testServer.URL() + release1ServerPath,
 				release2: testServer.URL() + release2ServerPath,
 			},

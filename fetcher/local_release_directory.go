@@ -27,8 +27,8 @@ func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.Release
 	}
 }
 
-func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (cargo.CompiledReleaseSet, error) {
-	outputReleases := map[cargo.CompiledRelease]string{}
+func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (CompiledReleaseSet, error) {
+	outputReleases := map[CompiledRelease]string{}
 
 	rawReleases, err := l.releasesService.FromDirectories([]string{releasesDir})
 	if err != nil {
@@ -37,7 +37,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (cargo.Compi
 
 	for _, release := range rawReleases {
 		releaseManifest := release.(builder.ReleaseManifest)
-		outputReleases[cargo.CompiledRelease{
+		outputReleases[CompiledRelease{
 			Name:            releaseManifest.Name,
 			Version:         releaseManifest.Version,
 			StemcellOS:      releaseManifest.StemcellOS,
@@ -48,7 +48,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (cargo.Compi
 	return outputReleases, nil
 }
 
-func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraReleaseSet cargo.CompiledReleaseSet, noConfirm bool) error {
+func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraReleaseSet CompiledReleaseSet, noConfirm bool) error {
 	var doDeletion byte
 
 	if len(extraReleaseSet) == 0 {
@@ -78,7 +78,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 	return nil
 }
 
-func (l LocalReleaseDirectory) DeleteReleases(releasesToDelete cargo.CompiledReleaseSet) error {
+func (l LocalReleaseDirectory) DeleteReleases(releasesToDelete CompiledReleaseSet) error {
 	for release, path := range releasesToDelete {
 		err := os.Remove(path)
 
@@ -93,11 +93,11 @@ func (l LocalReleaseDirectory) DeleteReleases(releasesToDelete cargo.CompiledRel
 	return nil
 }
 
-func ConvertToLocalBasename(compiledRelease cargo.CompiledRelease) string {
+func ConvertToLocalBasename(compiledRelease CompiledRelease) string {
 	return fmt.Sprintf("%s-%s-%s-%s.tgz", compiledRelease.Name, compiledRelease.Version, compiledRelease.StemcellOS, compiledRelease.StemcellVersion)
 }
 
-func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedReleaseSet cargo.CompiledReleaseSet, assetsLock cargo.AssetsLock) error {
+func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedReleaseSet CompiledReleaseSet, assetsLock cargo.AssetsLock) error {
 	if len(downloadedReleaseSet) == 0 {
 		return nil
 	}
@@ -125,7 +125,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 		}
 
 		if expectedSum != sum {
-			l.DeleteReleases(cargo.CompiledReleaseSet{release: completeLocalPath})
+			l.DeleteReleases(CompiledReleaseSet{release: completeLocalPath})
 			badReleases = append(badReleases, fmt.Sprintf("%+v", completeLocalPath))
 		}
 	}
@@ -137,7 +137,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 	return nil
 }
 
-func findExpectedSum(release cargo.CompiledRelease, desiredReleases []cargo.Release) (string, bool) {
+func findExpectedSum(release CompiledRelease, desiredReleases []cargo.Release) (string, bool) {
 	for _, r := range desiredReleases {
 		if r.Name == release.Name {
 			return r.SHA1, true

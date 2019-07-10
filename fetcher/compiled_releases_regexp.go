@@ -3,8 +3,6 @@ package fetcher
 import (
 	"fmt"
 	"regexp"
-
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 const (
@@ -37,9 +35,9 @@ func NewCompiledReleasesRegexp(regex string) (*CompiledReleasesRegexp, error) {
 	return &CompiledReleasesRegexp{r: r}, nil
 }
 
-func (crr *CompiledReleasesRegexp) Convert(s3Key string) (cargo.CompiledRelease, error) {
+func (crr *CompiledReleasesRegexp) Convert(s3Key string) (CompiledRelease, error) {
 	if !crr.r.MatchString(s3Key) {
-		return cargo.CompiledRelease{}, fmt.Errorf("s3 key does not match regex")
+		return CompiledRelease{}, fmt.Errorf("s3 key does not match regex")
 	}
 
 	matches := crr.r.FindStringSubmatch(s3Key)
@@ -50,7 +48,7 @@ func (crr *CompiledReleasesRegexp) Convert(s3Key string) (cargo.CompiledRelease,
 		}
 	}
 
-	return cargo.CompiledRelease{
+	return CompiledRelease{
 		Name:            subgroup[ReleaseName],
 		Version:         subgroup[ReleaseVersion],
 		StemcellOS:      subgroup[StemcellOS],

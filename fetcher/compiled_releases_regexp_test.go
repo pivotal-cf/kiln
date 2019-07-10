@@ -4,12 +4,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 var _ = Describe("CompiledReleasesRegexp", func() {
 	var (
-		compiledRelease cargo.CompiledRelease
+		compiledRelease fetcher.CompiledRelease
 		regex           *fetcher.CompiledReleasesRegexp
 		err             error
 	)
@@ -20,7 +19,7 @@ var _ = Describe("CompiledReleasesRegexp", func() {
 
 		compiledRelease, err = regex.Convert("2.5/uaa/uaa-1.2.3-ubuntu-trusty-123.tgz")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(compiledRelease).To(Equal(cargo.CompiledRelease{Name: "uaa", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "123"}))
+		Expect(compiledRelease).To(Equal(fetcher.CompiledRelease{Name: "uaa", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "123"}))
 	})
 
 	It("returns an error if s3 key does not match the regex", func() {
