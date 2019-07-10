@@ -99,10 +99,10 @@ func main() {
 
 		boshIoReleaseSource := fetcher.NewBOSHIOReleaseSource(outLogger, "")
 
-		uncompiledReleaseSource := &fetcher.S3ReleaseSource{Logger: outLogger}
-		uncompiledReleaseSource.Configure(assets.UncompiledReleases)
+		privateBoshIOReleaseSource := &fetcher.S3ReleaseSource{Logger: outLogger}
+		privateBoshIOReleaseSource.Configure(assets.UncompiledReleases)
 
-		return []commands.ReleaseSource{compiledReleaseSource, boshIoReleaseSource, uncompiledReleaseSource}
+		return []commands.ReleaseSource{compiledReleaseSource, boshIoReleaseSource, privateBoshIOReleaseSource}
 	}
 
 	commandSet["fetch"] = commands.NewFetch(outLogger, releaseSourcesFactory, localReleaseDirectory)

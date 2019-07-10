@@ -141,7 +141,7 @@ func (f Fetch) Execute(args []string) error {
 			)
 
 		}
-		return fmt.Errorf("Could not find the following releases:\n%s", strings.Join(formattedMissingReleases, "\n"))
+		return fmt.Errorf("Could not find an exact match for these releases in any of the release sources we checked:\n%s", strings.Join(formattedMissingReleases, "\n"))
 	}
 
 	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, assetsLock)

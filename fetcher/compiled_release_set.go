@@ -73,7 +73,8 @@ func (crs CompiledReleaseSet) With(toAdd CompiledReleaseSet) CompiledReleaseSet 
 func (crs CompiledReleaseSet) Without(other CompiledReleaseSet) CompiledReleaseSet {
 	result := crs.copy()
 	for release := range result {
-		if _, ok := other[release]; ok {
+		release, ok := other.Contains(release)
+		if ok {
 			delete(result, release)
 		}
 	}
@@ -85,21 +86,12 @@ func (source CompiledReleaseSet) TransferElements(toAdd, dest CompiledReleaseSet
 	des := dest.copy()
 
 	for release, path := range toAdd {
-		if _, ok := sor[release]; ok {
-			delete(sor, release)
+		match, ok := sor.Contains(release)
+		if ok {
+			delete(sor, match)
 			des[release] = path
-		} else {
-			newRelease := CompiledRelease{
-				Name:            release.Name,
-				Version:         release.Version,
-				StemcellOS:      "some-os",
-				StemcellVersion: "4.5.6",
-			}
-			if _, ok := sor[newRelease]; ok {
-				delete(sor, newRelease)
-				des[newRelease] = path
-			}
 		}
 	}
+
 	return sor, des
 }
