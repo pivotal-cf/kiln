@@ -56,7 +56,7 @@ func (r *S3ReleaseSource) Configure(config cargo.S3ReleaseConfig) {
 func (r S3ReleaseSource) GetMatchedReleases(desiredReleaseSet CompiledReleaseSet) (CompiledReleaseSet, error) {
 	matchedS3Objects := make(CompiledReleaseSet)
 
-	regex, err := NewCompiledReleasesRegexp(r.Regex)
+	regex, err := NewReleasesRegexp(r.Regex)
 	if err != nil {
 		return nil, err
 	}

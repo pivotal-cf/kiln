@@ -4,6 +4,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
+// TODO: We should probably rename this to an abstract "Release" or "Artifact"
 type CompiledRelease struct {
 	Name            string
 	Version         string
@@ -11,6 +12,7 @@ type CompiledRelease struct {
 	StemcellVersion string
 }
 
+// TODO: Match the name of whatever we chose for the type of CompiledRelease
 type CompiledReleaseSet map[CompiledRelease]string
 
 func newCompiledRelease(release cargo.Release, stemcell cargo.Stemcell) CompiledRelease {
@@ -37,7 +39,7 @@ func (set CompiledReleaseSet) Contains(release CompiledRelease) (CompiledRelease
 	if ok {
 		return release, ok
 	} else {
-		if isBuiltRelease(release) {
+		if release.IsBuiltRelease() {
 			for key := range set {
 				if release.Name == key.Name && release.Version == key.Version {
 					return key, true
@@ -48,11 +50,9 @@ func (set CompiledReleaseSet) Contains(release CompiledRelease) (CompiledRelease
 	}
 }
 
-// Feature Envy
-func isBuiltRelease(release CompiledRelease) bool {
-	return release.StemcellOS == "" && release.StemcellVersion == ""
+func (rel CompiledRelease) IsBuiltRelease() bool {
+	return rel.StemcellOS == "" && rel.StemcellVersion == ""
 }
-
 
 func (crs CompiledReleaseSet) copy() CompiledReleaseSet {
 	dup := make(CompiledReleaseSet)

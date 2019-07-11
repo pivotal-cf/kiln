@@ -2,15 +2,13 @@ package fetcher
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/cargo"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 var repos = []string{
@@ -91,7 +89,7 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet CompiledReleas
 func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects CompiledReleaseSet, downloadThreads int) error {
 	r.logger.Printf("downloading %d objects from bosh.io...", len(matchedBOSHObjects))
 
-	for _, downloadURL := range matchedBOSHObjects {
+	for release, downloadURL := range matchedBOSHObjects {
 
 		r.logger.Printf("downloading %s...\n", downloadURL)
 		// Get the data
@@ -101,7 +99,7 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObje
 		}
 
 		// Create the file
-		fileName := strings.Split(resp.Header["Content-Disposition"][0], "=")[1]
+		fileName :=  fmt.Sprintf("%s-%s.tgz", release.Name, release.Version)
 		out, err := os.Create(filepath.Join(releaseDir, fileName))
 		if err != nil {
 			return err

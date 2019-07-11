@@ -172,24 +172,24 @@ var _ = Describe("DownloadReleases", func() {
 			testServer.URL(),
 		)
 
-		release1 = fetcher.CompiledRelease{Name: "some-release", Version: "1.2.3"}
+		release1 = fetcher.CompiledRelease{Name: "some", Version: "1.2.3"}
 		release1ServerPath = "/some-release"
-		release1Filename = "some-release.tgz"
+		release1Filename = "some-1.2.3.tgz"
 		release1ServerFileContents = "totes-a-real-release"
 
-		release2 = fetcher.CompiledRelease{Name: "another-release", Version: "2.3.4"}
+		release2 = fetcher.CompiledRelease{Name: "another", Version: "2.3.4"}
 		release2ServerPath = "/releases/another/release/2.3.4"
-		release2Filename = "release-2.3.4.tgz"
+		release2Filename = "another-2.3.4.tgz"
 		release2ServerFileContents = "blah-blah-blah deploy instructions blah blah"
 
 		testServer.RouteToHandler("GET", release1ServerPath,
 			ghttp.RespondWith(http.StatusOK, release1ServerFileContents,
-				http.Header{"Content-Disposition": []string{"attachment; filename=" + release1Filename}},
+				nil,
 			),
 		)
 		testServer.RouteToHandler("GET", release2ServerPath,
 			ghttp.RespondWith(http.StatusOK, release2ServerFileContents,
-				http.Header{"Content-Disposition": []string{"attachment; filename=" + release2Filename}},
+				nil,
 			),
 		)
 	})

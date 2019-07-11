@@ -94,6 +94,9 @@ func (l LocalReleaseDirectory) DeleteReleases(releasesToDelete CompiledReleaseSe
 }
 
 func ConvertToLocalBasename(compiledRelease CompiledRelease) string {
+	if compiledRelease.IsBuiltRelease() {
+		return fmt.Sprintf("%s-%s.tgz", compiledRelease.Name, compiledRelease.Version)
+	}
 	return fmt.Sprintf("%s-%s-%s-%s.tgz", compiledRelease.Name, compiledRelease.Version, compiledRelease.StemcellOS, compiledRelease.StemcellVersion)
 }
 
@@ -116,12 +119,19 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 			continue
 		}
 
-		localBasename := ConvertToLocalBasename(release)
-		completeLocalPath := filepath.Join(releasesDir, localBasename)
+		compiledLocalBasename := ConvertToLocalBasename(release)
+		completeLocalPath := filepath.Join(releasesDir, compiledLocalBasename)
+		if _, err := os.Stat(completeLocalPath); os.IsNotExist(err) {
+			builtLocalBasename := ConvertToLocalBasename(CompiledRelease{
+				Name:    release.Name,
+				Version: release.Version,
+			})
+			completeLocalPath = filepath.Join(releasesDir, builtLocalBasename)
+		}
 
 		sum, err := calculateSum(completeLocalPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("error while calculating checksum: %s", err)
 		}
 
 		if expectedSum != sum {

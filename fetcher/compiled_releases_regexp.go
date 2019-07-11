@@ -12,11 +12,11 @@ const (
 	StemcellVersion = "stemcell_version"
 )
 
-type CompiledReleasesRegexp struct {
+type ReleasesRegexp struct {
 	r *regexp.Regexp
 }
 
-func NewCompiledReleasesRegexp(regex string) (*CompiledReleasesRegexp, error) {
+func NewReleasesRegexp(regex string) (*ReleasesRegexp, error) {
 	r, err := regexp.Compile(regex)
 	if err != nil {
 		return nil, err
@@ -32,10 +32,10 @@ func NewCompiledReleasesRegexp(regex string) (*CompiledReleasesRegexp, error) {
 		return nil, fmt.Errorf("Missing some capture group. Required capture groups: %s, %s, %s, %s", ReleaseName, ReleaseVersion, StemcellOS, StemcellVersion)
 	}
 
-	return &CompiledReleasesRegexp{r: r}, nil
+	return &ReleasesRegexp{r: r}, nil
 }
 
-func (crr *CompiledReleasesRegexp) Convert(s3Key string) (CompiledRelease, error) {
+func (crr *ReleasesRegexp) Convert(s3Key string) (CompiledRelease, error) {
 	if !crr.r.MatchString(s3Key) {
 		return CompiledRelease{}, fmt.Errorf("s3 key does not match regex")
 	}

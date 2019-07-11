@@ -26,7 +26,7 @@ compiled_releases:
   region: us-west-1
   access_key_id: mykey
   secret_access_key: mysecret
-  regex: ^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$
+  regex: ^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)(?:-(?P<stemcell_os>[a-z-_]+))?(?:-(?P<stemcell_version>[\d\.]+))?\.tgz$
 `
 
 const MinimalAssetsLockContents = `
