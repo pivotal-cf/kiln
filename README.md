@@ -111,7 +111,7 @@ or as flags (`--variable`).*
 
 ### Example Variables File
 ```
-$ lpass show --notes 'our-super-secret-file'
+$ lpass show --notes 'pas-releng-fetch-releases'
 ---
 aws_access_key_id: SOME_REALLY_SECRET_ID
 aws_secret_access_key: SOME_REALLY_SECRET_KEY
@@ -120,7 +120,7 @@ aws_secret_access_key: SOME_REALLY_SECRET_KEY
 Interpolating this file in kiln would look something like this.
 
 ```
-kiln fetch --assets-file random-assets.yml --variables-file <(lpass show --notes 'our-super-secret-file')
+kiln fetch --assets-file random-assets.yml --variables-file <(lpass show --notes 'pas-releng-fetch-releases')
 ```
 
 ### `bake`
