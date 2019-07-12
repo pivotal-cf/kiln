@@ -21,6 +21,7 @@ Commands:
   fetch    fetches releases
   help     prints this usage information
   publish  prints this usage information
+  update   updates stemcell_criteria and releases
   version  prints the kiln release version
 `
 

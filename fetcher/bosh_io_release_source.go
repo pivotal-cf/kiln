@@ -105,8 +105,11 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObje
 			return err
 		}
 
-		// Create the file
-		fileName := fmt.Sprintf("%s-%s.tgz", releaseID.Name, releaseID.Version)
+		var fileName string
+		count, err := fmt.Sscanf(resp.Header.Get("Content-Disposition"), "attachment; filename=%s", &fileName)
+		if fileName == "" || err != nil || count != 1 {
+			fileName = fmt.Sprintf("%s-%s.tgz", releaseID.Name, releaseID.Version)
+		}
 		out, err := os.Create(filepath.Join(releaseDir, fileName))
 		if err != nil {
 			return err
