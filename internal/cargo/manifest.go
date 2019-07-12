@@ -35,6 +35,7 @@ type Assets struct {
 	Stemcell           Stemcell        `yaml:"stemcell_criteria"`
 	CompiledReleases   S3ReleaseConfig `yaml:"compiled_releases"`
 	UncompiledReleases S3ReleaseConfig `yaml:"uncompiled_releases"`
+	Stemcell           Stemcell        `yaml:"stemcell_criteria"`
 }
 
 type S3ReleaseConfig struct {
