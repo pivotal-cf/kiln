@@ -49,9 +49,12 @@ func (crr *ReleasesRegexp) Convert(s3Key string) (CompiledRelease, error) {
 	}
 
 	return CompiledRelease{
-		Name:            subgroup[ReleaseName],
-		Version:         subgroup[ReleaseVersion],
+		ID: ReleaseID{
+			Name:    subgroup[ReleaseName],
+			Version: subgroup[ReleaseVersion],
+		},
 		StemcellOS:      subgroup[StemcellOS],
 		StemcellVersion: subgroup[StemcellVersion],
+		Path:            "",
 	}, nil
 }

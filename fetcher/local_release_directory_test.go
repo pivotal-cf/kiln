@@ -55,12 +55,20 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				releases, err := localReleaseDirectory.GetLocalReleases(releasesDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(releases).To(HaveLen(1))
-				Expect(releases).To(HaveKeyWithValue(fetcher.CompiledRelease{
-					Name:            "some-release",
-					Version:         "1.2.3",
-					StemcellOS:      "some-os",
-					StemcellVersion: "4.5.6",
-				}, releaseFile))
+				Expect(releases).To(HaveKeyWithValue(
+					fetcher.ReleaseID{
+						Name:    "some-release",
+						Version: "1.2.3",
+					},
+					fetcher.CompiledRelease{
+						ID: fetcher.ReleaseID{
+							Name:    "some-release",
+							Version: "1.2.3",
+						},
+						StemcellOS:      "some-os",
+						StemcellVersion: "4.5.6",
+						Path:            releaseFile,
+					}))
 			})
 		})
 
@@ -90,16 +98,17 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		})
 
 		It("deletes specified files", func() {
+			extraReleaseID := fetcher.ReleaseID{Name: "extra-release", Version: "v0.0"}
+			extraFileName := extraFile.Name()
 			extraRelease := fetcher.CompiledRelease{
-				Name:            "extra-release",
-				Version:         "v0.0",
+				ID:              extraReleaseID,
 				StemcellOS:      "os-0",
 				StemcellVersion: "v0.0.0",
+				Path:            extraFileName,
 			}
 
-			extraFileName := extraFile.Name()
-			extraReleases := map[fetcher.CompiledRelease]string{}
-			extraReleases[extraRelease] = extraFileName
+			extraReleases := map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{}
+			extraReleases[extraReleaseID] = extraRelease
 
 			err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
 			Expect(err).NotTo(HaveOccurred())
@@ -110,15 +119,16 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when a file cannot be removed", func() {
 			It("returns an error", func() {
+				extraReleaseID := fetcher.ReleaseID{Name: "extra-release-that-cannot-be-deleted", Version: "v0.0"}
 				extraRelease := fetcher.CompiledRelease{
-					Name:            "extra-release-that-cannot-be-deleted",
-					Version:         "v0.0",
+					ID:              extraReleaseID,
 					StemcellOS:      "os-0",
 					StemcellVersion: "v0.0.0",
+					Path:            "file-does-not-exist",
 				}
 
-				extraReleases := map[fetcher.CompiledRelease]string{}
-				extraReleases[extraRelease] = "file-does-not-exist"
+				extraReleases := map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{}
+				extraReleases[extraReleaseID] = extraRelease
 
 				err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
 				Expect(err).To(MatchError("failed to delete release extra-release-that-cannot-be-deleted"))
@@ -128,7 +138,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 	Describe("VerifyChecksums", func() {
 		var (
-			downloadedReleases map[fetcher.CompiledRelease]string
+			downloadedReleases map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader
 			assetsLock         cargo.AssetsLock
 			goodFilePath       string
 			badFilePath        string
@@ -166,14 +176,13 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when all the checksums on the downloaded releases match their checksums in assets.lock", func() {
 			It("succeeds", func() {
-				downloadedReleases = map[fetcher.CompiledRelease]string{
-					{
-						Name:            "good",
-						Version:         "1.2.3",
+				downloadedReleases = map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{
+					fetcher.ReleaseID{Name: "good", Version: "1.2.3"}: fetcher.CompiledRelease{
+						ID:              fetcher.ReleaseID{Name: "good", Version: "1.2.3"},
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
-					}: goodFilePath,
-				}
+						Path:            goodFilePath,
+					}}
 				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, assetsLock)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -181,14 +190,13 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when at least one checksum on the downloaded releases does not match the checksum in assets.lock", func() {
 			It("returns an error and deletes the bad release", func() {
-				downloadedReleases = map[fetcher.CompiledRelease]string{
-					{
-						Name:            "bad",
-						Version:         "1.2.3",
+				downloadedReleases = map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{
+					fetcher.ReleaseID{Name: "bad", Version: "1.2.3"}: fetcher.CompiledRelease{
+						ID:              fetcher.ReleaseID{Name: "bad", Version: "1.2.3"},
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
-					}: badFilePath,
-				}
+						Path:            badFilePath,
+					}}
 				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, assetsLock)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("These downloaded releases do not match the checksum"))
@@ -224,19 +232,19 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			})
 
 			It("does not validate its checksum", func() {
-				downloadedReleases = map[fetcher.CompiledRelease]string{
-					{
-						Name:            "good",
-						Version:         "1.2.3",
+				downloadedReleases = map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{
+					fetcher.ReleaseID{Name: "good", Version: "1.2.3"}: fetcher.CompiledRelease{
+						ID:              fetcher.ReleaseID{Name: "good", Version: "1.2.3"},
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
-					}: goodFilePath,
-					{
-						Name:            "uaa",
-						Version:         "7.3.0",
+						Path:            goodFilePath,
+					},
+					fetcher.ReleaseID{Name: "uaa", Version: "7.3.0"}: fetcher.CompiledRelease{
+						ID:              fetcher.ReleaseID{Name: "uaa", Version: "7.3.0"},
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
-					}: nonStandardFilePath,
+						Path:            nonStandardFilePath,
+					},
 				}
 				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, assetsLock)
 				Expect(err).NotTo(HaveOccurred())

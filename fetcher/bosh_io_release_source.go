@@ -2,13 +2,14 @@ package fetcher
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 var repos = []string{
@@ -64,8 +65,8 @@ func (r *BOSHIOReleaseSource) Configure(assets cargo.Assets) {
 	return
 }
 
-func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet CompiledReleaseSet) (CompiledReleaseSet, error) {
-	matchedBOSHIOReleases := make(CompiledReleaseSet)
+func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet) (ReleaseSet, error) {
+	matchedBOSHIOReleases := make(ReleaseSet)
 
 	for compRelease := range desiredReleaseSet {
 	found:
@@ -75,8 +76,9 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet CompiledReleas
 				exists := r.releaseExistOnBoshio(fullName)
 				if exists {
 					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, compRelease.Version)
-					builtRelease := CompiledRelease{Name: compRelease.Name, Version: compRelease.Version}
-					matchedBOSHIOReleases[builtRelease] = downloadURL
+					builtReleaseID := ReleaseID{Name: compRelease.Name, Version: compRelease.Version}
+					builtRelease := BuiltRelease{ID: builtReleaseID, Path: downloadURL}
+					matchedBOSHIOReleases[builtReleaseID] = builtRelease
 					break found
 				}
 			}
@@ -86,11 +88,12 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet CompiledReleas
 	return matchedBOSHIOReleases, nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects CompiledReleaseSet, downloadThreads int) error {
+func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects ReleaseSet, downloadThreads int) error {
 	r.logger.Printf("downloading %d objects from bosh.io...", len(matchedBOSHObjects))
 
-	for release, downloadURL := range matchedBOSHObjects {
+	for releaseID, release := range matchedBOSHObjects {
 
+		downloadURL := release.DownloadString()
 		r.logger.Printf("downloading %s...\n", downloadURL)
 		// Get the data
 		resp, err := http.Get(downloadURL)
@@ -99,7 +102,7 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObje
 		}
 
 		// Create the file
-		fileName :=  fmt.Sprintf("%s-%s.tgz", release.Name, release.Version)
+		fileName := fmt.Sprintf("%s-%s.tgz", releaseID.Name, releaseID.Version)
 		out, err := os.Create(filepath.Join(releaseDir, fileName))
 		if err != nil {
 			return err

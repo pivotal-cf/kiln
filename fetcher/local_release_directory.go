@@ -27,8 +27,8 @@ func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.Release
 	}
 }
 
-func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (CompiledReleaseSet, error) {
-	outputReleases := map[CompiledRelease]string{}
+func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (ReleaseSet, error) {
+	outputReleases := map[ReleaseID]ReleaseInfoDownloader{}
 
 	rawReleases, err := l.releasesService.FromDirectories([]string{releasesDir})
 	if err != nil {
@@ -37,18 +37,19 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (CompiledRel
 
 	for _, release := range rawReleases {
 		releaseManifest := release.(builder.ReleaseManifest)
-		outputReleases[CompiledRelease{
-			Name:            releaseManifest.Name,
-			Version:         releaseManifest.Version,
+		id := ReleaseID{Name: releaseManifest.Name, Version: releaseManifest.Version}
+		rel := CompiledRelease{
+			ID:              id,
 			StemcellOS:      releaseManifest.StemcellOS,
 			StemcellVersion: releaseManifest.StemcellVersion,
-		}] = filepath.Join(releasesDir, releaseManifest.File)
+			Path:            filepath.Join(releasesDir, releaseManifest.File),
+		}
+		outputReleases[id] = rel
 	}
-
 	return outputReleases, nil
 }
 
-func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraReleaseSet CompiledReleaseSet, noConfirm bool) error {
+func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraReleaseSet ReleaseSet, noConfirm bool) error {
 	var doDeletion byte
 
 	if len(extraReleaseSet) == 0 {
@@ -60,8 +61,8 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 	} else {
 		l.logger.Println("Warning: kiln will delete the following files:")
 
-		for _, path := range extraReleaseSet {
-			l.logger.Printf("- %s\n", path)
+		for _, release := range extraReleaseSet {
+			l.logger.Printf("- %s\n", release.DownloadString())
 		}
 
 		l.logger.Printf("Are you sure you want to delete these files? [yN]")
@@ -78,29 +79,39 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 	return nil
 }
 
-func (l LocalReleaseDirectory) DeleteReleases(releasesToDelete CompiledReleaseSet) error {
-	for release, path := range releasesToDelete {
-		err := os.Remove(path)
+func (l LocalReleaseDirectory) DeleteReleases(releasesToDelete ReleaseSet) error {
+	for releaseID, release := range releasesToDelete {
+		err := os.Remove(release.DownloadString())
 
 		if err != nil {
-			l.logger.Printf("error removing release %s: %v\n", release.Name, err)
-			return fmt.Errorf("failed to delete release %s", release.Name)
+			l.logger.Printf("error removing release %s: %v\n", releaseID.Name, err)
+			return fmt.Errorf("failed to delete release %s", releaseID.Name)
 		}
 
-		l.logger.Printf("removed release %s\n", release.Name)
+		l.logger.Printf("removed release %s\n", releaseID.Name)
 	}
 
 	return nil
 }
 
-func ConvertToLocalBasename(compiledRelease CompiledRelease) string {
-	if compiledRelease.IsBuiltRelease() {
-		return fmt.Sprintf("%s-%s.tgz", compiledRelease.Name, compiledRelease.Version)
+//func ConvertToLocalBasename(compiledRelease CompiledRelease) string {
+//	if compiledRelease.IsBuiltRelease() {
+//		return fmt.Sprintf("%s-%s.tgz", compiledRelease.Name, compiledRelease.Version)
+//	}
+//	return fmt.Sprintf("%s-%s-%s-%s.tgz", compiledRelease.Name, compiledRelease.Version, compiledRelease.StemcellOS, compiledRelease.StemcellVersion)
+//}
+
+func ConvertToLocalBasename(release ReleaseInfoDownloader) string {
+	cr, ok := release.(CompiledRelease)
+	if !ok {
+		br := release.(BuiltRelease)
+		return fmt.Sprintf("%s-%s.tgz", br.ID.Name, br.ID.Version)
+	} else {
+		return fmt.Sprintf("%s-%s-%s-%s.tgz", cr.ID.Name, cr.ID.Version, cr.StemcellOS, cr.StemcellVersion)
 	}
-	return fmt.Sprintf("%s-%s-%s-%s.tgz", compiledRelease.Name, compiledRelease.Version, compiledRelease.StemcellOS, compiledRelease.StemcellVersion)
 }
 
-func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedReleaseSet CompiledReleaseSet, assetsLock cargo.AssetsLock) error {
+func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedReleaseSet ReleaseSet, assetsLock cargo.AssetsLock) error {
 	if len(downloadedReleaseSet) == 0 {
 		return nil
 	}
@@ -109,25 +120,27 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 
 	var badReleases []string
 
-	for release, _ := range downloadedReleaseSet {
-		expectedSum, found := findExpectedSum(release, assetsLock.Releases)
+	for releaseID, release := range downloadedReleaseSet {
+		expectedSum, found := findExpectedSum(releaseID, assetsLock.Releases)
 
 		if !found {
-			return fmt.Errorf("release %s is not in assets file", release.Name)
+			return fmt.Errorf("release %s is not in assets file", releaseID.Name)
 		}
 		if expectedSum == "" {
 			continue
 		}
 
-		compiledLocalBasename := ConvertToLocalBasename(release)
-		completeLocalPath := filepath.Join(releasesDir, compiledLocalBasename)
-		if _, err := os.Stat(completeLocalPath); os.IsNotExist(err) {
-			builtLocalBasename := ConvertToLocalBasename(CompiledRelease{
-				Name:    release.Name,
-				Version: release.Version,
-			})
-			completeLocalPath = filepath.Join(releasesDir, builtLocalBasename)
-		}
+		LocalBasename := ConvertToLocalBasename(release)
+
+		completeLocalPath := filepath.Join(releasesDir, LocalBasename)
+
+		//if _, err := os.Stat(completeLocalPath); os.IsNotExist(err) {
+		//	builtLocalBasename := ConvertToLocalBasename(CompiledRelease{
+		//		Name:    release.Name,
+		//		Version: release.Version,
+		//	})
+		//	completeLocalPath = filepath.Join(releasesDir, builtLocalBasename)
+		//}
 
 		sum, err := calculateSum(completeLocalPath)
 		if err != nil {
@@ -135,7 +148,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 		}
 
 		if expectedSum != sum {
-			l.DeleteReleases(CompiledReleaseSet{release: completeLocalPath})
+			l.DeleteReleases(ReleaseSet{releaseID: release})
 			badReleases = append(badReleases, fmt.Sprintf("%+v", completeLocalPath))
 		}
 	}
@@ -147,7 +160,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 	return nil
 }
 
-func findExpectedSum(release CompiledRelease, desiredReleases []cargo.Release) (string, bool) {
+func findExpectedSum(release ReleaseID, desiredReleases []cargo.Release) (string, bool) {
 	for _, r := range desiredReleases {
 		if r.Name == release.Name {
 			return r.SHA1, true

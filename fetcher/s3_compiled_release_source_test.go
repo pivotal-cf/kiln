@@ -31,17 +31,23 @@ func verifySetsConcurrency(opts []func(*s3manager.Downloader), concurrency int) 
 	Expect(downloader.Concurrency).To(Equal(concurrency))
 }
 
-var _ = Describe("GetMatchedReleases from S3", func() {
+var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 	var (
 		releaseSource     fetcher.S3ReleaseSource
 		fakeS3Client      *fakes.S3ObjectLister
-		desiredReleaseSet fetcher.CompiledReleaseSet
+		desiredReleaseSet fetcher.ReleaseSet
 		bpmKey            string
 	)
 
 	BeforeEach(func() {
-		desiredReleaseSet = fetcher.CompiledReleaseSet{
-			{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}: "",
+		bpmReleaseID := fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}
+		desiredReleaseSet = fetcher.ReleaseSet{
+			bpmReleaseID: fetcher.CompiledRelease{
+				ID:              bpmReleaseID,
+				StemcellOS:      "ubuntu-xenial",
+				StemcellVersion: "190.0.0",
+				Path:            "",
+			},
 		}
 
 		fakeS3Client = new(fakes.S3ObjectLister)
@@ -81,7 +87,7 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 		Expect(input.Bucket).To(Equal(aws.String("some-bucket")))
 
 		Expect(matchedS3Objects).To(HaveLen(1))
-		Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+		Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0", Path: bpmKey}))
 	})
 
 	Context("if any objects in S3 do not match a release specified in assets.lock", func() {
@@ -108,7 +114,7 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+			Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0", Path: bpmKey}))
 		})
 	})
 
@@ -136,17 +142,17 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+			Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0", Path: bpmKey}))
 		})
 	})
 })
 
-var _ = Describe("S3ReleaseSource DownloadReleases", func() {
+var _ = Describe("S3ReleaseSource DownloadReleases from compiled source", func() {
 	var (
 		logger           *log.Logger
 		releaseSource    commands.ReleaseSource
 		releaseDir       string
-		matchedS3Objects map[fetcher.CompiledRelease]string
+		matchedS3Objects map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader
 		fakeS3Downloader *fakes.S3Downloader
 	)
 
@@ -156,9 +162,9 @@ var _ = Describe("S3ReleaseSource DownloadReleases", func() {
 		releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		matchedS3Objects = make(map[fetcher.CompiledRelease]string)
-		matchedS3Objects[fetcher.CompiledRelease{Name: "uaa", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "1234"}] = "some-uaa-key"
-		matchedS3Objects[fetcher.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "1234"}] = "some-bpm-key"
+		matchedS3Objects = make(map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader)
+		matchedS3Objects[fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}] = fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}, StemcellOS: "ubuntu-trusty", StemcellVersion: "1234", Path: "some-uaa-key"}
+		matchedS3Objects[fetcher.ReleaseID{Name: "bpm", Version: "1.2.3"}] = fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3"}, StemcellOS: "ubuntu-trusty", StemcellVersion: "1234", Path: "some-bpm-key"}
 
 		logger = log.New(GinkgoWriter, "", 0)
 		fakeS3Downloader = new(fakes.S3Downloader)
