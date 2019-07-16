@@ -5,13 +5,6 @@ import (
 	"regexp"
 )
 
-const (
-	ReleaseName     = "release_name"
-	ReleaseVersion  = "release_version"
-	StemcellOS      = "stemcell_os"
-	StemcellVersion = "stemcell_version"
-)
-
 type ReleasesRegexp struct {
 	r *regexp.Regexp
 }

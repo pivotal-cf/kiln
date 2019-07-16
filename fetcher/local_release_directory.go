@@ -8,11 +8,24 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/cargo"
+)
+
+type stringError string
+
+func (str stringError) Error() string { return string(str) }
+
+type multipleErrors []error
+
+func (errs multipleErrors) Error() string { return strconv.Itoa(len(errs)) + " errors" }
+
+const (
+	ErrReleaseTypeNotSupported = stringError("release type not supported")
 )
 
 type LocalReleaseDirectory struct {
@@ -38,11 +51,22 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (ReleaseSet,
 	for _, release := range rawReleases {
 		releaseManifest := release.(builder.ReleaseManifest)
 		id := ReleaseID{Name: releaseManifest.Name, Version: releaseManifest.Version}
-		rel := CompiledRelease{
-			ID:              id,
-			StemcellOS:      releaseManifest.StemcellOS,
-			StemcellVersion: releaseManifest.StemcellVersion,
-			Path:            filepath.Join(releasesDir, releaseManifest.File),
+
+		var rel ReleaseInfoDownloader
+		// see implementation of ReleaseManifestReader.Read for why we can assume that
+		// stemcell metadata are empty strings
+		if releaseManifest.StemcellOS != "" && releaseManifest.StemcellVersion != "" {
+			rel = CompiledRelease{
+				ID:              id,
+				StemcellOS:      releaseManifest.StemcellOS,
+				StemcellVersion: releaseManifest.StemcellVersion,
+				Path:            filepath.Join(releasesDir, releaseManifest.File),
+			}
+		} else {
+			rel = BuiltRelease{
+				ID:   id,
+				Path: filepath.Join(releasesDir, releaseManifest.File),
+			}
 		}
 		outputReleases[id] = rel
 	}
@@ -94,20 +118,14 @@ func (l LocalReleaseDirectory) DeleteReleases(releasesToDelete ReleaseSet) error
 	return nil
 }
 
-//func ConvertToLocalBasename(compiledRelease CompiledRelease) string {
-//	if compiledRelease.IsBuiltRelease() {
-//		return fmt.Sprintf("%s-%s.tgz", compiledRelease.Name, compiledRelease.Version)
-//	}
-//	return fmt.Sprintf("%s-%s-%s-%s.tgz", compiledRelease.Name, compiledRelease.Version, compiledRelease.StemcellOS, compiledRelease.StemcellVersion)
-//}
-
-func ConvertToLocalBasename(release ReleaseInfoDownloader) string {
-	cr, ok := release.(CompiledRelease)
-	if !ok {
-		br := release.(BuiltRelease)
-		return fmt.Sprintf("%s-%s.tgz", br.ID.Name, br.ID.Version)
-	} else {
-		return fmt.Sprintf("%s-%s-%s-%s.tgz", cr.ID.Name, cr.ID.Version, cr.StemcellOS, cr.StemcellVersion)
+func ConvertToLocalBasename(release ReleaseInfoDownloader) (string, error) {
+	switch rel := release.(type) {
+	case CompiledRelease:
+		return fmt.Sprintf("%s-%s-%s-%s.tgz", rel.ID.Name, rel.ID.Version, rel.StemcellOS, rel.StemcellVersion), nil
+	case BuiltRelease:
+		return fmt.Sprintf("%s-%s.tgz", rel.ID.Name, rel.ID.Version), nil
+	default:
+		return "", ErrReleaseTypeNotSupported
 	}
 }
 
@@ -120,6 +138,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 
 	var badReleases []string
 
+	var errs []error
 	for releaseID, release := range downloadedReleaseSet {
 		expectedSum, found := findExpectedSum(releaseID, assetsLock.Releases)
 
@@ -130,17 +149,13 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 			continue
 		}
 
-		LocalBasename := ConvertToLocalBasename(release)
+		localBasename, err := ConvertToLocalBasename(release)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
 
-		completeLocalPath := filepath.Join(releasesDir, LocalBasename)
-
-		//if _, err := os.Stat(completeLocalPath); os.IsNotExist(err) {
-		//	builtLocalBasename := ConvertToLocalBasename(CompiledRelease{
-		//		Name:    release.Name,
-		//		Version: release.Version,
-		//	})
-		//	completeLocalPath = filepath.Join(releasesDir, builtLocalBasename)
-		//}
+		completeLocalPath := filepath.Join(releasesDir, localBasename)
 
 		sum, err := calculateSum(completeLocalPath)
 		if err != nil {
@@ -151,6 +166,10 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 			l.DeleteReleases(ReleaseSet{releaseID: release})
 			badReleases = append(badReleases, fmt.Sprintf("%+v", completeLocalPath))
 		}
+	}
+
+	if len(errs) > 0 {
+		return multipleErrors(errs)
 	}
 
 	if len(badReleases) != 0 {

@@ -205,7 +205,7 @@ var _ = Describe("S3ReleaseSource DownloadReleases from compiled source", func()
 
 	Context("when the matchedS3Objects argument is empty", func() {
 		It("does not download anything from S3", func() {
-			err := releaseSource.DownloadReleases(releaseDir, map[fetcher.CompiledRelease]string{}, 0)
+			err := releaseSource.DownloadReleases(releaseDir, fetcher.ReleaseSet{}, 0)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(0))
 		})

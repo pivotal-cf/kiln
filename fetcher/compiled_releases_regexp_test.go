@@ -19,7 +19,7 @@ var _ = Describe("ReleasesRegexp", func() {
 
 		compiledRelease, err = regex.Convert("2.5/uaa/uaa-1.2.3-ubuntu-trusty-123.tgz")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(compiledRelease).To(Equal(fetcher.CompiledRelease{Name: "uaa", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "123"}))
+		Expect(compiledRelease).To(Equal(fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}, StemcellOS: "ubuntu-trusty", StemcellVersion: "123"}))
 	})
 
 	It("returns an error if s3 key does not match the regex", func() {
@@ -42,7 +42,7 @@ var _ = Describe("ReleasesRegexp", func() {
 		Expect(err).ToNot(HaveOccurred())
 		compiledRelease, err = regex.Convert("2.5/uaa/uaa-1.2.3.tgz")
 		Expect(compiledRelease.IsBuiltRelease()).To(BeTrue())
-		Expect(compiledRelease.Name).To(Equal("uaa"))
-		Expect(compiledRelease.Version).To(Equal("1.2.3"))
+		Expect(compiledRelease.ID.Name).To(Equal("uaa"))
+		Expect(compiledRelease.ID.Version).To(Equal("1.2.3"))
 	})
 })

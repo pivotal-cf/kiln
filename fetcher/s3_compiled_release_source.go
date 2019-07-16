@@ -4,18 +4,35 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
+const (
+	ReleaseName     = "release_name"
+	ReleaseVersion  = "release_version"
+	StemcellOS      = "stemcell_os"
+	StemcellVersion = "stemcell_version"
+)
+
 func (r S3ReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet) (ReleaseSet, error) {
 	matchedS3Objects := make(ReleaseSet)
 
-	regex, err := NewReleasesRegexp(r.Regex)
+	exp, err := regexp.Compile(r.Regex)
 	if err != nil {
 		return nil, err
+	}
+	var count int
+	for _, name := range exp.SubexpNames() {
+		if name == ReleaseName || name == ReleaseVersion || name == StemcellOS || name == StemcellVersion {
+			count++
+		}
+	}
+	if count != 4 {
+		return nil, fmt.Errorf("Missing some capture group. Required capture groups: %s, %s, %s, %s", ReleaseName, ReleaseVersion, StemcellOS, StemcellVersion)
 	}
 
 	err = r.S3Client.ListObjectsPages(
@@ -28,7 +45,7 @@ func (r S3ReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet) (Relea
 					continue
 				}
 
-				compiledRelease, err := regex.Convert(*s3Object.Key)
+				compiledRelease, err := createCompiledReleaseFromS3Key(exp, *s3Object.Key)
 				if err != nil {
 					continue
 				}
@@ -59,8 +76,31 @@ func (r S3ReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet) (Relea
 	return matchingReleases, nil
 }
 
-func (r S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects ReleaseSet,
-	downloadThreads int) error {
+func createCompiledReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (CompiledRelease, error) {
+	if !exp.MatchString(s3Key) {
+		return CompiledRelease{}, fmt.Errorf("s3 key does not match regex")
+	}
+
+	matches := exp.FindStringSubmatch(s3Key)
+	subgroup := make(map[string]string)
+	for i, name := range exp.SubexpNames() {
+		if i != 0 && name != "" {
+			subgroup[name] = matches[i]
+		}
+	}
+
+	return CompiledRelease{
+		ID: ReleaseID{
+			Name:    subgroup[ReleaseName],
+			Version: subgroup[ReleaseVersion],
+		},
+		StemcellOS:      subgroup[StemcellOS],
+		StemcellVersion: subgroup[StemcellVersion],
+		Path:            "",
+	}, nil
+}
+
+func (r S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects ReleaseSet, downloadThreads int) error {
 	r.Logger.Printf("downloading %d objects from s3...", len(matchedS3Objects))
 	setConcurrency := func(dl *s3manager.Downloader) {
 		if downloadThreads > 0 {
@@ -70,10 +110,13 @@ func (r S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects Re
 		}
 	}
 
+	var errs []error
 	for _, release := range matchedS3Objects {
-		//Type switch? on release
-		compiledRelease := release.(CompiledRelease)
-		outputFile := ConvertToLocalBasename(compiledRelease)
+		outputFile, err := ConvertToLocalBasename(release)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
 
 		file, err := os.Create(filepath.Join(releaseDir, outputFile))
 		if err != nil {
@@ -90,6 +133,8 @@ func (r S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects Re
 			return fmt.Errorf("failed to download file, %v\n", err)
 		}
 	}
-
+	if len(errs) > 0 {
+		return multipleErrors(errs)
+	}
 	return nil
 }

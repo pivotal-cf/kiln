@@ -33,17 +33,6 @@ func (cr CompiledRelease) DownloadString() string {
 
 type ReleaseSet map[ReleaseID]ReleaseInfoDownloader
 
-//func init() {
-//	all_the_releases := make(ReleaseSet)
-//
-//	compiled_release := CompiledRelease{ID: ReleaseID{"foo", "0.1.0"}, StemcellOS: "plan9", StemcellVersion: "0.0.1", Path: "/bla"}
-//
-//	built_release := BuiltRelease{ID: ReleaseID{"poo", "1.1.0"}, Path: "/paa"}
-//
-//	all_the_releases[compiled_release.ID] = compiled_release
-//	all_the_releases[built_release.ID] = built_release
-//}
-
 func newCompiledRelease(release cargo.Release, stemcell cargo.Stemcell) CompiledRelease {
 	return CompiledRelease{
 		ID: ReleaseID{
@@ -64,25 +53,6 @@ func NewReleaseSet(assetsLock cargo.AssetsLock) ReleaseSet {
 		set[compiledRelease.ID] = compiledRelease
 	}
 	return set
-}
-
-func (set ReleaseSet) Contains(releaseID ReleaseID) (ReleaseID, bool) {
-	_, ok := set[releaseID]
-	if ok {
-		return releaseID, ok
-	} else {
-		return ReleaseID{}, ok
-	}
-
-	//	if release.IsBuiltRelease() {
-	//		for key := range set {
-	//			if release.Name == key.Name && release.Version == key.Version {
-	//				return key, true
-	//			}
-	//		}
-	//	}
-	//	return CompiledRelease{}, ok
-	//}
 }
 
 func (rel CompiledRelease) IsBuiltRelease() bool {
@@ -108,8 +78,7 @@ func (crs ReleaseSet) With(toAdd ReleaseSet) ReleaseSet {
 func (crs ReleaseSet) Without(other ReleaseSet) ReleaseSet {
 	result := crs.copy()
 	for releaseID := range result {
-		releaseID, ok := other.Contains(releaseID)
-		if ok {
+		if _, ok := other[releaseID]; ok {
 			delete(result, releaseID)
 		}
 	}
@@ -121,9 +90,8 @@ func (source ReleaseSet) TransferElements(toAdd, dest ReleaseSet) (ReleaseSet, R
 	des := dest.copy()
 
 	for releaseID, release := range toAdd {
-		match, ok := sor.Contains(releaseID)
-		if ok {
-			delete(sor, match)
+		if _, ok := sor[releaseID]; ok {
+			delete(sor, releaseID)
 			des[releaseID] = release
 		}
 	}

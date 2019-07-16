@@ -69,9 +69,9 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(foundReleases).To(HaveLen(2))
 			Expect(foundReleases).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"},
-				fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"}, Path: uaaURL}))
+				fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"}, Path: uaaURL}))
 			Expect(foundReleases).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"},
-				fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, Path: cfRabbitURL}))
+				fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, Path: cfRabbitURL}))
 		})
 	})
 

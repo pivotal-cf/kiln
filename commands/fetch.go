@@ -17,11 +17,26 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type stringError string
+
+func (str stringError) Error() string {
+	return string(str)
+}
+
+type ErrorMissingReleases []string
+
+func (releases ErrorMissingReleases) Error() string {
+	return fmt.Sprintf("Could not find an exact match for these releases in any of the release sources we checked:\n%s", strings.Join(releases, "\n"))
+}
+
 const (
 	ReleaseName     = "release_name"
 	ReleaseVersion  = "release_version"
 	StemcellOS      = "stemcell_os"
 	StemcellVersion = "stemcell_version"
+
+	ErrReleaseStemcellOSDoesNotMatchExpectedStemcell      = stringError("local release stemcell os does not match expected stemcell in assets lock")
+	ErrReleaseStemcellVersionDoesNotMatchExpectedStemcell = stringError("local release stemcell version does not match expected stemcell in assets lock")
 )
 
 type Fetch struct {
@@ -111,17 +126,19 @@ func (f Fetch) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	existingReleaseSet := f.ensureStemcellFieldsSet(availableLocalReleaseSet, assetsLock.Stemcell)
+	if err := f.verifyCompiledReleaseStemcell(availableLocalReleaseSet, assetsLock.Stemcell); err != nil {
+		return err
+	}
 	desiredReleaseSet := fetcher.NewReleaseSet(assetsLock)
-	extraReleaseSet := existingReleaseSet.Without(desiredReleaseSet)
+	extraReleaseSet := availableLocalReleaseSet.Without(desiredReleaseSet)
 
 	err = f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleaseSet, f.Options.NoConfirm)
 	if err != nil {
 		f.logger.Println("failed deleting some releases: ", err.Error())
 	}
 
-	satisfiedReleaseSet := existingReleaseSet.Without(extraReleaseSet)
-	unsatisfiedReleaseSet := desiredReleaseSet.Without(existingReleaseSet)
+	satisfiedReleaseSet := availableLocalReleaseSet.Without(extraReleaseSet)
+	unsatisfiedReleaseSet := desiredReleaseSet.Without(availableLocalReleaseSet)
 
 	if len(unsatisfiedReleaseSet) > 0 {
 		f.logger.Printf("Found %d missing releases to download", len(unsatisfiedReleaseSet))
@@ -142,7 +159,7 @@ func (f Fetch) Execute(args []string) error {
 			)
 
 		}
-		return fmt.Errorf("Could not find an exact match for these releases in any of the release sources we checked:\n%s", strings.Join(formattedMissingReleases, "\n"))
+		return ErrorMissingReleases(formattedMissingReleases)
 	}
 
 	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, assetsLock)
@@ -167,19 +184,18 @@ func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet,
 	return satisfiedReleaseSet, unsatisfiedReleaseSet, nil
 }
 
-func (f Fetch) ensureStemcellFieldsSet(localReleases fetcher.ReleaseSet, stemcell cargo.Stemcell) fetcher.ReleaseSet {
-	hydratedLocalReleases := make(fetcher.ReleaseSet)
-
-	for localRelease, path := range localReleases {
-		if localRelease.StemcellOS == "" {
-			localRelease.StemcellOS = stemcell.OS
-			localRelease.StemcellVersion = stemcell.Version
+func (f Fetch) verifyCompiledReleaseStemcell(localReleases fetcher.ReleaseSet, stemcell cargo.Stemcell) error {
+	for _, release := range localReleases {
+		if rel, ok := release.(fetcher.CompiledRelease); ok {
+			if rel.StemcellOS != stemcell.OS {
+				return ErrReleaseStemcellOSDoesNotMatchExpectedStemcell
+			}
+			if rel.StemcellOS != stemcell.OS {
+				return ErrReleaseStemcellVersionDoesNotMatchExpectedStemcell
+			}
 		}
-
-		hydratedLocalReleases[localRelease] = path
 	}
-
-	return hydratedLocalReleases
+	return nil
 }
 
 func (f Fetch) Usage() jhanda.Usage {
