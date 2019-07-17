@@ -18,7 +18,9 @@ const (
 	StemcellVersion = "stemcell_version"
 )
 
-func (r S3ReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet) (ReleaseSet, error) {
+type S3CompiledReleaseSource S3ReleaseSource
+
+func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet) (ReleaseSet, error) {
 	matchedS3Objects := make(ReleaseSet)
 
 	exp, err := regexp.Compile(r.Regex)
@@ -35,7 +37,7 @@ func (r S3ReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet) (Relea
 		return nil, fmt.Errorf("Missing some capture group. Required capture groups: %s, %s, %s, %s", ReleaseName, ReleaseVersion, StemcellOS, StemcellVersion)
 	}
 
-	err = r.S3Client.ListObjectsPages(
+	if err := r.S3Client.ListObjectsPages(
 		&s3.ListObjectsInput{
 			Bucket: aws.String(r.Bucket),
 		},
@@ -59,49 +61,22 @@ func (r S3ReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet) (Relea
 			}
 			return true
 		},
-	)
-	if err != nil {
+	); err != nil {
 		return nil, err
 	}
 
 	matchingReleases := make(ReleaseSet, 0)
-	for expectedRelease := range desiredReleaseSet {
-		s3Key, ok := matchedS3Objects[expectedRelease]
-
-		if ok {
-			matchingReleases[expectedRelease] = s3Key
+	for expectedReleaseID := range desiredReleaseSet {
+		if rel, ok := matchedS3Objects[expectedReleaseID]; ok {
+			matchingReleases[expectedReleaseID] = rel
 		}
 	}
 
 	return matchingReleases, nil
 }
 
-func createCompiledReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (CompiledRelease, error) {
-	if !exp.MatchString(s3Key) {
-		return CompiledRelease{}, fmt.Errorf("s3 key does not match regex")
-	}
-
-	matches := exp.FindStringSubmatch(s3Key)
-	subgroup := make(map[string]string)
-	for i, name := range exp.SubexpNames() {
-		if i != 0 && name != "" {
-			subgroup[name] = matches[i]
-		}
-	}
-
-	return CompiledRelease{
-		ID: ReleaseID{
-			Name:    subgroup[ReleaseName],
-			Version: subgroup[ReleaseVersion],
-		},
-		StemcellOS:      subgroup[StemcellOS],
-		StemcellVersion: subgroup[StemcellVersion],
-		Path:            "",
-	}, nil
-}
-
-func (r S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects ReleaseSet, downloadThreads int) error {
-	r.Logger.Printf("downloading %d objects from s3...", len(matchedS3Objects))
+func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects ReleaseSet, downloadThreads int) error {
+	r.Logger.Printf("downloading %d objects from compiled s3...", len(matchedS3Objects))
 	setConcurrency := func(dl *s3manager.Downloader) {
 		if downloadThreads > 0 {
 			dl.Concurrency = downloadThreads
@@ -137,4 +112,28 @@ func (r S3ReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects Re
 		return multipleErrors(errs)
 	}
 	return nil
+}
+
+func createCompiledReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (CompiledRelease, error) {
+	if !exp.MatchString(s3Key) {
+		return CompiledRelease{}, fmt.Errorf("s3 key does not match regex")
+	}
+
+	matches := exp.FindStringSubmatch(s3Key)
+	subgroup := make(map[string]string)
+	for i, name := range exp.SubexpNames() {
+		if i != 0 && name != "" {
+			subgroup[name] = matches[i]
+		}
+	}
+
+	return CompiledRelease{
+		ID: ReleaseID{
+			Name:    subgroup[ReleaseName],
+			Version: subgroup[ReleaseVersion],
+		},
+		StemcellOS:      subgroup[StemcellOS],
+		StemcellVersion: subgroup[StemcellVersion],
+		Path:            "",
+	}, nil
 }

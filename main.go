@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"log"
 	"os"
+
+	"github.com/pivotal-cf/kiln/internal/cargo"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
@@ -87,22 +88,26 @@ func main() {
 	metadataService := baking.NewMetadataService()
 	checksummer := baking.NewChecksummer(errLogger)
 
-
 	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(outLogger, releasesService)
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
+
 	releaseSourcesFactory := func(assets cargo.Assets) []commands.ReleaseSource {
-		compiledReleaseSource := &fetcher.S3ReleaseSource{Logger: outLogger}
+		compiledReleaseSource := fetcher.S3ReleaseSource{Logger: outLogger}
 		compiledReleaseSource.Configure(assets.CompiledReleases)
 
 		boshIoReleaseSource := fetcher.NewBOSHIOReleaseSource(outLogger, "")
 
-		privateBoshIOReleaseSource := &fetcher.S3ReleaseSource{Logger: outLogger}
-		privateBoshIOReleaseSource.Configure(assets.UncompiledReleases)
+		builtReleaseSource := fetcher.S3ReleaseSource{Logger: outLogger}
+		builtReleaseSource.Configure(assets.UncompiledReleases)
 
-		return []commands.ReleaseSource{compiledReleaseSource, boshIoReleaseSource, privateBoshIOReleaseSource}
+		return []commands.ReleaseSource{
+			fetcher.S3CompiledReleaseSource(compiledReleaseSource),
+			boshIoReleaseSource,
+			fetcher.S3BuiltReleaseSource(builtReleaseSource),
+		}
 	}
 
 	commandSet["fetch"] = commands.NewFetch(outLogger, releaseSourcesFactory, localReleaseDirectory)

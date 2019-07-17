@@ -14,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/fetcher/fakes"
 )
@@ -33,7 +32,7 @@ func verifySetsConcurrency(opts []func(*s3manager.Downloader), concurrency int) 
 
 var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 	var (
-		releaseSource     fetcher.S3ReleaseSource
+		releaseSource     fetcher.S3CompiledReleaseSource
 		fakeS3Client      *fakes.S3ObjectLister
 		desiredReleaseSet fetcher.ReleaseSet
 		bpmKey            string
@@ -71,7 +70,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 		logger := log.New(nil, "", 0)
 
-		releaseSource = fetcher.S3ReleaseSource{
+		releaseSource = fetcher.S3CompiledReleaseSource{
 			Logger:   logger,
 			S3Client: fakeS3Client,
 			Regex:    `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+(-\w+(\.[0-9]+)?)?)(?:-(?P<stemcell_os>[a-z-_]+))?(?:-(?P<stemcell_version>[\d\.]+))?\.tgz$`,
@@ -145,12 +144,29 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 			Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0", Path: bpmKey}))
 		})
 	})
+
+	When("the regular expression is missing a capture group", func() {
+		BeforeEach(func() {
+			releaseSource = fetcher.S3CompiledReleaseSource{
+				Logger:   log.New(nil, "", 0),
+				S3Client: fakeS3Client,
+				Regex:    `^2.5/.+/([a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
+				Bucket:   "some-bucket",
+			}
+		})
+
+		It("returns an error if a required capture is missing", func() {
+			_, err := releaseSource.GetMatchedReleases(nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring("Missing some capture group")))
+		})
+	})
 })
 
-var _ = Describe("S3ReleaseSource DownloadReleases from compiled source", func() {
+var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source", func() {
 	var (
 		logger           *log.Logger
-		releaseSource    commands.ReleaseSource
+		releaseSource    fetcher.S3CompiledReleaseSource
 		releaseDir       string
 		matchedS3Objects map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader
 		fakeS3Downloader *fakes.S3Downloader
@@ -173,7 +189,7 @@ var _ = Describe("S3ReleaseSource DownloadReleases from compiled source", func()
 			n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 			return int64(n), err
 		}
-		releaseSource = &fetcher.S3ReleaseSource{
+		releaseSource = fetcher.S3CompiledReleaseSource{
 			Logger:       logger,
 			S3Downloader: fakeS3Downloader,
 			Bucket:       "some-bucket",
