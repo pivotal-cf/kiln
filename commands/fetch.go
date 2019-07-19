@@ -17,27 +17,44 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type multipleError []error
+
+func (errs multipleError) Error() string {
+	var strs []string
+	for _, err := range errs {
+		strs = append(strs, err.Error())
+	}
+	return strings.Join(strs, "; ")
+}
+
+type ConfigFileError struct {
+	HumanReadableConfigFileName string
+	err                         error
+}
+
+func (err ConfigFileError) Unwrap() error {
+	return err.err
+}
+
+func (err ConfigFileError) Error() string {
+	return fmt.Sprintf("encountered a configuration file error with %s: %s", err.HumanReadableConfigFileName, err.err.Error())
+}
+
 type stringError string
 
 func (str stringError) Error() string {
 	return string(str)
 }
 
-type ErrorMissingReleases []string
+type ErrorMissingReleases fetcher.ReleaseSet
 
 func (releases ErrorMissingReleases) Error() string {
-	return fmt.Sprintf("Could not find an exact match for these releases in any of the release sources we checked:\n%s", strings.Join(releases, "\n"))
+	var missing []string
+	for id, _ := range releases {
+		missing = append(missing, fmt.Sprintf("- %s (%s)", id.Name, id.Version))
+	}
+	return fmt.Sprintf("could not find the following releases\n%s", strings.Join(missing, "\n"))
 }
-
-const (
-	ReleaseName     = "release_name"
-	ReleaseVersion  = "release_version"
-	StemcellOS      = "stemcell_os"
-	StemcellVersion = "stemcell_version"
-
-	ErrReleaseStemcellOSDoesNotMatchExpectedStemcell      = stringError("local release stemcell os does not match expected stemcell in assets lock")
-	ErrReleaseStemcellVersionDoesNotMatchExpectedStemcell = stringError("local release stemcell version does not match expected stemcell in assets lock")
-)
 
 type Fetch struct {
 	logger *log.Logger
@@ -98,19 +115,20 @@ func (f Fetch) Execute(args []string) error {
 		Variables: templateVariables,
 	}, assetsYAML)
 	if err != nil {
-		return err
+		return ConfigFileError{err: err, HumanReadableConfigFileName: "interpolating variable files with assets file"}
 	}
 
-	f.logger.Println("getting release information from assets.yml")
+	f.logger.Println("getting release information from " + f.Options.AssetsFile)
 
 	var assets cargo.Assets
 	err = yaml.Unmarshal(interpolatedMetadata, &assets)
 	if err != nil {
-		return err
+		return ConfigFileError{err: err, HumanReadableConfigFileName: "assets specification " + f.Options.AssetsFile}
 	}
 
 	f.logger.Println("getting release information from assets.lock")
-	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, filepath.Ext(f.Options.AssetsFile))))
+	assetsLockFileName := fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, filepath.Ext(f.Options.AssetsFile)))
+	assetsLockFile, err := os.Open(assetsLockFileName)
 	if err != nil {
 		return err
 	}
@@ -119,7 +137,7 @@ func (f Fetch) Execute(args []string) error {
 	var assetsLock cargo.AssetsLock
 	err = yaml.NewDecoder(assetsLockFile).Decode(&assetsLock)
 	if err != nil {
-		return err
+		return ConfigFileError{err: err, HumanReadableConfigFileName: "assets lock " + assetsLockFileName}
 	}
 
 	availableLocalReleaseSet, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
@@ -150,16 +168,7 @@ func (f Fetch) Execute(args []string) error {
 	}
 
 	if len(unsatisfiedReleaseSet) > 0 {
-		formattedMissingReleases := make([]string, 0)
-
-		for missingRelease := range unsatisfiedReleaseSet {
-			formattedMissingReleases = append(
-				formattedMissingReleases,
-				fmt.Sprintf("%+v", missingRelease),
-			)
-
-		}
-		return ErrorMissingReleases(formattedMissingReleases)
+		return ErrorMissingReleases(unsatisfiedReleaseSet)
 	}
 
 	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, assetsLock)
@@ -185,17 +194,41 @@ func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet,
 }
 
 func (f Fetch) verifyCompiledReleaseStemcell(localReleases fetcher.ReleaseSet, stemcell cargo.Stemcell) error {
+	var errs []error
 	for _, release := range localReleases {
 		if rel, ok := release.(fetcher.CompiledRelease); ok {
-			if rel.StemcellOS != stemcell.OS {
-				return ErrReleaseStemcellOSDoesNotMatchExpectedStemcell
-			}
-			if rel.StemcellOS != stemcell.OS {
-				return ErrReleaseStemcellVersionDoesNotMatchExpectedStemcell
+			if rel.StemcellOS != stemcell.OS || rel.StemcellVersion != stemcell.Version {
+				errs = append(errs, IncorrectOSError{
+					ReleaseName:    rel.ID.Name,
+					ReleaseVersion: rel.ID.Version,
+					GotOS:          rel.StemcellOS,
+					GotOSVersion:   rel.StemcellVersion,
+					WantOS:         stemcell.OS,
+					WantOSVersion:  stemcell.Version,
+				})
 			}
 		}
 	}
+	if len(errs) != 0 {
+		return multipleError(errs)
+	}
 	return nil
+}
+
+type IncorrectOSError struct {
+	ReleaseName, ReleaseVersion string
+	WantOS, GotOS               string
+	WantOSVersion, GotOSVersion string
+}
+
+func (err IncorrectOSError) Error() string {
+	return fmt.Sprintf(
+		"expected release %s-%s to have been compiled with %s %s but was compiled with %s %s",
+		err.ReleaseName,
+		err.ReleaseVersion,
+		err.WantOS, err.WantOSVersion,
+		err.GotOS, err.GotOSVersion,
+	)
 }
 
 func (f Fetch) Usage() jhanda.Usage {

@@ -8,6 +8,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pivotal-cf/kiln/internal/cargo"
+	"gopkg.in/yaml.v2"
+
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/fetcher"
 
@@ -15,30 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"gopkg.in/yaml.v2"
 )
-
-const MinimalAssetsYMLContents = `
----
-compiled_releases:
-  type: s3
-  bucket: compiled-releases
-  region: us-west-1
-  access_key_id: mykey
-  secret_access_key: mysecret
-  regex: ^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)(?:-(?P<stemcell_os>[a-z-_]+))?(?:-(?P<stemcell_version>[\d\.]+))?\.tgz$
-`
-
-const MinimalAssetsLockContents = `
----
-releases:
-- name: some-release
-  version: "1.2.3"
-stemcell_criteria:
-  os: some-os
-  version: "4.5.6"
-`
 
 var _ = Describe("Fetch", func() {
 	var (
@@ -49,96 +29,211 @@ var _ = Describe("Fetch", func() {
 		someAssetsLockPath          string
 		assetsLockContents          string
 		someReleasesDirectory       string
-		err                         error
 		fakeS3CompiledReleaseSource *fakes.ReleaseSource
 		fakeBoshIOReleaseSource     *fakes.ReleaseSource
 		fakeS3BuiltReleaseSource    *fakes.ReleaseSource
 		fakeReleaseSources          []commands.ReleaseSource
 		fakeLocalReleaseDirectory   *fakes.LocalReleaseDirectory
+		releaseSourcesFactory       func(cargo.Assets) []commands.ReleaseSource
+
+		fetchExecuteArgs []string
+		fetchExecuteErr  error
 	)
 
-	BeforeEach(func() {
-		logger = log.New(GinkgoWriter, "", 0)
-
-		tmpDir, err = ioutil.TempDir("", "fetch-test")
-
-		someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
-		Expect(err).NotTo(HaveOccurred())
-
-		someAssetsFilePath = filepath.Join(tmpDir, "assets.yml")
-		err = ioutil.WriteFile(someAssetsFilePath, []byte(MinimalAssetsYMLContents), 0644)
-		Expect(err).NotTo(HaveOccurred())
-
-		someAssetsLockPath = filepath.Join(tmpDir, "assets.lock")
-		assetsLockContents = MinimalAssetsLockContents
-
-		fakeS3CompiledReleaseSource = new(fakes.ReleaseSource)
-		fakeBoshIOReleaseSource = new(fakes.ReleaseSource)
-		fakeS3BuiltReleaseSource = new(fakes.ReleaseSource)
-		fakeReleaseSources = []commands.ReleaseSource{fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource}
-		fakeS3CompiledReleaseSource.GetMatchedReleasesReturns(
-			fetcher.ReleaseSet{
-				fetcher.ReleaseID{Name: "some-release", Version: "1.2.3"}: fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "some-release", Version: "1.2.3"}, StemcellOS: "some-os", StemcellVersion: "4.5.6", Path: "some-s3-key"},
-			}, nil)
-
-		fakeLocalReleaseDirectory = new(fakes.LocalReleaseDirectory)
-		fakeLocalReleaseDirectory.GetLocalReleasesReturns(fetcher.ReleaseSet{}, nil)
-	})
-
-	AfterEach(func() {
-		Expect(os.RemoveAll(tmpDir)).To(Succeed())
-	})
-
 	Describe("Execute", func() {
-		JustBeforeEach(func() {
-			err := ioutil.WriteFile(someAssetsLockPath, []byte(assetsLockContents), 0644)
+		BeforeEach(func() {
+			logger = log.New(GinkgoWriter, "", 0)
+
+			var err error
+			tmpDir, err = ioutil.TempDir("", "fetch-test")
+
+			someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
 			Expect(err).NotTo(HaveOccurred())
-			releaseSourcesFactory := func(cargo.Assets) []commands.ReleaseSource { return fakeReleaseSources }
-			fetch = commands.NewFetch(logger, releaseSourcesFactory, fakeLocalReleaseDirectory)
+
+			someAssetsFilePath = filepath.Join(tmpDir, "assets.yml")
+			err = ioutil.WriteFile(someAssetsFilePath, []byte(""), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			someAssetsLockPath = filepath.Join(tmpDir, "assets.lock")
+			assetsLockContents = `
+---
+releases:
+- name: some-release
+  version: "1.2.3"
+stemcell_criteria:
+  os: some-os
+  version: "4.5.6"
+`
+
+			fakeLocalReleaseDirectory = new(fakes.LocalReleaseDirectory)
+
+			fakeS3CompiledReleaseSource = new(fakes.ReleaseSource)
+			fakeBoshIOReleaseSource = new(fakes.ReleaseSource)
+			fakeS3BuiltReleaseSource = new(fakes.ReleaseSource)
+
+			fetchExecuteArgs = []string{
+				"--releases-directory", someReleasesDirectory,
+				"--assets-file", someAssetsFilePath,
+			}
 		})
 
-		// no local releases, some releases found in `compiled-releases` S3 bucket
-		// no local releases, some releases found in bosh.io
-		// no local releases, remaining releases fetched in `uncompiled-releases` S3 bucket
-		Context("happy case", func() {
-			It("works", func() {
-				err := fetch.Execute([]string{
-					"--releases-directory", someReleasesDirectory,
-					"--assets-file", someAssetsFilePath,
-				})
-				Expect(err).NotTo(HaveOccurred())
+		AfterEach(func() {
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
+		})
 
-				Expect(fakeS3CompiledReleaseSource.GetMatchedReleasesCallCount()).To(Equal(1))
-				desiredReleaseSet := fakeS3CompiledReleaseSource.GetMatchedReleasesArgsForCall(0)
-				Expect(desiredReleaseSet).To(Equal(fetcher.ReleaseSet{
-					fetcher.ReleaseID{Name: "some-release", Version: "1.2.3"}: fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "some-release", Version: "1.2.3"}, StemcellOS: "some-os", StemcellVersion: "4.5.6", Path: ""}}))
+		JustBeforeEach(func() {
+			fakeReleaseSources = []commands.ReleaseSource{fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource}
+			releaseSourcesFactory = func(cargo.Assets) []commands.ReleaseSource { return fakeReleaseSources }
 
-				Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-				releasesDir, objects, threads := fakeS3CompiledReleaseSource.DownloadReleasesArgsForCall(0)
-				Expect(releasesDir).To(Equal(someReleasesDirectory))
-				Expect(threads).To(Equal(0))
-				Expect(objects).To(HaveKeyWithValue(fetcher.ReleaseID{
-					Name:    "some-release",
-					Version: "1.2.3",
-				}, fetcher.CompiledRelease{
-					ID: fetcher.ReleaseID{
-						Name:    "some-release",
-						Version: "1.2.3",
+			err := ioutil.WriteFile(someAssetsLockPath, []byte(assetsLockContents), 0644)
+			Expect(err).NotTo(HaveOccurred())
+			fetch = commands.NewFetch(logger, releaseSourcesFactory, fakeLocalReleaseDirectory)
+
+			fetchExecuteErr = fetch.Execute(fetchExecuteArgs)
+		})
+
+		// When a local compiled release exists
+		//  When the releases' stemcell is different from the stemcell criteria
+		//    It will return an error
+
+		When("a local compiled release exists", func() {
+			BeforeEach(func() {
+				releaseID := fetcher.ReleaseID{Name: "metastaticvariable", Version: "0.1.0"}
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(fetcher.ReleaseSet{
+					releaseID: fetcher.CompiledRelease{
+						ID:              releaseID,
+						StemcellOS:      "fooOS",
+						StemcellVersion: "0.2.0",
+						Path:            "releases/foo-0.1.0-fooOS-0.2.0.tgz",
 					},
-					StemcellOS:      "some-os",
-					StemcellVersion: "4.5.6",
-					Path:            "some-s3-key",
-				}))
+				}, nil)
+			})
+
+			When("the release was compiled with a different os", func() {
+				BeforeEach(func() {
+					assetsLockContents = `---
+stemcell_criteria:
+  os: barOS
+  version: "0.2.0"`
+				})
+
+				It("returns an error", func() {
+					Expect(fetchExecuteErr).To(MatchError(ContainSubstring("expected release metastaticvariable-0.1.0 to have been compiled with barOS 0.2.0 but was compiled with fooOS 0.2.0")))
+				})
+			})
+
+			When("the release was compiled with a different version of the same os", func() {
+				BeforeEach(func() {
+					assetsLockContents = `---
+stemcell_criteria:
+  os: fooOS
+  version: "0.3.0"`
+				})
+
+				It("returns an error", func() {
+					Expect(fetchExecuteErr).To(MatchError(ContainSubstring("expected release metastaticvariable-0.1.0 to have been compiled with fooOS 0.3.0 but was compiled with fooOS 0.2.0")))
+				})
 			})
 		})
 
-		Context("when one or more releases are not available on S3(compiled), bosh.io, nor S3(built)", func() {
+		Context("starting with no releases and some are found in each release source (happy path)", func() {
+			var (
+				s3CompiledReleaseID = fetcher.ReleaseID{Name: "lts-compiled-release", Version: "1.2.4"}
+				s3BuiltReleaseID    = fetcher.ReleaseID{Name: "lts-built-release", Version: "1.3.9"}
+				boshIOReleaseID     = fetcher.ReleaseID{Name: "boshio-release", Version: "1.4.16"}
+			)
+			BeforeEach(func() {
+				assetsLockContents = `---
+releases:
+- name: lts-compiled-release
+  version: "1.2.4"
+- name: lts-built-release
+  version: "1.3.9"
+- name: boshio-release
+  version: "1.4.16"
+stemcell_criteria:
+  os: some-os
+  version: "30.1"
+`
+				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns(
+					fetcher.ReleaseSet{
+						s3CompiledReleaseID: fetcher.CompiledRelease{ID: s3CompiledReleaseID, StemcellOS: "some-os", StemcellVersion: "30.1", Path: "some-s3-key"},
+					}, nil)
+
+				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns(
+					fetcher.ReleaseSet{
+						s3BuiltReleaseID: fetcher.BuiltRelease{ID: s3BuiltReleaseID, Path: "some-other-s3-key"},
+					}, nil)
+
+				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
+					fetcher.ReleaseSet{
+						boshIOReleaseID: fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"},
+					}, nil)
+
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(fetcher.ReleaseSet{}, nil)
+			})
+
+			It("completes successfully", func() {
+				Expect(fetchExecuteErr).NotTo(HaveOccurred())
+			})
+
+			It("fetches compiled release from s3 compiled release source", func() {
+				Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+
+				releasesDir, objects, threads := fakeS3CompiledReleaseSource.DownloadReleasesArgsForCall(0)
+				Expect(releasesDir).To(Equal(someReleasesDirectory))
+				Expect(threads).To(Equal(0))
+				Expect(objects).To(HaveKeyWithValue(
+					s3CompiledReleaseID,
+					fetcher.CompiledRelease{
+						ID:              s3CompiledReleaseID,
+						StemcellOS:      "some-os",
+						StemcellVersion: "30.1",
+						Path:            "some-s3-key",
+					}))
+			})
+
+			It("fetches built release from s3 built release source", func() {
+				Expect(fakeS3BuiltReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+				releasesDir, objects, threads := fakeS3BuiltReleaseSource.DownloadReleasesArgsForCall(0)
+				Expect(releasesDir).To(Equal(someReleasesDirectory))
+				Expect(threads).To(Equal(0))
+				Expect(objects).To(HaveKeyWithValue(
+					s3BuiltReleaseID,
+					fetcher.BuiltRelease{
+						ID:   s3BuiltReleaseID,
+						Path: "some-other-s3-key",
+					}))
+			})
+
+			It("fetches bosh.io release from bosh.io release source", func() {
+				Expect(fakeBoshIOReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+				releasesDir, objects, threads := fakeBoshIOReleaseSource.DownloadReleasesArgsForCall(0)
+				Expect(releasesDir).To(Equal(someReleasesDirectory))
+				Expect(threads).To(Equal(0))
+				Expect(objects).To(HaveKeyWithValue(
+					boshIOReleaseID,
+					fetcher.BuiltRelease{
+						ID:   boshIOReleaseID,
+						Path: "some-bosh-io-url",
+					}))
+			})
+		})
+
+		Context("when one or more releases are not available from release sources", func() {
 			BeforeEach(func() {
 				emptyReleaseSet := make(fetcher.ReleaseSet)
-
+				assetsLockContents = `---
+releases:
+- name: not-found-in-any-release-source
+  version: "0.0.1"
+stemcell_criteria:
+  os: some-os
+  version: "30.1"
+`
 				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns(emptyReleaseSet, nil)
+				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns(emptyReleaseSet, nil)
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(emptyReleaseSet, nil)
-				//fakeS3CompiledReleaseSource.GetMatchedReleasesReturns(emptyReleaseSet, nil)
 			})
 			It("reports an error", func() {
 				err := fetch.Execute([]string{
@@ -146,34 +241,29 @@ var _ = Describe("Fetch", func() {
 					"--assets-file", someAssetsFilePath,
 				})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(`Could not find an exact match for these releases in any of the release sources we checked`))
+				Expect(err.Error()).To(ContainSubstring(
+					"could not find the following releases\n- not-found-in-any-release-source (0.0.1)")) // Could not find an exact match for these releases in any of the release sources we checked
 			})
 		})
 
-		// no local releases, all releases found in `compiled-releases` S3 bucket
-		// no local releases, all releases found in bosh.io
-		// no local releases, all releases found in `uncompiled-releases` S3 bucket
-
-		// no local releases, some releases found in `compiled-releases` S3 bucket
-		// no local releases, remaining releases found in bosh.io
-		// no local releases, no releases fetched in `uncompiled-releases` S3 bucket
-
-		// some local releases, all releases found in `compiled-releases` S3 bucket
-		// some local releases, all releases found in bosh.io
-		// some local releases, all releases found in `uncompiled-releases` S3 bucket
-
-		// all local releases, no releases fetched from `compiled-releases` S3 bucket
-		// all local releases, no releases fetched from bosh.io
-		// all local releases, no releases fetched from `uncompiled-releases` S3 bucket
-
 		Context("when all releases are already present in output directory", func() {
 			BeforeEach(func() {
+				assetsLockContents = `---
+releases:
+- name: some-release-from-local-dir
+  version: "1.2.3"
+stemcell_criteria:
+  os: some-os
+  version: "4.5.6"
+`
+
+				someLocalReleaseID := fetcher.ReleaseID{
+					Name:    "some-release-from-local-dir",
+					Version: "1.2.3",
+				}
 				fakeLocalReleaseDirectory.GetLocalReleasesReturns(fetcher.ReleaseSet{
-					fetcher.ReleaseID{
-						Name:    "some-release",
-						Version: "1.2.3",
-					}: fetcher.CompiledRelease{
-						ID:              fetcher.ReleaseID{Name: "some-release", Version: "1.2.3"},
+					someLocalReleaseID: fetcher.CompiledRelease{
+						ID:              someLocalReleaseID,
 						StemcellOS:      "some-os",
 						StemcellVersion: "4.5.6",
 						Path:            "/path/to/some/release",
@@ -182,13 +272,10 @@ var _ = Describe("Fetch", func() {
 			})
 
 			It("no-ops", func() {
-				err := fetch.Execute([]string{
-					"--releases-directory", someReleasesDirectory,
-					"--assets-file", someAssetsFilePath,
-				})
-				Expect(err).NotTo(HaveOccurred())
+				Expect(fetchExecuteErr).NotTo(HaveOccurred())
 
 				Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(0))
+				Expect(fakeS3BuiltReleaseSource.DownloadReleasesCallCount()).To(Equal(0))
 				Expect(fakeBoshIOReleaseSource.DownloadReleasesCallCount()).To(Equal(0))
 			})
 		})
@@ -259,12 +346,7 @@ stemcell_criteria:
 			})
 
 			It("downloads only the missing releases", func() {
-				err := fetch.Execute([]string{
-					"--releases-directory", someReleasesDirectory,
-					"--assets-file", someAssetsFilePath,
-				})
-				Expect(err).NotTo(HaveOccurred())
-				//_ = err
+				Expect(fetchExecuteErr).NotTo(HaveOccurred())
 
 				Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
 				_, objects, _ := fakeS3CompiledReleaseSource.DownloadReleasesArgsForCall(0)
@@ -290,30 +372,52 @@ stemcell_criteria:
 				})
 
 				It("returns an error", func() {
-					err := fetch.Execute([]string{
-						"--releases-directory", someReleasesDirectory,
-						"--assets-file", someAssetsFilePath,
-					})
-					Expect(err).To(HaveOccurred())
+					Expect(fetchExecuteErr).To(HaveOccurred())
 				})
 			})
 		})
 
 		Context("when there are extra releases locally that are not in the assets.lock", func() {
+			var (
+				boshIOReleaseID = fetcher.ReleaseID{Name: "some-release", Version: "1.2.3"}
+				localReleaseID  = fetcher.ReleaseID{Name: "some-extra-release", Version: "1.2.3"}
+			)
 			BeforeEach(func() {
+
+				assetsLockContents = `---
+releases:
+- name: some-release
+  version: "1.2.3"
+stemcell_criteria:
+  os: some-os
+  version: "4.5.6"
+`
 				fakeLocalReleaseDirectory.GetLocalReleasesReturns(fetcher.ReleaseSet{
-					fetcher.ReleaseID{Name: "some-extra-release", Version: "1.2.3"}: fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "some-extra-release", Version: "1.2.3"}, StemcellOS: "some-os", StemcellVersion: "4.5.6", Path: "path/to/some/extra/release"},
+					localReleaseID: fetcher.CompiledRelease{
+						ID:              localReleaseID,
+						StemcellOS:      "some-os",
+						StemcellVersion: "4.5.6",
+						Path:            "path/to/some/extra/release",
+					},
 				}, nil)
+
+				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
+					fetcher.ReleaseSet{
+						boshIOReleaseID: fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"},
+					}, nil)
+
 			})
 
 			Context("in non-interactive mode", func() {
-				It("deletes the extra releases", func() {
-					err := fetch.Execute([]string{
+				BeforeEach(func() {
+					fetchExecuteArgs = []string{
 						"--releases-directory", someReleasesDirectory,
 						"--assets-file", someAssetsFilePath,
 						"--no-confirm",
-					})
-					Expect(err).NotTo(HaveOccurred())
+					}
+				})
+				It("deletes the extra releases", func() {
+					Expect(fetchExecuteErr).NotTo(HaveOccurred())
 
 					Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
 
@@ -340,7 +444,6 @@ stemcell_criteria:
 			})
 
 			Context("when multiple variable files are provided", func() {
-				var someVariableFile, otherVariableFile *os.File
 				const TemplatizedAssetsYMLContents = `
 ---
 compiled_releases:
@@ -351,6 +454,10 @@ compiled_releases:
   secret_access_key: $( variable "secret_key" )
   regex: $( variable "regex" )
 `
+
+				var (
+					someVariableFile, otherVariableFile *os.File
+				)
 
 				BeforeEach(func() {
 					var err error
@@ -387,17 +494,18 @@ compiled_releases:
 					n, err = otherVariableFile.Write(data)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(data).To(HaveLen(n))
-				})
 
-				It("interpolates variables from both files", func() {
-					err := fetch.Execute([]string{
+					fetchExecuteArgs = []string{
 						"--releases-directory", someReleasesDirectory,
 						"--assets-file", someAssetsFilePath,
 						"--variables-file", someVariableFile.Name(),
 						"--variables-file", otherVariableFile.Name(),
 						"--variable", "region=north-east-1",
-					})
-					Expect(err).NotTo(HaveOccurred())
+					}
+				})
+
+				It("interpolates variables from both files", func() {
+					Expect(fetchExecuteErr).NotTo(HaveOccurred())
 
 					Expect(fakeS3CompiledReleaseSource.GetMatchedReleasesCallCount()).To(Equal(1))
 					_ = fakeS3CompiledReleaseSource.GetMatchedReleasesArgsForCall(0)
@@ -405,13 +513,16 @@ compiled_releases:
 			})
 
 			Context("when # of download threads is specified", func() {
-				It("passes concurrency parameter to DownloadReleases", func() {
-					err := fetch.Execute([]string{
+				BeforeEach(func() {
+					fetchExecuteArgs = []string{
 						"--releases-directory", someReleasesDirectory,
 						"--assets-file", someAssetsFilePath,
 						"--download-threads", "10",
-					})
-					Expect(err).NotTo(HaveOccurred())
+					}
+				})
+
+				It("passes concurrency parameter to DownloadReleases", func() {
+					Expect(fetchExecuteErr).NotTo(HaveOccurred())
 					_, _, threads := fakeS3CompiledReleaseSource.DownloadReleasesArgsForCall(0)
 					Expect(threads).To(Equal(10))
 				})
