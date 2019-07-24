@@ -22,9 +22,9 @@ type multipleError []error
 func (errs multipleError) Error() string {
 	var strs []string
 	for _, err := range errs {
-		strs = append(strs, err.Error())
+		strs = append(strs, "- "+err.Error())
 	}
-	return strings.Join(strs, "; ")
+	return "\n" + strings.Join(strs, "\n")
 }
 
 type ConfigFileError struct {
