@@ -8,27 +8,8 @@ type ReleaseID struct {
 	Name, Version string
 }
 
-type BuiltRelease struct {
-	ID   ReleaseID
-	Path string
-}
-
-type CompiledRelease struct {
-	ID              ReleaseID
-	StemcellOS      string
-	StemcellVersion string
-	Path            string
-}
-
 type ReleaseInfoDownloader interface {
 	DownloadString() string
-}
-
-func (br BuiltRelease) DownloadString() string {
-	return br.Path
-}
-func (cr CompiledRelease) DownloadString() string {
-	return cr.Path
 }
 
 type ReleaseSet map[ReleaseID]ReleaseInfoDownloader
