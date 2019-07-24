@@ -95,19 +95,24 @@ func main() {
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 
 	releaseSourcesFactory := func(assets cargo.Assets) []commands.ReleaseSource {
-		compiledReleaseSource := fetcher.S3ReleaseSource{Logger: outLogger}
-		compiledReleaseSource.Configure(assets.CompiledReleases)
+		var releaseSources []commands.ReleaseSource
+
+		if assets.CompiledReleases.Bucket != "" {
+			compiledReleaseSource := fetcher.S3ReleaseSource{Logger: outLogger}
+			compiledReleaseSource.Configure(assets.CompiledReleases)
+			releaseSources = append(releaseSources, fetcher.S3CompiledReleaseSource(compiledReleaseSource))
+		}
 
 		boshIoReleaseSource := fetcher.NewBOSHIOReleaseSource(outLogger, "")
+		releaseSources = append(releaseSources, boshIoReleaseSource)
 
-		builtReleaseSource := fetcher.S3ReleaseSource{Logger: outLogger}
-		builtReleaseSource.Configure(assets.UncompiledReleases)
-
-		return []commands.ReleaseSource{
-			fetcher.S3CompiledReleaseSource(compiledReleaseSource),
-			boshIoReleaseSource,
-			fetcher.S3BuiltReleaseSource(builtReleaseSource),
+		if assets.UncompiledReleases.Bucket != "" {
+			builtReleaseSource := fetcher.S3ReleaseSource{Logger: outLogger}
+			builtReleaseSource.Configure(assets.UncompiledReleases)
+			releaseSources = append(releaseSources, fetcher.S3BuiltReleaseSource(builtReleaseSource))
 		}
+
+		return releaseSources
 	}
 
 	commandSet["fetch"] = commands.NewFetch(outLogger, releaseSourcesFactory, localReleaseDirectory)
