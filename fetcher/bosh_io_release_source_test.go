@@ -32,13 +32,13 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			testServer = ghttp.NewServer()
 
 			path, _ := regexp.Compile("/api/v1/releases/github.com/pivotal-cf/cf-rabbitmq.*")
-			testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, ``))
+			testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "268.0.0"}]`))
 
 			path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/cf-rabbitmq.*")
 			testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
 
 			path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/uaa.*")
-			testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, ``))
+			testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "73.3.0"}]`))
 
 			path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/zzz.*")
 			testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
@@ -75,6 +75,46 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 		})
 	})
 
+	When("a bosh release exists but the version does not", func() {
+		var (
+			testServer     *ghttp.Server
+			releaseName    = "my-release"
+			releaseVersion = "1.2.3"
+			releaseSource  *fetcher.BOSHIOReleaseSource
+
+			foundReleases         fetcher.ReleaseSet
+			getMatchedReleasesErr error
+		)
+
+		BeforeEach(func() {
+			testServer = ghttp.NewServer()
+
+			pathRegex, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/.*")
+			testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `[{"version": "4.0.4"}]`))
+
+			releaseSource = fetcher.NewBOSHIOReleaseSource(
+				log.New(GinkgoWriter, "", 0),
+				testServer.URL(),
+			)
+
+		})
+
+		AfterEach(func() {
+			testServer.Close()
+		})
+
+		JustBeforeEach(func() {
+			releaseID := fetcher.ReleaseID{Name: releaseName, Version: releaseVersion}
+
+			foundReleases, getMatchedReleasesErr = releaseSource.GetMatchedReleases(fetcher.ReleaseSet{releaseID: fetcher.CompiledRelease{}})
+		})
+
+		It("does not match that release", func() {
+			Expect(getMatchedReleasesErr).NotTo(HaveOccurred())
+			Expect(foundReleases).To(HaveLen(0))
+		})
+	})
+
 	Describe("releases can exist in many orgs with various suffixes", func() {
 		var (
 			testServer     *ghttp.Server
@@ -99,7 +139,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 		DescribeTable("searching multiple paths for each release",
 			func(organization, suffix string) {
 				path := fmt.Sprintf("/api/v1/releases/github.com/%s/%s%s", organization, releaseName, suffix)
-				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, ``))
+				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, fmt.Sprintf(`[{"version": %q}]`, releaseVersion)))
 
 				pathRegex, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/.*")
 				testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `null`))
