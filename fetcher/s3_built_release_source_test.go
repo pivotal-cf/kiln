@@ -9,47 +9,40 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/fetcher/fakes"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
-func verifySetsConcurrency(opts []func(*s3manager.Downloader), concurrency int) {
-	Expect(opts).To(HaveLen(1))
-
-	downloader := &s3manager.Downloader{
-		Concurrency: 1,
-	}
-
-	opts[0](downloader)
-
-	Expect(downloader.Concurrency).To(Equal(concurrency))
-}
-
-var _ = Describe("GetMatchedReleases from S3", func() {
+var _ = Describe("GetMatchedReleases from S3 built source", func() {
 	var (
-		releaseSource     fetcher.S3ReleaseSource
+		releaseSource     fetcher.S3BuiltReleaseSource
 		fakeS3Client      *fakes.S3ObjectLister
-		desiredReleaseSet cargo.CompiledReleaseSet
+		desiredReleaseSet fetcher.ReleaseSet
 		bpmKey            string
 	)
 
 	BeforeEach(func() {
-		desiredReleaseSet = cargo.CompiledReleaseSet{
-			{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}: "",
+		bpmReleaseID := fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}
+		desiredReleaseSet = fetcher.ReleaseSet{
+			bpmReleaseID: fetcher.CompiledRelease{
+				ID:              bpmReleaseID,
+				StemcellOS:      "ubuntu-xenial",
+				StemcellVersion: "190.0.0",
+				Path:            "",
+			},
 		}
 
 		fakeS3Client = new(fakes.S3ObjectLister)
 
 		irrelevantKey := "some-key"
-		uaaKey := "1.10/uaa/uaa-1.2.3-ubuntu-xenial-190.0.0.tgz"
-		bpmKey = "2.5/bpm/bpm-1.2.3-lts-ubuntu-xenial-190.0.0.tgz"
+		uaaKey := "1.10/uaa/uaa-1.2.3.tgz"
+		bpmKey = "2.5/bpm/bpm-1.2.3-lts.tgz"
 		fakeS3Client.ListObjectsPagesStub = func(input *s3.ListObjectsInput, fn func(*s3.ListObjectsOutput, bool) bool) error {
 			shouldContinue := fn(&s3.ListObjectsOutput{
 				Contents: []*s3.Object{
@@ -66,11 +59,11 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 
 		logger := log.New(nil, "", 0)
 
-		releaseSource = fetcher.S3ReleaseSource{
+		releaseSource = fetcher.S3BuiltReleaseSource{
 			Logger:   logger,
 			S3Client: fakeS3Client,
-			Regex:    `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+(-\w+(\.[0-9]+)?)?)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
-			Bucket:   "some-bucket",
+			Regex:    `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+(-\w+(\.[0-9]+)?)?)\.tgz$`,
+			Bucket:   "built-bucket",
 		}
 	})
 
@@ -79,16 +72,30 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		input, _ := fakeS3Client.ListObjectsPagesArgsForCall(0)
-		Expect(input.Bucket).To(Equal(aws.String("some-bucket")))
+		Expect(input.Bucket).To(Equal(aws.String("built-bucket")))
 
 		Expect(matchedS3Objects).To(HaveLen(1))
-		Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+		Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, Path: bpmKey}))
 	})
 
-	Context("if any objects in S3 do not match a release specified in assets.lock", func() {
+	When("the regular expression is missing a capture group", func() {
 		BeforeEach(func() {
-			wrongReleaseVersionKey := "2.5/bpm/bpm-4.5.6-ubuntu-xenial-190.0.0.tgz"
-			wrongReleaseNameKey := "2.5/diego/diego-1.2.3-ubuntu-xenial-190.0.0.tgz"
+			releaseSource = fetcher.S3BuiltReleaseSource{
+				Regex: `^2.5/.+/([a-z-_]+)-(?P<release_version>[0-9\.]+)\.tgz$`,
+			}
+		})
+
+		It("returns an error if a required capture is missing", func() {
+			_, err := releaseSource.GetMatchedReleases(nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring("Missing some capture group")))
+		})
+	})
+
+	Context("if any objects in built S3 bucket do not match a release specified in assets.lock", func() {
+		BeforeEach(func() {
+			wrongReleaseVersionKey := "2.5/bpm/bpm-4.5.6.tgz"
+			wrongReleaseNameKey := "2.5/diego/diego-1.2.3.tgz"
 			fakeS3Client.ListObjectsPagesStub = func(input *s3.ListObjectsInput, fn func(*s3.ListObjectsOutput, bool) bool) error {
 				shouldContinue := fn(&s3.ListObjectsOutput{
 					Contents: []*s3.Object{
@@ -104,50 +111,22 @@ var _ = Describe("GetMatchedReleases from S3", func() {
 			}
 		})
 
-		It("does not return them", func() {
+		It("does not return them, but does return the matched release", func() {
 			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
-		})
-	})
-
-	Context("if any objects in S3 do not match the provided stemcell criterion", func() {
-		BeforeEach(func() {
-			wrongStemcellVersionKey := "2.5/capi/capi-1.2.3-ubuntu-xenial-190.30.0.tgz"
-			wrongStemcellOSKey := "2.5/diego/diego-1.2.3-windows-1803.0.0.tgz"
-			fakeS3Client.ListObjectsPagesStub = func(input *s3.ListObjectsInput, fn func(*s3.ListObjectsOutput, bool) bool) error {
-				shouldContinue := fn(&s3.ListObjectsOutput{
-					Contents: []*s3.Object{
-						{Key: &wrongStemcellVersionKey},
-						{Key: &wrongStemcellOSKey},
-						{Key: &bpmKey},
-					},
-				},
-					true,
-				)
-				Expect(shouldContinue).To(BeTrue())
-				return nil
-			}
-		})
-
-		It("does not return them", func() {
-			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(HaveKeyWithValue(cargo.CompiledRelease{Name: "bpm", Version: "1.2.3-lts", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}, bpmKey))
+			Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, Path: bpmKey}))
 		})
 	})
 })
 
-var _ = Describe("S3ReleaseSource DownloadReleases", func() {
+var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func() {
 	var (
 		logger           *log.Logger
-		releaseSource    commands.ReleaseSource
+		releaseSource    fetcher.S3BuiltReleaseSource
 		releaseDir       string
-		matchedS3Objects map[cargo.CompiledRelease]string
+		matchedS3Objects map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader
 		fakeS3Downloader *fakes.S3Downloader
 	)
 
@@ -157,9 +136,9 @@ var _ = Describe("S3ReleaseSource DownloadReleases", func() {
 		releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		matchedS3Objects = make(map[cargo.CompiledRelease]string)
-		matchedS3Objects[cargo.CompiledRelease{Name: "uaa", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "1234"}] = "some-uaa-key"
-		matchedS3Objects[cargo.CompiledRelease{Name: "bpm", Version: "1.2.3", StemcellOS: "ubuntu-trusty", StemcellVersion: "1234"}] = "some-bpm-key"
+		matchedS3Objects = make(map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader)
+		matchedS3Objects[fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}] = fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}, Path: "some-uaa-key"}
+		matchedS3Objects[fetcher.ReleaseID{Name: "bpm", Version: "1.2.3"}] = fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3"}, Path: "some-bpm-key"}
 
 		logger = log.New(GinkgoWriter, "", 0)
 		fakeS3Downloader = new(fakes.S3Downloader)
@@ -168,7 +147,7 @@ var _ = Describe("S3ReleaseSource DownloadReleases", func() {
 			n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 			return int64(n), err
 		}
-		releaseSource = &fetcher.S3ReleaseSource{
+		releaseSource = fetcher.S3BuiltReleaseSource{
 			Logger:       logger,
 			S3Downloader: fakeS3Downloader,
 			Bucket:       "some-bucket",
@@ -179,15 +158,15 @@ var _ = Describe("S3ReleaseSource DownloadReleases", func() {
 		_ = os.RemoveAll(releaseDir)
 	})
 
-	It("downloads the appropriate versions of releases listed in matchedS3Objects", func() {
+	It("downloads the appropriate versions of built releases listed in matchedS3Objects", func() {
 		err := releaseSource.DownloadReleases(releaseDir, matchedS3Objects, 7)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(2))
 
-		bpmContents, err := ioutil.ReadFile(filepath.Join(releaseDir, "bpm-1.2.3-ubuntu-trusty-1234.tgz"))
+		bpmContents, err := ioutil.ReadFile(filepath.Join(releaseDir, "bpm-1.2.3.tgz"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(bpmContents).To(Equal([]byte("some-bucket/some-bpm-key")))
-		uaaContents, err := ioutil.ReadFile(filepath.Join(releaseDir, "uaa-1.2.3-ubuntu-trusty-1234.tgz"))
+		uaaContents, err := ioutil.ReadFile(filepath.Join(releaseDir, "uaa-1.2.3.tgz"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(uaaContents).To(Equal([]byte("some-bucket/some-uaa-key")))
 
@@ -200,7 +179,7 @@ var _ = Describe("S3ReleaseSource DownloadReleases", func() {
 
 	Context("when the matchedS3Objects argument is empty", func() {
 		It("does not download anything from S3", func() {
-			err := releaseSource.DownloadReleases(releaseDir, map[cargo.CompiledRelease]string{}, 0)
+			err := releaseSource.DownloadReleases(releaseDir, fetcher.ReleaseSet{}, 0)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(0))
 		})

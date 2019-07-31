@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -8,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
@@ -66,18 +66,23 @@ func (r *BOSHIOReleaseSource) Configure(assets cargo.Assets) {
 	return
 }
 
-func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet cargo.CompiledReleaseSet) (cargo.CompiledReleaseSet, error) {
-	matchedBOSHIOReleases := make(cargo.CompiledReleaseSet)
+func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet) (ReleaseSet, error) {
+	matchedBOSHIOReleases := make(ReleaseSet)
 
-	for compRelease := range desiredReleaseSet {
+	for rel := range desiredReleaseSet {
 	found:
 		for _, repo := range repos {
 			for _, suf := range suffixes {
-				fullName := repo + "/" + compRelease.Name + suf
-				exists := r.releaseExistOnBoshio(fullName)
+				fullName := repo + "/" + rel.Name + suf
+				exists, err := source.releaseExistOnBoshio(fullName, rel.Version)
+				if err != nil {
+					return nil, err
+				}
 				if exists {
-					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, compRelease.Version)
-					matchedBOSHIOReleases[compRelease] = downloadURL
+					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", source.serverURI, fullName, rel.Version)
+					builtReleaseID := ReleaseID{Name: rel.Name, Version: rel.Version}
+					builtRelease := BuiltRelease{ID: builtReleaseID, Path: downloadURL}
+					matchedBOSHIOReleases[builtReleaseID] = builtRelease
 					break found
 				}
 			}
@@ -87,11 +92,12 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet cargo.Compiled
 	return matchedBOSHIOReleases, nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects cargo.CompiledReleaseSet, downloadThreads int) error {
+func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects ReleaseSet, downloadThreads int) error {
 	r.logger.Printf("downloading %d objects from bosh.io...", len(matchedBOSHObjects))
 
-	for _, downloadURL := range matchedBOSHObjects {
+	for releaseID, release := range matchedBOSHObjects {
 
+		downloadURL := release.DownloadString()
 		r.logger.Printf("downloading %s...\n", downloadURL)
 		// Get the data
 		resp, err := http.Get(downloadURL)
@@ -100,7 +106,7 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObje
 		}
 
 		// Create the file
-		fileName := strings.Split(resp.Header["Content-Disposition"][0], "=")[1]
+		fileName := fmt.Sprintf("%s-%s.tgz", releaseID.Name, releaseID.Version)
 		out, err := os.Create(filepath.Join(releaseDir, fileName))
 		if err != nil {
 			return err
@@ -117,17 +123,43 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObje
 	return nil
 }
 
-func (r BOSHIOReleaseSource) releaseExistOnBoshio(name string) bool {
+type ResponseStatusCodeError http.Response
+
+func (err ResponseStatusCodeError) Error() string {
+	return fmt.Sprintf("response to %s %s got status %d when a success was expected", err.Request.Method, err.Request.URL, err.StatusCode)
+}
+
+func (r BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {
 	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/github.com/%s", r.serverURI, name))
 	if err != nil {
-		fmt.Errorf("Bosh.io API is down with error: %v", err)
-		os.Exit(1)
+		return false, fmt.Errorf("Bosh.io API is down with error: %v", err)
+	}
+	if resp.StatusCode >= 500 {
+		return false, (*ResponseStatusCodeError)(resp)
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return false, nil
+	}
+	if resp.StatusCode >= 300 {
+		// we don't handle redirects yet
+		// also this will catch other client request errors (>= 400)
+		return false, (*ResponseStatusCodeError)(resp)
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if string(body) == "null" {
-		return false
-	} else {
-		return true
+		return false, nil
 	}
+	var releases []struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(body, &releases); err != nil {
+		return false, err
+	}
+	for _, rel := range releases {
+		if rel.Version == version {
+			return true, nil
+		}
+	}
+	return false, nil
 }

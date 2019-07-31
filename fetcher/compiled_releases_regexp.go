@@ -3,22 +3,13 @@ package fetcher
 import (
 	"fmt"
 	"regexp"
-
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
-const (
-	ReleaseName     = "release_name"
-	ReleaseVersion  = "release_version"
-	StemcellOS      = "stemcell_os"
-	StemcellVersion = "stemcell_version"
-)
-
-type CompiledReleasesRegexp struct {
+type ReleasesRegexp struct {
 	r *regexp.Regexp
 }
 
-func NewCompiledReleasesRegexp(regex string) (*CompiledReleasesRegexp, error) {
+func NewReleasesRegexp(regex string) (*ReleasesRegexp, error) {
 	r, err := regexp.Compile(regex)
 	if err != nil {
 		return nil, err
@@ -34,12 +25,12 @@ func NewCompiledReleasesRegexp(regex string) (*CompiledReleasesRegexp, error) {
 		return nil, fmt.Errorf("Missing some capture group. Required capture groups: %s, %s, %s, %s", ReleaseName, ReleaseVersion, StemcellOS, StemcellVersion)
 	}
 
-	return &CompiledReleasesRegexp{r: r}, nil
+	return &ReleasesRegexp{r: r}, nil
 }
 
-func (crr *CompiledReleasesRegexp) Convert(s3Key string) (cargo.CompiledRelease, error) {
+func (crr *ReleasesRegexp) Convert(s3Key string) (CompiledRelease, error) {
 	if !crr.r.MatchString(s3Key) {
-		return cargo.CompiledRelease{}, fmt.Errorf("s3 key does not match regex")
+		return CompiledRelease{}, fmt.Errorf("s3 key does not match regex")
 	}
 
 	matches := crr.r.FindStringSubmatch(s3Key)
@@ -50,10 +41,13 @@ func (crr *CompiledReleasesRegexp) Convert(s3Key string) (cargo.CompiledRelease,
 		}
 	}
 
-	return cargo.CompiledRelease{
-		Name:            subgroup[ReleaseName],
-		Version:         subgroup[ReleaseVersion],
+	return CompiledRelease{
+		ID: ReleaseID{
+			Name:    subgroup[ReleaseName],
+			Version: subgroup[ReleaseVersion],
+		},
 		StemcellOS:      subgroup[StemcellOS],
 		StemcellVersion: subgroup[StemcellVersion],
+		Path:            "",
 	}, nil
 }

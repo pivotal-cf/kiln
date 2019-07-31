@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pivotal-cf/kiln/fetcher"
+
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
@@ -15,17 +17,49 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	ReleaseName     = "release_name"
-	ReleaseVersion  = "release_version"
-	StemcellOS      = "stemcell_os"
-	StemcellVersion = "stemcell_version"
-)
+type multipleError []error
+
+func (errs multipleError) Error() string {
+	var strs []string
+	for _, err := range errs {
+		strs = append(strs, "- "+err.Error())
+	}
+	return "\n" + strings.Join(strs, "\n")
+}
+
+type ConfigFileError struct {
+	HumanReadableConfigFileName string
+	err                         error
+}
+
+func (err ConfigFileError) Unwrap() error {
+	return err.err
+}
+
+func (err ConfigFileError) Error() string {
+	return fmt.Sprintf("encountered a configuration file error with %s: %s", err.HumanReadableConfigFileName, err.err.Error())
+}
+
+type stringError string
+
+func (str stringError) Error() string {
+	return string(str)
+}
+
+type ErrorMissingReleases fetcher.ReleaseSet
+
+func (releases ErrorMissingReleases) Error() string {
+	var missing []string
+	for id, _ := range releases {
+		missing = append(missing, fmt.Sprintf("- %s (%s)", id.Name, id.Version))
+	}
+	return fmt.Sprintf("could not find the following releases\n%s", strings.Join(missing, "\n"))
+}
 
 type Fetch struct {
 	logger *log.Logger
 
-	releaseSources        []ReleaseSource
+	releaseSourcesFactory func(cargo.Assets) []ReleaseSource
 	localReleaseDirectory LocalReleaseDirectory
 
 	Options struct {
@@ -38,26 +72,25 @@ type Fetch struct {
 	}
 }
 
-func NewFetch(logger *log.Logger, releaseSources []ReleaseSource, localReleaseDirectory LocalReleaseDirectory) Fetch {
+func NewFetch(logger *log.Logger, releaseSourcesFactory func(cargo.Assets) []ReleaseSource, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
 		logger:                logger,
-		releaseSources:        releaseSources,
 		localReleaseDirectory: localReleaseDirectory,
+		releaseSourcesFactory: releaseSourcesFactory,
 	}
 }
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedReleases(assetsLock cargo.CompiledReleaseSet) (cargo.CompiledReleaseSet, error)
-	DownloadReleases(releasesDir string, matchedS3Objects cargo.CompiledReleaseSet, downloadThreads int) error
-	Configure(cargo.Assets)
+	GetMatchedReleases(assetsLock fetcher.ReleaseSet) (fetcher.ReleaseSet, error)
+	DownloadReleases(releasesDir string, matchedS3Objects fetcher.ReleaseSet, downloadThreads int) error
 }
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
-	GetLocalReleases(releasesDir string) (cargo.CompiledReleaseSet, error)
-	DeleteExtraReleases(releasesDir string, extraReleases cargo.CompiledReleaseSet, noConfirm bool) error
-	VerifyChecksums(releasesDir string, downloadedRelases cargo.CompiledReleaseSet, assetsLock cargo.AssetsLock) error
+	GetLocalReleases(releasesDir string) (fetcher.ReleaseSet, error)
+	DeleteExtraReleases(releasesDir string, extraReleases fetcher.ReleaseSet, noConfirm bool) error
+	VerifyChecksums(releasesDir string, downloadedRelases fetcher.ReleaseSet, assetsLock cargo.AssetsLock) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -82,19 +115,20 @@ func (f Fetch) Execute(args []string) error {
 		Variables: templateVariables,
 	}, assetsYAML)
 	if err != nil {
-		return err
+		return ConfigFileError{err: err, HumanReadableConfigFileName: "interpolating variable files with assets file"}
 	}
 
-	f.logger.Println("getting release information from assets.yml")
+	f.logger.Println("getting release information from " + f.Options.AssetsFile)
 
 	var assets cargo.Assets
 	err = yaml.Unmarshal(interpolatedMetadata, &assets)
 	if err != nil {
-		return err
+		return ConfigFileError{err: err, HumanReadableConfigFileName: "assets specification " + f.Options.AssetsFile}
 	}
 
 	f.logger.Println("getting release information from assets.lock")
-	assetsLockFile, err := os.Open(fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, filepath.Ext(f.Options.AssetsFile))))
+	assetsLockFileName := fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, filepath.Ext(f.Options.AssetsFile)))
+	assetsLockFile, err := os.Open(assetsLockFileName)
 	if err != nil {
 		return err
 	}
@@ -103,24 +137,26 @@ func (f Fetch) Execute(args []string) error {
 	var assetsLock cargo.AssetsLock
 	err = yaml.NewDecoder(assetsLockFile).Decode(&assetsLock)
 	if err != nil {
-		return err
+		return ConfigFileError{err: err, HumanReadableConfigFileName: "assets lock " + assetsLockFileName}
 	}
 
 	availableLocalReleaseSet, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
 	if err != nil {
 		return err
 	}
-	existingReleaseSet := f.ensureStemcellFieldsSet(availableLocalReleaseSet, assetsLock.Stemcell)
-	desiredReleaseSet := cargo.NewCompiledReleaseSet(assetsLock)
-	extraReleaseSet := existingReleaseSet.Without(desiredReleaseSet)
+	if err := f.verifyCompiledReleaseStemcell(availableLocalReleaseSet, assetsLock.Stemcell); err != nil {
+		return err
+	}
+	desiredReleaseSet := fetcher.NewReleaseSet(assetsLock)
+	extraReleaseSet := availableLocalReleaseSet.Without(desiredReleaseSet)
 
 	err = f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleaseSet, f.Options.NoConfirm)
 	if err != nil {
 		f.logger.Println("failed deleting some releases: ", err.Error())
 	}
 
-	satisfiedReleaseSet := existingReleaseSet.Without(extraReleaseSet)
-	unsatisfiedReleaseSet := desiredReleaseSet.Without(existingReleaseSet)
+	satisfiedReleaseSet := availableLocalReleaseSet.Without(extraReleaseSet)
+	unsatisfiedReleaseSet := desiredReleaseSet.Without(availableLocalReleaseSet)
 
 	if len(unsatisfiedReleaseSet) > 0 {
 		f.logger.Printf("Found %d missing releases to download", len(unsatisfiedReleaseSet))
@@ -132,25 +168,15 @@ func (f Fetch) Execute(args []string) error {
 	}
 
 	if len(unsatisfiedReleaseSet) > 0 {
-		formattedMissingReleases := make([]string, 0)
-
-		for missingRelease := range unsatisfiedReleaseSet {
-			formattedMissingReleases = append(
-				formattedMissingReleases,
-				fmt.Sprintf("%+v", missingRelease),
-			)
-
-		}
-		return fmt.Errorf("Could not find the following releases:\n%s", strings.Join(formattedMissingReleases, "\n"))
+		return ErrorMissingReleases(unsatisfiedReleaseSet)
 	}
 
 	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, assetsLock)
 }
 
-func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet, unsatisfiedReleaseSet cargo.CompiledReleaseSet) (satisfied, unsatisfied cargo.CompiledReleaseSet, err error) {
-	for _, releaseSource := range f.releaseSources {
-		releaseSource.Configure(assets)
-
+func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseSet) (satisfied, unsatisfied fetcher.ReleaseSet, err error) {
+	releaseSources := f.releaseSourcesFactory(assets)
+	for _, releaseSource := range releaseSources {
 		matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet)
 		if err != nil {
 			return nil, nil, err
@@ -161,26 +187,48 @@ func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet,
 			return nil, nil, err
 		}
 
-		satisfiedReleaseSet = satisfiedReleaseSet.With(matchedReleaseSet)
-		unsatisfiedReleaseSet = unsatisfiedReleaseSet.Without(matchedReleaseSet)
+		unsatisfiedReleaseSet, satisfiedReleaseSet = unsatisfiedReleaseSet.TransferElements(matchedReleaseSet, satisfiedReleaseSet)
 	}
 
 	return satisfiedReleaseSet, unsatisfiedReleaseSet, nil
 }
 
-func (f Fetch) ensureStemcellFieldsSet(localReleases cargo.CompiledReleaseSet, stemcell cargo.Stemcell) cargo.CompiledReleaseSet {
-	hydratedLocalReleases := make(cargo.CompiledReleaseSet)
-
-	for localRelease, path := range localReleases {
-		if localRelease.StemcellOS == "" {
-			localRelease.StemcellOS = stemcell.OS
-			localRelease.StemcellVersion = stemcell.Version
+func (f Fetch) verifyCompiledReleaseStemcell(localReleases fetcher.ReleaseSet, stemcell cargo.Stemcell) error {
+	var errs []error
+	for _, release := range localReleases {
+		if rel, ok := release.(fetcher.CompiledRelease); ok {
+			if rel.StemcellOS != stemcell.OS || rel.StemcellVersion != stemcell.Version {
+				errs = append(errs, IncorrectOSError{
+					ReleaseName:    rel.ID.Name,
+					ReleaseVersion: rel.ID.Version,
+					GotOS:          rel.StemcellOS,
+					GotOSVersion:   rel.StemcellVersion,
+					WantOS:         stemcell.OS,
+					WantOSVersion:  stemcell.Version,
+				})
+			}
 		}
-
-		hydratedLocalReleases[localRelease] = path
 	}
+	if len(errs) != 0 {
+		return multipleError(errs)
+	}
+	return nil
+}
 
-	return hydratedLocalReleases
+type IncorrectOSError struct {
+	ReleaseName, ReleaseVersion string
+	WantOS, GotOS               string
+	WantOSVersion, GotOSVersion string
+}
+
+func (err IncorrectOSError) Error() string {
+	return fmt.Sprintf(
+		"expected release %s-%s to have been compiled with %s %s but was compiled with %s %s",
+		err.ReleaseName,
+		err.ReleaseVersion,
+		err.WantOS, err.WantOSVersion,
+		err.GotOS, err.GotOSVersion,
+	)
 }
 
 func (f Fetch) Usage() jhanda.Usage {

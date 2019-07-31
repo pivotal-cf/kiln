@@ -1,3 +1,4 @@
 *.pivotal
 *.sha256
 .idea
+*debug.test

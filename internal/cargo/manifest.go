@@ -32,7 +32,8 @@ type AssetsLock struct {
 }
 
 type Assets struct {
-	CompiledReleases S3ReleaseConfig `yaml:"compiled_releases"`
+	CompiledReleases   S3ReleaseConfig `yaml:"compiled_releases"`
+	UncompiledReleases S3ReleaseConfig `yaml:"uncompiled_releases"`
 }
 
 type S3ReleaseConfig struct {
@@ -42,13 +43,6 @@ type S3ReleaseConfig struct {
 	AccessKeyId     string `yaml:"access_key_id"`
 	SecretAccessKey string `yaml:"secret_access_key"`
 	Regex           string `yaml:"regex"`
-}
-
-type CompiledRelease struct {
-	Name            string
-	Version         string
-	StemcellOS      string
-	StemcellVersion string
 }
 
 type Stemcell struct {
@@ -88,51 +82,4 @@ type InstanceGroupJob struct {
 	Provides   interface{} `yaml:"provides"`
 	Consumes   interface{} `yaml:"consumes"`
 	Properties interface{} `yaml:"properties"`
-}
-
-type CompiledReleaseSet map[CompiledRelease]string
-
-func (crs CompiledReleaseSet) With(toAdd CompiledReleaseSet) CompiledReleaseSet {
-	result := crs.copy()
-	for release, path := range toAdd {
-		result[release] = path
-	}
-	return result
-}
-
-func (crs CompiledReleaseSet) Without(other CompiledReleaseSet) CompiledReleaseSet {
-	result := crs.copy()
-	for release := range result {
-		if _, ok := other[release]; ok {
-			delete(result, release)
-		}
-	}
-	return result
-}
-
-func (crs CompiledReleaseSet) copy() CompiledReleaseSet {
-	dup := make(CompiledReleaseSet)
-	for release, path := range crs {
-		dup[release] = path
-	}
-	return dup
-}
-
-func newCompiledRelease(release Release, stemcell Stemcell) CompiledRelease {
-	return CompiledRelease{
-		Name:            release.Name,
-		Version:         release.Version,
-		StemcellOS:      stemcell.OS,
-		StemcellVersion: stemcell.Version,
-	}
-}
-
-func NewCompiledReleaseSet(assetsLock AssetsLock) CompiledReleaseSet {
-	set := make(CompiledReleaseSet)
-	stemcell := assetsLock.Stemcell
-	for _, release := range assetsLock.Releases {
-		compiledRelease := newCompiledRelease(release, stemcell)
-		set[compiledRelease] = ""
-	}
-	return set
 }
