@@ -63,10 +63,11 @@ type Fetch struct {
 	localReleaseDirectory LocalReleaseDirectory
 
 	Options struct {
-		AssetsFile      string   `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
+		AssetsFile      string   `short:"a" long:"assets-file" default:"assets.yml" description:"path to assets file"`
+		ReleasesDir     string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+
 		VariablesFiles  []string `short:"vf" long:"variables-file" description:"path to variables file"`
 		Variables       []string `short:"vr" long:"variable" description:"variable in key=value format"`
-		ReleasesDir     string   `short:"rd" long:"releases-directory" required:"true" description:"path to a directory to download releases into"`
 		DownloadThreads int      `short:"dt" long:"download-threads" description:"number of parallel threads to download parts from S3"`
 		NoConfirm       bool     `short:"n" long:"no-confirm" description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
 	}
@@ -97,6 +98,14 @@ func (f Fetch) Execute(args []string) error {
 	args, err := jhanda.Parse(&f.Options, args)
 	if err != nil {
 		return err
+	}
+
+	if _, err := os.Stat(f.Options.ReleasesDir); err != nil {
+		if err == os.ErrNotExist {
+			os.MkdirAll(f.Options.ReleasesDir, 0644)
+		} else {
+			return fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
+		}
 	}
 
 	templateVariablesService := baking.NewTemplateVariablesService()
