@@ -1,5 +1,7 @@
 package fetcher
 
+import "strconv"
+
 type stringError string
 
 func (str stringError) Error() string { return string(str) }
