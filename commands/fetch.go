@@ -101,8 +101,8 @@ func (f Fetch) Execute(args []string) error {
 	}
 
 	if _, err := os.Stat(f.Options.ReleasesDir); err != nil {
-		if err == os.ErrNotExist {
-			os.MkdirAll(f.Options.ReleasesDir, 0644)
+		if os.IsNotExist(err) {
+			os.MkdirAll(f.Options.ReleasesDir, 0777)
 		} else {
 			return fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
 		}
