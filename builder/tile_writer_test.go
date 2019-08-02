@@ -118,7 +118,15 @@ var _ = Describe("TileWriter", func() {
 				}
 			}
 
-			err := tileWriter.Write([]byte("generated-metadata-contents"), input)
+			var metadata = `---
+releases:
+- file: release-1.tgz
+- file: release-2.tgz
+- file: release-3.tgz
+- file: release-4.tgz
+`
+
+			err := tileWriter.Write([]byte(metadata), input)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(zipper.SetWriterCallCount()).To(Equal(1))
@@ -129,7 +137,7 @@ var _ = Describe("TileWriter", func() {
 
 			path, file := zipper.AddArgsForCall(0)
 			Expect(path).To(Equal(filepath.Join("metadata", "metadata.yml")))
-			Eventually(gbytes.BufferReader(file)).Should(gbytes.Say("generated-metadata-contents"))
+			Eventually(gbytes.BufferReader(file)).Should(gbytes.Say(metadata))
 
 			path, file = zipper.AddArgsForCall(1)
 			Expect(path).To(Equal(filepath.Join("migrations", "v1", "migration-1.js")))
@@ -177,6 +185,48 @@ var _ = Describe("TileWriter", func() {
 			Entry("without stubbing releases", false, nil),
 			Entry("with stubbed releases", true, errors.New("don't open release")),
 		)
+
+		Context("when releases directory is empty & releases are stubbed", func() {
+			BeforeEach(func() {
+				dirInfo := &fakes.FileInfo{}
+				dirInfo.IsDirReturns(true)
+
+				releaseInfo := &fakes.FileInfo{}
+				releaseInfo.IsDirReturns(false)
+
+				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
+					switch root {
+					case "/some/path/releases":
+						walkFn("/some/path/releases", dirInfo, nil)
+					default:
+						return nil
+					}
+
+					return nil
+				}
+
+				filesystem.OpenStub = func(path string) (io.ReadCloser, error) {
+					if path == "/some/path/releases/release-1.tgz" {
+						return nil, errors.New("unexpected call")
+					}
+
+					return nil, nil
+				}
+			})
+			It("adds stub releases based on metadata", func() {
+				input := builder.WriteInput{
+					ReleaseDirectories: []string{"/some/path/releases"},
+					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
+					StubReleases:       true,
+				}
+
+				err := tileWriter.Write([]byte("releases:\n- file: release-1.tgz"), input)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(zipper.AddCallCount()).To(Equal(2))
+				path, _ := zipper.AddArgsForCall(1)
+				Expect(path).To(Equal(filepath.Join("releases", "release-1.tgz")))
+			})
+		})
 
 		Context("when releases directory is provided", func() {
 			BeforeEach(func() {
@@ -414,6 +464,36 @@ var _ = Describe("TileWriter", func() {
 					Expect(err).To(MatchError("boom!"))
 				})
 			})
+			Context("when the releases are stubbed", func() {
+				var input builder.WriteInput
+				BeforeEach(func() {
+					input = builder.WriteInput{
+						StubReleases: true,
+						OutputFile:   outputFile,
+					}
+				})
+				Context("when the generated metadata is invalid", func() {
+					It("returns the error", func() {
+						err := tileWriter.Write([]byte("generated-metadata"), input)
+						Expect(err).To(HaveOccurred())
+						Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
+					})
+				})
+
+				Context("when the release file cannot be added to the zip", func() {
+					BeforeEach(func() {
+						zipper.AddReturnsOnCall(1, errors.New("failed to add file to zip"))
+					})
+					It("returns the error", func() {
+						err := tileWriter.Write([]byte("---\nreleases:\n- file: release-1.tgz"), input)
+						Expect(err).To(HaveOccurred())
+						Expect(err).To(MatchError("failed to add file to zip"))
+
+						Expect(filesystem.RemoveCallCount()).To(Equal(1))
+						Expect(filesystem.RemoveArgsForCall(0)).To(Equal(outputFile))
+					})
+				})
+			})
 
 			Context("when the zipper fails to create migrations folder", func() {
 				BeforeEach(func() {
@@ -639,6 +719,7 @@ var _ = Describe("TileWriter", func() {
 						Expect(logger.PrintfCall.Receives.LogLines).To(
 							ContainElement(expectedLogLine),
 						)
+
 					})
 				})
 			})

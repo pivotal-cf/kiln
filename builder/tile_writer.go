@@ -2,6 +2,7 @@ package builder
 
 import (
 	"bytes"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"os"
@@ -52,6 +53,14 @@ type WriteInput struct {
 	EmbedPaths           []string
 }
 
+type tileMetadata struct {
+	Releases []release `yaml:"releases"`
+}
+
+type release struct {
+	File string `yaml:"file"`
+}
+
 func (w TileWriter) Write(generatedMetadataContents []byte, input WriteInput) error {
 	w.logger.Printf("Building %s...", input.OutputFile)
 
@@ -75,7 +84,11 @@ func (w TileWriter) Write(generatedMetadataContents []byte, input WriteInput) er
 		return err
 	}
 
-	err = w.addReleases(input.ReleaseDirectories, input.StubReleases, input.OutputFile)
+	if input.StubReleases {
+		err = w.addStubReleases(generatedMetadataContents, input.OutputFile)
+	} else {
+		err = w.addReleases(input.ReleaseDirectories, input.OutputFile)
+	}
 	if err != nil {
 		w.removeOutputFile(input.OutputFile)
 		return err
@@ -96,9 +109,9 @@ func (w TileWriter) Write(generatedMetadataContents []byte, input WriteInput) er
 	return nil
 }
 
-func (w TileWriter) addReleases(releasesDirs []string, stubReleases bool, outputFile string) error {
+func (w TileWriter) addReleases(releasesDirs []string, outputFile string) error {
 	for _, releasesDirectory := range releasesDirs {
-		err := w.addReleaseTarballs(releasesDirectory, stubReleases, outputFile)
+		err := w.addReleaseTarballs(releasesDirectory, outputFile)
 		if err != nil {
 			return err
 		}
@@ -107,7 +120,24 @@ func (w TileWriter) addReleases(releasesDirs []string, stubReleases bool, output
 	return nil
 }
 
-func (w TileWriter) addReleaseTarballs(releasesDir string, stubReleases bool, outputFile string) error {
+func (w TileWriter) addStubReleases(generatedMetadataContents []byte, outputFile string) error {
+	var metadata tileMetadata
+	err := yaml.Unmarshal(generatedMetadataContents, &metadata)
+	if err != nil {
+		return err
+	}
+	for _, release := range metadata.Releases {
+		path := filepath.Join("releases", release.File)
+		contents := ioutil.NopCloser(strings.NewReader(""))
+		err = w.addToZipper(path, contents, outputFile)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (w TileWriter) addReleaseTarballs(releasesDir string, outputFile string) error {
 	return w.filesystem.Walk(releasesDir, func(filePath string, info os.FileInfo, err error) error {
 		isTarball, _ := regexp.MatchString("tgz$|tar.gz$", filePath)
 		if !isTarball {
@@ -123,13 +153,11 @@ func (w TileWriter) addReleaseTarballs(releasesDir string, stubReleases bool, ou
 		}
 
 		file := ioutil.NopCloser(strings.NewReader(""))
-		if !stubReleases {
-			file, err = w.filesystem.Open(filePath)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
+		file, err = w.filesystem.Open(filePath)
+		if err != nil {
+			return err
 		}
+		defer file.Close()
 
 		return w.addToZipper(filepath.Join("releases", filepath.Base(filePath)), file, outputFile)
 	})
