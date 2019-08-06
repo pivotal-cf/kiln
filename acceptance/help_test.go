@@ -62,10 +62,10 @@ Usage: kiln [options] fetch [<args>]
   --version, -v  bool  prints the kiln release version (default: false)
 
 Command Arguments:
-  --assets-file, -a          string (required)  path to assets file
+  --assets-file, -a          string             path to assets file (default: assets.yml)
   --download-threads, -dt    int                number of parallel threads to download parts from S3
   --no-confirm, -n           bool               non-interactive mode, will delete extra releases in releases dir without prompting
-  --releases-directory, -rd  string (required)  path to a directory to download releases into
+  --releases-directory, -rd  string             path to a directory to download releases into (default: releases)
   --variable, -vr            string (variadic)  variable in key=value format
   --variables-file, -vf      string (variadic)  path to variables file
 `

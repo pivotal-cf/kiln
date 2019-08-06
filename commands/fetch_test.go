@@ -529,18 +529,6 @@ compiled_releases:
 			})
 
 			Context("failure cases", func() {
-				Context("the assets-file flag is missing", func() {
-					It("returns a flag error", func() {
-						err := fetch.Execute([]string{"--releases-directory", "reldir"})
-						Expect(err).To(MatchError("missing required flag \"--assets-file\""))
-					})
-				})
-				Context("the releases-directory flag is missing", func() {
-					It("returns a flag error", func() {
-						err := fetch.Execute([]string{"--assets-file", "assets.yml"})
-						Expect(err).To(MatchError("missing required flag \"--releases-directory\""))
-					})
-				})
 				Context("assets.yml is missing", func() {
 					It("returns an error", func() {
 						badAssetsFilePath := filepath.Join(tmpDir, "non-existent-assets.yml")
