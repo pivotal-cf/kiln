@@ -276,7 +276,7 @@ func releaseType(window string, v *semver.Version) pivnet.ReleaseType {
 	}
 }
 
-// Usage writes helpful inforamtion.
+// Usage writes helpful information.
 func (publish Publish) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "This command prints helpful usage information.",
