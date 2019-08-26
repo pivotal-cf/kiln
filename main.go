@@ -136,6 +136,10 @@ func main() {
 		checksummer,
 	)
 
+	commandSet["update"] = commands.Update{
+		StemcellsVersionsService: new(fetcher.Pivnet),
+	}
+
 	err = commandSet.Execute(command, args)
 	if err != nil {
 		log.Fatal(err)

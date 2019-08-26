@@ -8,21 +8,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
-
-type stringError string
-
-func (str stringError) Error() string { return string(str) }
-
-type multipleErrors []error
-
-func (errs multipleErrors) Error() string { return strconv.Itoa(len(errs)) + " errors" }
 
 const (
 	ErrReleaseTypeNotSupported = stringError("release type not supported")
