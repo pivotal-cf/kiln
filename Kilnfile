@@ -1,7 +1,0 @@
-# vi:syntax=yaml
-slug: elastic-runtime
-release_dates:
-  alpha: 2019-10-04
-  beta: 2019-10-28
-  rc: 2019-11-11
-  ga: 2019-12-06
