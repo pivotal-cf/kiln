@@ -162,7 +162,7 @@ func NewBake(
 }
 
 func (b Bake) Execute(args []string) error {
-	args, err := jhanda.Parse(&b.Options, args)
+	_, err := jhanda.Parse(&b.Options, args)
 	if err != nil {
 		return err
 	}

@@ -20,6 +20,7 @@ Commands:
   bake     bakes a tile
   fetch    fetches releases
   help     prints this usage information
+  publish  prints this usage information
   version  prints the kiln release version
 `
 

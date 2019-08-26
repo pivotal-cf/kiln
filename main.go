@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
@@ -116,6 +117,7 @@ func main() {
 	}
 
 	commandSet["fetch"] = commands.NewFetch(outLogger, releaseSourcesFactory, localReleaseDirectory)
+	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New("."))
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
 		tileWriter,
