@@ -79,6 +79,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 
 		When("fetching with an empty line as a string", func() {
 			It("returns an error", func() {
+				stemcellSlug = ""
 				Expect(gotErr).To(Equal(fetcher.ErrProductSlugMustNotBeEmpty))
 				Expect(gotVersions).To(BeNil())
 			})
