@@ -34,7 +34,7 @@ func (cr CompiledRelease) DownloadString() string {
 type S3CompiledReleaseSource S3ReleaseSource
 
 func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet, stemcell cargo.Stemcell) (ReleaseSet, error) {
-	matchedS3Objects := make(ReleaseSet)
+	matchedS3Objects := make(map[ReleaseID][]CompiledRelease)
 
 	exp, err := regexp.Compile(r.Regex)
 	if err != nil {
@@ -65,12 +65,7 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet
 					continue
 				}
 
-				matchedS3Objects[compiledRelease.ID] = CompiledRelease{
-					ID:              compiledRelease.ID,
-					StemcellVersion: compiledRelease.StemcellVersion,
-					StemcellOS:      compiledRelease.StemcellOS,
-					Path:            *s3Object.Key,
-				}
+				matchedS3Objects[compiledRelease.ID] = append(matchedS3Objects[compiledRelease.ID], compiledRelease)
 			}
 			return true
 		},
@@ -80,8 +75,13 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet
 
 	matchingReleases := make(ReleaseSet, 0)
 	for expectedReleaseID := range desiredReleaseSet {
-		if rel, ok := matchedS3Objects[expectedReleaseID]; ok {
-			matchingReleases[expectedReleaseID] = rel
+		if releases, ok := matchedS3Objects[expectedReleaseID]; ok {
+			for _, release := range releases {
+				if release.StemcellVersion == stemcell.Version && release.StemcellOS == stemcell.OS {
+					matchingReleases[expectedReleaseID] = release
+					break
+				}
+			}
 		}
 	}
 
@@ -147,6 +147,6 @@ func createCompiledReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (CompiledR
 		},
 		StemcellOS:      subgroup[StemcellOS],
 		StemcellVersion: subgroup[StemcellVersion],
-		Path:            "",
+		Path:            s3Key,
 	}, nil
 }

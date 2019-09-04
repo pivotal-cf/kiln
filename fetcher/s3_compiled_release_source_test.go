@@ -43,7 +43,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 	BeforeEach(func() {
 		bpmReleaseID := fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}
-		desiredStemcell := cargo.Stemcell{OS: "ubuntu-xenial", Version: "190.0.0"}
+		desiredStemcell = cargo.Stemcell{OS: "ubuntu-xenial", Version: "190.0.0"}
 		desiredReleaseSet = fetcher.ReleaseSet{
 			bpmReleaseID: fetcher.CompiledRelease{
 				ID:              bpmReleaseID,
@@ -90,7 +90,17 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 		Expect(input.Bucket).To(Equal(aws.String("some-bucket")))
 
 		Expect(matchedS3Objects).To(HaveLen(1))
-		Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0", Path: bpmKey}))
+		Expect(matchedS3Objects).To(
+			HaveKeyWithValue(
+				fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+				fetcher.CompiledRelease{
+					ID:              fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+					StemcellOS:      "ubuntu-xenial",
+					StemcellVersion: "190.0.0",
+					Path:            bpmKey,
+				},
+			),
+		)
 	})
 
 	Context("if any objects in S3 do not match a release specified in assets.lock", func() {
@@ -117,7 +127,17 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0", Path: bpmKey}))
+			Expect(matchedS3Objects).To(
+				HaveKeyWithValue(
+					fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+					fetcher.CompiledRelease{
+						ID:              fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+						StemcellOS:      "ubuntu-xenial",
+						StemcellVersion: "190.0.0",
+						Path:            bpmKey,
+					},
+				),
+			)
 		})
 	})
 
@@ -145,7 +165,54 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0", Path: bpmKey}))
+			Expect(matchedS3Objects).To(
+				HaveKeyWithValue(
+					fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+					fetcher.CompiledRelease{
+						ID:              fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+						StemcellOS:      "ubuntu-xenial",
+						StemcellVersion: "190.0.0",
+						Path:            bpmKey,
+					},
+				),
+			)
+		})
+	})
+
+	Context("when a matching release version is compiled against multiple stemcell versions", func() {
+		BeforeEach(func() {
+			bpmKey = "2.5/bpm/bpm-1.2.3-lts-ubuntu-xenial-190.0.0.tgz"
+			bpmWrongStemcellKey := "2.5/bpm/bpm-1.2.3-lts-ubuntu-xenial-191.0.0.tgz"
+			fakeS3Client.ListObjectsPagesStub = func(input *s3.ListObjectsInput, fn func(*s3.ListObjectsOutput, bool) bool) error {
+				shouldContinue := fn(&s3.ListObjectsOutput{
+					Contents: []*s3.Object{
+						{Key: &bpmKey},
+						{Key: &bpmWrongStemcellKey},
+					},
+				},
+					true,
+				)
+				Expect(shouldContinue).To(BeTrue())
+				return nil
+			}
+		})
+
+		It("lists the compiled release with the correct stemcell version as a match", func() {
+			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet, desiredStemcell)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(matchedS3Objects).To(HaveLen(1))
+			Expect(matchedS3Objects).To(
+				HaveKeyWithValue(
+					fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+					fetcher.CompiledRelease{
+						ID:              fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+						StemcellOS:      "ubuntu-xenial",
+						StemcellVersion: "190.0.0",
+						Path:            bpmKey,
+					},
+				),
+			)
 		})
 	})
 
