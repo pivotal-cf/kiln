@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/pivotal-cf/kiln/internal/cargo"
+
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -23,7 +25,7 @@ func (br BuiltRelease) DownloadString() string {
 
 type S3BuiltReleaseSource S3ReleaseSource
 
-func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet) (ReleaseSet, error) {
+func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet, stemcell cargo.Stemcell) (ReleaseSet, error) {
 	matchedS3Objects := make(ReleaseSet)
 
 	exp, err := regexp.Compile(src.Regex)

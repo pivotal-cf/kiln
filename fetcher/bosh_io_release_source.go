@@ -66,7 +66,7 @@ func (r *BOSHIOReleaseSource) Configure(assets cargo.Assets) {
 	return
 }
 
-func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet) (ReleaseSet, error) {
+func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet, stemcell cargo.Stemcell) (ReleaseSet, error) {
 	matchedBOSHIOReleases := make(ReleaseSet)
 
 	for rel := range desiredReleaseSet {

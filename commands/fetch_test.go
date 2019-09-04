@@ -508,7 +508,7 @@ compiled_releases:
 					Expect(fetchExecuteErr).NotTo(HaveOccurred())
 
 					Expect(fakeS3CompiledReleaseSource.GetMatchedReleasesCallCount()).To(Equal(1))
-					_ = fakeS3CompiledReleaseSource.GetMatchedReleasesArgsForCall(0)
+					_, _ = fakeS3CompiledReleaseSource.GetMatchedReleasesArgsForCall(0)
 				})
 			})
 

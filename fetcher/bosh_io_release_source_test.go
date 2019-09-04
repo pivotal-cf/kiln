@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/pivotal-cf/kiln/internal/cargo"
+
 	. "github.com/onsi/ginkgo/extensions/table"
 
 	"github.com/onsi/gomega/ghttp"
@@ -20,6 +22,8 @@ import (
 )
 
 var _ = Describe("GetMatchedReleases from bosh.io", func() {
+	var ignoredStemcell = cargo.Stemcell{OS: "ignored", Version: "ignored"}
+
 	Context("happy path", func() {
 		var (
 			releaseSource     *fetcher.BOSHIOReleaseSource
@@ -62,7 +66,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 				fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}: fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, StemcellOS: os, StemcellVersion: version},
 			}
 
-			foundReleases, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
+			foundReleases, err := releaseSource.GetMatchedReleases(desiredReleaseSet, ignoredStemcell)
 			uaaURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/uaa-release?v=73.3.0", testServer.URL())
 			cfRabbitURL := fmt.Sprintf("%s/d/github.com/pivotal-cf/cf-rabbitmq-release?v=268.0.0", testServer.URL())
 
@@ -106,7 +110,10 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 		JustBeforeEach(func() {
 			releaseID := fetcher.ReleaseID{Name: releaseName, Version: releaseVersion}
 
-			foundReleases, getMatchedReleasesErr = releaseSource.GetMatchedReleases(fetcher.ReleaseSet{releaseID: fetcher.CompiledRelease{}})
+			foundReleases, getMatchedReleasesErr = releaseSource.GetMatchedReleases(
+				fetcher.ReleaseSet{releaseID: fetcher.CompiledRelease{}},
+				ignoredStemcell,
+			)
 		})
 
 		It("does not match that release", func() {
@@ -152,7 +159,10 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 					Path:            "",
 				}
 
-				foundReleases, err := releaseSource.GetMatchedReleases(fetcher.ReleaseSet{releaseID: compiledRelease})
+				foundReleases, err := releaseSource.GetMatchedReleases(
+					fetcher.ReleaseSet{releaseID: compiledRelease},
+					ignoredStemcell,
+				)
 
 				Expect(err).NotTo(HaveOccurred())
 				expectedPath := fmt.Sprintf("%s/d/github.com/%s/%s%s?v=%s",

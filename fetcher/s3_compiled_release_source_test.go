@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pivotal-cf/kiln/internal/cargo"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -36,15 +38,17 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 		fakeS3Client      *fakes.S3ObjectLister
 		desiredReleaseSet fetcher.ReleaseSet
 		bpmKey            string
+		desiredStemcell   cargo.Stemcell
 	)
 
 	BeforeEach(func() {
 		bpmReleaseID := fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}
+		desiredStemcell := cargo.Stemcell{OS: "ubuntu-xenial", Version: "190.0.0"}
 		desiredReleaseSet = fetcher.ReleaseSet{
 			bpmReleaseID: fetcher.CompiledRelease{
 				ID:              bpmReleaseID,
-				StemcellOS:      "ubuntu-xenial",
-				StemcellVersion: "190.0.0",
+				StemcellOS:      desiredStemcell.OS,
+				StemcellVersion: desiredStemcell.Version,
 				Path:            "",
 			},
 		}
@@ -79,7 +83,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 	})
 
 	It("lists all objects that match the given regex", func() {
-		matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
+		matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet, desiredStemcell)
 		Expect(err).NotTo(HaveOccurred())
 
 		input, _ := fakeS3Client.ListObjectsPagesArgsForCall(0)
@@ -109,7 +113,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 		})
 
 		It("does not return them", func() {
-			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
+			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet, desiredStemcell)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
@@ -137,7 +141,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 		})
 
 		It("does not return them", func() {
-			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
+			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet, desiredStemcell)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
@@ -156,7 +160,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 		})
 
 		It("returns an error if a required capture is missing", func() {
-			_, err := releaseSource.GetMatchedReleases(nil)
+			_, err := releaseSource.GetMatchedReleases(nil, desiredStemcell)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("Missing some capture group")))
 		})

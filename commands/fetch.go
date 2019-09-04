@@ -63,8 +63,8 @@ type Fetch struct {
 	localReleaseDirectory LocalReleaseDirectory
 
 	Options struct {
-		AssetsFile      string   `short:"a" long:"assets-file" default:"assets.yml" description:"path to assets file"`
-		ReleasesDir     string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+		AssetsFile  string `short:"a" long:"assets-file" default:"assets.yml" description:"path to assets file"`
+		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 
 		VariablesFiles  []string `short:"vf" long:"variables-file" description:"path to variables file"`
 		Variables       []string `short:"vr" long:"variable" description:"variable in key=value format"`
@@ -83,7 +83,7 @@ func NewFetch(logger *log.Logger, releaseSourcesFactory func(cargo.Assets) []Rel
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedReleases(assetsLock fetcher.ReleaseSet) (fetcher.ReleaseSet, error)
+	GetMatchedReleases(assetsLock fetcher.ReleaseSet, stemcell cargo.Stemcell) (fetcher.ReleaseSet, error)
 	DownloadReleases(releasesDir string, matchedS3Objects fetcher.ReleaseSet, downloadThreads int) error
 }
 
@@ -170,7 +170,7 @@ func (f Fetch) Execute(args []string) error {
 	if len(unsatisfiedReleaseSet) > 0 {
 		f.logger.Printf("Found %d missing releases to download", len(unsatisfiedReleaseSet))
 
-		satisfiedReleaseSet, unsatisfiedReleaseSet, err = f.downloadMissingReleases(assets, satisfiedReleaseSet, unsatisfiedReleaseSet)
+		satisfiedReleaseSet, unsatisfiedReleaseSet, err = f.downloadMissingReleases(assets, satisfiedReleaseSet, unsatisfiedReleaseSet, assetsLock.Stemcell)
 		if err != nil {
 			return err
 		}
@@ -183,10 +183,10 @@ func (f Fetch) Execute(args []string) error {
 	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, assetsLock)
 }
 
-func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseSet) (satisfied, unsatisfied fetcher.ReleaseSet, err error) {
+func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseSet, stemcell cargo.Stemcell) (satisfied, unsatisfied fetcher.ReleaseSet, err error) {
 	releaseSources := f.releaseSourcesFactory(assets)
 	for _, releaseSource := range releaseSources {
-		matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet)
+		matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet, stemcell)
 		if err != nil {
 			return nil, nil, err
 		}
