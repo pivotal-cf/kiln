@@ -86,7 +86,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 	}
 
 	if doDeletion == 'y' || doDeletion == 'Y' {
-		err := l.DeleteReleases(extraReleaseSet)
+		err := l.deleteReleases(releasesDir, extraReleaseSet)
 		if err != nil {
 			return err
 		}
@@ -94,9 +94,14 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 	return nil
 }
 
-func (l LocalReleaseDirectory) DeleteReleases(releasesToDelete ReleaseSet) error {
+func (l LocalReleaseDirectory) deleteReleases(releasesDir string, releasesToDelete ReleaseSet) error {
 	for releaseID, release := range releasesToDelete {
-		err := os.Remove(release.DownloadString())
+		path, err := ConvertToLocalBasename(release)
+		if err != nil {
+			l.logger.Printf("error converting release to local path %s: %v\n", releaseID.Name, err)
+			return fmt.Errorf("failed to delete release %s", releaseID.Name)
+		}
+		err = os.Remove(filepath.Join(releasesDir, path))
 
 		if err != nil {
 			l.logger.Printf("error removing release %s: %v\n", releaseID.Name, err)
@@ -154,7 +159,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 		}
 
 		if expectedSum != sum {
-			l.DeleteReleases(ReleaseSet{releaseID: release})
+			l.deleteReleases(releasesDir, ReleaseSet{releaseID: release})
 			badReleases = append(badReleases, fmt.Sprintf("%+v", completeLocalPath))
 		}
 	}

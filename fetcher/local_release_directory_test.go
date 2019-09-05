@@ -90,21 +90,20 @@ var _ = Describe("LocalReleaseDirectory", func() {
 	})
 
 	Describe("DeleteExtraReleases", func() {
-		var extraFile *os.File
+		var extraFilePath string
 		BeforeEach(func() {
-			var err error
-			extraFile, err = ioutil.TempFile(releasesDir, "extra-release")
+			extraFilePath = filepath.Join(releasesDir, "extra-release-0.0-os-0-0.0.0.tgz")
+			err := ioutil.WriteFile(extraFilePath, []byte("abc"), 0644)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("deletes specified files", func() {
-			extraReleaseID := fetcher.ReleaseID{Name: "extra-release", Version: "v0.0"}
-			extraFileName := extraFile.Name()
+			extraReleaseID := fetcher.ReleaseID{Name: "extra-release", Version: "0.0"}
 			extraRelease := fetcher.CompiledRelease{
 				ID:              extraReleaseID,
 				StemcellOS:      "os-0",
-				StemcellVersion: "v0.0.0",
-				Path:            extraFileName,
+				StemcellVersion: "0.0.0",
+				Path:            "meaningless-string-used-only-by-release-source",
 			}
 
 			extraReleases := map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{}
@@ -113,17 +112,17 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = os.Stat(extraFile.Name())
+			_, err = os.Stat(extraFilePath)
 			Expect(os.IsNotExist(err)).To(BeTrue())
 		})
 
 		Context("when a file cannot be removed", func() {
 			It("returns an error", func() {
-				extraReleaseID := fetcher.ReleaseID{Name: "extra-release-that-cannot-be-deleted", Version: "v0.0"}
+				extraReleaseID := fetcher.ReleaseID{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
 				extraRelease := fetcher.CompiledRelease{
 					ID:              extraReleaseID,
 					StemcellOS:      "os-0",
-					StemcellVersion: "v0.0.0",
+					StemcellVersion: "0.0.0",
 					Path:            "file-does-not-exist",
 				}
 
@@ -137,6 +136,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 	})
 
 	Describe("VerifyChecksums", func() {
+		const meaninglessReleaseSourcePath = "/random/path/used/only/by/release-source"
 		var (
 			downloadedReleases map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader
 			assetsLock         cargo.AssetsLock
@@ -181,7 +181,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 						ID:              fetcher.ReleaseID{Name: "good", Version: "1.2.3"},
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
-						Path:            goodFilePath,
+						Path:            meaninglessReleaseSourcePath,
 					}}
 				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, assetsLock)
 				Expect(err).NotTo(HaveOccurred())
@@ -195,7 +195,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 						ID:              fetcher.ReleaseID{Name: "bad", Version: "1.2.3"},
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
-						Path:            badFilePath,
+						Path:            meaninglessReleaseSourcePath,
 					}}
 				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, assetsLock)
 				Expect(err).To(HaveOccurred())
