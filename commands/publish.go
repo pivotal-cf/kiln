@@ -49,15 +49,29 @@ func NewPublish(outLogger, errLogger *log.Logger, fs billy.Filesystem) Publish {
 }
 
 func (publish Publish) Execute(args []string) error {
-	defer func() {
+	defer publish.recoverFromPanic()
+
+	kilnfile, version, err := publish.parseArgsAndSetup(args)
+	if err != nil {
+		return err
+	}
+
+	return publish.updateReleaseOnPivnet(kilnfile, version)
+}
+
+func (publish Publish) recoverFromPanic() func() {
+	return func() {
 		if r := recover(); r != nil {
 			publish.ErrLogger.Println(r)
 			os.Exit(1)
 		}
-	}()
+	}
+}
+
+func (publish Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Version, error) {
 	_, err := jhanda.Parse(&publish.Options, args)
 	if err != nil {
-		return err
+		return Kilnfile{}, nil, err
 	}
 
 	if publish.Now == nil {
@@ -79,48 +93,45 @@ func (publish Publish) Execute(args []string) error {
 
 	versionFile, err := publish.FS.Open(publish.Options.Version)
 	if err != nil {
-		return err
+		return Kilnfile{}, nil, err
 	}
 	defer versionFile.Close()
 
 	versionBuf, err := ioutil.ReadAll(versionFile)
 	if err != nil {
-		return err
+		return Kilnfile{}, nil, err
 	}
 
 	version, err := semver.NewVersion(strings.TrimSpace(string(versionBuf)))
 	if err != nil {
-		return err
+		return Kilnfile{}, nil, err
 	}
 
 	file, err := publish.FS.Open(publish.Options.Kilnfile)
 	if err != nil {
-		return err
+		return Kilnfile{}, nil, err
 	}
 	defer file.Close()
 
 	var kilnfile Kilnfile
 	if err := yaml.NewDecoder(file).Decode(&kilnfile); err != nil {
-		return fmt.Errorf("could not parse Kilnfile: %s", err)
+		return Kilnfile{}, nil, fmt.Errorf("could not parse Kilnfile: %s", err)
 	}
 
+	return kilnfile, version, nil
+}
+
+func (publish Publish) updateReleaseOnPivnet(kilnfile Kilnfile, version *semver.Version) error {
 	publish.OutLogger.Printf("Requesting list of releases for %s", kilnfile.Slug)
+
 	releases, err := publish.Pivnet.List(kilnfile.Slug)
 	if err != nil {
 		return err
 	}
 
-	vs := version.String()
-	var release pivnet.Release
-	for _, r := range releases {
-		if r.Version == vs {
-			release = r
-			break
-		}
-	}
-
-	if release.Version == "" {
-		return fmt.Errorf("release with version %s not found on %s", vs, publish.Options.PivnetHost)
+	release, err := publish.findRelease(releases, kilnfile, version)
+	if err != nil {
+		return err
 	}
 
 	window, err := kilnfile.ReleaseWindow(publish.Now())
@@ -141,15 +152,26 @@ func (publish Publish) Execute(args []string) error {
 	return nil
 }
 
-func (publish Publish) DetermineVersion(releases []pivnet.Release, window string, version *semver.Version) (string, error) {
-	if version.Patch() > 0 {
-		publishableVersion, _ := version.SetPrerelease("")
-		return publishableVersion.String(), nil
+func (publish Publish) findRelease(releases []pivnet.Release, kilnfile Kilnfile, version *semver.Version) (pivnet.Release, error) {
+	vs := version.String()
+	var release pivnet.Release
+	for _, r := range releases {
+		if r.Version == vs {
+			release = r
+			break
+		}
 	}
 
-	if window == "ga" {
-		v, _ := version.SetPrerelease("")
-		return v.String(), nil
+	if release.Version == "" {
+		return pivnet.Release{}, fmt.Errorf("release with version %s not found on %s", vs, publish.Options.PivnetHost)
+	}
+	return release, nil
+}
+
+func (publish Publish) DetermineVersion(releases []pivnet.Release, window string, version *semver.Version) (string, error) {
+	if version.Patch() > 0 || window == "ga" {
+		publishableVersion, _ := version.SetPrerelease("")
+		return publishableVersion.String(), nil
 	}
 
 	// To allow testing times other than current time
@@ -157,6 +179,29 @@ func (publish Publish) DetermineVersion(releases []pivnet.Release, window string
 		publish.Now = time.Now
 	}
 
+	maxPublished := maxPublishedVersion(releases, version, window)
+
+	if maxPublished == nil {
+		v, err := version.SetPrerelease(window + ".1")
+		return v.String(), err
+	}
+
+	segments := strings.Split(maxPublished.Prerelease(), ".")
+	if len(segments) < 2 {
+		return "", fmt.Errorf("expected prerelease to have a dot (%s)", maxPublished)
+	}
+
+	n, err := strconv.Atoi(segments[len(segments)-1])
+	if err != nil {
+		return "", fmt.Errorf("release has malformed prelease version (%s): %s", maxPublished, err)
+	}
+
+	pubVer, _ := maxPublished.SetPrerelease(strings.Join(segments[:len(segments)-1], ".") + "." + strconv.Itoa(n+1))
+
+	return pubVer.String(), nil
+}
+
+func maxPublishedVersion(releases []pivnet.Release, version *semver.Version, window string) *semver.Version {
 	var filteredVersions []*semver.Version
 	for _, release := range releases {
 		v, err := semver.NewVersion(release.Version)
@@ -172,26 +217,12 @@ func (publish Publish) DetermineVersion(releases []pivnet.Release, window string
 	}
 
 	if len(filteredVersions) == 0 {
-		v, err := version.SetPrerelease(window + ".1")
-		return v.String(), err
+		return nil
 	}
 
 	sort.Sort(sort.Reverse(semver.Collection(filteredVersions)))
 
-	maxPublished := filteredVersions[0]
-	segments := strings.Split(maxPublished.Prerelease(), ".")
-	if len(segments) < 2 {
-		return "", fmt.Errorf("expected prerelease to have a dot (%s)", maxPublished)
-	}
-
-	n, err := strconv.Atoi(segments[len(segments)-1])
-	if err != nil {
-		return "", fmt.Errorf("release has malformed prelease version (%s): %s", maxPublished, err)
-	}
-
-	pubVer, _ := maxPublished.SetPrerelease(strings.Join(segments[:len(segments)-1], ".") + "." + strconv.Itoa(n+1))
-
-	return pubVer.String(), nil
+	return filteredVersions[0]
 }
 
 const PublishDateFormat = "2006-01-02"
