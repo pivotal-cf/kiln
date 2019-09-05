@@ -95,7 +95,7 @@ func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSe
 func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects ReleaseSet, downloadThreads int) error {
 	r.logger.Printf("downloading %d objects from bosh.io...", len(matchedBOSHObjects))
 
-	for releaseID, release := range matchedBOSHObjects {
+	for _, release := range matchedBOSHObjects {
 
 		downloadURL := release.DownloadString()
 		r.logger.Printf("downloading %s...\n", downloadURL)
@@ -105,11 +105,11 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObje
 			return err
 		}
 
-		var fileName string
-		count, err := fmt.Sscanf(resp.Header.Get("Content-Disposition"), "attachment; filename=%s", &fileName)
-		if fileName == "" || err != nil || count != 1 {
-			fileName = fmt.Sprintf("%s-%s.tgz", releaseID.Name, releaseID.Version)
+		fileName, err := ConvertToLocalBasename(release)
+		if err != nil {
+			return err // untested, this this shouldn't be possible
 		}
+
 		out, err := os.Create(filepath.Join(releaseDir, fileName))
 		if err != nil {
 			return err
