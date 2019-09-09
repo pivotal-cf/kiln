@@ -32,7 +32,7 @@ type Publish struct {
 		PivnetHost  string `long:"pivnet-host" default:"https://network.pivotal.io" description:"pivnet host"`
 	}
 
-	Pivnet PivnetReleasesService
+	PivnetReleaseService PivnetReleasesService
 
 	FS  billy.Filesystem
 	Now func() time.Time
@@ -48,50 +48,50 @@ func NewPublish(outLogger, errLogger *log.Logger, fs billy.Filesystem) Publish {
 	}
 }
 
-func (publish Publish) Execute(args []string) error {
-	defer publish.recoverFromPanic()
+func (p Publish) Execute(args []string) error {
+	defer p.recoverFromPanic()
 
-	kilnfile, version, err := publish.parseArgsAndSetup(args)
+	kilnfile, version, err := p.parseArgsAndSetup(args)
 	if err != nil {
 		return err
 	}
 
-	return publish.updateReleaseOnPivnet(kilnfile, version)
+	return p.updateReleaseOnPivnet(kilnfile, version)
 }
 
-func (publish Publish) recoverFromPanic() func() {
+func (p Publish) recoverFromPanic() func() {
 	return func() {
 		if r := recover(); r != nil {
-			publish.ErrLogger.Println(r)
+			p.ErrLogger.Println(r)
 			os.Exit(1)
 		}
 	}
 }
 
-func (publish Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Version, error) {
-	_, err := jhanda.Parse(&publish.Options, args)
+func (p Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Version, error) {
+	_, err := jhanda.Parse(&p.Options, args)
 	if err != nil {
 		return Kilnfile{}, nil, err
 	}
 
-	if publish.Now == nil {
-		publish.Now = time.Now
+	if p.Now == nil {
+		p.Now = time.Now
 	}
 
-	if publish.Pivnet == nil {
+	if p.PivnetReleaseService == nil {
 		config := pivnet.ClientConfig{
-			Host:      publish.Options.PivnetHost,
+			Host:      p.Options.PivnetHost,
 			UserAgent: "kiln",
 		}
 
-		tokenService := pivnet.NewAccessTokenOrLegacyToken(publish.Options.PivnetToken, publish.Options.PivnetHost)
+		tokenService := pivnet.NewAccessTokenOrLegacyToken(p.Options.PivnetToken, p.Options.PivnetHost)
 
-		logger := logshim.NewLogShim(publish.OutLogger, publish.ErrLogger, false)
+		logger := logshim.NewLogShim(p.OutLogger, p.ErrLogger, false)
 		client := pivnet.NewClient(tokenService, config, logger)
-		publish.Pivnet = client.Releases
+		p.PivnetReleaseService = client.Releases
 	}
 
-	versionFile, err := publish.FS.Open(publish.Options.Version)
+	versionFile, err := p.FS.Open(p.Options.Version)
 	if err != nil {
 		return Kilnfile{}, nil, err
 	}
@@ -107,7 +107,7 @@ func (publish Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Versi
 		return Kilnfile{}, nil, err
 	}
 
-	file, err := publish.FS.Open(publish.Options.Kilnfile)
+	file, err := p.FS.Open(p.Options.Kilnfile)
 	if err != nil {
 		return Kilnfile{}, nil, err
 	}
@@ -121,38 +121,38 @@ func (publish Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Versi
 	return kilnfile, version, nil
 }
 
-func (publish Publish) updateReleaseOnPivnet(kilnfile Kilnfile, version *semver.Version) error {
-	publish.OutLogger.Printf("Requesting list of releases for %s", kilnfile.Slug)
+func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, version *semver.Version) error {
+	p.OutLogger.Printf("Requesting list of releases for %s", kilnfile.Slug)
 
-	releases, err := publish.Pivnet.List(kilnfile.Slug)
+	releases, err := p.PivnetReleaseService.List(kilnfile.Slug)
 	if err != nil {
 		return err
 	}
 
-	release, err := publish.findRelease(releases, kilnfile, version)
+	release, err := p.findRelease(releases, kilnfile, version)
 	if err != nil {
 		return err
 	}
 
-	window, err := kilnfile.ReleaseWindow(publish.Now())
+	window, err := kilnfile.ReleaseWindow(p.Now())
 	if err != nil {
 		return err
 	}
 
-	release.Version, err = publish.DetermineVersion(releases, window, version)
+	release.Version, err = p.DetermineVersion(releases, window, version)
 	if err != nil {
 		return err
 	}
 	release.ReleaseType = releaseType(window, version)
 
-	if _, err := publish.Pivnet.Update(kilnfile.Slug, release); err != nil {
+	if _, err := p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (publish Publish) findRelease(releases []pivnet.Release, kilnfile Kilnfile, version *semver.Version) (pivnet.Release, error) {
+func (p Publish) findRelease(releases []pivnet.Release, kilnfile Kilnfile, version *semver.Version) (pivnet.Release, error) {
 	vs := version.String()
 	var release pivnet.Release
 	for _, r := range releases {
@@ -163,20 +163,20 @@ func (publish Publish) findRelease(releases []pivnet.Release, kilnfile Kilnfile,
 	}
 
 	if release.Version == "" {
-		return pivnet.Release{}, fmt.Errorf("release with version %s not found on %s", vs, publish.Options.PivnetHost)
+		return pivnet.Release{}, fmt.Errorf("release with version %s not found on %s", vs, p.Options.PivnetHost)
 	}
 	return release, nil
 }
 
-func (publish Publish) DetermineVersion(releases []pivnet.Release, window string, version *semver.Version) (string, error) {
+func (p Publish) DetermineVersion(releases []pivnet.Release, window string, version *semver.Version) (string, error) {
 	if version.Patch() > 0 || window == "ga" {
 		publishableVersion, _ := version.SetPrerelease("")
 		return publishableVersion.String(), nil
 	}
 
 	// To allow testing times other than current time
-	if publish.Now == nil {
-		publish.Now = time.Now
+	if p.Now == nil {
+		p.Now = time.Now
 	}
 
 	maxPublished := maxPublishedVersion(releases, version, window)
@@ -308,10 +308,10 @@ func releaseType(window string, v *semver.Version) pivnet.ReleaseType {
 }
 
 // Usage writes helpful information.
-func (publish Publish) Usage() jhanda.Usage {
+func (p Publish) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "This command prints helpful usage information.",
 		ShortDescription: "prints this usage information",
-		Flags:            publish.Options,
+		Flags:            p.Options,
 	}
 }

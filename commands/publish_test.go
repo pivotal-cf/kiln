@@ -61,8 +61,8 @@ publish_dates:
 			kf.Close()
 
 			publish := commands.Publish{
-				FS:     fs,
-				Pivnet: rs,
+				FS:                   fs,
+				PivnetReleaseService: rs,
 				Now: func() time.Time {
 					return parseTime(publishDateAlpha)
 				},
@@ -126,7 +126,7 @@ publish_dates:
 				}
 
 				publish.FS = fs
-				publish.Pivnet = releasesService
+				publish.PivnetReleaseService = releasesService
 				publish.Now = func() time.Time {
 					return now
 				}
@@ -239,7 +239,7 @@ publish_dates:
 		})
 
 		JustBeforeEach(func() {
-			publish.Pivnet = releasesService
+			publish.PivnetReleaseService = releasesService
 			publish.Now = func() time.Time {
 				return now
 			}
