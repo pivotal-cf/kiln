@@ -143,7 +143,12 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, version *semver.Versio
 	if err != nil {
 		return err
 	}
-	release.ReleaseType = releaseType(window, version)
+
+	v, err := semver.NewVersion(release.Version)
+	if err != nil {
+		return err // untested
+	}
+	release.ReleaseType = releaseType(window, v)
 
 	if _, err := p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
 		return err

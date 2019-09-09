@@ -45,42 +45,150 @@ publish_dates:
 	})
 
 	Describe("Execute", func() {
-		It("updates Pivnet release with the determined version", func() {
-			release := pivnet.Release{Version: "2.0.0-build.45", ID: 123}
-			rs := &fakes.PivnetReleasesService{}
-			rs.ListReturns([]pivnet.Release{release}, nil)
-			rs.UpdateReturns(pivnet.Release{}, nil)
+		When("on the happy-path", func() {
+			var (
+				publish commands.Publish
+				rs      *fakes.PivnetReleasesService
+				now     time.Time
+			)
 
-			fs := memfs.New()
-			vf, _ := fs.Create("version")
-			vf.Write([]byte("2.0.0-build.45"))
-			vf.Close()
+			BeforeEach(func() {
+				release := pivnet.Release{Version: "2.0.0-build.45", ID: 123}
+				rs = &fakes.PivnetReleasesService{}
+				rs.ListReturns([]pivnet.Release{release}, nil)
+				rs.UpdateReturns(pivnet.Release{}, nil)
+			})
 
-			kf, _ := fs.Create("Kilnfile")
-			kf.Write([]byte(defaultKilnFileBody))
-			kf.Close()
+			JustBeforeEach(func() {
+				fs := memfs.New()
+				vf, _ := fs.Create("version")
+				vf.Write([]byte("2.0.0-build.45"))
+				vf.Close()
 
-			publish := commands.Publish{
-				FS:                   fs,
-				PivnetReleaseService: rs,
-				Now: func() time.Time {
-					return parseTime(publishDateAlpha)
-				},
-				OutLogger: log.New(ioutil.Discard, "", 0),
-				ErrLogger: log.New(ioutil.Discard, "", 0),
-			}
-			err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
-			Expect(err).NotTo(HaveOccurred())
+				kf, _ := fs.Create("Kilnfile")
+				kf.Write([]byte(defaultKilnFileBody))
+				kf.Close()
 
-			Expect(rs.ListCallCount()).To(Equal(1))
-			Expect(rs.ListArgsForCall(0)).To(Equal(slug))
+				publish = commands.Publish{
+					FS:                   fs,
+					PivnetReleaseService: rs,
+					Now: func() time.Time {
+						return now
+					},
+					OutLogger: log.New(ioutil.Discard, "", 0),
+					ErrLogger: log.New(ioutil.Discard, "", 0),
+				}
+			})
 
-			Expect(rs.UpdateCallCount()).To(Equal(1))
-			{
-				s, r := rs.UpdateArgsForCall(0)
-				Expect(s).To(Equal(slug))
-				Expect(r.Version).To(Equal("2.0.0-alpha.1"))
-			}
+			Context("before the alpha window", func() {
+				BeforeEach(func() {
+					now = parseTime(publishDateAlpha).Add(-1 * time.Second)
+				})
+
+				It("updates Pivnet release with the determined version and release type", func() {
+					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(rs.ListCallCount()).To(Equal(1))
+					Expect(rs.ListArgsForCall(0)).To(Equal(slug))
+
+					Expect(rs.UpdateCallCount()).To(Equal(1))
+					{
+						s, r := rs.UpdateArgsForCall(0)
+						Expect(s).To(Equal(slug))
+						Expect(r.Version).To(Equal("2.0.0-internal.1"))
+						Expect(r.ReleaseType).To(BeEquivalentTo("Developer Release"))
+					}
+				})
+			})
+
+			Context("during the alpha window", func() {
+				BeforeEach(func() {
+					now = parseTime(publishDateAlpha)
+				})
+
+				It("updates Pivnet release with the determined version and release type", func() {
+					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(rs.ListCallCount()).To(Equal(1))
+					Expect(rs.ListArgsForCall(0)).To(Equal(slug))
+
+					Expect(rs.UpdateCallCount()).To(Equal(1))
+					{
+						s, r := rs.UpdateArgsForCall(0)
+						Expect(s).To(Equal(slug))
+						Expect(r.Version).To(Equal("2.0.0-alpha.1"))
+						Expect(r.ReleaseType).To(BeEquivalentTo("Alpha Release"))
+					}
+				})
+			})
+
+			Context("during the beta window", func() {
+				BeforeEach(func() {
+					now = parseTime(publishDateBeta)
+				})
+
+				It("updates Pivnet release with the determined version and release type", func() {
+					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(rs.ListCallCount()).To(Equal(1))
+					Expect(rs.ListArgsForCall(0)).To(Equal(slug))
+
+					Expect(rs.UpdateCallCount()).To(Equal(1))
+					{
+						s, r := rs.UpdateArgsForCall(0)
+						Expect(s).To(Equal(slug))
+						Expect(r.Version).To(Equal("2.0.0-beta.1"))
+						Expect(r.ReleaseType).To(BeEquivalentTo("Beta Release"))
+					}
+				})
+			})
+
+			Context("during the rc window", func() {
+				BeforeEach(func() {
+					now = parseTime(publishDateRC)
+				})
+
+				It("updates Pivnet release with the determined version and release type", func() {
+					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(rs.ListCallCount()).To(Equal(1))
+					Expect(rs.ListArgsForCall(0)).To(Equal(slug))
+
+					Expect(rs.UpdateCallCount()).To(Equal(1))
+					{
+						s, r := rs.UpdateArgsForCall(0)
+						Expect(s).To(Equal(slug))
+						Expect(r.Version).To(Equal("2.0.0-rc.1"))
+						Expect(r.ReleaseType).To(BeEquivalentTo("Release Candidate"))
+					}
+				})
+			})
+
+			Context("during the ga window", func() {
+				BeforeEach(func() {
+					now = parseTime(publishDateGA)
+				})
+
+				It("updates Pivnet release with the determined version and release type", func() {
+					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(rs.ListCallCount()).To(Equal(1))
+					Expect(rs.ListArgsForCall(0)).To(Equal(slug))
+
+					Expect(rs.UpdateCallCount()).To(Equal(1))
+					{
+						s, r := rs.UpdateArgsForCall(0)
+						Expect(s).To(Equal(slug))
+						Expect(r.Version).To(Equal("2.0.0"))
+						Expect(r.ReleaseType).To(BeEquivalentTo("Major Release"))
+					}
+				})
+			})
 		})
 
 		When("not the happy case", func() {
