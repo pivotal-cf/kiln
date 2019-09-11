@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	pivnet "github.com/pivotal-cf/go-pivnet"
+	"github.com/pivotal-cf/go-pivnet"
 	"github.com/pivotal-cf/go-pivnet/logshim"
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/src-d/go-billy.v4"
@@ -279,12 +279,7 @@ func (kilnfile Kilnfile) ReleaseWindow(currentTime time.Time) (string, error) {
 		return "beta", nil
 	}
 
-	alphaDate := kilnfile.PublishDates.Alpha
-	if currentTime.Equal(alphaDate.Time) || currentTime.After(alphaDate.Time) {
-		return "alpha", nil
-	}
-
-	return "internal", nil
+	return "alpha", nil
 }
 
 func releaseType(window string, v *semver.Version) pivnet.ReleaseType {
@@ -304,8 +299,6 @@ func releaseType(window string, v *semver.Version) pivnet.ReleaseType {
 		case v.Prerelease() == "":
 			return "Maintenance Release"
 		}
-		fallthrough
-	case "internal":
 		fallthrough
 	default:
 		return "Developer Release"

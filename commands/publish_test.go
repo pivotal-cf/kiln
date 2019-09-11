@@ -19,16 +19,14 @@ import (
 
 var _ = Describe("Publish", func() {
 	const (
-		slug             = "elastic-runtime"
-		publishDateAlpha = "2019-10-04"
-		publishDateBeta  = "2019-10-28"
-		publishDateRC    = "2019-11-11"
-		publishDateGA    = "2019-12-06"
+		slug            = "elastic-runtime"
+		publishDateBeta = "2019-10-28"
+		publishDateRC   = "2019-11-11"
+		publishDateGA   = "2019-12-06"
 
 		defaultKilnFileBody = `---
 slug: ` + slug + `
 publish_dates:
-  alpha: ` + publishDateAlpha + `
   beta: ` + publishDateBeta + `
   rc: ` + publishDateRC + `
   ga: ` + publishDateGA
@@ -80,31 +78,9 @@ publish_dates:
 				}
 			})
 
-			Context("before the alpha window", func() {
+			Context("before the beta window", func() {
 				BeforeEach(func() {
-					now = parseTime(publishDateAlpha).Add(-1 * time.Second)
-				})
-
-				It("updates Pivnet release with the determined version and release type", func() {
-					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(rs.ListCallCount()).To(Equal(1))
-					Expect(rs.ListArgsForCall(0)).To(Equal(slug))
-
-					Expect(rs.UpdateCallCount()).To(Equal(1))
-					{
-						s, r := rs.UpdateArgsForCall(0)
-						Expect(s).To(Equal(slug))
-						Expect(r.Version).To(Equal("2.0.0-internal.1"))
-						Expect(r.ReleaseType).To(BeEquivalentTo("Developer Release"))
-					}
-				})
-			})
-
-			Context("during the alpha window", func() {
-				BeforeEach(func() {
-					now = parseTime(publishDateAlpha)
+					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
 				})
 
 				It("updates Pivnet release with the determined version and release type", func() {
@@ -242,7 +218,7 @@ publish_dates:
 
 			When("the release to be updated is not found", func() {
 				BeforeEach(func() {
-					now = parseTime(publishDateAlpha)
+					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
 					releasesService.ListReturns([]pivnet.Release{{Version: "1.2.3-build.1"}}, nil)
 				})
 
@@ -256,7 +232,7 @@ publish_dates:
 
 			When("the version file contains an invalid semver", func() {
 				BeforeEach(func() {
-					now = parseTime(publishDateAlpha)
+					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
 					versionFileBody = "not a banana"
 				})
 
@@ -379,7 +355,7 @@ publish_dates:
 
 			When("there has not been an alpha release yet", func() {
 				BeforeEach(func() {
-					now = parseTime(publishDateAlpha)
+					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
 				})
 
 				It("returns alpha 1 as the version number", func() {
@@ -392,7 +368,7 @@ publish_dates:
 			When("there has been two alpha releases and we are in the alpha window", func() {
 				BeforeEach(func() {
 					releases = []pivnet.Release{{Version: "2.8.0-alpha.1"}, {Version: "2.8.0-alpha.2"}}
-					now = parseTime(publishDateAlpha)
+					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
 				})
 
 				It("returns alpha 3 as the version number", func() {
@@ -471,7 +447,7 @@ publish_dates:
 			When("the prerelease number is malformed", func() {
 				BeforeEach(func() {
 					releases = []pivnet.Release{{Version: "2.8.0-alpha.1a"}, {Version: "2.8.0-alpha.1b"}}
-					now = parseTime(publishDateAlpha)
+					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
 				})
 
 				It("returns an error", func() {
@@ -483,7 +459,7 @@ publish_dates:
 			When("the prerelease does not have a dot", func() {
 				BeforeEach(func() {
 					releases = []pivnet.Release{{Version: "2.8.0-alpha1"}}
-					now = parseTime(publishDateAlpha)
+					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
 				})
 
 				It("returns an error", func() {
@@ -527,28 +503,15 @@ publish_dates:
 				}
 
 				kilnfile = commands.Kilnfile{}
-				kilnfile.PublishDates.Alpha = commands.Date{parseTime(publishDateAlpha)}
+				kilnfile.PublishDates.Alpha = commands.Date{parseTime(publishDateBeta).Add(-24 * time.Hour)}
 				kilnfile.PublishDates.RC = commands.Date{parseTime(publishDateRC)}
 				kilnfile.PublishDates.Beta = commands.Date{parseTime(publishDateBeta)}
 				kilnfile.PublishDates.GA = commands.Date{parseTime(publishDateGA)}
 			})
 
-			When("the window is before alpha", func() {
+			When("the window is before beta", func() {
 				BeforeEach(func() {
-					now = parseTime(publishDateAlpha)
-					now = now.Add(-time.Hour * 24 * 5)
-				})
-
-				It("returns internal", func() {
-					window, err := kilnfile.ReleaseWindow(now)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(window).To(Equal("internal"))
-				})
-			})
-
-			When("the window is in alpha", func() {
-				BeforeEach(func() {
-					now = parseTime(publishDateAlpha)
+					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
 				})
 
 				It("returns alpha", func() {
