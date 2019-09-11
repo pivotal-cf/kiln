@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,25 +17,16 @@ import (
 var _ = Describe("publish", func() {
 	const (
 		slug             = "elastic-runtime"
-		publishDateBeta  = "2019-10-28"
-		publishDateRC    = "2019-11-11"
-		publishDateGA    = "2019-12-06"
 
 		// we are testing on a specific release on pivnet
 		releaseID = 384471
-
-		kilnfileBody = `---
-slug: ` + slug + `
-publish_dates:
-  beta: ` + publishDateBeta + `
-  rc: ` + publishDateRC + `
-  ga: ` + publishDateGA
 	)
 
 	var (
 		client pivnet.Client
 		token, tmpDir, initialDir, host,
 		releaseVersion string
+		kilnfileBody string
 	)
 
 	restoreState := func() {
@@ -70,6 +62,22 @@ publish_dates:
 	BeforeEach(func() {
 		restoreState()
 		var err error
+
+		now := time.Now().UTC()
+		days := 24*time.Hour
+		publishDateBeta := now.Add(1*days)
+		publishDateRC := publishDateBeta.Add(13*days)
+		publishDateGA := publishDateRC.Add(28*days)
+
+		dateFormat := "2006-01-02"
+
+		kilnfileBody = `---
+slug: ` + slug + `
+publish_dates:
+  beta: ` + publishDateBeta.Format(dateFormat) + `
+  rc: ` + publishDateRC.Format(dateFormat) + `
+  ga: ` + publishDateGA.Format(dateFormat)
+
 		tmpDir, err = ioutil.TempDir("", "kiln-publish-test")
 		Expect(err).NotTo(HaveOccurred())
 		initialDir, _ = os.Getwd()
