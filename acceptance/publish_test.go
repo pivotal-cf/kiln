@@ -97,6 +97,6 @@ publish_dates:
 			Expect(err).NotTo(HaveOccurred())
 		}
 		Expect(rel.Version).To(Equal("2.2.17"))
-		Expect(string(rel.ReleaseType)).To(Equal("Developer Release"))
+		Expect(string(rel.ReleaseType)).To(Equal("Alpha Release"))
 	})
 })

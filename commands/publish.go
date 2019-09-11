@@ -68,7 +68,7 @@ func (p Publish) recoverFromPanic() func() {
 	}
 }
 
-func (p Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Version, error) {
+func (p *Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Version, error) {
 	_, err := jhanda.Parse(&p.Options, args)
 	if err != nil {
 		return Kilnfile{}, nil, err
