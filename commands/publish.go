@@ -24,6 +24,12 @@ type PivnetReleasesService interface {
 	Update(productSlug string, release pivnet.Release) (pivnet.Release, error)
 }
 
+//go:generate counterfeiter -o ./fakes/pivnet_product_files_service.go --fake-name PivnetProductFilesService . PivnetProductFilesService
+type PivnetProductFilesService interface {
+	List(productSlug string) ([]pivnet.ProductFile, error)
+	AddToRelease(productSlug string, releaseID int, productFileID int) error
+}
+
 type Publish struct {
 	Options struct {
 		Kilnfile    string `short:"f" long:"file" default:"Kilnfile" description:"path to Kilnfile"`
@@ -32,7 +38,8 @@ type Publish struct {
 		PivnetHost  string `long:"pivnet-host" default:"https://network.pivotal.io" description:"pivnet host"`
 	}
 
-	PivnetReleaseService PivnetReleasesService
+	PivnetReleaseService      PivnetReleasesService
+	PivnetProductFilesService PivnetProductFilesService
 
 	FS  billy.Filesystem
 	Now func() time.Time
@@ -152,6 +159,28 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, version *semver.Versio
 
 	if _, err := p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
 		return err
+	}
+
+	if window == "ga" {
+		productFiles, err := p.PivnetProductFilesService.List(kilnfile.Slug)
+		if err != nil {
+			panic(err)
+		}
+
+		matchingFileVersion := fmt.Sprintf("%d.%d", v.Major(), v.Minor())
+
+		var productFileID int
+		for _, file := range productFiles {
+
+			if matchingFileVersion == file.FileVersion && file.FileType == "Open Source License" {
+				productFileID = file.ID
+				break
+			}
+		}
+
+		if err = p.PivnetProductFilesService.AddToRelease(kilnfile.Slug, release.ID, productFileID); err != nil {
+			panic(err)
+		}
 	}
 
 	return nil
