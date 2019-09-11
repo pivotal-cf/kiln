@@ -293,7 +293,7 @@ publish_dates:
 				BeforeEach(func() {
 					kilnFileBody = `---
 publish_dates:
-  alpha: "ERROR"
+  beta: "ERROR"
 `
 				})
 
@@ -503,7 +503,6 @@ publish_dates:
 				}
 
 				kilnfile = commands.Kilnfile{}
-				kilnfile.PublishDates.Alpha = commands.Date{parseTime(publishDateBeta).Add(-24 * time.Hour)}
 				kilnfile.PublishDates.RC = commands.Date{parseTime(publishDateRC)}
 				kilnfile.PublishDates.Beta = commands.Date{parseTime(publishDateBeta)}
 				kilnfile.PublishDates.GA = commands.Date{parseTime(publishDateGA)}

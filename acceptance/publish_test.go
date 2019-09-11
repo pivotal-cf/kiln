@@ -16,7 +16,6 @@ import (
 var _ = Describe("publish", func() {
 	const (
 		slug             = "elastic-runtime"
-		publishDateAlpha = "2019-10-04"
 		publishDateBeta  = "2019-10-28"
 		publishDateRC    = "2019-11-11"
 		publishDateGA    = "2019-12-06"
@@ -27,7 +26,6 @@ var _ = Describe("publish", func() {
 		kilnfileBody = `---
 slug: ` + slug + `
 publish_dates:
-  alpha: ` + publishDateAlpha + `
   beta: ` + publishDateBeta + `
   rc: ` + publishDateRC + `
   ga: ` + publishDateGA

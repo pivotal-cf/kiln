@@ -255,7 +255,6 @@ func (d *Date) UnmarshalYAML(unmarshal func(interface{}) error) error {
 type Kilnfile struct {
 	Slug         string `yaml:"slug"`
 	PublishDates struct {
-		Alpha Date `yaml:"alpha"`
 		Beta  Date `yaml:"beta"`
 		RC    Date `yaml:"rc"`
 		GA    Date `yaml:"ga"`
