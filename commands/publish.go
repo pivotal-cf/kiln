@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -24,6 +25,12 @@ type PivnetReleasesService interface {
 	Update(productSlug string, release pivnet.Release) (pivnet.Release, error)
 }
 
+//go:generate counterfeiter -o ./fakes/pivnet_product_files_service.go --fake-name PivnetProductFilesService . PivnetProductFilesService
+type PivnetProductFilesService interface {
+	List(productSlug string) ([]pivnet.ProductFile, error)
+	AddToRelease(productSlug string, releaseID int, productFileID int) error
+}
+
 type Publish struct {
 	Options struct {
 		Kilnfile    string `short:"f" long:"file" default:"Kilnfile" description:"path to Kilnfile"`
@@ -32,7 +39,8 @@ type Publish struct {
 		PivnetHost  string `long:"pivnet-host" default:"https://network.pivotal.io" description:"pivnet host"`
 	}
 
-	PivnetReleaseService PivnetReleasesService
+	PivnetReleaseService      PivnetReleasesService
+	PivnetProductFilesService PivnetProductFilesService
 
 	FS  billy.Filesystem
 	Now func() time.Time
@@ -121,7 +129,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Version, e
 	return kilnfile, version, nil
 }
 
-func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, version *semver.Version) error {
+func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.Version) error {
 	p.OutLogger.Printf("Requesting list of releases for %s", kilnfile.Slug)
 
 	releases, err := p.PivnetReleaseService.List(kilnfile.Slug)
@@ -129,7 +137,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, version *semver.Versio
 		return err
 	}
 
-	release, err := p.findRelease(releases, kilnfile, version)
+	release, err := p.findRelease(releases, kilnfile, buildVersion)
 	if err != nil {
 		return err
 	}
@@ -139,21 +147,52 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, version *semver.Versio
 		return err
 	}
 
-	release.Version, err = p.DetermineVersion(releases, window, version)
+	versionToPublish, err := p.DetermineVersion(releases, window, buildVersion)
 	if err != nil {
 		return err
 	}
 
-	v, err := semver.NewVersion(release.Version)
+	err = p.attachLicenseFile(window, kilnfile.Slug, release.ID, versionToPublish)
 	if err != nil {
-		return err // untested
+		return err
 	}
-	release.ReleaseType = releaseType(window, v)
+
+	release.Version = versionToPublish.String()
+	release.ReleaseType = releaseType(window, versionToPublish)
 
 	if _, err := p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func (p Publish) attachLicenseFile(window, slug string, releaseID int, version *semver.Version) error {
+	if window == "ga" {
+		productFiles, err := p.PivnetProductFilesService.List(slug)
+		if err != nil {
+			return err
+		}
+
+		matchingFileVersion := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
+
+		var productFileID int
+		for _, file := range productFiles {
+			if matchingFileVersion == file.FileVersion && file.FileType == "Open Source License" {
+				productFileID = file.ID
+				break
+			}
+		}
+
+		if productFileID == 0 {
+			return errors.New("required license file doesn't exist on Pivnet")
+		}
+
+		err = p.PivnetProductFilesService.AddToRelease(slug, releaseID, productFileID)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -173,10 +212,10 @@ func (p Publish) findRelease(releases []pivnet.Release, kilnfile Kilnfile, versi
 	return release, nil
 }
 
-func (p Publish) DetermineVersion(releases []pivnet.Release, window string, version *semver.Version) (string, error) {
+func (p Publish) DetermineVersion(releases []pivnet.Release, window string, version *semver.Version) (*semver.Version, error) {
 	if version.Patch() > 0 || window == "ga" {
 		publishableVersion, _ := version.SetPrerelease("")
-		return publishableVersion.String(), nil
+		return &publishableVersion, nil
 	}
 
 	// To allow testing times other than current time
@@ -188,22 +227,22 @@ func (p Publish) DetermineVersion(releases []pivnet.Release, window string, vers
 
 	if maxPublished == nil {
 		v, err := version.SetPrerelease(window + ".1")
-		return v.String(), err
+		return &v, err
 	}
 
 	segments := strings.Split(maxPublished.Prerelease(), ".")
 	if len(segments) < 2 {
-		return "", fmt.Errorf("expected prerelease to have a dot (%s)", maxPublished)
+		return nil, fmt.Errorf("expected prerelease to have a dot (%s)", maxPublished)
 	}
 
 	n, err := strconv.Atoi(segments[len(segments)-1])
 	if err != nil {
-		return "", fmt.Errorf("release has malformed prelease version (%s): %s", maxPublished, err)
+		return nil, fmt.Errorf("release has malformed prelease version (%s): %s", maxPublished, err)
 	}
 
 	pubVer, _ := maxPublished.SetPrerelease(strings.Join(segments[:len(segments)-1], ".") + "." + strconv.Itoa(n+1))
 
-	return pubVer.String(), nil
+	return &pubVer, nil
 }
 
 func maxPublishedVersion(releases []pivnet.Release, version *semver.Version, window string) *semver.Version {
@@ -255,9 +294,9 @@ func (d *Date) UnmarshalYAML(unmarshal func(interface{}) error) error {
 type Kilnfile struct {
 	Slug         string `yaml:"slug"`
 	PublishDates struct {
-		Beta  Date `yaml:"beta"`
-		RC    Date `yaml:"rc"`
-		GA    Date `yaml:"ga"`
+		Beta Date `yaml:"beta"`
+		RC   Date `yaml:"rc"`
+		GA   Date `yaml:"ga"`
 	} `yaml:"publish_dates"`
 }
 

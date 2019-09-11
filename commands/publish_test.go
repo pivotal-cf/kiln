@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,7 +11,7 @@ import (
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	pivnet "github.com/pivotal-cf/go-pivnet"
+	"github.com/pivotal-cf/go-pivnet"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	"gopkg.in/src-d/go-billy.v4"
@@ -45,22 +46,29 @@ publish_dates:
 	Describe("Execute", func() {
 		When("on the happy-path", func() {
 			var (
-				publish commands.Publish
-				rs      *fakes.PivnetReleasesService
-				now     time.Time
+				publish    commands.Publish
+				rs         *fakes.PivnetReleasesService
+				pfs        *fakes.PivnetProductFilesService
+				now        time.Time
+				versionStr string
 			)
+			const releaseID = 123
 
 			BeforeEach(func() {
-				release := pivnet.Release{Version: "2.0.0-build.45", ID: 123}
+				versionStr = "2.0.0-build.45"
 				rs = &fakes.PivnetReleasesService{}
-				rs.ListReturns([]pivnet.Release{release}, nil)
-				rs.UpdateReturns(pivnet.Release{}, nil)
+				pfs = &fakes.PivnetProductFilesService{}
 			})
 
 			JustBeforeEach(func() {
+				release := pivnet.Release{Version: versionStr, ID: releaseID}
+
+				rs.ListReturns([]pivnet.Release{release}, nil)
+				rs.UpdateReturns(pivnet.Release{}, nil)
+
 				fs := memfs.New()
 				vf, _ := fs.Create("version")
-				vf.Write([]byte("2.0.0-build.45"))
+				vf.Write([]byte(versionStr))
 				vf.Close()
 
 				kf, _ := fs.Create("Kilnfile")
@@ -68,8 +76,9 @@ publish_dates:
 				kf.Close()
 
 				publish = commands.Publish{
-					FS:                   fs,
-					PivnetReleaseService: rs,
+					FS:                        fs,
+					PivnetReleaseService:      rs,
+					PivnetProductFilesService: pfs,
 					Now: func() time.Time {
 						return now
 					},
@@ -98,6 +107,13 @@ publish_dates:
 						Expect(r.ReleaseType).To(BeEquivalentTo("Alpha Release"))
 					}
 				})
+
+				It("does not add a file to the release", func() {
+					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
+				})
 			})
 
 			Context("during the beta window", func() {
@@ -119,6 +135,13 @@ publish_dates:
 						Expect(r.Version).To(Equal("2.0.0-beta.1"))
 						Expect(r.ReleaseType).To(BeEquivalentTo("Beta Release"))
 					}
+				})
+
+				It("does not add a file to the release", func() {
+					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
 				})
 			})
 
@@ -142,29 +165,156 @@ publish_dates:
 						Expect(r.ReleaseType).To(BeEquivalentTo("Release Candidate"))
 					}
 				})
-			})
 
-			Context("during the ga window", func() {
-				BeforeEach(func() {
-					now = parseTime(publishDateGA)
-				})
-
-				It("updates Pivnet release with the determined version and release type", func() {
+				It("does not add a file to the release", func() {
 					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(rs.ListCallCount()).To(Equal(1))
-					Expect(rs.ListArgsForCall(0)).To(Equal(slug))
-
-					Expect(rs.UpdateCallCount()).To(Equal(1))
-					{
-						s, r := rs.UpdateArgsForCall(0)
-						Expect(s).To(Equal(slug))
-						Expect(r.Version).To(Equal("2.0.0"))
-						Expect(r.ReleaseType).To(BeEquivalentTo("Major Release"))
-					}
+					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
 				})
 			})
+
+			Context("during the ga window", func() {
+				const (
+					version20FileID = 42
+					version21FileID = 43
+				)
+
+				BeforeEach(func() {
+					pfs.ListReturns(
+						[]pivnet.ProductFile{
+							{
+								ID:          40,
+								Name:        "Uncle Bob's Magic Elixir",
+								FileVersion: "2.0",
+								FileType:    "Snake Oil",
+							},
+							{
+								ID:          41,
+								Name:        "Uncle Bob's Magic Elixir",
+								FileVersion: "2.1",
+								FileType:    "Snake Oil",
+							},
+							{
+								ID:          version21FileID,
+								Name:        "PCF Pivotal Application Service v2.1 OSL",
+								FileVersion: "2.1",
+								FileType:    "Open Source License",
+							},
+							{
+								ID:          version20FileID,
+								Name:        "PCF Pivotal Application Service v2.0 OSL",
+								FileVersion: "2.0",
+								FileType:    "Open Source License",
+							},
+						},
+						nil,
+					)
+				})
+
+				Context("for a major release", func() {
+					BeforeEach(func() {
+						now = parseTime(publishDateGA)
+						versionStr = "2.0.0-build.45"
+					})
+
+					It("updates Pivnet release with the determined version and release type", func() {
+						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(rs.ListCallCount()).To(Equal(1))
+						Expect(rs.ListArgsForCall(0)).To(Equal(slug))
+
+						Expect(rs.UpdateCallCount()).To(Equal(1))
+						{
+							s, r := rs.UpdateArgsForCall(0)
+							Expect(s).To(Equal(slug))
+							Expect(r.Version).To(Equal("2.0.0"))
+							Expect(r.ReleaseType).To(BeEquivalentTo("Major Release"))
+						}
+					})
+
+					It("adds the appropriate OSL file", func() {
+						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
+						productSlug, productReleaseID, fileID := pfs.AddToReleaseArgsForCall(0)
+						Expect(productSlug).To(Equal(slug))
+						Expect(productReleaseID).To(Equal(releaseID))
+						Expect(fileID).To(Equal(version20FileID))
+					})
+				})
+
+				Context("for a minor release", func() {
+					BeforeEach(func() {
+						now = parseTime(publishDateGA)
+						versionStr = "2.1.0-build.45"
+					})
+
+					It("updates Pivnet release with the determined version and release type", func() {
+						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(rs.ListCallCount()).To(Equal(1))
+						Expect(rs.ListArgsForCall(0)).To(Equal(slug))
+
+						Expect(rs.UpdateCallCount()).To(Equal(1))
+						{
+							s, r := rs.UpdateArgsForCall(0)
+							Expect(s).To(Equal(slug))
+							Expect(r.Version).To(Equal("2.1.0"))
+							Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
+						}
+					})
+
+					It("adds the appropriate OSL file", func() {
+						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
+						productSlug, productReleaseID, fileID := pfs.AddToReleaseArgsForCall(0)
+						Expect(productSlug).To(Equal(slug))
+						Expect(productReleaseID).To(Equal(releaseID))
+						Expect(fileID).To(Equal(version21FileID))
+					})
+				})
+
+				Context("for a patch release", func() {
+					BeforeEach(func() {
+						now = parseTime(publishDateGA)
+						versionStr = "2.1.1-build.45"
+					})
+
+					It("updates Pivnet release with the determined version and release type", func() {
+						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(rs.ListCallCount()).To(Equal(1))
+						Expect(rs.ListArgsForCall(0)).To(Equal(slug))
+
+						Expect(rs.UpdateCallCount()).To(Equal(1))
+						{
+							s, r := rs.UpdateArgsForCall(0)
+							Expect(s).To(Equal(slug))
+							Expect(r.Version).To(Equal("2.1.1"))
+							Expect(r.ReleaseType).To(BeEquivalentTo("Maintenance Release"))
+						}
+					})
+
+					It("adds the appropriate OSL file", func() {
+						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
+						productSlug, productReleaseID, fileID := pfs.AddToReleaseArgsForCall(0)
+						Expect(productSlug).To(Equal(slug))
+						Expect(productReleaseID).To(Equal(releaseID))
+						Expect(fileID).To(Equal(version21FileID))
+					})
+				})
+			})
+
 		})
 
 		When("not the happy case", func() {
@@ -176,6 +326,7 @@ publish_dates:
 				noVersionFile, noKilnFile     bool
 				versionFileBody, kilnFileBody string
 				releasesService               *fakes.PivnetReleasesService
+				productFilesService           *fakes.PivnetProductFilesService
 
 				executeArgs []string
 			)
@@ -187,6 +338,7 @@ publish_dates:
 				publish.ErrLogger = log.New(ioutil.Discard, "", 0)
 
 				releasesService = &fakes.PivnetReleasesService{}
+				productFilesService = &fakes.PivnetProductFilesService{}
 
 				noVersionFile, noKilnFile = false, false
 				fs = memfs.New()
@@ -211,6 +363,7 @@ publish_dates:
 
 				publish.FS = fs
 				publish.PivnetReleaseService = releasesService
+				publish.PivnetProductFilesService = productFilesService
 				publish.Now = func() time.Time {
 					return now
 				}
@@ -242,7 +395,7 @@ publish_dates:
 				})
 			})
 
-			When("the kiln file does not exist", func() {
+			When("the Kilnfile does not exist", func() {
 				BeforeEach(func() {
 					noVersionFile = true
 				})
@@ -254,7 +407,7 @@ publish_dates:
 				})
 			})
 
-			When("the kiln file does not exist", func() {
+			When("the Kilnfile does not exist", func() {
 				BeforeEach(func() {
 					noKilnFile = true
 				})
@@ -303,6 +456,81 @@ publish_dates:
 					Expect(err).To(MatchError(ContainSubstring("parsing time")))
 				})
 			})
+
+			When("there is an error fetching product files from Pivnet", func() {
+				BeforeEach(func() {
+					now = parseTime(publishDateGA)
+					releasesService.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
+					productFilesService.ListReturns(nil, errors.New("bad stuff happened"))
+				})
+
+				It("returns an error and makes no changes", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(HaveOccurred())
+
+					Expect(releasesService.UpdateCallCount()).To(Equal(0))
+					Expect(productFilesService.ListCallCount()).To(Equal(1))
+					Expect(productFilesService.AddToReleaseCallCount()).To(Equal(0))
+					Expect(err).To(MatchError("bad stuff happened"))
+				})
+			})
+
+			When("there the necessary license file doesn't exist on Pivnet", func() {
+				BeforeEach(func() {
+					now = parseTime(publishDateGA)
+					releasesService.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
+					productFilesService.ListReturns(
+						[]pivnet.ProductFile{
+							{
+								ID:          42,
+								Name:        "PCF Pivotal Application Service v2.1 OSL",
+								FileVersion: "2.1",
+								FileType:    "Open Source License",
+							},
+						},
+						nil,
+					)
+				})
+
+				It("returns an error and makes no changes", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(HaveOccurred())
+
+					Expect(releasesService.UpdateCallCount()).To(Equal(0))
+					Expect(productFilesService.ListCallCount()).To(Equal(1))
+					Expect(productFilesService.AddToReleaseCallCount()).To(Equal(0))
+					Expect(err).To(MatchError(ContainSubstring("file doesn't exist")))
+				})
+			})
+
+			When("there is an error adding the license file to the release on Pivnet", func() {
+				BeforeEach(func() {
+					now = parseTime(publishDateGA)
+					releasesService.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
+					productFilesService.ListReturns(
+						[]pivnet.ProductFile{
+							{
+								ID:          42,
+								Name:        "PCF Pivotal Application Service v2.8 OSL",
+								FileVersion: "2.8",
+								FileType:    "Open Source License",
+							},
+						},
+						nil,
+					)
+					productFilesService.AddToReleaseReturns(errors.New("more bad stuff happened"))
+				})
+
+				It("returns an error and makes no changes", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(HaveOccurred())
+
+					Expect(releasesService.UpdateCallCount()).To(Equal(0))
+					Expect(productFilesService.ListCallCount()).To(Equal(1))
+					Expect(productFilesService.AddToReleaseCallCount()).To(Equal(1))
+					Expect(err).To(MatchError("more bad stuff happened"))
+				})
+			})
 		})
 	})
 
@@ -333,7 +561,7 @@ publish_dates:
 			It("returns the version number without the prerelease segments", func() {
 				got, err := publish.DetermineVersion(releases, "", semver.MustParse("1.2.3-build.45"))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(got).To(Equal("1.2.3"))
+				Expect(got).To(Equal(semver.MustParse("1.2.3")))
 				Expect(releasesService.ListCallCount()).To(Equal(0))
 				Expect(releasesService.UpdateCallCount()).To(Equal(0))
 			})
@@ -361,7 +589,7 @@ publish_dates:
 				It("returns alpha 1 as the version number", func() {
 					got, err := publish.DetermineVersion(releases, "alpha", someVersion)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal("2.8.0-alpha.1"))
+					Expect(got).To(Equal(semver.MustParse("2.8.0-alpha.1")))
 				})
 			})
 
@@ -374,7 +602,7 @@ publish_dates:
 				It("returns alpha 3 as the version number", func() {
 					got, err := publish.DetermineVersion(releases, "alpha", someVersion)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal("2.8.0-alpha.3"))
+					Expect(got).To(Equal(semver.MustParse("2.8.0-alpha.3")))
 				})
 			})
 
@@ -387,7 +615,7 @@ publish_dates:
 				It("returns beta 2 as the prerelease version number", func() {
 					got, err := publish.DetermineVersion(releases, "beta", someVersion)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal("2.8.0-beta.2"))
+					Expect(got).To(Equal(semver.MustParse("2.8.0-beta.2")))
 				})
 			})
 
@@ -401,7 +629,7 @@ publish_dates:
 				It("returns the next beta number as the prerelease version number", func() {
 					got, err := publish.DetermineVersion(releases, "rc", someVersion)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal("2.8.0-rc.2"))
+					Expect(got).To(Equal(semver.MustParse("2.8.0-rc.2")))
 				})
 			})
 
@@ -414,7 +642,7 @@ publish_dates:
 				It("returns the next beta number as the prerelease version number", func() {
 					got, err := publish.DetermineVersion(releases, "beta", someVersion)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal("2.8.0-beta.3"))
+					Expect(got).To(Equal(semver.MustParse("2.8.0-beta.3")))
 				})
 			})
 
@@ -427,7 +655,7 @@ publish_dates:
 				It("returns the first rc number", func() {
 					got, err := publish.DetermineVersion(releases, "rc", someVersion)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal("2.8.0-rc.1"))
+					Expect(got).To(Equal(semver.MustParse("2.8.0-rc.1")))
 				})
 			})
 
@@ -440,7 +668,7 @@ publish_dates:
 				It("returns a version without a prelease part", func() {
 					got, err := publish.DetermineVersion(releases, "ga", someVersion)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal("2.8.0"))
+					Expect(got).To(Equal(semver.MustParse("2.8.0")))
 				})
 			})
 
