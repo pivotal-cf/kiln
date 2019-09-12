@@ -19,6 +19,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const oslFileType = "Open Source License"
+
 //go:generate counterfeiter -o ./fakes/pivnet_releases_service.go --fake-name PivnetReleasesService . PivnetReleasesService
 type PivnetReleasesService interface {
 	List(productSlug string) ([]pivnet.Release, error)
@@ -86,7 +88,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Version, e
 		p.Now = time.Now
 	}
 
-	if p.PivnetReleaseService == nil {
+	if p.PivnetReleaseService == nil || p.PivnetProductFilesService == nil {
 		config := pivnet.ClientConfig{
 			Host:      p.Options.PivnetHost,
 			UserAgent: "kiln",
@@ -96,7 +98,14 @@ func (p *Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Version, e
 
 		logger := logshim.NewLogShim(p.OutLogger, p.ErrLogger, false)
 		client := pivnet.NewClient(tokenService, config, logger)
-		p.PivnetReleaseService = client.Releases
+
+		if p.PivnetReleaseService == nil {
+			p.PivnetReleaseService = client.Releases
+		}
+
+		if p.PivnetProductFilesService == nil {
+			p.PivnetProductFilesService = client.ProductFiles
+		}
 	}
 
 	versionFile, err := p.FS.Open(p.Options.Version)
@@ -174,11 +183,11 @@ func (p Publish) attachLicenseFile(window, slug string, releaseID int, version *
 			return err
 		}
 
-		matchingFileVersion := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
+		licenseFileVersion := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
 
 		var productFileID int
 		for _, file := range productFiles {
-			if matchingFileVersion == file.FileVersion && file.FileType == "Open Source License" {
+			if file.FileType == oslFileType && file.FileVersion == licenseFileVersion {
 				productFileID = file.ID
 				break
 			}

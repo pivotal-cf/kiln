@@ -16,16 +16,16 @@ import (
 
 var _ = Describe("publish", func() {
 	const (
-		slug             = "elastic-runtime"
+		slug           = "elastic-runtime"
+		releaseVersion = "2.2.17-build.6"
 
 		// we are testing on a specific release on pivnet
 		releaseID = 384471
 	)
 
 	var (
-		client pivnet.Client
+		client       pivnet.Client
 		token, tmpDir, initialDir, host,
-		releaseVersion string
 		kilnfileBody string
 	)
 
@@ -43,19 +43,23 @@ var _ = Describe("publish", func() {
 		accessTokenService := pivnet.NewAccessTokenOrLegacyToken(token, config.Host)
 		client = pivnet.NewClient(accessTokenService, config, logger)
 
-		releaseVersion = "2.2.17-build.6"
 		rel, err := client.Releases.Get(slug, releaseID)
-		if err != nil {
+		Expect(err).NotTo(HaveOccurred())
+
+		if rel.Version != releaseVersion || rel.ReleaseType != "Developer Release" {
+			rel.Version = releaseVersion
+			rel.ReleaseType = "Developer Release"
+			_, err = client.Releases.Update(slug, rel)
 			Expect(err).NotTo(HaveOccurred())
 		}
-		if rel.Version == releaseVersion && rel.ReleaseType == "Developer Release" {
-			return
-		}
-		rel.Version = releaseVersion
-		rel.ReleaseType = "Maintenance Release"
-		_, err = client.Releases.Update(slug, rel)
-		if err != nil {
-			Expect(err).NotTo(HaveOccurred())
+
+		releaseFiles, err := client.ProductFiles.ListForRelease(slug, releaseID)
+		Expect(err).NotTo(HaveOccurred())
+		for _, file := range releaseFiles {
+			if file.FileType == "Open Source License" {
+				err = client.ProductFiles.RemoveFromRelease(slug, releaseID, file.ID)
+				Expect(err).NotTo(HaveOccurred())
+			}
 		}
 	}
 
@@ -64,10 +68,10 @@ var _ = Describe("publish", func() {
 		var err error
 
 		now := time.Now().UTC()
-		days := 24*time.Hour
-		publishDateBeta := now.Add(1*days)
-		publishDateRC := publishDateBeta.Add(13*days)
-		publishDateGA := publishDateRC.Add(28*days)
+		days := 24 * time.Hour
+		publishDateGA := now.Add(-1 * days)
+		publishDateRC := publishDateGA.Add(-14 * days)
+		publishDateBeta := publishDateRC.Add(-13 * days)
 
 		dateFormat := "2006-01-02"
 
@@ -101,10 +105,21 @@ publish_dates:
 		Eventually(session, 20).Should(gexec.Exit(0))
 
 		rel, err := client.Releases.Get(slug, releaseID)
-		if err != nil {
-			Expect(err).NotTo(HaveOccurred())
-		}
+		Expect(err).NotTo(HaveOccurred())
 		Expect(rel.Version).To(Equal("2.2.17"))
-		Expect(string(rel.ReleaseType)).To(Equal("Alpha Release"))
+		Expect(string(rel.ReleaseType)).To(Equal("Maintenance Release"))
+
+		releaseFiles, err := client.ProductFiles.ListForRelease(slug, releaseID)
+		Expect(err).NotTo(HaveOccurred())
+
+		var licenseFile pivnet.ProductFile
+		for _, file := range releaseFiles {
+			if file.FileType == "Open Source License" {
+				licenseFile = file
+				break
+			}
+		}
+		Expect(licenseFile).NotTo(Equal(pivnet.ProductFile{}))
+		Expect(licenseFile.Name).To(Equal("PCF Pivotal Application Service v2.2 OSL"))
 	})
 })
