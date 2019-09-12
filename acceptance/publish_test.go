@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	"github.com/pivotal-cf/go-pivnet"
-	"github.com/pivotal-cf/go-pivnet/logshim"
+	"github.com/pivotal-cf/go-pivnet/v2"
+	"github.com/pivotal-cf/go-pivnet/v2/logshim"
 )
 
 var _ = Describe("publish", func() {
@@ -24,7 +24,7 @@ var _ = Describe("publish", func() {
 	)
 
 	var (
-		client       pivnet.Client
+		client pivnet.Client
 		token, tmpDir, initialDir, host,
 		kilnfileBody string
 	)
@@ -40,7 +40,7 @@ var _ = Describe("publish", func() {
 		stderrLogger := log.New(os.Stderr, "", log.LstdFlags)
 		logger := logshim.NewLogShim(stdoutLogger, stderrLogger, false)
 		config := pivnet.ClientConfig{Host: host}
-		accessTokenService := pivnet.NewAccessTokenOrLegacyToken(token, config.Host)
+		accessTokenService := pivnet.NewAccessTokenOrLegacyToken(token, config.Host, false)
 		client = pivnet.NewClient(accessTokenService, config, logger)
 
 		rel, err := client.Releases.Get(slug, releaseID)

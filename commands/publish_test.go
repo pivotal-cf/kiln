@@ -11,7 +11,7 @@ import (
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/go-pivnet"
+	"github.com/pivotal-cf/go-pivnet/v2"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	"gopkg.in/src-d/go-billy.v4"

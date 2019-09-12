@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	"github.com/pivotal-cf/go-pivnet"
-	"github.com/pivotal-cf/go-pivnet/logshim"
+	"github.com/pivotal-cf/go-pivnet/v2"
+	"github.com/pivotal-cf/go-pivnet/v2/logshim"
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/yaml.v2"
@@ -94,7 +94,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Version, e
 			UserAgent: "kiln",
 		}
 
-		tokenService := pivnet.NewAccessTokenOrLegacyToken(p.Options.PivnetToken, p.Options.PivnetHost)
+		tokenService := pivnet.NewAccessTokenOrLegacyToken(p.Options.PivnetToken, p.Options.PivnetHost, false)
 
 		logger := logshim.NewLogShim(p.OutLogger, p.ErrLogger, false)
 		client := pivnet.NewClient(tokenService, config, logger)
