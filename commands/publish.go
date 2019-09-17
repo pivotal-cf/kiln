@@ -141,17 +141,18 @@ func (p *Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Version, e
 func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.Version) error {
 	p.OutLogger.Printf("Requesting list of releases for %s", kilnfile.Slug)
 
+	window, err := kilnfile.ReleaseWindow(p.Now())
+	if err != nil {
+		return err
+	}
+	releaseType := releaseType(window, buildVersion)
+
 	releases, err := p.PivnetReleaseService.List(kilnfile.Slug)
 	if err != nil {
 		return err
 	}
 
 	release, err := p.findRelease(releases, kilnfile, buildVersion)
-	if err != nil {
-		return err
-	}
-
-	window, err := kilnfile.ReleaseWindow(p.Now())
 	if err != nil {
 		return err
 	}
@@ -167,7 +168,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 	}
 
 	release.Version = versionToPublish.String()
-	release.ReleaseType = releaseType(window, versionToPublish)
+	release.ReleaseType = releaseType
 
 	if _, err := p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
 		return err
@@ -278,6 +279,37 @@ func maxPublishedVersion(releases []pivnet.Release, version *semver.Version, win
 	return filteredVersions[0]
 }
 
+func releaseType(window string, v *semver.Version) pivnet.ReleaseType {
+	switch window {
+	case "rc":
+		return "Release Candidate"
+	case "beta":
+		return "Beta Release"
+	case "alpha":
+		return "Alpha Release"
+	case "ga":
+		switch {
+		case v.Minor() == 0 && v.Patch() == 0:
+			return "Major Release"
+		case v.Patch() == 0:
+			return "Minor Release"
+		default:
+			return "Maintenance Release"
+		}
+	default:
+		return "Developer Release"
+	}
+}
+
+// Usage writes helpful information.
+func (p Publish) Usage() jhanda.Usage {
+	return jhanda.Usage{
+		Description:      "This command prints helpful usage information.",
+		ShortDescription: "prints this usage information",
+		Flags:            p.Options,
+	}
+}
+
 const PublishDateFormat = "2006-01-02"
 
 type Date struct {
@@ -327,36 +359,4 @@ func (kilnfile Kilnfile) ReleaseWindow(currentTime time.Time) (string, error) {
 	}
 
 	return "alpha", nil
-}
-
-func releaseType(window string, v *semver.Version) pivnet.ReleaseType {
-	switch window {
-	case "rc":
-		return "Release Candidate"
-	case "beta":
-		return "Beta Release"
-	case "alpha":
-		return "Alpha Release"
-	case "ga":
-		switch {
-		case v.Minor() == 0 && v.Patch() == 0 && v.Prerelease() == "":
-			return "Major Release"
-		case v.Patch() == 0 && v.Prerelease() == "":
-			return "Minor Release"
-		case v.Prerelease() == "":
-			return "Maintenance Release"
-		}
-		fallthrough
-	default:
-		return "Developer Release"
-	}
-}
-
-// Usage writes helpful information.
-func (p Publish) Usage() jhanda.Usage {
-	return jhanda.Usage{
-		Description:      "This command prints helpful usage information.",
-		ShortDescription: "prints this usage information",
-		Flags:            p.Options,
-	}
 }
