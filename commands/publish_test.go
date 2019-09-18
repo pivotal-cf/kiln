@@ -46,11 +46,12 @@ publish_dates:
 	Describe("Execute", func() {
 		When("on the happy-path", func() {
 			var (
-				publish    commands.Publish
-				rs         *fakes.PivnetReleasesService
-				pfs        *fakes.PivnetProductFilesService
-				now        time.Time
-				versionStr string
+				publish          commands.Publish
+				rs               *fakes.PivnetReleasesService
+				pfs              *fakes.PivnetProductFilesService
+				now              time.Time
+				versionStr       string
+				releasesOnPivnet []pivnet.Release
 			)
 			const releaseID = 123
 
@@ -58,12 +59,15 @@ publish_dates:
 				versionStr = "2.0.0-build.45"
 				rs = &fakes.PivnetReleasesService{}
 				pfs = &fakes.PivnetProductFilesService{}
+				releasesOnPivnet = []pivnet.Release{}
 			})
 
 			JustBeforeEach(func() {
-				release := pivnet.Release{Version: versionStr, ID: releaseID}
+				if len(releasesOnPivnet) == 0 {
+					releasesOnPivnet = []pivnet.Release{{Version: versionStr, ID: releaseID}}
+				}
+				rs.ListReturns(releasesOnPivnet, nil)
 
-				rs.ListReturns([]pivnet.Release{release}, nil)
 				rs.UpdateReturns(pivnet.Release{}, nil)
 
 				fs := memfs.New()
@@ -105,6 +109,8 @@ publish_dates:
 						Expect(s).To(Equal(slug))
 						Expect(r.Version).To(Equal("2.0.0-alpha.1"))
 						Expect(r.ReleaseType).To(BeEquivalentTo("Alpha Release"))
+						Expect(r.EndOfSupportDate).To(Equal(""))
+						Expect(r.ReleaseDate).To(Equal("2019-10-27"))
 					}
 				})
 
@@ -134,6 +140,8 @@ publish_dates:
 						Expect(s).To(Equal(slug))
 						Expect(r.Version).To(Equal("2.0.0-beta.1"))
 						Expect(r.ReleaseType).To(BeEquivalentTo("Beta Release"))
+						Expect(r.EndOfSupportDate).To(Equal(""))
+						Expect(r.ReleaseDate).To(Equal(publishDateBeta))
 					}
 				})
 
@@ -163,6 +171,8 @@ publish_dates:
 						Expect(s).To(Equal(slug))
 						Expect(r.Version).To(Equal("2.0.0-rc.1"))
 						Expect(r.ReleaseType).To(BeEquivalentTo("Release Candidate"))
+						Expect(r.EndOfSupportDate).To(Equal(""))
+						Expect(r.ReleaseDate).To(Equal(publishDateRC))
 					}
 				})
 
@@ -231,6 +241,8 @@ publish_dates:
 							Expect(s).To(Equal(slug))
 							Expect(r.Version).To(Equal("2.0.0"))
 							Expect(r.ReleaseType).To(BeEquivalentTo("Major Release"))
+							Expect(r.EndOfSupportDate).To(Equal("2020-09-30"))
+							Expect(r.ReleaseDate).To(Equal(publishDateGA))
 						}
 					})
 
@@ -265,6 +277,8 @@ publish_dates:
 							Expect(s).To(Equal(slug))
 							Expect(r.Version).To(Equal("2.1.0"))
 							Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
+							Expect(r.EndOfSupportDate).To(Equal("2020-09-30"))
+							Expect(r.ReleaseDate).To(Equal(publishDateGA))
 						}
 					})
 
@@ -281,9 +295,18 @@ publish_dates:
 				})
 
 				Context("for a patch release", func() {
+					var endOfSupportDate string
 					BeforeEach(func() {
 						now = parseTime(publishDateGA)
 						versionStr = "2.1.1-build.45"
+						endOfSupportDate = "2019-07-31"
+
+						releasesOnPivnet = []pivnet.Release{
+							{Version: versionStr, ID: releaseID},
+							{Version: "2.1.0", EndOfSupportDate: endOfSupportDate},
+							{Version: "2.1.1-build.1234"},
+							{Version: "2.0.0", EndOfSupportDate: "2010-01-05"},
+						}
 					})
 
 					It("updates Pivnet release with the determined version and release type", func() {
@@ -299,6 +322,8 @@ publish_dates:
 							Expect(s).To(Equal(slug))
 							Expect(r.Version).To(Equal("2.1.1"))
 							Expect(r.ReleaseType).To(BeEquivalentTo("Maintenance Release"))
+							Expect(r.EndOfSupportDate).To(Equal(endOfSupportDate))
+							Expect(r.ReleaseDate).To(Equal(publishDateGA))
 						}
 					})
 
@@ -495,11 +520,11 @@ publish_dates:
 				It("returns an error and makes no changes", func() {
 					err := publish.Execute(executeArgs)
 					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring("file doesn't exist")))
 
 					Expect(releasesService.UpdateCallCount()).To(Equal(0))
 					Expect(productFilesService.ListCallCount()).To(Equal(1))
 					Expect(productFilesService.AddToReleaseCallCount()).To(Equal(0))
-					Expect(err).To(MatchError(ContainSubstring("file doesn't exist")))
 				})
 			})
 
@@ -529,6 +554,33 @@ publish_dates:
 					Expect(productFilesService.ListCallCount()).To(Equal(1))
 					Expect(productFilesService.AddToReleaseCallCount()).To(Equal(1))
 					Expect(err).To(MatchError("more bad stuff happened"))
+				})
+			})
+
+			When("a release on PivNet has an invalid version", func() {
+				BeforeEach(func() {
+					now = parseTime(publishDateGA)
+					releasesService.ListReturns([]pivnet.Release{
+						{Version: someVersion.String()},
+						{Version: "invalid version"},
+					}, nil)
+					productFilesService.ListReturns(
+						[]pivnet.ProductFile{
+							{
+								ID:          42,
+								Name:        "PCF Pivotal Application Service v2.8 OSL",
+								FileVersion: "2.8",
+								FileType:    "Open Source License",
+							},
+						},
+						nil,
+					)
+				})
+
+				It("returns an error", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring("Invalid Semantic Version")))
 				})
 			})
 		})

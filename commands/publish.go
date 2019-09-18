@@ -170,11 +170,64 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 	release.Version = versionToPublish.String()
 	release.ReleaseType = releaseType
 
+	release.ReleaseDate = p.Now().Format(PublishDateFormat)
+	if window == "ga" {
+		lastPatchRelease, matchExists, err := p.findLatestPatchRelease(releases, buildVersion)
+		if err != nil {
+			return err
+		}
+		if matchExists {
+			release.EndOfSupportDate = lastPatchRelease.EndOfSupportDate
+		} else {
+			release.EndOfSupportDate = endOfSupportFor(p.Now())
+		}
+	}
+
 	if _, err := p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func endOfSupportFor(now time.Time) string {
+  monthWithOverflow := now.Month() + 10
+  month := ((monthWithOverflow - 1) % 12) + 1
+  yearDelta := int((monthWithOverflow - 1) / 12)
+  startOfTenthMonth := time.Date(now.Year() + yearDelta, month, 1, 0, 0, 0, 0, now.Location())
+  endOfNinthMonth := startOfTenthMonth.Add(-24 * time.Hour)
+  return endOfNinthMonth.Format(PublishDateFormat)
+}
+
+func (p Publish) findLatestPatchRelease(releases []pivnet.Release, version *semver.Version) (pivnet.Release, bool, error) {
+	constraint, err := semver.NewConstraint(fmt.Sprintf("~%d.%d.0", version.Major(), version.Minor()))
+	if err != nil {
+		return pivnet.Release{}, false, err // untested, since we exit earlier for invalid versions
+	}
+
+	var matches []pivnet.Release
+	for _, release := range releases {
+		v, err := semver.NewVersion(release.Version)
+		if err != nil {
+			return pivnet.Release{}, false, err
+		}
+
+		if constraint.Check(v) {
+			matches = append(matches, release)
+		}
+	}
+
+	if len(matches) == 0 {
+		return pivnet.Release{}, false, nil
+	}
+
+	sort.Slice(matches, func(i, j int) bool {
+		v1 := semver.MustParse(matches[i].Version)
+		v2 := semver.MustParse(matches[j].Version)
+		return v1.LessThan(v2)
+	})
+
+	return matches[len(matches)-1], true, nil
 }
 
 func (p Publish) attachLicenseFile(window, slug string, releaseID int, version *semver.Version) error {
