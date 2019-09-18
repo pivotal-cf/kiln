@@ -158,7 +158,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 		return err
 	}
 
-	versionToPublish, err := p.DetermineVersion(releases, window, buildVersion)
+	versionToPublish, err := p.determineVersion(releases, window, buildVersion)
 	if err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (p Publish) attachLicenseFile(window, slug string, releaseID int, version *
 	return nil
 }
 
-func (p Publish) DetermineVersion(releases []pivnet.Release, window string, version *semver.Version) (*semver.Version, error) {
+func (p Publish) determineVersion(releases []pivnet.Release, window string, version *semver.Version) (*semver.Version, error) {
 	if version.Patch() > 0 || window == "ga" {
 		publishableVersion, _ := version.SetPrerelease("")
 		return &publishableVersion, nil

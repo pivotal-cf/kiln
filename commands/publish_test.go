@@ -1,11 +1,9 @@
 package commands_test
 
 import (
-	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"log"
-	"os"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -120,6 +118,24 @@ publish_dates:
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
 				})
+
+				Context("when previous alphas have been published", func() {
+					BeforeEach(func() {
+						releasesOnPivnet = []pivnet.Release{
+							{Version: versionStr, ID: releaseID},
+							{Version: "2.0.0-alpha.456"},
+						}
+					})
+
+					It("publishes with a version that increments the alpha number", func() {
+						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						Expect(err).NotTo(HaveOccurred())
+
+						s, r := rs.UpdateArgsForCall(0)
+						Expect(s).To(Equal(slug))
+						Expect(r.Version).To(Equal("2.0.0-alpha.457"))
+					})
+				})
 			})
 
 			Context("during the beta window", func() {
@@ -151,6 +167,24 @@ publish_dates:
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
 				})
+
+				Context("when previous betas have been published", func() {
+					BeforeEach(func() {
+						releasesOnPivnet = []pivnet.Release{
+							{Version: versionStr, ID: releaseID},
+							{Version: "2.0.0-beta.123"},
+						}
+					})
+
+					It("publishes with a version that increments the alpha number", func() {
+						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						Expect(err).NotTo(HaveOccurred())
+
+						s, r := rs.UpdateArgsForCall(0)
+						Expect(s).To(Equal(slug))
+						Expect(r.Version).To(Equal("2.0.0-beta.124"))
+					})
+				})
 			})
 
 			Context("during the rc window", func() {
@@ -181,6 +215,25 @@ publish_dates:
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
+				})
+
+				Context("when previous release candidates have been published", func() {
+					BeforeEach(func() {
+						releasesOnPivnet = []pivnet.Release{
+							{Version: versionStr, ID: releaseID},
+							{Version: "2.0.0-rc.2"},
+							{Version: "2.0.0-rc.1"},
+						}
+					})
+
+					It("publishes with a version that increments the alpha number", func() {
+						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						Expect(err).NotTo(HaveOccurred())
+
+						s, r := rs.UpdateArgsForCall(0)
+						Expect(s).To(Equal(slug))
+						Expect(r.Version).To(Equal("2.0.0-rc.3"))
+					})
 				})
 			})
 
@@ -588,177 +641,6 @@ publish_dates:
 						Expect(r.Version).To(Equal("2.8.0"))
 						Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
 					}
-				})
-			})
-		})
-	})
-
-	Describe("DetermineVersion", func() {
-		var (
-			publish commands.Publish
-
-			releases        []pivnet.Release
-			releasesService *fakes.PivnetReleasesService
-
-			now time.Time
-		)
-
-		BeforeEach(func() {
-			releasesService = &fakes.PivnetReleasesService{}
-			publish = commands.Publish{}
-			publish.Options.Kilnfile = "Kilnfile"
-		})
-
-		JustBeforeEach(func() {
-			publish.PivnetReleaseService = releasesService
-			publish.Now = func() time.Time {
-				return now
-			}
-		})
-
-		When("patch version is more than 0", func() {
-			It("returns the version number without the prerelease segments", func() {
-				got, err := publish.DetermineVersion(releases, "", semver.MustParse("1.2.3-build.45"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(got).To(Equal(semver.MustParse("1.2.3")))
-				Expect(releasesService.ListCallCount()).To(Equal(0))
-				Expect(releasesService.UpdateCallCount()).To(Equal(0))
-			})
-		})
-
-		When("patch version is 0", func() {
-			BeforeEach(func() {
-				var err error
-				// TODO: Consider removing this beforeeach
-				resBody, err := os.Open("testdata/elastic-runtime-releases.json")
-				Expect(err).NotTo(HaveOccurred())
-				var file struct {
-					Releases []pivnet.Release `json:"releases"`
-				}
-				err = json.NewDecoder(resBody).Decode(&file)
-				releases = file.Releases
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			When("there has not been an alpha release yet", func() {
-				BeforeEach(func() {
-					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
-				})
-
-				It("returns alpha 1 as the version number", func() {
-					got, err := publish.DetermineVersion(releases, "alpha", someVersion)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal(semver.MustParse("2.8.0-alpha.1")))
-				})
-			})
-
-			When("there has been two alpha releases and we are in the alpha window", func() {
-				BeforeEach(func() {
-					releases = []pivnet.Release{{Version: "2.8.0-alpha.1"}, {Version: "2.8.0-alpha.2"}}
-					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
-				})
-
-				It("returns alpha 3 as the version number", func() {
-					got, err := publish.DetermineVersion(releases, "alpha", someVersion)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal(semver.MustParse("2.8.0-alpha.3")))
-				})
-			})
-
-			When("a beta prerelease exists and we are in the beta window", func() {
-				BeforeEach(func() {
-					releases = []pivnet.Release{{Version: "2.8.0-beta.1"}, {Version: "2.8.0-alpha.1"}}
-					now = parseTime(publishDateBeta)
-				})
-
-				It("returns beta 2 as the prerelease version number", func() {
-					got, err := publish.DetermineVersion(releases, "beta", someVersion)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal(semver.MustParse("2.8.0-beta.2")))
-				})
-			})
-
-			When("the response from pivnet is an unsorted version list and we are in the rc window", func() {
-				BeforeEach(func() {
-					releases = []pivnet.Release{{Version: "2.8.0-alpha.1"}, {Version: "2.8.0-rc.1"}, {Version: "2.8.0-beta.1"}, {Version: "2.8.0-beta.2"}}
-					now = parseTime(publishDateRC)
-					now.Add(time.Hour * 24 * 2) // put the date into middle of the window
-				})
-
-				It("returns the next beta number as the prerelease version number", func() {
-					got, err := publish.DetermineVersion(releases, "rc", someVersion)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal(semver.MustParse("2.8.0-rc.2")))
-				})
-			})
-
-			When("the release window is in beta", func() {
-				BeforeEach(func() {
-					releases = []pivnet.Release{{Version: "2.8.0-rc.1"}, {Version: "2.8.0-alpha.1"}, {Version: "2.8.0-beta.1"}, {Version: "2.8.0-beta.2"}}
-					now = parseTime(publishDateBeta)
-				})
-
-				It("returns the next beta number as the prerelease version number", func() {
-					got, err := publish.DetermineVersion(releases, "beta", someVersion)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal(semver.MustParse("2.8.0-beta.3")))
-				})
-			})
-
-			When("the release window is in rc", func() {
-				BeforeEach(func() {
-					releases = []pivnet.Release{{Version: "2.8.0-alpha.1"}, {Version: "2.8.0-beta.1"}, {Version: "2.8.0-beta.2"}}
-					now = parseTime(publishDateRC)
-				})
-
-				It("returns the first rc number", func() {
-					got, err := publish.DetermineVersion(releases, "rc", someVersion)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal(semver.MustParse("2.8.0-rc.1")))
-				})
-			})
-
-			When("the release window is in GA", func() {
-				BeforeEach(func() {
-					releases = []pivnet.Release{{Version: "2.8.0-alpha.1"}, {Version: "2.8.0-beta.1"}, {Version: "2.8.0-beta.2"}, {Version: "2.8.0-rc.1"}}
-					now = parseTime(publishDateGA)
-				})
-
-				It("returns a version without a prelease part", func() {
-					got, err := publish.DetermineVersion(releases, "ga", someVersion)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(got).To(Equal(semver.MustParse("2.8.0")))
-				})
-			})
-
-			When("the prerelease number is malformed", func() {
-				BeforeEach(func() {
-					releases = []pivnet.Release{{Version: "2.8.0-alpha.1a"}, {Version: "2.8.0-alpha.1b"}}
-					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
-				})
-
-				It("returns an error", func() {
-					_, err := publish.DetermineVersion(releases, "", someVersion)
-					Expect(err).To(HaveOccurred())
-				})
-			})
-
-			When("the prerelease does not have a dot", func() {
-				BeforeEach(func() {
-					releases = []pivnet.Release{{Version: "2.8.0-alpha1"}}
-					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
-				})
-
-				It("returns an error", func() {
-					_, err := publish.DetermineVersion(releases, "", someVersion)
-					Expect(err).To(HaveOccurred())
-				})
-			})
-
-			When("the Now func is not set", func() {
-				It("it does not panic", func() {
-					publish.Now = nil
-					publish.DetermineVersion(releases, "", someVersion)
 				})
 			})
 		})
