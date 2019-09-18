@@ -147,12 +147,13 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 	}
 	releaseType := releaseType(window, buildVersion)
 
-	releases, err := p.PivnetReleaseService.List(kilnfile.Slug)
+	var releases releaseSet
+	releases, err = p.PivnetReleaseService.List(kilnfile.Slug)
 	if err != nil {
 		return err
 	}
 
-	release, err := p.findRelease(releases, kilnfile, buildVersion)
+	release, err := releases.Find(buildVersion.String())
 	if err != nil {
 		return err
 	}
@@ -191,43 +192,16 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 }
 
 func endOfSupportFor(now time.Time) string {
-  monthWithOverflow := now.Month() + 10
-  month := ((monthWithOverflow - 1) % 12) + 1
-  yearDelta := int((monthWithOverflow - 1) / 12)
-  startOfTenthMonth := time.Date(now.Year() + yearDelta, month, 1, 0, 0, 0, 0, now.Location())
-  endOfNinthMonth := startOfTenthMonth.Add(-24 * time.Hour)
-  return endOfNinthMonth.Format(PublishDateFormat)
+	monthWithOverflow := now.Month() + 10
+	month := ((monthWithOverflow - 1) % 12) + 1
+	yearDelta := int((monthWithOverflow - 1) / 12)
+	startOfTenthMonth := time.Date(now.Year()+yearDelta, month, 1, 0, 0, 0, 0, now.Location())
+	endOfNinthMonth := startOfTenthMonth.Add(-24 * time.Hour)
+	return endOfNinthMonth.Format(PublishDateFormat)
 }
 
-func (p Publish) findLatestPatchRelease(releases []pivnet.Release, version *semver.Version) (pivnet.Release, bool, error) {
-	constraint, err := semver.NewConstraint(fmt.Sprintf("~%d.%d.0", version.Major(), version.Minor()))
-	if err != nil {
-		return pivnet.Release{}, false, err // untested, since we exit earlier for invalid versions
-	}
-
-	var matches []pivnet.Release
-	for _, release := range releases {
-		v, err := semver.NewVersion(release.Version)
-		if err != nil {
-			return pivnet.Release{}, false, err
-		}
-
-		if constraint.Check(v) {
-			matches = append(matches, release)
-		}
-	}
-
-	if len(matches) == 0 {
-		return pivnet.Release{}, false, nil
-	}
-
-	sort.Slice(matches, func(i, j int) bool {
-		v1 := semver.MustParse(matches[i].Version)
-		v2 := semver.MustParse(matches[j].Version)
-		return v1.LessThan(v2)
-	})
-
-	return matches[len(matches)-1], true, nil
+func (p Publish) findLatestPatchRelease(releases releaseSet, version *semver.Version) (pivnet.Release, bool, error) {
+	return releases.FindLatest(fmt.Sprintf("~%d.%d.0", version.Major(), version.Minor()))
 }
 
 func (p Publish) attachLicenseFile(window, slug string, releaseID int, version *semver.Version) error {
@@ -257,22 +231,6 @@ func (p Publish) attachLicenseFile(window, slug string, releaseID int, version *
 		}
 	}
 	return nil
-}
-
-func (p Publish) findRelease(releases []pivnet.Release, kilnfile Kilnfile, version *semver.Version) (pivnet.Release, error) {
-	vs := version.String()
-	var release pivnet.Release
-	for _, r := range releases {
-		if r.Version == vs {
-			release = r
-			break
-		}
-	}
-
-	if release.Version == "" {
-		return pivnet.Release{}, fmt.Errorf("release with version %s not found on %s", vs, p.Options.PivnetHost)
-	}
-	return release, nil
 }
 
 func (p Publish) DetermineVersion(releases []pivnet.Release, window string, version *semver.Version) (*semver.Version, error) {
@@ -308,28 +266,19 @@ func (p Publish) DetermineVersion(releases []pivnet.Release, window string, vers
 	return &pubVer, nil
 }
 
-func maxPublishedVersion(releases []pivnet.Release, version *semver.Version, window string) *semver.Version {
-	var filteredVersions []*semver.Version
-	for _, release := range releases {
-		v, err := semver.NewVersion(release.Version)
-		if err != nil {
-			continue
-		}
-		if v.Major() == version.Major() && v.Minor() == version.Minor() && v.Patch() == version.Patch() {
-			if pre := v.Prerelease(); !strings.HasPrefix(pre, window) {
-				continue
-			}
-			filteredVersions = append(filteredVersions, v)
-		}
-	}
+func maxPublishedVersion(releases releaseSet, version *semver.Version, window string) *semver.Version {
+	coreVersion := fmt.Sprintf("%d.%d.%d-%s.", version.Major(), version.Minor(), version.Patch(), window)
+	constraintStr := fmt.Sprintf(">= %s0, < %s9999", coreVersion, coreVersion)
 
-	if len(filteredVersions) == 0 {
+	latestRelease, matchFound, err := releases.FindLatest(constraintStr)
+	if err != nil {
 		return nil
 	}
 
-	sort.Sort(sort.Reverse(semver.Collection(filteredVersions)))
-
-	return filteredVersions[0]
+	if matchFound {
+		return semver.MustParse(latestRelease.Version)
+	}
+	return nil
 }
 
 func releaseType(window string, v *semver.Version) pivnet.ReleaseType {
@@ -412,4 +361,47 @@ func (kilnfile Kilnfile) ReleaseWindow(currentTime time.Time) (string, error) {
 	}
 
 	return "alpha", nil
+}
+
+type releaseSet []pivnet.Release
+
+func (rs releaseSet) Find(version string) (pivnet.Release, error) {
+	for _, r := range rs {
+		if r.Version == version {
+			return r, nil
+		}
+	}
+
+	return pivnet.Release{}, fmt.Errorf("release with version %s not found", version)
+}
+
+func (rs releaseSet) FindLatest(constraintStr string) (pivnet.Release, bool, error) {
+	constraint, err := semver.NewConstraint(constraintStr)
+	if err != nil {
+		return pivnet.Release{}, false, err
+	}
+
+	var matches []pivnet.Release
+	for _, release := range rs {
+		v, err := semver.NewVersion(release.Version)
+		if err != nil {
+			return pivnet.Release{}, false, err
+		}
+
+		if constraint.Check(v) {
+			matches = append(matches, release)
+		}
+	}
+
+	if len(matches) == 0 {
+		return pivnet.Release{}, false, nil
+	}
+
+	sort.Slice(matches, func(i, j int) bool {
+		v1 := semver.MustParse(matches[i].Version)
+		v2 := semver.MustParse(matches[j].Version)
+		return v1.LessThan(v2)
+	})
+
+	return matches[len(matches)-1], true, nil
 }

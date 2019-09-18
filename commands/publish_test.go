@@ -404,7 +404,7 @@ publish_dates:
 					err := publish.Execute(executeArgs)
 					Expect(releasesService.ListCallCount()).To(Equal(1))
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError(ContainSubstring("release with version " + someVersion.String() + " not found on")))
+					Expect(err).To(MatchError(ContainSubstring("release with version " + someVersion.String() + " not found")))
 				})
 			})
 
