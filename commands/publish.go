@@ -239,14 +239,12 @@ func (p Publish) DetermineVersion(releases []pivnet.Release, window string, vers
 		return &publishableVersion, nil
 	}
 
-	// To allow testing times other than current time
-	if p.Now == nil {
-		p.Now = time.Now
+	maxPublished, matchFound, err := maxPublishedVersion(releases, version, window)
+
+	if err != nil {
+		return nil, err
 	}
-
-	maxPublished := maxPublishedVersion(releases, version, window)
-
-	if maxPublished == nil {
+	if !matchFound {
 		v, err := version.SetPrerelease(window + ".1")
 		return &v, err
 	}
@@ -266,19 +264,16 @@ func (p Publish) DetermineVersion(releases []pivnet.Release, window string, vers
 	return &pubVer, nil
 }
 
-func maxPublishedVersion(releases releaseSet, version *semver.Version, window string) *semver.Version {
-	coreVersion := fmt.Sprintf("%d.%d.%d-%s.", version.Major(), version.Minor(), version.Patch(), window)
-	constraintStr := fmt.Sprintf(">= %s0, < %s9999", coreVersion, coreVersion)
+func maxPublishedVersion(releases releaseSet, version *semver.Version, window string) (*semver.Version, bool, error) {
+	coreVersion := fmt.Sprintf("%d.%d.%d-%s", version.Major(), version.Minor(), version.Patch(), window)
+	constraintStr := fmt.Sprintf(">= %s.0, < %s.9999", coreVersion, coreVersion)
 
 	latestRelease, matchFound, err := releases.FindLatest(constraintStr)
-	if err != nil {
-		return nil
+	if err != nil || !matchFound {
+		return nil, matchFound, err
 	}
 
-	if matchFound {
-		return semver.MustParse(latestRelease.Version)
-	}
-	return nil
+	return semver.MustParse(latestRelease.Version), true, nil
 }
 
 func releaseType(window string, v *semver.Version) pivnet.ReleaseType {
@@ -378,14 +373,14 @@ func (rs releaseSet) Find(version string) (pivnet.Release, error) {
 func (rs releaseSet) FindLatest(constraintStr string) (pivnet.Release, bool, error) {
 	constraint, err := semver.NewConstraint(constraintStr)
 	if err != nil {
-		return pivnet.Release{}, false, err
+		return pivnet.Release{}, false, fmt.Errorf("FindLatest: unable to parse constraint %q: %w", constraintStr, err)
 	}
 
 	var matches []pivnet.Release
 	for _, release := range rs {
 		v, err := semver.NewVersion(release.Version)
 		if err != nil {
-			return pivnet.Release{}, false, err
+			continue
 		}
 
 		if constraint.Check(v) {

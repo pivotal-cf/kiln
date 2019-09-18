@@ -577,10 +577,17 @@ publish_dates:
 					)
 				})
 
-				It("returns an error", func() {
+				It("ignores that release and updates the correct release", func() {
 					err := publish.Execute(executeArgs)
-					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError(ContainSubstring("Invalid Semantic Version")))
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(releasesService.UpdateCallCount()).To(Equal(1))
+					{
+						s, r := releasesService.UpdateArgsForCall(0)
+						Expect(s).To(Equal(slug))
+						Expect(r.Version).To(Equal("2.8.0"))
+						Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
+					}
 				})
 			})
 		})
