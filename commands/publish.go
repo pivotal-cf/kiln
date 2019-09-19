@@ -61,12 +61,12 @@ func NewPublish(outLogger, errLogger *log.Logger, fs billy.Filesystem) Publish {
 func (p Publish) Execute(args []string) error {
 	defer p.recoverFromPanic()
 
-	kilnfile, version, err := p.parseArgsAndSetup(args)
+	kilnfile, buildVersion, err := p.parseArgsAndSetup(args)
 	if err != nil {
 		return err
 	}
 
-	return p.updateReleaseOnPivnet(kilnfile, version)
+	return p.updateReleaseOnPivnet(kilnfile, buildVersion)
 }
 
 func (p Publish) recoverFromPanic() func() {
@@ -145,7 +145,13 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 	if err != nil {
 		return err
 	}
-	releaseType := releaseType(window, buildVersion)
+
+	rv, err := ReleaseVersionFromBuildVersion(buildVersion, window)
+	if err != nil {
+		return err
+	}
+
+	releaseType := releaseType(window, rv)
 
 	var releases releaseSet
 	releases, err = p.PivnetReleaseService.List(kilnfile.Slug)
@@ -158,7 +164,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 		return err
 	}
 
-	versionToPublish, err := p.determineVersion(releases, window, buildVersion)
+	versionToPublish, err := p.determineVersion(releases, rv)
 	if err != nil {
 		return err
 	}
@@ -172,8 +178,8 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 	release.ReleaseType = releaseType
 
 	release.ReleaseDate = p.Now().Format(PublishDateFormat)
-	if window == "ga" {
-		lastPatchRelease, matchExists, err := p.findLatestPatchRelease(releases, buildVersion)
+	if rv.IsGA() {
+		lastPatchRelease, matchExists, err := p.findLatestPatchRelease(releases, rv)
 		if err != nil {
 			return err
 		}
@@ -191,17 +197,21 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 	return nil
 }
 
-func endOfSupportFor(now time.Time) string {
-	monthWithOverflow := now.Month() + 10
+func endOfSupportFor(publishDate time.Time) string {
+	monthWithOverflow := publishDate.Month() + 10
 	month := ((monthWithOverflow - 1) % 12) + 1
 	yearDelta := int((monthWithOverflow - 1) / 12)
-	startOfTenthMonth := time.Date(now.Year()+yearDelta, month, 1, 0, 0, 0, 0, now.Location())
+	startOfTenthMonth := time.Date(publishDate.Year()+yearDelta, month, 1, 0, 0, 0, 0, publishDate.Location())
 	endOfNinthMonth := startOfTenthMonth.Add(-24 * time.Hour)
 	return endOfNinthMonth.Format(PublishDateFormat)
 }
 
-func (p Publish) findLatestPatchRelease(releases releaseSet, version *semver.Version) (pivnet.Release, bool, error) {
-	return releases.FindLatest(fmt.Sprintf("~%d.%d.0", version.Major(), version.Minor()))
+func (p Publish) findLatestPatchRelease(releases releaseSet, rv *releaseVersion) (pivnet.Release, bool, error) {
+	constraint, err := rv.MajorMinorConstraint()
+	if err != nil {
+		return pivnet.Release{}, false, err
+	}
+	return releases.FindLatest(constraint)
 }
 
 func (p Publish) attachLicenseFile(window, slug string, releaseID int, version *semver.Version) error {
@@ -233,50 +243,38 @@ func (p Publish) attachLicenseFile(window, slug string, releaseID int, version *
 	return nil
 }
 
-func (p Publish) determineVersion(releases []pivnet.Release, window string, version *semver.Version) (*semver.Version, error) {
-	if version.Patch() > 0 || window == "ga" {
-		publishableVersion, _ := version.SetPrerelease("")
-		return &publishableVersion, nil
+func (p Publish) determineVersion(releases releaseSet, version *releaseVersion) (*semver.Version, error) {
+	if version.IsGA() {
+		return version.Semver(), nil
 	}
 
-	maxPublished, matchFound, err := maxPublishedVersion(releases, version, window)
+	constraint, err := version.PrereleaseVersionsConstraint()
+	if err != nil {
+		return nil, fmt.Errorf("determineVersion: error building prerelease version constraint: %w", err)
+	}
 
+	latestRelease, previousReleaseExists, err := releases.FindLatest(constraint)
+	if err != nil {
+		return nil, fmt.Errorf("determineVersion: error finding the latest release: %w", err)
+	}
+	if !previousReleaseExists {
+		return version.Semver(), nil
+	}
+
+	maxPublishedVersion, err := ReleaseVersionFromPublishedVersion(latestRelease.Version)
+	if err != nil {
+		return nil, fmt.Errorf("determineVersion: error parsing release version: %w", err)
+	}
+
+	version, err = version.SetPrereleaseVersion(maxPublishedVersion.PrereleaseVersion() + 1)
 	if err != nil {
 		return nil, err
 	}
-	if !matchFound {
-		v, err := version.SetPrerelease(window + ".1")
-		return &v, err
-	}
 
-	segments := strings.Split(maxPublished.Prerelease(), ".")
-	if len(segments) < 2 {
-		return nil, fmt.Errorf("expected prerelease to have a dot (%s)", maxPublished)
-	}
-
-	n, err := strconv.Atoi(segments[len(segments)-1])
-	if err != nil {
-		return nil, fmt.Errorf("release has malformed prelease version (%s): %s", maxPublished, err)
-	}
-
-	pubVer, _ := maxPublished.SetPrerelease(strings.Join(segments[:len(segments)-1], ".") + "." + strconv.Itoa(n+1))
-
-	return &pubVer, nil
+	return version.Semver(), nil
 }
 
-func maxPublishedVersion(releases releaseSet, version *semver.Version, window string) (*semver.Version, bool, error) {
-	coreVersion := fmt.Sprintf("%d.%d.%d-%s", version.Major(), version.Minor(), version.Patch(), window)
-	constraintStr := fmt.Sprintf(">= %s.0, < %s.9999", coreVersion, coreVersion)
-
-	latestRelease, matchFound, err := releases.FindLatest(constraintStr)
-	if err != nil || !matchFound {
-		return nil, matchFound, err
-	}
-
-	return semver.MustParse(latestRelease.Version), true, nil
-}
-
-func releaseType(window string, v *semver.Version) pivnet.ReleaseType {
+func releaseType(window string, v *releaseVersion) pivnet.ReleaseType {
 	switch window {
 	case "rc":
 		return "Release Candidate"
@@ -286,9 +284,9 @@ func releaseType(window string, v *semver.Version) pivnet.ReleaseType {
 		return "Alpha Release"
 	case "ga":
 		switch {
-		case v.Minor() == 0 && v.Patch() == 0:
+		case v.IsMajor():
 			return "Major Release"
-		case v.Patch() == 0:
+		case v.IsMinor():
 			return "Minor Release"
 		default:
 			return "Maintenance Release"
@@ -370,12 +368,7 @@ func (rs releaseSet) Find(version string) (pivnet.Release, error) {
 	return pivnet.Release{}, fmt.Errorf("release with version %s not found", version)
 }
 
-func (rs releaseSet) FindLatest(constraintStr string) (pivnet.Release, bool, error) {
-	constraint, err := semver.NewConstraint(constraintStr)
-	if err != nil {
-		return pivnet.Release{}, false, fmt.Errorf("FindLatest: unable to parse constraint %q: %w", constraintStr, err)
-	}
-
+func (rs releaseSet) FindLatest(constraint *semver.Constraints) (pivnet.Release, bool, error) {
 	var matches []pivnet.Release
 	for _, release := range rs {
 		v, err := semver.NewVersion(release.Version)
@@ -399,4 +392,101 @@ func (rs releaseSet) FindLatest(constraintStr string) (pivnet.Release, bool, err
 	})
 
 	return matches[len(matches)-1], true, nil
+}
+
+type releaseVersion struct {
+	semver            semver.Version
+	window            string
+	prereleaseVersion int
+}
+
+func ReleaseVersionFromBuildVersion(baseVersion *semver.Version, window string) (*releaseVersion, error) {
+	v2, err := baseVersion.SetPrerelease("")
+	if err != nil {
+		return nil, fmt.Errorf("ReleaseVersionFromBuildVersion: error clearing prerelease of %q: %w", v2, err)
+	}
+
+	rv := &releaseVersion{semver: v2, window: window, prereleaseVersion: 0}
+
+	if window != "ga" {
+		rv, err = rv.SetPrereleaseVersion(1)
+		if err != nil {
+			return nil, fmt.Errorf("ReleaseVersionFromBuildVersion: error setting prerelease of %q to 1: %w", rv, err)
+		}
+	}
+	return rv, nil
+}
+
+func ReleaseVersionFromPublishedVersion(versionString string) (*releaseVersion, error) {
+	version, err := semver.NewVersion(versionString)
+	if err != nil {
+		return nil, fmt.Errorf("ReleaseVersionFromPublishedVersion: unable to parse version %q: %w", versionString, err)
+	}
+	segments := strings.Split(version.Prerelease(), ".")
+	if len(segments) != 2 {
+		return nil, fmt.Errorf("ReleaseVersionFromPublishedVersion: expected prerelease to have a dot (%q)", version)
+	}
+
+	window := segments[0]
+	prereleaseVersion, err := strconv.Atoi(segments[len(segments)-1])
+	if err != nil {
+		return nil, fmt.Errorf("ReleaseVersionFromPublishedVersion: release has malformed prelease version (%s): %w", version, err)
+	}
+
+	return &releaseVersion{
+		semver:            *version,
+		window:            window,
+		prereleaseVersion: prereleaseVersion,
+	}, nil
+}
+
+func (rv releaseVersion) MajorMinorConstraint() (*semver.Constraints, error) {
+	return semver.NewConstraint(fmt.Sprintf("~%d.%d.0", rv.semver.Major(), rv.semver.Minor()))
+}
+
+func (rv releaseVersion) PrereleaseVersionsConstraint() (*semver.Constraints, error) {
+	if rv.IsGA() {
+		return nil, fmt.Errorf("can't determine PrereleaseVersionsConstraint for %q, which is GA", rv.semver)
+	}
+	coreVersion := fmt.Sprintf("%d.%d.%d-%s", rv.semver.Major(), rv.semver.Minor(), rv.semver.Patch(), rv.window)
+	constraintStr := fmt.Sprintf(">= %s.0, <= %s.9999", coreVersion, coreVersion)
+	return semver.NewConstraint(constraintStr)
+}
+
+func (rv releaseVersion) SetPrereleaseVersion(prereleaseVersion int) (*releaseVersion, error) {
+	if rv.IsGA() {
+		return nil, fmt.Errorf("SetPrereleaseVersion: can't set the prerelease version on a GA version (%q)", rv.String())
+	}
+	v, err := rv.semver.SetPrerelease(fmt.Sprintf("%s.%d", rv.window, prereleaseVersion))
+	if err != nil {
+		return nil, fmt.Errorf("SetPrereleaseVersion: couldn't set prerelease: %w", err)
+	}
+	rv.semver = v
+	rv.prereleaseVersion = prereleaseVersion
+
+	return &rv, nil
+}
+
+func (rv releaseVersion) IsGA() bool {
+	return rv.window == "ga"
+}
+
+func (rv releaseVersion) IsMajor() bool {
+	return rv.semver.Minor() == 0 && rv.semver.Patch() == 0
+}
+
+func (rv releaseVersion) IsMinor() bool {
+	return rv.semver.Minor() != 0 && rv.semver.Patch() == 0
+}
+
+func (rv releaseVersion) String() string {
+	return rv.semver.String()
+}
+
+func (rv releaseVersion) Semver() *semver.Version {
+	return &rv.semver
+}
+
+func (rv releaseVersion) PrereleaseVersion() int {
+	return rv.prereleaseVersion
 }
