@@ -169,7 +169,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 		return err
 	}
 
-	err = p.attachLicenseFile(window, kilnfile.Slug, release.ID, versionToPublish)
+	err = p.attachLicenseFile(kilnfile.Slug, release.ID, versionToPublish)
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,12 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 
 	release.ReleaseDate = p.Now().Format(PublishDateFormat)
 	if rv.IsGA() {
-		lastPatchRelease, matchExists, err := p.findLatestPatchRelease(releases, rv)
+		sameMajorAndMinor, err := rv.MajorMinorConstraint()
+		if err != nil {
+			return err
+		}
+
+		lastPatchRelease, matchExists, err := releases.FindLatest(sameMajorAndMinor)
 		if err != nil {
 			return err
 		}
@@ -206,26 +211,16 @@ func endOfSupportFor(publishDate time.Time) string {
 	return endOfNinthMonth.Format(PublishDateFormat)
 }
 
-func (p Publish) findLatestPatchRelease(releases releaseSet, rv *releaseVersion) (pivnet.Release, bool, error) {
-	constraint, err := rv.MajorMinorConstraint()
-	if err != nil {
-		return pivnet.Release{}, false, err
-	}
-	return releases.FindLatest(constraint)
-}
-
-func (p Publish) attachLicenseFile(window, slug string, releaseID int, version *semver.Version) error {
-	if window == "ga" {
+func (p Publish) attachLicenseFile(slug string, releaseID int, version *releaseVersion) error {
+	if version.IsGA() {
 		productFiles, err := p.PivnetProductFilesService.List(slug)
 		if err != nil {
 			return err
 		}
 
-		licenseFileVersion := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
-
 		var productFileID int
 		for _, file := range productFiles {
-			if file.FileType == oslFileType && file.FileVersion == licenseFileVersion {
+			if file.FileType == oslFileType && file.FileVersion == version.MajorAndMinor() {
 				productFileID = file.ID
 				break
 			}
@@ -243,9 +238,9 @@ func (p Publish) attachLicenseFile(window, slug string, releaseID int, version *
 	return nil
 }
 
-func (p Publish) determineVersion(releases releaseSet, version *releaseVersion) (*semver.Version, error) {
+func (p Publish) determineVersion(releases releaseSet, version *releaseVersion) (*releaseVersion, error) {
 	if version.IsGA() {
-		return version.Semver(), nil
+		return version, nil
 	}
 
 	constraint, err := version.PrereleaseVersionsConstraint()
@@ -258,7 +253,7 @@ func (p Publish) determineVersion(releases releaseSet, version *releaseVersion) 
 		return nil, fmt.Errorf("determineVersion: error finding the latest release: %w", err)
 	}
 	if !previousReleaseExists {
-		return version.Semver(), nil
+		return version, nil
 	}
 
 	maxPublishedVersion, err := ReleaseVersionFromPublishedVersion(latestRelease.Version)
@@ -271,7 +266,7 @@ func (p Publish) determineVersion(releases releaseSet, version *releaseVersion) 
 		return nil, err
 	}
 
-	return version.Semver(), nil
+	return version, nil
 }
 
 func releaseType(window string, v *releaseVersion) pivnet.ReleaseType {
@@ -481,6 +476,10 @@ func (rv releaseVersion) IsMinor() bool {
 
 func (rv releaseVersion) String() string {
 	return rv.semver.String()
+}
+
+func (rv releaseVersion) MajorAndMinor() string {
+	return fmt.Sprintf("%d.%d", rv.semver.Major(), rv.semver.Minor())
 }
 
 func (rv releaseVersion) Semver() *semver.Version {
