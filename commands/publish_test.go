@@ -18,23 +18,11 @@ import (
 
 var _ = Describe("Publish", func() {
 	const (
-		slug            = "elastic-runtime"
-		publishDateBeta = "2019-10-28"
-		publishDateRC   = "2019-11-11"
-		publishDateGA   = "2019-12-06"
+		slug = "elastic-runtime"
 
 		defaultKilnFileBody = `---
-slug: ` + slug + `
-publish_dates:
-  beta: ` + publishDateBeta + `
-  rc: ` + publishDateRC + `
-  ga: ` + publishDateGA
+slug: ` + slug
 	)
-
-	parseTime := func(date string) time.Time {
-		t, _ := time.ParseInLocation(commands.PublishDateFormat, date, time.UTC)
-		return t
-	}
 
 	var someVersion *semver.Version
 	BeforeEach(func() {
@@ -58,6 +46,7 @@ publish_dates:
 				rs = &fakes.PivnetReleasesService{}
 				pfs = &fakes.PivnetProductFilesService{}
 				releasesOnPivnet = []pivnet.Release{}
+				now = time.Now()
 			})
 
 			JustBeforeEach(func() {
@@ -89,13 +78,15 @@ publish_dates:
 				}
 			})
 
-			Context("before the beta window", func() {
+			Context("during the alpha window", func() {
+				var args []string
+
 				BeforeEach(func() {
-					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
+					args = []string{"--window", "alpha", "--pivnet-token", "SOME_TOKEN"}
 				})
 
 				It("updates Pivnet release with the determined version and release type", func() {
-					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					err := publish.Execute(args)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(rs.ListCallCount()).To(Equal(1))
@@ -108,12 +99,12 @@ publish_dates:
 						Expect(r.Version).To(Equal("2.0.0-alpha.1"))
 						Expect(r.ReleaseType).To(BeEquivalentTo("Alpha Release"))
 						Expect(r.EndOfSupportDate).To(Equal(""))
-						Expect(r.ReleaseDate).To(Equal("2019-10-27"))
+						Expect(r.ReleaseDate).To(Equal(now.Format("2006-01-02")))
 					}
 				})
 
 				It("does not add a file to the release", func() {
-					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					err := publish.Execute(args)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
@@ -128,7 +119,7 @@ publish_dates:
 					})
 
 					It("publishes with a version that increments the alpha number", func() {
-						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						err := publish.Execute(args)
 						Expect(err).NotTo(HaveOccurred())
 
 						s, r := rs.UpdateArgsForCall(0)
@@ -139,12 +130,14 @@ publish_dates:
 			})
 
 			Context("during the beta window", func() {
+				var args []string
+
 				BeforeEach(func() {
-					now = parseTime(publishDateBeta)
+					args = []string{"--window", "beta", "--pivnet-token", "SOME_TOKEN"}
 				})
 
 				It("updates Pivnet release with the determined version and release type", func() {
-					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					err := publish.Execute(args)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(rs.ListCallCount()).To(Equal(1))
@@ -157,12 +150,12 @@ publish_dates:
 						Expect(r.Version).To(Equal("2.0.0-beta.1"))
 						Expect(r.ReleaseType).To(BeEquivalentTo("Beta Release"))
 						Expect(r.EndOfSupportDate).To(Equal(""))
-						Expect(r.ReleaseDate).To(Equal(publishDateBeta))
+						Expect(r.ReleaseDate).To(Equal(now.Format("2006-01-02")))
 					}
 				})
 
 				It("does not add a file to the release", func() {
-					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					err := publish.Execute(args)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
@@ -177,7 +170,7 @@ publish_dates:
 					})
 
 					It("publishes with a version that increments the alpha number", func() {
-						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						err := publish.Execute(args)
 						Expect(err).NotTo(HaveOccurred())
 
 						s, r := rs.UpdateArgsForCall(0)
@@ -188,12 +181,14 @@ publish_dates:
 			})
 
 			Context("during the rc window", func() {
+				var args []string
+
 				BeforeEach(func() {
-					now = parseTime(publishDateRC)
+					args = []string{"--window", "rc", "--pivnet-token", "SOME_TOKEN"}
 				})
 
 				It("updates Pivnet release with the determined version and release type", func() {
-					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					err := publish.Execute(args)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(rs.ListCallCount()).To(Equal(1))
@@ -206,12 +201,12 @@ publish_dates:
 						Expect(r.Version).To(Equal("2.0.0-rc.1"))
 						Expect(r.ReleaseType).To(BeEquivalentTo("Release Candidate"))
 						Expect(r.EndOfSupportDate).To(Equal(""))
-						Expect(r.ReleaseDate).To(Equal(publishDateRC))
+						Expect(r.ReleaseDate).To(Equal(now.Format("2006-01-02")))
 					}
 				})
 
 				It("does not add a file to the release", func() {
-					err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+					err := publish.Execute(args)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
@@ -227,7 +222,7 @@ publish_dates:
 					})
 
 					It("publishes with a version that increments the alpha number", func() {
-						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						err := publish.Execute(args)
 						Expect(err).NotTo(HaveOccurred())
 
 						s, r := rs.UpdateArgsForCall(0)
@@ -242,8 +237,12 @@ publish_dates:
 					version20FileID = 42
 					version21FileID = 43
 				)
+				var args []string
 
 				BeforeEach(func() {
+					args = []string{"--window", "ga", "--pivnet-token", "SOME_TOKEN"}
+					now = time.Date(2016, 5, 4, 3, 2, 1, 0, time.Local)
+
 					pfs.ListReturns(
 						[]pivnet.ProductFile{
 							{
@@ -277,12 +276,11 @@ publish_dates:
 
 				Context("for a major release", func() {
 					BeforeEach(func() {
-						now = parseTime(publishDateGA)
 						versionStr = "2.0.0-build.45"
 					})
 
 					It("updates Pivnet release with the determined version and release type", func() {
-						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						err := publish.Execute(args)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(rs.ListCallCount()).To(Equal(1))
@@ -294,13 +292,13 @@ publish_dates:
 							Expect(s).To(Equal(slug))
 							Expect(r.Version).To(Equal("2.0.0"))
 							Expect(r.ReleaseType).To(BeEquivalentTo("Major Release"))
-							Expect(r.EndOfSupportDate).To(Equal("2020-09-30"))
-							Expect(r.ReleaseDate).To(Equal(publishDateGA))
+							Expect(r.EndOfSupportDate).To(Equal("2017-02-28"))
+							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
 						}
 					})
 
 					It("adds the appropriate OSL file", func() {
-						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						err := publish.Execute(args)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
@@ -313,12 +311,11 @@ publish_dates:
 
 				Context("for a minor release", func() {
 					BeforeEach(func() {
-						now = parseTime(publishDateGA)
 						versionStr = "2.1.0-build.45"
 					})
 
 					It("updates Pivnet release with the determined version and release type", func() {
-						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						err := publish.Execute(args)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(rs.ListCallCount()).To(Equal(1))
@@ -330,13 +327,13 @@ publish_dates:
 							Expect(s).To(Equal(slug))
 							Expect(r.Version).To(Equal("2.1.0"))
 							Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
-							Expect(r.EndOfSupportDate).To(Equal("2020-09-30"))
-							Expect(r.ReleaseDate).To(Equal(publishDateGA))
+							Expect(r.EndOfSupportDate).To(Equal("2017-02-28"))
+							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
 						}
 					})
 
 					It("adds the appropriate OSL file", func() {
-						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						err := publish.Execute(args)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
@@ -350,7 +347,6 @@ publish_dates:
 				Context("for a patch release", func() {
 					var endOfSupportDate string
 					BeforeEach(func() {
-						now = parseTime(publishDateGA)
 						versionStr = "2.1.1-build.45"
 						endOfSupportDate = "2019-07-31"
 
@@ -363,7 +359,7 @@ publish_dates:
 					})
 
 					It("updates Pivnet release with the determined version and release type", func() {
-						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						err := publish.Execute(args)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(rs.ListCallCount()).To(Equal(1))
@@ -376,12 +372,12 @@ publish_dates:
 							Expect(r.Version).To(Equal("2.1.1"))
 							Expect(r.ReleaseType).To(BeEquivalentTo("Maintenance Release"))
 							Expect(r.EndOfSupportDate).To(Equal(endOfSupportDate))
-							Expect(r.ReleaseDate).To(Equal(publishDateGA))
+							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
 						}
 					})
 
 					It("adds the appropriate OSL file", func() {
-						err := publish.Execute([]string{"--pivnet-token", "SOME_TOKEN"})
+						err := publish.Execute(args)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
@@ -422,7 +418,7 @@ publish_dates:
 				fs = memfs.New()
 				kilnFileBody = defaultKilnFileBody
 
-				executeArgs = []string{"--pivnet-token", "SOME_TOKEN"}
+				executeArgs = []string{"--pivnet-token", "SOME_TOKEN", "--window", "ga"}
 			})
 
 			JustBeforeEach(func() {
@@ -448,15 +444,37 @@ publish_dates:
 				}
 			})
 
+			When("the window flag is not provided", func() {
+				BeforeEach(func() {
+					executeArgs = []string{"--pivnet-token", "SOME_TOKEN"}
+				})
+
+				It("returns an error", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring("missing required flag \"--window\"")))
+				})
+			})
+
+			When("the an unknown window is provided", func() {
+				BeforeEach(func() {
+					executeArgs = []string{"--window", "nosuchwindow", "--pivnet-token", "SOME_TOKEN"}
+				})
+
+				It("returns an error", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring("unknown window: \"nosuchwindow\"")))
+				})
+			})
+
 			When("the release to be updated is not found", func() {
 				BeforeEach(func() {
-					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
 					releasesService.ListReturns([]pivnet.Release{{Version: "1.2.3-build.1"}}, nil)
 				})
 
 				It("returns an error", func() {
 					err := publish.Execute(executeArgs)
-					Expect(releasesService.ListCallCount()).To(Equal(1))
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring("release with version " + someVersion.String() + " not found")))
 				})
@@ -464,7 +482,6 @@ publish_dates:
 
 			When("the version file contains an invalid semver", func() {
 				BeforeEach(func() {
-					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
 					versionFileBody = "not a banana"
 				})
 
@@ -498,17 +515,6 @@ publish_dates:
 				})
 			})
 
-			When("the Kilnfile contains invalid YAML", func() {
-				BeforeEach(func() {
-					kilnFileBody = "---> bad yaml file <---"
-				})
-
-				It("returns an error", func() {
-					err := publish.Execute(executeArgs)
-					Expect(err).To(HaveOccurred())
-				})
-			})
-
 			When("there is bad yaml in the file", func() {
 				BeforeEach(func() {
 					kilnFileBody = `}`
@@ -521,24 +527,8 @@ publish_dates:
 				})
 			})
 
-			When("a date is not properly formatted", func() {
-				BeforeEach(func() {
-					kilnFileBody = `---
-publish_dates:
-  beta: "ERROR"
-`
-				})
-
-				It("returns an error", func() {
-					err := publish.Execute(executeArgs)
-					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError(ContainSubstring("parsing time")))
-				})
-			})
-
 			When("there is an error fetching product files from Pivnet", func() {
 				BeforeEach(func() {
-					now = parseTime(publishDateGA)
 					releasesService.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
 					productFilesService.ListReturns(nil, errors.New("bad stuff happened"))
 				})
@@ -556,7 +546,6 @@ publish_dates:
 
 			When("there the necessary license file doesn't exist on Pivnet", func() {
 				BeforeEach(func() {
-					now = parseTime(publishDateGA)
 					releasesService.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
 					productFilesService.ListReturns(
 						[]pivnet.ProductFile{
@@ -584,7 +573,6 @@ publish_dates:
 
 			When("there is an error adding the license file to the release on Pivnet", func() {
 				BeforeEach(func() {
-					now = parseTime(publishDateGA)
 					releasesService.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
 					productFilesService.ListReturns(
 						[]pivnet.ProductFile{
@@ -613,7 +601,6 @@ publish_dates:
 
 			When("a release on PivNet has an invalid version", func() {
 				BeforeEach(func() {
-					now = parseTime(publishDateGA)
 					releasesService.ListReturns([]pivnet.Release{
 						{Version: someVersion.String()},
 						{Version: "invalid version"},
@@ -647,7 +634,6 @@ publish_dates:
 
 			When("the previous release on PivNet does not have an EOGS date", func() {
 				BeforeEach(func() {
-					now = parseTime(publishDateGA)
 					someVersion = semver.MustParse("2.9.1-build.111")
 
 					releasesService.ListReturns([]pivnet.Release{
@@ -674,87 +660,6 @@ publish_dates:
 					Expect(err).To(MatchError(ContainSubstring("does not have an End of General Support date")))
 
 					Expect(releasesService.UpdateCallCount()).To(Equal(0))
-				})
-			})
-		})
-	})
-
-	Describe("Kilnfile", func() {
-		Describe("ReleaseWindow", func() {
-			var (
-				fs billy.Filesystem
-
-				kilnFileBody string
-				noKilnFile   bool
-				now          time.Time
-				kilnfile     commands.Kilnfile
-			)
-
-			BeforeEach(func() {
-				noKilnFile = false
-				fs = memfs.New()
-				now = time.Now()
-				kilnFileBody = defaultKilnFileBody
-			})
-
-			JustBeforeEach(func() {
-				if !noKilnFile {
-					kilnFile, _ := fs.Create("Kilnfile")
-					kilnFile.Write([]byte(kilnFileBody))
-					kilnFile.Close()
-				}
-
-				kilnfile = commands.Kilnfile{}
-				kilnfile.PublishDates.RC = commands.Date{parseTime(publishDateRC)}
-				kilnfile.PublishDates.Beta = commands.Date{parseTime(publishDateBeta)}
-				kilnfile.PublishDates.GA = commands.Date{parseTime(publishDateGA)}
-			})
-
-			When("the window is before beta", func() {
-				BeforeEach(func() {
-					now = parseTime(publishDateBeta).Add(-24 * time.Hour)
-				})
-
-				It("returns alpha", func() {
-					window, err := kilnfile.ReleaseWindow(now)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(window).To(Equal("alpha"))
-				})
-			})
-
-			When("the window is in beta", func() {
-				BeforeEach(func() {
-					now = parseTime(publishDateBeta)
-				})
-
-				It("returns beta", func() {
-					window, err := kilnfile.ReleaseWindow(now)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(window).To(Equal("beta"))
-				})
-			})
-
-			When("the window is in rc", func() {
-				BeforeEach(func() {
-					now = parseTime(publishDateRC)
-				})
-
-				It("returns rc", func() {
-					window, err := kilnfile.ReleaseWindow(now)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(window).To(Equal("rc"))
-				})
-			})
-
-			When("the window is GA", func() {
-				BeforeEach(func() {
-					now = parseTime(publishDateGA)
-				})
-
-				It("returns ga", func() {
-					window, err := kilnfile.ReleaseWindow(now)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(window).To(Equal("ga"))
 				})
 			})
 		})

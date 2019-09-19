@@ -19,7 +19,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const oslFileType = "Open Source License"
+const (
+	publishDateFormat = "2006-01-02"
+	oslFileType       = "Open Source License"
+)
 
 //go:generate counterfeiter -o ./fakes/pivnet_releases_service.go --fake-name PivnetReleasesService . PivnetReleasesService
 type PivnetReleasesService interface {
@@ -39,6 +42,7 @@ type Publish struct {
 		Version     string `short:"v" long:"version-file" default:"version" description:"path to version file"`
 		PivnetToken string `short:"t" long:"pivnet-token" description:"pivnet refresh token" required:"true"`
 		PivnetHost  string `long:"pivnet-host" default:"https://network.pivotal.io" description:"pivnet host"`
+		Window      string `long:"window" required:"true"`
 	}
 
 	PivnetReleaseService      PivnetReleasesService
@@ -135,16 +139,18 @@ func (p *Publish) parseArgsAndSetup(args []string) (Kilnfile, *semver.Version, e
 		return Kilnfile{}, nil, fmt.Errorf("could not parse Kilnfile: %s", err)
 	}
 
+	window := p.Options.Window
+	if window != "ga" && window != "rc" && window != "beta" && window != "alpha" {
+		return Kilnfile{}, nil, fmt.Errorf("unknown window: %q", window)
+	}
+
 	return kilnfile, version, nil
 }
 
 func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.Version) error {
 	p.OutLogger.Printf("Requesting list of releases for %s", kilnfile.Slug)
 
-	window, err := kilnfile.ReleaseWindow(p.Now())
-	if err != nil {
-		return err
-	}
+	window := p.Options.Window
 
 	rv, err := ReleaseVersionFromBuildVersion(buildVersion, window)
 	if err != nil {
@@ -177,7 +183,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 	release.Version = versionToPublish.String()
 	release.ReleaseType = releaseType
 
-	release.ReleaseDate = p.Now().Format(PublishDateFormat)
+	release.ReleaseDate = p.Now().Format(publishDateFormat)
 	if rv.IsGA() {
 		sameMajorAndMinor, err := rv.MajorMinorConstraint()
 		if err != nil {
@@ -211,7 +217,7 @@ func endOfSupportFor(publishDate time.Time) string {
 	yearDelta := int((monthWithOverflow - 1) / 12)
 	startOfTenthMonth := time.Date(publishDate.Year()+yearDelta, month, 1, 0, 0, 0, 0, publishDate.Location())
 	endOfNinthMonth := startOfTenthMonth.Add(-24 * time.Hour)
-	return endOfNinthMonth.Format(PublishDateFormat)
+	return endOfNinthMonth.Format(publishDateFormat)
 }
 
 func (p Publish) attachLicenseFile(slug string, releaseID int, version *releaseVersion) error {
@@ -303,55 +309,8 @@ func (p Publish) Usage() jhanda.Usage {
 	}
 }
 
-const PublishDateFormat = "2006-01-02"
-
-type Date struct {
-	time.Time
-}
-
-// UnmarshalYAML parses a date in "YYYY-MM-DD" format
-func (d *Date) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var str string
-	if err := unmarshal(&str); err != nil {
-		return err
-	}
-
-	now, err := time.ParseInLocation(PublishDateFormat, str, time.UTC)
-	if err != nil {
-		return err
-	}
-
-	d.Time = now
-	return nil
-}
-
 type Kilnfile struct {
-	Slug         string `yaml:"slug"`
-	PublishDates struct {
-		Beta Date `yaml:"beta"`
-		RC   Date `yaml:"rc"`
-		GA   Date `yaml:"ga"`
-	} `yaml:"publish_dates"`
-}
-
-// ReleaseWindow determines the release window based on the current time.
-func (kilnfile Kilnfile) ReleaseWindow(currentTime time.Time) (string, error) {
-	gaDate := kilnfile.PublishDates.GA
-	if currentTime.Equal(gaDate.Time) || currentTime.After(gaDate.Time) {
-		return "ga", nil
-	}
-
-	rcDate := kilnfile.PublishDates.RC
-	if currentTime.Equal(rcDate.Time) || currentTime.After(rcDate.Time) {
-		return "rc", nil
-	}
-
-	betaDate := kilnfile.PublishDates.Beta
-	if currentTime.Equal(betaDate.Time) || currentTime.After(betaDate.Time) {
-		return "beta", nil
-	}
-
-	return "alpha", nil
+	Slug string `yaml:"slug"`
 }
 
 type releaseSet []pivnet.Release
