@@ -188,10 +188,13 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 		if err != nil {
 			return err
 		}
-		if matchExists {
+
+		if !matchExists {
+			release.EndOfSupportDate = endOfSupportFor(p.Now())
+		} else if lastPatchRelease.EndOfSupportDate != "" {
 			release.EndOfSupportDate = lastPatchRelease.EndOfSupportDate
 		} else {
-			release.EndOfSupportDate = endOfSupportFor(p.Now())
+			return fmt.Errorf("previously published release %q does not have an End of General Support date", lastPatchRelease.Version)
 		}
 	}
 

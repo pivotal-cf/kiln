@@ -420,13 +420,14 @@ publish_dates:
 
 				noVersionFile, noKilnFile = false, false
 				fs = memfs.New()
-				versionFileBody = someVersion.String()
 				kilnFileBody = defaultKilnFileBody
 
 				executeArgs = []string{"--pivnet-token", "SOME_TOKEN"}
 			})
 
 			JustBeforeEach(func() {
+				versionFileBody = someVersion.String()
+
 				if !noVersionFile {
 					version, _ := fs.Create("version")
 					version.Write([]byte(versionFileBody))
@@ -641,6 +642,38 @@ publish_dates:
 						Expect(r.Version).To(Equal("2.8.0"))
 						Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
 					}
+				})
+			})
+
+			When("the previous release on PivNet does not have an EOGS date", func() {
+				BeforeEach(func() {
+					now = parseTime(publishDateGA)
+					someVersion = semver.MustParse("2.9.1-build.111")
+
+					releasesService.ListReturns([]pivnet.Release{
+						{Version: someVersion.String(), ID: 99},
+						{Version: "2.9.0", EndOfSupportDate: ""},
+					}, nil)
+
+					productFilesService.ListReturns(
+						[]pivnet.ProductFile{
+							{
+								ID:          42,
+								Name:        "PCF Pivotal Application Service v2.9 OSL",
+								FileVersion: "2.9",
+								FileType:    "Open Source License",
+							},
+						},
+						nil,
+					)
+				})
+
+				It("returns an error instead of publishing the release", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring("does not have an End of General Support date")))
+
+					Expect(releasesService.UpdateCallCount()).To(Equal(0))
 				})
 			})
 		})
