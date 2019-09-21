@@ -48,7 +48,8 @@ var _ = Describe("publish", func() {
 
 		if rel.Version != releaseVersion || rel.ReleaseType != "Developer Release" {
 			rel.Version = releaseVersion
-			rel.ReleaseType = "Developer Release"
+			rel.ReleaseDate = ""
+			rel.EndOfSupportDate = ""
 			_, err = client.Releases.Update(slug, rel)
 			Expect(err).NotTo(HaveOccurred())
 		}
@@ -67,20 +68,8 @@ var _ = Describe("publish", func() {
 		restoreState()
 		var err error
 
-		now := time.Now().UTC()
-		days := 24 * time.Hour
-		publishDateGA := now.Add(-1 * days)
-		publishDateRC := publishDateGA.Add(-14 * days)
-		publishDateBeta := publishDateRC.Add(-13 * days)
-
-		dateFormat := "2006-01-02"
-
 		kilnfileBody = `---
-slug: ` + slug + `
-publish_dates:
-  beta: ` + publishDateBeta.Format(dateFormat) + `
-  rc: ` + publishDateRC.Format(dateFormat) + `
-  ga: ` + publishDateGA.Format(dateFormat)
+slug: ` + slug
 
 		tmpDir, err = ioutil.TempDir("", "kiln-publish-test")
 		Expect(err).NotTo(HaveOccurred())
@@ -98,6 +87,7 @@ publish_dates:
 
 	It("updates release on pivnet", func() {
 		command := exec.Command(pathToMain, "publish",
+			"--window", "ga",
 			"--pivnet-token", token,
 			"--pivnet-host", host)
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -107,7 +97,10 @@ publish_dates:
 		rel, err := client.Releases.Get(slug, releaseID)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rel.Version).To(Equal("2.2.17"))
-		Expect(string(rel.ReleaseType)).To(Equal("Maintenance Release"))
+		Expect(rel.ReleaseType).To(BeEquivalentTo("Maintenance Release"))
+		dateFormat := "2006-01-02"
+		Expect(rel.ReleaseDate).To(Equal(time.Now().Format(dateFormat)))
+		Expect(rel.EndOfSupportDate).To(Equal("2019-04-30")) // EOGS for 2.2
 
 		releaseFiles, err := client.ProductFiles.ListForRelease(slug, releaseID)
 		Expect(err).NotTo(HaveOccurred())
