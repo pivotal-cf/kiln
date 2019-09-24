@@ -38,11 +38,12 @@ type PivnetProductFilesService interface {
 
 type Publish struct {
 	Options struct {
-		Kilnfile    string `short:"f" long:"file" default:"Kilnfile" description:"path to Kilnfile"`
-		Version     string `short:"v" long:"version-file" default:"version" description:"path to version file"`
-		PivnetToken string `short:"t" long:"pivnet-token" description:"pivnet refresh token" required:"true"`
-		PivnetHost  string `long:"pivnet-host" default:"https://network.pivotal.io" description:"pivnet host"`
-		Window      string `long:"window" required:"true"`
+		Kilnfile            string `short:"f" long:"file" default:"Kilnfile" description:"path to Kilnfile"`
+		Version             string `short:"v" long:"version-file" default:"version" description:"path to version file"`
+		PivnetToken         string `short:"t" long:"pivnet-token" description:"pivnet refresh token" required:"true"`
+		PivnetHost          string `long:"pivnet-host" default:"https://network.pivotal.io" description:"pivnet host"`
+		IncludesSecurityFix bool   `long:"security-fix" description:"the release includes security fixes"`
+		Window              string `long:"window" required:"true"`
 	}
 
 	PivnetReleaseService      PivnetReleasesService
@@ -157,7 +158,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile Kilnfile, buildVersion *semver.V
 		return err
 	}
 
-	releaseType := releaseType(window, rv)
+	releaseType := releaseType(window, p.Options.IncludesSecurityFix, rv)
 
 	var releases releaseSet
 	releases, err = p.PivnetReleaseService.List(kilnfile.Slug)
@@ -278,7 +279,7 @@ func (p Publish) determineVersion(releases releaseSet, version *releaseVersion) 
 	return version, nil
 }
 
-func releaseType(window string, v *releaseVersion) pivnet.ReleaseType {
+func releaseType(window string, includesSecurityFix bool, v *releaseVersion) pivnet.ReleaseType {
 	switch window {
 	case "rc":
 		return "Release Candidate"
@@ -293,7 +294,11 @@ func releaseType(window string, v *releaseVersion) pivnet.ReleaseType {
 		case v.IsMinor():
 			return "Minor Release"
 		default:
-			return "Maintenance Release"
+			if includesSecurityFix {
+				return "Security Release"
+			} else {
+				return "Maintenance Release"
+			}
 		}
 	default:
 		return "Developer Release"

@@ -127,6 +127,21 @@ slug: ` + slug
 						Expect(r.Version).To(Equal("2.0.0-alpha.457"))
 					})
 				})
+
+				Context("when the --security-fix flag is given", func() {
+					BeforeEach(func() {
+						args = append(args, "--security-fix")
+					})
+
+					It("sets the correct release type", func() {
+						err := publish.Execute(args)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(rs.UpdateCallCount()).To(Equal(1))
+						_, r := rs.UpdateArgsForCall(0)
+						Expect(r.ReleaseType).To(BeEquivalentTo("Alpha Release"))
+					})
+				})
 			})
 
 			Context("during the beta window", func() {
@@ -176,6 +191,21 @@ slug: ` + slug
 						s, r := rs.UpdateArgsForCall(0)
 						Expect(s).To(Equal(slug))
 						Expect(r.Version).To(Equal("2.0.0-beta.124"))
+					})
+				})
+
+				Context("when the --security-fix flag is given", func() {
+					BeforeEach(func() {
+						args = append(args, "--security-fix")
+					})
+
+					It("sets the correct release type", func() {
+						err := publish.Execute(args)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(rs.UpdateCallCount()).To(Equal(1))
+						_, r := rs.UpdateArgsForCall(0)
+						Expect(r.ReleaseType).To(BeEquivalentTo("Beta Release"))
 					})
 				})
 			})
@@ -228,6 +258,21 @@ slug: ` + slug
 						s, r := rs.UpdateArgsForCall(0)
 						Expect(s).To(Equal(slug))
 						Expect(r.Version).To(Equal("2.0.0-rc.3"))
+					})
+				})
+
+				Context("when the --security-fix flag is given", func() {
+					BeforeEach(func() {
+						args = append(args, "--security-fix")
+					})
+
+					It("sets the correct release type", func() {
+						err := publish.Execute(args)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(rs.UpdateCallCount()).To(Equal(1))
+						_, r := rs.UpdateArgsForCall(0)
+						Expect(r.ReleaseType).To(BeEquivalentTo("Release Candidate"))
 					})
 				})
 			})
@@ -307,6 +352,21 @@ slug: ` + slug
 						Expect(productReleaseID).To(Equal(releaseID))
 						Expect(fileID).To(Equal(version20FileID))
 					})
+
+					Context("when the --security-fix flag is given", func() {
+						BeforeEach(func() {
+							args = append(args, "--security-fix")
+						})
+
+						It("sets the correct release type", func() {
+							err := publish.Execute(args)
+							Expect(err).NotTo(HaveOccurred())
+
+							Expect(rs.UpdateCallCount()).To(Equal(1))
+							_, r := rs.UpdateArgsForCall(0)
+							Expect(r.ReleaseType).To(BeEquivalentTo("Major Release"))
+						})
+					})
 				})
 
 				Context("for a minor release", func() {
@@ -341,6 +401,21 @@ slug: ` + slug
 						Expect(productSlug).To(Equal(slug))
 						Expect(productReleaseID).To(Equal(releaseID))
 						Expect(fileID).To(Equal(version21FileID))
+					})
+
+					Context("when the --security-fix flag is given", func() {
+						BeforeEach(func() {
+							args = append(args, "--security-fix")
+						})
+
+						It("sets the correct release type", func() {
+							err := publish.Execute(args)
+							Expect(err).NotTo(HaveOccurred())
+
+							Expect(rs.UpdateCallCount()).To(Equal(1))
+							_, r := rs.UpdateArgsForCall(0)
+							Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
+						})
 					})
 				})
 
@@ -385,6 +460,21 @@ slug: ` + slug
 						Expect(productSlug).To(Equal(slug))
 						Expect(productReleaseID).To(Equal(releaseID))
 						Expect(fileID).To(Equal(version21FileID))
+					})
+
+					Context("when the --security-fix flag is given", func() {
+						BeforeEach(func() {
+							args = append(args, "--security-fix")
+						})
+
+						It("sets the correct release type", func() {
+							err := publish.Execute(args)
+							Expect(err).NotTo(HaveOccurred())
+
+							Expect(rs.UpdateCallCount()).To(Equal(1))
+							_, r := rs.UpdateArgsForCall(0)
+							Expect(r.ReleaseType).To(BeEquivalentTo("Security Release"))
+						})
 					})
 				})
 			})
