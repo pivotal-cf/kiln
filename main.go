@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -98,19 +99,22 @@ func main() {
 	releaseSourcesFactory := func(assets cargo.Assets) []commands.ReleaseSource {
 		var releaseSources []commands.ReleaseSource
 
-		if assets.CompiledReleases.Bucket != "" {
-			compiledReleaseSource := fetcher.S3ReleaseSource{Logger: outLogger}
-			compiledReleaseSource.Configure(assets.CompiledReleases)
-			releaseSources = append(releaseSources, fetcher.S3CompiledReleaseSource(compiledReleaseSource))
-		}
-
-		boshIoReleaseSource := fetcher.NewBOSHIOReleaseSource(outLogger, "")
-		releaseSources = append(releaseSources, boshIoReleaseSource)
-
-		if assets.UncompiledReleases.Bucket != "" {
-			builtReleaseSource := fetcher.S3ReleaseSource{Logger: outLogger}
-			builtReleaseSource.Configure(assets.UncompiledReleases)
-			releaseSources = append(releaseSources, fetcher.S3BuiltReleaseSource(builtReleaseSource))
+		for _, releaseConfig := range assets.ReleaseSources {
+			var releaseSource commands.ReleaseSource
+			if releaseConfig.Type == "bosh.io" {
+				releaseSource = fetcher.NewBOSHIOReleaseSource(outLogger, "")
+			} else if releaseConfig.Type == "s3" {
+				s3ReleaseSource := fetcher.S3ReleaseSource{Logger: outLogger}
+				s3ReleaseSource.Configure(releaseConfig)
+				if releaseConfig.Compiled {
+					releaseSource = fetcher.S3CompiledReleaseSource(s3ReleaseSource)
+				} else {
+					releaseSource = fetcher.S3BuiltReleaseSource(s3ReleaseSource)
+				}
+			} else {
+				panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
+			}
+			releaseSources = append(releaseSources, releaseSource)
 		}
 
 		return releaseSources

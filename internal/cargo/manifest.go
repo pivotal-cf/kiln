@@ -32,13 +32,13 @@ type AssetsLock struct {
 }
 
 type Assets struct {
-	Stemcell           Stemcell        `yaml:"stemcell_criteria"`
-	CompiledReleases   S3ReleaseConfig `yaml:"compiled_releases"`
-	UncompiledReleases S3ReleaseConfig `yaml:"uncompiled_releases"`
+	Stemcell       Stemcell              `yaml:"stemcell_criteria"`
+	ReleaseSources []ReleaseSourceConfig `yaml:"release_sources"`
 }
 
-type S3ReleaseConfig struct {
+type ReleaseSourceConfig struct {
 	Type            string `yaml:"type"`
+	Compiled        bool   `yaml:"compiled"`
 	Bucket          string `yaml:"bucket"`
 	Region          string `yaml:"region"`
 	AccessKeyId     string `yaml:"access_key_id"`

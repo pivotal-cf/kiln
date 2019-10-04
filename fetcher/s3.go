@@ -30,7 +30,7 @@ type S3ReleaseSource struct {
 	Regex        string
 }
 
-func (r *S3ReleaseSource) Configure(config cargo.S3ReleaseConfig) {
+func (r *S3ReleaseSource) Configure(config cargo.ReleaseSourceConfig) {
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(config.Region),

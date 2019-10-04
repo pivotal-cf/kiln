@@ -51,10 +51,13 @@ release version and checksum.
 
 #### Assets File
 The assets file must also have information about how to access the S3 Bucket.
-The following are **required** in the `compiled_releases` hash in an assets
-file.
+Two types of release sources are allowed in the list under the `release_sources`
+key:
 
-- `type`: must be "s3"
+1. `type: bosh.io`. For this type, no other keys are required/allowed.
+2. `type: s3`. The following other keys **required** in this case.
+
+- `compiled` (boolean): true if the bucket contains compiled releases. false otherwise.
 - `bucket`: must be the name of the s3 bucket
 - `region`: must be the region of the bucket
 - `access_key_id`: must be an IAM access key id that has read permission for the
@@ -101,13 +104,14 @@ having the following members.
 
 ```
 $ cat assets.yml
-compiled_releases:
- type: s3
- bucket: compiled-releases
- region: us-west-1
- access_key_id: $(variable "aws_access_key_id")
- secret_access_key: $(variable "aws_secret_access_key")
- regex: ^2.6/.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>\d+\.\d+)(\.0)?\.tgz$
+release_sources:
+  - type: s3
+    compiled: true
+    bucket: compiled-releases
+    region: us-west-1
+    access_key_id: $(variable "aws_access_key_id")
+    secret_access_key: $(variable "aws_secret_access_key")
+    regex: ^2.6/.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>\d+\.\d+)(\.0)?\.tgz$
 ```
 
 *Credentials like S3 keys are not stored in git repos. To support separating

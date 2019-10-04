@@ -40,12 +40,6 @@ func (err ConfigFileError) Error() string {
 	return fmt.Sprintf("encountered a configuration file error with %s: %s", err.HumanReadableConfigFileName, err.err.Error())
 }
 
-type stringError string
-
-func (str stringError) Error() string {
-	return string(str)
-}
-
 type ErrorMissingReleases fetcher.ReleaseSet
 
 func (releases ErrorMissingReleases) Error() string {

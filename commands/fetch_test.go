@@ -235,6 +235,7 @@ stemcell_criteria:
 				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns(emptyReleaseSet, nil)
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(emptyReleaseSet, nil)
 			})
+
 			It("reports an error", func() {
 				err := fetch.Execute([]string{
 					"--releases-directory", someReleasesDirectory,
@@ -446,13 +447,14 @@ stemcell_criteria:
 			Context("when multiple variable files are provided", func() {
 				const TemplatizedAssetsYMLContents = `
 ---
-compiled_releases:
-  type: s3
-  bucket: $( variable "bucket" )
-  region: $( variable "region" )
-  access_key_id: $( variable "access_key" )
-  secret_access_key: $( variable "secret_key" )
-  regex: $( variable "regex" )
+release_sources:
+  - type: s3
+    compiled: true
+    bucket: $( variable "bucket" )
+    region: $( variable "region" )
+    access_key_id: $( variable "access_key" )
+    secret_access_key: $( variable "secret_key" )
+    regex: $( variable "regex" )
 `
 
 				var (
