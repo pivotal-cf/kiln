@@ -4,7 +4,6 @@ package fakes
 import (
 	"sync"
 
-	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
@@ -193,4 +192,4 @@ func (fake *ReleaseSource) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ commands.ReleaseSource = new(ReleaseSource)
+var _ fetcher.ReleaseSource = new(ReleaseSource)

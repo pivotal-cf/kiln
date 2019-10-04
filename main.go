@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 
 	"github.com/pivotal-cf/jhanda"
@@ -96,29 +94,7 @@ func main() {
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 
-	releaseSourcesFactory := func(assets cargo.Assets) []commands.ReleaseSource {
-		var releaseSources []commands.ReleaseSource
-
-		for _, releaseConfig := range assets.ReleaseSources {
-			var releaseSource commands.ReleaseSource
-			if releaseConfig.Type == "bosh.io" {
-				releaseSource = fetcher.NewBOSHIOReleaseSource(outLogger, "")
-			} else if releaseConfig.Type == "s3" {
-				s3ReleaseSource := fetcher.S3ReleaseSource{Logger: outLogger}
-				s3ReleaseSource.Configure(releaseConfig)
-				if releaseConfig.Compiled {
-					releaseSource = fetcher.S3CompiledReleaseSource(s3ReleaseSource)
-				} else {
-					releaseSource = fetcher.S3BuiltReleaseSource(s3ReleaseSource)
-				}
-			} else {
-				panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
-			}
-			releaseSources = append(releaseSources, releaseSource)
-		}
-
-		return releaseSources
-	}
+	releaseSourcesFactory := fetcher.NewReleaseSourcesFactory(outLogger)
 
 	commandSet["fetch"] = commands.NewFetch(outLogger, releaseSourcesFactory, localReleaseDirectory)
 	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New("."))

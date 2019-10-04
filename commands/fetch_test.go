@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/jhanda"
@@ -18,6 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
+	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
 )
 
 var _ = Describe("Fetch", func() {
@@ -29,12 +29,12 @@ var _ = Describe("Fetch", func() {
 		someAssetsLockPath          string
 		assetsLockContents          string
 		someReleasesDirectory       string
-		fakeS3CompiledReleaseSource *fakes.ReleaseSource
-		fakeBoshIOReleaseSource     *fakes.ReleaseSource
-		fakeS3BuiltReleaseSource    *fakes.ReleaseSource
-		fakeReleaseSources          []commands.ReleaseSource
+		fakeS3CompiledReleaseSource *fetcherFakes.ReleaseSource
+		fakeBoshIOReleaseSource     *fetcherFakes.ReleaseSource
+		fakeS3BuiltReleaseSource    *fetcherFakes.ReleaseSource
+		fakeReleaseSources          []fetcher.ReleaseSource
 		fakeLocalReleaseDirectory   *fakes.LocalReleaseDirectory
-		releaseSourcesFactory       func(cargo.Assets) []commands.ReleaseSource
+		releaseSourcesFactory       *fakes.ReleaseSourcesFactory
 
 		fetchExecuteArgs []string
 		fetchExecuteErr  error
@@ -67,14 +67,15 @@ stemcell_criteria:
 
 			fakeLocalReleaseDirectory = new(fakes.LocalReleaseDirectory)
 
-			fakeS3CompiledReleaseSource = new(fakes.ReleaseSource)
-			fakeBoshIOReleaseSource = new(fakes.ReleaseSource)
-			fakeS3BuiltReleaseSource = new(fakes.ReleaseSource)
+			fakeS3CompiledReleaseSource = new(fetcherFakes.ReleaseSource)
+			fakeBoshIOReleaseSource = new(fetcherFakes.ReleaseSource)
+			fakeS3BuiltReleaseSource = new(fetcherFakes.ReleaseSource)
 
 			fetchExecuteArgs = []string{
 				"--releases-directory", someReleasesDirectory,
 				"--assets-file", someAssetsFilePath,
 			}
+			releaseSourcesFactory = new(fakes.ReleaseSourcesFactory)
 		})
 
 		AfterEach(func() {
@@ -82,8 +83,8 @@ stemcell_criteria:
 		})
 
 		JustBeforeEach(func() {
-			fakeReleaseSources = []commands.ReleaseSource{fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource}
-			releaseSourcesFactory = func(cargo.Assets) []commands.ReleaseSource { return fakeReleaseSources }
+			fakeReleaseSources = []fetcher.ReleaseSource{fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource}
+			releaseSourcesFactory.ReleaseSourcesReturns(fakeReleaseSources)
 
 			err := ioutil.WriteFile(someAssetsLockPath, []byte(assetsLockContents), 0644)
 			Expect(err).NotTo(HaveOccurred())

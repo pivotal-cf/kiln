@@ -53,7 +53,7 @@ func (releases ErrorMissingReleases) Error() string {
 type Fetch struct {
 	logger *log.Logger
 
-	releaseSourcesFactory func(cargo.Assets) []ReleaseSource
+	releaseSourcesFactory ReleaseSourcesFactory
 	localReleaseDirectory LocalReleaseDirectory
 
 	Options struct {
@@ -67,18 +67,17 @@ type Fetch struct {
 	}
 }
 
-func NewFetch(logger *log.Logger, releaseSourcesFactory func(cargo.Assets) []ReleaseSource, localReleaseDirectory LocalReleaseDirectory) Fetch {
+//go:generate counterfeiter -o ./fakes/release_sources_factory.go --fake-name ReleaseSourcesFactory . ReleaseSourcesFactory
+type ReleaseSourcesFactory interface {
+	ReleaseSources(assets cargo.Assets) []fetcher.ReleaseSource
+}
+
+func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
 		logger:                logger,
 		localReleaseDirectory: localReleaseDirectory,
 		releaseSourcesFactory: releaseSourcesFactory,
 	}
-}
-
-//go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
-type ReleaseSource interface {
-	GetMatchedReleases(assetsLock fetcher.ReleaseSet, stemcell cargo.Stemcell) (fetcher.ReleaseSet, error)
-	DownloadReleases(releasesDir string, matchedS3Objects fetcher.ReleaseSet, downloadThreads int) error
 }
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
@@ -178,7 +177,7 @@ func (f Fetch) Execute(args []string) error {
 }
 
 func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseSet, stemcell cargo.Stemcell) (satisfied, unsatisfied fetcher.ReleaseSet, err error) {
-	releaseSources := f.releaseSourcesFactory(assets)
+	releaseSources := f.releaseSourcesFactory.ReleaseSources(assets)
 	for _, releaseSource := range releaseSources {
 		matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet, stemcell)
 		if err != nil {
