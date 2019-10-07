@@ -45,7 +45,7 @@ var _ = Describe("bake command", func() {
 		singleStemcellDirectory          = "fixtures/single-stemcell"
 		variableFile                     = "fixtures/variables-file"
 		someVarFile                      = "fixtures/var-dir/var-file.yml"
-		someAssetsYMLPath                = "fixtures/assets.yml"
+		someKilnfilePath                 = "fixtures/Kilnfile"
 		cfSHA1                           = "b383f3177e4fc4f0386b7a06ddbc3f57e7dbf09f"
 		diegoSHA1                        = "ade2a81b4bfda4eb7062cb1a9314f8941ae11d06"
 		metadata                         = "fixtures/metadata.yml"
@@ -311,9 +311,9 @@ var _ = Describe("bake command", func() {
 		})
 	})
 
-	Context("when the --assets-file flag is provided", func() {
+	Context("when the --kilnfile flag is provided", func() {
 
-		It("generates a tile with the correct metadata including the stemcell criteria from the asset file", func() {
+		It("generates a tile with the correct metadata including the stemcell criteria from the Kilnfile.lock", func() {
 			commandWithArgs = []string{
 				"bake",
 				"--bosh-variables-directory", someBOSHVariablesDirectory,
@@ -333,7 +333,7 @@ var _ = Describe("bake command", func() {
 				"--variable", "some-variable=some-variable-value",
 				"--variables-file", someVarFile,
 				"--version", "1.2.3",
-				"--assets-file", someAssetsYMLPath,
+				"--kilnfile", someKilnfilePath,
 			}
 			commandWithArgs = append(commandWithArgs,
 				"--migrations-directory", "fixtures/extra-migrations",
@@ -418,7 +418,7 @@ var _ = Describe("bake command", func() {
 			Expect(string(contents)).To(Equal("some_migration\n"))
 
 			Eventually(session.Err).Should(gbytes.Say("Reading release manifests"))
-			Eventually(session.Err).Should(gbytes.Say("Reading stemcell criteria from assets.lock"))
+			Eventually(session.Err).Should(gbytes.Say("Reading stemcell criteria from Kilnfile.lock"))
 			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Building %s", outputFile)))
 			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile)))
 			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding migrations/v1/201603041539_custom_buildpacks.js to %s...", outputFile)))
@@ -429,30 +429,30 @@ var _ = Describe("bake command", func() {
 		})
 
 		Context("failure cases", func() {
-			It("assets.lock does not exist", func() {
+			It("Kilnfile.lock does not exist", func() {
 				commandWithArgs = []string{
 					"bake",
 					"--instance-groups-directory", someInstanceGroupsDirectory,
 					"--metadata", metadata,
 					"--output-file", outputFile,
 					"--releases-directory", someReleasesDirectory,
-					"--assets-file", "non-existent-assets.yml",
+					"--kilnfile", "non-existent-kilnfile",
 				}
 
 				command := exec.Command(pathToMain, commandWithArgs...)
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(session.Err).Should(gbytes.Say("non-existent-assets.lock: no such file or directory"))
+				Eventually(session.Err).Should(gbytes.Say("non-existent-kilnfile.lock: no such file or directory"))
 			})
 		})
-		It("errors out when assets.lock cannot be unmarshalled", func() {
+		It("errors out when Kilnfile.lock cannot be unmarshalled", func() {
 			commandWithArgs = []string{
 				"bake",
 				"--instance-groups-directory", someInstanceGroupsDirectory,
 				"--metadata", metadata,
 				"--output-file", outputFile,
 				"--releases-directory", someReleasesDirectory,
-				"--assets-file", "fixtures/bad-assets.yml",
+				"--kilnfile", "fixtures/bad-Kilnfile",
 			}
 
 			command := exec.Command(pathToMain, commandWithArgs...)
@@ -700,7 +700,7 @@ var _ = Describe("bake command", func() {
 		})
 	})
 
-	Context("when neither --assets-file nor --stemcells-directory are provided", func() {
+	Context("when neither --kilnfile nor --stemcells-directory are provided", func() {
 		It("generates a tile with unchanged stemcell criteria", func() {
 			commandWithArgs = []string{
 				"bake",
@@ -768,7 +768,7 @@ var _ = Describe("bake command", func() {
 			})
 		})
 
-		Context("when a assets file does not exist", func() {
+		Context("when a Kilnfile.lock does not exist", func() {
 			It("prints an error and exits 1", func() {
 				commandWithArgs := []string{"bake",
 					"--bosh-variables-directory", someBOSHVariablesDirectory,
@@ -785,7 +785,7 @@ var _ = Describe("bake command", func() {
 					"--releases-directory", otherReleasesDirectory,
 					"--releases-directory", someReleasesDirectory,
 					"--runtime-configs-directory", someRuntimeConfigsDirectory,
-					"--assets-file", "non-existent-assets.yml",
+					"--kilnfile", "non-existent-Kilnfile",
 					"--variable", "some-variable=some-variable-value",
 					"--variables-file", someVarFile,
 					"--version", "1.2.3",
@@ -796,7 +796,7 @@ var _ = Describe("bake command", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("non-existent-assets.lock: no such file or directory"))
+				Expect(string(session.Err.Contents())).To(ContainSubstring("non-existent-Kilnfile.lock: no such file or directory"))
 			})
 		})
 

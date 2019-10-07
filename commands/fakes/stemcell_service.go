@@ -6,19 +6,6 @@ import (
 )
 
 type StemcellService struct {
-	FromAssetsFileStub        func(string) (map[string]interface{}, error)
-	fromAssetsFileMutex       sync.RWMutex
-	fromAssetsFileArgsForCall []struct {
-		arg1 string
-	}
-	fromAssetsFileReturns struct {
-		result1 map[string]interface{}
-		result2 error
-	}
-	fromAssetsFileReturnsOnCall map[int]struct {
-		result1 map[string]interface{}
-		result2 error
-	}
 	FromDirectoriesStub        func([]string) (map[string]interface{}, error)
 	fromDirectoriesMutex       sync.RWMutex
 	fromDirectoriesArgsForCall []struct {
@@ -29,6 +16,19 @@ type StemcellService struct {
 		result2 error
 	}
 	fromDirectoriesReturnsOnCall map[int]struct {
+		result1 map[string]interface{}
+		result2 error
+	}
+	FromKilnfileStub        func(string) (map[string]interface{}, error)
+	fromKilnfileMutex       sync.RWMutex
+	fromKilnfileArgsForCall []struct {
+		arg1 string
+	}
+	fromKilnfileReturns struct {
+		result1 map[string]interface{}
+		result2 error
+	}
+	fromKilnfileReturnsOnCall map[int]struct {
 		result1 map[string]interface{}
 		result2 error
 	}
@@ -47,69 +47,6 @@ type StemcellService struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *StemcellService) FromAssetsFile(arg1 string) (map[string]interface{}, error) {
-	fake.fromAssetsFileMutex.Lock()
-	ret, specificReturn := fake.fromAssetsFileReturnsOnCall[len(fake.fromAssetsFileArgsForCall)]
-	fake.fromAssetsFileArgsForCall = append(fake.fromAssetsFileArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	fake.recordInvocation("FromAssetsFile", []interface{}{arg1})
-	fake.fromAssetsFileMutex.Unlock()
-	if fake.FromAssetsFileStub != nil {
-		return fake.FromAssetsFileStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	fakeReturns := fake.fromAssetsFileReturns
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *StemcellService) FromAssetsFileCallCount() int {
-	fake.fromAssetsFileMutex.RLock()
-	defer fake.fromAssetsFileMutex.RUnlock()
-	return len(fake.fromAssetsFileArgsForCall)
-}
-
-func (fake *StemcellService) FromAssetsFileCalls(stub func(string) (map[string]interface{}, error)) {
-	fake.fromAssetsFileMutex.Lock()
-	defer fake.fromAssetsFileMutex.Unlock()
-	fake.FromAssetsFileStub = stub
-}
-
-func (fake *StemcellService) FromAssetsFileArgsForCall(i int) string {
-	fake.fromAssetsFileMutex.RLock()
-	defer fake.fromAssetsFileMutex.RUnlock()
-	argsForCall := fake.fromAssetsFileArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *StemcellService) FromAssetsFileReturns(result1 map[string]interface{}, result2 error) {
-	fake.fromAssetsFileMutex.Lock()
-	defer fake.fromAssetsFileMutex.Unlock()
-	fake.FromAssetsFileStub = nil
-	fake.fromAssetsFileReturns = struct {
-		result1 map[string]interface{}
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *StemcellService) FromAssetsFileReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
-	fake.fromAssetsFileMutex.Lock()
-	defer fake.fromAssetsFileMutex.Unlock()
-	fake.FromAssetsFileStub = nil
-	if fake.fromAssetsFileReturnsOnCall == nil {
-		fake.fromAssetsFileReturnsOnCall = make(map[int]struct {
-			result1 map[string]interface{}
-			result2 error
-		})
-	}
-	fake.fromAssetsFileReturnsOnCall[i] = struct {
-		result1 map[string]interface{}
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *StemcellService) FromDirectories(arg1 []string) (map[string]interface{}, error) {
@@ -175,6 +112,69 @@ func (fake *StemcellService) FromDirectoriesReturnsOnCall(i int, result1 map[str
 		})
 	}
 	fake.fromDirectoriesReturnsOnCall[i] = struct {
+		result1 map[string]interface{}
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *StemcellService) FromKilnfile(arg1 string) (map[string]interface{}, error) {
+	fake.fromKilnfileMutex.Lock()
+	ret, specificReturn := fake.fromKilnfileReturnsOnCall[len(fake.fromKilnfileArgsForCall)]
+	fake.fromKilnfileArgsForCall = append(fake.fromKilnfileArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("FromKilnfile", []interface{}{arg1})
+	fake.fromKilnfileMutex.Unlock()
+	if fake.FromKilnfileStub != nil {
+		return fake.FromKilnfileStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.fromKilnfileReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *StemcellService) FromKilnfileCallCount() int {
+	fake.fromKilnfileMutex.RLock()
+	defer fake.fromKilnfileMutex.RUnlock()
+	return len(fake.fromKilnfileArgsForCall)
+}
+
+func (fake *StemcellService) FromKilnfileCalls(stub func(string) (map[string]interface{}, error)) {
+	fake.fromKilnfileMutex.Lock()
+	defer fake.fromKilnfileMutex.Unlock()
+	fake.FromKilnfileStub = stub
+}
+
+func (fake *StemcellService) FromKilnfileArgsForCall(i int) string {
+	fake.fromKilnfileMutex.RLock()
+	defer fake.fromKilnfileMutex.RUnlock()
+	argsForCall := fake.fromKilnfileArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *StemcellService) FromKilnfileReturns(result1 map[string]interface{}, result2 error) {
+	fake.fromKilnfileMutex.Lock()
+	defer fake.fromKilnfileMutex.Unlock()
+	fake.FromKilnfileStub = nil
+	fake.fromKilnfileReturns = struct {
+		result1 map[string]interface{}
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *StemcellService) FromKilnfileReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
+	fake.fromKilnfileMutex.Lock()
+	defer fake.fromKilnfileMutex.Unlock()
+	fake.FromKilnfileStub = nil
+	if fake.fromKilnfileReturnsOnCall == nil {
+		fake.fromKilnfileReturnsOnCall = make(map[int]struct {
+			result1 map[string]interface{}
+			result2 error
+		})
+	}
+	fake.fromKilnfileReturnsOnCall[i] = struct {
 		result1 map[string]interface{}
 		result2 error
 	}{result1, result2}
@@ -246,10 +246,10 @@ func (fake *StemcellService) FromTarballReturnsOnCall(i int, result1 interface{}
 func (fake *StemcellService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.fromAssetsFileMutex.RLock()
-	defer fake.fromAssetsFileMutex.RUnlock()
 	fake.fromDirectoriesMutex.RLock()
 	defer fake.fromDirectoriesMutex.RUnlock()
+	fake.fromKilnfileMutex.RLock()
+	defer fake.fromKilnfileMutex.RUnlock()
 	fake.fromTarballMutex.RLock()
 	defer fake.fromTarballMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

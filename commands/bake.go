@@ -32,7 +32,7 @@ type releasesService interface {
 //go:generate counterfeiter -o ./fakes/stemcell_service.go --fake-name StemcellService . stemcellService
 type stemcellService interface {
 	FromDirectories(directories []string) (stemcell map[string]interface{}, err error)
-	FromAssetsFile(path string) (stemcell map[string]interface{}, err error)
+	FromKilnfile(path string) (stemcell map[string]interface{}, err error)
 	FromTarball(path string) (stemcell interface{}, err error)
 }
 
@@ -99,7 +99,7 @@ type Bake struct {
 	metadata          metadataService
 
 	Options struct {
-		AssetsFile         string   `short:"a"  long:"assets-file"                        description:"path to assets file  (NOTE: mutually exclusive with --stemcell-directory)"`
+		Kilnfile           string   `short:"kf"  long:"kilnfile"                        description:"path to Kilnfile  (NOTE: mutually exclusive with --stemcell-directory)"`
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
 		OutputFile         string   `short:"o"  long:"output-file"                        description:"path to where the tile will be output"`
 		ReleaseDirectories []string `short:"rd" long:"releases-directory"               description:"path to a directory containing release tarballs"`
@@ -115,8 +115,8 @@ type Bake struct {
 		PropertyDirectories      []string `short:"pd"  long:"properties-directory"      description:"path to a directory containing property blueprints"`
 		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory" description:"path to a directory containing runtime configs"`
 		Sha256                   bool     `            long:"sha256"                    description:"calculates a SHA256 checksum of the output file"`
-		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"          description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --assets-file)"`
-		StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"       description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --assets-file or --stemcell-tarball)"`
+		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"          description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)"`
+		StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"       description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)"`
 		StubReleases             bool     `short:"sr"  long:"stub-releases"             description:"skips importing release tarballs into the tile"`
 		VariableFiles            []string `short:"vf"  long:"variables-file"            description:"path to a file containing variables to interpolate"`
 		Variables                []string `short:"vr"  long:"variable"                  description:"key value pairs of variables to interpolate"`
@@ -175,12 +175,12 @@ func (b Bake) Execute(args []string) error {
 		return errors.New("--output-file must be provided unless using --metadata-only")
 	}
 
-	if b.Options.AssetsFile != "" && b.Options.StemcellTarball != "" {
-		return errors.New("--assets-file cannot be provided when using --stemcell-tarball")
+	if b.Options.Kilnfile != "" && b.Options.StemcellTarball != "" {
+		return errors.New("--kilnfile cannot be provided when using --stemcell-tarball")
 	}
 
-	if b.Options.AssetsFile != "" && len(b.Options.StemcellsDirectories) > 0 {
-		return errors.New("--assets-file cannot be provided when using --stemcells-directory")
+	if b.Options.Kilnfile != "" && len(b.Options.StemcellsDirectories) > 0 {
+		return errors.New("--kilnfile cannot be provided when using --stemcells-directory")
 	}
 
 	if b.Options.StemcellTarball != "" && len(b.Options.StemcellsDirectories) > 0 {
@@ -206,8 +206,8 @@ func (b Bake) Execute(args []string) error {
 	if b.Options.StemcellTarball != "" {
 		// TODO remove when stemcell tarball is deprecated
 		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
-	} else if b.Options.AssetsFile != "" {
-		stemcellManifests, err = b.stemcell.FromAssetsFile(b.Options.AssetsFile)
+	} else if b.Options.Kilnfile != "" {
+		stemcellManifests, err = b.stemcell.FromKilnfile(b.Options.Kilnfile)
 	} else if len(b.Options.StemcellsDirectories) > 0 {
 		stemcellManifests, err = b.stemcell.FromDirectories(b.Options.StemcellsDirectories)
 	}

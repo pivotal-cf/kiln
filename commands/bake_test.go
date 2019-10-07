@@ -2,15 +2,16 @@ package commands_test
 
 import (
 	"errors"
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
+
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
-	"log"
-	"os"
-	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -449,18 +450,18 @@ var _ = Describe("Bake", func() {
 					"--properties-directory", "some-properties-directory",
 					"--releases-directory", someReleasesDirectory,
 					"--runtime-configs-directory", "some-other-runtime-configs-directory",
-					"--assets-file", "assets.yml",
+					"--kilnfile", "Kilnfile",
 					"--bosh-variables-directory", "some-variables-directory",
 					"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
 					"--migrations-directory", "some-other-migrations-directory",
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(fakeStemcellService.FromAssetsFileCallCount()).To(Equal(1))
-				Expect(fakeStemcellService.FromAssetsFileArgsForCall(0)).To(Equal("assets.yml"))
+				Expect(fakeStemcellService.FromKilnfileCallCount()).To(Equal(1))
+				Expect(fakeStemcellService.FromKilnfileArgsForCall(0)).To(Equal("Kilnfile"))
 			})
 		})
 
-		Context("when neither the --assets-file nor --stemcell-tarball flags are provided", func() {
+		Context("when neither the --kilnfile nor --stemcell-tarball flags are provided", func() {
 			It("does not error", func() {
 				err := bake.Execute([]string{
 					"--metadata", "some-metadata",
@@ -713,28 +714,28 @@ var _ = Describe("Bake", func() {
 				})
 			})
 
-			Context("when both the --assets-file and --stemcells-directory are provided", func() {
+			Context("when both the --kilnfile and --stemcells-directory are provided", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--metadata", "some-metadata",
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--stemcells-directory", "some-stemcell-directory",
-						"--assets-file", "assets.yml",
+						"--kilnfile", "Kilnfile",
 					})
-					Expect(err).To(MatchError("--assets-file cannot be provided when using --stemcells-directory"))
+					Expect(err).To(MatchError("--kilnfile cannot be provided when using --stemcells-directory"))
 				})
 			})
 
 			//todo: When --stemcell-tarball is removed, delete this test
-			Context("when both the --stemcell-tarball and --assets-file are provided", func() {
+			Context("when both the --stemcell-tarball and --kilnfile are provided", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--metadata", "some-metadata",
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--stemcell-tarball", "some-stemcell-tarball",
-						"--assets-file", "assets.yml",
+						"--kilnfile", "Kilnfile",
 					})
-					Expect(err).To(MatchError("--assets-file cannot be provided when using --stemcell-tarball"))
+					Expect(err).To(MatchError("--kilnfile cannot be provided when using --stemcell-tarball"))
 				})
 			})
 

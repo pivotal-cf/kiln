@@ -8,10 +8,9 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/pivotal-cf/kiln/builder"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 type StemcellService struct {
@@ -82,11 +81,11 @@ func (ss StemcellService) FromTarball(path string) (interface{}, error) {
 	return stemcell.Metadata, nil
 }
 
-func (ss StemcellService) FromAssetsFile(assetsFilePath string) (map[string]interface{}, error) {
-	assetsLockFilePath := fmt.Sprintf("%s.lock", strings.TrimSuffix(assetsFilePath, filepath.Ext(assetsFilePath)))
-	assetsLockBasename := path.Base(assetsLockFilePath)
-	ss.logger.Println(fmt.Sprintf("Reading stemcell criteria from %s", assetsLockBasename))
-	assetsLockFile, err := os.Open(assetsLockFilePath)
+func (ss StemcellService) FromKilnfile(kilnfilePath string) (map[string]interface{}, error) {
+	kilnfileLockPath := fmt.Sprintf("%s.lock", kilnfilePath)
+	kilnfileLockBasename := path.Base(kilnfileLockPath)
+	ss.logger.Println(fmt.Sprintf("Reading stemcell criteria from %s", kilnfileLockBasename))
+	kilnfileLock, err := os.Open(kilnfileLockPath)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +99,7 @@ func (ss StemcellService) FromAssetsFile(assetsFilePath string) (map[string]inte
 		Metadata stemcellMetadata `yaml:"stemcell_criteria"`
 	}{}
 
-	lockFileContent, err := ioutil.ReadAll(assetsLockFile)
+	lockFileContent, err := ioutil.ReadAll(kilnfileLock)
 	if err != nil {
 		return nil, err
 	}
