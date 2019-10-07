@@ -97,7 +97,7 @@ func main() {
 	releaseSourcesFactory := fetcher.NewReleaseSourcesFactory(outLogger)
 
 	commandSet["fetch"] = commands.NewFetch(outLogger, releaseSourcesFactory, localReleaseDirectory)
-	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New("."))
+	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
 		tileWriter,
