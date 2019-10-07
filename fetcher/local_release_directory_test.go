@@ -139,7 +139,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		const meaninglessReleaseSourcePath = "/random/path/used/only/by/release-source"
 		var (
 			downloadedReleases map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader
-			assetsLock         cargo.AssetsLock
+			kilnfileLock       cargo.KilnfileLock
 			goodFilePath       string
 			badFilePath        string
 			err                error
@@ -154,7 +154,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			err = ioutil.WriteFile(badFilePath, []byte("some bad sha file"), 0644)
 			Expect(err).NotTo(HaveOccurred())
 
-			assetsLock = cargo.AssetsLock{
+			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.Release{
 					{
 						Name:    "good",
@@ -174,7 +174,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			}
 		})
 
-		Context("when all the checksums on the downloaded releases match their checksums in assets.lock", func() {
+		Context("when all the checksums on the downloaded releases match their checksums in Kilnfile.lock", func() {
 			It("succeeds", func() {
 				downloadedReleases = map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{
 					fetcher.ReleaseID{Name: "good", Version: "1.2.3"}: fetcher.CompiledRelease{
@@ -183,12 +183,12 @@ var _ = Describe("LocalReleaseDirectory", func() {
 						StemcellVersion: "190.0.0",
 						Path:            meaninglessReleaseSourcePath,
 					}}
-				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, assetsLock)
+				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, kilnfileLock)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
-		Context("when at least one checksum on the downloaded releases does not match the checksum in assets.lock", func() {
+		Context("when at least one checksum on the downloaded releases does not match the checksum in Kilnfile.lock", func() {
 			It("returns an error and deletes the bad release", func() {
 				downloadedReleases = map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{
 					fetcher.ReleaseID{Name: "bad", Version: "1.2.3"}: fetcher.CompiledRelease{
@@ -197,7 +197,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 						StemcellVersion: "190.0.0",
 						Path:            meaninglessReleaseSourcePath,
 					}}
-				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, assetsLock)
+				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, kilnfileLock)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("These downloaded releases do not match the checksum"))
 
@@ -215,7 +215,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				nonStandardFilePath = filepath.Join(releasesDir, "uaa-release-73.0.0.tgz") // bosh.io name, different from s3
 				err = ioutil.WriteFile(nonStandardFilePath, []byte("some release file"), 0644)
 				Expect(err).NotTo(HaveOccurred())
-				assetsLock = cargo.AssetsLock{
+				kilnfileLock = cargo.KilnfileLock{
 					Releases: []cargo.Release{
 						{
 							Name:    "good",
@@ -246,7 +246,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 						Path:            nonStandardFilePath,
 					},
 				}
-				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, assetsLock)
+				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, kilnfileLock)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

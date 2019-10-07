@@ -62,7 +62,7 @@ func NewBOSHIOReleaseSource(logger *log.Logger, customServerURI string) *BOSHIOR
 	}
 }
 
-func (r *BOSHIOReleaseSource) Configure(assets cargo.Assets) {
+func (r *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
 	return
 }
 

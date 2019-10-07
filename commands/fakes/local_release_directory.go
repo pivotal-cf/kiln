@@ -36,12 +36,12 @@ type LocalReleaseDirectory struct {
 		result1 fetcher.ReleaseSet
 		result2 error
 	}
-	VerifyChecksumsStub        func(string, fetcher.ReleaseSet, cargo.AssetsLock) error
+	VerifyChecksumsStub        func(string, fetcher.ReleaseSet, cargo.KilnfileLock) error
 	verifyChecksumsMutex       sync.RWMutex
 	verifyChecksumsArgsForCall []struct {
 		arg1 string
 		arg2 fetcher.ReleaseSet
-		arg3 cargo.AssetsLock
+		arg3 cargo.KilnfileLock
 	}
 	verifyChecksumsReturns struct {
 		result1 error
@@ -178,13 +178,13 @@ func (fake *LocalReleaseDirectory) GetLocalReleasesReturnsOnCall(i int, result1 
 	}{result1, result2}
 }
 
-func (fake *LocalReleaseDirectory) VerifyChecksums(arg1 string, arg2 fetcher.ReleaseSet, arg3 cargo.AssetsLock) error {
+func (fake *LocalReleaseDirectory) VerifyChecksums(arg1 string, arg2 fetcher.ReleaseSet, arg3 cargo.KilnfileLock) error {
 	fake.verifyChecksumsMutex.Lock()
 	ret, specificReturn := fake.verifyChecksumsReturnsOnCall[len(fake.verifyChecksumsArgsForCall)]
 	fake.verifyChecksumsArgsForCall = append(fake.verifyChecksumsArgsForCall, struct {
 		arg1 string
 		arg2 fetcher.ReleaseSet
-		arg3 cargo.AssetsLock
+		arg3 cargo.KilnfileLock
 	}{arg1, arg2, arg3})
 	fake.recordInvocation("VerifyChecksums", []interface{}{arg1, arg2, arg3})
 	fake.verifyChecksumsMutex.Unlock()
@@ -204,13 +204,13 @@ func (fake *LocalReleaseDirectory) VerifyChecksumsCallCount() int {
 	return len(fake.verifyChecksumsArgsForCall)
 }
 
-func (fake *LocalReleaseDirectory) VerifyChecksumsCalls(stub func(string, fetcher.ReleaseSet, cargo.AssetsLock) error) {
+func (fake *LocalReleaseDirectory) VerifyChecksumsCalls(stub func(string, fetcher.ReleaseSet, cargo.KilnfileLock) error) {
 	fake.verifyChecksumsMutex.Lock()
 	defer fake.verifyChecksumsMutex.Unlock()
 	fake.VerifyChecksumsStub = stub
 }
 
-func (fake *LocalReleaseDirectory) VerifyChecksumsArgsForCall(i int) (string, fetcher.ReleaseSet, cargo.AssetsLock) {
+func (fake *LocalReleaseDirectory) VerifyChecksumsArgsForCall(i int) (string, fetcher.ReleaseSet, cargo.KilnfileLock) {
 	fake.verifyChecksumsMutex.RLock()
 	defer fake.verifyChecksumsMutex.RUnlock()
 	argsForCall := fake.verifyChecksumsArgsForCall[i]

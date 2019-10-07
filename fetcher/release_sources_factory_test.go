@@ -14,7 +14,7 @@ import (
 var _ = Describe("NewReleaseSourcesFactory()", func() {
 	var (
 		rsFactory commands.ReleaseSourcesFactory
-		assets    cargo.Assets
+		kilnfile  cargo.Kilnfile
 	)
 
 	JustBeforeEach(func() {
@@ -23,7 +23,7 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 
 	Context("on the happy path", func() {
 		BeforeEach(func() {
-			assets = cargo.Assets{
+			kilnfile = cargo.Kilnfile{
 				ReleaseSources: []cargo.ReleaseSourceConfig{
 					{Type: "s3", Compiled: true, Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
 						Regex: `^2.8/.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>\d+\.\d+)(\.0)?\.tgz$`},
@@ -37,7 +37,7 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 		})
 
 		It("builds the correct release sources", func() {
-			releaseSources := rsFactory.ReleaseSources(assets)
+			releaseSources := rsFactory.ReleaseSources(kilnfile)
 			Expect(releaseSources).To(HaveLen(4))
 			var (
 				s3CompiledReleaseSource S3CompiledReleaseSource
@@ -47,22 +47,22 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 
 			Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3CompiledReleaseSource))
 			Expect(releaseSources[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Bucket": Equal(assets.ReleaseSources[0].Bucket),
-				"Regex":  Equal(assets.ReleaseSources[0].Regex),
+				"Bucket": Equal(kilnfile.ReleaseSources[0].Bucket),
+				"Regex":  Equal(kilnfile.ReleaseSources[0].Regex),
 			}))
 
 			Expect(releaseSources[1]).To(BeAssignableToTypeOf(s3BuiltReleaseSource))
 			Expect(releaseSources[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Bucket": Equal(assets.ReleaseSources[1].Bucket),
-				"Regex":  Equal(assets.ReleaseSources[1].Regex),
+				"Bucket": Equal(kilnfile.ReleaseSources[1].Bucket),
+				"Regex":  Equal(kilnfile.ReleaseSources[1].Regex),
 			}))
 
 			Expect(releaseSources[2]).To(BeAssignableToTypeOf(boshIOReleaseSource))
 
 			Expect(releaseSources[3]).To(BeAssignableToTypeOf(s3BuiltReleaseSource))
 			Expect(releaseSources[3]).To(MatchFields(IgnoreExtras, Fields{
-				"Bucket": Equal(assets.ReleaseSources[3].Bucket),
-				"Regex":  Equal(assets.ReleaseSources[3].Regex),
+				"Bucket": Equal(kilnfile.ReleaseSources[3].Bucket),
+				"Regex":  Equal(kilnfile.ReleaseSources[3].Regex),
 			}))
 		})
 	})

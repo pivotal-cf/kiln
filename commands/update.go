@@ -50,7 +50,7 @@ func (update Update) Execute(args []string) error {
 	if err != nil {
 		return errors.New("could not read assets-file")
 	}
-	var assetsSpec cargo.Assets
+	var assetsSpec cargo.Kilnfile
 	if err := yaml.Unmarshal(assetsSpecYAML, &assetsSpec); err != nil {
 		return fmt.Errorf("could not parse yaml in assets-file: %s", err)
 	}
@@ -77,7 +77,7 @@ func (update Update) Execute(args []string) error {
 		return err
 	}
 
-	var assetsLock cargo.AssetsLock
+	var assetsLock cargo.KilnfileLock
 	if err := yaml.Unmarshal(interpolatedMetadata, &assetsLock); err != nil {
 		return fmt.Errorf("could not parse yaml in assets.lock: %s", err)
 	}

@@ -125,7 +125,7 @@ func ConvertToLocalBasename(release ReleaseInfoDownloader) (string, error) {
 	}
 }
 
-func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedReleaseSet ReleaseSet, assetsLock cargo.AssetsLock) error {
+func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedReleaseSet ReleaseSet, kilnfileLock cargo.KilnfileLock) error {
 	if len(downloadedReleaseSet) == 0 {
 		return nil
 	}
@@ -136,10 +136,10 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 
 	var errs []error
 	for releaseID, release := range downloadedReleaseSet {
-		expectedSum, found := findExpectedSum(releaseID, assetsLock.Releases)
+		expectedSum, found := findExpectedSum(releaseID, kilnfileLock.Releases)
 
 		if !found {
-			return fmt.Errorf("release %s is not in assets file", releaseID.Name)
+			return fmt.Errorf("release %s is not in Kilnfile.lock file", releaseID.Name)
 		}
 		if expectedSum == "" {
 			continue

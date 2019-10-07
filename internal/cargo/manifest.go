@@ -26,12 +26,12 @@ type Release struct {
 	Version string `yaml:"version"`
 }
 
-type AssetsLock struct {
+type KilnfileLock struct {
 	Releases []Release `yaml:"releases"`
 	Stemcell Stemcell  `yaml:"stemcell_criteria"`
 }
 
-type Assets struct {
+type Kilnfile struct {
 	Stemcell       Stemcell              `yaml:"stemcell_criteria"`
 	ReleaseSources []ReleaseSourceConfig `yaml:"release_sources"`
 }

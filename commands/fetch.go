@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/pivotal-cf/kiln/fetcher"
@@ -57,7 +56,7 @@ type Fetch struct {
 	localReleaseDirectory LocalReleaseDirectory
 
 	Options struct {
-		AssetsFile  string `short:"a" long:"assets-file" default:"assets.yml" description:"path to assets file"`
+		Kilnfile    string `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
 		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 
 		VariablesFiles  []string `short:"vf" long:"variables-file" description:"path to variables file"`
@@ -69,7 +68,7 @@ type Fetch struct {
 
 //go:generate counterfeiter -o ./fakes/release_sources_factory.go --fake-name ReleaseSourcesFactory . ReleaseSourcesFactory
 type ReleaseSourcesFactory interface {
-	ReleaseSources(assets cargo.Assets) []fetcher.ReleaseSource
+	ReleaseSources(cargo.Kilnfile) []fetcher.ReleaseSource
 }
 
 func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, localReleaseDirectory LocalReleaseDirectory) Fetch {
@@ -84,7 +83,7 @@ func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, l
 type LocalReleaseDirectory interface {
 	GetLocalReleases(releasesDir string) (fetcher.ReleaseSet, error)
 	DeleteExtraReleases(releasesDir string, extraReleases fetcher.ReleaseSet, noConfirm bool) error
-	VerifyChecksums(releasesDir string, downloadedRelases fetcher.ReleaseSet, assetsLock cargo.AssetsLock) error
+	VerifyChecksums(releasesDir string, downloadedReleases fetcher.ReleaseSet, kilnfileLock cargo.KilnfileLock) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -107,7 +106,7 @@ func (f Fetch) Execute(args []string) error {
 		return fmt.Errorf("failed to parse template variables: %s", err)
 	}
 
-	assetsYAML, err := ioutil.ReadFile(f.Options.AssetsFile)
+	kilnfileYAML, err := ioutil.ReadFile(f.Options.Kilnfile)
 	if err != nil {
 		return err
 	}
@@ -115,41 +114,41 @@ func (f Fetch) Execute(args []string) error {
 	interpolator := builder.NewInterpolator()
 	interpolatedMetadata, err := interpolator.Interpolate(builder.InterpolateInput{
 		Variables: templateVariables,
-	}, assetsYAML)
+	}, kilnfileYAML)
 	if err != nil {
-		return ConfigFileError{err: err, HumanReadableConfigFileName: "interpolating variable files with assets file"}
+		return ConfigFileError{err: err, HumanReadableConfigFileName: "interpolating variable files with Kilnfile"}
 	}
 
-	f.logger.Println("getting release information from " + f.Options.AssetsFile)
+	f.logger.Println("getting release information from " + f.Options.Kilnfile)
 
-	var assets cargo.Assets
-	err = yaml.Unmarshal(interpolatedMetadata, &assets)
+	var kilnfile cargo.Kilnfile
+	err = yaml.Unmarshal(interpolatedMetadata, &kilnfile)
 	if err != nil {
-		return ConfigFileError{err: err, HumanReadableConfigFileName: "assets specification " + f.Options.AssetsFile}
+		return ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile specification " + f.Options.Kilnfile}
 	}
 
-	f.logger.Println("getting release information from assets.lock")
-	assetsLockFileName := fmt.Sprintf("%s.lock", strings.TrimSuffix(f.Options.AssetsFile, filepath.Ext(f.Options.AssetsFile)))
-	assetsLockFile, err := os.Open(assetsLockFileName)
+	f.logger.Println("getting release information from Kilnfile.lock")
+	lockFileName := fmt.Sprintf("%s.lock", f.Options.Kilnfile)
+	lockFile, err := os.Open(lockFileName)
 	if err != nil {
 		return err
 	}
-	defer assetsLockFile.Close()
+	defer lockFile.Close()
 
-	var assetsLock cargo.AssetsLock
-	err = yaml.NewDecoder(assetsLockFile).Decode(&assetsLock)
+	var kilnfileLock cargo.KilnfileLock
+	err = yaml.NewDecoder(lockFile).Decode(&kilnfileLock)
 	if err != nil {
-		return ConfigFileError{err: err, HumanReadableConfigFileName: "assets lock " + assetsLockFileName}
+		return ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile.lock " + lockFileName}
 	}
 
 	availableLocalReleaseSet, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
 	if err != nil {
 		return err
 	}
-	if err := f.verifyCompiledReleaseStemcell(availableLocalReleaseSet, assetsLock.Stemcell); err != nil {
+	if err := f.verifyCompiledReleaseStemcell(availableLocalReleaseSet, kilnfileLock.Stemcell); err != nil {
 		return err
 	}
-	desiredReleaseSet := fetcher.NewReleaseSet(assetsLock)
+	desiredReleaseSet := fetcher.NewReleaseSet(kilnfileLock)
 	extraReleaseSet := availableLocalReleaseSet.Without(desiredReleaseSet)
 
 	err = f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleaseSet, f.Options.NoConfirm)
@@ -163,7 +162,7 @@ func (f Fetch) Execute(args []string) error {
 	if len(unsatisfiedReleaseSet) > 0 {
 		f.logger.Printf("Found %d missing releases to download", len(unsatisfiedReleaseSet))
 
-		satisfiedReleaseSet, unsatisfiedReleaseSet, err = f.downloadMissingReleases(assets, satisfiedReleaseSet, unsatisfiedReleaseSet, assetsLock.Stemcell)
+		satisfiedReleaseSet, unsatisfiedReleaseSet, err = f.downloadMissingReleases(kilnfile, satisfiedReleaseSet, unsatisfiedReleaseSet, kilnfileLock.Stemcell)
 		if err != nil {
 			return err
 		}
@@ -173,11 +172,11 @@ func (f Fetch) Execute(args []string) error {
 		return ErrorMissingReleases(unsatisfiedReleaseSet)
 	}
 
-	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, assetsLock)
+	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, kilnfileLock)
 }
 
-func (f Fetch) downloadMissingReleases(assets cargo.Assets, satisfiedReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseSet, stemcell cargo.Stemcell) (satisfied, unsatisfied fetcher.ReleaseSet, err error) {
-	releaseSources := f.releaseSourcesFactory.ReleaseSources(assets)
+func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseSet, stemcell cargo.Stemcell) (satisfied, unsatisfied fetcher.ReleaseSet, err error) {
+	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile)
 	for _, releaseSource := range releaseSources {
 		matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet, stemcell)
 		if err != nil {
@@ -235,7 +234,7 @@ func (err IncorrectOSError) Error() string {
 
 func (f Fetch) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Fetches releases listed in assets file from S3 and downloads it locally",
+		Description:      "Fetches releases listed in Kilnfile.lock from S3 and downloads it locally",
 		ShortDescription: "fetches releases",
 		Flags:            f.Options,
 	}

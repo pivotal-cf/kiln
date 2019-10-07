@@ -25,9 +25,9 @@ var _ = Describe("Fetch", func() {
 		fetch                       commands.Fetch
 		logger                      *log.Logger
 		tmpDir                      string
-		someAssetsFilePath          string
-		someAssetsLockPath          string
-		assetsLockContents          string
+		someKilnfilePath            string
+		someKilnfileLockPath        string
+		lockContents                string
 		someReleasesDirectory       string
 		fakeS3CompiledReleaseSource *fetcherFakes.ReleaseSource
 		fakeBoshIOReleaseSource     *fetcherFakes.ReleaseSource
@@ -50,12 +50,12 @@ var _ = Describe("Fetch", func() {
 			someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
 			Expect(err).NotTo(HaveOccurred())
 
-			someAssetsFilePath = filepath.Join(tmpDir, "assets.yml")
-			err = ioutil.WriteFile(someAssetsFilePath, []byte(""), 0644)
+			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
+			err = ioutil.WriteFile(someKilnfilePath, []byte(""), 0644)
 			Expect(err).NotTo(HaveOccurred())
 
-			someAssetsLockPath = filepath.Join(tmpDir, "assets.lock")
-			assetsLockContents = `
+			someKilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
+			lockContents = `
 ---
 releases:
 - name: some-release
@@ -73,7 +73,7 @@ stemcell_criteria:
 
 			fetchExecuteArgs = []string{
 				"--releases-directory", someReleasesDirectory,
-				"--assets-file", someAssetsFilePath,
+				"--kilnfile", someKilnfilePath,
 			}
 			releaseSourcesFactory = new(fakes.ReleaseSourcesFactory)
 		})
@@ -86,7 +86,7 @@ stemcell_criteria:
 			fakeReleaseSources = []fetcher.ReleaseSource{fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource}
 			releaseSourcesFactory.ReleaseSourcesReturns(fakeReleaseSources)
 
-			err := ioutil.WriteFile(someAssetsLockPath, []byte(assetsLockContents), 0644)
+			err := ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0644)
 			Expect(err).NotTo(HaveOccurred())
 			fetch = commands.NewFetch(logger, releaseSourcesFactory, fakeLocalReleaseDirectory)
 
@@ -112,7 +112,7 @@ stemcell_criteria:
 
 			When("the release was compiled with a different os", func() {
 				BeforeEach(func() {
-					assetsLockContents = `---
+					lockContents = `---
 stemcell_criteria:
   os: barOS
   version: "0.2.0"`
@@ -125,7 +125,7 @@ stemcell_criteria:
 
 			When("the release was compiled with a different version of the same os", func() {
 				BeforeEach(func() {
-					assetsLockContents = `---
+					lockContents = `---
 stemcell_criteria:
   os: fooOS
   version: "0.3.0"`
@@ -144,7 +144,7 @@ stemcell_criteria:
 				boshIOReleaseID     = fetcher.ReleaseID{Name: "boshio-release", Version: "1.4.16"}
 			)
 			BeforeEach(func() {
-				assetsLockContents = `---
+				lockContents = `---
 releases:
 - name: lts-compiled-release
   version: "1.2.4"
@@ -224,7 +224,7 @@ stemcell_criteria:
 		Context("when one or more releases are not available from release sources", func() {
 			BeforeEach(func() {
 				emptyReleaseSet := make(fetcher.ReleaseSet)
-				assetsLockContents = `---
+				lockContents = `---
 releases:
 - name: not-found-in-any-release-source
   version: "0.0.1"
@@ -240,7 +240,7 @@ stemcell_criteria:
 			It("reports an error", func() {
 				err := fetch.Execute([]string{
 					"--releases-directory", someReleasesDirectory,
-					"--assets-file", someAssetsFilePath,
+					"--kilnfile", someKilnfilePath,
 				})
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(
@@ -250,7 +250,7 @@ stemcell_criteria:
 
 		Context("when all releases are already present in output directory", func() {
 			BeforeEach(func() {
-				assetsLockContents = `---
+				lockContents = `---
 releases:
 - name: some-release-from-local-dir
   version: "1.2.3"
@@ -296,7 +296,7 @@ stemcell_criteria:
 				missingReleaseS3Built fetcher.BuiltRelease
 			)
 			BeforeEach(func() {
-				assetsLockContents = `---
+				lockContents = `---
 releases:
 - name: some-release
   version: "1.2.3"
@@ -379,14 +379,14 @@ stemcell_criteria:
 			})
 		})
 
-		Context("when there are extra releases locally that are not in the assets.lock", func() {
+		Context("when there are extra releases locally that are not in the Kilnfile.lock", func() {
 			var (
 				boshIOReleaseID = fetcher.ReleaseID{Name: "some-release", Version: "1.2.3"}
 				localReleaseID  = fetcher.ReleaseID{Name: "some-extra-release", Version: "1.2.3"}
 			)
 			BeforeEach(func() {
 
-				assetsLockContents = `---
+				lockContents = `---
 releases:
 - name: some-release
   version: "1.2.3"
@@ -414,7 +414,7 @@ stemcell_criteria:
 				BeforeEach(func() {
 					fetchExecuteArgs = []string{
 						"--releases-directory", someReleasesDirectory,
-						"--assets-file", someAssetsFilePath,
+						"--kilnfile", someKilnfilePath,
 						"--no-confirm",
 					}
 				})
@@ -465,8 +465,8 @@ release_sources:
 				BeforeEach(func() {
 					var err error
 
-					someAssetsFilePath = filepath.Join(tmpDir, "assets.yml")
-					err = ioutil.WriteFile(someAssetsFilePath, []byte(TemplatizedAssetsYMLContents), 0644)
+					someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
+					err = ioutil.WriteFile(someKilnfilePath, []byte(TemplatizedAssetsYMLContents), 0644)
 					Expect(err).NotTo(HaveOccurred())
 
 					someVariableFile, err = ioutil.TempFile(tmpDir, "variables-file1")
@@ -500,7 +500,7 @@ release_sources:
 
 					fetchExecuteArgs = []string{
 						"--releases-directory", someReleasesDirectory,
-						"--assets-file", someAssetsFilePath,
+						"--kilnfile", someKilnfilePath,
 						"--variables-file", someVariableFile.Name(),
 						"--variables-file", otherVariableFile.Name(),
 						"--variable", "region=north-east-1",
@@ -519,7 +519,7 @@ release_sources:
 				BeforeEach(func() {
 					fetchExecuteArgs = []string{
 						"--releases-directory", someReleasesDirectory,
-						"--assets-file", someAssetsFilePath,
+						"--kilnfile", someKilnfilePath,
 						"--download-threads", "10",
 					}
 				})
@@ -537,7 +537,7 @@ release_sources:
 						badAssetsFilePath := filepath.Join(tmpDir, "non-existent-assets.yml")
 						err := fetch.Execute([]string{
 							"--releases-directory", someReleasesDirectory,
-							"--assets-file", badAssetsFilePath,
+							"--kilnfile", badAssetsFilePath,
 						})
 						Expect(err).To(MatchError(fmt.Sprintf("open %s: no such file or directory", badAssetsFilePath)))
 					})
@@ -546,7 +546,7 @@ release_sources:
 					It("returns an error", func() {
 						err := fetch.Execute([]string{
 							"--releases-directory", someReleasesDirectory,
-							"--assets-file", someAssetsFilePath,
+							"--kilnfile", someKilnfilePath,
 							"--download-threads", "not-a-number",
 						})
 						Expect(err).To(MatchError(fmt.Sprintf("invalid value \"not-a-number\" for flag -download-threads: parse error")))
@@ -560,7 +560,7 @@ release_sources:
 					It("returns an error", func() {
 						err := fetch.Execute([]string{
 							"--releases-directory", someReleasesDirectory,
-							"--assets-file", someAssetsFilePath,
+							"--kilnfile", someKilnfilePath,
 						})
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("some-error"))
@@ -574,7 +574,7 @@ release_sources:
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
 			Expect(fetch.Usage()).To(Equal(jhanda.Usage{
-				Description:      "Fetches releases listed in assets file from S3 and downloads it locally",
+				Description:      "Fetches releases listed in Kilnfile.lock from S3 and downloads it locally",
 				ShortDescription: "fetches releases",
 				Flags:            fetch.Options,
 			}))

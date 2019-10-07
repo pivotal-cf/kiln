@@ -10,10 +10,10 @@ import (
 )
 
 type ReleaseSourcesFactory struct {
-	ReleaseSourcesStub        func(cargo.Assets) []fetcher.ReleaseSource
+	ReleaseSourcesStub        func(cargo.Kilnfile) []fetcher.ReleaseSource
 	releaseSourcesMutex       sync.RWMutex
 	releaseSourcesArgsForCall []struct {
-		arg1 cargo.Assets
+		arg1 cargo.Kilnfile
 	}
 	releaseSourcesReturns struct {
 		result1 []fetcher.ReleaseSource
@@ -25,11 +25,11 @@ type ReleaseSourcesFactory struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseSourcesFactory) ReleaseSources(arg1 cargo.Assets) []fetcher.ReleaseSource {
+func (fake *ReleaseSourcesFactory) ReleaseSources(arg1 cargo.Kilnfile) []fetcher.ReleaseSource {
 	fake.releaseSourcesMutex.Lock()
 	ret, specificReturn := fake.releaseSourcesReturnsOnCall[len(fake.releaseSourcesArgsForCall)]
 	fake.releaseSourcesArgsForCall = append(fake.releaseSourcesArgsForCall, struct {
-		arg1 cargo.Assets
+		arg1 cargo.Kilnfile
 	}{arg1})
 	fake.recordInvocation("ReleaseSources", []interface{}{arg1})
 	fake.releaseSourcesMutex.Unlock()
@@ -49,13 +49,13 @@ func (fake *ReleaseSourcesFactory) ReleaseSourcesCallCount() int {
 	return len(fake.releaseSourcesArgsForCall)
 }
 
-func (fake *ReleaseSourcesFactory) ReleaseSourcesCalls(stub func(cargo.Assets) []fetcher.ReleaseSource) {
+func (fake *ReleaseSourcesFactory) ReleaseSourcesCalls(stub func(cargo.Kilnfile) []fetcher.ReleaseSource) {
 	fake.releaseSourcesMutex.Lock()
 	defer fake.releaseSourcesMutex.Unlock()
 	fake.ReleaseSourcesStub = stub
 }
 
-func (fake *ReleaseSourcesFactory) ReleaseSourcesArgsForCall(i int) cargo.Assets {
+func (fake *ReleaseSourcesFactory) ReleaseSourcesArgsForCall(i int) cargo.Kilnfile {
 	fake.releaseSourcesMutex.RLock()
 	defer fake.releaseSourcesMutex.RUnlock()
 	argsForCall := fake.releaseSourcesArgsForCall[i]
