@@ -57,15 +57,15 @@ Command Arguments:
 `
 
 const FETCH_USAGE = `kiln fetch
-Fetches releases listed in assets file from S3 and downloads it locally
+Fetches releases listed in Kilnfile.lock from S3 and downloads it locally
 
 Usage: kiln [options] fetch [<args>]
   --help, -h     bool  prints this usage information (default: false)
   --version, -v  bool  prints the kiln release version (default: false)
 
 Command Arguments:
-  --assets-file, -a          string             path to assets file (default: assets.yml)
   --download-threads, -dt    int                number of parallel threads to download parts from S3
+  --kilnfile, -kf            string             path to Kilnfile (default: Kilnfile)
   --no-confirm, -n           bool               non-interactive mode, will delete extra releases in releases dir without prompting
   --releases-directory, -rd  string             path to a directory to download releases into (default: releases)
   --variable, -vr            string (variadic)  variable in key=value format

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -14,7 +13,7 @@ import (
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/cargo"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -26,7 +25,7 @@ const (
 // Update wraps the dependancies and flag options for the `kiln update` command
 type Update struct {
 	Options struct {
-		AssetsFile     string   `short:"a" long:"assets-file" required:"true" description:"path to assets file"`
+		Kilnfile       string   `short:"kf" long:"kilnfile" required:"true" description:"path to Kilnfile"`
 		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
 		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
 		PivNetToken    string   `short:"pt" env:"PIVOTAL_NETWORK_API_TOKEN" long:"pivotal-network-token" description:"uaa access token for network.pivotal.io"`
@@ -37,7 +36,7 @@ type Update struct {
 	}
 }
 
-// Execute expects an assets.yaml to exist and be passed as a flag
+// Execute expects a Kilnfile to exist and be passed as a flag
 func (update Update) Execute(args []string) error {
 	_, err := jhanda.Parse(&update.Options, args)
 	if err != nil {
@@ -46,23 +45,23 @@ func (update Update) Execute(args []string) error {
 
 	update.StemcellsVersionsService.SetToken(update.Options.PivNetToken)
 
-	assetsSpecYAML, err := ioutil.ReadFile(update.Options.AssetsFile)
+	kilnfileYAML, err := ioutil.ReadFile(update.Options.Kilnfile)
 	if err != nil {
-		return errors.New("could not read assets-file")
+		return errors.New("could not read kilnfile")
 	}
-	var assetsSpec cargo.Kilnfile
-	if err := yaml.Unmarshal(assetsSpecYAML, &assetsSpec); err != nil {
-		return fmt.Errorf("could not parse yaml in assets-file: %s", err)
-	}
-
-	if assetsSpec.Stemcell.OS == "" && assetsSpec.Stemcell.Version == "" {
-		return fmt.Errorf("stemcell OS (%q) and/or version constraint (%q) are not set", assetsSpec.Stemcell.OS, assetsSpec.Stemcell.Version)
+	var kilnfile cargo.Kilnfile
+	if err := yaml.Unmarshal(kilnfileYAML, &kilnfile); err != nil {
+		return fmt.Errorf("could not parse yaml in kilnfile: %s", err)
 	}
 
-	assetsLockPath := filepath.Join(filepath.Dir(update.Options.AssetsFile), "assets.lock")
-	assetsLockYAML, err := ioutil.ReadFile(assetsLockPath)
+	if kilnfile.Stemcell.OS == "" && kilnfile.Stemcell.Version == "" {
+		return fmt.Errorf("stemcell OS (%q) and/or version constraint (%q) are not set", kilnfile.Stemcell.OS, kilnfile.Stemcell.Version)
+	}
+
+	kilnfileLockPath := fmt.Sprintf("%s.lock", update.Options.Kilnfile)
+	kilnfileLockYAML, err := ioutil.ReadFile(kilnfileLockPath)
 	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("could not read assets-file: %s", err)
+		return fmt.Errorf("could not read kilnfile: %s", err)
 	}
 	templateVariablesService := baking.NewTemplateVariablesService()
 	templateVariables, err := templateVariablesService.FromPathsAndPairs(update.Options.VariablesFiles, update.Options.Variables)
@@ -72,23 +71,23 @@ func (update Update) Execute(args []string) error {
 	interpolator := builder.NewInterpolator()
 	interpolatedMetadata, err := interpolator.Interpolate(builder.InterpolateInput{
 		Variables: templateVariables,
-	}, assetsLockYAML)
+	}, kilnfileLockYAML)
 	if err != nil {
 		return err
 	}
 
-	var assetsLock cargo.KilnfileLock
-	if err := yaml.Unmarshal(interpolatedMetadata, &assetsLock); err != nil {
-		return fmt.Errorf("could not parse yaml in assets.lock: %s", err)
+	var KilnfileLock cargo.KilnfileLock
+	if err := yaml.Unmarshal(interpolatedMetadata, &KilnfileLock); err != nil {
+		return fmt.Errorf("could not parse yaml in Kilnfile.lock: %s", err)
 	}
 
-	stemcellConstraint, err := semver.NewConstraint(assetsSpec.Stemcell.Version)
+	stemcellConstraint, err := semver.NewConstraint(kilnfile.Stemcell.Version)
 	if err != nil {
 		return fmt.Errorf("stemcell_constraint version error: %s", err)
 	}
 
 	var stemcellSlug string
-	switch assetsSpec.Stemcell.OS {
+	switch kilnfile.Stemcell.OS {
 	case "windows":
 		stemcellSlug = stemcellSlugWindows
 	case "ubuntu-xenial":
@@ -96,7 +95,7 @@ func (update Update) Execute(args []string) error {
 	case "ubuntu-trusty":
 		stemcellSlug = stemcellSlugTrusty
 	default:
-		return fmt.Errorf("stemcell_constraint os not supported: %s", assetsSpec.Stemcell.OS)
+		return fmt.Errorf("stemcell_constraint os not supported: %s", kilnfile.Stemcell.OS)
 	}
 
 	stemcellVersionsStrings, err := update.StemcellsVersionsService.Versions(stemcellSlug)
@@ -116,22 +115,22 @@ func (update Update) Execute(args []string) error {
 	sort.Sort(semver.Collection(stemcellVersions))
 
 	if len(stemcellVersions) > 0 {
-		assetsLock.Stemcell.Version = strings.TrimSuffix(stemcellVersions[len(stemcellVersions)-1].String(), ".0")
+		KilnfileLock.Stemcell.Version = strings.TrimSuffix(stemcellVersions[len(stemcellVersions)-1].String(), ".0")
 	}
-	assetsLock.Stemcell.OS = assetsSpec.Stemcell.OS
+	KilnfileLock.Stemcell.OS = kilnfile.Stemcell.OS
 
-	os.Remove(assetsLockPath)
-	assetsLockFile, err := os.Create(assetsLockPath)
+	os.Remove(kilnfileLockPath)
+	lockFile, err := os.Create(kilnfileLockPath)
 	if err != nil {
 		return err
 	}
 
-	assetsLockUpdatedYAML, err := yaml.Marshal(assetsLock)
+	updatedLockFileYAML, err := yaml.Marshal(KilnfileLock)
 	if err != nil {
 		return err
 	}
-	assetsLockFile.Write([]byte(assetsYAMLHeader))
-	assetsLockFile.Write(assetsLockUpdatedYAML)
+	lockFile.Write([]byte(lockFileYAMLHeader))
+	lockFile.Write(updatedLockFileYAML)
 	return nil
 }
 
@@ -145,7 +144,7 @@ func (update Update) Usage() jhanda.Usage {
 }
 
 const (
-	assetsYAMLHeader = "########### DO NOT EDIT! ############\n" +
+	lockFileYAMLHeader = "########### DO NOT EDIT! ############\n" +
 		"# This is a machine generated file, #\n" +
 		"# update by running `kiln update`   #\n" +
 		"#####################################\n" +

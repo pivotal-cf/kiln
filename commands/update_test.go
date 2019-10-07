@@ -18,19 +18,19 @@ var _ = Describe("Update", func() {
 	var _ jhanda.Command = commands.Update{}
 	When("Execute is called", func() {
 		var (
-			update                                                 *commands.Update
-			tmpDir, someAssetsSpecFilePath, someAssetsLockFilePath string
-			stemcellsVersionsService                               fakes.VersionsService
+			update                                        *commands.Update
+			tmpDir, someKilnfilePath, someKilfileLockPath string
+			stemcellsVersionsService                      fakes.VersionsService
 		)
 		BeforeEach(func() {
 			var err error
 			tmpDir, err = ioutil.TempDir("", "fetch-test")
 			// fmt.Println(tmpDir)
 			Expect(err).NotTo(HaveOccurred())
-			someAssetsSpecFilePath = filepath.Join(tmpDir, "assets.yml")
-			someAssetsLockFilePath = filepath.Join(tmpDir, "assets.lock")
+			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
+			someKilfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
 			Expect(
-				ioutil.WriteFile(someAssetsSpecFilePath, []byte(initallAssetsYAMLFileContents), 0644),
+				ioutil.WriteFile(someKilnfilePath, []byte(initallKilnfileYAMLFileContents), 0644),
 			).NotTo(HaveOccurred())
 
 			stemcellsVersionsService = fakes.VersionsService{}
@@ -53,7 +53,7 @@ var _ = Describe("Update", func() {
 		When("it passes correct flags", func() {
 			It("does not return an error", func() {
 				Expect(update.Execute([]string{
-					"--assets-file", someAssetsSpecFilePath,
+					"--kilnfile", someKilnfilePath,
 				})).NotTo(HaveOccurred())
 			})
 		})
@@ -61,7 +61,7 @@ var _ = Describe("Update", func() {
 		When("it passes incorrect flags", func() {
 			It("informs the user of bad flags", func() {
 				Expect(update.Execute([]string{
-					"--not-assets-file", someAssetsSpecFilePath,
+					"--not-kilnfile", someKilnfilePath,
 				})).To(HaveOccurred())
 			})
 		})
@@ -72,12 +72,12 @@ var _ = Describe("Update", func() {
 				update    commands.Update
 			)
 			BeforeEach(func() {
-				os.Remove(someAssetsSpecFilePath)
-				contents := strings.ReplaceAll(initallAssetsYAMLFileContents, `"3586.*"`, "not-a-semver")
-				ioutil.WriteFile(someAssetsSpecFilePath, []byte(contents), 0644)
+				os.Remove(someKilnfilePath)
+				contents := strings.ReplaceAll(initallKilnfileYAMLFileContents, `"3586.*"`, "not-a-semver")
+				ioutil.WriteFile(someKilnfilePath, []byte(contents), 0644)
 				update.StemcellsVersionsService = &fakes.VersionsService{}
 				updateErr = update.Execute([]string{
-					"--assets-file", someAssetsSpecFilePath,
+					"--kilnfile", someKilnfilePath,
 				})
 			})
 			It("returns a descriptive error", func() {
@@ -89,28 +89,28 @@ var _ = Describe("Update", func() {
 			})
 		})
 
-		When("given an assets.yml", func() {
+		When("given a Kilnfile", func() {
 			var (
 				updateErr error
 			)
 
 			JustBeforeEach(func() {
 				updateErr = update.Execute([]string{
-					"--assets-file", someAssetsSpecFilePath,
+					"--kilnfile", someKilnfilePath,
 				})
 			})
 
 			// happy paths vvv
 			When("an updated version of a stemcell exists", func() {
-				When("an assets.lock does not exists", func() {
-					It("creates assets.lock file", func() {
-						_, err := os.Stat(filepath.Join(tmpDir, "assets.lock"))
+				When("an Kilnfile.lock does not exists", func() {
+					It("creates Kilnfile.lock file", func() {
+						_, err := os.Stat(filepath.Join(tmpDir, "Kilnfile.lock"))
 						Expect(err).NotTo(HaveOccurred())
 					})
-					It("writes updated assets.lock contents", func() {
-						assetsLock, err := ioutil.ReadFile(someAssetsLockFilePath)
+					It("writes updated Kilnfile.lock contents", func() {
+						kilnfileLock, err := ioutil.ReadFile(someKilfileLockPath)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(string(assetsLock)).To(Equal(
+						Expect(string(kilnfileLock)).To(Equal(
 							"########### DO NOT EDIT! ############\n" +
 								"# This is a machine generated file, #\n" +
 								"# update by running `kiln update`   #\n" +
@@ -123,20 +123,20 @@ var _ = Describe("Update", func() {
 						))
 					})
 				})
-				When("an assets.lock already exists", func() {
+				When("an Kilnfile.lock already exists", func() {
 					BeforeEach(func() {
-						assetsLock, createErr := os.Create(someAssetsLockFilePath)
+						kilnfileLock, createErr := os.Create(someKilfileLockPath)
 						Expect(createErr).NotTo(HaveOccurred())
-						assetsLock.Write([]byte(initallAssetsLockFileContents))
-						assetsLock.Close()
+						kilnfileLock.Write([]byte(initallKilnfileLockFileContents))
+						kilnfileLock.Close()
 					})
 					It("does not return an error", func() {
 						Expect(updateErr).NotTo(HaveOccurred())
 					})
-					It("writes updated assets.lock contents", func() {
-						assetsLock, readErr := ioutil.ReadFile(someAssetsLockFilePath)
+					It("writes updated Kilnfile.lock contents", func() {
+						kilnfileLock, readErr := ioutil.ReadFile(someKilfileLockPath)
 						Expect(readErr).NotTo(HaveOccurred())
-						Expect(string(assetsLock)).To(Equal(
+						Expect(string(kilnfileLock)).To(Equal(
 							"########### DO NOT EDIT! ############\n" +
 								"# This is a machine generated file, #\n" +
 								"# update by running `kiln update`   #\n" +
@@ -150,25 +150,25 @@ var _ = Describe("Update", func() {
 					})
 					// happy paths ^^^
 
-					When("an assets.yaml has invalid yaml", func() {
+					When("a Kilnfile has invalid yaml", func() {
 						BeforeEach(func() {
-							assetsYAML, err := os.OpenFile(someAssetsSpecFilePath, os.O_RDWR, 0644)
+							kilnfile, err := os.OpenFile(someKilnfilePath, os.O_RDWR, 0644)
 							Expect(err).NotTo(HaveOccurred())
-							defer assetsYAML.Close()
-							_, err = assetsYAML.WriteString("\n{{{[[[bla bla bla]]]}}}")
+							defer kilnfile.Close()
+							_, err = kilnfile.WriteString("\n{{{[[[bla bla bla]]]}}}")
 							Expect(err).NotTo(HaveOccurred())
 						})
 						It("returns a descriptive error", func() {
 							Expect(updateErr).To(HaveOccurred())
-							Expect(updateErr.Error()).To(ContainSubstring("could not parse yaml in assets-file"))
+							Expect(updateErr.Error()).To(ContainSubstring("could not parse yaml in kilnfile"))
 						})
 					})
-					When("an assets.lock has invalid yaml", func() {
+					When("an Kilnfile.lock has invalid yaml", func() {
 						BeforeEach(func() {
-							assetsLockFile, err := os.OpenFile(someAssetsLockFilePath, os.O_RDWR, 0644)
+							kilnfileLockFile, err := os.OpenFile(someKilfileLockPath, os.O_RDWR, 0644)
 							Expect(err).NotTo(HaveOccurred())
-							defer assetsLockFile.Close()
-							_, err = assetsLockFile.WriteString("\n{{{[[[bla bla bla]]]}}}")
+							defer kilnfileLockFile.Close()
+							_, err = kilnfileLockFile.WriteString("\n{{{[[[bla bla bla]]]}}}")
 							Expect(err).NotTo(HaveOccurred())
 						})
 						It("returns a descriptive error", func() {
@@ -178,19 +178,19 @@ var _ = Describe("Update", func() {
 					})
 				})
 			})
-			When("assets.yaml is missing", func() {
+			When("Kilnfile is missing", func() {
 				BeforeEach(func() {
-					Expect(os.Remove(someAssetsSpecFilePath)).NotTo(HaveOccurred())
+					Expect(os.Remove(someKilnfilePath)).NotTo(HaveOccurred())
 				})
 				It("returns a descriptive error", func() {
 					Expect(updateErr).To(HaveOccurred())
-					Expect(updateErr).To(MatchError("could not read assets-file"))
+					Expect(updateErr).To(MatchError("could not read kilnfile"))
 				})
 			})
-			When("assets.yaml is missing", func() {
+			When("Kilnfile is missing", func() {
 				BeforeEach(func() {
-					os.Remove(someAssetsSpecFilePath)
-					ioutil.WriteFile(someAssetsSpecFilePath, []byte(initallAssetsYAMLWithoutStemcellCriteraFileContents), 0644)
+					os.Remove(someKilnfilePath)
+					ioutil.WriteFile(someKilnfilePath, []byte(initallKilnfileYAMLWithoutStemcellCriteraFileContents), 0644)
 				})
 				It("returns a descriptive error", func() {
 					Expect(updateErr).To(HaveOccurred())
@@ -222,14 +222,14 @@ var _ = Describe("Update", func() {
 })
 
 const (
-	initallAssetsYAMLFileContents = `---
+	initallKilnfileYAMLFileContents = `---
 stemcell_criteria:
   os: ubuntu-trusty
   version: "3586.*"
 `
-	initallAssetsYAMLWithoutStemcellCriteraFileContents = `---
+	initallKilnfileYAMLWithoutStemcellCriteraFileContents = `---
 `
-	initallAssetsLockFileContents = `---
+	initallKilnfileLockFileContents = `---
 stemcell_criteria:
   os: ubuntu-trusty
   version: "3586.1"

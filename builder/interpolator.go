@@ -110,7 +110,7 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 		},
 		"stemcell": func(osname ...string) (string, error) {
 			if input.StemcellManifest == nil && len(input.StemcellManifests) == 0 {
-				return "", errors.New("stemcell specification must be provided through either --stemcells-directory or --assets-file")
+				return "", errors.New("stemcell specification must be provided through either --stemcells-directory or --kilnfile")
 			}
 
 			if len(input.StemcellManifests) == 0 && len(osname) > 0 {

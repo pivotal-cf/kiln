@@ -446,7 +446,7 @@ stemcell_criteria:
 			})
 
 			Context("when multiple variable files are provided", func() {
-				const TemplatizedAssetsYMLContents = `
+				const TemplatizedKilnfileYMLContents = `
 ---
 release_sources:
   - type: s3
@@ -466,7 +466,7 @@ release_sources:
 					var err error
 
 					someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-					err = ioutil.WriteFile(someKilnfilePath, []byte(TemplatizedAssetsYMLContents), 0644)
+					err = ioutil.WriteFile(someKilnfilePath, []byte(TemplatizedKilnfileYMLContents), 0644)
 					Expect(err).NotTo(HaveOccurred())
 
 					someVariableFile, err = ioutil.TempFile(tmpDir, "variables-file1")
@@ -532,14 +532,14 @@ release_sources:
 			})
 
 			Context("failure cases", func() {
-				Context("assets.yml is missing", func() {
+				Context("kilnfile is missing", func() {
 					It("returns an error", func() {
-						badAssetsFilePath := filepath.Join(tmpDir, "non-existent-assets.yml")
+						badKilnfilePath := filepath.Join(tmpDir, "non-existent-Kilnfile")
 						err := fetch.Execute([]string{
 							"--releases-directory", someReleasesDirectory,
-							"--kilnfile", badAssetsFilePath,
+							"--kilnfile", badKilnfilePath,
 						})
-						Expect(err).To(MatchError(fmt.Sprintf("open %s: no such file or directory", badAssetsFilePath)))
+						Expect(err).To(MatchError(fmt.Sprintf("open %s: no such file or directory", badKilnfilePath)))
 					})
 				})
 				Context("# of download threads is not a number", func() {

@@ -438,8 +438,8 @@ var _ = Describe("Bake", func() {
 			})
 		})
 
-		Context("when assets file is specified", func() {
-			It("renders the stemcell criteria in tile metadata from that specified the assets.lock", func() {
+		Context("when Kilnfile is specified", func() {
+			It("renders the stemcell criteria in tile metadata from that specified the Kilnfile.lock", func() {
 				outputFile := "some-output-dir/some-product-file-1.2.3-build.4"
 				err := bake.Execute([]string{
 					"--forms-directory", "some-forms-directory",

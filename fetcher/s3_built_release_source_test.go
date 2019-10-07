@@ -96,7 +96,7 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 		})
 	})
 
-	Context("if any objects in built S3 bucket do not match a release specified in assets.lock", func() {
+	Context("if any objects in built S3 bucket do not match a release specified in Kilnfile.lock", func() {
 		BeforeEach(func() {
 			wrongReleaseVersionKey := "2.5/bpm/bpm-4.5.6.tgz"
 			wrongReleaseNameKey := "2.5/diego/diego-1.2.3.tgz"

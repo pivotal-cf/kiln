@@ -522,7 +522,7 @@ some_runtime_configs:
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("stemcell specification must be provided through either --stemcells-directory or --assets-file"))
+				Expect(err.Error()).To(ContainSubstring("stemcell specification must be provided through either --stemcells-directory or --kilnfile"))
 			})
 		})
 
