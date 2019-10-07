@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/pivotal-cf/go-pivnet/v2"
 	"github.com/pivotal-cf/go-pivnet/v2/logshim"
 )
@@ -17,10 +18,11 @@ import (
 var _ = Describe("publish", func() {
 	const (
 		slug           = "elastic-runtime"
-		releaseVersion = "2.2.17-build.6"
+		releaseVersion = "2.7.0-build.247"
 
 		// we are testing on a specific release on pivnet
-		releaseID = 384471
+		releaseID      = 471301
+		preGaUserGroup = "Dell/EMC Early Access Group"
 	)
 
 	var (
@@ -49,16 +51,19 @@ var _ = Describe("publish", func() {
 		if rel.Version != releaseVersion || rel.ReleaseType != "Developer Release" {
 			rel.Version = releaseVersion
 			rel.ReleaseDate = ""
+			rel.ReleaseType = "Developer Release"
 			rel.EndOfSupportDate = ""
+			rel.Availability = "Selected User Groups Only"
 			_, err = client.Releases.Update(slug, rel)
 			Expect(err).NotTo(HaveOccurred())
+
 		}
 
-		releaseFiles, err := client.ProductFiles.ListForRelease(slug, releaseID)
+		userGroups, err := client.UserGroups.ListForRelease(slug, releaseID)
 		Expect(err).NotTo(HaveOccurred())
-		for _, file := range releaseFiles {
-			if file.FileType == "Open Source License" {
-				err = client.ProductFiles.RemoveFromRelease(slug, releaseID, file.ID)
+		for _, userGroup := range userGroups {
+			if userGroup.Name == preGaUserGroup {
+				err = client.UserGroups.RemoveFromRelease(slug, releaseID, userGroup.ID)
 				Expect(err).NotTo(HaveOccurred())
 			}
 		}
@@ -69,7 +74,9 @@ var _ = Describe("publish", func() {
 		var err error
 
 		kilnfileBody = `---
-slug: ` + slug
+slug: ` + slug + `
+pre_ga_user_groups:
+  - ` + preGaUserGroup
 
 		tmpDir, err = ioutil.TempDir("", "kiln-publish-test")
 		Expect(err).NotTo(HaveOccurred())
@@ -87,7 +94,7 @@ slug: ` + slug
 
 	It("updates release on pivnet", func() {
 		command := exec.Command(pathToMain, "publish",
-			"--window", "ga",
+			"--window", "rc",
 			"--pivnet-token", token,
 			"--pivnet-host", host)
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -96,23 +103,18 @@ slug: ` + slug
 
 		rel, err := client.Releases.Get(slug, releaseID)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(rel.Version).To(Equal("2.2.17"))
-		Expect(rel.ReleaseType).To(BeEquivalentTo("Maintenance Release"))
+		Expect(rel.Version).To(Equal("2.7.0-rc.4"))
+		Expect(rel.ReleaseType).To(BeEquivalentTo("Release Candidate"))
 		dateFormat := "2006-01-02"
 		Expect(rel.ReleaseDate).To(Equal(time.Now().Format(dateFormat)))
-		Expect(rel.EndOfSupportDate).To(Equal("2019-04-30")) // EOGS for 2.2
+		Expect(rel.Availability).To(Equal("Selected User Groups Only"))
 
-		releaseFiles, err := client.ProductFiles.ListForRelease(slug, releaseID)
+		userGroups, err := client.UserGroups.ListForRelease(slug, releaseID)
 		Expect(err).NotTo(HaveOccurred())
-
-		var licenseFile pivnet.ProductFile
-		for _, file := range releaseFiles {
-			if file.FileType == "Open Source License" {
-				licenseFile = file
-				break
-			}
-		}
-		Expect(licenseFile).NotTo(Equal(pivnet.ProductFile{}))
-		Expect(licenseFile.Name).To(Equal("PCF Pivotal Application Service v2.2 OSL"))
+		Expect(userGroups).To(
+			ContainElement(
+				MatchFields(IgnoreExtras, Fields{
+					"Name": Equal(preGaUserGroup),
+				})))
 	})
 })

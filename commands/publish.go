@@ -38,6 +38,12 @@ type PivnetProductFilesService interface {
 	AddToRelease(productSlug string, releaseID int, productFileID int) error
 }
 
+//go:generate counterfeiter -o ./fakes/pivnet_user_groups_service.go --fake-name PivnetUserGroupsService . PivnetUserGroupsService
+type PivnetUserGroupsService interface {
+	List() ([]pivnet.UserGroup, error)
+	AddToRelease(productSlug string, releaseID int, userGroupID int) error
+}
+
 type Publish struct {
 	Options struct {
 		Kilnfile            string `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
@@ -50,6 +56,7 @@ type Publish struct {
 
 	PivnetReleaseService      PivnetReleasesService
 	PivnetProductFilesService PivnetProductFilesService
+	PivnetUserGroupsService   PivnetUserGroupsService
 
 	FS  billy.Filesystem
 	Now func() time.Time
@@ -95,7 +102,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 		p.Now = time.Now
 	}
 
-	if p.PivnetReleaseService == nil || p.PivnetProductFilesService == nil {
+	if p.PivnetReleaseService == nil || p.PivnetProductFilesService == nil || p.PivnetUserGroupsService == nil {
 		config := pivnet.ClientConfig{
 			Host:      p.Options.PivnetHost,
 			UserAgent: "kiln",
@@ -112,6 +119,10 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 
 		if p.PivnetProductFilesService == nil {
 			p.PivnetProductFilesService = client.ProductFiles
+		}
+
+		if p.PivnetUserGroupsService == nil {
+			p.PivnetUserGroupsService = client.UserGroups
 		}
 	}
 
@@ -205,6 +216,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 		} else {
 			return fmt.Errorf("previously published release %q does not have an End of General Support date", lastPatchRelease.Version)
 		}
+
 	}
 
 	p.OutLogger.Println("Updating product record on PivNet...")
@@ -219,8 +231,38 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 		p.OutLogger.Printf("  License file: %s\n", licenseFileName)
 	}
 
-	if _, err := p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
+	if release, err = p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
 		return err
+	}
+
+	if rv.IsGA() {
+		release.Availability = "All Users"
+
+		if release, err = p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
+			return err
+		}
+	} else {
+		allUserGroups, err := p.PivnetUserGroupsService.List()
+		if err != nil {
+			return err
+		}
+
+		for _, userGroupName := range kilnfile.PreGaUserGroups {
+			success := false
+			for _, userGroup := range allUserGroups {
+				if userGroup.Name == userGroupName {
+					err := p.PivnetUserGroupsService.AddToRelease(kilnfile.Slug, release.ID, userGroup.ID)
+					if err != nil {
+						return err
+					}
+					success = true
+					break
+				}
+			}
+			if !success {
+				return fmt.Errorf("no matching user group '%s' on Pivnet", userGroupName)
+			}
+		}
 	}
 
 	return nil

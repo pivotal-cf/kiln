@@ -19,10 +19,19 @@ import (
 
 var _ = Describe("Publish", func() {
 	const (
-		slug = "elastic-runtime"
+		slug           = "elastic-runtime"
+		userGroup1Name = "Dell/EMC Early Access Group"
+		userGroup1ID = 123
+		userGroup2Name = "PCF R&D"
+		userGroup2ID = 456
 
 		defaultKilnFileBody = `---
-slug: ` + slug
+slug: ` + slug + `
+pre_ga_user_groups:
+  - ` + userGroup1Name + `
+  - ` + userGroup2Name + `
+`
+
 	)
 
 	var someVersion *semver.Version
@@ -36,6 +45,7 @@ slug: ` + slug
 				publish          commands.Publish
 				rs               *fakes.PivnetReleasesService
 				pfs              *fakes.PivnetProductFilesService
+				ugs              *fakes.PivnetUserGroupsService
 				now              time.Time
 				versionStr       string
 				releasesOnPivnet []pivnet.Release
@@ -45,8 +55,9 @@ slug: ` + slug
 
 			BeforeEach(func() {
 				versionStr = "2.0.0-build.45"
-				rs = &fakes.PivnetReleasesService{}
-				pfs = &fakes.PivnetProductFilesService{}
+				rs = new(fakes.PivnetReleasesService)
+				pfs = new(fakes.PivnetProductFilesService)
+				ugs = new(fakes.PivnetUserGroupsService)
 				releasesOnPivnet = []pivnet.Release{}
 				now = time.Now()
 				outLoggerBuffer = strings.Builder{}
@@ -63,7 +74,13 @@ slug: ` + slug
 				}
 				rs.ListReturns(releasesOnPivnet, nil)
 
-				rs.UpdateReturns(pivnet.Release{}, nil)
+				rs.UpdateReturns(pivnet.Release{ID: releaseID}, nil)
+
+				ugs.ListReturns([]pivnet.UserGroup{
+					{ID: userGroup1ID, Name: userGroup1Name},
+					{ID: 123, Name: "Ignore me!"},
+					{ID: userGroup2ID, Name: userGroup2Name},
+				}, nil)
 
 				fs := memfs.New()
 				vf, _ := fs.Create("version")
@@ -78,6 +95,7 @@ slug: ` + slug
 					FS:                        fs,
 					PivnetReleaseService:      rs,
 					PivnetProductFilesService: pfs,
+					PivnetUserGroupsService: ugs,
 					Now: func() time.Time {
 						return now
 					},
@@ -118,6 +136,25 @@ slug: ` + slug
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
+				})
+
+				It("adds the pre-GA user groups to the release", func() {
+					err := publish.Execute(args)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(ugs.ListCallCount()).To(Equal(1))
+
+					Expect(ugs.AddToReleaseCallCount()).To(Equal(2))
+
+					s, rid, ugid := ugs.AddToReleaseArgsForCall(0)
+					Expect(s).To(Equal(s))
+					Expect(rid).To(Equal(releaseID))
+					Expect(ugid).To(Equal(userGroup1ID))
+
+					s, rid, ugid = ugs.AddToReleaseArgsForCall(1)
+					Expect(s).To(Equal(s))
+					Expect(rid).To(Equal(releaseID))
+					Expect(ugid).To(Equal(userGroup2ID))
 				})
 
 				Context("when previous alphas have been published", func() {
@@ -188,6 +225,25 @@ slug: ` + slug
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
 				})
 
+				It("adds the pre-GA user groups to the release", func() {
+					err := publish.Execute(args)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(ugs.ListCallCount()).To(Equal(1))
+
+					Expect(ugs.AddToReleaseCallCount()).To(Equal(2))
+
+					s, rid, ugid := ugs.AddToReleaseArgsForCall(0)
+					Expect(s).To(Equal(s))
+					Expect(rid).To(Equal(releaseID))
+					Expect(ugid).To(Equal(userGroup1ID))
+
+					s, rid, ugid = ugs.AddToReleaseArgsForCall(1)
+					Expect(s).To(Equal(s))
+					Expect(rid).To(Equal(releaseID))
+					Expect(ugid).To(Equal(userGroup2ID))
+				})
+
 				Context("when previous betas have been published", func() {
 					BeforeEach(func() {
 						releasesOnPivnet = []pivnet.Release{
@@ -254,6 +310,25 @@ slug: ` + slug
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
+				})
+
+				It("adds the pre-GA user groups to the release", func() {
+					err := publish.Execute(args)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(ugs.ListCallCount()).To(Equal(1))
+
+					Expect(ugs.AddToReleaseCallCount()).To(Equal(2))
+
+					s, rid, ugid := ugs.AddToReleaseArgsForCall(0)
+					Expect(s).To(Equal(s))
+					Expect(rid).To(Equal(releaseID))
+					Expect(ugid).To(Equal(userGroup1ID))
+
+					s, rid, ugid = ugs.AddToReleaseArgsForCall(1)
+					Expect(s).To(Equal(s))
+					Expect(rid).To(Equal(releaseID))
+					Expect(ugid).To(Equal(userGroup2ID))
 				})
 
 				Context("when previous release candidates have been published", func() {
@@ -354,7 +429,7 @@ slug: ` + slug
 						Expect(rs.ListCallCount()).To(Equal(1))
 						Expect(rs.ListArgsForCall(0)).To(Equal(slug))
 
-						Expect(rs.UpdateCallCount()).To(Equal(1))
+						Expect(rs.UpdateCallCount()).To(Equal(2))
 						{
 							s, r := rs.UpdateArgsForCall(0)
 							Expect(s).To(Equal(slug))
@@ -366,6 +441,18 @@ slug: ` + slug
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0"))
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Major Release"))
 
+					})
+
+					It("updates the Pivnet release's availability to all users", func(){
+						err := publish.Execute(args)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(rs.UpdateCallCount()).To(Equal(2))
+						{
+							s, r := rs.UpdateArgsForCall(1)
+							Expect(s).To(Equal(slug))
+							Expect(r.Availability).To(Equal("All Users"))
+						}
 					})
 
 					It("adds the appropriate OSL file", func() {
@@ -389,7 +476,7 @@ slug: ` + slug
 							err := publish.Execute(args)
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(rs.UpdateCallCount()).To(Equal(1))
+							Expect(rs.UpdateCallCount()).To(Equal(2))
 							_, r := rs.UpdateArgsForCall(0)
 							Expect(r.ReleaseType).To(BeEquivalentTo("Major Release"))
 						})
@@ -408,7 +495,7 @@ slug: ` + slug
 						Expect(rs.ListCallCount()).To(Equal(1))
 						Expect(rs.ListArgsForCall(0)).To(Equal(slug))
 
-						Expect(rs.UpdateCallCount()).To(Equal(1))
+						Expect(rs.UpdateCallCount()).To(Equal(2))
 						{
 							s, r := rs.UpdateArgsForCall(0)
 							Expect(s).To(Equal(slug))
@@ -416,6 +503,18 @@ slug: ` + slug
 							Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
 							Expect(r.EndOfSupportDate).To(Equal(endOfSupportDate))
 							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
+						}
+					})
+
+					It("updates the Pivnet release's availability to all users", func(){
+						err := publish.Execute(args)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(rs.UpdateCallCount()).To(Equal(2))
+						{
+							s, r := rs.UpdateArgsForCall(1)
+							Expect(s).To(Equal(slug))
+							Expect(r.Availability).To(Equal("All Users"))
 						}
 					})
 
@@ -439,7 +538,7 @@ slug: ` + slug
 							err := publish.Execute(args)
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(rs.UpdateCallCount()).To(Equal(1))
+							Expect(rs.UpdateCallCount()).To(Equal(2))
 							_, r := rs.UpdateArgsForCall(0)
 							Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
 						})
@@ -466,7 +565,7 @@ slug: ` + slug
 						Expect(rs.ListCallCount()).To(Equal(1))
 						Expect(rs.ListArgsForCall(0)).To(Equal(slug))
 
-						Expect(rs.UpdateCallCount()).To(Equal(1))
+						Expect(rs.UpdateCallCount()).To(Equal(2))
 						{
 							s, r := rs.UpdateArgsForCall(0)
 							Expect(s).To(Equal(slug))
@@ -474,6 +573,18 @@ slug: ` + slug
 							Expect(r.ReleaseType).To(BeEquivalentTo("Maintenance Release"))
 							Expect(r.EndOfSupportDate).To(Equal(endOfSupportDate))
 							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
+						}
+					})
+
+					It("updates the Pivnet release's availability to all users", func(){
+						err := publish.Execute(args)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(rs.UpdateCallCount()).To(Equal(2))
+						{
+							s, r := rs.UpdateArgsForCall(1)
+							Expect(s).To(Equal(slug))
+							Expect(r.Availability).To(Equal("All Users"))
 						}
 					})
 
@@ -497,7 +608,7 @@ slug: ` + slug
 							err := publish.Execute(args)
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(rs.UpdateCallCount()).To(Equal(1))
+							Expect(rs.UpdateCallCount()).To(Equal(2))
 							_, r := rs.UpdateArgsForCall(0)
 							Expect(r.ReleaseType).To(BeEquivalentTo("Security Release"))
 						})
@@ -515,8 +626,9 @@ slug: ` + slug
 
 				noVersionFile, noKilnFile     bool
 				versionFileBody, kilnFileBody string
-				releasesService               *fakes.PivnetReleasesService
-				productFilesService           *fakes.PivnetProductFilesService
+				rs                            *fakes.PivnetReleasesService
+				pfs                           *fakes.PivnetProductFilesService
+				ugs                           *fakes.PivnetUserGroupsService
 
 				executeArgs     []string
 				outLoggerBuffer strings.Builder
@@ -529,8 +641,9 @@ slug: ` + slug
 				publish.OutLogger = log.New(&outLoggerBuffer, "", 0)
 				publish.ErrLogger = log.New(ioutil.Discard, "", 0)
 
-				releasesService = &fakes.PivnetReleasesService{}
-				productFilesService = &fakes.PivnetProductFilesService{}
+				rs = new(fakes.PivnetReleasesService)
+				pfs = new(fakes.PivnetProductFilesService)
+				ugs = new(fakes.PivnetUserGroupsService)
 
 				noVersionFile, noKilnFile = false, false
 				fs = memfs.New()
@@ -555,8 +668,9 @@ slug: ` + slug
 				}
 
 				publish.FS = fs
-				publish.PivnetReleaseService = releasesService
-				publish.PivnetProductFilesService = productFilesService
+				publish.PivnetReleaseService = rs
+				publish.PivnetProductFilesService = pfs
+				publish.PivnetUserGroupsService = ugs
 				publish.Now = func() time.Time {
 					return now
 				}
@@ -588,7 +702,7 @@ slug: ` + slug
 
 			When("the release to be updated is not found", func() {
 				BeforeEach(func() {
-					releasesService.ListReturns([]pivnet.Release{{Version: "1.2.3-build.1"}}, nil)
+					rs.ListReturns([]pivnet.Release{{Version: "1.2.3-build.1"}}, nil)
 				})
 
 				It("returns an error", func() {
@@ -647,25 +761,25 @@ slug: ` + slug
 
 			When("there is an error fetching product files from Pivnet", func() {
 				BeforeEach(func() {
-					releasesService.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
-					productFilesService.ListReturns(nil, errors.New("bad stuff happened"))
+					rs.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
+					pfs.ListReturns(nil, errors.New("bad stuff happened"))
 				})
 
 				It("returns an error and makes no changes", func() {
 					err := publish.Execute(executeArgs)
 					Expect(err).To(HaveOccurred())
 
-					Expect(releasesService.UpdateCallCount()).To(Equal(0))
-					Expect(productFilesService.ListCallCount()).To(Equal(1))
-					Expect(productFilesService.AddToReleaseCallCount()).To(Equal(0))
+					Expect(rs.UpdateCallCount()).To(Equal(0))
+					Expect(pfs.ListCallCount()).To(Equal(1))
+					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
 					Expect(err).To(MatchError("bad stuff happened"))
 				})
 			})
 
 			When("there the necessary license file doesn't exist on Pivnet", func() {
 				BeforeEach(func() {
-					releasesService.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
-					productFilesService.ListReturns(
+					rs.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
+					pfs.ListReturns(
 						[]pivnet.ProductFile{
 							{
 								ID:          42,
@@ -683,16 +797,16 @@ slug: ` + slug
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring("file doesn't exist")))
 
-					Expect(releasesService.UpdateCallCount()).To(Equal(0))
-					Expect(productFilesService.ListCallCount()).To(Equal(1))
-					Expect(productFilesService.AddToReleaseCallCount()).To(Equal(0))
+					Expect(rs.UpdateCallCount()).To(Equal(0))
+					Expect(pfs.ListCallCount()).To(Equal(1))
+					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
 				})
 			})
 
 			When("there is an error adding the license file to the release on Pivnet", func() {
 				BeforeEach(func() {
-					releasesService.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
-					productFilesService.ListReturns(
+					rs.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
+					pfs.ListReturns(
 						[]pivnet.ProductFile{
 							{
 								ID:          42,
@@ -703,27 +817,27 @@ slug: ` + slug
 						},
 						nil,
 					)
-					productFilesService.AddToReleaseReturns(errors.New("more bad stuff happened"))
+					pfs.AddToReleaseReturns(errors.New("more bad stuff happened"))
 				})
 
 				It("returns an error and makes no changes", func() {
 					err := publish.Execute(executeArgs)
 					Expect(err).To(HaveOccurred())
 
-					Expect(releasesService.UpdateCallCount()).To(Equal(0))
-					Expect(productFilesService.ListCallCount()).To(Equal(1))
-					Expect(productFilesService.AddToReleaseCallCount()).To(Equal(1))
+					Expect(rs.UpdateCallCount()).To(Equal(0))
+					Expect(pfs.ListCallCount()).To(Equal(1))
+					Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
 					Expect(err).To(MatchError("more bad stuff happened"))
 				})
 			})
 
 			When("a release on PivNet has an invalid version", func() {
 				BeforeEach(func() {
-					releasesService.ListReturns([]pivnet.Release{
+					rs.ListReturns([]pivnet.Release{
 						{Version: someVersion.String()},
 						{Version: "invalid version"},
 					}, nil)
-					productFilesService.ListReturns(
+					pfs.ListReturns(
 						[]pivnet.ProductFile{
 							{
 								ID:          42,
@@ -740,9 +854,9 @@ slug: ` + slug
 					err := publish.Execute(executeArgs)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(releasesService.UpdateCallCount()).To(Equal(1))
+					Expect(rs.UpdateCallCount()).To(Equal(2))
 					{
-						s, r := releasesService.UpdateArgsForCall(0)
+						s, r := rs.UpdateArgsForCall(0)
 						Expect(s).To(Equal(slug))
 						Expect(r.Version).To(Equal("2.8.0"))
 						Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
@@ -752,16 +866,44 @@ slug: ` + slug
 				})
 			})
 
+			When("a release on PivNet cannot update it's availability", func() {
+				BeforeEach(func() {
+					rs.ListReturns([]pivnet.Release{
+						{Version: someVersion.String()},
+					}, nil)
+					pfs.ListReturns(
+						[]pivnet.ProductFile{
+							{
+								ID:          42,
+								Name:        "PCF Pivotal Application Service v2.8 OSL",
+								FileVersion: "2.8",
+								FileType:    "Open Source License",
+							},
+						},
+						nil,
+					)
+
+					rs.UpdateReturnsOnCall(1, pivnet.Release{}, errors.New("second update error"))
+				})
+
+				It("returns an error", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(MatchError("second update error"))
+
+					Expect(rs.UpdateCallCount()).To(Equal(2))
+				})
+			})
+
 			When("the previous release on PivNet does not have an EOGS date", func() {
 				BeforeEach(func() {
 					someVersion = semver.MustParse("2.9.1-build.111")
 
-					releasesService.ListReturns([]pivnet.Release{
+					rs.ListReturns([]pivnet.Release{
 						{Version: someVersion.String(), ID: 99},
 						{Version: "2.9.0", EndOfSupportDate: ""},
 					}, nil)
 
-					productFilesService.ListReturns(
+					pfs.ListReturns(
 						[]pivnet.ProductFile{
 							{
 								ID:          42,
@@ -779,9 +921,58 @@ slug: ` + slug
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring("does not have an End of General Support date")))
 
-					Expect(releasesService.UpdateCallCount()).To(Equal(0))
+					Expect(rs.UpdateCallCount()).To(Equal(0))
 				})
 			})
+
+			When("there is an error fetching user groups from PivNet", func() {
+				BeforeEach(func() {
+					executeArgs = []string{"--pivnet-token", "SOME_TOKEN", "--window", "rc"}
+					rs.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
+					ugs.ListReturns(nil, errors.New("error returning user groups"))
+				})
+
+				It("returns an error ", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError("error returning user groups"))
+				})
+			})
+
+			When("there is an error adding a user group to release", func() {
+				BeforeEach(func() {
+					executeArgs = []string{"--pivnet-token", "SOME_TOKEN", "--window", "rc"}
+					rs.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
+					ugs.ListReturns([]pivnet.UserGroup{
+						{ID: userGroup1ID, Name: userGroup1Name},
+						{ID: userGroup2ID, Name: userGroup2Name},
+					}, nil)
+					ugs.AddToReleaseReturns(errors.New("error adding user group to release"))
+				})
+
+				It("returns an error ", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError("error adding user group to release"))
+				})
+			})
+
+			When("one of the required user groups doesn't exist", func() {
+				BeforeEach(func() {
+					executeArgs = []string{"--pivnet-token", "SOME_TOKEN", "--window", "rc"}
+					rs.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
+					ugs.ListReturns([]pivnet.UserGroup{
+						{ID: userGroup2ID, Name: userGroup2Name},
+					}, nil)
+				})
+
+				It("returns an error", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(HaveOccurred())
+				})
+
+			})
+
 		})
 	})
 })
