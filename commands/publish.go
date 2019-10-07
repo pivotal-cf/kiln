@@ -38,7 +38,7 @@ type PivnetProductFilesService interface {
 
 type Publish struct {
 	Options struct {
-		Kilnfile            string `short:"f" long:"file" default:"Kilnfile" description:"path to Kilnfile"`
+		Kilnfile            string `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
 		Version             string `short:"v" long:"version-file" default:"version" description:"path to version file"`
 		PivnetToken         string `short:"t" long:"pivnet-token" description:"pivnet refresh token" required:"true"`
 		PivnetHost          string `long:"pivnet-host" default:"https://network.pivotal.io" description:"pivnet host"`
