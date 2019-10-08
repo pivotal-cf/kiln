@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -38,6 +39,7 @@ slug: ` + slug
 				now              time.Time
 				versionStr       string
 				releasesOnPivnet []pivnet.Release
+				outLoggerBuffer  strings.Builder
 			)
 			const releaseID = 123
 
@@ -47,6 +49,12 @@ slug: ` + slug
 				pfs = &fakes.PivnetProductFilesService{}
 				releasesOnPivnet = []pivnet.Release{}
 				now = time.Now()
+				outLoggerBuffer = strings.Builder{}
+			})
+
+			AfterEach(func() {
+				// regardless, should always output the publish date (i.e. now)
+				Expect(outLoggerBuffer.String()).To(ContainSubstring(now.Format("2006-01-02")))
 			})
 
 			JustBeforeEach(func() {
@@ -73,7 +81,7 @@ slug: ` + slug
 					Now: func() time.Time {
 						return now
 					},
-					OutLogger: log.New(ioutil.Discard, "", 0),
+					OutLogger: log.New(&outLoggerBuffer, "", 0),
 					ErrLogger: log.New(ioutil.Discard, "", 0),
 				}
 			})
@@ -101,6 +109,8 @@ slug: ` + slug
 						Expect(r.EndOfSupportDate).To(Equal(""))
 						Expect(r.ReleaseDate).To(Equal(now.Format("2006-01-02")))
 					}
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("2.0.0-alpha.1"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Alpha Release"))
 				})
 
 				It("does not add a file to the release", func() {
@@ -167,6 +177,8 @@ slug: ` + slug
 						Expect(r.EndOfSupportDate).To(Equal(""))
 						Expect(r.ReleaseDate).To(Equal(now.Format("2006-01-02")))
 					}
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("2.0.0-beta.1"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Beta Release"))
 				})
 
 				It("does not add a file to the release", func() {
@@ -233,6 +245,8 @@ slug: ` + slug
 						Expect(r.EndOfSupportDate).To(Equal(""))
 						Expect(r.ReleaseDate).To(Equal(now.Format("2006-01-02")))
 					}
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("2.0.0-rc.1"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release Candidate"))
 				})
 
 				It("does not add a file to the release", func() {
@@ -282,7 +296,10 @@ slug: ` + slug
 					version20FileID = 42
 					version21FileID = 43
 				)
-				var args []string
+				var (
+					args             []string
+					endOfSupportDate string
+				)
 
 				BeforeEach(func() {
 					args = []string{"--window", "ga", "--pivnet-token", "SOME_TOKEN"}
@@ -319,9 +336,14 @@ slug: ` + slug
 					)
 				})
 
+				AfterEach(func() {
+					Expect(outLoggerBuffer.String()).To(ContainSubstring(endOfSupportDate))
+				})
+
 				Context("for a major release", func() {
 					BeforeEach(func() {
 						versionStr = "2.0.0-build.45"
+						endOfSupportDate = "2017-02-28"
 					})
 
 					It("updates Pivnet release with the determined version and release type", func() {
@@ -337,9 +359,12 @@ slug: ` + slug
 							Expect(s).To(Equal(slug))
 							Expect(r.Version).To(Equal("2.0.0"))
 							Expect(r.ReleaseType).To(BeEquivalentTo("Major Release"))
-							Expect(r.EndOfSupportDate).To(Equal("2017-02-28"))
+							Expect(r.EndOfSupportDate).To(Equal(endOfSupportDate))
 							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
 						}
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("2.0.0"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Major Release"))
+
 					})
 
 					It("adds the appropriate OSL file", func() {
@@ -351,6 +376,7 @@ slug: ` + slug
 						Expect(productSlug).To(Equal(slug))
 						Expect(productReleaseID).To(Equal(releaseID))
 						Expect(fileID).To(Equal(version20FileID))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("PCF Pivotal Application Service v2.0 OSL"))
 					})
 
 					Context("when the --security-fix flag is given", func() {
@@ -387,7 +413,7 @@ slug: ` + slug
 							Expect(s).To(Equal(slug))
 							Expect(r.Version).To(Equal("2.1.0"))
 							Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
-							Expect(r.EndOfSupportDate).To(Equal("2017-02-28"))
+							Expect(r.EndOfSupportDate).To(Equal(endOfSupportDate))
 							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
 						}
 					})
@@ -420,7 +446,6 @@ slug: ` + slug
 				})
 
 				Context("for a patch release", func() {
-					var endOfSupportDate string
 					BeforeEach(func() {
 						versionStr = "2.1.1-build.45"
 						endOfSupportDate = "2019-07-31"
@@ -492,13 +517,15 @@ slug: ` + slug
 				releasesService               *fakes.PivnetReleasesService
 				productFilesService           *fakes.PivnetProductFilesService
 
-				executeArgs []string
+				executeArgs     []string
+				outLoggerBuffer strings.Builder
 			)
 
 			BeforeEach(func() {
 				publish = commands.Publish{}
 				publish.Options.Kilnfile = "Kilnfile"
-				publish.OutLogger = log.New(ioutil.Discard, "", 0)
+				outLoggerBuffer = strings.Builder{}
+				publish.OutLogger = log.New(&outLoggerBuffer, "", 0)
 				publish.ErrLogger = log.New(ioutil.Discard, "", 0)
 
 				releasesService = &fakes.PivnetReleasesService{}
@@ -719,6 +746,8 @@ slug: ` + slug
 						Expect(r.Version).To(Equal("2.8.0"))
 						Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
 					}
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("2.8.0"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Minor Release"))
 				})
 			})
 

@@ -178,7 +178,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 		return err
 	}
 
-	err = p.attachLicenseFile(kilnfile.Slug, release.ID, versionToPublish)
+	licenseFileName, err := p.attachLicenseFile(kilnfile.Slug, release.ID, versionToPublish)
 	if err != nil {
 		return err
 	}
@@ -207,6 +207,18 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 		}
 	}
 
+	p.OutLogger.Println("Updating product record on PivNet...")
+	p.OutLogger.Printf("  version: %s\n", release.Version)
+	p.OutLogger.Printf("  release date: %s\n", release.ReleaseDate)
+	p.OutLogger.Printf("  release type: %s\n", release.ReleaseType)
+	if release.EndOfSupportDate != "" {
+		p.OutLogger.Printf("  EOGS date: %s\n", release.EndOfSupportDate)
+	}
+
+	if licenseFileName != "" {
+		p.OutLogger.Printf("  License file: %s\n", licenseFileName)
+	}
+
 	if _, err := p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
 		return err
 	}
@@ -223,31 +235,34 @@ func endOfSupportFor(publishDate time.Time) string {
 	return endOfNinthMonth.Format(publishDateFormat)
 }
 
-func (p Publish) attachLicenseFile(slug string, releaseID int, version *releaseVersion) error {
+func (p Publish) attachLicenseFile(slug string, releaseID int, version *releaseVersion) (string, error) {
+
 	if version.IsGA() {
 		productFiles, err := p.PivnetProductFilesService.List(slug)
 		if err != nil {
-			return err
+			return "", err
 		}
 
-		var productFileID int
+		var productFile *pivnet.ProductFile
 		for _, file := range productFiles {
 			if file.FileType == oslFileType && file.FileVersion == version.MajorAndMinor() {
-				productFileID = file.ID
+				productFile = &file
 				break
 			}
 		}
 
-		if productFileID == 0 {
-			return errors.New("required license file doesn't exist on Pivnet")
+		if productFile == nil {
+			return "", errors.New("required license file doesn't exist on Pivnet")
 		}
 
-		err = p.PivnetProductFilesService.AddToRelease(slug, releaseID, productFileID)
-		if err != nil {
-			return err
+		err = p.PivnetProductFilesService.AddToRelease(slug, releaseID, productFile.ID)
+		if err == nil {
+			return productFile.Name, nil
+		} else {
+			return "", err
 		}
 	}
-	return nil
+	return "", nil
 }
 
 func (p Publish) determineVersion(releases releaseSet, version *releaseVersion) (*releaseVersion, error) {
