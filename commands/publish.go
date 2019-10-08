@@ -243,15 +243,8 @@ func (p Publish) attachLicenseFile(slug string, releaseID int, version *releaseV
 			return "", err
 		}
 
-		var productFile *pivnet.ProductFile
-		for _, file := range productFiles {
-			if file.FileType == oslFileType && file.FileVersion == version.MajorAndMinor() {
-				productFile = &file
-				break
-			}
-		}
-
-		if productFile == nil {
+		productFile, found := findMatchingOSL(productFiles, version)
+		if !found {
 			return "", errors.New("required license file doesn't exist on Pivnet")
 		}
 
@@ -263,6 +256,15 @@ func (p Publish) attachLicenseFile(slug string, releaseID int, version *releaseV
 		}
 	}
 	return "", nil
+}
+
+func findMatchingOSL(productFiles []pivnet.ProductFile, version *releaseVersion) (pivnet.ProductFile, bool) {
+	for _, file := range productFiles {
+		if file.FileType == oslFileType && file.FileVersion == version.MajorAndMinor() {
+			return file, true
+		}
+	}
+	return pivnet.ProductFile{}, false
 }
 
 func (p Publish) determineVersion(releases releaseSet, version *releaseVersion) (*releaseVersion, error) {
