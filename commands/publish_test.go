@@ -109,8 +109,8 @@ slug: ` + slug
 						Expect(r.EndOfSupportDate).To(Equal(""))
 						Expect(r.ReleaseDate).To(Equal(now.Format("2006-01-02")))
 					}
-					Expect(outLoggerBuffer.String()).To(ContainSubstring("2.0.0-alpha.1"))
-					Expect(outLoggerBuffer.String()).To(ContainSubstring("Alpha Release"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0-alpha.1"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Alpha Release"))
 				})
 
 				It("does not add a file to the release", func() {
@@ -177,8 +177,8 @@ slug: ` + slug
 						Expect(r.EndOfSupportDate).To(Equal(""))
 						Expect(r.ReleaseDate).To(Equal(now.Format("2006-01-02")))
 					}
-					Expect(outLoggerBuffer.String()).To(ContainSubstring("2.0.0-beta.1"))
-					Expect(outLoggerBuffer.String()).To(ContainSubstring("Beta Release"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0-beta.1"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Beta Release"))
 				})
 
 				It("does not add a file to the release", func() {
@@ -245,8 +245,8 @@ slug: ` + slug
 						Expect(r.EndOfSupportDate).To(Equal(""))
 						Expect(r.ReleaseDate).To(Equal(now.Format("2006-01-02")))
 					}
-					Expect(outLoggerBuffer.String()).To(ContainSubstring("2.0.0-rc.1"))
-					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release Candidate"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0-rc.1"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Release Candidate"))
 				})
 
 				It("does not add a file to the release", func() {
@@ -303,7 +303,9 @@ slug: ` + slug
 
 				BeforeEach(func() {
 					args = []string{"--window", "ga", "--pivnet-token", "SOME_TOKEN"}
+
 					now = time.Date(2016, 5, 4, 3, 2, 1, 0, time.Local)
+					endOfSupportDate = "2017-02-28" // by default, PivNet does not have EOGS: now + 300 days
 
 					pfs.ListReturns(
 						[]pivnet.ProductFile{
@@ -337,13 +339,12 @@ slug: ` + slug
 				})
 
 				AfterEach(func() {
-					Expect(outLoggerBuffer.String()).To(ContainSubstring(endOfSupportDate))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("EOGS date: " + endOfSupportDate))
 				})
 
 				Context("for a major release", func() {
 					BeforeEach(func() {
 						versionStr = "2.0.0-build.45"
-						endOfSupportDate = "2017-02-28"
 					})
 
 					It("updates Pivnet release with the determined version and release type", func() {
@@ -362,8 +363,8 @@ slug: ` + slug
 							Expect(r.EndOfSupportDate).To(Equal(endOfSupportDate))
 							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
 						}
-						Expect(outLoggerBuffer.String()).To(ContainSubstring("2.0.0"))
-						Expect(outLoggerBuffer.String()).To(ContainSubstring("Major Release"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Major Release"))
 
 					})
 
@@ -376,7 +377,7 @@ slug: ` + slug
 						Expect(productSlug).To(Equal(slug))
 						Expect(productReleaseID).To(Equal(releaseID))
 						Expect(fileID).To(Equal(version20FileID))
-						Expect(outLoggerBuffer.String()).To(ContainSubstring("PCF Pivotal Application Service v2.0 OSL"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("License file: PCF Pivotal Application Service v2.0 OSL"))
 					})
 
 					Context("when the --security-fix flag is given", func() {
@@ -746,8 +747,8 @@ slug: ` + slug
 						Expect(r.Version).To(Equal("2.8.0"))
 						Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
 					}
-					Expect(outLoggerBuffer.String()).To(ContainSubstring("2.8.0"))
-					Expect(outLoggerBuffer.String()).To(ContainSubstring("Minor Release"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.8.0"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Minor Release"))
 				})
 			})
 

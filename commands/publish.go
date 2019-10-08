@@ -208,9 +208,9 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 	}
 
 	p.OutLogger.Println("Updating product record on PivNet...")
-	p.OutLogger.Printf("  version: %s\n", release.Version)
-	p.OutLogger.Printf("  release date: %s\n", release.ReleaseDate)
-	p.OutLogger.Printf("  release type: %s\n", release.ReleaseType)
+	p.OutLogger.Printf("  Version: %s\n", release.Version)
+	p.OutLogger.Printf("  Release date: %s\n", release.ReleaseDate)
+	p.OutLogger.Printf("  Release type: %s\n", release.ReleaseType)
 	if release.EndOfSupportDate != "" {
 		p.OutLogger.Printf("  EOGS date: %s\n", release.EndOfSupportDate)
 	}
