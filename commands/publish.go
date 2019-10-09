@@ -236,6 +236,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 	}
 
 	if rv.IsGA() {
+		p.OutLogger.Println("  Availability: All Users")
 		release.Availability = "All Users"
 
 		if release, err = p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
@@ -247,7 +248,9 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 			return err
 		}
 
+		p.OutLogger.Println("  Granting access to groups...")
 		for _, userGroupName := range kilnfile.PreGaUserGroups {
+			p.OutLogger.Printf("    - %s\n", userGroupName)
 			success := false
 			for _, userGroup := range allUserGroups {
 				if userGroup.Name == userGroupName {
