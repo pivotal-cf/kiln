@@ -63,11 +63,6 @@ pre_ga_user_groups:
 				outLoggerBuffer = strings.Builder{}
 			})
 
-			AfterEach(func() {
-				// regardless, should always output the publish date (i.e. now)
-				Expect(outLoggerBuffer.String()).To(ContainSubstring(now.Format("2006-01-02")))
-			})
-
 			JustBeforeEach(func() {
 				if len(releasesOnPivnet) == 0 {
 					releasesOnPivnet = []pivnet.Release{{Version: versionStr, ID: releaseID}}
@@ -130,6 +125,7 @@ pre_ga_user_groups:
 					}
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0-alpha.1"))
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Alpha Release"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release date: %s", now.Format("2006-01-02")))
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Availability: Selected User Groups Only"))
 				})
 
@@ -223,6 +219,7 @@ pre_ga_user_groups:
 					}
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0-beta.1"))
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Beta Release"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release date: %s", now.Format("2006-01-02")))
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Availability: Selected User Groups Only"))
 				})
 
@@ -312,6 +309,7 @@ pre_ga_user_groups:
 					}
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0-rc.1"))
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Release Candidate"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release date: %s", now.Format("2006-01-02")))
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Availability: Selected User Groups Only"))
 				})
 
@@ -427,10 +425,6 @@ pre_ga_user_groups:
 					)
 				})
 
-				AfterEach(func() {
-					Expect(outLoggerBuffer.String()).To(ContainSubstring("EOGS date: " + endOfSupportDate))
-				})
-
 				Context("for a major release", func() {
 					BeforeEach(func() {
 						versionStr = "2.0.0-build.45"
@@ -455,7 +449,9 @@ pre_ga_user_groups:
 						}
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0"))
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Major Release"))
-
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Release date: %s", now.Format("2006-01-02")))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("EOGS date: %s", endOfSupportDate))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Availability: All Users"))
 					})
 
 					It("adds the appropriate OSL file", func() {
@@ -467,6 +463,7 @@ pre_ga_user_groups:
 						Expect(productSlug).To(Equal(slug))
 						Expect(productReleaseID).To(Equal(releaseID))
 						Expect(fileID).To(Equal(version20FileID))
+
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("License file: PCF Pivotal Application Service v2.0 OSL"))
 					})
 
@@ -508,6 +505,11 @@ pre_ga_user_groups:
 							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
 							Expect(r.Availability).To(Equal("All Users"))
 						}
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.1.0"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Minor Release"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Release date: %s", now.Format("2006-01-02")))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("EOGS date: %s", endOfSupportDate))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Availability: All Users"))
 					})
 
 					It("adds the appropriate OSL file", func() {
@@ -519,6 +521,8 @@ pre_ga_user_groups:
 						Expect(productSlug).To(Equal(slug))
 						Expect(productReleaseID).To(Equal(releaseID))
 						Expect(fileID).To(Equal(version21FileID))
+
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("License file: PCF Pivotal Application Service v2.1 OSL"))
 					})
 
 					Context("when the --security-fix flag is given", func() {
@@ -567,6 +571,11 @@ pre_ga_user_groups:
 							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
 							Expect(r.Availability).To(Equal("All Users"))
 						}
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.1.1"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Maintenance Release"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Release date: %s", now.Format("2006-01-02")))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("EOGS date: %s", endOfSupportDate))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("Availability: All Users"))
 					})
 
 					It("adds the appropriate OSL file", func() {
@@ -578,6 +587,8 @@ pre_ga_user_groups:
 						Expect(productSlug).To(Equal(slug))
 						Expect(productReleaseID).To(Equal(releaseID))
 						Expect(fileID).To(Equal(version21FileID))
+
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("License file: PCF Pivotal Application Service v2.1 OSL"))
 					})
 
 					Context("when the --security-fix flag is given", func() {
