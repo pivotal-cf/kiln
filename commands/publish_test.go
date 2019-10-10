@@ -126,9 +126,11 @@ pre_ga_user_groups:
 						Expect(r.ReleaseType).To(BeEquivalentTo("Alpha Release"))
 						Expect(r.EndOfSupportDate).To(Equal(""))
 						Expect(r.ReleaseDate).To(Equal(now.Format("2006-01-02")))
+						Expect(r.Availability).To(Equal("Selected User Groups Only"))
 					}
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0-alpha.1"))
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Alpha Release"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Availability: Selected User Groups Only"))
 				})
 
 				It("does not add a file to the release", func() {
@@ -155,6 +157,10 @@ pre_ga_user_groups:
 					Expect(s).To(Equal(s))
 					Expect(rid).To(Equal(releaseID))
 					Expect(ugid).To(Equal(userGroup2ID))
+
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Granting access to groups..."))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring(userGroup1Name))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring(userGroup2Name))
 				})
 
 				Context("when previous alphas have been published", func() {
@@ -213,9 +219,11 @@ pre_ga_user_groups:
 						Expect(r.ReleaseType).To(BeEquivalentTo("Beta Release"))
 						Expect(r.EndOfSupportDate).To(Equal(""))
 						Expect(r.ReleaseDate).To(Equal(now.Format("2006-01-02")))
+						Expect(r.Availability).To(Equal("Selected User Groups Only"))
 					}
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0-beta.1"))
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Beta Release"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Availability: Selected User Groups Only"))
 				})
 
 				It("does not add a file to the release", func() {
@@ -300,9 +308,11 @@ pre_ga_user_groups:
 						Expect(r.ReleaseType).To(BeEquivalentTo("Release Candidate"))
 						Expect(r.EndOfSupportDate).To(Equal(""))
 						Expect(r.ReleaseDate).To(Equal(now.Format("2006-01-02")))
+						Expect(r.Availability).To(Equal("Selected User Groups Only"))
 					}
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0-rc.1"))
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Release Candidate"))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Availability: Selected User Groups Only"))
 				})
 
 				It("does not add a file to the release", func() {
@@ -329,6 +339,10 @@ pre_ga_user_groups:
 					Expect(s).To(Equal(s))
 					Expect(rid).To(Equal(releaseID))
 					Expect(ugid).To(Equal(userGroup2ID))
+
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Granting access to groups..."))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring(userGroup1Name))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring(userGroup2Name))
 				})
 
 				Context("when previous release candidates have been published", func() {
@@ -429,7 +443,7 @@ pre_ga_user_groups:
 						Expect(rs.ListCallCount()).To(Equal(1))
 						Expect(rs.ListArgsForCall(0)).To(Equal(slug))
 
-						Expect(rs.UpdateCallCount()).To(Equal(2))
+						Expect(rs.UpdateCallCount()).To(Equal(1))
 						{
 							s, r := rs.UpdateArgsForCall(0)
 							Expect(s).To(Equal(slug))
@@ -437,22 +451,11 @@ pre_ga_user_groups:
 							Expect(r.ReleaseType).To(BeEquivalentTo("Major Release"))
 							Expect(r.EndOfSupportDate).To(Equal(endOfSupportDate))
 							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
+							Expect(r.Availability).To(Equal("All Users"))
 						}
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.0.0"))
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Major Release"))
 
-					})
-
-					It("updates the Pivnet release's availability to all users", func(){
-						err := publish.Execute(args)
-						Expect(err).NotTo(HaveOccurred())
-
-						Expect(rs.UpdateCallCount()).To(Equal(2))
-						{
-							s, r := rs.UpdateArgsForCall(1)
-							Expect(s).To(Equal(slug))
-							Expect(r.Availability).To(Equal("All Users"))
-						}
 					})
 
 					It("adds the appropriate OSL file", func() {
@@ -476,7 +479,7 @@ pre_ga_user_groups:
 							err := publish.Execute(args)
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(rs.UpdateCallCount()).To(Equal(2))
+							Expect(rs.UpdateCallCount()).To(Equal(1))
 							_, r := rs.UpdateArgsForCall(0)
 							Expect(r.ReleaseType).To(BeEquivalentTo("Major Release"))
 						})
@@ -495,7 +498,7 @@ pre_ga_user_groups:
 						Expect(rs.ListCallCount()).To(Equal(1))
 						Expect(rs.ListArgsForCall(0)).To(Equal(slug))
 
-						Expect(rs.UpdateCallCount()).To(Equal(2))
+						Expect(rs.UpdateCallCount()).To(Equal(1))
 						{
 							s, r := rs.UpdateArgsForCall(0)
 							Expect(s).To(Equal(slug))
@@ -503,17 +506,6 @@ pre_ga_user_groups:
 							Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
 							Expect(r.EndOfSupportDate).To(Equal(endOfSupportDate))
 							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
-						}
-					})
-
-					It("updates the Pivnet release's availability to all users", func(){
-						err := publish.Execute(args)
-						Expect(err).NotTo(HaveOccurred())
-
-						Expect(rs.UpdateCallCount()).To(Equal(2))
-						{
-							s, r := rs.UpdateArgsForCall(1)
-							Expect(s).To(Equal(slug))
 							Expect(r.Availability).To(Equal("All Users"))
 						}
 					})
@@ -538,7 +530,7 @@ pre_ga_user_groups:
 							err := publish.Execute(args)
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(rs.UpdateCallCount()).To(Equal(2))
+							Expect(rs.UpdateCallCount()).To(Equal(1))
 							_, r := rs.UpdateArgsForCall(0)
 							Expect(r.ReleaseType).To(BeEquivalentTo("Minor Release"))
 						})
@@ -565,7 +557,7 @@ pre_ga_user_groups:
 						Expect(rs.ListCallCount()).To(Equal(1))
 						Expect(rs.ListArgsForCall(0)).To(Equal(slug))
 
-						Expect(rs.UpdateCallCount()).To(Equal(2))
+						Expect(rs.UpdateCallCount()).To(Equal(1))
 						{
 							s, r := rs.UpdateArgsForCall(0)
 							Expect(s).To(Equal(slug))
@@ -573,17 +565,6 @@ pre_ga_user_groups:
 							Expect(r.ReleaseType).To(BeEquivalentTo("Maintenance Release"))
 							Expect(r.EndOfSupportDate).To(Equal(endOfSupportDate))
 							Expect(r.ReleaseDate).To(Equal("2016-05-04"))
-						}
-					})
-
-					It("updates the Pivnet release's availability to all users", func(){
-						err := publish.Execute(args)
-						Expect(err).NotTo(HaveOccurred())
-
-						Expect(rs.UpdateCallCount()).To(Equal(2))
-						{
-							s, r := rs.UpdateArgsForCall(1)
-							Expect(s).To(Equal(slug))
 							Expect(r.Availability).To(Equal("All Users"))
 						}
 					})
@@ -608,7 +589,7 @@ pre_ga_user_groups:
 							err := publish.Execute(args)
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(rs.UpdateCallCount()).To(Equal(2))
+							Expect(rs.UpdateCallCount()).To(Equal(1))
 							_, r := rs.UpdateArgsForCall(0)
 							Expect(r.ReleaseType).To(BeEquivalentTo("Security Release"))
 						})
@@ -854,7 +835,7 @@ pre_ga_user_groups:
 					err := publish.Execute(executeArgs)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(rs.UpdateCallCount()).To(Equal(2))
+					Expect(rs.UpdateCallCount()).To(Equal(1))
 					{
 						s, r := rs.UpdateArgsForCall(0)
 						Expect(s).To(Equal(slug))
@@ -863,34 +844,6 @@ pre_ga_user_groups:
 					}
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Version: 2.8.0"))
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Release type: Minor Release"))
-				})
-			})
-
-			When("a release on PivNet cannot update it's availability", func() {
-				BeforeEach(func() {
-					rs.ListReturns([]pivnet.Release{
-						{Version: someVersion.String()},
-					}, nil)
-					pfs.ListReturns(
-						[]pivnet.ProductFile{
-							{
-								ID:          42,
-								Name:        "PCF Pivotal Application Service v2.8 OSL",
-								FileVersion: "2.8",
-								FileType:    "Open Source License",
-							},
-						},
-						nil,
-					)
-
-					rs.UpdateReturnsOnCall(1, pivnet.Release{}, errors.New("second update error"))
-				})
-
-				It("returns an error", func() {
-					err := publish.Execute(executeArgs)
-					Expect(err).To(MatchError("second update error"))
-
-					Expect(rs.UpdateCallCount()).To(Equal(2))
 				})
 			})
 
@@ -969,6 +922,7 @@ pre_ga_user_groups:
 				It("returns an error", func() {
 					err := publish.Execute(executeArgs)
 					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring(userGroup1Name)))
 				})
 
 			})

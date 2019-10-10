@@ -194,80 +194,107 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 		return err
 	}
 
-	release.Version = versionToPublish.String()
-	release.ReleaseType = releaseType
+	endOfSupportDate, err := p.eogsDate(rv, releases)
+	if err != nil {
+		return err
+	}
 
-	release.ReleaseDate = p.Now().Format(publishDateFormat)
+	var availability string
+	if rv.IsGA() {
+		availability = "All Users"
+	} else {
+		availability = "Selected User Groups Only"
+	}
+
+	releaseDate := p.Now().Format(publishDateFormat)
+	updatedRelease, err := p.updateRelease(release, kilnfile.Slug, versionToPublish.String(), releaseType, releaseDate, endOfSupportDate, availability, licenseFileName)
+	if err != nil {
+		return err
+	}
+
+	err = p.addUserGroups(rv, updatedRelease, kilnfile)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p Publish) eogsDate(rv *releaseVersion, releases releaseSet) (string, error) {
 	if rv.IsGA() {
 		sameMajorAndMinor, err := rv.MajorMinorConstraint()
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		lastPatchRelease, matchExists, err := releases.FindLatest(sameMajorAndMinor)
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		if !matchExists {
-			release.EndOfSupportDate = endOfSupportFor(p.Now())
+			return endOfSupportFor(p.Now()), nil
 		} else if lastPatchRelease.EndOfSupportDate != "" {
-			release.EndOfSupportDate = lastPatchRelease.EndOfSupportDate
+			return lastPatchRelease.EndOfSupportDate, nil
 		} else {
-			return fmt.Errorf("previously published release %q does not have an End of General Support date", lastPatchRelease.Version)
+			return "", fmt.Errorf("previously published release %q does not have an End of General Support date", lastPatchRelease.Version)
 		}
-
 	}
+	return "", nil
+}
 
+func (p Publish) updateRelease(release pivnet.Release, slug, version string, releaseType pivnet.ReleaseType, releaseDate, endOfSupportDate, availability, licenseFileName string) (pivnet.Release, error) {
 	p.OutLogger.Println("Updating product record on PivNet...")
-	p.OutLogger.Printf("  Version: %s\n", release.Version)
-	p.OutLogger.Printf("  Release date: %s\n", release.ReleaseDate)
-	p.OutLogger.Printf("  Release type: %s\n", release.ReleaseType)
-	if release.EndOfSupportDate != "" {
-		p.OutLogger.Printf("  EOGS date: %s\n", release.EndOfSupportDate)
+	p.OutLogger.Printf("  Version: %s\n", version)
+	p.OutLogger.Printf("  Release date: %s\n", releaseDate)
+	p.OutLogger.Printf("  Release type: %s\n", releaseType)
+	if endOfSupportDate != "" {
+		p.OutLogger.Printf("  EOGS date: %s\n", endOfSupportDate)
 	}
-
+	p.OutLogger.Printf("  Availability: %s\n", availability)
 	if licenseFileName != "" {
 		p.OutLogger.Printf("  License file: %s\n", licenseFileName)
 	}
+	release.Version = version
+	release.ReleaseType = releaseType
+	release.ReleaseDate = releaseDate
+	release.EndOfSupportDate = endOfSupportDate
+	release.Availability = availability
+	updatedRelease, err := p.PivnetReleaseService.Update(slug, release)
+	if err != nil {
+		return pivnet.Release{}, err
+	}
+	return updatedRelease, nil
+}
 
-	if release, err = p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
+func (p Publish) addUserGroups(rv *releaseVersion, release pivnet.Release, kilnfile cargo.Kilnfile) error {
+	if rv.IsGA() {
+		return nil
+	}
+
+	allUserGroups, err := p.PivnetUserGroupsService.List()
+	if err != nil {
 		return err
 	}
 
-	if rv.IsGA() {
-		p.OutLogger.Println("  Availability: All Users")
-		release.Availability = "All Users"
-
-		if release, err = p.PivnetReleaseService.Update(kilnfile.Slug, release); err != nil {
-			return err
-		}
-	} else {
-		allUserGroups, err := p.PivnetUserGroupsService.List()
-		if err != nil {
-			return err
-		}
-
-		p.OutLogger.Println("  Granting access to groups...")
-		for _, userGroupName := range kilnfile.PreGaUserGroups {
-			p.OutLogger.Printf("    - %s\n", userGroupName)
-			success := false
-			for _, userGroup := range allUserGroups {
-				if userGroup.Name == userGroupName {
-					err := p.PivnetUserGroupsService.AddToRelease(kilnfile.Slug, release.ID, userGroup.ID)
-					if err != nil {
-						return err
-					}
-					success = true
-					break
+	p.OutLogger.Println("Granting access to groups...")
+	for _, userGroupName := range kilnfile.PreGaUserGroups {
+		p.OutLogger.Printf("  - %s\n", userGroupName)
+		groupFound := false
+		for _, userGroup := range allUserGroups {
+			if userGroup.Name == userGroupName {
+				err := p.PivnetUserGroupsService.AddToRelease(kilnfile.Slug, release.ID, userGroup.ID)
+				if err != nil {
+					return err
 				}
+				groupFound = true
+				break
 			}
-			if !success {
-				return fmt.Errorf("no matching user group '%s' on Pivnet", userGroupName)
-			}
+		}
+		if !groupFound {
+			return fmt.Errorf("no matching user group %q on Pivnet", userGroupName)
 		}
 	}
-
 	return nil
 }
 
