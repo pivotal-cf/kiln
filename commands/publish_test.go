@@ -21,9 +21,9 @@ var _ = Describe("Publish", func() {
 	const (
 		slug           = "elastic-runtime"
 		userGroup1Name = "Dell/EMC Early Access Group"
-		userGroup1ID = 123
+		userGroup1ID   = 123
 		userGroup2Name = "PCF R&D"
-		userGroup2ID = 456
+		userGroup2ID   = 456
 
 		defaultKilnFileBody = `---
 slug: ` + slug + `
@@ -31,7 +31,6 @@ pre_ga_user_groups:
   - ` + userGroup1Name + `
   - ` + userGroup2Name + `
 `
-
 	)
 
 	var someVersion *semver.Version
@@ -90,7 +89,7 @@ pre_ga_user_groups:
 					FS:                        fs,
 					PivnetReleaseService:      rs,
 					PivnetProductFilesService: pfs,
-					PivnetUserGroupsService: ugs,
+					PivnetUserGroupsService:   ugs,
 					Now: func() time.Time {
 						return now
 					},
