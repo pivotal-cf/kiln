@@ -20,7 +20,7 @@ Commands:
   bake     bakes a tile
   fetch    fetches releases
   help     prints this usage information
-  publish  prints this usage information
+  publish  publish tile on Pivnet
   update   updates stemcell_criteria and releases
   version  prints the kiln release version
 `

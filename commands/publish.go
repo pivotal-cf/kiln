@@ -407,8 +407,8 @@ func releaseType(window string, includesSecurityFix bool, v *releaseVersion) piv
 // Usage writes helpful information.
 func (p Publish) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "This command prints helpful usage information.",
-		ShortDescription: "prints this usage information",
+		Description:      "Update release date, end of general support date, and license files for a tile on Pivnet.",
+		ShortDescription: "publish tile on Pivnet",
 		Flags:            p.Options,
 	}
 }
