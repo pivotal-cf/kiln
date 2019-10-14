@@ -157,6 +157,9 @@ pre_ga_user_groups:
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Granting access to groups..."))
 					Expect(outLoggerBuffer.String()).To(ContainSubstring(userGroup1Name))
 					Expect(outLoggerBuffer.String()).To(ContainSubstring(userGroup2Name))
+
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("Successfully published tile."))
+
 				})
 
 				Context("when previous alphas have been published", func() {
@@ -610,7 +613,7 @@ pre_ga_user_groups:
 
 		})
 
-		When("not the happy case", func() {
+		When("the sad/unhappy case", func() {
 			var (
 				publish commands.Publish
 				now     time.Time
@@ -764,7 +767,7 @@ pre_ga_user_groups:
 					Expect(rs.UpdateCallCount()).To(Equal(0))
 					Expect(pfs.ListCallCount()).To(Equal(1))
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
-					Expect(err).To(MatchError("bad stuff happened"))
+					Expect(err).To(MatchError(ContainSubstring("bad stuff happened")))
 				})
 			})
 
@@ -819,7 +822,7 @@ pre_ga_user_groups:
 					Expect(rs.UpdateCallCount()).To(Equal(0))
 					Expect(pfs.ListCallCount()).To(Equal(1))
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
-					Expect(err).To(MatchError("more bad stuff happened"))
+					Expect(err).To(MatchError(ContainSubstring("Failed to publish tile: more bad stuff happened")))
 				})
 			})
 
@@ -899,7 +902,7 @@ pre_ga_user_groups:
 				It("returns an error ", func() {
 					err := publish.Execute(executeArgs)
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("error returning user groups"))
+					Expect(err).To(MatchError(ContainSubstring("error returning user groups")))
 				})
 			})
 
@@ -917,7 +920,7 @@ pre_ga_user_groups:
 				It("returns an error ", func() {
 					err := publish.Execute(executeArgs)
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("error adding user group to release"))
+					Expect(err).To(MatchError(ContainSubstring("error adding user group to release")))
 				})
 			})
 

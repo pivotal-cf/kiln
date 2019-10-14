@@ -80,7 +80,13 @@ func (p Publish) Execute(args []string) error {
 		return err
 	}
 
-	return p.updateReleaseOnPivnet(kilnfile, buildVersion)
+	err = p.updateReleaseOnPivnet(kilnfile, buildVersion)
+	if err != nil {
+		return fmt.Errorf("Failed to publish tile: %s", err)
+	} else {
+		p.OutLogger.Println("Successfully published tile.")
+	}
+	return nil
 }
 
 func (p Publish) recoverFromPanic() func() {
