@@ -260,6 +260,8 @@ func (p Publish) updateRelease(release pivnet.Release, slug, version string, rel
 	p.OutLogger.Printf("  Availability: %s\n", availability)
 	if licenseFileName != "" {
 		p.OutLogger.Printf("  License file: %s\n", licenseFileName)
+	} else {
+		p.OutLogger.Printf("   License file: None, pre-GA release")
 	}
 	release.Version = version
 	release.ReleaseType = releaseType

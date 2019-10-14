@@ -133,6 +133,7 @@ pre_ga_user_groups:
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("  License file: None, pre-GA release"))
 				})
 
 				It("adds the pre-GA user groups to the release", func() {
@@ -230,6 +231,7 @@ pre_ga_user_groups:
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("  License file: None, pre-GA release"))
 				})
 
 				It("adds the pre-GA user groups to the release", func() {
@@ -320,6 +322,7 @@ pre_ga_user_groups:
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
+					Expect(outLoggerBuffer.String()).To(ContainSubstring("  License file: None, pre-GA release"))
 				})
 
 				It("adds the pre-GA user groups to the release", func() {
