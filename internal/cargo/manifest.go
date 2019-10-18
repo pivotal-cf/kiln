@@ -32,10 +32,11 @@ type KilnfileLock struct {
 }
 
 type Kilnfile struct {
-	Stemcell        Stemcell              `yaml:"stemcell_criteria"`
-	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources"`
-	Slug            string                `yaml:"slug"`
-	PreGaUserGroups []string              `yaml:"pre_ga_user_groups"`
+	Stemcell                  Stemcell              `yaml:"stemcell_criteria"`
+	ReleaseSources            []ReleaseSourceConfig `yaml:"release_sources"`
+	ReleaseSourcesForTestOnly []ReleaseSourceConfig `yaml:"release_sources_for_test_only"`
+	Slug                      string                `yaml:"slug"`
+	PreGaUserGroups           []string              `yaml:"pre_ga_user_groups"`
 }
 
 type ReleaseSourceConfig struct {

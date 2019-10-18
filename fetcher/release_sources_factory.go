@@ -13,18 +13,24 @@ type ReleaseSource interface {
 	DownloadReleases(releasesDir string, matchedS3Objects ReleaseSet, downloadThreads int) error
 }
 
-type releaseSourceFunction func(cargo.Kilnfile) []ReleaseSource
+type releaseSourceFunction func(cargo.Kilnfile, bool) []ReleaseSource
 
-func (rsf releaseSourceFunction) ReleaseSources(kilnfile cargo.Kilnfile) []ReleaseSource {
-	return rsf(kilnfile)
+func (rsf releaseSourceFunction) ReleaseSources(kilnfile cargo.Kilnfile, includeTestReleases bool) []ReleaseSource {
+	return rsf(kilnfile, includeTestReleases)
 }
 
 func NewReleaseSourcesFactory(outLogger *log.Logger) releaseSourceFunction {
-	return func(kilnfile cargo.Kilnfile) []ReleaseSource {
+	return func(kilnfile cargo.Kilnfile, includeTestReleases bool) []ReleaseSource {
 		var releaseSources []ReleaseSource
 
 		for _, releaseConfig := range kilnfile.ReleaseSources {
 			releaseSources = append(releaseSources, releaseSourceFor(releaseConfig, outLogger))
+		}
+
+		if includeTestReleases {
+			for _, releaseConfig := range kilnfile.ReleaseSourcesForTestOnly {
+				releaseSources = append(releaseSources, releaseSourceFor(releaseConfig, outLogger))
+			}
 		}
 
 		return releaseSources

@@ -59,16 +59,17 @@ type Fetch struct {
 		Kilnfile    string `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
 		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 
-		VariablesFiles  []string `short:"vf" long:"variables-file" description:"path to variables file"`
-		Variables       []string `short:"vr" long:"variable" description:"variable in key=value format"`
-		DownloadThreads int      `short:"dt" long:"download-threads" description:"number of parallel threads to download parts from S3"`
-		NoConfirm       bool     `short:"n" long:"no-confirm" description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
+		VariablesFiles      []string `short:"vf" long:"variables-file"        description:"path to variables file"`
+		Variables           []string `short:"vr" long:"variable"              description:"variable in key=value format"`
+		DownloadThreads     int      `short:"dt" long:"download-threads"      description:"number of parallel threads to download parts from S3"`
+		NoConfirm           bool     `short:"n"  long:"no-confirm"            description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
+		IncludeTestReleases bool     `short:"t"  long:"include-test-releases" description:"include release sources that are only intended for testing, and not to be used for shipped products"`
 	}
 }
 
 //go:generate counterfeiter -o ./fakes/release_sources_factory.go --fake-name ReleaseSourcesFactory . ReleaseSourcesFactory
 type ReleaseSourcesFactory interface {
-	ReleaseSources(cargo.Kilnfile) []fetcher.ReleaseSource
+	ReleaseSources(kilnfile cargo.Kilnfile, includeTestReleases bool) []fetcher.ReleaseSource
 }
 
 func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, localReleaseDirectory LocalReleaseDirectory) Fetch {
@@ -176,7 +177,7 @@ func (f Fetch) Execute(args []string) error {
 }
 
 func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseSet, stemcell cargo.Stemcell) (satisfied, unsatisfied fetcher.ReleaseSet, err error) {
-	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile)
+	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile, f.Options.IncludeTestReleases)
 	for _, releaseSource := range releaseSources {
 		matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet, stemcell)
 		if err != nil {
