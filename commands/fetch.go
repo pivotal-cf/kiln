@@ -149,7 +149,7 @@ func (f Fetch) Execute(args []string) error {
 	if err := f.verifyCompiledReleaseStemcell(availableLocalReleaseSet, kilnfileLock.Stemcell); err != nil {
 		return err
 	}
-	desiredReleaseSet := fetcher.NewReleaseSet(kilnfileLock)
+	desiredReleaseSet := fetcher.NewReleaseSet(kilnfileLock.Releases, kilnfileLock.Stemcell)
 	extraReleaseSet := availableLocalReleaseSet.Without(desiredReleaseSet)
 
 	err = f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleaseSet, f.Options.NoConfirm)

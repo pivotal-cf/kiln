@@ -90,7 +90,7 @@ func (mr MissingReleases) Execute(args []string) error {
 	}
 
 	var satisfiedReleaseSet fetcher.ReleaseSet
-	unsatisfiedReleaseSet := fetcher.NewReleaseSet(kilnfileLock)
+	unsatisfiedReleaseSet := fetcher.NewReleaseSet(kilnfileLock.Releases, kilnfileLock.Stemcell)
 
 	if len(unsatisfiedReleaseSet) > 0 {
 		satisfiedReleaseSet, unsatisfiedReleaseSet, err = mr.findMissingReleases(kilnfile, satisfiedReleaseSet, unsatisfiedReleaseSet, kilnfileLock.Stemcell)

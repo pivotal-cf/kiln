@@ -26,10 +26,9 @@ func newCompiledRelease(release cargo.Release, stemcell cargo.Stemcell) Compiled
 	}
 }
 
-func NewReleaseSet(kilnfileLock cargo.KilnfileLock) ReleaseSet {
+func NewReleaseSet(releases []cargo.Release, stemcell cargo.Stemcell) ReleaseSet {
 	set := make(ReleaseSet)
-	stemcell := kilnfileLock.Stemcell
-	for _, release := range kilnfileLock.Releases {
+	for _, release := range releases {
 		compiledRelease := newCompiledRelease(release, stemcell)
 		set[compiledRelease.ID] = compiledRelease
 	}

@@ -98,6 +98,7 @@ func main() {
 
 	commandSet["fetch"] = commands.NewFetch(outLogger, releaseSourcesFactory, localReleaseDirectory)
 	commandSet["missing-releases"] = commands.NewMissingReleases(outLogger, releaseSourcesFactory)
+	commandSet["get-release"] = commands.NewGetRelease(outLogger, releaseSourcesFactory)
 	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
 	commandSet["bake"] = commands.NewBake(
 		interpolator,
