@@ -10,10 +10,11 @@ import (
 )
 
 type ReleaseSourcesFactory struct {
-	ReleaseSourcesStub        func(cargo.Kilnfile) []fetcher.ReleaseSource
+	ReleaseSourcesStub        func(cargo.Kilnfile, bool) []fetcher.ReleaseSource
 	releaseSourcesMutex       sync.RWMutex
 	releaseSourcesArgsForCall []struct {
 		arg1 cargo.Kilnfile
+		arg2 bool
 	}
 	releaseSourcesReturns struct {
 		result1 []fetcher.ReleaseSource
@@ -25,16 +26,17 @@ type ReleaseSourcesFactory struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseSourcesFactory) ReleaseSources(arg1 cargo.Kilnfile) []fetcher.ReleaseSource {
+func (fake *ReleaseSourcesFactory) ReleaseSources(arg1 cargo.Kilnfile, arg2 bool) []fetcher.ReleaseSource {
 	fake.releaseSourcesMutex.Lock()
 	ret, specificReturn := fake.releaseSourcesReturnsOnCall[len(fake.releaseSourcesArgsForCall)]
 	fake.releaseSourcesArgsForCall = append(fake.releaseSourcesArgsForCall, struct {
 		arg1 cargo.Kilnfile
-	}{arg1})
-	fake.recordInvocation("ReleaseSources", []interface{}{arg1})
+		arg2 bool
+	}{arg1, arg2})
+	fake.recordInvocation("ReleaseSources", []interface{}{arg1, arg2})
 	fake.releaseSourcesMutex.Unlock()
 	if fake.ReleaseSourcesStub != nil {
-		return fake.ReleaseSourcesStub(arg1)
+		return fake.ReleaseSourcesStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -49,17 +51,17 @@ func (fake *ReleaseSourcesFactory) ReleaseSourcesCallCount() int {
 	return len(fake.releaseSourcesArgsForCall)
 }
 
-func (fake *ReleaseSourcesFactory) ReleaseSourcesCalls(stub func(cargo.Kilnfile) []fetcher.ReleaseSource) {
+func (fake *ReleaseSourcesFactory) ReleaseSourcesCalls(stub func(cargo.Kilnfile, bool) []fetcher.ReleaseSource) {
 	fake.releaseSourcesMutex.Lock()
 	defer fake.releaseSourcesMutex.Unlock()
 	fake.ReleaseSourcesStub = stub
 }
 
-func (fake *ReleaseSourcesFactory) ReleaseSourcesArgsForCall(i int) cargo.Kilnfile {
+func (fake *ReleaseSourcesFactory) ReleaseSourcesArgsForCall(i int) (cargo.Kilnfile, bool) {
 	fake.releaseSourcesMutex.RLock()
 	defer fake.releaseSourcesMutex.RUnlock()
 	argsForCall := fake.releaseSourcesArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *ReleaseSourcesFactory) ReleaseSourcesReturns(result1 []fetcher.ReleaseSource) {

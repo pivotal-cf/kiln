@@ -46,7 +46,7 @@ func (releases ErrorMissingReleases) Error() string {
 	for id, _ := range releases {
 		missing = append(missing, fmt.Sprintf("- %s (%s)", id.Name, id.Version))
 	}
-	return fmt.Sprintf("could not find the following releases\n%s", strings.Join(missing, "\n"))
+	return fmt.Sprintf("could not find the following releases (Consider using --include-unreleasable-releases flag)\n%s", strings.Join(missing, "\n"))
 }
 
 type Fetch struct {
@@ -59,16 +59,17 @@ type Fetch struct {
 		Kilnfile    string `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
 		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 
-		VariablesFiles  []string `short:"vf" long:"variables-file" description:"path to variables file"`
-		Variables       []string `short:"vr" long:"variable" description:"variable in key=value format"`
-		DownloadThreads int      `short:"dt" long:"download-threads" description:"number of parallel threads to download parts from S3"`
-		NoConfirm       bool     `short:"n" long:"no-confirm" description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
+		VariablesFiles      []string `short:"vf" long:"variables-file" description:"path to variables file"`
+		Variables           []string `short:"vr" long:"variable" description:"variable in key=value format"`
+		DownloadThreads     int      `short:"dt" long:"download-threads" description:"number of parallel threads to download parts from S3"`
+		NoConfirm           bool     `short:"n" long:"no-confirm" description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
+		IncludeUnreleasable bool     `short:"u" long:"include-unreleasable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
 	}
 }
 
 //go:generate counterfeiter -o ./fakes/release_sources_factory.go --fake-name ReleaseSourcesFactory . ReleaseSourcesFactory
 type ReleaseSourcesFactory interface {
-	ReleaseSources(cargo.Kilnfile) []fetcher.ReleaseSource
+	ReleaseSources(cargo.Kilnfile, bool) []fetcher.ReleaseSource
 }
 
 func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, localReleaseDirectory LocalReleaseDirectory) Fetch {
@@ -90,6 +91,10 @@ func (f Fetch) Execute(args []string) error {
 	args, err := jhanda.Parse(&f.Options, args)
 	if err != nil {
 		return err
+	}
+
+	if f.Options.IncludeUnreleasable {
+		f.logger.Println(`WARNING - the "include-unreleasable-releases" flag was set. This allows fetching from development sources. DO NOT PUBLISH A TILE BUILT WITH THESE FETCHED RELEASES!`)
 	}
 
 	if _, err := os.Stat(f.Options.ReleasesDir); err != nil {
@@ -176,7 +181,7 @@ func (f Fetch) Execute(args []string) error {
 }
 
 func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseSet, stemcell cargo.Stemcell) (satisfied, unsatisfied fetcher.ReleaseSet, err error) {
-	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile)
+	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile, f.Options.IncludeUnreleasable)
 	for _, releaseSource := range releaseSources {
 		matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet, stemcell)
 		if err != nil {

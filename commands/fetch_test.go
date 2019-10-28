@@ -244,7 +244,7 @@ stemcell_criteria:
 				})
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(
-					"could not find the following releases\n- not-found-in-any-release-source (0.0.1)")) // Could not find an exact match for these releases in any of the release sources we checked
+					"could not find the following releases (Consider using --include-unreleasable-releases flag)\n- not-found-in-any-release-source (0.0.1)")) // Could not find an exact match for these releases in any of the release sources we checked
 			})
 		})
 

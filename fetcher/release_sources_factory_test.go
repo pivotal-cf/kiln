@@ -21,7 +21,7 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 		rsFactory = NewReleaseSourcesFactory(log.New(GinkgoWriter, "", log.LstdFlags))
 	})
 
-	Context("on the happy path", func() {
+	Context("when include-unreleaseable-releases is true", func() {
 		BeforeEach(func() {
 			kilnfile = cargo.Kilnfile{
 				ReleaseSources: []cargo.ReleaseSourceConfig{
@@ -37,7 +37,7 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 		})
 
 		It("builds the correct release sources", func() {
-			releaseSources := rsFactory.ReleaseSources(kilnfile)
+			releaseSources := rsFactory.ReleaseSources(kilnfile, true)
 			Expect(releaseSources).To(HaveLen(4))
 			var (
 				s3CompiledReleaseSource S3CompiledReleaseSource
@@ -63,6 +63,34 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 			Expect(releaseSources[3]).To(MatchFields(IgnoreExtras, Fields{
 				"Bucket": Equal(kilnfile.ReleaseSources[3].Bucket),
 				"Regex":  Equal(kilnfile.ReleaseSources[3].Regex),
+			}))
+		})
+	})
+
+	Context("when include-unreleaseable-releases is false", func() {
+		BeforeEach(func() {
+			kilnfile = cargo.Kilnfile{
+				ReleaseSources: []cargo.ReleaseSourceConfig{
+					{ReleasableReleases: true, Type: "s3", Compiled: true, Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
+						Regex: `^2.8/.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>\d+\.\d+)(\.0)?\.tgz$`},
+					{Type: "s3", Compiled: false, Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+						Regex: `^2.8/.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+)\.tgz$`},
+					{Type: "bosh.io"},
+					{Type: "s3", Compiled: false, Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+						Regex: `^(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+-?[a-zA-Z0-9]\.?[0-9]*)\.tgz$`},
+				},
+			}
+		})
+
+		It("builds the correct release sources", func() {
+			releaseSources := rsFactory.ReleaseSources(kilnfile, false)
+			Expect(releaseSources).To(HaveLen(1))
+			var s3CompiledReleaseSource S3CompiledReleaseSource
+
+			Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3CompiledReleaseSource))
+			Expect(releaseSources[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Bucket": Equal(kilnfile.ReleaseSources[0].Bucket),
+				"Regex":  Equal(kilnfile.ReleaseSources[0].Regex),
 			}))
 		})
 	})

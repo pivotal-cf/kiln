@@ -64,12 +64,13 @@ Usage: kiln [options] fetch [<args>]
   --version, -v  bool  prints the kiln release version (default: false)
 
 Command Arguments:
-  --download-threads, -dt    int                number of parallel threads to download parts from S3
-  --kilnfile, -kf            string             path to Kilnfile (default: Kilnfile)
-  --no-confirm, -n           bool               non-interactive mode, will delete extra releases in releases dir without prompting
-  --releases-directory, -rd  string             path to a directory to download releases into (default: releases)
-  --variable, -vr            string (variadic)  variable in key=value format
-  --variables-file, -vf      string (variadic)  path to variables file
+  --download-threads, -dt              int                number of parallel threads to download parts from S3
+  --include-unreleasable-releases, -u  bool               include releases that would not be shipped with the tile (development builds)
+  --kilnfile, -kf                      string             path to Kilnfile (default: Kilnfile)
+  --no-confirm, -n                     bool               non-interactive mode, will delete extra releases in releases dir without prompting
+  --releases-directory, -rd            string             path to a directory to download releases into (default: releases)
+  --variable, -vr                      string (variadic)  variable in key=value format
+  --variables-file, -vf                string (variadic)  path to variables file
 `
 
 var _ = Describe("help", func() {
