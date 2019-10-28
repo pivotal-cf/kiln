@@ -39,14 +39,14 @@ type Kilnfile struct {
 }
 
 type ReleaseSourceConfig struct {
-	Type               string `yaml:"type"`
-	Compiled           bool   `yaml:"compiled"`
-	Bucket             string `yaml:"bucket"`
-	Region             string `yaml:"region"`
-	AccessKeyId        string `yaml:"access_key_id"`
-	SecretAccessKey    string `yaml:"secret_access_key"`
-	Regex              string `yaml:"regex"`
-	ReleasableReleases bool   `yaml:"releasable_releases"`
+	Type            string `yaml:"type"`
+	Compiled        bool   `yaml:"compiled"`
+	Bucket          string `yaml:"bucket"`
+	Region          string `yaml:"region"`
+	AccessKeyId     string `yaml:"access_key_id"`
+	SecretAccessKey string `yaml:"secret_access_key"`
+	Regex           string `yaml:"regex"`
+	Publishable     bool   `yaml:"publishable"`
 }
 
 type Stemcell struct {

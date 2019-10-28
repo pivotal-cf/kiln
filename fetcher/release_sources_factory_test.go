@@ -21,7 +21,7 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 		rsFactory = NewReleaseSourcesFactory(log.New(GinkgoWriter, "", log.LstdFlags))
 	})
 
-	Context("when include-unreleaseable-releases is true", func() {
+	Context("when allow-only-publishable-releases is false", func() {
 		BeforeEach(func() {
 			kilnfile = cargo.Kilnfile{
 				ReleaseSources: []cargo.ReleaseSourceConfig{
@@ -37,7 +37,7 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 		})
 
 		It("builds the correct release sources", func() {
-			releaseSources := rsFactory.ReleaseSources(kilnfile, true)
+			releaseSources := rsFactory.ReleaseSources(kilnfile, false)
 			Expect(releaseSources).To(HaveLen(4))
 			var (
 				s3CompiledReleaseSource S3CompiledReleaseSource
@@ -67,11 +67,11 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 		})
 	})
 
-	Context("when include-unreleaseable-releases is false", func() {
+	Context("when allow-only-publishable-releases is true", func() {
 		BeforeEach(func() {
 			kilnfile = cargo.Kilnfile{
 				ReleaseSources: []cargo.ReleaseSourceConfig{
-					{ReleasableReleases: true, Type: "s3", Compiled: true, Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
+					{Publishable: true, Type: "s3", Compiled: true, Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
 						Regex: `^2.8/.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>\d+\.\d+)(\.0)?\.tgz$`},
 					{Type: "s3", Compiled: false, Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
 						Regex: `^2.8/.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+)\.tgz$`},
@@ -83,7 +83,7 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 		})
 
 		It("builds the correct release sources", func() {
-			releaseSources := rsFactory.ReleaseSources(kilnfile, false)
+			releaseSources := rsFactory.ReleaseSources(kilnfile, true)
 			Expect(releaseSources).To(HaveLen(1))
 			var s3CompiledReleaseSource S3CompiledReleaseSource
 
