@@ -132,7 +132,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetche
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 	}
 	if !f.Options.AllowOnlyPublishableReleases {
-		f.logger.Println("WARNING - the \"allow-only-publishable-releases\" flag was not set. Development sources may be fetched.\nEXERCISE CAUTION WHEN PUSBLISHING A TILE WITH THESE RELEASES!")
+		f.logger.Println("WARNING - the \"allow-only-publishable-releases\" flag was not set. Some fetched releases may be intended for development/testing only.\nEXERCISE CAUTION WHEN PUBLISHING A TILE WITH THESE RELEASES!")
 	}
 	if _, err := os.Stat(f.Options.ReleasesDir); err != nil {
 		if os.IsNotExist(err) {
