@@ -88,71 +88,16 @@ type LocalReleaseDirectory interface {
 }
 
 func (f Fetch) Execute(args []string) error {
-	args, err := jhanda.Parse(&f.Options, args)
+	kilnfile, kilnfileLock, availableLocalReleaseSet, err := f.setup(args)
 	if err != nil {
 		return err
 	}
 
-	if !f.Options.AllowOnlyPublishableReleases {
-		f.logger.Println("WARNING - the \"allow-only-publishable-releases\" flag was not set. Development sources may be fetched.\nEXERCISE CAUTION WHEN PUSBLISHING A TILE WITH THESE RELEASES!")
-	}
-
-	if _, err := os.Stat(f.Options.ReleasesDir); err != nil {
-		if os.IsNotExist(err) {
-			os.MkdirAll(f.Options.ReleasesDir, 0777)
-		} else {
-			return fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
-		}
-	}
-
-	templateVariablesService := baking.NewTemplateVariablesService()
-	templateVariables, err := templateVariablesService.FromPathsAndPairs(f.Options.VariablesFiles, f.Options.Variables)
-	if err != nil {
-		return fmt.Errorf("failed to parse template variables: %s", err)
-	}
-
-	kilnfileYAML, err := ioutil.ReadFile(f.Options.Kilnfile)
+	err = f.verifyCompiledReleaseStemcell(availableLocalReleaseSet, kilnfileLock.Stemcell)
 	if err != nil {
 		return err
 	}
 
-	interpolator := builder.NewInterpolator()
-	interpolatedMetadata, err := interpolator.Interpolate(builder.InterpolateInput{
-		Variables: templateVariables,
-	}, kilnfileYAML)
-	if err != nil {
-		return ConfigFileError{err: err, HumanReadableConfigFileName: "interpolating variable files with Kilnfile"}
-	}
-
-	f.logger.Println("getting release information from " + f.Options.Kilnfile)
-
-	var kilnfile cargo.Kilnfile
-	err = yaml.Unmarshal(interpolatedMetadata, &kilnfile)
-	if err != nil {
-		return ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile specification " + f.Options.Kilnfile}
-	}
-
-	f.logger.Println("getting release information from Kilnfile.lock")
-	lockFileName := fmt.Sprintf("%s.lock", f.Options.Kilnfile)
-	lockFile, err := os.Open(lockFileName)
-	if err != nil {
-		return err
-	}
-	defer lockFile.Close()
-
-	var kilnfileLock cargo.KilnfileLock
-	err = yaml.NewDecoder(lockFile).Decode(&kilnfileLock)
-	if err != nil {
-		return ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile.lock " + lockFileName}
-	}
-
-	availableLocalReleaseSet, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
-	if err != nil {
-		return err
-	}
-	if err := f.verifyCompiledReleaseStemcell(availableLocalReleaseSet, kilnfileLock.Stemcell); err != nil {
-		return err
-	}
 	desiredReleaseSet := fetcher.NewReleaseSet(kilnfileLock)
 	extraReleaseSet := availableLocalReleaseSet.Without(desiredReleaseSet)
 
@@ -179,6 +124,70 @@ func (f Fetch) Execute(args []string) error {
 
 	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, kilnfileLock)
 }
+
+func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetcher.ReleaseSet, error) {
+	args, err := jhanda.Parse(&f.Options, args)
+
+	if err != nil {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
+	}
+	if !f.Options.AllowOnlyPublishableReleases {
+		f.logger.Println("WARNING - the \"allow-only-publishable-releases\" flag was not set. Development sources may be fetched.\nEXERCISE CAUTION WHEN PUSBLISHING A TILE WITH THESE RELEASES!")
+	}
+	if _, err := os.Stat(f.Options.ReleasesDir); err != nil {
+		if os.IsNotExist(err) {
+			os.MkdirAll(f.Options.ReleasesDir, 0777)
+		} else {
+			return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
+		}
+	}
+	templateVariablesService := baking.NewTemplateVariablesService()
+	templateVariables, err := templateVariablesService.FromPathsAndPairs(f.Options.VariablesFiles, f.Options.Variables)
+	if err != nil {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to parse template variables: %s", err)
+	}
+
+	kilnfileYAML, err := ioutil.ReadFile(f.Options.Kilnfile)
+	if err != nil {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
+	}
+	interpolator := builder.NewInterpolator()
+	interpolatedMetadata, err := interpolator.Interpolate(builder.InterpolateInput{
+		Variables: templateVariables,
+	}, kilnfileYAML)
+	if err != nil {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, ConfigFileError{err: err, HumanReadableConfigFileName: "interpolating variable files with Kilnfile"}
+	}
+
+	f.logger.Println("getting release information from " + f.Options.Kilnfile)
+	var kilnfile cargo.Kilnfile
+	err = yaml.Unmarshal(interpolatedMetadata, &kilnfile)
+	if err != nil {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile specification " + f.Options.Kilnfile}
+	}
+
+	f.logger.Println("getting release information from Kilnfile.lock")
+	lockFileName := fmt.Sprintf("%s.lock", f.Options.Kilnfile)
+	lockFile, err := os.Open(lockFileName)
+	if err != nil {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
+	}
+	defer lockFile.Close()
+
+	var kilnfileLock cargo.KilnfileLock
+	err = yaml.NewDecoder(lockFile).Decode(&kilnfileLock)
+	if err != nil {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile.lock " + lockFileName}
+	}
+
+	availableLocalReleaseSet, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
+	if err != nil {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
+	}
+
+	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
+}
+
 
 func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseSet, stemcell cargo.Stemcell) (satisfied, unsatisfied fetcher.ReleaseSet, err error) {
 	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile, f.Options.AllowOnlyPublishableReleases)
