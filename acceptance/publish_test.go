@@ -1,12 +1,13 @@
 package acceptance_test
 
 import (
-	"github.com/onsi/gomega/types"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"time"
+
+	"github.com/onsi/gomega/types"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,7 +28,7 @@ var _ = Describe("publish", func() {
 	)
 
 	var (
-		client pivnet.Client
+		client       pivnet.Client
 		token, tmpDir, initialDir, host,
 		kilnfileBody string
 	)
@@ -100,7 +101,7 @@ pre_ga_user_groups:
 			"--pivnet-host", host)
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(session, 20).Should(gexec.Exit(0))
+		Eventually(session, 60).Should(gexec.Exit(0))
 
 		rel, err := client.Releases.Get(slug, releaseID)
 		Expect(err).NotTo(HaveOccurred())
@@ -117,5 +118,5 @@ pre_ga_user_groups:
 })
 
 func HaveFieldWithValue(field string, value interface{}) types.GomegaMatcher {
-  return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{field: Equal(value)})
+	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{field: Equal(value)})
 }
