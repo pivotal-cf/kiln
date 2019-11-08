@@ -11,6 +11,13 @@ func (cr CompiledRelease) DownloadString() string {
 	return cr.Path
 }
 
+func (cr CompiledRelease) Satisfies(rr ReleaseRequirement) bool {
+	return cr.ID.Name == rr.Name &&
+		cr.ID.Version == rr.Version &&
+		cr.StemcellOS == rr.StemcellOS &&
+		cr.StemcellVersion == rr.StemcellVersion
+}
+
 func (cr CompiledRelease) IsBuiltRelease() bool {
 	return cr.StemcellOS == "" && cr.StemcellVersion == ""
 }

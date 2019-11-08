@@ -39,7 +39,7 @@ func (err ConfigFileError) Error() string {
 	return fmt.Sprintf("encountered a configuration file error with %s: %s", err.HumanReadableConfigFileName, err.err.Error())
 }
 
-type ErrorMissingReleases fetcher.ReleaseSet
+type ErrorMissingReleases fetcher.ReleaseRequirementSet
 
 func (releases ErrorMissingReleases) Error() string {
 	var missing []string
@@ -98,16 +98,13 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	desiredReleaseSet := fetcher.NewReleaseSet(kilnfileLock)
-	extraReleaseSet := availableLocalReleaseSet.Without(desiredReleaseSet)
+	desiredReleaseSet := fetcher.NewReleaseRequirementSet(kilnfileLock)
+	satisfiedReleaseSet, unsatisfiedReleaseSet, extraReleaseSet := desiredReleaseSet.Partition(availableLocalReleaseSet)
 
 	err = f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleaseSet, f.Options.NoConfirm)
 	if err != nil {
 		f.logger.Println("failed deleting some releases: ", err.Error())
 	}
-
-	satisfiedReleaseSet := availableLocalReleaseSet.Without(extraReleaseSet)
-	unsatisfiedReleaseSet := desiredReleaseSet.Without(availableLocalReleaseSet)
 
 	if len(unsatisfiedReleaseSet) > 0 {
 		f.logger.Printf("Found %d missing releases to download", len(unsatisfiedReleaseSet))
@@ -189,7 +186,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetche
 }
 
 
-func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseSet, stemcell cargo.Stemcell) (satisfied, unsatisfied fetcher.ReleaseSet, err error) {
+func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet fetcher.ReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseRequirementSet, stemcell cargo.Stemcell) (satisfied fetcher.ReleaseSet, unsatisfied fetcher.ReleaseRequirementSet, err error) {
 	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile, f.Options.AllowOnlyPublishableReleases)
 	for _, releaseSource := range releaseSources {
 		matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet, stemcell)
@@ -202,7 +199,8 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedRelease
 			return nil, nil, err
 		}
 
-		unsatisfiedReleaseSet, satisfiedReleaseSet = unsatisfiedReleaseSet.TransferElements(matchedReleaseSet, satisfiedReleaseSet)
+		satisfiedReleaseSet = satisfiedReleaseSet.With(matchedReleaseSet)
+		unsatisfiedReleaseSet = unsatisfiedReleaseSet.WithoutReleases(matchedReleaseSet.ReleaseIDs())
 	}
 
 	return satisfiedReleaseSet, unsatisfiedReleaseSet, nil

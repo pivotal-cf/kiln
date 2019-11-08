@@ -22,7 +22,7 @@ const (
 
 type S3CompiledReleaseSource S3ReleaseSource
 
-func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet, stemcell cargo.Stemcell) (ReleaseSet, error) {
+func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet, stemcell cargo.Stemcell) (ReleaseSet, error) {
 	matchedS3Objects := make(map[ReleaseID][]CompiledRelease)
 
 	exp, err := regexp.Compile(r.Regex)

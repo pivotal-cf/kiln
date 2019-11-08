@@ -27,7 +27,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 	Context("happy path", func() {
 		var (
 			releaseSource     *fetcher.BOSHIOReleaseSource
-			desiredReleaseSet fetcher.ReleaseSet
+			desiredReleaseSet fetcher.ReleaseRequirementSet
 			testServer        *ghttp.Server
 		)
 
@@ -60,10 +60,10 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 		It("returns built releases which exist on bosh.io", func() {
 			os := "ubuntu-xenial"
 			version := "190.0.0"
-			desiredReleaseSet = fetcher.ReleaseSet{
-				fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"}:          fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"}, StemcellOS: os, StemcellVersion: version},
-				fetcher.ReleaseID{Name: "zzz", Version: "999"}:             fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "zzz", Version: "999"}, StemcellOS: os, StemcellVersion: version},
-				fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}: fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, StemcellOS: os, StemcellVersion: version},
+			desiredReleaseSet = fetcher.ReleaseRequirementSet{
+				fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"}:          fetcher.ReleaseRequirement{Name: "uaa", Version: "73.3.0", StemcellOS: os, StemcellVersion: version},
+				fetcher.ReleaseID{Name: "zzz", Version: "999"}:             fetcher.ReleaseRequirement{Name: "zzz", Version: "999", StemcellOS: os, StemcellVersion: version},
+				fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}: fetcher.ReleaseRequirement{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: os, StemcellVersion: version},
 			}
 
 			foundReleases, err := releaseSource.GetMatchedReleases(desiredReleaseSet, ignoredStemcell)
@@ -111,7 +111,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			releaseID := fetcher.ReleaseID{Name: releaseName, Version: releaseVersion}
 
 			foundReleases, getMatchedReleasesErr = releaseSource.GetMatchedReleases(
-				fetcher.ReleaseSet{releaseID: fetcher.CompiledRelease{}},
+				fetcher.ReleaseRequirementSet{releaseID: fetcher.ReleaseRequirement{}},
 				ignoredStemcell,
 			)
 		})
@@ -152,15 +152,15 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 				testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `null`))
 
 				releaseID := fetcher.ReleaseID{Name: releaseName, Version: releaseVersion}
-				compiledRelease := fetcher.CompiledRelease{
-					ID:              releaseID,
+				releaseRequirement := fetcher.ReleaseRequirement{
+					Name: releaseName,
+					Version: releaseVersion,
 					StemcellOS:      "generic-os",
 					StemcellVersion: "4.5.6",
-					Path:            "",
 				}
 
 				foundReleases, err := releaseSource.GetMatchedReleases(
-					fetcher.ReleaseSet{releaseID: compiledRelease},
+					fetcher.ReleaseRequirementSet{releaseID: releaseRequirement},
 					ignoredStemcell,
 				)
 

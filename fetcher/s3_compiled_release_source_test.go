@@ -36,7 +36,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 	var (
 		releaseSource     fetcher.S3CompiledReleaseSource
 		fakeS3Client      *fakes.S3ObjectLister
-		desiredReleaseSet fetcher.ReleaseSet
+		desiredReleaseSet fetcher.ReleaseRequirementSet
 		bpmKey            string
 		desiredStemcell   cargo.Stemcell
 	)
@@ -44,12 +44,12 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 	BeforeEach(func() {
 		bpmReleaseID := fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}
 		desiredStemcell = cargo.Stemcell{OS: "ubuntu-xenial", Version: "190.0.0"}
-		desiredReleaseSet = fetcher.ReleaseSet{
-			bpmReleaseID: fetcher.CompiledRelease{
-				ID:              bpmReleaseID,
+		desiredReleaseSet = fetcher.ReleaseRequirementSet{
+			bpmReleaseID: fetcher.ReleaseRequirement{
+				Name: bpmReleaseID.Name,
+				Version: bpmReleaseID.Version,
 				StemcellOS:      desiredStemcell.OS,
 				StemcellVersion: desiredStemcell.Version,
-				Path:            "",
 			},
 		}
 

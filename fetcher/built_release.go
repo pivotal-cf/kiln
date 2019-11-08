@@ -8,3 +8,8 @@ type BuiltRelease struct {
 func (br BuiltRelease) DownloadString() string {
 	return br.Path
 }
+
+func (br BuiltRelease) Satisfies(rr ReleaseRequirement) bool {
+	return br.ID.Name == rr.Name &&
+		br.ID.Version == rr.Version
+}
