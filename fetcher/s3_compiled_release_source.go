@@ -20,17 +20,6 @@ const (
 	StemcellVersion = "stemcell_version"
 )
 
-type CompiledRelease struct {
-	ID              ReleaseID
-	StemcellOS      string
-	StemcellVersion string
-	Path            string
-}
-
-func (cr CompiledRelease) DownloadString() string {
-	return cr.Path
-}
-
 type S3CompiledReleaseSource S3ReleaseSource
 
 func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet, stemcell cargo.Stemcell) (ReleaseSet, error) {

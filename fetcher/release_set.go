@@ -36,10 +36,6 @@ func NewReleaseSet(kilnfileLock cargo.KilnfileLock) ReleaseSet {
 	return set
 }
 
-func (rel CompiledRelease) IsBuiltRelease() bool {
-	return rel.StemcellOS == "" && rel.StemcellVersion == ""
-}
-
 func (crs ReleaseSet) copy() ReleaseSet {
 	dup := make(ReleaseSet)
 	for releaseID, release := range crs {

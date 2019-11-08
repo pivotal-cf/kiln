@@ -14,15 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
-type BuiltRelease struct {
-	ID   ReleaseID
-	Path string
-}
-
-func (br BuiltRelease) DownloadString() string {
-	return br.Path
-}
-
 type S3BuiltReleaseSource S3ReleaseSource
 
 func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseSet, stemcell cargo.Stemcell) (ReleaseSet, error) {
