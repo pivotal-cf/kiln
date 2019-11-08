@@ -32,7 +32,7 @@ func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.Release
 }
 
 func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (ReleaseSet, error) {
-	outputReleases := map[ReleaseID]ReleaseInfoDownloader{}
+	outputReleases := map[ReleaseID]ReleaseInfo{}
 
 	rawReleases, err := l.releasesService.FromDirectories([]string{releasesDir})
 	if err != nil {
@@ -43,7 +43,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (ReleaseSet,
 		releaseManifest := release.(builder.ReleaseManifest)
 		id := ReleaseID{Name: releaseManifest.Name, Version: releaseManifest.Version}
 
-		var rel ReleaseInfoDownloader
+		var rel ReleaseInfo
 		// see implementation of ReleaseManifestReader.Read for why we can assume that
 		// stemcell metadata are empty strings
 		if releaseManifest.StemcellOS != "" && releaseManifest.StemcellVersion != "" {
@@ -114,7 +114,7 @@ func (l LocalReleaseDirectory) deleteReleases(releasesDir string, releasesToDele
 	return nil
 }
 
-func ConvertToLocalBasename(release ReleaseInfoDownloader) (string, error) {
+func ConvertToLocalBasename(release ReleaseInfo) (string, error) {
 	switch rel := release.(type) {
 	case CompiledRelease:
 		return fmt.Sprintf("%s-%s-%s-%s.tgz", rel.ID.Name, rel.ID.Version, rel.StemcellOS, rel.StemcellVersion), nil

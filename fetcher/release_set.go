@@ -8,11 +8,11 @@ type ReleaseID struct {
 	Name, Version string
 }
 
-type ReleaseInfoDownloader interface {
+type ReleaseInfo interface {
 	DownloadString() string
 }
 
-type ReleaseSet map[ReleaseID]ReleaseInfoDownloader
+type ReleaseSet map[ReleaseID]ReleaseInfo
 
 func newCompiledRelease(release cargo.Release, stemcell cargo.Stemcell) CompiledRelease {
 	return CompiledRelease{

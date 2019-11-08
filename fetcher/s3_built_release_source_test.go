@@ -130,7 +130,7 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 		logger           *log.Logger
 		releaseSource    fetcher.S3BuiltReleaseSource
 		releaseDir       string
-		matchedS3Objects map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader
+		matchedS3Objects map[fetcher.ReleaseID]fetcher.ReleaseInfo
 		fakeS3Downloader *fakes.S3Downloader
 	)
 
@@ -140,7 +140,7 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 		releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		matchedS3Objects = make(map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader)
+		matchedS3Objects = make(map[fetcher.ReleaseID]fetcher.ReleaseInfo)
 		matchedS3Objects[fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}] = fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}, Path: "some-uaa-key"}
 		matchedS3Objects[fetcher.ReleaseID{Name: "bpm", Version: "1.2.3"}] = fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3"}, Path: "some-bpm-key"}
 
