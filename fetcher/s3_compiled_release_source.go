@@ -22,7 +22,7 @@ const (
 
 type S3CompiledReleaseSource S3ReleaseSource
 
-func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet, stemcell cargo.Stemcell) (ReleaseSet, error) {
+func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet, stemcell cargo.Stemcell) ([]ReleaseInfo, error) {
 	matchedS3Objects := make(map[ReleaseID][]CompiledRelease)
 
 	exp, err := regexp.Compile(r.Regex)
@@ -74,11 +74,13 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseReq
 		}
 	}
 
-	return matchingReleases, nil
+	return matchingReleases.ReleaseInfos(), nil
 }
 
-func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, matchedS3Objects ReleaseSet, downloadThreads int) error {
-	r.Logger.Printf("downloading %d objects from compiled s3...", len(matchedS3Objects))
+func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteReleases []ReleaseInfo, downloadThreads int) (ReleaseSet, error) {
+	localReleases := make(ReleaseSet)
+
+	r.Logger.Printf("downloading %d objects from compiled s3...", len(remoteReleases))
 	setConcurrency := func(dl *s3manager.Downloader) {
 		if downloadThreads > 0 {
 			dl.Concurrency = downloadThreads
@@ -88,7 +90,7 @@ func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, matchedS3Ob
 	}
 
 	var errs []error
-	for _, release := range matchedS3Objects {
+	for _, release := range remoteReleases {
 		outputFile, err := ConvertToLocalBasename(release)
 		if err != nil {
 			errs = append(errs, err)
@@ -97,7 +99,7 @@ func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, matchedS3Ob
 
 		file, err := os.Create(filepath.Join(releaseDir, outputFile))
 		if err != nil {
-			return fmt.Errorf("failed to create file %q, %v", outputFile, err)
+			return nil, fmt.Errorf("failed to create file %q, %v", outputFile, err)
 		}
 
 		r.Logger.Printf("downloading %s...\n", release.DownloadString())
@@ -107,13 +109,16 @@ func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, matchedS3Ob
 		}, setConcurrency)
 
 		if err != nil {
-			return fmt.Errorf("failed to download file, %v\n", err)
+			return nil, fmt.Errorf("failed to download file, %v\n", err)
 		}
+
+		rID := release.ReleaseID()
+		localReleases[rID] = release.AsLocal(outputFile)
 	}
 	if len(errs) > 0 {
-		return multipleErrors(errs)
+		return nil, multipleErrors(errs)
 	}
-	return nil
+	return localReleases, nil
 }
 
 func createCompiledReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (CompiledRelease, error) {

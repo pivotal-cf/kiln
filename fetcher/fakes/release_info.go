@@ -8,6 +8,17 @@ import (
 )
 
 type ReleaseInfo struct {
+	AsLocalStub        func(string) fetcher.ReleaseInfo
+	asLocalMutex       sync.RWMutex
+	asLocalArgsForCall []struct {
+		arg1 string
+	}
+	asLocalReturns struct {
+		result1 fetcher.ReleaseInfo
+	}
+	asLocalReturnsOnCall map[int]struct {
+		result1 fetcher.ReleaseInfo
+	}
 	DownloadStringStub        func() string
 	downloadStringMutex       sync.RWMutex
 	downloadStringArgsForCall []struct {
@@ -17,6 +28,16 @@ type ReleaseInfo struct {
 	}
 	downloadStringReturnsOnCall map[int]struct {
 		result1 string
+	}
+	ReleaseIDStub        func() fetcher.ReleaseID
+	releaseIDMutex       sync.RWMutex
+	releaseIDArgsForCall []struct {
+	}
+	releaseIDReturns struct {
+		result1 fetcher.ReleaseID
+	}
+	releaseIDReturnsOnCall map[int]struct {
+		result1 fetcher.ReleaseID
 	}
 	SatisfiesStub        func(fetcher.ReleaseRequirement) bool
 	satisfiesMutex       sync.RWMutex
@@ -31,6 +52,66 @@ type ReleaseInfo struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *ReleaseInfo) AsLocal(arg1 string) fetcher.ReleaseInfo {
+	fake.asLocalMutex.Lock()
+	ret, specificReturn := fake.asLocalReturnsOnCall[len(fake.asLocalArgsForCall)]
+	fake.asLocalArgsForCall = append(fake.asLocalArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("AsLocal", []interface{}{arg1})
+	fake.asLocalMutex.Unlock()
+	if fake.AsLocalStub != nil {
+		return fake.AsLocalStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.asLocalReturns
+	return fakeReturns.result1
+}
+
+func (fake *ReleaseInfo) AsLocalCallCount() int {
+	fake.asLocalMutex.RLock()
+	defer fake.asLocalMutex.RUnlock()
+	return len(fake.asLocalArgsForCall)
+}
+
+func (fake *ReleaseInfo) AsLocalCalls(stub func(string) fetcher.ReleaseInfo) {
+	fake.asLocalMutex.Lock()
+	defer fake.asLocalMutex.Unlock()
+	fake.AsLocalStub = stub
+}
+
+func (fake *ReleaseInfo) AsLocalArgsForCall(i int) string {
+	fake.asLocalMutex.RLock()
+	defer fake.asLocalMutex.RUnlock()
+	argsForCall := fake.asLocalArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *ReleaseInfo) AsLocalReturns(result1 fetcher.ReleaseInfo) {
+	fake.asLocalMutex.Lock()
+	defer fake.asLocalMutex.Unlock()
+	fake.AsLocalStub = nil
+	fake.asLocalReturns = struct {
+		result1 fetcher.ReleaseInfo
+	}{result1}
+}
+
+func (fake *ReleaseInfo) AsLocalReturnsOnCall(i int, result1 fetcher.ReleaseInfo) {
+	fake.asLocalMutex.Lock()
+	defer fake.asLocalMutex.Unlock()
+	fake.AsLocalStub = nil
+	if fake.asLocalReturnsOnCall == nil {
+		fake.asLocalReturnsOnCall = make(map[int]struct {
+			result1 fetcher.ReleaseInfo
+		})
+	}
+	fake.asLocalReturnsOnCall[i] = struct {
+		result1 fetcher.ReleaseInfo
+	}{result1}
 }
 
 func (fake *ReleaseInfo) DownloadString() string {
@@ -82,6 +163,58 @@ func (fake *ReleaseInfo) DownloadStringReturnsOnCall(i int, result1 string) {
 	}
 	fake.downloadStringReturnsOnCall[i] = struct {
 		result1 string
+	}{result1}
+}
+
+func (fake *ReleaseInfo) ReleaseID() fetcher.ReleaseID {
+	fake.releaseIDMutex.Lock()
+	ret, specificReturn := fake.releaseIDReturnsOnCall[len(fake.releaseIDArgsForCall)]
+	fake.releaseIDArgsForCall = append(fake.releaseIDArgsForCall, struct {
+	}{})
+	fake.recordInvocation("ReleaseID", []interface{}{})
+	fake.releaseIDMutex.Unlock()
+	if fake.ReleaseIDStub != nil {
+		return fake.ReleaseIDStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.releaseIDReturns
+	return fakeReturns.result1
+}
+
+func (fake *ReleaseInfo) ReleaseIDCallCount() int {
+	fake.releaseIDMutex.RLock()
+	defer fake.releaseIDMutex.RUnlock()
+	return len(fake.releaseIDArgsForCall)
+}
+
+func (fake *ReleaseInfo) ReleaseIDCalls(stub func() fetcher.ReleaseID) {
+	fake.releaseIDMutex.Lock()
+	defer fake.releaseIDMutex.Unlock()
+	fake.ReleaseIDStub = stub
+}
+
+func (fake *ReleaseInfo) ReleaseIDReturns(result1 fetcher.ReleaseID) {
+	fake.releaseIDMutex.Lock()
+	defer fake.releaseIDMutex.Unlock()
+	fake.ReleaseIDStub = nil
+	fake.releaseIDReturns = struct {
+		result1 fetcher.ReleaseID
+	}{result1}
+}
+
+func (fake *ReleaseInfo) ReleaseIDReturnsOnCall(i int, result1 fetcher.ReleaseID) {
+	fake.releaseIDMutex.Lock()
+	defer fake.releaseIDMutex.Unlock()
+	fake.ReleaseIDStub = nil
+	if fake.releaseIDReturnsOnCall == nil {
+		fake.releaseIDReturnsOnCall = make(map[int]struct {
+			result1 fetcher.ReleaseID
+		})
+	}
+	fake.releaseIDReturnsOnCall[i] = struct {
+		result1 fetcher.ReleaseID
 	}{result1}
 }
 
@@ -148,8 +281,12 @@ func (fake *ReleaseInfo) SatisfiesReturnsOnCall(i int, result1 bool) {
 func (fake *ReleaseInfo) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.asLocalMutex.RLock()
+	defer fake.asLocalMutex.RUnlock()
 	fake.downloadStringMutex.RLock()
 	defer fake.downloadStringMutex.RUnlock()
+	fake.releaseIDMutex.RLock()
+	defer fake.releaseIDMutex.RUnlock()
 	fake.satisfiesMutex.RLock()
 	defer fake.satisfiesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

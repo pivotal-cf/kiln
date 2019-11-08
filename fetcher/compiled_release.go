@@ -17,3 +17,12 @@ func (cr CompiledRelease) Satisfies(rr ReleaseRequirement) bool {
 		cr.StemcellOS == rr.StemcellOS &&
 		cr.StemcellVersion == rr.StemcellVersion
 }
+
+func (cr CompiledRelease) ReleaseID() ReleaseID {
+	return cr.ID
+}
+
+func (cr CompiledRelease) AsLocal(path string) ReleaseInfo {
+	cr.Path = path
+	return cr
+}

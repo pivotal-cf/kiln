@@ -66,7 +66,7 @@ func (r *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
 	return
 }
 
-func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet, stemcell cargo.Stemcell) (ReleaseSet, error) {
+func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet, stemcell cargo.Stemcell) ([]ReleaseInfo, error) {
 	matchedBOSHIOReleases := make(ReleaseSet)
 
 	for rel := range desiredReleaseSet {
@@ -89,30 +89,32 @@ func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRe
 		}
 	}
 
-	return matchedBOSHIOReleases, nil //no foreseen error to return to a higher level
+	return matchedBOSHIOReleases.ReleaseInfos(), nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObjects ReleaseSet, downloadThreads int) error {
-	r.logger.Printf("downloading %d objects from bosh.io...", len(matchedBOSHObjects))
+func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []ReleaseInfo, downloadThreads int) (ReleaseSet, error) {
+	localReleases := make(ReleaseSet)
 
-	for _, release := range matchedBOSHObjects {
+	r.logger.Printf("downloading %d objects from bosh.io...", len(remoteReleases))
+
+	for _, release := range remoteReleases {
 
 		downloadURL := release.DownloadString()
 		r.logger.Printf("downloading %s...\n", downloadURL)
 		// Get the data
 		resp, err := http.Get(downloadURL)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		fileName, err := ConvertToLocalBasename(release)
 		if err != nil {
-			return err // untested, this this shouldn't be possible
+			return nil, err // untested, this this shouldn't be possible
 		}
 
 		out, err := os.Create(filepath.Join(releaseDir, fileName))
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Write the body to file
@@ -120,10 +122,13 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, matchedBOSHObje
 		resp.Body.Close()
 		out.Close()
 		if err != nil {
-			return err
+			return nil, err
 		}
+
+		localReleases[release.ReleaseID()] = release.AsLocal(fileName)
 	}
-	return nil
+
+	return localReleases, nil
 }
 
 type ResponseStatusCodeError http.Response

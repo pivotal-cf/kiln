@@ -72,10 +72,10 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(foundReleases).To(HaveLen(2))
-			Expect(foundReleases).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"},
-				fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"}, Path: uaaURL}))
-			Expect(foundReleases).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"},
-				fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, Path: cfRabbitURL}))
+			Expect(foundReleases).To(ConsistOf(
+				fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"}, Path: uaaURL},
+				fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, Path: cfRabbitURL},
+			))
 		})
 	})
 
@@ -86,7 +86,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			releaseVersion = "1.2.3"
 			releaseSource  *fetcher.BOSHIOReleaseSource
 
-			foundReleases         fetcher.ReleaseSet
+			foundReleases         []fetcher.ReleaseInfo
 			getMatchedReleasesErr error
 		)
 
@@ -178,7 +178,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 					Path: expectedPath,
 				}
 
-				Expect(foundReleases).To(HaveKeyWithValue(releaseID, expectedRelease))
+				Expect(foundReleases).To(ConsistOf(expectedRelease))
 			},
 
 			Entry("cloudfoundry org, no suffix", "cloudfoundry", ""),
@@ -258,11 +258,8 @@ var _ = Describe("DownloadReleases", func() {
 	})
 
 	It("downloads the given releases into the release dir", func() {
-		matchedReleases := fetcher.ReleaseSet{
-			release1ID: release1,
-			release2ID: release2,
-		}
-		err := releaseSource.DownloadReleases(releaseDir,
+		matchedReleases := []fetcher.ReleaseInfo{release1, release2}
+		localReleases, err := releaseSource.DownloadReleases(releaseDir,
 			matchedReleases,
 			1,
 		)
@@ -281,5 +278,7 @@ var _ = Describe("DownloadReleases", func() {
 		release2DiskContents, err := ioutil.ReadFile(fullRelease2Path)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(release2DiskContents).To(BeEquivalentTo(release2ServerFileContents))
+
+		Expect(localReleases).To(HaveLen(2))
 	})
 })

@@ -8,6 +8,8 @@ type ReleaseID struct {
 type ReleaseInfo interface {
 	DownloadString() string
 	Satisfies(set ReleaseRequirement) bool
+	ReleaseID() ReleaseID
+	AsLocal(string) ReleaseInfo
 }
 
 type ReleaseSet map[ReleaseID]ReleaseInfo
@@ -24,6 +26,14 @@ func (rs ReleaseSet) ReleaseIDs() []ReleaseID {
 	result := make([]ReleaseID, 0, len(rs))
 	for rID := range rs {
 		result = append(result, rID)
+	}
+	return result
+}
+
+func (rs ReleaseSet) ReleaseInfos() []ReleaseInfo {
+	result := make([]ReleaseInfo, 0, len(rs))
+	for _, rInfo := range rs {
+		result = append(result, rInfo)
 	}
 	return result
 }
