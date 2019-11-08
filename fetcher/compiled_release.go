@@ -17,7 +17,3 @@ func (cr CompiledRelease) Satisfies(rr ReleaseRequirement) bool {
 		cr.StemcellOS == rr.StemcellOS &&
 		cr.StemcellVersion == rr.StemcellVersion
 }
-
-func (cr CompiledRelease) IsBuiltRelease() bool {
-	return cr.StemcellOS == "" && cr.StemcellVersion == ""
-}

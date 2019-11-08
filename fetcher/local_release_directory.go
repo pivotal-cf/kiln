@@ -32,7 +32,7 @@ func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.Release
 }
 
 func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (ReleaseSet, error) {
-	outputReleases := map[ReleaseID]ReleaseInfo{}
+	outputReleases := ReleaseSet{}
 
 	rawReleases, err := l.releasesService.FromDirectories([]string{releasesDir})
 	if err != nil {

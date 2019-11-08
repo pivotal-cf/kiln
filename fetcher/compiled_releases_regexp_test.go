@@ -37,12 +37,13 @@ var _ = Describe("ReleasesRegexp", func() {
 		Expect(err).To(MatchError(ContainSubstring("release_name, release_version")))
 	})
 
-	It("returns a Built Release if the stemcell details are missing", func() {
+	It("returns a partial compiled Release if the stemcell details are missing", func() {
 		regex, err = fetcher.NewReleasesRegexp(`^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)(?:-(?P<stemcell_os>[a-z-_]+))?(?:-(?P<stemcell_version>[\d\.]+))?\.tgz$`)
 		Expect(err).ToNot(HaveOccurred())
 		compiledRelease, err = regex.Convert("2.5/uaa/uaa-1.2.3.tgz")
-		Expect(compiledRelease.IsBuiltRelease()).To(BeTrue())
 		Expect(compiledRelease.ID.Name).To(Equal("uaa"))
 		Expect(compiledRelease.ID.Version).To(Equal("1.2.3"))
+		Expect(compiledRelease.StemcellOS).To(Equal(""))
+		Expect(compiledRelease.StemcellVersion).To(Equal(""))
 	})
 })
