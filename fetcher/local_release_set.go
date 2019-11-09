@@ -11,9 +11,10 @@ type LocalRelease interface {
 }
 
 type RemoteRelease interface {
-	DownloadString() string
+	RemotePath() string
 	ReleaseID() ReleaseID
 	AsLocal(string) LocalRelease
+	StandardizedFilename() string
 }
 
 type LocalReleaseSet map[ReleaseID]LocalRelease

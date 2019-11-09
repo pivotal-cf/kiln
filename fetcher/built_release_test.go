@@ -22,4 +22,16 @@ var _ = Describe("BuiltRelease", func() {
 		Entry("when the release name is different", "something-else", expectedVersion, false),
 		Entry("when the release version is different", expectedName, "999.999.999", false),
 	)
+
+	Describe("StandardizedFilename", func() {
+		var release BuiltRelease
+
+		BeforeEach(func() {
+			release = BuiltRelease{ID: ReleaseID{Name: expectedName, Version: expectedVersion}}
+		})
+
+		It("returns the standardized filename for the release", func() {
+			Expect(release.StandardizedFilename()).To(Equal("my-awesome-release-42.0.0.tgz"))
+		})
+	})
 })

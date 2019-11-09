@@ -15,10 +15,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
-const (
-	ErrReleaseTypeNotSupported = stringError("release type not supported")
-)
-
 type LocalReleaseDirectory struct {
 	logger          *log.Logger
 	releasesService baking.ReleasesService
@@ -107,17 +103,6 @@ func (l LocalReleaseDirectory) deleteReleases(releasesDir string, releasesToDele
 	}
 
 	return nil
-}
-
-func ConvertToLocalBasename(release RemoteRelease) (string, error) {
-	switch rel := release.(type) {
-	case CompiledRelease:
-		return fmt.Sprintf("%s-%s-%s-%s.tgz", rel.ID.Name, rel.ID.Version, rel.StemcellOS, rel.StemcellVersion), nil
-	case BuiltRelease:
-		return fmt.Sprintf("%s-%s.tgz", rel.ID.Name, rel.ID.Version), nil
-	default:
-		return "", ErrReleaseTypeNotSupported
-	}
 }
 
 func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedReleaseSet LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error {

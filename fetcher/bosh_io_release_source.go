@@ -98,7 +98,7 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases 
 
 	for _, release := range remoteReleases {
 
-		downloadURL := release.DownloadString()
+		downloadURL := release.RemotePath()
 		r.logger.Printf("downloading %s...\n", downloadURL)
 		// Get the data
 		resp, err := http.Get(downloadURL)
@@ -106,10 +106,7 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases 
 			return nil, err
 		}
 
-		fileName, err := ConvertToLocalBasename(release)
-		if err != nil {
-			return nil, err // untested, this this shouldn't be possible
-		}
+		fileName := release.StandardizedFilename()
 
 		out, err := os.Create(filepath.Join(releaseDir, fileName))
 		if err != nil {

@@ -78,21 +78,16 @@ func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleas
 
 	var errs []error
 	for _, release := range remoteReleases {
-		outputFile, err := ConvertToLocalBasename(release)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-
+		outputFile := release.StandardizedFilename()
 		file, err := os.Create(filepath.Join(releaseDir, outputFile))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create file %q, %v", outputFile, err)
 		}
 
-		src.Logger.Printf("downloading %s...\n", release.DownloadString())
+		src.Logger.Printf("downloading %s...\n", release.RemotePath())
 		_, err = src.S3Downloader.Download(file, &s3.GetObjectInput{
 			Bucket: aws.String(src.Bucket),
-			Key:    aws.String(release.DownloadString()),
+			Key:    aws.String(release.RemotePath()),
 		}, setConcurrency)
 
 		if err != nil {

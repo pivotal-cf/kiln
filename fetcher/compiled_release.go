@@ -1,5 +1,7 @@
 package fetcher
 
+import "fmt"
+
 type CompiledRelease struct {
 	ID              ReleaseID
 	StemcellOS      string
@@ -7,8 +9,12 @@ type CompiledRelease struct {
 	Path            string
 }
 
-func (cr CompiledRelease) DownloadString() string {
+func (cr CompiledRelease) RemotePath() string {
 	return cr.Path
+}
+
+func (cr CompiledRelease) StandardizedFilename() string {
+	return fmt.Sprintf("%s-%s-%s-%s.tgz", cr.ID.Name, cr.ID.Version, cr.StemcellOS, cr.StemcellVersion)
 }
 
 func (cr CompiledRelease) LocalPath() string {

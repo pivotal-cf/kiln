@@ -1,12 +1,18 @@
 package fetcher
 
+import "fmt"
+
 type BuiltRelease struct {
 	ID   ReleaseID
 	Path string
 }
 
-func (br BuiltRelease) DownloadString() string {
+func (br BuiltRelease) RemotePath() string {
 	return br.Path
+}
+
+func (br BuiltRelease) StandardizedFilename() string {
+	return fmt.Sprintf("%s-%s.tgz", br.ID.Name, br.ID.Version)
 }
 
 func (br BuiltRelease) LocalPath() string {
