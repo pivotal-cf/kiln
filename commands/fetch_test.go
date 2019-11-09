@@ -98,41 +98,88 @@ stemcell_criteria:
 		//    It will return an error
 
 		When("a local compiled release exists", func() {
+			const (
+				expectedStemcellOS      = "fooOS"
+				expectedStemcellVersion = "0.2.0"
+			)
+			var (
+				releaseID                               fetcher.ReleaseID
+				releaseOnDisk                           fetcher.CompiledRelease
+				actualStemcellOS, actualStemcellVersion string
+			)
 			BeforeEach(func() {
-				releaseID := fetcher.ReleaseID{Name: "metastaticvariable", Version: "0.1.0"}
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(fetcher.LocalReleaseSet{
-					releaseID: fetcher.CompiledRelease{
-						ID:              releaseID,
-						StemcellOS:      "fooOS",
-						StemcellVersion: "0.2.0",
-						Path:            "releases/foo-0.1.0-fooOS-0.2.0.tgz",
-					},
+				releaseID = fetcher.ReleaseID{Name: "some-release", Version: "0.1.0"}
+				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]fetcher.RemoteRelease{
+					fetcher.CompiledRelease{ID: releaseID, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion},
 				}, nil)
+				fakeS3CompiledReleaseSource.DownloadReleasesReturns(
+					fetcher.LocalReleaseSet{
+						releaseID: fetcher.CompiledRelease{
+							ID:              releaseID,
+							StemcellOS:      expectedStemcellOS,
+							StemcellVersion: expectedStemcellVersion,
+							Path:            fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, expectedStemcellOS, expectedStemcellVersion),
+						},
+					}, nil)
+				lockContents = `---
+releases:
+- name: ` + releaseID.Name + `
+  version: "` + releaseID.Version + `"
+stemcell_criteria:
+  os: ` + expectedStemcellOS + `
+  version: "` + expectedStemcellVersion + `"`
+				fetchExecuteArgs = append(fetchExecuteArgs, "--no-confirm")
 			})
 
 			When("the release was compiled with a different os", func() {
 				BeforeEach(func() {
-					lockContents = `---
-stemcell_criteria:
-  os: barOS
-  version: "0.2.0"`
+					releaseOnDisk = fetcher.CompiledRelease{
+						ID:              releaseID,
+						StemcellOS:      "different-os",
+						StemcellVersion: expectedStemcellVersion,
+						Path:            fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, actualStemcellOS, actualStemcellVersion),
+					}
+					fakeLocalReleaseDirectory.GetLocalReleasesReturns(
+						fetcher.LocalReleaseSet{releaseID: releaseOnDisk},
+						nil)
 				})
 
-				It("returns an error", func() {
-					Expect(fetchExecuteErr).To(MatchError(ContainSubstring("expected release metastaticvariable-0.1.0 to have been compiled with barOS 0.2.0 but was compiled with fooOS 0.2.0")))
+				It("deletes the file from disk", func() {
+					Expect(fetchExecuteErr).NotTo(HaveOccurred())
+
+					Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+
+					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
+					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
+					Expect(noConfirm).To(Equal(true))
+					Expect(extras).To(HaveLen(1))
+					Expect(extras).To(ConsistOf(releaseOnDisk))
 				})
 			})
 
 			When("the release was compiled with a different version of the same os", func() {
 				BeforeEach(func() {
-					lockContents = `---
-stemcell_criteria:
-  os: fooOS
-  version: "0.3.0"`
+					releaseOnDisk = fetcher.CompiledRelease{
+						ID:              releaseID,
+						StemcellOS:      expectedStemcellOS,
+						StemcellVersion: "404",
+						Path:            fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, actualStemcellOS, actualStemcellVersion),
+					}
+					fakeLocalReleaseDirectory.GetLocalReleasesReturns(
+						fetcher.LocalReleaseSet{releaseID: releaseOnDisk},
+						nil)
 				})
 
-				It("returns an error", func() {
-					Expect(fetchExecuteErr).To(MatchError(ContainSubstring("expected release metastaticvariable-0.1.0 to have been compiled with fooOS 0.3.0 but was compiled with fooOS 0.2.0")))
+				It("deletes the file from disk", func() {
+					Expect(fetchExecuteErr).NotTo(HaveOccurred())
+
+					Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+
+					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
+					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
+					Expect(noConfirm).To(Equal(true))
+					Expect(extras).To(HaveLen(1))
+					Expect(extras).To(ConsistOf(releaseOnDisk))
 				})
 			})
 		})
