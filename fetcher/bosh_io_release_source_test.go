@@ -280,5 +280,15 @@ var _ = Describe("DownloadReleases", func() {
 		Expect(release2DiskContents).To(BeEquivalentTo(release2ServerFileContents))
 
 		Expect(localReleases).To(HaveLen(2))
+		Expect(localReleases).To(HaveKeyWithValue(
+			release1ID, fetcher.BuiltRelease{
+				ID:              release1ID,
+				Path:            fullRelease1Path,
+			}))
+		Expect(localReleases).To(HaveKeyWithValue(
+			release2ID, fetcher.BuiltRelease{
+				ID:              release2ID,
+				Path:            fullRelease2Path,
+			}))
 	})
 })

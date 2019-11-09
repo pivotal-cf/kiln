@@ -3,14 +3,13 @@ package fetcher
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/cargo"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 var repos = []string{
@@ -106,9 +105,9 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases 
 			return nil, err
 		}
 
-		fileName := release.StandardizedFilename()
+		filePath := filepath.Join(releaseDir, release.StandardizedFilename())
 
-		out, err := os.Create(filepath.Join(releaseDir, fileName))
+		out, err := os.Create(filePath)
 		if err != nil {
 			return nil, err
 		}
@@ -121,7 +120,7 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases 
 			return nil, err
 		}
 
-		localReleases[release.ReleaseID()] = release.AsLocal(fileName)
+		localReleases[release.ReleaseID()] = release.AsLocal(filePath)
 	}
 
 	return localReleases, nil

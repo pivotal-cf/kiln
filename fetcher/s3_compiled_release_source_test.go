@@ -46,8 +46,8 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 		desiredStemcell = cargo.Stemcell{OS: "ubuntu-xenial", Version: "190.0.0"}
 		desiredReleaseSet = fetcher.ReleaseRequirementSet{
 			bpmReleaseID: fetcher.ReleaseRequirement{
-				Name: bpmReleaseID.Name,
-				Version: bpmReleaseID.Version,
+				Name:            bpmReleaseID.Name,
+				Version:         bpmReleaseID.Version,
 				StemcellOS:      desiredStemcell.OS,
 				StemcellVersion: desiredStemcell.Version,
 			},
@@ -91,13 +91,13 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 		Expect(matchedS3Objects).To(HaveLen(1))
 		Expect(matchedS3Objects).To(ConsistOf(
-				fetcher.CompiledRelease{
-					ID:              fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-					StemcellOS:      "ubuntu-xenial",
-					StemcellVersion: "190.0.0",
-					Path:            bpmKey,
-				},
-			),
+			fetcher.CompiledRelease{
+				ID:              fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+				StemcellOS:      "ubuntu-xenial",
+				StemcellVersion: "190.0.0",
+				Path:            bpmKey,
+			},
+		),
 		)
 	})
 
@@ -126,13 +126,13 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-					fetcher.CompiledRelease{
-						ID:              fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-						StemcellOS:      "ubuntu-xenial",
-						StemcellVersion: "190.0.0",
-						Path:            bpmKey,
-					},
-				),
+				fetcher.CompiledRelease{
+					ID:              fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+					StemcellOS:      "ubuntu-xenial",
+					StemcellVersion: "190.0.0",
+					Path:            bpmKey,
+				},
+			),
 			)
 		})
 	})
@@ -162,13 +162,13 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-					fetcher.CompiledRelease{
-						ID:              fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-						StemcellOS:      "ubuntu-xenial",
-						StemcellVersion: "190.0.0",
-						Path:            bpmKey,
-					},
-				),
+				fetcher.CompiledRelease{
+					ID:              fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+					StemcellOS:      "ubuntu-xenial",
+					StemcellVersion: "190.0.0",
+					Path:            bpmKey,
+				},
+			),
 			)
 		})
 	})
@@ -197,13 +197,13 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-					fetcher.CompiledRelease{
-						ID:              fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-						StemcellOS:      "ubuntu-xenial",
-						StemcellVersion: "190.0.0",
-						Path:            bpmKey,
-					},
-				),
+				fetcher.CompiledRelease{
+					ID:              fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+					StemcellOS:      "ubuntu-xenial",
+					StemcellVersion: "190.0.0",
+					Path:            bpmKey,
+				},
+			),
 			)
 		})
 	})
@@ -228,11 +228,17 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source", func() {
 	var (
-		logger           *log.Logger
-		releaseSource    fetcher.S3CompiledReleaseSource
-		releaseDir       string
-		matchedS3Objects []fetcher.RemoteRelease
-		fakeS3Downloader *fakes.S3Downloader
+		logger                     *log.Logger
+		releaseSource              fetcher.S3CompiledReleaseSource
+		releaseDir                 string
+		uaaReleaseID, bpmReleaseID fetcher.ReleaseID
+		matchedS3Objects           []fetcher.RemoteRelease
+		fakeS3Downloader           *fakes.S3Downloader
+	)
+
+	const (
+		expectedStemcellVersion = "1234"
+		expectedStemcellOS      = "ubuntu-trusty"
 	)
 
 	BeforeEach(func() {
@@ -241,9 +247,12 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 		releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 		Expect(err).NotTo(HaveOccurred())
 
+		uaaReleaseID = fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}
+		bpmReleaseID = fetcher.ReleaseID{Name: "bpm", Version: "1.2.3"}
+
 		matchedS3Objects = []fetcher.RemoteRelease{
-			fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}, StemcellOS: "ubuntu-trusty", StemcellVersion: "1234", Path: "some-uaa-key"},
-			fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3"}, StemcellOS: "ubuntu-trusty", StemcellVersion: "1234", Path: "some-bpm-key"},
+			fetcher.CompiledRelease{ID: uaaReleaseID, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion, Path: "some-uaa-key"},
+			fetcher.CompiledRelease{ID: bpmReleaseID, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion, Path: "some-bpm-key"},
 		}
 
 		logger = log.New(GinkgoWriter, "", 0)
@@ -269,10 +278,12 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 		Expect(err).NotTo(HaveOccurred())
 		Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(2))
 
-		bpmContents, err := ioutil.ReadFile(filepath.Join(releaseDir, "bpm-1.2.3-ubuntu-trusty-1234.tgz"))
+		bpmReleasePath := filepath.Join(releaseDir, "bpm-1.2.3-ubuntu-trusty-1234.tgz")
+		bpmContents, err := ioutil.ReadFile(bpmReleasePath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(bpmContents).To(Equal([]byte("some-bucket/some-bpm-key")))
-		uaaContents, err := ioutil.ReadFile(filepath.Join(releaseDir, "uaa-1.2.3-ubuntu-trusty-1234.tgz"))
+		uaaReleasePath := filepath.Join(releaseDir, "uaa-1.2.3-ubuntu-trusty-1234.tgz")
+		uaaContents, err := ioutil.ReadFile(uaaReleasePath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(uaaContents).To(Equal([]byte("some-bucket/some-uaa-key")))
 
@@ -283,6 +294,23 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 		verifySetsConcurrency(opts, 7)
 
 		Expect(localReleases).To(HaveLen(2))
+		Expect(localReleases).To(HaveKeyWithValue(
+			uaaReleaseID,
+			fetcher.CompiledRelease{
+				ID:              uaaReleaseID,
+				StemcellOS:      expectedStemcellOS,
+				StemcellVersion: expectedStemcellVersion,
+				Path:            uaaReleasePath,
+			}))
+		Expect(localReleases).To(HaveKeyWithValue(
+			bpmReleaseID,
+			fetcher.CompiledRelease{
+				ID:              bpmReleaseID,
+				StemcellOS:      expectedStemcellOS,
+				StemcellVersion: expectedStemcellVersion,
+				Path:            bpmReleasePath,
+			}))
+
 	})
 
 	Context("when the matchedS3Objects argument is empty", func() {

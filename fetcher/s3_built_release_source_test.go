@@ -129,11 +129,12 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 
 var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func() {
 	var (
-		logger           *log.Logger
-		releaseSource    fetcher.S3BuiltReleaseSource
-		releaseDir       string
-		matchedS3Objects []fetcher.RemoteRelease
-		fakeS3Downloader *fakes.S3Downloader
+		logger                     *log.Logger
+		releaseSource              fetcher.S3BuiltReleaseSource
+		releaseDir                 string
+		matchedS3Objects           []fetcher.RemoteRelease
+		uaaReleaseID, bpmReleaseID fetcher.ReleaseID
+		fakeS3Downloader           *fakes.S3Downloader
 	)
 
 	BeforeEach(func() {
@@ -142,9 +143,11 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 		releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 		Expect(err).NotTo(HaveOccurred())
 
+		uaaReleaseID = fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}
+		bpmReleaseID = fetcher.ReleaseID{Name: "bpm", Version: "1.2.3"}
 		matchedS3Objects = []fetcher.RemoteRelease{
-			fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}, Path: "some-uaa-key"},
-			fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3"}, Path: "some-bpm-key"},
+			fetcher.BuiltRelease{ID: uaaReleaseID, Path: "some-uaa-key"},
+			fetcher.BuiltRelease{ID: bpmReleaseID, Path: "some-bpm-key"},
 		}
 
 		logger = log.New(GinkgoWriter, "", 0)
@@ -170,10 +173,12 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 		Expect(err).NotTo(HaveOccurred())
 		Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(2))
 
-		bpmContents, err := ioutil.ReadFile(filepath.Join(releaseDir, "bpm-1.2.3.tgz"))
+		bpmReleasePath := filepath.Join(releaseDir, "bpm-1.2.3.tgz")
+		bpmContents, err := ioutil.ReadFile(bpmReleasePath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(bpmContents).To(Equal([]byte("some-bucket/some-bpm-key")))
-		uaaContents, err := ioutil.ReadFile(filepath.Join(releaseDir, "uaa-1.2.3.tgz"))
+		uaaReleasePath := filepath.Join(releaseDir, "uaa-1.2.3.tgz")
+		uaaContents, err := ioutil.ReadFile(uaaReleasePath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(uaaContents).To(Equal([]byte("some-bucket/some-uaa-key")))
 
@@ -184,6 +189,16 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 		verifySetsConcurrency(opts, 7)
 
 		Expect(localReleases).To(HaveLen(2))
+		Expect(localReleases).To(HaveKeyWithValue(
+			uaaReleaseID, fetcher.BuiltRelease{
+				ID:   uaaReleaseID,
+				Path: uaaReleasePath,
+			}))
+		Expect(localReleases).To(HaveKeyWithValue(
+			bpmReleaseID, fetcher.BuiltRelease{
+				ID:   bpmReleaseID,
+				Path: bpmReleasePath,
+			}))
 	})
 
 	Context("when the matchedS3Objects argument is empty", func() {

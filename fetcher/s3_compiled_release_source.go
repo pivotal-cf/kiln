@@ -91,8 +91,8 @@ func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteRelea
 
 	var errs []error
 	for _, release := range remoteReleases {
-		outputFile := release.StandardizedFilename()
-		file, err := os.Create(filepath.Join(releaseDir, outputFile))
+		outputFile := filepath.Join(releaseDir, release.StandardizedFilename())
+		file, err := os.Create(outputFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create file %q, %v", outputFile, err)
 		}
