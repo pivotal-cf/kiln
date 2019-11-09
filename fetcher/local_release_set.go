@@ -16,9 +16,9 @@ type RemoteRelease interface {
 	AsLocal(string) LocalRelease
 }
 
-type ReleaseSet map[ReleaseID]LocalRelease
+type LocalReleaseSet map[ReleaseID]LocalRelease
 
-func (rs ReleaseSet) With(toAdd ReleaseSet) ReleaseSet {
+func (rs LocalReleaseSet) With(toAdd LocalReleaseSet) LocalReleaseSet {
 	result := rs.copy()
 	for releaseID, release := range toAdd {
 		result[releaseID] = release
@@ -26,7 +26,7 @@ func (rs ReleaseSet) With(toAdd ReleaseSet) ReleaseSet {
 	return result
 }
 
-func (rs ReleaseSet) ReleaseIDs() []ReleaseID {
+func (rs LocalReleaseSet) ReleaseIDs() []ReleaseID {
 	result := make([]ReleaseID, 0, len(rs))
 	for rID := range rs {
 		result = append(result, rID)
@@ -34,7 +34,7 @@ func (rs ReleaseSet) ReleaseIDs() []ReleaseID {
 	return result
 }
 
-func (rs ReleaseSet) LocalReleases() []LocalRelease {
+func (rs LocalReleaseSet) LocalReleases() []LocalRelease {
 	result := make([]LocalRelease, 0, len(rs))
 	for _, rInfo := range rs {
 		result = append(result, rInfo)
@@ -42,8 +42,8 @@ func (rs ReleaseSet) LocalReleases() []LocalRelease {
 	return result
 }
 
-func (rs ReleaseSet) copy() ReleaseSet {
-	dup := make(ReleaseSet)
+func (rs LocalReleaseSet) copy() LocalReleaseSet {
+	dup := make(LocalReleaseSet)
 	for releaseID, release := range rs {
 		dup[releaseID] = release
 	}

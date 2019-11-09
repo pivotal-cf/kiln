@@ -50,7 +50,7 @@ var _ = Describe("ReleaseRequirementSet", func() {
 
 	Describe("Partition", func() {
 		var (
-			releaseSet                             ReleaseSet
+			releaseSet                             LocalReleaseSet
 			extraReleaseID                         ReleaseID
 			satisfyingRelease, unsatisfyingRelease *fakes.LocalRelease
 		)
@@ -64,7 +64,7 @@ var _ = Describe("ReleaseRequirementSet", func() {
 
 			extraReleaseID = ReleaseID{Name: "extra", Version: "2.3.5"}
 
-			releaseSet = ReleaseSet{
+			releaseSet = LocalReleaseSet{
 				release1ID:     satisfyingRelease,
 				release2ID:     unsatisfyingRelease,
 				extraReleaseID: unsatisfyingRelease,

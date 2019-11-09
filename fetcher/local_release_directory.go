@@ -31,8 +31,8 @@ func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.Release
 	}
 }
 
-func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (ReleaseSet, error) {
-	outputReleases := ReleaseSet{}
+func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (LocalReleaseSet, error) {
+	outputReleases := LocalReleaseSet{}
 
 	rawReleases, err := l.releasesService.FromDirectories([]string{releasesDir})
 	if err != nil {
@@ -64,7 +64,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (ReleaseSet,
 	return outputReleases, nil
 }
 
-func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraReleaseSet ReleaseSet, noConfirm bool) error {
+func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraReleaseSet LocalReleaseSet, noConfirm bool) error {
 	var doDeletion byte
 
 	if len(extraReleaseSet) == 0 {
@@ -94,7 +94,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 	return nil
 }
 
-func (l LocalReleaseDirectory) deleteReleases(releasesDir string, releasesToDelete ReleaseSet) error {
+func (l LocalReleaseDirectory) deleteReleases(releasesDir string, releasesToDelete LocalReleaseSet) error {
 	for releaseID, release := range releasesToDelete {
 		err := os.Remove(release.LocalPath())
 
@@ -120,7 +120,7 @@ func ConvertToLocalBasename(release RemoteRelease) (string, error) {
 	}
 }
 
-func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedReleaseSet ReleaseSet, kilnfileLock cargo.KilnfileLock) error {
+func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedReleaseSet LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error {
 	if len(downloadedReleaseSet) == 0 {
 		return nil
 	}
@@ -146,7 +146,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 		}
 
 		if expectedSum != sum {
-			l.deleteReleases(releasesDir, ReleaseSet{releaseID: release})
+			l.deleteReleases(releasesDir, LocalReleaseSet{releaseID: release})
 			badReleases = append(badReleases, fmt.Sprintf("%+v", release.LocalPath()))
 		}
 	}

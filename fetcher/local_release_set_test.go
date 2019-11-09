@@ -4,4 +4,4 @@ import (
 	. "github.com/onsi/ginkgo"
 )
 
-var _ = Describe("ReleaseSet", func() {})
+var _ = Describe("LocalReleaseSet", func() {})

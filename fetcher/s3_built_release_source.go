@@ -64,8 +64,8 @@ func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequ
 	return matchingReleases, err
 }
 
-func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleases []RemoteRelease, downloadThreads int) (ReleaseSet, error) {
-	localReleases := make(ReleaseSet)
+func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleases []RemoteRelease, downloadThreads int) (LocalReleaseSet, error) {
+	localReleases := make(LocalReleaseSet)
 
 	src.Logger.Printf("downloading %d objects from built s3...", len(remoteReleases))
 	setConcurrency := func(dl *s3manager.Downloader) {

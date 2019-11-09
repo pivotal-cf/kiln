@@ -9,7 +9,7 @@ import (
 )
 
 type ReleaseSource struct {
-	DownloadReleasesStub        func(string, []fetcher.RemoteRelease, int) (fetcher.ReleaseSet, error)
+	DownloadReleasesStub        func(string, []fetcher.RemoteRelease, int) (fetcher.LocalReleaseSet, error)
 	downloadReleasesMutex       sync.RWMutex
 	downloadReleasesArgsForCall []struct {
 		arg1 string
@@ -17,11 +17,11 @@ type ReleaseSource struct {
 		arg3 int
 	}
 	downloadReleasesReturns struct {
-		result1 fetcher.ReleaseSet
+		result1 fetcher.LocalReleaseSet
 		result2 error
 	}
 	downloadReleasesReturnsOnCall map[int]struct {
-		result1 fetcher.ReleaseSet
+		result1 fetcher.LocalReleaseSet
 		result2 error
 	}
 	GetMatchedReleasesStub        func(fetcher.ReleaseRequirementSet, cargo.Stemcell) ([]fetcher.RemoteRelease, error)
@@ -42,7 +42,7 @@ type ReleaseSource struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseSource) DownloadReleases(arg1 string, arg2 []fetcher.RemoteRelease, arg3 int) (fetcher.ReleaseSet, error) {
+func (fake *ReleaseSource) DownloadReleases(arg1 string, arg2 []fetcher.RemoteRelease, arg3 int) (fetcher.LocalReleaseSet, error) {
 	var arg2Copy []fetcher.RemoteRelease
 	if arg2 != nil {
 		arg2Copy = make([]fetcher.RemoteRelease, len(arg2))
@@ -73,7 +73,7 @@ func (fake *ReleaseSource) DownloadReleasesCallCount() int {
 	return len(fake.downloadReleasesArgsForCall)
 }
 
-func (fake *ReleaseSource) DownloadReleasesCalls(stub func(string, []fetcher.RemoteRelease, int) (fetcher.ReleaseSet, error)) {
+func (fake *ReleaseSource) DownloadReleasesCalls(stub func(string, []fetcher.RemoteRelease, int) (fetcher.LocalReleaseSet, error)) {
 	fake.downloadReleasesMutex.Lock()
 	defer fake.downloadReleasesMutex.Unlock()
 	fake.DownloadReleasesStub = stub
@@ -86,28 +86,28 @@ func (fake *ReleaseSource) DownloadReleasesArgsForCall(i int) (string, []fetcher
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *ReleaseSource) DownloadReleasesReturns(result1 fetcher.ReleaseSet, result2 error) {
+func (fake *ReleaseSource) DownloadReleasesReturns(result1 fetcher.LocalReleaseSet, result2 error) {
 	fake.downloadReleasesMutex.Lock()
 	defer fake.downloadReleasesMutex.Unlock()
 	fake.DownloadReleasesStub = nil
 	fake.downloadReleasesReturns = struct {
-		result1 fetcher.ReleaseSet
+		result1 fetcher.LocalReleaseSet
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseSource) DownloadReleasesReturnsOnCall(i int, result1 fetcher.ReleaseSet, result2 error) {
+func (fake *ReleaseSource) DownloadReleasesReturnsOnCall(i int, result1 fetcher.LocalReleaseSet, result2 error) {
 	fake.downloadReleasesMutex.Lock()
 	defer fake.downloadReleasesMutex.Unlock()
 	fake.DownloadReleasesStub = nil
 	if fake.downloadReleasesReturnsOnCall == nil {
 		fake.downloadReleasesReturnsOnCall = make(map[int]struct {
-			result1 fetcher.ReleaseSet
+			result1 fetcher.LocalReleaseSet
 			result2 error
 		})
 	}
 	fake.downloadReleasesReturnsOnCall[i] = struct {
-		result1 fetcher.ReleaseSet
+		result1 fetcher.LocalReleaseSet
 		result2 error
 	}{result1, result2}
 }

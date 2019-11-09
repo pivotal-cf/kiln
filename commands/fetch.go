@@ -82,9 +82,9 @@ func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, l
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
-	GetLocalReleases(releasesDir string) (fetcher.ReleaseSet, error)
-	DeleteExtraReleases(releasesDir string, extraReleases fetcher.ReleaseSet, noConfirm bool) error
-	VerifyChecksums(releasesDir string, downloadedReleases fetcher.ReleaseSet, kilnfileLock cargo.KilnfileLock) error
+	GetLocalReleases(releasesDir string) (fetcher.LocalReleaseSet, error)
+	DeleteExtraReleases(releasesDir string, extraReleases fetcher.LocalReleaseSet, noConfirm bool) error
+	VerifyChecksums(releasesDir string, downloadedReleases fetcher.LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -122,7 +122,7 @@ func (f Fetch) Execute(args []string) error {
 	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, kilnfileLock)
 }
 
-func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetcher.ReleaseSet, error) {
+func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetcher.LocalReleaseSet, error) {
 	args, err := jhanda.Parse(&f.Options, args)
 
 	if err != nil {
@@ -186,7 +186,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetche
 }
 
 
-func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet fetcher.ReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseRequirementSet, stemcell cargo.Stemcell) (satisfied fetcher.ReleaseSet, unsatisfied fetcher.ReleaseRequirementSet, err error) {
+func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet fetcher.LocalReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseRequirementSet, stemcell cargo.Stemcell) (satisfied fetcher.LocalReleaseSet, unsatisfied fetcher.ReleaseRequirementSet, err error) {
 	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile, f.Options.AllowOnlyPublishableReleases)
 	for _, releaseSource := range releaseSources {
 		remoteReleases, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet, stemcell)
@@ -206,7 +206,7 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedRelease
 	return satisfiedReleaseSet, unsatisfiedReleaseSet, nil
 }
 
-func (f Fetch) verifyCompiledReleaseStemcell(localReleases fetcher.ReleaseSet, stemcell cargo.Stemcell) error {
+func (f Fetch) verifyCompiledReleaseStemcell(localReleases fetcher.LocalReleaseSet, stemcell cargo.Stemcell) error {
 	var errs []error
 	for _, release := range localReleases {
 		if rel, ok := release.(fetcher.CompiledRelease); ok {
