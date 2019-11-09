@@ -16,16 +16,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type multipleError []error
-
-func (errs multipleError) Error() string {
-	var strs []string
-	for _, err := range errs {
-		strs = append(strs, "- "+err.Error())
-	}
-	return "\n" + strings.Join(strs, "\n")
-}
-
 type ConfigFileError struct {
 	HumanReadableConfigFileName string
 	err                         error
