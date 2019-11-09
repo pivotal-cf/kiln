@@ -231,7 +231,7 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 		logger           *log.Logger
 		releaseSource    fetcher.S3CompiledReleaseSource
 		releaseDir       string
-		matchedS3Objects []fetcher.ReleaseInfo
+		matchedS3Objects []fetcher.RemoteRelease
 		fakeS3Downloader *fakes.S3Downloader
 	)
 
@@ -241,7 +241,7 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 		releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		matchedS3Objects = []fetcher.ReleaseInfo{
+		matchedS3Objects = []fetcher.RemoteRelease{
 			fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}, StemcellOS: "ubuntu-trusty", StemcellVersion: "1234", Path: "some-uaa-key"},
 			fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3"}, StemcellOS: "ubuntu-trusty", StemcellVersion: "1234", Path: "some-bpm-key"},
 		}

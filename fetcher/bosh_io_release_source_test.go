@@ -86,7 +86,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			releaseVersion = "1.2.3"
 			releaseSource  *fetcher.BOSHIOReleaseSource
 
-			foundReleases         []fetcher.ReleaseInfo
+			foundReleases         []fetcher.RemoteRelease
 			getMatchedReleasesErr error
 		)
 
@@ -258,7 +258,7 @@ var _ = Describe("DownloadReleases", func() {
 	})
 
 	It("downloads the given releases into the release dir", func() {
-		matchedReleases := []fetcher.ReleaseInfo{release1, release2}
+		matchedReleases := []fetcher.RemoteRelease{release1, release2}
 		localReleases, err := releaseSource.DownloadReleases(releaseDir,
 			matchedReleases,
 			1,

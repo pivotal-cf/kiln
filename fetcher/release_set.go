@@ -4,15 +4,19 @@ type ReleaseID struct {
 	Name, Version string
 }
 
-//go:generate counterfeiter -o ./fakes/release_info.go --fake-name ReleaseInfo . ReleaseInfo
-type ReleaseInfo interface {
-	DownloadString() string
+//go:generate counterfeiter -o ./fakes/local_release.go --fake-name LocalRelease . LocalRelease
+type LocalRelease interface {
 	Satisfies(set ReleaseRequirement) bool
-	ReleaseID() ReleaseID
-	AsLocal(string) ReleaseInfo
+	LocalPath() string
 }
 
-type ReleaseSet map[ReleaseID]ReleaseInfo
+type RemoteRelease interface {
+	DownloadString() string
+	ReleaseID() ReleaseID
+	AsLocal(string) LocalRelease
+}
+
+type ReleaseSet map[ReleaseID]LocalRelease
 
 func (rs ReleaseSet) With(toAdd ReleaseSet) ReleaseSet {
 	result := rs.copy()
@@ -30,8 +34,8 @@ func (rs ReleaseSet) ReleaseIDs() []ReleaseID {
 	return result
 }
 
-func (rs ReleaseSet) ReleaseInfos() []ReleaseInfo {
-	result := make([]ReleaseInfo, 0, len(rs))
+func (rs ReleaseSet) LocalReleases() []LocalRelease {
+	result := make([]LocalRelease, 0, len(rs))
 	for _, rInfo := range rs {
 		result = append(result, rInfo)
 	}

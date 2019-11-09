@@ -66,8 +66,8 @@ func (r *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
 	return
 }
 
-func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet, stemcell cargo.Stemcell) ([]ReleaseInfo, error) {
-	matchedBOSHIOReleases := make(ReleaseSet)
+func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet, stemcell cargo.Stemcell) ([]RemoteRelease, error) {
+	matches := make([]RemoteRelease, 0)
 
 	for rel := range desiredReleaseSet {
 	found:
@@ -80,19 +80,18 @@ func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRe
 				}
 				if exists {
 					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", source.serverURI, fullName, rel.Version)
-					builtReleaseID := ReleaseID{Name: rel.Name, Version: rel.Version}
-					builtRelease := BuiltRelease{ID: builtReleaseID, Path: downloadURL}
-					matchedBOSHIOReleases[builtReleaseID] = builtRelease
+					builtRelease := BuiltRelease{ID: ReleaseID{Name: rel.Name, Version: rel.Version}, Path: downloadURL}
+					matches = append(matches, builtRelease)
 					break found
 				}
 			}
 		}
 	}
 
-	return matchedBOSHIOReleases.ReleaseInfos(), nil //no foreseen error to return to a higher level
+	return matches, nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []ReleaseInfo, downloadThreads int) (ReleaseSet, error) {
+func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []RemoteRelease, downloadThreads int) (ReleaseSet, error) {
 	localReleases := make(ReleaseSet)
 
 	r.logger.Printf("downloading %d objects from bosh.io...", len(remoteReleases))

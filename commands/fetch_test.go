@@ -157,7 +157,7 @@ stemcell_criteria:
   version: "30.1"
 `
 				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns(
-					[]fetcher.ReleaseInfo{
+					[]fetcher.RemoteRelease{
 						fetcher.CompiledRelease{ID: s3CompiledReleaseID, StemcellOS: "some-os", StemcellVersion: "30.1", Path: "some-s3-key"},
 					},
 					nil)
@@ -170,7 +170,7 @@ stemcell_criteria:
 					nil)
 
 				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns(
-					[]fetcher.ReleaseInfo{fetcher.BuiltRelease{ID: s3BuiltReleaseID, Path: "some-other-s3-key"}},
+					[]fetcher.RemoteRelease{fetcher.BuiltRelease{ID: s3BuiltReleaseID, Path: "some-other-s3-key"}},
 					nil)
 				fakeS3BuiltReleaseSource.DownloadReleasesReturns(
 					fetcher.ReleaseSet{
@@ -179,7 +179,7 @@ stemcell_criteria:
 					nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
-					[]fetcher.ReleaseInfo{fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"}},
+					[]fetcher.RemoteRelease{fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"}},
 					nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(
 					fetcher.ReleaseSet{
@@ -339,13 +339,13 @@ stemcell_criteria:
 					fetcher.ReleaseID{Name: "some-tiny-release", Version: "1.2.3"}: fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "some-tiny-release", Version: "1.2.3"}, Path: "path/to/some/tiny/release"},
 				}, nil)
 
-				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]fetcher.ReleaseInfo{missingReleaseS3Compiled}, nil)
+				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]fetcher.RemoteRelease{missingReleaseS3Compiled}, nil)
 				fakeS3CompiledReleaseSource.DownloadReleasesReturns(fetcher.ReleaseSet{missingReleaseS3CompiledID: missingReleaseS3Compiled}, nil)
 
-				fakeBoshIOReleaseSource.GetMatchedReleasesReturns([]fetcher.ReleaseInfo{missingReleaseBoshIO}, nil)
+				fakeBoshIOReleaseSource.GetMatchedReleasesReturns([]fetcher.RemoteRelease{missingReleaseBoshIO}, nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(fetcher.ReleaseSet{missingReleaseBoshIOID: missingReleaseBoshIO}, nil)
 
-				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns([]fetcher.ReleaseInfo{missingReleaseS3Built}, nil)
+				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns([]fetcher.RemoteRelease{missingReleaseS3Built}, nil)
 				fakeS3BuiltReleaseSource.DownloadReleasesReturns(fetcher.ReleaseSet{missingReleaseS3BuiltID: missingReleaseS3Built}, nil)
 			})
 
@@ -407,7 +407,7 @@ stemcell_criteria:
 				}, nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
-					[]fetcher.ReleaseInfo{fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"}},
+					[]fetcher.RemoteRelease{fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"}},
 					nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(
 					fetcher.ReleaseSet{boshIOReleaseID: fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"}},

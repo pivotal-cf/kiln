@@ -11,6 +11,10 @@ func (cr CompiledRelease) DownloadString() string {
 	return cr.Path
 }
 
+func (cr CompiledRelease) LocalPath() string {
+	return cr.Path
+}
+
 func (cr CompiledRelease) Satisfies(rr ReleaseRequirement) bool {
 	return cr.ID.Name == rr.Name &&
 		cr.ID.Version == rr.Version &&
@@ -22,7 +26,7 @@ func (cr CompiledRelease) ReleaseID() ReleaseID {
 	return cr.ID
 }
 
-func (cr CompiledRelease) AsLocal(path string) ReleaseInfo {
+func (cr CompiledRelease) AsLocal(path string) LocalRelease {
 	cr.Path = path
 	return cr
 }

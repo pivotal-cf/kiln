@@ -22,7 +22,7 @@ const (
 
 type S3CompiledReleaseSource S3ReleaseSource
 
-func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet, stemcell cargo.Stemcell) ([]ReleaseInfo, error) {
+func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet, stemcell cargo.Stemcell) ([]RemoteRelease, error) {
 	matchedS3Objects := make(map[ReleaseID][]CompiledRelease)
 
 	exp, err := regexp.Compile(r.Regex)
@@ -62,22 +62,22 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseReq
 		return nil, err
 	}
 
-	matchingReleases := make(ReleaseSet, 0)
+	matchingReleases := make([]RemoteRelease, 0)
 	for expectedReleaseID := range desiredReleaseSet {
 		if releases, ok := matchedS3Objects[expectedReleaseID]; ok {
 			for _, release := range releases {
 				if release.StemcellVersion == stemcell.Version && release.StemcellOS == stemcell.OS {
-					matchingReleases[expectedReleaseID] = release
+					matchingReleases = append(matchingReleases, release)
 					break
 				}
 			}
 		}
 	}
 
-	return matchingReleases.ReleaseInfos(), nil
+	return matchingReleases, nil
 }
 
-func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteReleases []ReleaseInfo, downloadThreads int) (ReleaseSet, error) {
+func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteReleases []RemoteRelease, downloadThreads int) (ReleaseSet, error) {
 	localReleases := make(ReleaseSet)
 
 	r.Logger.Printf("downloading %d objects from compiled s3...", len(remoteReleases))

@@ -103,11 +103,12 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				ID:              extraReleaseID,
 				StemcellOS:      "os-0",
 				StemcellVersion: "0.0.0",
-				Path:            "meaningless-string-used-only-by-release-source",
+				Path:            extraFilePath,
 			}
 
-			extraReleases := map[fetcher.ReleaseID]fetcher.ReleaseInfo{}
-			extraReleases[extraReleaseID] = extraRelease
+			extraReleases := map[fetcher.ReleaseID]fetcher.LocalRelease{
+				extraReleaseID: extraRelease,
+			}
 
 			err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
 			Expect(err).NotTo(HaveOccurred())
@@ -126,7 +127,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 					Path:            "file-does-not-exist",
 				}
 
-				extraReleases := map[fetcher.ReleaseID]fetcher.ReleaseInfo{}
+				extraReleases := map[fetcher.ReleaseID]fetcher.LocalRelease{}
 				extraReleases[extraReleaseID] = extraRelease
 
 				err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
@@ -136,9 +137,8 @@ var _ = Describe("LocalReleaseDirectory", func() {
 	})
 
 	Describe("VerifyChecksums", func() {
-		const meaninglessReleaseSourcePath = "/random/path/used/only/by/release-source"
 		var (
-			downloadedReleases map[fetcher.ReleaseID]fetcher.ReleaseInfo
+			downloadedReleases map[fetcher.ReleaseID]fetcher.LocalRelease
 			kilnfileLock       cargo.KilnfileLock
 			goodFilePath       string
 			badFilePath        string
@@ -176,12 +176,12 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when all the checksums on the downloaded releases match their checksums in Kilnfile.lock", func() {
 			It("succeeds", func() {
-				downloadedReleases = map[fetcher.ReleaseID]fetcher.ReleaseInfo{
+				downloadedReleases = map[fetcher.ReleaseID]fetcher.LocalRelease{
 					fetcher.ReleaseID{Name: "good", Version: "1.2.3"}: fetcher.CompiledRelease{
 						ID:              fetcher.ReleaseID{Name: "good", Version: "1.2.3"},
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
-						Path:            meaninglessReleaseSourcePath,
+						Path:            goodFilePath,
 					}}
 				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, kilnfileLock)
 				Expect(err).NotTo(HaveOccurred())
@@ -190,12 +190,12 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when at least one checksum on the downloaded releases does not match the checksum in Kilnfile.lock", func() {
 			It("returns an error and deletes the bad release", func() {
-				downloadedReleases = map[fetcher.ReleaseID]fetcher.ReleaseInfo{
+				downloadedReleases = map[fetcher.ReleaseID]fetcher.LocalRelease{
 					fetcher.ReleaseID{Name: "bad", Version: "1.2.3"}: fetcher.CompiledRelease{
 						ID:              fetcher.ReleaseID{Name: "bad", Version: "1.2.3"},
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
-						Path:            meaninglessReleaseSourcePath,
+						Path:            badFilePath,
 					}}
 				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, kilnfileLock)
 				Expect(err).To(HaveOccurred())
@@ -232,7 +232,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			})
 
 			It("does not validate its checksum", func() {
-				downloadedReleases = map[fetcher.ReleaseID]fetcher.ReleaseInfo{
+				downloadedReleases = map[fetcher.ReleaseID]fetcher.LocalRelease{
 					fetcher.ReleaseID{Name: "good", Version: "1.2.3"}: fetcher.CompiledRelease{
 						ID:              fetcher.ReleaseID{Name: "good", Version: "1.2.3"},
 						StemcellOS:      "ubuntu-xenial",

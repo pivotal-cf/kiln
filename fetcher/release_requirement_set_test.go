@@ -52,14 +52,14 @@ var _ = Describe("ReleaseRequirementSet", func() {
 		var (
 			releaseSet                             ReleaseSet
 			extraReleaseID                         ReleaseID
-			satisfyingRelease, unsatisfyingRelease *fakes.ReleaseInfo
+			satisfyingRelease, unsatisfyingRelease *fakes.LocalRelease
 		)
 
 		BeforeEach(func() {
-			satisfyingRelease = new(fakes.ReleaseInfo)
+			satisfyingRelease = new(fakes.LocalRelease)
 			satisfyingRelease.SatisfiesReturns(true)
 
-			unsatisfyingRelease = new(fakes.ReleaseInfo)
+			unsatisfyingRelease = new(fakes.LocalRelease)
 			unsatisfyingRelease.SatisfiesReturns(false)
 
 			extraReleaseID = ReleaseID{Name: "extra", Version: "2.3.5"}

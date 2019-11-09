@@ -9,6 +9,10 @@ func (br BuiltRelease) DownloadString() string {
 	return br.Path
 }
 
+func (br BuiltRelease) LocalPath() string {
+	return br.Path
+}
+
 func (br BuiltRelease) Satisfies(rr ReleaseRequirement) bool {
 	return br.ID.Name == rr.Name &&
 		br.ID.Version == rr.Version
@@ -18,7 +22,7 @@ func (br BuiltRelease) ReleaseID() ReleaseID {
 	return br.ID
 }
 
-func (br BuiltRelease) AsLocal(path string) ReleaseInfo {
+func (br BuiltRelease) AsLocal(path string) LocalRelease {
 	br.Path = path
 	return br
 }
