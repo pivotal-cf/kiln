@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pivotal-cf/kiln/builder"
+	. "github.com/pivotal-cf/kiln/builder"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("MetadataPartsDirectoryReader", func() {
 	var (
-		reader  builder.MetadataPartsDirectoryReader
+		reader  MetadataPartsDirectoryReader
 		tempDir string
 	)
 
@@ -46,13 +46,13 @@ type: password
 			err = ioutil.WriteFile(filepath.Join(tempDir, "ignores.any-other-extension"), []byte("not-yaml"), 0755)
 			Expect(err).ToNot(HaveOccurred())
 
-			reader = builder.NewMetadataPartsDirectoryReader()
+			reader = NewMetadataPartsDirectoryReader()
 		})
 
 		It("reads the contents of each yml file in the directory", func() {
 			vars, err := reader.Read(tempDir)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(vars).To(Equal([]builder.Part{
+			Expect(vars).To(Equal([]Part{
 				{
 					File: "vars-file-1.yml",
 					Name: "variable-1",
@@ -161,14 +161,14 @@ variables:
 			err = ioutil.WriteFile(filepath.Join(tempDir, "ignores.any-other-extension"), []byte("not-yaml"), 0755)
 			Expect(err).ToNot(HaveOccurred())
 
-			reader = builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")
+			reader = NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")
 		})
 
 		Describe("Read", func() {
 			It("reads the contents of each yml file in the directory", func() {
 				vars, err := reader.Read(tempDir)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(vars).To(Equal([]builder.Part{
+				Expect(vars).To(Equal([]Part{
 					{
 						File: "vars-file-1.yml",
 						Name: "variable-1",
@@ -264,13 +264,13 @@ variables:
 
 		Context("when specifying an Order key", func() {
 			BeforeEach(func() {
-				reader = builder.NewMetadataPartsDirectoryReaderWithOrder("variables", "variable_order")
+				reader = NewMetadataPartsDirectoryReaderWithOrder("variables", "variable_order")
 			})
 
 			It("returns the contents of the files in the directory sorted by _order.yml", func() {
 				vars, err := reader.Read(tempDir)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(vars).To(Equal([]builder.Part{
+				Expect(vars).To(Equal([]Part{
 					{
 						File: "vars-file-2.yml",
 						Name: "variable-3",
@@ -326,7 +326,7 @@ variables:
 
 				Context("when _order.yml file does not have the specified orderKey", func() {
 					BeforeEach(func() {
-						reader = builder.NewMetadataPartsDirectoryReaderWithOrder("variables", "bad_order_key")
+						reader = NewMetadataPartsDirectoryReaderWithOrder("variables", "bad_order_key")
 					})
 
 					It("returns an error", func() {

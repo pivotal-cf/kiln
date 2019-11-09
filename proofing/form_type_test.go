@@ -3,21 +3,21 @@ package proofing_test
 import (
 	"os"
 
-	"github.com/pivotal-cf/kiln/proofing"
+	. "github.com/pivotal-cf/kiln/proofing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("FormType", func() {
-	var formType proofing.FormType
+	var formType FormType
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/form_types.yml")
 		defer f.Close()
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		formType = productTemplate.FormTypes[0]

@@ -3,21 +3,21 @@ package proofing_test
 import (
 	"os"
 
-	"github.com/pivotal-cf/kiln/proofing"
+	. "github.com/pivotal-cf/kiln/proofing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("VerifierBlueprint", func() {
-	var verifierBlueprint proofing.VerifierBlueprint
+	var verifierBlueprint VerifierBlueprint
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/metadata.yml")
 		defer f.Close()
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		verifierBlueprint = productTemplate.FormTypes[0].Verifiers[0]

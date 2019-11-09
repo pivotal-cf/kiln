@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pivotal-cf/kiln/builder"
+	. "github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/builder/fakes"
 
 	. "github.com/onsi/ginkgo"
@@ -22,7 +22,7 @@ var _ = Describe("TileWriter", func() {
 		filesystem *fakes.Filesystem
 		zipper     *fakes.Zipper
 		logger     *fakes.Logger
-		tileWriter builder.TileWriter
+		tileWriter TileWriter
 		outputFile string
 
 		expectedFile *os.File
@@ -32,7 +32,7 @@ var _ = Describe("TileWriter", func() {
 		filesystem = &fakes.Filesystem{}
 		zipper = &fakes.Zipper{}
 		logger = &fakes.Logger{}
-		tileWriter = builder.NewTileWriter(filesystem, zipper, logger)
+		tileWriter = NewTileWriter(filesystem, zipper, logger)
 		outputFile = "some-output-dir/cool-product-file-1.2.3-build.4.pivotal"
 	})
 
@@ -43,7 +43,7 @@ var _ = Describe("TileWriter", func() {
 		})
 
 		DescribeTable("writes tile to disk", func(stubbed bool, errorWhenAttemptingToOpenRelease error) {
-			input := builder.WriteInput{
+			input := WriteInput{
 				ReleaseDirectories:   []string{"/some/path/releases", "/some/other/path/releases"},
 				MigrationDirectories: []string{"/some/path/migrations", "/some/other/path/migrations"},
 				OutputFile:           outputFile,
@@ -214,7 +214,7 @@ releases:
 				}
 			})
 			It("adds stub releases based on metadata", func() {
-				input := builder.WriteInput{
+				input := WriteInput{
 					ReleaseDirectories: []string{"/some/path/releases"},
 					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
 					StubReleases:       true,
@@ -268,7 +268,7 @@ releases:
 
 			Context("and no migrations are provided", func() {
 				It("creates empty migrations/v1 folder", func() {
-					input := builder.WriteInput{
+					input := WriteInput{
 						ReleaseDirectories:   []string{"/some/path/releases"},
 						MigrationDirectories: []string{},
 						OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
@@ -293,7 +293,7 @@ releases:
 
 			Context("and the migrations directory is empty", func() {
 				It("creates empty migrations/v1 folder", func() {
-					input := builder.WriteInput{
+					input := WriteInput{
 						ReleaseDirectories:   []string{"/some/path/releases"},
 						MigrationDirectories: []string{"/some/path/migrations"},
 						OutputFile:           "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
@@ -350,7 +350,7 @@ releases:
 			})
 
 			It("embeds the file in the embed directory", func() {
-				input := builder.WriteInput{
+				input := WriteInput{
 					ReleaseDirectories:   []string{"/some/path/releases"},
 					MigrationDirectories: []string{},
 					EmbedPaths:           []string{"/some/path/to-embed/my-file.txt"},
@@ -415,7 +415,7 @@ releases:
 			})
 
 			It("embeds the directory in the embed directory", func() {
-				input := builder.WriteInput{
+				input := WriteInput{
 					ReleaseDirectories:   []string{"/some/path/releases"},
 					MigrationDirectories: []string{},
 					EmbedPaths:           []string{"/some/path/to-embed"},
@@ -455,7 +455,7 @@ releases:
 				})
 
 				It("returns the error", func() {
-					input := builder.WriteInput{
+					input := WriteInput{
 						OutputFile: outputFile,
 					}
 
@@ -465,9 +465,9 @@ releases:
 				})
 			})
 			Context("when the releases are stubbed", func() {
-				var input builder.WriteInput
+				var input WriteInput
 				BeforeEach(func() {
-					input = builder.WriteInput{
+					input = WriteInput{
 						StubReleases: true,
 						OutputFile:   outputFile,
 					}
@@ -501,7 +501,7 @@ releases:
 				})
 
 				It("returns an error", func() {
-					input := builder.WriteInput{
+					input := WriteInput{
 						StubReleases: true,
 						OutputFile:   outputFile,
 					}
@@ -520,7 +520,7 @@ releases:
 					})
 
 					It("returns an error", func() {
-						input := builder.WriteInput{
+						input := WriteInput{
 							StubReleases: true,
 							OutputFile:   outputFile,
 						}
@@ -538,7 +538,7 @@ releases:
 			})
 
 			Context("when a release file cannot be opened", func() {
-				var input builder.WriteInput
+				var input WriteInput
 
 				BeforeEach(func() {
 					dirInfo := &fakes.FileInfo{}
@@ -562,7 +562,7 @@ releases:
 						return nil, nil
 					}
 
-					input = builder.WriteInput{
+					input = WriteInput{
 						ReleaseDirectories: []string{"/some/path/releases"},
 						OutputFile:         outputFile,
 					}
@@ -595,7 +595,7 @@ releases:
 			})
 
 			Context("when a migration file cannot be opened", func() {
-				var input builder.WriteInput
+				var input WriteInput
 
 				BeforeEach(func() {
 					dirInfo := &fakes.FileInfo{}
@@ -632,7 +632,7 @@ releases:
 						return nil, nil
 					}
 
-					input = builder.WriteInput{
+					input = WriteInput{
 						ReleaseDirectories:   []string{"/some/path/releases"},
 						MigrationDirectories: []string{"/some/path/migrations"},
 						StubReleases:         true,
@@ -667,7 +667,7 @@ releases:
 			})
 
 			Context("when an embed file cannot be opened", func() {
-				var input builder.WriteInput
+				var input WriteInput
 
 				BeforeEach(func() {
 					dirInfo := &fakes.FileInfo{}
@@ -691,7 +691,7 @@ releases:
 						return nil, nil
 					}
 
-					input = builder.WriteInput{
+					input = WriteInput{
 						EmbedPaths: []string{"/some/path/embed"},
 						OutputFile: outputFile,
 					}
@@ -730,7 +730,7 @@ releases:
 				})
 
 				It("returns an error", func() {
-					input := builder.WriteInput{
+					input := WriteInput{
 						StubReleases: true,
 						OutputFile:   outputFile,
 					}
@@ -748,7 +748,7 @@ releases:
 					})
 
 					It("returns an error", func() {
-						input := builder.WriteInput{
+						input := WriteInput{
 							StubReleases: true,
 							OutputFile:   outputFile,
 						}
@@ -766,12 +766,12 @@ releases:
 			})
 
 			Context("when the zipper fails to close", func() {
-				var input builder.WriteInput
+				var input WriteInput
 
 				BeforeEach(func() {
 					zipper.CloseReturns(errors.New("failed to close the zip"))
 
-					input = builder.WriteInput{
+					input = WriteInput{
 						StubReleases: true,
 						OutputFile:   outputFile,
 					}

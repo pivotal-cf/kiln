@@ -9,7 +9,7 @@ import (
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/commands"
+	. "github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	"gopkg.in/yaml.v2"
 
@@ -40,7 +40,7 @@ var _ = Describe("Bake", func() {
 		someReleasesDirectory  string
 		tmpDir                 string
 
-		bake commands.Bake
+		bake Bake
 	)
 
 	BeforeEach(func() {
@@ -150,7 +150,7 @@ var _ = Describe("Bake", func() {
 
 		fakeInterpolator.InterpolateReturns([]byte("some-interpolated-metadata"), nil)
 
-		bake = commands.NewBake(
+		bake = NewBake(
 			fakeInterpolator,
 			fakeTileWriter,
 			fakeLogger,

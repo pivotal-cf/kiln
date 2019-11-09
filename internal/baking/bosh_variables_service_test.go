@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/internal/baking"
+	. "github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/baking/fakes"
 
 	. "github.com/onsi/ginkgo"
@@ -14,7 +14,7 @@ import (
 var _ = Describe("BOSHVariablesService", func() {
 	Describe("FromDirectories", func() {
 		var (
-			service baking.BOSHVariablesService
+			service BOSHVariablesService
 			logger  *fakes.Logger
 			reader  *fakes.DirectoryReader
 		)
@@ -23,7 +23,7 @@ var _ = Describe("BOSHVariablesService", func() {
 			logger = &fakes.Logger{}
 			reader = &fakes.DirectoryReader{}
 
-			service = baking.NewBOSHVariablesService(logger, reader)
+			service = NewBOSHVariablesService(logger, reader)
 
 			reader.ReadReturns([]builder.Part{
 				{
@@ -37,7 +37,7 @@ var _ = Describe("BOSHVariablesService", func() {
 				},
 			}, nil)
 
-			service = baking.NewBOSHVariablesService(logger, reader)
+			service = NewBOSHVariablesService(logger, reader)
 		})
 
 		It("parses template variables from a collection of files", func() {

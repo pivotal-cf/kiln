@@ -15,14 +15,14 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/kiln/commands"
+	. "github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
 )
 
 var _ = Describe("Fetch", func() {
 	var (
-		fetch                       commands.Fetch
+		fetch                       Fetch
 		logger                      *log.Logger
 		tmpDir                      string
 		someKilnfilePath            string
@@ -88,7 +88,7 @@ stemcell_criteria:
 
 			err := ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0644)
 			Expect(err).NotTo(HaveOccurred())
-			fetch = commands.NewFetch(logger, releaseSourcesFactory, fakeLocalReleaseDirectory)
+			fetch = NewFetch(logger, releaseSourcesFactory, fakeLocalReleaseDirectory)
 
 			fetchExecuteErr = fetch.Execute(fetchExecuteArgs)
 		})

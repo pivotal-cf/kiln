@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/internal/baking"
+	. "github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/baking/fakes"
 
 	. "github.com/onsi/ginkgo"
@@ -16,7 +16,7 @@ var _ = Describe("FormsService", func() {
 		var (
 			logger  *fakes.Logger
 			reader  *fakes.DirectoryReader
-			service baking.FormsService
+			service FormsService
 		)
 
 		BeforeEach(func() {
@@ -32,7 +32,7 @@ var _ = Describe("FormsService", func() {
 				},
 			}, nil)
 
-			service = baking.NewFormsService(logger, reader)
+			service = NewFormsService(logger, reader)
 		})
 
 		It("parses the forms passed in a set of directories", func() {

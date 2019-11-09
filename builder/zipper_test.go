@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pivotal-cf/kiln/builder"
+	. "github.com/pivotal-cf/kiln/builder"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -40,7 +40,7 @@ var _ = Describe("Zipper", func() {
 
 	Describe("CreateFolder", func() {
 		It("creates the given path", func() {
-			zipper := builder.NewZipper()
+			zipper := NewZipper()
 			zipper.SetWriter(tileFile)
 
 			err := zipper.CreateFolder("some/path/to/folder")
@@ -59,7 +59,7 @@ var _ = Describe("Zipper", func() {
 		})
 
 		It("does not append separator if already given to the input", func() {
-			zipper := builder.NewZipper()
+			zipper := NewZipper()
 			zipper.SetWriter(tileFile)
 
 			err := zipper.CreateFolder("some/path/to/folder/")
@@ -79,7 +79,7 @@ var _ = Describe("Zipper", func() {
 		Context("failure cases", func() {
 			Context("when path has not been set", func() {
 				It("returns an error", func() {
-					zipper := builder.NewZipper()
+					zipper := NewZipper()
 
 					err := zipper.CreateFolder("/blah/blah")
 					Expect(err).To(MatchError("zipper path must be set"))
@@ -90,7 +90,7 @@ var _ = Describe("Zipper", func() {
 
 	Describe("Add", func() {
 		It("writes the given file into the path", func() {
-			zipper := builder.NewZipper()
+			zipper := NewZipper()
 			zipper.SetWriter(tileFile)
 
 			err := zipper.Add("some/path/to/file.txt", strings.NewReader("file contents"))
@@ -122,7 +122,7 @@ var _ = Describe("Zipper", func() {
 					buffer := NewBuffer(bytes.NewBuffer([]byte{}))
 					buffer.Error = errors.New("failed to read file")
 
-					zipper := builder.NewZipper()
+					zipper := NewZipper()
 					zipper.SetWriter(tileFile)
 
 					err := zipper.Add("file.txt", buffer)
@@ -132,7 +132,7 @@ var _ = Describe("Zipper", func() {
 
 			Context("when path has not been set", func() {
 				It("returns an error", func() {
-					zipper := builder.NewZipper()
+					zipper := NewZipper()
 
 					err := zipper.Add("/blah/blah", strings.NewReader("file contents"))
 					Expect(err).To(MatchError("zipper path must be set"))
@@ -143,7 +143,7 @@ var _ = Describe("Zipper", func() {
 
 	Describe("AddWithMode", func() {
 		It("writes the given file into the path", func() {
-			zipper := builder.NewZipper()
+			zipper := NewZipper()
 			zipper.SetWriter(tileFile)
 
 			err := zipper.AddWithMode("some/path/to/file.txt", strings.NewReader("file contents"), 0644)
@@ -175,7 +175,7 @@ var _ = Describe("Zipper", func() {
 					buffer := NewBuffer(bytes.NewBuffer([]byte{}))
 					buffer.Error = errors.New("failed to read file")
 
-					zipper := builder.NewZipper()
+					zipper := NewZipper()
 					zipper.SetWriter(tileFile)
 
 					err := zipper.AddWithMode("file.txt", buffer, 0)
@@ -185,7 +185,7 @@ var _ = Describe("Zipper", func() {
 
 			Context("when path has not been set", func() {
 				It("returns an error", func() {
-					zipper := builder.NewZipper()
+					zipper := NewZipper()
 
 					err := zipper.AddWithMode("/blah/blah", strings.NewReader("file contents"), 0)
 					Expect(err).To(MatchError("zipper path must be set"))

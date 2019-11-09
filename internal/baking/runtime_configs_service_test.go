@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/internal/baking"
+	. "github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/baking/fakes"
 
 	. "github.com/onsi/ginkgo"
@@ -16,7 +16,7 @@ var _ = Describe("RuntimeConfigsService", func() {
 		var (
 			logger  *fakes.Logger
 			reader  *fakes.DirectoryReader
-			service baking.RuntimeConfigsService
+			service RuntimeConfigsService
 		)
 
 		BeforeEach(func() {
@@ -31,7 +31,7 @@ var _ = Describe("RuntimeConfigsService", func() {
 				},
 			}, nil)
 
-			service = baking.NewRuntimeConfigsService(logger, reader)
+			service = NewRuntimeConfigsService(logger, reader)
 		})
 
 		It("parses the runtime configs passed in a set of directories", func() {

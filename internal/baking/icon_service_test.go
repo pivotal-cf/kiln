@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/pivotal-cf/kiln/internal/baking"
+	. "github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/baking/fakes"
 
 	. "github.com/onsi/ginkgo"
@@ -16,7 +16,7 @@ var _ = Describe("IconService", func() {
 		var (
 			path    string
 			logger  *fakes.Logger
-			service baking.IconService
+			service IconService
 		)
 
 		BeforeEach(func() {
@@ -31,7 +31,7 @@ var _ = Describe("IconService", func() {
 			Expect(file.Close()).To(Succeed())
 
 			logger = &fakes.Logger{}
-			service = baking.NewIconService(logger)
+			service = NewIconService(logger)
 		})
 
 		AfterEach(func() {

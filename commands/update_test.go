@@ -10,15 +10,15 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/commands"
+	. "github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 )
 
 var _ = Describe("Update", func() {
-	var _ jhanda.Command = commands.Update{}
+	var _ jhanda.Command = Update{}
 	When("Execute is called", func() {
 		var (
-			update                                        *commands.Update
+			update                                        *Update
 			tmpDir, someKilnfilePath, someKilfileLockPath string
 			stemcellsVersionsService                      fakes.VersionsService
 		)
@@ -42,7 +42,7 @@ var _ = Describe("Update", func() {
 				"3588.0",
 				"3587.1",
 			}
-			update = &commands.Update{
+			update = &Update{
 				StemcellsVersionsService: &stemcellsVersionsService,
 			}
 		})
@@ -69,7 +69,7 @@ var _ = Describe("Update", func() {
 		When("the stemcell version constraint is bad", func() {
 			var (
 				updateErr error
-				update    commands.Update
+				update    Update
 			)
 			BeforeEach(func() {
 				os.Remove(someKilnfilePath)

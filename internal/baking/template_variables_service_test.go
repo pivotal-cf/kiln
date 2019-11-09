@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/pivotal-cf/kiln/internal/baking"
+	. "github.com/pivotal-cf/kiln/internal/baking"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,12 +13,12 @@ import (
 var _ = Describe("TemplateVariablesService", func() {
 	Describe("FromPathsAndPairs", func() {
 		var (
-			service baking.TemplateVariablesService
+			service TemplateVariablesService
 			path    string
 		)
 
 		BeforeEach(func() {
-			service = baking.NewTemplateVariablesService()
+			service = NewTemplateVariablesService()
 
 			contents := `---
 key-1:

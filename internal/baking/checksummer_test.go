@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pivotal-cf/kiln/internal/baking"
+	. "github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/baking/fakes"
 
 	. "github.com/onsi/ginkgo"
@@ -17,13 +17,13 @@ import (
 var _ = Describe("Checksummer", func() {
 	var (
 		logger      *fakes.Logger
-		checksummer baking.Checksummer
+		checksummer Checksummer
 		tmpdir      string
 	)
 
 	BeforeEach(func() {
 		logger = &fakes.Logger{}
-		checksummer = baking.NewChecksummer(logger)
+		checksummer = NewChecksummer(logger)
 
 		var err error
 		tmpdir, err = ioutil.TempDir("", "")

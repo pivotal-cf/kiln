@@ -3,25 +3,25 @@ package proofing_test
 import (
 	"os"
 
-	"github.com/pivotal-cf/kiln/proofing"
+	. "github.com/pivotal-cf/kiln/proofing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("SelectorPropertyBlueprint", func() {
-	var selectorPropertyBlueprint proofing.SelectorPropertyBlueprint
+	var selectorPropertyBlueprint SelectorPropertyBlueprint
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/property_blueprints.yml")
 		defer f.Close()
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		var ok bool
-		selectorPropertyBlueprint, ok = productTemplate.PropertyBlueprints[1].(proofing.SelectorPropertyBlueprint)
+		selectorPropertyBlueprint, ok = productTemplate.PropertyBlueprints[1].(SelectorPropertyBlueprint)
 		Expect(ok).To(BeTrue())
 	})
 
@@ -42,7 +42,7 @@ var _ = Describe("SelectorPropertyBlueprint", func() {
 		It("returns a list of normalized property blueprints", func() {
 			normalized := selectorPropertyBlueprint.Normalize("some-prefix")
 
-			Expect(normalized).To(ConsistOf([]proofing.NormalizedPropertyBlueprint{
+			Expect(normalized).To(ConsistOf([]NormalizedPropertyBlueprint{
 				{
 					Property:     "some-prefix.some-selector-name",
 					Configurable: true,

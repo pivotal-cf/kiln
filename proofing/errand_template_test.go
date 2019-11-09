@@ -3,21 +3,21 @@ package proofing_test
 import (
 	"os"
 
-	"github.com/pivotal-cf/kiln/proofing"
+	. "github.com/pivotal-cf/kiln/proofing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("ErrandTemplate", func() {
-	var errandTemplate proofing.ErrandTemplate
+	var errandTemplate ErrandTemplate
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/errands.yml")
 		defer f.Close()
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		errandTemplate = productTemplate.PostDeployErrands[0]

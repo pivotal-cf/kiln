@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/pivotal-cf/kiln/internal/cargo"
+	. "github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/internal/cargo/opsman"
 	"github.com/pivotal-cf/kiln/proofing"
 	yaml "gopkg.in/yaml.v2"
@@ -15,10 +15,10 @@ import (
 )
 
 var _ = Describe("Generator", func() {
-	var generator cargo.Generator
+	var generator Generator
 
 	BeforeEach(func() {
-		generator = cargo.NewGenerator()
+		generator = NewGenerator()
 	})
 
 	Describe("Execute", func() {
@@ -30,7 +30,7 @@ var _ = Describe("Generator", func() {
 			template, err := proofing.Parse(f)
 			Expect(err).NotTo(HaveOccurred())
 
-			manifest := generator.Execute(template, cargo.OpsManagerConfig{
+			manifest := generator.Execute(template, OpsManagerConfig{
 				DeploymentName: "some-product-name",
 				AvailabilityZones: []string{
 					"some-az-1",

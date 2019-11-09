@@ -15,24 +15,24 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/kiln/fetcher"
+	. "github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/fetcher/fakes"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 var _ = Describe("GetMatchedReleases from S3 built source", func() {
 	var (
-		releaseSource     fetcher.S3BuiltReleaseSource
+		releaseSource     S3BuiltReleaseSource
 		fakeS3Client      *fakes.S3ObjectLister
-		desiredReleaseSet fetcher.ReleaseRequirementSet
+		desiredReleaseSet ReleaseRequirementSet
 		bpmKey            string
 		ignoredStemcell   cargo.Stemcell
 	)
 
 	BeforeEach(func() {
-		bpmReleaseID := fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}
-		desiredReleaseSet = fetcher.ReleaseRequirementSet{
-			bpmReleaseID: fetcher.ReleaseRequirement{
+		bpmReleaseID := ReleaseID{Name: "bpm", Version: "1.2.3-lts"}
+		desiredReleaseSet = ReleaseRequirementSet{
+			bpmReleaseID: ReleaseRequirement{
 				Name:            bpmReleaseID.Name,
 				Version:         bpmReleaseID.Version,
 				StemcellOS:      "ubuntu-xenial",
@@ -63,7 +63,7 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 
 		logger := log.New(nil, "", 0)
 
-		releaseSource = fetcher.S3BuiltReleaseSource{
+		releaseSource = S3BuiltReleaseSource{
 			Logger:   logger,
 			S3Client: fakeS3Client,
 			Regex:    `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+(-\w+(\.[0-9]+)?)?)\.tgz$`,
@@ -79,12 +79,12 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 		Expect(input.Bucket).To(Equal(aws.String("built-bucket")))
 
 		Expect(matchedS3Objects).To(HaveLen(1))
-		Expect(matchedS3Objects).To(ConsistOf(fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, Path: bpmKey}))
+		Expect(matchedS3Objects).To(ConsistOf(BuiltRelease{ID: ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, Path: bpmKey}))
 	})
 
 	When("the regular expression is missing a capture group", func() {
 		BeforeEach(func() {
-			releaseSource = fetcher.S3BuiltReleaseSource{
+			releaseSource = S3BuiltReleaseSource{
 				Regex: `^2.5/.+/([a-z-_]+)-(?P<release_version>[0-9\.]+)\.tgz$`,
 			}
 		})
@@ -121,7 +121,7 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-				fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, Path: bpmKey},
+				BuiltRelease{ID: ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, Path: bpmKey},
 			))
 		})
 	})
@@ -130,10 +130,10 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func() {
 	var (
 		logger                     *log.Logger
-		releaseSource              fetcher.S3BuiltReleaseSource
+		releaseSource              S3BuiltReleaseSource
 		releaseDir                 string
-		matchedS3Objects           []fetcher.RemoteRelease
-		uaaReleaseID, bpmReleaseID fetcher.ReleaseID
+		matchedS3Objects           []RemoteRelease
+		uaaReleaseID, bpmReleaseID ReleaseID
 		fakeS3Downloader           *fakes.S3Downloader
 	)
 
@@ -143,11 +143,11 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 		releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		uaaReleaseID = fetcher.ReleaseID{Name: "uaa", Version: "1.2.3"}
-		bpmReleaseID = fetcher.ReleaseID{Name: "bpm", Version: "1.2.3"}
-		matchedS3Objects = []fetcher.RemoteRelease{
-			fetcher.BuiltRelease{ID: uaaReleaseID, Path: "some-uaa-key"},
-			fetcher.BuiltRelease{ID: bpmReleaseID, Path: "some-bpm-key"},
+		uaaReleaseID = ReleaseID{Name: "uaa", Version: "1.2.3"}
+		bpmReleaseID = ReleaseID{Name: "bpm", Version: "1.2.3"}
+		matchedS3Objects = []RemoteRelease{
+			BuiltRelease{ID: uaaReleaseID, Path: "some-uaa-key"},
+			BuiltRelease{ID: bpmReleaseID, Path: "some-bpm-key"},
 		}
 
 		logger = log.New(GinkgoWriter, "", 0)
@@ -157,7 +157,7 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 			n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 			return int64(n), err
 		}
-		releaseSource = fetcher.S3BuiltReleaseSource{
+		releaseSource = S3BuiltReleaseSource{
 			Logger:       logger,
 			S3Downloader: fakeS3Downloader,
 			Bucket:       "some-bucket",
@@ -190,12 +190,12 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 
 		Expect(localReleases).To(HaveLen(2))
 		Expect(localReleases).To(HaveKeyWithValue(
-			uaaReleaseID, fetcher.BuiltRelease{
+			uaaReleaseID, BuiltRelease{
 				ID:   uaaReleaseID,
 				Path: uaaReleasePath,
 			}))
 		Expect(localReleases).To(HaveKeyWithValue(
-			bpmReleaseID, fetcher.BuiltRelease{
+			bpmReleaseID, BuiltRelease{
 				ID:   bpmReleaseID,
 				Path: bpmReleasePath,
 			}))

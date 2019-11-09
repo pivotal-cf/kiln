@@ -3,21 +3,21 @@ package proofing_test
 import (
 	"os"
 
-	"github.com/pivotal-cf/kiln/proofing"
+	. "github.com/pivotal-cf/kiln/proofing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("ProductTemplate", func() {
-	var productTemplate proofing.ProductTemplate
+	var productTemplate ProductTemplate
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/metadata.yml")
 		defer f.Close()
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err = proofing.Parse(f)
+		productTemplate, err = Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -46,7 +46,7 @@ var _ = Describe("ProductTemplate", func() {
 		Expect(productTemplate.RequiresProductVersions).To(HaveLen(1))
 		Expect(productTemplate.Releases).To(HaveLen(1))
 		Expect(productTemplate.RuntimeConfigs).To(HaveLen(1))
-		Expect(productTemplate.StemcellCriteria).To(BeAssignableToTypeOf(proofing.StemcellCriteria{}))
+		Expect(productTemplate.StemcellCriteria).To(BeAssignableToTypeOf(StemcellCriteria{}))
 		Expect(productTemplate.Variables).To(HaveLen(1))
 	})
 
@@ -56,7 +56,7 @@ var _ = Describe("ProductTemplate", func() {
 			defer f.Close()
 			Expect(err).NotTo(HaveOccurred())
 
-			productTemplate, err = proofing.Parse(f)
+			productTemplate, err = Parse(f)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
