@@ -81,7 +81,7 @@ func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleas
 		outputFile := filepath.Join(releaseDir, release.StandardizedFilename())
 		file, err := os.Create(outputFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create file %q, %v", outputFile, err)
+			return nil, fmt.Errorf("failed to create file %q: %w", outputFile, err)
 		}
 
 		src.Logger.Printf("downloading %s...\n", release.RemotePath())
@@ -91,7 +91,7 @@ func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleas
 		}, setConcurrency)
 
 		if err != nil {
-			return nil, fmt.Errorf("failed to download file, %v\n", err)
+			return nil, fmt.Errorf("failed to download file: %w\n", err)
 		}
 		rID := release.ReleaseID()
 		localReleases[rID] = release.AsLocal(outputFile)

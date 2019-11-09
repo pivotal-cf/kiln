@@ -135,7 +135,7 @@ func (err ResponseStatusCodeError) Error() string {
 func (r BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {
 	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/github.com/%s", r.serverURI, name))
 	if err != nil {
-		return false, fmt.Errorf("Bosh.io API is down with error: %v", err)
+		return false, fmt.Errorf("bosh.io API is down with error: %w", err)
 	}
 	if resp.StatusCode >= 500 {
 		return false, (*ResponseStatusCodeError)(resp)

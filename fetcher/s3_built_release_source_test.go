@@ -242,7 +242,7 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 			It("returns an error", func() {
 				_, err := releaseSource.DownloadReleases(releaseDir, matchedS3Objects, 0)
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError("failed to download file, 503 Service Unavailable\n"))
+				Expect(err).To(MatchError("failed to download file: 503 Service Unavailable\n"))
 			})
 		})
 	})
