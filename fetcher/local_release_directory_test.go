@@ -110,7 +110,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				extraReleaseID: extraRelease,
 			}
 
-			err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
+			err := localReleaseDirectory.DeleteExtraReleases(extraReleases, noConfirm)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = os.Stat(extraFilePath)
@@ -130,7 +130,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				extraReleases := map[fetcher.ReleaseID]fetcher.LocalRelease{}
 				extraReleases[extraReleaseID] = extraRelease
 
-				err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
+				err := localReleaseDirectory.DeleteExtraReleases(extraReleases, noConfirm)
 				Expect(err).To(MatchError("failed to delete release extra-release-that-cannot-be-deleted"))
 			})
 		})
@@ -183,7 +183,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 						StemcellVersion: "190.0.0",
 						Path:            goodFilePath,
 					}}
-				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, kilnfileLock)
+				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -197,7 +197,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 						StemcellVersion: "190.0.0",
 						Path:            badFilePath,
 					}}
-				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, kilnfileLock)
+				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("These downloaded releases do not match the checksum"))
 
@@ -246,7 +246,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 						Path:            nonStandardFilePath,
 					},
 				}
-				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, kilnfileLock)
+				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

@@ -60,7 +60,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (LocalReleas
 	return outputReleases, nil
 }
 
-func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraReleaseSet LocalReleaseSet, noConfirm bool) error {
+func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet LocalReleaseSet, noConfirm bool) error {
 	var doDeletion byte
 
 	if len(extraReleaseSet) == 0 {
@@ -82,7 +82,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 	}
 
 	if doDeletion == 'y' || doDeletion == 'Y' {
-		err := l.deleteReleases(releasesDir, extraReleaseSet)
+		err := l.deleteReleases(extraReleaseSet)
 		if err != nil {
 			return err
 		}
@@ -90,7 +90,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 	return nil
 }
 
-func (l LocalReleaseDirectory) deleteReleases(releasesDir string, releasesToDelete LocalReleaseSet) error {
+func (l LocalReleaseDirectory) deleteReleases(releasesToDelete LocalReleaseSet) error {
 	for releaseID, release := range releasesToDelete {
 		err := os.Remove(release.LocalPath())
 
@@ -105,7 +105,7 @@ func (l LocalReleaseDirectory) deleteReleases(releasesDir string, releasesToDele
 	return nil
 }
 
-func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedReleaseSet LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error {
+func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error {
 	if len(downloadedReleaseSet) == 0 {
 		return nil
 	}
@@ -131,7 +131,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 		}
 
 		if expectedSum != sum {
-			l.deleteReleases(releasesDir, LocalReleaseSet{releaseID: release})
+			l.deleteReleases(LocalReleaseSet{releaseID: release})
 			badReleases = append(badReleases, fmt.Sprintf("%+v", release.LocalPath()))
 		}
 	}

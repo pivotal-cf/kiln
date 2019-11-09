@@ -430,8 +430,7 @@ stemcell_criteria:
 					Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
 
 					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
-					releaseDir, extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
-					Expect(releaseDir).To(Equal(someReleasesDirectory))
+					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
 					Expect(extras).To(HaveLen(1))
 					Expect(noConfirm).To(Equal(true))
 					Expect(extras).To(ConsistOf(

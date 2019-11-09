@@ -83,8 +83,8 @@ func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, l
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
 	GetLocalReleases(releasesDir string) (fetcher.LocalReleaseSet, error)
-	DeleteExtraReleases(releasesDir string, extraReleases fetcher.LocalReleaseSet, noConfirm bool) error
-	VerifyChecksums(releasesDir string, downloadedReleases fetcher.LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error
+	DeleteExtraReleases(extraReleases fetcher.LocalReleaseSet, noConfirm bool) error
+	VerifyChecksums(downloadedReleases fetcher.LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -101,7 +101,7 @@ func (f Fetch) Execute(args []string) error {
 	desiredReleaseSet := fetcher.NewReleaseRequirementSet(kilnfileLock)
 	satisfiedReleaseSet, unsatisfiedReleaseSet, extraReleaseSet := desiredReleaseSet.Partition(availableLocalReleaseSet)
 
-	err = f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleaseSet, f.Options.NoConfirm)
+	err = f.localReleaseDirectory.DeleteExtraReleases(extraReleaseSet, f.Options.NoConfirm)
 	if err != nil {
 		f.logger.Println("failed deleting some releases: ", err.Error())
 	}
@@ -119,7 +119,7 @@ func (f Fetch) Execute(args []string) error {
 		return ErrorMissingReleases(unsatisfiedReleaseSet)
 	}
 
-	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, kilnfileLock)
+	return f.localReleaseDirectory.VerifyChecksums(satisfiedReleaseSet, kilnfileLock)
 }
 
 func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetcher.LocalReleaseSet, error) {
