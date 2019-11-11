@@ -118,6 +118,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 
 		logger := logshim.NewLogShim(p.OutLogger, p.ErrLogger, false)
 		client := pivnet.NewClient(tokenService, config, logger)
+		client.HTTP.Timeout = 60 * 5 * time.Second
 
 		if p.PivnetReleaseService == nil {
 			p.PivnetReleaseService = client.Releases
@@ -280,9 +281,24 @@ func (p Publish) addUserGroups(rv *releaseVersion, release pivnet.Release, kilnf
 		return nil
 	}
 
-	allUserGroups, err := p.PivnetUserGroupsService.List()
-	if err != nil {
-		return err
+	var (
+		err           error
+		allUserGroups []pivnet.UserGroup
+		errorCount    int
+	)
+listUserGroupsRetryLoop:
+	for {
+		allUserGroups, err = p.PivnetUserGroupsService.List()
+		if err != nil && errorCount < 5 {
+			if !strings.HasSuffix(err.Error(), "net/http: request canceled (Client.Timeout exceeded while awaiting headers)") {
+				return err
+			}
+			errorCount++
+			p.ErrLogger.Printf("failed list user groups with error: %s", err)
+			p.OutLogger.Printf("retrying list command (%d retries so far)", errorCount)
+			continue listUserGroupsRetryLoop
+		}
+		break listUserGroupsRetryLoop
 	}
 
 	p.OutLogger.Println("Granting access to groups...")
