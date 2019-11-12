@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/internal/baking"
+	. "github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/baking/fakes"
 
 	. "github.com/onsi/ginkgo"
@@ -16,7 +16,7 @@ var _ = Describe("PropertiesService", func() {
 		var (
 			logger  *fakes.Logger
 			reader  *fakes.DirectoryReader
-			service baking.PropertiesService
+			service PropertiesService
 		)
 
 		BeforeEach(func() {
@@ -31,7 +31,7 @@ var _ = Describe("PropertiesService", func() {
 				},
 			}, nil)
 
-			service = baking.NewPropertiesService(logger, reader)
+			service = NewPropertiesService(logger, reader)
 		})
 
 		It("parses the properties passed in a set of directories", func() {

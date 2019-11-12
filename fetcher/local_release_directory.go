@@ -15,10 +15,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
-const (
-	ErrReleaseTypeNotSupported = stringError("release type not supported")
-)
-
 type LocalReleaseDirectory struct {
 	logger          *log.Logger
 	releasesService baking.ReleasesService
@@ -31,8 +27,8 @@ func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.Release
 	}
 }
 
-func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (ReleaseSet, error) {
-	outputReleases := map[ReleaseID]ReleaseInfoDownloader{}
+func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (LocalReleaseSet, error) {
+	outputReleases := LocalReleaseSet{}
 
 	rawReleases, err := l.releasesService.FromDirectories([]string{releasesDir})
 	if err != nil {
@@ -43,7 +39,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (ReleaseSet,
 		releaseManifest := release.(builder.ReleaseManifest)
 		id := ReleaseID{Name: releaseManifest.Name, Version: releaseManifest.Version}
 
-		var rel ReleaseInfoDownloader
+		var rel LocalRelease
 		// see implementation of ReleaseManifestReader.Read for why we can assume that
 		// stemcell metadata are empty strings
 		if releaseManifest.StemcellOS != "" && releaseManifest.StemcellVersion != "" {
@@ -64,7 +60,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (ReleaseSet,
 	return outputReleases, nil
 }
 
-func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraReleaseSet ReleaseSet, noConfirm bool) error {
+func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet LocalReleaseSet, noConfirm bool) error {
 	var doDeletion byte
 
 	if len(extraReleaseSet) == 0 {
@@ -77,7 +73,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 		l.logger.Println("Warning: kiln will delete the following files:")
 
 		for _, release := range extraReleaseSet {
-			l.logger.Printf("- %s\n", release.DownloadString())
+			l.logger.Printf("- %s\n", release.LocalPath())
 		}
 
 		l.logger.Printf("Are you sure you want to delete these files? [yN]")
@@ -86,7 +82,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 	}
 
 	if doDeletion == 'y' || doDeletion == 'Y' {
-		err := l.deleteReleases(releasesDir, extraReleaseSet)
+		err := l.deleteReleases(extraReleaseSet)
 		if err != nil {
 			return err
 		}
@@ -94,14 +90,9 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(releasesDir string, extraRele
 	return nil
 }
 
-func (l LocalReleaseDirectory) deleteReleases(releasesDir string, releasesToDelete ReleaseSet) error {
+func (l LocalReleaseDirectory) deleteReleases(releasesToDelete LocalReleaseSet) error {
 	for releaseID, release := range releasesToDelete {
-		path, err := ConvertToLocalBasename(release)
-		if err != nil {
-			l.logger.Printf("error converting release to local path %s: %v\n", releaseID.Name, err)
-			return fmt.Errorf("failed to delete release %s", releaseID.Name)
-		}
-		err = os.Remove(filepath.Join(releasesDir, path))
+		err := os.Remove(release.LocalPath())
 
 		if err != nil {
 			l.logger.Printf("error removing release %s: %v\n", releaseID.Name, err)
@@ -114,18 +105,7 @@ func (l LocalReleaseDirectory) deleteReleases(releasesDir string, releasesToDele
 	return nil
 }
 
-func ConvertToLocalBasename(release ReleaseInfoDownloader) (string, error) {
-	switch rel := release.(type) {
-	case CompiledRelease:
-		return fmt.Sprintf("%s-%s-%s-%s.tgz", rel.ID.Name, rel.ID.Version, rel.StemcellOS, rel.StemcellVersion), nil
-	case BuiltRelease:
-		return fmt.Sprintf("%s-%s.tgz", rel.ID.Name, rel.ID.Version), nil
-	default:
-		return "", ErrReleaseTypeNotSupported
-	}
-}
-
-func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedReleaseSet ReleaseSet, kilnfileLock cargo.KilnfileLock) error {
+func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error {
 	if len(downloadedReleaseSet) == 0 {
 		return nil
 	}
@@ -145,22 +125,14 @@ func (l LocalReleaseDirectory) VerifyChecksums(releasesDir string, downloadedRel
 			continue
 		}
 
-		localBasename, err := ConvertToLocalBasename(release)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-
-		completeLocalPath := filepath.Join(releasesDir, localBasename)
-
-		sum, err := calculateSum(completeLocalPath)
+		sum, err := calculateSum(release.LocalPath())
 		if err != nil {
 			return fmt.Errorf("error while calculating checksum: %s", err)
 		}
 
 		if expectedSum != sum {
-			l.deleteReleases(releasesDir, ReleaseSet{releaseID: release})
-			badReleases = append(badReleases, fmt.Sprintf("%+v", completeLocalPath))
+			l.deleteReleases(LocalReleaseSet{releaseID: release})
+			badReleases = append(badReleases, fmt.Sprintf("%+v", release.LocalPath()))
 		}
 	}
 

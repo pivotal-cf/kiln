@@ -9,7 +9,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/pivotal-cf/kiln/builder"
+	. "github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/builder/fakes"
 
 	. "github.com/onsi/ginkgo"
@@ -19,12 +19,12 @@ import (
 var _ = Describe("StemcellManifestReader", func() {
 	var (
 		filesystem *fakes.Filesystem
-		reader     builder.StemcellManifestReader
+		reader     StemcellManifestReader
 	)
 
 	BeforeEach(func() {
 		filesystem = &fakes.Filesystem{}
-		reader = builder.NewStemcellManifestReader(filesystem)
+		reader = NewStemcellManifestReader(filesystem)
 
 		tarball := NewBuffer(bytes.NewBuffer([]byte{}))
 		gw := gzip.NewWriter(tarball)
@@ -61,8 +61,8 @@ operating_system: centOS
 		It("extracts the stemcell manifest information from the tarball", func() {
 			stemcellManifest, err := reader.Read("/path/to/stemcell/tarball")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(stemcellManifest).To(Equal(builder.Part{
-				Metadata: builder.StemcellManifest{
+			Expect(stemcellManifest).To(Equal(Part{
+				Metadata: StemcellManifest{
 					Version:         "9999",
 					OperatingSystem: "centOS",
 				},

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/internal/baking"
+	. "github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/baking/fakes"
 
 	. "github.com/onsi/ginkgo"
@@ -20,7 +20,7 @@ var _ = Describe("ReleasesService", func() {
 			tempDir string
 			logger  *fakes.Logger
 			reader  *fakes.PartReader
-			service baking.ReleasesService
+			service ReleasesService
 		)
 
 		BeforeEach(func() {
@@ -48,7 +48,7 @@ var _ = Describe("ReleasesService", func() {
 
 			logger = &fakes.Logger{}
 			reader = &fakes.PartReader{}
-			service = baking.NewReleasesService(logger, reader)
+			service = NewReleasesService(logger, reader)
 		})
 
 		AfterEach(func() {

@@ -1,7 +1,7 @@
 package builder_test
 
 import (
-	"github.com/pivotal-cf/kiln/builder"
+	. "github.com/pivotal-cf/kiln/builder"
 	yaml "gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
@@ -35,17 +35,17 @@ selected_value: $( release "some-release" | select "version" )
 `
 
 	var (
-		input        builder.InterpolateInput
-		interpolator builder.Interpolator
+		input        InterpolateInput
+		interpolator Interpolator
 	)
 
 	BeforeEach(func() {
-		interpolator = builder.NewInterpolator()
+		interpolator = NewInterpolator()
 
-		input = builder.InterpolateInput{
+		input = InterpolateInput{
 			Version: "3.4.5",
 			BOSHVariables: map[string]interface{}{
-				"some-bosh-variable": builder.Metadata{
+				"some-bosh-variable": Metadata{
 					"name": "some-bosh-variable",
 					"type": "some-bosh-type",
 				},
@@ -54,26 +54,26 @@ selected_value: $( release "some-release" | select "version" )
 				"some-variable": "some-value",
 			},
 			ReleaseManifests: map[string]interface{}{
-				"some-release": builder.ReleaseManifest{
+				"some-release": ReleaseManifest{
 					Name:    "some-release",
 					Version: "1.2.3",
 					File:    "some-release-1.2.3.tgz",
 					SHA1:    "123abc",
 				},
 			},
-			StemcellManifest: builder.StemcellManifest{
+			StemcellManifest: StemcellManifest{
 				Version:         "2.3.4",
 				OperatingSystem: "an-operating-system",
 			},
 			FormTypes: map[string]interface{}{
-				"some-form": builder.Metadata{
+				"some-form": Metadata{
 					"name":  "some-form",
 					"label": "some-form-label",
 				},
 			},
 			IconImage: "some-icon-image",
 			InstanceGroups: map[string]interface{}{
-				"some-instance-group": builder.Metadata{
+				"some-instance-group": Metadata{
 					"name": "some-instance-group",
 					"templates": []string{
 						"$( job \"some-job\" )",
@@ -81,19 +81,19 @@ selected_value: $( release "some-release" | select "version" )
 				},
 			},
 			Jobs: map[string]interface{}{
-				"some-job": builder.Metadata{
+				"some-job": Metadata{
 					"name":    "some-job",
 					"release": "some-release",
 				},
 			},
 			PropertyBlueprints: map[string]interface{}{
-				"some-templated-property": builder.Metadata{
+				"some-templated-property": Metadata{
 					"name":         "some-templated-property",
 					"type":         "boolean",
 					"configurable": true,
 					"default":      false,
 				},
-				"some-other-templated-property": builder.Metadata{
+				"some-other-templated-property": Metadata{
 					"name":         "some-other-templated-property",
 					"type":         "string",
 					"configurable": false,
@@ -101,7 +101,7 @@ selected_value: $( release "some-release" | select "version" )
 				},
 			},
 			RuntimeConfigs: map[string]interface{}{
-				"some-runtime-config": builder.Metadata{
+				"some-runtime-config": Metadata{
 					"name":           "some-runtime-config",
 					"runtime_config": "some-addon-runtime-config\n",
 				},
@@ -183,12 +183,12 @@ selected_value: 1.2.3
 some_form_types:
 - $( form "some-form" )`
 
-		input = builder.InterpolateInput{
+		input = InterpolateInput{
 			Variables: map[string]interface{}{
 				"some-form-variable": "variable-form-label",
 			},
 			FormTypes: map[string]interface{}{
-				"some-form": builder.Metadata{
+				"some-form": Metadata{
 					"name":  "some-form",
 					"label": `$( variable "some-form-variable" )`,
 				},
@@ -208,9 +208,9 @@ some_form_types:
 		var templateYAML string
 
 		BeforeEach(func() {
-			input = builder.InterpolateInput{
+			input = InterpolateInput{
 				ReleaseManifests: map[string]interface{}{
-					"some-release": builder.ReleaseManifest{
+					"some-release": ReleaseManifest{
 						Name:    "some-release",
 						Version: "1.2.3",
 						File:    "some-release-1.2.3.tgz",
@@ -218,11 +218,11 @@ some_form_types:
 					},
 				},
 				StemcellManifests: map[string]interface{}{
-					"windows": builder.StemcellManifest{
+					"windows": StemcellManifest{
 						OperatingSystem: "windows",
 						Version:         "2019.4",
 					},
-					"centOS": builder.StemcellManifest{
+					"centOS": StemcellManifest{
 						OperatingSystem: "centOS",
 						Version:         "5.4",
 					},
@@ -273,9 +273,9 @@ additional_stemcells_criteria:
 ---
 stemcell_criteria: $( stemcell )`
 
-			input = builder.InterpolateInput{
+			input = InterpolateInput{
 				ReleaseManifests: map[string]interface{}{
-					"some-release": builder.ReleaseManifest{
+					"some-release": ReleaseManifest{
 						Name:    "some-release",
 						Version: "1.2.3",
 						File:    "some-release-1.2.3.tgz",
@@ -283,7 +283,7 @@ stemcell_criteria: $( stemcell )`
 					},
 				},
 				StemcellManifests: map[string]interface{}{
-					"centOS": builder.StemcellManifest{
+					"centOS": StemcellManifest{
 						OperatingSystem: "centOS",
 						Version:         "5.4",
 					},
@@ -314,9 +314,9 @@ stemcell_criteria:
 some_runtime_configs:
 - $( runtime_config "some-runtime-config" )`
 
-			input = builder.InterpolateInput{
+			input = InterpolateInput{
 				ReleaseManifests: map[string]interface{}{
-					"some-release": builder.ReleaseManifest{
+					"some-release": ReleaseManifest{
 						Name:    "some-release",
 						Version: "1.2.3",
 						File:    "some-release-1.2.3.tgz",
@@ -324,7 +324,7 @@ some_runtime_configs:
 					},
 				},
 				RuntimeConfigs: map[string]interface{}{
-					"some-runtime-config": builder.Metadata{
+					"some-runtime-config": Metadata{
 						"name": "some-runtime-config",
 						"runtime_config": `releases:
 - $( release "some-release" )`,
@@ -359,7 +359,7 @@ releases:
 		Context("when the interpolated runtime config does not have a runtime_config key", func() {
 			JustBeforeEach(func() {
 				input.RuntimeConfigs = map[string]interface{}{
-					"some-runtime-config": builder.Metadata{
+					"some-runtime-config": Metadata{
 						"name": "some-runtime-config",
 					},
 				}
@@ -378,7 +378,7 @@ some_runtime_configs:
 	Context("when release tgz file does not exist and stub releases is true", func() {
 		It("sets version to unknown", func() {
 
-			interpolator := builder.NewInterpolator()
+			interpolator := NewInterpolator()
 			input.StubReleases = true
 			interpolatedYAML, err := interpolator.Interpolate(input, []byte(`releases: [$(release "stub-release")]`))
 
@@ -393,7 +393,7 @@ some_runtime_configs:
 		Context("when the requested form name is not found", func() {
 			It("returns an error", func() {
 				input.FormTypes = map[string]interface{}{}
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
@@ -404,7 +404,7 @@ some_runtime_configs:
 		Context("when the requested property blueprint is not found", func() {
 			It("returns an error", func() {
 				input.PropertyBlueprints = map[string]interface{}{}
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
@@ -415,7 +415,7 @@ some_runtime_configs:
 		Context("when the requested runtime config is not found", func() {
 			It("returns an error", func() {
 				input.RuntimeConfigs = map[string]interface{}{}
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
@@ -426,12 +426,12 @@ some_runtime_configs:
 		Context("when the nested form contains invalid templating", func() {
 			It("returns an error", func() {
 				input.FormTypes = map[string]interface{}{
-					"some-form": builder.Metadata{
+					"some-form": Metadata{
 						"name":  "some-form",
 						"label": "$( invalid_helper )",
 					},
 				}
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to interpolate value"))
@@ -441,7 +441,7 @@ some_runtime_configs:
 		Context("when template parsing fails", func() {
 			It("returns an error", func() {
 
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte("$(variable"))
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("template parsing failed"))
@@ -451,7 +451,7 @@ some_runtime_configs:
 		Context("when template execution fails", func() {
 			It("returns an error", func() {
 
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte(`name: $( variable "some-missing-variable" )`))
 
 				Expect(err).To(HaveOccurred())
@@ -463,7 +463,7 @@ some_runtime_configs:
 		Context("when release tgz file does not exist but is provided", func() {
 			It("returns an error", func() {
 
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte(`releases: [$(release "some-release-does-not-exist")]`))
 
 				Expect(err).To(HaveOccurred())
@@ -473,7 +473,7 @@ some_runtime_configs:
 
 		Context("when the bosh_variable helper is used without providing the flag", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				input.BOSHVariables = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
@@ -484,7 +484,7 @@ some_runtime_configs:
 
 		Context("when the form helper is used without providing the flag", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				input.FormTypes = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
@@ -495,7 +495,7 @@ some_runtime_configs:
 
 		Context("when the property helper is used without providing the flag", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				input.PropertyBlueprints = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
@@ -506,7 +506,7 @@ some_runtime_configs:
 
 		Context("when the release helper is used without providing the flag", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				input.ReleaseManifests = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
@@ -517,7 +517,7 @@ some_runtime_configs:
 
 		Context("when the stemcell helper is used without any stemcells", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				input.StemcellManifest = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
@@ -533,7 +533,7 @@ some_releases:
 - $(release "some-release")
 stemcell_criteria: $( stemcell "windows" )
 `
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte(templateWithStemcellName))
 
 				Expect(err).To(HaveOccurred())
@@ -543,7 +543,7 @@ stemcell_criteria: $( stemcell "windows" )
 
 		Context("when the version helper is used without providing the flag", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				input.Version = ""
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
@@ -554,7 +554,7 @@ stemcell_criteria: $( stemcell "windows" )
 
 		Context("when the variable helper is used without providing the flag", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				input.Variables = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
@@ -565,7 +565,7 @@ stemcell_criteria: $( stemcell "windows" )
 
 		Context("when the icon helper is used without providing the flag", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				input.IconImage = ""
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
@@ -576,7 +576,7 @@ stemcell_criteria: $( stemcell "windows" )
 
 		Context("when the instance_group helper is used without providing the flag", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				input.InstanceGroups = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
@@ -587,7 +587,7 @@ stemcell_criteria: $( stemcell "windows" )
 
 		Context("when the job helper is used without providing the flag", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				input.Jobs = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
@@ -598,7 +598,7 @@ stemcell_criteria: $( stemcell "windows" )
 
 		Context("when the runtime_config helper is used without providing the flag", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				input.RuntimeConfigs = nil
 				_, err := interpolator.Interpolate(input, []byte(templateYAML))
 
@@ -609,7 +609,7 @@ stemcell_criteria: $( stemcell "windows" )
 
 		Context("when a specified instance group is not included in the interpolate input", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte(`job_types: [$(instance_group "some-instance-group-does-not-exist")]`))
 
 				Expect(err).To(HaveOccurred())
@@ -619,7 +619,7 @@ stemcell_criteria: $( stemcell "windows" )
 
 		Context("when a specified job is not included in the interpolate input", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte(`job: [$(job "some-job-does-not-exist")]`))
 
 				Expect(err).To(HaveOccurred())
@@ -629,7 +629,7 @@ stemcell_criteria: $( stemcell "windows" )
 
 		Context("input to the select function cannot be JSON unmarshalled", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte(`job: [$( "%%%" | select "value" )]`))
 
 				Expect(err).To(HaveOccurred())
@@ -639,7 +639,7 @@ stemcell_criteria: $( stemcell "windows" )
 
 		Context("input to the select function cannot be JSON unmarshalled", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte(`release: [$( release "some-release" | select "key-not-there" )]`))
 
 				Expect(err).To(HaveOccurred())
@@ -649,7 +649,7 @@ stemcell_criteria: $( stemcell "windows" )
 
 		Context("input to regexReplaceAll is not valid regex", func() {
 			It("returns an error", func() {
-				interpolator := builder.NewInterpolator()
+				interpolator := NewInterpolator()
 				_, err := interpolator.Interpolate(input, []byte(`regex: $( regexReplaceAll "**" "" "" )`))
 
 				Expect(err).To(HaveOccurred())

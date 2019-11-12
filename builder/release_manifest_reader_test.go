@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pivotal-cf/kiln/builder"
+	. "github.com/pivotal-cf/kiln/builder"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -68,14 +68,14 @@ func createReleaseTarball(releaseMetadata string) (*os.File, string) {
 
 var _ = Describe("ReleaseManifestReader", func() {
 	var (
-		reader      builder.ReleaseManifestReader
+		reader      ReleaseManifestReader
 		releaseSHA1 string
 		tarball     *os.File
 		err         error
 	)
 
 	BeforeEach(func() {
-		reader = builder.NewReleaseManifestReader()
+		reader = NewReleaseManifestReader()
 		tarball, releaseSHA1 = createReleaseTarball(`
 name: release
 version: 1.2.3
@@ -92,12 +92,12 @@ compiled_packages:
 
 	Describe("Read", func() {
 		It("extracts the release manifest information from the tarball", func() {
-			var releaseManifest builder.Part
+			var releaseManifest Part
 			releaseManifest, err = reader.Read(tarball.Name())
 			Expect(err).NotTo(HaveOccurred())
-			Expect(releaseManifest).To(Equal(builder.Part{
+			Expect(releaseManifest).To(Equal(Part{
 				Name: "release",
-				Metadata: builder.ReleaseManifest{
+				Metadata: ReleaseManifest{
 					Name:            "release",
 					Version:         "1.2.3",
 					File:            filepath.Base(tarball.Name()),
@@ -117,12 +117,12 @@ version: 1.2.3
 			})
 
 			It("extracts the release manifest information from the tarball", func() {
-				var releaseManifest builder.Part
+				var releaseManifest Part
 				releaseManifest, err = reader.Read(tarball.Name())
 				Expect(err).NotTo(HaveOccurred())
-				Expect(releaseManifest).To(Equal(builder.Part{
+				Expect(releaseManifest).To(Equal(Part{
 					Name: "release",
-					Metadata: builder.ReleaseManifest{
+					Metadata: ReleaseManifest{
 						Name:            "release",
 						Version:         "1.2.3",
 						File:            filepath.Base(tarball.Name()),

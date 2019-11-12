@@ -3,25 +3,25 @@ package proofing_test
 import (
 	"os"
 
-	"github.com/pivotal-cf/kiln/proofing"
+	. "github.com/pivotal-cf/kiln/proofing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("CollectionPropertyBlueprint", func() {
-	var collectionPropertyBlueprint proofing.CollectionPropertyBlueprint
+	var collectionPropertyBlueprint CollectionPropertyBlueprint
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/property_blueprints.yml")
 		defer f.Close()
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		var ok bool
-		collectionPropertyBlueprint, ok = productTemplate.PropertyBlueprints[2].(proofing.CollectionPropertyBlueprint)
+		collectionPropertyBlueprint, ok = productTemplate.PropertyBlueprints[2].(CollectionPropertyBlueprint)
 		Expect(ok).To(BeTrue())
 	})
 
@@ -41,7 +41,7 @@ var _ = Describe("CollectionPropertyBlueprint", func() {
 		It("returns a list of normalized property blueprints", func() {
 			normalized := collectionPropertyBlueprint.Normalize("some-prefix")
 
-			Expect(normalized).To(ConsistOf([]proofing.NormalizedPropertyBlueprint{
+			Expect(normalized).To(ConsistOf([]NormalizedPropertyBlueprint{
 				{
 					Property:     "some-prefix.some-collection-name",
 					Configurable: true,

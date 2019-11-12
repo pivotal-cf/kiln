@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/commands"
+	. "github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 
 	. "github.com/onsi/ginkgo"
@@ -70,7 +70,7 @@ var _ = Describe("Help", func() {
 				clean := &fakes.Command{}
 				clean.UsageReturns(jhanda.Usage{ShortDescription: "cleans the pot you used"})
 
-				help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{
+				help := NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{
 					"cook":  cook,
 					"clean": clean,
 				})
@@ -94,7 +94,7 @@ var _ = Describe("Help", func() {
 					}{},
 				})
 
-				help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook})
+				help := NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook})
 				err := help.Execute([]string{"cook"})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -103,7 +103,7 @@ var _ = Describe("Help", func() {
 
 			Context("when the command does not exist", func() {
 				It("returns an error", func() {
-					help := commands.NewHelp(output, flags, jhanda.CommandSet{})
+					help := NewHelp(output, flags, jhanda.CommandSet{})
 					err := help.Execute([]string{"missing-command"})
 					Expect(err).To(MatchError("unknown command: missing-command"))
 				})
@@ -118,7 +118,7 @@ var _ = Describe("Help", func() {
 						Flags:            func() {},
 					})
 
-					help := commands.NewHelp(output, flags, jhanda.CommandSet{"cook": cook})
+					help := NewHelp(output, flags, jhanda.CommandSet{"cook": cook})
 					err := help.Execute([]string{"cook"})
 					Expect(err).To(MatchError("unexpected pointer to non-struct type func"))
 				})
@@ -132,7 +132,7 @@ var _ = Describe("Help", func() {
 						ShortDescription: "cooks you a stew",
 					})
 
-					help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook})
+					help := NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook})
 					err := help.Execute([]string{"cook"})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -150,7 +150,7 @@ var _ = Describe("Help", func() {
 						Flags:            struct{}{},
 					})
 
-					help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook})
+					help := NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook})
 					err := help.Execute([]string{"cook"})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -163,7 +163,7 @@ var _ = Describe("Help", func() {
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			help := commands.NewHelp(nil, "", jhanda.CommandSet{})
+			help := NewHelp(nil, "", jhanda.CommandSet{})
 			Expect(help.Usage()).To(Equal(jhanda.Usage{
 				Description:      "This command prints helpful usage information.",
 				ShortDescription: "prints this usage information",

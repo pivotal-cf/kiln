@@ -9,14 +9,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/fetcher"
+	. "github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 var _ = Describe("LocalReleaseDirectory", func() {
 	var (
-		localReleaseDirectory fetcher.LocalReleaseDirectory
+		localReleaseDirectory LocalReleaseDirectory
 		noConfirm             bool
 		releasesDir           string
 		releaseFile           string
@@ -35,7 +35,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		releaseManifestReader := builder.NewReleaseManifestReader()
 		releasesService := baking.NewReleasesService(fakeLogger, releaseManifestReader)
 
-		localReleaseDirectory = fetcher.NewLocalReleaseDirectory(fakeLogger, releasesService)
+		localReleaseDirectory = NewLocalReleaseDirectory(fakeLogger, releasesService)
 	})
 
 	AfterEach(func() {
@@ -56,12 +56,12 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(releases).To(HaveLen(1))
 				Expect(releases).To(HaveKeyWithValue(
-					fetcher.ReleaseID{
+					ReleaseID{
 						Name:    "some-release",
 						Version: "1.2.3",
 					},
-					fetcher.CompiledRelease{
-						ID: fetcher.ReleaseID{
+					CompiledRelease{
+						ID: ReleaseID{
 							Name:    "some-release",
 							Version: "1.2.3",
 						},
@@ -98,18 +98,19 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		})
 
 		It("deletes specified files", func() {
-			extraReleaseID := fetcher.ReleaseID{Name: "extra-release", Version: "0.0"}
-			extraRelease := fetcher.CompiledRelease{
+			extraReleaseID := ReleaseID{Name: "extra-release", Version: "0.0"}
+			extraRelease := CompiledRelease{
 				ID:              extraReleaseID,
 				StemcellOS:      "os-0",
 				StemcellVersion: "0.0.0",
-				Path:            "meaningless-string-used-only-by-release-source",
+				Path:            extraFilePath,
 			}
 
-			extraReleases := map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{}
-			extraReleases[extraReleaseID] = extraRelease
+			extraReleases := map[ReleaseID]LocalRelease{
+				extraReleaseID: extraRelease,
+			}
 
-			err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
+			err := localReleaseDirectory.DeleteExtraReleases(extraReleases, noConfirm)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = os.Stat(extraFilePath)
@@ -118,27 +119,26 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when a file cannot be removed", func() {
 			It("returns an error", func() {
-				extraReleaseID := fetcher.ReleaseID{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
-				extraRelease := fetcher.CompiledRelease{
+				extraReleaseID := ReleaseID{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
+				extraRelease := CompiledRelease{
 					ID:              extraReleaseID,
 					StemcellOS:      "os-0",
 					StemcellVersion: "0.0.0",
 					Path:            "file-does-not-exist",
 				}
 
-				extraReleases := map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{}
+				extraReleases := map[ReleaseID]LocalRelease{}
 				extraReleases[extraReleaseID] = extraRelease
 
-				err := localReleaseDirectory.DeleteExtraReleases(releasesDir, extraReleases, noConfirm)
+				err := localReleaseDirectory.DeleteExtraReleases(extraReleases, noConfirm)
 				Expect(err).To(MatchError("failed to delete release extra-release-that-cannot-be-deleted"))
 			})
 		})
 	})
 
 	Describe("VerifyChecksums", func() {
-		const meaninglessReleaseSourcePath = "/random/path/used/only/by/release-source"
 		var (
-			downloadedReleases map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader
+			downloadedReleases map[ReleaseID]LocalRelease
 			kilnfileLock       cargo.KilnfileLock
 			goodFilePath       string
 			badFilePath        string
@@ -176,28 +176,28 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when all the checksums on the downloaded releases match their checksums in Kilnfile.lock", func() {
 			It("succeeds", func() {
-				downloadedReleases = map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{
-					fetcher.ReleaseID{Name: "good", Version: "1.2.3"}: fetcher.CompiledRelease{
-						ID:              fetcher.ReleaseID{Name: "good", Version: "1.2.3"},
+				downloadedReleases = map[ReleaseID]LocalRelease{
+					ReleaseID{Name: "good", Version: "1.2.3"}: CompiledRelease{
+						ID:              ReleaseID{Name: "good", Version: "1.2.3"},
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
-						Path:            meaninglessReleaseSourcePath,
+						Path:            goodFilePath,
 					}}
-				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, kilnfileLock)
+				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
 		Context("when at least one checksum on the downloaded releases does not match the checksum in Kilnfile.lock", func() {
 			It("returns an error and deletes the bad release", func() {
-				downloadedReleases = map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{
-					fetcher.ReleaseID{Name: "bad", Version: "1.2.3"}: fetcher.CompiledRelease{
-						ID:              fetcher.ReleaseID{Name: "bad", Version: "1.2.3"},
+				downloadedReleases = map[ReleaseID]LocalRelease{
+					ReleaseID{Name: "bad", Version: "1.2.3"}: CompiledRelease{
+						ID:              ReleaseID{Name: "bad", Version: "1.2.3"},
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
-						Path:            meaninglessReleaseSourcePath,
+						Path:            badFilePath,
 					}}
-				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, kilnfileLock)
+				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("These downloaded releases do not match the checksum"))
 
@@ -232,21 +232,21 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			})
 
 			It("does not validate its checksum", func() {
-				downloadedReleases = map[fetcher.ReleaseID]fetcher.ReleaseInfoDownloader{
-					fetcher.ReleaseID{Name: "good", Version: "1.2.3"}: fetcher.CompiledRelease{
-						ID:              fetcher.ReleaseID{Name: "good", Version: "1.2.3"},
+				downloadedReleases = map[ReleaseID]LocalRelease{
+					ReleaseID{Name: "good", Version: "1.2.3"}: CompiledRelease{
+						ID:              ReleaseID{Name: "good", Version: "1.2.3"},
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
 						Path:            goodFilePath,
 					},
-					fetcher.ReleaseID{Name: "uaa", Version: "7.3.0"}: fetcher.CompiledRelease{
-						ID:              fetcher.ReleaseID{Name: "uaa", Version: "7.3.0"},
+					ReleaseID{Name: "uaa", Version: "7.3.0"}: CompiledRelease{
+						ID:              ReleaseID{Name: "uaa", Version: "7.3.0"},
 						StemcellOS:      "ubuntu-xenial",
 						StemcellVersion: "190.0.0",
 						Path:            nonStandardFilePath,
 					},
 				}
-				err := localReleaseDirectory.VerifyChecksums(releasesDir, downloadedReleases, kilnfileLock)
+				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

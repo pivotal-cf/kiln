@@ -3,21 +3,21 @@ package proofing_test
 import (
 	"os"
 
-	"github.com/pivotal-cf/kiln/proofing"
+	. "github.com/pivotal-cf/kiln/proofing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Release", func() {
-	var release proofing.Release
+	var release Release
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/metadata.yml")
 		defer f.Close()
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		release = productTemplate.Releases[0]
@@ -36,7 +36,7 @@ var _ = Describe("Release", func() {
 
 	Context("validations", func() {
 		BeforeEach(func() {
-			release = proofing.Release{
+			release = Release{
 				Name:    "some-name",
 				Version: "some-version",
 				File:    "some-file",
@@ -60,7 +60,7 @@ var _ = Describe("Release", func() {
 		})
 
 		It("combines validations", func() {
-			release = proofing.Release{}
+			release = Release{}
 			Expect(release.Validate()).To(MatchError(`- release name must be present
 - release file must be present
 - release version must be present`))

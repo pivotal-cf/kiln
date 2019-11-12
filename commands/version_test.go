@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/commands"
+	. "github.com/pivotal-cf/kiln/commands"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,12 +15,12 @@ var _ = Describe("Version", func() {
 	var (
 		writer  strings.Builder
 		logger  *log.Logger
-		version commands.Version
+		version Version
 	)
 
 	BeforeEach(func() {
 		logger = log.New(&writer, "", 0)
-		version = commands.NewVersion(logger, "1.2.3-build.4")
+		version = NewVersion(logger, "1.2.3-build.4")
 	})
 
 	Describe("Execute", func() {
@@ -34,7 +34,7 @@ var _ = Describe("Version", func() {
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			version := commands.NewVersion(nil, "")
+			version := NewVersion(nil, "")
 			Expect(version.Usage()).To(Equal(jhanda.Usage{
 				Description:      "This command prints the kiln release version number.",
 				ShortDescription: "prints the kiln release version",

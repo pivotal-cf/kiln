@@ -3,7 +3,7 @@ package baking_test
 import (
 	"errors"
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/internal/baking"
+	. "github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/baking/fakes"
 	"io/ioutil"
 	"os"
@@ -19,13 +19,13 @@ var _ = Describe("StemcellService", func() {
 			tempDir string
 			logger  *fakes.Logger
 			reader  *fakes.PartReader
-			service baking.StemcellService
+			service StemcellService
 		)
 
 		BeforeEach(func() {
 			logger = &fakes.Logger{}
 			reader = &fakes.PartReader{}
-			service = baking.NewStemcellService(logger, reader)
+			service = NewStemcellService(logger, reader)
 
 			var err error
 			tempDir, err = ioutil.TempDir("", "")
@@ -103,7 +103,7 @@ var _ = Describe("StemcellService", func() {
 		var (
 			logger  *fakes.Logger
 			reader  *fakes.PartReader
-			service baking.StemcellService
+			service StemcellService
 		)
 
 		BeforeEach(func() {
@@ -116,7 +116,7 @@ var _ = Describe("StemcellService", func() {
 				},
 			}, nil)
 
-			service = baking.NewStemcellService(logger, reader)
+			service = NewStemcellService(logger, reader)
 		})
 
 		It("parses the stemcell passed as a tarball", func() {

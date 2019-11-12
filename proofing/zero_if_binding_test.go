@@ -3,21 +3,21 @@ package proofing_test
 import (
 	"os"
 
-	"github.com/pivotal-cf/kiln/proofing"
+	. "github.com/pivotal-cf/kiln/proofing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("ZeroIf", func() {
-	var zeroIfBinding proofing.ZeroIfBinding
+	var zeroIfBinding ZeroIfBinding
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/metadata.yml")
 		defer f.Close()
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		zeroIfBinding = productTemplate.JobTypes[0].InstanceDefinition.ZeroIf

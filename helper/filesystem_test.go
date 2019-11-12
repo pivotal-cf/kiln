@@ -5,17 +5,17 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pivotal-cf/kiln/helper"
+	. "github.com/pivotal-cf/kiln/helper"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Filesystem", func() {
-	var filesystem helper.Filesystem
+	var filesystem Filesystem
 
 	BeforeEach(func() {
-		filesystem = helper.NewFilesystem()
+		filesystem = NewFilesystem()
 	})
 
 	Describe("Create", func() {

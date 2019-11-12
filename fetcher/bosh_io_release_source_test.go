@@ -15,7 +15,7 @@ import (
 
 	"github.com/onsi/gomega/ghttp"
 
-	"github.com/pivotal-cf/kiln/fetcher"
+	. "github.com/pivotal-cf/kiln/fetcher"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,8 +26,8 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 
 	Context("happy path", func() {
 		var (
-			releaseSource     *fetcher.BOSHIOReleaseSource
-			desiredReleaseSet fetcher.ReleaseSet
+			releaseSource     *BOSHIOReleaseSource
+			desiredReleaseSet ReleaseRequirementSet
 			testServer        *ghttp.Server
 		)
 
@@ -47,7 +47,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/zzz.*")
 			testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
 
-			releaseSource = fetcher.NewBOSHIOReleaseSource(
+			releaseSource = NewBOSHIOReleaseSource(
 				logger,
 				testServer.URL(),
 			)
@@ -60,10 +60,10 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 		It("returns built releases which exist on bosh.io", func() {
 			os := "ubuntu-xenial"
 			version := "190.0.0"
-			desiredReleaseSet = fetcher.ReleaseSet{
-				fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"}:          fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"}, StemcellOS: os, StemcellVersion: version},
-				fetcher.ReleaseID{Name: "zzz", Version: "999"}:             fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "zzz", Version: "999"}, StemcellOS: os, StemcellVersion: version},
-				fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}: fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, StemcellOS: os, StemcellVersion: version},
+			desiredReleaseSet = ReleaseRequirementSet{
+				ReleaseID{Name: "uaa", Version: "73.3.0"}:          ReleaseRequirement{Name: "uaa", Version: "73.3.0", StemcellOS: os, StemcellVersion: version},
+				ReleaseID{Name: "zzz", Version: "999"}:             ReleaseRequirement{Name: "zzz", Version: "999", StemcellOS: os, StemcellVersion: version},
+				ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}: ReleaseRequirement{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: os, StemcellVersion: version},
 			}
 
 			foundReleases, err := releaseSource.GetMatchedReleases(desiredReleaseSet, ignoredStemcell)
@@ -72,10 +72,10 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(foundReleases).To(HaveLen(2))
-			Expect(foundReleases).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"},
-				fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "uaa", Version: "73.3.0"}, Path: uaaURL}))
-			Expect(foundReleases).To(HaveKeyWithValue(fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"},
-				fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, Path: cfRabbitURL}))
+			Expect(foundReleases).To(ConsistOf(
+				BuiltRelease{ID: ReleaseID{Name: "uaa", Version: "73.3.0"}, Path: uaaURL},
+				BuiltRelease{ID: ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, Path: cfRabbitURL},
+			))
 		})
 	})
 
@@ -84,9 +84,9 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			testServer     *ghttp.Server
 			releaseName    = "my-release"
 			releaseVersion = "1.2.3"
-			releaseSource  *fetcher.BOSHIOReleaseSource
+			releaseSource  *BOSHIOReleaseSource
 
-			foundReleases         fetcher.ReleaseSet
+			foundReleases         []RemoteRelease
 			getMatchedReleasesErr error
 		)
 
@@ -96,7 +96,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			pathRegex, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/.*")
 			testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `[{"version": "4.0.4"}]`))
 
-			releaseSource = fetcher.NewBOSHIOReleaseSource(
+			releaseSource = NewBOSHIOReleaseSource(
 				log.New(GinkgoWriter, "", 0),
 				testServer.URL(),
 			)
@@ -108,10 +108,10 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 		})
 
 		JustBeforeEach(func() {
-			releaseID := fetcher.ReleaseID{Name: releaseName, Version: releaseVersion}
+			releaseID := ReleaseID{Name: releaseName, Version: releaseVersion}
 
 			foundReleases, getMatchedReleasesErr = releaseSource.GetMatchedReleases(
-				fetcher.ReleaseSet{releaseID: fetcher.CompiledRelease{}},
+				ReleaseRequirementSet{releaseID: ReleaseRequirement{}},
 				ignoredStemcell,
 			)
 		})
@@ -127,13 +127,13 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			testServer     *ghttp.Server
 			releaseName    = "my-release"
 			releaseVersion = "1.2.3"
-			releaseSource  *fetcher.BOSHIOReleaseSource
+			releaseSource  *BOSHIOReleaseSource
 		)
 
 		BeforeEach(func() {
 			testServer = ghttp.NewServer()
 
-			releaseSource = fetcher.NewBOSHIOReleaseSource(
+			releaseSource = NewBOSHIOReleaseSource(
 				log.New(GinkgoWriter, "", 0),
 				testServer.URL(),
 			)
@@ -151,16 +151,16 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 				pathRegex, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/.*")
 				testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `null`))
 
-				releaseID := fetcher.ReleaseID{Name: releaseName, Version: releaseVersion}
-				compiledRelease := fetcher.CompiledRelease{
-					ID:              releaseID,
+				releaseID := ReleaseID{Name: releaseName, Version: releaseVersion}
+				releaseRequirement := ReleaseRequirement{
+					Name: releaseName,
+					Version: releaseVersion,
 					StemcellOS:      "generic-os",
 					StemcellVersion: "4.5.6",
-					Path:            "",
 				}
 
 				foundReleases, err := releaseSource.GetMatchedReleases(
-					fetcher.ReleaseSet{releaseID: compiledRelease},
+					ReleaseRequirementSet{releaseID: releaseRequirement},
 					ignoredStemcell,
 				)
 
@@ -173,12 +173,12 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 					releaseVersion,
 				)
 
-				expectedRelease := fetcher.BuiltRelease{
+				expectedRelease := BuiltRelease{
 					ID:   releaseID,
 					Path: expectedPath,
 				}
 
-				Expect(foundReleases).To(HaveKeyWithValue(releaseID, expectedRelease))
+				Expect(foundReleases).To(ConsistOf(expectedRelease))
 			},
 
 			Entry("cloudfoundry org, no suffix", "cloudfoundry", ""),
@@ -200,17 +200,17 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 var _ = Describe("DownloadReleases", func() {
 	var (
 		releaseDir    string
-		releaseSource *fetcher.BOSHIOReleaseSource
+		releaseSource *BOSHIOReleaseSource
 		testServer    *ghttp.Server
 
-		release1ID                 fetcher.ReleaseID
-		release1                   fetcher.BuiltRelease
+		release1ID                 ReleaseID
+		release1                   BuiltRelease
 		release1ServerPath         string
 		release1Filename           string
 		release1ServerFileContents string
 
-		release2ID                 fetcher.ReleaseID
-		release2                   fetcher.BuiltRelease
+		release2ID                 ReleaseID
+		release2                   BuiltRelease
 		release2ServerPath         string
 		release2Filename           string
 		release2ServerFileContents string
@@ -223,20 +223,20 @@ var _ = Describe("DownloadReleases", func() {
 
 		testServer = ghttp.NewServer()
 
-		releaseSource = fetcher.NewBOSHIOReleaseSource(
+		releaseSource = NewBOSHIOReleaseSource(
 			log.New(GinkgoWriter, "", 0),
 			testServer.URL(),
 		)
 
-		release1ID = fetcher.ReleaseID{Name: "some", Version: "1.2.3"}
+		release1ID = ReleaseID{Name: "some", Version: "1.2.3"}
 		release1ServerPath = "/some-release"
-		release1 = fetcher.BuiltRelease{ID: release1ID, Path: testServer.URL() + release1ServerPath}
+		release1 = BuiltRelease{ID: release1ID, Path: testServer.URL() + release1ServerPath}
 		release1Filename = "some-1.2.3.tgz"
 		release1ServerFileContents = "totes-a-real-release"
 
-		release2ID = fetcher.ReleaseID{Name: "another", Version: "2.3.4"}
+		release2ID = ReleaseID{Name: "another", Version: "2.3.4"}
 		release2ServerPath = "/releases/another/release/2.3.4"
-		release2 = fetcher.BuiltRelease{ID: release2ID, Path: testServer.URL() + release2ServerPath}
+		release2 = BuiltRelease{ID: release2ID, Path: testServer.URL() + release2ServerPath}
 		release2Filename = "another-2.3.4.tgz"
 		release2ServerFileContents = "blah-blah-blah deploy instructions blah blah"
 
@@ -258,11 +258,8 @@ var _ = Describe("DownloadReleases", func() {
 	})
 
 	It("downloads the given releases into the release dir", func() {
-		matchedReleases := fetcher.ReleaseSet{
-			release1ID: release1,
-			release2ID: release2,
-		}
-		err := releaseSource.DownloadReleases(releaseDir,
+		matchedReleases := []RemoteRelease{release1, release2}
+		localReleases, err := releaseSource.DownloadReleases(releaseDir,
 			matchedReleases,
 			1,
 		)
@@ -281,5 +278,17 @@ var _ = Describe("DownloadReleases", func() {
 		release2DiskContents, err := ioutil.ReadFile(fullRelease2Path)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(release2DiskContents).To(BeEquivalentTo(release2ServerFileContents))
+
+		Expect(localReleases).To(HaveLen(2))
+		Expect(localReleases).To(HaveKeyWithValue(
+			release1ID, BuiltRelease{
+				ID:              release1ID,
+				Path:            fullRelease1Path,
+			}))
+		Expect(localReleases).To(HaveKeyWithValue(
+			release2ID, BuiltRelease{
+				ID:              release2ID,
+				Path:            fullRelease2Path,
+			}))
 	})
 })

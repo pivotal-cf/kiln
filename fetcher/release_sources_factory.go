@@ -9,8 +9,8 @@ import (
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedReleases(ReleaseSet, cargo.Stemcell) (ReleaseSet, error)
-	DownloadReleases(releasesDir string, matchedS3Objects ReleaseSet, downloadThreads int) error
+	GetMatchedReleases(ReleaseRequirementSet, cargo.Stemcell) ([]RemoteRelease, error)
+	DownloadReleases(releasesDir string, matchedS3Objects []RemoteRelease, downloadThreads int) (LocalReleaseSet, error)
 }
 
 type releaseSourceFunction func(cargo.Kilnfile, bool) []ReleaseSource

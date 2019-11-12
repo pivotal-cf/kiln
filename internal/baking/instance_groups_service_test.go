@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/internal/baking"
+	. "github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/baking/fakes"
 
 	. "github.com/onsi/ginkgo"
@@ -16,7 +16,7 @@ var _ = Describe("InstanceGroupsService", func() {
 		var (
 			logger  *fakes.Logger
 			reader  *fakes.DirectoryReader
-			service baking.InstanceGroupsService
+			service InstanceGroupsService
 		)
 
 		BeforeEach(func() {
@@ -31,7 +31,7 @@ var _ = Describe("InstanceGroupsService", func() {
 				},
 			}, nil)
 
-			service = baking.NewInstanceGroupsService(logger, reader)
+			service = NewInstanceGroupsService(logger, reader)
 		})
 
 		It("parses the instance groups passed in a set of directories", func() {

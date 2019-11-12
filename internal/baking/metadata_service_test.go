@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/pivotal-cf/kiln/internal/baking"
+	. "github.com/pivotal-cf/kiln/internal/baking"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -14,7 +14,7 @@ var _ = Describe("MetadataService", func() {
 	Describe("Read", func() {
 		var (
 			path    string
-			service baking.MetadataService
+			service MetadataService
 		)
 
 		BeforeEach(func() {
@@ -28,7 +28,7 @@ var _ = Describe("MetadataService", func() {
 
 			Expect(file.Close()).To(Succeed())
 
-			service = baking.NewMetadataService()
+			service = NewMetadataService()
 		})
 
 		AfterEach(func() {

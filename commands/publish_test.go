@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/go-pivnet/v2"
-	"github.com/pivotal-cf/kiln/commands"
+	. "github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/memfs"
@@ -41,7 +41,7 @@ pre_ga_user_groups:
 	Describe("Execute", func() {
 		When("on the happy-path", func() {
 			var (
-				publish          commands.Publish
+				publish          Publish
 				rs               *fakes.PivnetReleasesService
 				pfs              *fakes.PivnetProductFilesService
 				ugs              *fakes.PivnetUserGroupsService
@@ -85,7 +85,7 @@ pre_ga_user_groups:
 				kf.Write([]byte(defaultKilnFileBody))
 				kf.Close()
 
-				publish = commands.Publish{
+				publish = Publish{
 					FS:                        fs,
 					PivnetReleaseService:      rs,
 					PivnetProductFilesService: pfs,
@@ -617,7 +617,7 @@ pre_ga_user_groups:
 
 		When("the sad/unhappy case", func() {
 			var (
-				publish commands.Publish
+				publish Publish
 				now     time.Time
 				fs      billy.Filesystem
 
@@ -632,7 +632,7 @@ pre_ga_user_groups:
 			)
 
 			BeforeEach(func() {
-				publish = commands.Publish{}
+				publish = Publish{}
 				publish.Options.Kilnfile = "Kilnfile"
 				outLoggerBuffer = strings.Builder{}
 				publish.OutLogger = log.New(&outLoggerBuffer, "", 0)

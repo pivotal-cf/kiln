@@ -16,16 +16,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type multipleError []error
-
-func (errs multipleError) Error() string {
-	var strs []string
-	for _, err := range errs {
-		strs = append(strs, "- "+err.Error())
-	}
-	return "\n" + strings.Join(strs, "\n")
-}
-
 type ConfigFileError struct {
 	HumanReadableConfigFileName string
 	err                         error
@@ -39,7 +29,7 @@ func (err ConfigFileError) Error() string {
 	return fmt.Sprintf("encountered a configuration file error with %s: %s", err.HumanReadableConfigFileName, err.err.Error())
 }
 
-type ErrorMissingReleases fetcher.ReleaseSet
+type ErrorMissingReleases fetcher.ReleaseRequirementSet
 
 func (releases ErrorMissingReleases) Error() string {
 	var missing []string
@@ -82,9 +72,9 @@ func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, l
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
-	GetLocalReleases(releasesDir string) (fetcher.ReleaseSet, error)
-	DeleteExtraReleases(releasesDir string, extraReleases fetcher.ReleaseSet, noConfirm bool) error
-	VerifyChecksums(releasesDir string, downloadedReleases fetcher.ReleaseSet, kilnfileLock cargo.KilnfileLock) error
+	GetLocalReleases(releasesDir string) (fetcher.LocalReleaseSet, error)
+	DeleteExtraReleases(extraReleases fetcher.LocalReleaseSet, noConfirm bool) error
+	VerifyChecksums(downloadedReleases fetcher.LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -93,21 +83,13 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	err = f.verifyCompiledReleaseStemcell(availableLocalReleaseSet, kilnfileLock.Stemcell)
-	if err != nil {
-		return err
-	}
+	desiredReleaseSet := fetcher.NewReleaseRequirementSet(kilnfileLock)
+	satisfiedReleaseSet, unsatisfiedReleaseSet, extraReleaseSet := desiredReleaseSet.Partition(availableLocalReleaseSet)
 
-	desiredReleaseSet := fetcher.NewReleaseSet(kilnfileLock)
-	extraReleaseSet := availableLocalReleaseSet.Without(desiredReleaseSet)
-
-	err = f.localReleaseDirectory.DeleteExtraReleases(f.Options.ReleasesDir, extraReleaseSet, f.Options.NoConfirm)
+	err = f.localReleaseDirectory.DeleteExtraReleases(extraReleaseSet, f.Options.NoConfirm)
 	if err != nil {
 		f.logger.Println("failed deleting some releases: ", err.Error())
 	}
-
-	satisfiedReleaseSet := availableLocalReleaseSet.Without(extraReleaseSet)
-	unsatisfiedReleaseSet := desiredReleaseSet.Without(availableLocalReleaseSet)
 
 	if len(unsatisfiedReleaseSet) > 0 {
 		f.logger.Printf("Found %d missing releases to download", len(unsatisfiedReleaseSet))
@@ -122,10 +104,10 @@ func (f Fetch) Execute(args []string) error {
 		return ErrorMissingReleases(unsatisfiedReleaseSet)
 	}
 
-	return f.localReleaseDirectory.VerifyChecksums(f.Options.ReleasesDir, satisfiedReleaseSet, kilnfileLock)
+	return f.localReleaseDirectory.VerifyChecksums(satisfiedReleaseSet, kilnfileLock)
 }
 
-func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetcher.ReleaseSet, error) {
+func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetcher.LocalReleaseSet, error) {
 	args, err := jhanda.Parse(&f.Options, args)
 
 	if err != nil {
@@ -188,62 +170,27 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetche
 	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
 }
 
-
-func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseSet, stemcell cargo.Stemcell) (satisfied, unsatisfied fetcher.ReleaseSet, err error) {
+func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet fetcher.LocalReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseRequirementSet, stemcell cargo.Stemcell) (satisfied fetcher.LocalReleaseSet, unsatisfied fetcher.ReleaseRequirementSet, err error) {
 	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile, f.Options.AllowOnlyPublishableReleases)
 	for _, releaseSource := range releaseSources {
-		matchedReleaseSet, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet, stemcell)
+		if len(unsatisfiedReleaseSet) == 0 {
+			break
+		}
+		remoteReleases, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet, stemcell)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		err = releaseSource.DownloadReleases(f.Options.ReleasesDir, matchedReleaseSet, f.Options.DownloadThreads)
+		localReleases, err := releaseSource.DownloadReleases(f.Options.ReleasesDir, remoteReleases, f.Options.DownloadThreads)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		unsatisfiedReleaseSet, satisfiedReleaseSet = unsatisfiedReleaseSet.TransferElements(matchedReleaseSet, satisfiedReleaseSet)
+		satisfiedReleaseSet = satisfiedReleaseSet.With(localReleases)
+		unsatisfiedReleaseSet = unsatisfiedReleaseSet.WithoutReleases(localReleases.ReleaseIDs())
 	}
 
 	return satisfiedReleaseSet, unsatisfiedReleaseSet, nil
-}
-
-func (f Fetch) verifyCompiledReleaseStemcell(localReleases fetcher.ReleaseSet, stemcell cargo.Stemcell) error {
-	var errs []error
-	for _, release := range localReleases {
-		if rel, ok := release.(fetcher.CompiledRelease); ok {
-			if rel.StemcellOS != stemcell.OS || rel.StemcellVersion != stemcell.Version {
-				errs = append(errs, IncorrectOSError{
-					ReleaseName:    rel.ID.Name,
-					ReleaseVersion: rel.ID.Version,
-					GotOS:          rel.StemcellOS,
-					GotOSVersion:   rel.StemcellVersion,
-					WantOS:         stemcell.OS,
-					WantOSVersion:  stemcell.Version,
-				})
-			}
-		}
-	}
-	if len(errs) != 0 {
-		return multipleError(errs)
-	}
-	return nil
-}
-
-type IncorrectOSError struct {
-	ReleaseName, ReleaseVersion string
-	WantOS, GotOS               string
-	WantOSVersion, GotOSVersion string
-}
-
-func (err IncorrectOSError) Error() string {
-	return fmt.Sprintf(
-		"expected release %s-%s to have been compiled with %s %s but was compiled with %s %s",
-		err.ReleaseName,
-		err.ReleaseVersion,
-		err.WantOS, err.WantOSVersion,
-		err.GotOS, err.GotOSVersion,
-	)
 }
 
 func (f Fetch) Usage() jhanda.Usage {
