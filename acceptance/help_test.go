@@ -40,7 +40,7 @@ Command Arguments:
   --icon, -i                         string             path to icon file
   --instance-groups-directory, -ig   string (variadic)  path to a directory containing instance groups
   --jobs-directory, -j               string (variadic)  path to a directory containing jobs
-  --kilnfile, -kf                    string             path to Kilnfile  (NOTE: mutually exclusive with --stemcell-directory)
+  --kilnfile, -kf                    string             path to Kilnfile
   --metadata, -m                     string (required)  path to the metadata file
   --metadata-only, -mo               bool               don't build a tile, output the metadata to stdout
   --migrations-directory, -md        string (variadic)  path to a directory containing migrations
@@ -49,8 +49,8 @@ Command Arguments:
   --releases-directory, -rd          string (variadic)  path to a directory containing release tarballs
   --runtime-configs-directory, -rcd  string (variadic)  path to a directory containing runtime configs
   --sha256                           bool               calculates a SHA256 checksum of the output file
-  --stemcell-tarball, -st            string             deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)
-  --stemcells-directory, -sd         string (variadic)  path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)
+  --stemcell-tarball, -st            string             deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --stemcells-directory)
+  --stemcells-directory, -sd         string (variadic)  path to a directory containing stemcells  (NOTE: mutually exclusive with --stemcell-tarball)
   --stub-releases, -sr               bool               skips importing release tarballs into the tile
   --variable, -vr                    string (variadic)  key value pairs of variables to interpolate
   --variables-file, -vf              string (variadic)  path to a file containing variables to interpolate

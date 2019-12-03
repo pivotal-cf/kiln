@@ -99,10 +99,10 @@ type Bake struct {
 	metadata          metadataService
 
 	Options struct {
-		Kilnfile           string   `short:"kf"  long:"kilnfile"                        description:"path to Kilnfile  (NOTE: mutually exclusive with --stemcell-directory)"`
+		Kilnfile           string   `short:"kf" long:"kilnfile"                           description:"path to Kilnfile"`
 		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
 		OutputFile         string   `short:"o"  long:"output-file"                        description:"path to where the tile will be output"`
-		ReleaseDirectories []string `short:"rd" long:"releases-directory"               description:"path to a directory containing release tarballs"`
+		ReleaseDirectories []string `short:"rd" long:"releases-directory"                 description:"path to a directory containing release tarballs"`
 
 		BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"  description:"path to a directory containing BOSH variables"`
 		EmbedPaths               []string `short:"e"   long:"embed"                     description:"path to files to include in the tile /embed directory"`
@@ -115,8 +115,8 @@ type Bake struct {
 		PropertyDirectories      []string `short:"pd"  long:"properties-directory"      description:"path to a directory containing property blueprints"`
 		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory" description:"path to a directory containing runtime configs"`
 		Sha256                   bool     `            long:"sha256"                    description:"calculates a SHA256 checksum of the output file"`
-		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"          description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)"`
-		StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"       description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)"`
+		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"          description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --stemcells-directory)"`
+		StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"       description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --stemcell-tarball)"`
 		StubReleases             bool     `short:"sr"  long:"stub-releases"             description:"skips importing release tarballs into the tile"`
 		VariableFiles            []string `short:"vf"  long:"variables-file"            description:"path to a file containing variables to interpolate"`
 		Variables                []string `short:"vr"  long:"variable"                  description:"key value pairs of variables to interpolate"`
@@ -175,14 +175,6 @@ func (b Bake) Execute(args []string) error {
 		return errors.New("--output-file must be provided unless using --metadata-only")
 	}
 
-	if b.Options.Kilnfile != "" && b.Options.StemcellTarball != "" {
-		return errors.New("--kilnfile cannot be provided when using --stemcell-tarball")
-	}
-
-	if b.Options.Kilnfile != "" && len(b.Options.StemcellsDirectories) > 0 {
-		return errors.New("--kilnfile cannot be provided when using --stemcells-directory")
-	}
-
 	if b.Options.StemcellTarball != "" && len(b.Options.StemcellsDirectories) > 0 {
 		return errors.New("--stemcell-tarball cannot be provided when using --stemcells-directory")
 	}
@@ -206,11 +198,12 @@ func (b Bake) Execute(args []string) error {
 	if b.Options.StemcellTarball != "" {
 		// TODO remove when stemcell tarball is deprecated
 		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
-	} else if b.Options.Kilnfile != "" {
-		stemcellManifests, err = b.stemcell.FromKilnfile(b.Options.Kilnfile)
 	} else if len(b.Options.StemcellsDirectories) > 0 {
 		stemcellManifests, err = b.stemcell.FromDirectories(b.Options.StemcellsDirectories)
+	} else {
+		stemcellManifests, err = b.stemcell.FromKilnfile(b.Options.Kilnfile)
 	}
+
 	if err != nil {
 		return fmt.Errorf("failed to parse stemcell: %s", err)
 	}
