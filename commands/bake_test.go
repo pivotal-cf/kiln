@@ -714,31 +714,6 @@ var _ = Describe("Bake", func() {
 				})
 			})
 
-			Context("when both the --kilnfile and --stemcells-directory are provided", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--stemcells-directory", "some-stemcell-directory",
-						"--kilnfile", "Kilnfile",
-					})
-					Expect(err).To(MatchError("--kilnfile cannot be provided when using --stemcells-directory"))
-				})
-			})
-
-			//todo: When --stemcell-tarball is removed, delete this test
-			Context("when both the --stemcell-tarball and --kilnfile are provided", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--kilnfile", "Kilnfile",
-					})
-					Expect(err).To(MatchError("--kilnfile cannot be provided when using --stemcell-tarball"))
-				})
-			})
-
 			//todo: When --stemcell-tarball is remove, delete this test
 			Context("when both the --stemcell-tarball and --stemcells-directory are provided", func() {
 				It("returns an error", func() {
