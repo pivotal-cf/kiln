@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -10,24 +9,8 @@ import (
 	"github.com/pivotal-cf/kiln/fetcher"
 
 	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/cargo"
-	"gopkg.in/yaml.v2"
 )
-
-type ConfigFileError struct {
-	HumanReadableConfigFileName string
-	err                         error
-}
-
-func (err ConfigFileError) Unwrap() error {
-	return err.err
-}
-
-func (err ConfigFileError) Error() string {
-	return fmt.Sprintf("encountered a configuration file error with %s: %s", err.HumanReadableConfigFileName, err.err.Error())
-}
 
 type ErrorMissingReleases fetcher.ReleaseRequirementSet
 
@@ -123,43 +106,9 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetche
 			return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
 		}
 	}
-	templateVariablesService := baking.NewTemplateVariablesService()
-	templateVariables, err := templateVariablesService.FromPathsAndPairs(f.Options.VariablesFiles, f.Options.Variables)
-	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to parse template variables: %s", err)
-	}
-
-	kilnfileYAML, err := ioutil.ReadFile(f.Options.Kilnfile)
+	kilnfile, kilnfileLock, err := cargo.LoadKilnfiles(f.Options.Kilnfile, f.Options.VariablesFiles, f.Options.Variables)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
-	}
-	interpolator := builder.NewInterpolator()
-	interpolatedMetadata, err := interpolator.Interpolate(builder.InterpolateInput{
-		Variables: templateVariables,
-	}, kilnfileYAML)
-	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, ConfigFileError{err: err, HumanReadableConfigFileName: "interpolating variable files with Kilnfile"}
-	}
-
-	f.logger.Println("getting release information from " + f.Options.Kilnfile)
-	var kilnfile cargo.Kilnfile
-	err = yaml.Unmarshal(interpolatedMetadata, &kilnfile)
-	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile specification " + f.Options.Kilnfile}
-	}
-
-	f.logger.Println("getting release information from Kilnfile.lock")
-	lockFileName := fmt.Sprintf("%s.lock", f.Options.Kilnfile)
-	lockFile, err := os.Open(lockFileName)
-	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
-	}
-	defer lockFile.Close()
-
-	var kilnfileLock cargo.KilnfileLock
-	err = yaml.NewDecoder(lockFile).Decode(&kilnfileLock)
-	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile.lock " + lockFileName}
 	}
 
 	availableLocalReleaseSet, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
