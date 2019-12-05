@@ -127,7 +127,7 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedRelease
 		if len(unsatisfiedReleaseSet) == 0 {
 			break
 		}
-		remoteReleases, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet, stemcell)
+		remoteReleases, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet)
 		if err != nil {
 			return nil, nil, err
 		}

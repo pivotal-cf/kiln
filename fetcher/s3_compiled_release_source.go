@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/pivotal-cf/kiln/internal/cargo"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -22,7 +20,7 @@ const (
 
 type S3CompiledReleaseSource S3ReleaseSource
 
-func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet, stemcell cargo.Stemcell) ([]RemoteRelease, error) {
+func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet) ([]RemoteRelease, error) {
 	matchedS3Objects := make(map[ReleaseID][]CompiledRelease)
 
 	exp, err := regexp.Compile(r.Regex)
@@ -63,10 +61,10 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseReq
 	}
 
 	matchingReleases := make([]RemoteRelease, 0)
-	for expectedReleaseID := range desiredReleaseSet {
+	for expectedReleaseID, requirement := range desiredReleaseSet {
 		if releases, ok := matchedS3Objects[expectedReleaseID]; ok {
 			for _, release := range releases {
-				if release.StemcellVersion == stemcell.Version && release.StemcellOS == stemcell.OS {
+				if release.Satisfies(requirement) {
 					matchingReleases = append(matchingReleases, release)
 					break
 				}

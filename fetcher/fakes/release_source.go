@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 type ReleaseSource struct {
@@ -24,11 +23,10 @@ type ReleaseSource struct {
 		result1 fetcher.LocalReleaseSet
 		result2 error
 	}
-	GetMatchedReleasesStub        func(fetcher.ReleaseRequirementSet, cargo.Stemcell) ([]fetcher.RemoteRelease, error)
+	GetMatchedReleasesStub        func(fetcher.ReleaseRequirementSet) ([]fetcher.RemoteRelease, error)
 	getMatchedReleasesMutex       sync.RWMutex
 	getMatchedReleasesArgsForCall []struct {
 		arg1 fetcher.ReleaseRequirementSet
-		arg2 cargo.Stemcell
 	}
 	getMatchedReleasesReturns struct {
 		result1 []fetcher.RemoteRelease
@@ -112,17 +110,16 @@ func (fake *ReleaseSource) DownloadReleasesReturnsOnCall(i int, result1 fetcher.
 	}{result1, result2}
 }
 
-func (fake *ReleaseSource) GetMatchedReleases(arg1 fetcher.ReleaseRequirementSet, arg2 cargo.Stemcell) ([]fetcher.RemoteRelease, error) {
+func (fake *ReleaseSource) GetMatchedReleases(arg1 fetcher.ReleaseRequirementSet) ([]fetcher.RemoteRelease, error) {
 	fake.getMatchedReleasesMutex.Lock()
 	ret, specificReturn := fake.getMatchedReleasesReturnsOnCall[len(fake.getMatchedReleasesArgsForCall)]
 	fake.getMatchedReleasesArgsForCall = append(fake.getMatchedReleasesArgsForCall, struct {
 		arg1 fetcher.ReleaseRequirementSet
-		arg2 cargo.Stemcell
-	}{arg1, arg2})
-	fake.recordInvocation("GetMatchedReleases", []interface{}{arg1, arg2})
+	}{arg1})
+	fake.recordInvocation("GetMatchedReleases", []interface{}{arg1})
 	fake.getMatchedReleasesMutex.Unlock()
 	if fake.GetMatchedReleasesStub != nil {
-		return fake.GetMatchedReleasesStub(arg1, arg2)
+		return fake.GetMatchedReleasesStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -137,17 +134,17 @@ func (fake *ReleaseSource) GetMatchedReleasesCallCount() int {
 	return len(fake.getMatchedReleasesArgsForCall)
 }
 
-func (fake *ReleaseSource) GetMatchedReleasesCalls(stub func(fetcher.ReleaseRequirementSet, cargo.Stemcell) ([]fetcher.RemoteRelease, error)) {
+func (fake *ReleaseSource) GetMatchedReleasesCalls(stub func(fetcher.ReleaseRequirementSet) ([]fetcher.RemoteRelease, error)) {
 	fake.getMatchedReleasesMutex.Lock()
 	defer fake.getMatchedReleasesMutex.Unlock()
 	fake.GetMatchedReleasesStub = stub
 }
 
-func (fake *ReleaseSource) GetMatchedReleasesArgsForCall(i int) (fetcher.ReleaseRequirementSet, cargo.Stemcell) {
+func (fake *ReleaseSource) GetMatchedReleasesArgsForCall(i int) fetcher.ReleaseRequirementSet {
 	fake.getMatchedReleasesMutex.RLock()
 	defer fake.getMatchedReleasesMutex.RUnlock()
 	argsForCall := fake.getMatchedReleasesArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1
 }
 
 func (fake *ReleaseSource) GetMatchedReleasesReturns(result1 []fetcher.RemoteRelease, result2 error) {

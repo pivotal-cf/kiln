@@ -17,7 +17,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/fetcher/fakes"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 var _ = Describe("GetMatchedReleases from S3 built source", func() {
@@ -26,7 +25,6 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 		fakeS3Client      *fakes.S3ObjectLister
 		desiredReleaseSet ReleaseRequirementSet
 		bpmKey            string
-		ignoredStemcell   cargo.Stemcell
 	)
 
 	BeforeEach(func() {
@@ -59,8 +57,6 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 			return nil
 		}
 
-		ignoredStemcell = cargo.Stemcell{OS: "ignored", Version: "ignored"}
-
 		logger := log.New(nil, "", 0)
 
 		releaseSource = S3BuiltReleaseSource{
@@ -72,7 +68,7 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 	})
 
 	It("lists all objects that match the given regex", func() {
-		matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet, ignoredStemcell)
+		matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 		Expect(err).NotTo(HaveOccurred())
 
 		input, _ := fakeS3Client.ListObjectsPagesArgsForCall(0)
@@ -90,7 +86,7 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 		})
 
 		It("returns an error if a required capture is missing", func() {
-			_, err := releaseSource.GetMatchedReleases(nil, ignoredStemcell)
+			_, err := releaseSource.GetMatchedReleases(nil)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("Missing some capture group")))
 		})
@@ -116,7 +112,7 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 		})
 
 		It("does not return them, but does return the matched release", func() {
-			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet, ignoredStemcell)
+			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))

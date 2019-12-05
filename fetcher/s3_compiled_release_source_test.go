@@ -83,7 +83,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 	})
 
 	It("lists all objects that match the given regex", func() {
-		matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet, desiredStemcell)
+		matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 		Expect(err).NotTo(HaveOccurred())
 
 		input, _ := fakeS3Client.ListObjectsPagesArgsForCall(0)
@@ -121,7 +121,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 		})
 
 		It("does not return them", func() {
-			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet, desiredStemcell)
+			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
@@ -157,7 +157,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 		})
 
 		It("does not return them", func() {
-			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet, desiredStemcell)
+			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
@@ -192,7 +192,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 		})
 
 		It("lists the compiled release with the correct stemcell version as a match", func() {
-			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet, desiredStemcell)
+			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(matchedS3Objects).To(HaveLen(1))
@@ -219,7 +219,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 		})
 
 		It("returns an error if a required capture is missing", func() {
-			_, err := releaseSource.GetMatchedReleases(nil, desiredStemcell)
+			_, err := releaseSource.GetMatchedReleases(nil)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("Missing some capture group")))
 		})

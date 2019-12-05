@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/pivotal-cf/kiln/internal/cargo"
-
 	. "github.com/onsi/ginkgo/extensions/table"
 
 	"github.com/onsi/gomega/ghttp"
@@ -22,8 +20,6 @@ import (
 )
 
 var _ = Describe("GetMatchedReleases from bosh.io", func() {
-	var ignoredStemcell = cargo.Stemcell{OS: "ignored", Version: "ignored"}
-
 	Context("happy path", func() {
 		var (
 			releaseSource     *BOSHIOReleaseSource
@@ -66,7 +62,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 				ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}: ReleaseRequirement{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: os, StemcellVersion: version},
 			}
 
-			foundReleases, err := releaseSource.GetMatchedReleases(desiredReleaseSet, ignoredStemcell)
+			foundReleases, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 			uaaURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/uaa-release?v=73.3.0", testServer.URL())
 			cfRabbitURL := fmt.Sprintf("%s/d/github.com/pivotal-cf/cf-rabbitmq-release?v=268.0.0", testServer.URL())
 
@@ -112,7 +108,6 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 
 			foundReleases, getMatchedReleasesErr = releaseSource.GetMatchedReleases(
 				ReleaseRequirementSet{releaseID: ReleaseRequirement{}},
-				ignoredStemcell,
 			)
 		})
 
@@ -161,7 +156,6 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 
 				foundReleases, err := releaseSource.GetMatchedReleases(
 					ReleaseRequirementSet{releaseID: releaseRequirement},
-					ignoredStemcell,
 				)
 
 				Expect(err).NotTo(HaveOccurred())

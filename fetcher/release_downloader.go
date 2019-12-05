@@ -2,7 +2,6 @@ package fetcher
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 type releaseDownloader struct {
@@ -15,11 +14,10 @@ func NewReleaseDownloader(releaseSources []ReleaseSource) releaseDownloader {
 
 func (rd releaseDownloader) DownloadRelease(releaseDir string, requirement ReleaseRequirement) (LocalRelease, error) {
 	releaseID := ReleaseID{Name: requirement.Name, Version: requirement.Version}
-	stemcell := cargo.Stemcell{OS: requirement.StemcellOS, Version: requirement.StemcellVersion}
 	releaseRequirementSet := ReleaseRequirementSet{releaseID: requirement}
 
 	for _, releaseSource := range rd.releaseSources {
-		remoteReleases, err := releaseSource.GetMatchedReleases(releaseRequirementSet, stemcell)
+		remoteReleases, err := releaseSource.GetMatchedReleases(releaseRequirementSet)
 		if err != nil {
 			return nil, err
 		}

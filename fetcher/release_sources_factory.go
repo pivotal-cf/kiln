@@ -9,7 +9,7 @@ import (
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedReleases(ReleaseRequirementSet, cargo.Stemcell) ([]RemoteRelease, error)
+	GetMatchedReleases(ReleaseRequirementSet) ([]RemoteRelease, error)
 	DownloadReleases(releasesDir string, matchedS3Objects []RemoteRelease, downloadThreads int) (LocalReleaseSet, error)
 }
 
