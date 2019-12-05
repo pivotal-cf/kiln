@@ -1,6 +1,7 @@
 package baking_test
 
 import (
+	"gopkg.in/src-d/go-billy.v4/osfs"
 	"io/ioutil"
 	"os"
 
@@ -18,7 +19,7 @@ var _ = Describe("TemplateVariablesService", func() {
 		)
 
 		BeforeEach(func() {
-			service = NewTemplateVariablesService()
+			service = NewTemplateVariablesService(osfs.New(""))
 
 			contents := `---
 key-1:

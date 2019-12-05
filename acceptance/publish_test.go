@@ -28,7 +28,7 @@ var _ = Describe("publish", func() {
 	)
 
 	var (
-		client       pivnet.Client
+		client pivnet.Client
 		token, tmpDir, initialDir, host,
 		kilnfileBody string
 	)

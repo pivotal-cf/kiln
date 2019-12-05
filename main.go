@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/pivotal-cf/kiln/internal/cargo"
 	"log"
 	"os"
 
@@ -53,6 +54,8 @@ func main() {
 	}
 
 	filesystem := helper.NewFilesystem()
+	fs := osfs.New("")
+
 	zipper := builder.NewZipper()
 	interpolator := builder.NewInterpolator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, errLogger)
@@ -63,7 +66,7 @@ func main() {
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	stemcellService := baking.NewStemcellService(errLogger, stemcellManifestReader)
 
-	templateVariablesService := baking.NewTemplateVariablesService()
+	templateVariablesService := baking.NewTemplateVariablesService(fs)
 
 	boshVariableDirectoryReader := builder.NewMetadataPartsDirectoryReader()
 	boshVariablesService := baking.NewBOSHVariablesService(errLogger, boshVariableDirectoryReader)
@@ -120,8 +123,22 @@ func main() {
 		StemcellsVersionsService: new(fetcher.Pivnet),
 	}
 
+	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, newReleaseDownloaderFactory(), fetcher.CalculateSum)
+
 	err = commandSet.Execute(command, args)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+type releaseDownloaderFactory struct{}
+
+func (f releaseDownloaderFactory) ReleaseDownloader(outLogger *log.Logger, kilnfile cargo.Kilnfile) (commands.ReleaseDownloader, error) {
+	releaseSources := fetcher.NewReleaseSourcesFactory(outLogger)(kilnfile, false)
+
+	return fetcher.NewReleaseDownloader(releaseSources), nil
+}
+
+func newReleaseDownloaderFactory() releaseDownloaderFactory {
+	return releaseDownloaderFactory{}
 }

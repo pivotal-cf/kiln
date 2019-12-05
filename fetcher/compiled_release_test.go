@@ -9,9 +9,9 @@ import (
 
 var _ = Describe("CompiledRelease", func() {
 	const (
-		expectedName    = "my-awesome-release"
-		expectedVersion = "42.0.0"
-		expectedStemcellOS = "plan9"
+		expectedName            = "my-awesome-release"
+		expectedVersion         = "42.0.0"
+		expectedStemcellOS      = "plan9"
 		expectedStemcellVersion = "9.9.9"
 	)
 
@@ -27,14 +27,13 @@ var _ = Describe("CompiledRelease", func() {
 		Entry("when the stemcell version is different", expectedName, expectedVersion, expectedStemcellOS, "0.0.0", false),
 	)
 
-
 	Describe("StandardizedFilename", func() {
 		var release CompiledRelease
 
 		BeforeEach(func() {
 			release = CompiledRelease{
-				ID: ReleaseID{Name: expectedName, Version: expectedVersion},
-				StemcellOS: expectedStemcellOS,
+				ID:              ReleaseID{Name: expectedName, Version: expectedVersion},
+				StemcellOS:      expectedStemcellOS,
 				StemcellVersion: expectedStemcellVersion,
 			}
 		})

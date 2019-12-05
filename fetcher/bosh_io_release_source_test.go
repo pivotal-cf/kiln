@@ -153,8 +153,8 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 
 				releaseID := ReleaseID{Name: releaseName, Version: releaseVersion}
 				releaseRequirement := ReleaseRequirement{
-					Name: releaseName,
-					Version: releaseVersion,
+					Name:            releaseName,
+					Version:         releaseVersion,
 					StemcellOS:      "generic-os",
 					StemcellVersion: "4.5.6",
 				}
@@ -282,13 +282,13 @@ var _ = Describe("DownloadReleases", func() {
 		Expect(localReleases).To(HaveLen(2))
 		Expect(localReleases).To(HaveKeyWithValue(
 			release1ID, BuiltRelease{
-				ID:              release1ID,
-				Path:            fullRelease1Path,
+				ID:   release1ID,
+				Path: fullRelease1Path,
 			}))
 		Expect(localReleases).To(HaveKeyWithValue(
 			release2ID, BuiltRelease{
-				ID:              release2ID,
-				Path:            fullRelease2Path,
+				ID:   release2ID,
+				Path: fullRelease2Path,
 			}))
 	})
 })

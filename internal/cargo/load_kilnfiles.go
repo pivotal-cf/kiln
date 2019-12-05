@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
+	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"os"
 )
 
 type ConfigFileError struct {
@@ -22,14 +22,19 @@ func (err ConfigFileError) Error() string {
 	return fmt.Sprintf("encountered a configuration file error with %s: %s", err.HumanReadableConfigFileName, err.err.Error())
 }
 
-func LoadKilnfiles(kilnfilePath string, variablesFiles, variables []string) (Kilnfile, KilnfileLock, error) {
-	templateVariablesService := baking.NewTemplateVariablesService()
+func LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (Kilnfile, KilnfileLock, error) {
+	templateVariablesService := baking.NewTemplateVariablesService(fs)
 	templateVariables, err := templateVariablesService.FromPathsAndPairs(variablesFiles, variables)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("failed to parse template variables: %s", err)
 	}
 
-	kilnfileYAML, err := ioutil.ReadFile(kilnfilePath)
+	kf, err := fs.Open(kilnfilePath)
+	if err != nil {
+		return Kilnfile{}, KilnfileLock{}, err
+	}
+	defer kf.Close()
+	kilnfileYAML, err := ioutil.ReadAll(kf)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, err
 	}
@@ -49,7 +54,7 @@ func LoadKilnfiles(kilnfilePath string, variablesFiles, variables []string) (Kil
 	}
 
 	lockFileName := fmt.Sprintf("%s.lock", kilnfilePath)
-	lockFile, err := os.Open(lockFileName)
+	lockFile, err := fs.Open(lockFileName)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, err
 	}

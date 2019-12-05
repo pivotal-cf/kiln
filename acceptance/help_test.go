@@ -17,12 +17,13 @@ Usage: kiln [options] <command> [<args>]
   --version, -v  bool  prints the kiln release version (default: false)
 
 Commands:
-  bake     bakes a tile
-  fetch    fetches releases
-  help     prints this usage information
-  publish  publish tile on Pivnet
-  update   updates stemcell_criteria and releases
-  version  prints the kiln release version
+  bake            bakes a tile
+  fetch           fetches releases
+  help            prints this usage information
+  publish         publish tile on Pivnet
+  update          updates stemcell_criteria and releases
+  update-release  bumps a release to a new version
+  version         prints the kiln release version
 `
 
 const BAKE_USAGE = `kiln bake

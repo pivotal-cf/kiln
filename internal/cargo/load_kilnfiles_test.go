@@ -4,12 +4,24 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf/kiln/internal/cargo"
-	"io/ioutil"
-	"path/filepath"
+	"gopkg.in/src-d/go-billy.v4"
+	"gopkg.in/src-d/go-billy.v4/memfs"
 )
+
+func writeFile(fs billy.Filesystem, path string, contents string) error {
+	file, err := fs.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write([]byte(contents))
+	return err
+}
 
 var _ = Describe("LoadKilnfiles", func() {
 	var (
+		filesystem       billy.Filesystem
 		kilnfilePath     string
 		kilnfileLockPath string
 		variableFilePath string
@@ -17,12 +29,11 @@ var _ = Describe("LoadKilnfiles", func() {
 	)
 
 	BeforeEach(func() {
-		tmpDir, err := ioutil.TempDir("", "load-kilnfiles-test")
-		Expect(err).NotTo(HaveOccurred())
+		filesystem = memfs.New()
 
-		kilnfilePath = filepath.Join(tmpDir, "my-kilnfile")
+		kilnfilePath = "my-kilnfile"
 		kilnfileLockPath = kilnfilePath + ".lock"
-		variableFilePath = filepath.Join(tmpDir, "variable-file.yml")
+		variableFilePath = "variable-file.yml"
 
 		variableStrings = []string{
 			"access_key=id",
@@ -61,18 +72,18 @@ regex: "^.*$"
 
 	Context("happy path", func() {
 		BeforeEach(func() {
-			err := ioutil.WriteFile(kilnfilePath, []byte(validKilnfileContents), 0644)
+			err := writeFile(filesystem, kilnfilePath, validKilnfileContents)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(kilnfileLockPath, []byte(validKilnfileLockContents), 0644)
+			err = writeFile(filesystem, kilnfileLockPath, validKilnfileLockContents)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(variableFilePath, []byte(validVariableFileContents), 0644)
+			err = writeFile(filesystem, variableFilePath, validVariableFileContents)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("correctly loads the Kilnfile", func() {
-			kilnfile, _, err := LoadKilnfiles(kilnfilePath, []string{variableFilePath}, variableStrings)
+			kilnfile, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kilnfile).To(Equal(Kilnfile{
 				ReleaseSources: []ReleaseSourceConfig{
@@ -90,7 +101,7 @@ regex: "^.*$"
 		})
 
 		It("correctly loads the Kilnfile.lock", func() {
-			_, kilnfileLock, err := LoadKilnfiles(kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, kilnfileLock, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kilnfileLock).To(Equal(KilnfileLock{
 				Releases: []Release{{Name: "some-release", Version: "1.2.3"}},
@@ -101,117 +112,117 @@ regex: "^.*$"
 
 	When("the Kilnfile doesn't exist", func() {
 		BeforeEach(func() {
-			err := ioutil.WriteFile(kilnfileLockPath, []byte(validKilnfileLockContents), 0644)
+			err := writeFile(filesystem, kilnfileLockPath, validKilnfileLockContents)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(variableFilePath, []byte(validVariableFileContents), 0644)
+			err = writeFile(filesystem, variableFilePath, validVariableFileContents)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(kilnfilePath, []string{variableFilePath}, variableStrings)
-			Expect(err).To(MatchError(ContainSubstring("no such file")))
+			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			Expect(err).To(MatchError(ContainSubstring("file does not exist")))
 		})
 	})
 
 	When("the Kilnfile.lock doesn't exist", func() {
 		BeforeEach(func() {
-			err := ioutil.WriteFile(kilnfilePath, []byte(validKilnfileContents), 0644)
+			err := writeFile(filesystem, kilnfilePath, validKilnfileContents)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(variableFilePath, []byte(validVariableFileContents), 0644)
+			err = writeFile(filesystem, variableFilePath, validVariableFileContents)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(kilnfilePath, []string{variableFilePath}, variableStrings)
-			Expect(err).To(MatchError(ContainSubstring("no such file")))
+			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			Expect(err).To(MatchError(ContainSubstring("file does not exist")))
 		})
 	})
 
 	When("the variable file doesn't exist", func() {
 		BeforeEach(func() {
-			err := ioutil.WriteFile(kilnfilePath, []byte(validKilnfileContents), 0644)
+			err := writeFile(filesystem, kilnfilePath, validKilnfileContents)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(kilnfileLockPath, []byte(validKilnfileLockContents), 0644)
+			err = writeFile(filesystem, kilnfileLockPath, validKilnfileLockContents)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(kilnfilePath, []string{variableFilePath}, variableStrings)
-			Expect(err).To(MatchError(ContainSubstring("no such file")))
+			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			Expect(err).To(MatchError(ContainSubstring("file does not exist")))
 		})
 	})
 
 	When("the Kilnfile is invalid YAML", func() {
 		BeforeEach(func() {
-			err := ioutil.WriteFile(kilnfilePath, []byte("some-random-string"), 0644)
+			err := writeFile(filesystem, kilnfilePath, "some-random-string")
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(kilnfileLockPath, []byte(validKilnfileLockContents), 0644)
+			err = writeFile(filesystem, kilnfileLockPath, validKilnfileLockContents)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(variableFilePath, []byte(validVariableFileContents), 0644)
+			err = writeFile(filesystem, variableFilePath, validVariableFileContents)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
 		})
 	})
 
 	When("the Kilnfile.lock is invalid YAML", func() {
 		BeforeEach(func() {
-			err := ioutil.WriteFile(kilnfilePath, []byte(validKilnfileContents), 0644)
+			err := writeFile(filesystem, kilnfilePath, validKilnfileContents)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(kilnfileLockPath, []byte("some-random-string"), 0644)
+			err = writeFile(filesystem, kilnfileLockPath, "some-random-string")
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(variableFilePath, []byte(validVariableFileContents), 0644)
+			err = writeFile(filesystem, variableFilePath, validVariableFileContents)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
 		})
 	})
 
 	When("the variables file is invalid YAML", func() {
 		BeforeEach(func() {
-			err := ioutil.WriteFile(kilnfilePath, []byte(validKilnfileContents), 0644)
+			err := writeFile(filesystem, kilnfilePath, validKilnfileContents)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(kilnfileLockPath, []byte(validKilnfileLockContents), 0644)
+			err = writeFile(filesystem, kilnfileLockPath, validKilnfileLockContents)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(variableFilePath, []byte("invalid-yaml"), 0644)
+			err = writeFile(filesystem, variableFilePath, "invalid-yaml")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
 		})
 	})
 
 	When("interpolation fails", func() {
 		BeforeEach(func() {
-			err := ioutil.WriteFile(kilnfilePath, []byte(validKilnfileContents), 0644)
+			err := writeFile(filesystem, kilnfilePath, validKilnfileContents)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(kilnfileLockPath, []byte(validKilnfileLockContents), 0644)
+			err = writeFile(filesystem, kilnfileLockPath, validKilnfileLockContents)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(variableFilePath, []byte("{}"), 0644)
+			err = writeFile(filesystem, variableFilePath, "{}")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).To(MatchError(ContainSubstring("could not find variable")))
 		})
 	})

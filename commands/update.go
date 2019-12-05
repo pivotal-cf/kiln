@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -63,7 +64,7 @@ func (update Update) Execute(args []string) error {
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("could not read kilnfile: %s", err)
 	}
-	templateVariablesService := baking.NewTemplateVariablesService()
+	templateVariablesService := baking.NewTemplateVariablesService(osfs.New(""))
 	templateVariables, err := templateVariablesService.FromPathsAndPairs(update.Options.VariablesFiles, update.Options.Variables)
 	if err != nil {
 		return fmt.Errorf("failed to parse template variables: %s", err)

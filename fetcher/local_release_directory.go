@@ -4,6 +4,8 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"gopkg.in/src-d/go-billy.v4"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 	"io"
 	"log"
 	"os"
@@ -114,6 +116,8 @@ func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet LocalRelease
 
 	var badReleases []string
 
+	fs := osfs.New("")
+
 	var errs []error
 	for releaseID, release := range downloadedReleaseSet {
 		expectedSum, found := findExpectedSum(releaseID, kilnfileLock.Releases)
@@ -125,7 +129,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet LocalRelease
 			continue
 		}
 
-		sum, err := calculateSum(release.LocalPath())
+		sum, err := CalculateSum(release.LocalPath(), fs)
 		if err != nil {
 			return fmt.Errorf("error while calculating checksum: %s", err)
 		}
@@ -157,8 +161,8 @@ func findExpectedSum(release ReleaseID, desiredReleases []cargo.Release) (string
 	return "", false
 }
 
-func calculateSum(releasePath string) (string, error) {
-	f, err := os.Open(releasePath)
+func CalculateSum(releasePath string, fs billy.Filesystem) (string, error) {
+	f, err := fs.Open(releasePath)
 	if err != nil {
 		return "", err
 	}

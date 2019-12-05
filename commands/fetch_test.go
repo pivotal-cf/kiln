@@ -352,7 +352,7 @@ stemcell_criteria:
 
 				missingReleaseS3Compiled fetcher.CompiledRelease
 				missingReleaseBoshIO,
-				missingReleaseS3Built    fetcher.BuiltRelease
+				missingReleaseS3Built fetcher.BuiltRelease
 			)
 			BeforeEach(func() {
 				lockContents = `---

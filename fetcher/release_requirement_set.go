@@ -51,8 +51,8 @@ func (rrs ReleaseRequirementSet) copy() ReleaseRequirementSet {
 
 func newReleaseRequirement(release cargo.Release, stemcell cargo.Stemcell) ReleaseRequirement {
 	return ReleaseRequirement{
-		Name:    release.Name,
-		Version: release.Version,
+		Name:            release.Name,
+		Version:         release.Version,
 		StemcellOS:      stemcell.OS,
 		StemcellVersion: stemcell.Version,
 	}

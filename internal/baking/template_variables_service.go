@@ -2,28 +2,31 @@ package baking
 
 import (
 	"fmt"
-	"io/ioutil"
+	"gopkg.in/src-d/go-billy.v4"
 	"strings"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
-type TemplateVariablesService struct{}
+type TemplateVariablesService struct {
+	filesystem billy.Filesystem
+}
 
-func NewTemplateVariablesService() TemplateVariablesService {
-	return TemplateVariablesService{}
+func NewTemplateVariablesService(fs billy.Filesystem) TemplateVariablesService {
+	return TemplateVariablesService{filesystem: fs}
 }
 
 func (s TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []string) (map[string]interface{}, error) {
 	variables := map[string]interface{}{}
 
 	for _, path := range paths {
-		content, err := ioutil.ReadFile(path)
+		file, err := s.filesystem.Open(path)
 		if err != nil {
 			return nil, err
 		}
 
-		err = yaml.Unmarshal(content, &variables)
+		err = yaml.NewDecoder(file).Decode(&variables)
+		file.Close()
 		if err != nil {
 			return nil, err
 		}
