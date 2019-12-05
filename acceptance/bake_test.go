@@ -700,6 +700,60 @@ var _ = Describe("bake command", func() {
 		})
 	})
 
+	Context("when neither --kilnfile nor --stemcells-directory are provided", func() {
+		It("generates a tile with unchanged stemcell criteria", func() {
+			commandWithArgs = []string{
+				"bake",
+				"--releases-directory", otherReleasesDirectory,
+				"--releases-directory", someReleasesDirectory,
+				"--icon", someIconPath,
+				"--metadata", metadataWithStemcellCriteria,
+				"--output-file", outputFile,
+				"--version", "1.2.3",
+			}
+
+			command := exec.Command(pathToMain, commandWithArgs...)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			archive, err := os.Open(outputFile)
+			Expect(err).NotTo(HaveOccurred())
+
+			archiveInfo, err := archive.Stat()
+			Expect(err).NotTo(HaveOccurred())
+
+			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			Expect(err).NotTo(HaveOccurred())
+
+			var file io.ReadCloser
+			for _, f := range zr.File {
+				if f.Name == "metadata/metadata.yml" {
+					file, err = f.Open()
+					Expect(err).NotTo(HaveOccurred())
+					break
+				}
+			}
+
+			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
+			metadataContents, err := ioutil.ReadAll(file)
+			Expect(err).NotTo(HaveOccurred())
+
+			renderedYAML := fmt.Sprintf(expectedMetadataWithStemcellCriteria, diegoSHA1, cfSHA1)
+			Expect(metadataContents).To(HelpfullyMatchYAML(renderedYAML))
+
+			Eventually(session.Err).Should(gbytes.Say("Reading release manifests"))
+			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Building %s", outputFile)))
+			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding metadata/metadata.yml to %s...", outputFile)))
+			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Creating empty migrations folder in %s...", outputFile)))
+			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding releases/diego-release-0.1467.1-3215.4.0.tgz to %s...", outputFile)))
+			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Adding releases/cf-release-235.0.0-3215.4.0.tgz to %s...", outputFile)))
+			Eventually(session.Err).ShouldNot(gbytes.Say(fmt.Sprintf("Adding releases/not-a-tarball.txt to %s...", outputFile)))
+		})
+	})
+
 	Context("failure cases", func() {
 		Context("when a release tarball does not exist", func() {
 			It("prints an error and exits 1", func() {
