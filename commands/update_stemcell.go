@@ -3,11 +3,12 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/src-d/go-billy.v4/osfs"
 	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
+
+	"gopkg.in/src-d/go-billy.v4/osfs"
 
 	"github.com/Masterminds/semver"
 	"github.com/pivotal-cf/jhanda"
@@ -23,8 +24,8 @@ const (
 	stemcellSlugTrusty  = "stemcells"
 )
 
-// Update wraps the dependancies and flag options for the `kiln update` command
-type Update struct {
+// UpdateStemcell wraps the dependencies and flag options for the `kiln update-release` command
+type UpdateStemcell struct {
 	Options struct {
 		Kilnfile       string   `short:"kf" long:"kilnfile" required:"true" description:"path to Kilnfile"`
 		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
@@ -38,7 +39,7 @@ type Update struct {
 }
 
 // Execute expects a Kilnfile to exist and be passed as a flag
-func (update Update) Execute(args []string) error {
+func (update UpdateStemcell) Execute(args []string) error {
 	_, err := jhanda.Parse(&update.Options, args)
 	if err != nil {
 		return err
@@ -130,24 +131,15 @@ func (update Update) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	lockFile.Write([]byte(lockFileYAMLHeader))
 	lockFile.Write(updatedLockFileYAML)
 	return nil
 }
 
 // Usage implements the Usage part of the jhanda.Command interface
-func (update Update) Usage() jhanda.Usage {
+func (update UpdateStemcell) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "updates stemcell_criteria and releases.",
-		ShortDescription: "updates stemcell_criteria and releases",
+		Description:      "updates stemcell_criteria in Kilnfile.lock",
+		ShortDescription: "updates stemcell_criteria",
 		Flags:            update.Options,
 	}
 }
-
-const (
-	lockFileYAMLHeader = "########### DO NOT EDIT! ############\n" +
-		"# This is a machine generated file, #\n" +
-		"# update by running `kiln update`   #\n" +
-		"#####################################\n" +
-		"---\n"
-)

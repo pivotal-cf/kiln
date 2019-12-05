@@ -7,6 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pivotal-cf/kiln/internal/cargo"
+	"gopkg.in/yaml.v2"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/jhanda"
@@ -14,11 +17,11 @@ import (
 	"github.com/pivotal-cf/kiln/commands/fakes"
 )
 
-var _ = Describe("Update", func() {
-	var _ jhanda.Command = Update{}
+var _ = Describe("UpdateStemcell", func() {
+	var _ jhanda.Command = UpdateStemcell{}
 	When("Execute is called", func() {
 		var (
-			update                                        *Update
+			update                                        *UpdateStemcell
 			tmpDir, someKilnfilePath, someKilfileLockPath string
 			stemcellsVersionsService                      fakes.VersionsService
 		)
@@ -42,7 +45,7 @@ var _ = Describe("Update", func() {
 				"3588.0",
 				"3587.1",
 			}
-			update = &Update{
+			update = &UpdateStemcell{
 				StemcellsVersionsService: &stemcellsVersionsService,
 			}
 		})
@@ -69,7 +72,7 @@ var _ = Describe("Update", func() {
 		When("the stemcell version constraint is bad", func() {
 			var (
 				updateErr error
-				update    Update
+				update    UpdateStemcell
 			)
 			BeforeEach(func() {
 				os.Remove(someKilnfilePath)
@@ -108,19 +111,19 @@ var _ = Describe("Update", func() {
 						Expect(err).NotTo(HaveOccurred())
 					})
 					It("writes updated Kilnfile.lock contents", func() {
-						kilnfileLock, err := ioutil.ReadFile(someKilfileLockPath)
+						kilnfileLockFile, err := os.Open(someKilfileLockPath)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(string(kilnfileLock)).To(Equal(
-							"########### DO NOT EDIT! ############\n" +
-								"# This is a machine generated file, #\n" +
-								"# update by running `kiln update`   #\n" +
-								"#####################################\n" +
-								"---\n" +
-								"releases: []\n" +
-								"stemcell_criteria:\n" +
-								"  os: ubuntu-trusty\n" +
-								"  version: \"3586.7\"\n",
-						))
+						var kilnfileLock cargo.KilnfileLock
+						err = yaml.NewDecoder(kilnfileLockFile).Decode(&kilnfileLock)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(kilnfileLock).To(Equal(cargo.KilnfileLock{
+							Releases: []cargo.Release{},
+							Stemcell: cargo.Stemcell{
+								OS:      "ubuntu-trusty",
+								Version: "3586.7",
+							},
+						}))
 					})
 				})
 				When("an Kilnfile.lock already exists", func() {
@@ -134,19 +137,19 @@ var _ = Describe("Update", func() {
 						Expect(updateErr).NotTo(HaveOccurred())
 					})
 					It("writes updated Kilnfile.lock contents", func() {
-						kilnfileLock, readErr := ioutil.ReadFile(someKilfileLockPath)
-						Expect(readErr).NotTo(HaveOccurred())
-						Expect(string(kilnfileLock)).To(Equal(
-							"########### DO NOT EDIT! ############\n" +
-								"# This is a machine generated file, #\n" +
-								"# update by running `kiln update`   #\n" +
-								"#####################################\n" +
-								"---\n" +
-								"releases: []\n" +
-								"stemcell_criteria:\n" +
-								"  os: ubuntu-trusty\n" +
-								"  version: \"3586.7\"\n",
-						))
+						kilnfileLockFile, err := os.Open(someKilfileLockPath)
+						Expect(err).NotTo(HaveOccurred())
+						var kilnfileLock cargo.KilnfileLock
+						err = yaml.NewDecoder(kilnfileLockFile).Decode(&kilnfileLock)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(kilnfileLock).To(Equal(cargo.KilnfileLock{
+							Releases: []cargo.Release{},
+							Stemcell: cargo.Stemcell{
+								OS:      "ubuntu-trusty",
+								Version: "3586.7",
+							},
+						}))
 					})
 					// happy paths ^^^
 

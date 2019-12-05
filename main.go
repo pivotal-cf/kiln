@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"log"
 	"os"
+
+	"github.com/pivotal-cf/kiln/internal/cargo"
 
 	"gopkg.in/src-d/go-billy.v4/osfs"
 
@@ -119,7 +120,7 @@ func main() {
 		checksummer,
 	)
 
-	commandSet["update"] = commands.Update{
+	commandSet["update-stemcell"] = commands.UpdateStemcell{
 		StemcellsVersionsService: new(fetcher.Pivnet),
 	}
 
