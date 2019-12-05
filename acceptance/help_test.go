@@ -57,23 +57,6 @@ Command Arguments:
   --version, -v                      string             version of the tile
 `
 
-const FETCH_USAGE = `kiln fetch
-Fetches releases listed in Kilnfile.lock from S3 and downloads it locally
-
-Usage: kiln [options] fetch [<args>]
-  --help, -h     bool  prints this usage information (default: false)
-  --version, -v  bool  prints the kiln release version (default: false)
-
-Command Arguments:
-  --allow-only-publishable-releases  bool               include releases that would not be shipped with the tile (development builds)
-  --download-threads, -dt            int                number of parallel threads to download parts from S3
-  --kilnfile, -kf                    string             path to Kilnfile (default: Kilnfile)
-  --no-confirm, -n                   bool               non-interactive mode, will delete extra releases in releases dir without prompting
-  --releases-directory, -rd          string             path to a directory to download releases into (default: releases)
-  --variable, -vr                    string (variadic)  variable in key=value format
-  --variables-file, -vf              string (variadic)  path to variables file
-`
-
 var _ = Describe("help", func() {
 	Context("when given no command at all", func() {
 		It("prints the global usage", func() {
@@ -127,15 +110,6 @@ var _ = Describe("help", func() {
 
 			Eventually(session).Should(gexec.Exit(0))
 			Expect(string(session.Out.Contents())).To(ContainSubstring(BAKE_USAGE))
-		})
-
-		It("prints the usage for that command", func() {
-			command := exec.Command(pathToMain, "help", "fetch")
-			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(session).Should(gexec.Exit(0))
-			Expect(string(session.Out.Contents())).To(ContainSubstring(FETCH_USAGE))
 		})
 	})
 })
