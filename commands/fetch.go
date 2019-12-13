@@ -108,7 +108,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetche
 			return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
 		}
 	}
-	kilnfile, kilnfileLock, err := cargo.LoadKilnfiles(osfs.New(""), f.Options.Kilnfile, f.Options.VariablesFiles, f.Options.Variables)
+	kilnfile, kilnfileLock, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), f.Options.Kilnfile, f.Options.VariablesFiles, f.Options.Variables)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 	}

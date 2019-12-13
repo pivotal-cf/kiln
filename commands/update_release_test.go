@@ -29,8 +29,7 @@ var _ = Describe("UpdateRelease", func() {
 
 	var (
 		updateReleaseCommand      UpdateRelease
-		preexistingKilnfileLock   string
-		kilnfileContents          string
+		preexistingKilnfileLock   []byte
 		filesystem                billy.Filesystem
 		releaseDownloaderFactory  *fakes.ReleaseDownloaderFactory
 		releaseDownloader         *fakes.ReleaseDownloader
@@ -38,42 +37,49 @@ var _ = Describe("UpdateRelease", func() {
 		downloadedReleasePath     string
 		expectedDownloadedRelease fetcher.LocalRelease
 		checksummer               func(string, billy.Filesystem) (string, error)
+		kilnFileLoader            *fakes.KilnFileLoader
 	)
 
 	Context("Execute", func() {
 		BeforeEach(func() {
 			releaseDownloaderFactory = new(fakes.ReleaseDownloaderFactory)
+			kilnFileLoader = new(fakes.KilnFileLoader)
 			releaseDownloader = new(fakes.ReleaseDownloader)
 			releaseDownloaderFactory.ReleaseDownloaderReturns(releaseDownloader, nil)
-			kilnfileContents = `---
-release_sources:
-- type: bosh.io
-`
-			preexistingKilnfileLock = `---
-releases:
-- name: minecraft
-  sha1: "developersdevelopersdevelopersdevelopers"
-  version: "2.0.1"
-- name: ` + releaseName + `
-  sha1: "03ac801323cd23205dde357cc7d2dc9e92bc0c93"
-  version: "1.87.0"
-stemcell_criteria:
-  os: some-os
-  version: "4.5.6"
-`
-			filesystem = osfs.New("/tmp/")
-			kf, err := filesystem.Create("Kilnfile")
-			Expect(err).NotTo(HaveOccurred())
-			defer kf.Close()
 
-			_, err = kf.Write([]byte(kilnfileContents))
-			Expect(err).NotTo(HaveOccurred())
+			filesystem = osfs.New("/tmp/")
+
+			kilnfile := cargo.Kilnfile{
+				ReleaseSources: []cargo.ReleaseSourceConfig{{Type: "bosh.io"}},
+			}
+
+			kilnFileLock := cargo.KilnfileLock{
+				Releases: []cargo.Release{
+					{
+						Name:    "minecraft",
+						SHA1:    "developersdevelopersdevelopersdevelopers",
+						Version: "2.0.1",
+					},
+					{
+						Name:    releaseName,
+						SHA1:    "03ac801323cd23205dde357cc7d2dc9e92bc0c93",
+						Version: "1.87.0",
+					},
+				},
+				Stemcell: cargo.Stemcell{
+					OS:      "some-os",
+					Version: "4.5.6",
+				},
+			}
+
+			kilnFileLoader.LoadKilnfilesReturns(kilnfile, kilnFileLock, nil)
 
 			kfl, err := filesystem.Create("Kilnfile.lock")
 			Expect(err).NotTo(HaveOccurred())
 			defer kfl.Close()
 
-			_, err = kfl.Write([]byte(preexistingKilnfileLock))
+			preexistingKilnfileLock, err = yaml.Marshal(kilnFileLock)
+			_, err = kfl.Write(preexistingKilnfileLock)
 			Expect(err).NotTo(HaveOccurred())
 
 			logger = log.New(GinkgoWriter, "", 0)
@@ -89,7 +95,7 @@ stemcell_criteria:
 		})
 
 		JustBeforeEach(func() {
-			updateReleaseCommand = NewUpdateRelease(logger, filesystem, releaseDownloaderFactory, checksummer)
+			updateReleaseCommand = NewUpdateRelease(logger, filesystem, releaseDownloaderFactory, checksummer, kilnFileLoader)
 		})
 
 		When("updating to a version that exists in the remote", func() {
@@ -114,6 +120,8 @@ stemcell_criteria:
 					"--name", releaseName,
 					"--version", releaseVersion,
 					"--releases-directory", releasesDir,
+					"--variable", "someKey=someValue",
+					"--variables-file", "thisisafile",
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -129,6 +137,14 @@ stemcell_criteria:
 					StemcellVersion: "4.5.6",
 				}
 				Expect(receivedReleaseRequirement).To(Equal(releaseRequirement))
+
+				Expect(kilnFileLoader.LoadKilnfilesCallCount()).To(Equal(1))
+				fs, kilnfilePath, variablesFiles, variables := kilnFileLoader.LoadKilnfilesArgsForCall(0)
+
+				Expect(fs).To(Equal(filesystem))
+				Expect(kilnfilePath).To(Equal("Kilnfile"))
+				Expect(variablesFiles).To(Equal([]string{"thisisafile"}))
+				Expect(variables).To(Equal([]string{"someKey=someValue"}))
 			})
 
 			It("writes the new version to the Kilnfile.lock", func() {
@@ -326,7 +342,7 @@ stemcell_criteria:
 	})
 })
 
-func expectKilnfileLockIsUnchanged(fs billy.Filesystem, originalContents string) {
+func expectKilnfileLockIsUnchanged(fs billy.Filesystem, originalContents []byte) {
 	file, err := fs.Open("Kilnfile.lock")
 	Expect(err).NotTo(HaveOccurred())
 

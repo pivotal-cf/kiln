@@ -26,6 +26,7 @@ var _ = Describe("LoadKilnfiles", func() {
 		kilnfileLockPath string
 		variableFilePath string
 		variableStrings  []string
+		kilnfileLoader   KilnfileLoader
 	)
 
 	BeforeEach(func() {
@@ -39,6 +40,8 @@ var _ = Describe("LoadKilnfiles", func() {
 			"access_key=id",
 			"secret_key=key",
 		}
+
+		kilnfileLoader = KilnfileLoader{}
 	})
 
 	const validKilnfileContents = `
@@ -83,7 +86,7 @@ regex: "^.*$"
 		})
 
 		It("correctly loads the Kilnfile", func() {
-			kilnfile, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			kilnfile, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kilnfile).To(Equal(Kilnfile{
 				ReleaseSources: []ReleaseSourceConfig{
@@ -101,7 +104,7 @@ regex: "^.*$"
 		})
 
 		It("correctly loads the Kilnfile.lock", func() {
-			_, kilnfileLock, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, kilnfileLock, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kilnfileLock).To(Equal(KilnfileLock{
 				Releases: []Release{{Name: "some-release", Version: "1.2.3"}},
@@ -120,7 +123,7 @@ regex: "^.*$"
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).To(MatchError(ContainSubstring("file does not exist")))
 		})
 	})
@@ -135,7 +138,7 @@ regex: "^.*$"
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).To(MatchError(ContainSubstring("file does not exist")))
 		})
 	})
@@ -150,7 +153,7 @@ regex: "^.*$"
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).To(MatchError(ContainSubstring("file does not exist")))
 		})
 	})
@@ -168,7 +171,7 @@ regex: "^.*$"
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
 		})
 	})
@@ -186,7 +189,7 @@ regex: "^.*$"
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
 		})
 	})
@@ -204,7 +207,7 @@ regex: "^.*$"
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
 		})
 	})
@@ -222,7 +225,7 @@ regex: "^.*$"
 		})
 
 		It("returns an error", func() {
-			_, _, err := LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			_, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).To(MatchError(ContainSubstring("could not find variable")))
 		})
 	})

@@ -2,11 +2,12 @@ package cargo
 
 import (
 	"fmt"
+	"io/ioutil"
+
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
 )
 
 type ConfigFileError struct {
@@ -22,7 +23,10 @@ func (err ConfigFileError) Error() string {
 	return fmt.Sprintf("encountered a configuration file error with %s: %s", err.HumanReadableConfigFileName, err.err.Error())
 }
 
-func LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (Kilnfile, KilnfileLock, error) {
+type KilnfileLoader struct {
+}
+
+func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (Kilnfile, KilnfileLock, error) {
 	templateVariablesService := baking.NewTemplateVariablesService(fs)
 	templateVariables, err := templateVariablesService.FromPathsAndPairs(variablesFiles, variables)
 	if err != nil {

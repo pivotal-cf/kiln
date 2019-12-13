@@ -13,15 +13,18 @@ import (
 
 type UpdateRelease struct {
 	Options struct {
-		Kilnfile    string `short:"kf" long:"kilnfile" required:"true" description:"path to Kilnfile"`
-		Name        string `short:"n" long:"name" required:"true" description: "name of release to update""`
-		Version     string `short:"v" long:"version" required:"true" description: "desired version of release""`
-		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+		Kilnfile       string   `short:"kf" long:"kilnfile" required:"true" description:"path to Kilnfile"`
+		Name           string   `short:"n" long:"name" required:"true" description: "name of release to update""`
+		Version        string   `short:"v" long:"version" required:"true" description: "desired version of release""`
+		ReleasesDir    string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
+		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
 	}
 	releaseDownloaderFactory ReleaseDownloaderFactory
 	filesystem               billy.Filesystem
 	logger                   *log.Logger
 	checksummer              checksumFunc
+	loader                   KilnFileLoader
 }
 
 //go:generate counterfeiter -o ./fakes/release_downloader_factory.go --fake-name ReleaseDownloaderFactory . ReleaseDownloaderFactory
@@ -36,13 +39,19 @@ type ReleaseDownloader interface {
 
 type checksumFunc func(path string, fs billy.Filesystem) (string, error)
 
-func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, releaseDownloaderFactory ReleaseDownloaderFactory, checksummer checksumFunc) UpdateRelease {
+func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, releaseDownloaderFactory ReleaseDownloaderFactory, checksummer checksumFunc, loader KilnFileLoader) UpdateRelease {
 	return UpdateRelease{
 		logger:                   logger,
 		releaseDownloaderFactory: releaseDownloaderFactory,
 		filesystem:               filesystem,
 		checksummer:              checksummer,
+		loader:                   loader,
 	}
+}
+
+//go:generate counterfeiter -o ./fakes/kiln_file_loader.go --fake-name KilnfileLoader . KilnfileLoader
+type KilnFileLoader interface {
+	LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (cargo.Kilnfile, cargo.KilnfileLock, error)
 }
 
 func (u UpdateRelease) Execute(args []string) error {
@@ -51,7 +60,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		return err
 	}
 
-	kilnfile, kilnfileLock, err := cargo.LoadKilnfiles(u.filesystem, u.Options.Kilnfile, nil, nil)
+	kilnfile, kilnfileLock, err := u.loader.LoadKilnfiles(u.filesystem, u.Options.Kilnfile, u.Options.VariablesFiles, u.Options.Variables)
 	kilnfileLockPath := fmt.Sprintf("%s.lock", u.Options.Kilnfile)
 
 	releaseDownloader, err := u.releaseDownloaderFactory.ReleaseDownloader(u.logger, kilnfile)
