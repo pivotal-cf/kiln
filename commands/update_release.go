@@ -62,6 +62,9 @@ func (u UpdateRelease) Execute(args []string) error {
 
 	kilnfile, kilnfileLock, err := u.loader.LoadKilnfiles(u.filesystem, u.Options.Kilnfile, u.Options.VariablesFiles, u.Options.Variables)
 	kilnfileLockPath := fmt.Sprintf("%s.lock", u.Options.Kilnfile)
+	if err != nil {
+		return fmt.Errorf("error loading Kilnfiles: %w", err)
+	}
 
 	releaseDownloader, err := u.releaseDownloaderFactory.ReleaseDownloader(u.logger, kilnfile)
 	if err != nil {
@@ -75,7 +78,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		StemcellVersion: kilnfileLock.Stemcell.Version,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("error downloading the release: %w", err)
 	}
 
 	var matchingRelease *cargo.Release
@@ -98,7 +101,7 @@ func (u UpdateRelease) Execute(args []string) error {
 
 	updatedLockFileYAML, err := yaml.Marshal(kilnfileLock)
 	if err != nil {
-		return err // untestable
+		return fmt.Errorf("error marshaling the Kilnfile.lock: %w", err) // untestable
 	}
 
 	lockFile, err := u.filesystem.Create(kilnfileLockPath) // overwrites the file

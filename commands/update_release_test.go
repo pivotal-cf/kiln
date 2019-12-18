@@ -196,6 +196,22 @@ var _ = Describe("UpdateRelease", func() {
 			})
 		})
 
+		When("there is an error loading the Kilnfiles", func() {
+			BeforeEach(func() {
+				kilnFileLoader.LoadKilnfilesReturns(cargo.Kilnfile{}, cargo.KilnfileLock{}, errors.New("big bada boom"))
+			})
+
+			It("errors", func() {
+				err := updateReleaseCommand.Execute([]string{
+					"--kilnfile", "Kilnfile",
+					"--name", releaseName,
+					"--version", releaseVersion,
+					"--releases-directory", releasesDir,
+				})
+				Expect(err).To(MatchError(ContainSubstring("big bada boom")))
+			})
+		})
+
 		When("downloading the release fails", func() {
 			BeforeEach(func() {
 				releaseDownloader.DownloadReleaseReturns(nil, errors.New("bad stuff"))
@@ -208,7 +224,7 @@ var _ = Describe("UpdateRelease", func() {
 					"--version", releaseVersion,
 					"--releases-directory", releasesDir,
 				})
-				Expect(err).To(MatchError("bad stuff"))
+				Expect(err).To(MatchError(ContainSubstring("bad stuff")))
 			})
 
 			It("does not update the Kilnfile.lock", func() {
