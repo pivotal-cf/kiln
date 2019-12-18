@@ -18,6 +18,7 @@ import (
 
 var _ = Context("Updating a release to a specific version", func() {
 	var kilnfileContents, previousKilnfileLock, kilnfileLockPath, kilnfilePath, releasesPath string
+
 	Context("for public releases", func() {
 		BeforeEach(func() {
 			kilnfileContents = `---
@@ -57,6 +58,7 @@ stemcell_criteria:
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
+
 			Eventually(session, 60*time.Second).Should(gexec.Exit(0))
 			Expect(session.Out).To(gbytes.Say("Updated capi to 1.88.0"))
 
@@ -81,6 +83,7 @@ stemcell_criteria:
 				}))
 		})
 	})
+
 	Context("for private releases (on S3)", func() {
 		BeforeEach(func() {
 			kilnfileContents = `---
@@ -117,13 +120,16 @@ stemcell_criteria:
 			_ = ioutil.WriteFile(kilnfileLockPath, []byte(previousKilnfileLock), 0600)
 			_ = os.Mkdir(releasesPath, 0700)
 		})
+
 		It("updates the Kilnfile.lock", func() {
 			varsFile := os.Getenv("KILN_ACCEPTANCE_VARS_FILE_CONTENTS")
 			if varsFile == "" {
-				Skip("Need vars file contents")
+				Fail("please provide the KILN_ACCEPTANCE_VARS_FILE_CONTENTS environment variable")
 			}
+
 			tmpfile, err := ioutil.TempFile("", "varsfile")
 			Expect(err).NotTo(HaveOccurred())
+
 			tmpfile.Write([]byte(varsFile))
 			tmpfile.Close()
 

@@ -36,7 +36,7 @@ var _ = Describe("publish", func() {
 	restoreState := func() {
 		token = os.Getenv("PIVNET_TOKEN")
 		if token == "" {
-			Skip("please provide the PIVNET_TOKEN environment variable")
+			Fail("please provide the PIVNET_TOKEN environment variable")
 		}
 		host = "https://pivnet-integration.cfapps.io"
 
