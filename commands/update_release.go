@@ -71,6 +71,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("error creating ReleaseDownloader: %w", err)
 	}
 
+	u.logger.Println("Searching for the release...")
 	localRelease, err := releaseDownloader.DownloadRelease(u.Options.ReleasesDir, fetcher.ReleaseRequirement{
 		Name:            u.Options.Name,
 		Version:         u.Options.Version,
