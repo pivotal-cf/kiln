@@ -13,7 +13,7 @@ import (
 
 type UpdateRelease struct {
 	Options struct {
-		Kilnfile       string   `short:"kf" long:"kilnfile" required:"true" description:"path to Kilnfile"`
+		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
 		Name           string   `short:"n" long:"name" required:"true" description: "name of release to update""`
 		Version        string   `short:"v" long:"version" required:"true" description: "desired version of release""`
 		ReleasesDir    string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
