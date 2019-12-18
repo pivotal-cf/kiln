@@ -119,6 +119,9 @@ stemcell_criteria:
 		})
 		It("updates the Kilnfile.lock", func() {
 			varsFile := os.Getenv("KILN_ACCEPTANCE_VARS_FILE_CONTENTS")
+			if varsFile == "" {
+				Skip("Need vars file contents")
+			}
 			tmpfile, err := ioutil.TempFile("", "varsfile")
 			Expect(err).NotTo(HaveOccurred())
 			tmpfile.Write([]byte(varsFile))
