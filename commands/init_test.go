@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"github.com/matt-royal/biloba"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -11,7 +12,7 @@ import (
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "commands")
+	RunSpecsWithCustomReporters(t, "commands", biloba.DefaultReporters())
 }
 
 //go:generate counterfeiter -o ./fakes/command.go --fake-name Command . command

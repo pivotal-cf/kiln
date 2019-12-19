@@ -2,6 +2,7 @@ package builder_test
 
 import (
 	"bytes"
+	"github.com/matt-royal/biloba"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -12,7 +13,7 @@ import (
 
 func TestBuilder(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "builder")
+	RunSpecsWithCustomReporters(t, "builder", biloba.DefaultReporters())
 }
 
 func NewBuffer(b *bytes.Buffer) *Buffer {

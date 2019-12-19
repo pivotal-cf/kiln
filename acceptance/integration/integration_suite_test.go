@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"github.com/matt-royal/biloba"
 	"github.com/onsi/gomega/gexec"
 	"os"
 	"testing"
@@ -13,7 +14,7 @@ var pathToMain string
 
 func TestIntegration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "acceptance/integration")
+	RunSpecsWithCustomReporters(t, "acceptance/integration", biloba.DefaultReporters())
 }
 
 var _ = BeforeSuite(func() {

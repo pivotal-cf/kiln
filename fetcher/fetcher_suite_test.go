@@ -1,6 +1,7 @@
 package fetcher_test
 
 import (
+	"github.com/matt-royal/biloba"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -9,5 +10,5 @@ import (
 
 func TestFetcher(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Fetcher Suite")
+	RunSpecsWithCustomReporters(t, "Fetcher Suite", biloba.DefaultReporters())
 }

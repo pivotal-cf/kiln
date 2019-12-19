@@ -1,6 +1,7 @@
 package baking_test
 
 import (
+	"github.com/matt-royal/biloba"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -9,5 +10,5 @@ import (
 
 func TestBaking(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "internal/baking")
+	RunSpecsWithCustomReporters(t, "internal/baking", biloba.DefaultReporters())
 }
