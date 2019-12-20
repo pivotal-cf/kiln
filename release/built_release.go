@@ -1,6 +1,8 @@
-package fetcher
+package release
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type BuiltRelease struct {
 	ID         ReleaseID

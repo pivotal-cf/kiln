@@ -2,6 +2,7 @@ package fetcher
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/release"
 	"log"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
@@ -9,8 +10,8 @@ import (
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedReleases(ReleaseRequirementSet) ([]RemoteRelease, error)
-	DownloadReleases(releasesDir string, matchedS3Objects []RemoteRelease, downloadThreads int) (LocalReleaseSet, error)
+	GetMatchedReleases(release.ReleaseRequirementSet) ([]release.RemoteRelease, error)
+	DownloadReleases(releasesDir string, matchedS3Objects []release.RemoteRelease, downloadThreads int) (release.LocalReleaseSet, error)
 }
 
 type releaseSourceFunction func(cargo.Kilnfile, bool) []ReleaseSource

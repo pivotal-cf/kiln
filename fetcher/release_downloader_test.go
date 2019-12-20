@@ -7,6 +7,7 @@ import (
 	"github.com/pivotal-cf/kiln/commands"
 	. "github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/release"
 	"io/ioutil"
 	"path/filepath"
 )
@@ -20,10 +21,10 @@ var _ = Describe("DownloadRelease", func() {
 		releaseDownloader                            commands.ReleaseDownloader
 		primaryReleaseSource, secondaryReleaseSource *fakes.ReleaseSource
 		downloadDir                                  string
-		requirement                                  ReleaseRequirement
-		releaseID                                    ReleaseID
-		expectedRemoteRelease                        RemoteRelease
-		expectedLocalRelease                         LocalRelease
+		requirement                                  release.ReleaseRequirement
+		releaseID                                    release.ReleaseID
+		expectedRemoteRelease                        release.RemoteRelease
+		expectedLocalRelease                         release.LocalRelease
 	)
 
 	BeforeEach(func() {
@@ -36,23 +37,23 @@ var _ = Describe("DownloadRelease", func() {
 		downloadDir, err = ioutil.TempDir("/tmp", "download-release-spec")
 		Expect(err).NotTo(HaveOccurred())
 
-		requirement = ReleaseRequirement{
+		requirement = release.ReleaseRequirement{
 			Name:            releaseName,
 			Version:         releaseVersion,
 			StemcellOS:      "magi",
 			StemcellVersion: "3",
 		}
 
-		releaseID = ReleaseID{Name: releaseName, Version: releaseVersion}
-		baseRelease := NewBuiltRelease(releaseID, "", "something-remote")
+		releaseID = release.ReleaseID{Name: releaseName, Version: releaseVersion}
+		baseRelease := release.NewBuiltRelease(releaseID, "", "something-remote")
 		expectedRemoteRelease = baseRelease
 		expectedLocalRelease = baseRelease.AsLocal(filepath.Join(downloadDir, "evangelion-3.33.tgz"))
 	})
 
 	When("the release is available from the primary release source", func() {
 		BeforeEach(func() {
-			primaryReleaseSource.GetMatchedReleasesReturns([]RemoteRelease{expectedRemoteRelease}, nil)
-			primaryReleaseSource.DownloadReleasesReturns(LocalReleaseSet{releaseID: expectedLocalRelease}, nil)
+			primaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{expectedRemoteRelease}, nil)
+			primaryReleaseSource.DownloadReleasesReturns(release.LocalReleaseSet{releaseID: expectedLocalRelease}, nil)
 		})
 
 		It("downloads the release from that source", func() {
@@ -71,9 +72,9 @@ var _ = Describe("DownloadRelease", func() {
 
 	When("the release is available from the secondary release source", func() {
 		BeforeEach(func() {
-			primaryReleaseSource.GetMatchedReleasesReturns([]RemoteRelease{}, nil)
-			secondaryReleaseSource.GetMatchedReleasesReturns([]RemoteRelease{expectedRemoteRelease}, nil)
-			secondaryReleaseSource.DownloadReleasesReturns(LocalReleaseSet{releaseID: expectedLocalRelease}, nil)
+			primaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{}, nil)
+			secondaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{expectedRemoteRelease}, nil)
+			secondaryReleaseSource.DownloadReleasesReturns(release.LocalReleaseSet{releaseID: expectedLocalRelease}, nil)
 		})
 
 		It("downloads the release from that source", func() {
@@ -92,8 +93,8 @@ var _ = Describe("DownloadRelease", func() {
 
 	When("the release isn't available from any release source", func() {
 		BeforeEach(func() {
-			primaryReleaseSource.GetMatchedReleasesReturns([]RemoteRelease{}, nil)
-			secondaryReleaseSource.GetMatchedReleasesReturns([]RemoteRelease{}, nil)
+			primaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{}, nil)
+			secondaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{}, nil)
 		})
 
 		It("errors and doesn't download", func() {
@@ -134,7 +135,7 @@ var _ = Describe("DownloadRelease", func() {
 
 		BeforeEach(func() {
 			expectedError = errors.New("boom")
-			primaryReleaseSource.GetMatchedReleasesReturns([]RemoteRelease{expectedRemoteRelease}, nil)
+			primaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{expectedRemoteRelease}, nil)
 			primaryReleaseSource.DownloadReleasesReturns(nil, expectedError)
 		})
 

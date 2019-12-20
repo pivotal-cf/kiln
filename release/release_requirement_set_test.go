@@ -1,11 +1,11 @@
-package fetcher_test
+package release_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/release/fakes"
 	"github.com/pivotal-cf/kiln/internal/cargo"
+	. "github.com/pivotal-cf/kiln/release"
 )
 
 var _ = Describe("ReleaseRequirementSet", func() {

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/release"
 	"log"
 	"os"
 	"strings"
@@ -14,7 +15,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
-type ErrorMissingReleases fetcher.ReleaseRequirementSet
+type ErrorMissingReleases release.ReleaseRequirementSet
 
 func (releases ErrorMissingReleases) Error() string {
 	var missing []string
@@ -57,9 +58,9 @@ func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, l
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
-	GetLocalReleases(releasesDir string) (fetcher.LocalReleaseSet, error)
-	DeleteExtraReleases(extraReleases fetcher.LocalReleaseSet, noConfirm bool) error
-	VerifyChecksums(downloadedReleases fetcher.LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error
+	GetLocalReleases(releasesDir string) (release.LocalReleaseSet, error)
+	DeleteExtraReleases(extraReleases release.LocalReleaseSet, noConfirm bool) error
+	VerifyChecksums(downloadedReleases release.LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -68,7 +69,7 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	desiredReleaseSet := fetcher.NewReleaseRequirementSet(kilnfileLock)
+	desiredReleaseSet := release.NewReleaseRequirementSet(kilnfileLock)
 	satisfiedReleaseSet, unsatisfiedReleaseSet, extraReleaseSet := desiredReleaseSet.Partition(availableLocalReleaseSet)
 
 	err = f.localReleaseDirectory.DeleteExtraReleases(extraReleaseSet, f.Options.NoConfirm)
@@ -92,7 +93,7 @@ func (f Fetch) Execute(args []string) error {
 	return f.localReleaseDirectory.VerifyChecksums(satisfiedReleaseSet, kilnfileLock)
 }
 
-func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetcher.LocalReleaseSet, error) {
+func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, release.LocalReleaseSet, error) {
 	args, err := jhanda.Parse(&f.Options, args)
 
 	if err != nil {
@@ -121,7 +122,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, fetche
 	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
 }
 
-func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet fetcher.LocalReleaseSet, unsatisfiedReleaseSet fetcher.ReleaseRequirementSet, stemcell cargo.Stemcell) (satisfied fetcher.LocalReleaseSet, unsatisfied fetcher.ReleaseRequirementSet, err error) {
+func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet release.LocalReleaseSet, unsatisfiedReleaseSet release.ReleaseRequirementSet, stemcell cargo.Stemcell) (satisfied release.LocalReleaseSet, unsatisfied release.ReleaseRequirementSet, err error) {
 	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile, f.Options.AllowOnlyPublishableReleases)
 	for _, releaseSource := range releaseSources {
 		if len(unsatisfiedReleaseSet) == 0 {

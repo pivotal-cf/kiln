@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pivotal-cf/kiln/internal/cargo"
+	"github.com/pivotal-cf/kiln/release"
 	"io"
 	"io/ioutil"
 	"log"
@@ -65,8 +66,8 @@ func (r *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
 	return
 }
 
-func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet) ([]RemoteRelease, error) {
-	matches := make([]RemoteRelease, 0)
+func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
+	matches := make([]release.RemoteRelease, 0)
 
 	for rel := range desiredReleaseSet {
 	found:
@@ -79,7 +80,7 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequire
 				}
 				if exists {
 					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, rel.Version)
-					builtRelease := NewBuiltRelease(ReleaseID{Name: rel.Name, Version: rel.Version}, "", downloadURL)
+					builtRelease := release.NewBuiltRelease(release.ReleaseID{Name: rel.Name, Version: rel.Version}, "", downloadURL)
 					matches = append(matches, builtRelease)
 					break found
 				}
@@ -90,8 +91,8 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequire
 	return matches, nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []RemoteRelease, downloadThreads int) (LocalReleaseSet, error) {
-	localReleases := make(LocalReleaseSet)
+func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) (release.LocalReleaseSet, error) {
+	localReleases := make(release.LocalReleaseSet)
 
 	r.logger.Printf("downloading %d objects from bosh.io...", len(remoteReleases))
 

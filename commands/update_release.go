@@ -2,10 +2,10 @@ package commands
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/release"
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/yaml.v2"
@@ -34,7 +34,7 @@ type ReleaseDownloaderFactory interface {
 
 //go:generate counterfeiter -o ./fakes/release_downloader.go --fake-name ReleaseDownloader . ReleaseDownloader
 type ReleaseDownloader interface {
-	DownloadRelease(downloadDir string, requirement fetcher.ReleaseRequirement) (fetcher.LocalRelease, error)
+	DownloadRelease(downloadDir string, requirement release.ReleaseRequirement) (release.LocalRelease, error)
 }
 
 type checksumFunc func(path string, fs billy.Filesystem) (string, error)
@@ -72,7 +72,7 @@ func (u UpdateRelease) Execute(args []string) error {
 	}
 
 	u.logger.Println("Searching for the release...")
-	localRelease, err := releaseDownloader.DownloadRelease(u.Options.ReleasesDir, fetcher.ReleaseRequirement{
+	localRelease, err := releaseDownloader.DownloadRelease(u.Options.ReleasesDir, release.ReleaseRequirement{
 		Name:            u.Options.Name,
 		Version:         u.Options.Version,
 		StemcellOS:      kilnfileLock.Stemcell.OS,

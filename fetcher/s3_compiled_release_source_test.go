@@ -3,6 +3,7 @@ package fetcher_test
 import (
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/release"
 	"io"
 	"io/ioutil"
 	"log"
@@ -36,16 +37,16 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 	var (
 		releaseSource     S3CompiledReleaseSource
 		fakeS3Client      *fakes.S3ObjectLister
-		desiredReleaseSet ReleaseRequirementSet
+		desiredReleaseSet release.ReleaseRequirementSet
 		bpmKey            string
 		desiredStemcell   cargo.Stemcell
 	)
 
 	BeforeEach(func() {
-		bpmReleaseID := ReleaseID{Name: "bpm", Version: "1.2.3-lts"}
+		bpmReleaseID := release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}
 		desiredStemcell = cargo.Stemcell{OS: "ubuntu-xenial", Version: "190.0.0"}
-		desiredReleaseSet = ReleaseRequirementSet{
-			bpmReleaseID: ReleaseRequirement{
+		desiredReleaseSet = release.ReleaseRequirementSet{
+			bpmReleaseID: release.ReleaseRequirement{
 				Name:            bpmReleaseID.Name,
 				Version:         bpmReleaseID.Version,
 				StemcellOS:      desiredStemcell.OS,
@@ -91,8 +92,8 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 		Expect(matchedS3Objects).To(HaveLen(1))
 		Expect(matchedS3Objects).To(ConsistOf(
-			NewCompiledRelease(
-				ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+			release.NewCompiledRelease(
+				release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
 				"ubuntu-xenial",
 				"190.0.0",
 				"",
@@ -127,8 +128,8 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-				NewCompiledRelease(
-					ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+				release.NewCompiledRelease(
+					release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
 					"ubuntu-xenial",
 					"190.0.0",
 					"",
@@ -164,8 +165,8 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-				NewCompiledRelease(
-					ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+				release.NewCompiledRelease(
+					release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
 					"ubuntu-xenial",
 					"190.0.0",
 					"",
@@ -200,8 +201,8 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-				NewCompiledRelease(
-					ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+				release.NewCompiledRelease(
+					release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
 					"ubuntu-xenial",
 					"190.0.0",
 					"",
@@ -235,8 +236,8 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 		logger                     *log.Logger
 		releaseSource              S3CompiledReleaseSource
 		releaseDir                 string
-		uaaReleaseID, bpmReleaseID ReleaseID
-		matchedS3Objects           []RemoteRelease
+		uaaReleaseID, bpmReleaseID release.ReleaseID
+		matchedS3Objects           []release.RemoteRelease
 		fakeS3Downloader           *fakes.S3Downloader
 	)
 
@@ -253,12 +254,12 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 		releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		uaaReleaseID = ReleaseID{Name: "uaa", Version: "1.2.3"}
-		bpmReleaseID = ReleaseID{Name: "bpm", Version: "1.2.3"}
+		uaaReleaseID = release.ReleaseID{Name: "uaa", Version: "1.2.3"}
+		bpmReleaseID = release.ReleaseID{Name: "bpm", Version: "1.2.3"}
 
-		matchedS3Objects = []RemoteRelease{
-			NewCompiledRelease(uaaReleaseID, expectedStemcellOS, expectedStemcellVersion, "", uaaRemotePath),
-			NewCompiledRelease(bpmReleaseID, expectedStemcellOS, expectedStemcellVersion, "", bpmRemotePath),
+		matchedS3Objects = []release.RemoteRelease{
+			release.NewCompiledRelease(uaaReleaseID, expectedStemcellOS, expectedStemcellVersion, "", uaaRemotePath),
+			release.NewCompiledRelease(bpmReleaseID, expectedStemcellOS, expectedStemcellVersion, "", bpmRemotePath),
 		}
 
 		logger = log.New(GinkgoWriter, "", 0)
@@ -302,7 +303,7 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 		Expect(localReleases).To(HaveLen(2))
 		Expect(localReleases).To(HaveKeyWithValue(
 			uaaReleaseID,
-			NewCompiledRelease(
+			release.NewCompiledRelease(
 				uaaReleaseID,
 				expectedStemcellOS,
 				expectedStemcellVersion,
@@ -311,7 +312,7 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 			)))
 		Expect(localReleases).To(HaveKeyWithValue(
 			bpmReleaseID,
-			NewCompiledRelease(
+			release.NewCompiledRelease(
 				bpmReleaseID,
 				expectedStemcellOS,
 				expectedStemcellVersion,

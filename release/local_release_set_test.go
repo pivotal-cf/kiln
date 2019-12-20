@@ -1,4 +1,4 @@
-package fetcher_test
+package release_test
 
 import (
 	. "github.com/onsi/ginkgo"

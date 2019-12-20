@@ -3,6 +3,7 @@ package commands_test
 import (
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/release"
 	"io/ioutil"
 	"log"
 	"os"
@@ -35,7 +36,7 @@ var _ = Describe("UpdateRelease", func() {
 		releaseDownloader         *fakes.ReleaseDownloader
 		logger                    *log.Logger
 		downloadedReleasePath     string
-		expectedDownloadedRelease fetcher.LocalRelease
+		expectedDownloadedRelease release.LocalRelease
 		checksummer               func(string, billy.Filesystem) (string, error)
 		kilnFileLoader            *fakes.KilnfileLoader
 	)
@@ -87,9 +88,9 @@ var _ = Describe("UpdateRelease", func() {
 			err = filesystem.MkdirAll(releasesDir, os.ModePerm)
 			Expect(err).NotTo(HaveOccurred())
 
-			releaseID := fetcher.ReleaseID{Name: releaseName, Version: releaseVersion}
+			releaseID := release.ReleaseID{Name: releaseName, Version: releaseVersion}
 			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, releaseVersion))
-			expectedDownloadedRelease = fetcher.NewBuiltRelease(releaseID, downloadedReleasePath, "")
+			expectedDownloadedRelease = release.NewBuiltRelease(releaseID, downloadedReleasePath, "")
 
 			checksummer = fetcher.CalculateSum
 		})
@@ -101,7 +102,7 @@ var _ = Describe("UpdateRelease", func() {
 		When("updating to a version that exists in the remote", func() {
 			BeforeEach(func() {
 				releaseDownloader.DownloadReleaseCalls(
-					func(dir string, requirement fetcher.ReleaseRequirement) (fetcher.LocalRelease, error) {
+					func(dir string, requirement release.ReleaseRequirement) (release.LocalRelease, error) {
 						downloadedReleaseFile, err := filesystem.Create(downloadedReleasePath)
 						Expect(err).NotTo(HaveOccurred())
 						defer downloadedReleaseFile.Close()
@@ -130,7 +131,7 @@ var _ = Describe("UpdateRelease", func() {
 				receivedReleasesDir, receivedReleaseRequirement := releaseDownloader.DownloadReleaseArgsForCall(0)
 				Expect(receivedReleasesDir).To(Equal(releasesDir))
 
-				releaseRequirement := fetcher.ReleaseRequirement{
+				releaseRequirement := release.ReleaseRequirement{
 					Name:            releaseName,
 					Version:         releaseVersion,
 					StemcellOS:      "some-os",

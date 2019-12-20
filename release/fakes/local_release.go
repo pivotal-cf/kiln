@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/pivotal-cf/kiln/fetcher"
+	"github.com/pivotal-cf/kiln/release"
 )
 
 type LocalRelease struct {
@@ -18,10 +18,10 @@ type LocalRelease struct {
 	localPathReturnsOnCall map[int]struct {
 		result1 string
 	}
-	SatisfiesStub        func(fetcher.ReleaseRequirement) bool
+	SatisfiesStub        func(release.ReleaseRequirement) bool
 	satisfiesMutex       sync.RWMutex
 	satisfiesArgsForCall []struct {
-		arg1 fetcher.ReleaseRequirement
+		arg1 release.ReleaseRequirement
 	}
 	satisfiesReturns struct {
 		result1 bool
@@ -85,11 +85,11 @@ func (fake *LocalRelease) LocalPathReturnsOnCall(i int, result1 string) {
 	}{result1}
 }
 
-func (fake *LocalRelease) Satisfies(arg1 fetcher.ReleaseRequirement) bool {
+func (fake *LocalRelease) Satisfies(arg1 release.ReleaseRequirement) bool {
 	fake.satisfiesMutex.Lock()
 	ret, specificReturn := fake.satisfiesReturnsOnCall[len(fake.satisfiesArgsForCall)]
 	fake.satisfiesArgsForCall = append(fake.satisfiesArgsForCall, struct {
-		arg1 fetcher.ReleaseRequirement
+		arg1 release.ReleaseRequirement
 	}{arg1})
 	fake.recordInvocation("Satisfies", []interface{}{arg1})
 	fake.satisfiesMutex.Unlock()
@@ -109,13 +109,13 @@ func (fake *LocalRelease) SatisfiesCallCount() int {
 	return len(fake.satisfiesArgsForCall)
 }
 
-func (fake *LocalRelease) SatisfiesCalls(stub func(fetcher.ReleaseRequirement) bool) {
+func (fake *LocalRelease) SatisfiesCalls(stub func(release.ReleaseRequirement) bool) {
 	fake.satisfiesMutex.Lock()
 	defer fake.satisfiesMutex.Unlock()
 	fake.SatisfiesStub = stub
 }
 
-func (fake *LocalRelease) SatisfiesArgsForCall(i int) fetcher.ReleaseRequirement {
+func (fake *LocalRelease) SatisfiesArgsForCall(i int) release.ReleaseRequirement {
 	fake.satisfiesMutex.RLock()
 	defer fake.satisfiesMutex.RUnlock()
 	argsForCall := fake.satisfiesArgsForCall[i]
@@ -171,4 +171,4 @@ func (fake *LocalRelease) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ fetcher.LocalRelease = new(LocalRelease)
+var _ release.LocalRelease = new(LocalRelease)

@@ -1,6 +1,7 @@
 package fetcher_test
 
 import (
+	"github.com/pivotal-cf/kiln/release"
 	"io/ioutil"
 	"log"
 	"os"
@@ -56,12 +57,12 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(releases).To(HaveLen(1))
 				Expect(releases).To(HaveKeyWithValue(
-					ReleaseID{
+					release.ReleaseID{
 						Name:    "some-release",
 						Version: "1.2.3",
 					},
-					NewCompiledRelease(
-						ReleaseID{Name: "some-release", Version: "1.2.3"},
+					release.NewCompiledRelease(
+						release.ReleaseID{Name: "some-release", Version: "1.2.3"},
 						"some-os",
 						"4.5.6",
 						releaseFile,
@@ -96,10 +97,10 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		})
 
 		It("deletes specified files", func() {
-			extraReleaseID := ReleaseID{Name: "extra-release", Version: "0.0"}
-			extraRelease := NewCompiledRelease(extraReleaseID, "os-0", "0.0.0", extraFilePath, "")
+			extraReleaseID := release.ReleaseID{Name: "extra-release", Version: "0.0"}
+			extraRelease := release.NewCompiledRelease(extraReleaseID, "os-0", "0.0.0", extraFilePath, "")
 
-			extraReleases := map[ReleaseID]LocalRelease{
+			extraReleases := map[release.ReleaseID]release.LocalRelease{
 				extraReleaseID: extraRelease,
 			}
 
@@ -112,10 +113,10 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when a file cannot be removed", func() {
 			It("returns an error", func() {
-				extraReleaseID := ReleaseID{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
-				extraRelease := NewCompiledRelease(extraReleaseID, "os-0", "0.0.0", "file-does-not-exist", "")
+				extraReleaseID := release.ReleaseID{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
+				extraRelease := release.NewCompiledRelease(extraReleaseID, "os-0", "0.0.0", "file-does-not-exist", "")
 
-				extraReleases := map[ReleaseID]LocalRelease{}
+				extraReleases := map[release.ReleaseID]release.LocalRelease{}
 				extraReleases[extraReleaseID] = extraRelease
 
 				err := localReleaseDirectory.DeleteExtraReleases(extraReleases, noConfirm)
@@ -126,7 +127,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 	Describe("VerifyChecksums", func() {
 		var (
-			downloadedReleases map[ReleaseID]LocalRelease
+			downloadedReleases map[release.ReleaseID]release.LocalRelease
 			kilnfileLock       cargo.KilnfileLock
 			goodFilePath       string
 			badFilePath        string
@@ -164,9 +165,9 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when all the checksums on the downloaded releases match their checksums in Kilnfile.lock", func() {
 			It("succeeds", func() {
-				downloadedReleases = map[ReleaseID]LocalRelease{
-					ReleaseID{Name: "good", Version: "1.2.3"}: NewCompiledRelease(
-						ReleaseID{Name: "good", Version: "1.2.3"},
+				downloadedReleases = map[release.ReleaseID]release.LocalRelease{
+					release.ReleaseID{Name: "good", Version: "1.2.3"}: release.NewCompiledRelease(
+						release.ReleaseID{Name: "good", Version: "1.2.3"},
 						"ubuntu-xenial",
 						"190.0.0",
 						goodFilePath,
@@ -179,9 +180,9 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when at least one checksum on the downloaded releases does not match the checksum in Kilnfile.lock", func() {
 			It("returns an error and deletes the bad release", func() {
-				downloadedReleases = map[ReleaseID]LocalRelease{
-					ReleaseID{Name: "bad", Version: "1.2.3"}: NewCompiledRelease(
-						ReleaseID{Name: "bad", Version: "1.2.3"},
+				downloadedReleases = map[release.ReleaseID]release.LocalRelease{
+					release.ReleaseID{Name: "bad", Version: "1.2.3"}: release.NewCompiledRelease(
+						release.ReleaseID{Name: "bad", Version: "1.2.3"},
 						"ubuntu-xenial",
 						"190.0.0",
 						badFilePath,
@@ -222,16 +223,16 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			})
 
 			It("does not validate its checksum", func() {
-				downloadedReleases = map[ReleaseID]LocalRelease{
-					ReleaseID{Name: "good", Version: "1.2.3"}: NewCompiledRelease(
-						ReleaseID{Name: "good", Version: "1.2.3"},
+				downloadedReleases = map[release.ReleaseID]release.LocalRelease{
+					release.ReleaseID{Name: "good", Version: "1.2.3"}: release.NewCompiledRelease(
+						release.ReleaseID{Name: "good", Version: "1.2.3"},
 						"ubuntu-xenial",
 						"190.0.0",
 						goodFilePath,
 						"",
 					),
-					ReleaseID{Name: "uaa", Version: "7.3.0"}: NewCompiledRelease(
-						ReleaseID{Name: "uaa", Version: "7.3.0"},
+					release.ReleaseID{Name: "uaa", Version: "7.3.0"}: release.NewCompiledRelease(
+						release.ReleaseID{Name: "uaa", Version: "7.3.0"},
 						"ubuntu-xenial",
 						"190.0.0",
 						nonStandardFilePath,
