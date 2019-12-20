@@ -6,11 +6,22 @@ type CompiledRelease struct {
 	ID              ReleaseID
 	StemcellOS      string
 	StemcellVersion string
-	Path            string
+	localPath       string
+	remotePath      string
+}
+
+func NewCompiledRelease(id ReleaseID, stemcellOS, stemcellVersion, localPath, remotePath string) CompiledRelease {
+	return CompiledRelease{
+		ID:              id,
+		StemcellOS:      stemcellOS,
+		StemcellVersion: stemcellVersion,
+		localPath:       localPath,
+		remotePath:      remotePath,
+	}
 }
 
 func (cr CompiledRelease) RemotePath() string {
-	return cr.Path
+	return cr.remotePath
 }
 
 func (cr CompiledRelease) StandardizedFilename() string {
@@ -18,7 +29,7 @@ func (cr CompiledRelease) StandardizedFilename() string {
 }
 
 func (cr CompiledRelease) LocalPath() string {
-	return cr.Path
+	return cr.localPath
 }
 
 func (cr CompiledRelease) Satisfies(rr ReleaseRequirement) bool {
@@ -33,6 +44,6 @@ func (cr CompiledRelease) ReleaseID() ReleaseID {
 }
 
 func (cr CompiledRelease) AsLocal(path string) LocalRelease {
-	cr.Path = path
+	cr.localPath = path
 	return cr
 }

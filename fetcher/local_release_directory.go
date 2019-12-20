@@ -49,7 +49,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (LocalReleas
 				ID:              id,
 				StemcellOS:      releaseManifest.StemcellOS,
 				StemcellVersion: releaseManifest.StemcellVersion,
-				Path:            filepath.Join(releasesDir, releaseManifest.File),
+				localPath:       filepath.Join(releasesDir, releaseManifest.File),
 			}
 		} else {
 			rel = NewBuiltRelease(id, filepath.Join(releasesDir, releaseManifest.File), "")

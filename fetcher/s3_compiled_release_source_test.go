@@ -91,12 +91,13 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 		Expect(matchedS3Objects).To(HaveLen(1))
 		Expect(matchedS3Objects).To(ConsistOf(
-			CompiledRelease{
-				ID:              ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-				StemcellOS:      "ubuntu-xenial",
-				StemcellVersion: "190.0.0",
-				Path:            bpmKey,
-			},
+			NewCompiledRelease(
+				ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+				"ubuntu-xenial",
+				"190.0.0",
+				"",
+				bpmKey,
+			),
 		),
 		)
 	})
@@ -126,12 +127,13 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-				CompiledRelease{
-					ID:              ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-					StemcellOS:      "ubuntu-xenial",
-					StemcellVersion: "190.0.0",
-					Path:            bpmKey,
-				},
+				NewCompiledRelease(
+					ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+					"ubuntu-xenial",
+					"190.0.0",
+					"",
+					bpmKey,
+				),
 			),
 			)
 		})
@@ -162,12 +164,13 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-				CompiledRelease{
-					ID:              ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-					StemcellOS:      "ubuntu-xenial",
-					StemcellVersion: "190.0.0",
-					Path:            bpmKey,
-				},
+				NewCompiledRelease(
+					ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+					"ubuntu-xenial",
+					"190.0.0",
+					"",
+					bpmKey,
+					),
 			),
 			)
 		})
@@ -197,12 +200,13 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-				CompiledRelease{
-					ID:              ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-					StemcellOS:      "ubuntu-xenial",
-					StemcellVersion: "190.0.0",
-					Path:            bpmKey,
-				},
+				NewCompiledRelease(
+					ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+					"ubuntu-xenial",
+					"190.0.0",
+					"",
+					bpmKey,
+					),
 			),
 			)
 		})
@@ -239,6 +243,8 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 	const (
 		expectedStemcellVersion = "1234"
 		expectedStemcellOS      = "ubuntu-trusty"
+		uaaRemotePath           = "some-uaa-key"
+		bpmRemotePath           = "some-bpm-key"
 	)
 
 	BeforeEach(func() {
@@ -251,8 +257,8 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 		bpmReleaseID = ReleaseID{Name: "bpm", Version: "1.2.3"}
 
 		matchedS3Objects = []RemoteRelease{
-			CompiledRelease{ID: uaaReleaseID, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion, Path: "some-uaa-key"},
-			CompiledRelease{ID: bpmReleaseID, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion, Path: "some-bpm-key"},
+			NewCompiledRelease(uaaReleaseID, expectedStemcellOS, expectedStemcellVersion, "", uaaRemotePath),
+			NewCompiledRelease(bpmReleaseID, expectedStemcellOS, expectedStemcellVersion, "", bpmRemotePath),
 		}
 
 		logger = log.New(GinkgoWriter, "", 0)
@@ -296,20 +302,22 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 		Expect(localReleases).To(HaveLen(2))
 		Expect(localReleases).To(HaveKeyWithValue(
 			uaaReleaseID,
-			CompiledRelease{
-				ID:              uaaReleaseID,
-				StemcellOS:      expectedStemcellOS,
-				StemcellVersion: expectedStemcellVersion,
-				Path:            uaaReleasePath,
-			}))
+			NewCompiledRelease(
+				uaaReleaseID,
+				expectedStemcellOS,
+				expectedStemcellVersion,
+				uaaReleasePath,
+				uaaRemotePath,
+			)))
 		Expect(localReleases).To(HaveKeyWithValue(
 			bpmReleaseID,
-			CompiledRelease{
-				ID:              bpmReleaseID,
-				StemcellOS:      expectedStemcellOS,
-				StemcellVersion: expectedStemcellVersion,
-				Path:            bpmReleasePath,
-			}))
+			NewCompiledRelease(
+				bpmReleaseID,
+				expectedStemcellOS,
+				expectedStemcellVersion,
+				bpmReleasePath,
+				bpmRemotePath,
+			)))
 
 	})
 

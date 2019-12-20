@@ -127,13 +127,11 @@ func createCompiledReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (CompiledR
 		}
 	}
 
-	return CompiledRelease{
-		ID: ReleaseID{
-			Name:    subgroup[ReleaseName],
-			Version: subgroup[ReleaseVersion],
-		},
-		StemcellOS:      subgroup[StemcellOS],
-		StemcellVersion: subgroup[StemcellVersion],
-		Path:            s3Key,
-	}, nil
+	return NewCompiledRelease(
+		ReleaseID{Name:    subgroup[ReleaseName], Version: subgroup[ReleaseVersion]},
+		subgroup[StemcellOS],
+		subgroup[StemcellVersion],
+		"",
+		s3Key,
+	), nil
 }

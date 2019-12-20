@@ -48,6 +48,6 @@ func (crr *ReleasesRegexp) Convert(s3Key string) (CompiledRelease, error) {
 		},
 		StemcellOS:      subgroup[StemcellOS],
 		StemcellVersion: subgroup[StemcellVersion],
-		Path:            "",
+		localPath:       "",
 	}, nil
 }
