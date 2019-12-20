@@ -13,7 +13,7 @@ func NewReleaseDownloader(releaseSources []ReleaseSource) releaseDownloader {
 	return releaseDownloader{releaseSources: releaseSources}
 }
 
-func (rd releaseDownloader) DownloadRelease(releaseDir string, requirement release.ReleaseRequirement) (release.LocalRelease, error) {
+func (rd releaseDownloader) DownloadRelease(releaseDir string, requirement release.ReleaseRequirement) (release.ReleaseWithLocation, error) {
 	releaseID := release.ReleaseID{Name: requirement.Name, Version: requirement.Version}
 	releaseRequirementSet := release.ReleaseRequirementSet{releaseID: requirement}
 

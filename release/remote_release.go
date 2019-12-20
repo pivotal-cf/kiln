@@ -1,10 +1,11 @@
 package release
 
 type RemoteRelease interface {
-	RemotePath() string
-	ReleaseID() ReleaseID
 	AsLocal(string) LocalRelease
-	StandardizedFilename() string
+	ReleaseID() ReleaseID
+	RemotePath() string
 	Satisfies(set ReleaseRequirement) bool
+	StandardizedFilename() string
+	WithLocalPath(string) ReleaseWithLocation
 }
 

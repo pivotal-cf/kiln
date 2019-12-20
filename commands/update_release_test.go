@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/pivotal-cf/kiln/release"
+	releaseFakes "github.com/pivotal-cf/kiln/release/fakes"
 	"io/ioutil"
 	"log"
 	"os"
@@ -23,9 +24,11 @@ import (
 
 var _ = Describe("UpdateRelease", func() {
 	const (
-		releaseName    = "capi"
-		releaseVersion = "1.8.7"
-		releasesDir    = "releases"
+		releaseName       = "capi"
+		releaseVersion    = "1.8.7"
+		releasesDir       = "releases"
+		remotePath        = "s3://pivotal"
+		releaseSourceName = "LaBreaTarPit"
 	)
 
 	var (
@@ -36,7 +39,7 @@ var _ = Describe("UpdateRelease", func() {
 		releaseDownloader         *fakes.ReleaseDownloader
 		logger                    *log.Logger
 		downloadedReleasePath     string
-		expectedDownloadedRelease release.LocalRelease
+		expectedDownloadedRelease *releaseFakes.ReleaseWithLocation
 		checksummer               func(string, billy.Filesystem) (string, error)
 		kilnFileLoader            *fakes.KilnfileLoader
 	)
@@ -88,9 +91,10 @@ var _ = Describe("UpdateRelease", func() {
 			err = filesystem.MkdirAll(releasesDir, os.ModePerm)
 			Expect(err).NotTo(HaveOccurred())
 
-			releaseID := release.ReleaseID{Name: releaseName, Version: releaseVersion}
 			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, releaseVersion))
-			expectedDownloadedRelease = release.NewBuiltRelease(releaseID, downloadedReleasePath, "")
+			expectedDownloadedRelease = new(releaseFakes.ReleaseWithLocation)
+			expectedDownloadedRelease.LocalPathReturns(downloadedReleasePath)
+			expectedDownloadedRelease.RemotePathReturns(remotePath)
 
 			checksummer = fetcher.CalculateSum
 		})
@@ -102,7 +106,7 @@ var _ = Describe("UpdateRelease", func() {
 		When("updating to a version that exists in the remote", func() {
 			BeforeEach(func() {
 				releaseDownloader.DownloadReleaseCalls(
-					func(dir string, requirement release.ReleaseRequirement) (release.LocalRelease, error) {
+					func(dir string, requirement release.ReleaseRequirement) (release.ReleaseWithLocation, error) {
 						downloadedReleaseFile, err := filesystem.Create(downloadedReleasePath)
 						Expect(err).NotTo(HaveOccurred())
 						defer downloadedReleaseFile.Close()

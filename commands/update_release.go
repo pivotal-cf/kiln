@@ -34,7 +34,7 @@ type ReleaseDownloaderFactory interface {
 
 //go:generate counterfeiter -o ./fakes/release_downloader.go --fake-name ReleaseDownloader . ReleaseDownloader
 type ReleaseDownloader interface {
-	DownloadRelease(downloadDir string, requirement release.ReleaseRequirement) (release.LocalRelease, error)
+	DownloadRelease(downloadDir string, requirement release.ReleaseRequirement) (release.ReleaseWithLocation, error)
 }
 
 type checksumFunc func(path string, fs billy.Filesystem) (string, error)
@@ -72,7 +72,7 @@ func (u UpdateRelease) Execute(args []string) error {
 	}
 
 	u.logger.Println("Searching for the release...")
-	localRelease, err := releaseDownloader.DownloadRelease(u.Options.ReleasesDir, release.ReleaseRequirement{
+	release, err := releaseDownloader.DownloadRelease(u.Options.ReleasesDir, release.ReleaseRequirement{
 		Name:            u.Options.Name,
 		Version:         u.Options.Version,
 		StemcellOS:      kilnfileLock.Stemcell.OS,
@@ -94,7 +94,7 @@ func (u UpdateRelease) Execute(args []string) error {
 	}
 
 	matchingRelease.Version = u.Options.Version
-	sha, err := u.checksummer(localRelease.LocalPath(), u.filesystem)
+	sha, err := u.checksummer(release.LocalPath(), u.filesystem)
 	if err != nil {
 		return fmt.Errorf("error while calculating release checksum: %w", err)
 	}

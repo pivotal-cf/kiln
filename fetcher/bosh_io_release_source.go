@@ -91,13 +91,12 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.Releas
 	return matches, nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) (release.LocalReleaseSet, error) {
-	localReleases := make(release.LocalReleaseSet)
+func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) (release.ReleaseWithLocationSet, error) {
+	releases := make(release.ReleaseWithLocationSet)
 
 	r.logger.Printf("downloading %d objects from bosh.io...", len(remoteReleases))
 
 	for _, release := range remoteReleases {
-
 		downloadURL := release.RemotePath()
 		r.logger.Printf("downloading %s...\n", downloadURL)
 		// Get the data
@@ -121,10 +120,10 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases 
 			return nil, err
 		}
 
-		localReleases[release.ReleaseID()] = release.AsLocal(filePath)
+		releases[release.ReleaseID()] = release.WithLocalPath(filePath)
 	}
 
-	return localReleases, nil
+	return releases, nil
 }
 
 type ResponseStatusCodeError http.Response

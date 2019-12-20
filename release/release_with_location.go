@@ -6,11 +6,13 @@ type unhomedRelease interface {
 	ReleaseID() ReleaseID
 }
 
+//go:generate counterfeiter -o ./fakes/release_with_location.go --fake-name ReleaseWithLocation . ReleaseWithLocation
 type ReleaseWithLocation interface {
 	unhomedRelease
-	RemotePath() string
-	LocalPath() string
 	AsLocal(string) LocalRelease
+	LocalPath() string
+	RemotePath() string
+	WithLocalPath(string) ReleaseWithLocation
 }
 
 type releaseWithLocation struct {
@@ -29,4 +31,19 @@ func (r releaseWithLocation) LocalPath() string {
 func (r releaseWithLocation) AsLocal(path string) LocalRelease {
 	r.localPath = path
 	return r
+}
+
+func (r releaseWithLocation) WithLocalPath(path string) ReleaseWithLocation {
+	r.localPath = path
+	return r
+}
+
+type ReleaseWithLocationSet map[ReleaseID]ReleaseWithLocation
+
+func (rs ReleaseWithLocationSet) ReleaseIDs() []ReleaseID {
+	result := make([]ReleaseID, 0, len(rs))
+	for rID := range rs {
+		result = append(result, rID)
+	}
+	return result
 }
