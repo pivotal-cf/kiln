@@ -89,7 +89,7 @@ var _ = Describe("UpdateRelease", func() {
 
 			releaseID := fetcher.ReleaseID{Name: releaseName, Version: releaseVersion}
 			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, releaseVersion))
-			expectedDownloadedRelease = fetcher.BuiltRelease{ID: releaseID, Path: downloadedReleasePath}
+			expectedDownloadedRelease = fetcher.NewBuiltRelease(releaseID, downloadedReleasePath, "")
 
 			checksummer = fetcher.CalculateSum
 		})

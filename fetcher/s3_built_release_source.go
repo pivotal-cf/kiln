@@ -113,11 +113,9 @@ func createBuiltReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (BuiltRelease
 		}
 	}
 
-	return BuiltRelease{
-		ID: ReleaseID{
-			Name:    subgroup[ReleaseName],
-			Version: subgroup[ReleaseVersion],
-		},
-		Path: s3Key,
-	}, nil
+	return NewBuiltRelease(
+		ReleaseID{Name: subgroup[ReleaseName], Version: subgroup[ReleaseVersion]},
+		"",
+		s3Key,
+	), nil
 }

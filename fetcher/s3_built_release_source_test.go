@@ -75,7 +75,7 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 		Expect(input.Bucket).To(Equal(aws.String("built-bucket")))
 
 		Expect(matchedS3Objects).To(HaveLen(1))
-		Expect(matchedS3Objects).To(ConsistOf(BuiltRelease{ID: ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, Path: bpmKey}))
+		Expect(matchedS3Objects).To(ConsistOf(NewBuiltRelease(ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, "", bpmKey)))
 	})
 
 	When("the regular expression is missing a capture group", func() {
@@ -117,7 +117,7 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-				BuiltRelease{ID: ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, Path: bpmKey},
+				NewBuiltRelease(ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, "", bpmKey),
 			))
 		})
 	})
@@ -142,8 +142,8 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 		uaaReleaseID = ReleaseID{Name: "uaa", Version: "1.2.3"}
 		bpmReleaseID = ReleaseID{Name: "bpm", Version: "1.2.3"}
 		matchedS3Objects = []RemoteRelease{
-			BuiltRelease{ID: uaaReleaseID, Path: "some-uaa-key"},
-			BuiltRelease{ID: bpmReleaseID, Path: "some-bpm-key"},
+			NewBuiltRelease(uaaReleaseID, "", "some-uaa-key"),
+			NewBuiltRelease(bpmReleaseID, "", "some-bpm-key"),
 		}
 
 		logger = log.New(GinkgoWriter, "", 0)
@@ -186,15 +186,9 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 
 		Expect(localReleases).To(HaveLen(2))
 		Expect(localReleases).To(HaveKeyWithValue(
-			uaaReleaseID, BuiltRelease{
-				ID:   uaaReleaseID,
-				Path: uaaReleasePath,
-			}))
+			uaaReleaseID, NewBuiltRelease(uaaReleaseID, uaaReleasePath, "some-uaa-key")))
 		Expect(localReleases).To(HaveKeyWithValue(
-			bpmReleaseID, BuiltRelease{
-				ID:   bpmReleaseID,
-				Path: bpmReleasePath,
-			}))
+			bpmReleaseID, NewBuiltRelease(bpmReleaseID, bpmReleasePath, "some-bpm-key")))
 	})
 
 	Context("when the matchedS3Objects argument is empty", func() {

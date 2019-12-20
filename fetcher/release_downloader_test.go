@@ -44,7 +44,7 @@ var _ = Describe("DownloadRelease", func() {
 		}
 
 		releaseID = ReleaseID{Name: releaseName, Version: releaseVersion}
-		baseRelease := BuiltRelease{ID: releaseID, Path: "something-remote"}
+		baseRelease := NewBuiltRelease(releaseID, "", "something-remote")
 		expectedRemoteRelease = baseRelease
 		expectedLocalRelease = baseRelease.AsLocal(filepath.Join(downloadDir, "evangelion-3.33.tgz"))
 	})

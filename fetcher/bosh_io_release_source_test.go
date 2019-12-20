@@ -69,8 +69,8 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(foundReleases).To(HaveLen(2))
 			Expect(foundReleases).To(ConsistOf(
-				BuiltRelease{ID: ReleaseID{Name: "uaa", Version: "73.3.0"}, Path: uaaURL},
-				BuiltRelease{ID: ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, Path: cfRabbitURL},
+				NewBuiltRelease(ReleaseID{Name: "uaa", Version: "73.3.0"}, "", uaaURL),
+				NewBuiltRelease(ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, "", cfRabbitURL),
 			))
 		})
 	})
@@ -167,10 +167,7 @@ var _ = Describe("GetMatchedReleases from bosh.io", func() {
 					releaseVersion,
 				)
 
-				expectedRelease := BuiltRelease{
-					ID:   releaseID,
-					Path: expectedPath,
-				}
+				expectedRelease := NewBuiltRelease(releaseID, "", expectedPath)
 
 				Expect(foundReleases).To(ConsistOf(expectedRelease))
 			},
@@ -224,13 +221,13 @@ var _ = Describe("DownloadReleases", func() {
 
 		release1ID = ReleaseID{Name: "some", Version: "1.2.3"}
 		release1ServerPath = "/some-release"
-		release1 = BuiltRelease{ID: release1ID, Path: testServer.URL() + release1ServerPath}
+		release1 = NewBuiltRelease(release1ID, "", testServer.URL() + release1ServerPath)
 		release1Filename = "some-1.2.3.tgz"
 		release1ServerFileContents = "totes-a-real-release"
 
 		release2ID = ReleaseID{Name: "another", Version: "2.3.4"}
 		release2ServerPath = "/releases/another/release/2.3.4"
-		release2 = BuiltRelease{ID: release2ID, Path: testServer.URL() + release2ServerPath}
+		release2 = NewBuiltRelease(release2ID, "", testServer.URL() + release2ServerPath)
 		release2Filename = "another-2.3.4.tgz"
 		release2ServerFileContents = "blah-blah-blah deploy instructions blah blah"
 
@@ -275,14 +272,8 @@ var _ = Describe("DownloadReleases", func() {
 
 		Expect(localReleases).To(HaveLen(2))
 		Expect(localReleases).To(HaveKeyWithValue(
-			release1ID, BuiltRelease{
-				ID:   release1ID,
-				Path: fullRelease1Path,
-			}))
+			release1ID, NewBuiltRelease(release1ID, fullRelease1Path, release1.RemotePath())))
 		Expect(localReleases).To(HaveKeyWithValue(
-			release2ID, BuiltRelease{
-				ID:   release2ID,
-				Path: fullRelease2Path,
-			}))
+			release2ID, NewBuiltRelease(release2ID, fullRelease2Path, release2.RemotePath())))
 	})
 })

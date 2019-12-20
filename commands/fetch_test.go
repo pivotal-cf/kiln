@@ -217,20 +217,20 @@ stemcell_criteria:
 					nil)
 
 				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns(
-					[]fetcher.RemoteRelease{fetcher.BuiltRelease{ID: s3BuiltReleaseID, Path: "some-other-s3-key"}},
+					[]fetcher.RemoteRelease{fetcher.NewBuiltRelease(s3BuiltReleaseID, "", "some-other-s3-key")},
 					nil)
 				fakeS3BuiltReleaseSource.DownloadReleasesReturns(
 					fetcher.LocalReleaseSet{
-						s3BuiltReleaseID: fetcher.BuiltRelease{ID: s3BuiltReleaseID, Path: "some-other-s3-key"},
+						s3BuiltReleaseID: fetcher.NewBuiltRelease(s3BuiltReleaseID, "", "some-other-s3-key"),
 					},
 					nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
-					[]fetcher.RemoteRelease{fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"}},
+					[]fetcher.RemoteRelease{fetcher.NewBuiltRelease(boshIOReleaseID, "", "some-bosh-io-url")},
 					nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(
 					fetcher.LocalReleaseSet{
-						boshIOReleaseID: fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"},
+						boshIOReleaseID: fetcher.NewBuiltRelease(boshIOReleaseID, "", "some-bosh-io-url"),
 					},
 					nil)
 
@@ -262,10 +262,7 @@ stemcell_criteria:
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(ConsistOf(
-					fetcher.BuiltRelease{
-						ID:   s3BuiltReleaseID,
-						Path: "some-other-s3-key",
-					}))
+					fetcher.NewBuiltRelease(s3BuiltReleaseID, "", "some-other-s3-key")))
 			})
 
 			It("fetches bosh.io release from bosh.io release source", func() {
@@ -274,10 +271,7 @@ stemcell_criteria:
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(ConsistOf(
-					fetcher.BuiltRelease{
-						ID:   boshIOReleaseID,
-						Path: "some-bosh-io-url",
-					}))
+					fetcher.NewBuiltRelease(boshIOReleaseID, "", "some-bosh-io-url")))
 			})
 		})
 
@@ -376,14 +370,14 @@ stemcell_criteria:
 				missingReleaseS3BuiltID = fetcher.ReleaseID{Name: "some-missing-release-on-s3-built", Version: "8.9.0"}
 
 				missingReleaseS3Compiled = fetcher.CompiledRelease{ID: missingReleaseS3CompiledID, StemcellOS: "some-os", StemcellVersion: "4.5.6", Path: missingReleaseS3CompiledPath}
-				missingReleaseBoshIO = fetcher.BuiltRelease{ID: missingReleaseBoshIOID, Path: missingReleaseBoshIOPath}
-				missingReleaseS3Built = fetcher.BuiltRelease{ID: missingReleaseS3BuiltID, Path: missingReleaseS3BuiltPath}
+				missingReleaseBoshIO = fetcher.NewBuiltRelease(missingReleaseBoshIOID, missingReleaseBoshIOPath, "")
+				missingReleaseS3Built = fetcher.NewBuiltRelease(missingReleaseS3BuiltID, missingReleaseS3BuiltPath, "")
 
 				fakeLocalReleaseDirectory.GetLocalReleasesReturns(fetcher.LocalReleaseSet{
 					fetcher.ReleaseID{Name: "some-release", Version: "1.2.3"}: fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "some-release", Version: "1.2.3"}, StemcellOS: "some-os", StemcellVersion: "4.5.6", Path: "path/to/some/release"},
 					// a release that has no compiled packages, such as consul-drain, will also have no stemcell criteria in release.MF.
 					// we must make sure that we can match this kind of release properly to avoid unnecessary downloads.
-					fetcher.ReleaseID{Name: "some-tiny-release", Version: "1.2.3"}: fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "some-tiny-release", Version: "1.2.3"}, Path: "path/to/some/tiny/release"},
+					fetcher.ReleaseID{Name: "some-tiny-release", Version: "1.2.3"}: fetcher.NewBuiltRelease(fetcher.ReleaseID{Name: "some-tiny-release", Version: "1.2.3"}, "path/to/some/tiny/release", ""),
 				}, nil)
 
 				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]fetcher.RemoteRelease{missingReleaseS3Compiled}, nil)
@@ -454,10 +448,10 @@ stemcell_criteria:
 				}, nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
-					[]fetcher.RemoteRelease{fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"}},
+					[]fetcher.RemoteRelease{fetcher.NewBuiltRelease(boshIOReleaseID, "", "some-bosh-io-url")},
 					nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(
-					fetcher.LocalReleaseSet{boshIOReleaseID: fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"}},
+					fetcher.LocalReleaseSet{boshIOReleaseID: fetcher.NewBuiltRelease(boshIOReleaseID, "", "some-bosh-io-url")},
 					nil)
 
 			})

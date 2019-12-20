@@ -3,12 +3,21 @@ package fetcher
 import "fmt"
 
 type BuiltRelease struct {
-	ID   ReleaseID
-	Path string
+	ID         ReleaseID
+	localPath  string
+	remotePath string
+}
+
+func NewBuiltRelease(id ReleaseID, localPath, remotePath string) BuiltRelease {
+	return BuiltRelease{
+		ID:         id,
+		localPath:  localPath,
+		remotePath: remotePath,
+	}
 }
 
 func (br BuiltRelease) RemotePath() string {
-	return br.Path
+	return br.remotePath
 }
 
 func (br BuiltRelease) StandardizedFilename() string {
@@ -16,7 +25,7 @@ func (br BuiltRelease) StandardizedFilename() string {
 }
 
 func (br BuiltRelease) LocalPath() string {
-	return br.Path
+	return br.localPath
 }
 
 func (br BuiltRelease) Satisfies(rr ReleaseRequirement) bool {
@@ -29,6 +38,6 @@ func (br BuiltRelease) ReleaseID() ReleaseID {
 }
 
 func (br BuiltRelease) AsLocal(path string) LocalRelease {
-	br.Path = path
+	br.localPath = path
 	return br
 }

@@ -52,10 +52,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (LocalReleas
 				Path:            filepath.Join(releasesDir, releaseManifest.File),
 			}
 		} else {
-			rel = BuiltRelease{
-				ID:   id,
-				Path: filepath.Join(releasesDir, releaseManifest.File),
-			}
+			rel = NewBuiltRelease(id, filepath.Join(releasesDir, releaseManifest.File), "")
 		}
 		outputReleases[id] = rel
 	}

@@ -65,7 +65,7 @@ func (r *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
 	return
 }
 
-func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet) ([]RemoteRelease, error) {
+func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet) ([]RemoteRelease, error) {
 	matches := make([]RemoteRelease, 0)
 
 	for rel := range desiredReleaseSet {
@@ -73,13 +73,13 @@ func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRe
 		for _, repo := range repos {
 			for _, suf := range suffixes {
 				fullName := repo + "/" + rel.Name + suf
-				exists, err := source.releaseExistOnBoshio(fullName, rel.Version)
+				exists, err := r.releaseExistOnBoshio(fullName, rel.Version)
 				if err != nil {
 					return nil, err
 				}
 				if exists {
-					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", source.serverURI, fullName, rel.Version)
-					builtRelease := BuiltRelease{ID: ReleaseID{Name: rel.Name, Version: rel.Version}, Path: downloadURL}
+					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, rel.Version)
+					builtRelease := NewBuiltRelease(ReleaseID{Name: rel.Name, Version: rel.Version}, "", downloadURL)
 					matches = append(matches, builtRelease)
 					break found
 				}
