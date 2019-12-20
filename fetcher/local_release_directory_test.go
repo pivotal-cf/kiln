@@ -100,7 +100,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			extraReleaseID := release.ReleaseID{Name: "extra-release", Version: "0.0"}
 			extraRelease := release.NewCompiledRelease(extraReleaseID, "os-0", "0.0.0", extraFilePath, "")
 
-			extraReleases := map[release.ReleaseID]release.LocalRelease{
+			extraReleases := map[release.ReleaseID]release.ReleaseWithLocation{
 				extraReleaseID: extraRelease,
 			}
 
@@ -116,7 +116,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				extraReleaseID := release.ReleaseID{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
 				extraRelease := release.NewCompiledRelease(extraReleaseID, "os-0", "0.0.0", "file-does-not-exist", "")
 
-				extraReleases := map[release.ReleaseID]release.LocalRelease{}
+				extraReleases := map[release.ReleaseID]release.ReleaseWithLocation{}
 				extraReleases[extraReleaseID] = extraRelease
 
 				err := localReleaseDirectory.DeleteExtraReleases(extraReleases, noConfirm)
@@ -127,7 +127,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 	Describe("VerifyChecksums", func() {
 		var (
-			downloadedReleases map[release.ReleaseID]release.LocalRelease
+			downloadedReleases map[release.ReleaseID]release.ReleaseWithLocation
 			kilnfileLock       cargo.KilnfileLock
 			goodFilePath       string
 			badFilePath        string
@@ -165,7 +165,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when all the checksums on the downloaded releases match their checksums in Kilnfile.lock", func() {
 			It("succeeds", func() {
-				downloadedReleases = map[release.ReleaseID]release.LocalRelease{
+				downloadedReleases = map[release.ReleaseID]release.ReleaseWithLocation{
 					release.ReleaseID{Name: "good", Version: "1.2.3"}: release.NewCompiledRelease(
 						release.ReleaseID{Name: "good", Version: "1.2.3"},
 						"ubuntu-xenial",
@@ -180,7 +180,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when at least one checksum on the downloaded releases does not match the checksum in Kilnfile.lock", func() {
 			It("returns an error and deletes the bad release", func() {
-				downloadedReleases = map[release.ReleaseID]release.LocalRelease{
+				downloadedReleases = map[release.ReleaseID]release.ReleaseWithLocation{
 					release.ReleaseID{Name: "bad", Version: "1.2.3"}: release.NewCompiledRelease(
 						release.ReleaseID{Name: "bad", Version: "1.2.3"},
 						"ubuntu-xenial",
@@ -223,7 +223,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			})
 
 			It("does not validate its checksum", func() {
-				downloadedReleases = map[release.ReleaseID]release.LocalRelease{
+				downloadedReleases = map[release.ReleaseID]release.ReleaseWithLocation{
 					release.ReleaseID{Name: "good", Version: "1.2.3"}: release.NewCompiledRelease(
 						release.ReleaseID{Name: "good", Version: "1.2.3"},
 						"ubuntu-xenial",

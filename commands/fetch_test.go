@@ -137,7 +137,7 @@ stemcell_criteria:
 				BeforeEach(func() {
 					releaseOnDisk = release.NewCompiledRelease(releaseID, "different-os", expectedStemcellVersion, fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, actualStemcellOS, actualStemcellVersion), "")
 					fakeLocalReleaseDirectory.GetLocalReleasesReturns(
-						release.LocalReleaseSet{releaseID: releaseOnDisk},
+						release.ReleaseWithLocationSet{releaseID: releaseOnDisk},
 						nil)
 				})
 
@@ -164,7 +164,7 @@ stemcell_criteria:
 						"",
 					)
 					fakeLocalReleaseDirectory.GetLocalReleasesReturns(
-						release.LocalReleaseSet{releaseID: releaseOnDisk},
+						release.ReleaseWithLocationSet{releaseID: releaseOnDisk},
 						nil)
 				})
 
@@ -230,7 +230,7 @@ stemcell_criteria:
 					},
 					nil)
 
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.LocalReleaseSet{}, nil)
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.ReleaseWithLocationSet{}, nil)
 			})
 
 			It("completes successfully", func() {
@@ -307,7 +307,7 @@ stemcell_criteria:
 					Name:    "some-release-from-local-dir",
 					Version: "1.2.3",
 				}
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.LocalReleaseSet{
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.ReleaseWithLocationSet{
 					someLocalReleaseID: release.NewCompiledRelease(someLocalReleaseID, "some-os", "4.5.6", "/path/to/some/release", ""),
 				}, nil)
 			})
@@ -359,7 +359,7 @@ stemcell_criteria:
 				missingReleaseBoshIO = release.NewBuiltRelease(missingReleaseBoshIOID, missingReleaseBoshIOPath, "")
 				missingReleaseS3Built = release.NewBuiltRelease(missingReleaseS3BuiltID, missingReleaseS3BuiltPath, "")
 
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.LocalReleaseSet{
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.ReleaseWithLocationSet{
 					release.ReleaseID{Name: "some-release", Version: "1.2.3"}: release.NewCompiledRelease(
 						release.ReleaseID{Name: "some-release", Version: "1.2.3"},
 						"some-os",
@@ -430,7 +430,7 @@ stemcell_criteria:
   os: some-os
   version: "4.5.6"
 `
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.LocalReleaseSet{
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.ReleaseWithLocationSet{
 					localReleaseID: release.NewCompiledRelease(localReleaseID, "some-os", "4.5.6", "path/to/some/extra/release", ""),
 				}, nil)
 

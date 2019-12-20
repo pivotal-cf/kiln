@@ -16,8 +16,8 @@ func NewReleaseRequirementSet(kilnfileLock cargo.KilnfileLock) ReleaseRequiremen
 	return set
 }
 
-func (rrs ReleaseRequirementSet) Partition(other LocalReleaseSet) (intersection LocalReleaseSet, missing ReleaseRequirementSet, extra LocalReleaseSet) {
-	intersection = make(LocalReleaseSet)
+func (rrs ReleaseRequirementSet) Partition(other ReleaseWithLocationSet) (intersection ReleaseWithLocationSet, missing ReleaseRequirementSet, extra ReleaseWithLocationSet) {
+	intersection = make(ReleaseWithLocationSet)
 	missing = make(ReleaseRequirementSet)
 	extra = other.copy()
 

@@ -50,21 +50,21 @@ var _ = Describe("ReleaseRequirementSet", func() {
 
 	Describe("Partition", func() {
 		var (
-			releaseSet                             LocalReleaseSet
+			releaseSet                             ReleaseWithLocationSet
 			extraReleaseID                         ReleaseID
-			satisfyingRelease, unsatisfyingRelease *fakes.LocalRelease
+			satisfyingRelease, unsatisfyingRelease *fakes.ReleaseWithLocation
 		)
 
 		BeforeEach(func() {
-			satisfyingRelease = new(fakes.LocalRelease)
+			satisfyingRelease = new(fakes.ReleaseWithLocation)
 			satisfyingRelease.SatisfiesReturns(true)
 
-			unsatisfyingRelease = new(fakes.LocalRelease)
+			unsatisfyingRelease = new(fakes.ReleaseWithLocation)
 			unsatisfyingRelease.SatisfiesReturns(false)
 
 			extraReleaseID = ReleaseID{Name: "extra", Version: "2.3.5"}
 
-			releaseSet = LocalReleaseSet{
+			releaseSet = ReleaseWithLocationSet{
 				release1ID:     satisfyingRelease,
 				release2ID:     unsatisfyingRelease,
 				extraReleaseID: unsatisfyingRelease,
