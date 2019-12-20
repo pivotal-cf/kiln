@@ -196,13 +196,13 @@ var _ = Describe("DownloadReleases", func() {
 		testServer    *ghttp.Server
 
 		release1ID                 release.ReleaseID
-		release1                   release.BuiltRelease
+		release1                   release.RemoteRelease
 		release1ServerPath         string
 		release1Filename           string
 		release1ServerFileContents string
 
 		release2ID                 release.ReleaseID
-		release2                   release.BuiltRelease
+		release2                   release.RemoteRelease
 		release2ServerPath         string
 		release2Filename           string
 		release2ServerFileContents string

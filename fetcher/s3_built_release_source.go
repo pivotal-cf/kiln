@@ -16,7 +16,7 @@ import (
 type S3BuiltReleaseSource S3ReleaseSource
 
 func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
-	matchedS3Objects := make(map[release.ReleaseID]release.BuiltRelease)
+	matchedS3Objects := make(map[release.ReleaseID]release.RemoteRelease)
 
 	exp, err := regexp.Compile(src.Regex)
 	if err != nil {
@@ -45,7 +45,7 @@ func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.Rel
 				if err != nil {
 					continue
 				}
-				matchedS3Objects[release.ID] = release
+				matchedS3Objects[release.ReleaseID()] = release
 			}
 			return true
 		},
@@ -101,9 +101,9 @@ func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleas
 	return localReleases, nil
 }
 
-func createBuiltReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (release.BuiltRelease, error) {
+func createBuiltReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (release.RemoteRelease, error) {
 	if !exp.MatchString(s3Key) {
-		return release.BuiltRelease{}, fmt.Errorf("s3 key does not match regex")
+		return nil, fmt.Errorf("s3 key does not match regex")
 	}
 
 	matches := exp.FindStringSubmatch(s3Key)

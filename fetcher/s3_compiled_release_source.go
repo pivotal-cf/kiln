@@ -22,7 +22,7 @@ const (
 type S3CompiledReleaseSource S3ReleaseSource
 
 func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
-	matchedS3Objects := make(map[release.ReleaseID][]release.CompiledRelease)
+	matchedS3Objects := make(map[release.ReleaseID][]release.RemoteRelease)
 
 	exp, err := regexp.Compile(r.Regex)
 	if err != nil {
@@ -53,7 +53,7 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.Re
 					continue
 				}
 
-				matchedS3Objects[compiledRelease.ID] = append(matchedS3Objects[compiledRelease.ID], compiledRelease)
+				matchedS3Objects[compiledRelease.ReleaseID()] = append(matchedS3Objects[compiledRelease.ReleaseID()], compiledRelease)
 			}
 			return true
 		},
@@ -115,9 +115,9 @@ func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteRelea
 	return localReleases, nil
 }
 
-func createCompiledReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (release.CompiledRelease, error) {
+func createCompiledReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (release.RemoteRelease, error) {
 	if !exp.MatchString(s3Key) {
-		return release.CompiledRelease{}, fmt.Errorf("s3 key does not match regex")
+		return nil, fmt.Errorf("s3 key does not match regex")
 	}
 
 	matches := exp.FindStringSubmatch(s3Key)

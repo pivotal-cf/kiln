@@ -7,7 +7,7 @@ import (
 	. "github.com/pivotal-cf/kiln/release"
 )
 
-var _ = Describe("BuiltRelease", func() {
+var _ = Describe("builtRelease", func() {
 	const (
 		expectedName    = "my-awesome-release"
 		expectedVersion = "42.0.0"
@@ -24,10 +24,10 @@ var _ = Describe("BuiltRelease", func() {
 	)
 
 	Describe("StandardizedFilename", func() {
-		var release BuiltRelease
+		var release RemoteRelease
 
 		BeforeEach(func() {
-			release = BuiltRelease{ID: ReleaseID{Name: expectedName, Version: expectedVersion}}
+			release = NewBuiltRelease(ReleaseID{Name: expectedName, Version: expectedVersion}, "", "")
 		})
 
 		It("returns the standardized filename for the release", func() {

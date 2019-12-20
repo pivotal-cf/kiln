@@ -5,5 +5,6 @@ type RemoteRelease interface {
 	ReleaseID() ReleaseID
 	AsLocal(string) LocalRelease
 	StandardizedFilename() string
+	Satisfies(set ReleaseRequirement) bool
 }
 

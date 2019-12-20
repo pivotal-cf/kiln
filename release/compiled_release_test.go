@@ -7,7 +7,7 @@ import (
 	. "github.com/pivotal-cf/kiln/release"
 )
 
-var _ = Describe("CompiledRelease", func() {
+var _ = Describe("compiledRelease", func() {
 	const (
 		expectedName            = "my-awesome-release"
 		expectedVersion         = "42.0.0"
@@ -16,7 +16,7 @@ var _ = Describe("CompiledRelease", func() {
 	)
 
 	DescribeTable("Satisfies", func(name, version, stemcellOS, stemcellVersion string, expectedResult bool) {
-		release := CompiledRelease{ID: ReleaseID{Name: name, Version: version}, StemcellOS: stemcellOS, StemcellVersion: stemcellVersion}
+		release := NewCompiledRelease(ReleaseID{Name: name, Version: version}, stemcellOS, stemcellVersion, "", "")
 		requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion}
 		Expect(release.Satisfies(requirement)).To(Equal(expectedResult))
 	},
@@ -28,14 +28,15 @@ var _ = Describe("CompiledRelease", func() {
 	)
 
 	Describe("StandardizedFilename", func() {
-		var release CompiledRelease
+		var release RemoteRelease
 
 		BeforeEach(func() {
-			release = CompiledRelease{
-				ID:              ReleaseID{Name: expectedName, Version: expectedVersion},
-				StemcellOS:      expectedStemcellOS,
-				StemcellVersion: expectedStemcellVersion,
-			}
+			release = NewCompiledRelease(
+				ReleaseID{Name: expectedName, Version: expectedVersion},
+				expectedStemcellOS,
+				expectedStemcellVersion,
+				"", "",
+			)
 		})
 
 		It("returns the standardized filename for the release", func() {

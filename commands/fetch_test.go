@@ -105,13 +105,13 @@ stemcell_criteria:
 			)
 			var (
 				releaseID                               release.ReleaseID
-				releaseOnDisk                           release.CompiledRelease
+				releaseOnDisk                           release.ReleaseWithLocation
 				actualStemcellOS, actualStemcellVersion string
 			)
 			BeforeEach(func() {
 				releaseID = release.ReleaseID{Name: "some-release", Version: "0.1.0"}
 				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{
-					release.CompiledRelease{ID: releaseID, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion},
+					release.NewCompiledRelease(releaseID, expectedStemcellOS, expectedStemcellVersion, "", ""),
 				}, nil)
 				fakeS3CompiledReleaseSource.DownloadReleasesReturns(
 					release.LocalReleaseSet{
@@ -330,9 +330,9 @@ stemcell_criteria:
 				missingReleaseS3BuiltID      release.ReleaseID
 				missingReleaseS3BuiltPath    = "s3-key-some-missing-release-on-s3-built"
 
-				missingReleaseS3Compiled release.CompiledRelease
+				missingReleaseS3Compiled,
 				missingReleaseBoshIO,
-				missingReleaseS3Built release.BuiltRelease
+				missingReleaseS3Built release.ReleaseWithLocation
 			)
 			BeforeEach(func() {
 				lockContents = `---
