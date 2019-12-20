@@ -37,13 +37,13 @@ var _ = Describe("UpdateRelease", func() {
 		downloadedReleasePath     string
 		expectedDownloadedRelease fetcher.LocalRelease
 		checksummer               func(string, billy.Filesystem) (string, error)
-		kilnFileLoader            *fakes.KilnFileLoader
+		kilnFileLoader            *fakes.KilnfileLoader
 	)
 
 	Context("Execute", func() {
 		BeforeEach(func() {
 			releaseDownloaderFactory = new(fakes.ReleaseDownloaderFactory)
-			kilnFileLoader = new(fakes.KilnFileLoader)
+			kilnFileLoader = new(fakes.KilnfileLoader)
 			releaseDownloader = new(fakes.ReleaseDownloader)
 			releaseDownloaderFactory.ReleaseDownloaderReturns(releaseDownloader, nil)
 
