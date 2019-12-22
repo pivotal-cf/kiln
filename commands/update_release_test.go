@@ -3,14 +3,13 @@ package commands_test
 import (
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/release"
-	releaseFakes "github.com/pivotal-cf/kiln/release/fakes"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
+	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
@@ -39,7 +38,7 @@ var _ = Describe("UpdateRelease", func() {
 		releaseDownloader         *fakes.ReleaseDownloader
 		logger                    *log.Logger
 		downloadedReleasePath     string
-		expectedDownloadedRelease *releaseFakes.ReleaseWithLocation
+		expectedDownloadedRelease release.ReleaseWithLocation
 		checksummer               func(string, billy.Filesystem) (string, error)
 		kilnFileLoader            *fakes.KilnfileLoader
 	)
@@ -58,7 +57,7 @@ var _ = Describe("UpdateRelease", func() {
 			}
 
 			kilnFileLock := cargo.KilnfileLock{
-				Releases: []cargo.Release{
+				Releases: []cargo.ReleaseLock{
 					{
 						Name:    "minecraft",
 						SHA1:    "developersdevelopersdevelopersdevelopers",
@@ -92,9 +91,9 @@ var _ = Describe("UpdateRelease", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, releaseVersion))
-			expectedDownloadedRelease = new(releaseFakes.ReleaseWithLocation)
-			expectedDownloadedRelease.LocalPathReturns(downloadedReleasePath)
-			expectedDownloadedRelease.RemotePathReturns(remotePath)
+			expectedDownloadedRelease = release.NewBuiltRelease(
+				release.ReleaseID{Name: releaseName, Version: releaseVersion},
+			).WithLocalPath(downloadedReleasePath).WithRemote(releaseSourceName, remotePath)
 
 			checksummer = fetcher.CalculateSum
 		})
@@ -169,10 +168,12 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kilnfileLock.Releases).To(HaveLen(2))
 				Expect(kilnfileLock.Releases).To(ContainElement(
-					cargo.Release{
-						Name:    releaseName,
-						Version: releaseVersion,
-						SHA1:    "ba01716b40a3557d699d024d76c307e351e96829",
+					cargo.ReleaseLock{
+						Name:         releaseName,
+						Version:      releaseVersion,
+						SHA1:         "ba01716b40a3557d699d024d76c307e351e96829",
+						RemoteSource: releaseSourceName,
+						RemotePath:   remotePath,
 					},
 				))
 			})

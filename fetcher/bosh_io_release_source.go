@@ -3,14 +3,15 @@ package fetcher
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/release"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/pivotal-cf/kiln/internal/cargo"
+	"github.com/pivotal-cf/kiln/release"
 )
 
 var repos = []string{
@@ -45,6 +46,10 @@ var suffixes = []string{
 	"-bosh-release",
 	"",
 }
+
+const (
+	BOSHIOReleaseSourceID = "bosh.io"
+)
 
 type BOSHIOReleaseSource struct {
 	serverURI string
@@ -82,7 +87,7 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.Releas
 					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, rel.Version)
 					builtRelease := release.NewBuiltRelease(
 						release.ReleaseID{Name: rel.Name, Version: rel.Version},
-					).WithRemotePath(downloadURL)
+					).WithRemote(BOSHIOReleaseSourceID, downloadURL)
 					matches = append(matches, builtRelease)
 					break found
 				}

@@ -2,10 +2,11 @@ package fetcher
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/release"
 	"os"
 	"path/filepath"
 	"regexp"
+
+	"github.com/pivotal-cf/kiln/release"
 
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
@@ -41,7 +42,7 @@ func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.Rel
 				if s3Object.Key == nil {
 					continue
 				}
-				release, err := createBuiltReleaseFromS3Key(exp, *s3Object.Key)
+				release, err := createBuiltReleaseFromS3Key(exp, src.ID, *s3Object.Key)
 				if err != nil {
 					continue
 				}
@@ -101,7 +102,7 @@ func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleas
 	return releases, nil
 }
 
-func createBuiltReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (release.RemoteRelease, error) {
+func createBuiltReleaseFromS3Key(exp *regexp.Regexp, releaseSourceID, s3Key string) (release.RemoteRelease, error) {
 	if !exp.MatchString(s3Key) {
 		return nil, fmt.Errorf("s3 key does not match regex")
 	}
@@ -116,5 +117,5 @@ func createBuiltReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (release.Remo
 
 	return release.NewBuiltRelease(
 		release.ReleaseID{Name: subgroup[ReleaseName], Version: subgroup[ReleaseVersion]},
-	).WithRemotePath(s3Key), nil
+	).WithRemote(releaseSourceID, s3Key), nil
 }

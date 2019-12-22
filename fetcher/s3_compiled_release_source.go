@@ -2,10 +2,11 @@ package fetcher
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/release"
 	"os"
 	"path/filepath"
 	"regexp"
+
+	"github.com/pivotal-cf/kiln/release"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -48,7 +49,7 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.Re
 					continue
 				}
 
-				compiledRelease, err := createCompiledReleaseFromS3Key(exp, *s3Object.Key)
+				compiledRelease, err := createCompiledReleaseFromS3Key(exp, r.ID, *s3Object.Key)
 				if err != nil {
 					continue
 				}
@@ -115,7 +116,7 @@ func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteRelea
 	return releases, nil
 }
 
-func createCompiledReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (release.RemoteRelease, error) {
+func createCompiledReleaseFromS3Key(exp *regexp.Regexp, releaseSourceID, s3Key string) (release.RemoteRelease, error) {
 	if !exp.MatchString(s3Key) {
 		return nil, fmt.Errorf("s3 key does not match regex")
 	}
@@ -132,5 +133,5 @@ func createCompiledReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (release.R
 		release.ReleaseID{Name: subgroup[ReleaseName], Version: subgroup[ReleaseVersion]},
 		subgroup[StemcellOS],
 		subgroup[StemcellVersion],
-	).WithRemotePath(s3Key), nil
+	).WithRemote(releaseSourceID, s3Key), nil
 }

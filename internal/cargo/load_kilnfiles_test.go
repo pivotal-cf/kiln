@@ -107,7 +107,7 @@ regex: "^.*$"
 			_, kilnfileLock, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kilnfileLock).To(Equal(KilnfileLock{
-				Releases: []Release{{Name: "some-release", Version: "1.2.3"}},
+				Releases: []ReleaseLock{{Name: "some-release", Version: "1.2.3"}},
 				Stemcell: Stemcell{OS: "some-os", Version: "4.5.6"},
 			}))
 		})

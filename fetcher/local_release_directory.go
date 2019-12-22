@@ -4,14 +4,15 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	release2 "github.com/pivotal-cf/kiln/release"
-	"gopkg.in/src-d/go-billy.v4"
-	"gopkg.in/src-d/go-billy.v4/osfs"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	release2 "github.com/pivotal-cf/kiln/release"
+	"gopkg.in/src-d/go-billy.v4"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
@@ -148,7 +149,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet release2.Rel
 	return nil
 }
 
-func findExpectedSum(release release2.ReleaseID, desiredReleases []cargo.Release) (string, bool) {
+func findExpectedSum(release release2.ReleaseID, desiredReleases []cargo.ReleaseLock) (string, bool) {
 	for _, r := range desiredReleases {
 		if r.Name == release.Name {
 			return r.SHA1, true

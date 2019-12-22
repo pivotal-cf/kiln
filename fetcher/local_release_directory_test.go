@@ -1,11 +1,12 @@
 package fetcher_test
 
 import (
-	"github.com/pivotal-cf/kiln/release"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/pivotal-cf/kiln/release"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -143,7 +144,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.Release{
+				Releases: []cargo.ReleaseLock{
 					{
 						Name:    "good",
 						Version: "1.2.3",
@@ -204,7 +205,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				err = ioutil.WriteFile(nonStandardFilePath, []byte("some release file"), 0644)
 				Expect(err).NotTo(HaveOccurred())
 				kilnfileLock = cargo.KilnfileLock{
-					Releases: []cargo.Release{
+					Releases: []cargo.ReleaseLock{
 						{
 							Name:    "good",
 							Version: "1.2.3",

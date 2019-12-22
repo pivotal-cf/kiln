@@ -2,8 +2,9 @@ package commands
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/release"
 	"log"
+
+	"github.com/pivotal-cf/kiln/release"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/cargo"
@@ -82,7 +83,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("error downloading the release: %w", err)
 	}
 
-	var matchingRelease *cargo.Release
+	var matchingRelease *cargo.ReleaseLock
 	for i := range kilnfileLock.Releases {
 		if kilnfileLock.Releases[i].Name == u.Options.Name {
 			matchingRelease = &kilnfileLock.Releases[i]
@@ -93,12 +94,15 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("no release named %q exists in your Kilnfile.lock", u.Options.Name)
 	}
 
-	matchingRelease.Version = u.Options.Version
 	sha, err := u.checksummer(release.LocalPath(), u.filesystem)
 	if err != nil {
 		return fmt.Errorf("error while calculating release checksum: %w", err)
 	}
+
+	matchingRelease.Version = u.Options.Version
 	matchingRelease.SHA1 = sha
+	matchingRelease.RemotePath = release.RemotePath()
+	matchingRelease.RemoteSource = release.ReleaseSourceID()
 
 	updatedLockFileYAML, err := yaml.Marshal(kilnfileLock)
 	if err != nil {

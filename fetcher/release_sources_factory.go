@@ -2,8 +2,9 @@ package fetcher
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/release"
 	"log"
+
+	"github.com/pivotal-cf/kiln/release"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
@@ -36,19 +37,17 @@ func NewReleaseSourcesFactory(outLogger *log.Logger) releaseSourceFunction {
 }
 
 func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
-	if releaseConfig.Type == "bosh.io" {
+	switch releaseConfig.Type {
+	case "bosh.io":
 		return NewBOSHIOReleaseSource(outLogger, "")
-	}
-
-	if releaseConfig.Type != "s3" {
-		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
-	}
-
-	s3ReleaseSource := S3ReleaseSource{Logger: outLogger}
-	s3ReleaseSource.Configure(releaseConfig)
-	if releaseConfig.Compiled {
-		return S3CompiledReleaseSource(s3ReleaseSource)
-	} else {
+	case "s3":
+		s3ReleaseSource := S3ReleaseSource{Logger: outLogger, ID: releaseConfig.ID}
+		s3ReleaseSource.Configure(releaseConfig)
+		if releaseConfig.Compiled {
+			return S3CompiledReleaseSource(s3ReleaseSource)
+		}
 		return S3BuiltReleaseSource(s3ReleaseSource)
+	default:
+		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
 	}
 }

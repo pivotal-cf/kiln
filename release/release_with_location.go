@@ -12,13 +12,15 @@ type ReleaseWithLocation interface {
 	LocalPath() string
 	RemotePath() string
 	WithLocalPath(string) ReleaseWithLocation
-	WithRemotePath(string) ReleaseWithLocation
+	WithRemote(remoteSourceID string, remotePath string) ReleaseWithLocation
+	ReleaseSourceID() string
 }
 
 type releaseWithLocation struct {
 	unhomedRelease
-	localPath string
-	remotePath string
+	localPath      string
+	remoteSourceID string
+	remotePath     string
 }
 
 func (r releaseWithLocation) RemotePath() string {
@@ -28,7 +30,8 @@ func (r releaseWithLocation) LocalPath() string {
 	return r.localPath
 }
 
-func (r releaseWithLocation) WithRemotePath(remotePath string) ReleaseWithLocation {
+func (r releaseWithLocation) WithRemote(remoteSourceID string, remotePath string) ReleaseWithLocation {
+	r.remoteSourceID = remoteSourceID
 	r.remotePath = remotePath
 	return r
 }
@@ -38,3 +41,6 @@ func (r releaseWithLocation) WithLocalPath(localPath string) ReleaseWithLocation
 	return r
 }
 
+func (r releaseWithLocation) ReleaseSourceID() string {
+	return r.remoteSourceID
+}

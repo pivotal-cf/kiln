@@ -72,9 +72,15 @@ stemcell_criteria:
 
 			Expect(kilnfileLock).To(Equal(
 				cargo.KilnfileLock{
-					Releases: []cargo.Release{
+					Releases: []cargo.ReleaseLock{
 						{Name: "loggregator-agent", Version: "5.1.0", SHA1: "a86e10219b0ed9b7b82f0610b7cdc03c13765722"},
-						{Name: "capi", Version: "1.88.0", SHA1: "7a7ef183de3252724b6f8e6ca39ad7cf4995fe27"},
+						{
+							Name:         "capi",
+							Version:      "1.88.0",
+							SHA1:         "7a7ef183de3252724b6f8e6ca39ad7cf4995fe27",
+							RemoteSource: "bosh.io",
+							RemotePath:   "https://bosh.io/d/github.com/cloudfoundry/capi-release?v=1.88.0",
+						},
 					},
 					Stemcell: cargo.Stemcell{
 						OS:      "some-os",
@@ -88,7 +94,8 @@ stemcell_criteria:
 		BeforeEach(func() {
 			kilnfileContents = `---
 release_sources:
-- type: s3
+- id: compiled-releases
+  type: s3
   bucket: compiled-releases
   region: us-west-1
   access_key_id: $(variable "aws_access_key_id")
@@ -156,9 +163,15 @@ stemcell_criteria:
 
 			Expect(kilnfileLock).To(Equal(
 				cargo.KilnfileLock{
-					Releases: []cargo.Release{
+					Releases: []cargo.ReleaseLock{
 						{Name: "loggregator-agent", Version: "5.1.0", SHA1: "a86e10219b0ed9b7b82f0610b7cdc03c13765722"},
-						{Name: "capi", Version: "1.86.0", SHA1: "32f40c3006e3b0b401b855da99cbd701c3c5be33"},
+						{
+							Name:         "capi",
+							Version:      "1.86.0",
+							SHA1:         "32f40c3006e3b0b401b855da99cbd701c3c5be33",
+							RemoteSource: "compiled-releases",
+							RemotePath:   "2.8/capi/capi-1.86.0-ubuntu-xenial-456.30.tgz",
+						},
 					},
 					Stemcell: cargo.Stemcell{
 						OS:      "ubuntu-xenial",

@@ -2,7 +2,7 @@ package release
 
 import "github.com/pivotal-cf/kiln/internal/cargo"
 
-func newReleaseRequirement(release cargo.Release, stemcell cargo.Stemcell) ReleaseRequirement {
+func newReleaseRequirement(release cargo.ReleaseLock, stemcell cargo.Stemcell) ReleaseRequirement {
 	return ReleaseRequirement{
 		Name:            release.Name,
 		Version:         release.Version,

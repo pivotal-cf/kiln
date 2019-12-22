@@ -3,11 +3,12 @@ package commands_test
 import (
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/release"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/pivotal-cf/kiln/release"
 
 	"gopkg.in/yaml.v2"
 
@@ -39,6 +40,12 @@ var _ = Describe("Fetch", func() {
 
 		fetchExecuteArgs []string
 		fetchExecuteErr  error
+	)
+
+	const (
+		s3CompiledReleaseSourceID = "s3-compiled"
+		s3BuiltReleaseSourceID    = "s3-built"
+		boshIOReleaseSourceID     = fetcher.BOSHIOReleaseSourceID
 	)
 
 	Describe("Execute", func() {
@@ -203,30 +210,30 @@ stemcell_criteria:
 `
 				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns(
 					[]release.RemoteRelease{
-						release.NewCompiledRelease(s3CompiledReleaseID, "some-os", "30.1").WithRemotePath("some-s3-key"),
+						release.NewCompiledRelease(s3CompiledReleaseID, "some-os", "30.1").WithRemote(s3CompiledReleaseSourceID, "some-s3-key"),
 					},
 					nil)
 				fakeS3CompiledReleaseSource.DownloadReleasesReturns(
 					release.ReleaseWithLocationSet{
-						s3CompiledReleaseID: release.NewCompiledRelease(s3CompiledReleaseID, "some-os", "30.1").WithLocalPath("local-path").WithRemotePath("some-s3-key"),
+						s3CompiledReleaseID: release.NewCompiledRelease(s3CompiledReleaseID, "some-os", "30.1").WithLocalPath("local-path").WithRemote(s3CompiledReleaseSourceID, "some-s3-key"),
 					},
 					nil)
 
 				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns(
-					[]release.RemoteRelease{release.NewBuiltRelease(s3BuiltReleaseID).WithRemotePath("some-other-s3-key")},
+					[]release.RemoteRelease{release.NewBuiltRelease(s3BuiltReleaseID).WithRemote(s3BuiltReleaseSourceID, "some-other-s3-key")},
 					nil)
 				fakeS3BuiltReleaseSource.DownloadReleasesReturns(
 					release.ReleaseWithLocationSet{
-						s3BuiltReleaseID: release.NewBuiltRelease(s3BuiltReleaseID).WithLocalPath("local-path2").WithRemotePath("some-other-s3-key"),
+						s3BuiltReleaseID: release.NewBuiltRelease(s3BuiltReleaseID).WithLocalPath("local-path2").WithRemote(s3BuiltReleaseSourceID, "some-other-s3-key"),
 					},
 					nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
-					[]release.RemoteRelease{release.NewBuiltRelease(boshIOReleaseID).WithRemotePath("some-bosh-io-url")},
+					[]release.RemoteRelease{release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")},
 					nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(
 					release.ReleaseWithLocationSet{
-						boshIOReleaseID: release.NewBuiltRelease(boshIOReleaseID).WithLocalPath("local-path3").WithRemotePath("some-bosh-io-url"),
+						boshIOReleaseID: release.NewBuiltRelease(boshIOReleaseID).WithLocalPath("local-path3").WithRemote(boshIOReleaseSourceID, "some-bosh-io-url"),
 					},
 					nil)
 
@@ -244,7 +251,7 @@ stemcell_criteria:
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(ConsistOf(
-					release.NewCompiledRelease(s3CompiledReleaseID, "some-os", "30.1").WithRemotePath("some-s3-key")))
+					release.NewCompiledRelease(s3CompiledReleaseID, "some-os", "30.1").WithRemote(s3CompiledReleaseSourceID, "some-s3-key")))
 			})
 
 			It("fetches built release from s3 built release source", func() {
@@ -253,7 +260,7 @@ stemcell_criteria:
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(ConsistOf(
-					release.NewBuiltRelease(s3BuiltReleaseID).WithRemotePath("some-other-s3-key")))
+					release.NewBuiltRelease(s3BuiltReleaseID).WithRemote(s3BuiltReleaseSourceID, "some-other-s3-key")))
 			})
 
 			It("fetches bosh.io release from bosh.io release source", func() {
@@ -262,7 +269,7 @@ stemcell_criteria:
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(ConsistOf(
-					release.NewBuiltRelease(boshIOReleaseID).WithRemotePath("some-bosh-io-url")))
+					release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")))
 			})
 		})
 
@@ -356,7 +363,7 @@ stemcell_criteria:
 				missingReleaseBoshIOID = release.ReleaseID{Name: "some-missing-release-on-boshio", Version: "5.6.7"}
 				missingReleaseS3BuiltID = release.ReleaseID{Name: "some-missing-release-on-s3-built", Version: "8.9.0"}
 
-				missingReleaseS3Compiled = release.NewCompiledRelease(missingReleaseS3CompiledID, "some-os", "4.5.6").WithRemotePath(missingReleaseS3CompiledPath)
+				missingReleaseS3Compiled = release.NewCompiledRelease(missingReleaseS3CompiledID, "some-os", "4.5.6").WithRemote(s3CompiledReleaseSourceID, missingReleaseS3CompiledPath)
 				missingReleaseBoshIO = release.NewBuiltRelease(missingReleaseBoshIOID).WithLocalPath(missingReleaseBoshIOPath)
 				missingReleaseS3Built = release.NewBuiltRelease(missingReleaseS3BuiltID).WithLocalPath(missingReleaseS3BuiltPath)
 
@@ -436,10 +443,10 @@ stemcell_criteria:
 				}, nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
-					[]release.RemoteRelease{release.NewBuiltRelease(boshIOReleaseID).WithRemotePath("some-bosh-io-url")},
+					[]release.RemoteRelease{release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")},
 					nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(
-					release.ReleaseWithLocationSet{boshIOReleaseID: release.NewBuiltRelease(boshIOReleaseID).WithRemotePath("some-bosh-io-url")},
+					release.ReleaseWithLocationSet{boshIOReleaseID: release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")},
 					nil)
 
 			})

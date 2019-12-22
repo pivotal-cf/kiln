@@ -28,6 +28,16 @@ type ReleaseWithLocation struct {
 	releaseIDReturnsOnCall map[int]struct {
 		result1 release.ReleaseID
 	}
+	ReleaseSourceIDStub        func() string
+	releaseSourceIDMutex       sync.RWMutex
+	releaseSourceIDArgsForCall []struct {
+	}
+	releaseSourceIDReturns struct {
+		result1 string
+	}
+	releaseSourceIDReturnsOnCall map[int]struct {
+		result1 string
+	}
 	RemotePathStub        func() string
 	remotePathMutex       sync.RWMutex
 	remotePathArgsForCall []struct {
@@ -70,15 +80,16 @@ type ReleaseWithLocation struct {
 	withLocalPathReturnsOnCall map[int]struct {
 		result1 release.ReleaseWithLocation
 	}
-	WithRemotePathStub        func(string) release.ReleaseWithLocation
-	withRemotePathMutex       sync.RWMutex
-	withRemotePathArgsForCall []struct {
+	WithRemoteStub        func(string, string) release.ReleaseWithLocation
+	withRemoteMutex       sync.RWMutex
+	withRemoteArgsForCall []struct {
 		arg1 string
+		arg2 string
 	}
-	withRemotePathReturns struct {
+	withRemoteReturns struct {
 		result1 release.ReleaseWithLocation
 	}
-	withRemotePathReturnsOnCall map[int]struct {
+	withRemoteReturnsOnCall map[int]struct {
 		result1 release.ReleaseWithLocation
 	}
 	invocations      map[string][][]interface{}
@@ -186,6 +197,58 @@ func (fake *ReleaseWithLocation) ReleaseIDReturnsOnCall(i int, result1 release.R
 	}
 	fake.releaseIDReturnsOnCall[i] = struct {
 		result1 release.ReleaseID
+	}{result1}
+}
+
+func (fake *ReleaseWithLocation) ReleaseSourceID() string {
+	fake.releaseSourceIDMutex.Lock()
+	ret, specificReturn := fake.releaseSourceIDReturnsOnCall[len(fake.releaseSourceIDArgsForCall)]
+	fake.releaseSourceIDArgsForCall = append(fake.releaseSourceIDArgsForCall, struct {
+	}{})
+	fake.recordInvocation("ReleaseSourceID", []interface{}{})
+	fake.releaseSourceIDMutex.Unlock()
+	if fake.ReleaseSourceIDStub != nil {
+		return fake.ReleaseSourceIDStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.releaseSourceIDReturns
+	return fakeReturns.result1
+}
+
+func (fake *ReleaseWithLocation) ReleaseSourceIDCallCount() int {
+	fake.releaseSourceIDMutex.RLock()
+	defer fake.releaseSourceIDMutex.RUnlock()
+	return len(fake.releaseSourceIDArgsForCall)
+}
+
+func (fake *ReleaseWithLocation) ReleaseSourceIDCalls(stub func() string) {
+	fake.releaseSourceIDMutex.Lock()
+	defer fake.releaseSourceIDMutex.Unlock()
+	fake.ReleaseSourceIDStub = stub
+}
+
+func (fake *ReleaseWithLocation) ReleaseSourceIDReturns(result1 string) {
+	fake.releaseSourceIDMutex.Lock()
+	defer fake.releaseSourceIDMutex.Unlock()
+	fake.ReleaseSourceIDStub = nil
+	fake.releaseSourceIDReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *ReleaseWithLocation) ReleaseSourceIDReturnsOnCall(i int, result1 string) {
+	fake.releaseSourceIDMutex.Lock()
+	defer fake.releaseSourceIDMutex.Unlock()
+	fake.ReleaseSourceIDStub = nil
+	if fake.releaseSourceIDReturnsOnCall == nil {
+		fake.releaseSourceIDReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.releaseSourceIDReturnsOnCall[i] = struct {
+		result1 string
 	}{result1}
 }
 
@@ -413,62 +476,63 @@ func (fake *ReleaseWithLocation) WithLocalPathReturnsOnCall(i int, result1 relea
 	}{result1}
 }
 
-func (fake *ReleaseWithLocation) WithRemotePath(arg1 string) release.ReleaseWithLocation {
-	fake.withRemotePathMutex.Lock()
-	ret, specificReturn := fake.withRemotePathReturnsOnCall[len(fake.withRemotePathArgsForCall)]
-	fake.withRemotePathArgsForCall = append(fake.withRemotePathArgsForCall, struct {
+func (fake *ReleaseWithLocation) WithRemote(arg1 string, arg2 string) release.ReleaseWithLocation {
+	fake.withRemoteMutex.Lock()
+	ret, specificReturn := fake.withRemoteReturnsOnCall[len(fake.withRemoteArgsForCall)]
+	fake.withRemoteArgsForCall = append(fake.withRemoteArgsForCall, struct {
 		arg1 string
-	}{arg1})
-	fake.recordInvocation("WithRemotePath", []interface{}{arg1})
-	fake.withRemotePathMutex.Unlock()
-	if fake.WithRemotePathStub != nil {
-		return fake.WithRemotePathStub(arg1)
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("WithRemote", []interface{}{arg1, arg2})
+	fake.withRemoteMutex.Unlock()
+	if fake.WithRemoteStub != nil {
+		return fake.WithRemoteStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.withRemotePathReturns
+	fakeReturns := fake.withRemoteReturns
 	return fakeReturns.result1
 }
 
-func (fake *ReleaseWithLocation) WithRemotePathCallCount() int {
-	fake.withRemotePathMutex.RLock()
-	defer fake.withRemotePathMutex.RUnlock()
-	return len(fake.withRemotePathArgsForCall)
+func (fake *ReleaseWithLocation) WithRemoteCallCount() int {
+	fake.withRemoteMutex.RLock()
+	defer fake.withRemoteMutex.RUnlock()
+	return len(fake.withRemoteArgsForCall)
 }
 
-func (fake *ReleaseWithLocation) WithRemotePathCalls(stub func(string) release.ReleaseWithLocation) {
-	fake.withRemotePathMutex.Lock()
-	defer fake.withRemotePathMutex.Unlock()
-	fake.WithRemotePathStub = stub
+func (fake *ReleaseWithLocation) WithRemoteCalls(stub func(string, string) release.ReleaseWithLocation) {
+	fake.withRemoteMutex.Lock()
+	defer fake.withRemoteMutex.Unlock()
+	fake.WithRemoteStub = stub
 }
 
-func (fake *ReleaseWithLocation) WithRemotePathArgsForCall(i int) string {
-	fake.withRemotePathMutex.RLock()
-	defer fake.withRemotePathMutex.RUnlock()
-	argsForCall := fake.withRemotePathArgsForCall[i]
-	return argsForCall.arg1
+func (fake *ReleaseWithLocation) WithRemoteArgsForCall(i int) (string, string) {
+	fake.withRemoteMutex.RLock()
+	defer fake.withRemoteMutex.RUnlock()
+	argsForCall := fake.withRemoteArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *ReleaseWithLocation) WithRemotePathReturns(result1 release.ReleaseWithLocation) {
-	fake.withRemotePathMutex.Lock()
-	defer fake.withRemotePathMutex.Unlock()
-	fake.WithRemotePathStub = nil
-	fake.withRemotePathReturns = struct {
+func (fake *ReleaseWithLocation) WithRemoteReturns(result1 release.ReleaseWithLocation) {
+	fake.withRemoteMutex.Lock()
+	defer fake.withRemoteMutex.Unlock()
+	fake.WithRemoteStub = nil
+	fake.withRemoteReturns = struct {
 		result1 release.ReleaseWithLocation
 	}{result1}
 }
 
-func (fake *ReleaseWithLocation) WithRemotePathReturnsOnCall(i int, result1 release.ReleaseWithLocation) {
-	fake.withRemotePathMutex.Lock()
-	defer fake.withRemotePathMutex.Unlock()
-	fake.WithRemotePathStub = nil
-	if fake.withRemotePathReturnsOnCall == nil {
-		fake.withRemotePathReturnsOnCall = make(map[int]struct {
+func (fake *ReleaseWithLocation) WithRemoteReturnsOnCall(i int, result1 release.ReleaseWithLocation) {
+	fake.withRemoteMutex.Lock()
+	defer fake.withRemoteMutex.Unlock()
+	fake.WithRemoteStub = nil
+	if fake.withRemoteReturnsOnCall == nil {
+		fake.withRemoteReturnsOnCall = make(map[int]struct {
 			result1 release.ReleaseWithLocation
 		})
 	}
-	fake.withRemotePathReturnsOnCall[i] = struct {
+	fake.withRemoteReturnsOnCall[i] = struct {
 		result1 release.ReleaseWithLocation
 	}{result1}
 }
@@ -480,6 +544,8 @@ func (fake *ReleaseWithLocation) Invocations() map[string][][]interface{} {
 	defer fake.localPathMutex.RUnlock()
 	fake.releaseIDMutex.RLock()
 	defer fake.releaseIDMutex.RUnlock()
+	fake.releaseSourceIDMutex.RLock()
+	defer fake.releaseSourceIDMutex.RUnlock()
 	fake.remotePathMutex.RLock()
 	defer fake.remotePathMutex.RUnlock()
 	fake.satisfiesMutex.RLock()
@@ -488,8 +554,8 @@ func (fake *ReleaseWithLocation) Invocations() map[string][][]interface{} {
 	defer fake.standardizedFilenameMutex.RUnlock()
 	fake.withLocalPathMutex.RLock()
 	defer fake.withLocalPathMutex.RUnlock()
-	fake.withRemotePathMutex.RLock()
-	defer fake.withRemotePathMutex.RUnlock()
+	fake.withRemoteMutex.RLock()
+	defer fake.withRemoteMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

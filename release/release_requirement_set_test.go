@@ -3,9 +3,9 @@ package release_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/kiln/release/fakes"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	. "github.com/pivotal-cf/kiln/release"
+	"github.com/pivotal-cf/kiln/release/fakes"
 )
 
 var _ = Describe("ReleaseRequirementSet", func() {
@@ -25,7 +25,7 @@ var _ = Describe("ReleaseRequirementSet", func() {
 
 	BeforeEach(func() {
 		kilnfileLock := cargo.KilnfileLock{
-			Releases: []cargo.Release{
+			Releases: []cargo.ReleaseLock{
 				{Name: release1Name, Version: release1Version},
 				{Name: release2Name, Version: release2Version},
 			},

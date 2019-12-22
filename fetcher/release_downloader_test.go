@@ -2,14 +2,15 @@ package fetcher_test
 
 import (
 	"errors"
+	"io/ioutil"
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/commands"
 	. "github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/fetcher/fakes"
 	"github.com/pivotal-cf/kiln/release"
-	"io/ioutil"
-	"path/filepath"
 )
 
 var _ = Describe("DownloadRelease", func() {
@@ -45,7 +46,7 @@ var _ = Describe("DownloadRelease", func() {
 		}
 
 		releaseID = release.ReleaseID{Name: releaseName, Version: releaseVersion}
-		baseRelease := release.NewBuiltRelease(releaseID).WithRemotePath("something-remote")
+		baseRelease := release.NewBuiltRelease(releaseID).WithRemote("banana", "something-remote")
 		expectedRemoteRelease = baseRelease
 		expectedLocalRelease = baseRelease.WithLocalPath(filepath.Join(downloadDir, "evangelion-3.33.tgz"))
 	})
