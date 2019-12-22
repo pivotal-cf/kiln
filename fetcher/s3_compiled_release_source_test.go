@@ -96,11 +96,8 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 				release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
 				"ubuntu-xenial",
 				"190.0.0",
-				"",
-				bpmKey,
-			),
-		),
-		)
+			).WithRemotePath(bpmKey),
+		))
 	})
 
 	Context("if any objects in S3 do not match a release specified in Kilnfile.lock", func() {
@@ -132,11 +129,8 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 					release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
 					"ubuntu-xenial",
 					"190.0.0",
-					"",
-					bpmKey,
-				),
-			),
-			)
+				).WithRemotePath(bpmKey),
+			))
 		})
 	})
 
@@ -169,9 +163,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 					release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
 					"ubuntu-xenial",
 					"190.0.0",
-					"",
-					bpmKey,
-					),
+				).WithRemotePath(bpmKey),
 			),
 			)
 		})
@@ -205,9 +197,7 @@ var _ = Describe("GetMatchedReleases from S3 compiled source", func() {
 					release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
 					"ubuntu-xenial",
 					"190.0.0",
-					"",
-					bpmKey,
-					),
+				).WithRemotePath(bpmKey),
 			),
 			)
 		})
@@ -258,8 +248,8 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 		bpmReleaseID = release.ReleaseID{Name: "bpm", Version: "1.2.3"}
 
 		matchedS3Objects = []release.RemoteRelease{
-			release.NewCompiledRelease(uaaReleaseID, expectedStemcellOS, expectedStemcellVersion, "", uaaRemotePath),
-			release.NewCompiledRelease(bpmReleaseID, expectedStemcellOS, expectedStemcellVersion, "", bpmRemotePath),
+			release.NewCompiledRelease(uaaReleaseID, expectedStemcellOS, expectedStemcellVersion).WithRemotePath(uaaRemotePath),
+			release.NewCompiledRelease(bpmReleaseID, expectedStemcellOS, expectedStemcellVersion).WithRemotePath(bpmRemotePath),
 		}
 
 		logger = log.New(GinkgoWriter, "", 0)
@@ -307,18 +297,16 @@ var _ = Describe("S3CompiledReleaseSource DownloadReleases from compiled source"
 				uaaReleaseID,
 				expectedStemcellOS,
 				expectedStemcellVersion,
-				uaaReleasePath,
-				uaaRemotePath,
-			)))
+			).WithLocalPath(uaaReleasePath).WithRemotePath(uaaRemotePath),
+		))
 		Expect(localReleases).To(HaveKeyWithValue(
 			bpmReleaseID,
 			release.NewCompiledRelease(
 				bpmReleaseID,
 				expectedStemcellOS,
 				expectedStemcellVersion,
-				bpmReleasePath,
-				bpmRemotePath,
-			)))
+			).WithLocalPath(bpmReleasePath).WithRemotePath(bpmRemotePath),
+		))
 
 	})
 

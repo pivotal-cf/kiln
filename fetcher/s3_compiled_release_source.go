@@ -132,7 +132,5 @@ func createCompiledReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (release.R
 		release.ReleaseID{Name: subgroup[ReleaseName], Version: subgroup[ReleaseVersion]},
 		subgroup[StemcellOS],
 		subgroup[StemcellVersion],
-		"",
-		s3Key,
-	), nil
+	).WithRemotePath(s3Key), nil
 }

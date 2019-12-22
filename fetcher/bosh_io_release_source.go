@@ -80,7 +80,9 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.Releas
 				}
 				if exists {
 					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, rel.Version)
-					builtRelease := release.NewBuiltRelease(release.ReleaseID{Name: rel.Name, Version: rel.Version}, "", downloadURL)
+					builtRelease := release.NewBuiltRelease(
+						release.ReleaseID{Name: rel.Name, Version: rel.Version},
+					).WithRemotePath(downloadURL)
 					matches = append(matches, builtRelease)
 					break found
 				}

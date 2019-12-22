@@ -50,11 +50,9 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (release2.Re
 				id,
 				releaseManifest.StemcellOS,
 				releaseManifest.StemcellVersion,
-				filepath.Join(releasesDir, releaseManifest.File),
-				"",
-			)
+			).WithLocalPath(filepath.Join(releasesDir, releaseManifest.File))
 		} else {
-			rel = release2.NewBuiltRelease(id, filepath.Join(releasesDir, releaseManifest.File), "")
+			rel = release2.NewBuiltRelease(id).WithLocalPath(filepath.Join(releasesDir, releaseManifest.File))
 		}
 		outputReleases[id] = rel
 	}

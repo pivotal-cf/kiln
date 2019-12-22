@@ -6,12 +6,8 @@ import (
 
 type builtRelease ReleaseID
 
-func NewBuiltRelease(id ReleaseID, localPath, remotePath string) releaseWithLocation {
-	return releaseWithLocation{
-		unhomedRelease: builtRelease(id),
-		localPath:      localPath,
-		remotePath:     remotePath,
-	}
+func NewBuiltRelease(id ReleaseID) releaseWithLocation {
+	return releaseWithLocation{unhomedRelease: builtRelease(id)}
 }
 
 func (br builtRelease) StandardizedFilename() string {

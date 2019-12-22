@@ -76,7 +76,7 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 		Expect(input.Bucket).To(Equal(aws.String("built-bucket")))
 
 		Expect(matchedS3Objects).To(HaveLen(1))
-		Expect(matchedS3Objects).To(ConsistOf(release.NewBuiltRelease(release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, "", bpmKey)))
+		Expect(matchedS3Objects).To(ConsistOf(release.NewBuiltRelease(release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}).WithRemotePath(bpmKey)))
 	})
 
 	When("the regular expression is missing a capture group", func() {
@@ -118,7 +118,7 @@ var _ = Describe("GetMatchedReleases from S3 built source", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-				release.NewBuiltRelease(release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}, "", bpmKey),
+				release.NewBuiltRelease(release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}).WithRemotePath(bpmKey),
 			))
 		})
 	})
@@ -143,8 +143,8 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 		uaaReleaseID = release.ReleaseID{Name: "uaa", Version: "1.2.3"}
 		bpmReleaseID = release.ReleaseID{Name: "bpm", Version: "1.2.3"}
 		matchedS3Objects = []release.RemoteRelease{
-			release.NewBuiltRelease(uaaReleaseID, "", "some-uaa-key"),
-			release.NewBuiltRelease(bpmReleaseID, "", "some-bpm-key"),
+			release.NewBuiltRelease(uaaReleaseID).WithRemotePath("some-uaa-key"),
+			release.NewBuiltRelease(bpmReleaseID).WithRemotePath("some-bpm-key"),
 		}
 
 		logger = log.New(GinkgoWriter, "", 0)
@@ -187,9 +187,9 @@ var _ = Describe("S3BuiltReleaseSource DownloadReleases from Built source", func
 
 		Expect(localReleases).To(HaveLen(2))
 		Expect(localReleases).To(HaveKeyWithValue(
-			uaaReleaseID, release.NewBuiltRelease(uaaReleaseID, uaaReleasePath, "some-uaa-key")))
+			uaaReleaseID, release.NewBuiltRelease(uaaReleaseID).WithLocalPath(uaaReleasePath).WithRemotePath("some-uaa-key")))
 		Expect(localReleases).To(HaveKeyWithValue(
-			bpmReleaseID, release.NewBuiltRelease(bpmReleaseID, bpmReleasePath, "some-bpm-key")))
+			bpmReleaseID, release.NewBuiltRelease(bpmReleaseID).WithLocalPath(bpmReleasePath).WithRemotePath("some-bpm-key")))
 	})
 
 	Context("when the matchedS3Objects argument is empty", func() {

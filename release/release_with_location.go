@@ -12,6 +12,7 @@ type ReleaseWithLocation interface {
 	LocalPath() string
 	RemotePath() string
 	WithLocalPath(string) ReleaseWithLocation
+	WithRemotePath(string) ReleaseWithLocation
 }
 
 type releaseWithLocation struct {
@@ -27,8 +28,13 @@ func (r releaseWithLocation) LocalPath() string {
 	return r.localPath
 }
 
-func (r releaseWithLocation) WithLocalPath(path string) ReleaseWithLocation {
-	r.localPath = path
+func (r releaseWithLocation) WithRemotePath(remotePath string) ReleaseWithLocation {
+	r.remotePath = remotePath
+	return r
+}
+
+func (r releaseWithLocation) WithLocalPath(localPath string) ReleaseWithLocation {
+	r.localPath = localPath
 	return r
 }
 
