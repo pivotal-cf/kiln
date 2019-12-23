@@ -22,9 +22,10 @@ import (
 )
 
 var _ = Describe("S3BuiltReleaseSource", func() {
-	const ID = "my-awesome-s3-rs"
 
 	Describe("S3BuiltReleaseSource DownloadReleases from Built source", func() {
+		const bucket = "some-bucket"
+
 		var (
 			logger                     *log.Logger
 			releaseSource              S3BuiltReleaseSource
@@ -43,8 +44,8 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 			uaaReleaseID = release.ReleaseID{Name: "uaa", Version: "1.2.3"}
 			bpmReleaseID = release.ReleaseID{Name: "bpm", Version: "1.2.3"}
 			matchedS3Objects = []release.RemoteRelease{
-				release.NewBuiltRelease(uaaReleaseID).WithRemote(ID, "some-uaa-key"),
-				release.NewBuiltRelease(bpmReleaseID).WithRemote(ID, "some-bpm-key"),
+				release.NewBuiltRelease(uaaReleaseID).WithRemote(bucket, "some-uaa-key"),
+				release.NewBuiltRelease(bpmReleaseID).WithRemote(bucket, "some-bpm-key"),
 			}
 
 			logger = log.New(GinkgoWriter, "", 0)
@@ -57,7 +58,7 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 			releaseSource = S3BuiltReleaseSource{
 				Logger:       logger,
 				S3Downloader: fakeS3Downloader,
-				Bucket:       "some-bucket",
+				Bucket:       bucket,
 			}
 		})
 
@@ -87,9 +88,9 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 
 			Expect(localReleases).To(HaveLen(2))
 			Expect(localReleases).To(HaveKeyWithValue(
-				uaaReleaseID, release.NewBuiltRelease(uaaReleaseID).WithLocalPath(uaaReleasePath).WithRemote(ID, "some-uaa-key")))
+				uaaReleaseID, release.NewBuiltRelease(uaaReleaseID).WithLocalPath(uaaReleasePath).WithRemote(bucket, "some-uaa-key")))
 			Expect(localReleases).To(HaveKeyWithValue(
-				bpmReleaseID, release.NewBuiltRelease(bpmReleaseID).WithLocalPath(bpmReleasePath).WithRemote(ID, "some-bpm-key")))
+				bpmReleaseID, release.NewBuiltRelease(bpmReleaseID).WithLocalPath(bpmReleasePath).WithRemote(bucket, "some-bpm-key")))
 		})
 
 		Context("when the matchedS3Objects argument is empty", func() {
@@ -140,6 +141,8 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 	})
 
 	Describe("GetMatchedReleases from S3 built source", func() {
+		const bucket = "built-bucket"
+
 		var (
 			releaseSource     S3BuiltReleaseSource
 			fakeS3Client      *fakes.S3ObjectLister
@@ -180,11 +183,10 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 			logger := log.New(nil, "", 0)
 
 			releaseSource = S3BuiltReleaseSource{
-				ID:       ID,
 				Logger:   logger,
 				S3Client: fakeS3Client,
 				Regex:    `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+(-\w+(\.[0-9]+)?)?)\.tgz$`,
-				Bucket:   "built-bucket",
+				Bucket:   bucket,
 			}
 		})
 
@@ -193,10 +195,10 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			input, _ := fakeS3Client.ListObjectsPagesArgsForCall(0)
-			Expect(input.Bucket).To(Equal(aws.String("built-bucket")))
+			Expect(input.Bucket).To(Equal(aws.String(bucket)))
 
 			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(ConsistOf(release.NewBuiltRelease(release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}).WithRemote(ID, bpmKey)))
+			Expect(matchedS3Objects).To(ConsistOf(release.NewBuiltRelease(release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}).WithRemote(bucket, bpmKey)))
 		})
 
 		When("the regular expression is missing a capture group", func() {
@@ -238,7 +240,7 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 
 				Expect(matchedS3Objects).To(HaveLen(1))
 				Expect(matchedS3Objects).To(ConsistOf(
-					release.NewBuiltRelease(release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}).WithRemote(ID, bpmKey),
+					release.NewBuiltRelease(release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}).WithRemote(bucket, bpmKey),
 				))
 			})
 		})

@@ -42,7 +42,7 @@ func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.Rel
 				if s3Object.Key == nil {
 					continue
 				}
-				release, err := createBuiltReleaseFromS3Key(exp, src.ID, *s3Object.Key)
+				release, err := createBuiltReleaseFromS3Key(exp, src.Bucket, *s3Object.Key)
 				if err != nil {
 					continue
 				}

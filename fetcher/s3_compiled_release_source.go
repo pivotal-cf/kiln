@@ -49,7 +49,7 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.Re
 					continue
 				}
 
-				compiledRelease, err := createCompiledReleaseFromS3Key(exp, r.ID, *s3Object.Key)
+				compiledRelease, err := createCompiledReleaseFromS3Key(exp, r.Bucket, *s3Object.Key)
 				if err != nil {
 					continue
 				}

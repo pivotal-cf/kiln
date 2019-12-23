@@ -41,7 +41,7 @@ func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Lo
 	case "bosh.io":
 		return NewBOSHIOReleaseSource(outLogger, "")
 	case "s3":
-		s3ReleaseSource := S3ReleaseSource{Logger: outLogger, ID: releaseConfig.ID}
+		s3ReleaseSource := S3ReleaseSource{Logger: outLogger}
 		s3ReleaseSource.Configure(releaseConfig)
 		if releaseConfig.Compiled {
 			return S3CompiledReleaseSource(s3ReleaseSource)

@@ -13,7 +13,6 @@ type Kilnfile struct {
 }
 
 type ReleaseSourceConfig struct {
-	ID              string `yaml:"id"`
 	Type            string `yaml:"type"`
 	Compiled        bool   `yaml:"compiled"`
 	Bucket          string `yaml:"bucket"`

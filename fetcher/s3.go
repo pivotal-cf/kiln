@@ -23,7 +23,6 @@ type S3ObjectLister interface {
 }
 
 type S3ReleaseSource struct {
-	ID           string
 	Logger       *log.Logger
 	S3Client     S3ObjectLister
 	S3Downloader S3Downloader
