@@ -12,7 +12,6 @@ import (
 
 const (
 	ErrCouldNotCreateRequest     = stringError("could not create valid http request")
-	ErrNotImplemented            = stringError("not implemented")
 	ErrProductSlugMustNotBeEmpty = stringError("product slug must not be empty")
 )
 

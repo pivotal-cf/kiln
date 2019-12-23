@@ -116,7 +116,6 @@ func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet release2.Rel
 
 	fs := osfs.New("")
 
-	var errs []error
 	for releaseID, release := range downloadedReleaseSet {
 		expectedSum, found := findExpectedSum(releaseID, kilnfileLock.Releases)
 
@@ -136,10 +135,6 @@ func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet release2.Rel
 			l.deleteReleases(release2.ReleaseWithLocationSet{releaseID: release})
 			badReleases = append(badReleases, fmt.Sprintf("%+v", release.LocalPath()))
 		}
-	}
-
-	if len(errs) > 0 {
-		return multipleErrors(errs)
 	}
 
 	if len(badReleases) != 0 {

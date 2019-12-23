@@ -93,7 +93,6 @@ func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteRelea
 		}
 	}
 
-	var errs []error
 	for _, release := range remoteReleases {
 		outputFile := filepath.Join(releaseDir, release.StandardizedFilename())
 		file, err := os.Create(outputFile)
@@ -114,9 +113,7 @@ func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteRelea
 		rID := release.ReleaseID()
 		releases[rID] = release.WithLocalPath(outputFile)
 	}
-	if len(errs) > 0 {
-		return nil, multipleErrors(errs)
-	}
+
 	return releases, nil
 }
 
