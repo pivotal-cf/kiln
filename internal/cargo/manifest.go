@@ -26,29 +26,6 @@ type Release struct {
 	Version string `yaml:"version"`
 }
 
-type KilnfileLock struct {
-	Releases []Release `yaml:"releases"`
-	Stemcell Stemcell  `yaml:"stemcell_criteria"`
-}
-
-type Kilnfile struct {
-	Stemcell        Stemcell              `yaml:"stemcell_criteria"`
-	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources"`
-	Slug            string                `yaml:"slug"`
-	PreGaUserGroups []string              `yaml:"pre_ga_user_groups"`
-}
-
-type ReleaseSourceConfig struct {
-	Type            string `yaml:"type"`
-	Compiled        bool   `yaml:"compiled"`
-	Bucket          string `yaml:"bucket"`
-	Region          string `yaml:"region"`
-	AccessKeyId     string `yaml:"access_key_id"`
-	SecretAccessKey string `yaml:"secret_access_key"`
-	Regex           string `yaml:"regex"`
-	Publishable     bool   `yaml:"publishable"`
-}
-
 type Stemcell struct {
 	Alias   string `yaml:"alias,omitempty"`
 	OS      string `yaml:"os"`

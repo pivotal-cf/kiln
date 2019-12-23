@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/pivotal-cf/kiln/release"
+
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -14,8 +16,12 @@ import (
 
 type S3BuiltReleaseSource S3ReleaseSource
 
-func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet) ([]RemoteRelease, error) {
-	matchedS3Objects := make(map[ReleaseID]BuiltRelease)
+func (src S3BuiltReleaseSource) ID() string {
+	return src.Bucket
+}
+
+func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
+	matchedS3Objects := make(map[release.ReleaseID]release.RemoteRelease)
 
 	exp, err := regexp.Compile(src.Regex)
 	if err != nil {
@@ -40,11 +46,11 @@ func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequ
 				if s3Object.Key == nil {
 					continue
 				}
-				release, err := createBuiltReleaseFromS3Key(exp, *s3Object.Key)
+				release, err := createBuiltReleaseFromS3Key(exp, src.Bucket, *s3Object.Key)
 				if err != nil {
 					continue
 				}
-				matchedS3Objects[release.ID] = release
+				matchedS3Objects[release.ReleaseID()] = release
 			}
 			return true
 		},
@@ -52,7 +58,7 @@ func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequ
 		return nil, err
 	}
 
-	matchingReleases := make([]RemoteRelease, 0)
+	matchingReleases := make([]release.RemoteRelease, 0)
 	for expectedReleaseID := range desiredReleaseSet {
 		if rel, ok := matchedS3Objects[expectedReleaseID]; ok {
 			matchingReleases = append(matchingReleases, rel)
@@ -62,8 +68,8 @@ func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequ
 	return matchingReleases, err
 }
 
-func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleases []RemoteRelease, downloadThreads int) (LocalReleaseSet, error) {
-	localReleases := make(LocalReleaseSet)
+func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) (release.ReleaseWithLocationSet, error) {
+	releases := make(release.ReleaseWithLocationSet)
 
 	src.Logger.Printf("downloading %d objects from built s3...", len(remoteReleases))
 	setConcurrency := func(dl *s3manager.Downloader) {
@@ -74,7 +80,6 @@ func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleas
 		}
 	}
 
-	var errs []error
 	for _, release := range remoteReleases {
 		outputFile := filepath.Join(releaseDir, release.StandardizedFilename())
 		file, err := os.Create(outputFile)
@@ -92,17 +97,15 @@ func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleas
 			return nil, fmt.Errorf("failed to download file: %w\n", err)
 		}
 		rID := release.ReleaseID()
-		localReleases[rID] = release.AsLocal(outputFile)
+		releases[rID] = release.WithLocalPath(outputFile)
 	}
-	if len(errs) > 0 {
-		return nil, multipleErrors(errs)
-	}
-	return localReleases, nil
+
+	return releases, nil
 }
 
-func createBuiltReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (BuiltRelease, error) {
+func createBuiltReleaseFromS3Key(exp *regexp.Regexp, releaseSourceID, s3Key string) (release.RemoteRelease, error) {
 	if !exp.MatchString(s3Key) {
-		return BuiltRelease{}, fmt.Errorf("s3 key does not match regex")
+		return nil, fmt.Errorf("s3 key does not match regex")
 	}
 
 	matches := exp.FindStringSubmatch(s3Key)
@@ -113,11 +116,7 @@ func createBuiltReleaseFromS3Key(exp *regexp.Regexp, s3Key string) (BuiltRelease
 		}
 	}
 
-	return BuiltRelease{
-		ID: ReleaseID{
-			Name:    subgroup[ReleaseName],
-			Version: subgroup[ReleaseVersion],
-		},
-		Path: s3Key,
-	}, nil
+	return release.NewBuiltRelease(
+		release.ReleaseID{Name: subgroup[ReleaseName], Version: subgroup[ReleaseVersion]},
+	).WithRemote(releaseSourceID, s3Key), nil
 }

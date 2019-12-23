@@ -5,15 +5,15 @@ import (
 	"sync"
 
 	"github.com/pivotal-cf/kiln/commands"
-	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
+	"github.com/pivotal-cf/kiln/release"
 )
 
 type LocalReleaseDirectory struct {
-	DeleteExtraReleasesStub        func(fetcher.LocalReleaseSet, bool) error
+	DeleteExtraReleasesStub        func(release.ReleaseWithLocationSet, bool) error
 	deleteExtraReleasesMutex       sync.RWMutex
 	deleteExtraReleasesArgsForCall []struct {
-		arg1 fetcher.LocalReleaseSet
+		arg1 release.ReleaseWithLocationSet
 		arg2 bool
 	}
 	deleteExtraReleasesReturns struct {
@@ -22,23 +22,23 @@ type LocalReleaseDirectory struct {
 	deleteExtraReleasesReturnsOnCall map[int]struct {
 		result1 error
 	}
-	GetLocalReleasesStub        func(string) (fetcher.LocalReleaseSet, error)
+	GetLocalReleasesStub        func(string) (release.ReleaseWithLocationSet, error)
 	getLocalReleasesMutex       sync.RWMutex
 	getLocalReleasesArgsForCall []struct {
 		arg1 string
 	}
 	getLocalReleasesReturns struct {
-		result1 fetcher.LocalReleaseSet
+		result1 release.ReleaseWithLocationSet
 		result2 error
 	}
 	getLocalReleasesReturnsOnCall map[int]struct {
-		result1 fetcher.LocalReleaseSet
+		result1 release.ReleaseWithLocationSet
 		result2 error
 	}
-	VerifyChecksumsStub        func(fetcher.LocalReleaseSet, cargo.KilnfileLock) error
+	VerifyChecksumsStub        func(release.ReleaseWithLocationSet, cargo.KilnfileLock) error
 	verifyChecksumsMutex       sync.RWMutex
 	verifyChecksumsArgsForCall []struct {
-		arg1 fetcher.LocalReleaseSet
+		arg1 release.ReleaseWithLocationSet
 		arg2 cargo.KilnfileLock
 	}
 	verifyChecksumsReturns struct {
@@ -51,11 +51,11 @@ type LocalReleaseDirectory struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *LocalReleaseDirectory) DeleteExtraReleases(arg1 fetcher.LocalReleaseSet, arg2 bool) error {
+func (fake *LocalReleaseDirectory) DeleteExtraReleases(arg1 release.ReleaseWithLocationSet, arg2 bool) error {
 	fake.deleteExtraReleasesMutex.Lock()
 	ret, specificReturn := fake.deleteExtraReleasesReturnsOnCall[len(fake.deleteExtraReleasesArgsForCall)]
 	fake.deleteExtraReleasesArgsForCall = append(fake.deleteExtraReleasesArgsForCall, struct {
-		arg1 fetcher.LocalReleaseSet
+		arg1 release.ReleaseWithLocationSet
 		arg2 bool
 	}{arg1, arg2})
 	fake.recordInvocation("DeleteExtraReleases", []interface{}{arg1, arg2})
@@ -76,13 +76,13 @@ func (fake *LocalReleaseDirectory) DeleteExtraReleasesCallCount() int {
 	return len(fake.deleteExtraReleasesArgsForCall)
 }
 
-func (fake *LocalReleaseDirectory) DeleteExtraReleasesCalls(stub func(fetcher.LocalReleaseSet, bool) error) {
+func (fake *LocalReleaseDirectory) DeleteExtraReleasesCalls(stub func(release.ReleaseWithLocationSet, bool) error) {
 	fake.deleteExtraReleasesMutex.Lock()
 	defer fake.deleteExtraReleasesMutex.Unlock()
 	fake.DeleteExtraReleasesStub = stub
 }
 
-func (fake *LocalReleaseDirectory) DeleteExtraReleasesArgsForCall(i int) (fetcher.LocalReleaseSet, bool) {
+func (fake *LocalReleaseDirectory) DeleteExtraReleasesArgsForCall(i int) (release.ReleaseWithLocationSet, bool) {
 	fake.deleteExtraReleasesMutex.RLock()
 	defer fake.deleteExtraReleasesMutex.RUnlock()
 	argsForCall := fake.deleteExtraReleasesArgsForCall[i]
@@ -112,7 +112,7 @@ func (fake *LocalReleaseDirectory) DeleteExtraReleasesReturnsOnCall(i int, resul
 	}{result1}
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleases(arg1 string) (fetcher.LocalReleaseSet, error) {
+func (fake *LocalReleaseDirectory) GetLocalReleases(arg1 string) (release.ReleaseWithLocationSet, error) {
 	fake.getLocalReleasesMutex.Lock()
 	ret, specificReturn := fake.getLocalReleasesReturnsOnCall[len(fake.getLocalReleasesArgsForCall)]
 	fake.getLocalReleasesArgsForCall = append(fake.getLocalReleasesArgsForCall, struct {
@@ -136,7 +136,7 @@ func (fake *LocalReleaseDirectory) GetLocalReleasesCallCount() int {
 	return len(fake.getLocalReleasesArgsForCall)
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleasesCalls(stub func(string) (fetcher.LocalReleaseSet, error)) {
+func (fake *LocalReleaseDirectory) GetLocalReleasesCalls(stub func(string) (release.ReleaseWithLocationSet, error)) {
 	fake.getLocalReleasesMutex.Lock()
 	defer fake.getLocalReleasesMutex.Unlock()
 	fake.GetLocalReleasesStub = stub
@@ -149,37 +149,37 @@ func (fake *LocalReleaseDirectory) GetLocalReleasesArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleasesReturns(result1 fetcher.LocalReleaseSet, result2 error) {
+func (fake *LocalReleaseDirectory) GetLocalReleasesReturns(result1 release.ReleaseWithLocationSet, result2 error) {
 	fake.getLocalReleasesMutex.Lock()
 	defer fake.getLocalReleasesMutex.Unlock()
 	fake.GetLocalReleasesStub = nil
 	fake.getLocalReleasesReturns = struct {
-		result1 fetcher.LocalReleaseSet
+		result1 release.ReleaseWithLocationSet
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleasesReturnsOnCall(i int, result1 fetcher.LocalReleaseSet, result2 error) {
+func (fake *LocalReleaseDirectory) GetLocalReleasesReturnsOnCall(i int, result1 release.ReleaseWithLocationSet, result2 error) {
 	fake.getLocalReleasesMutex.Lock()
 	defer fake.getLocalReleasesMutex.Unlock()
 	fake.GetLocalReleasesStub = nil
 	if fake.getLocalReleasesReturnsOnCall == nil {
 		fake.getLocalReleasesReturnsOnCall = make(map[int]struct {
-			result1 fetcher.LocalReleaseSet
+			result1 release.ReleaseWithLocationSet
 			result2 error
 		})
 	}
 	fake.getLocalReleasesReturnsOnCall[i] = struct {
-		result1 fetcher.LocalReleaseSet
+		result1 release.ReleaseWithLocationSet
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *LocalReleaseDirectory) VerifyChecksums(arg1 fetcher.LocalReleaseSet, arg2 cargo.KilnfileLock) error {
+func (fake *LocalReleaseDirectory) VerifyChecksums(arg1 release.ReleaseWithLocationSet, arg2 cargo.KilnfileLock) error {
 	fake.verifyChecksumsMutex.Lock()
 	ret, specificReturn := fake.verifyChecksumsReturnsOnCall[len(fake.verifyChecksumsArgsForCall)]
 	fake.verifyChecksumsArgsForCall = append(fake.verifyChecksumsArgsForCall, struct {
-		arg1 fetcher.LocalReleaseSet
+		arg1 release.ReleaseWithLocationSet
 		arg2 cargo.KilnfileLock
 	}{arg1, arg2})
 	fake.recordInvocation("VerifyChecksums", []interface{}{arg1, arg2})
@@ -200,13 +200,13 @@ func (fake *LocalReleaseDirectory) VerifyChecksumsCallCount() int {
 	return len(fake.verifyChecksumsArgsForCall)
 }
 
-func (fake *LocalReleaseDirectory) VerifyChecksumsCalls(stub func(fetcher.LocalReleaseSet, cargo.KilnfileLock) error) {
+func (fake *LocalReleaseDirectory) VerifyChecksumsCalls(stub func(release.ReleaseWithLocationSet, cargo.KilnfileLock) error) {
 	fake.verifyChecksumsMutex.Lock()
 	defer fake.verifyChecksumsMutex.Unlock()
 	fake.VerifyChecksumsStub = stub
 }
 
-func (fake *LocalReleaseDirectory) VerifyChecksumsArgsForCall(i int) (fetcher.LocalReleaseSet, cargo.KilnfileLock) {
+func (fake *LocalReleaseDirectory) VerifyChecksumsArgsForCall(i int) (release.ReleaseWithLocationSet, cargo.KilnfileLock) {
 	fake.verifyChecksumsMutex.RLock()
 	defer fake.verifyChecksumsMutex.RUnlock()
 	argsForCall := fake.verifyChecksumsArgsForCall[i]

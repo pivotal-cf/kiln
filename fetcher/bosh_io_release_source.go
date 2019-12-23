@@ -3,13 +3,15 @@ package fetcher
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/pivotal-cf/kiln/internal/cargo"
+	"github.com/pivotal-cf/kiln/release"
 )
 
 var repos = []string{
@@ -45,6 +47,10 @@ var suffixes = []string{
 	"",
 }
 
+const (
+	BOSHIOReleaseSourceID = "bosh.io"
+)
+
 type BOSHIOReleaseSource struct {
 	serverURI string
 	logger    *log.Logger
@@ -61,25 +67,31 @@ func NewBOSHIOReleaseSource(logger *log.Logger, customServerURI string) *BOSHIOR
 	}
 }
 
+func (_ BOSHIOReleaseSource) ID() string {
+	return BOSHIOReleaseSourceID
+}
+
 func (r *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
 	return
 }
 
-func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRequirementSet) ([]RemoteRelease, error) {
-	matches := make([]RemoteRelease, 0)
+func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
+	matches := make([]release.RemoteRelease, 0)
 
 	for rel := range desiredReleaseSet {
 	found:
 		for _, repo := range repos {
 			for _, suf := range suffixes {
 				fullName := repo + "/" + rel.Name + suf
-				exists, err := source.releaseExistOnBoshio(fullName, rel.Version)
+				exists, err := r.releaseExistOnBoshio(fullName, rel.Version)
 				if err != nil {
 					return nil, err
 				}
 				if exists {
-					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", source.serverURI, fullName, rel.Version)
-					builtRelease := BuiltRelease{ID: ReleaseID{Name: rel.Name, Version: rel.Version}, Path: downloadURL}
+					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, rel.Version)
+					builtRelease := release.NewBuiltRelease(
+						release.ReleaseID{Name: rel.Name, Version: rel.Version},
+					).WithRemote(BOSHIOReleaseSourceID, downloadURL)
 					matches = append(matches, builtRelease)
 					break found
 				}
@@ -90,13 +102,12 @@ func (source BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet ReleaseRe
 	return matches, nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []RemoteRelease, downloadThreads int) (LocalReleaseSet, error) {
-	localReleases := make(LocalReleaseSet)
+func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) (release.ReleaseWithLocationSet, error) {
+	releases := make(release.ReleaseWithLocationSet)
 
 	r.logger.Printf("downloading %d objects from bosh.io...", len(remoteReleases))
 
 	for _, release := range remoteReleases {
-
 		downloadURL := release.RemotePath()
 		r.logger.Printf("downloading %s...\n", downloadURL)
 		// Get the data
@@ -120,10 +131,10 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases 
 			return nil, err
 		}
 
-		localReleases[release.ReleaseID()] = release.AsLocal(filePath)
+		releases[release.ReleaseID()] = release.WithLocalPath(filePath)
 	}
 
-	return localReleases, nil
+	return releases, nil
 }
 
 type ResponseStatusCodeError http.Response

@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pivotal-cf/kiln/release"
+
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/jhanda"
@@ -38,6 +40,12 @@ var _ = Describe("Fetch", func() {
 
 		fetchExecuteArgs []string
 		fetchExecuteErr  error
+	)
+
+	const (
+		s3CompiledReleaseSourceID = "s3-compiled"
+		s3BuiltReleaseSourceID    = "s3-built"
+		boshIOReleaseSourceID     = fetcher.BOSHIOReleaseSourceID
 	)
 
 	Describe("Execute", func() {
@@ -103,23 +111,22 @@ stemcell_criteria:
 				expectedStemcellVersion = "0.2.0"
 			)
 			var (
-				releaseID                               fetcher.ReleaseID
-				releaseOnDisk                           fetcher.CompiledRelease
+				releaseID                               release.ReleaseID
+				releaseOnDisk                           release.ReleaseWithLocation
 				actualStemcellOS, actualStemcellVersion string
 			)
 			BeforeEach(func() {
-				releaseID = fetcher.ReleaseID{Name: "some-release", Version: "0.1.0"}
-				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]fetcher.RemoteRelease{
-					fetcher.CompiledRelease{ID: releaseID, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion},
+				releaseID = release.ReleaseID{Name: "some-release", Version: "0.1.0"}
+				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{
+					release.NewCompiledRelease(releaseID, expectedStemcellOS, expectedStemcellVersion),
 				}, nil)
 				fakeS3CompiledReleaseSource.DownloadReleasesReturns(
-					fetcher.LocalReleaseSet{
-						releaseID: fetcher.CompiledRelease{
-							ID:              releaseID,
-							StemcellOS:      expectedStemcellOS,
-							StemcellVersion: expectedStemcellVersion,
-							Path:            fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, expectedStemcellOS, expectedStemcellVersion),
-						},
+					release.ReleaseWithLocationSet{
+						releaseID: release.NewCompiledRelease(
+							releaseID,
+							expectedStemcellOS,
+							expectedStemcellVersion,
+						).WithLocalPath(fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, expectedStemcellOS, expectedStemcellVersion)),
 					}, nil)
 				lockContents = `---
 releases:
@@ -133,14 +140,10 @@ stemcell_criteria:
 
 			When("the release was compiled with a different os", func() {
 				BeforeEach(func() {
-					releaseOnDisk = fetcher.CompiledRelease{
-						ID:              releaseID,
-						StemcellOS:      "different-os",
-						StemcellVersion: expectedStemcellVersion,
-						Path:            fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, actualStemcellOS, actualStemcellVersion),
-					}
+					releaseOnDisk = release.NewCompiledRelease(releaseID, "different-os", expectedStemcellVersion).
+						WithLocalPath(fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, actualStemcellOS, actualStemcellVersion))
 					fakeLocalReleaseDirectory.GetLocalReleasesReturns(
-						fetcher.LocalReleaseSet{releaseID: releaseOnDisk},
+						release.ReleaseWithLocationSet{releaseID: releaseOnDisk},
 						nil)
 				})
 
@@ -159,14 +162,16 @@ stemcell_criteria:
 
 			When("the release was compiled with a different version of the same os", func() {
 				BeforeEach(func() {
-					releaseOnDisk = fetcher.CompiledRelease{
-						ID:              releaseID,
-						StemcellOS:      expectedStemcellOS,
-						StemcellVersion: "404",
-						Path:            fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, actualStemcellOS, actualStemcellVersion),
-					}
+					releaseOnDisk = release.NewCompiledRelease(
+						releaseID,
+						expectedStemcellOS,
+						"404",
+					).WithLocalPath(
+						fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, actualStemcellOS, actualStemcellVersion),
+					)
+
 					fakeLocalReleaseDirectory.GetLocalReleasesReturns(
-						fetcher.LocalReleaseSet{releaseID: releaseOnDisk},
+						release.ReleaseWithLocationSet{releaseID: releaseOnDisk},
 						nil)
 				})
 
@@ -186,9 +191,9 @@ stemcell_criteria:
 
 		Context("starting with no releases and some are found in each release source (happy path)", func() {
 			var (
-				s3CompiledReleaseID = fetcher.ReleaseID{Name: "lts-compiled-release", Version: "1.2.4"}
-				s3BuiltReleaseID    = fetcher.ReleaseID{Name: "lts-built-release", Version: "1.3.9"}
-				boshIOReleaseID     = fetcher.ReleaseID{Name: "boshio-release", Version: "1.4.16"}
+				s3CompiledReleaseID = release.ReleaseID{Name: "lts-compiled-release", Version: "1.2.4"}
+				s3BuiltReleaseID    = release.ReleaseID{Name: "lts-built-release", Version: "1.3.9"}
+				boshIOReleaseID     = release.ReleaseID{Name: "boshio-release", Version: "1.4.16"}
 			)
 			BeforeEach(func() {
 				lockContents = `---
@@ -204,37 +209,35 @@ stemcell_criteria:
   version: "30.1"
 `
 				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns(
-					[]fetcher.RemoteRelease{
-						fetcher.CompiledRelease{ID: s3CompiledReleaseID, StemcellOS: "some-os", StemcellVersion: "30.1", Path: "some-s3-key"},
+					[]release.RemoteRelease{
+						release.NewCompiledRelease(s3CompiledReleaseID, "some-os", "30.1").WithRemote(s3CompiledReleaseSourceID, "some-s3-key"),
 					},
 					nil)
 				fakeS3CompiledReleaseSource.DownloadReleasesReturns(
-					fetcher.LocalReleaseSet{
-						s3CompiledReleaseID: fetcher.CompiledRelease{
-							ID: s3CompiledReleaseID, StemcellOS: "some-os", StemcellVersion: "30.1", Path: "local-path",
-						},
+					release.ReleaseWithLocationSet{
+						s3CompiledReleaseID: release.NewCompiledRelease(s3CompiledReleaseID, "some-os", "30.1").WithLocalPath("local-path").WithRemote(s3CompiledReleaseSourceID, "some-s3-key"),
 					},
 					nil)
 
 				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns(
-					[]fetcher.RemoteRelease{fetcher.BuiltRelease{ID: s3BuiltReleaseID, Path: "some-other-s3-key"}},
+					[]release.RemoteRelease{release.NewBuiltRelease(s3BuiltReleaseID).WithRemote(s3BuiltReleaseSourceID, "some-other-s3-key")},
 					nil)
 				fakeS3BuiltReleaseSource.DownloadReleasesReturns(
-					fetcher.LocalReleaseSet{
-						s3BuiltReleaseID: fetcher.BuiltRelease{ID: s3BuiltReleaseID, Path: "some-other-s3-key"},
+					release.ReleaseWithLocationSet{
+						s3BuiltReleaseID: release.NewBuiltRelease(s3BuiltReleaseID).WithLocalPath("local-path2").WithRemote(s3BuiltReleaseSourceID, "some-other-s3-key"),
 					},
 					nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
-					[]fetcher.RemoteRelease{fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"}},
+					[]release.RemoteRelease{release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")},
 					nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(
-					fetcher.LocalReleaseSet{
-						boshIOReleaseID: fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"},
+					release.ReleaseWithLocationSet{
+						boshIOReleaseID: release.NewBuiltRelease(boshIOReleaseID).WithLocalPath("local-path3").WithRemote(boshIOReleaseSourceID, "some-bosh-io-url"),
 					},
 					nil)
 
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(fetcher.LocalReleaseSet{}, nil)
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.ReleaseWithLocationSet{}, nil)
 			})
 
 			It("completes successfully", func() {
@@ -248,12 +251,7 @@ stemcell_criteria:
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(ConsistOf(
-					fetcher.CompiledRelease{
-						ID:              s3CompiledReleaseID,
-						StemcellOS:      "some-os",
-						StemcellVersion: "30.1",
-						Path:            "some-s3-key",
-					}))
+					release.NewCompiledRelease(s3CompiledReleaseID, "some-os", "30.1").WithRemote(s3CompiledReleaseSourceID, "some-s3-key")))
 			})
 
 			It("fetches built release from s3 built release source", func() {
@@ -262,10 +260,7 @@ stemcell_criteria:
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(ConsistOf(
-					fetcher.BuiltRelease{
-						ID:   s3BuiltReleaseID,
-						Path: "some-other-s3-key",
-					}))
+					release.NewBuiltRelease(s3BuiltReleaseID).WithRemote(s3BuiltReleaseSourceID, "some-other-s3-key")))
 			})
 
 			It("fetches bosh.io release from bosh.io release source", func() {
@@ -274,10 +269,7 @@ stemcell_criteria:
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(ConsistOf(
-					fetcher.BuiltRelease{
-						ID:   boshIOReleaseID,
-						Path: "some-bosh-io-url",
-					}))
+					release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")))
 			})
 		})
 
@@ -318,17 +310,13 @@ stemcell_criteria:
   version: "4.5.6"
 `
 
-				someLocalReleaseID := fetcher.ReleaseID{
+				someLocalReleaseID := release.ReleaseID{
 					Name:    "some-release-from-local-dir",
 					Version: "1.2.3",
 				}
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(fetcher.LocalReleaseSet{
-					someLocalReleaseID: fetcher.CompiledRelease{
-						ID:              someLocalReleaseID,
-						StemcellOS:      "some-os",
-						StemcellVersion: "4.5.6",
-						Path:            "/path/to/some/release",
-					},
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.ReleaseWithLocationSet{
+					someLocalReleaseID: release.NewCompiledRelease(someLocalReleaseID, "some-os", "4.5.6").
+						WithLocalPath("/path/to/some/release"),
 				}, nil)
 			})
 
@@ -343,16 +331,16 @@ stemcell_criteria:
 
 		Context("when some releases are already present in output directory", func() {
 			var (
-				missingReleaseS3CompiledID   fetcher.ReleaseID
+				missingReleaseS3CompiledID   release.ReleaseID
 				missingReleaseS3CompiledPath = "s3-key-some-missing-release-on-s3-compiled"
-				missingReleaseBoshIOID       fetcher.ReleaseID
+				missingReleaseBoshIOID       release.ReleaseID
 				missingReleaseBoshIOPath     = "some-other-bosh-io-key"
-				missingReleaseS3BuiltID      fetcher.ReleaseID
+				missingReleaseS3BuiltID      release.ReleaseID
 				missingReleaseS3BuiltPath    = "s3-key-some-missing-release-on-s3-built"
 
-				missingReleaseS3Compiled fetcher.CompiledRelease
+				missingReleaseS3Compiled,
 				missingReleaseBoshIO,
-				missingReleaseS3Built fetcher.BuiltRelease
+				missingReleaseS3Built release.ReleaseWithLocation
 			)
 			BeforeEach(func() {
 				lockContents = `---
@@ -371,29 +359,35 @@ stemcell_criteria:
   os: some-os
   version: "4.5.6"`
 
-				missingReleaseS3CompiledID = fetcher.ReleaseID{Name: "some-missing-release-on-s3-compiled", Version: "4.5.6"}
-				missingReleaseBoshIOID = fetcher.ReleaseID{Name: "some-missing-release-on-boshio", Version: "5.6.7"}
-				missingReleaseS3BuiltID = fetcher.ReleaseID{Name: "some-missing-release-on-s3-built", Version: "8.9.0"}
+				missingReleaseS3CompiledID = release.ReleaseID{Name: "some-missing-release-on-s3-compiled", Version: "4.5.6"}
+				missingReleaseBoshIOID = release.ReleaseID{Name: "some-missing-release-on-boshio", Version: "5.6.7"}
+				missingReleaseS3BuiltID = release.ReleaseID{Name: "some-missing-release-on-s3-built", Version: "8.9.0"}
 
-				missingReleaseS3Compiled = fetcher.CompiledRelease{ID: missingReleaseS3CompiledID, StemcellOS: "some-os", StemcellVersion: "4.5.6", Path: missingReleaseS3CompiledPath}
-				missingReleaseBoshIO = fetcher.BuiltRelease{ID: missingReleaseBoshIOID, Path: missingReleaseBoshIOPath}
-				missingReleaseS3Built = fetcher.BuiltRelease{ID: missingReleaseS3BuiltID, Path: missingReleaseS3BuiltPath}
+				missingReleaseS3Compiled = release.NewCompiledRelease(missingReleaseS3CompiledID, "some-os", "4.5.6").WithRemote(s3CompiledReleaseSourceID, missingReleaseS3CompiledPath)
+				missingReleaseBoshIO = release.NewBuiltRelease(missingReleaseBoshIOID).WithLocalPath(missingReleaseBoshIOPath)
+				missingReleaseS3Built = release.NewBuiltRelease(missingReleaseS3BuiltID).WithLocalPath(missingReleaseS3BuiltPath)
 
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(fetcher.LocalReleaseSet{
-					fetcher.ReleaseID{Name: "some-release", Version: "1.2.3"}: fetcher.CompiledRelease{ID: fetcher.ReleaseID{Name: "some-release", Version: "1.2.3"}, StemcellOS: "some-os", StemcellVersion: "4.5.6", Path: "path/to/some/release"},
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.ReleaseWithLocationSet{
+					release.ReleaseID{Name: "some-release", Version: "1.2.3"}: release.NewCompiledRelease(
+						release.ReleaseID{Name: "some-release", Version: "1.2.3"},
+						"some-os",
+						"4.5.6",
+					).WithLocalPath("path/to/some/release"),
 					// a release that has no compiled packages, such as consul-drain, will also have no stemcell criteria in release.MF.
 					// we must make sure that we can match this kind of release properly to avoid unnecessary downloads.
-					fetcher.ReleaseID{Name: "some-tiny-release", Version: "1.2.3"}: fetcher.BuiltRelease{ID: fetcher.ReleaseID{Name: "some-tiny-release", Version: "1.2.3"}, Path: "path/to/some/tiny/release"},
+					release.ReleaseID{Name: "some-tiny-release", Version: "1.2.3"}: release.NewBuiltRelease(
+						release.ReleaseID{Name: "some-tiny-release", Version: "1.2.3"},
+					).WithLocalPath("path/to/some/tiny/release"),
 				}, nil)
 
-				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]fetcher.RemoteRelease{missingReleaseS3Compiled}, nil)
-				fakeS3CompiledReleaseSource.DownloadReleasesReturns(fetcher.LocalReleaseSet{missingReleaseS3CompiledID: missingReleaseS3Compiled}, nil)
+				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{missingReleaseS3Compiled}, nil)
+				fakeS3CompiledReleaseSource.DownloadReleasesReturns(release.ReleaseWithLocationSet{missingReleaseS3CompiledID: missingReleaseS3Compiled}, nil)
 
-				fakeBoshIOReleaseSource.GetMatchedReleasesReturns([]fetcher.RemoteRelease{missingReleaseBoshIO}, nil)
-				fakeBoshIOReleaseSource.DownloadReleasesReturns(fetcher.LocalReleaseSet{missingReleaseBoshIOID: missingReleaseBoshIO}, nil)
+				fakeBoshIOReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{missingReleaseBoshIO}, nil)
+				fakeBoshIOReleaseSource.DownloadReleasesReturns(release.ReleaseWithLocationSet{missingReleaseBoshIOID: missingReleaseBoshIO}, nil)
 
-				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns([]fetcher.RemoteRelease{missingReleaseS3Built}, nil)
-				fakeS3BuiltReleaseSource.DownloadReleasesReturns(fetcher.LocalReleaseSet{missingReleaseS3BuiltID: missingReleaseS3Built}, nil)
+				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{missingReleaseS3Built}, nil)
+				fakeS3BuiltReleaseSource.DownloadReleasesReturns(release.ReleaseWithLocationSet{missingReleaseS3BuiltID: missingReleaseS3Built}, nil)
 			})
 
 			It("downloads only the missing releases", func() {
@@ -431,8 +425,8 @@ stemcell_criteria:
 
 		Context("when there are extra releases locally that are not in the Kilnfile.lock", func() {
 			var (
-				boshIOReleaseID = fetcher.ReleaseID{Name: "some-release", Version: "1.2.3"}
-				localReleaseID  = fetcher.ReleaseID{Name: "some-extra-release", Version: "1.2.3"}
+				boshIOReleaseID = release.ReleaseID{Name: "some-release", Version: "1.2.3"}
+				localReleaseID  = release.ReleaseID{Name: "some-extra-release", Version: "1.2.3"}
 			)
 			BeforeEach(func() {
 
@@ -444,20 +438,15 @@ stemcell_criteria:
   os: some-os
   version: "4.5.6"
 `
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(fetcher.LocalReleaseSet{
-					localReleaseID: fetcher.CompiledRelease{
-						ID:              localReleaseID,
-						StemcellOS:      "some-os",
-						StemcellVersion: "4.5.6",
-						Path:            "path/to/some/extra/release",
-					},
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.ReleaseWithLocationSet{
+					localReleaseID: release.NewCompiledRelease(localReleaseID, "some-os", "4.5.6").WithLocalPath("path/to/some/extra/release"),
 				}, nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
-					[]fetcher.RemoteRelease{fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"}},
+					[]release.RemoteRelease{release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")},
 					nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(
-					fetcher.LocalReleaseSet{boshIOReleaseID: fetcher.BuiltRelease{ID: boshIOReleaseID, Path: "some-bosh-io-url"}},
+					release.ReleaseWithLocationSet{boshIOReleaseID: release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")},
 					nil)
 
 			})
@@ -481,15 +470,12 @@ stemcell_criteria:
 					Expect(extras).To(HaveLen(1))
 					Expect(noConfirm).To(Equal(true))
 					Expect(extras).To(ConsistOf(
-						fetcher.CompiledRelease{
-							ID: fetcher.ReleaseID{
-								Name:    "some-extra-release",
-								Version: "1.2.3",
-							},
-							StemcellOS:      "some-os",
-							StemcellVersion: "4.5.6",
-							Path:            "path/to/some/extra/release",
-						}))
+						release.NewCompiledRelease(
+							release.ReleaseID{Name: "some-extra-release", Version: "1.2.3"},
+							"some-os",
+							"4.5.6",
+						).WithLocalPath("path/to/some/extra/release"),
+					))
 				})
 			})
 

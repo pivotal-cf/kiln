@@ -1,11 +1,11 @@
-package fetcher_test
+package release_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/fetcher/fakes"
 	"github.com/pivotal-cf/kiln/internal/cargo"
+	. "github.com/pivotal-cf/kiln/release"
+	"github.com/pivotal-cf/kiln/release/fakes"
 )
 
 var _ = Describe("ReleaseRequirementSet", func() {
@@ -25,7 +25,7 @@ var _ = Describe("ReleaseRequirementSet", func() {
 
 	BeforeEach(func() {
 		kilnfileLock := cargo.KilnfileLock{
-			Releases: []cargo.Release{
+			Releases: []cargo.ReleaseLock{
 				{Name: release1Name, Version: release1Version},
 				{Name: release2Name, Version: release2Version},
 			},
@@ -50,21 +50,21 @@ var _ = Describe("ReleaseRequirementSet", func() {
 
 	Describe("Partition", func() {
 		var (
-			releaseSet                             LocalReleaseSet
+			releaseSet                             ReleaseWithLocationSet
 			extraReleaseID                         ReleaseID
-			satisfyingRelease, unsatisfyingRelease *fakes.LocalRelease
+			satisfyingRelease, unsatisfyingRelease *fakes.ReleaseWithLocation
 		)
 
 		BeforeEach(func() {
-			satisfyingRelease = new(fakes.LocalRelease)
+			satisfyingRelease = new(fakes.ReleaseWithLocation)
 			satisfyingRelease.SatisfiesReturns(true)
 
-			unsatisfyingRelease = new(fakes.LocalRelease)
+			unsatisfyingRelease = new(fakes.ReleaseWithLocation)
 			unsatisfyingRelease.SatisfiesReturns(false)
 
 			extraReleaseID = ReleaseID{Name: "extra", Version: "2.3.5"}
 
-			releaseSet = LocalReleaseSet{
+			releaseSet = ReleaseWithLocationSet{
 				release1ID:     satisfyingRelease,
 				release2ID:     unsatisfyingRelease,
 				extraReleaseID: unsatisfyingRelease,

@@ -1,6 +1,8 @@
-package fetcher
+package release
 
-import "github.com/pivotal-cf/kiln/internal/cargo"
+import (
+	"github.com/pivotal-cf/kiln/internal/cargo"
+)
 
 type ReleaseRequirementSet map[ReleaseID]ReleaseRequirement
 
@@ -14,8 +16,8 @@ func NewReleaseRequirementSet(kilnfileLock cargo.KilnfileLock) ReleaseRequiremen
 	return set
 }
 
-func (rrs ReleaseRequirementSet) Partition(other LocalReleaseSet) (intersection LocalReleaseSet, missing ReleaseRequirementSet, extra LocalReleaseSet) {
-	intersection = make(LocalReleaseSet)
+func (rrs ReleaseRequirementSet) Partition(other ReleaseWithLocationSet) (intersection ReleaseWithLocationSet, missing ReleaseRequirementSet, extra ReleaseWithLocationSet) {
+	intersection = make(ReleaseWithLocationSet)
 	missing = make(ReleaseRequirementSet)
 	extra = other.copy()
 
@@ -47,21 +49,4 @@ func (rrs ReleaseRequirementSet) copy() ReleaseRequirementSet {
 		dup[releaseID] = release
 	}
 	return dup
-}
-
-func newReleaseRequirement(release cargo.Release, stemcell cargo.Stemcell) ReleaseRequirement {
-	return ReleaseRequirement{
-		Name:            release.Name,
-		Version:         release.Version,
-		StemcellOS:      stemcell.OS,
-		StemcellVersion: stemcell.Version,
-	}
-}
-
-type ReleaseRequirement struct {
-	Name, Version, StemcellOS, StemcellVersion string
-}
-
-func (rr ReleaseRequirement) releaseID() ReleaseID {
-	return ReleaseID{Name: rr.Name, Version: rr.Version}
 }

@@ -1,20 +1,20 @@
-package fetcher_test
+package release_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	. "github.com/pivotal-cf/kiln/fetcher"
+	. "github.com/pivotal-cf/kiln/release"
 )
 
-var _ = Describe("BuiltRelease", func() {
+var _ = Describe("builtRelease", func() {
 	const (
 		expectedName    = "my-awesome-release"
 		expectedVersion = "42.0.0"
 	)
 
 	DescribeTable("Satisfies", func(name, version string, expectedResult bool) {
-		release := BuiltRelease{ID: ReleaseID{Name: name, Version: version}}
+		release := NewBuiltRelease(ReleaseID{Name: name, Version: version})
 		requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: "not-used", StemcellVersion: "404"}
 		Expect(release.Satisfies(requirement)).To(Equal(expectedResult))
 	},
@@ -24,10 +24,10 @@ var _ = Describe("BuiltRelease", func() {
 	)
 
 	Describe("StandardizedFilename", func() {
-		var release BuiltRelease
+		var release RemoteRelease
 
 		BeforeEach(func() {
-			release = BuiltRelease{ID: ReleaseID{Name: expectedName, Version: expectedVersion}}
+			release = NewBuiltRelease(ReleaseID{Name: expectedName, Version: expectedVersion})
 		})
 
 		It("returns the standardized filename for the release", func() {

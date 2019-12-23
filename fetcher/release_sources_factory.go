@@ -4,13 +4,16 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/pivotal-cf/kiln/release"
+
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedReleases(ReleaseRequirementSet) ([]RemoteRelease, error)
-	DownloadReleases(releasesDir string, matchedS3Objects []RemoteRelease, downloadThreads int) (LocalReleaseSet, error)
+	GetMatchedReleases(release.ReleaseRequirementSet) ([]release.RemoteRelease, error)
+	DownloadReleases(releasesDir string, matchedS3Objects []release.RemoteRelease, downloadThreads int) (release.ReleaseWithLocationSet, error)
+	ID() string
 }
 
 type releaseSourceFunction func(cargo.Kilnfile, bool) []ReleaseSource
@@ -30,24 +33,36 @@ func NewReleaseSourcesFactory(outLogger *log.Logger) releaseSourceFunction {
 			releaseSources = append(releaseSources, releaseSourceFor(releaseConfig, outLogger))
 		}
 
+		panicIfDuplicateIDs(releaseSources)
+
 		return releaseSources
 	}
 }
 
 func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
-	if releaseConfig.Type == "bosh.io" {
+	switch releaseConfig.Type {
+	case "bosh.io":
 		return NewBOSHIOReleaseSource(outLogger, "")
-	}
-
-	if releaseConfig.Type != "s3" {
+	case "s3":
+		s3ReleaseSource := S3ReleaseSource{Logger: outLogger}
+		s3ReleaseSource.Configure(releaseConfig)
+		if releaseConfig.Compiled {
+			return S3CompiledReleaseSource(s3ReleaseSource)
+		}
+		return S3BuiltReleaseSource(s3ReleaseSource)
+	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
 	}
+}
 
-	s3ReleaseSource := S3ReleaseSource{Logger: outLogger}
-	s3ReleaseSource.Configure(releaseConfig)
-	if releaseConfig.Compiled {
-		return S3CompiledReleaseSource(s3ReleaseSource)
-	} else {
-		return S3BuiltReleaseSource(s3ReleaseSource)
+func panicIfDuplicateIDs(releaseSources []ReleaseSource) {
+	indexOfID := make(map[string]int)
+	for index, rs := range releaseSources {
+		id := rs.ID()
+		previousIndex, seen := indexOfID[id]
+		if seen {
+			panic(fmt.Sprintf(`release_sources must have unique IDs; items at index %d and %d both have ID %q`, previousIndex, index, id))
+		}
+		indexOfID[id] = index
 	}
 }

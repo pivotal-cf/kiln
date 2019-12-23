@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pivotal-cf/kiln/release"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/builder"
@@ -56,19 +58,16 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(releases).To(HaveLen(1))
 				Expect(releases).To(HaveKeyWithValue(
-					ReleaseID{
+					release.ReleaseID{
 						Name:    "some-release",
 						Version: "1.2.3",
 					},
-					CompiledRelease{
-						ID: ReleaseID{
-							Name:    "some-release",
-							Version: "1.2.3",
-						},
-						StemcellOS:      "some-os",
-						StemcellVersion: "4.5.6",
-						Path:            releaseFile,
-					}))
+					release.NewCompiledRelease(
+						release.ReleaseID{Name: "some-release", Version: "1.2.3"},
+						"some-os",
+						"4.5.6",
+					).WithLocalPath(releaseFile),
+				))
 			})
 		})
 
@@ -98,15 +97,10 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		})
 
 		It("deletes specified files", func() {
-			extraReleaseID := ReleaseID{Name: "extra-release", Version: "0.0"}
-			extraRelease := CompiledRelease{
-				ID:              extraReleaseID,
-				StemcellOS:      "os-0",
-				StemcellVersion: "0.0.0",
-				Path:            extraFilePath,
-			}
+			extraReleaseID := release.ReleaseID{Name: "extra-release", Version: "0.0"}
+			extraRelease := release.NewCompiledRelease(extraReleaseID, "os-0", "0.0.0").WithLocalPath(extraFilePath)
 
-			extraReleases := map[ReleaseID]LocalRelease{
+			extraReleases := map[release.ReleaseID]release.ReleaseWithLocation{
 				extraReleaseID: extraRelease,
 			}
 
@@ -119,15 +113,10 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when a file cannot be removed", func() {
 			It("returns an error", func() {
-				extraReleaseID := ReleaseID{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
-				extraRelease := CompiledRelease{
-					ID:              extraReleaseID,
-					StemcellOS:      "os-0",
-					StemcellVersion: "0.0.0",
-					Path:            "file-does-not-exist",
-				}
+				extraReleaseID := release.ReleaseID{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
+				extraRelease := release.NewCompiledRelease(extraReleaseID, "os-0", "0.0.0").WithLocalPath("file-does-not-exist")
 
-				extraReleases := map[ReleaseID]LocalRelease{}
+				extraReleases := map[release.ReleaseID]release.ReleaseWithLocation{}
 				extraReleases[extraReleaseID] = extraRelease
 
 				err := localReleaseDirectory.DeleteExtraReleases(extraReleases, noConfirm)
@@ -138,7 +127,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 	Describe("VerifyChecksums", func() {
 		var (
-			downloadedReleases map[ReleaseID]LocalRelease
+			downloadedReleases map[release.ReleaseID]release.ReleaseWithLocation
 			kilnfileLock       cargo.KilnfileLock
 			goodFilePath       string
 			badFilePath        string
@@ -155,7 +144,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.Release{
+				Releases: []cargo.ReleaseLock{
 					{
 						Name:    "good",
 						Version: "1.2.3",
@@ -176,13 +165,13 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when all the checksums on the downloaded releases match their checksums in Kilnfile.lock", func() {
 			It("succeeds", func() {
-				downloadedReleases = map[ReleaseID]LocalRelease{
-					ReleaseID{Name: "good", Version: "1.2.3"}: CompiledRelease{
-						ID:              ReleaseID{Name: "good", Version: "1.2.3"},
-						StemcellOS:      "ubuntu-xenial",
-						StemcellVersion: "190.0.0",
-						Path:            goodFilePath,
-					}}
+				downloadedReleases = map[release.ReleaseID]release.ReleaseWithLocation{
+					release.ReleaseID{Name: "good", Version: "1.2.3"}: release.NewCompiledRelease(
+						release.ReleaseID{Name: "good", Version: "1.2.3"},
+						"ubuntu-xenial",
+						"190.0.0",
+					).WithLocalPath(goodFilePath),
+				}
 				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -190,13 +179,13 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when at least one checksum on the downloaded releases does not match the checksum in Kilnfile.lock", func() {
 			It("returns an error and deletes the bad release", func() {
-				downloadedReleases = map[ReleaseID]LocalRelease{
-					ReleaseID{Name: "bad", Version: "1.2.3"}: CompiledRelease{
-						ID:              ReleaseID{Name: "bad", Version: "1.2.3"},
-						StemcellOS:      "ubuntu-xenial",
-						StemcellVersion: "190.0.0",
-						Path:            badFilePath,
-					}}
+				downloadedReleases = map[release.ReleaseID]release.ReleaseWithLocation{
+					release.ReleaseID{Name: "bad", Version: "1.2.3"}: release.NewCompiledRelease(
+						release.ReleaseID{Name: "bad", Version: "1.2.3"},
+						"ubuntu-xenial",
+						"190.0.0",
+					).WithLocalPath(badFilePath),
+				}
 				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("These downloaded releases do not match the checksum"))
@@ -216,7 +205,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				err = ioutil.WriteFile(nonStandardFilePath, []byte("some release file"), 0644)
 				Expect(err).NotTo(HaveOccurred())
 				kilnfileLock = cargo.KilnfileLock{
-					Releases: []cargo.Release{
+					Releases: []cargo.ReleaseLock{
 						{
 							Name:    "good",
 							Version: "1.2.3",
@@ -232,19 +221,17 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			})
 
 			It("does not validate its checksum", func() {
-				downloadedReleases = map[ReleaseID]LocalRelease{
-					ReleaseID{Name: "good", Version: "1.2.3"}: CompiledRelease{
-						ID:              ReleaseID{Name: "good", Version: "1.2.3"},
-						StemcellOS:      "ubuntu-xenial",
-						StemcellVersion: "190.0.0",
-						Path:            goodFilePath,
-					},
-					ReleaseID{Name: "uaa", Version: "7.3.0"}: CompiledRelease{
-						ID:              ReleaseID{Name: "uaa", Version: "7.3.0"},
-						StemcellOS:      "ubuntu-xenial",
-						StemcellVersion: "190.0.0",
-						Path:            nonStandardFilePath,
-					},
+				downloadedReleases = map[release.ReleaseID]release.ReleaseWithLocation{
+					release.ReleaseID{Name: "good", Version: "1.2.3"}: release.NewCompiledRelease(
+						release.ReleaseID{Name: "good", Version: "1.2.3"},
+						"ubuntu-xenial",
+						"190.0.0",
+					).WithLocalPath(goodFilePath),
+					release.ReleaseID{Name: "uaa", Version: "7.3.0"}: release.NewCompiledRelease(
+						release.ReleaseID{Name: "uaa", Version: "7.3.0"},
+						"ubuntu-xenial",
+						"190.0.0",
+					).WithLocalPath(nonStandardFilePath),
 				}
 				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
 				Expect(err).NotTo(HaveOccurred())

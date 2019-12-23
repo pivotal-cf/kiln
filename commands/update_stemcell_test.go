@@ -118,7 +118,7 @@ var _ = Describe("UpdateStemcell", func() {
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(kilnfileLock).To(Equal(cargo.KilnfileLock{
-							Releases: []cargo.Release{},
+							Releases: []cargo.ReleaseLock{},
 							Stemcell: cargo.Stemcell{
 								OS:      "ubuntu-trusty",
 								Version: "3586.7",
@@ -144,7 +144,7 @@ var _ = Describe("UpdateStemcell", func() {
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(kilnfileLock).To(Equal(cargo.KilnfileLock{
-							Releases: []cargo.Release{},
+							Releases: []cargo.ReleaseLock{},
 							Stemcell: cargo.Stemcell{
 								OS:      "ubuntu-trusty",
 								Version: "3586.7",

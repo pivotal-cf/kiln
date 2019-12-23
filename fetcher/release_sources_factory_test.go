@@ -30,7 +30,7 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 					{Type: "s3", Compiled: false, Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
 						Regex: `^2.8/.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+)\.tgz$`},
 					{Type: "bosh.io"},
-					{Type: "s3", Compiled: false, Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+					{Type: "s3", Compiled: false, Bucket: "bucket-3", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
 						Regex: `^(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+-?[a-zA-Z0-9]\.?[0-9]*)\.tgz$`},
 				},
 			}
@@ -92,6 +92,29 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 				"Bucket": Equal(kilnfile.ReleaseSources[0].Bucket),
 				"Regex":  Equal(kilnfile.ReleaseSources[0].Regex),
 			}))
+		})
+	})
+
+	Context("when there are duplicate release source identifiers", func() {
+		BeforeEach(func() {
+			kilnfile = cargo.Kilnfile{
+				ReleaseSources: []cargo.ReleaseSourceConfig{
+					{Type: "s3", Compiled: true, Bucket: "some-bucket", Region: "us-west-1"},
+					{Type: "s3", Compiled: false, Bucket: "some-bucket", Region: "us-west-1"},
+				},
+			}
+		})
+
+		It("builds the correct release sources", func() {
+			var r interface{}
+			func() {
+				defer func() {
+					r = recover()
+				}()
+				rsFactory.ReleaseSources(kilnfile, false)
+			}()
+			Expect(r).To(ContainSubstring("unique"))
+			Expect(r).To(ContainSubstring(`"some-bucket"`))
 		})
 	})
 })

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
+	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
@@ -22,9 +23,11 @@ import (
 
 var _ = Describe("UpdateRelease", func() {
 	const (
-		releaseName    = "capi"
-		releaseVersion = "1.8.7"
-		releasesDir    = "releases"
+		releaseName       = "capi"
+		releaseVersion    = "1.8.7"
+		releasesDir       = "releases"
+		remotePath        = "s3://pivotal"
+		releaseSourceName = "LaBreaTarPit"
 	)
 
 	var (
@@ -35,15 +38,15 @@ var _ = Describe("UpdateRelease", func() {
 		releaseDownloader         *fakes.ReleaseDownloader
 		logger                    *log.Logger
 		downloadedReleasePath     string
-		expectedDownloadedRelease fetcher.LocalRelease
+		expectedDownloadedRelease release.ReleaseWithLocation
 		checksummer               func(string, billy.Filesystem) (string, error)
-		kilnFileLoader            *fakes.KilnFileLoader
+		kilnFileLoader            *fakes.KilnfileLoader
 	)
 
 	Context("Execute", func() {
 		BeforeEach(func() {
 			releaseDownloaderFactory = new(fakes.ReleaseDownloaderFactory)
-			kilnFileLoader = new(fakes.KilnFileLoader)
+			kilnFileLoader = new(fakes.KilnfileLoader)
 			releaseDownloader = new(fakes.ReleaseDownloader)
 			releaseDownloaderFactory.ReleaseDownloaderReturns(releaseDownloader, nil)
 
@@ -54,7 +57,7 @@ var _ = Describe("UpdateRelease", func() {
 			}
 
 			kilnFileLock := cargo.KilnfileLock{
-				Releases: []cargo.Release{
+				Releases: []cargo.ReleaseLock{
 					{
 						Name:    "minecraft",
 						SHA1:    "developersdevelopersdevelopersdevelopers",
@@ -87,9 +90,10 @@ var _ = Describe("UpdateRelease", func() {
 			err = filesystem.MkdirAll(releasesDir, os.ModePerm)
 			Expect(err).NotTo(HaveOccurred())
 
-			releaseID := fetcher.ReleaseID{Name: releaseName, Version: releaseVersion}
 			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, releaseVersion))
-			expectedDownloadedRelease = fetcher.BuiltRelease{ID: releaseID, Path: downloadedReleasePath}
+			expectedDownloadedRelease = release.NewBuiltRelease(
+				release.ReleaseID{Name: releaseName, Version: releaseVersion},
+			).WithLocalPath(downloadedReleasePath).WithRemote(releaseSourceName, remotePath)
 
 			checksummer = fetcher.CalculateSum
 		})
@@ -101,7 +105,7 @@ var _ = Describe("UpdateRelease", func() {
 		When("updating to a version that exists in the remote", func() {
 			BeforeEach(func() {
 				releaseDownloader.DownloadReleaseCalls(
-					func(dir string, requirement fetcher.ReleaseRequirement) (fetcher.LocalRelease, error) {
+					func(dir string, requirement release.ReleaseRequirement) (release.ReleaseWithLocation, error) {
 						downloadedReleaseFile, err := filesystem.Create(downloadedReleasePath)
 						Expect(err).NotTo(HaveOccurred())
 						defer downloadedReleaseFile.Close()
@@ -130,7 +134,7 @@ var _ = Describe("UpdateRelease", func() {
 				receivedReleasesDir, receivedReleaseRequirement := releaseDownloader.DownloadReleaseArgsForCall(0)
 				Expect(receivedReleasesDir).To(Equal(releasesDir))
 
-				releaseRequirement := fetcher.ReleaseRequirement{
+				releaseRequirement := release.ReleaseRequirement{
 					Name:            releaseName,
 					Version:         releaseVersion,
 					StemcellOS:      "some-os",
@@ -164,10 +168,12 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kilnfileLock.Releases).To(HaveLen(2))
 				Expect(kilnfileLock.Releases).To(ContainElement(
-					cargo.Release{
-						Name:    releaseName,
-						Version: releaseVersion,
-						SHA1:    "ba01716b40a3557d699d024d76c307e351e96829",
+					cargo.ReleaseLock{
+						Name:         releaseName,
+						Version:      releaseVersion,
+						SHA1:         "ba01716b40a3557d699d024d76c307e351e96829",
+						RemoteSource: releaseSourceName,
+						RemotePath:   remotePath,
 					},
 				))
 			})

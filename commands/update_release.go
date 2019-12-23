@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/pivotal-cf/kiln/release"
+
 	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/yaml.v2"
@@ -24,7 +25,7 @@ type UpdateRelease struct {
 	filesystem               billy.Filesystem
 	logger                   *log.Logger
 	checksummer              checksumFunc
-	loader                   KilnFileLoader
+	loader                   KilnfileLoader
 }
 
 //go:generate counterfeiter -o ./fakes/release_downloader_factory.go --fake-name ReleaseDownloaderFactory . ReleaseDownloaderFactory
@@ -34,12 +35,12 @@ type ReleaseDownloaderFactory interface {
 
 //go:generate counterfeiter -o ./fakes/release_downloader.go --fake-name ReleaseDownloader . ReleaseDownloader
 type ReleaseDownloader interface {
-	DownloadRelease(downloadDir string, requirement fetcher.ReleaseRequirement) (fetcher.LocalRelease, error)
+	DownloadRelease(downloadDir string, requirement release.ReleaseRequirement) (release.ReleaseWithLocation, error)
 }
 
 type checksumFunc func(path string, fs billy.Filesystem) (string, error)
 
-func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, releaseDownloaderFactory ReleaseDownloaderFactory, checksummer checksumFunc, loader KilnFileLoader) UpdateRelease {
+func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, releaseDownloaderFactory ReleaseDownloaderFactory, checksummer checksumFunc, loader KilnfileLoader) UpdateRelease {
 	return UpdateRelease{
 		logger:                   logger,
 		releaseDownloaderFactory: releaseDownloaderFactory,
@@ -49,8 +50,8 @@ func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, releaseDo
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/kiln_file_loader.go --fake-name KilnfileLoader . KilnfileLoader
-type KilnFileLoader interface {
+//go:generate counterfeiter -o ./fakes/kilnfile_loader.go --fake-name KilnfileLoader . KilnfileLoader
+type KilnfileLoader interface {
 	LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (cargo.Kilnfile, cargo.KilnfileLock, error)
 }
 
@@ -72,7 +73,7 @@ func (u UpdateRelease) Execute(args []string) error {
 	}
 
 	u.logger.Println("Searching for the release...")
-	localRelease, err := releaseDownloader.DownloadRelease(u.Options.ReleasesDir, fetcher.ReleaseRequirement{
+	release, err := releaseDownloader.DownloadRelease(u.Options.ReleasesDir, release.ReleaseRequirement{
 		Name:            u.Options.Name,
 		Version:         u.Options.Version,
 		StemcellOS:      kilnfileLock.Stemcell.OS,
@@ -82,7 +83,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("error downloading the release: %w", err)
 	}
 
-	var matchingRelease *cargo.Release
+	var matchingRelease *cargo.ReleaseLock
 	for i := range kilnfileLock.Releases {
 		if kilnfileLock.Releases[i].Name == u.Options.Name {
 			matchingRelease = &kilnfileLock.Releases[i]
@@ -93,12 +94,15 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("no release named %q exists in your Kilnfile.lock", u.Options.Name)
 	}
 
-	matchingRelease.Version = u.Options.Version
-	sha, err := u.checksummer(localRelease.LocalPath(), u.filesystem)
+	sha, err := u.checksummer(release.LocalPath(), u.filesystem)
 	if err != nil {
 		return fmt.Errorf("error while calculating release checksum: %w", err)
 	}
+
+	matchingRelease.Version = u.Options.Version
 	matchingRelease.SHA1 = sha
+	matchingRelease.RemotePath = release.RemotePath()
+	matchingRelease.RemoteSource = release.ReleaseSourceID()
 
 	updatedLockFileYAML, err := yaml.Marshal(kilnfileLock)
 	if err != nil {
