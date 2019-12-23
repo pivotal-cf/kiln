@@ -50,4 +50,3 @@ func (rrs ReleaseRequirementSet) copy() ReleaseRequirementSet {
 	}
 	return dup
 }
-

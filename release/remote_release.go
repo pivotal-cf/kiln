@@ -7,4 +7,3 @@ type RemoteRelease interface {
 	StandardizedFilename() string
 	WithLocalPath(string) ReleaseWithLocation
 }
-

@@ -16,6 +16,10 @@ import (
 
 type S3BuiltReleaseSource S3ReleaseSource
 
+func (src S3BuiltReleaseSource) ID() string {
+	return src.Bucket
+}
+
 func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
 	matchedS3Objects := make(map[release.ReleaseID]release.RemoteRelease)
 

@@ -67,6 +67,10 @@ func NewBOSHIOReleaseSource(logger *log.Logger, customServerURI string) *BOSHIOR
 	}
 }
 
+func (_ BOSHIOReleaseSource) ID() string {
+	return BOSHIOReleaseSourceID
+}
+
 func (r *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
 	return
 }

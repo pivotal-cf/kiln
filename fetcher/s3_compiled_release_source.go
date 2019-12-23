@@ -22,6 +22,10 @@ const (
 
 type S3CompiledReleaseSource S3ReleaseSource
 
+func (r S3CompiledReleaseSource) ID() string {
+	return r.Bucket
+}
+
 func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
 	matchedS3Objects := make(map[release.ReleaseID][]release.RemoteRelease)
 

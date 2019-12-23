@@ -37,6 +37,16 @@ type ReleaseSource struct {
 		result1 []release.RemoteRelease
 		result2 error
 	}
+	IDStub        func() string
+	iDMutex       sync.RWMutex
+	iDArgsForCall []struct {
+	}
+	iDReturns struct {
+		result1 string
+	}
+	iDReturnsOnCall map[int]struct {
+		result1 string
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -174,6 +184,58 @@ func (fake *ReleaseSource) GetMatchedReleasesReturnsOnCall(i int, result1 []rele
 	}{result1, result2}
 }
 
+func (fake *ReleaseSource) ID() string {
+	fake.iDMutex.Lock()
+	ret, specificReturn := fake.iDReturnsOnCall[len(fake.iDArgsForCall)]
+	fake.iDArgsForCall = append(fake.iDArgsForCall, struct {
+	}{})
+	fake.recordInvocation("ID", []interface{}{})
+	fake.iDMutex.Unlock()
+	if fake.IDStub != nil {
+		return fake.IDStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.iDReturns
+	return fakeReturns.result1
+}
+
+func (fake *ReleaseSource) IDCallCount() int {
+	fake.iDMutex.RLock()
+	defer fake.iDMutex.RUnlock()
+	return len(fake.iDArgsForCall)
+}
+
+func (fake *ReleaseSource) IDCalls(stub func() string) {
+	fake.iDMutex.Lock()
+	defer fake.iDMutex.Unlock()
+	fake.IDStub = stub
+}
+
+func (fake *ReleaseSource) IDReturns(result1 string) {
+	fake.iDMutex.Lock()
+	defer fake.iDMutex.Unlock()
+	fake.IDStub = nil
+	fake.iDReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *ReleaseSource) IDReturnsOnCall(i int, result1 string) {
+	fake.iDMutex.Lock()
+	defer fake.iDMutex.Unlock()
+	fake.IDStub = nil
+	if fake.iDReturnsOnCall == nil {
+		fake.iDReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.iDReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
+}
+
 func (fake *ReleaseSource) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -181,6 +243,8 @@ func (fake *ReleaseSource) Invocations() map[string][][]interface{} {
 	defer fake.downloadReleasesMutex.RUnlock()
 	fake.getMatchedReleasesMutex.RLock()
 	defer fake.getMatchedReleasesMutex.RUnlock()
+	fake.iDMutex.RLock()
+	defer fake.iDMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

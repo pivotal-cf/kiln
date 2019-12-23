@@ -13,6 +13,7 @@ import (
 type ReleaseSource interface {
 	GetMatchedReleases(release.ReleaseRequirementSet) ([]release.RemoteRelease, error)
 	DownloadReleases(releasesDir string, matchedS3Objects []release.RemoteRelease, downloadThreads int) (release.ReleaseWithLocationSet, error)
+	ID() string
 }
 
 type releaseSourceFunction func(cargo.Kilnfile, bool) []ReleaseSource
@@ -32,6 +33,8 @@ func NewReleaseSourcesFactory(outLogger *log.Logger) releaseSourceFunction {
 			releaseSources = append(releaseSources, releaseSourceFor(releaseConfig, outLogger))
 		}
 
+		panicIfDuplicateIDs(releaseSources)
+
 		return releaseSources
 	}
 }
@@ -49,5 +52,17 @@ func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Lo
 		return S3BuiltReleaseSource(s3ReleaseSource)
 	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
+	}
+}
+
+func panicIfDuplicateIDs(releaseSources []ReleaseSource) {
+	indexOfID := make(map[string]int)
+	for index, rs := range releaseSources {
+		id := rs.ID()
+		previousIndex, seen := indexOfID[id]
+		if seen {
+			panic(fmt.Sprintf(`release_sources must have unique IDs; items at index %d and %d both have ID %q`, previousIndex, index, id))
+		}
+		indexOfID[id] = index
 	}
 }

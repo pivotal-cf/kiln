@@ -13,7 +13,7 @@ type compiledRelease struct {
 func NewCompiledRelease(id ReleaseID, stemcellOS, stemcellVersion string) releaseWithLocation {
 	return releaseWithLocation{
 		unhomedRelease: compiledRelease{
-			builtRelease:     builtRelease(id),
+			builtRelease:    builtRelease(id),
 			StemcellOS:      stemcellOS,
 			StemcellVersion: stemcellVersion,
 		},
