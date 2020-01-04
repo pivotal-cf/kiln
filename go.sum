@@ -67,6 +67,8 @@ github.com/pivotal-cf/jhanda v0.0.0-20191113141013-9cb1997202c0/go.mod h1:UXciri
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/robdimsdale/sanitizer v0.0.0-20160522134901-ab2334cb7539/go.mod h1:tqCODtkKV+9Tfvt9JURvKCTxJ69bA/OU/QhsaQLK/rc=
+github.com/sclevine/spec v1.4.0 h1:z/Q9idDcay5m5irkZ28M7PtQM4aOISzOpj4bUPkDee8=
+github.com/sclevine/spec v1.4.0/go.mod h1:LvpgJaFyvQzRvc1kaDs0bulYwzC70PbiYjC4QnFHkOM=
 github.com/shirou/gopsutil v0.0.0-20180927124308-a11c78ba2c13 h1:hzFIj+Ky1KX599VGAVY//20nam1rYKwQwNVix1sYhXo=
 github.com/shirou/gopsutil v0.0.0-20180927124308-a11c78ba2c13/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
 github.com/shirou/gopsutil v2.19.10+incompatible h1:lA4Pi29JEVIQIgATSeftHSY0rMGI9CLrl2ZvDLiahto=

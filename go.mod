@@ -19,6 +19,7 @@ require (
 	github.com/pivotal-cf-experimental/gomegamatchers v0.0.0-20180326192815-e36bfcc98c3a
 	github.com/pivotal-cf/go-pivnet/v2 v2.0.11
 	github.com/pivotal-cf/jhanda v0.0.0-20191113141013-9cb1997202c0
+	github.com/sclevine/spec v1.4.0
 	github.com/shirou/gopsutil v2.19.10+incompatible // indirect
 	github.com/stretchr/testify v1.4.0 // indirect
 	golang.org/x/net v0.0.0-20191119073136-fc4aabc6c914 // indirect
