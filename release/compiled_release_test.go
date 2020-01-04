@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func testCompiledRelease(t *testing.T, when spec.G, it spec.S) {
+func testCompiledRelease(t *testing.T, context spec.G, it spec.S) {
 	const (
 		expectedName            = "my-awesome-release"
 		expectedVersion         = "42.0.0"
@@ -16,9 +16,9 @@ func testCompiledRelease(t *testing.T, when spec.G, it spec.S) {
 		expectedStemcellVersion = "9.9.9"
 	)
 
-	when("Satisfies", func() {
+	context("Satisfies", func() {
 		scenario := func(description, name, version, stemcellOS, stemcellVersion string, expectedResult bool) {
-			when(description, func() {
+			context(description, func() {
 				it("is "+strconv.FormatBool(expectedResult), func() {
 					release := NewCompiledRelease(ReleaseID{Name: name, Version: version}, stemcellOS, stemcellVersion)
 					requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion}
@@ -33,7 +33,7 @@ func testCompiledRelease(t *testing.T, when spec.G, it spec.S) {
 		scenario("the stemcell version is different", expectedName, expectedVersion, expectedStemcellOS, "0.0.0", false)
 	})
 
-	when("StandardizedFilename", func() {
+	context("StandardizedFilename", func() {
 		var release RemoteRelease
 
 		it.Before(func() {

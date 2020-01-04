@@ -9,15 +9,15 @@ import (
 	"testing"
 )
 
-func testBuiltRelease(t *testing.T, when spec.G, it spec.S) {
+func testBuiltRelease(t *testing.T, context spec.G, it spec.S) {
 	const (
 		expectedName    = "my-awesome-release"
 		expectedVersion = "42.0.0"
 	)
 
-	when("Satisfies", func() {
+	context("Satisfies", func() {
 		scenario := func(description, name, version string, expectedResult bool) {
-			when(description, func() {
+			context(description, func() {
 				it("is "+strconv.FormatBool(expectedResult), func() {
 					release := NewBuiltRelease(ReleaseID{Name: name, Version: version})
 					requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: "not-used", StemcellVersion: "404"}
@@ -30,7 +30,7 @@ func testBuiltRelease(t *testing.T, when spec.G, it spec.S) {
 		scenario("the release version is different", expectedName, "999.999.999", false)
 	})
 
-	when("StandardizedFilename", func() {
+	context("StandardizedFilename", func() {
 		var release RemoteRelease
 
 		it.Before(func() {
