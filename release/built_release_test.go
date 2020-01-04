@@ -9,42 +9,36 @@ import (
 	"testing"
 )
 
-func TestBuiltRelease(t *testing.T) {
-	spec.Run(t, "builtRelease", func(t *testing.T, when spec.G, it spec.S) {
-		const (
-			expectedName    = "my-awesome-release"
-			expectedVersion = "42.0.0"
-		)
+func testBuiltRelease(t *testing.T, when spec.G, it spec.S) {
+	const (
+		expectedName    = "my-awesome-release"
+		expectedVersion = "42.0.0"
+	)
+
+	when("Satisfies", func() {
+		scenario := func(description, name, version string, expectedResult bool) {
+			when(description, func() {
+				it("is "+strconv.FormatBool(expectedResult), func() {
+					release := NewBuiltRelease(ReleaseID{Name: name, Version: version})
+					requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: "not-used", StemcellVersion: "404"}
+					Expect(release.Satisfies(requirement)).To(Equal(expectedResult))
+				})
+			})
+		}
+		scenario("the release name and version match", expectedName, expectedVersion, true)
+		scenario("the release name is different", "something-else", expectedVersion, false)
+		scenario("the release version is different", expectedName, "999.999.999", false)
+	})
+
+	when("StandardizedFilename", func() {
+		var release RemoteRelease
 
 		it.Before(func() {
-			RegisterTestingT(t)
+			release = NewBuiltRelease(ReleaseID{Name: expectedName, Version: expectedVersion})
 		})
 
-		when("StandardizedFilename", func() {
-			var release RemoteRelease
-
-			it.Before(func() {
-				release = NewBuiltRelease(ReleaseID{Name: expectedName, Version: expectedVersion})
-			})
-
-			it("returns the standardized filename for the release", func() {
-				Expect(release.StandardizedFilename()).To(Equal("my-awesome-release-42.0.0.tgz"))
-			})
-		})
-
-		when("Satisfies", func() {
-			scenario := func(description, name, version string, expectedResult bool) {
-				when(description, func() {
-					it("is " + strconv.FormatBool(expectedResult), func() {
-						release := NewBuiltRelease(ReleaseID{Name: name, Version: version})
-						requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: "not-used", StemcellVersion: "404"}
-						Expect(release.Satisfies(requirement)).To(Equal(expectedResult))
-					})
-				})
-			}
-			scenario("the release name and version match", expectedName, expectedVersion, true)
-			scenario("the release name is different", "something-else", expectedVersion, false)
-			scenario("the release version is different", expectedName, "999.999.999", false)
+		it("returns the standardized filename for the release", func() {
+			Expect(release.StandardizedFilename()).To(Equal("my-awesome-release-42.0.0.tgz"))
 		})
 	})
 }
