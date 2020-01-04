@@ -15,6 +15,7 @@ func init() {
 	})
 	suite("builtRelease", testBuiltRelease)
 	suite("compiledRelease", testCompiledRelease)
+	suite("ReleaseRequirementSet", testReleaseRequirementSet)
 }
 
 func TestRelease(t *testing.T) {
