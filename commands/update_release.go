@@ -15,8 +15,8 @@ import (
 type UpdateRelease struct {
 	Options struct {
 		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
-		Name           string   `short:"n" long:"name" required:"true" description: "name of release to update""`
-		Version        string   `short:"v" long:"version" required:"true" description: "desired version of release""`
+		Name           string   `short:"n" long:"name" required:"true" description:"name of release to update"`
+		Version        string   `short:"v" long:"version" required:"true" description:"desired version of release"`
 		ReleasesDir    string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
 		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
