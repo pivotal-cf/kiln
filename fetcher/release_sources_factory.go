@@ -9,6 +9,11 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
+const (
+	ReleaseSourceTypeBOSHIO = "bosh.io"
+	ReleaseSourceTypeS3     = "s3"
+)
+
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
 	GetMatchedReleases(release.ReleaseRequirementSet) ([]release.RemoteRelease, error)
@@ -41,9 +46,9 @@ func NewReleaseSourcesFactory(outLogger *log.Logger) releaseSourceFunction {
 
 func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
 	switch releaseConfig.Type {
-	case "bosh.io":
+	case ReleaseSourceTypeBOSHIO:
 		return NewBOSHIOReleaseSource(outLogger, "")
-	case "s3":
+	case ReleaseSourceTypeS3:
 		s3ReleaseSource := S3ReleaseSource{Logger: outLogger}
 		s3ReleaseSource.Configure(releaseConfig)
 		if releaseConfig.Compiled {

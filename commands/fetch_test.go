@@ -45,7 +45,7 @@ var _ = Describe("Fetch", func() {
 	const (
 		s3CompiledReleaseSourceID = "s3-compiled"
 		s3BuiltReleaseSourceID    = "s3-built"
-		boshIOReleaseSourceID     = fetcher.BOSHIOReleaseSourceID
+		boshIOReleaseSourceID     = fetcher.ReleaseSourceTypeBOSHIO
 	)
 
 	Describe("Execute", func() {
