@@ -4,6 +4,9 @@ import (
 	"log"
 	"os"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 
 	"gopkg.in/src-d/go-billy.v4/osfs"
@@ -14,6 +17,8 @@ import (
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/helper"
 	"github.com/pivotal-cf/kiln/internal/baking"
+
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 var version = "unknown"
@@ -126,6 +131,12 @@ func main() {
 
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, newReleaseDownloaderFactory(), fetcher.CalculateSum, cargo.KilnfileLoader{})
 
+	commandSet["push-release"] = commands.PushRelease{
+		FS:             osfs.New(""),
+		KilnfileLoader: cargo.KilnfileLoader{},
+		UploaderConfig: uploaderConfig,
+	}
+
 	err = commandSet.Execute(command, args)
 	if err != nil {
 		log.Fatal(err)
@@ -142,4 +153,16 @@ func (f releaseDownloaderFactory) ReleaseDownloader(outLogger *log.Logger, kilnf
 
 func newReleaseDownloaderFactory() releaseDownloaderFactory {
 	return releaseDownloaderFactory{}
+}
+
+// uploaderConfig will panic if config is not correct
+func uploaderConfig(config *cargo.ReleaseSourceConfig) (commands.S3Uploader, error) {
+	return s3manager.NewUploader(session.Must(session.NewSession(&aws.Config{
+		Region: aws.String(config.Region),
+		Credentials: credentials.NewStaticCredentials(
+			config.AccessKeyId,
+			config.SecretAccessKey,
+			"",
+		),
+	}))), nil
 }
