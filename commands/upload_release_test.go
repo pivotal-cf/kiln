@@ -12,7 +12,7 @@ import (
 	"gopkg.in/src-d/go-billy.v4/memfs"
 )
 
-var _ = FDescribe("UploadRelease", func() {
+var _ = Describe("UploadRelease", func() {
 	Context("Execute", func() {
 		var (
 			fs       billy.Filesystem
