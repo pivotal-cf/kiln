@@ -131,7 +131,7 @@ func main() {
 
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, newReleaseDownloaderFactory(), fetcher.CalculateSum, cargo.KilnfileLoader{})
 
-	commandSet["push-release"] = commands.PushRelease{
+	commandSet["upload-release"] = commands.UploadRelease{
 		FS:             osfs.New(""),
 		KilnfileLoader: cargo.KilnfileLoader{},
 		UploaderConfig: uploaderConfig,

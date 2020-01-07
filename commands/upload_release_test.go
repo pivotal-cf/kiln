@@ -12,14 +12,14 @@ import (
 	"gopkg.in/src-d/go-billy.v4/memfs"
 )
 
-var _ = FDescribe("PushRelease", func() {
+var _ = FDescribe("UploadRelease", func() {
 	Context("Execute", func() {
 		var (
 			fs       billy.Filesystem
 			loader   *fakes.KilnfileLoader
 			uploader *fakes.S3Uploader
 
-			pushRelease commands.PushRelease
+			uploadRelease commands.UploadRelease
 
 			exampleReleaseSourceList = []cargo.ReleaseSourceConfig{
 				{
@@ -47,7 +47,7 @@ var _ = FDescribe("PushRelease", func() {
 			loader = new(fakes.KilnfileLoader)
 			uploader = new(fakes.S3Uploader)
 
-			pushRelease = commands.PushRelease{
+			uploadRelease = commands.UploadRelease{
 				FS:             fs,
 				KilnfileLoader: loader,
 				UploaderConfig: func(rsc *cargo.ReleaseSourceConfig) (commands.S3Uploader, error) {
@@ -75,13 +75,13 @@ var _ = FDescribe("PushRelease", func() {
 
 				var relSrcConfig *cargo.ReleaseSourceConfig
 
-				pushRelease.UploaderConfig = func(rsc *cargo.ReleaseSourceConfig) (commands.S3Uploader, error) {
+				uploadRelease.UploaderConfig = func(rsc *cargo.ReleaseSourceConfig) (commands.S3Uploader, error) {
 					configUploaderCallCount++
 					relSrcConfig = rsc
 					return uploader, nil
 				}
 
-				err := pushRelease.Execute([]string{
+				err := uploadRelease.Execute([]string{
 					"--kilnfile", "not-read-see-struct/Kilnfile",
 					"--name", "banana-release",
 					"--path", "banana-release.tgz",
@@ -122,7 +122,7 @@ var _ = FDescribe("PushRelease", func() {
 				})
 
 				It("returns an error without suggested release sources", func() {
-					err := pushRelease.Execute([]string{
+					err := uploadRelease.Execute([]string{
 						"--kilnfile", "not-read-see-struct/Kilnfile",
 						"--name", "banana-release",
 						"--path", "banana-release.tgz",
@@ -148,7 +148,7 @@ var _ = FDescribe("PushRelease", func() {
 				})
 
 				It("returns an error without suggested release sources", func() {
-					err := pushRelease.Execute([]string{
+					err := uploadRelease.Execute([]string{
 						"--kilnfile", "not-read-see-struct/Kilnfile",
 						"--name", "banana-release",
 						"--path", "banana-release.tgz",

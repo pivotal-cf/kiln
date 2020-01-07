@@ -20,7 +20,7 @@ type S3Uploader interface {
 	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
 }
 
-type PushRelease struct {
+type UploadRelease struct {
 	FS             billy.Filesystem
 	KilnfileLoader KilnfileLoader
 	UploaderConfig func(*cargo.ReleaseSourceConfig) (S3Uploader, error)
@@ -36,23 +36,23 @@ type PushRelease struct {
 	}
 }
 
-func (pushRelease PushRelease) Execute(args []string) error {
-	_, err := jhanda.Parse(&pushRelease.Options, args)
+func (uploadRelease UploadRelease) Execute(args []string) error {
+	_, err := jhanda.Parse(&uploadRelease.Options, args)
 	if err != nil {
 		return err
 	}
 
-	kilnfile, _, err := pushRelease.KilnfileLoader.LoadKilnfiles(
-		pushRelease.FS,
-		pushRelease.Options.Kilnfile,
-		pushRelease.Options.VariablesFiles,
-		pushRelease.Options.Variables,
+	kilnfile, _, err := uploadRelease.KilnfileLoader.LoadKilnfiles(
+		uploadRelease.FS,
+		uploadRelease.Options.Kilnfile,
+		uploadRelease.Options.VariablesFiles,
+		uploadRelease.Options.Variables,
 	)
 	if err != nil {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
-	file, err := pushRelease.FS.Open(pushRelease.Options.Path)
+	file, err := uploadRelease.FS.Open(uploadRelease.Options.Path)
 	if err != nil {
 		return fmt.Errorf("could not open release: %w", err)
 	}
@@ -66,7 +66,7 @@ func (pushRelease PushRelease) Execute(args []string) error {
 	for index, rel := range kilnfile.ReleaseSources {
 		if rel.Type == fetcher.ReleaseSourceTypeS3 {
 			validSourcesForErrOutput = append(validSourcesForErrOutput, rel.Bucket)
-			if rel.Bucket == pushRelease.Options.Remote {
+			if rel.Bucket == uploadRelease.Options.Remote {
 				rc = &kilnfile.ReleaseSources[index]
 				break
 			}
@@ -81,14 +81,14 @@ func (pushRelease PushRelease) Execute(args []string) error {
 		return errors.New(msg)
 	}
 
-	uploader, err := pushRelease.UploaderConfig(rc)
+	uploader, err := uploadRelease.UploaderConfig(rc)
 	if err != nil {
 		return fmt.Errorf("could not configure s3 uploader client: %w", err)
 	}
 
 	if _, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(rc.Bucket),
-		Key:    aws.String(filepath.Base(pushRelease.Options.Path)),
+		Key:    aws.String(filepath.Base(uploadRelease.Options.Path)),
 		Body:   file,
 	}); err != nil {
 		return fmt.Errorf("upload failed: %w", err)
@@ -97,10 +97,10 @@ func (pushRelease PushRelease) Execute(args []string) error {
 	return nil
 }
 
-func (pushRelease PushRelease) Usage() jhanda.Usage {
+func (uploadRelease UploadRelease) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Uploads a Bosh Release to a release source for use in kiln fetch",
 		ShortDescription: "Upload BOSH Release",
-		Flags:            pushRelease.Options,
+		Flags:            uploadRelease.Options,
 	}
 }
