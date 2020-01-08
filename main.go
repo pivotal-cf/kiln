@@ -4,21 +4,19 @@ import (
 	"log"
 	"os"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-
-	"gopkg.in/src-d/go-billy.v4/osfs"
-
-	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/helper"
 	"github.com/pivotal-cf/kiln/internal/baking"
+	"github.com/pivotal-cf/kiln/internal/cargo"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/pivotal-cf/jhanda"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 )
 
 var version = "unknown"
