@@ -21,24 +21,27 @@ var _ = Describe("UploadRelease", func() {
 
 			uploadRelease commands.UploadRelease
 
-			exampleReleaseSourceList = []cargo.ReleaseSourceConfig{
-				{
-					Type:            "s3",
-					Bucket:          "orange-bucket",
-					Region:          "mars-2",
-					AccessKeyId:     "id",
-					SecretAccessKey: "secret",
-				},
-				{
-					Type: "boshio",
-				},
-				{
-					Type:            "s3",
-					Bucket:          "lemon-bucket",
-					Region:          "mars-2",
-					AccessKeyId:     "id",
-					SecretAccessKey: "secret",
-				},
+			exampleReleaseSourceList = func() []cargo.ReleaseSourceConfig {
+				return []cargo.ReleaseSourceConfig{
+					{
+						Type:            "s3",
+						Bucket:          "orange-bucket",
+						Region:          "mars-2",
+						AccessKeyId:     "id",
+						SecretAccessKey: "secret",
+						Regex:           "^(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\\.]+-?[a-zA-Z0-9]\\.?[0-9]*)\\.tgz$",
+					},
+					{
+						Type: "boshio",
+					},
+					{
+						Type:            "s3",
+						Bucket:          "lemon-bucket",
+						Region:          "mars-2",
+						AccessKeyId:     "id",
+						SecretAccessKey: "secret",
+					},
+				}
 			}
 		)
 
@@ -60,7 +63,7 @@ var _ = Describe("UploadRelease", func() {
 		When("it recieves a correct tarball path", func() {
 			BeforeEach(func() {
 				loader.LoadKilnfilesReturns(
-					cargo.Kilnfile{ReleaseSources: exampleReleaseSourceList},
+					cargo.Kilnfile{ReleaseSources: exampleReleaseSourceList()},
 					cargo.KilnfileLock{}, nil)
 
 				f, err := fs.Create("banana-release.tgz")
@@ -83,8 +86,8 @@ var _ = Describe("UploadRelease", func() {
 
 				err := uploadRelease.Execute([]string{
 					"--kilnfile", "not-read-see-struct/Kilnfile",
-					"--name", "banana-release",
-					"--path", "banana-release.tgz",
+					"--local-path", "banana-release.tgz",
+					"--remote-path", "banana-release-1.2.3.tgz",
 					"--remote", "orange-bucket",
 					"--variables-file", "my-secrets",
 				})
@@ -102,10 +105,76 @@ var _ = Describe("UploadRelease", func() {
 				Expect(opts.Bucket).NotTo(BeNil())
 				Expect(*opts.Bucket).To(Equal("orange-bucket"))
 				Expect(opts.Key).NotTo(BeNil())
-				Expect(*opts.Key).To(Equal("banana-release.tgz"))
+				Expect(*opts.Key).To(Equal("banana-release-1.2.3.tgz"))
 
 				buf, _ := ioutil.ReadAll(opts.Body)
 				Expect(string(buf)).To(Equal("banana"))
+			})
+		})
+
+		When("the release source in Kilnfile has an invalid regular expression", func() {
+			BeforeEach(func() {
+				relSrcList := exampleReleaseSourceList()
+
+				relSrcList[0].Regex = "^(?P<bad_regex"
+
+				loader.LoadKilnfilesReturns(cargo.Kilnfile{
+					ReleaseSources: relSrcList,
+				}, cargo.KilnfileLock{}, nil)
+
+				f, err := fs.Create("banana-release.tgz")
+				_, _ = f.Write([]byte("banana"))
+				f.Close()
+
+				uploadRelease.UploaderConfig = func(rsc *cargo.ReleaseSourceConfig) (commands.S3Uploader, error) {
+					return uploader, nil
+				}
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("returns a descriptive error", func() {
+				err := uploadRelease.Execute([]string{
+					"--kilnfile", "not-read-see-struct/Kilnfile",
+					"--local-path", "banana-release.tgz",
+					"--remote-path", "banana-release-1.2.3.tgz",
+					"--remote", "orange-bucket",
+					"--variables-file", "my-secrets",
+				})
+
+				Expect(err).To(MatchError(ContainSubstring("could not compile the regular expression")))
+			})
+		})
+
+		When("the remote-path does not match the regex in the release_source", func() {
+			BeforeEach(func() {
+				relSrcList := exampleReleaseSourceList()
+
+				loader.LoadKilnfilesReturns(cargo.Kilnfile{
+					ReleaseSources: relSrcList,
+				}, cargo.KilnfileLock{}, nil)
+
+				f, err := fs.Create("banana-release.tgz")
+				_, _ = f.Write([]byte("banana"))
+				f.Close()
+
+				uploadRelease.UploaderConfig = func(rsc *cargo.ReleaseSourceConfig) (commands.S3Uploader, error) {
+					return uploader, nil
+				}
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("returns a descriptive error", func() {
+				err := uploadRelease.Execute([]string{
+					"--kilnfile", "not-read-see-struct/Kilnfile",
+					"--local-path", "banana-release.tgz",
+					"--remote-path", "BLA_BLA_BLA.tgz",
+					"--remote", "orange-bucket",
+					"--variables-file", "my-secrets",
+				})
+
+				Expect(err).To(MatchError(ContainSubstring("remote-path does not match")))
 			})
 		})
 
@@ -124,8 +193,8 @@ var _ = Describe("UploadRelease", func() {
 				It("returns an error without suggested release sources", func() {
 					err := uploadRelease.Execute([]string{
 						"--kilnfile", "not-read-see-struct/Kilnfile",
-						"--name", "banana-release",
-						"--path", "banana-release.tgz",
+						"--local-path", "banana-release.tgz",
+						"--remote-path", "banana-release-1.2.3.tgz",
 						"--remote", "orange-bucket",
 						"--variables-file", "my-secrets",
 					})
@@ -136,7 +205,7 @@ var _ = Describe("UploadRelease", func() {
 			When("at least one release source is an s3 bucket", func() {
 				BeforeEach(func() {
 					loader.LoadKilnfilesReturns(
-						cargo.Kilnfile{ReleaseSources: exampleReleaseSourceList},
+						cargo.Kilnfile{ReleaseSources: exampleReleaseSourceList()},
 						cargo.KilnfileLock{}, nil,
 					)
 
@@ -150,8 +219,8 @@ var _ = Describe("UploadRelease", func() {
 				It("returns an error without suggested release sources", func() {
 					err := uploadRelease.Execute([]string{
 						"--kilnfile", "not-read-see-struct/Kilnfile",
-						"--name", "banana-release",
-						"--path", "banana-release.tgz",
+						"--local-path", "banana-release.tgz",
+						"--remote-path", "banana-release-1.2.3.tgz",
 						"--remote", "dog-bucket",
 						"--variables-file", "my-secrets",
 					})

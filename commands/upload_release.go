@@ -3,7 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
+	"regexp"
 
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
@@ -30,9 +30,9 @@ type UploadRelease struct {
 		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
 		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
 
-		Name   string `short:"n" long:"name" required:"true" description:"name of release to update"`
-		Remote string `short:"r" long:"remote" required:"true" description:"name of remote source"`
-		Path   string `short:"p" long:"path" required:"true" description:"path to BOSH release tarball, the file should be be named like 'my-rel-1.2.3.tgz'"`
+		Remote     string `short:"r" long:"remote" required:"true" description:"name of remote source"`
+		LocalPath  string `short:"lp" long:"local-path" required:"true" description:"path to BOSH release tarball"`
+		RemotePath string `short:"rp" long:"remote-path" required:"true" description:"path at the remote source"`
 	}
 }
 
@@ -52,7 +52,7 @@ func (uploadRelease UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
-	file, err := uploadRelease.FS.Open(uploadRelease.Options.Path)
+	file, err := uploadRelease.FS.Open(uploadRelease.Options.LocalPath)
 	if err != nil {
 		return fmt.Errorf("could not open release: %w", err)
 	}
@@ -81,6 +81,15 @@ func (uploadRelease UploadRelease) Execute(args []string) error {
 		return errors.New(msg)
 	}
 
+	re, err := regexp.Compile(rc.Regex)
+	if err != nil {
+		return fmt.Errorf("could not compile the regular expression in Kilnfile for %q: %w", rc.Bucket, err)
+	}
+
+	if !re.MatchString(uploadRelease.Options.RemotePath) {
+		return fmt.Errorf("remote-path does not match regular expression in kilnfile for %q", rc.Bucket)
+	}
+
 	uploader, err := uploadRelease.UploaderConfig(rc)
 	if err != nil {
 		return fmt.Errorf("could not configure s3 uploader client: %w", err)
@@ -88,7 +97,7 @@ func (uploadRelease UploadRelease) Execute(args []string) error {
 
 	if _, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(rc.Bucket),
-		Key:    aws.String(filepath.Base(uploadRelease.Options.Path)),
+		Key:    aws.String(uploadRelease.Options.RemotePath),
 		Body:   file,
 	}); err != nil {
 		return fmt.Errorf("upload failed: %w", err)
