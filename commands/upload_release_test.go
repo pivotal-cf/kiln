@@ -60,7 +60,7 @@ var _ = Describe("UploadRelease", func() {
 			}
 		})
 
-		When("it recieves a correct tarball path", func() {
+		When("it receives a correct tarball path", func() {
 			BeforeEach(func() {
 				loader.LoadKilnfilesReturns(
 					cargo.Kilnfile{ReleaseSources: exampleReleaseSourceList()},
