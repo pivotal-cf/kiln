@@ -108,8 +108,8 @@ func (uploadRelease UploadRelease) Execute(args []string) error {
 
 func (uploadRelease UploadRelease) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Uploads a Bosh Release to a release source for use in kiln fetch",
-		ShortDescription: "Upload BOSH Release",
+		Description:      "Uploads a Bosh Release to an S3 release source for use in kiln fetch",
+		ShortDescription: "uploads a BOSH release to an s3 release_source",
 		Flags:            uploadRelease.Options,
 	}
 }
