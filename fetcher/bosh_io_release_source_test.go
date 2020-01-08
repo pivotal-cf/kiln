@@ -279,9 +279,13 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 			Expect(localReleases).To(HaveLen(2))
 			Expect(localReleases).To(HaveKeyWithValue(
-				release1ID, release.NewBuiltRelease(release1ID).WithLocalPath(fullRelease1Path).WithRemote(ID, release1.RemotePath())))
+				release1ID,
+				release.LocalRelease{ReleaseID: release1ID, LocalPath: fullRelease1Path},
+			))
 			Expect(localReleases).To(HaveKeyWithValue(
-				release2ID, release.NewBuiltRelease(release2ID).WithLocalPath(fullRelease2Path).WithRemote(ID, release2.RemotePath())))
+				release2ID,
+				release.LocalRelease{ReleaseID: release2ID, LocalPath: fullRelease2Path},
+			))
 		})
 	})
 })

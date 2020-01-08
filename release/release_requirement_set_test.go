@@ -5,7 +5,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	. "github.com/pivotal-cf/kiln/release"
-	"github.com/pivotal-cf/kiln/release/fakes"
 )
 
 var _ = Describe("ReleaseRequirementSet", func() {
@@ -52,22 +51,20 @@ var _ = Describe("ReleaseRequirementSet", func() {
 		var (
 			releaseSet                             ReleaseWithLocationSet
 			extraReleaseID                         ReleaseID
-			satisfyingRelease, unsatisfyingRelease *fakes.ReleaseWithLocation
+			satisfyingRelease, unsatisfyingRelease, extraRelease ReleaseWithLocation
 		)
 
 		BeforeEach(func() {
-			satisfyingRelease = new(fakes.ReleaseWithLocation)
-			satisfyingRelease.SatisfiesReturns(true)
-
-			unsatisfyingRelease = new(fakes.ReleaseWithLocation)
-			unsatisfyingRelease.SatisfiesReturns(false)
+			satisfyingRelease = NewBuiltRelease(release1ID).WithLocalPath("satisfying-path")
+			unsatisfyingRelease = NewBuiltRelease(ReleaseID{Name: release2Name, Version: "4.0.4"}).WithLocalPath("unsatisfying-path")
 
 			extraReleaseID = ReleaseID{Name: "extra", Version: "2.3.5"}
+			extraRelease = NewBuiltRelease(extraReleaseID).WithLocalPath("so-extra")
 
 			releaseSet = ReleaseWithLocationSet{
 				release1ID:     satisfyingRelease,
 				release2ID:     unsatisfyingRelease,
-				extraReleaseID: unsatisfyingRelease,
+				extraReleaseID: extraRelease,
 			}
 		})
 
@@ -75,14 +72,26 @@ var _ = Describe("ReleaseRequirementSet", func() {
 			intersection, missing, extra := rrs.Partition(releaseSet)
 
 			Expect(intersection).To(HaveLen(1))
-			Expect(intersection).To(HaveKeyWithValue(release1ID, satisfyingRelease))
+			Expect(intersection).To(HaveKeyWithValue(
+				release1ID,
+				LocalRelease{ReleaseID: release1ID, LocalPath: satisfyingRelease.LocalPath()},
+			))
 
 			Expect(missing).To(HaveLen(1))
 			Expect(missing).To(HaveKeyWithValue(release2ID, rrs[release2ID]))
 
 			Expect(extra).To(HaveLen(2))
-			Expect(extra).To(HaveKeyWithValue(release2ID, unsatisfyingRelease))
-			Expect(extra).To(HaveKeyWithValue(extraReleaseID, unsatisfyingRelease))
+			Expect(extra).To(HaveKeyWithValue(
+				release2ID,
+				LocalRelease{
+					ReleaseID: ReleaseID{Name: release2Name, Version: "4.0.4"},
+					LocalPath: unsatisfyingRelease.LocalPath(),
+				},
+			))
+			Expect(extra).To(HaveKeyWithValue(
+				extraReleaseID,
+				LocalRelease{ReleaseID: extraReleaseID, LocalPath: extraRelease.LocalPath()},
+			))
 		})
 
 		It("does not modify itself", func() {

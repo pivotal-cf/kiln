@@ -12,6 +12,7 @@ type ReleaseWithLocation interface {
 	LocalPath() string
 	RemotePath() string
 	WithLocalPath(string) ReleaseWithLocation
+	AsLocalRelease(string) LocalRelease
 	WithRemote(remoteSourceID string, remotePath string) ReleaseWithLocation
 	ReleaseSourceID() string
 }
@@ -39,6 +40,13 @@ func (r releaseWithLocation) WithRemote(remoteSourceID string, remotePath string
 func (r releaseWithLocation) WithLocalPath(localPath string) ReleaseWithLocation {
 	r.localPath = localPath
 	return r
+}
+
+func (r releaseWithLocation) AsLocalRelease(localPath string) LocalRelease {
+	return LocalRelease{
+		ReleaseID: r.ReleaseID(),
+		LocalPath: localPath,
+	}
 }
 
 func (r releaseWithLocation) ReleaseSourceID() string {

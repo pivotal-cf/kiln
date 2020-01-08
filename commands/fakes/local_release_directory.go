@@ -10,10 +10,10 @@ import (
 )
 
 type LocalReleaseDirectory struct {
-	DeleteExtraReleasesStub        func(release.ReleaseWithLocationSet, bool) error
+	DeleteExtraReleasesStub        func(release.LocalReleaseSet, bool) error
 	deleteExtraReleasesMutex       sync.RWMutex
 	deleteExtraReleasesArgsForCall []struct {
-		arg1 release.ReleaseWithLocationSet
+		arg1 release.LocalReleaseSet
 		arg2 bool
 	}
 	deleteExtraReleasesReturns struct {
@@ -35,10 +35,10 @@ type LocalReleaseDirectory struct {
 		result1 release.ReleaseWithLocationSet
 		result2 error
 	}
-	VerifyChecksumsStub        func(release.ReleaseWithLocationSet, cargo.KilnfileLock) error
+	VerifyChecksumsStub        func(release.LocalReleaseSet, cargo.KilnfileLock) error
 	verifyChecksumsMutex       sync.RWMutex
 	verifyChecksumsArgsForCall []struct {
-		arg1 release.ReleaseWithLocationSet
+		arg1 release.LocalReleaseSet
 		arg2 cargo.KilnfileLock
 	}
 	verifyChecksumsReturns struct {
@@ -51,11 +51,11 @@ type LocalReleaseDirectory struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *LocalReleaseDirectory) DeleteExtraReleases(arg1 release.ReleaseWithLocationSet, arg2 bool) error {
+func (fake *LocalReleaseDirectory) DeleteExtraReleases(arg1 release.LocalReleaseSet, arg2 bool) error {
 	fake.deleteExtraReleasesMutex.Lock()
 	ret, specificReturn := fake.deleteExtraReleasesReturnsOnCall[len(fake.deleteExtraReleasesArgsForCall)]
 	fake.deleteExtraReleasesArgsForCall = append(fake.deleteExtraReleasesArgsForCall, struct {
-		arg1 release.ReleaseWithLocationSet
+		arg1 release.LocalReleaseSet
 		arg2 bool
 	}{arg1, arg2})
 	fake.recordInvocation("DeleteExtraReleases", []interface{}{arg1, arg2})
@@ -76,13 +76,13 @@ func (fake *LocalReleaseDirectory) DeleteExtraReleasesCallCount() int {
 	return len(fake.deleteExtraReleasesArgsForCall)
 }
 
-func (fake *LocalReleaseDirectory) DeleteExtraReleasesCalls(stub func(release.ReleaseWithLocationSet, bool) error) {
+func (fake *LocalReleaseDirectory) DeleteExtraReleasesCalls(stub func(release.LocalReleaseSet, bool) error) {
 	fake.deleteExtraReleasesMutex.Lock()
 	defer fake.deleteExtraReleasesMutex.Unlock()
 	fake.DeleteExtraReleasesStub = stub
 }
 
-func (fake *LocalReleaseDirectory) DeleteExtraReleasesArgsForCall(i int) (release.ReleaseWithLocationSet, bool) {
+func (fake *LocalReleaseDirectory) DeleteExtraReleasesArgsForCall(i int) (release.LocalReleaseSet, bool) {
 	fake.deleteExtraReleasesMutex.RLock()
 	defer fake.deleteExtraReleasesMutex.RUnlock()
 	argsForCall := fake.deleteExtraReleasesArgsForCall[i]
@@ -175,11 +175,11 @@ func (fake *LocalReleaseDirectory) GetLocalReleasesReturnsOnCall(i int, result1 
 	}{result1, result2}
 }
 
-func (fake *LocalReleaseDirectory) VerifyChecksums(arg1 release.ReleaseWithLocationSet, arg2 cargo.KilnfileLock) error {
+func (fake *LocalReleaseDirectory) VerifyChecksums(arg1 release.LocalReleaseSet, arg2 cargo.KilnfileLock) error {
 	fake.verifyChecksumsMutex.Lock()
 	ret, specificReturn := fake.verifyChecksumsReturnsOnCall[len(fake.verifyChecksumsArgsForCall)]
 	fake.verifyChecksumsArgsForCall = append(fake.verifyChecksumsArgsForCall, struct {
-		arg1 release.ReleaseWithLocationSet
+		arg1 release.LocalReleaseSet
 		arg2 cargo.KilnfileLock
 	}{arg1, arg2})
 	fake.recordInvocation("VerifyChecksums", []interface{}{arg1, arg2})
@@ -200,13 +200,13 @@ func (fake *LocalReleaseDirectory) VerifyChecksumsCallCount() int {
 	return len(fake.verifyChecksumsArgsForCall)
 }
 
-func (fake *LocalReleaseDirectory) VerifyChecksumsCalls(stub func(release.ReleaseWithLocationSet, cargo.KilnfileLock) error) {
+func (fake *LocalReleaseDirectory) VerifyChecksumsCalls(stub func(release.LocalReleaseSet, cargo.KilnfileLock) error) {
 	fake.verifyChecksumsMutex.Lock()
 	defer fake.verifyChecksumsMutex.Unlock()
 	fake.VerifyChecksumsStub = stub
 }
 
-func (fake *LocalReleaseDirectory) VerifyChecksumsArgsForCall(i int) (release.ReleaseWithLocationSet, cargo.KilnfileLock) {
+func (fake *LocalReleaseDirectory) VerifyChecksumsArgsForCall(i int) (release.LocalReleaseSet, cargo.KilnfileLock) {
 	fake.verifyChecksumsMutex.RLock()
 	defer fake.verifyChecksumsMutex.RUnlock()
 	argsForCall := fake.verifyChecksumsArgsForCall[i]

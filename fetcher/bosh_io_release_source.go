@@ -98,8 +98,8 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.Releas
 	return matches, nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) (release.ReleaseWithLocationSet, error) {
-	releases := make(release.ReleaseWithLocationSet)
+func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) (release.LocalReleaseSet, error) {
+	releases := make(release.LocalReleaseSet)
 
 	r.logger.Printf("downloading %d objects from bosh.io...", len(remoteReleases))
 
@@ -127,7 +127,7 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases 
 			return nil, err
 		}
 
-		releases[release.ReleaseID()] = release.WithLocalPath(filePath)
+		releases[release.ReleaseID()] = release.AsLocalRelease(filePath)
 	}
 
 	return releases, nil

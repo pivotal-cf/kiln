@@ -98,9 +98,9 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		It("deletes specified files", func() {
 			extraReleaseID := release.ReleaseID{Name: "extra-release", Version: "0.0"}
-			extraRelease := release.NewCompiledRelease(extraReleaseID, "os-0", "0.0.0").WithLocalPath(extraFilePath)
+			extraRelease := release.LocalRelease{ReleaseID: extraReleaseID, LocalPath: extraFilePath}
 
-			extraReleases := map[release.ReleaseID]release.ReleaseWithLocation{
+			extraReleases := release.LocalReleaseSet{
 				extraReleaseID: extraRelease,
 			}
 
@@ -114,9 +114,9 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		Context("when a file cannot be removed", func() {
 			It("returns an error", func() {
 				extraReleaseID := release.ReleaseID{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
-				extraRelease := release.NewCompiledRelease(extraReleaseID, "os-0", "0.0.0").WithLocalPath("file-does-not-exist")
+				extraRelease := release.LocalRelease{ReleaseID: extraReleaseID, LocalPath: "file-does-not-exist"}
 
-				extraReleases := map[release.ReleaseID]release.ReleaseWithLocation{}
+				extraReleases := release.LocalReleaseSet{}
 				extraReleases[extraReleaseID] = extraRelease
 
 				err := localReleaseDirectory.DeleteExtraReleases(extraReleases, noConfirm)
@@ -127,7 +127,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 	Describe("VerifyChecksums", func() {
 		var (
-			downloadedReleases map[release.ReleaseID]release.ReleaseWithLocation
+			downloadedReleases release.LocalReleaseSet
 			kilnfileLock       cargo.KilnfileLock
 			goodFilePath       string
 			badFilePath        string
@@ -165,12 +165,11 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when all the checksums on the downloaded releases match their checksums in Kilnfile.lock", func() {
 			It("succeeds", func() {
-				downloadedReleases = map[release.ReleaseID]release.ReleaseWithLocation{
-					release.ReleaseID{Name: "good", Version: "1.2.3"}: release.NewCompiledRelease(
-						release.ReleaseID{Name: "good", Version: "1.2.3"},
-						"ubuntu-xenial",
-						"190.0.0",
-					).WithLocalPath(goodFilePath),
+				downloadedReleases = release.LocalReleaseSet{
+					release.ReleaseID{Name: "good", Version: "1.2.3"}: release.LocalRelease{
+						ReleaseID: release.ReleaseID{Name: "good", Version: "1.2.3"},
+						LocalPath: goodFilePath,
+					},
 				}
 				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
 				Expect(err).NotTo(HaveOccurred())
@@ -179,12 +178,11 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when at least one checksum on the downloaded releases does not match the checksum in Kilnfile.lock", func() {
 			It("returns an error and deletes the bad release", func() {
-				downloadedReleases = map[release.ReleaseID]release.ReleaseWithLocation{
-					release.ReleaseID{Name: "bad", Version: "1.2.3"}: release.NewCompiledRelease(
-						release.ReleaseID{Name: "bad", Version: "1.2.3"},
-						"ubuntu-xenial",
-						"190.0.0",
-					).WithLocalPath(badFilePath),
+				downloadedReleases = release.LocalReleaseSet{
+					release.ReleaseID{Name: "bad", Version: "1.2.3"}: release.LocalRelease{
+						ReleaseID: release.ReleaseID{Name: "bad", Version: "1.2.3"},
+						LocalPath: badFilePath,
+					},
 				}
 				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
 				Expect(err).To(HaveOccurred())
@@ -221,17 +219,15 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			})
 
 			It("does not validate its checksum", func() {
-				downloadedReleases = map[release.ReleaseID]release.ReleaseWithLocation{
-					release.ReleaseID{Name: "good", Version: "1.2.3"}: release.NewCompiledRelease(
-						release.ReleaseID{Name: "good", Version: "1.2.3"},
-						"ubuntu-xenial",
-						"190.0.0",
-					).WithLocalPath(goodFilePath),
-					release.ReleaseID{Name: "uaa", Version: "7.3.0"}: release.NewCompiledRelease(
-						release.ReleaseID{Name: "uaa", Version: "7.3.0"},
-						"ubuntu-xenial",
-						"190.0.0",
-					).WithLocalPath(nonStandardFilePath),
+				downloadedReleases = release.LocalReleaseSet{
+					release.ReleaseID{Name: "good", Version: "1.2.3"}: release.LocalRelease{
+						ReleaseID: release.ReleaseID{Name: "good", Version: "1.2.3"},
+						LocalPath: goodFilePath,
+					},
+					release.ReleaseID{Name: "uaa", Version: "7.3.0"}: release.LocalRelease{
+						ReleaseID: release.ReleaseID{Name: "uaa", Version: "7.3.0"},
+						LocalPath: nonStandardFilePath,
+					},
 				}
 				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
 				Expect(err).NotTo(HaveOccurred())

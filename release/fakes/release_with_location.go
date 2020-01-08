@@ -8,6 +8,17 @@ import (
 )
 
 type ReleaseWithLocation struct {
+	AsLocalReleaseStub        func(string) release.LocalRelease
+	asLocalReleaseMutex       sync.RWMutex
+	asLocalReleaseArgsForCall []struct {
+		arg1 string
+	}
+	asLocalReleaseReturns struct {
+		result1 release.LocalRelease
+	}
+	asLocalReleaseReturnsOnCall map[int]struct {
+		result1 release.LocalRelease
+	}
 	LocalPathStub        func() string
 	localPathMutex       sync.RWMutex
 	localPathArgsForCall []struct {
@@ -94,6 +105,66 @@ type ReleaseWithLocation struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *ReleaseWithLocation) AsLocalRelease(arg1 string) release.LocalRelease {
+	fake.asLocalReleaseMutex.Lock()
+	ret, specificReturn := fake.asLocalReleaseReturnsOnCall[len(fake.asLocalReleaseArgsForCall)]
+	fake.asLocalReleaseArgsForCall = append(fake.asLocalReleaseArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("AsLocalRelease", []interface{}{arg1})
+	fake.asLocalReleaseMutex.Unlock()
+	if fake.AsLocalReleaseStub != nil {
+		return fake.AsLocalReleaseStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.asLocalReleaseReturns
+	return fakeReturns.result1
+}
+
+func (fake *ReleaseWithLocation) AsLocalReleaseCallCount() int {
+	fake.asLocalReleaseMutex.RLock()
+	defer fake.asLocalReleaseMutex.RUnlock()
+	return len(fake.asLocalReleaseArgsForCall)
+}
+
+func (fake *ReleaseWithLocation) AsLocalReleaseCalls(stub func(string) release.LocalRelease) {
+	fake.asLocalReleaseMutex.Lock()
+	defer fake.asLocalReleaseMutex.Unlock()
+	fake.AsLocalReleaseStub = stub
+}
+
+func (fake *ReleaseWithLocation) AsLocalReleaseArgsForCall(i int) string {
+	fake.asLocalReleaseMutex.RLock()
+	defer fake.asLocalReleaseMutex.RUnlock()
+	argsForCall := fake.asLocalReleaseArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *ReleaseWithLocation) AsLocalReleaseReturns(result1 release.LocalRelease) {
+	fake.asLocalReleaseMutex.Lock()
+	defer fake.asLocalReleaseMutex.Unlock()
+	fake.AsLocalReleaseStub = nil
+	fake.asLocalReleaseReturns = struct {
+		result1 release.LocalRelease
+	}{result1}
+}
+
+func (fake *ReleaseWithLocation) AsLocalReleaseReturnsOnCall(i int, result1 release.LocalRelease) {
+	fake.asLocalReleaseMutex.Lock()
+	defer fake.asLocalReleaseMutex.Unlock()
+	fake.AsLocalReleaseStub = nil
+	if fake.asLocalReleaseReturnsOnCall == nil {
+		fake.asLocalReleaseReturnsOnCall = make(map[int]struct {
+			result1 release.LocalRelease
+		})
+	}
+	fake.asLocalReleaseReturnsOnCall[i] = struct {
+		result1 release.LocalRelease
+	}{result1}
 }
 
 func (fake *ReleaseWithLocation) LocalPath() string {
@@ -540,6 +611,8 @@ func (fake *ReleaseWithLocation) WithRemoteReturnsOnCall(i int, result1 release.
 func (fake *ReleaseWithLocation) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.asLocalReleaseMutex.RLock()
+	defer fake.asLocalReleaseMutex.RUnlock()
 	fake.localPathMutex.RLock()
 	defer fake.localPathMutex.RUnlock()
 	fake.releaseIDMutex.RLock()

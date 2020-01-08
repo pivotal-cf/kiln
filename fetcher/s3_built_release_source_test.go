@@ -88,9 +88,13 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 
 			Expect(localReleases).To(HaveLen(2))
 			Expect(localReleases).To(HaveKeyWithValue(
-				uaaReleaseID, release.NewBuiltRelease(uaaReleaseID).WithLocalPath(uaaReleasePath).WithRemote(bucket, "some-uaa-key")))
+				uaaReleaseID,
+				release.LocalRelease{ReleaseID: uaaReleaseID, LocalPath: uaaReleasePath},
+			))
 			Expect(localReleases).To(HaveKeyWithValue(
-				bpmReleaseID, release.NewBuiltRelease(bpmReleaseID).WithLocalPath(bpmReleasePath).WithRemote(bucket, "some-bpm-key")))
+				bpmReleaseID,
+				release.LocalRelease{ReleaseID: bpmReleaseID, LocalPath: bpmReleasePath},
+			))
 		})
 
 		Context("when the matchedS3Objects argument is empty", func() {

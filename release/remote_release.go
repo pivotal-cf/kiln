@@ -6,4 +6,5 @@ type RemoteRelease interface {
 	Satisfies(set ReleaseRequirement) bool
 	StandardizedFilename() string
 	WithLocalPath(string) ReleaseWithLocation
+	AsLocalRelease(string) LocalRelease
 }

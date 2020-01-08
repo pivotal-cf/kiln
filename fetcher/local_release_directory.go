@@ -60,7 +60,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (release2.Re
 	return outputReleases, nil
 }
 
-func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet release2.ReleaseWithLocationSet, noConfirm bool) error {
+func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet release2.LocalReleaseSet, noConfirm bool) error {
 	var doDeletion byte
 
 	if len(extraReleaseSet) == 0 {
@@ -73,7 +73,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet release2.Rele
 		l.logger.Println("Warning: kiln will delete the following files:")
 
 		for _, release := range extraReleaseSet {
-			l.logger.Printf("- %s\n", release.LocalPath())
+			l.logger.Printf("- %s\n", release.LocalPath)
 		}
 
 		l.logger.Printf("Are you sure you want to delete these files? [yN]")
@@ -90,9 +90,9 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet release2.Rele
 	return nil
 }
 
-func (l LocalReleaseDirectory) deleteReleases(releasesToDelete release2.ReleaseWithLocationSet) error {
+func (l LocalReleaseDirectory) deleteReleases(releasesToDelete release2.LocalReleaseSet) error {
 	for releaseID, release := range releasesToDelete {
-		err := os.Remove(release.LocalPath())
+		err := os.Remove(release.LocalPath)
 
 		if err != nil {
 			l.logger.Printf("error removing release %s: %v\n", releaseID.Name, err)
@@ -105,7 +105,7 @@ func (l LocalReleaseDirectory) deleteReleases(releasesToDelete release2.ReleaseW
 	return nil
 }
 
-func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet release2.ReleaseWithLocationSet, kilnfileLock cargo.KilnfileLock) error {
+func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet release2.LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error {
 	if len(downloadedReleaseSet) == 0 {
 		return nil
 	}
@@ -126,14 +126,14 @@ func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet release2.Rel
 			continue
 		}
 
-		sum, err := CalculateSum(release.LocalPath(), fs)
+		sum, err := CalculateSum(release.LocalPath, fs)
 		if err != nil {
 			return fmt.Errorf("error while calculating checksum: %s", err)
 		}
 
 		if expectedSum != sum {
-			l.deleteReleases(release2.ReleaseWithLocationSet{releaseID: release})
-			badReleases = append(badReleases, fmt.Sprintf("%+v", release.LocalPath()))
+			l.deleteReleases(release2.LocalReleaseSet{releaseID: release})
+			badReleases = append(badReleases, fmt.Sprintf("%+v", release.LocalPath))
 		}
 	}
 

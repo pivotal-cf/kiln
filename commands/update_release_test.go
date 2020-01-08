@@ -38,7 +38,7 @@ var _ = Describe("UpdateRelease", func() {
 		releaseDownloader         *fakes.ReleaseDownloader
 		logger                    *log.Logger
 		downloadedReleasePath     string
-		expectedDownloadedRelease release.ReleaseWithLocation
+		expectedDownloadedRelease release.LocalRelease
 		checksummer               func(string, billy.Filesystem) (string, error)
 		kilnFileLoader            *fakes.KilnfileLoader
 	)
@@ -91,9 +91,10 @@ var _ = Describe("UpdateRelease", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, releaseVersion))
-			expectedDownloadedRelease = release.NewBuiltRelease(
-				release.ReleaseID{Name: releaseName, Version: releaseVersion},
-			).WithLocalPath(downloadedReleasePath).WithRemote(releaseSourceName, remotePath)
+			expectedDownloadedRelease = release.LocalRelease{
+				ReleaseID: release.ReleaseID{Name: releaseName, Version: releaseVersion},
+				LocalPath: downloadedReleasePath,
+			}
 
 			checksummer = fetcher.CalculateSum
 		})
@@ -105,7 +106,7 @@ var _ = Describe("UpdateRelease", func() {
 		When("updating to a version that exists in the remote", func() {
 			BeforeEach(func() {
 				releaseDownloader.DownloadReleaseCalls(
-					func(dir string, requirement release.ReleaseRequirement) (release.ReleaseWithLocation, error) {
+					func(dir string, requirement release.ReleaseRequirement) (release.LocalRelease, string, string, error) {
 						downloadedReleaseFile, err := filesystem.Create(downloadedReleasePath)
 						Expect(err).NotTo(HaveOccurred())
 						defer downloadedReleaseFile.Close()
@@ -113,7 +114,7 @@ var _ = Describe("UpdateRelease", func() {
 						_, err = downloadedReleaseFile.Write([]byte("lots of files"))
 						Expect(err).NotTo(HaveOccurred())
 
-						return expectedDownloadedRelease, nil
+						return expectedDownloadedRelease, releaseSourceName, remotePath, nil
 					},
 				)
 			})
@@ -220,7 +221,7 @@ var _ = Describe("UpdateRelease", func() {
 
 		When("downloading the release fails", func() {
 			BeforeEach(func() {
-				releaseDownloader.DownloadReleaseReturns(nil, errors.New("bad stuff"))
+				releaseDownloader.DownloadReleaseReturns(release.LocalRelease{}, "", "", errors.New("bad stuff"))
 			})
 
 			It("errors", func() {
@@ -249,7 +250,7 @@ var _ = Describe("UpdateRelease", func() {
 			var expectedError error
 
 			BeforeEach(func() {
-				releaseDownloader.DownloadReleaseReturns(expectedDownloadedRelease, nil)
+				releaseDownloader.DownloadReleaseReturns(expectedDownloadedRelease, releaseSourceName, remotePath, nil)
 				expectedError = errors.New("no can do")
 				checksummer = func(string, billy.Filesystem) (string, error) {
 					return "", expectedError
@@ -312,7 +313,7 @@ var _ = Describe("UpdateRelease", func() {
 					},
 				}
 
-				releaseDownloader.DownloadReleaseReturns(expectedDownloadedRelease, nil)
+				releaseDownloader.DownloadReleaseReturns(expectedDownloadedRelease, releaseSourceName, remotePath, nil)
 				checksummer = func(string, billy.Filesystem) (string, error) { return "some-sha", nil }
 			})
 
@@ -340,7 +341,7 @@ var _ = Describe("UpdateRelease", func() {
 					CreateFunc: func(path string) (billy.File, error) { return badFile, nil },
 				}
 
-				releaseDownloader.DownloadReleaseReturns(expectedDownloadedRelease, nil)
+				releaseDownloader.DownloadReleaseReturns(expectedDownloadedRelease, releaseSourceName, remotePath, nil)
 				checksummer = func(string, billy.Filesystem) (string, error) { return "some-sha", nil }
 			})
 

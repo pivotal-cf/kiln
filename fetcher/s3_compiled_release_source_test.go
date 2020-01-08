@@ -299,21 +299,12 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 			Expect(localReleases).To(HaveLen(2))
 			Expect(localReleases).To(HaveKeyWithValue(
 				uaaReleaseID,
-				release.NewCompiledRelease(
-					uaaReleaseID,
-					expectedStemcellOS,
-					expectedStemcellVersion,
-				).WithLocalPath(uaaReleasePath).WithRemote(bucket, uaaRemotePath),
+				release.LocalRelease{ReleaseID: uaaReleaseID, LocalPath: uaaReleasePath},
 			))
 			Expect(localReleases).To(HaveKeyWithValue(
 				bpmReleaseID,
-				release.NewCompiledRelease(
-					bpmReleaseID,
-					expectedStemcellOS,
-					expectedStemcellVersion,
-				).WithLocalPath(bpmReleasePath).WithRemote(bucket, bpmRemotePath),
+				release.LocalRelease{ReleaseID: bpmReleaseID, LocalPath: bpmReleasePath},
 			))
-
 		})
 
 		Context("when the matchedS3Objects argument is empty", func() {
