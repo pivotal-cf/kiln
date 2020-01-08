@@ -87,7 +87,7 @@ func (uploadRelease UploadRelease) Execute(args []string) error {
 	}
 
 	if !re.MatchString(uploadRelease.Options.RemotePath) {
-		return fmt.Errorf("remote-path does not match regular expression in kilnfile for %q", rc.Bucket)
+		return fmt.Errorf("remote-path does not match regular expression in Kilnfile for %q", rc.Bucket)
 	}
 
 	uploader, err := uploadRelease.UploaderConfig(rc)
