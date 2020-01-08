@@ -133,6 +133,7 @@ func main() {
 		FS:             osfs.New(""),
 		KilnfileLoader: cargo.KilnfileLoader{},
 		UploaderConfig: uploaderConfig,
+		Logger:         log.New(os.Stdout, "", 0),
 	}
 
 	err = commandSet.Execute(command, args)
@@ -154,7 +155,7 @@ func newReleaseDownloaderFactory() releaseDownloaderFactory {
 }
 
 // uploaderConfig will panic if config is not correct
-func uploaderConfig(config *cargo.ReleaseSourceConfig) (commands.S3Uploader, error) {
+func uploaderConfig(config *cargo.ReleaseSourceConfig) commands.S3Uploader {
 	return s3manager.NewUploader(session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(config.Region),
 		Credentials: credentials.NewStaticCredentials(
@@ -162,5 +163,5 @@ func uploaderConfig(config *cargo.ReleaseSourceConfig) (commands.S3Uploader, err
 			config.SecretAccessKey,
 			"",
 		),
-	}))), nil
+	})))
 }

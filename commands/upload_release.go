@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"log"
 	"regexp"
 
 	"github.com/pivotal-cf/kiln/fetcher"
@@ -23,7 +24,8 @@ type S3Uploader interface {
 type UploadRelease struct {
 	FS             billy.Filesystem
 	KilnfileLoader KilnfileLoader
-	UploaderConfig func(*cargo.ReleaseSourceConfig) (S3Uploader, error)
+	UploaderConfig func(*cargo.ReleaseSourceConfig) S3Uploader
+	Logger         *log.Logger
 
 	Options struct {
 		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
@@ -90,10 +92,7 @@ func (uploadRelease UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("remote-path does not match regular expression in Kilnfile for %q", rc.Bucket)
 	}
 
-	uploader, err := uploadRelease.UploaderConfig(rc)
-	if err != nil {
-		return fmt.Errorf("could not configure s3 uploader client: %w", err)
-	}
+	uploader := uploadRelease.UploaderConfig(rc)
 
 	if _, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(rc.Bucket),
@@ -102,6 +101,8 @@ func (uploadRelease UploadRelease) Execute(args []string) error {
 	}); err != nil {
 		return fmt.Errorf("upload failed: %w", err)
 	}
+
+	uploadRelease.Logger.Println("upload succeeded")
 
 	return nil
 }

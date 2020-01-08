@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"io/ioutil"
+	"log"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -53,9 +54,10 @@ var _ = Describe("UploadRelease", func() {
 			uploadRelease = commands.UploadRelease{
 				FS:             fs,
 				KilnfileLoader: loader,
-				UploaderConfig: func(rsc *cargo.ReleaseSourceConfig) (commands.S3Uploader, error) {
+				Logger:         log.New(GinkgoWriter, "", 0),
+				UploaderConfig: func(rsc *cargo.ReleaseSourceConfig) commands.S3Uploader {
 					Fail("this function should be overridden in tests that use it")
-					return nil, nil
+					return nil
 				},
 			}
 		})
@@ -78,10 +80,10 @@ var _ = Describe("UploadRelease", func() {
 
 				var relSrcConfig *cargo.ReleaseSourceConfig
 
-				uploadRelease.UploaderConfig = func(rsc *cargo.ReleaseSourceConfig) (commands.S3Uploader, error) {
+				uploadRelease.UploaderConfig = func(rsc *cargo.ReleaseSourceConfig) commands.S3Uploader {
 					configUploaderCallCount++
 					relSrcConfig = rsc
-					return uploader, nil
+					return uploader
 				}
 
 				err := uploadRelease.Execute([]string{
@@ -126,8 +128,8 @@ var _ = Describe("UploadRelease", func() {
 				_, _ = f.Write([]byte("banana"))
 				f.Close()
 
-				uploadRelease.UploaderConfig = func(rsc *cargo.ReleaseSourceConfig) (commands.S3Uploader, error) {
-					return uploader, nil
+				uploadRelease.UploaderConfig = func(rsc *cargo.ReleaseSourceConfig) commands.S3Uploader {
+					return uploader
 				}
 
 				Expect(err).NotTo(HaveOccurred())
@@ -158,8 +160,8 @@ var _ = Describe("UploadRelease", func() {
 				_, _ = f.Write([]byte("banana"))
 				f.Close()
 
-				uploadRelease.UploaderConfig = func(rsc *cargo.ReleaseSourceConfig) (commands.S3Uploader, error) {
-					return uploader, nil
+				uploadRelease.UploaderConfig = func(rsc *cargo.ReleaseSourceConfig) commands.S3Uploader {
+					return uploader
 				}
 
 				Expect(err).NotTo(HaveOccurred())
