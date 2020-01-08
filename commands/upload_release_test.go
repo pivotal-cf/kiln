@@ -88,7 +88,7 @@ var _ = Describe("UploadRelease", func() {
 					"--kilnfile", "not-read-see-struct/Kilnfile",
 					"--local-path", "banana-release.tgz",
 					"--remote-path", "banana-release-1.2.3.tgz",
-					"--remote", "orange-bucket",
+					"--release-source", "orange-bucket",
 					"--variables-file", "my-secrets",
 				})
 
@@ -138,7 +138,7 @@ var _ = Describe("UploadRelease", func() {
 					"--kilnfile", "not-read-see-struct/Kilnfile",
 					"--local-path", "banana-release.tgz",
 					"--remote-path", "banana-release-1.2.3.tgz",
-					"--remote", "orange-bucket",
+					"--release-source", "orange-bucket",
 					"--variables-file", "my-secrets",
 				})
 
@@ -170,7 +170,7 @@ var _ = Describe("UploadRelease", func() {
 					"--kilnfile", "not-read-see-struct/Kilnfile",
 					"--local-path", "banana-release.tgz",
 					"--remote-path", "BLA_BLA_BLA.tgz",
-					"--remote", "orange-bucket",
+					"--release-source", "orange-bucket",
 					"--variables-file", "my-secrets",
 				})
 
@@ -195,7 +195,7 @@ var _ = Describe("UploadRelease", func() {
 						"--kilnfile", "not-read-see-struct/Kilnfile",
 						"--local-path", "banana-release.tgz",
 						"--remote-path", "banana-release-1.2.3.tgz",
-						"--remote", "orange-bucket",
+						"--release-source", "orange-bucket",
 						"--variables-file", "my-secrets",
 					})
 
@@ -221,7 +221,7 @@ var _ = Describe("UploadRelease", func() {
 						"--kilnfile", "not-read-see-struct/Kilnfile",
 						"--local-path", "banana-release.tgz",
 						"--remote-path", "banana-release-1.2.3.tgz",
-						"--remote", "dog-bucket",
+						"--release-source", "dog-bucket",
 						"--variables-file", "my-secrets",
 					})
 

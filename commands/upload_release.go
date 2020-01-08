@@ -30,9 +30,9 @@ type UploadRelease struct {
 		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
 		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
 
-		Remote     string `short:"r" long:"remote" required:"true" description:"name of remote source"`
-		LocalPath  string `short:"lp" long:"local-path" required:"true" description:"path to BOSH release tarball"`
-		RemotePath string `short:"rp" long:"remote-path" required:"true" description:"path at the remote source"`
+		ReleaseSource string `short:"rs" long:"release-source" required:"true" description:"name of the release source specified in the Kilnfile"`
+		LocalPath     string `short:"lp" long:"local-path" required:"true" description:"path to BOSH release tarball"`
+		RemotePath    string `short:"rp" long:"remote-path" required:"true" description:"path at the remote source"`
 	}
 }
 
@@ -66,7 +66,7 @@ func (uploadRelease UploadRelease) Execute(args []string) error {
 	for index, rel := range kilnfile.ReleaseSources {
 		if rel.Type == fetcher.ReleaseSourceTypeS3 {
 			validSourcesForErrOutput = append(validSourcesForErrOutput, rel.Bucket)
-			if rel.Bucket == uploadRelease.Options.Remote {
+			if rel.Bucket == uploadRelease.Options.ReleaseSource {
 				rc = &kilnfile.ReleaseSources[index]
 				break
 			}
