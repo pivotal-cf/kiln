@@ -23,7 +23,7 @@ import (
 
 var _ = Describe("BOSHIOReleaseSource", func() {
 	const (
-		ID = BOSHIOReleaseSourceID
+		ID = ReleaseSourceTypeBOSHIO
 	)
 
 	Describe("GetMatchedReleases from bosh.io", func() {

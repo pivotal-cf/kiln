@@ -23,6 +23,7 @@ Commands:
   publish          publish tile on Pivnet
   update-release   bumps a release to a new version
   update-stemcell  updates stemcell_criteria
+  upload-release   uploads a BOSH release to an s3 release_source
   version          prints the kiln release version
 `
 

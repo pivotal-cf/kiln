@@ -47,10 +47,6 @@ var suffixes = []string{
 	"",
 }
 
-const (
-	BOSHIOReleaseSourceID = "bosh.io"
-)
-
 type BOSHIOReleaseSource struct {
 	serverURI string
 	logger    *log.Logger
@@ -68,7 +64,7 @@ func NewBOSHIOReleaseSource(logger *log.Logger, customServerURI string) *BOSHIOR
 }
 
 func (_ BOSHIOReleaseSource) ID() string {
-	return BOSHIOReleaseSourceID
+	return ReleaseSourceTypeBOSHIO
 }
 
 func (r *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
@@ -91,7 +87,7 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.Releas
 					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, rel.Version)
 					builtRelease := release.NewBuiltRelease(
 						release.ReleaseID{Name: rel.Name, Version: rel.Version},
-					).WithRemote(BOSHIOReleaseSourceID, downloadURL)
+					).WithRemote(ReleaseSourceTypeBOSHIO, downloadURL)
 					matches = append(matches, builtRelease)
 					break found
 				}
