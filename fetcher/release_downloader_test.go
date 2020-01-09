@@ -17,7 +17,7 @@ var _ = Describe("DownloadRelease", func() {
 	const (
 		releaseName    = "evangelion"
 		releaseVersion = "3.33"
-		remotePath = "something-remote.tgz"
+		remotePath     = "something-remote.tgz"
 	)
 	var (
 		releaseDownloader                            commands.ReleaseDownloader

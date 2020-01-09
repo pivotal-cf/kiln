@@ -21,7 +21,7 @@ func (rrs ReleaseRequirementSet) Partition(other []SatisfyingLocalRelease) (inte
 
 	for _, rel := range other {
 		req, ok := rrs[rel.ReleaseID]
-		if ok  && rel.Satisfies(req) {
+		if ok && rel.Satisfies(req) {
 			intersection = append(intersection, rel.LocalRelease)
 			delete(missing, rel.ReleaseID)
 		} else {
@@ -30,16 +30,6 @@ func (rrs ReleaseRequirementSet) Partition(other []SatisfyingLocalRelease) (inte
 	}
 
 	return intersection, missing, extra
-}
-
-func (rrs ReleaseRequirementSet) WithoutLocalReleases(toRemove []LocalRelease) ReleaseRequirementSet {
-	result := rrs.copy()
-
-	for _, rel := range toRemove {
-		delete(result, rel.ReleaseID)
-	}
-
-	return result
 }
 
 func (rrs ReleaseRequirementSet) copy() ReleaseRequirementSet {

@@ -18,7 +18,7 @@ func (r SatisfyingLocalRelease) Satisfies(rr ReleaseRequirement) bool {
 		r.ExtraConstraint.Satisfies(rr)
 }
 
-type noConstraint struct {}
+type noConstraint struct{}
 
 func (noConstraint) Satisfies(ReleaseRequirement) bool {
 	return true

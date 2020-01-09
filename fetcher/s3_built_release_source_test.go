@@ -199,7 +199,7 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(release.RemoteRelease{
-				ReleaseID: release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+				ReleaseID:  release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
 				RemotePath: bpmKey,
 			}))
 		})
@@ -244,7 +244,7 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 				Expect(matchedS3Objects).To(HaveLen(1))
 				Expect(matchedS3Objects).To(ConsistOf(
 					release.RemoteRelease{
-						ReleaseID: release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+						ReleaseID:  release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
 						RemotePath: bpmKey,
 					},
 				))

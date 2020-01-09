@@ -28,9 +28,9 @@ func (r S3CompiledReleaseSource) ID() string {
 
 type compiledRelease struct {
 	release.ReleaseID
-	stemcellOS string
+	stemcellOS      string
 	stemcellVersion string
-	remotePath string
+	remotePath      string
 }
 
 func (cr compiledRelease) satisfies(rr release.ReleaseRequirement) bool {
@@ -42,7 +42,7 @@ func (cr compiledRelease) satisfies(rr release.ReleaseRequirement) bool {
 
 func (cr compiledRelease) asRemoteRelease() release.RemoteRelease {
 	return release.RemoteRelease{
-		ReleaseID: cr.ReleaseID,
+		ReleaseID:  cr.ReleaseID,
 		RemotePath: cr.remotePath,
 	}
 }

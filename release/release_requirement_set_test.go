@@ -97,21 +97,4 @@ var _ = Describe("ReleaseRequirementSet", func() {
 			Expect(releaseSet).To(ConsistOf(satisfyingRelease, unsatisfyingRelease, extraRelease))
 		})
 	})
-
-	Describe("WithoutLocalReleases", func() {
-		It("returns a set without those releases", func() {
-			release2Requirement := rrs[release2ID]
-			result := rrs.WithoutLocalReleases([]LocalRelease{{ReleaseID: release1ID}})
-
-			Expect(result).To(HaveLen(1))
-			Expect(result).NotTo(HaveKey(release1ID))
-			Expect(result).To(HaveKeyWithValue(release2ID, release2Requirement))
-		})
-
-		It("does not modify the original", func() {
-			_ = rrs.WithoutLocalReleases([]LocalRelease{{ReleaseID: release1ID}})
-			Expect(rrs).To(HaveLen(2))
-			Expect(rrs).To(HaveKey(release1ID))
-		})
-	})
 })
