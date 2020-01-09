@@ -22,17 +22,17 @@ type LocalReleaseDirectory struct {
 	deleteExtraReleasesReturnsOnCall map[int]struct {
 		result1 error
 	}
-	GetLocalReleasesStub        func(string) (release.SatisfiableLocalReleaseSet, error)
+	GetLocalReleasesStub        func(string) ([]release.SatisfyingLocalRelease, error)
 	getLocalReleasesMutex       sync.RWMutex
 	getLocalReleasesArgsForCall []struct {
 		arg1 string
 	}
 	getLocalReleasesReturns struct {
-		result1 release.SatisfiableLocalReleaseSet
+		result1 []release.SatisfyingLocalRelease
 		result2 error
 	}
 	getLocalReleasesReturnsOnCall map[int]struct {
-		result1 release.SatisfiableLocalReleaseSet
+		result1 []release.SatisfyingLocalRelease
 		result2 error
 	}
 	VerifyChecksumsStub        func(release.LocalReleaseSet, cargo.KilnfileLock) error
@@ -112,7 +112,7 @@ func (fake *LocalReleaseDirectory) DeleteExtraReleasesReturnsOnCall(i int, resul
 	}{result1}
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleases(arg1 string) (release.SatisfiableLocalReleaseSet, error) {
+func (fake *LocalReleaseDirectory) GetLocalReleases(arg1 string) ([]release.SatisfyingLocalRelease, error) {
 	fake.getLocalReleasesMutex.Lock()
 	ret, specificReturn := fake.getLocalReleasesReturnsOnCall[len(fake.getLocalReleasesArgsForCall)]
 	fake.getLocalReleasesArgsForCall = append(fake.getLocalReleasesArgsForCall, struct {
@@ -136,7 +136,7 @@ func (fake *LocalReleaseDirectory) GetLocalReleasesCallCount() int {
 	return len(fake.getLocalReleasesArgsForCall)
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleasesCalls(stub func(string) (release.SatisfiableLocalReleaseSet, error)) {
+func (fake *LocalReleaseDirectory) GetLocalReleasesCalls(stub func(string) ([]release.SatisfyingLocalRelease, error)) {
 	fake.getLocalReleasesMutex.Lock()
 	defer fake.getLocalReleasesMutex.Unlock()
 	fake.GetLocalReleasesStub = stub
@@ -149,28 +149,28 @@ func (fake *LocalReleaseDirectory) GetLocalReleasesArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleasesReturns(result1 release.SatisfiableLocalReleaseSet, result2 error) {
+func (fake *LocalReleaseDirectory) GetLocalReleasesReturns(result1 []release.SatisfyingLocalRelease, result2 error) {
 	fake.getLocalReleasesMutex.Lock()
 	defer fake.getLocalReleasesMutex.Unlock()
 	fake.GetLocalReleasesStub = nil
 	fake.getLocalReleasesReturns = struct {
-		result1 release.SatisfiableLocalReleaseSet
+		result1 []release.SatisfyingLocalRelease
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleasesReturnsOnCall(i int, result1 release.SatisfiableLocalReleaseSet, result2 error) {
+func (fake *LocalReleaseDirectory) GetLocalReleasesReturnsOnCall(i int, result1 []release.SatisfyingLocalRelease, result2 error) {
 	fake.getLocalReleasesMutex.Lock()
 	defer fake.getLocalReleasesMutex.Unlock()
 	fake.GetLocalReleasesStub = nil
 	if fake.getLocalReleasesReturnsOnCall == nil {
 		fake.getLocalReleasesReturnsOnCall = make(map[int]struct {
-			result1 release.SatisfiableLocalReleaseSet
+			result1 []release.SatisfyingLocalRelease
 			result2 error
 		})
 	}
 	fake.getLocalReleasesReturnsOnCall[i] = struct {
-		result1 release.SatisfiableLocalReleaseSet
+		result1 []release.SatisfyingLocalRelease
 		result2 error
 	}{result1, result2}
 }

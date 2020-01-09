@@ -57,11 +57,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				releases, err := localReleaseDirectory.GetLocalReleases(releasesDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(releases).To(HaveLen(1))
-				Expect(releases).To(HaveKeyWithValue(
-					release.ReleaseID{
-						Name:    "some-release",
-						Version: "1.2.3",
-					},
+				Expect(releases).To(ConsistOf(
 					release.NewCompiledRelease(
 						release.ReleaseID{Name: "some-release", Version: "1.2.3"},
 						"some-os",

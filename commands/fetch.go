@@ -59,7 +59,7 @@ func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, l
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
-	GetLocalReleases(releasesDir string) (release.SatisfiableLocalReleaseSet, error)
+	GetLocalReleases(releasesDir string) ([]release.SatisfyingLocalRelease, error)
 	DeleteExtraReleases(extraReleases release.LocalReleaseSet, noConfirm bool) error
 	VerifyChecksums(downloadedReleases release.LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error
 }
@@ -94,7 +94,7 @@ func (f Fetch) Execute(args []string) error {
 	return f.localReleaseDirectory.VerifyChecksums(satisfiedReleaseSet, kilnfileLock)
 }
 
-func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, release.SatisfiableLocalReleaseSet, error) {
+func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []release.SatisfyingLocalRelease, error) {
 	args, err := jhanda.Parse(&f.Options, args)
 
 	if err != nil {

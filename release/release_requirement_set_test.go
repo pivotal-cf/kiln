@@ -49,9 +49,9 @@ var _ = Describe("ReleaseRequirementSet", func() {
 
 	Describe("Partition", func() {
 		var (
-			releaseSet                                           SatisfiableLocalReleaseSet
+			releaseSet                                           []SatisfyingLocalRelease
 			extraReleaseID                                       ReleaseID
-			satisfyingRelease, unsatisfyingRelease, extraRelease SatisfiableLocalRelease
+			satisfyingRelease, unsatisfyingRelease, extraRelease SatisfyingLocalRelease
 		)
 
 		BeforeEach(func() {
@@ -61,11 +61,7 @@ var _ = Describe("ReleaseRequirementSet", func() {
 			extraReleaseID = ReleaseID{Name: "extra", Version: "2.3.5"}
 			extraRelease = NewBuiltRelease(extraReleaseID, "so-extra")
 
-			releaseSet = SatisfiableLocalReleaseSet{
-				release1ID:     satisfyingRelease,
-				release2ID:     unsatisfyingRelease,
-				extraReleaseID: extraRelease,
-			}
+			releaseSet = []SatisfyingLocalRelease{satisfyingRelease, unsatisfyingRelease, extraRelease}
 		})
 
 		It("returns the intersecting, missing, and extra releases", func() {
@@ -81,15 +77,13 @@ var _ = Describe("ReleaseRequirementSet", func() {
 			Expect(missing).To(HaveKeyWithValue(release2ID, rrs[release2ID]))
 
 			Expect(extra).To(HaveLen(2))
-			Expect(extra).To(HaveKeyWithValue(
-				release2ID,
+			Expect(extra).To(ContainElement(
 				LocalRelease{
 					ReleaseID: ReleaseID{Name: release2Name, Version: "4.0.4"},
 					LocalPath: unsatisfyingRelease.LocalPath,
 				},
 			))
-			Expect(extra).To(HaveKeyWithValue(
-				extraReleaseID,
+			Expect(extra).To(ContainElement(
 				LocalRelease{ReleaseID: extraReleaseID, LocalPath: extraRelease.LocalPath},
 			))
 		})
@@ -103,10 +97,7 @@ var _ = Describe("ReleaseRequirementSet", func() {
 
 		It("does not modify the given release set", func() {
 			rrs.Partition(releaseSet)
-			Expect(releaseSet).To(HaveLen(3))
-			Expect(releaseSet).To(HaveKey(release1ID))
-			Expect(releaseSet).To(HaveKey(release2ID))
-			Expect(releaseSet).To(HaveKey(extraReleaseID))
+			Expect(releaseSet).To(ConsistOf(satisfyingRelease, unsatisfyingRelease, extraRelease))
 		})
 	})
 
