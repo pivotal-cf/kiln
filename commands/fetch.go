@@ -60,8 +60,8 @@ func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, l
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
 	GetLocalReleases(releasesDir string) ([]release.SatisfyingLocalRelease, error)
-	DeleteExtraReleases(extraReleases release.LocalReleaseSet, noConfirm bool) error
-	VerifyChecksums(downloadedReleases release.LocalReleaseSet, kilnfileLock cargo.KilnfileLock) error
+	DeleteExtraReleases(extraReleases []release.LocalRelease, noConfirm bool) error
+	VerifyChecksums(downloadedReleases []release.LocalRelease, kilnfileLock cargo.KilnfileLock) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -123,7 +123,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []rele
 	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
 }
 
-func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet release.LocalReleaseSet, unsatisfiedReleaseSet release.ReleaseRequirementSet, stemcell cargo.Stemcell) (satisfied release.LocalReleaseSet, unsatisfied release.ReleaseRequirementSet, err error) {
+func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet []release.LocalRelease, unsatisfiedReleaseSet release.ReleaseRequirementSet, stemcell cargo.Stemcell) (satisfied []release.LocalRelease, unsatisfied release.ReleaseRequirementSet, err error) {
 	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile, f.Options.AllowOnlyPublishableReleases)
 	for _, releaseSource := range releaseSources {
 		if len(unsatisfiedReleaseSet) == 0 {
@@ -141,8 +141,8 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedRelease
 			return nil, nil, err
 		}
 
-		satisfiedReleaseSet = satisfiedReleaseSet.With(localReleases)
-		unsatisfiedReleaseSet = unsatisfiedReleaseSet.WithoutReleases(localReleases.ReleaseIDs())
+		satisfiedReleaseSet = append(satisfiedReleaseSet, localReleases...)
+		unsatisfiedReleaseSet = unsatisfiedReleaseSet.WithoutLocalReleases(localReleases)
 	}
 
 	return satisfiedReleaseSet, unsatisfiedReleaseSet, nil

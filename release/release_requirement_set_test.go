@@ -68,8 +68,7 @@ var _ = Describe("ReleaseRequirementSet", func() {
 			intersection, missing, extra := rrs.Partition(releaseSet)
 
 			Expect(intersection).To(HaveLen(1))
-			Expect(intersection).To(HaveKeyWithValue(
-				release1ID,
+			Expect(intersection).To(ConsistOf(
 				LocalRelease{ReleaseID: release1ID, LocalPath: satisfyingRelease.LocalPath},
 			))
 
@@ -77,13 +76,11 @@ var _ = Describe("ReleaseRequirementSet", func() {
 			Expect(missing).To(HaveKeyWithValue(release2ID, rrs[release2ID]))
 
 			Expect(extra).To(HaveLen(2))
-			Expect(extra).To(ContainElement(
+			Expect(extra).To(ConsistOf(
 				LocalRelease{
 					ReleaseID: ReleaseID{Name: release2Name, Version: "4.0.4"},
 					LocalPath: unsatisfyingRelease.LocalPath,
 				},
-			))
-			Expect(extra).To(ContainElement(
 				LocalRelease{ReleaseID: extraReleaseID, LocalPath: extraRelease.LocalPath},
 			))
 		})
@@ -101,10 +98,10 @@ var _ = Describe("ReleaseRequirementSet", func() {
 		})
 	})
 
-	Describe("WithoutReleases", func() {
+	Describe("WithoutLocalReleases", func() {
 		It("returns a set without those releases", func() {
 			release2Requirement := rrs[release2ID]
-			result := rrs.WithoutReleases([]ReleaseID{release1ID})
+			result := rrs.WithoutLocalReleases([]LocalRelease{{ReleaseID: release1ID}})
 
 			Expect(result).To(HaveLen(1))
 			Expect(result).NotTo(HaveKey(release1ID))
@@ -112,7 +109,7 @@ var _ = Describe("ReleaseRequirementSet", func() {
 		})
 
 		It("does not modify the original", func() {
-			_ = rrs.WithoutReleases([]ReleaseID{release1ID})
+			_ = rrs.WithoutLocalReleases([]LocalRelease{{ReleaseID: release1ID}})
 			Expect(rrs).To(HaveLen(2))
 			Expect(rrs).To(HaveKey(release1ID))
 		})

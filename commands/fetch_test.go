@@ -121,8 +121,8 @@ stemcell_criteria:
 					{ReleaseID: releaseID, RemotePath: "not-used"},
 				}, nil)
 				fakeS3CompiledReleaseSource.DownloadReleasesReturns(
-					release.LocalReleaseSet{
-						releaseID: release.LocalRelease{
+					[]release.LocalRelease{
+						{
 							ReleaseID: releaseID,
 							LocalPath: fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, expectedStemcellOS, expectedStemcellVersion),
 						},
@@ -214,27 +214,21 @@ stemcell_criteria:
 					[]release.RemoteRelease{{ReleaseID: s3CompiledReleaseID, RemotePath: "some-s3-key"},},
 					nil)
 				fakeS3CompiledReleaseSource.DownloadReleasesReturns(
-					release.LocalReleaseSet{
-						s3CompiledReleaseID: release.LocalRelease{ReleaseID: s3CompiledReleaseID, LocalPath: "local-path"},
-					},
+					[]release.LocalRelease{{ReleaseID: s3CompiledReleaseID, LocalPath: "local-path"}},
 					nil)
 
 				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns(
 					[]release.RemoteRelease{{ReleaseID: s3BuiltReleaseID, RemotePath: "some-other-s3-key"}},
 					nil)
 				fakeS3BuiltReleaseSource.DownloadReleasesReturns(
-					release.LocalReleaseSet{
-						s3BuiltReleaseID: release.LocalRelease{ReleaseID: s3BuiltReleaseID, LocalPath: "local-path2"},
-					},
+					[]release.LocalRelease{{ReleaseID: s3BuiltReleaseID, LocalPath: "local-path2"}},
 					nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
 					[]release.RemoteRelease{{ReleaseID: boshIOReleaseID, RemotePath: "some-bosh-io-url"}},
 					nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(
-					release.LocalReleaseSet{
-						boshIOReleaseID: release.LocalRelease{ReleaseID: boshIOReleaseID, LocalPath: "local-path3"},
-					},
+					[]release.LocalRelease{{ReleaseID: boshIOReleaseID, LocalPath: "local-path3"}},
 					nil)
 
 				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.SatisfyingLocalRelease{}, nil)
@@ -385,18 +379,18 @@ stemcell_criteria:
 				}, nil)
 
 				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{missingReleaseS3Compiled}, nil)
-				fakeS3CompiledReleaseSource.DownloadReleasesReturns(release.LocalReleaseSet{
-					missingReleaseS3CompiledID: release.LocalRelease{ReleaseID: missingReleaseS3CompiledID, LocalPath: "local-path-1"},
+				fakeS3CompiledReleaseSource.DownloadReleasesReturns([]release.LocalRelease{
+					{ReleaseID: missingReleaseS3CompiledID, LocalPath: "local-path-1"},
 				}, nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{missingReleaseBoshIO}, nil)
-				fakeBoshIOReleaseSource.DownloadReleasesReturns(release.LocalReleaseSet{
-					missingReleaseBoshIOID: release.LocalRelease{ReleaseID: missingReleaseBoshIOID, LocalPath: "local-path-2"},
+				fakeBoshIOReleaseSource.DownloadReleasesReturns([]release.LocalRelease{
+					{ReleaseID: missingReleaseBoshIOID, LocalPath: "local-path-2"},
 				}, nil)
 
 				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{missingReleaseS3Built}, nil)
-				fakeS3BuiltReleaseSource.DownloadReleasesReturns(release.LocalReleaseSet{
-					missingReleaseS3BuiltID: release.LocalRelease{ReleaseID: missingReleaseS3BuiltID, LocalPath: "local-path-3"},
+				fakeS3BuiltReleaseSource.DownloadReleasesReturns([]release.LocalRelease{
+					{ReleaseID: missingReleaseS3BuiltID, LocalPath: "local-path-3"},
 				}, nil)
 			})
 
@@ -456,7 +450,7 @@ stemcell_criteria:
 					[]release.RemoteRelease{{ReleaseID: boshIOReleaseID, RemotePath: "some-bosh-io-url"}},
 					nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(
-					release.LocalReleaseSet{boshIOReleaseID: release.LocalRelease{ReleaseID: boshIOReleaseID, LocalPath: "local-path"}},
+					[]release.LocalRelease{{ReleaseID: boshIOReleaseID, LocalPath: "local-path"}},
 					nil)
 
 			})

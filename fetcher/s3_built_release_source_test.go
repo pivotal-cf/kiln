@@ -87,12 +87,8 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 			verifySetsConcurrency(opts, 7)
 
 			Expect(localReleases).To(HaveLen(2))
-			Expect(localReleases).To(HaveKeyWithValue(
-				uaaReleaseID,
+			Expect(localReleases).To(ConsistOf(
 				release.LocalRelease{ReleaseID: uaaReleaseID, LocalPath: uaaReleasePath},
-			))
-			Expect(localReleases).To(HaveKeyWithValue(
-				bpmReleaseID,
 				release.LocalRelease{ReleaseID: bpmReleaseID, LocalPath: bpmReleasePath},
 			))
 		})

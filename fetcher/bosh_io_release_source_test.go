@@ -278,12 +278,8 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			Expect(release2DiskContents).To(BeEquivalentTo(release2ServerFileContents))
 
 			Expect(localReleases).To(HaveLen(2))
-			Expect(localReleases).To(HaveKeyWithValue(
-				release1ID,
+			Expect(localReleases).To(ConsistOf(
 				release.LocalRelease{ReleaseID: release1ID, LocalPath: fullRelease1Path},
-			))
-			Expect(localReleases).To(HaveKeyWithValue(
-				release2ID,
 				release.LocalRelease{ReleaseID: release2ID, LocalPath: fullRelease2Path},
 			))
 		})

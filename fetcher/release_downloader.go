@@ -37,7 +37,8 @@ func (rd releaseDownloader) DownloadRelease(releaseDir string, requirement relea
 		if err != nil {
 			return release.LocalRelease{}, "", "", err
 		}
-		return localReleases[releaseID], releaseSource.ID(), remoteReleases[0].RemotePath, nil
+
+		return localReleases[0], releaseSource.ID(), remoteReleases[0].RemotePath, nil
 	}
 
 	return release.LocalRelease{}, "", "", fmt.Errorf("couldn't find %q %s in any release source", requirement.Name, requirement.Version)

@@ -102,8 +102,8 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.Re
 	return matchingReleases, nil
 }
 
-func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) (release.LocalReleaseSet, error) {
-	releases := make(release.LocalReleaseSet)
+func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) ([]release.LocalRelease, error) {
+	var releases []release.LocalRelease
 
 	r.Logger.Printf("downloading %d objects from compiled s3...", len(remoteReleases))
 	setConcurrency := func(dl *s3manager.Downloader) {
@@ -132,10 +132,7 @@ func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteRelea
 			return nil, fmt.Errorf("failed to download file: %w\n", err)
 		}
 
-		releases[rel.ReleaseID] = release.LocalRelease{
-			ReleaseID: rel.ReleaseID,
-			LocalPath: outputFile,
-		}
+		releases = append(releases, release.LocalRelease{ReleaseID: rel.ReleaseID, LocalPath: outputFile})
 	}
 
 	return releases, nil

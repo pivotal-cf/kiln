@@ -56,7 +56,7 @@ var _ = Describe("DownloadRelease", func() {
 	When("the release is available from the primary release source", func() {
 		BeforeEach(func() {
 			primaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{expectedRemoteRelease}, nil)
-			primaryReleaseSource.DownloadReleasesReturns(release.LocalReleaseSet{releaseID: expectedLocalRelease}, nil)
+			primaryReleaseSource.DownloadReleasesReturns([]release.LocalRelease{expectedLocalRelease}, nil)
 		})
 
 		It("downloads the release from that source", func() {
@@ -79,7 +79,7 @@ var _ = Describe("DownloadRelease", func() {
 		BeforeEach(func() {
 			primaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{}, nil)
 			secondaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{expectedRemoteRelease}, nil)
-			secondaryReleaseSource.DownloadReleasesReturns(release.LocalReleaseSet{releaseID: expectedLocalRelease}, nil)
+			secondaryReleaseSource.DownloadReleasesReturns([]release.LocalRelease{expectedLocalRelease}, nil)
 		})
 
 		It("downloads the release from that source", func() {

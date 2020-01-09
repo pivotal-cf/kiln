@@ -16,29 +16,27 @@ func NewReleaseRequirementSet(kilnfileLock cargo.KilnfileLock) ReleaseRequiremen
 	return set
 }
 
-func (rrs ReleaseRequirementSet) Partition(other []SatisfyingLocalRelease) (intersection LocalReleaseSet, missing ReleaseRequirementSet, extra LocalReleaseSet) {
-	intersection = make(LocalReleaseSet)
+func (rrs ReleaseRequirementSet) Partition(other []SatisfyingLocalRelease) (intersection []LocalRelease, missing ReleaseRequirementSet, extra []LocalRelease) {
 	missing = rrs.copy()
-	extra = make(LocalReleaseSet)
 
 	for _, rel := range other {
 		req, ok := rrs[rel.ReleaseID]
 		if ok  && rel.Satisfies(req) {
-			intersection[rel.ReleaseID] = rel.LocalRelease
+			intersection = append(intersection, rel.LocalRelease)
 			delete(missing, rel.ReleaseID)
 		} else {
-			extra[rel.ReleaseID] = rel.LocalRelease
+			extra = append(extra, rel.LocalRelease)
 		}
 	}
 
 	return intersection, missing, extra
 }
 
-func (rrs ReleaseRequirementSet) WithoutReleases(toRemove []ReleaseID) ReleaseRequirementSet {
+func (rrs ReleaseRequirementSet) WithoutLocalReleases(toRemove []LocalRelease) ReleaseRequirementSet {
 	result := rrs.copy()
 
-	for _, rID := range toRemove {
-		delete(result, rID)
+	for _, rel := range toRemove {
+		delete(result, rel.ReleaseID)
 	}
 
 	return result
