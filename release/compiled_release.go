@@ -5,10 +5,9 @@ type stemcellConstraints struct {
 	StemcellVersion string
 }
 
-func NewCompiledRelease(id ReleaseID, stemcellOS, stemcellVersion, localPath string) satisfiableLocalRelease {
-	return satisfiableLocalRelease{
-		releaseID: id,
-		localPath: localPath,
+func NewCompiledRelease(id ReleaseID, stemcellOS, stemcellVersion, localPath string) SatisfiableLocalRelease {
+	return SatisfiableLocalRelease{
+		LocalRelease: LocalRelease{ReleaseID: id, LocalPath: localPath},
 		additionalConstraints: stemcellConstraints{
 			StemcellOS:      stemcellOS,
 			StemcellVersion: stemcellVersion,

@@ -156,7 +156,7 @@ stemcell_criteria:
 					Expect(noConfirm).To(Equal(true))
 					Expect(extras).To(HaveLen(1))
 					Expect(extras).To(ConsistOf(
-						release.LocalRelease{ReleaseID: releaseOnDisk.ReleaseID(), LocalPath: releaseOnDisk.LocalPath()},
+						release.LocalRelease{ReleaseID: releaseOnDisk.ReleaseID, LocalPath: releaseOnDisk.LocalPath},
 					))
 				})
 			})
@@ -185,7 +185,7 @@ stemcell_criteria:
 					Expect(noConfirm).To(Equal(true))
 					Expect(extras).To(HaveLen(1))
 					Expect(extras).To(ConsistOf(
-						release.LocalRelease{ReleaseID: releaseOnDisk.ReleaseID(), LocalPath: releaseOnDisk.LocalPath()},
+						release.LocalRelease{ReleaseID: releaseOnDisk.ReleaseID, LocalPath: releaseOnDisk.LocalPath},
 					))
 				})
 			})

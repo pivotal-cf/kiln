@@ -22,7 +22,7 @@ func (rrs ReleaseRequirementSet) Partition(other SatisfiableLocalReleaseSet) (in
 	extra = make(LocalReleaseSet)
 
 	for rID, rel := range other {
-		extra[rID] = rel.LocalRelease()
+		extra[rID] = rel.LocalRelease
 	}
 
 	for rID, requirement := range rrs {

@@ -74,7 +74,7 @@ var _ = Describe("ReleaseRequirementSet", func() {
 			Expect(intersection).To(HaveLen(1))
 			Expect(intersection).To(HaveKeyWithValue(
 				release1ID,
-				LocalRelease{ReleaseID: release1ID, LocalPath: satisfyingRelease.LocalPath()},
+				LocalRelease{ReleaseID: release1ID, LocalPath: satisfyingRelease.LocalPath},
 			))
 
 			Expect(missing).To(HaveLen(1))
@@ -85,12 +85,12 @@ var _ = Describe("ReleaseRequirementSet", func() {
 				release2ID,
 				LocalRelease{
 					ReleaseID: ReleaseID{Name: release2Name, Version: "4.0.4"},
-					LocalPath: unsatisfyingRelease.LocalPath(),
+					LocalPath: unsatisfyingRelease.LocalPath,
 				},
 			))
 			Expect(extra).To(HaveKeyWithValue(
 				extraReleaseID,
-				LocalRelease{ReleaseID: extraReleaseID, LocalPath: extraRelease.LocalPath()},
+				LocalRelease{ReleaseID: extraReleaseID, LocalPath: extraRelease.LocalPath},
 			))
 		})
 

@@ -1,8 +1,7 @@
 package release
 
-func NewBuiltRelease(id ReleaseID, localPath string) satisfiableLocalRelease {
-	return satisfiableLocalRelease{
-		releaseID: id,
-		localPath: localPath,
+func NewBuiltRelease(id ReleaseID, localPath string) SatisfiableLocalRelease {
+	return SatisfiableLocalRelease{
+		LocalRelease: LocalRelease{ReleaseID: id, LocalPath: localPath},
 	}
 }
