@@ -1,6 +1,6 @@
 package release
 
-type additionalConstraints interface {
+type AdditionalConstraint interface {
 	Satisfies(set ReleaseRequirement) bool
 }
 
@@ -8,18 +8,22 @@ type SatisfiableLocalReleaseSet map[ReleaseID]SatisfiableLocalRelease
 
 type SatisfiableLocalRelease struct {
 	LocalRelease
-	additionalConstraints
+	AdditionalConstraint
 }
 
 func (r SatisfiableLocalRelease) Satisfies(rr ReleaseRequirement) bool {
-	if r.ReleaseID.Name == rr.Name && r.ReleaseID.Version == rr.Version {
-		if r.additionalConstraints == nil {
-			return true
-		} else {
-			return r.additionalConstraints.Satisfies(rr)
-		}
+	if r.AdditionalConstraint == nil {
+		r.AdditionalConstraint = noConstraint{}
 	}
-	return false
+	return r.ReleaseID.Name == rr.Name &&
+		r.ReleaseID.Version == rr.Version &&
+		r.AdditionalConstraint.Satisfies(rr)
+}
+
+type noConstraint struct {}
+
+func (noConstraint) Satisfies(ReleaseRequirement) bool {
+	return true
 }
 
 func NewBuiltRelease(id ReleaseID, localPath string) SatisfiableLocalRelease {
@@ -28,22 +32,22 @@ func NewBuiltRelease(id ReleaseID, localPath string) SatisfiableLocalRelease {
 	}
 }
 
-type stemcellConstraints struct {
-	StemcellOS      string
-	StemcellVersion string
-}
-
 func NewCompiledRelease(id ReleaseID, stemcellOS, stemcellVersion, localPath string) SatisfiableLocalRelease {
 	return SatisfiableLocalRelease{
 		LocalRelease: LocalRelease{ReleaseID: id, LocalPath: localPath},
-		additionalConstraints: stemcellConstraints{
+		AdditionalConstraint: StemcellConstraint{
 			StemcellOS:      stemcellOS,
 			StemcellVersion: stemcellVersion,
 		},
 	}
 }
 
-func (cr stemcellConstraints) Satisfies(rr ReleaseRequirement) bool {
+type StemcellConstraint struct {
+	StemcellOS      string
+	StemcellVersion string
+}
+
+func (cr StemcellConstraint) Satisfies(rr ReleaseRequirement) bool {
 	return cr.StemcellOS == rr.StemcellOS &&
 		cr.StemcellVersion == rr.StemcellVersion
 }
