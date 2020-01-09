@@ -71,8 +71,8 @@ func (r *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
 	return
 }
 
-func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
-	matches := make([]release.RemoteRelease, 0)
+func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.DeprecatedRemoteRelease, error) {
+	matches := make([]release.DeprecatedRemoteRelease, 0)
 
 	for rel := range desiredReleaseSet {
 	found:
@@ -103,8 +103,8 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases 
 
 	r.logger.Printf("downloading %d objects from bosh.io...", len(remoteReleases))
 
-	for _, release := range remoteReleases {
-		downloadURL := release.RemotePath()
+	for _, rel := range remoteReleases {
+		downloadURL := rel.RemotePath
 		r.logger.Printf("downloading %s...\n", downloadURL)
 		// Get the data
 		resp, err := http.Get(downloadURL)
@@ -112,7 +112,7 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases 
 			return nil, err
 		}
 
-		filePath := filepath.Join(releaseDir, release.StandardizedFilename())
+		filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", rel.ReleaseID.Name, rel.ReleaseID.Version))
 
 		out, err := os.Create(filePath)
 		if err != nil {
@@ -127,7 +127,7 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases 
 			return nil, err
 		}
 
-		releases[release.ReleaseID()] = release.AsLocalRelease(filePath)
+		releases[rel.ReleaseID] = release.LocalRelease{ReleaseID: rel.ReleaseID, LocalPath: filePath}
 	}
 
 	return releases, nil

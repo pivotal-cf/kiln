@@ -2,6 +2,7 @@ package fetcher
 
 import (
 	"fmt"
+
 	"github.com/pivotal-cf/kiln/release"
 )
 
@@ -27,7 +28,12 @@ func (rd releaseDownloader) DownloadRelease(releaseDir string, requirement relea
 			continue
 		}
 
-		localReleases, err := releaseSource.DownloadReleases(releaseDir, remoteReleases, 0)
+		rrs := make([]release.RemoteRelease, 0, len(remoteReleases))
+		for _, r := range remoteReleases {
+			rrs = append(rrs, release.RemoteRelease{ReleaseID: r.ReleaseID(), RemotePath: r.RemotePath()})
+		}
+
+		localReleases, err := releaseSource.DownloadReleases(releaseDir, rrs, 0)
 		if err != nil {
 			return release.LocalRelease{}, "", "", err
 		}

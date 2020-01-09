@@ -16,7 +16,7 @@ const (
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedReleases(release.ReleaseRequirementSet) ([]release.RemoteRelease, error)
+	GetMatchedReleases(release.ReleaseRequirementSet) ([]release.DeprecatedRemoteRelease, error)
 	DownloadReleases(releasesDir string, matchedS3Objects []release.RemoteRelease, downloadThreads int) (release.LocalReleaseSet, error)
 	ID() string
 }

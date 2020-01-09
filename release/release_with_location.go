@@ -15,6 +15,7 @@ type ReleaseWithLocation interface {
 	AsLocalRelease(string) LocalRelease
 	WithRemote(remoteSourceID string, remotePath string) ReleaseWithLocation
 	ReleaseSourceID() string
+	AsRemoteRelease() RemoteRelease
 }
 
 type releaseWithLocation struct {
@@ -51,4 +52,8 @@ func (r releaseWithLocation) AsLocalRelease(localPath string) LocalRelease {
 
 func (r releaseWithLocation) ReleaseSourceID() string {
 	return r.remoteSourceID
+}
+
+func (r releaseWithLocation) AsRemoteRelease() RemoteRelease {
+	return RemoteRelease{ReleaseID: r.ReleaseID(), RemotePath: r.RemotePath()}
 }

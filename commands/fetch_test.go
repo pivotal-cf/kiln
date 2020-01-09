@@ -117,7 +117,7 @@ stemcell_criteria:
 			)
 			BeforeEach(func() {
 				releaseID = release.ReleaseID{Name: "some-release", Version: "0.1.0"}
-				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{
+				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]release.DeprecatedRemoteRelease{
 					release.NewCompiledRelease(releaseID, expectedStemcellOS, expectedStemcellVersion),
 				}, nil)
 				fakeS3CompiledReleaseSource.DownloadReleasesReturns(
@@ -212,7 +212,7 @@ stemcell_criteria:
   version: "30.1"
 `
 				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns(
-					[]release.RemoteRelease{
+					[]release.DeprecatedRemoteRelease{
 						release.NewCompiledRelease(s3CompiledReleaseID, "some-os", "30.1").WithRemote(s3CompiledReleaseSourceID, "some-s3-key"),
 					},
 					nil)
@@ -223,7 +223,7 @@ stemcell_criteria:
 					nil)
 
 				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns(
-					[]release.RemoteRelease{release.NewBuiltRelease(s3BuiltReleaseID).WithRemote(s3BuiltReleaseSourceID, "some-other-s3-key")},
+					[]release.DeprecatedRemoteRelease{release.NewBuiltRelease(s3BuiltReleaseID).WithRemote(s3BuiltReleaseSourceID, "some-other-s3-key")},
 					nil)
 				fakeS3BuiltReleaseSource.DownloadReleasesReturns(
 					release.LocalReleaseSet{
@@ -232,7 +232,7 @@ stemcell_criteria:
 					nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
-					[]release.RemoteRelease{release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")},
+					[]release.DeprecatedRemoteRelease{release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")},
 					nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(
 					release.LocalReleaseSet{
@@ -254,7 +254,8 @@ stemcell_criteria:
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(ConsistOf(
-					release.NewCompiledRelease(s3CompiledReleaseID, "some-os", "30.1").WithRemote(s3CompiledReleaseSourceID, "some-s3-key")))
+					release.RemoteRelease{ReleaseID: s3CompiledReleaseID, RemotePath: "some-s3-key"},
+				))
 			})
 
 			It("fetches built release from s3 built release source", func() {
@@ -263,7 +264,8 @@ stemcell_criteria:
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(ConsistOf(
-					release.NewBuiltRelease(s3BuiltReleaseID).WithRemote(s3BuiltReleaseSourceID, "some-other-s3-key")))
+					release.RemoteRelease{ReleaseID: s3BuiltReleaseID, RemotePath: "some-other-s3-key"},
+				))
 			})
 
 			It("fetches bosh.io release from bosh.io release source", func() {
@@ -272,7 +274,8 @@ stemcell_criteria:
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(objects).To(ConsistOf(
-					release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")))
+					release.RemoteRelease{ReleaseID: boshIOReleaseID, RemotePath: "some-bosh-io-url"},
+				))
 			})
 		})
 
@@ -383,17 +386,17 @@ stemcell_criteria:
 					).WithLocalPath("path/to/some/tiny/release"),
 				}, nil)
 
-				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{missingReleaseS3Compiled}, nil)
+				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]release.DeprecatedRemoteRelease{missingReleaseS3Compiled}, nil)
 				fakeS3CompiledReleaseSource.DownloadReleasesReturns(release.LocalReleaseSet{
 					missingReleaseS3CompiledID: release.LocalRelease{ReleaseID: missingReleaseS3CompiledID, LocalPath: "local-path-1"},
 				}, nil)
 
-				fakeBoshIOReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{missingReleaseBoshIO}, nil)
+				fakeBoshIOReleaseSource.GetMatchedReleasesReturns([]release.DeprecatedRemoteRelease{missingReleaseBoshIO}, nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(release.LocalReleaseSet{
 					missingReleaseBoshIOID: release.LocalRelease{ReleaseID: missingReleaseBoshIOID, LocalPath: "local-path-2"},
 				}, nil)
 
-				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{missingReleaseS3Built}, nil)
+				fakeS3BuiltReleaseSource.GetMatchedReleasesReturns([]release.DeprecatedRemoteRelease{missingReleaseS3Built}, nil)
 				fakeS3BuiltReleaseSource.DownloadReleasesReturns(release.LocalReleaseSet{
 					missingReleaseS3BuiltID: release.LocalRelease{ReleaseID: missingReleaseS3BuiltID, LocalPath: "local-path-3"},
 				}, nil)
@@ -405,17 +408,17 @@ stemcell_criteria:
 				Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
 				_, objects, _ := fakeS3CompiledReleaseSource.DownloadReleasesArgsForCall(0)
 				Expect(objects).To(HaveLen(1))
-				Expect(objects).To(ConsistOf(missingReleaseS3Compiled))
+				Expect(objects).To(ConsistOf(missingReleaseS3Compiled.AsRemoteRelease()))
 
 				Expect(fakeBoshIOReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
 				_, objects, _ = fakeBoshIOReleaseSource.DownloadReleasesArgsForCall(0)
 				Expect(objects).To(HaveLen(1))
-				Expect(objects).To(ConsistOf(missingReleaseBoshIO))
+				Expect(objects).To(ConsistOf(missingReleaseBoshIO.AsRemoteRelease()))
 
 				Expect(fakeS3BuiltReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
 				_, objects, _ = fakeS3BuiltReleaseSource.DownloadReleasesArgsForCall(0)
 				Expect(objects).To(HaveLen(1))
-				Expect(objects).To(ConsistOf(missingReleaseS3Built))
+				Expect(objects).To(ConsistOf(missingReleaseS3Built.AsRemoteRelease()))
 			})
 
 			Context("when download fails", func() {
@@ -452,7 +455,7 @@ stemcell_criteria:
 				}, nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(
-					[]release.RemoteRelease{release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")},
+					[]release.DeprecatedRemoteRelease{release.NewBuiltRelease(boshIOReleaseID).WithRemote(boshIOReleaseSourceID, "some-bosh-io-url")},
 					nil)
 				fakeBoshIOReleaseSource.DownloadReleasesReturns(
 					release.LocalReleaseSet{boshIOReleaseID: release.LocalRelease{ReleaseID: boshIOReleaseID, LocalPath: "local-path"}},

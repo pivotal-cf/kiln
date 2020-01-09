@@ -89,7 +89,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				releaseVersion = "1.2.3"
 				releaseSource  *BOSHIOReleaseSource
 
-				foundReleases         []release.RemoteRelease
+				foundReleases         []release.DeprecatedRemoteRelease
 				getMatchedReleasesErr error
 			)
 
@@ -228,13 +228,13 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 			release1ID = release.ReleaseID{Name: "some", Version: "1.2.3"}
 			release1ServerPath = "/some-release"
-			release1 = release.NewBuiltRelease(release1ID).WithRemote(ID, testServer.URL()+release1ServerPath)
+			release1 = release.RemoteRelease{ReleaseID: release1ID, RemotePath: testServer.URL() + release1ServerPath}
 			release1Filename = "some-1.2.3.tgz"
 			release1ServerFileContents = "totes-a-real-release"
 
 			release2ID = release.ReleaseID{Name: "another", Version: "2.3.4"}
 			release2ServerPath = "/releases/another/release/2.3.4"
-			release2 = release.NewBuiltRelease(release2ID).WithRemote(ID, testServer.URL()+release2ServerPath)
+			release2 = release.RemoteRelease{ReleaseID: release2ID, RemotePath: testServer.URL() + release2ServerPath}
 			release2Filename = "another-2.3.4.tgz"
 			release2ServerFileContents = "blah-blah-blah deploy instructions blah blah"
 

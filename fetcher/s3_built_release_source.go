@@ -20,8 +20,8 @@ func (src S3BuiltReleaseSource) ID() string {
 	return src.Bucket
 }
 
-func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
-	matchedS3Objects := make(map[release.ReleaseID]release.RemoteRelease)
+func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.DeprecatedRemoteRelease, error) {
+	matchedS3Objects := make(map[release.ReleaseID]release.DeprecatedRemoteRelease)
 
 	exp, err := regexp.Compile(src.Regex)
 	if err != nil {
@@ -58,7 +58,7 @@ func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.Rel
 		return nil, err
 	}
 
-	matchingReleases := make([]release.RemoteRelease, 0)
+	matchingReleases := make([]release.DeprecatedRemoteRelease, 0)
 	for expectedReleaseID := range desiredReleaseSet {
 		if rel, ok := matchedS3Objects[expectedReleaseID]; ok {
 			matchingReleases = append(matchingReleases, rel)
@@ -80,30 +80,34 @@ func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleas
 		}
 	}
 
-	for _, release := range remoteReleases {
-		outputFile := filepath.Join(releaseDir, release.StandardizedFilename())
+	for _, rel := range remoteReleases {
+		outputFile := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", rel.ReleaseID.Name, rel.ReleaseID.Version))
+
 		file, err := os.Create(outputFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create file %q: %w", outputFile, err)
 		}
 
-		src.Logger.Printf("downloading %s...\n", release.RemotePath())
+		src.Logger.Printf("downloading %s...\n", rel.RemotePath)
+
 		_, err = src.S3Downloader.Download(file, &s3.GetObjectInput{
 			Bucket: aws.String(src.Bucket),
-			Key:    aws.String(release.RemotePath()),
+			Key:    aws.String(rel.RemotePath),
 		}, setConcurrency)
-
 		if err != nil {
 			return nil, fmt.Errorf("failed to download file: %w\n", err)
 		}
-		rID := release.ReleaseID()
-		releases[rID] = release.AsLocalRelease(outputFile)
+
+		releases[rel.ReleaseID] = release.LocalRelease{
+			ReleaseID: rel.ReleaseID,
+			LocalPath: outputFile,
+		}
 	}
 
 	return releases, nil
 }
 
-func createBuiltReleaseFromS3Key(exp *regexp.Regexp, releaseSourceID, s3Key string) (release.RemoteRelease, error) {
+func createBuiltReleaseFromS3Key(exp *regexp.Regexp, releaseSourceID, s3Key string) (release.DeprecatedRemoteRelease, error) {
 	if !exp.MatchString(s3Key) {
 		return nil, fmt.Errorf("s3 key does not match regex")
 	}

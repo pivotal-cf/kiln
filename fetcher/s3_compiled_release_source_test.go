@@ -254,8 +254,8 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 			bpmReleaseID = release.ReleaseID{Name: "bpm", Version: "1.2.3"}
 
 			matchedS3Objects = []release.RemoteRelease{
-				release.NewCompiledRelease(uaaReleaseID, expectedStemcellOS, expectedStemcellVersion).WithRemote(bucket, uaaRemotePath),
-				release.NewCompiledRelease(bpmReleaseID, expectedStemcellOS, expectedStemcellVersion).WithRemote(bucket, bpmRemotePath),
+				{ReleaseID: uaaReleaseID, RemotePath: uaaRemotePath},
+				{ReleaseID: bpmReleaseID, RemotePath: bpmRemotePath},
 			}
 
 			logger = log.New(GinkgoWriter, "", 0)
@@ -281,11 +281,11 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(2))
 
-			bpmReleasePath := filepath.Join(releaseDir, "bpm-1.2.3-ubuntu-trusty-1234.tgz")
+			bpmReleasePath := filepath.Join(releaseDir, "bpm-1.2.3.tgz")
 			bpmContents, err := ioutil.ReadFile(bpmReleasePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bpmContents).To(Equal([]byte("some-bucket/some-bpm-key")))
-			uaaReleasePath := filepath.Join(releaseDir, "uaa-1.2.3-ubuntu-trusty-1234.tgz")
+			uaaReleasePath := filepath.Join(releaseDir, "uaa-1.2.3.tgz")
 			uaaContents, err := ioutil.ReadFile(uaaReleasePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(uaaContents).To(Equal([]byte("some-bucket/some-uaa-key")))

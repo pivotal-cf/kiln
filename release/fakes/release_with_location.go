@@ -19,6 +19,16 @@ type ReleaseWithLocation struct {
 	asLocalReleaseReturnsOnCall map[int]struct {
 		result1 release.LocalRelease
 	}
+	AsRemoteReleaseStub        func() release.RemoteRelease
+	asRemoteReleaseMutex       sync.RWMutex
+	asRemoteReleaseArgsForCall []struct {
+	}
+	asRemoteReleaseReturns struct {
+		result1 release.RemoteRelease
+	}
+	asRemoteReleaseReturnsOnCall map[int]struct {
+		result1 release.RemoteRelease
+	}
 	LocalPathStub        func() string
 	localPathMutex       sync.RWMutex
 	localPathArgsForCall []struct {
@@ -164,6 +174,58 @@ func (fake *ReleaseWithLocation) AsLocalReleaseReturnsOnCall(i int, result1 rele
 	}
 	fake.asLocalReleaseReturnsOnCall[i] = struct {
 		result1 release.LocalRelease
+	}{result1}
+}
+
+func (fake *ReleaseWithLocation) AsRemoteRelease() release.RemoteRelease {
+	fake.asRemoteReleaseMutex.Lock()
+	ret, specificReturn := fake.asRemoteReleaseReturnsOnCall[len(fake.asRemoteReleaseArgsForCall)]
+	fake.asRemoteReleaseArgsForCall = append(fake.asRemoteReleaseArgsForCall, struct {
+	}{})
+	fake.recordInvocation("AsRemoteRelease", []interface{}{})
+	fake.asRemoteReleaseMutex.Unlock()
+	if fake.AsRemoteReleaseStub != nil {
+		return fake.AsRemoteReleaseStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.asRemoteReleaseReturns
+	return fakeReturns.result1
+}
+
+func (fake *ReleaseWithLocation) AsRemoteReleaseCallCount() int {
+	fake.asRemoteReleaseMutex.RLock()
+	defer fake.asRemoteReleaseMutex.RUnlock()
+	return len(fake.asRemoteReleaseArgsForCall)
+}
+
+func (fake *ReleaseWithLocation) AsRemoteReleaseCalls(stub func() release.RemoteRelease) {
+	fake.asRemoteReleaseMutex.Lock()
+	defer fake.asRemoteReleaseMutex.Unlock()
+	fake.AsRemoteReleaseStub = stub
+}
+
+func (fake *ReleaseWithLocation) AsRemoteReleaseReturns(result1 release.RemoteRelease) {
+	fake.asRemoteReleaseMutex.Lock()
+	defer fake.asRemoteReleaseMutex.Unlock()
+	fake.AsRemoteReleaseStub = nil
+	fake.asRemoteReleaseReturns = struct {
+		result1 release.RemoteRelease
+	}{result1}
+}
+
+func (fake *ReleaseWithLocation) AsRemoteReleaseReturnsOnCall(i int, result1 release.RemoteRelease) {
+	fake.asRemoteReleaseMutex.Lock()
+	defer fake.asRemoteReleaseMutex.Unlock()
+	fake.AsRemoteReleaseStub = nil
+	if fake.asRemoteReleaseReturnsOnCall == nil {
+		fake.asRemoteReleaseReturnsOnCall = make(map[int]struct {
+			result1 release.RemoteRelease
+		})
+	}
+	fake.asRemoteReleaseReturnsOnCall[i] = struct {
+		result1 release.RemoteRelease
 	}{result1}
 }
 
@@ -613,6 +675,8 @@ func (fake *ReleaseWithLocation) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.asLocalReleaseMutex.RLock()
 	defer fake.asLocalReleaseMutex.RUnlock()
+	fake.asRemoteReleaseMutex.RLock()
+	defer fake.asRemoteReleaseMutex.RUnlock()
 	fake.localPathMutex.RLock()
 	defer fake.localPathMutex.RUnlock()
 	fake.releaseIDMutex.RLock()

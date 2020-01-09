@@ -23,7 +23,7 @@ import (
 
 var _ = Describe("S3BuiltReleaseSource", func() {
 
-	Describe("S3BuiltReleaseSource DownloadReleases from Built source", func() {
+	Describe("DownloadReleases", func() {
 		const bucket = "some-bucket"
 
 		var (
@@ -44,8 +44,8 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 			uaaReleaseID = release.ReleaseID{Name: "uaa", Version: "1.2.3"}
 			bpmReleaseID = release.ReleaseID{Name: "bpm", Version: "1.2.3"}
 			matchedS3Objects = []release.RemoteRelease{
-				release.NewBuiltRelease(uaaReleaseID).WithRemote(bucket, "some-uaa-key"),
-				release.NewBuiltRelease(bpmReleaseID).WithRemote(bucket, "some-bpm-key"),
+				{ReleaseID: uaaReleaseID, RemotePath: "some-uaa-key"},
+				{ReleaseID: bpmReleaseID, RemotePath: "some-bpm-key"},
 			}
 
 			logger = log.New(GinkgoWriter, "", 0)

@@ -24,7 +24,7 @@ var _ = Describe("builtRelease", func() {
 	)
 
 	Describe("StandardizedFilename", func() {
-		var release RemoteRelease
+		var release DeprecatedRemoteRelease
 
 		BeforeEach(func() {
 			release = NewBuiltRelease(ReleaseID{Name: expectedName, Version: expectedVersion})

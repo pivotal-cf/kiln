@@ -2,10 +2,11 @@ package commands
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/release"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/pivotal-cf/kiln/release"
 
 	"gopkg.in/src-d/go-billy.v4/osfs"
 
@@ -133,7 +134,14 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedRelease
 			return nil, nil, err
 		}
 
-		localReleases, err := releaseSource.DownloadReleases(f.Options.ReleasesDir, remoteReleases, f.Options.DownloadThreads)
+		//TODO: make get and download release functions singular, why? We do not need to download all at once because under the cover we are downloading in serially.
+
+		rrs := make([]release.RemoteRelease, 0, len(remoteReleases))
+		for _, r := range remoteReleases {
+			rrs = append(rrs, release.RemoteRelease{ReleaseID: r.ReleaseID(), RemotePath: r.RemotePath()})
+		}
+
+		localReleases, err := releaseSource.DownloadReleases(f.Options.ReleasesDir, rrs, f.Options.DownloadThreads)
 		if err != nil {
 			return nil, nil, err
 		}

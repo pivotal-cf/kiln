@@ -28,7 +28,7 @@ var _ = Describe("compiledRelease", func() {
 	)
 
 	Describe("StandardizedFilename", func() {
-		var release RemoteRelease
+		var release DeprecatedRemoteRelease
 
 		BeforeEach(func() {
 			release = NewCompiledRelease(
