@@ -76,8 +76,8 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(foundReleases).To(HaveLen(2))
 				Expect(foundReleases).To(ConsistOf(
-					release.NewBuiltRelease(release.ReleaseID{Name: "uaa", Version: "73.3.0"}).WithRemote(ID, uaaURL),
-					release.NewBuiltRelease(release.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}).WithRemote(ID, cfRabbitURL),
+					release.RemoteRelease{ReleaseID: release.ReleaseID{Name: "uaa", Version: "73.3.0"}, RemotePath: uaaURL},
+					release.RemoteRelease{ReleaseID: release.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, RemotePath: cfRabbitURL},
 				))
 			})
 		})
@@ -174,7 +174,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 						releaseVersion,
 					)
 
-					expectedRelease := release.NewBuiltRelease(releaseID).WithRemote(ID, expectedPath)
+					expectedRelease := release.RemoteRelease{ReleaseID: releaseID, RemotePath: expectedPath}
 
 					Expect(foundReleases).To(ConsistOf(expectedRelease))
 				},
@@ -228,13 +228,13 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 			release1ID = release.ReleaseID{Name: "some", Version: "1.2.3"}
 			release1ServerPath = "/some-release"
-			release1 = release.NewBuiltRelease(release1ID).WithRemote(ID, testServer.URL()+release1ServerPath)
+			release1 = release.RemoteRelease{ReleaseID: release1ID, RemotePath: testServer.URL() + release1ServerPath}
 			release1Filename = "some-1.2.3.tgz"
 			release1ServerFileContents = "totes-a-real-release"
 
 			release2ID = release.ReleaseID{Name: "another", Version: "2.3.4"}
 			release2ServerPath = "/releases/another/release/2.3.4"
-			release2 = release.NewBuiltRelease(release2ID).WithRemote(ID, testServer.URL()+release2ServerPath)
+			release2 = release.RemoteRelease{ReleaseID: release2ID, RemotePath: testServer.URL() + release2ServerPath}
 			release2Filename = "another-2.3.4.tgz"
 			release2ServerFileContents = "blah-blah-blah deploy instructions blah blah"
 
@@ -278,10 +278,10 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			Expect(release2DiskContents).To(BeEquivalentTo(release2ServerFileContents))
 
 			Expect(localReleases).To(HaveLen(2))
-			Expect(localReleases).To(HaveKeyWithValue(
-				release1ID, release.NewBuiltRelease(release1ID).WithLocalPath(fullRelease1Path).WithRemote(ID, release1.RemotePath())))
-			Expect(localReleases).To(HaveKeyWithValue(
-				release2ID, release.NewBuiltRelease(release2ID).WithLocalPath(fullRelease2Path).WithRemote(ID, release2.RemotePath())))
+			Expect(localReleases).To(ConsistOf(
+				release.LocalRelease{ReleaseID: release1ID, LocalPath: fullRelease1Path},
+				release.LocalRelease{ReleaseID: release2ID, LocalPath: fullRelease2Path},
+			))
 		})
 	})
 })

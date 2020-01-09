@@ -31,8 +31,8 @@ func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.Release
 	}
 }
 
-func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (release2.ReleaseWithLocationSet, error) {
-	outputReleases := release2.ReleaseWithLocationSet{}
+func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]release2.SatisfyingLocalRelease, error) {
+	var outputReleases []release2.SatisfyingLocalRelease
 
 	rawReleases, err := l.releasesService.FromDirectories([]string{releasesDir})
 	if err != nil {
@@ -43,24 +43,25 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (release2.Re
 		releaseManifest := release.(builder.ReleaseManifest)
 		id := release2.ReleaseID{Name: releaseManifest.Name, Version: releaseManifest.Version}
 
-		var rel release2.ReleaseWithLocation
+		var rel release2.SatisfyingLocalRelease
 		// see implementation of ReleaseManifestReader.Read for why we can assume that
 		// stemcell metadata are empty strings
 		if releaseManifest.StemcellOS != "" && releaseManifest.StemcellVersion != "" {
-			rel = release2.NewCompiledRelease(
+			rel = release2.NewLocalCompiledRelease(
 				id,
 				releaseManifest.StemcellOS,
 				releaseManifest.StemcellVersion,
-			).WithLocalPath(filepath.Join(releasesDir, releaseManifest.File))
+				filepath.Join(releasesDir, releaseManifest.File),
+			)
 		} else {
-			rel = release2.NewBuiltRelease(id).WithLocalPath(filepath.Join(releasesDir, releaseManifest.File))
+			rel = release2.NewLocalBuiltRelease(id, filepath.Join(releasesDir, releaseManifest.File))
 		}
-		outputReleases[id] = rel
+		outputReleases = append(outputReleases, rel)
 	}
 	return outputReleases, nil
 }
 
-func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet release2.ReleaseWithLocationSet, noConfirm bool) error {
+func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []release2.LocalRelease, noConfirm bool) error {
 	var doDeletion byte
 
 	if len(extraReleaseSet) == 0 {
@@ -73,7 +74,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet release2.Rele
 		l.logger.Println("Warning: kiln will delete the following files:")
 
 		for _, release := range extraReleaseSet {
-			l.logger.Printf("- %s\n", release.LocalPath())
+			l.logger.Printf("- %s\n", release.LocalPath)
 		}
 
 		l.logger.Printf("Are you sure you want to delete these files? [yN]")
@@ -90,22 +91,22 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet release2.Rele
 	return nil
 }
 
-func (l LocalReleaseDirectory) deleteReleases(releasesToDelete release2.ReleaseWithLocationSet) error {
-	for releaseID, release := range releasesToDelete {
-		err := os.Remove(release.LocalPath())
+func (l LocalReleaseDirectory) deleteReleases(releasesToDelete []release2.LocalRelease) error {
+	for _, release := range releasesToDelete {
+		err := os.Remove(release.LocalPath)
 
 		if err != nil {
-			l.logger.Printf("error removing release %s: %v\n", releaseID.Name, err)
-			return fmt.Errorf("failed to delete release %s", releaseID.Name)
+			l.logger.Printf("error removing release %s: %v\n", release.Name, err)
+			return fmt.Errorf("failed to delete release %s", release.Name)
 		}
 
-		l.logger.Printf("removed release %s\n", releaseID.Name)
+		l.logger.Printf("removed release %s\n", release.Name)
 	}
 
 	return nil
 }
 
-func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet release2.ReleaseWithLocationSet, kilnfileLock cargo.KilnfileLock) error {
+func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet []release2.LocalRelease, kilnfileLock cargo.KilnfileLock) error {
 	if len(downloadedReleaseSet) == 0 {
 		return nil
 	}
@@ -116,24 +117,24 @@ func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet release2.Rel
 
 	fs := osfs.New("")
 
-	for releaseID, release := range downloadedReleaseSet {
-		expectedSum, found := findExpectedSum(releaseID, kilnfileLock.Releases)
+	for _, release := range downloadedReleaseSet {
+		expectedSum, found := findExpectedSum(release.ReleaseID, kilnfileLock.Releases)
 
 		if !found {
-			return fmt.Errorf("release %s is not in Kilnfile.lock file", releaseID.Name)
+			return fmt.Errorf("release %s is not in Kilnfile.lock file", release.Name)
 		}
 		if expectedSum == "" {
 			continue
 		}
 
-		sum, err := CalculateSum(release.LocalPath(), fs)
+		sum, err := CalculateSum(release.LocalPath, fs)
 		if err != nil {
 			return fmt.Errorf("error while calculating checksum: %s", err)
 		}
 
 		if expectedSum != sum {
-			l.deleteReleases(release2.ReleaseWithLocationSet{releaseID: release})
-			badReleases = append(badReleases, fmt.Sprintf("%+v", release.LocalPath()))
+			l.deleteReleases([]release2.LocalRelease{release})
+			badReleases = append(badReleases, fmt.Sprintf("%+v", release.LocalPath))
 		}
 	}
 

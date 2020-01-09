@@ -7,7 +7,24 @@ import (
 	. "github.com/pivotal-cf/kiln/release"
 )
 
-var _ = Describe("compiledRelease", func() {
+var _ = Describe("NewLocalBuiltRelease()", func() {
+	const (
+		expectedName    = "my-awesome-release"
+		expectedVersion = "42.0.0"
+	)
+
+	DescribeTable("Satisfies", func(name, version string, expectedResult bool) {
+		release := NewLocalBuiltRelease(ReleaseID{Name: name, Version: version}, "not-used")
+		requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: "not-used", StemcellVersion: "404"}
+		Expect(release.Satisfies(requirement)).To(Equal(expectedResult))
+	},
+		Entry("when the release name and version match", expectedName, expectedVersion, true),
+		Entry("when the release name is different", "something-else", expectedVersion, false),
+		Entry("when the release version is different", expectedName, "999.999.999", false),
+	)
+})
+
+var _ = Describe("NewLocalCompiledRelease()", func() {
 	const (
 		expectedName            = "my-awesome-release"
 		expectedVersion         = "42.0.0"
@@ -16,7 +33,7 @@ var _ = Describe("compiledRelease", func() {
 	)
 
 	DescribeTable("Satisfies", func(name, version, stemcellOS, stemcellVersion string, expectedResult bool) {
-		release := NewCompiledRelease(ReleaseID{Name: name, Version: version}, stemcellOS, stemcellVersion)
+		release := NewLocalCompiledRelease(ReleaseID{Name: name, Version: version}, stemcellOS, stemcellVersion, "not-used")
 		requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion}
 		Expect(release.Satisfies(requirement)).To(Equal(expectedResult))
 	},
@@ -26,20 +43,4 @@ var _ = Describe("compiledRelease", func() {
 		Entry("when the stemcell os is different", expectedName, expectedVersion, "wrong-os", expectedStemcellVersion, false),
 		Entry("when the stemcell version is different", expectedName, expectedVersion, expectedStemcellOS, "0.0.0", false),
 	)
-
-	Describe("StandardizedFilename", func() {
-		var release RemoteRelease
-
-		BeforeEach(func() {
-			release = NewCompiledRelease(
-				ReleaseID{Name: expectedName, Version: expectedVersion},
-				expectedStemcellOS,
-				expectedStemcellVersion,
-			)
-		})
-
-		It("returns the standardized filename for the release", func() {
-			Expect(release.StandardizedFilename()).To(Equal("my-awesome-release-42.0.0-plan9-9.9.9.tgz"))
-		})
-	})
 })

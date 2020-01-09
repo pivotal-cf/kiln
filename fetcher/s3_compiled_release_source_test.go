@@ -98,11 +98,10 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-				release.NewCompiledRelease(
-					release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-					"ubuntu-xenial",
-					"190.0.0",
-				).WithRemote(bucket, bpmKey),
+				release.RemoteRelease{
+					ReleaseID:  release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+					RemotePath: bpmKey,
+				},
 			))
 		})
 
@@ -131,11 +130,10 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 
 				Expect(matchedS3Objects).To(HaveLen(1))
 				Expect(matchedS3Objects).To(ConsistOf(
-					release.NewCompiledRelease(
-						release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-						"ubuntu-xenial",
-						"190.0.0",
-					).WithRemote(bucket, bpmKey),
+					release.RemoteRelease{
+						ReleaseID:  release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+						RemotePath: bpmKey,
+					},
 				))
 			})
 		})
@@ -165,11 +163,10 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 
 				Expect(matchedS3Objects).To(HaveLen(1))
 				Expect(matchedS3Objects).To(ConsistOf(
-					release.NewCompiledRelease(
-						release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-						"ubuntu-xenial",
-						"190.0.0",
-					).WithRemote(bucket, bpmKey),
+					release.RemoteRelease{
+						ReleaseID:  release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+						RemotePath: bpmKey,
+					},
 				),
 				)
 			})
@@ -199,11 +196,10 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 
 				Expect(matchedS3Objects).To(HaveLen(1))
 				Expect(matchedS3Objects).To(ConsistOf(
-					release.NewCompiledRelease(
-						release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-						"ubuntu-xenial",
-						"190.0.0",
-					).WithRemote(bucket, bpmKey),
+					release.RemoteRelease{
+						ReleaseID:  release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+						RemotePath: bpmKey,
+					},
 				),
 				)
 			})
@@ -254,8 +250,8 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 			bpmReleaseID = release.ReleaseID{Name: "bpm", Version: "1.2.3"}
 
 			matchedS3Objects = []release.RemoteRelease{
-				release.NewCompiledRelease(uaaReleaseID, expectedStemcellOS, expectedStemcellVersion).WithRemote(bucket, uaaRemotePath),
-				release.NewCompiledRelease(bpmReleaseID, expectedStemcellOS, expectedStemcellVersion).WithRemote(bucket, bpmRemotePath),
+				{ReleaseID: uaaReleaseID, RemotePath: uaaRemotePath},
+				{ReleaseID: bpmReleaseID, RemotePath: bpmRemotePath},
 			}
 
 			logger = log.New(GinkgoWriter, "", 0)
@@ -281,11 +277,11 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(2))
 
-			bpmReleasePath := filepath.Join(releaseDir, "bpm-1.2.3-ubuntu-trusty-1234.tgz")
+			bpmReleasePath := filepath.Join(releaseDir, "bpm-1.2.3.tgz")
 			bpmContents, err := ioutil.ReadFile(bpmReleasePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bpmContents).To(Equal([]byte("some-bucket/some-bpm-key")))
-			uaaReleasePath := filepath.Join(releaseDir, "uaa-1.2.3-ubuntu-trusty-1234.tgz")
+			uaaReleasePath := filepath.Join(releaseDir, "uaa-1.2.3.tgz")
 			uaaContents, err := ioutil.ReadFile(uaaReleasePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(uaaContents).To(Equal([]byte("some-bucket/some-uaa-key")))
@@ -297,23 +293,10 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 			verifySetsConcurrency(opts, 7)
 
 			Expect(localReleases).To(HaveLen(2))
-			Expect(localReleases).To(HaveKeyWithValue(
-				uaaReleaseID,
-				release.NewCompiledRelease(
-					uaaReleaseID,
-					expectedStemcellOS,
-					expectedStemcellVersion,
-				).WithLocalPath(uaaReleasePath).WithRemote(bucket, uaaRemotePath),
+			Expect(localReleases).To(ConsistOf(
+				release.LocalRelease{ReleaseID: uaaReleaseID, LocalPath: uaaReleasePath},
+				release.LocalRelease{ReleaseID: bpmReleaseID, LocalPath: bpmReleasePath},
 			))
-			Expect(localReleases).To(HaveKeyWithValue(
-				bpmReleaseID,
-				release.NewCompiledRelease(
-					bpmReleaseID,
-					expectedStemcellOS,
-					expectedStemcellVersion,
-				).WithLocalPath(bpmReleasePath).WithRemote(bucket, bpmRemotePath),
-			))
-
 		})
 
 		Context("when the matchedS3Objects argument is empty", func() {

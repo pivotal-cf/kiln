@@ -85,9 +85,10 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.Releas
 				}
 				if exists {
 					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, rel.Version)
-					builtRelease := release.NewBuiltRelease(
-						release.ReleaseID{Name: rel.Name, Version: rel.Version},
-					).WithRemote(ReleaseSourceTypeBOSHIO, downloadURL)
+					builtRelease := release.RemoteRelease{
+						ReleaseID:  release.ReleaseID{Name: rel.Name, Version: rel.Version},
+						RemotePath: downloadURL,
+					}
 					matches = append(matches, builtRelease)
 					break found
 				}
@@ -98,13 +99,13 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.Releas
 	return matches, nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) (release.ReleaseWithLocationSet, error) {
-	releases := make(release.ReleaseWithLocationSet)
+func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) ([]release.LocalRelease, error) {
+	var releases []release.LocalRelease
 
 	r.logger.Printf("downloading %d objects from bosh.io...", len(remoteReleases))
 
-	for _, release := range remoteReleases {
-		downloadURL := release.RemotePath()
+	for _, rel := range remoteReleases {
+		downloadURL := rel.RemotePath
 		r.logger.Printf("downloading %s...\n", downloadURL)
 		// Get the data
 		resp, err := http.Get(downloadURL)
@@ -112,7 +113,7 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases 
 			return nil, err
 		}
 
-		filePath := filepath.Join(releaseDir, release.StandardizedFilename())
+		filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", rel.Name, rel.Version))
 
 		out, err := os.Create(filePath)
 		if err != nil {
@@ -127,7 +128,7 @@ func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases 
 			return nil, err
 		}
 
-		releases[release.ReleaseID()] = release.WithLocalPath(filePath)
+		releases = append(releases, release.LocalRelease{ReleaseID: rel.ReleaseID, LocalPath: filePath})
 	}
 
 	return releases, nil

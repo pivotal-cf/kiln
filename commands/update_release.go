@@ -35,7 +35,7 @@ type ReleaseDownloaderFactory interface {
 
 //go:generate counterfeiter -o ./fakes/release_downloader.go --fake-name ReleaseDownloader . ReleaseDownloader
 type ReleaseDownloader interface {
-	DownloadRelease(downloadDir string, requirement release.ReleaseRequirement) (release.ReleaseWithLocation, error)
+	DownloadRelease(downloadDir string, requirement release.ReleaseRequirement) (release.LocalRelease, string, string, error)
 }
 
 type checksumFunc func(path string, fs billy.Filesystem) (string, error)
@@ -73,7 +73,7 @@ func (u UpdateRelease) Execute(args []string) error {
 	}
 
 	u.logger.Println("Searching for the release...")
-	release, err := releaseDownloader.DownloadRelease(u.Options.ReleasesDir, release.ReleaseRequirement{
+	localRelease, remoteSource, remotePath, err := releaseDownloader.DownloadRelease(u.Options.ReleasesDir, release.ReleaseRequirement{
 		Name:            u.Options.Name,
 		Version:         u.Options.Version,
 		StemcellOS:      kilnfileLock.Stemcell.OS,
@@ -94,15 +94,15 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("no release named %q exists in your Kilnfile.lock", u.Options.Name)
 	}
 
-	sha, err := u.checksummer(release.LocalPath(), u.filesystem)
+	sha, err := u.checksummer(localRelease.LocalPath, u.filesystem)
 	if err != nil {
 		return fmt.Errorf("error while calculating release checksum: %w", err)
 	}
 
 	matchingRelease.Version = u.Options.Version
 	matchingRelease.SHA1 = sha
-	matchingRelease.RemotePath = release.RemotePath()
-	matchingRelease.RemoteSource = release.ReleaseSourceID()
+	matchingRelease.RemoteSource = remoteSource
+	matchingRelease.RemotePath = remotePath
 
 	updatedLockFileYAML, err := yaml.Marshal(kilnfileLock)
 	if err != nil {

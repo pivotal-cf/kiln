@@ -5,7 +5,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	. "github.com/pivotal-cf/kiln/release"
-	"github.com/pivotal-cf/kiln/release/fakes"
 )
 
 var _ = Describe("ReleaseRequirementSet", func() {
@@ -50,39 +49,40 @@ var _ = Describe("ReleaseRequirementSet", func() {
 
 	Describe("Partition", func() {
 		var (
-			releaseSet                             ReleaseWithLocationSet
-			extraReleaseID                         ReleaseID
-			satisfyingRelease, unsatisfyingRelease *fakes.ReleaseWithLocation
+			releaseSet                                           []SatisfyingLocalRelease
+			extraReleaseID                                       ReleaseID
+			satisfyingRelease, unsatisfyingRelease, extraRelease SatisfyingLocalRelease
 		)
 
 		BeforeEach(func() {
-			satisfyingRelease = new(fakes.ReleaseWithLocation)
-			satisfyingRelease.SatisfiesReturns(true)
-
-			unsatisfyingRelease = new(fakes.ReleaseWithLocation)
-			unsatisfyingRelease.SatisfiesReturns(false)
+			satisfyingRelease = NewLocalBuiltRelease(release1ID, "satisfying-path")
+			unsatisfyingRelease = NewLocalBuiltRelease(ReleaseID{Name: release2Name, Version: "4.0.4"}, "unsatisfying-path")
 
 			extraReleaseID = ReleaseID{Name: "extra", Version: "2.3.5"}
+			extraRelease = NewLocalBuiltRelease(extraReleaseID, "so-extra")
 
-			releaseSet = ReleaseWithLocationSet{
-				release1ID:     satisfyingRelease,
-				release2ID:     unsatisfyingRelease,
-				extraReleaseID: unsatisfyingRelease,
-			}
+			releaseSet = []SatisfyingLocalRelease{satisfyingRelease, unsatisfyingRelease, extraRelease}
 		})
 
 		It("returns the intersecting, missing, and extra releases", func() {
 			intersection, missing, extra := rrs.Partition(releaseSet)
 
 			Expect(intersection).To(HaveLen(1))
-			Expect(intersection).To(HaveKeyWithValue(release1ID, satisfyingRelease))
+			Expect(intersection).To(ConsistOf(
+				LocalRelease{ReleaseID: release1ID, LocalPath: satisfyingRelease.LocalPath},
+			))
 
 			Expect(missing).To(HaveLen(1))
 			Expect(missing).To(HaveKeyWithValue(release2ID, rrs[release2ID]))
 
 			Expect(extra).To(HaveLen(2))
-			Expect(extra).To(HaveKeyWithValue(release2ID, unsatisfyingRelease))
-			Expect(extra).To(HaveKeyWithValue(extraReleaseID, unsatisfyingRelease))
+			Expect(extra).To(ConsistOf(
+				LocalRelease{
+					ReleaseID: ReleaseID{Name: release2Name, Version: "4.0.4"},
+					LocalPath: unsatisfyingRelease.LocalPath,
+				},
+				LocalRelease{ReleaseID: extraReleaseID, LocalPath: extraRelease.LocalPath},
+			))
 		})
 
 		It("does not modify itself", func() {
@@ -94,27 +94,7 @@ var _ = Describe("ReleaseRequirementSet", func() {
 
 		It("does not modify the given release set", func() {
 			rrs.Partition(releaseSet)
-			Expect(releaseSet).To(HaveLen(3))
-			Expect(releaseSet).To(HaveKey(release1ID))
-			Expect(releaseSet).To(HaveKey(release2ID))
-			Expect(releaseSet).To(HaveKey(extraReleaseID))
-		})
-	})
-
-	Describe("WithoutReleases", func() {
-		It("returns a set without those releases", func() {
-			release2Requirement := rrs[release2ID]
-			result := rrs.WithoutReleases([]ReleaseID{release1ID})
-
-			Expect(result).To(HaveLen(1))
-			Expect(result).NotTo(HaveKey(release1ID))
-			Expect(result).To(HaveKeyWithValue(release2ID, release2Requirement))
-		})
-
-		It("does not modify the original", func() {
-			_ = rrs.WithoutReleases([]ReleaseID{release1ID})
-			Expect(rrs).To(HaveLen(2))
-			Expect(rrs).To(HaveKey(release1ID))
+			Expect(releaseSet).To(ConsistOf(satisfyingRelease, unsatisfyingRelease, extraRelease))
 		})
 	})
 })

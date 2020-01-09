@@ -2,10 +2,11 @@ package commands
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/release"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/pivotal-cf/kiln/release"
 
 	"gopkg.in/src-d/go-billy.v4/osfs"
 
@@ -58,9 +59,9 @@ func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, l
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
-	GetLocalReleases(releasesDir string) (release.ReleaseWithLocationSet, error)
-	DeleteExtraReleases(extraReleases release.ReleaseWithLocationSet, noConfirm bool) error
-	VerifyChecksums(downloadedReleases release.ReleaseWithLocationSet, kilnfileLock cargo.KilnfileLock) error
+	GetLocalReleases(releasesDir string) ([]release.SatisfyingLocalRelease, error)
+	DeleteExtraReleases(extraReleases []release.LocalRelease, noConfirm bool) error
+	VerifyChecksums(downloadedReleases []release.LocalRelease, kilnfileLock cargo.KilnfileLock) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -70,30 +71,35 @@ func (f Fetch) Execute(args []string) error {
 	}
 
 	desiredReleaseSet := release.NewReleaseRequirementSet(kilnfileLock)
-	satisfiedReleaseSet, unsatisfiedReleaseSet, extraReleaseSet := desiredReleaseSet.Partition(availableLocalReleaseSet)
+	localReleases, unsatisfiedReleaseSet, extraReleaseSet := desiredReleaseSet.Partition(availableLocalReleaseSet)
 
 	err = f.localReleaseDirectory.DeleteExtraReleases(extraReleaseSet, f.Options.NoConfirm)
 	if err != nil {
 		f.logger.Println("failed deleting some releases: ", err.Error())
 	}
 
-	if len(unsatisfiedReleaseSet) > 0 {
-		f.logger.Printf("Found %d missing releases to download", len(unsatisfiedReleaseSet))
-
-		satisfiedReleaseSet, unsatisfiedReleaseSet, err = f.downloadMissingReleases(kilnfile, satisfiedReleaseSet, unsatisfiedReleaseSet, kilnfileLock.Stemcell)
-		if err != nil {
-			return err
+	var missingReleases []cargo.ReleaseLock
+	for _, rel := range kilnfileLock.Releases {
+		if _, missing := unsatisfiedReleaseSet[release.ReleaseID{Name: rel.Name, Version: rel.Version}]; missing {
+			missingReleases = append(missingReleases, rel)
 		}
 	}
 
 	if len(unsatisfiedReleaseSet) > 0 {
-		return ErrorMissingReleases(unsatisfiedReleaseSet)
+		f.logger.Printf("Found %d missing releases to download", len(unsatisfiedReleaseSet))
+
+		downloadedReleases, err := f.downloadMissingReleases(kilnfile, missingReleases)
+		if err != nil {
+			return err
+		}
+
+		localReleases = append(localReleases, downloadedReleases...)
 	}
 
-	return f.localReleaseDirectory.VerifyChecksums(satisfiedReleaseSet, kilnfileLock)
+	return f.localReleaseDirectory.VerifyChecksums(localReleases, kilnfileLock)
 }
 
-func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, release.ReleaseWithLocationSet, error) {
+func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []release.SatisfyingLocalRelease, error) {
 	args, err := jhanda.Parse(&f.Options, args)
 
 	if err != nil {
@@ -122,27 +128,35 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, releas
 	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
 }
 
-func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedReleaseSet release.ReleaseWithLocationSet, unsatisfiedReleaseSet release.ReleaseRequirementSet, stemcell cargo.Stemcell) (satisfied release.ReleaseWithLocationSet, unsatisfied release.ReleaseRequirementSet, err error) {
+func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ReleaseLock) ([]release.LocalRelease, error) {
 	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile, f.Options.AllowOnlyPublishableReleases)
+
+	releaseSourceMap := make(map[string]fetcher.ReleaseSource)
 	for _, releaseSource := range releaseSources {
-		if len(unsatisfiedReleaseSet) == 0 {
-			break
-		}
-		remoteReleases, err := releaseSource.GetMatchedReleases(unsatisfiedReleaseSet)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		localReleases, err := releaseSource.DownloadReleases(f.Options.ReleasesDir, remoteReleases, f.Options.DownloadThreads)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		satisfiedReleaseSet = satisfiedReleaseSet.With(localReleases)
-		unsatisfiedReleaseSet = unsatisfiedReleaseSet.WithoutReleases(localReleases.ReleaseIDs())
+		releaseSourceMap[releaseSource.ID()] = releaseSource
 	}
 
-	return satisfiedReleaseSet, unsatisfiedReleaseSet, nil
+	var downloaded []release.LocalRelease
+
+	for _, rl := range releaseLocks {
+		src, ok := releaseSourceMap[rl.RemoteSource]
+		if !ok {
+			return nil, fmt.Errorf("release_source %q for %q %q does not exist", rl.RemoteSource, rl.Name, rl.Version)
+		}
+
+		local, err := src.DownloadReleases(
+			f.Options.ReleasesDir,
+			[]release.RemoteRelease{{ReleaseID: release.ReleaseID{Name: rl.Name, Version: rl.Version}, RemotePath: rl.RemotePath}},
+			f.Options.DownloadThreads,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("download failed: %w", err)
+		}
+
+		downloaded = append(downloaded, local...)
+	}
+
+	return downloaded, nil
 }
 
 func (f Fetch) Usage() jhanda.Usage {

@@ -9,25 +9,29 @@ import (
 )
 
 type ReleaseDownloader struct {
-	DownloadReleaseStub        func(string, release.ReleaseRequirement) (release.ReleaseWithLocation, error)
+	DownloadReleaseStub        func(string, release.ReleaseRequirement) (release.LocalRelease, string, string, error)
 	downloadReleaseMutex       sync.RWMutex
 	downloadReleaseArgsForCall []struct {
 		arg1 string
 		arg2 release.ReleaseRequirement
 	}
 	downloadReleaseReturns struct {
-		result1 release.ReleaseWithLocation
-		result2 error
+		result1 release.LocalRelease
+		result2 string
+		result3 string
+		result4 error
 	}
 	downloadReleaseReturnsOnCall map[int]struct {
-		result1 release.ReleaseWithLocation
-		result2 error
+		result1 release.LocalRelease
+		result2 string
+		result3 string
+		result4 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseDownloader) DownloadRelease(arg1 string, arg2 release.ReleaseRequirement) (release.ReleaseWithLocation, error) {
+func (fake *ReleaseDownloader) DownloadRelease(arg1 string, arg2 release.ReleaseRequirement) (release.LocalRelease, string, string, error) {
 	fake.downloadReleaseMutex.Lock()
 	ret, specificReturn := fake.downloadReleaseReturnsOnCall[len(fake.downloadReleaseArgsForCall)]
 	fake.downloadReleaseArgsForCall = append(fake.downloadReleaseArgsForCall, struct {
@@ -40,10 +44,10 @@ func (fake *ReleaseDownloader) DownloadRelease(arg1 string, arg2 release.Release
 		return fake.DownloadReleaseStub(arg1, arg2)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1, ret.result2, ret.result3, ret.result4
 	}
 	fakeReturns := fake.downloadReleaseReturns
-	return fakeReturns.result1, fakeReturns.result2
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3, fakeReturns.result4
 }
 
 func (fake *ReleaseDownloader) DownloadReleaseCallCount() int {
@@ -52,7 +56,7 @@ func (fake *ReleaseDownloader) DownloadReleaseCallCount() int {
 	return len(fake.downloadReleaseArgsForCall)
 }
 
-func (fake *ReleaseDownloader) DownloadReleaseCalls(stub func(string, release.ReleaseRequirement) (release.ReleaseWithLocation, error)) {
+func (fake *ReleaseDownloader) DownloadReleaseCalls(stub func(string, release.ReleaseRequirement) (release.LocalRelease, string, string, error)) {
 	fake.downloadReleaseMutex.Lock()
 	defer fake.downloadReleaseMutex.Unlock()
 	fake.DownloadReleaseStub = stub
@@ -65,30 +69,36 @@ func (fake *ReleaseDownloader) DownloadReleaseArgsForCall(i int) (string, releas
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *ReleaseDownloader) DownloadReleaseReturns(result1 release.ReleaseWithLocation, result2 error) {
+func (fake *ReleaseDownloader) DownloadReleaseReturns(result1 release.LocalRelease, result2 string, result3 string, result4 error) {
 	fake.downloadReleaseMutex.Lock()
 	defer fake.downloadReleaseMutex.Unlock()
 	fake.DownloadReleaseStub = nil
 	fake.downloadReleaseReturns = struct {
-		result1 release.ReleaseWithLocation
-		result2 error
-	}{result1, result2}
+		result1 release.LocalRelease
+		result2 string
+		result3 string
+		result4 error
+	}{result1, result2, result3, result4}
 }
 
-func (fake *ReleaseDownloader) DownloadReleaseReturnsOnCall(i int, result1 release.ReleaseWithLocation, result2 error) {
+func (fake *ReleaseDownloader) DownloadReleaseReturnsOnCall(i int, result1 release.LocalRelease, result2 string, result3 string, result4 error) {
 	fake.downloadReleaseMutex.Lock()
 	defer fake.downloadReleaseMutex.Unlock()
 	fake.DownloadReleaseStub = nil
 	if fake.downloadReleaseReturnsOnCall == nil {
 		fake.downloadReleaseReturnsOnCall = make(map[int]struct {
-			result1 release.ReleaseWithLocation
-			result2 error
+			result1 release.LocalRelease
+			result2 string
+			result3 string
+			result4 error
 		})
 	}
 	fake.downloadReleaseReturnsOnCall[i] = struct {
-		result1 release.ReleaseWithLocation
-		result2 error
-	}{result1, result2}
+		result1 release.LocalRelease
+		result2 string
+		result3 string
+		result4 error
+	}{result1, result2, result3, result4}
 }
 
 func (fake *ReleaseDownloader) Invocations() map[string][][]interface{} {
