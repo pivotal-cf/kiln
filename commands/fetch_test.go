@@ -112,7 +112,7 @@ stemcell_criteria:
 			)
 			var (
 				releaseID                               release.ReleaseID
-				releaseOnDisk                           release.ReleaseWithLocation
+				releaseOnDisk                           release.SatisfiableLocalRelease
 				actualStemcellOS, actualStemcellVersion string
 			)
 			BeforeEach(func() {
@@ -139,10 +139,10 @@ stemcell_criteria:
 
 			When("the release was compiled with a different os", func() {
 				BeforeEach(func() {
-					releaseOnDisk = release.NewCompiledRelease(releaseID, "different-os", expectedStemcellVersion).
-						WithLocalPath(fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, actualStemcellOS, actualStemcellVersion))
+					releaseOnDisk = release.NewCompiledRelease(releaseID, "different-os", expectedStemcellVersion,
+						fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, actualStemcellOS, actualStemcellVersion))
 					fakeLocalReleaseDirectory.GetLocalReleasesReturns(
-						release.ReleaseWithLocationSet{releaseID: releaseOnDisk},
+						release.SatisfiableLocalReleaseSet{releaseID: releaseOnDisk},
 						nil)
 				})
 
@@ -167,12 +167,11 @@ stemcell_criteria:
 						releaseID,
 						expectedStemcellOS,
 						"404",
-					).WithLocalPath(
 						fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, actualStemcellOS, actualStemcellVersion),
 					)
 
 					fakeLocalReleaseDirectory.GetLocalReleasesReturns(
-						release.ReleaseWithLocationSet{releaseID: releaseOnDisk},
+						release.SatisfiableLocalReleaseSet{releaseID: releaseOnDisk},
 						nil)
 				})
 
@@ -238,7 +237,7 @@ stemcell_criteria:
 					},
 					nil)
 
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.ReleaseWithLocationSet{}, nil)
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.SatisfiableLocalReleaseSet{}, nil)
 			})
 
 			It("completes successfully", func() {
@@ -318,9 +317,8 @@ stemcell_criteria:
 					Name:    "some-release-from-local-dir",
 					Version: "1.2.3",
 				}
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.ReleaseWithLocationSet{
-					someLocalReleaseID: release.NewCompiledRelease(someLocalReleaseID, "some-os", "4.5.6").
-						WithLocalPath("/path/to/some/release"),
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.SatisfiableLocalReleaseSet{
+					someLocalReleaseID: release.NewCompiledRelease(someLocalReleaseID, "some-os", "4.5.6", "/path/to/some/release"),
 				}, nil)
 			})
 
@@ -371,17 +369,19 @@ stemcell_criteria:
 				missingReleaseBoshIO = release.RemoteRelease{ReleaseID: missingReleaseBoshIOID, RemotePath: missingReleaseBoshIOPath}
 				missingReleaseS3Built = release.RemoteRelease{ReleaseID: missingReleaseS3BuiltID, RemotePath: missingReleaseS3BuiltPath}
 
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.ReleaseWithLocationSet{
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.SatisfiableLocalReleaseSet{
 					release.ReleaseID{Name: "some-release", Version: "1.2.3"}: release.NewCompiledRelease(
 						release.ReleaseID{Name: "some-release", Version: "1.2.3"},
 						"some-os",
 						"4.5.6",
-					).WithLocalPath("path/to/some/release"),
+						"path/to/some/release",
+					),
 					// a release that has no compiled packages, such as consul-drain, will also have no stemcell criteria in release.MF.
 					// we must make sure that we can match this kind of release properly to avoid unnecessary downloads.
 					release.ReleaseID{Name: "some-tiny-release", Version: "1.2.3"}: release.NewBuiltRelease(
 						release.ReleaseID{Name: "some-tiny-release", Version: "1.2.3"},
-					).WithLocalPath("path/to/some/tiny/release"),
+						"path/to/some/tiny/release",
+					),
 				}, nil)
 
 				fakeS3CompiledReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{missingReleaseS3Compiled}, nil)
@@ -448,8 +448,8 @@ stemcell_criteria:
   os: some-os
   version: "4.5.6"
 `
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.ReleaseWithLocationSet{
-					localReleaseID: release.NewCompiledRelease(localReleaseID, "some-os", "4.5.6").WithLocalPath("path/to/some/extra/release"),
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(release.SatisfiableLocalReleaseSet{
+					localReleaseID: release.NewCompiledRelease(localReleaseID, "some-os", "4.5.6", "path/to/some/extra/release"),
 				}, nil)
 
 				fakeBoshIOReleaseSource.GetMatchedReleasesReturns(

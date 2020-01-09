@@ -31,8 +31,8 @@ func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.Release
 	}
 }
 
-func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (release2.ReleaseWithLocationSet, error) {
-	outputReleases := release2.ReleaseWithLocationSet{}
+func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (release2.SatisfiableLocalReleaseSet, error) {
+	outputReleases := release2.SatisfiableLocalReleaseSet{}
 
 	rawReleases, err := l.releasesService.FromDirectories([]string{releasesDir})
 	if err != nil {
@@ -43,7 +43,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (release2.Re
 		releaseManifest := release.(builder.ReleaseManifest)
 		id := release2.ReleaseID{Name: releaseManifest.Name, Version: releaseManifest.Version}
 
-		var rel release2.ReleaseWithLocation
+		var rel release2.SatisfiableLocalRelease
 		// see implementation of ReleaseManifestReader.Read for why we can assume that
 		// stemcell metadata are empty strings
 		if releaseManifest.StemcellOS != "" && releaseManifest.StemcellVersion != "" {
@@ -51,9 +51,10 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) (release2.Re
 				id,
 				releaseManifest.StemcellOS,
 				releaseManifest.StemcellVersion,
-			).WithLocalPath(filepath.Join(releasesDir, releaseManifest.File))
+				filepath.Join(releasesDir, releaseManifest.File),
+			)
 		} else {
-			rel = release2.NewBuiltRelease(id).WithLocalPath(filepath.Join(releasesDir, releaseManifest.File))
+			rel = release2.NewBuiltRelease(id, filepath.Join(releasesDir, releaseManifest.File))
 		}
 		outputReleases[id] = rel
 	}

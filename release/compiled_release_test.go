@@ -16,7 +16,7 @@ var _ = Describe("compiledRelease", func() {
 	)
 
 	DescribeTable("Satisfies", func(name, version, stemcellOS, stemcellVersion string, expectedResult bool) {
-		release := NewCompiledRelease(ReleaseID{Name: name, Version: version}, stemcellOS, stemcellVersion)
+		release := NewCompiledRelease(ReleaseID{Name: name, Version: version}, stemcellOS, stemcellVersion, "not-used")
 		requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion}
 		Expect(release.Satisfies(requirement)).To(Equal(expectedResult))
 	},

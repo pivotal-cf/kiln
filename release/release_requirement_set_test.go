@@ -49,19 +49,19 @@ var _ = Describe("ReleaseRequirementSet", func() {
 
 	Describe("Partition", func() {
 		var (
-			releaseSet                             ReleaseWithLocationSet
-			extraReleaseID                         ReleaseID
-			satisfyingRelease, unsatisfyingRelease, extraRelease ReleaseWithLocation
+			releaseSet                                           SatisfiableLocalReleaseSet
+			extraReleaseID                                       ReleaseID
+			satisfyingRelease, unsatisfyingRelease, extraRelease SatisfiableLocalRelease
 		)
 
 		BeforeEach(func() {
-			satisfyingRelease = NewBuiltRelease(release1ID).WithLocalPath("satisfying-path")
-			unsatisfyingRelease = NewBuiltRelease(ReleaseID{Name: release2Name, Version: "4.0.4"}).WithLocalPath("unsatisfying-path")
+			satisfyingRelease = NewBuiltRelease(release1ID, "satisfying-path")
+			unsatisfyingRelease = NewBuiltRelease(ReleaseID{Name: release2Name, Version: "4.0.4"}, "unsatisfying-path")
 
 			extraReleaseID = ReleaseID{Name: "extra", Version: "2.3.5"}
-			extraRelease = NewBuiltRelease(extraReleaseID).WithLocalPath("so-extra")
+			extraRelease = NewBuiltRelease(extraReleaseID, "so-extra")
 
-			releaseSet = ReleaseWithLocationSet{
+			releaseSet = SatisfiableLocalReleaseSet{
 				release1ID:     satisfyingRelease,
 				release2ID:     unsatisfyingRelease,
 				extraReleaseID: extraRelease,

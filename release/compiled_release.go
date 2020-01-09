@@ -6,13 +6,14 @@ type compiledRelease struct {
 	StemcellVersion string
 }
 
-func NewCompiledRelease(id ReleaseID, stemcellOS, stemcellVersion string) releaseWithLocation {
-	return releaseWithLocation{
+func NewCompiledRelease(id ReleaseID, stemcellOS, stemcellVersion, localPath string) satisfiableLocalRelease {
+	return satisfiableLocalRelease{
 		unhomedRelease: compiledRelease{
 			builtRelease:    builtRelease(id),
 			StemcellOS:      stemcellOS,
 			StemcellVersion: stemcellVersion,
 		},
+		localPath: localPath,
 	}
 }
 

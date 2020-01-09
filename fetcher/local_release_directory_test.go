@@ -66,7 +66,8 @@ var _ = Describe("LocalReleaseDirectory", func() {
 						release.ReleaseID{Name: "some-release", Version: "1.2.3"},
 						"some-os",
 						"4.5.6",
-					).WithLocalPath(releaseFile),
+						releaseFile,
+					),
 				))
 			})
 		})

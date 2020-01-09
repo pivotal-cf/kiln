@@ -2,8 +2,8 @@ package release
 
 type builtRelease ReleaseID
 
-func NewBuiltRelease(id ReleaseID) releaseWithLocation {
-	return releaseWithLocation{unhomedRelease: builtRelease(id)}
+func NewBuiltRelease(id ReleaseID, localPath string) satisfiableLocalRelease {
+	return satisfiableLocalRelease{unhomedRelease: builtRelease(id), localPath: localPath}
 }
 
 func (br builtRelease) Satisfies(rr ReleaseRequirement) bool {
