@@ -98,11 +98,10 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 
 			Expect(matchedS3Objects).To(HaveLen(1))
 			Expect(matchedS3Objects).To(ConsistOf(
-				release.NewCompiledRelease(
-					release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-					"ubuntu-xenial",
-					"190.0.0",
-				).WithRemote(bucket, bpmKey),
+				release.RemoteRelease{
+					ReleaseID:  release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+					RemotePath: bpmKey,
+				},
 			))
 		})
 
@@ -131,11 +130,10 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 
 				Expect(matchedS3Objects).To(HaveLen(1))
 				Expect(matchedS3Objects).To(ConsistOf(
-					release.NewCompiledRelease(
-						release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-						"ubuntu-xenial",
-						"190.0.0",
-					).WithRemote(bucket, bpmKey),
+					release.RemoteRelease{
+						ReleaseID:  release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+						RemotePath: bpmKey,
+					},
 				))
 			})
 		})
@@ -165,11 +163,10 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 
 				Expect(matchedS3Objects).To(HaveLen(1))
 				Expect(matchedS3Objects).To(ConsistOf(
-					release.NewCompiledRelease(
-						release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-						"ubuntu-xenial",
-						"190.0.0",
-					).WithRemote(bucket, bpmKey),
+					release.RemoteRelease{
+						ReleaseID:  release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+						RemotePath: bpmKey,
+					},
 				),
 				)
 			})
@@ -199,11 +196,10 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 
 				Expect(matchedS3Objects).To(HaveLen(1))
 				Expect(matchedS3Objects).To(ConsistOf(
-					release.NewCompiledRelease(
-						release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-						"ubuntu-xenial",
-						"190.0.0",
-					).WithRemote(bucket, bpmKey),
+					release.RemoteRelease{
+						ReleaseID:  release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+						RemotePath: bpmKey,
+					},
 				),
 				)
 			})

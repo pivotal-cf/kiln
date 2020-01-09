@@ -24,17 +24,17 @@ type ReleaseSource struct {
 		result1 release.LocalReleaseSet
 		result2 error
 	}
-	GetMatchedReleasesStub        func(release.ReleaseRequirementSet) ([]release.DeprecatedRemoteRelease, error)
+	GetMatchedReleasesStub        func(release.ReleaseRequirementSet) ([]release.RemoteRelease, error)
 	getMatchedReleasesMutex       sync.RWMutex
 	getMatchedReleasesArgsForCall []struct {
 		arg1 release.ReleaseRequirementSet
 	}
 	getMatchedReleasesReturns struct {
-		result1 []release.DeprecatedRemoteRelease
+		result1 []release.RemoteRelease
 		result2 error
 	}
 	getMatchedReleasesReturnsOnCall map[int]struct {
-		result1 []release.DeprecatedRemoteRelease
+		result1 []release.RemoteRelease
 		result2 error
 	}
 	IDStub        func() string
@@ -121,7 +121,7 @@ func (fake *ReleaseSource) DownloadReleasesReturnsOnCall(i int, result1 release.
 	}{result1, result2}
 }
 
-func (fake *ReleaseSource) GetMatchedReleases(arg1 release.ReleaseRequirementSet) ([]release.DeprecatedRemoteRelease, error) {
+func (fake *ReleaseSource) GetMatchedReleases(arg1 release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
 	fake.getMatchedReleasesMutex.Lock()
 	ret, specificReturn := fake.getMatchedReleasesReturnsOnCall[len(fake.getMatchedReleasesArgsForCall)]
 	fake.getMatchedReleasesArgsForCall = append(fake.getMatchedReleasesArgsForCall, struct {
@@ -145,7 +145,7 @@ func (fake *ReleaseSource) GetMatchedReleasesCallCount() int {
 	return len(fake.getMatchedReleasesArgsForCall)
 }
 
-func (fake *ReleaseSource) GetMatchedReleasesCalls(stub func(release.ReleaseRequirementSet) ([]release.DeprecatedRemoteRelease, error)) {
+func (fake *ReleaseSource) GetMatchedReleasesCalls(stub func(release.ReleaseRequirementSet) ([]release.RemoteRelease, error)) {
 	fake.getMatchedReleasesMutex.Lock()
 	defer fake.getMatchedReleasesMutex.Unlock()
 	fake.GetMatchedReleasesStub = stub
@@ -158,28 +158,28 @@ func (fake *ReleaseSource) GetMatchedReleasesArgsForCall(i int) release.ReleaseR
 	return argsForCall.arg1
 }
 
-func (fake *ReleaseSource) GetMatchedReleasesReturns(result1 []release.DeprecatedRemoteRelease, result2 error) {
+func (fake *ReleaseSource) GetMatchedReleasesReturns(result1 []release.RemoteRelease, result2 error) {
 	fake.getMatchedReleasesMutex.Lock()
 	defer fake.getMatchedReleasesMutex.Unlock()
 	fake.GetMatchedReleasesStub = nil
 	fake.getMatchedReleasesReturns = struct {
-		result1 []release.DeprecatedRemoteRelease
+		result1 []release.RemoteRelease
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseSource) GetMatchedReleasesReturnsOnCall(i int, result1 []release.DeprecatedRemoteRelease, result2 error) {
+func (fake *ReleaseSource) GetMatchedReleasesReturnsOnCall(i int, result1 []release.RemoteRelease, result2 error) {
 	fake.getMatchedReleasesMutex.Lock()
 	defer fake.getMatchedReleasesMutex.Unlock()
 	fake.GetMatchedReleasesStub = nil
 	if fake.getMatchedReleasesReturnsOnCall == nil {
 		fake.getMatchedReleasesReturnsOnCall = make(map[int]struct {
-			result1 []release.DeprecatedRemoteRelease
+			result1 []release.RemoteRelease
 			result2 error
 		})
 	}
 	fake.getMatchedReleasesReturnsOnCall[i] = struct {
-		result1 []release.DeprecatedRemoteRelease
+		result1 []release.RemoteRelease
 		result2 error
 	}{result1, result2}
 }

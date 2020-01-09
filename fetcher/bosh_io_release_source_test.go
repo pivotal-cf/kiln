@@ -76,8 +76,8 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(foundReleases).To(HaveLen(2))
 				Expect(foundReleases).To(ConsistOf(
-					release.NewBuiltRelease(release.ReleaseID{Name: "uaa", Version: "73.3.0"}).WithRemote(ID, uaaURL),
-					release.NewBuiltRelease(release.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}).WithRemote(ID, cfRabbitURL),
+					release.RemoteRelease{ReleaseID: release.ReleaseID{Name: "uaa", Version: "73.3.0"}, RemotePath: uaaURL},
+					release.RemoteRelease{ReleaseID: release.ReleaseID{Name: "cf-rabbitmq", Version: "268.0.0"}, RemotePath: cfRabbitURL},
 				))
 			})
 		})
@@ -89,7 +89,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				releaseVersion = "1.2.3"
 				releaseSource  *BOSHIOReleaseSource
 
-				foundReleases         []release.DeprecatedRemoteRelease
+				foundReleases         []release.RemoteRelease
 				getMatchedReleasesErr error
 			)
 
@@ -174,7 +174,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 						releaseVersion,
 					)
 
-					expectedRelease := release.NewBuiltRelease(releaseID).WithRemote(ID, expectedPath)
+					expectedRelease := release.RemoteRelease{ReleaseID: releaseID, RemotePath: expectedPath}
 
 					Expect(foundReleases).To(ConsistOf(expectedRelease))
 				},

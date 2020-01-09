@@ -202,7 +202,10 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 			Expect(input.Bucket).To(Equal(aws.String(bucket)))
 
 			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(ConsistOf(release.NewBuiltRelease(release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}).WithRemote(bucket, bpmKey)))
+			Expect(matchedS3Objects).To(ConsistOf(release.RemoteRelease{
+				ReleaseID: release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+				RemotePath: bpmKey,
+			}))
 		})
 
 		When("the regular expression is missing a capture group", func() {
@@ -244,7 +247,10 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 
 				Expect(matchedS3Objects).To(HaveLen(1))
 				Expect(matchedS3Objects).To(ConsistOf(
-					release.NewBuiltRelease(release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}).WithRemote(bucket, bpmKey),
+					release.RemoteRelease{
+						ReleaseID: release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+						RemotePath: bpmKey,
+					},
 				))
 			})
 		})

@@ -20,8 +20,8 @@ func (src S3BuiltReleaseSource) ID() string {
 	return src.Bucket
 }
 
-func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.DeprecatedRemoteRelease, error) {
-	matchedS3Objects := make(map[release.ReleaseID]release.DeprecatedRemoteRelease)
+func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
+	matchedS3Objects := make(map[release.ReleaseID]release.RemoteRelease)
 
 	exp, err := regexp.Compile(src.Regex)
 	if err != nil {
@@ -50,7 +50,7 @@ func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.Rel
 				if err != nil {
 					continue
 				}
-				matchedS3Objects[release.ReleaseID()] = release
+				matchedS3Objects[release.ReleaseID] = release
 			}
 			return true
 		},
@@ -58,7 +58,7 @@ func (src S3BuiltReleaseSource) GetMatchedReleases(desiredReleaseSet release.Rel
 		return nil, err
 	}
 
-	matchingReleases := make([]release.DeprecatedRemoteRelease, 0)
+	matchingReleases := make([]release.RemoteRelease, 0)
 	for expectedReleaseID := range desiredReleaseSet {
 		if rel, ok := matchedS3Objects[expectedReleaseID]; ok {
 			matchingReleases = append(matchingReleases, rel)
@@ -107,9 +107,9 @@ func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleas
 	return releases, nil
 }
 
-func createBuiltReleaseFromS3Key(exp *regexp.Regexp, releaseSourceID, s3Key string) (release.DeprecatedRemoteRelease, error) {
+func createBuiltReleaseFromS3Key(exp *regexp.Regexp, releaseSourceID, s3Key string) (release.RemoteRelease, error) {
 	if !exp.MatchString(s3Key) {
-		return nil, fmt.Errorf("s3 key does not match regex")
+		return release.RemoteRelease{}, fmt.Errorf("s3 key does not match regex")
 	}
 
 	matches := exp.FindStringSubmatch(s3Key)
@@ -120,7 +120,8 @@ func createBuiltReleaseFromS3Key(exp *regexp.Regexp, releaseSourceID, s3Key stri
 		}
 	}
 
-	return release.NewBuiltRelease(
-		release.ReleaseID{Name: subgroup[ReleaseName], Version: subgroup[ReleaseVersion]},
-	).WithRemote(releaseSourceID, s3Key), nil
+	return release.RemoteRelease{
+		ReleaseID: release.ReleaseID{Name: subgroup[ReleaseName], Version: subgroup[ReleaseVersion]},
+		RemotePath: s3Key,
+	}, nil
 }

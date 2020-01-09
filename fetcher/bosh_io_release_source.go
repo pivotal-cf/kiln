@@ -71,8 +71,8 @@ func (r *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
 	return
 }
 
-func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.DeprecatedRemoteRelease, error) {
-	matches := make([]release.DeprecatedRemoteRelease, 0)
+func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
+	matches := make([]release.RemoteRelease, 0)
 
 	for rel := range desiredReleaseSet {
 	found:
@@ -85,9 +85,10 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.Releas
 				}
 				if exists {
 					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, rel.Version)
-					builtRelease := release.NewBuiltRelease(
-						release.ReleaseID{Name: rel.Name, Version: rel.Version},
-					).WithRemote(ReleaseSourceTypeBOSHIO, downloadURL)
+					builtRelease := release.RemoteRelease{
+						ReleaseID:  release.ReleaseID{Name: rel.Name, Version: rel.Version},
+						RemotePath: downloadURL,
+					}
 					matches = append(matches, builtRelease)
 					break found
 				}

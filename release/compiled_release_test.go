@@ -26,20 +26,4 @@ var _ = Describe("compiledRelease", func() {
 		Entry("when the stemcell os is different", expectedName, expectedVersion, "wrong-os", expectedStemcellVersion, false),
 		Entry("when the stemcell version is different", expectedName, expectedVersion, expectedStemcellOS, "0.0.0", false),
 	)
-
-	Describe("StandardizedFilename", func() {
-		var release DeprecatedRemoteRelease
-
-		BeforeEach(func() {
-			release = NewCompiledRelease(
-				ReleaseID{Name: expectedName, Version: expectedVersion},
-				expectedStemcellOS,
-				expectedStemcellVersion,
-			)
-		})
-
-		It("returns the standardized filename for the release", func() {
-			Expect(release.StandardizedFilename()).To(Equal("my-awesome-release-42.0.0-plan9-9.9.9.tgz"))
-		})
-	})
 })

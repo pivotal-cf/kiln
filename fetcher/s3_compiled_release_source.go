@@ -26,8 +26,29 @@ func (r S3CompiledReleaseSource) ID() string {
 	return r.Bucket
 }
 
-func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.DeprecatedRemoteRelease, error) {
-	matchedS3Objects := make(map[release.ReleaseID][]release.DeprecatedRemoteRelease)
+type compiledRelease struct {
+	release.ReleaseID
+	stemcellOS string
+	stemcellVersion string
+	remotePath string
+}
+
+func (cr compiledRelease) satisfies(rr release.ReleaseRequirement) bool {
+	return cr.Name == rr.Name &&
+		cr.Version == rr.Version &&
+		cr.stemcellOS == rr.StemcellOS &&
+		cr.stemcellVersion == cr.stemcellVersion
+}
+
+func (cr compiledRelease) asRemoteRelease() release.RemoteRelease {
+	return release.RemoteRelease{
+		ReleaseID: cr.ReleaseID,
+		RemotePath: cr.remotePath,
+	}
+}
+
+func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
+	matchedS3Objects := make(map[release.ReleaseID][]compiledRelease)
 
 	exp, err := regexp.Compile(r.Regex)
 	if err != nil {
@@ -58,7 +79,7 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.Re
 					continue
 				}
 
-				matchedS3Objects[compiledRelease.ReleaseID()] = append(matchedS3Objects[compiledRelease.ReleaseID()], compiledRelease)
+				matchedS3Objects[compiledRelease.ReleaseID] = append(matchedS3Objects[compiledRelease.ReleaseID], compiledRelease)
 			}
 			return true
 		},
@@ -66,12 +87,12 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.Re
 		return nil, err
 	}
 
-	matchingReleases := make([]release.DeprecatedRemoteRelease, 0)
+	matchingReleases := make([]release.RemoteRelease, 0)
 	for expectedReleaseID, requirement := range desiredReleaseSet {
 		if releases, ok := matchedS3Objects[expectedReleaseID]; ok {
 			for _, release := range releases {
-				if release.Satisfies(requirement) {
-					matchingReleases = append(matchingReleases, release)
+				if release.satisfies(requirement) {
+					matchingReleases = append(matchingReleases, release.asRemoteRelease())
 					break
 				}
 			}
@@ -120,9 +141,9 @@ func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteRelea
 	return releases, nil
 }
 
-func createCompiledReleaseFromS3Key(exp *regexp.Regexp, releaseSourceID, s3Key string) (release.DeprecatedRemoteRelease, error) {
+func createCompiledReleaseFromS3Key(exp *regexp.Regexp, releaseSourceID, s3Key string) (compiledRelease, error) {
 	if !exp.MatchString(s3Key) {
-		return nil, fmt.Errorf("s3 key does not match regex")
+		return compiledRelease{}, fmt.Errorf("s3 key does not match regex")
 	}
 
 	matches := exp.FindStringSubmatch(s3Key)
@@ -133,9 +154,10 @@ func createCompiledReleaseFromS3Key(exp *regexp.Regexp, releaseSourceID, s3Key s
 		}
 	}
 
-	return release.NewCompiledRelease(
-		release.ReleaseID{Name: subgroup[ReleaseName], Version: subgroup[ReleaseVersion]},
-		subgroup[StemcellOS],
-		subgroup[StemcellVersion],
-	).WithRemote(releaseSourceID, s3Key), nil
+	return compiledRelease{
+		ReleaseID:       release.ReleaseID{Name: subgroup[ReleaseName], Version: subgroup[ReleaseVersion]},
+		stemcellOS:      subgroup[StemcellOS],
+		stemcellVersion: subgroup[StemcellVersion],
+		remotePath:      s3Key,
+	}, nil
 }

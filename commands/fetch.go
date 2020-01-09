@@ -136,12 +136,7 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, satisfiedRelease
 
 		//TODO: make get and download release functions singular, why? We do not need to download all at once because under the cover we are downloading in serially.
 
-		rrs := make([]release.RemoteRelease, 0, len(remoteReleases))
-		for _, r := range remoteReleases {
-			rrs = append(rrs, release.RemoteRelease{ReleaseID: r.ReleaseID(), RemotePath: r.RemotePath()})
-		}
-
-		localReleases, err := releaseSource.DownloadReleases(f.Options.ReleasesDir, rrs, f.Options.DownloadThreads)
+		localReleases, err := releaseSource.DownloadReleases(f.Options.ReleasesDir, remoteReleases, f.Options.DownloadThreads)
 		if err != nil {
 			return nil, nil, err
 		}
