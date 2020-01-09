@@ -96,11 +96,11 @@ func (l LocalReleaseDirectory) deleteReleases(releasesToDelete []release2.LocalR
 		err := os.Remove(release.LocalPath)
 
 		if err != nil {
-			l.logger.Printf("error removing release %s: %v\n", release.ReleaseID.Name, err)
-			return fmt.Errorf("failed to delete release %s", release.ReleaseID.Name)
+			l.logger.Printf("error removing release %s: %v\n", release.Name, err)
+			return fmt.Errorf("failed to delete release %s", release.Name)
 		}
 
-		l.logger.Printf("removed release %s\n", release.ReleaseID.Name)
+		l.logger.Printf("removed release %s\n", release.Name)
 	}
 
 	return nil
@@ -121,7 +121,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet []release2.L
 		expectedSum, found := findExpectedSum(release.ReleaseID, kilnfileLock.Releases)
 
 		if !found {
-			return fmt.Errorf("release %s is not in Kilnfile.lock file", release.ReleaseID.Name)
+			return fmt.Errorf("release %s is not in Kilnfile.lock file", release.Name)
 		}
 		if expectedSum == "" {
 			continue

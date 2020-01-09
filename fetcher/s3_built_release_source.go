@@ -81,7 +81,7 @@ func (src S3BuiltReleaseSource) DownloadReleases(releaseDir string, remoteReleas
 	}
 
 	for _, rel := range remoteReleases {
-		outputFile := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", rel.ReleaseID.Name, rel.ReleaseID.Version))
+		outputFile := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", rel.Name, rel.Version))
 
 		file, err := os.Create(outputFile)
 		if err != nil {

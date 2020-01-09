@@ -13,8 +13,8 @@ func (r SatisfyingLocalRelease) Satisfies(rr ReleaseRequirement) bool {
 	if r.ExtraConstraint == nil {
 		r.ExtraConstraint = noConstraint{}
 	}
-	return r.ReleaseID.Name == rr.Name &&
-		r.ReleaseID.Version == rr.Version &&
+	return r.Name == rr.Name &&
+		r.Version == rr.Version &&
 		r.ExtraConstraint.Satisfies(rr)
 }
 

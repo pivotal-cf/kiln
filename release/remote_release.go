@@ -1,6 +1,6 @@
 package release
 
 type RemoteRelease struct {
-	ReleaseID  ReleaseID
+	ReleaseID
 	RemotePath string
 }

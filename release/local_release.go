@@ -1,6 +1,6 @@
 package release
 
 type LocalRelease struct {
-	ReleaseID ReleaseID
+	ReleaseID
 	LocalPath string
 }
