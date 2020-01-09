@@ -47,14 +47,14 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]release2.
 		// see implementation of ReleaseManifestReader.Read for why we can assume that
 		// stemcell metadata are empty strings
 		if releaseManifest.StemcellOS != "" && releaseManifest.StemcellVersion != "" {
-			rel = release2.NewCompiledRelease(
+			rel = release2.NewLocalCompiledRelease(
 				id,
 				releaseManifest.StemcellOS,
 				releaseManifest.StemcellVersion,
 				filepath.Join(releasesDir, releaseManifest.File),
 			)
 		} else {
-			rel = release2.NewBuiltRelease(id, filepath.Join(releasesDir, releaseManifest.File))
+			rel = release2.NewLocalBuiltRelease(id, filepath.Join(releasesDir, releaseManifest.File))
 		}
 		outputReleases = append(outputReleases, rel)
 	}

@@ -55,11 +55,11 @@ var _ = Describe("ReleaseRequirementSet", func() {
 		)
 
 		BeforeEach(func() {
-			satisfyingRelease = NewBuiltRelease(release1ID, "satisfying-path")
-			unsatisfyingRelease = NewBuiltRelease(ReleaseID{Name: release2Name, Version: "4.0.4"}, "unsatisfying-path")
+			satisfyingRelease = NewLocalBuiltRelease(release1ID, "satisfying-path")
+			unsatisfyingRelease = NewLocalBuiltRelease(ReleaseID{Name: release2Name, Version: "4.0.4"}, "unsatisfying-path")
 
 			extraReleaseID = ReleaseID{Name: "extra", Version: "2.3.5"}
-			extraRelease = NewBuiltRelease(extraReleaseID, "so-extra")
+			extraRelease = NewLocalBuiltRelease(extraReleaseID, "so-extra")
 
 			releaseSet = []SatisfyingLocalRelease{satisfyingRelease, unsatisfyingRelease, extraRelease}
 		})

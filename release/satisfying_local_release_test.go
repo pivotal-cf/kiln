@@ -7,14 +7,14 @@ import (
 	. "github.com/pivotal-cf/kiln/release"
 )
 
-var _ = Describe("NewBuiltRelease()", func() {
+var _ = Describe("NewLocalBuiltRelease()", func() {
 	const (
 		expectedName    = "my-awesome-release"
 		expectedVersion = "42.0.0"
 	)
 
 	DescribeTable("Satisfies", func(name, version string, expectedResult bool) {
-		release := NewBuiltRelease(ReleaseID{Name: name, Version: version}, "not-used")
+		release := NewLocalBuiltRelease(ReleaseID{Name: name, Version: version}, "not-used")
 		requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: "not-used", StemcellVersion: "404"}
 		Expect(release.Satisfies(requirement)).To(Equal(expectedResult))
 	},
@@ -24,7 +24,7 @@ var _ = Describe("NewBuiltRelease()", func() {
 	)
 })
 
-var _ = Describe("NewCompiledRelease()", func() {
+var _ = Describe("NewLocalCompiledRelease()", func() {
 	const (
 		expectedName            = "my-awesome-release"
 		expectedVersion         = "42.0.0"
@@ -33,7 +33,7 @@ var _ = Describe("NewCompiledRelease()", func() {
 	)
 
 	DescribeTable("Satisfies", func(name, version, stemcellOS, stemcellVersion string, expectedResult bool) {
-		release := NewCompiledRelease(ReleaseID{Name: name, Version: version}, stemcellOS, stemcellVersion, "not-used")
+		release := NewLocalCompiledRelease(ReleaseID{Name: name, Version: version}, stemcellOS, stemcellVersion, "not-used")
 		requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion}
 		Expect(release.Satisfies(requirement)).To(Equal(expectedResult))
 	},

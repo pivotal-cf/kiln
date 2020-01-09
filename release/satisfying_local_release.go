@@ -24,13 +24,13 @@ func (noConstraint) Satisfies(ReleaseRequirement) bool {
 	return true
 }
 
-func NewBuiltRelease(id ReleaseID, localPath string) SatisfyingLocalRelease {
+func NewLocalBuiltRelease(id ReleaseID, localPath string) SatisfyingLocalRelease {
 	return SatisfyingLocalRelease{
 		LocalRelease: LocalRelease{ReleaseID: id, LocalPath: localPath},
 	}
 }
 
-func NewCompiledRelease(id ReleaseID, stemcellOS, stemcellVersion, localPath string) SatisfyingLocalRelease {
+func NewLocalCompiledRelease(id ReleaseID, stemcellOS, stemcellVersion, localPath string) SatisfyingLocalRelease {
 	return SatisfyingLocalRelease{
 		LocalRelease: LocalRelease{ReleaseID: id, LocalPath: localPath},
 		ExtraConstraint: StemcellConstraint{
