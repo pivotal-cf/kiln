@@ -7,7 +7,7 @@ import (
 	. "github.com/pivotal-cf/kiln/release"
 )
 
-var _ = Describe("compiledRelease", func() {
+var _ = Describe("NewCompiledRelease()", func() {
 	const (
 		expectedName            = "my-awesome-release"
 		expectedVersion         = "42.0.0"

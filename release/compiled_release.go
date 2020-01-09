@@ -1,24 +1,22 @@
 package release
 
-type compiledRelease struct {
-	builtRelease
+type stemcellConstraints struct {
 	StemcellOS      string
 	StemcellVersion string
 }
 
 func NewCompiledRelease(id ReleaseID, stemcellOS, stemcellVersion, localPath string) satisfiableLocalRelease {
 	return satisfiableLocalRelease{
-		unhomedRelease: compiledRelease{
-			builtRelease:    builtRelease(id),
+		releaseID: id,
+		localPath: localPath,
+		additionalConstraints: stemcellConstraints{
 			StemcellOS:      stemcellOS,
 			StemcellVersion: stemcellVersion,
 		},
-		localPath: localPath,
 	}
 }
 
-func (cr compiledRelease) Satisfies(rr ReleaseRequirement) bool {
-	return cr.builtRelease.Satisfies(rr) &&
-		cr.StemcellOS == rr.StemcellOS &&
+func (cr stemcellConstraints) Satisfies(rr ReleaseRequirement) bool {
+	return cr.StemcellOS == rr.StemcellOS &&
 		cr.StemcellVersion == rr.StemcellVersion
 }
