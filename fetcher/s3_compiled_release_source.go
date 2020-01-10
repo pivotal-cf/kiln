@@ -37,7 +37,7 @@ func (cr compiledRelease) satisfies(rr release.ReleaseRequirement) bool {
 	return cr.Name == rr.Name &&
 		cr.Version == rr.Version &&
 		cr.stemcellOS == rr.StemcellOS &&
-		cr.stemcellVersion == cr.stemcellVersion
+		cr.stemcellVersion == rr.StemcellVersion
 }
 
 func (cr compiledRelease) asRemoteRelease() release.RemoteRelease {

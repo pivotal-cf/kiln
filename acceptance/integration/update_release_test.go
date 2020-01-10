@@ -77,7 +77,13 @@ stemcell_criteria:
 			Expect(kilnfileLock).To(Equal(
 				cargo.KilnfileLock{
 					Releases: []cargo.ReleaseLock{
-						{Name: "loggregator-agent", Version: "5.1.0", SHA1: "a86e10219b0ed9b7b82f0610b7cdc03c13765722"},
+						{
+							Name:         "loggregator-agent",
+							Version:      "5.1.0",
+							SHA1:         "a86e10219b0ed9b7b82f0610b7cdc03c13765722",
+							RemoteSource: "bosh.io",
+							RemotePath:   "https://bosh.io/d/github.com/cloudfoundry/loggregator-agent-release?v=5.1.0",
+						},
 						{
 							Name:         "capi",
 							Version:      "1.88.0",
@@ -114,12 +120,12 @@ releases:
   version: "5.1.0"
   sha1: "a86e10219b0ed9b7b82f0610b7cdc03c13765722"
   remote_source: compiled-releases
-  remote_path: "2.8/loggregator-agent/loggregator-agent-5.1.0-ubuntu-xenial-56.30.tgz"
+  remote_path: "2.8/loggregator-agent/loggregator-agent-5.1.0-ubuntu-xenial-456.30.tgz"
 - name: capi
   sha1: "03ac801323cd23205dde357cc7d2dc9e92bc0c93"
   version: "1.87.0"
   remote_source: compiled-releases
-  remote_path: "2.8/capi/capi-1.87.0-ubuntu-xenial-56.30.tgz"
+  remote_path: "2.8/capi/capi-1.86.0-ubuntu-xenial-456.30.tgz"
 stemcell_criteria:
   os: ubuntu-xenial
   version: '456.30'
@@ -172,7 +178,13 @@ stemcell_criteria:
 			Expect(kilnfileLock).To(Equal(
 				cargo.KilnfileLock{
 					Releases: []cargo.ReleaseLock{
-						{Name: "loggregator-agent", Version: "5.1.0", SHA1: "a86e10219b0ed9b7b82f0610b7cdc03c13765722"},
+						{
+							Name:         "loggregator-agent",
+							Version:      "5.1.0",
+							SHA1:         "a86e10219b0ed9b7b82f0610b7cdc03c13765722",
+							RemoteSource: "compiled-releases",
+							RemotePath:   "2.8/loggregator-agent/loggregator-agent-5.1.0-ubuntu-xenial-456.30.tgz",
+						},
 						{
 							Name:         "capi",
 							Version:      "1.86.0",

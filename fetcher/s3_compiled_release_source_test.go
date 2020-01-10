@@ -176,11 +176,13 @@ var _ = Describe("S3CompiledReleaseSource", func() {
 			BeforeEach(func() {
 				bpmKey = "2.5/bpm/bpm-1.2.3-lts-ubuntu-xenial-190.0.0.tgz"
 				bpmWrongStemcellKey := "2.5/bpm/bpm-1.2.3-lts-ubuntu-xenial-191.0.0.tgz"
+				bpmAnotherWrongStemcellKey := "2.5/bpm/bpm-1.2.3-lts-ubuntu-xenial-192.0.0.tgz"
 				fakeS3Client.ListObjectsPagesStub = func(input *s3.ListObjectsInput, fn func(*s3.ListObjectsOutput, bool) bool) error {
 					shouldContinue := fn(&s3.ListObjectsOutput{
 						Contents: []*s3.Object{
-							{Key: &bpmKey},
 							{Key: &bpmWrongStemcellKey},
+							{Key: &bpmKey},
+							{Key: &bpmAnotherWrongStemcellKey},
 						},
 					},
 						true,
