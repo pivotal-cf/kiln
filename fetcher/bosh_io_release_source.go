@@ -63,15 +63,15 @@ func NewBOSHIOReleaseSource(logger *log.Logger, customServerURI string) *BOSHIOR
 	}
 }
 
-func (_ BOSHIOReleaseSource) ID() string {
+func (src BOSHIOReleaseSource) ID() string {
 	return ReleaseSourceTypeBOSHIO
 }
 
-func (r *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
+func (src *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
 	return
 }
 
-func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
+func (src BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
 	matches := make([]release.RemoteRelease, 0)
 
 	for rel := range desiredReleaseSet {
@@ -79,12 +79,12 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.Releas
 		for _, repo := range repos {
 			for _, suf := range suffixes {
 				fullName := repo + "/" + rel.Name + suf
-				exists, err := r.releaseExistOnBoshio(fullName, rel.Version)
+				exists, err := src.releaseExistOnBoshio(fullName, rel.Version)
 				if err != nil {
 					return nil, err
 				}
 				if exists {
-					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", r.serverURI, fullName, rel.Version)
+					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, rel.Version)
 					builtRelease := release.RemoteRelease{
 						ReleaseID:  release.ReleaseID{Name: rel.Name, Version: rel.Version},
 						RemotePath: downloadURL,
@@ -99,14 +99,13 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.Releas
 	return matches, nil //no foreseen error to return to a higher level
 }
 
-func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) ([]release.LocalRelease, error) {
+func (src BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) ([]release.LocalRelease, error) {
 	var releases []release.LocalRelease
 
 	for _, rel := range remoteReleases {
-		r.logger.Printf("downloading %s %s from bosh.io", rel.Name, rel.Version)
+		src.logger.Printf("downloading %s %s from %s", rel.Name, rel.Version, src.ID())
 
 		downloadURL := rel.RemotePath
-		r.logger.Printf("downloading %s...\n", downloadURL)
 		// Get the data
 		resp, err := http.Get(downloadURL)
 		if err != nil {
@@ -140,8 +139,8 @@ func (err ResponseStatusCodeError) Error() string {
 	return fmt.Sprintf("response to %s %s got status %d when a success was expected", err.Request.Method, err.Request.URL, err.StatusCode)
 }
 
-func (r BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/github.com/%s", r.serverURI, name))
+func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {
+	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/github.com/%s", src.serverURI, name))
 	if err != nil {
 		return false, fmt.Errorf("bosh.io API is down with error: %w", err)
 	}

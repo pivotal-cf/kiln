@@ -114,7 +114,7 @@ func (src S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteRel
 	}
 
 	for _, rel := range remoteReleases {
-		S3ReleaseSource(src).Logger.Printf("downloading %s %s from %s", rel.Name, rel.Version, src.Bucket)
+		src.Logger.Printf("downloading %s %s from %s", rel.Name, rel.Version, src.Bucket)
 
 		outputFile := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", rel.Name, rel.Version))
 
@@ -122,8 +122,6 @@ func (src S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteRel
 		if err != nil {
 			return nil, fmt.Errorf("failed to create file %q: %w", outputFile, err)
 		}
-
-		src.Logger.Printf("downloading %s...\n", rel.RemotePath)
 
 		_, err = src.S3Downloader.Download(file, &s3.GetObjectInput{
 			Bucket: aws.String(src.Bucket),
