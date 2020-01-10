@@ -22,8 +22,8 @@ const (
 
 type S3CompiledReleaseSource S3ReleaseSource
 
-func (r S3CompiledReleaseSource) ID() string {
-	return r.Bucket
+func (src S3CompiledReleaseSource) ID() string {
+	return src.Bucket
 }
 
 type compiledRelease struct {
@@ -47,10 +47,10 @@ func (cr compiledRelease) asRemoteRelease() release.RemoteRelease {
 	}
 }
 
-func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
+func (src S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
 	matchedS3Objects := make(map[release.ReleaseID][]compiledRelease)
 
-	exp, err := regexp.Compile(r.Regex)
+	exp, err := regexp.Compile(src.Regex)
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +64,9 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.Re
 		return nil, fmt.Errorf("Missing some capture group. Required capture groups: %s, %s, %s, %s", ReleaseName, ReleaseVersion, StemcellOS, StemcellVersion)
 	}
 
-	if err := r.S3Client.ListObjectsPages(
+	if err := src.S3Client.ListObjectsPages(
 		&s3.ListObjectsInput{
-			Bucket: aws.String(r.Bucket),
+			Bucket: aws.String(src.Bucket),
 		},
 		func(page *s3.ListObjectsOutput, lastPage bool) bool {
 			for _, s3Object := range page.Contents {
@@ -74,7 +74,7 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.Re
 					continue
 				}
 
-				compiledRelease, err := createCompiledReleaseFromS3Key(exp, r.Bucket, *s3Object.Key)
+				compiledRelease, err := createCompiledReleaseFromS3Key(exp, src.Bucket, *s3Object.Key)
 				if err != nil {
 					continue
 				}
@@ -102,10 +102,9 @@ func (r S3CompiledReleaseSource) GetMatchedReleases(desiredReleaseSet release.Re
 	return matchingReleases, nil
 }
 
-func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) ([]release.LocalRelease, error) {
+func (src S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) ([]release.LocalRelease, error) {
 	var releases []release.LocalRelease
 
-	r.Logger.Printf("downloading %d objects from compiled s3...", len(remoteReleases))
 	setConcurrency := func(dl *s3manager.Downloader) {
 		if downloadThreads > 0 {
 			dl.Concurrency = downloadThreads
@@ -115,6 +114,8 @@ func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteRelea
 	}
 
 	for _, rel := range remoteReleases {
+		S3ReleaseSource(src).Logger.Printf("downloading %s %s from %s", rel.Name, rel.Version, src.Bucket)
+
 		outputFile := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", rel.Name, rel.Version))
 
 		file, err := os.Create(outputFile)
@@ -122,10 +123,10 @@ func (r S3CompiledReleaseSource) DownloadReleases(releaseDir string, remoteRelea
 			return nil, fmt.Errorf("failed to create file %q: %w", outputFile, err)
 		}
 
-		r.Logger.Printf("downloading %s...\n", rel.RemotePath)
+		src.Logger.Printf("downloading %s...\n", rel.RemotePath)
 
-		_, err = r.S3Downloader.Download(file, &s3.GetObjectInput{
-			Bucket: aws.String(r.Bucket),
+		_, err = src.S3Downloader.Download(file, &s3.GetObjectInput{
+			Bucket: aws.String(src.Bucket),
 			Key:    aws.String(rel.RemotePath),
 		}, setConcurrency)
 		if err != nil {

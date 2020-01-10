@@ -102,9 +102,9 @@ func (r BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.Releas
 func (r BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) ([]release.LocalRelease, error) {
 	var releases []release.LocalRelease
 
-	r.logger.Printf("downloading %d objects from bosh.io...", len(remoteReleases))
-
 	for _, rel := range remoteReleases {
+		r.logger.Printf("downloading %s %s from bosh.io", rel.Name, rel.Version)
+
 		downloadURL := rel.RemotePath
 		r.logger.Printf("downloading %s...\n", downloadURL)
 		// Get the data
