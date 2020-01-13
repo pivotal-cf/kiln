@@ -94,6 +94,8 @@ func (uploadRelease UploadRelease) Execute(args []string) error {
 
 	uploader := uploadRelease.UploaderConfig(rc)
 
+	uploadRelease.Logger.Printf("Uploading release %q to %s as %q...\n",
+		uploadRelease.Options.LocalPath, uploadRelease.Options.ReleaseSource, uploadRelease.Options.RemotePath)
 	if _, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(rc.Bucket),
 		Key:    aws.String(uploadRelease.Options.RemotePath),
@@ -102,7 +104,7 @@ func (uploadRelease UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("upload failed: %w", err)
 	}
 
-	uploadRelease.Logger.Println("upload succeeded")
+	uploadRelease.Logger.Println("Upload succeeded")
 
 	return nil
 }
