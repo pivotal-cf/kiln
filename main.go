@@ -144,8 +144,8 @@ func main() {
 
 type releaseDownloaderFactory struct{}
 
-func (f releaseDownloaderFactory) ReleaseDownloader(outLogger *log.Logger, kilnfile cargo.Kilnfile) (commands.ReleaseDownloader, error) {
-	releaseSources := fetcher.NewReleaseSourcesFactory(outLogger)(kilnfile, false)
+func (f releaseDownloaderFactory) ReleaseDownloader(outLogger *log.Logger, kilnfile cargo.Kilnfile, allowOnlyPublishable bool) (commands.ReleaseDownloader, error) {
+	releaseSources := fetcher.NewReleaseSourcesFactory(outLogger)(kilnfile, allowOnlyPublishable)
 
 	return fetcher.NewReleaseDownloader(releaseSources), nil
 }

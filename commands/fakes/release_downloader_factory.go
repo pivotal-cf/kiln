@@ -10,11 +10,12 @@ import (
 )
 
 type ReleaseDownloaderFactory struct {
-	ReleaseDownloaderStub        func(*log.Logger, cargo.Kilnfile) (commands.ReleaseDownloader, error)
+	ReleaseDownloaderStub        func(*log.Logger, cargo.Kilnfile, bool) (commands.ReleaseDownloader, error)
 	releaseDownloaderMutex       sync.RWMutex
 	releaseDownloaderArgsForCall []struct {
 		arg1 *log.Logger
 		arg2 cargo.Kilnfile
+		arg3 bool
 	}
 	releaseDownloaderReturns struct {
 		result1 commands.ReleaseDownloader
@@ -28,17 +29,18 @@ type ReleaseDownloaderFactory struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseDownloaderFactory) ReleaseDownloader(arg1 *log.Logger, arg2 cargo.Kilnfile) (commands.ReleaseDownloader, error) {
+func (fake *ReleaseDownloaderFactory) ReleaseDownloader(arg1 *log.Logger, arg2 cargo.Kilnfile, arg3 bool) (commands.ReleaseDownloader, error) {
 	fake.releaseDownloaderMutex.Lock()
 	ret, specificReturn := fake.releaseDownloaderReturnsOnCall[len(fake.releaseDownloaderArgsForCall)]
 	fake.releaseDownloaderArgsForCall = append(fake.releaseDownloaderArgsForCall, struct {
 		arg1 *log.Logger
 		arg2 cargo.Kilnfile
-	}{arg1, arg2})
-	fake.recordInvocation("ReleaseDownloader", []interface{}{arg1, arg2})
+		arg3 bool
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("ReleaseDownloader", []interface{}{arg1, arg2, arg3})
 	fake.releaseDownloaderMutex.Unlock()
 	if fake.ReleaseDownloaderStub != nil {
-		return fake.ReleaseDownloaderStub(arg1, arg2)
+		return fake.ReleaseDownloaderStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -53,17 +55,17 @@ func (fake *ReleaseDownloaderFactory) ReleaseDownloaderCallCount() int {
 	return len(fake.releaseDownloaderArgsForCall)
 }
 
-func (fake *ReleaseDownloaderFactory) ReleaseDownloaderCalls(stub func(*log.Logger, cargo.Kilnfile) (commands.ReleaseDownloader, error)) {
+func (fake *ReleaseDownloaderFactory) ReleaseDownloaderCalls(stub func(*log.Logger, cargo.Kilnfile, bool) (commands.ReleaseDownloader, error)) {
 	fake.releaseDownloaderMutex.Lock()
 	defer fake.releaseDownloaderMutex.Unlock()
 	fake.ReleaseDownloaderStub = stub
 }
 
-func (fake *ReleaseDownloaderFactory) ReleaseDownloaderArgsForCall(i int) (*log.Logger, cargo.Kilnfile) {
+func (fake *ReleaseDownloaderFactory) ReleaseDownloaderArgsForCall(i int) (*log.Logger, cargo.Kilnfile, bool) {
 	fake.releaseDownloaderMutex.RLock()
 	defer fake.releaseDownloaderMutex.RUnlock()
 	argsForCall := fake.releaseDownloaderArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *ReleaseDownloaderFactory) ReleaseDownloaderReturns(result1 commands.ReleaseDownloader, result2 error) {

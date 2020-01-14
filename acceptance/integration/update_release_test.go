@@ -24,7 +24,6 @@ var _ = Context("Updating a release to a specific version", func() {
 			kilnfileContents = `---
 release_sources:
 - type: bosh.io
-
 `
 			previousKilnfileLock = `---
 releases:
@@ -97,6 +96,23 @@ stemcell_criteria:
 						Version: "4.5.6",
 					},
 				}))
+		})
+
+		When("--allow-only-publishable-releases is passed and no publishable release is available", func() {
+			It("fails", func() {
+				command := exec.Command(pathToMain, "update-release",
+					"--allow-only-publishable-releases",
+					"--name", "capi",
+					"--version", "1.88.0",
+					"--kilnfile", kilnfilePath,
+					"--releases-directory", releasesPath)
+
+				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(session, 60*time.Second).Should(gexec.Exit(1))
+				Expect(session.Err).To(gbytes.Say(`couldn't find "capi" 1.88.0`))
+			})
 		})
 	})
 

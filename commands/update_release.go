@@ -14,12 +14,13 @@ import (
 
 type UpdateRelease struct {
 	Options struct {
-		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
-		Name           string   `short:"n" long:"name" required:"true" description:"name of release to update"`
-		Version        string   `short:"v" long:"version" required:"true" description:"desired version of release"`
-		ReleasesDir    string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
-		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
-		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
+		Kilnfile                     string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
+		Name                         string   `short:"n" long:"name" required:"true" description:"name of release to update"`
+		Version                      string   `short:"v" long:"version" required:"true" description:"desired version of release"`
+		ReleasesDir                  string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+		Variables                    []string `short:"vr" long:"variable" description:"variable in key=value format"`
+		VariablesFiles               []string `short:"vf" long:"variables-file" description:"path to variables file"`
+		AllowOnlyPublishableReleases bool     `long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
 	}
 	releaseDownloaderFactory ReleaseDownloaderFactory
 	filesystem               billy.Filesystem
@@ -30,7 +31,7 @@ type UpdateRelease struct {
 
 //go:generate counterfeiter -o ./fakes/release_downloader_factory.go --fake-name ReleaseDownloaderFactory . ReleaseDownloaderFactory
 type ReleaseDownloaderFactory interface {
-	ReleaseDownloader(*log.Logger, cargo.Kilnfile) (ReleaseDownloader, error)
+	ReleaseDownloader(*log.Logger, cargo.Kilnfile, bool) (ReleaseDownloader, error)
 }
 
 //go:generate counterfeiter -o ./fakes/release_downloader.go --fake-name ReleaseDownloader . ReleaseDownloader
@@ -67,7 +68,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
-	releaseDownloader, err := u.releaseDownloaderFactory.ReleaseDownloader(u.logger, kilnfile)
+	releaseDownloader, err := u.releaseDownloaderFactory.ReleaseDownloader(u.logger, kilnfile, u.Options.AllowOnlyPublishableReleases)
 	if err != nil {
 		return fmt.Errorf("error creating ReleaseDownloader: %w", err)
 	}

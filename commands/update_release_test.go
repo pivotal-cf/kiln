@@ -178,6 +178,48 @@ var _ = Describe("UpdateRelease", func() {
 					},
 				))
 			})
+
+			It("considers all release sources", func() {
+				err := updateReleaseCommand.Execute([]string{
+					"--kilnfile", "Kilnfile",
+					"--name", releaseName,
+					"--version", releaseVersion,
+					"--releases-directory", releasesDir,
+					"--variable", "someKey=someValue",
+					"--variables-file", "thisisafile",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(releaseDownloaderFactory.ReleaseDownloaderCallCount()).To(Equal(1))
+				_, _, allowOnlyPublishable := releaseDownloaderFactory.ReleaseDownloaderArgsForCall(0)
+				Expect(allowOnlyPublishable).To(BeFalse())
+			})
+		})
+
+		When("passing the --allow-only-publishable-releases flag", func() {
+			var downloadErr error
+
+			BeforeEach(func() {
+				downloadErr = errors.New("asplode!!")
+				releaseDownloader.DownloadReleaseReturns(release.LocalRelease{}, "", "", downloadErr)
+			})
+
+			It("tells the release downloader factory to allow only publishable releases", func() {
+				err := updateReleaseCommand.Execute([]string{
+					"--allow-only-publishable-releases",
+					"--kilnfile", "Kilnfile",
+					"--name", releaseName,
+					"--version", releaseVersion,
+					"--releases-directory", releasesDir,
+					"--variable", "someKey=someValue",
+					"--variables-file", "thisisafile",
+				})
+				Expect(err).To(MatchError(downloadErr))
+
+				Expect(releaseDownloaderFactory.ReleaseDownloaderCallCount()).To(Equal(1))
+				_, _, allowOnlyPublishable := releaseDownloaderFactory.ReleaseDownloaderArgsForCall(0)
+				Expect(allowOnlyPublishable).To(BeTrue())
+			})
 		})
 
 		When("the named release isn't in Kilnfile.lock", func() {
