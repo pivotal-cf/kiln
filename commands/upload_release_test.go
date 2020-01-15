@@ -1,8 +1,15 @@
 package commands_test
 
 import (
-	"io/ioutil"
+	"archive/tar"
+	"compress/gzip"
+	"crypto/sha1"
+	"fmt"
+	"io"
 	"log"
+	"os"
+	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -30,7 +37,7 @@ var _ = Describe("UploadRelease", func() {
 						Region:          "mars-2",
 						AccessKeyId:     "id",
 						SecretAccessKey: "secret",
-						Regex:           "^(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\\.]+-?[a-zA-Z0-9]\\.?[0-9]*)\\.tgz$",
+						Regex:           `^\w+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+-?[a-zA-Z0-9]\.?[0-9]*)\.tgz$`,
 					},
 					{
 						Type: "boshio",
@@ -44,7 +51,48 @@ var _ = Describe("UploadRelease", func() {
 					},
 				}
 			}
+
+			expectedReleaseSHA string
 		)
+
+		var writeReleaseTarball = func(path, name, version string) string {
+			f, err := fs.Create(path)
+			Expect(err).NotTo(HaveOccurred())
+
+			gw := gzip.NewWriter(f)
+			tw := tar.NewWriter(gw)
+
+			releaseManifest := `
+name: ` + name + `
+version: ` + version + `
+`
+			manifestReader := strings.NewReader(releaseManifest)
+
+			header := &tar.Header{
+				Name:    "release.MF",
+				Size:    manifestReader.Size(),
+				Mode:    int64(os.O_RDONLY),
+				ModTime: time.Now(),
+			}
+			Expect(tw.WriteHeader(header)).To(Succeed())
+
+			_, err = io.Copy(tw, manifestReader)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(tw.Close()).To(Succeed())
+			Expect(gw.Close()).To(Succeed())
+			Expect(f.Close()).To(Succeed())
+
+			tarball, err := fs.Open(path)
+			Expect(err).NotTo(HaveOccurred())
+			defer tarball.Close()
+
+			hash := sha1.New()
+			_, err = io.Copy(hash, tarball)
+			Expect(err).NotTo(HaveOccurred())
+
+			return fmt.Sprintf("%x", hash.Sum(nil))
+		}
 
 		BeforeEach(func() {
 			fs = memfs.New()
@@ -60,6 +108,7 @@ var _ = Describe("UploadRelease", func() {
 					return nil
 				},
 			}
+			expectedReleaseSHA = writeReleaseTarball("banana-release.tgz", "banana", "1.2.3")
 		})
 
 		When("it receives a correct tarball path", func() {
@@ -67,12 +116,6 @@ var _ = Describe("UploadRelease", func() {
 				loader.LoadKilnfilesReturns(
 					cargo.Kilnfile{ReleaseSources: exampleReleaseSourceList()},
 					cargo.KilnfileLock{}, nil)
-
-				f, err := fs.Create("banana-release.tgz")
-				_, _ = f.Write([]byte("banana"))
-				f.Close()
-
-				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("uploads the tarball to the release source", func() {
@@ -89,28 +132,56 @@ var _ = Describe("UploadRelease", func() {
 				err := uploadRelease.Execute([]string{
 					"--kilnfile", "not-read-see-struct/Kilnfile",
 					"--local-path", "banana-release.tgz",
-					"--remote-path", "banana-release-1.2.3.tgz",
 					"--release-source", "orange-bucket",
 					"--variables-file", "my-secrets",
 				})
 
 				Expect(err).NotTo(HaveOccurred())
+
 				Expect(configUploaderCallCount).To(Equal(1))
+
 				Expect(relSrcConfig).NotTo(BeNil())
 				Expect(relSrcConfig.Bucket).To(Equal("orange-bucket"))
+
 				Expect(uploader.UploadCallCount()).To(Equal(1))
 
 				opts, fns := uploader.UploadArgsForCall(0)
-
 				Expect(fns).To(HaveLen(0))
-
 				Expect(opts.Bucket).NotTo(BeNil())
 				Expect(*opts.Bucket).To(Equal("orange-bucket"))
 				Expect(opts.Key).NotTo(BeNil())
-				Expect(*opts.Key).To(Equal("banana-release-1.2.3.tgz"))
+				Expect(*opts.Key).To(Equal("banana/banana-1.2.3.tgz"))
 
-				buf, _ := ioutil.ReadAll(opts.Body)
-				Expect(string(buf)).To(Equal("banana"))
+				hash := sha1.New()
+				_, err = io.Copy(hash, opts.Body)
+				Expect(err).NotTo(HaveOccurred())
+
+				releaseSHA := fmt.Sprintf("%x", hash.Sum(nil))
+				Expect(releaseSHA).To(Equal(expectedReleaseSHA))
+			})
+		})
+
+		When("the release tarball is invalid", func() {
+			BeforeEach(func() {
+				f, err := fs.Create("invalid-release.tgz")
+				_, _ = f.Write([]byte("invalid"))
+				f.Close()
+
+				Expect(err).NotTo(HaveOccurred())
+
+				loader.LoadKilnfilesReturns(
+					cargo.Kilnfile{ReleaseSources: exampleReleaseSourceList()},
+					cargo.KilnfileLock{}, nil)
+			})
+
+			It("errors", func() {
+				err := uploadRelease.Execute([]string{
+					"--kilnfile", "not-read-see-struct/Kilnfile",
+					"--local-path", "invalid-release.tgz",
+					"--release-source", "orange-bucket",
+					"--variables-file", "my-secrets",
+				})
+				Expect(err).To(MatchError(ContainSubstring("error reading the release manifest")))
 			})
 		})
 
@@ -124,22 +195,15 @@ var _ = Describe("UploadRelease", func() {
 					ReleaseSources: relSrcList,
 				}, cargo.KilnfileLock{}, nil)
 
-				f, err := fs.Create("banana-release.tgz")
-				_, _ = f.Write([]byte("banana"))
-				f.Close()
-
 				uploadRelease.UploaderConfig = func(rsc *cargo.ReleaseSourceConfig) commands.S3Uploader {
 					return uploader
 				}
-
-				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("returns a descriptive error", func() {
 				err := uploadRelease.Execute([]string{
 					"--kilnfile", "not-read-see-struct/Kilnfile",
 					"--local-path", "banana-release.tgz",
-					"--remote-path", "banana-release-1.2.3.tgz",
 					"--release-source", "orange-bucket",
 					"--variables-file", "my-secrets",
 				})
@@ -148,55 +212,50 @@ var _ = Describe("UploadRelease", func() {
 			})
 		})
 
-		When("the remote-path does not match the regex in the release_source", func() {
+		When("the conventional remote-path does not match the regex in the release_source", func() {
 			BeforeEach(func() {
-				relSrcList := exampleReleaseSourceList()
+				relSrcList := []cargo.ReleaseSourceConfig{
+					{
+						Type:            "s3",
+						Bucket:          "orange-bucket",
+						Region:          "mars-2",
+						AccessKeyId:     "id",
+						SecretAccessKey: "secret",
+						Regex:           "^pointless-root-dir/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\\.]+-?[a-zA-Z0-9]\\.?[0-9]*)\\.tgz$",
+					},
+				}
 
 				loader.LoadKilnfilesReturns(cargo.Kilnfile{
 					ReleaseSources: relSrcList,
 				}, cargo.KilnfileLock{}, nil)
 
-				f, err := fs.Create("banana-release.tgz")
-				_, _ = f.Write([]byte("banana"))
-				f.Close()
-
 				uploadRelease.UploaderConfig = func(rsc *cargo.ReleaseSourceConfig) commands.S3Uploader {
 					return uploader
 				}
-
-				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("returns a descriptive error", func() {
 				err := uploadRelease.Execute([]string{
 					"--kilnfile", "not-read-see-struct/Kilnfile",
 					"--local-path", "banana-release.tgz",
-					"--remote-path", "BLA_BLA_BLA.tgz",
 					"--release-source", "orange-bucket",
 					"--variables-file", "my-secrets",
 				})
 
-				Expect(err).To(MatchError(ContainSubstring("remote-path does not match")))
+				Expect(err).To(MatchError(ContainSubstring(`remote path "banana/banana-1.2.3.tgz" does not match`)))
 			})
 		})
 
-		When("some the remote does not exist in the Kilnfile", func() {
+		When("the given release source doesn't exist", func() {
 			When("no release sources are s3 buckets", func() {
 				BeforeEach(func() {
 					loader.LoadKilnfilesReturns(cargo.Kilnfile{}, cargo.KilnfileLock{}, nil)
-
-					f, err := fs.Create("banana-release.tgz")
-					_, _ = f.Write([]byte("banana"))
-					f.Close()
-
-					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("returns an error without suggested release sources", func() {
 					err := uploadRelease.Execute([]string{
 						"--kilnfile", "not-read-see-struct/Kilnfile",
 						"--local-path", "banana-release.tgz",
-						"--remote-path", "banana-release-1.2.3.tgz",
 						"--release-source", "orange-bucket",
 						"--variables-file", "my-secrets",
 					})
@@ -204,26 +263,20 @@ var _ = Describe("UploadRelease", func() {
 					Expect(err).To(MatchError(ContainSubstring("remote release source")))
 				})
 			})
-			When("at least one release source is an s3 bucket", func() {
+
+			When("some release sources are s3 buckets", func() {
 				BeforeEach(func() {
 					loader.LoadKilnfilesReturns(
 						cargo.Kilnfile{ReleaseSources: exampleReleaseSourceList()},
 						cargo.KilnfileLock{}, nil,
 					)
-
-					f, err := fs.Create("banana-release.tgz")
-					_, _ = f.Write([]byte("banana"))
-					f.Close()
-
-					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It("returns an error without suggested release sources", func() {
+				It("returns an error that suggests valid release sources", func() {
 					err := uploadRelease.Execute([]string{
 						"--kilnfile", "not-read-see-struct/Kilnfile",
 						"--local-path", "banana-release.tgz",
-						"--remote-path", "banana-release-1.2.3.tgz",
-						"--release-source", "dog-bucket",
+						"--release-source", "no-such-release-source",
 						"--variables-file", "my-secrets",
 					})
 

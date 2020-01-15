@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/src-d/go-billy.v4"
+	"gopkg.in/src-d/go-billy.v4/osfs"
+
+	"gopkg.in/yaml.v2"
 )
 
 type ReleaseManifest struct {
@@ -33,14 +35,20 @@ type compiledPackage struct {
 	Stemcell string `yaml:"stemcell"`
 }
 
-type ReleaseManifestReader struct{}
+type ReleaseManifestReader struct {
+	fs billy.Filesystem
+}
 
-func NewReleaseManifestReader() ReleaseManifestReader {
-	return ReleaseManifestReader{}
+func NewReleaseManifestReader(fs billy.Filesystem) ReleaseManifestReader {
+	return ReleaseManifestReader{fs: fs}
 }
 
 func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
-	file, err := os.Open(releaseTarball)
+	if r.fs == nil {
+		r.fs = osfs.New("")
+	}
+
+	file, err := r.fs.Open(releaseTarball)
 	if err != nil {
 		return Part{}, err
 	}

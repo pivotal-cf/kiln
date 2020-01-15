@@ -6,6 +6,8 @@ import (
 	"log"
 	"regexp"
 
+	"github.com/pivotal-cf/kiln/builder"
+
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 
@@ -34,7 +36,6 @@ type UploadRelease struct {
 
 		ReleaseSource string `short:"rs" long:"release-source" required:"true" description:"name of the release source specified in the Kilnfile"`
 		LocalPath     string `short:"lp" long:"local-path" required:"true" description:"path to BOSH release tarball"`
-		RemotePath    string `short:"rp" long:"remote-path" required:"true" description:"path at the remote source"`
 	}
 }
 
@@ -83,22 +84,31 @@ func (uploadRelease UploadRelease) Execute(args []string) error {
 		return errors.New(msg)
 	}
 
+	manifestReader := builder.NewReleaseManifestReader(uploadRelease.FS)
+	part, err := manifestReader.Read(uploadRelease.Options.LocalPath)
+	if err != nil {
+		return fmt.Errorf("error reading the release manifest: %w", err)
+	}
+
+	manifest := part.Metadata.(builder.ReleaseManifest)
+	remotePath := fmt.Sprintf("%s/%s-%s.tgz", manifest.Name, manifest.Name, manifest.Version)
+
 	re, err := regexp.Compile(rc.Regex)
 	if err != nil {
 		return fmt.Errorf("could not compile the regular expression in Kilnfile for %q: %w", rc.Bucket, err)
 	}
 
-	if !re.MatchString(uploadRelease.Options.RemotePath) {
-		return fmt.Errorf("remote-path does not match regular expression in Kilnfile for %q", rc.Bucket)
+	if !re.MatchString(remotePath) {
+		return fmt.Errorf("remote path %q does not match regular expression in Kilnfile for %q", remotePath, rc.Bucket)
 	}
 
 	uploader := uploadRelease.UploaderConfig(rc)
 
 	uploadRelease.Logger.Printf("Uploading release %q to %s as %q...\n",
-		uploadRelease.Options.LocalPath, uploadRelease.Options.ReleaseSource, uploadRelease.Options.RemotePath)
+		uploadRelease.Options.LocalPath, uploadRelease.Options.ReleaseSource, remotePath)
 	if _, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(rc.Bucket),
-		Key:    aws.String(uploadRelease.Options.RemotePath),
+		Key:    aws.String(remotePath),
 		Body:   file,
 	}); err != nil {
 		return fmt.Errorf("upload failed: %w", err)

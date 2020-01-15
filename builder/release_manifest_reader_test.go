@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"gopkg.in/src-d/go-billy.v4/osfs"
+
 	. "github.com/pivotal-cf/kiln/builder"
 
 	. "github.com/onsi/ginkgo"
@@ -75,7 +77,7 @@ var _ = Describe("ReleaseManifestReader", func() {
 	)
 
 	BeforeEach(func() {
-		reader = NewReleaseManifestReader()
+		reader = NewReleaseManifestReader(osfs.New(""))
 		tarball, releaseSHA1 = createReleaseTarball(`
 name: release
 version: 1.2.3

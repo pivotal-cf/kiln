@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"gopkg.in/src-d/go-billy.v4/osfs"
+
 	"github.com/pivotal-cf/kiln/release"
 
 	. "github.com/onsi/ginkgo"
@@ -34,7 +36,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		releaseFile = filepath.Join(releasesDir, "some-release.tgz")
 
 		fakeLogger = log.New(GinkgoWriter, "", 0)
-		releaseManifestReader := builder.NewReleaseManifestReader()
+		releaseManifestReader := builder.NewReleaseManifestReader(osfs.New(""))
 		releasesService := baking.NewReleasesService(fakeLogger, releaseManifestReader)
 
 		localReleaseDirectory = NewLocalReleaseDirectory(fakeLogger, releasesService)

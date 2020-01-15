@@ -64,7 +64,7 @@ func main() {
 	interpolator := builder.NewInterpolator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, errLogger)
 
-	releaseManifestReader := builder.NewReleaseManifestReader()
+	releaseManifestReader := builder.NewReleaseManifestReader(osfs.New(""))
 	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
 
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
