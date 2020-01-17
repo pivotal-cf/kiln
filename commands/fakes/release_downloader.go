@@ -9,7 +9,7 @@ import (
 )
 
 type ReleaseDownloader struct {
-	DownloadReleaseStub        func(string, release.Requirement) (release.Local, string, string, error)
+	DownloadReleaseStub        func(string, release.Requirement) (release.Local, release.Remote, error)
 	downloadReleaseMutex       sync.RWMutex
 	downloadReleaseArgsForCall []struct {
 		arg1 string
@@ -17,21 +17,19 @@ type ReleaseDownloader struct {
 	}
 	downloadReleaseReturns struct {
 		result1 release.Local
-		result2 string
-		result3 string
-		result4 error
+		result2 release.Remote
+		result3 error
 	}
 	downloadReleaseReturnsOnCall map[int]struct {
 		result1 release.Local
-		result2 string
-		result3 string
-		result4 error
+		result2 release.Remote
+		result3 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseDownloader) DownloadRelease(arg1 string, arg2 release.Requirement) (release.Local, string, string, error) {
+func (fake *ReleaseDownloader) DownloadRelease(arg1 string, arg2 release.Requirement) (release.Local, release.Remote, error) {
 	fake.downloadReleaseMutex.Lock()
 	ret, specificReturn := fake.downloadReleaseReturnsOnCall[len(fake.downloadReleaseArgsForCall)]
 	fake.downloadReleaseArgsForCall = append(fake.downloadReleaseArgsForCall, struct {
@@ -44,10 +42,10 @@ func (fake *ReleaseDownloader) DownloadRelease(arg1 string, arg2 release.Require
 		return fake.DownloadReleaseStub(arg1, arg2)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3, ret.result4
+		return ret.result1, ret.result2, ret.result3
 	}
 	fakeReturns := fake.downloadReleaseReturns
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3, fakeReturns.result4
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
 func (fake *ReleaseDownloader) DownloadReleaseCallCount() int {
@@ -56,7 +54,7 @@ func (fake *ReleaseDownloader) DownloadReleaseCallCount() int {
 	return len(fake.downloadReleaseArgsForCall)
 }
 
-func (fake *ReleaseDownloader) DownloadReleaseCalls(stub func(string, release.Requirement) (release.Local, string, string, error)) {
+func (fake *ReleaseDownloader) DownloadReleaseCalls(stub func(string, release.Requirement) (release.Local, release.Remote, error)) {
 	fake.downloadReleaseMutex.Lock()
 	defer fake.downloadReleaseMutex.Unlock()
 	fake.DownloadReleaseStub = stub
@@ -69,36 +67,33 @@ func (fake *ReleaseDownloader) DownloadReleaseArgsForCall(i int) (string, releas
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *ReleaseDownloader) DownloadReleaseReturns(result1 release.Local, result2 string, result3 string, result4 error) {
+func (fake *ReleaseDownloader) DownloadReleaseReturns(result1 release.Local, result2 release.Remote, result3 error) {
 	fake.downloadReleaseMutex.Lock()
 	defer fake.downloadReleaseMutex.Unlock()
 	fake.DownloadReleaseStub = nil
 	fake.downloadReleaseReturns = struct {
 		result1 release.Local
-		result2 string
-		result3 string
-		result4 error
-	}{result1, result2, result3, result4}
+		result2 release.Remote
+		result3 error
+	}{result1, result2, result3}
 }
 
-func (fake *ReleaseDownloader) DownloadReleaseReturnsOnCall(i int, result1 release.Local, result2 string, result3 string, result4 error) {
+func (fake *ReleaseDownloader) DownloadReleaseReturnsOnCall(i int, result1 release.Local, result2 release.Remote, result3 error) {
 	fake.downloadReleaseMutex.Lock()
 	defer fake.downloadReleaseMutex.Unlock()
 	fake.DownloadReleaseStub = nil
 	if fake.downloadReleaseReturnsOnCall == nil {
 		fake.downloadReleaseReturnsOnCall = make(map[int]struct {
 			result1 release.Local
-			result2 string
-			result3 string
-			result4 error
+			result2 release.Remote
+			result3 error
 		})
 	}
 	fake.downloadReleaseReturnsOnCall[i] = struct {
 		result1 release.Local
-		result2 string
-		result3 string
-		result4 error
-	}{result1, result2, result3, result4}
+		result2 release.Remote
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *ReleaseDownloader) Invocations() map[string][][]interface{} {

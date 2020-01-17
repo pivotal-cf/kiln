@@ -66,13 +66,13 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 				uaaURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/uaa-release?v=73.3.0", testServer.URL())
-				Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "uaa", Version: "73.3.0"}, RemotePath: uaaURL}))
+				Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "uaa", Version: "73.3.0"}, RemotePath: uaaURL, SourceID: ReleaseSourceTypeBOSHIO}))
 
 				foundRelease, found, err = releaseSource.GetMatchedRelease(rabbitmqRequirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 				cfRabbitURL := fmt.Sprintf("%s/d/github.com/pivotal-cf/cf-rabbitmq-release?v=268.0.0", testServer.URL())
-				Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "268.0.0"}, RemotePath: cfRabbitURL}))
+				Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "268.0.0"}, RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
 			})
 
 
@@ -198,7 +198,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 						releaseVersion,
 					)
 
-					Expect(foundRelease).To(Equal(release.Remote{ID: releaseID, RemotePath: expectedPath}))
+					Expect(foundRelease).To(Equal(release.Remote{ID: releaseID, RemotePath: expectedPath, SourceID: ReleaseSourceTypeBOSHIO}))
 				},
 
 				Entry("cloudfoundry org, no suffix", "cloudfoundry", ""),
@@ -244,7 +244,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 			release1ID = release.ID{Name: "some", Version: "1.2.3"}
 			release1ServerPath = "/some-release"
-			release1 = release.Remote{ID: release1ID, RemotePath: testServer.URL() + release1ServerPath}
+			release1 = release.Remote{ID: release1ID, RemotePath: testServer.URL() + release1ServerPath, SourceID: ReleaseSourceTypeBOSHIO}
 			release1Filename = "some-1.2.3.tgz"
 			release1ServerFileContents = "totes-a-real-release"
 

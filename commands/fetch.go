@@ -146,7 +146,7 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []c
 
 		local, err := src.DownloadRelease(
 			f.Options.ReleasesDir,
-			release.Remote{ID: release.ID{Name: rl.Name, Version: rl.Version}, RemotePath: rl.RemotePath},
+			release.Remote{ID: release.ID{Name: rl.Name, Version: rl.Version}, RemotePath: rl.RemotePath, SourceID: rl.RemoteSource},
 			f.Options.DownloadThreads,
 		)
 		if err != nil {

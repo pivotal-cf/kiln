@@ -95,6 +95,7 @@ func (src S3ReleaseSource) GetMatchedRelease(requirement release.Requirement) (r
 	return release.Remote{
 		ID:         release.ID{Name: requirement.Name, Version: requirement.Version},
 		RemotePath: remotePath,
+		SourceID: src.ID(),
 	}, true, nil
 }
 

@@ -85,6 +85,7 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement release.Requirement
 				builtRelease := release.Remote{
 					ID:         release.ID{Name: requirement.Name, Version: requirement.Version},
 					RemotePath: downloadURL,
+					SourceID: src.ID(),
 				}
 				return builtRelease, true, nil
 			}

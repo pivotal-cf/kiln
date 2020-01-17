@@ -54,7 +54,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
-			remoteRelease = release.Remote{ID: releaseID, RemotePath: "some-uaa-key"}
+			remoteRelease = release.Remote{ID: releaseID, RemotePath: "some-uaa-key", SourceID: bucket}
 
 			logger = log.New(GinkgoWriter, "", 0)
 			fakeS3Downloader = new(fakes.S3Downloader)
@@ -173,6 +173,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(remoteRelease).To(Equal(release.Remote{
 				ID:         bpmReleaseID,
 				RemotePath: bpmKey,
+				SourceID:   bucket,
 			}))
 		})
 

@@ -14,11 +14,11 @@ func NewReleaseDownloader(releaseSources []ReleaseSource) releaseDownloader {
 	return releaseDownloader{releaseSources: releaseSources}
 }
 
-func (rd releaseDownloader) DownloadRelease(releaseDir string, requirement release.Requirement) (release.Local, string, string, error) {
+func (rd releaseDownloader) DownloadRelease(releaseDir string, requirement release.Requirement) (release.Local, release.Remote, error) {
 	for _, releaseSource := range rd.releaseSources {
 		remoteRelease, found, err := releaseSource.GetMatchedRelease(requirement)
 		if err != nil {
-			return release.Local{}, "", "", err
+			return release.Local{}, release.Remote{}, err
 		}
 
 		if !found {
@@ -27,11 +27,11 @@ func (rd releaseDownloader) DownloadRelease(releaseDir string, requirement relea
 
 		localRelease, err := releaseSource.DownloadRelease(releaseDir, remoteRelease, 0)
 		if err != nil {
-			return release.Local{}, "", "", err
+			return release.Local{}, release.Remote{}, err
 		}
 
-		return localRelease, releaseSource.ID(), remoteRelease.RemotePath, nil
+		return localRelease, remoteRelease, nil
 	}
 
-	return release.Local{}, "", "", fmt.Errorf("couldn't find %q %s in any release source", requirement.Name, requirement.Version)
+	return release.Local{}, release.Remote{}, fmt.Errorf("couldn't find %q %s in any release source", requirement.Name, requirement.Version)
 }
