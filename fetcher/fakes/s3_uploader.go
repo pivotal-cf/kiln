@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/pivotal-cf/kiln/commands"
+	"github.com/pivotal-cf/kiln/fetcher"
 )
 
 type S3Uploader struct {
@@ -115,4 +115,4 @@ func (fake *S3Uploader) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ commands.S3Uploader = new(S3Uploader)
+var _ fetcher.S3Uploader = new(S3Uploader)

@@ -11,10 +11,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 )
@@ -132,7 +128,7 @@ func main() {
 	commandSet["upload-release"] = commands.UploadRelease{
 		FS:             osfs.New(""),
 		KilnfileLoader: cargo.KilnfileLoader{},
-		UploaderConfig: uploaderConfig,
+		ReleaseSourcesFactory: releaseSourcesFactory,
 		Logger:         log.New(os.Stdout, "", 0),
 	}
 
@@ -152,16 +148,4 @@ func (f releaseDownloaderFactory) ReleaseDownloader(outLogger *log.Logger, kilnf
 
 func newReleaseDownloaderFactory() releaseDownloaderFactory {
 	return releaseDownloaderFactory{}
-}
-
-// uploaderConfig will panic if config is not correct
-func uploaderConfig(config *cargo.ReleaseSourceConfig) commands.S3Uploader {
-	return s3manager.NewUploader(session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(config.Region),
-		Credentials: credentials.NewStaticCredentials(
-			config.AccessKeyId,
-			config.SecretAccessKey,
-			"",
-		),
-	})))
 }

@@ -2,6 +2,7 @@ package fetcher
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -120,4 +121,30 @@ func createBuiltReleaseFromS3Key(exp *regexp.Regexp, releaseSourceID, s3Key stri
 		ReleaseID:  release.ReleaseID{Name: subgroup[ReleaseName], Version: subgroup[ReleaseVersion]},
 		RemotePath: s3Key,
 	}, nil
+}
+
+func (src S3BuiltReleaseSource) UploadRelease(name, version string, file io.Reader) error {
+	remotePath := fmt.Sprintf("%s/%s-%s.tgz", name, name, version)
+
+	re, err := regexp.Compile(src.Regex)
+	if err != nil {
+		return fmt.Errorf("couldn't compile the regular expression for release source %q: %w", src.ID(), err)
+	}
+
+	if !re.MatchString(remotePath) {
+		return fmt.Errorf("remote path %q does not match regular expression for release source %q", remotePath, src.ID())
+	}
+
+	src.Logger.Printf("Uploading release to %s at %q...\n", src.ID(), remotePath)
+
+	_, err = src.S3Uploader.Upload(&s3manager.UploadInput{
+		Bucket: aws.String(src.Bucket),
+		Key:    aws.String(remotePath),
+		Body:   file,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

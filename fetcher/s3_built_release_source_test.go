@@ -3,11 +3,13 @@ package fetcher_test
 import (
 	"errors"
 	"fmt"
+	. "github.com/onsi/gomega/gstruct"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pivotal-cf/kiln/release"
 
@@ -22,7 +24,6 @@ import (
 )
 
 var _ = Describe("S3BuiltReleaseSource", func() {
-
 	Describe("DownloadReleases", func() {
 		const bucket = "some-bucket"
 
@@ -140,7 +141,7 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 		})
 	})
 
-	Describe("GetMatchedReleases from S3 built source", func() {
+	Describe("GetMatchedReleases", func() {
 		const bucket = "built-bucket"
 
 		var (
@@ -248,6 +249,67 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 						RemotePath: bpmKey,
 					},
 				))
+			})
+		})
+	})
+
+	Describe("UploadRelease", func() {
+		var (
+			s3Uploader    *fakes.S3Uploader
+			releaseSource *S3BuiltReleaseSource
+			file          io.Reader
+		)
+
+		BeforeEach(func() {
+			s3Uploader = new(fakes.S3Uploader)
+			releaseSource = &S3BuiltReleaseSource{
+				S3Uploader: s3Uploader,
+				Bucket:     "orange-bucket",
+				Logger:     log.New(GinkgoWriter, "", 0),
+				Regex: `^\w+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+-?[a-zA-Z0-9]\.?[0-9]*)\.tgz$`,
+			}
+			file = strings.NewReader("banana banana")
+		})
+
+		Context("happy path", func() {
+			It("uploads the file to the correct location", func() {
+				Expect(
+					releaseSource.UploadRelease("banana", "1.2.3", file),
+				).To(Succeed())
+
+				Expect(s3Uploader.UploadCallCount()).To(Equal(1))
+
+				opts, fns := s3Uploader.UploadArgsForCall(0)
+
+				Expect(fns).To(HaveLen(0))
+
+				Expect(opts.Bucket).To(PointTo(Equal("orange-bucket")))
+				Expect(opts.Key).To(PointTo(Equal("banana/banana-1.2.3.tgz")))
+				Expect(opts.Body).To(Equal(file))
+			})
+		})
+
+		When("the regular expression is invalid", func() {
+			BeforeEach(func() {
+				releaseSource.Regex = "^(?P<bad_regex"
+			})
+
+			It("returns a descriptive error", func() {
+				err := releaseSource.UploadRelease("banana", "1.2.3", file)
+
+				Expect(err).To(MatchError(ContainSubstring("couldn't compile the regular expression")))
+			})
+		})
+
+		When("the conventional remote-path does not match the regex", func() {
+			BeforeEach(func() {
+				releaseSource.Regex = "^pointless-root-dir/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\\.]+-?[a-zA-Z0-9]\\.?[0-9]*)\\.tgz$"
+			})
+
+			It("returns a descriptive error", func() {
+				err := releaseSource.UploadRelease("banana", "1.2.3", file)
+
+				Expect(err).To(MatchError(ContainSubstring(`remote path "banana/banana-1.2.3.tgz" does not match`)))
 			})
 		})
 	})

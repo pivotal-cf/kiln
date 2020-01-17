@@ -17,6 +17,11 @@ type S3Downloader interface {
 	Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
 }
 
+//go:generate counterfeiter -o ./fakes/s3_uploader.go --fake-name S3Uploader . S3Uploader
+type S3Uploader interface {
+	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
+}
+
 //go:generate counterfeiter -o ./fakes/s3_object_lister.go --fake-name S3ObjectLister . S3ObjectLister
 type S3ObjectLister interface {
 	ListObjectsPages(*s3.ListObjectsInput, func(*s3.ListObjectsOutput, bool) bool) error
@@ -26,6 +31,7 @@ type S3ReleaseSource struct {
 	Logger       *log.Logger
 	S3Client     S3ObjectLister
 	S3Downloader S3Downloader
+	S3Uploader   S3Uploader
 	Bucket       string
 	Regex        string
 }
@@ -44,6 +50,7 @@ func (r *S3ReleaseSource) Configure(config cargo.ReleaseSourceConfig) {
 
 	r.S3Client = client
 	r.S3Downloader = s3manager.NewDownloaderWithClient(client)
+	r.S3Uploader = s3manager.NewUploaderWithClient(client)
 
 	r.Bucket = config.Bucket
 	r.Regex = config.Regex

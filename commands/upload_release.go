@@ -3,31 +3,27 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/fetcher"
+	"io"
 	"log"
-	"regexp"
 
 	"github.com/pivotal-cf/kiln/builder"
 
-	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/src-d/go-billy.v4"
 )
 
-//go:generate counterfeiter -o ./fakes/s3_uploader.go --fake-name S3Uploader . S3Uploader
-
-type S3Uploader interface {
-	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
+//go:generate counterfeiter -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
+type ReleaseUploader interface {
+	UploadRelease(name, version string, file io.Reader) error
+	fetcher.ReleaseSource
 }
 
 type UploadRelease struct {
-	FS             billy.Filesystem
-	KilnfileLoader KilnfileLoader
-	UploaderConfig func(*cargo.ReleaseSourceConfig) S3Uploader
-	Logger         *log.Logger
+	FS                    billy.Filesystem
+	KilnfileLoader        KilnfileLoader
+	ReleaseSourcesFactory ReleaseSourcesFactory
+	Logger                *log.Logger
 
 	Options struct {
 		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
@@ -39,90 +35,78 @@ type UploadRelease struct {
 	}
 }
 
-func (uploadRelease UploadRelease) Execute(args []string) error {
-	_, err := jhanda.Parse(&uploadRelease.Options, args)
+func (command UploadRelease) Execute(args []string) error {
+	_, err := jhanda.Parse(&command.Options, args)
 	if err != nil {
 		return err
 	}
 
-	kilnfile, _, err := uploadRelease.KilnfileLoader.LoadKilnfiles(
-		uploadRelease.FS,
-		uploadRelease.Options.Kilnfile,
-		uploadRelease.Options.VariablesFiles,
-		uploadRelease.Options.Variables,
-	)
+	uploader, err := command.findUploader()
 	if err != nil {
-		return fmt.Errorf("error loading Kilnfiles: %w", err)
+		return err
 	}
 
-	file, err := uploadRelease.FS.Open(uploadRelease.Options.LocalPath)
+	file, err := command.FS.Open(command.Options.LocalPath)
 	if err != nil {
 		return fmt.Errorf("could not open release: %w", err)
 	}
 
-	var (
-		rc *cargo.ReleaseSourceConfig
-
-		validSourcesForErrOutput []string
-	)
-
-	for index, rel := range kilnfile.ReleaseSources {
-		if rel.Type == fetcher.ReleaseSourceTypeS3 {
-			validSourcesForErrOutput = append(validSourcesForErrOutput, rel.Bucket)
-			if rel.Bucket == uploadRelease.Options.ReleaseSource {
-				rc = &kilnfile.ReleaseSources[index]
-				break
-			}
-		}
-	}
-
-	if rc == nil {
-		const msg = "remote release source could not be found in Kilnfile (only release sources of type s3 are supported)"
-		if len(validSourcesForErrOutput) > 0 {
-			return fmt.Errorf(msg+", some acceptable sources are: %v", validSourcesForErrOutput)
-		}
-		return errors.New(msg)
-	}
-
-	manifestReader := builder.NewReleaseManifestReader(uploadRelease.FS)
-	part, err := manifestReader.Read(uploadRelease.Options.LocalPath)
+	manifestReader := builder.NewReleaseManifestReader(command.FS)
+	part, err := manifestReader.Read(command.Options.LocalPath)
 	if err != nil {
 		return fmt.Errorf("error reading the release manifest: %w", err)
 	}
 
 	manifest := part.Metadata.(builder.ReleaseManifest)
-	remotePath := fmt.Sprintf("%s/%s-%s.tgz", manifest.Name, manifest.Name, manifest.Version)
 
-	re, err := regexp.Compile(rc.Regex)
+	err = uploader.UploadRelease(manifest.Name, manifest.Version, file)
 	if err != nil {
-		return fmt.Errorf("could not compile the regular expression in Kilnfile for %q: %w", rc.Bucket, err)
+		return fmt.Errorf("error uploading the release: %w", err)
 	}
 
-	if !re.MatchString(remotePath) {
-		return fmt.Errorf("remote path %q does not match regular expression in Kilnfile for %q", remotePath, rc.Bucket)
-	}
-
-	uploader := uploadRelease.UploaderConfig(rc)
-
-	uploadRelease.Logger.Printf("Uploading release %q to %s as %q...\n",
-		uploadRelease.Options.LocalPath, uploadRelease.Options.ReleaseSource, remotePath)
-	if _, err := uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(rc.Bucket),
-		Key:    aws.String(remotePath),
-		Body:   file,
-	}); err != nil {
-		return fmt.Errorf("upload failed: %w", err)
-	}
-
-	uploadRelease.Logger.Println("Upload succeeded")
+	command.Logger.Println("Upload succeeded")
 
 	return nil
 }
 
-func (uploadRelease UploadRelease) Usage() jhanda.Usage {
+func (command UploadRelease) findUploader() (ReleaseUploader, error) {
+	kilnfile, _, err := command.KilnfileLoader.LoadKilnfiles(
+		command.FS,
+		command.Options.Kilnfile,
+		command.Options.VariablesFiles,
+		command.Options.Variables,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error loading Kilnfiles: %w", err)
+	}
+
+	releaseSources := command.ReleaseSourcesFactory.ReleaseSources(kilnfile, false)
+
+	var uploaderIDs []string
+
+	for _, source := range releaseSources {
+		u, ok := source.(ReleaseUploader)
+		if ok {
+			uploaderIDs = append(uploaderIDs, u.ID())
+			if u.ID() == command.Options.ReleaseSource {
+				return u, nil
+			}
+		}
+	}
+
+	if len(uploaderIDs) > 0 {
+		return nil, fmt.Errorf(
+			"could not find a valid matching release source in the Kilnfile, available upload-compatible sources are: %v",
+			uploaderIDs,
+		)
+	}
+	return nil, errors.New("no upload-capable release sources were found in the Kilnfile")
+}
+
+func (command UploadRelease) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Uploads a BOSH Release to an S3 release source for use in kiln fetch",
 		ShortDescription: "uploads a BOSH release to an s3 release_source",
-		Flags:            uploadRelease.Options,
+		Flags:            command.Options,
 	}
 }
