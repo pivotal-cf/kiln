@@ -479,7 +479,7 @@ release_sources:
     region: $( variable "region" )
     access_key_id: $( variable "access_key" )
     secret_access_key: $( variable "secret_key" )
-    regex: $( variable "regex" )
+    path_template: $( variable "path_template" )
 `
 
 				var (
@@ -511,9 +511,9 @@ release_sources:
 					defer otherVariableFile.Close()
 
 					variables = map[string]string{
-						"access_key": "newkey",
-						"secret_key": "newsecret",
-						"regex":      `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>[\d\.]+)\.tgz$`,
+						"access_key":    "newkey",
+						"secret_key":    "newsecret",
+						"path_template": `2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
 					}
 					data, err = yaml.Marshal(&variables)
 					Expect(err).NotTo(HaveOccurred())

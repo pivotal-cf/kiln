@@ -57,23 +57,21 @@ key:
 1. `type: bosh.io`. For this type, no other keys are required/allowed.
 2. `type: s3`. The following other keys **required** in this case.
 
-- `compiled` (boolean): true if the bucket contains compiled releases. false otherwise.
+- `publishable` (boolean): true if this bucket contains releases that are suitable to ship to customers
 - `bucket`: must be the name of the s3 bucket
 - `region`: must be the region of the bucket
 - `access_key_id`: must be an IAM access key id that has read permission for the
   specified bucket
 - `secret_access_key`: must be the secret for the specified `access_key_id`
-- `regex:`: a regular expression applied to the full-path directory listing of
-  the S3 bucket. Only files that match the regex will considered. This regular
-  expression must include either two or four named capture groups
-  and is used to specify a capture groups to map release name and version and
-  optionally stemcell name and version.
-  - `release_name` must map to the Kilnfile.lock file under `releases[].name`
-  - `release_version` must map to the Kilnfile.lock file under
-    `releases[].version`
-  - `stemcell_os` may map to the Kilnfile.lock file under `stemcell_criteria.os`
-  - `stemcell_version` may map to the Kilnfile.lock file under
-    `stemcell_criteria.version`
+- `release_path:`: a (text/template package) template expression used to build the 
+  full-path to a release in the S3 bucket. The template should evaluate to the exact 
+  path within the s3 bucket for a given release name+version+stemcell combination. 
+  The template has access to the following fields:
+  - release name (e.g. `{{.Name}}`)
+  - release version (e.g. `{{.Version}}`)
+  - stemcell OS (e.g. `{{.StemcellOS}}`)
+  - stemcell version (e.g. `{{.StemcellVersion}}`)
+  - There's also access to a `trimSuffix` helper (e.g. `{{trimSuffix .Name "-release"}}`)
 
 ### Kilnfile.lock
 
@@ -109,7 +107,7 @@ release_sources:
     region: us-west-1
     access_key_id: $(variable "aws_access_key_id")
     secret_access_key: $(variable "aws_secret_access_key")
-    regex: ^2.6/.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>\d+\.\d+)(\.0)?\.tgz$
+    path_template: 2.6/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz
 ```
 
 *Credentials like S3 keys are not stored in git repos. To support separating

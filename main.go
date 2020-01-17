@@ -126,10 +126,10 @@ func main() {
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, newReleaseDownloaderFactory(), fetcher.CalculateSum, cargo.KilnfileLoader{})
 
 	commandSet["upload-release"] = commands.UploadRelease{
-		FS:             osfs.New(""),
-		KilnfileLoader: cargo.KilnfileLoader{},
+		FS:                    osfs.New(""),
+		KilnfileLoader:        cargo.KilnfileLoader{},
 		ReleaseSourcesFactory: releaseSourcesFactory,
-		Logger:         log.New(os.Stdout, "", 0),
+		Logger:                log.New(os.Stdout, "", 0),
 	}
 
 	err = commandSet.Execute(command, args)

@@ -60,7 +60,7 @@ func (command UploadRelease) Execute(args []string) error {
 
 	manifest := part.Metadata.(builder.ReleaseManifest)
 
-	err = ensureNoExistingRelease(manifest.Name, manifest.Version,uploader)
+	err = ensureNoExistingRelease(manifest.Name, manifest.Version, uploader)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func ensureNoExistingRelease(name, version string, uploader ReleaseUploader) err
 		return fmt.Errorf("a release with name %q and version %q already exists on %s",
 			name, version, uploader.ID())
 	}
-	
+
 	return nil
 }
 

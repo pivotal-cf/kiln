@@ -15,7 +15,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,15 +22,27 @@ import (
 	"github.com/pivotal-cf/kiln/fetcher/fakes"
 )
 
-var _ = Describe("S3BuiltReleaseSource", func() {
+func verifySetsConcurrency(opts []func(*s3manager.Downloader), concurrency int) {
+	Expect(opts).To(HaveLen(1))
+
+	downloader := &s3manager.Downloader{
+		Concurrency: 1,
+	}
+
+	opts[0](downloader)
+
+	Expect(downloader.Concurrency).To(Equal(concurrency))
+}
+
+var _ = Describe("S3ReleaseSource", func() {
 	Describe("DownloadReleases", func() {
 		const bucket = "some-bucket"
 
 		var (
 			logger                     *log.Logger
-			releaseSource              S3BuiltReleaseSource
+			releaseSource              S3ReleaseSource
 			releaseDir                 string
-			matchedS3Objects           []release.RemoteRelease
+			remoteReleases             []release.RemoteRelease
 			uaaReleaseID, bpmReleaseID release.ReleaseID
 			fakeS3Downloader           *fakes.S3Downloader
 		)
@@ -44,7 +55,7 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 
 			uaaReleaseID = release.ReleaseID{Name: "uaa", Version: "1.2.3"}
 			bpmReleaseID = release.ReleaseID{Name: "bpm", Version: "1.2.3"}
-			matchedS3Objects = []release.RemoteRelease{
+			remoteReleases = []release.RemoteRelease{
 				{ReleaseID: uaaReleaseID, RemotePath: "some-uaa-key"},
 				{ReleaseID: bpmReleaseID, RemotePath: "some-bpm-key"},
 			}
@@ -56,7 +67,7 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 				n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 				return int64(n), err
 			}
-			releaseSource = S3BuiltReleaseSource{
+			releaseSource = S3ReleaseSource{
 				Logger:       logger,
 				S3Downloader: fakeS3Downloader,
 				Bucket:       bucket,
@@ -67,8 +78,8 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 			_ = os.RemoveAll(releaseDir)
 		})
 
-		It("downloads the appropriate versions of built releases listed in matchedS3Objects", func() {
-			localReleases, err := releaseSource.DownloadReleases(releaseDir, matchedS3Objects, 7)
+		It("downloads the appropriate versions of built releases listed in remoteReleases", func() {
+			localReleases, err := releaseSource.DownloadReleases(releaseDir, remoteReleases, 7)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(2))
 
@@ -94,7 +105,7 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 			))
 		})
 
-		Context("when the matchedS3Objects argument is empty", func() {
+		Context("when the remoteReleases argument is empty", func() {
 			It("does not download anything from S3", func() {
 				_, err := releaseSource.DownloadReleases(releaseDir, nil, 0)
 				Expect(err).NotTo(HaveOccurred())
@@ -104,7 +115,7 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 
 		Context("when number of threads is not specified", func() {
 			It("uses the s3manager package's default download concurrency", func() {
-				_, err := releaseSource.DownloadReleases(releaseDir, matchedS3Objects, 0)
+				_, err := releaseSource.DownloadReleases(releaseDir, remoteReleases, 0)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(2))
 
@@ -119,7 +130,7 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 		Context("failure cases", func() {
 			Context("when a file can't be created", func() {
 				It("returns an error", func() {
-					_, err := releaseSource.DownloadReleases("/non-existent-folder", matchedS3Objects, 0)
+					_, err := releaseSource.DownloadReleases("/non-existent-folder", remoteReleases, 0)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("/non-existent-folder"))
 				})
@@ -133,7 +144,7 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := releaseSource.DownloadReleases(releaseDir, matchedS3Objects, 0)
+					_, err := releaseSource.DownloadReleases(releaseDir, remoteReleases, 0)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError("failed to download file: 503 Service Unavailable\n"))
 				})
@@ -145,14 +156,15 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 		const bucket = "built-bucket"
 
 		var (
-			releaseSource     S3BuiltReleaseSource
-			fakeS3Client      *fakes.S3ObjectLister
+			releaseSource     *S3ReleaseSource
+			fakeS3Client      *fakes.S3HeadObjecter
 			desiredReleaseSet release.ReleaseRequirementSet
+			bpmReleaseID      release.ReleaseID
 			bpmKey            string
 		)
 
 		BeforeEach(func() {
-			bpmReleaseID := release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"}
+			bpmReleaseID = release.ReleaseID{Name: "bpm-release", Version: "1.2.3"}
 			desiredReleaseSet = release.ReleaseRequirementSet{
 				bpmReleaseID: release.ReleaseRequirement{
 					Name:            bpmReleaseID.Name,
@@ -162,93 +174,60 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 				},
 			}
 
-			fakeS3Client = new(fakes.S3ObjectLister)
-
-			irrelevantKey := "some-key"
-			uaaKey := "1.10/uaa/uaa-1.2.3.tgz"
-			bpmKey = "2.5/bpm/bpm-1.2.3-lts.tgz"
-			fakeS3Client.ListObjectsPagesStub = func(input *s3.ListObjectsInput, fn func(*s3.ListObjectsOutput, bool) bool) error {
-				shouldContinue := fn(&s3.ListObjectsOutput{
-					Contents: []*s3.Object{
-						{Key: &irrelevantKey},
-						{Key: &uaaKey},
-						{Key: &bpmKey},
-					},
-				},
-					true,
-				)
-				Expect(shouldContinue).To(BeTrue())
-				return nil
-			}
+			fakeS3Client = new(fakes.S3HeadObjecter)
+			fakeS3Client.HeadObjectReturns(new(s3.HeadObjectOutput), nil)
 
 			logger := log.New(nil, "", 0)
 
-			releaseSource = S3BuiltReleaseSource{
-				Logger:   logger,
-				S3Client: fakeS3Client,
-				Regex:    `^2.5/.+/(?P<release_name>[a-z-_]+)-(?P<release_version>[0-9\.]+(-\w+(\.[0-9]+)?)?)\.tgz$`,
-				Bucket:   bucket,
+			releaseSource = &S3ReleaseSource{
+				Logger:       logger,
+				S3Client:     fakeS3Client,
+				PathTemplate: `2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+				Bucket:       bucket,
 			}
+			bpmKey = "2.5/bpm/bpm-release-1.2.3-ubuntu-xenial-190.0.0.tgz"
 		})
 
-		It("lists all objects that match the given regex", func() {
-			matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
+		It("searches for the requested release", func() {
+			remoteReleases, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 			Expect(err).NotTo(HaveOccurred())
 
-			input, _ := fakeS3Client.ListObjectsPagesArgsForCall(0)
-			Expect(input.Bucket).To(Equal(aws.String(bucket)))
+			Expect(fakeS3Client.HeadObjectCallCount()).To(Equal(1))
+			input := fakeS3Client.HeadObjectArgsForCall(0)
+			Expect(input.Bucket).To(PointTo(BeEquivalentTo(bucket)))
+			Expect(input.Key).To(PointTo(BeEquivalentTo(bpmKey)))
 
-			Expect(matchedS3Objects).To(HaveLen(1))
-			Expect(matchedS3Objects).To(ConsistOf(release.RemoteRelease{
-				ReleaseID:  release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
+			Expect(remoteReleases).To(HaveLen(1))
+			Expect(remoteReleases).To(ConsistOf(release.RemoteRelease{
+				ReleaseID:  bpmReleaseID,
 				RemotePath: bpmKey,
 			}))
 		})
 
-		When("the regular expression is missing a capture group", func() {
+		When("the requested releases doesn't exist in the bucket", func() {
 			BeforeEach(func() {
-				releaseSource = S3BuiltReleaseSource{
-					Regex: `^2.5/.+/([a-z-_]+)-(?P<release_version>[0-9\.]+)\.tgz$`,
-				}
+				notFoundError := new(fakes.S3RequestFailure)
+				notFoundError.StatusCodeReturns(404)
+				fakeS3Client.HeadObjectReturns(nil, notFoundError)
 			})
 
-			It("returns an error if a required capture is missing", func() {
-				_, err := releaseSource.GetMatchedReleases(nil)
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(ContainSubstring("Missing some capture group")))
+			It("does not return them", func() {
+				remoteReleases, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(remoteReleases).To(HaveLen(0))
 			})
 		})
 
-		Context("if any objects in built S3 bucket do not match a release specified in Kilnfile.lock", func() {
+		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
-				wrongReleaseVersionKey := "2.5/bpm/bpm-4.5.6.tgz"
-				wrongReleaseNameKey := "2.5/diego/diego-1.2.3.tgz"
-				fakeS3Client.ListObjectsPagesStub = func(input *s3.ListObjectsInput, fn func(*s3.ListObjectsOutput, bool) bool) error {
-					shouldContinue := fn(&s3.ListObjectsOutput{
-						Contents: []*s3.Object{
-							{Key: &wrongReleaseVersionKey},
-							{Key: &wrongReleaseNameKey},
-							{Key: &bpmKey},
-						},
-					},
-						true,
-					)
-					Expect(shouldContinue).To(BeTrue())
-					return nil
-				}
+				releaseSource.PathTemplate = "{{.NoSuchField}}"
 			})
 
-			It("does not return them, but does return the matched release", func() {
-				matchedS3Objects, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
-				Expect(err).NotTo(HaveOccurred())
+			It("returns a descriptive error", func() {
+				_, err := releaseSource.GetMatchedReleases(desiredReleaseSet)
 
-				Expect(matchedS3Objects).To(HaveLen(1))
-				Expect(matchedS3Objects).To(ConsistOf(
-					release.RemoteRelease{
-						ReleaseID:  release.ReleaseID{Name: "bpm", Version: "1.2.3-lts"},
-						RemotePath: bpmKey,
-					},
-				))
+				Expect(err).To(MatchError(ContainSubstring(`unable to evaluate path_template`)))
 			})
 		})
 	})
@@ -256,17 +235,17 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 	Describe("UploadRelease", func() {
 		var (
 			s3Uploader    *fakes.S3Uploader
-			releaseSource *S3BuiltReleaseSource
+			releaseSource *S3ReleaseSource
 			file          io.Reader
 		)
 
 		BeforeEach(func() {
 			s3Uploader = new(fakes.S3Uploader)
-			releaseSource = &S3BuiltReleaseSource{
-				S3Uploader: s3Uploader,
-				Bucket:     "orange-bucket",
-				Logger:     log.New(GinkgoWriter, "", 0),
-				Regex: `^\w+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+-?[a-zA-Z0-9]\.?[0-9]*)\.tgz$`,
+			releaseSource = &S3ReleaseSource{
+				S3Uploader:   s3Uploader,
+				Bucket:       "orange-bucket",
+				Logger:       log.New(GinkgoWriter, "", 0),
+				PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
 			}
 			file = strings.NewReader("banana banana")
 		})
@@ -289,27 +268,15 @@ var _ = Describe("S3BuiltReleaseSource", func() {
 			})
 		})
 
-		When("the regular expression is invalid", func() {
+		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
-				releaseSource.Regex = "^(?P<bad_regex"
+				releaseSource.PathTemplate = "{{.NoSuchField}}"
 			})
 
 			It("returns a descriptive error", func() {
 				err := releaseSource.UploadRelease("banana", "1.2.3", file)
 
-				Expect(err).To(MatchError(ContainSubstring("couldn't compile the regular expression")))
-			})
-		})
-
-		When("the conventional remote-path does not match the regex", func() {
-			BeforeEach(func() {
-				releaseSource.Regex = "^pointless-root-dir/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\\.]+-?[a-zA-Z0-9]\\.?[0-9]*)\\.tgz$"
-			})
-
-			It("returns a descriptive error", func() {
-				err := releaseSource.UploadRelease("banana", "1.2.3", file)
-
-				Expect(err).To(MatchError(ContainSubstring(`remote path "banana/banana-1.2.3.tgz" does not match`)))
+				Expect(err).To(MatchError(ContainSubstring(`unable to evaluate path_template`)))
 			})
 		})
 	})

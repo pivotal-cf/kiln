@@ -53,7 +53,7 @@ release_sources:
     region: $( variable "region" )
     access_key_id: $( variable "access_key" )
     secret_access_key: $( variable "secret_key" )
-    regex: $( variable "regex" )
+    path_template: $( variable "path_template" )
 `
 
 	const validKilnfileLockContents = `
@@ -70,7 +70,7 @@ stemcell_criteria:
 ---
 bucket: my-bucket
 region: middle-earth
-regex: "^.*$"
+path_template: "not-used"
 `
 
 	Context("happy path", func() {
@@ -92,12 +92,11 @@ regex: "^.*$"
 				ReleaseSources: []ReleaseSourceConfig{
 					{
 						Type:            "s3",
-						Compiled:        true,
 						Bucket:          "my-bucket",
 						Region:          "middle-earth",
 						AccessKeyId:     "id",
 						SecretAccessKey: "key",
-						Regex:           "^.*$",
+						PathTemplate:    "not-used",
 					},
 				},
 			}))

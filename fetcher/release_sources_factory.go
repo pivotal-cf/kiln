@@ -51,10 +51,7 @@ func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Lo
 	case ReleaseSourceTypeS3:
 		s3ReleaseSource := S3ReleaseSource{Logger: outLogger}
 		s3ReleaseSource.Configure(releaseConfig)
-		if releaseConfig.Compiled {
-			return S3CompiledReleaseSource(s3ReleaseSource)
-		}
-		return S3BuiltReleaseSource(s3ReleaseSource)
+		return s3ReleaseSource
 	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
 	}
