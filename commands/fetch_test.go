@@ -118,12 +118,10 @@ stemcell_criteria:
 			)
 			BeforeEach(func() {
 				releaseID = release.ReleaseID{Name: "some-release", Version: "0.1.0"}
-				fakeS3CompiledReleaseSource.DownloadReleasesReturns(
-					[]release.LocalRelease{
-						{
-							ReleaseID: releaseID,
-							LocalPath: fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, expectedStemcellOS, expectedStemcellVersion),
-						},
+				fakeS3CompiledReleaseSource.DownloadReleaseReturns(
+					release.LocalRelease{
+						ReleaseID: releaseID,
+						LocalPath: fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, expectedStemcellOS, expectedStemcellVersion),
 					}, nil)
 				lockContents = `---
 releases:
@@ -149,7 +147,7 @@ stemcell_criteria:
 				It("deletes the file from disk", func() {
 					Expect(fetchExecuteErr).NotTo(HaveOccurred())
 
-					Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+					Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
 
 					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
 					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
@@ -178,7 +176,7 @@ stemcell_criteria:
 				It("deletes the file from disk", func() {
 					Expect(fetchExecuteErr).NotTo(HaveOccurred())
 
-					Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+					Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
 
 					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
 					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
@@ -216,16 +214,16 @@ stemcell_criteria:
   os: some-os
   version: "30.1"
 `
-				fakeS3CompiledReleaseSource.DownloadReleasesReturns(
-					[]release.LocalRelease{{ReleaseID: s3CompiledReleaseID, LocalPath: "local-path"}},
+				fakeS3CompiledReleaseSource.DownloadReleaseReturns(
+					release.LocalRelease{ReleaseID: s3CompiledReleaseID, LocalPath: "local-path"},
 					nil)
 
-				fakeS3BuiltReleaseSource.DownloadReleasesReturns(
-					[]release.LocalRelease{{ReleaseID: s3BuiltReleaseID, LocalPath: "local-path2"}},
+				fakeS3BuiltReleaseSource.DownloadReleaseReturns(
+					release.LocalRelease{ReleaseID: s3BuiltReleaseID, LocalPath: "local-path2"},
 					nil)
 
-				fakeBoshIOReleaseSource.DownloadReleasesReturns(
-					[]release.LocalRelease{{ReleaseID: boshIOReleaseID, LocalPath: "local-path3"}},
+				fakeBoshIOReleaseSource.DownloadReleaseReturns(
+					release.LocalRelease{ReleaseID: boshIOReleaseID, LocalPath: "local-path3"},
 					nil)
 
 				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.SatisfyingLocalRelease{}, nil)
@@ -236,32 +234,32 @@ stemcell_criteria:
 			})
 
 			It("fetches compiled release from s3 compiled release source", func() {
-				Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+				Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
 
-				releasesDir, objects, threads := fakeS3CompiledReleaseSource.DownloadReleasesArgsForCall(0)
+				releasesDir, object, threads := fakeS3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
-				Expect(objects).To(ConsistOf(
+				Expect(object).To(Equal(
 					release.RemoteRelease{ReleaseID: s3CompiledReleaseID, RemotePath: "some-s3-key"},
 				))
 			})
 
 			It("fetches built release from s3 built release source", func() {
-				Expect(fakeS3BuiltReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-				releasesDir, objects, threads := fakeS3BuiltReleaseSource.DownloadReleasesArgsForCall(0)
+				Expect(fakeS3BuiltReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				releasesDir, object, threads := fakeS3BuiltReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
-				Expect(objects).To(ConsistOf(
+				Expect(object).To(Equal(
 					release.RemoteRelease{ReleaseID: s3BuiltReleaseID, RemotePath: "some-other-s3-key"},
 				))
 			})
 
 			It("fetches bosh.io release from bosh.io release source", func() {
-				Expect(fakeBoshIOReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-				releasesDir, objects, threads := fakeBoshIOReleaseSource.DownloadReleasesArgsForCall(0)
+				Expect(fakeBoshIOReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				releasesDir, object, threads := fakeBoshIOReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(threads).To(Equal(0))
-				Expect(objects).To(ConsistOf(
+				Expect(object).To(Equal(
 					release.RemoteRelease{ReleaseID: boshIOReleaseID, RemotePath: "some-bosh-io-url"},
 				))
 			})
@@ -292,9 +290,9 @@ stemcell_criteria:
 			It("no-ops", func() {
 				Expect(fetchExecuteErr).NotTo(HaveOccurred())
 
-				Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(0))
-				Expect(fakeS3BuiltReleaseSource.DownloadReleasesCallCount()).To(Equal(0))
-				Expect(fakeBoshIOReleaseSource.DownloadReleasesCallCount()).To(Equal(0))
+				Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
+				Expect(fakeS3BuiltReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
+				Expect(fakeBoshIOReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
 			})
 		})
 
@@ -357,16 +355,16 @@ stemcell_criteria:
 					),
 				}, nil)
 
-				fakeS3CompiledReleaseSource.DownloadReleasesReturns([]release.LocalRelease{
-					{ReleaseID: missingReleaseS3CompiledID, LocalPath: "local-path-1"},
+				fakeS3CompiledReleaseSource.DownloadReleaseReturns(release.LocalRelease{
+					ReleaseID: missingReleaseS3CompiledID, LocalPath: "local-path-1",
 				}, nil)
 
-				fakeBoshIOReleaseSource.DownloadReleasesReturns([]release.LocalRelease{
-					{ReleaseID: missingReleaseBoshIOID, LocalPath: "local-path-2"},
+				fakeBoshIOReleaseSource.DownloadReleaseReturns(release.LocalRelease{
+					ReleaseID: missingReleaseBoshIOID, LocalPath: "local-path-2",
 				}, nil)
 
-				fakeS3BuiltReleaseSource.DownloadReleasesReturns([]release.LocalRelease{
-					{ReleaseID: missingReleaseS3BuiltID, LocalPath: "local-path-3"},
+				fakeS3BuiltReleaseSource.DownloadReleaseReturns(release.LocalRelease{
+					ReleaseID: missingReleaseS3BuiltID, LocalPath: "local-path-3",
 				}, nil)
 
 				missingReleaseS3Compiled = release.RemoteRelease{ReleaseID: missingReleaseS3CompiledID, RemotePath: missingReleaseS3CompiledPath}
@@ -377,20 +375,17 @@ stemcell_criteria:
 			It("downloads only the missing releases", func() {
 				Expect(fetchExecuteErr).NotTo(HaveOccurred())
 
-				Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-				_, objects, _ := fakeS3CompiledReleaseSource.DownloadReleasesArgsForCall(0)
-				Expect(objects).To(HaveLen(1))
-				Expect(objects).To(ConsistOf(missingReleaseS3Compiled))
+				Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				_, object, _ := fakeS3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
+				Expect(object).To(Equal(missingReleaseS3Compiled))
 
-				Expect(fakeBoshIOReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-				_, objects, _ = fakeBoshIOReleaseSource.DownloadReleasesArgsForCall(0)
-				Expect(objects).To(HaveLen(1))
-				Expect(objects).To(ConsistOf(missingReleaseBoshIO))
+				Expect(fakeBoshIOReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				_, object, _ = fakeBoshIOReleaseSource.DownloadReleaseArgsForCall(0)
+				Expect(object).To(Equal(missingReleaseBoshIO))
 
-				Expect(fakeS3BuiltReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-				_, objects, _ = fakeS3BuiltReleaseSource.DownloadReleasesArgsForCall(0)
-				Expect(objects).To(HaveLen(1))
-				Expect(objects).To(ConsistOf(missingReleaseS3Built))
+				Expect(fakeS3BuiltReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				_, object, _ = fakeS3BuiltReleaseSource.DownloadReleaseArgsForCall(0)
+				Expect(object).To(Equal(missingReleaseS3Built))
 			})
 
 			Context("when download fails", func() {
@@ -400,8 +395,8 @@ stemcell_criteria:
 
 				BeforeEach(func() {
 					wrappedErr = errors.New("kaboom")
-					fakeS3CompiledReleaseSource.DownloadReleasesReturns(
-						nil,
+					fakeS3CompiledReleaseSource.DownloadReleaseReturns(
+						release.LocalRelease{},
 						wrappedErr,
 					)
 				})
@@ -435,8 +430,8 @@ stemcell_criteria:
 					release.NewLocalCompiledRelease(localReleaseID, "some-os", "4.5.6", "path/to/some/extra/release"),
 				}, nil)
 
-				fakeBoshIOReleaseSource.DownloadReleasesReturns(
-					[]release.LocalRelease{{ReleaseID: boshIOReleaseID, LocalPath: "local-path"}},
+				fakeBoshIOReleaseSource.DownloadReleaseReturns(
+					release.LocalRelease{ReleaseID: boshIOReleaseID, LocalPath: "local-path"},
 					nil)
 
 			})
@@ -453,7 +448,7 @@ stemcell_criteria:
 				It("deletes the extra releases", func() {
 					Expect(fetchExecuteErr).NotTo(HaveOccurred())
 
-					Expect(fakeS3CompiledReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+					Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
 
 					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
 
@@ -547,7 +542,7 @@ release_sources:
 
 				It("passes concurrency parameter to DownloadReleases", func() {
 					Expect(fetchExecuteErr).NotTo(HaveOccurred())
-					_, _, threads := fakeS3CompiledReleaseSource.DownloadReleasesArgsForCall(0)
+					_, _, threads := fakeS3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
 					Expect(threads).To(Equal(10))
 				})
 			})

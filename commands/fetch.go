@@ -144,16 +144,16 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []c
 			return nil, fmt.Errorf("release_source %q for %q %q does not exist", rl.RemoteSource, rl.Name, rl.Version)
 		}
 
-		local, err := src.DownloadReleases(
+		local, err := src.DownloadRelease(
 			f.Options.ReleasesDir,
-			[]release.RemoteRelease{{ReleaseID: release.ReleaseID{Name: rl.Name, Version: rl.Version}, RemotePath: rl.RemotePath}},
+			release.RemoteRelease{ReleaseID: release.ReleaseID{Name: rl.Name, Version: rl.Version}, RemotePath: rl.RemotePath},
 			f.Options.DownloadThreads,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("download failed: %w", err)
 		}
 
-		downloaded = append(downloaded, local...)
+		downloaded = append(downloaded, local)
 	}
 
 	return downloaded, nil

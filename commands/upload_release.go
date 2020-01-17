@@ -77,13 +77,12 @@ func (command UploadRelease) Execute(args []string) error {
 
 func ensureNoExistingRelease(name, version string, uploader ReleaseUploader) error {
 	requirement := release.ReleaseRequirement{Name: name, Version: version}
-	id := release.ReleaseID{Name: name, Version: version}
-	existing, err := uploader.GetMatchedReleases(release.ReleaseRequirementSet{id: requirement})
+	_, found, err := uploader.GetMatchedRelease(requirement)
 	if err != nil {
 		return fmt.Errorf("couldn't query release source: %w", err)
 	}
 
-	if len(existing) > 0 {
+	if found {
 		return fmt.Errorf("a release with name %q and version %q already exists on %s",
 			name, version, uploader.ID())
 	}

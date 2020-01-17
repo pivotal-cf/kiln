@@ -71,66 +71,54 @@ func (src *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
 	return
 }
 
-func (src BOSHIOReleaseSource) GetMatchedReleases(desiredReleaseSet release.ReleaseRequirementSet) ([]release.RemoteRelease, error) {
-	matches := make([]release.RemoteRelease, 0)
-
-	for rel := range desiredReleaseSet {
-	found:
-		for _, repo := range repos {
-			for _, suf := range suffixes {
-				fullName := repo + "/" + rel.Name + suf
-				exists, err := src.releaseExistOnBoshio(fullName, rel.Version)
-				if err != nil {
-					return nil, err
+func (src BOSHIOReleaseSource) GetMatchedRelease(requirement release.ReleaseRequirement) (release.RemoteRelease, bool, error) {
+	for _, repo := range repos {
+		for _, suf := range suffixes {
+			fullName := repo + "/" + requirement.Name + suf
+			exists, err := src.releaseExistOnBoshio(fullName, requirement.Version)
+			if err != nil {
+				return release.RemoteRelease{}, false, err
+			}
+			
+			if exists {
+				downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, requirement.Version)
+				builtRelease := release.RemoteRelease{
+					ReleaseID:  release.ReleaseID{Name: requirement.Name, Version: requirement.Version},
+					RemotePath: downloadURL,
 				}
-				if exists {
-					downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, rel.Version)
-					builtRelease := release.RemoteRelease{
-						ReleaseID:  release.ReleaseID{Name: rel.Name, Version: rel.Version},
-						RemotePath: downloadURL,
-					}
-					matches = append(matches, builtRelease)
-					break found
-				}
+				return builtRelease, true, nil
 			}
 		}
 	}
-
-	return matches, nil //no foreseen error to return to a higher level
+	return release.RemoteRelease{}, false, nil
 }
 
-func (src BOSHIOReleaseSource) DownloadReleases(releaseDir string, remoteReleases []release.RemoteRelease, downloadThreads int) ([]release.LocalRelease, error) {
-	var releases []release.LocalRelease
+func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.RemoteRelease, downloadThreads int) (release.LocalRelease, error) {
+	src.logger.Printf("downloading %s %s from %s", remoteRelease.Name, remoteRelease.Version, src.ID())
 
-	for _, rel := range remoteReleases {
-		src.logger.Printf("downloading %s %s from %s", rel.Name, rel.Version, src.ID())
-
-		downloadURL := rel.RemotePath
-		// Get the data
-		resp, err := http.Get(downloadURL)
-		if err != nil {
-			return nil, err
-		}
-
-		filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", rel.Name, rel.Version))
-
-		out, err := os.Create(filePath)
-		if err != nil {
-			return nil, err
-		}
-
-		// Write the body to file
-		_, err = io.Copy(out, resp.Body)
-		resp.Body.Close()
-		out.Close()
-		if err != nil {
-			return nil, err
-		}
-
-		releases = append(releases, release.LocalRelease{ReleaseID: rel.ReleaseID, LocalPath: filePath})
+	downloadURL := remoteRelease.RemotePath
+	// Get the data
+	resp, err := http.Get(downloadURL)
+	if err != nil {
+		return release.LocalRelease{}, err
 	}
 
-	return releases, nil
+	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
+
+	out, err := os.Create(filePath)
+	if err != nil {
+		return release.LocalRelease{}, err
+	}
+
+	// Write the body to file
+	_, err = io.Copy(out, resp.Body)
+	resp.Body.Close()
+	out.Close()
+	if err != nil {
+		return release.LocalRelease{}, err
+	}
+
+	return release.LocalRelease{ReleaseID: remoteRelease.ReleaseID, LocalPath: filePath}, nil
 }
 
 type ResponseStatusCodeError http.Response

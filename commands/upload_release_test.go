@@ -121,12 +121,10 @@ version: ` + version + `
 
 			When("the release already exists on the release source", func() {
 				BeforeEach(func() {
-					releaseUploader.GetMatchedReleasesReturns([]release.RemoteRelease{
-						{
-							ReleaseID:  release.ReleaseID{Name: "banana", Version: "1.2.3"},
-							RemotePath: "banana/banana-1.2.3.tgz",
-						},
-					}, nil)
+					releaseUploader.GetMatchedReleaseReturns(release.RemoteRelease{
+						ReleaseID:  release.ReleaseID{Name: "banana", Version: "1.2.3"},
+						RemotePath: "banana/banana-1.2.3.tgz",
+					}, true, nil)
 				})
 
 				It("errors and does not upload", func() {
@@ -136,14 +134,10 @@ version: ` + version + `
 					})
 					Expect(err).To(MatchError(ContainSubstring("already exists")))
 
-					Expect(releaseUploader.GetMatchedReleasesCallCount()).To(Equal(1))
+					Expect(releaseUploader.GetMatchedReleaseCallCount()).To(Equal(1))
 
-					requirementSet := releaseUploader.GetMatchedReleasesArgsForCall(0)
-					Expect(requirementSet).To(HaveLen(1))
-					Expect(requirementSet).To(HaveKeyWithValue(
-						release.ReleaseID{Name: "banana", Version: "1.2.3"},
-						release.ReleaseRequirement{Name: "banana", Version: "1.2.3"},
-					))
+					requirement := releaseUploader.GetMatchedReleaseArgsForCall(0)
+					Expect(requirement).To(Equal(release.ReleaseRequirement{Name: "banana", Version: "1.2.3"}))
 
 					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
 				})
@@ -198,7 +192,7 @@ version: ` + version + `
 
 		When("querying the release source fails", func() {
 			BeforeEach(func() {
-				releaseUploader.GetMatchedReleasesReturns(nil, errors.New("boom"))
+				releaseUploader.GetMatchedReleaseReturns(release.RemoteRelease{}, false, errors.New("boom"))
 			})
 
 			It("returns an error", func() {
