@@ -68,13 +68,13 @@ func (src S3ReleaseSource) ID() string {
 }
 
 //go:generate counterfeiter -o ./fakes/s3_request_failure.go --fake-name S3RequestFailure github.com/aws/aws-sdk-go/service/s3.RequestFailure
-func (src S3ReleaseSource) GetMatchedRelease(requirement release.ReleaseRequirement) (release.RemoteRelease, bool, error) {
+func (src S3ReleaseSource) GetMatchedRelease(requirement release.Requirement) (release.Remote, bool, error) {
 	t := src.pathTemplate()
 
 	pathBuf := new(bytes.Buffer)
 	err := t.Execute(pathBuf, requirement)
 	if err != nil {
-		return release.RemoteRelease{}, false, fmt.Errorf("unable to evaluate path_template: %w", err)
+		return release.Remote{}, false, fmt.Errorf("unable to evaluate path_template: %w", err)
 	}
 
 	remotePath := pathBuf.String()
@@ -87,18 +87,18 @@ func (src S3ReleaseSource) GetMatchedRelease(requirement release.ReleaseRequirem
 	if err != nil {
 		requestFailure, ok := err.(s3.RequestFailure)
 		if ok && requestFailure.StatusCode() == 404 {
-			return release.RemoteRelease{}, false, nil
+			return release.Remote{}, false, nil
 		}
-		return release.RemoteRelease{}, false, err
+		return release.Remote{}, false, err
 	}
 
-	return release.RemoteRelease{
-		ReleaseID:  release.ReleaseID{Name: requirement.Name, Version: requirement.Version},
+	return release.Remote{
+		ID:         release.ID{Name: requirement.Name, Version: requirement.Version},
 		RemotePath: remotePath,
 	}, true, nil
 }
 
-func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.RemoteRelease, downloadThreads int) (release.LocalRelease, error) {
+func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error) {
 	setConcurrency := func(dl *s3manager.Downloader) {
 		if downloadThreads > 0 {
 			dl.Concurrency = downloadThreads
@@ -113,7 +113,7 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease rele
 
 	file, err := os.Create(outputFile)
 	if err != nil {
-		return release.LocalRelease{}, fmt.Errorf("failed to create file %q: %w", outputFile, err)
+		return release.Local{}, fmt.Errorf("failed to create file %q: %w", outputFile, err)
 	}
 
 	_, err = src.S3Downloader.Download(file, &s3.GetObjectInput{
@@ -121,15 +121,15 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease rele
 		Key:    aws.String(remoteRelease.RemotePath),
 	}, setConcurrency)
 	if err != nil {
-		return release.LocalRelease{}, fmt.Errorf("failed to download file: %w\n", err)
+		return release.Local{}, fmt.Errorf("failed to download file: %w\n", err)
 	}
 
-	return release.LocalRelease{ReleaseID: remoteRelease.ReleaseID, LocalPath: outputFile}, nil
+	return release.Local{ID: remoteRelease.ID, LocalPath: outputFile}, nil
 }
 
 func (src S3ReleaseSource) UploadRelease(name, version string, file io.Reader) error {
 	pathBuf := new(bytes.Buffer)
-	err := src.pathTemplate().Execute(pathBuf, release.ReleaseID{Name: name, Version: version})
+	err := src.pathTemplate().Execute(pathBuf, release.ID{Name: name, Version: version})
 	if err != nil {
 		return fmt.Errorf("unable to evaluate path_template: %w", err)
 	}

@@ -36,7 +36,7 @@ type ReleaseDownloaderFactory interface {
 
 //go:generate counterfeiter -o ./fakes/release_downloader.go --fake-name ReleaseDownloader . ReleaseDownloader
 type ReleaseDownloader interface {
-	DownloadRelease(downloadDir string, requirement release.ReleaseRequirement) (release.LocalRelease, string, string, error)
+	DownloadRelease(downloadDir string, requirement release.Requirement) (release.Local, string, string, error)
 }
 
 type checksumFunc func(path string, fs billy.Filesystem) (string, error)
@@ -74,7 +74,7 @@ func (u UpdateRelease) Execute(args []string) error {
 	}
 
 	u.logger.Println("Searching for the release...")
-	localRelease, remoteSource, remotePath, err := releaseDownloader.DownloadRelease(u.Options.ReleasesDir, release.ReleaseRequirement{
+	localRelease, remoteSource, remotePath, err := releaseDownloader.DownloadRelease(u.Options.ReleasesDir, release.Requirement{
 		Name:            u.Options.Name,
 		Version:         u.Options.Version,
 		StemcellOS:      kilnfileLock.Stemcell.OS,

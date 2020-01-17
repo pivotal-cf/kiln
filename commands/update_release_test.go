@@ -38,7 +38,7 @@ var _ = Describe("UpdateRelease", func() {
 		releaseDownloader         *fakes.ReleaseDownloader
 		logger                    *log.Logger
 		downloadedReleasePath     string
-		expectedDownloadedRelease release.LocalRelease
+		expectedDownloadedRelease release.Local
 		checksummer               func(string, billy.Filesystem) (string, error)
 		kilnFileLoader            *fakes.KilnfileLoader
 	)
@@ -91,8 +91,8 @@ var _ = Describe("UpdateRelease", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, releaseVersion))
-			expectedDownloadedRelease = release.LocalRelease{
-				ReleaseID: release.ReleaseID{Name: releaseName, Version: releaseVersion},
+			expectedDownloadedRelease = release.Local{
+				ID:        release.ID{Name: releaseName, Version: releaseVersion},
 				LocalPath: downloadedReleasePath,
 			}
 
@@ -106,7 +106,7 @@ var _ = Describe("UpdateRelease", func() {
 		When("updating to a version that exists in the remote", func() {
 			BeforeEach(func() {
 				releaseDownloader.DownloadReleaseCalls(
-					func(dir string, requirement release.ReleaseRequirement) (release.LocalRelease, string, string, error) {
+					func(dir string, requirement release.Requirement) (release.Local, string, string, error) {
 						downloadedReleaseFile, err := filesystem.Create(downloadedReleasePath)
 						Expect(err).NotTo(HaveOccurred())
 						defer downloadedReleaseFile.Close()
@@ -135,7 +135,7 @@ var _ = Describe("UpdateRelease", func() {
 				receivedReleasesDir, receivedReleaseRequirement := releaseDownloader.DownloadReleaseArgsForCall(0)
 				Expect(receivedReleasesDir).To(Equal(releasesDir))
 
-				releaseRequirement := release.ReleaseRequirement{
+				releaseRequirement := release.Requirement{
 					Name:            releaseName,
 					Version:         releaseVersion,
 					StemcellOS:      "some-os",
@@ -201,7 +201,7 @@ var _ = Describe("UpdateRelease", func() {
 
 			BeforeEach(func() {
 				downloadErr = errors.New("asplode!!")
-				releaseDownloader.DownloadReleaseReturns(release.LocalRelease{}, "", "", downloadErr)
+				releaseDownloader.DownloadReleaseReturns(release.Local{}, "", "", downloadErr)
 			})
 
 			It("tells the release downloader factory to allow only publishable releases", func() {
@@ -263,7 +263,7 @@ var _ = Describe("UpdateRelease", func() {
 
 		When("downloading the release fails", func() {
 			BeforeEach(func() {
-				releaseDownloader.DownloadReleaseReturns(release.LocalRelease{}, "", "", errors.New("bad stuff"))
+				releaseDownloader.DownloadReleaseReturns(release.Local{}, "", "", errors.New("bad stuff"))
 			})
 
 			It("errors", func() {

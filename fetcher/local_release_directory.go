@@ -31,8 +31,8 @@ func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.Release
 	}
 }
 
-func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]release2.SatisfyingLocalRelease, error) {
-	var outputReleases []release2.SatisfyingLocalRelease
+func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]release2.LocalSatisfying, error) {
+	var outputReleases []release2.LocalSatisfying
 
 	rawReleases, err := l.releasesService.FromDirectories([]string{releasesDir})
 	if err != nil {
@@ -41,27 +41,27 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]release2.
 
 	for _, release := range rawReleases {
 		releaseManifest := release.(builder.ReleaseManifest)
-		id := release2.ReleaseID{Name: releaseManifest.Name, Version: releaseManifest.Version}
+		id := release2.ID{Name: releaseManifest.Name, Version: releaseManifest.Version}
 
-		var rel release2.SatisfyingLocalRelease
+		var rel release2.LocalSatisfying
 		// see implementation of ReleaseManifestReader.Read for why we can assume that
 		// stemcell metadata are empty strings
 		if releaseManifest.StemcellOS != "" && releaseManifest.StemcellVersion != "" {
-			rel = release2.NewLocalCompiledRelease(
+			rel = release2.NewLocalCompiled(
 				id,
 				releaseManifest.StemcellOS,
 				releaseManifest.StemcellVersion,
 				filepath.Join(releasesDir, releaseManifest.File),
 			)
 		} else {
-			rel = release2.NewLocalBuiltRelease(id, filepath.Join(releasesDir, releaseManifest.File))
+			rel = release2.NewLocalBuilt(id, filepath.Join(releasesDir, releaseManifest.File))
 		}
 		outputReleases = append(outputReleases, rel)
 	}
 	return outputReleases, nil
 }
 
-func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []release2.LocalRelease, noConfirm bool) error {
+func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []release2.Local, noConfirm bool) error {
 	var doDeletion byte
 
 	if len(extraReleaseSet) == 0 {
@@ -91,7 +91,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []release2.Lo
 	return nil
 }
 
-func (l LocalReleaseDirectory) deleteReleases(releasesToDelete []release2.LocalRelease) error {
+func (l LocalReleaseDirectory) deleteReleases(releasesToDelete []release2.Local) error {
 	for _, release := range releasesToDelete {
 		err := os.Remove(release.LocalPath)
 
@@ -106,7 +106,7 @@ func (l LocalReleaseDirectory) deleteReleases(releasesToDelete []release2.LocalR
 	return nil
 }
 
-func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet []release2.LocalRelease, kilnfileLock cargo.KilnfileLock) error {
+func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet []release2.Local, kilnfileLock cargo.KilnfileLock) error {
 	if len(downloadedReleaseSet) == 0 {
 		return nil
 	}
@@ -118,7 +118,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet []release2.L
 	fs := osfs.New("")
 
 	for _, release := range downloadedReleaseSet {
-		expectedSum, found := findExpectedSum(release.ReleaseID, kilnfileLock.Releases)
+		expectedSum, found := findExpectedSum(release.ID, kilnfileLock.Releases)
 
 		if !found {
 			return fmt.Errorf("release %s is not in Kilnfile.lock file", release.Name)
@@ -133,7 +133,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet []release2.L
 		}
 
 		if expectedSum != sum {
-			l.deleteReleases([]release2.LocalRelease{release})
+			l.deleteReleases([]release2.Local{release})
 			badReleases = append(badReleases, fmt.Sprintf("%+v", release.LocalPath))
 		}
 	}
@@ -145,7 +145,7 @@ func (l LocalReleaseDirectory) VerifyChecksums(downloadedReleaseSet []release2.L
 	return nil
 }
 
-func findExpectedSum(release release2.ReleaseID, desiredReleases []cargo.ReleaseLock) (string, bool) {
+func findExpectedSum(release release2.ID, desiredReleases []cargo.ReleaseLock) (string, bool) {
 	for _, r := range desiredReleases {
 		if r.Name == release.Name {
 			return r.SHA1, true

@@ -71,43 +71,43 @@ func (src *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
 	return
 }
 
-func (src BOSHIOReleaseSource) GetMatchedRelease(requirement release.ReleaseRequirement) (release.RemoteRelease, bool, error) {
+func (src BOSHIOReleaseSource) GetMatchedRelease(requirement release.Requirement) (release.Remote, bool, error) {
 	for _, repo := range repos {
 		for _, suf := range suffixes {
 			fullName := repo + "/" + requirement.Name + suf
 			exists, err := src.releaseExistOnBoshio(fullName, requirement.Version)
 			if err != nil {
-				return release.RemoteRelease{}, false, err
+				return release.Remote{}, false, err
 			}
 			
 			if exists {
 				downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, requirement.Version)
-				builtRelease := release.RemoteRelease{
-					ReleaseID:  release.ReleaseID{Name: requirement.Name, Version: requirement.Version},
+				builtRelease := release.Remote{
+					ID:         release.ID{Name: requirement.Name, Version: requirement.Version},
 					RemotePath: downloadURL,
 				}
 				return builtRelease, true, nil
 			}
 		}
 	}
-	return release.RemoteRelease{}, false, nil
+	return release.Remote{}, false, nil
 }
 
-func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.RemoteRelease, downloadThreads int) (release.LocalRelease, error) {
+func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error) {
 	src.logger.Printf("downloading %s %s from %s", remoteRelease.Name, remoteRelease.Version, src.ID())
 
 	downloadURL := remoteRelease.RemotePath
 	// Get the data
 	resp, err := http.Get(downloadURL)
 	if err != nil {
-		return release.LocalRelease{}, err
+		return release.Local{}, err
 	}
 
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
 
 	out, err := os.Create(filePath)
 	if err != nil {
-		return release.LocalRelease{}, err
+		return release.Local{}, err
 	}
 
 	// Write the body to file
@@ -115,10 +115,10 @@ func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease 
 	resp.Body.Close()
 	out.Close()
 	if err != nil {
-		return release.LocalRelease{}, err
+		return release.Local{}, err
 	}
 
-	return release.LocalRelease{ReleaseID: remoteRelease.ReleaseID, LocalPath: filePath}, nil
+	return release.Local{ID: remoteRelease.ID, LocalPath: filePath}, nil
 }
 
 type ResponseStatusCodeError http.Response

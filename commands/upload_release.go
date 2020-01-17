@@ -76,7 +76,7 @@ func (command UploadRelease) Execute(args []string) error {
 }
 
 func ensureNoExistingRelease(name, version string, uploader ReleaseUploader) error {
-	requirement := release.ReleaseRequirement{Name: name, Version: version}
+	requirement := release.Requirement{Name: name, Version: version}
 	_, found, err := uploader.GetMatchedRelease(requirement)
 	if err != nil {
 		return fmt.Errorf("couldn't query release source: %w", err)

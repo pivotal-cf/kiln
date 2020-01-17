@@ -42,8 +42,8 @@ var _ = Describe("S3ReleaseSource", func() {
 			logger           *log.Logger
 			releaseSource    S3ReleaseSource
 			releaseDir       string
-			remoteRelease    release.RemoteRelease
-			releaseID        release.ReleaseID
+			remoteRelease    release.Remote
+			releaseID        release.ID
 			fakeS3Downloader *fakes.S3Downloader
 		)
 
@@ -53,8 +53,8 @@ var _ = Describe("S3ReleaseSource", func() {
 			releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 			Expect(err).NotTo(HaveOccurred())
 
-			releaseID = release.ReleaseID{Name: "uaa", Version: "1.2.3"}
-			remoteRelease = release.RemoteRelease{ReleaseID: releaseID, RemotePath: "some-uaa-key"}
+			releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
+			remoteRelease = release.Remote{ID: releaseID, RemotePath: "some-uaa-key"}
 
 			logger = log.New(GinkgoWriter, "", 0)
 			fakeS3Downloader = new(fakes.S3Downloader)
@@ -87,7 +87,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			_, _, opts := fakeS3Downloader.DownloadArgsForCall(0)
 			verifySetsConcurrency(opts, 7)
 
-			Expect(localRelease).To(Equal(release.LocalRelease{ReleaseID: releaseID, LocalPath: releasePath}))
+			Expect(localRelease).To(Equal(release.Local{ID: releaseID, LocalPath: releasePath}))
 		})
 
 		Context("when number of threads is not specified", func() {
@@ -132,14 +132,14 @@ var _ = Describe("S3ReleaseSource", func() {
 		var (
 			releaseSource  *S3ReleaseSource
 			fakeS3Client   *fakes.S3HeadObjecter
-			desiredRelease release.ReleaseRequirement
-			bpmReleaseID   release.ReleaseID
+			desiredRelease release.Requirement
+			bpmReleaseID   release.ID
 			bpmKey         string
 		)
 
 		BeforeEach(func() {
-			bpmReleaseID = release.ReleaseID{Name: "bpm-release", Version: "1.2.3"}
-			desiredRelease = release.ReleaseRequirement{
+			bpmReleaseID = release.ID{Name: "bpm-release", Version: "1.2.3"}
+			desiredRelease = release.Requirement{
 				Name:            "bpm-release",
 				Version:         "1.2.3",
 				StemcellOS:      "ubuntu-xenial",
@@ -170,8 +170,8 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(input.Bucket).To(PointTo(BeEquivalentTo(bucket)))
 			Expect(input.Key).To(PointTo(BeEquivalentTo(bpmKey)))
 
-			Expect(remoteRelease).To(Equal(release.RemoteRelease{
-				ReleaseID:  bpmReleaseID,
+			Expect(remoteRelease).To(Equal(release.Remote{
+				ID:         bpmReleaseID,
 				RemotePath: bpmKey,
 			}))
 		})

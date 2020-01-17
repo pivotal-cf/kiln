@@ -1,5 +1,5 @@
 package release
 
-type ReleaseID struct {
+type ID struct {
 	Name, Version string
 }
