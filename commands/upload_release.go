@@ -60,16 +60,9 @@ func (command UploadRelease) Execute(args []string) error {
 
 	manifest := part.Metadata.(builder.ReleaseManifest)
 
-	requirement := release.ReleaseRequirement{Name: manifest.Name, Version: manifest.Version}
-	id := release.ReleaseID{Name: manifest.Name, Version: manifest.Version}
-	existing, err := uploader.GetMatchedReleases(release.ReleaseRequirementSet{id: requirement})
+	err = ensureNoExistingRelease(manifest.Name, manifest.Version,uploader)
 	if err != nil {
-		return fmt.Errorf("couldn't query release source: %w", err)
-	}
-
-	if len(existing) > 0 {
-		return fmt.Errorf("a release with name %q and version %q already exists on %s",
-			manifest.Name, manifest.Version, uploader.ID())
+		return err
 	}
 
 	err = uploader.UploadRelease(manifest.Name, manifest.Version, file)
@@ -79,6 +72,22 @@ func (command UploadRelease) Execute(args []string) error {
 
 	command.Logger.Println("Upload succeeded")
 
+	return nil
+}
+
+func ensureNoExistingRelease(name, version string, uploader ReleaseUploader) error {
+	requirement := release.ReleaseRequirement{Name: name, Version: version}
+	id := release.ReleaseID{Name: name, Version: version}
+	existing, err := uploader.GetMatchedReleases(release.ReleaseRequirementSet{id: requirement})
+	if err != nil {
+		return fmt.Errorf("couldn't query release source: %w", err)
+	}
+
+	if len(existing) > 0 {
+		return fmt.Errorf("a release with name %q and version %q already exists on %s",
+			name, version, uploader.ID())
+	}
+	
 	return nil
 }
 
