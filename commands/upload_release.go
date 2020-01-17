@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/pivotal-cf/kiln/fetcher"
+	"github.com/pivotal-cf/kiln/release"
 	"io"
 	"log"
 
@@ -58,6 +59,18 @@ func (command UploadRelease) Execute(args []string) error {
 	}
 
 	manifest := part.Metadata.(builder.ReleaseManifest)
+
+	requirement := release.ReleaseRequirement{Name: manifest.Name, Version: manifest.Version}
+	id := release.ReleaseID{Name: manifest.Name, Version: manifest.Version}
+	existing, err := uploader.GetMatchedReleases(release.ReleaseRequirementSet{id: requirement})
+	if err != nil {
+		return fmt.Errorf("couldn't query release source: %w", err)
+	}
+
+	if len(existing) > 0 {
+		return fmt.Errorf("a release with name %q and version %q already exists on %s",
+			manifest.Name, manifest.Version, uploader.ID())
+	}
 
 	err = uploader.UploadRelease(manifest.Name, manifest.Version, file)
 	if err != nil {

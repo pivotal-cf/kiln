@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/pivotal-cf/kiln/fetcher"
+	"github.com/pivotal-cf/kiln/release"
 	"io"
 	"log"
 	"os"
@@ -98,10 +99,8 @@ version: ` + version + `
 		When("it receives a correct tarball path", func() {
 			It("uploads the tarball to the release source", func() {
 				err := uploadRelease.Execute([]string{
-					"--kilnfile", "not-read-see-struct/Kilnfile",
 					"--local-path", "banana-release.tgz",
 					"--release-source", "orange-bucket",
-					"--variables-file", "my-secrets",
 				})
 
 				Expect(err).NotTo(HaveOccurred())
@@ -119,6 +118,36 @@ version: ` + version + `
 				releaseSHA := fmt.Sprintf("%x", hash.Sum(nil))
 				Expect(releaseSHA).To(Equal(expectedReleaseSHA))
 			})
+
+			When("the release already exists on the release source", func() {
+				BeforeEach(func() {
+					releaseUploader.GetMatchedReleasesReturns([]release.RemoteRelease{
+						{
+							ReleaseID:  release.ReleaseID{Name: "banana", Version: "1.2.3"},
+							RemotePath: "banana/banana-1.2.3.tgz",
+						},
+					}, nil)
+				})
+
+				It("errors and does not upload", func() {
+					err := uploadRelease.Execute([]string{
+						"--local-path", "banana-release.tgz",
+						"--release-source", "orange-bucket",
+					})
+					Expect(err).To(MatchError(ContainSubstring("already exists")))
+
+					Expect(releaseUploader.GetMatchedReleasesCallCount()).To(Equal(1))
+
+					requirementSet := releaseUploader.GetMatchedReleasesArgsForCall(0)
+					Expect(requirementSet).To(HaveLen(1))
+					Expect(requirementSet).To(HaveKeyWithValue(
+						release.ReleaseID{Name: "banana", Version: "1.2.3"},
+						release.ReleaseRequirement{Name: "banana", Version: "1.2.3"},
+					))
+
+					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
+				})
+			})
 		})
 
 		When("the release tarball is invalid", func() {
@@ -132,44 +161,61 @@ version: ` + version + `
 
 			It("errors", func() {
 				err := uploadRelease.Execute([]string{
-					"--kilnfile", "not-read-see-struct/Kilnfile",
 					"--local-path", "invalid-release.tgz",
 					"--release-source", "orange-bucket",
-					"--variables-file", "my-secrets",
 				})
 				Expect(err).To(MatchError(ContainSubstring("error reading the release manifest")))
 			})
 		})
 
 		When("the given release source doesn't exist", func() {
-			When("no release sources are s3 buckets", func() {
+			When("no release sources can upload", func() {
 				BeforeEach(func() {
 					releaseSourcesFactory.ReleaseSourcesReturns(nil)
 				})
 
 				It("returns an error without suggested release sources", func() {
 					err := uploadRelease.Execute([]string{
-						"--kilnfile", "not-read-see-struct/Kilnfile",
 						"--local-path", "banana-release.tgz",
 						"--release-source", "orange-bucket",
-						"--variables-file", "my-secrets",
 					})
 
 					Expect(err).To(MatchError(ContainSubstring("release source")))
 				})
 			})
 
-			When("some release sources are s3 buckets", func() {
+			When("some release sources can upload", func() {
 				It("returns an error that suggests valid release sources", func() {
 					err := uploadRelease.Execute([]string{
-						"--kilnfile", "not-read-see-struct/Kilnfile",
 						"--local-path", "banana-release.tgz",
 						"--release-source", "no-such-release-source",
-						"--variables-file", "my-secrets",
 					})
 
 					Expect(err).To(MatchError(ContainSubstring("orange-bucket")))
 				})
+			})
+		})
+
+		When("querying the release source fails", func() {
+			BeforeEach(func() {
+				releaseUploader.GetMatchedReleasesReturns(nil, errors.New("boom"))
+			})
+
+			It("returns an error", func() {
+				err := uploadRelease.Execute([]string{
+					"--local-path", "banana-release.tgz",
+					"--release-source", "orange-bucket",
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("boom")))
+			})
+
+			It("doesn't upload anything", func() {
+				_ = uploadRelease.Execute([]string{
+					"--local-path", "banana-release.tgz",
+					"--release-source", "orange-bucket",
+				})
+				Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
 			})
 		})
 
@@ -180,10 +226,8 @@ version: ` + version + `
 
 			It("returns an error", func() {
 				err := uploadRelease.Execute([]string{
-					"--kilnfile", "not-read-see-struct/Kilnfile",
 					"--local-path", "banana-release.tgz",
 					"--release-source", "orange-bucket",
-					"--variables-file", "my-secrets",
 				})
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(ContainSubstring("upload")))
