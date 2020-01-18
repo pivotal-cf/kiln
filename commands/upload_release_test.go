@@ -26,11 +26,11 @@ import (
 var _ = Describe("UploadRelease", func() {
 	Context("Execute", func() {
 		var (
-			fs                    billy.Filesystem
-			loader                *fakes.KilnfileLoader
-			releaseSourcesFactory *fakes.ReleaseSourcesFactory
-			nonReleaseUploader    *fetcherFakes.ReleaseSource
-			releaseUploader       *fakes.ReleaseUploader
+			fs                   billy.Filesystem
+			loader               *fakes.KilnfileLoader
+			releaseSourceFactory *fakes.ReleaseSourceFactory
+			nonReleaseUploader   *fetcherFakes.ReleaseSource
+			releaseUploader      *fetcherFakes.ReleaseUploader
 
 			uploadRelease commands.UploadRelease
 
@@ -82,16 +82,16 @@ version: ` + version + `
 
 			nonReleaseUploader = new(fetcherFakes.ReleaseSource)
 			nonReleaseUploader.IDReturns("lemon-bucket")
-			releaseUploader = new(fakes.ReleaseUploader)
+			releaseUploader = new(fetcherFakes.ReleaseUploader)
 			releaseUploader.IDReturns("orange-bucket")
-			releaseSourcesFactory = new(fakes.ReleaseSourcesFactory)
-			releaseSourcesFactory.ReleaseSourcesReturns([]fetcher.ReleaseSource{nonReleaseUploader, releaseUploader})
+			releaseSourceFactory = new(fakes.ReleaseSourceFactory)
+			releaseSourceFactory.ReleaseSourceReturns([]fetcher.ReleaseSource{nonReleaseUploader, releaseUploader})
 
 			uploadRelease = commands.UploadRelease{
-				FS:                    fs,
-				KilnfileLoader:        loader,
-				Logger:                log.New(GinkgoWriter, "", 0),
-				ReleaseSourcesFactory: releaseSourcesFactory,
+				FS:                   fs,
+				KilnfileLoader:       loader,
+				Logger:               log.New(GinkgoWriter, "", 0),
+				ReleaseSourceFactory: releaseSourceFactory,
 			}
 			expectedReleaseSHA = writeReleaseTarball("banana-release.tgz", "banana", "1.2.3")
 		})
@@ -166,7 +166,7 @@ version: ` + version + `
 		When("the given release source doesn't exist", func() {
 			When("no release sources can upload", func() {
 				BeforeEach(func() {
-					releaseSourcesFactory.ReleaseSourcesReturns(nil)
+					releaseSourceFactory.ReleaseSourceReturns(nil)
 				})
 
 				It("returns an error without suggested release sources", func() {

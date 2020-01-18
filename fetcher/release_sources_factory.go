@@ -21,15 +21,15 @@ type ReleaseSource interface {
 	ID() string
 }
 
-type releaseSourceFunction func(cargo.Kilnfile, bool) []ReleaseSource
+type releaseSourceFunction func(cargo.Kilnfile, bool) MultiReleaseSource
 
-func (rsf releaseSourceFunction) ReleaseSources(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) []ReleaseSource {
+func (rsf releaseSourceFunction) ReleaseSource(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) MultiReleaseSource {
 	return rsf(kilnfile, allowOnlyPublishable)
 }
 
-func NewReleaseSourcesFactory(outLogger *log.Logger) releaseSourceFunction {
-	return func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) []ReleaseSource {
-		var releaseSources []ReleaseSource
+func NewReleaseSourceFactory(outLogger *log.Logger) releaseSourceFunction {
+	return func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) MultiReleaseSource {
+		var releaseSources MultiReleaseSource
 
 		for _, releaseConfig := range kilnfile.ReleaseSources {
 			if allowOnlyPublishable && !releaseConfig.Publishable {

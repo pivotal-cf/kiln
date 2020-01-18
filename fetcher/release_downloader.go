@@ -6,32 +6,26 @@ import (
 	"github.com/pivotal-cf/kiln/release"
 )
 
-type releaseDownloader struct {
-	releaseSources []ReleaseSource
-}
+type releaseDownloader MultiReleaseSource
 
-func NewReleaseDownloader(releaseSources []ReleaseSource) releaseDownloader {
-	return releaseDownloader{releaseSources: releaseSources}
+func NewReleaseDownloader(releaseSource MultiReleaseSource) releaseDownloader {
+	return releaseDownloader(releaseSource)
 }
 
 func (rd releaseDownloader) DownloadRelease(releaseDir string, requirement release.Requirement) (release.Local, release.Remote, error) {
-	for _, releaseSource := range rd.releaseSources {
-		remoteRelease, found, err := releaseSource.GetMatchedRelease(requirement)
+		remoteRelease, found, err := MultiReleaseSource(rd).GetMatchedRelease(requirement)
 		if err != nil {
 			return release.Local{}, release.Remote{}, err
 		}
 
 		if !found {
-			continue
+			return release.Local{}, release.Remote{}, fmt.Errorf("couldn't find %q %s in any release source", requirement.Name, requirement.Version)
 		}
 
-		localRelease, err := releaseSource.DownloadRelease(releaseDir, remoteRelease, 0)
+		localRelease, err := MultiReleaseSource(rd).DownloadRelease(releaseDir, remoteRelease, 0)
 		if err != nil {
 			return release.Local{}, release.Remote{}, err
 		}
 
 		return localRelease, remoteRelease, nil
-	}
-
-	return release.Local{}, release.Remote{}, fmt.Errorf("couldn't find %q %s in any release source", requirement.Name, requirement.Version)
 }

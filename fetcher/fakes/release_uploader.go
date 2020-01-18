@@ -5,7 +5,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/pivotal-cf/kiln/commands"
+	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/release"
 )
 
@@ -342,4 +342,4 @@ func (fake *ReleaseUploader) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ commands.ReleaseUploader = new(ReleaseUploader)
+var _ fetcher.ReleaseUploader = new(ReleaseUploader)

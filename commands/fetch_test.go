@@ -36,7 +36,7 @@ var _ = Describe("Fetch", func() {
 		fakeS3BuiltReleaseSource    *fetcherFakes.ReleaseSource
 		fakeReleaseSources          []fetcher.ReleaseSource
 		fakeLocalReleaseDirectory   *fakes.LocalReleaseDirectory
-		releaseSourcesFactory       *fakes.ReleaseSourcesFactory
+		releaseSourceFactory        *fakes.ReleaseSourceFactory
 
 		fetchExecuteArgs []string
 		fetchExecuteErr  error
@@ -88,7 +88,7 @@ stemcell_criteria:
 				"--releases-directory", someReleasesDirectory,
 				"--kilnfile", someKilnfilePath,
 			}
-			releaseSourcesFactory = new(fakes.ReleaseSourcesFactory)
+			releaseSourceFactory = new(fakes.ReleaseSourceFactory)
 		})
 
 		AfterEach(func() {
@@ -97,11 +97,11 @@ stemcell_criteria:
 
 		JustBeforeEach(func() {
 			fakeReleaseSources = []fetcher.ReleaseSource{fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource}
-			releaseSourcesFactory.ReleaseSourcesReturns(fakeReleaseSources)
+			releaseSourceFactory.ReleaseSourceReturns(fakeReleaseSources)
 
 			err := ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0644)
 			Expect(err).NotTo(HaveOccurred())
-			fetch = NewFetch(logger, releaseSourcesFactory, fakeLocalReleaseDirectory)
+			fetch = NewFetch(logger, releaseSourceFactory, fakeLocalReleaseDirectory)
 
 			fetchExecuteErr = fetch.Execute(fetchExecuteArgs)
 		})

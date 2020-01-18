@@ -97,7 +97,7 @@ func main() {
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 
-	releaseSourcesFactory := fetcher.NewReleaseSourcesFactory(outLogger)
+	releaseSourcesFactory := fetcher.NewReleaseSourceFactory(outLogger)
 
 	commandSet["fetch"] = commands.NewFetch(outLogger, releaseSourcesFactory, localReleaseDirectory)
 	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
@@ -126,10 +126,10 @@ func main() {
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, newReleaseDownloaderFactory(), fetcher.CalculateSum, cargo.KilnfileLoader{})
 
 	commandSet["upload-release"] = commands.UploadRelease{
-		FS:                    osfs.New(""),
-		KilnfileLoader:        cargo.KilnfileLoader{},
-		ReleaseSourcesFactory: releaseSourcesFactory,
-		Logger:                log.New(os.Stdout, "", 0),
+		FS:                   osfs.New(""),
+		KilnfileLoader:       cargo.KilnfileLoader{},
+		ReleaseSourceFactory: releaseSourcesFactory,
+		Logger:               log.New(os.Stdout, "", 0),
 	}
 
 	err = commandSet.Execute(command, args)
@@ -141,7 +141,7 @@ func main() {
 type releaseDownloaderFactory struct{}
 
 func (f releaseDownloaderFactory) ReleaseDownloader(outLogger *log.Logger, kilnfile cargo.Kilnfile, allowOnlyPublishable bool) (commands.ReleaseDownloader, error) {
-	releaseSources := fetcher.NewReleaseSourcesFactory(outLogger)(kilnfile, allowOnlyPublishable)
+	releaseSources := fetcher.NewReleaseSourceFactory(outLogger)(kilnfile, allowOnlyPublishable)
 
 	return fetcher.NewReleaseDownloader(releaseSources), nil
 }

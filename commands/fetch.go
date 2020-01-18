@@ -29,7 +29,7 @@ func (releases ErrorMissingReleases) Error() string {
 type Fetch struct {
 	logger *log.Logger
 
-	releaseSourcesFactory ReleaseSourcesFactory
+	releaseSourcesFactory ReleaseSourceFactory
 	localReleaseDirectory LocalReleaseDirectory
 
 	Options struct {
@@ -44,12 +44,12 @@ type Fetch struct {
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/release_sources_factory.go --fake-name ReleaseSourcesFactory . ReleaseSourcesFactory
-type ReleaseSourcesFactory interface {
-	ReleaseSources(cargo.Kilnfile, bool) []fetcher.ReleaseSource
+//go:generate counterfeiter -o ./fakes/release_source_factory.go --fake-name ReleaseSourceFactory . ReleaseSourceFactory
+type ReleaseSourceFactory interface {
+	ReleaseSource(cargo.Kilnfile, bool) fetcher.MultiReleaseSource
 }
 
-func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, localReleaseDirectory LocalReleaseDirectory) Fetch {
+func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourceFactory, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
 		logger:                logger,
 		localReleaseDirectory: localReleaseDirectory,
@@ -129,26 +129,18 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []rele
 }
 
 func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ReleaseLock) ([]release.Local, error) {
-	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile, f.Options.AllowOnlyPublishableReleases)
-
-	releaseSourceMap := make(map[string]fetcher.ReleaseSource)
-	for _, releaseSource := range releaseSources {
-		releaseSourceMap[releaseSource.ID()] = releaseSource
-	}
+	releaseSource := fetcher.MultiReleaseSource(f.releaseSourcesFactory.ReleaseSource(kilnfile, f.Options.AllowOnlyPublishableReleases))
 
 	var downloaded []release.Local
 
 	for _, rl := range releaseLocks {
-		src, ok := releaseSourceMap[rl.RemoteSource]
-		if !ok {
-			return nil, fmt.Errorf("release_source %q for %q %q does not exist", rl.RemoteSource, rl.Name, rl.Version)
+		remoteRelease := release.Remote{
+			ID: release.ID{Name: rl.Name, Version: rl.Version},
+			RemotePath: rl.RemotePath,
+			SourceID: rl.RemoteSource,
 		}
 
-		local, err := src.DownloadRelease(
-			f.Options.ReleasesDir,
-			release.Remote{ID: release.ID{Name: rl.Name, Version: rl.Version}, RemotePath: rl.RemotePath, SourceID: rl.RemoteSource},
-			f.Options.DownloadThreads,
-		)
+		local, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease, f.Options.DownloadThreads)
 		if err != nil {
 			return nil, fmt.Errorf("download failed: %w", err)
 		}

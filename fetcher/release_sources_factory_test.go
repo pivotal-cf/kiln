@@ -11,14 +11,14 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
-var _ = Describe("NewReleaseSourcesFactory()", func() {
+var _ = Describe("NewReleaseSourceFactory()", func() {
 	var (
-		rsFactory commands.ReleaseSourcesFactory
+		rsFactory commands.ReleaseSourceFactory
 		kilnfile  cargo.Kilnfile
 	)
 
 	JustBeforeEach(func() {
-		rsFactory = NewReleaseSourcesFactory(log.New(GinkgoWriter, "", log.LstdFlags))
+		rsFactory = NewReleaseSourceFactory(log.New(GinkgoWriter, "", log.LstdFlags))
 	})
 
 	Context("when allow-only-publishable-releases is false", func() {
@@ -37,7 +37,7 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 		})
 
 		It("builds the correct release sources", func() {
-			releaseSources := rsFactory.ReleaseSources(kilnfile, false)
+			releaseSources := rsFactory.ReleaseSource(kilnfile, false)
 			Expect(releaseSources).To(HaveLen(4))
 			var (
 				s3ReleaseSource     S3ReleaseSource
@@ -82,7 +82,7 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 		})
 
 		It("builds the correct release sources", func() {
-			releaseSources := rsFactory.ReleaseSources(kilnfile, true)
+			releaseSources := rsFactory.ReleaseSource(kilnfile, true)
 			Expect(releaseSources).To(HaveLen(1))
 			var s3ReleaseSource S3ReleaseSource
 
@@ -110,7 +110,7 @@ var _ = Describe("NewReleaseSourcesFactory()", func() {
 				defer func() {
 					r = recover()
 				}()
-				rsFactory.ReleaseSources(kilnfile, false)
+				rsFactory.ReleaseSource(kilnfile, false)
 			}()
 			Expect(r).To(ContainSubstring("unique"))
 			Expect(r).To(ContainSubstring(`"some-bucket"`))
