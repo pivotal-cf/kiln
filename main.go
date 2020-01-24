@@ -126,10 +126,10 @@ func main() {
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, newReleaseDownloaderFactory(), cargo.KilnfileLoader{})
 
 	commandSet["upload-release"] = commands.UploadRelease{
-		FS:                   osfs.New(""),
-		KilnfileLoader:       cargo.KilnfileLoader{},
-		ReleaseSourceFactory: releaseSourcesFactory,
-		Logger:               log.New(os.Stdout, "", 0),
+		FS:                     osfs.New(""),
+		KilnfileLoader:         cargo.KilnfileLoader{},
+		ReleaseUploaderFactory: releaseSourcesFactory,
+		Logger:                 log.New(os.Stdout, "", 0),
 	}
 
 	err = commandSet.Execute(command, args)

@@ -1,19 +1,11 @@
 package fetcher
 
 import (
-	"errors"
 	"fmt"
 	"github.com/pivotal-cf/kiln/release"
-	"io"
 )
 
 type MultiReleaseSource []ReleaseSource
-
-//go:generate counterfeiter -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
-type ReleaseUploader interface {
-	UploadRelease(name, version string, file io.Reader) error
-	ReleaseSource
-}
 
 func (multiSrc MultiReleaseSource) GetMatchedRelease(requirement release.Requirement) (release.Remote, bool, error) {
 	for _, src := range multiSrc {
@@ -51,42 +43,6 @@ func (multiSrc MultiReleaseSource) DownloadRelease(releaseDir string, remoteRele
 	}
 
 	return localRelease, nil
-}
-
-func (multiSrc MultiReleaseSource) UploadRelease(name, version, sourceID string, file io.Reader) error {
-	var (
-		uploader     ReleaseUploader
-		availableIDs []string
-	)
-	for _, src := range multiSrc {
-		u, ok := src.(ReleaseUploader)
-		if !ok {
-			continue
-		}
-		availableIDs = append(availableIDs, u.ID())
-		if u.ID() == sourceID {
-			uploader = u
-			break
-		}
-	}
-
-	if len(availableIDs) == 0 {
-		return errors.New("no upload-capable release sources were found in the Kilnfile")
-	}
-
-	if uploader == nil {
-		return fmt.Errorf(
-			"could not find a valid matching release source in the Kilnfile, available upload-compatible sources are: %q",
-			availableIDs,
-		)
-	}
-
-	err := uploader.UploadRelease(name, version, file)
-	if err != nil {
-		return scopedError(uploader.ID(), err)
-	}
-
-	return nil
 }
 
 func scopedError(sourceID string, err error) error {

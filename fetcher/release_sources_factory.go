@@ -1,7 +1,9 @@
 package fetcher
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log"
 
 	"github.com/pivotal-cf/kiln/release"
@@ -21,10 +23,49 @@ type ReleaseSource interface {
 	ID() string
 }
 
+//go:generate counterfeiter -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
+type ReleaseUploader interface {
+	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
+	UploadRelease(name, version string, file io.Reader) error
+}
+
 type releaseSourceFunction func(cargo.Kilnfile, bool) MultiReleaseSource
 
 func (rsf releaseSourceFunction) ReleaseSource(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) MultiReleaseSource {
 	return rsf(kilnfile, allowOnlyPublishable)
+}
+
+func (rsf releaseSourceFunction) ReleaseUploader(sourceID string, kilnfile cargo.Kilnfile) (ReleaseUploader, error) {
+	var (
+		uploader     ReleaseUploader
+		availableIDs []string
+	)
+	sources := rsf(kilnfile, false)
+
+	for _, src := range sources {
+		u, ok := src.(ReleaseUploader)
+		if !ok {
+			continue
+		}
+		availableIDs = append(availableIDs, src.ID())
+		if src.ID() == sourceID {
+			uploader = u
+			break
+		}
+	}
+
+	if len(availableIDs) == 0 {
+		return nil, errors.New("no upload-capable release sources were found in the Kilnfile")
+	}
+
+	if uploader == nil {
+		return nil, fmt.Errorf(
+			"could not find a valid matching release source in the Kilnfile, available upload-compatible sources are: %q",
+			availableIDs,
+		)
+	}
+
+	return uploader, nil
 }
 
 func NewReleaseSourceFactory(outLogger *log.Logger) releaseSourceFunction {

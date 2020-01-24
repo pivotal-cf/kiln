@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/fetcher"
+	"github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/release"
 	"log"
 
@@ -12,10 +14,10 @@ import (
 )
 
 type UploadRelease struct {
-	FS                   billy.Filesystem
-	KilnfileLoader       KilnfileLoader
-	ReleaseSourceFactory ReleaseSourceFactory
-	Logger               *log.Logger
+	FS                     billy.Filesystem
+	KilnfileLoader         KilnfileLoader
+	ReleaseUploaderFactory ReleaseUploaderFactory
+	Logger                 *log.Logger
 
 	Options struct {
 		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
@@ -25,6 +27,11 @@ type UploadRelease struct {
 		ReleaseSource string `short:"rs" long:"release-source" required:"true" description:"name of the release source specified in the Kilnfile"`
 		LocalPath     string `short:"lp" long:"local-path" required:"true" description:"path to BOSH release tarball"`
 	}
+}
+
+//go:generate counterfeiter -o ./fakes/release_uploader_factory.go --fake-name ReleaseUploaderFactory . ReleaseUploaderFactory
+type ReleaseUploaderFactory interface {
+	ReleaseUploader(sourceID string, kilnfile cargo.Kilnfile) (fetcher.ReleaseUploader, error)
 }
 
 func (command UploadRelease) Execute(args []string) error {
@@ -43,7 +50,10 @@ func (command UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
-	releaseSource := command.ReleaseSourceFactory.ReleaseSource(kilnfile, false)
+	releaseSource, err := command.ReleaseUploaderFactory.ReleaseUploader(command.Options.ReleaseSource, kilnfile)
+	if err != nil {
+		return fmt.Errorf("error finding release source: %w", err)
+	}
 
 	file, err := command.FS.Open(command.Options.LocalPath)
 	if err != nil {
@@ -69,7 +79,7 @@ func (command UploadRelease) Execute(args []string) error {
 			manifest.Name, manifest.Version, command.Options.ReleaseSource)
 	}
 
-	err = releaseSource.UploadRelease(manifest.Name, manifest.Version, command.Options.ReleaseSource, file)
+	err = releaseSource.UploadRelease(manifest.Name, manifest.Version, file)
 	if err != nil {
 		return fmt.Errorf("error uploading the release: %w", err)
 	}
