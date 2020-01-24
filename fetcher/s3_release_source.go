@@ -2,6 +2,8 @@ package fetcher
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"github.com/pivotal-cf/kiln/release"
 	"io"
@@ -95,7 +97,7 @@ func (src S3ReleaseSource) GetMatchedRelease(requirement release.Requirement) (r
 	return release.Remote{
 		ID:         release.ID{Name: requirement.Name, Version: requirement.Version},
 		RemotePath: remotePath,
-		SourceID: src.ID(),
+		SourceID:   src.ID(),
 	}, true, nil
 }
 
@@ -116,6 +118,7 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease rele
 	if err != nil {
 		return release.Local{}, fmt.Errorf("failed to create file %q: %w", outputFile, err)
 	}
+	defer file.Close()
 
 	_, err = src.S3Downloader.Download(file, &s3.GetObjectInput{
 		Bucket: aws.String(src.Bucket),
@@ -125,7 +128,20 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease rele
 		return release.Local{}, fmt.Errorf("failed to download file: %w\n", err)
 	}
 
-	return release.Local{ID: remoteRelease.ID, LocalPath: outputFile}, nil
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return release.Local{}, fmt.Errorf("error reseting file cursor: %w", err) // untested
+	}
+
+	hash := sha1.New()
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		return release.Local{}, fmt.Errorf("error hashing file contents: %w", err) // untested
+	}
+
+	sha1 := hex.EncodeToString(hash.Sum(nil))
+
+	return release.Local{ID: remoteRelease.ID, LocalPath: outputFile, SHA1: sha1}, nil
 }
 
 func (src S3ReleaseSource) UploadRelease(name, version string, file io.Reader) error {

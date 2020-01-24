@@ -112,16 +112,16 @@ stemcell_criteria:
 				expectedStemcellVersion = "0.2.0"
 			)
 			var (
-				releaseID                               release.ID
-				releaseOnDisk                           release.LocalSatisfying
-				actualStemcellOS, actualStemcellVersion string
+				releaseID     release.ID
+				releaseOnDisk release.Local
 			)
 			BeforeEach(func() {
 				releaseID = release.ID{Name: "some-release", Version: "0.1.0"}
 				fakeS3CompiledReleaseSource.DownloadReleaseReturns(
 					release.Local{
 						ID:        releaseID,
-						LocalPath: fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, expectedStemcellOS, expectedStemcellVersion),
+						LocalPath: fmt.Sprintf("releases/%s-%s.tgz", releaseID.Name, releaseID.Version),
+						SHA1:      "correct-sha",
 					}, nil)
 				lockContents = `---
 releases:
@@ -129,19 +129,21 @@ releases:
   version: "` + releaseID.Version + `"
   remote_source: ` + s3CompiledReleaseSourceID + `
   remote_path: not-used
+  sha1: correct-sha
 stemcell_criteria:
   os: ` + expectedStemcellOS + `
   version: "` + expectedStemcellVersion + `"`
 				fetchExecuteArgs = append(fetchExecuteArgs, "--no-confirm")
 			})
 
-			When("the release was compiled with a different os", func() {
+			When("the release on disk has the wrong SHA1", func() {
 				BeforeEach(func() {
-					releaseOnDisk = release.NewLocalCompiled(releaseID, "different-os", expectedStemcellVersion,
-						fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, actualStemcellOS, actualStemcellVersion))
-					fakeLocalReleaseDirectory.GetLocalReleasesReturns(
-						[]release.LocalSatisfying{releaseOnDisk},
-						nil)
+					releaseOnDisk = release.Local{
+						ID:        releaseID,
+						LocalPath: fmt.Sprintf("releases/%s-%s.tgz", releaseID.Name, releaseID.Version),
+						SHA1:      "wrong-sha",
+					}
+					fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.Local{releaseOnDisk}, nil)
 				})
 
 				It("deletes the file from disk", func() {
@@ -153,38 +155,7 @@ stemcell_criteria:
 					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
 					Expect(noConfirm).To(Equal(true))
 					Expect(extras).To(HaveLen(1))
-					Expect(extras).To(ConsistOf(
-						release.Local{ID: releaseOnDisk.ID, LocalPath: releaseOnDisk.LocalPath},
-					))
-				})
-			})
-
-			When("the release was compiled with a different version of the same os", func() {
-				BeforeEach(func() {
-					releaseOnDisk = release.NewLocalCompiled(
-						releaseID,
-						expectedStemcellOS,
-						"404",
-						fmt.Sprintf("releases/%s-%s-%s-%s.tgz", releaseID.Name, releaseID.Version, actualStemcellOS, actualStemcellVersion),
-					)
-
-					fakeLocalReleaseDirectory.GetLocalReleasesReturns(
-						[]release.LocalSatisfying{releaseOnDisk},
-						nil)
-				})
-
-				It("deletes the file from disk", func() {
-					Expect(fetchExecuteErr).NotTo(HaveOccurred())
-
-					Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
-
-					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
-					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
-					Expect(noConfirm).To(Equal(true))
-					Expect(extras).To(HaveLen(1))
-					Expect(extras).To(ConsistOf(
-						release.Local{ID: releaseOnDisk.ID, LocalPath: releaseOnDisk.LocalPath},
-					))
+					Expect(extras).To(ConsistOf(releaseOnDisk))
 				})
 			})
 		})
@@ -202,31 +173,34 @@ releases:
   version: "1.2.4"
   remote_source: ` + s3CompiledReleaseSourceID + `
   remote_path: some-s3-key
+  sha1: correct-sha
 - name: lts-built-release
   version: "1.3.9"
   remote_source: ` + s3BuiltReleaseSourceID + `
   remote_path: some-other-s3-key
+  sha1: correct-sha
 - name: boshio-release
   version: "1.4.16"
   remote_source: ` + boshIOReleaseSourceID + `
   remote_path: some-bosh-io-url
+  sha1: correct-sha
 stemcell_criteria:
   os: some-os
   version: "30.1"
 `
 				fakeS3CompiledReleaseSource.DownloadReleaseReturns(
-					release.Local{ID: s3CompiledReleaseID, LocalPath: "local-path"},
+					release.Local{ID: s3CompiledReleaseID, LocalPath: "local-path", SHA1: "correct-sha"},
 					nil)
 
 				fakeS3BuiltReleaseSource.DownloadReleaseReturns(
-					release.Local{ID: s3BuiltReleaseID, LocalPath: "local-path2"},
+					release.Local{ID: s3BuiltReleaseID, LocalPath: "local-path2", SHA1: "correct-sha"},
 					nil)
 
 				fakeBoshIOReleaseSource.DownloadReleaseReturns(
-					release.Local{ID: boshIOReleaseID, LocalPath: "local-path3"},
+					release.Local{ID: boshIOReleaseID, LocalPath: "local-path3", SHA1: "correct-sha"},
 					nil)
 
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.LocalSatisfying{}, nil)
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns(nil, nil)
 			})
 
 			It("completes successfully", func() {
@@ -273,6 +247,7 @@ releases:
   version: "1.2.3"
   remote_source: ` + s3CompiledReleaseSourceID + `
   remote_path: not-used
+  sha1: correct-sha
 stemcell_criteria:
   os: some-os
   version: "4.5.6"
@@ -282,8 +257,8 @@ stemcell_criteria:
 					Name:    "some-release-from-local-dir",
 					Version: "1.2.3",
 				}
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.LocalSatisfying{
-					release.NewLocalCompiled(someLocalReleaseID, "some-os", "4.5.6", "/path/to/some/release"),
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.Local{
+					{ID: someLocalReleaseID, LocalPath: "/path/to/some/release", SHA1: "correct-sha"},
 				}, nil)
 			})
 
@@ -316,22 +291,27 @@ releases:
   version: "1.2.3"
   remote_source: ` + s3BuiltReleaseSourceID + `
   remote_path: not-used
+  sha1: correct-sha
 - name: some-tiny-release
   version: "1.2.3"
   remote_source: ` + boshIOReleaseSourceID + `
   remote_path: not-used2
+  sha1: correct-sha
 - name: some-missing-release-on-s3-compiled
   version: "4.5.6"
   remote_source: ` + s3CompiledReleaseSourceID + `
   remote_path: ` + missingReleaseS3CompiledPath + `
+  sha1: correct-sha
 - name: some-missing-release-on-boshio
   version: "5.6.7"
   remote_source: ` + boshIOReleaseSourceID + `
   remote_path: ` + missingReleaseBoshIOPath + `
+  sha1: correct-sha
 - name: some-missing-release-on-s3-built
   version: "8.9.0"
   remote_source: ` + s3BuiltReleaseSourceID + `
   remote_path: ` + missingReleaseS3BuiltPath + `
+  sha1: correct-sha
 stemcell_criteria:
   os: some-os
   version: "4.5.6"`
@@ -340,31 +320,29 @@ stemcell_criteria:
 				missingReleaseBoshIOID = release.ID{Name: "some-missing-release-on-boshio", Version: "5.6.7"}
 				missingReleaseS3BuiltID = release.ID{Name: "some-missing-release-on-s3-built", Version: "8.9.0"}
 
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.LocalSatisfying{
-					release.NewLocalCompiled(
-						release.ID{Name: "some-release", Version: "1.2.3"},
-						"some-os",
-						"4.5.6",
-						"path/to/some/release",
-					),
-					// a release that has no compiled packages, such as consul-drain, will also have no stemcell criteria in release.MF.
-					// we must make sure that we can match this kind of release properly to avoid unnecessary downloads.
-					release.NewLocalBuilt(
-						release.ID{Name: "some-tiny-release", Version: "1.2.3"},
-						"path/to/some/tiny/release",
-					),
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.Local{
+					{
+						ID:        release.ID{Name: "some-release", Version: "1.2.3"},
+						LocalPath: "path/to/some/release",
+						SHA1:      "correct-sha",
+					},
+					{
+						ID:        release.ID{Name: "some-tiny-release", Version: "1.2.3"},
+						LocalPath: "path/to/some/tiny/release",
+						SHA1:      "correct-sha",
+					},
 				}, nil)
 
 				fakeS3CompiledReleaseSource.DownloadReleaseReturns(release.Local{
-					ID: missingReleaseS3CompiledID, LocalPath: "local-path-1",
+					ID: missingReleaseS3CompiledID, LocalPath: "local-path-1", SHA1: "correct-sha",
 				}, nil)
 
 				fakeBoshIOReleaseSource.DownloadReleaseReturns(release.Local{
-					ID: missingReleaseBoshIOID, LocalPath: "local-path-2",
+					ID: missingReleaseBoshIOID, LocalPath: "local-path-2", SHA1: "correct-sha",
 				}, nil)
 
 				fakeS3BuiltReleaseSource.DownloadReleaseReturns(release.Local{
-					ID: missingReleaseS3BuiltID, LocalPath: "local-path-3",
+					ID: missingReleaseS3BuiltID, LocalPath: "local-path-3", SHA1: "correct-sha",
 				}, nil)
 
 				missingReleaseS3Compiled = release.Remote{ID: missingReleaseS3CompiledID, RemotePath: missingReleaseS3CompiledPath, SourceID: s3CompiledReleaseSourceID}
@@ -407,6 +385,36 @@ stemcell_criteria:
 					Expect(errors.Is(fetchExecuteErr, wrappedErr)).To(BeTrue())
 				})
 			})
+
+			Context("when the downloaded release has the wrong sha1", func() {
+				var badReleasePath string
+
+				BeforeEach(func() {
+					badReleasePath = filepath.Join(someReleasesDirectory, "local-path-3")
+
+					fakeS3BuiltReleaseSource.DownloadReleaseCalls(func(string, release.Remote, int) (release.Local, error) {
+						f, err := os.Create(badReleasePath)
+						Expect(err).NotTo(HaveOccurred())
+						defer f.Close()
+
+						return release.Local{
+							ID: missingReleaseS3BuiltID, LocalPath: badReleasePath, SHA1: "wrong-sha",
+						}, nil
+					})
+				})
+
+				It("errors", func() {
+					Expect(fetchExecuteErr).To(MatchError(ContainSubstring("incorrect SHA1")))
+					Expect(fetchExecuteErr).To(MatchError(ContainSubstring(`"correct-sha"`)))
+					Expect(fetchExecuteErr).To(MatchError(ContainSubstring(`"wrong-sha"`)))
+				})
+
+				It("deletes the release file from disk", func() {
+					_, err := os.Stat(badReleasePath)
+					Expect(err).To(HaveOccurred())
+					Expect(os.IsNotExist(err)).To(BeTrue(), "Expected file %q not to exist, but got a different error: %v", badReleasePath, err)
+				})
+			})
 		})
 
 		Context("when there are extra releases locally that are not in the Kilnfile.lock", func() {
@@ -426,12 +434,12 @@ stemcell_criteria:
   os: some-os
   version: "4.5.6"
 `
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.LocalSatisfying{
-					release.NewLocalCompiled(localReleaseID, "some-os", "4.5.6", "path/to/some/extra/release"),
+				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.Local{
+					{ID: localReleaseID, LocalPath: "path/to/some/extra/release", SHA1: "correct-sha"},
 				}, nil)
 
 				fakeBoshIOReleaseSource.DownloadReleaseReturns(
-					release.Local{ID: boshIOReleaseID, LocalPath: "local-path"},
+					release.Local{ID: boshIOReleaseID, LocalPath: "local-path", SHA1: "correct-sha"},
 					nil)
 
 			})
@@ -459,6 +467,7 @@ stemcell_criteria:
 						release.Local{
 							ID:        release.ID{Name: "some-extra-release", Version: "1.2.3"},
 							LocalPath: "path/to/some/extra/release",
+							SHA1:      "correct-sha",
 						},
 					))
 				})

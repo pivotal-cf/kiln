@@ -15,7 +15,6 @@ import (
 	"github.com/pivotal-cf/kiln/builder"
 	. "github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/baking"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 var _ = Describe("LocalReleaseDirectory", func() {
@@ -60,12 +59,11 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(releases).To(HaveLen(1))
 				Expect(releases).To(ConsistOf(
-					release.NewLocalCompiled(
-						release.ID{Name: "some-release", Version: "1.2.3"},
-						"some-os",
-						"4.5.6",
-						releaseFile,
-					),
+					release.Local{
+						ID:        release.ID{Name: "some-release", Version: "1.2.3"},
+						LocalPath: releaseFile,
+						SHA1:      "6d96f7c98610fa6d8e7f45271111221b5b8497a2",
+					},
 				))
 			})
 		})
@@ -113,116 +111,6 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 				err := localReleaseDirectory.DeleteExtraReleases([]release.Local{extraRelease}, noConfirm)
 				Expect(err).To(MatchError("failed to delete release extra-release-that-cannot-be-deleted"))
-			})
-		})
-	})
-
-	Describe("VerifyChecksums", func() {
-		var (
-			downloadedReleases []release.Local
-			kilnfileLock       cargo.KilnfileLock
-			goodFilePath       string
-			badFilePath        string
-			err                error
-		)
-
-		BeforeEach(func() {
-			goodFilePath = filepath.Join(releasesDir, "good-1.2.3-ubuntu-xenial-190.0.0.tgz")
-			err = ioutil.WriteFile(goodFilePath, []byte("abc"), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			badFilePath = filepath.Join(releasesDir, "bad-1.2.3-ubuntu-xenial-190.0.0.tgz")
-			err = ioutil.WriteFile(badFilePath, []byte("some bad sha file"), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.ReleaseLock{
-					{
-						Name:    "good",
-						Version: "1.2.3",
-						SHA1:    "a9993e364706816aba3e25717850c26c9cd0d89d", // sha1 for string "abc"
-					},
-					{
-						Name:    "bad",
-						Version: "1.2.3",
-						SHA1:    "a9993e364706816aba3e25717850c26c9cd0d89d", // sha1 for string "abc"
-					},
-				},
-				Stemcell: cargo.Stemcell{
-					OS:      "ubuntu-xenial",
-					Version: "190.0.0",
-				},
-			}
-		})
-
-		Context("when all the checksums on the downloaded releases match their checksums in Kilnfile.lock", func() {
-			It("succeeds", func() {
-				downloadedReleases = []release.Local{
-					{
-						ID:        release.ID{Name: "good", Version: "1.2.3"},
-						LocalPath: goodFilePath,
-					},
-				}
-				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-
-		Context("when at least one checksum on the downloaded releases does not match the checksum in Kilnfile.lock", func() {
-			It("returns an error and deletes the bad release", func() {
-				downloadedReleases = []release.Local{
-					{
-						ID:        release.ID{Name: "bad", Version: "1.2.3"},
-						LocalPath: badFilePath,
-					},
-				}
-				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("These downloaded releases do not match the checksum"))
-
-				_, err = os.Stat(badFilePath)
-				Expect(os.IsNotExist(err)).To(BeTrue())
-			})
-		})
-
-		Context("when no checksum is specified for a release (and the release file is not in the normal place)", func() {
-			var (
-				nonStandardFilePath string
-			)
-
-			BeforeEach(func() {
-				nonStandardFilePath = filepath.Join(releasesDir, "uaa-release-73.0.0.tgz") // bosh.io name, different from s3
-				err = ioutil.WriteFile(nonStandardFilePath, []byte("some release file"), 0644)
-				Expect(err).NotTo(HaveOccurred())
-				kilnfileLock = cargo.KilnfileLock{
-					Releases: []cargo.ReleaseLock{
-						{
-							Name:    "good",
-							Version: "1.2.3",
-							SHA1:    "a9993e364706816aba3e25717850c26c9cd0d89d",
-						},
-						{Name: "uaa", Version: "7.3.0"},
-					},
-					Stemcell: cargo.Stemcell{
-						OS:      "ubuntu-xenial",
-						Version: "190.0.0",
-					},
-				}
-			})
-
-			It("does not validate its checksum", func() {
-				downloadedReleases = []release.Local{
-					{
-						ID:        release.ID{Name: "good", Version: "1.2.3"},
-						LocalPath: goodFilePath,
-					},
-					{
-						ID:        release.ID{Name: "uaa", Version: "7.3.0"},
-						LocalPath: nonStandardFilePath,
-					},
-				}
-				err := localReleaseDirectory.VerifyChecksums(downloadedReleases, kilnfileLock)
-				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

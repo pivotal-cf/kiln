@@ -123,7 +123,7 @@ func main() {
 		StemcellsVersionsService: new(fetcher.Pivnet),
 	}
 
-	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, newReleaseDownloaderFactory(), fetcher.CalculateSum, cargo.KilnfileLoader{})
+	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, newReleaseDownloaderFactory(), cargo.KilnfileLoader{})
 
 	commandSet["upload-release"] = commands.UploadRelease{
 		FS:                   osfs.New(""),

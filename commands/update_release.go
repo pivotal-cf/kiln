@@ -25,7 +25,6 @@ type UpdateRelease struct {
 	releaseDownloaderFactory ReleaseDownloaderFactory
 	filesystem               billy.Filesystem
 	logger                   *log.Logger
-	checksummer              checksumFunc
 	loader                   KilnfileLoader
 }
 
@@ -39,14 +38,11 @@ type ReleaseDownloader interface {
 	DownloadRelease(downloadDir string, requirement release.Requirement) (release.Local, release.Remote, error)
 }
 
-type checksumFunc func(path string, fs billy.Filesystem) (string, error)
-
-func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, releaseDownloaderFactory ReleaseDownloaderFactory, checksummer checksumFunc, loader KilnfileLoader) UpdateRelease {
+func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, releaseDownloaderFactory ReleaseDownloaderFactory, loader KilnfileLoader) UpdateRelease {
 	return UpdateRelease{
 		logger:                   logger,
 		releaseDownloaderFactory: releaseDownloaderFactory,
 		filesystem:               filesystem,
-		checksummer:              checksummer,
 		loader:                   loader,
 	}
 }
@@ -95,13 +91,8 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("no release named %q exists in your Kilnfile.lock", u.Options.Name)
 	}
 
-	sha, err := u.checksummer(localRelease.LocalPath, u.filesystem)
-	if err != nil {
-		return fmt.Errorf("error while calculating release checksum: %w", err)
-	}
-
-	matchingRelease.Version = u.Options.Version
-	matchingRelease.SHA1 = sha
+	matchingRelease.Version = localRelease.Version
+	matchingRelease.SHA1 = localRelease.SHA1
 	matchingRelease.RemoteSource = remoteRelease.SourceID
 	matchingRelease.RemotePath = remoteRelease.RemotePath
 

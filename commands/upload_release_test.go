@@ -124,7 +124,7 @@ version: ` + version + `
 					releaseUploader.GetMatchedReleaseReturns(release.Remote{
 						ID:         release.ID{Name: "banana", Version: "1.2.3"},
 						RemotePath: "banana/banana-1.2.3.tgz",
-						SourceID: releaseUploader.ID(),
+						SourceID:   releaseUploader.ID(),
 					}, true, nil)
 				})
 

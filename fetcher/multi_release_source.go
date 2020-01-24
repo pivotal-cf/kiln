@@ -55,7 +55,7 @@ func (multiSrc MultiReleaseSource) DownloadRelease(releaseDir string, remoteRele
 
 func (multiSrc MultiReleaseSource) UploadRelease(name, version, sourceID string, file io.Reader) error {
 	var (
-		uploader ReleaseUploader
+		uploader     ReleaseUploader
 		availableIDs []string
 	)
 	for _, src := range multiSrc {

@@ -1,13 +1,17 @@
 package fetcher_test
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/pivotal-cf/kiln/release"
 
@@ -29,8 +33,8 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 	Describe("GetMatchedReleases from bosh.io", func() {
 		Context("happy path", func() {
 			var (
-				releaseSource     *BOSHIOReleaseSource
-				testServer        *ghttp.Server
+				releaseSource *BOSHIOReleaseSource
+				testServer    *ghttp.Server
 			)
 
 			BeforeEach(func() {
@@ -75,12 +79,11 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "268.0.0"}, RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
 			})
 
-
 		})
 
 		When("a bosh release doesn't exist on bosh.io in any version", func() {
 			var (
-				testServer     *ghttp.Server
+				testServer    *ghttp.Server
 				releaseSource *BOSHIOReleaseSource
 			)
 
@@ -115,7 +118,6 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				releaseName    = "my-release"
 				releaseVersion = "1.2.3"
 				releaseSource  *BOSHIOReleaseSource
-
 			)
 
 			BeforeEach(func() {
@@ -137,9 +139,9 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 			It("does not match that release", func() {
 				_, found, err := releaseSource.GetMatchedRelease(release.Requirement{
-					Name: releaseName,
-					Version: releaseVersion,
-					StemcellOS: "ignored",
+					Name:            releaseName,
+					Version:         releaseVersion,
+					StemcellOS:      "ignored",
 					StemcellVersion: "ignored",
 				})
 
@@ -218,16 +220,20 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 	})
 
 	Describe("DownloadRelease", func() {
+		const (
+			release1Filename           = "some-1.2.3.tgz"
+			release1ServerPath         = "/some-release"
+			release1ServerFileContents = "totes-a-real-release"
+		)
 		var (
 			releaseDir    string
 			releaseSource *BOSHIOReleaseSource
 			testServer    *ghttp.Server
 
-			release1ID                 release.ID
-			release1                   release.Remote
-			release1ServerPath         string
-			release1Filename           string
-			release1ServerFileContents string
+			release1ID release.ID
+			release1   release.Remote
+
+			release1Sha1 string
 		)
 
 		BeforeEach(func() {
@@ -243,10 +249,13 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			)
 
 			release1ID = release.ID{Name: "some", Version: "1.2.3"}
-			release1ServerPath = "/some-release"
 			release1 = release.Remote{ID: release1ID, RemotePath: testServer.URL() + release1ServerPath, SourceID: ReleaseSourceTypeBOSHIO}
-			release1Filename = "some-1.2.3.tgz"
-			release1ServerFileContents = "totes-a-real-release"
+
+			hash := sha1.New()
+			_, err = io.Copy(hash, strings.NewReader(release1ServerFileContents))
+			Expect(err).NotTo(HaveOccurred())
+
+			release1Sha1 = hex.EncodeToString(hash.Sum(nil))
 
 			testServer.RouteToHandler("GET", release1ServerPath,
 				ghttp.RespondWith(http.StatusOK, release1ServerFileContents,
@@ -272,7 +281,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(release1DiskContents).To(BeEquivalentTo(release1ServerFileContents))
 
-			Expect(localRelease).To(Equal(release.Local{ID: release1ID, LocalPath: fullRelease1Path}))
+			Expect(localRelease).To(Equal(release.Local{ID: release1ID, LocalPath: fullRelease1Path, SHA1: release1Sha1}))
 		})
 	})
 })
