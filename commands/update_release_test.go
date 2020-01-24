@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
+	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 )
@@ -34,8 +35,8 @@ var _ = Describe("UpdateRelease", func() {
 		updateReleaseCommand      UpdateRelease
 		preexistingKilnfileLock   []byte
 		filesystem                billy.Filesystem
-		releaseDownloaderFactory  *fakes.ReleaseDownloaderFactory
-		releaseDownloader         *fakes.ReleaseDownloader
+		releaseSourceFactory      *fakes.ReleaseSourceFactory
+		releaseSource             *fetcherFakes.ReleaseSource
 		logger                    *log.Logger
 		downloadedReleasePath     string
 		expectedDownloadedRelease release.Local
@@ -45,10 +46,10 @@ var _ = Describe("UpdateRelease", func() {
 
 	Context("Execute", func() {
 		BeforeEach(func() {
-			releaseDownloaderFactory = new(fakes.ReleaseDownloaderFactory)
+			releaseSourceFactory = new(fakes.ReleaseSourceFactory)
 			kilnFileLoader = new(fakes.KilnfileLoader)
-			releaseDownloader = new(fakes.ReleaseDownloader)
-			releaseDownloaderFactory.ReleaseDownloaderReturns(releaseDownloader, nil)
+			releaseSource = new(fetcherFakes.ReleaseSource)
+			releaseSourceFactory.ReleaseSourceReturns(releaseSource)
 
 			filesystem = osfs.New("/tmp/")
 
@@ -101,28 +102,16 @@ var _ = Describe("UpdateRelease", func() {
 				RemotePath: remotePath,
 				SourceID:   releaseSourceName,
 			}
+
+			releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, true, nil)
+			releaseSource.DownloadReleaseReturns(expectedDownloadedRelease, nil)
 		})
 
 		JustBeforeEach(func() {
-			updateReleaseCommand = NewUpdateRelease(logger, filesystem, releaseDownloaderFactory, kilnFileLoader)
+			updateReleaseCommand = NewUpdateRelease(logger, filesystem, releaseSourceFactory, kilnFileLoader)
 		})
 
 		When("updating to a version that exists in the remote", func() {
-			BeforeEach(func() {
-				releaseDownloader.DownloadReleaseCalls(
-					func(dir string, requirement release.Requirement) (release.Local, release.Remote, error) {
-						downloadedReleaseFile, err := filesystem.Create(downloadedReleasePath)
-						Expect(err).NotTo(HaveOccurred())
-						defer downloadedReleaseFile.Close()
-
-						_, err = downloadedReleaseFile.Write([]byte("lots of files"))
-						Expect(err).NotTo(HaveOccurred())
-
-						return expectedDownloadedRelease, expectedRemoteRelease, nil
-					},
-				)
-			})
-
 			It("downloads the release", func() {
 				err := updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
@@ -134,11 +123,9 @@ var _ = Describe("UpdateRelease", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(releaseDownloader.DownloadReleaseCallCount()).To(Equal(1), "DownloadRelease should be called once and only once")
+				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(1))
 
-				receivedReleasesDir, receivedReleaseRequirement := releaseDownloader.DownloadReleaseArgsForCall(0)
-				Expect(receivedReleasesDir).To(Equal(releasesDir))
-
+				receivedReleaseRequirement := releaseSource.GetMatchedReleaseArgsForCall(0)
 				releaseRequirement := release.Requirement{
 					Name:            releaseName,
 					Version:         releaseVersion,
@@ -146,6 +133,12 @@ var _ = Describe("UpdateRelease", func() {
 					StemcellVersion: "4.5.6",
 				}
 				Expect(receivedReleaseRequirement).To(Equal(releaseRequirement))
+
+				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(1))
+
+				receivedReleasesDir, receivedRemoteRelease, _ := releaseSource.DownloadReleaseArgsForCall(0)
+				Expect(receivedReleasesDir).To(Equal(releasesDir))
+				Expect(receivedRemoteRelease).To(Equal(expectedRemoteRelease))
 
 				Expect(kilnFileLoader.LoadKilnfilesCallCount()).To(Equal(1))
 				fs, kilnfilePath, variablesFiles, variables := kilnFileLoader.LoadKilnfilesArgsForCall(0)
@@ -194,8 +187,8 @@ var _ = Describe("UpdateRelease", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(releaseDownloaderFactory.ReleaseDownloaderCallCount()).To(Equal(1))
-				_, _, allowOnlyPublishable := releaseDownloaderFactory.ReleaseDownloaderArgsForCall(0)
+				Expect(releaseSourceFactory.ReleaseSourceCallCount()).To(Equal(1))
+				_, allowOnlyPublishable := releaseSourceFactory.ReleaseSourceArgsForCall(0)
 				Expect(allowOnlyPublishable).To(BeFalse())
 			})
 		})
@@ -205,7 +198,7 @@ var _ = Describe("UpdateRelease", func() {
 
 			BeforeEach(func() {
 				downloadErr = errors.New("asplode!!")
-				releaseDownloader.DownloadReleaseReturns(release.Local{}, release.Remote{}, downloadErr)
+				releaseSource.DownloadReleaseReturns(release.Local{}, downloadErr)
 			})
 
 			It("tells the release downloader factory to allow only publishable releases", func() {
@@ -220,8 +213,8 @@ var _ = Describe("UpdateRelease", func() {
 				})
 				Expect(err).To(MatchError(downloadErr))
 
-				Expect(releaseDownloaderFactory.ReleaseDownloaderCallCount()).To(Equal(1))
-				_, _, allowOnlyPublishable := releaseDownloaderFactory.ReleaseDownloaderArgsForCall(0)
+				Expect(releaseSourceFactory.ReleaseSourceCallCount()).To(Equal(1))
+				_, allowOnlyPublishable := releaseSourceFactory.ReleaseSourceArgsForCall(0)
 				Expect(allowOnlyPublishable).To(BeTrue())
 			})
 		})
@@ -265,9 +258,9 @@ var _ = Describe("UpdateRelease", func() {
 			})
 		})
 
-		When("downloading the release fails", func() {
+		When("the release can't be found", func() {
 			BeforeEach(func() {
-				releaseDownloader.DownloadReleaseReturns(release.Local{}, release.Remote{}, errors.New("bad stuff"))
+				releaseSource.GetMatchedReleaseReturns(release.Remote{}, false, errors.New("bad stuff"))
 			})
 
 			It("errors", func() {
@@ -292,12 +285,9 @@ var _ = Describe("UpdateRelease", func() {
 			})
 		})
 
-		When("making the release downloader errors", func() {
-			var expectedError error
-
+		When("downloading the release fails", func() {
 			BeforeEach(func() {
-				expectedError = errors.New("big badda boom")
-				releaseDownloaderFactory.ReleaseDownloaderReturns(nil, expectedError)
+				releaseSource.DownloadReleaseReturns(release.Local{}, errors.New("bad stuff"))
 			})
 
 			It("errors", func() {
@@ -307,7 +297,18 @@ var _ = Describe("UpdateRelease", func() {
 					"--version", releaseVersion,
 					"--releases-directory", releasesDir,
 				})
-				Expect(err).To(MatchError(ContainSubstring(expectedError.Error())))
+				Expect(err).To(MatchError(ContainSubstring("bad stuff")))
+			})
+
+			It("does not update the Kilnfile.lock", func() {
+				_ = updateReleaseCommand.Execute([]string{
+					"--kilnfile", "Kilnfile",
+					"--name", releaseName,
+					"--version", releaseVersion,
+					"--releases-directory", releasesDir,
+				})
+
+				expectKilnfileLockIsUnchanged(filesystem, preexistingKilnfileLock)
 			})
 		})
 
@@ -324,8 +325,6 @@ var _ = Describe("UpdateRelease", func() {
 						return nil, expectedError
 					},
 				}
-
-				releaseDownloader.DownloadReleaseReturns(expectedDownloadedRelease, expectedRemoteRelease, nil)
 			})
 
 			It("errors", func() {
@@ -351,8 +350,6 @@ var _ = Describe("UpdateRelease", func() {
 					Filesystem: ogFilesystem,
 					CreateFunc: func(path string) (billy.File, error) { return badFile, nil },
 				}
-
-				releaseDownloader.DownloadReleaseReturns(expectedDownloadedRelease, expectedRemoteRelease, nil)
 			})
 
 			It("errors", func() {

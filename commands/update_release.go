@@ -22,28 +22,18 @@ type UpdateRelease struct {
 		VariablesFiles               []string `short:"vf" long:"variables-file" description:"path to variables file"`
 		AllowOnlyPublishableReleases bool     `long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
 	}
-	releaseDownloaderFactory ReleaseDownloaderFactory
-	filesystem               billy.Filesystem
-	logger                   *log.Logger
-	loader                   KilnfileLoader
+	releaseSourceFactory ReleaseSourceFactory
+	filesystem           billy.Filesystem
+	logger               *log.Logger
+	loader               KilnfileLoader
 }
 
-//go:generate counterfeiter -o ./fakes/release_downloader_factory.go --fake-name ReleaseDownloaderFactory . ReleaseDownloaderFactory
-type ReleaseDownloaderFactory interface {
-	ReleaseDownloader(*log.Logger, cargo.Kilnfile, bool) (ReleaseDownloader, error)
-}
-
-//go:generate counterfeiter -o ./fakes/release_downloader.go --fake-name ReleaseDownloader . ReleaseDownloader
-type ReleaseDownloader interface {
-	DownloadRelease(downloadDir string, requirement release.Requirement) (release.Local, release.Remote, error)
-}
-
-func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, releaseDownloaderFactory ReleaseDownloaderFactory, loader KilnfileLoader) UpdateRelease {
+func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, releaseSourceFactory ReleaseSourceFactory, loader KilnfileLoader) UpdateRelease {
 	return UpdateRelease{
-		logger:                   logger,
-		releaseDownloaderFactory: releaseDownloaderFactory,
-		filesystem:               filesystem,
-		loader:                   loader,
+		logger:               logger,
+		releaseSourceFactory: releaseSourceFactory,
+		filesystem:           filesystem,
+		loader:               loader,
 	}
 }
 
@@ -64,18 +54,23 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
-	releaseDownloader, err := u.releaseDownloaderFactory.ReleaseDownloader(u.logger, kilnfile, u.Options.AllowOnlyPublishableReleases)
-	if err != nil {
-		return fmt.Errorf("error creating ReleaseDownloader: %w", err)
-	}
+	releaseSource := u.releaseSourceFactory.ReleaseSource(kilnfile, u.Options.AllowOnlyPublishableReleases)
 
 	u.logger.Println("Searching for the release...")
-	localRelease, remoteRelease, err := releaseDownloader.DownloadRelease(u.Options.ReleasesDir, release.Requirement{
+	remoteRelease, found, err := releaseSource.GetMatchedRelease(release.Requirement{
 		Name:            u.Options.Name,
 		Version:         u.Options.Version,
 		StemcellOS:      kilnfileLock.Stemcell.OS,
 		StemcellVersion: kilnfileLock.Stemcell.Version,
 	})
+	if err != nil {
+		return fmt.Errorf("error finding the release: %w", err)
+	}
+	if !found {
+		return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
+	}
+
+	localRelease, err := releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease, 0)
 	if err != nil {
 		return fmt.Errorf("error downloading the release: %w", err)
 	}

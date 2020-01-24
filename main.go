@@ -123,7 +123,7 @@ func main() {
 		StemcellsVersionsService: new(fetcher.Pivnet),
 	}
 
-	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, newReleaseDownloaderFactory(), cargo.KilnfileLoader{})
+	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, releaseSourcesFactory, cargo.KilnfileLoader{})
 
 	commandSet["upload-release"] = commands.UploadRelease{
 		FS:                     osfs.New(""),
@@ -136,16 +136,4 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-type releaseDownloaderFactory struct{}
-
-func (f releaseDownloaderFactory) ReleaseDownloader(outLogger *log.Logger, kilnfile cargo.Kilnfile, allowOnlyPublishable bool) (commands.ReleaseDownloader, error) {
-	releaseSources := fetcher.NewReleaseSourceFactory(outLogger)(kilnfile, allowOnlyPublishable)
-
-	return fetcher.NewReleaseDownloader(releaseSources), nil
-}
-
-func newReleaseDownloaderFactory() releaseDownloaderFactory {
-	return releaseDownloaderFactory{}
 }
