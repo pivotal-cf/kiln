@@ -26,11 +26,11 @@ import (
 var _ = Describe("UploadRelease", func() {
 	Context("Execute", func() {
 		var (
-			fs                    billy.Filesystem
-			loader                *fakes.KilnfileLoader
-			releaseSourcesFactory *fakes.ReleaseSourcesFactory
-			nonReleaseUploader    *fetcherFakes.ReleaseSource
-			releaseUploader       *fakes.ReleaseUploader
+			fs                   billy.Filesystem
+			loader               *fakes.KilnfileLoader
+			releaseSourceFactory *fakes.ReleaseSourceFactory
+			nonReleaseUploader   *fetcherFakes.ReleaseSource
+			releaseUploader      *fetcherFakes.ReleaseUploader
 
 			uploadRelease commands.UploadRelease
 
@@ -82,16 +82,16 @@ version: ` + version + `
 
 			nonReleaseUploader = new(fetcherFakes.ReleaseSource)
 			nonReleaseUploader.IDReturns("lemon-bucket")
-			releaseUploader = new(fakes.ReleaseUploader)
+			releaseUploader = new(fetcherFakes.ReleaseUploader)
 			releaseUploader.IDReturns("orange-bucket")
-			releaseSourcesFactory = new(fakes.ReleaseSourcesFactory)
-			releaseSourcesFactory.ReleaseSourcesReturns([]fetcher.ReleaseSource{nonReleaseUploader, releaseUploader})
+			releaseSourceFactory = new(fakes.ReleaseSourceFactory)
+			releaseSourceFactory.ReleaseSourceReturns([]fetcher.ReleaseSource{nonReleaseUploader, releaseUploader})
 
 			uploadRelease = commands.UploadRelease{
-				FS:                    fs,
-				KilnfileLoader:        loader,
-				Logger:                log.New(GinkgoWriter, "", 0),
-				ReleaseSourcesFactory: releaseSourcesFactory,
+				FS:                   fs,
+				KilnfileLoader:       loader,
+				Logger:               log.New(GinkgoWriter, "", 0),
+				ReleaseSourceFactory: releaseSourceFactory,
 			}
 			expectedReleaseSHA = writeReleaseTarball("banana-release.tgz", "banana", "1.2.3")
 		})
@@ -121,12 +121,11 @@ version: ` + version + `
 
 			When("the release already exists on the release source", func() {
 				BeforeEach(func() {
-					releaseUploader.GetMatchedReleasesReturns([]release.RemoteRelease{
-						{
-							ReleaseID:  release.ReleaseID{Name: "banana", Version: "1.2.3"},
-							RemotePath: "banana/banana-1.2.3.tgz",
-						},
-					}, nil)
+					releaseUploader.GetMatchedReleaseReturns(release.Remote{
+						ID:         release.ID{Name: "banana", Version: "1.2.3"},
+						RemotePath: "banana/banana-1.2.3.tgz",
+						SourceID: releaseUploader.ID(),
+					}, true, nil)
 				})
 
 				It("errors and does not upload", func() {
@@ -136,14 +135,10 @@ version: ` + version + `
 					})
 					Expect(err).To(MatchError(ContainSubstring("already exists")))
 
-					Expect(releaseUploader.GetMatchedReleasesCallCount()).To(Equal(1))
+					Expect(releaseUploader.GetMatchedReleaseCallCount()).To(Equal(1))
 
-					requirementSet := releaseUploader.GetMatchedReleasesArgsForCall(0)
-					Expect(requirementSet).To(HaveLen(1))
-					Expect(requirementSet).To(HaveKeyWithValue(
-						release.ReleaseID{Name: "banana", Version: "1.2.3"},
-						release.ReleaseRequirement{Name: "banana", Version: "1.2.3"},
-					))
+					requirement := releaseUploader.GetMatchedReleaseArgsForCall(0)
+					Expect(requirement).To(Equal(release.Requirement{Name: "banana", Version: "1.2.3"}))
 
 					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
 				})
@@ -171,7 +166,7 @@ version: ` + version + `
 		When("the given release source doesn't exist", func() {
 			When("no release sources can upload", func() {
 				BeforeEach(func() {
-					releaseSourcesFactory.ReleaseSourcesReturns(nil)
+					releaseSourceFactory.ReleaseSourceReturns(nil)
 				})
 
 				It("returns an error without suggested release sources", func() {
@@ -198,7 +193,7 @@ version: ` + version + `
 
 		When("querying the release source fails", func() {
 			BeforeEach(func() {
-				releaseUploader.GetMatchedReleasesReturns(nil, errors.New("boom"))
+				releaseUploader.GetMatchedReleaseReturns(release.Remote{}, false, errors.New("boom"))
 			})
 
 			It("returns an error", func() {

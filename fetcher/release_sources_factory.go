@@ -16,20 +16,20 @@ const (
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedReleases(release.ReleaseRequirementSet) ([]release.RemoteRelease, error)
-	DownloadReleases(releasesDir string, matchedS3Objects []release.RemoteRelease, downloadThreads int) ([]release.LocalRelease, error)
+	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
+	DownloadRelease(releasesDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error)
 	ID() string
 }
 
-type releaseSourceFunction func(cargo.Kilnfile, bool) []ReleaseSource
+type releaseSourceFunction func(cargo.Kilnfile, bool) MultiReleaseSource
 
-func (rsf releaseSourceFunction) ReleaseSources(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) []ReleaseSource {
+func (rsf releaseSourceFunction) ReleaseSource(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) MultiReleaseSource {
 	return rsf(kilnfile, allowOnlyPublishable)
 }
 
-func NewReleaseSourcesFactory(outLogger *log.Logger) releaseSourceFunction {
-	return func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) []ReleaseSource {
-		var releaseSources []ReleaseSource
+func NewReleaseSourceFactory(outLogger *log.Logger) releaseSourceFunction {
+	return func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) MultiReleaseSource {
+		var releaseSources MultiReleaseSource
 
 		for _, releaseConfig := range kilnfile.ReleaseSources {
 			if allowOnlyPublishable && !releaseConfig.Publishable {
@@ -51,10 +51,7 @@ func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Lo
 	case ReleaseSourceTypeS3:
 		s3ReleaseSource := S3ReleaseSource{Logger: outLogger}
 		s3ReleaseSource.Configure(releaseConfig)
-		if releaseConfig.Compiled {
-			return S3CompiledReleaseSource(s3ReleaseSource)
-		}
-		return S3BuiltReleaseSource(s3ReleaseSource)
+		return s3ReleaseSource
 	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
 	}

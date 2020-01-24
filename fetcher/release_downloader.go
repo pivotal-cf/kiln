@@ -6,40 +6,26 @@ import (
 	"github.com/pivotal-cf/kiln/release"
 )
 
-type releaseDownloader struct {
-	releaseSources []ReleaseSource
+type releaseDownloader MultiReleaseSource
+
+func NewReleaseDownloader(releaseSource MultiReleaseSource) releaseDownloader {
+	return releaseDownloader(releaseSource)
 }
 
-func NewReleaseDownloader(releaseSources []ReleaseSource) releaseDownloader {
-	return releaseDownloader{releaseSources: releaseSources}
-}
-
-func (rd releaseDownloader) DownloadRelease(releaseDir string, requirement release.ReleaseRequirement) (release.LocalRelease, string, string, error) {
-	releaseID := release.ReleaseID{Name: requirement.Name, Version: requirement.Version}
-	releaseRequirementSet := release.ReleaseRequirementSet{releaseID: requirement}
-
-	for _, releaseSource := range rd.releaseSources {
-		remoteReleases, err := releaseSource.GetMatchedReleases(releaseRequirementSet)
+func (rd releaseDownloader) DownloadRelease(releaseDir string, requirement release.Requirement) (release.Local, release.Remote, error) {
+		remoteRelease, found, err := MultiReleaseSource(rd).GetMatchedRelease(requirement)
 		if err != nil {
-			return release.LocalRelease{}, "", "", err
+			return release.Local{}, release.Remote{}, err
 		}
 
-		if len(remoteReleases) == 0 {
-			continue
+		if !found {
+			return release.Local{}, release.Remote{}, fmt.Errorf("couldn't find %q %s in any release source", requirement.Name, requirement.Version)
 		}
 
-		rrs := make([]release.RemoteRelease, 0, len(remoteReleases))
-		for _, r := range remoteReleases {
-			rrs = append(rrs, release.RemoteRelease{ReleaseID: r.ReleaseID, RemotePath: r.RemotePath})
-		}
-
-		localReleases, err := releaseSource.DownloadReleases(releaseDir, rrs, 0)
+		localRelease, err := MultiReleaseSource(rd).DownloadRelease(releaseDir, remoteRelease, 0)
 		if err != nil {
-			return release.LocalRelease{}, "", "", err
+			return release.Local{}, release.Remote{}, err
 		}
 
-		return localReleases[0], releaseSource.ID(), remoteReleases[0].RemotePath, nil
-	}
-
-	return release.LocalRelease{}, "", "", fmt.Errorf("couldn't find %q %s in any release source", requirement.Name, requirement.Version)
+		return localRelease, remoteRelease, nil
 }

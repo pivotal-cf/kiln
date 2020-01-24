@@ -1,11 +1,8 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/release"
-	"io"
 	"log"
 
 	"github.com/pivotal-cf/kiln/builder"
@@ -14,17 +11,11 @@ import (
 	"gopkg.in/src-d/go-billy.v4"
 )
 
-//go:generate counterfeiter -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
-type ReleaseUploader interface {
-	UploadRelease(name, version string, file io.Reader) error
-	fetcher.ReleaseSource
-}
-
 type UploadRelease struct {
-	FS                    billy.Filesystem
-	KilnfileLoader        KilnfileLoader
-	ReleaseSourcesFactory ReleaseSourcesFactory
-	Logger                *log.Logger
+	FS                   billy.Filesystem
+	KilnfileLoader       KilnfileLoader
+	ReleaseSourceFactory ReleaseSourceFactory
+	Logger               *log.Logger
 
 	Options struct {
 		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
@@ -42,10 +33,17 @@ func (command UploadRelease) Execute(args []string) error {
 		return err
 	}
 
-	uploader, err := command.findUploader()
+	kilnfile, _, err := command.KilnfileLoader.LoadKilnfiles(
+		command.FS,
+		command.Options.Kilnfile,
+		command.Options.VariablesFiles,
+		command.Options.Variables,
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
+
+	releaseSource := command.ReleaseSourceFactory.ReleaseSource(kilnfile, false)
 
 	file, err := command.FS.Open(command.Options.LocalPath)
 	if err != nil {
@@ -60,12 +58,18 @@ func (command UploadRelease) Execute(args []string) error {
 
 	manifest := part.Metadata.(builder.ReleaseManifest)
 
-	err = ensureNoExistingRelease(manifest.Name, manifest.Version,uploader)
+	requirement := release.Requirement{Name: manifest.Name, Version: manifest.Version}
+	_, found, err := releaseSource.GetMatchedRelease(requirement)
 	if err != nil {
-		return err
+		return fmt.Errorf("couldn't query release source: %w", err)
 	}
 
-	err = uploader.UploadRelease(manifest.Name, manifest.Version, file)
+	if found {
+		return fmt.Errorf("a release with name %q and version %q already exists on %s",
+			manifest.Name, manifest.Version, command.Options.ReleaseSource)
+	}
+
+	err = releaseSource.UploadRelease(manifest.Name, manifest.Version, command.Options.ReleaseSource, file)
 	if err != nil {
 		return fmt.Errorf("error uploading the release: %w", err)
 	}
@@ -73,56 +77,6 @@ func (command UploadRelease) Execute(args []string) error {
 	command.Logger.Println("Upload succeeded")
 
 	return nil
-}
-
-func ensureNoExistingRelease(name, version string, uploader ReleaseUploader) error {
-	requirement := release.ReleaseRequirement{Name: name, Version: version}
-	id := release.ReleaseID{Name: name, Version: version}
-	existing, err := uploader.GetMatchedReleases(release.ReleaseRequirementSet{id: requirement})
-	if err != nil {
-		return fmt.Errorf("couldn't query release source: %w", err)
-	}
-
-	if len(existing) > 0 {
-		return fmt.Errorf("a release with name %q and version %q already exists on %s",
-			name, version, uploader.ID())
-	}
-	
-	return nil
-}
-
-func (command UploadRelease) findUploader() (ReleaseUploader, error) {
-	kilnfile, _, err := command.KilnfileLoader.LoadKilnfiles(
-		command.FS,
-		command.Options.Kilnfile,
-		command.Options.VariablesFiles,
-		command.Options.Variables,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error loading Kilnfiles: %w", err)
-	}
-
-	releaseSources := command.ReleaseSourcesFactory.ReleaseSources(kilnfile, false)
-
-	var uploaderIDs []string
-
-	for _, source := range releaseSources {
-		u, ok := source.(ReleaseUploader)
-		if ok {
-			uploaderIDs = append(uploaderIDs, u.ID())
-			if u.ID() == command.Options.ReleaseSource {
-				return u, nil
-			}
-		}
-	}
-
-	if len(uploaderIDs) > 0 {
-		return nil, fmt.Errorf(
-			"could not find a valid matching release source in the Kilnfile, available upload-compatible sources are: %v",
-			uploaderIDs,
-		)
-	}
-	return nil, errors.New("no upload-capable release sources were found in the Kilnfile")
 }
 
 func (command UploadRelease) Usage() jhanda.Usage {

@@ -23,10 +23,10 @@ var _ = Describe("DownloadRelease", func() {
 		releaseDownloader                            commands.ReleaseDownloader
 		primaryReleaseSource, secondaryReleaseSource *fakes.ReleaseSource
 		downloadDir                                  string
-		requirement                                  release.ReleaseRequirement
-		releaseID                                    release.ReleaseID
-		expectedRemoteRelease                        release.RemoteRelease
-		expectedLocalRelease                         release.LocalRelease
+		requirement                                  release.Requirement
+		releaseID                                    release.ID
+		expectedRemoteRelease                        *release.Remote
+		expectedLocalRelease                         release.Local
 	)
 
 	BeforeEach(func() {
@@ -41,79 +41,80 @@ var _ = Describe("DownloadRelease", func() {
 		downloadDir, err = ioutil.TempDir("/tmp", "download-release-spec")
 		Expect(err).NotTo(HaveOccurred())
 
-		requirement = release.ReleaseRequirement{
+		requirement = release.Requirement{
 			Name:            releaseName,
 			Version:         releaseVersion,
 			StemcellOS:      "magi",
 			StemcellVersion: "3",
 		}
 
-		releaseID = release.ReleaseID{Name: releaseName, Version: releaseVersion}
-		expectedRemoteRelease = release.RemoteRelease{ReleaseID: releaseID, RemotePath: remotePath}
-		expectedLocalRelease = release.LocalRelease{ReleaseID: releaseID, LocalPath: filepath.Join(downloadDir, "evangelion-3.33.tgz")}
+		releaseID = release.ID{Name: releaseName, Version: releaseVersion}
+		expectedRemoteRelease = &release.Remote{ID: releaseID, RemotePath: remotePath}
+		expectedLocalRelease = release.Local{ID: releaseID, LocalPath: filepath.Join(downloadDir, "evangelion-3.33.tgz")}
 	})
 
 	When("the release is available from the primary release source", func() {
 		BeforeEach(func() {
-			primaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{expectedRemoteRelease}, nil)
-			primaryReleaseSource.DownloadReleasesReturns([]release.LocalRelease{expectedLocalRelease}, nil)
+			expectedRemoteRelease.SourceID = primaryReleaseSource.ID()
+			primaryReleaseSource.GetMatchedReleaseReturns(*expectedRemoteRelease, true, nil)
+			primaryReleaseSource.DownloadReleaseReturns(expectedLocalRelease, nil)
 		})
 
 		It("downloads the release from that source", func() {
-			localRelease, remoteSource, remotePath, err := releaseDownloader.DownloadRelease(downloadDir, requirement)
+			localRelease, remoteRelease, err := releaseDownloader.DownloadRelease(downloadDir, requirement)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(localRelease).To(Equal(expectedLocalRelease))
-			Expect(remoteSource).To(Equal(primaryReleaseSource.ID()))
+			Expect(remoteRelease).To(Equal(*expectedRemoteRelease))
 			Expect(remotePath).To(Equal(remotePath))
 
-			Expect(primaryReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
-			Expect(secondaryReleaseSource.DownloadReleasesCallCount()).To(Equal(0))
+			Expect(primaryReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+			Expect(secondaryReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
 
-			actualDir, actualRemoteReleases, _ := primaryReleaseSource.DownloadReleasesArgsForCall(0)
+			actualDir, actualRemoteRelease, _ := primaryReleaseSource.DownloadReleaseArgsForCall(0)
 			Expect(actualDir).To(Equal(downloadDir))
-			Expect(actualRemoteReleases).To(ConsistOf(expectedRemoteRelease))
+			Expect(actualRemoteRelease).To(Equal(*expectedRemoteRelease))
 		})
 	})
 
 	When("the release is available from the secondary release source", func() {
 		BeforeEach(func() {
-			primaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{}, nil)
-			secondaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{expectedRemoteRelease}, nil)
-			secondaryReleaseSource.DownloadReleasesReturns([]release.LocalRelease{expectedLocalRelease}, nil)
+			expectedRemoteRelease.SourceID = secondaryReleaseSource.ID()
+			primaryReleaseSource.GetMatchedReleaseReturns(release.Remote{}, false, nil)
+			secondaryReleaseSource.GetMatchedReleaseReturns(*expectedRemoteRelease, true, nil)
+			secondaryReleaseSource.DownloadReleaseReturns(expectedLocalRelease, nil)
 		})
 
 		It("downloads the release from that source", func() {
-			localRelease, remoteSource, remotePath, err := releaseDownloader.DownloadRelease(downloadDir, requirement)
+			localRelease, remoteRelease, err := releaseDownloader.DownloadRelease(downloadDir, requirement)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(localRelease).To(Equal(expectedLocalRelease))
-			Expect(remoteSource).To(Equal(secondaryReleaseSource.ID()))
-			Expect(remotePath).To(Equal(remotePath))
+			Expect(remoteRelease).To(Equal(*expectedRemoteRelease))
 
-			Expect(primaryReleaseSource.DownloadReleasesCallCount()).To(Equal(0))
-			Expect(secondaryReleaseSource.DownloadReleasesCallCount()).To(Equal(1))
+			Expect(primaryReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
+			Expect(secondaryReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
 
-			actualDir, actualRemoteReleases, _ := secondaryReleaseSource.DownloadReleasesArgsForCall(0)
+			actualDir, actualRemoteRelease, _ := secondaryReleaseSource.DownloadReleaseArgsForCall(0)
 			Expect(actualDir).To(Equal(downloadDir))
-			Expect(actualRemoteReleases).To(ConsistOf(expectedRemoteRelease))
+			Expect(actualRemoteRelease).To(Equal(*expectedRemoteRelease))
 		})
 	})
 
 	When("the release isn't available from any release source", func() {
 		BeforeEach(func() {
-			primaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{}, nil)
-			secondaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{}, nil)
+			primaryReleaseSource.GetMatchedReleaseReturns(release.Remote{}, false, nil)
+			secondaryReleaseSource.GetMatchedReleaseReturns(release.Remote{}, false, nil)
 		})
 
 		It("errors and doesn't download", func() {
-			_, _, _, err := releaseDownloader.DownloadRelease(downloadDir, requirement)
+			_, _, err := releaseDownloader.DownloadRelease(downloadDir, requirement)
 			Expect(err).To(MatchError("couldn't find \"evangelion\" 3.33 in any release source"))
 		})
 
 		It("doesn't download", func() {
 			releaseDownloader.DownloadRelease(downloadDir, requirement)
 
-			Expect(primaryReleaseSource.DownloadReleasesCallCount()).To(Equal(0))
-			Expect(secondaryReleaseSource.DownloadReleasesCallCount()).To(Equal(0))
+			Expect(primaryReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
+			Expect(secondaryReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
 		})
 	})
 
@@ -122,18 +123,18 @@ var _ = Describe("DownloadRelease", func() {
 
 		BeforeEach(func() {
 			expectedError = errors.New("boom")
-			primaryReleaseSource.GetMatchedReleasesReturns(nil, expectedError)
+			primaryReleaseSource.GetMatchedReleaseReturns(release.Remote{}, false, expectedError)
 		})
 
 		It("returns that error", func() {
-			_, _, _, err := releaseDownloader.DownloadRelease(downloadDir, requirement)
+			_, _, err := releaseDownloader.DownloadRelease(downloadDir, requirement)
 			Expect(err).To(MatchError(expectedError))
 		})
 
 		It("doesn't download anything", func() {
 			releaseDownloader.DownloadRelease(downloadDir, requirement)
-			Expect(primaryReleaseSource.DownloadReleasesCallCount()).To(Equal(0))
-			Expect(secondaryReleaseSource.DownloadReleasesCallCount()).To(Equal(0))
+			Expect(primaryReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
+			Expect(secondaryReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
 		})
 	})
 
@@ -142,12 +143,13 @@ var _ = Describe("DownloadRelease", func() {
 
 		BeforeEach(func() {
 			expectedError = errors.New("boom")
-			primaryReleaseSource.GetMatchedReleasesReturns([]release.RemoteRelease{expectedRemoteRelease}, nil)
-			primaryReleaseSource.DownloadReleasesReturns(nil, expectedError)
+			expectedRemoteRelease.SourceID = primaryReleaseSource.ID()
+			primaryReleaseSource.GetMatchedReleaseReturns(*expectedRemoteRelease, true, nil)
+			primaryReleaseSource.DownloadReleaseReturns(release.Local{}, expectedError)
 		})
 
 		It("returns that error", func() {
-			_, _, _, err := releaseDownloader.DownloadRelease(downloadDir, requirement)
+			_, _, err := releaseDownloader.DownloadRelease(downloadDir, requirement)
 			Expect(err).To(MatchError(expectedError))
 		})
 	})

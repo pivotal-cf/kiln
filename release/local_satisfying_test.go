@@ -7,15 +7,15 @@ import (
 	. "github.com/pivotal-cf/kiln/release"
 )
 
-var _ = Describe("NewLocalBuiltRelease()", func() {
+var _ = Describe("NewLocalBuilt()", func() {
 	const (
 		expectedName    = "my-awesome-release"
 		expectedVersion = "42.0.0"
 	)
 
 	DescribeTable("Satisfies", func(name, version string, expectedResult bool) {
-		release := NewLocalBuiltRelease(ReleaseID{Name: name, Version: version}, "not-used")
-		requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: "not-used", StemcellVersion: "404"}
+		release := NewLocalBuilt(ID{Name: name, Version: version}, "not-used")
+		requirement := Requirement{Name: expectedName, Version: expectedVersion, StemcellOS: "not-used", StemcellVersion: "404"}
 		Expect(release.Satisfies(requirement)).To(Equal(expectedResult))
 	},
 		Entry("when the release name and version match", expectedName, expectedVersion, true),
@@ -24,7 +24,7 @@ var _ = Describe("NewLocalBuiltRelease()", func() {
 	)
 })
 
-var _ = Describe("NewLocalCompiledRelease()", func() {
+var _ = Describe("NewLocalCompiled()", func() {
 	const (
 		expectedName            = "my-awesome-release"
 		expectedVersion         = "42.0.0"
@@ -33,8 +33,8 @@ var _ = Describe("NewLocalCompiledRelease()", func() {
 	)
 
 	DescribeTable("Satisfies", func(name, version, stemcellOS, stemcellVersion string, expectedResult bool) {
-		release := NewLocalCompiledRelease(ReleaseID{Name: name, Version: version}, stemcellOS, stemcellVersion, "not-used")
-		requirement := ReleaseRequirement{Name: expectedName, Version: expectedVersion, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion}
+		release := NewLocalCompiled(ID{Name: name, Version: version}, stemcellOS, stemcellVersion, "not-used")
+		requirement := Requirement{Name: expectedName, Version: expectedVersion, StemcellOS: expectedStemcellOS, StemcellVersion: expectedStemcellVersion}
 		Expect(release.Satisfies(requirement)).To(Equal(expectedResult))
 	},
 		Entry("when the all attributes match", expectedName, expectedVersion, expectedStemcellOS, expectedStemcellVersion, true),

@@ -16,7 +16,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
-type ErrorMissingReleases release.ReleaseRequirementSet
+type ErrorMissingReleases release.RequirementSet
 
 func (releases ErrorMissingReleases) Error() string {
 	var missing []string
@@ -29,7 +29,7 @@ func (releases ErrorMissingReleases) Error() string {
 type Fetch struct {
 	logger *log.Logger
 
-	releaseSourcesFactory ReleaseSourcesFactory
+	releaseSourcesFactory ReleaseSourceFactory
 	localReleaseDirectory LocalReleaseDirectory
 
 	Options struct {
@@ -44,12 +44,12 @@ type Fetch struct {
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/release_sources_factory.go --fake-name ReleaseSourcesFactory . ReleaseSourcesFactory
-type ReleaseSourcesFactory interface {
-	ReleaseSources(cargo.Kilnfile, bool) []fetcher.ReleaseSource
+//go:generate counterfeiter -o ./fakes/release_source_factory.go --fake-name ReleaseSourceFactory . ReleaseSourceFactory
+type ReleaseSourceFactory interface {
+	ReleaseSource(cargo.Kilnfile, bool) fetcher.MultiReleaseSource
 }
 
-func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, localReleaseDirectory LocalReleaseDirectory) Fetch {
+func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourceFactory, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
 		logger:                logger,
 		localReleaseDirectory: localReleaseDirectory,
@@ -59,9 +59,9 @@ func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourcesFactory, l
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
-	GetLocalReleases(releasesDir string) ([]release.SatisfyingLocalRelease, error)
-	DeleteExtraReleases(extraReleases []release.LocalRelease, noConfirm bool) error
-	VerifyChecksums(downloadedReleases []release.LocalRelease, kilnfileLock cargo.KilnfileLock) error
+	GetLocalReleases(releasesDir string) ([]release.LocalSatisfying, error)
+	DeleteExtraReleases(extraReleases []release.Local, noConfirm bool) error
+	VerifyChecksums(downloadedReleases []release.Local, kilnfileLock cargo.KilnfileLock) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -70,7 +70,7 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	desiredReleaseSet := release.NewReleaseRequirementSet(kilnfileLock)
+	desiredReleaseSet := release.NewRequirementSet(kilnfileLock)
 	localReleases, unsatisfiedReleaseSet, extraReleaseSet := desiredReleaseSet.Partition(availableLocalReleaseSet)
 
 	err = f.localReleaseDirectory.DeleteExtraReleases(extraReleaseSet, f.Options.NoConfirm)
@@ -80,7 +80,7 @@ func (f Fetch) Execute(args []string) error {
 
 	var missingReleases []cargo.ReleaseLock
 	for _, rel := range kilnfileLock.Releases {
-		if _, missing := unsatisfiedReleaseSet[release.ReleaseID{Name: rel.Name, Version: rel.Version}]; missing {
+		if _, missing := unsatisfiedReleaseSet[release.ID{Name: rel.Name, Version: rel.Version}]; missing {
 			missingReleases = append(missingReleases, rel)
 		}
 	}
@@ -99,7 +99,7 @@ func (f Fetch) Execute(args []string) error {
 	return f.localReleaseDirectory.VerifyChecksums(localReleases, kilnfileLock)
 }
 
-func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []release.SatisfyingLocalRelease, error) {
+func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []release.LocalSatisfying, error) {
 	args, err := jhanda.Parse(&f.Options, args)
 
 	if err != nil {
@@ -128,32 +128,24 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []rele
 	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
 }
 
-func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ReleaseLock) ([]release.LocalRelease, error) {
-	releaseSources := f.releaseSourcesFactory.ReleaseSources(kilnfile, f.Options.AllowOnlyPublishableReleases)
+func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ReleaseLock) ([]release.Local, error) {
+	releaseSource := fetcher.MultiReleaseSource(f.releaseSourcesFactory.ReleaseSource(kilnfile, f.Options.AllowOnlyPublishableReleases))
 
-	releaseSourceMap := make(map[string]fetcher.ReleaseSource)
-	for _, releaseSource := range releaseSources {
-		releaseSourceMap[releaseSource.ID()] = releaseSource
-	}
-
-	var downloaded []release.LocalRelease
+	var downloaded []release.Local
 
 	for _, rl := range releaseLocks {
-		src, ok := releaseSourceMap[rl.RemoteSource]
-		if !ok {
-			return nil, fmt.Errorf("release_source %q for %q %q does not exist", rl.RemoteSource, rl.Name, rl.Version)
+		remoteRelease := release.Remote{
+			ID: release.ID{Name: rl.Name, Version: rl.Version},
+			RemotePath: rl.RemotePath,
+			SourceID: rl.RemoteSource,
 		}
 
-		local, err := src.DownloadReleases(
-			f.Options.ReleasesDir,
-			[]release.RemoteRelease{{ReleaseID: release.ReleaseID{Name: rl.Name, Version: rl.Version}, RemotePath: rl.RemotePath}},
-			f.Options.DownloadThreads,
-		)
+		local, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease, f.Options.DownloadThreads)
 		if err != nil {
 			return nil, fmt.Errorf("download failed: %w", err)
 		}
 
-		downloaded = append(downloaded, local...)
+		downloaded = append(downloaded, local)
 	}
 
 	return downloaded, nil

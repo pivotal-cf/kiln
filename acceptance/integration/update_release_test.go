@@ -126,7 +126,7 @@ release_sources:
   region: us-west-1
   access_key_id: $(variable "aws_access_key_id")
   secret_access_key: $(variable "aws_secret_access_key")
-  regex: ^2\.8/.+/(?P<release_name>[a-z-_0-9]+)-(?P<release_version>v?[0-9\.]+)-(?P<stemcell_os>[a-z-_]+)-(?P<stemcell_version>\d+\.\d+)(\.0)?\.tgz$
+  path_template: 2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz
   compiled: true
   publishable: true
 `

@@ -2,8 +2,8 @@ package release
 
 import "github.com/pivotal-cf/kiln/internal/cargo"
 
-func newReleaseRequirement(release cargo.ReleaseLock, stemcell cargo.Stemcell) ReleaseRequirement {
-	return ReleaseRequirement{
+func newRequirement(release cargo.ReleaseLock, stemcell cargo.Stemcell) Requirement {
+	return Requirement{
 		Name:            release.Name,
 		Version:         release.Version,
 		StemcellOS:      stemcell.OS,
@@ -11,10 +11,10 @@ func newReleaseRequirement(release cargo.ReleaseLock, stemcell cargo.Stemcell) R
 	}
 }
 
-type ReleaseRequirement struct {
+type Requirement struct {
 	Name, Version, StemcellOS, StemcellVersion string
 }
 
-func (rr ReleaseRequirement) releaseID() ReleaseID {
-	return ReleaseID{Name: rr.Name, Version: rr.Version}
+func (rr Requirement) releaseID() ID {
+	return ID{Name: rr.Name, Version: rr.Version}
 }
