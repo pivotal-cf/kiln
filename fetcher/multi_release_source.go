@@ -5,7 +5,13 @@ import (
 	"github.com/pivotal-cf/kiln/release"
 )
 
-type MultiReleaseSource []ReleaseSource
+type MultiReleaseSource []ReleaseSourceWithID
+
+//go:generate counterfeiter -o ./fakes/release_source_with_id.go --fake-name ReleaseSourceWithID . ReleaseSourceWithID
+type ReleaseSourceWithID interface {
+	ReleaseSource
+	ID() string
+}
 
 func (multiSrc MultiReleaseSource) GetMatchedRelease(requirement release.Requirement) (release.Remote, bool, error) {
 	for _, src := range multiSrc {
@@ -21,7 +27,7 @@ func (multiSrc MultiReleaseSource) GetMatchedRelease(requirement release.Require
 }
 
 func (multiSrc MultiReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error) {
-	var correctSrc ReleaseSource
+	var correctSrc ReleaseSourceWithID
 	for _, src := range multiSrc {
 		if src.ID() == remoteRelease.SourceID {
 			correctSrc = src
