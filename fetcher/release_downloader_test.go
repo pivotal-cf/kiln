@@ -21,7 +21,7 @@ var _ = Describe("DownloadRelease", func() {
 	)
 	var (
 		releaseDownloader                            commands.ReleaseDownloader
-		primaryReleaseSource, secondaryReleaseSource *fakes.ReleaseSource
+		primaryReleaseSource, secondaryReleaseSource *fakes.ReleaseSourceWithID
 		downloadDir                                  string
 		requirement                                  release.Requirement
 		releaseID                                    release.ID
@@ -30,12 +30,12 @@ var _ = Describe("DownloadRelease", func() {
 	)
 
 	BeforeEach(func() {
-		primaryReleaseSource = new(fakes.ReleaseSource)
+		primaryReleaseSource = new(fakes.ReleaseSourceWithID)
 		primaryReleaseSource.IDReturns("primary")
-		secondaryReleaseSource = new(fakes.ReleaseSource)
+		secondaryReleaseSource = new(fakes.ReleaseSourceWithID)
 		secondaryReleaseSource.IDReturns("secondary")
 
-		releaseDownloader = NewReleaseDownloader([]ReleaseSource{primaryReleaseSource, secondaryReleaseSource})
+		releaseDownloader = NewReleaseDownloader(MultiReleaseSource{primaryReleaseSource, secondaryReleaseSource})
 
 		var err error
 		downloadDir, err = ioutil.TempDir("/tmp", "download-release-spec")

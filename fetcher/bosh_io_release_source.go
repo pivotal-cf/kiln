@@ -1,6 +1,8 @@
 package fetcher
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -79,13 +81,13 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement release.Requirement
 			if err != nil {
 				return release.Remote{}, false, err
 			}
-			
+
 			if exists {
 				downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, requirement.Version)
 				builtRelease := release.Remote{
 					ID:         release.ID{Name: requirement.Name, Version: requirement.Version},
 					RemotePath: downloadURL,
-					SourceID: src.ID(),
+					SourceID:   src.ID(),
 				}
 				return builtRelease, true, nil
 			}
@@ -98,7 +100,7 @@ func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease 
 	src.logger.Printf("downloading %s %s from %s", remoteRelease.Name, remoteRelease.Version, src.ID())
 
 	downloadURL := remoteRelease.RemotePath
-	// Get the data
+
 	resp, err := http.Get(downloadURL)
 	if err != nil {
 		return release.Local{}, err
@@ -110,16 +112,28 @@ func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease 
 	if err != nil {
 		return release.Local{}, err
 	}
+	defer out.Close()
 
-	// Write the body to file
 	_, err = io.Copy(out, resp.Body)
 	resp.Body.Close()
-	out.Close()
 	if err != nil {
 		return release.Local{}, err
 	}
 
-	return release.Local{ID: remoteRelease.ID, LocalPath: filePath}, nil
+	_, err = out.Seek(0, 0)
+	if err != nil {
+		return release.Local{}, fmt.Errorf("error reseting file cursor: %w", err) // untested
+	}
+
+	hash := sha1.New()
+	_, err = io.Copy(hash, out)
+	if err != nil {
+		return release.Local{}, fmt.Errorf("error hashing file contents: %w", err) // untested
+	}
+
+	sha1 := hex.EncodeToString(hash.Sum(nil))
+
+	return release.Local{ID: remoteRelease.ID, LocalPath: filePath, SHA1: sha1}, nil
 }
 
 type ResponseStatusCodeError http.Response

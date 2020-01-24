@@ -16,7 +16,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
-	"github.com/pivotal-cf/kiln/fetcher"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 )
@@ -28,6 +27,7 @@ var _ = Describe("UpdateRelease", func() {
 		releasesDir       = "releases"
 		remotePath        = "s3://pivotal"
 		releaseSourceName = "LaBreaTarPit"
+		releaseSha1       = "new-sha1"
 	)
 
 	var (
@@ -39,8 +39,7 @@ var _ = Describe("UpdateRelease", func() {
 		logger                    *log.Logger
 		downloadedReleasePath     string
 		expectedDownloadedRelease release.Local
-		expectedRemoteRelease release.Remote
-		checksummer               func(string, billy.Filesystem) (string, error)
+		expectedRemoteRelease     release.Remote
 		kilnFileLoader            *fakes.KilnfileLoader
 	)
 
@@ -66,7 +65,7 @@ var _ = Describe("UpdateRelease", func() {
 					},
 					{
 						Name:    releaseName,
-						SHA1:    "03ac801323cd23205dde357cc7d2dc9e92bc0c93",
+						SHA1:    "old-sha1",
 						Version: "1.87.0",
 					},
 				},
@@ -95,18 +94,17 @@ var _ = Describe("UpdateRelease", func() {
 			expectedDownloadedRelease = release.Local{
 				ID:        release.ID{Name: releaseName, Version: releaseVersion},
 				LocalPath: downloadedReleasePath,
+				SHA1:      releaseSha1,
 			}
 			expectedRemoteRelease = release.Remote{
 				ID:         expectedDownloadedRelease.ID,
 				RemotePath: remotePath,
 				SourceID:   releaseSourceName,
 			}
-
-			checksummer = fetcher.CalculateSum
 		})
 
 		JustBeforeEach(func() {
-			updateReleaseCommand = NewUpdateRelease(logger, filesystem, releaseDownloaderFactory, checksummer, kilnFileLoader)
+			updateReleaseCommand = NewUpdateRelease(logger, filesystem, releaseDownloaderFactory, kilnFileLoader)
 		})
 
 		When("updating to a version that exists in the remote", func() {
@@ -178,7 +176,7 @@ var _ = Describe("UpdateRelease", func() {
 					cargo.ReleaseLock{
 						Name:         releaseName,
 						Version:      releaseVersion,
-						SHA1:         "ba01716b40a3557d699d024d76c307e351e96829",
+						SHA1:         releaseSha1,
 						RemoteSource: releaseSourceName,
 						RemotePath:   remotePath,
 					},
@@ -294,40 +292,6 @@ var _ = Describe("UpdateRelease", func() {
 			})
 		})
 
-		When("there is an error checksumming the downloaded file", func() {
-			var expectedError error
-
-			BeforeEach(func() {
-				releaseDownloader.DownloadReleaseReturns(expectedDownloadedRelease, expectedRemoteRelease, nil)
-				expectedError = errors.New("no can do")
-				checksummer = func(string, billy.Filesystem) (string, error) {
-					return "", expectedError
-				}
-			})
-
-			It("errors", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
-				Expect(err).To(MatchError(ContainSubstring("while calculating release checksum")))
-				Expect(err).To(MatchError(ContainSubstring(expectedError.Error())))
-			})
-
-			It("does not update the Kilnfile.lock", func() {
-				_ = updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
-
-				expectKilnfileLockIsUnchanged(filesystem, preexistingKilnfileLock)
-			})
-		})
-
 		When("making the release downloader errors", func() {
 			var expectedError error
 
@@ -362,7 +326,6 @@ var _ = Describe("UpdateRelease", func() {
 				}
 
 				releaseDownloader.DownloadReleaseReturns(expectedDownloadedRelease, expectedRemoteRelease, nil)
-				checksummer = func(string, billy.Filesystem) (string, error) { return "some-sha", nil }
 			})
 
 			It("errors", func() {
@@ -390,7 +353,6 @@ var _ = Describe("UpdateRelease", func() {
 				}
 
 				releaseDownloader.DownloadReleaseReturns(expectedDownloadedRelease, expectedRemoteRelease, nil)
-				checksummer = func(string, billy.Filesystem) (string, error) { return "some-sha", nil }
 			})
 
 			It("errors", func() {

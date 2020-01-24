@@ -6,7 +6,6 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/release"
 	"io"
 	"log"
@@ -26,11 +25,10 @@ import (
 var _ = Describe("UploadRelease", func() {
 	Context("Execute", func() {
 		var (
-			fs                   billy.Filesystem
-			loader               *fakes.KilnfileLoader
-			releaseSourceFactory *fakes.ReleaseSourceFactory
-			nonReleaseUploader   *fetcherFakes.ReleaseSource
-			releaseUploader      *fetcherFakes.ReleaseUploader
+			fs                     billy.Filesystem
+			loader                 *fakes.KilnfileLoader
+			releaseUploaderFactory *fakes.ReleaseUploaderFactory
+			releaseUploader        *fetcherFakes.ReleaseUploader
 
 			uploadRelease commands.UploadRelease
 
@@ -80,18 +78,15 @@ version: ` + version + `
 			fs = memfs.New()
 			loader = new(fakes.KilnfileLoader)
 
-			nonReleaseUploader = new(fetcherFakes.ReleaseSource)
-			nonReleaseUploader.IDReturns("lemon-bucket")
 			releaseUploader = new(fetcherFakes.ReleaseUploader)
-			releaseUploader.IDReturns("orange-bucket")
-			releaseSourceFactory = new(fakes.ReleaseSourceFactory)
-			releaseSourceFactory.ReleaseSourceReturns([]fetcher.ReleaseSource{nonReleaseUploader, releaseUploader})
+			releaseUploaderFactory = new(fakes.ReleaseUploaderFactory)
+			releaseUploaderFactory.ReleaseUploaderReturns(releaseUploader, nil)
 
 			uploadRelease = commands.UploadRelease{
-				FS:                   fs,
-				KilnfileLoader:       loader,
-				Logger:               log.New(GinkgoWriter, "", 0),
-				ReleaseSourceFactory: releaseSourceFactory,
+				FS:                     fs,
+				KilnfileLoader:         loader,
+				Logger:                 log.New(GinkgoWriter, "", 0),
+				ReleaseUploaderFactory: releaseUploaderFactory,
 			}
 			expectedReleaseSHA = writeReleaseTarball("banana-release.tgz", "banana", "1.2.3")
 		})
@@ -124,7 +119,7 @@ version: ` + version + `
 					releaseUploader.GetMatchedReleaseReturns(release.Remote{
 						ID:         release.ID{Name: "banana", Version: "1.2.3"},
 						RemotePath: "banana/banana-1.2.3.tgz",
-						SourceID: releaseUploader.ID(),
+						SourceID:   "orange-bucket",
 					}, true, nil)
 				})
 
@@ -164,29 +159,18 @@ version: ` + version + `
 		})
 
 		When("the given release source doesn't exist", func() {
-			When("no release sources can upload", func() {
+			When("there's an error finding the release source", func() {
 				BeforeEach(func() {
-					releaseSourceFactory.ReleaseSourceReturns(nil)
+					releaseUploaderFactory.ReleaseUploaderReturns(nil, errors.New("no release source eligible"))
 				})
 
-				It("returns an error without suggested release sources", func() {
+				It("returns the error", func() {
 					err := uploadRelease.Execute([]string{
 						"--local-path", "banana-release.tgz",
 						"--release-source", "orange-bucket",
 					})
 
-					Expect(err).To(MatchError(ContainSubstring("release source")))
-				})
-			})
-
-			When("some release sources can upload", func() {
-				It("returns an error that suggests valid release sources", func() {
-					err := uploadRelease.Execute([]string{
-						"--local-path", "banana-release.tgz",
-						"--release-source", "no-such-release-source",
-					})
-
-					Expect(err).To(MatchError(ContainSubstring("orange-bucket")))
+					Expect(err).To(MatchError(ContainSubstring("no release source eligible")))
 				})
 			})
 		})

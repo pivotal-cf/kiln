@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/pivotal-cf/kiln/commands"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/release"
 )
 
@@ -22,30 +21,18 @@ type LocalReleaseDirectory struct {
 	deleteExtraReleasesReturnsOnCall map[int]struct {
 		result1 error
 	}
-	GetLocalReleasesStub        func(string) ([]release.LocalSatisfying, error)
+	GetLocalReleasesStub        func(string) ([]release.Local, error)
 	getLocalReleasesMutex       sync.RWMutex
 	getLocalReleasesArgsForCall []struct {
 		arg1 string
 	}
 	getLocalReleasesReturns struct {
-		result1 []release.LocalSatisfying
+		result1 []release.Local
 		result2 error
 	}
 	getLocalReleasesReturnsOnCall map[int]struct {
-		result1 []release.LocalSatisfying
+		result1 []release.Local
 		result2 error
-	}
-	VerifyChecksumsStub        func([]release.Local, cargo.KilnfileLock) error
-	verifyChecksumsMutex       sync.RWMutex
-	verifyChecksumsArgsForCall []struct {
-		arg1 []release.Local
-		arg2 cargo.KilnfileLock
-	}
-	verifyChecksumsReturns struct {
-		result1 error
-	}
-	verifyChecksumsReturnsOnCall map[int]struct {
-		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -117,7 +104,7 @@ func (fake *LocalReleaseDirectory) DeleteExtraReleasesReturnsOnCall(i int, resul
 	}{result1}
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleases(arg1 string) ([]release.LocalSatisfying, error) {
+func (fake *LocalReleaseDirectory) GetLocalReleases(arg1 string) ([]release.Local, error) {
 	fake.getLocalReleasesMutex.Lock()
 	ret, specificReturn := fake.getLocalReleasesReturnsOnCall[len(fake.getLocalReleasesArgsForCall)]
 	fake.getLocalReleasesArgsForCall = append(fake.getLocalReleasesArgsForCall, struct {
@@ -141,7 +128,7 @@ func (fake *LocalReleaseDirectory) GetLocalReleasesCallCount() int {
 	return len(fake.getLocalReleasesArgsForCall)
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleasesCalls(stub func(string) ([]release.LocalSatisfying, error)) {
+func (fake *LocalReleaseDirectory) GetLocalReleasesCalls(stub func(string) ([]release.Local, error)) {
 	fake.getLocalReleasesMutex.Lock()
 	defer fake.getLocalReleasesMutex.Unlock()
 	fake.GetLocalReleasesStub = stub
@@ -154,96 +141,30 @@ func (fake *LocalReleaseDirectory) GetLocalReleasesArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleasesReturns(result1 []release.LocalSatisfying, result2 error) {
+func (fake *LocalReleaseDirectory) GetLocalReleasesReturns(result1 []release.Local, result2 error) {
 	fake.getLocalReleasesMutex.Lock()
 	defer fake.getLocalReleasesMutex.Unlock()
 	fake.GetLocalReleasesStub = nil
 	fake.getLocalReleasesReturns = struct {
-		result1 []release.LocalSatisfying
+		result1 []release.Local
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleasesReturnsOnCall(i int, result1 []release.LocalSatisfying, result2 error) {
+func (fake *LocalReleaseDirectory) GetLocalReleasesReturnsOnCall(i int, result1 []release.Local, result2 error) {
 	fake.getLocalReleasesMutex.Lock()
 	defer fake.getLocalReleasesMutex.Unlock()
 	fake.GetLocalReleasesStub = nil
 	if fake.getLocalReleasesReturnsOnCall == nil {
 		fake.getLocalReleasesReturnsOnCall = make(map[int]struct {
-			result1 []release.LocalSatisfying
+			result1 []release.Local
 			result2 error
 		})
 	}
 	fake.getLocalReleasesReturnsOnCall[i] = struct {
-		result1 []release.LocalSatisfying
+		result1 []release.Local
 		result2 error
 	}{result1, result2}
-}
-
-func (fake *LocalReleaseDirectory) VerifyChecksums(arg1 []release.Local, arg2 cargo.KilnfileLock) error {
-	var arg1Copy []release.Local
-	if arg1 != nil {
-		arg1Copy = make([]release.Local, len(arg1))
-		copy(arg1Copy, arg1)
-	}
-	fake.verifyChecksumsMutex.Lock()
-	ret, specificReturn := fake.verifyChecksumsReturnsOnCall[len(fake.verifyChecksumsArgsForCall)]
-	fake.verifyChecksumsArgsForCall = append(fake.verifyChecksumsArgsForCall, struct {
-		arg1 []release.Local
-		arg2 cargo.KilnfileLock
-	}{arg1Copy, arg2})
-	fake.recordInvocation("VerifyChecksums", []interface{}{arg1Copy, arg2})
-	fake.verifyChecksumsMutex.Unlock()
-	if fake.VerifyChecksumsStub != nil {
-		return fake.VerifyChecksumsStub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.verifyChecksumsReturns
-	return fakeReturns.result1
-}
-
-func (fake *LocalReleaseDirectory) VerifyChecksumsCallCount() int {
-	fake.verifyChecksumsMutex.RLock()
-	defer fake.verifyChecksumsMutex.RUnlock()
-	return len(fake.verifyChecksumsArgsForCall)
-}
-
-func (fake *LocalReleaseDirectory) VerifyChecksumsCalls(stub func([]release.Local, cargo.KilnfileLock) error) {
-	fake.verifyChecksumsMutex.Lock()
-	defer fake.verifyChecksumsMutex.Unlock()
-	fake.VerifyChecksumsStub = stub
-}
-
-func (fake *LocalReleaseDirectory) VerifyChecksumsArgsForCall(i int) ([]release.Local, cargo.KilnfileLock) {
-	fake.verifyChecksumsMutex.RLock()
-	defer fake.verifyChecksumsMutex.RUnlock()
-	argsForCall := fake.verifyChecksumsArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *LocalReleaseDirectory) VerifyChecksumsReturns(result1 error) {
-	fake.verifyChecksumsMutex.Lock()
-	defer fake.verifyChecksumsMutex.Unlock()
-	fake.VerifyChecksumsStub = nil
-	fake.verifyChecksumsReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *LocalReleaseDirectory) VerifyChecksumsReturnsOnCall(i int, result1 error) {
-	fake.verifyChecksumsMutex.Lock()
-	defer fake.verifyChecksumsMutex.Unlock()
-	fake.VerifyChecksumsStub = nil
-	if fake.verifyChecksumsReturnsOnCall == nil {
-		fake.verifyChecksumsReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.verifyChecksumsReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
 }
 
 func (fake *LocalReleaseDirectory) Invocations() map[string][][]interface{} {
@@ -253,8 +174,6 @@ func (fake *LocalReleaseDirectory) Invocations() map[string][][]interface{} {
 	defer fake.deleteExtraReleasesMutex.RUnlock()
 	fake.getLocalReleasesMutex.RLock()
 	defer fake.getLocalReleasesMutex.RUnlock()
-	fake.verifyChecksumsMutex.RLock()
-	defer fake.verifyChecksumsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

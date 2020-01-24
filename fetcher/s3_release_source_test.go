@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	. "github.com/onsi/gomega/gstruct"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 	"io"
 	"io/ioutil"
 	"log"
@@ -84,10 +85,13 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(releaseContents).To(Equal([]byte("some-bucket/some-uaa-key")))
 
+			sha1, err := CalculateSum(releasePath, osfs.New(""))
+			Expect(err).NotTo(HaveOccurred())
+
 			_, _, opts := fakeS3Downloader.DownloadArgsForCall(0)
 			verifySetsConcurrency(opts, 7)
 
-			Expect(localRelease).To(Equal(release.Local{ID: releaseID, LocalPath: releasePath}))
+			Expect(localRelease).To(Equal(release.Local{ID: releaseID, LocalPath: releasePath, SHA1: sha1}))
 		})
 
 		Context("when number of threads is not specified", func() {
