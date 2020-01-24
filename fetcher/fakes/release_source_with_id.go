@@ -8,7 +8,7 @@ import (
 	"github.com/pivotal-cf/kiln/release"
 )
 
-type ReleaseSource struct {
+type ReleaseSourceWithID struct {
 	DownloadReleaseStub        func(string, release.Remote, int) (release.Local, error)
 	downloadReleaseMutex       sync.RWMutex
 	downloadReleaseArgsForCall []struct {
@@ -39,11 +39,21 @@ type ReleaseSource struct {
 		result2 bool
 		result3 error
 	}
+	IDStub        func() string
+	iDMutex       sync.RWMutex
+	iDArgsForCall []struct {
+	}
+	iDReturns struct {
+		result1 string
+	}
+	iDReturnsOnCall map[int]struct {
+		result1 string
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseSource) DownloadRelease(arg1 string, arg2 release.Remote, arg3 int) (release.Local, error) {
+func (fake *ReleaseSourceWithID) DownloadRelease(arg1 string, arg2 release.Remote, arg3 int) (release.Local, error) {
 	fake.downloadReleaseMutex.Lock()
 	ret, specificReturn := fake.downloadReleaseReturnsOnCall[len(fake.downloadReleaseArgsForCall)]
 	fake.downloadReleaseArgsForCall = append(fake.downloadReleaseArgsForCall, struct {
@@ -63,26 +73,26 @@ func (fake *ReleaseSource) DownloadRelease(arg1 string, arg2 release.Remote, arg
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *ReleaseSource) DownloadReleaseCallCount() int {
+func (fake *ReleaseSourceWithID) DownloadReleaseCallCount() int {
 	fake.downloadReleaseMutex.RLock()
 	defer fake.downloadReleaseMutex.RUnlock()
 	return len(fake.downloadReleaseArgsForCall)
 }
 
-func (fake *ReleaseSource) DownloadReleaseCalls(stub func(string, release.Remote, int) (release.Local, error)) {
+func (fake *ReleaseSourceWithID) DownloadReleaseCalls(stub func(string, release.Remote, int) (release.Local, error)) {
 	fake.downloadReleaseMutex.Lock()
 	defer fake.downloadReleaseMutex.Unlock()
 	fake.DownloadReleaseStub = stub
 }
 
-func (fake *ReleaseSource) DownloadReleaseArgsForCall(i int) (string, release.Remote, int) {
+func (fake *ReleaseSourceWithID) DownloadReleaseArgsForCall(i int) (string, release.Remote, int) {
 	fake.downloadReleaseMutex.RLock()
 	defer fake.downloadReleaseMutex.RUnlock()
 	argsForCall := fake.downloadReleaseArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *ReleaseSource) DownloadReleaseReturns(result1 release.Local, result2 error) {
+func (fake *ReleaseSourceWithID) DownloadReleaseReturns(result1 release.Local, result2 error) {
 	fake.downloadReleaseMutex.Lock()
 	defer fake.downloadReleaseMutex.Unlock()
 	fake.DownloadReleaseStub = nil
@@ -92,7 +102,7 @@ func (fake *ReleaseSource) DownloadReleaseReturns(result1 release.Local, result2
 	}{result1, result2}
 }
 
-func (fake *ReleaseSource) DownloadReleaseReturnsOnCall(i int, result1 release.Local, result2 error) {
+func (fake *ReleaseSourceWithID) DownloadReleaseReturnsOnCall(i int, result1 release.Local, result2 error) {
 	fake.downloadReleaseMutex.Lock()
 	defer fake.downloadReleaseMutex.Unlock()
 	fake.DownloadReleaseStub = nil
@@ -108,7 +118,7 @@ func (fake *ReleaseSource) DownloadReleaseReturnsOnCall(i int, result1 release.L
 	}{result1, result2}
 }
 
-func (fake *ReleaseSource) GetMatchedRelease(arg1 release.Requirement) (release.Remote, bool, error) {
+func (fake *ReleaseSourceWithID) GetMatchedRelease(arg1 release.Requirement) (release.Remote, bool, error) {
 	fake.getMatchedReleaseMutex.Lock()
 	ret, specificReturn := fake.getMatchedReleaseReturnsOnCall[len(fake.getMatchedReleaseArgsForCall)]
 	fake.getMatchedReleaseArgsForCall = append(fake.getMatchedReleaseArgsForCall, struct {
@@ -126,26 +136,26 @@ func (fake *ReleaseSource) GetMatchedRelease(arg1 release.Requirement) (release.
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
-func (fake *ReleaseSource) GetMatchedReleaseCallCount() int {
+func (fake *ReleaseSourceWithID) GetMatchedReleaseCallCount() int {
 	fake.getMatchedReleaseMutex.RLock()
 	defer fake.getMatchedReleaseMutex.RUnlock()
 	return len(fake.getMatchedReleaseArgsForCall)
 }
 
-func (fake *ReleaseSource) GetMatchedReleaseCalls(stub func(release.Requirement) (release.Remote, bool, error)) {
+func (fake *ReleaseSourceWithID) GetMatchedReleaseCalls(stub func(release.Requirement) (release.Remote, bool, error)) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = stub
 }
 
-func (fake *ReleaseSource) GetMatchedReleaseArgsForCall(i int) release.Requirement {
+func (fake *ReleaseSourceWithID) GetMatchedReleaseArgsForCall(i int) release.Requirement {
 	fake.getMatchedReleaseMutex.RLock()
 	defer fake.getMatchedReleaseMutex.RUnlock()
 	argsForCall := fake.getMatchedReleaseArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *ReleaseSource) GetMatchedReleaseReturns(result1 release.Remote, result2 bool, result3 error) {
+func (fake *ReleaseSourceWithID) GetMatchedReleaseReturns(result1 release.Remote, result2 bool, result3 error) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = nil
@@ -156,7 +166,7 @@ func (fake *ReleaseSource) GetMatchedReleaseReturns(result1 release.Remote, resu
 	}{result1, result2, result3}
 }
 
-func (fake *ReleaseSource) GetMatchedReleaseReturnsOnCall(i int, result1 release.Remote, result2 bool, result3 error) {
+func (fake *ReleaseSourceWithID) GetMatchedReleaseReturnsOnCall(i int, result1 release.Remote, result2 bool, result3 error) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = nil
@@ -174,13 +184,67 @@ func (fake *ReleaseSource) GetMatchedReleaseReturnsOnCall(i int, result1 release
 	}{result1, result2, result3}
 }
 
-func (fake *ReleaseSource) Invocations() map[string][][]interface{} {
+func (fake *ReleaseSourceWithID) ID() string {
+	fake.iDMutex.Lock()
+	ret, specificReturn := fake.iDReturnsOnCall[len(fake.iDArgsForCall)]
+	fake.iDArgsForCall = append(fake.iDArgsForCall, struct {
+	}{})
+	fake.recordInvocation("ID", []interface{}{})
+	fake.iDMutex.Unlock()
+	if fake.IDStub != nil {
+		return fake.IDStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.iDReturns
+	return fakeReturns.result1
+}
+
+func (fake *ReleaseSourceWithID) IDCallCount() int {
+	fake.iDMutex.RLock()
+	defer fake.iDMutex.RUnlock()
+	return len(fake.iDArgsForCall)
+}
+
+func (fake *ReleaseSourceWithID) IDCalls(stub func() string) {
+	fake.iDMutex.Lock()
+	defer fake.iDMutex.Unlock()
+	fake.IDStub = stub
+}
+
+func (fake *ReleaseSourceWithID) IDReturns(result1 string) {
+	fake.iDMutex.Lock()
+	defer fake.iDMutex.Unlock()
+	fake.IDStub = nil
+	fake.iDReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *ReleaseSourceWithID) IDReturnsOnCall(i int, result1 string) {
+	fake.iDMutex.Lock()
+	defer fake.iDMutex.Unlock()
+	fake.IDStub = nil
+	if fake.iDReturnsOnCall == nil {
+		fake.iDReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.iDReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *ReleaseSourceWithID) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.downloadReleaseMutex.RLock()
 	defer fake.downloadReleaseMutex.RUnlock()
 	fake.getMatchedReleaseMutex.RLock()
 	defer fake.getMatchedReleaseMutex.RUnlock()
+	fake.iDMutex.RLock()
+	defer fake.iDMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
@@ -188,7 +252,7 @@ func (fake *ReleaseSource) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *ReleaseSource) recordInvocation(key string, args []interface{}) {
+func (fake *ReleaseSourceWithID) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -200,4 +264,4 @@ func (fake *ReleaseSource) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ fetcher.ReleaseSource = new(ReleaseSource)
+var _ fetcher.ReleaseSourceWithID = new(ReleaseSourceWithID)

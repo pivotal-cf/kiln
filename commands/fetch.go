@@ -34,7 +34,7 @@ type Fetch struct {
 
 //go:generate counterfeiter -o ./fakes/release_source_factory.go --fake-name ReleaseSourceFactory . ReleaseSourceFactory
 type ReleaseSourceFactory interface {
-	ReleaseSource(cargo.Kilnfile, bool) fetcher.MultiReleaseSource
+	ReleaseSource(cargo.Kilnfile, bool) fetcher.ReleaseSource
 }
 
 func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourceFactory, localReleaseDirectory LocalReleaseDirectory) Fetch {

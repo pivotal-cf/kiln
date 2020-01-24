@@ -38,7 +38,7 @@ var _ = Describe("ReleaseSourceFactory", func() {
 			})
 
 			It("builds the correct release sources", func() {
-				releaseSources := rsFactory.ReleaseSource(kilnfile, false)
+				releaseSources := rsFactory.ReleaseSource(kilnfile, false).(MultiReleaseSource)
 				Expect(releaseSources).To(HaveLen(4))
 				var (
 					s3ReleaseSource     S3ReleaseSource
@@ -83,7 +83,7 @@ var _ = Describe("ReleaseSourceFactory", func() {
 			})
 
 			It("builds the correct release sources", func() {
-				releaseSources := rsFactory.ReleaseSource(kilnfile, true)
+				releaseSources := rsFactory.ReleaseSource(kilnfile, true).(MultiReleaseSource)
 				Expect(releaseSources).To(HaveLen(1))
 				var s3ReleaseSource S3ReleaseSource
 

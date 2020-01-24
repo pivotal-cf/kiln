@@ -10,23 +10,23 @@ import (
 )
 
 type ReleaseSourceFactory struct {
-	ReleaseSourceStub        func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource
+	ReleaseSourceStub        func(cargo.Kilnfile, bool) fetcher.ReleaseSource
 	releaseSourceMutex       sync.RWMutex
 	releaseSourceArgsForCall []struct {
 		arg1 cargo.Kilnfile
 		arg2 bool
 	}
 	releaseSourceReturns struct {
-		result1 fetcher.MultiReleaseSource
+		result1 fetcher.ReleaseSource
 	}
 	releaseSourceReturnsOnCall map[int]struct {
-		result1 fetcher.MultiReleaseSource
+		result1 fetcher.ReleaseSource
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseSourceFactory) ReleaseSource(arg1 cargo.Kilnfile, arg2 bool) fetcher.MultiReleaseSource {
+func (fake *ReleaseSourceFactory) ReleaseSource(arg1 cargo.Kilnfile, arg2 bool) fetcher.ReleaseSource {
 	fake.releaseSourceMutex.Lock()
 	ret, specificReturn := fake.releaseSourceReturnsOnCall[len(fake.releaseSourceArgsForCall)]
 	fake.releaseSourceArgsForCall = append(fake.releaseSourceArgsForCall, struct {
@@ -51,7 +51,7 @@ func (fake *ReleaseSourceFactory) ReleaseSourceCallCount() int {
 	return len(fake.releaseSourceArgsForCall)
 }
 
-func (fake *ReleaseSourceFactory) ReleaseSourceCalls(stub func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource) {
+func (fake *ReleaseSourceFactory) ReleaseSourceCalls(stub func(cargo.Kilnfile, bool) fetcher.ReleaseSource) {
 	fake.releaseSourceMutex.Lock()
 	defer fake.releaseSourceMutex.Unlock()
 	fake.ReleaseSourceStub = stub
@@ -64,26 +64,26 @@ func (fake *ReleaseSourceFactory) ReleaseSourceArgsForCall(i int) (cargo.Kilnfil
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *ReleaseSourceFactory) ReleaseSourceReturns(result1 fetcher.MultiReleaseSource) {
+func (fake *ReleaseSourceFactory) ReleaseSourceReturns(result1 fetcher.ReleaseSource) {
 	fake.releaseSourceMutex.Lock()
 	defer fake.releaseSourceMutex.Unlock()
 	fake.ReleaseSourceStub = nil
 	fake.releaseSourceReturns = struct {
-		result1 fetcher.MultiReleaseSource
+		result1 fetcher.ReleaseSource
 	}{result1}
 }
 
-func (fake *ReleaseSourceFactory) ReleaseSourceReturnsOnCall(i int, result1 fetcher.MultiReleaseSource) {
+func (fake *ReleaseSourceFactory) ReleaseSourceReturnsOnCall(i int, result1 fetcher.ReleaseSource) {
 	fake.releaseSourceMutex.Lock()
 	defer fake.releaseSourceMutex.Unlock()
 	fake.ReleaseSourceStub = nil
 	if fake.releaseSourceReturnsOnCall == nil {
 		fake.releaseSourceReturnsOnCall = make(map[int]struct {
-			result1 fetcher.MultiReleaseSource
+			result1 fetcher.ReleaseSource
 		})
 	}
 	fake.releaseSourceReturnsOnCall[i] = struct {
-		result1 fetcher.MultiReleaseSource
+		result1 fetcher.ReleaseSource
 	}{result1}
 }
 

@@ -31,10 +31,10 @@ var _ = Describe("Fetch", func() {
 		someKilnfileLockPath        string
 		lockContents                string
 		someReleasesDirectory       string
-		fakeS3CompiledReleaseSource *fetcherFakes.ReleaseSource
-		fakeBoshIOReleaseSource     *fetcherFakes.ReleaseSource
-		fakeS3BuiltReleaseSource    *fetcherFakes.ReleaseSource
-		fakeReleaseSources          []fetcher.ReleaseSource
+		fakeS3CompiledReleaseSource *fetcherFakes.ReleaseSourceWithID
+		fakeBoshIOReleaseSource     *fetcherFakes.ReleaseSourceWithID
+		fakeS3BuiltReleaseSource    *fetcherFakes.ReleaseSourceWithID
+		fakeReleaseSources          fetcher.MultiReleaseSource
 		fakeLocalReleaseDirectory   *fakes.LocalReleaseDirectory
 		releaseSourceFactory        *fakes.ReleaseSourceFactory
 
@@ -77,11 +77,11 @@ stemcell_criteria:
 
 			fakeLocalReleaseDirectory = new(fakes.LocalReleaseDirectory)
 
-			fakeS3CompiledReleaseSource = new(fetcherFakes.ReleaseSource)
+			fakeS3CompiledReleaseSource = new(fetcherFakes.ReleaseSourceWithID)
 			fakeS3CompiledReleaseSource.IDReturns(s3CompiledReleaseSourceID)
-			fakeBoshIOReleaseSource = new(fetcherFakes.ReleaseSource)
+			fakeBoshIOReleaseSource = new(fetcherFakes.ReleaseSourceWithID)
 			fakeBoshIOReleaseSource.IDReturns(boshIOReleaseSourceID)
-			fakeS3BuiltReleaseSource = new(fetcherFakes.ReleaseSource)
+			fakeS3BuiltReleaseSource = new(fetcherFakes.ReleaseSourceWithID)
 			fakeS3BuiltReleaseSource.IDReturns(s3BuiltReleaseSourceID)
 
 			fetchExecuteArgs = []string{
@@ -96,7 +96,7 @@ stemcell_criteria:
 		})
 
 		JustBeforeEach(func() {
-			fakeReleaseSources = []fetcher.ReleaseSource{fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource}
+			fakeReleaseSources = fetcher.MultiReleaseSource{fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource}
 			releaseSourceFactory.ReleaseSourceReturns(fakeReleaseSources)
 
 			err := ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0644)

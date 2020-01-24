@@ -20,7 +20,6 @@ const (
 type ReleaseSource interface {
 	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
 	DownloadRelease(releasesDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error)
-	ID() string
 }
 
 //go:generate counterfeiter -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
@@ -31,7 +30,7 @@ type ReleaseUploader interface {
 
 type releaseSourceFunction func(cargo.Kilnfile, bool) MultiReleaseSource
 
-func (rsf releaseSourceFunction) ReleaseSource(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) MultiReleaseSource {
+func (rsf releaseSourceFunction) ReleaseSource(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) ReleaseSource {
 	return rsf(kilnfile, allowOnlyPublishable)
 }
 
@@ -85,7 +84,7 @@ func NewReleaseSourceFactory(outLogger *log.Logger) releaseSourceFunction {
 	}
 }
 
-func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
+func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSourceWithID {
 	switch releaseConfig.Type {
 	case ReleaseSourceTypeBOSHIO:
 		return NewBOSHIOReleaseSource(outLogger, "")
@@ -98,7 +97,7 @@ func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Lo
 	}
 }
 
-func panicIfDuplicateIDs(releaseSources []ReleaseSource) {
+func panicIfDuplicateIDs(releaseSources []ReleaseSourceWithID) {
 	indexOfID := make(map[string]int)
 	for index, rs := range releaseSources {
 		id := rs.ID()
