@@ -1,6 +1,7 @@
 package main
 
 import (
+	"gopkg.in/src-d/go-billy.v4"
 	"log"
 	"os"
 
@@ -53,15 +54,42 @@ func main() {
 		command = "help"
 	}
 
-	filesystem := helper.NewFilesystem()
 	fs := osfs.New("")
 
+	releaseManifestReader := builder.NewReleaseManifestReader(fs)
+	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
+	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(outLogger, releasesService)
+	releaseSourcesFactory := fetcher.NewReleaseSourceFactory(outLogger)
+	kilnfileLoader := cargo.KilnfileLoader{}
+
+	commandSet := jhanda.CommandSet{}
+	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
+	commandSet["version"] = commands.NewVersion(outLogger, version)
+	commandSet["bake"] = bakeCommand(fs, releasesService, outLogger, errLogger)
+	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, releaseSourcesFactory, kilnfileLoader)
+	commandSet["fetch"] = commands.NewFetch(outLogger, releaseSourcesFactory, localReleaseDirectory)
+	commandSet["upload-release"] = commands.UploadRelease{
+		FS:                     fs,
+		KilnfileLoader:         kilnfileLoader,
+		ReleaseUploaderFactory: releaseSourcesFactory,
+		Logger:                 outLogger,
+	}
+	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
+
+	// update-stemcell isn't currently used and may be deleted or changed in the future
+	commandSet["update-stemcell"] = commands.UpdateStemcell{StemcellsVersionsService: new(fetcher.Pivnet)}
+
+	err = commandSet.Execute(command, args)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func bakeCommand(fs billy.Filesystem, releasesService baking.ReleasesService, outLogger *log.Logger, errLogger *log.Logger) commands.Bake {
+	filesystem := helper.NewFilesystem()
 	zipper := builder.NewZipper()
 	interpolator := builder.NewInterpolator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, errLogger)
-
-	releaseManifestReader := builder.NewReleaseManifestReader(osfs.New(""))
-	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
 
 	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
 	stemcellService := baking.NewStemcellService(errLogger, stemcellManifestReader)
@@ -87,21 +115,11 @@ func main() {
 	runtimeConfigsService := baking.NewRuntimeConfigsService(errLogger, runtimeConfigsDirectoryReader)
 
 	iconService := baking.NewIconService(errLogger)
-
+	
 	metadataService := baking.NewMetadataService()
 	checksummer := baking.NewChecksummer(errLogger)
 
-	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(outLogger, releasesService)
-
-	commandSet := jhanda.CommandSet{}
-	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
-	commandSet["version"] = commands.NewVersion(outLogger, version)
-
-	releaseSourcesFactory := fetcher.NewReleaseSourceFactory(outLogger)
-
-	commandSet["fetch"] = commands.NewFetch(outLogger, releaseSourcesFactory, localReleaseDirectory)
-	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
-	commandSet["bake"] = commands.NewBake(
+	return commands.NewBake(
 		interpolator,
 		tileWriter,
 		outLogger,
@@ -118,22 +136,4 @@ func main() {
 		metadataService,
 		checksummer,
 	)
-
-	commandSet["update-stemcell"] = commands.UpdateStemcell{
-		StemcellsVersionsService: new(fetcher.Pivnet),
-	}
-
-	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, releaseSourcesFactory, cargo.KilnfileLoader{})
-
-	commandSet["upload-release"] = commands.UploadRelease{
-		FS:                     osfs.New(""),
-		KilnfileLoader:         cargo.KilnfileLoader{},
-		ReleaseUploaderFactory: releaseSourcesFactory,
-		Logger:                 log.New(os.Stdout, "", 0),
-	}
-
-	err = commandSet.Execute(command, args)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
