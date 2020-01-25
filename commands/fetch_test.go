@@ -158,6 +158,28 @@ stemcell_criteria:
 					Expect(extras).To(ConsistOf(releaseOnDisk))
 				})
 			})
+
+			When("the release on disk has the correct SHA1", func() {
+				BeforeEach(func() {
+					releaseOnDisk = release.Local{
+						ID:        releaseID,
+						LocalPath: fmt.Sprintf("releases/%s-%s.tgz", releaseID.Name, releaseID.Version),
+						SHA1:      "correct-sha",
+					}
+					fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.Local{releaseOnDisk}, nil)
+				})
+
+				It("does not delete the file from disk", func() {
+					Expect(fetchExecuteErr).NotTo(HaveOccurred())
+
+					Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
+
+					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
+					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
+					Expect(noConfirm).To(Equal(true))
+					Expect(extras).To(HaveLen(0))
+				})
+			})
 		})
 
 		Context("starting with no releases but all can be downloaded from their source (happy path)", func() {

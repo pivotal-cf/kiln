@@ -3,12 +3,9 @@ package commands
 import (
 	"fmt"
 	"github.com/pivotal-cf/kiln/release"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 	"log"
 	"os"
-	"sort"
-	"strings"
-
-	"gopkg.in/src-d/go-billy.v4/osfs"
 
 	"github.com/pivotal-cf/kiln/fetcher"
 
@@ -149,42 +146,19 @@ func (f Fetch) Usage() jhanda.Usage {
 	}
 }
 
-type sortableReleaseLocks []cargo.ReleaseLock
-
-func (locks sortableReleaseLocks) Len() int {
-	return len(locks)
-}
-
-func (locks sortableReleaseLocks) Less(i, j int) bool {
-	return strings.Compare(locks[i].Name, locks[j].Name) < 0
-}
-
-func (locks sortableReleaseLocks) Swap(i, j int) {
-	locks[i], locks[j] = locks[j], locks[i]
-}
-
 func partition(releaseLocks []cargo.ReleaseLock, localReleases []release.Local) (intersection []release.Local, missing []cargo.ReleaseLock, extra []release.Local) {
-	lockMap := make(map[release.ID]cargo.ReleaseLock)
-	for _, lock := range releaseLocks {
-		id := release.ID{Name: lock.Name, Version: lock.Version}
-		lockMap[id] = lock
-	}
-
+nextRelease:
 	for _, rel := range localReleases {
-		lock, ok := lockMap[rel.ID]
-		if ok && rel.Name == lock.Name && rel.Version == lock.Version && rel.SHA1 == lock.SHA1 {
-			intersection = append(intersection, rel)
-			delete(lockMap, rel.ID)
-		} else {
-			extra = append(extra, rel)
+		for j, lock := range releaseLocks {
+			if rel.Name == lock.Name && rel.Version == lock.Version && rel.SHA1 == lock.SHA1 {
+				intersection = append(intersection, rel)
+				releaseLocks = append(releaseLocks[:j], releaseLocks[j+1:]...)
+				continue nextRelease
+			}
 		}
+
+		extra = append(extra, rel)
 	}
 
-	sortedMissing := make(sortableReleaseLocks, 0, len(lockMap))
-	for _, lock := range lockMap {
-		sortedMissing = append(sortedMissing, lock)
-	}
-	sort.Sort(sortedMissing)
-
-	return intersection, sortedMissing, extra
+	return intersection, releaseLocks, extra
 }
