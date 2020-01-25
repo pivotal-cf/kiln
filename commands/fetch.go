@@ -147,12 +147,15 @@ func (f Fetch) Usage() jhanda.Usage {
 }
 
 func partition(releaseLocks []cargo.ReleaseLock, localReleases []release.Local) (intersection []release.Local, missing []cargo.ReleaseLock, extra []release.Local) {
+	missing = make([]cargo.ReleaseLock, len(releaseLocks))
+	copy(missing, releaseLocks)
+
 nextRelease:
 	for _, rel := range localReleases {
-		for j, lock := range releaseLocks {
+		for j, lock := range missing {
 			if rel.Name == lock.Name && rel.Version == lock.Version && rel.SHA1 == lock.SHA1 {
 				intersection = append(intersection, rel)
-				releaseLocks = append(releaseLocks[:j], releaseLocks[j+1:]...)
+				missing = append(missing[:j], missing[j+1:]...)
 				continue nextRelease
 			}
 		}
@@ -160,5 +163,5 @@ nextRelease:
 		extra = append(extra, rel)
 	}
 
-	return intersection, releaseLocks, extra
+	return intersection, missing, extra
 }
