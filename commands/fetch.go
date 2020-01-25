@@ -5,6 +5,8 @@ import (
 	"github.com/pivotal-cf/kiln/release"
 	"log"
 	"os"
+	"sort"
+	"strings"
 
 	"gopkg.in/src-d/go-billy.v4/osfs"
 
@@ -147,6 +149,20 @@ func (f Fetch) Usage() jhanda.Usage {
 	}
 }
 
+type sortableReleaseLocks []cargo.ReleaseLock
+
+func (locks sortableReleaseLocks) Len() int {
+	return len(locks)
+}
+
+func (locks sortableReleaseLocks) Less(i, j int) bool {
+	return strings.Compare(locks[i].Name, locks[j].Name) < 0
+}
+
+func (locks sortableReleaseLocks) Swap(i, j int) {
+	locks[i], locks[j] = locks[j], locks[i]
+}
+
 func partition(releaseLocks []cargo.ReleaseLock, localReleases []release.Local) (intersection []release.Local, missing []cargo.ReleaseLock, extra []release.Local) {
 	lockMap := make(map[release.ID]cargo.ReleaseLock)
 	for _, lock := range releaseLocks {
@@ -164,10 +180,11 @@ func partition(releaseLocks []cargo.ReleaseLock, localReleases []release.Local) 
 		}
 	}
 
-	missing = make([]cargo.ReleaseLock, 0, len(lockMap))
+	sortedMissing := make(sortableReleaseLocks, 0, len(lockMap))
 	for _, lock := range lockMap {
-		missing = append(missing, lock)
+		sortedMissing = append(sortedMissing, lock)
 	}
+	sort.Sort(sortedMissing)
 
-	return intersection, missing, extra
+	return intersection, sortedMissing, extra
 }
