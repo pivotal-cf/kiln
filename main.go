@@ -74,6 +74,7 @@ func main() {
 		ReleaseUploaderFactory: releaseSourcesFactory,
 		Logger:                 outLogger,
 	}
+	commandSet["sync-with-local"] = commands.NewSyncWithLocal(kilnfileLoader, fs, localReleaseDirectory, releaseSourcesFactory, outLogger)
 	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
 
 	// update-stemcell isn't currently used and may be deleted or changed in the future
@@ -115,7 +116,7 @@ func bakeCommand(fs billy.Filesystem, releasesService baking.ReleasesService, ou
 	runtimeConfigsService := baking.NewRuntimeConfigsService(errLogger, runtimeConfigsDirectoryReader)
 
 	iconService := baking.NewIconService(errLogger)
-	
+
 	metadataService := baking.NewMetadataService()
 	checksummer := baking.NewChecksummer(errLogger)
 

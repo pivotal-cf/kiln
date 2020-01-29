@@ -71,15 +71,10 @@ func (src S3ReleaseSource) ID() string {
 
 //go:generate counterfeiter -o ./fakes/s3_request_failure.go --fake-name S3RequestFailure github.com/aws/aws-sdk-go/service/s3.RequestFailure
 func (src S3ReleaseSource) GetMatchedRelease(requirement release.Requirement) (release.Remote, bool, error) {
-	t := src.pathTemplate()
-
-	pathBuf := new(bytes.Buffer)
-	err := t.Execute(pathBuf, requirement)
+	remotePath, err := src.RemotePath(requirement)
 	if err != nil {
-		return release.Remote{}, false, fmt.Errorf("unable to evaluate path_template: %w", err)
+		return release.Remote{}, false, err
 	}
-
-	remotePath := pathBuf.String()
 
 	headRequest := new(s3.HeadObjectInput)
 	headRequest.SetBucket(src.Bucket)
@@ -145,13 +140,15 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease rele
 }
 
 func (src S3ReleaseSource) UploadRelease(name, version string, file io.Reader) error {
-	pathBuf := new(bytes.Buffer)
-	err := src.pathTemplate().Execute(pathBuf, release.ID{Name: name, Version: version})
+	remotePath, err := src.RemotePath(release.Requirement{
+		Name:            name,
+		Version:         version,
+		StemcellOS:      "",
+		StemcellVersion: "",
+	})
 	if err != nil {
-		return fmt.Errorf("unable to evaluate path_template: %w", err)
+		return err
 	}
-
-	remotePath := pathBuf.String()
 
 	src.Logger.Printf("Uploading release to %s at %q...\n", src.ID(), remotePath)
 
@@ -165,6 +162,17 @@ func (src S3ReleaseSource) UploadRelease(name, version string, file io.Reader) e
 	}
 
 	return nil
+}
+
+func (src S3ReleaseSource) RemotePath(requirement release.Requirement) (string, error) {
+	pathBuf := new(bytes.Buffer)
+
+	err := src.pathTemplate().Execute(pathBuf, requirement)
+	if err != nil {
+		return "", fmt.Errorf("unable to evaluate path_template: %w", err)
+	}
+
+	return pathBuf.String(), nil
 }
 
 func (src S3ReleaseSource) pathTemplate() *template.Template {

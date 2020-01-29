@@ -104,11 +104,10 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 	outputReleaseManifest := ReleaseManifest{
 		Name:            inputReleaseManifest.Name,
 		Version:         inputReleaseManifest.Version,
+		File:            filepath.Base(releaseTarball),
 		StemcellOS:      stemcellOS,
 		StemcellVersion: stemcellVersion,
 	}
-
-	outputReleaseManifest.File = filepath.Base(releaseTarball)
 
 	_, err = file.Seek(0, 0)
 	if err != nil {
@@ -124,6 +123,7 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 	outputReleaseManifest.SHA1 = fmt.Sprintf("%x", hash.Sum(nil))
 
 	return Part{
+		File:     releaseTarball,
 		Name:     inputReleaseManifest.Name,
 		Metadata: outputReleaseManifest,
 	}, nil

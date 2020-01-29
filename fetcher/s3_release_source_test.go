@@ -257,4 +257,44 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 		})
 	})
+
+	Describe("RemotePath", func() {
+		var (
+			releaseSource *S3ReleaseSource
+			requirement   release.Requirement
+		)
+
+		BeforeEach(func() {
+			releaseSource = &S3ReleaseSource{
+				S3Uploader:   nil,
+				Bucket:       "orange-bucket",
+				Logger:       log.New(GinkgoWriter, "", 0),
+				PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+			}
+			requirement = release.Requirement{
+				Name:            "bob",
+				Version:         "2.0",
+				StemcellOS:      "plan9",
+				StemcellVersion: "42",
+			}
+		})
+
+		It("returns the remote path for the given requirement", func() {
+			path, err := releaseSource.RemotePath(requirement)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(path).To(Equal("bob/bob-2.0-plan9-42.tgz"))
+		})
+
+		When("there is an error evaluating the path template", func() {
+			BeforeEach(func() {
+				releaseSource.PathTemplate = "{{.NoSuchField}}"
+			})
+
+			It("returns a descriptive error", func() {
+				_, err := releaseSource.RemotePath(requirement)
+
+				Expect(err).To(MatchError(ContainSubstring(`unable to evaluate path_template`)))
+			})
+		})
+	})
 })

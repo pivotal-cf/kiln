@@ -98,6 +98,7 @@ compiled_packages:
 			releaseManifest, err = reader.Read(tarball.Name())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(releaseManifest).To(Equal(Part{
+				File: tarball.Name(),
 				Name: "release",
 				Metadata: ReleaseManifest{
 					Name:            "release",
@@ -123,6 +124,7 @@ version: 1.2.3
 				releaseManifest, err = reader.Read(tarball.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(releaseManifest).To(Equal(Part{
+					File: tarball.Name(),
 					Name: "release",
 					Metadata: ReleaseManifest{
 						Name:            "release",

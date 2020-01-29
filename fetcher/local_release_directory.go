@@ -4,16 +4,14 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"github.com/pivotal-cf/kiln/builder"
+	"github.com/pivotal-cf/kiln/internal/baking"
 	release "github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 	"io"
 	"log"
 	"os"
-	"path/filepath"
-
-	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/internal/baking"
 )
 
 type LocalReleaseDirectory struct {
@@ -31,15 +29,15 @@ func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.Release
 func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]release.Local, error) {
 	var outputReleases []release.Local
 
-	rawReleases, err := l.releasesService.FromDirectories([]string{releasesDir})
+	rawReleases, err := l.releasesService.ReleasesInDirectory(releasesDir)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, rel := range rawReleases {
-		releaseManifest := rel.(builder.ReleaseManifest)
+		releaseManifest := rel.Metadata.(builder.ReleaseManifest)
 		id := release.ID{Name: releaseManifest.Name, Version: releaseManifest.Version}
-		localPath := filepath.Join(releasesDir, releaseManifest.File)
+		localPath := rel.File
 		sha1, err := CalculateSum(localPath, osfs.New(""))
 
 		if err != nil {

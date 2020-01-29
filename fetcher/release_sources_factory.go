@@ -28,6 +28,11 @@ type ReleaseUploader interface {
 	UploadRelease(name, version string, file io.Reader) error
 }
 
+//go:generate counterfeiter -o ./fakes/remote_pather.go --fake-name RemotePather . RemotePather
+type RemotePather interface {
+	RemotePath(release.Requirement) (string, error)
+}
+
 type releaseSourceFunction func(cargo.Kilnfile, bool) MultiReleaseSource
 
 func (rsf releaseSourceFunction) ReleaseSource(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) ReleaseSource {
@@ -65,6 +70,39 @@ func (rsf releaseSourceFunction) ReleaseUploader(sourceID string, kilnfile cargo
 	}
 
 	return uploader, nil
+}
+
+func (rsf releaseSourceFunction) RemotePather(sourceID string, kilnfile cargo.Kilnfile) (RemotePather, error) {
+	var (
+		pather       RemotePather
+		availableIDs []string
+	)
+	sources := rsf(kilnfile, false)
+
+	for _, src := range sources {
+		u, ok := src.(RemotePather)
+		if !ok {
+			continue
+		}
+		availableIDs = append(availableIDs, src.ID())
+		if src.ID() == sourceID {
+			pather = u
+			break
+		}
+	}
+
+	if len(availableIDs) == 0 {
+		return nil, errors.New("no path-generating release sources were found in the Kilnfile")
+	}
+
+	if pather == nil {
+		return nil, fmt.Errorf(
+			"could not find a valid matching release source in the Kilnfile, available path-generating sources are: %q",
+			availableIDs,
+		)
+	}
+
+	return pather, nil
 }
 
 func NewReleaseSourceFactory(outLogger *log.Logger) releaseSourceFunction {

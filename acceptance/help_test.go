@@ -21,6 +21,7 @@ Commands:
   fetch            fetches releases
   help             prints this usage information
   publish          publish tile on Pivnet
+  sync-with-local  update the Kilnfile.lock based on local releases
   update-release   bumps a release to a new version
   update-stemcell  updates stemcell_criteria
   upload-release   uploads a BOSH release to an s3 release_source

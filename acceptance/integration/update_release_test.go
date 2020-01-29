@@ -120,14 +120,12 @@ stemcell_criteria:
 		BeforeEach(func() {
 			kilnfileContents = `---
 release_sources:
-- id: compiled-releases
-  type: s3
+- type: s3
   bucket: compiled-releases
   region: us-west-1
   access_key_id: $(variable "aws_access_key_id")
   secret_access_key: $(variable "aws_secret_access_key")
   path_template: 2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz
-  compiled: true
   publishable: true
 `
 			previousKilnfileLock = `---

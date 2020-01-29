@@ -186,4 +186,72 @@ var _ = Describe("ReleaseSourceFactory", func() {
 			})
 		})
 	})
+
+	Describe("RemotePather", func() {
+		var (
+			rpFactory commands.RemotePatherFactory
+			kilnfile  cargo.Kilnfile
+		)
+
+		JustBeforeEach(func() {
+			rpFactory = NewReleaseSourceFactory(log.New(GinkgoWriter, "", log.LstdFlags))
+		})
+
+		BeforeEach(func() {
+			kilnfile = cargo.Kilnfile{
+				ReleaseSources: []cargo.ReleaseSourceConfig{
+					{Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
+						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`},
+					{Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}.tgz`},
+					{Type: "bosh.io"},
+					{Type: "s3", Bucket: "bucket-3", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+						PathTemplate: `{{.Name}}-{{.Version}}.tgz`},
+				},
+			}
+		})
+
+		Context("when the named source exists and implements RemotePath", func() {
+			It("returns a valid release uploader", func() {
+				uploader, err := rpFactory.RemotePather("bucket-2", kilnfile)
+				Expect(err).NotTo(HaveOccurred())
+
+				var s3ReleaseSource S3ReleaseSource
+				Expect(uploader).To(BeAssignableToTypeOf(s3ReleaseSource))
+			})
+		})
+
+		Context("when no sources implement RemotePath", func() {
+			BeforeEach(func() {
+				kilnfile = cargo.Kilnfile{
+					ReleaseSources: []cargo.ReleaseSourceConfig{{Type: "bosh.io"}},
+				}
+			})
+
+			It("errors", func() {
+				_, err := rpFactory.RemotePather("bosh.io", kilnfile)
+				Expect(err).To(MatchError(ContainSubstring("no path-generating release sources were found")))
+			})
+		})
+
+		Context("when the named source doesn't implement RemotePath", func() {
+			It("errors with a list of valid sources", func() {
+				_, err := rpFactory.RemotePather("bosh.io", kilnfile)
+				Expect(err).To(MatchError(ContainSubstring("could not find a valid matching release source")))
+				Expect(err).To(MatchError(ContainSubstring("bucket-1")))
+				Expect(err).To(MatchError(ContainSubstring("bucket-2")))
+				Expect(err).To(MatchError(ContainSubstring("bucket-3")))
+			})
+		})
+
+		Context("when the named source doesn't exist", func() {
+			It("errors with a list of valid sources", func() {
+				_, err := rpFactory.RemotePather("bucket-42", kilnfile)
+				Expect(err).To(MatchError(ContainSubstring("could not find a valid matching release source")))
+				Expect(err).To(MatchError(ContainSubstring("bucket-1")))
+				Expect(err).To(MatchError(ContainSubstring("bucket-2")))
+				Expect(err).To(MatchError(ContainSubstring("bucket-3")))
+			})
+		})
+	})
 })
