@@ -75,11 +75,12 @@ release_sources:
 		Expect(ioutil.WriteFile(kilnfilePath, []byte(kilnfileContents), _readOnly)).To(Succeed())
 		Expect(ioutil.WriteFile(kilnfileLockPath, []byte(previousKilnfileLock), _readOnly)).To(Succeed())
 
-		expectedReleaseSHA = test_helpers.WriteReleaseTarball(
+		expectedReleaseSHA, err = test_helpers.WriteReleaseTarball(
 			fmt.Sprintf("%s/loggregator-agent-5.3.6.tgz", loggregatorReleaseDirPath),
 			"loggregator-agent",
 			"5.3.6",
 			osfs.New(""))
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("updates the Kilnfile.lock", func() {

@@ -62,7 +62,7 @@ var _ = Describe("sync-with-local", func() {
 						SHA1:         "old-sha-2",
 					},
 				},
-				Stemcell: cargo.Stemcell{},
+				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 			}
 
 			localReleaseDirectory = new(fakes.LocalReleaseDirectory)
@@ -101,12 +101,7 @@ var _ = Describe("sync-with-local", func() {
 		})
 
 		JustBeforeEach(func() {
-			kilnfileLoader.LoadKilnfilesReturns(cargo.Kilnfile{
-				Stemcell:        cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
-				ReleaseSources:  nil,
-				Slug:            "",
-				PreGaUserGroups: nil,
-			}, kilnfileLock, nil)
+			kilnfileLoader.LoadKilnfilesReturns(cargo.Kilnfile{}, kilnfileLock, nil)
 		})
 
 		It("updates the Kilnfile.lock to have the same version as the local releases", func() {

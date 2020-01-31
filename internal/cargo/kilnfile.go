@@ -6,7 +6,6 @@ type KilnfileLock struct {
 }
 
 type Kilnfile struct {
-	Stemcell        Stemcell              `yaml:"stemcell_criteria"`
 	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources"`
 	Slug            string                `yaml:"slug"`
 	PreGaUserGroups []string              `yaml:"pre_ga_user_groups"`

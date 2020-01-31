@@ -10,45 +10,77 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	. "github.com/onsi/gomega"
 )
 
-func WriteReleaseTarball(path, name, version string, fs billy.Filesystem) string {
-	f, err := fs.Create(path)
-	Expect(err).NotTo(HaveOccurred())
-
-	gw := gzip.NewWriter(f)
-	tw := tar.NewWriter(gw)
-
+func WriteReleaseTarball(path, name, version string, fs billy.Filesystem) (string, error) {
 	releaseManifest := `
 name: ` + name + `
 version: ` + version + `
 `
-	manifestReader := strings.NewReader(releaseManifest)
+	return WriteTarballWithFile(path, "release.MF", releaseManifest, fs)
+}
+
+func WriteStemcellTarball(path, operatingSystem, version string, fs billy.Filesystem) (string, error) {
+	releaseManifest := `
+operating_system: ` + operatingSystem + `
+version: ` + version + `
+`
+	return WriteTarballWithFile(path, "stemcell.MF", releaseManifest, fs)
+}
+
+func WriteTarballWithFile(tarballPath, internalFilePath, fileContents string, fs billy.Filesystem) (string, error) {
+	f, err := fs.Create(tarballPath)
+	if err != nil {
+		return "", err
+	}
+
+	gw := gzip.NewWriter(f)
+	tw := tar.NewWriter(gw)
+
+	contentsReader := strings.NewReader(fileContents)
 
 	header := &tar.Header{
-		Name:    "release.MF",
-		Size:    manifestReader.Size(),
+		Name:    internalFilePath,
+		Size:    contentsReader.Size(),
 		Mode:    int64(os.O_RDONLY),
 		ModTime: time.Now(),
 	}
-	Expect(tw.WriteHeader(header)).To(Succeed())
+	err = tw.WriteHeader(header)
+	if err != nil {
+		return "", err
+	}
 
-	_, err = io.Copy(tw, manifestReader)
-	Expect(err).NotTo(HaveOccurred())
+	_, err = io.Copy(tw, contentsReader)
+	if err != nil {
+		return "", err
+	}
 
-	Expect(tw.Close()).To(Succeed())
-	Expect(gw.Close()).To(Succeed())
-	Expect(f.Close()).To(Succeed())
+	err = tw.Close()
+	if err != nil {
+		return "", err
+	}
 
-	tarball, err := fs.Open(path)
-	Expect(err).NotTo(HaveOccurred())
+	err = gw.Close()
+	if err != nil {
+		return "", err
+	}
+
+	err = f.Close()
+	if err != nil {
+		return "", err
+	}
+
+	tarball, err := fs.Open(tarballPath)
+	if err != nil {
+		return "", err
+	}
 	defer tarball.Close()
 
 	hash := sha1.New()
 	_, err = io.Copy(hash, tarball)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return "", err
+	}
 
-	return fmt.Sprintf("%x", hash.Sum(nil))
+	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }

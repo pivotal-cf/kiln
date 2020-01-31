@@ -77,8 +77,11 @@ func main() {
 	commandSet["sync-with-local"] = commands.NewSyncWithLocal(kilnfileLoader, fs, localReleaseDirectory, releaseSourcesFactory, outLogger)
 	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
 
-	// update-stemcell isn't currently used and may be deleted or changed in the future
-	commandSet["update-stemcell"] = commands.UpdateStemcell{StemcellsVersionsService: new(fetcher.Pivnet)}
+	commandSet["update-stemcell"] = commands.UpdateStemcell{
+		KilnfileLoader: kilnfileLoader,
+		ReleaseSourceFactory: releaseSourcesFactory,
+		Logger: outLogger,
+	}
 
 	err = commandSet.Execute(command, args)
 	if err != nil {

@@ -44,7 +44,10 @@ var _ = Describe("UploadRelease", func() {
 				Logger:                 log.New(GinkgoWriter, "", 0),
 				ReleaseUploaderFactory: releaseUploaderFactory,
 			}
-			expectedReleaseSHA = test_helpers.WriteReleaseTarball("banana-release.tgz", "banana", "1.2.3", fs)
+
+			var err error
+			expectedReleaseSHA, err = test_helpers.WriteReleaseTarball("banana-release.tgz", "banana", "1.2.3", fs)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		When("it receives a correct tarball path", func() {
