@@ -31,7 +31,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 		return err
 	}
 
-	fmt.Println("Parsing stemcell manifest...")
+	update.Logger.Println("Parsing stemcell manifest...")
 	fs := helper.NewFilesystem()
 	part, err := builder.NewStemcellManifestReader(fs).Read(update.Options.StemcellFile)
 	if err != nil {
@@ -61,7 +61,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 	releaseSource := update.ReleaseSourceFactory.ReleaseSource(kilnfile, false)
 
 	for i, rel := range kilnfileLock.Releases {
-		fmt.Printf("Updating release %q with stemcell %s %s...", rel.Name, newStemcellOS, newStemcellVersion)
+		update.Logger.Printf("Updating release %q with stemcell %s %s...", rel.Name, newStemcellOS, newStemcellVersion)
 
 		remote, found, err := releaseSource.GetMatchedRelease(release.Requirement{
 			Name:            rel.Name,
