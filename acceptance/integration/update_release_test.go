@@ -17,7 +17,47 @@ import (
 )
 
 var _ = Context("Updating a release to a specific version", func() {
-	var kilnfileContents, previousKilnfileLock, kilnfileLockPath, kilnfilePath, releasesPath string
+	var (
+		kilnfileContents,
+		previousKilnfileLock,
+		kilnfileLockPath,
+		kilnfilePath,
+		releasesPath,
+		varsFilePath,
+		tmpDir string
+
+		varsFileContents = os.Getenv("KILN_ACCEPTANCE_VARS_FILE_CONTENTS")
+	)
+
+	BeforeEach(func() {
+		var err error
+		tmpDir, err = ioutil.TempDir("", "kiln-main-test")
+		Expect(err).NotTo(HaveOccurred())
+
+		kilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
+		kilnfilePath = filepath.Join(tmpDir, "Kilnfile")
+		releasesPath = filepath.Join(tmpDir, "releases")
+
+		Expect(
+			os.Mkdir(releasesPath, 0700),
+		).To(Succeed())
+	})
+
+	AfterEach(func(){
+		Expect(
+			os.RemoveAll(tmpDir),
+		).To(Succeed())
+	})
+
+	JustBeforeEach(func() {
+		Expect(
+			ioutil.WriteFile(kilnfilePath, []byte(kilnfileContents), 0600),
+		).To(Succeed())
+
+		Expect(
+			ioutil.WriteFile(kilnfileLockPath, []byte(previousKilnfileLock), 0600),
+		).To(Succeed())
+	})
 
 	Context("for public releases", func() {
 		BeforeEach(func() {
@@ -41,15 +81,6 @@ stemcell_criteria:
   os: some-os
   version: "4.5.6"
 `
-			tmpDir, err := ioutil.TempDir("", "kiln-main-test")
-			Expect(err).NotTo(HaveOccurred())
-
-			kilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
-			kilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-			releasesPath = filepath.Join(tmpDir, "releases")
-			ioutil.WriteFile(kilnfilePath, []byte(kilnfileContents), 0600)
-			ioutil.WriteFile(kilnfileLockPath, []byte(previousKilnfileLock), 0600)
-			os.Mkdir(releasesPath, 0700)
 		})
 
 		It("updates the Kilnfile.lock", func() {
@@ -118,6 +149,10 @@ stemcell_criteria:
 
 	Context("for private releases (on S3)", func() {
 		BeforeEach(func() {
+			if varsFileContents == "" {
+				Fail("please provide the KILN_ACCEPTANCE_VARS_FILE_CONTENTS environment variable")
+			}
+
 			kilnfileContents = `---
 release_sources:
 - type: s3
@@ -144,36 +179,21 @@ stemcell_criteria:
   os: ubuntu-xenial
   version: '456.30'
 `
-			tmpDir, err := ioutil.TempDir("", "kiln-main-test")
-			Expect(err).NotTo(HaveOccurred())
 
-			kilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
-			kilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-			releasesPath = filepath.Join(tmpDir, "releases")
+			varsFilePath = filepath.Join(tmpDir, "variables.yml")
 
-			_ = ioutil.WriteFile(kilnfilePath, []byte(kilnfileContents), 0600)
-			_ = ioutil.WriteFile(kilnfileLockPath, []byte(previousKilnfileLock), 0600)
-			_ = os.Mkdir(releasesPath, 0700)
+			Expect(
+				ioutil.WriteFile(varsFilePath, []byte(varsFileContents), 0600),
+			).To(Succeed())
 		})
 
 		It("updates the Kilnfile.lock", func() {
-			varsFile := os.Getenv("KILN_ACCEPTANCE_VARS_FILE_CONTENTS")
-			if varsFile == "" {
-				Fail("please provide the KILN_ACCEPTANCE_VARS_FILE_CONTENTS environment variable")
-			}
-
-			tmpfile, err := ioutil.TempFile("", "varsfile")
-			Expect(err).NotTo(HaveOccurred())
-
-			tmpfile.Write([]byte(varsFile))
-			tmpfile.Close()
-
 			command := exec.Command(pathToMain, "update-release",
 				"--name", "capi",
 				"--version", "1.86.0",
 				"--kilnfile", kilnfilePath,
 				"--releases-directory", releasesPath,
-				"--variables-file", tmpfile.Name(),
+				"--variables-file", varsFilePath,
 			)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)

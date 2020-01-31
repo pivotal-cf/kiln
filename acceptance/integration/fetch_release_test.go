@@ -15,24 +15,35 @@ import (
 var _ = Describe("fetch", func() {
 	var (
 		tmpDir string
+		varsFilePath string
 
 		productDirectory   = os.Getenv("PRODUCT_DIRECTORY")
-		awsAccessKeyID     = os.Getenv("AWS_ACCESS_KEY_ID")
-		awsSecretAccessKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
+		varsFileContents = os.Getenv("KILN_ACCEPTANCE_VARS_FILE_CONTENTS")
 	)
 
 	BeforeEach(func() {
-		Expect(productDirectory).NotTo(BeEmpty())
-		Expect(awsAccessKeyID).NotTo(BeEmpty())
-		Expect(awsSecretAccessKey).NotTo(BeEmpty())
+		if varsFileContents == "" {
+			Fail("please provide the KILN_ACCEPTANCE_VARS_FILE_CONTENTS environment variable")
+		}
+
+		if productDirectory == "" {
+			Fail("please provide the PRODUCT_DIRECTORY environment variable (usually the path to p-isolation-segment)")
+		}
 
 		var err error
 		tmpDir, err = ioutil.TempDir("", "kiln-fetch")
 		Expect(err).NotTo(HaveOccurred())
+
+		varsFilePath = filepath.Join(tmpDir, "variables.yml")
+		Expect(
+			ioutil.WriteFile(varsFilePath, []byte(varsFileContents), 0600),
+		).To(Succeed())
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(tmpDir)).To(Succeed())
+		Expect(
+			os.RemoveAll(tmpDir),
+		).To(Succeed())
 	})
 
 	It("fetches releases", func() {
@@ -40,8 +51,7 @@ var _ = Describe("fetch", func() {
 			"--kilnfile", filepath.Join(productDirectory, "Kilnfile"),
 			"--releases-directory", tmpDir,
 			"--download-threads", "8",
-			"--variable", "aws_access_key_id="+awsAccessKeyID,
-			"--variable", "aws_secret_access_key="+awsSecretAccessKey,
+			"--variables-file", varsFilePath,
 		)
 
 		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
