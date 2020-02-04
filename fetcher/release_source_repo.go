@@ -31,7 +31,7 @@ type MultiReleaseSource interface {
 //go:generate counterfeiter -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
 type ReleaseUploader interface {
 	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
-	UploadRelease(name, version string, file io.Reader) error
+	UploadRelease(spec release.Requirement, file io.Reader) error
 }
 
 //go:generate counterfeiter -o ./fakes/remote_pather.go --fake-name RemotePather . RemotePather

@@ -4,17 +4,18 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	"io"
+	"log"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
-	"github.com/pivotal-cf/kiln/internal/test-helpers"
+	test_helpers "github.com/pivotal-cf/kiln/internal/test-helpers"
 	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/memfs"
-	"io"
-	"log"
 )
 
 var _ = Describe("UploadRelease", func() {
@@ -61,9 +62,9 @@ var _ = Describe("UploadRelease", func() {
 
 				Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(1))
 
-				name, version, file := releaseUploader.UploadReleaseArgsForCall(0)
-				Expect(name).To(Equal("banana"))
-				Expect(version).To(Equal("1.2.3"))
+				spec, file := releaseUploader.UploadReleaseArgsForCall(0)
+				Expect(spec.Name).To(Equal("banana"))
+				Expect(spec.Version).To(Equal("1.2.3"))
 
 				hash := sha1.New()
 				_, err = io.Copy(hash, file)

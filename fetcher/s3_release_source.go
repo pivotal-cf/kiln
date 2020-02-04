@@ -5,13 +5,14 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"github.com/pivotal-cf/kiln/release"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/pivotal-cf/kiln/release"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -144,13 +145,8 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease rele
 	return release.Local{ID: remoteRelease.ID, LocalPath: outputFile, SHA1: sha1}, nil
 }
 
-func (src S3ReleaseSource) UploadRelease(name, version string, file io.Reader) error {
-	remotePath, err := src.RemotePath(release.Requirement{
-		Name:            name,
-		Version:         version,
-		StemcellOS:      "",
-		StemcellVersion: "",
-	})
+func (src S3ReleaseSource) UploadRelease(spec release.Requirement, file io.Reader) error {
+	remotePath, err := src.RemotePath(spec)
 	if err != nil {
 		return err
 	}

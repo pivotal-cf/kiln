@@ -3,14 +3,15 @@ package fetcher_test
 import (
 	"errors"
 	"fmt"
-	. "github.com/onsi/gomega/gstruct"
-	"gopkg.in/src-d/go-billy.v4/osfs"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	. "github.com/onsi/gomega/gstruct"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 
 	"github.com/pivotal-cf/kiln/release"
 
@@ -230,7 +231,10 @@ var _ = Describe("S3ReleaseSource", func() {
 		Context("happy path", func() {
 			It("uploads the file to the correct location", func() {
 				Expect(
-					releaseSource.UploadRelease("banana", "1.2.3", file),
+					releaseSource.UploadRelease(release.Requirement{
+						Name:    "banana",
+						Version: "1.2.3",
+					}, file),
 				).To(Succeed())
 
 				Expect(s3Uploader.UploadCallCount()).To(Equal(1))
@@ -251,7 +255,10 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns a descriptive error", func() {
-				err := releaseSource.UploadRelease("banana", "1.2.3", file)
+				err := releaseSource.UploadRelease(release.Requirement{
+					Name:    "banana",
+					Version: "1.2.3",
+				}, file)
 
 				Expect(err).To(MatchError(ContainSubstring(`unable to evaluate path_template`)))
 			})

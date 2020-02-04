@@ -2,10 +2,11 @@ package commands
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/release"
-	"log"
 
 	"github.com/pivotal-cf/kiln/builder"
 
@@ -77,7 +78,10 @@ func (command UploadRelease) Execute(args []string) error {
 			manifest.Name, manifest.Version, command.Options.ReleaseSource)
 	}
 
-	err = releaseSource.UploadRelease(manifest.Name, manifest.Version, file)
+	err = releaseSource.UploadRelease(release.Requirement{
+		Name:    manifest.Name,
+		Version: manifest.Version,
+	}, file)
 	if err != nil {
 		return fmt.Errorf("error uploading the release: %w", err)
 	}
