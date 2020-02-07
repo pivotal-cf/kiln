@@ -16,7 +16,7 @@ import (
 type Fetch struct {
 	logger *log.Logger
 
-	releaseSourcesFactory ReleaseSourceFactory
+	multiReleaseSourceProvider MultiReleaseSourceProvider
 	localReleaseDirectory LocalReleaseDirectory
 
 	Options struct {
@@ -31,16 +31,14 @@ type Fetch struct {
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/release_source_factory.go --fake-name ReleaseSourceFactory . ReleaseSourceFactory
-type ReleaseSourceFactory interface {
-	ReleaseSource(cargo.Kilnfile, bool) fetcher.ReleaseSource
-}
+//go:generate counterfeiter -o ./fakes/multi_release_source_provider.go --fake-name MultiReleaseSourceProvider . MultiReleaseSourceProvider
+type MultiReleaseSourceProvider func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource
 
-func NewFetch(logger *log.Logger, releaseSourcesFactory ReleaseSourceFactory, localReleaseDirectory LocalReleaseDirectory) Fetch {
+func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
 		logger:                logger,
 		localReleaseDirectory: localReleaseDirectory,
-		releaseSourcesFactory: releaseSourcesFactory,
+		multiReleaseSourceProvider: multiReleaseSourceProvider,
 	}
 }
 
@@ -107,7 +105,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []rele
 }
 
 func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ReleaseLock) ([]release.Local, error) {
-	releaseSource := f.releaseSourcesFactory.ReleaseSource(kilnfile, f.Options.AllowOnlyPublishableReleases)
+	releaseSource := f.multiReleaseSourceProvider(kilnfile, f.Options.AllowOnlyPublishableReleases)
 
 	var downloaded []release.Local
 

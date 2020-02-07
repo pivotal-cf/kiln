@@ -23,23 +23,21 @@ type SyncWithLocal struct {
 	kilnfileLoader        KilnfileLoader
 	localReleaseDirectory LocalReleaseDirectory
 	logger                *log.Logger
-	remotePatherFactory   RemotePatherFactory
+	remotePatherFinder    RemotePatherFinder
 }
 
-func NewSyncWithLocal(kilnfileLoader KilnfileLoader, fs billy.Filesystem, localReleaseDirectory LocalReleaseDirectory, remotePatherFactory RemotePatherFactory, logger *log.Logger) SyncWithLocal {
+func NewSyncWithLocal(kilnfileLoader KilnfileLoader, fs billy.Filesystem, localReleaseDirectory LocalReleaseDirectory, remotePatherFinder RemotePatherFinder, logger *log.Logger) SyncWithLocal {
 	return SyncWithLocal{
 		fs:                    fs,
 		kilnfileLoader:        kilnfileLoader,
 		localReleaseDirectory: localReleaseDirectory,
 		logger:                logger,
-		remotePatherFactory:   remotePatherFactory,
+		remotePatherFinder:    remotePatherFinder,
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/remote_pather_factory.go --fake-name RemotePatherFactory . RemotePatherFactory
-type RemotePatherFactory interface {
-	RemotePather(sourceID string, kilnfile cargo.Kilnfile) (fetcher.RemotePather, error)
-}
+//go:generate counterfeiter -o ./fakes/remote_pather_finder.go --fake-name RemotePatherFinder . RemotePatherFinder
+type RemotePatherFinder func(cargo.Kilnfile, string) (fetcher.RemotePather, error)
 
 func (command SyncWithLocal) Execute(args []string) error {
 	_, err := jhanda.Parse(&command.Options, args)
@@ -57,7 +55,7 @@ func (command SyncWithLocal) Execute(args []string) error {
 		return fmt.Errorf("couldn't load kilnfiles: %w", err) // untested
 	}
 
-	remotePather, err := command.remotePatherFactory.RemotePather(command.Options.ReleaseSourceID, kilnfile)
+	remotePather, err := command.remotePatherFinder(kilnfile, command.Options.ReleaseSourceID)
 	if err != nil {
 		return fmt.Errorf("couldn't load the release source: %w", err) // untested
 	}

@@ -52,6 +52,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 				releaseSource = NewBOSHIOReleaseSource(
 					logger,
+					false,
 					testServer.URL(),
 				)
 			})
@@ -96,6 +97,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 				releaseSource = NewBOSHIOReleaseSource(
 					logger,
+					false,
 					testServer.URL(),
 				)
 			})
@@ -128,6 +130,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 				releaseSource = NewBOSHIOReleaseSource(
 					log.New(GinkgoWriter, "", 0),
+					false,
 					testServer.URL(),
 				)
 
@@ -163,6 +166,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 				releaseSource = NewBOSHIOReleaseSource(
 					log.New(GinkgoWriter, "", 0),
+					false,
 					testServer.URL(),
 				)
 			})
@@ -245,6 +249,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 			releaseSource = NewBOSHIOReleaseSource(
 				log.New(GinkgoWriter, "", 0),
+				false,
 				testServer.URL(),
 			)
 

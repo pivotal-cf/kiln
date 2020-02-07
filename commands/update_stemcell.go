@@ -20,9 +20,9 @@ type UpdateStemcell struct {
 		StemcellFile   string   `short:"sf" long:"stemcell-file" description:"path to the stemcell tarball on disk"`
 		ReleasesDir    string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 	}
-	KilnfileLoader       KilnfileLoader
-	ReleaseSourceFactory ReleaseSourceFactory
-	Logger               *log.Logger
+	KilnfileLoader             KilnfileLoader
+	MultiReleaseSourceProvider MultiReleaseSourceProvider
+	Logger                     *log.Logger
 }
 
 func (update UpdateStemcell) Execute(args []string) error {
@@ -58,7 +58,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 		return nil
 	}
 
-	releaseSource := update.ReleaseSourceFactory.ReleaseSource(kilnfile, false)
+	releaseSource := update.MultiReleaseSourceProvider(kilnfile, false)
 
 	for i, rel := range kilnfileLock.Releases {
 		update.Logger.Printf("Updating release %q with stemcell %s %s...", rel.Name, newStemcellOS, newStemcellVersion)

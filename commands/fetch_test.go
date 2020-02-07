@@ -3,6 +3,7 @@ package commands_test
 import (
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/cargo"
 	"io/ioutil"
 	"log"
 	"os"
@@ -31,12 +32,12 @@ var _ = Describe("Fetch", func() {
 		someKilnfileLockPath        string
 		lockContents                string
 		someReleasesDirectory       string
-		fakeS3CompiledReleaseSource *fetcherFakes.ReleaseSourceWithID
-		fakeBoshIOReleaseSource     *fetcherFakes.ReleaseSourceWithID
-		fakeS3BuiltReleaseSource    *fetcherFakes.ReleaseSourceWithID
+		fakeS3CompiledReleaseSource *fetcherFakes.ReleaseSource
+		fakeBoshIOReleaseSource     *fetcherFakes.ReleaseSource
+		fakeS3BuiltReleaseSource    *fetcherFakes.ReleaseSource
 		fakeReleaseSources          fetcher.MultiReleaseSource
 		fakeLocalReleaseDirectory   *fakes.LocalReleaseDirectory
-		releaseSourceFactory        *fakes.ReleaseSourceFactory
+		multiReleaseSourceProvider  MultiReleaseSourceProvider
 
 		fetchExecuteArgs []string
 		fetchExecuteErr  error
@@ -77,18 +78,17 @@ stemcell_criteria:
 
 			fakeLocalReleaseDirectory = new(fakes.LocalReleaseDirectory)
 
-			fakeS3CompiledReleaseSource = new(fetcherFakes.ReleaseSourceWithID)
+			fakeS3CompiledReleaseSource = new(fetcherFakes.ReleaseSource)
 			fakeS3CompiledReleaseSource.IDReturns(s3CompiledReleaseSourceID)
-			fakeBoshIOReleaseSource = new(fetcherFakes.ReleaseSourceWithID)
+			fakeBoshIOReleaseSource = new(fetcherFakes.ReleaseSource)
 			fakeBoshIOReleaseSource.IDReturns(boshIOReleaseSourceID)
-			fakeS3BuiltReleaseSource = new(fetcherFakes.ReleaseSourceWithID)
+			fakeS3BuiltReleaseSource = new(fetcherFakes.ReleaseSource)
 			fakeS3BuiltReleaseSource.IDReturns(s3BuiltReleaseSourceID)
 
 			fetchExecuteArgs = []string{
 				"--releases-directory", someReleasesDirectory,
 				"--kilnfile", someKilnfilePath,
 			}
-			releaseSourceFactory = new(fakes.ReleaseSourceFactory)
 		})
 
 		AfterEach(func() {
@@ -96,12 +96,14 @@ stemcell_criteria:
 		})
 
 		JustBeforeEach(func() {
-			fakeReleaseSources = fetcher.MultiReleaseSource{fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource}
-			releaseSourceFactory.ReleaseSourceReturns(fakeReleaseSources)
+			fakeReleaseSources = fetcher.NewMultiReleaseSource(fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource)
+			multiReleaseSourceProvider = func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
+				return fakeReleaseSources
+			}
 
 			err := ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0644)
 			Expect(err).NotTo(HaveOccurred())
-			fetch = NewFetch(logger, releaseSourceFactory, fakeLocalReleaseDirectory)
+			fetch = NewFetch(logger, multiReleaseSourceProvider, fakeLocalReleaseDirectory)
 
 			fetchExecuteErr = fetch.Execute(fetchExecuteArgs)
 		})

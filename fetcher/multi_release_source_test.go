@@ -9,10 +9,10 @@ import (
 	"github.com/pivotal-cf/kiln/release"
 )
 
-var _ = Describe("MultiReleaseSource", func() {
+var _ = Describe("multiReleaseSource", func() {
 	var (
 		multiSrc         MultiReleaseSource
-		src1, src2, src3 *fakes.ReleaseSourceWithID
+		src1, src2, src3 *fakes.ReleaseSource
 		requirement      release.Requirement
 	)
 
@@ -22,13 +22,13 @@ var _ = Describe("MultiReleaseSource", func() {
 	)
 
 	BeforeEach(func() {
-		src1 = new(fakes.ReleaseSourceWithID)
+		src1 = new(fakes.ReleaseSource)
 		src1.IDReturns("src-1")
-		src2 = new(fakes.ReleaseSourceWithID)
+		src2 = new(fakes.ReleaseSource)
 		src2.IDReturns("src-2")
-		src3 = new(fakes.ReleaseSourceWithID)
+		src3 = new(fakes.ReleaseSource)
 		src3.IDReturns("src-3")
-		multiSrc = MultiReleaseSource{src1, src2, src3}
+		multiSrc = NewMultiReleaseSource(src1, src2, src3)
 
 		requirement = release.Requirement{
 			Name:            releaseName,

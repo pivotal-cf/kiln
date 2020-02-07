@@ -51,10 +51,11 @@ var suffixes = []string{
 
 type BOSHIOReleaseSource struct {
 	serverURI string
+	publishable bool
 	logger    *log.Logger
 }
 
-func NewBOSHIOReleaseSource(logger *log.Logger, customServerURI string) *BOSHIOReleaseSource {
+func NewBOSHIOReleaseSource(logger *log.Logger, publishable bool, customServerURI string) *BOSHIOReleaseSource {
 	if customServerURI == "" {
 		customServerURI = "https://bosh.io"
 	}
@@ -62,11 +63,16 @@ func NewBOSHIOReleaseSource(logger *log.Logger, customServerURI string) *BOSHIOR
 	return &BOSHIOReleaseSource{
 		logger:    logger,
 		serverURI: customServerURI,
+		publishable: publishable,
 	}
 }
 
 func (src BOSHIOReleaseSource) ID() string {
 	return ReleaseSourceTypeBOSHIO
+}
+
+func (src BOSHIOReleaseSource) Publishable() bool {
+	return src.publishable
 }
 
 func (src *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {

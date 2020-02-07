@@ -134,8 +134,8 @@ stemcell_criteria:
 				}
 			})
 
-			releaseSourceFactory := new(fakes.ReleaseSourceFactory)
-			releaseSourceFactory.ReleaseSourceReturns(releaseSource)
+			multiReleaseSourceProvider := new(fakes.MultiReleaseSourceProvider)
+			multiReleaseSourceProvider.Returns(releaseSource)
 
 			tmpDir, err = ioutil.TempDir("", "fetch-test")
 			Expect(err).NotTo(HaveOccurred())
@@ -158,9 +158,9 @@ stemcell_criteria:
 			logger := log.New(outputBuffer, "", 0)
 
 			update = &UpdateStemcell{
-				KilnfileLoader:       kilnfileLoader,
-				ReleaseSourceFactory: releaseSourceFactory,
-				Logger:               logger,
+				KilnfileLoader:             kilnfileLoader,
+				MultiReleaseSourceProvider: multiReleaseSourceProvider.Spy,
+				Logger:                     logger,
 			}
 		})
 

@@ -43,6 +43,7 @@ type S3ReleaseSource struct {
 	S3Uploader   S3Uploader
 	Bucket       string
 	PathTemplate string
+	IsPublishable bool
 }
 
 func (src *S3ReleaseSource) Configure(config cargo.ReleaseSourceConfig) {
@@ -67,6 +68,10 @@ func (src *S3ReleaseSource) Configure(config cargo.ReleaseSourceConfig) {
 
 func (src S3ReleaseSource) ID() string {
 	return src.Bucket
+}
+
+func (src S3ReleaseSource) Publishable() bool {
+	return src.IsPublishable
 }
 
 //go:generate counterfeiter -o ./fakes/s3_request_failure.go --fake-name S3RequestFailure github.com/aws/aws-sdk-go/service/s3.RequestFailure

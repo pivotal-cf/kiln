@@ -59,28 +59,39 @@ func main() {
 	releaseManifestReader := builder.NewReleaseManifestReader(fs)
 	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
 	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(outLogger, releasesService)
-	releaseSourcesFactory := fetcher.NewReleaseSourceFactory(outLogger)
 	kilnfileLoader := cargo.KilnfileLoader{}
+	mrsProvider := commands.MultiReleaseSourceProvider(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
+		repo := fetcher.NewReleaseSourceRepo(kilnfile, outLogger)
+		return repo.MultiReleaseSource(allowOnlyPublishable)
+	})
+	ruFinder := commands.ReleaseUploaderFinder(func(kilnfile cargo.Kilnfile, sourceID string) (fetcher.ReleaseUploader, error) {
+		repo := fetcher.NewReleaseSourceRepo(kilnfile, outLogger)
+		return repo.FindReleaseUploader(sourceID)
+	})
+	rpFinder := commands.RemotePatherFinder(func(kilnfile cargo.Kilnfile, sourceID string) (fetcher.RemotePather, error) {
+		repo := fetcher.NewReleaseSourceRepo(kilnfile, outLogger)
+		return repo.FindRemotePather(sourceID)
+	})
 
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 	commandSet["bake"] = bakeCommand(fs, releasesService, outLogger, errLogger)
-	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, releaseSourcesFactory, kilnfileLoader)
-	commandSet["fetch"] = commands.NewFetch(outLogger, releaseSourcesFactory, localReleaseDirectory)
+	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider, kilnfileLoader)
+	commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 	commandSet["upload-release"] = commands.UploadRelease{
-		FS:                     fs,
-		KilnfileLoader:         kilnfileLoader,
-		ReleaseUploaderFactory: releaseSourcesFactory,
-		Logger:                 outLogger,
+		FS:                    fs,
+		KilnfileLoader:        kilnfileLoader,
+		ReleaseUploaderFinder: ruFinder,
+		Logger:                outLogger,
 	}
-	commandSet["sync-with-local"] = commands.NewSyncWithLocal(kilnfileLoader, fs, localReleaseDirectory, releaseSourcesFactory, outLogger)
+	commandSet["sync-with-local"] = commands.NewSyncWithLocal(kilnfileLoader, fs, localReleaseDirectory, rpFinder, outLogger)
 	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
 
 	commandSet["update-stemcell"] = commands.UpdateStemcell{
-		KilnfileLoader: kilnfileLoader,
-		ReleaseSourceFactory: releaseSourcesFactory,
-		Logger: outLogger,
+		KilnfileLoader:             kilnfileLoader,
+		MultiReleaseSourceProvider: mrsProvider,
+		Logger:                     outLogger,
 	}
 
 	err = commandSet.Execute(command, args)

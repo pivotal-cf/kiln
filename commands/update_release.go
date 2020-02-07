@@ -22,18 +22,18 @@ type UpdateRelease struct {
 		VariablesFiles               []string `short:"vf" long:"variables-file" description:"path to variables file"`
 		AllowOnlyPublishableReleases bool     `long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
 	}
-	releaseSourceFactory ReleaseSourceFactory
-	filesystem           billy.Filesystem
-	logger               *log.Logger
-	loader               KilnfileLoader
+	multiReleaseSourceProvider MultiReleaseSourceProvider
+	filesystem                 billy.Filesystem
+	logger                     *log.Logger
+	loader                     KilnfileLoader
 }
 
-func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, releaseSourceFactory ReleaseSourceFactory, loader KilnfileLoader) UpdateRelease {
+func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, multiReleaseSourceProvider MultiReleaseSourceProvider, loader KilnfileLoader) UpdateRelease {
 	return UpdateRelease{
-		logger:               logger,
-		releaseSourceFactory: releaseSourceFactory,
-		filesystem:           filesystem,
-		loader:               loader,
+		logger:                     logger,
+		multiReleaseSourceProvider: multiReleaseSourceProvider,
+		filesystem:                 filesystem,
+		loader:                     loader,
 	}
 }
 
@@ -54,7 +54,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
-	releaseSource := u.releaseSourceFactory.ReleaseSource(kilnfile, u.Options.AllowOnlyPublishableReleases)
+	releaseSource := u.multiReleaseSourceProvider(kilnfile, u.Options.AllowOnlyPublishableReleases)
 
 	u.logger.Println("Searching for the release...")
 	remoteRelease, found, err := releaseSource.GetMatchedRelease(release.Requirement{

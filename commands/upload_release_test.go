@@ -20,10 +20,10 @@ import (
 var _ = Describe("UploadRelease", func() {
 	Context("Execute", func() {
 		var (
-			fs                     billy.Filesystem
-			loader                 *fakes.KilnfileLoader
-			releaseUploaderFactory *fakes.ReleaseUploaderFactory
-			releaseUploader        *fetcherFakes.ReleaseUploader
+			fs                    billy.Filesystem
+			loader                *fakes.KilnfileLoader
+			releaseUploaderFinder *fakes.ReleaseUploaderFinder
+			releaseUploader       *fetcherFakes.ReleaseUploader
 
 			uploadRelease commands.UploadRelease
 
@@ -35,14 +35,14 @@ var _ = Describe("UploadRelease", func() {
 			loader = new(fakes.KilnfileLoader)
 
 			releaseUploader = new(fetcherFakes.ReleaseUploader)
-			releaseUploaderFactory = new(fakes.ReleaseUploaderFactory)
-			releaseUploaderFactory.ReleaseUploaderReturns(releaseUploader, nil)
+			releaseUploaderFinder = new(fakes.ReleaseUploaderFinder)
+			releaseUploaderFinder.Returns(releaseUploader, nil)
 
 			uploadRelease = commands.UploadRelease{
-				FS:                     fs,
-				KilnfileLoader:         loader,
-				Logger:                 log.New(GinkgoWriter, "", 0),
-				ReleaseUploaderFactory: releaseUploaderFactory,
+				FS:                    fs,
+				KilnfileLoader:        loader,
+				Logger:                log.New(GinkgoWriter, "", 0),
+				ReleaseUploaderFinder: releaseUploaderFinder.Spy,
 			}
 
 			var err error
@@ -120,7 +120,7 @@ var _ = Describe("UploadRelease", func() {
 		When("the given release source doesn't exist", func() {
 			When("there's an error finding the release source", func() {
 				BeforeEach(func() {
-					releaseUploaderFactory.ReleaseUploaderReturns(nil, errors.New("no release source eligible"))
+					releaseUploaderFinder.Returns(nil, errors.New("no release source eligible"))
 				})
 
 				It("returns the error", func() {

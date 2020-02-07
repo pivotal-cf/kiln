@@ -6,20 +6,117 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/pivotal-cf/kiln/commands"
 	. "github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
-var _ = Describe("ReleaseSourceFactory", func() {
-	Describe("ReleaseSource", func() {
+var _ = Describe("ReleaseSourceRepo", func() {
+	var logger *log.Logger
+
+	BeforeEach(func() {
+		logger = log.New(GinkgoWriter, "", log.LstdFlags)
+	})
+
+	Describe("NewReleaseSourceRepo", func() {
+		var kilnfile cargo.Kilnfile
+
+		Context("happy path", func() {
+			BeforeEach(func() {
+				kilnfile = cargo.Kilnfile{
+					ReleaseSources: []cargo.ReleaseSourceConfig{
+						{Type: "s3", Bucket: "compiled-releases", Region: "us-west-1", Publishable: true},
+						{Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false},
+						{Type: "bosh.io", Publishable: false},
+					},
+				}
+			})
+
+			It("constructs the ReleaseSources properly", func() {
+				repo := NewReleaseSourceRepo(kilnfile, logger)
+				releaseSources := repo.ReleaseSources
+
+				Expect(releaseSources).To(HaveLen(3))
+				var (
+					s3ReleaseSource     S3ReleaseSource
+					boshIOReleaseSource *BOSHIOReleaseSource
+				)
+
+				Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3ReleaseSource))
+				Expect(releaseSources[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Bucket":       Equal(kilnfile.ReleaseSources[0].Bucket),
+					"PathTemplate": Equal(kilnfile.ReleaseSources[0].PathTemplate),
+				}))
+				Expect(releaseSources[0].(S3ReleaseSource).Publishable()).To(BeTrue())
+
+				Expect(releaseSources[1]).To(BeAssignableToTypeOf(s3ReleaseSource))
+				Expect(releaseSources[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Bucket":       Equal(kilnfile.ReleaseSources[1].Bucket),
+					"PathTemplate": Equal(kilnfile.ReleaseSources[1].PathTemplate),
+				}))
+				Expect(releaseSources[1].(S3ReleaseSource).Publishable()).To(BeFalse())
+
+				Expect(releaseSources[2]).To(BeAssignableToTypeOf(boshIOReleaseSource))
+				Expect(releaseSources[2].(*BOSHIOReleaseSource).Publishable()).To(BeFalse())
+			})
+
+		})
+
+		Context("when bosh.io is publishable", func() {
+			BeforeEach(func() {
+				kilnfile = cargo.Kilnfile{
+					ReleaseSources: []cargo.ReleaseSourceConfig{
+						{Type: "bosh.io", Publishable: true},
+					},
+				}
+			})
+
+			It("marks it correctly", func() {
+				repo := NewReleaseSourceRepo(kilnfile, logger)
+				releaseSources := repo.ReleaseSources
+
+				Expect(releaseSources).To(HaveLen(1))
+				var (
+					boshIOReleaseSource *BOSHIOReleaseSource
+				)
+
+				Expect(releaseSources[0]).To(BeAssignableToTypeOf(boshIOReleaseSource))
+				Expect(releaseSources[0].(*BOSHIOReleaseSource).Publishable()).To(BeTrue())
+			})
+		})
+
+		Context("when there are duplicate release source identifiers", func() {
+
+			BeforeEach(func() {
+				kilnfile = cargo.Kilnfile{
+					ReleaseSources: []cargo.ReleaseSourceConfig{
+						{Type: "s3", Bucket: "some-bucket", Region: "us-west-1"},
+						{Type: "s3", Bucket: "some-bucket", Region: "us-west-1"},
+					},
+				}
+			})
+
+			It("panics with a helpful message", func() {
+				var r interface{}
+				func() {
+					defer func() {
+						r = recover()
+					}()
+					NewReleaseSourceRepo(kilnfile, logger)
+				}()
+				Expect(r).To(ContainSubstring("unique"))
+				Expect(r).To(ContainSubstring(`"some-bucket"`))
+			})
+		})
+	})
+
+	Describe("multiReleaseSource", func() {
 		var (
-			rsFactory commands.ReleaseSourceFactory
-			kilnfile  cargo.Kilnfile
+			repo     ReleaseSourceRepo
+			kilnfile cargo.Kilnfile
 		)
 
 		JustBeforeEach(func() {
-			rsFactory = NewReleaseSourceFactory(log.New(GinkgoWriter, "", log.LstdFlags))
+			repo = NewReleaseSourceRepo(kilnfile, logger)
 		})
 
 		Context("when allow-only-publishable-releases is false", func() {
@@ -38,7 +135,7 @@ var _ = Describe("ReleaseSourceFactory", func() {
 			})
 
 			It("builds the correct release sources", func() {
-				releaseSources := rsFactory.ReleaseSource(kilnfile, false).(MultiReleaseSource)
+				releaseSources := repo.MultiReleaseSource(false)
 				Expect(releaseSources).To(HaveLen(4))
 				var (
 					s3ReleaseSource     S3ReleaseSource
@@ -76,14 +173,14 @@ var _ = Describe("ReleaseSourceFactory", func() {
 						{Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
 							PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}.tgz`},
 						{Type: "bosh.io"},
-						{Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+						{Type: "s3", Bucket: "bucket-3", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
 							PathTemplate: `{{.Name}}-{{.Version}}.tgz`},
 					},
 				}
 			})
 
 			It("builds the correct release sources", func() {
-				releaseSources := rsFactory.ReleaseSource(kilnfile, true).(MultiReleaseSource)
+				releaseSources := repo.MultiReleaseSource(true)
 				Expect(releaseSources).To(HaveLen(1))
 				var s3ReleaseSource S3ReleaseSource
 
@@ -92,41 +189,23 @@ var _ = Describe("ReleaseSourceFactory", func() {
 					"Bucket":       Equal(kilnfile.ReleaseSources[0].Bucket),
 					"PathTemplate": Equal(kilnfile.ReleaseSources[0].PathTemplate),
 				}))
-			})
-		})
 
-		Context("when there are duplicate release source identifiers", func() {
-			BeforeEach(func() {
-				kilnfile = cargo.Kilnfile{
-					ReleaseSources: []cargo.ReleaseSourceConfig{
-						{Type: "s3", Bucket: "some-bucket", Region: "us-west-1"},
-						{Type: "s3", Bucket: "some-bucket", Region: "us-west-1"},
-					},
-				}
-			})
+				releaseSource, ok := releaseSources[0].(ReleaseSource)
+				Expect(ok).To(BeTrue(), "Couldn't convert releaseSources[0] to type ReleaseSource")
+				Expect(releaseSource.Publishable()).To(BeTrue())
 
-			It("builds the correct release sources", func() {
-				var r interface{}
-				func() {
-					defer func() {
-						r = recover()
-					}()
-					rsFactory.ReleaseSource(kilnfile, false)
-				}()
-				Expect(r).To(ContainSubstring("unique"))
-				Expect(r).To(ContainSubstring(`"some-bucket"`))
 			})
 		})
 	})
 
-	Describe("ReleaseUploader", func() {
+	Describe("FindReleaseUploader", func() {
 		var (
-			ruFactory commands.ReleaseUploaderFactory
-			kilnfile  cargo.Kilnfile
+			repo     ReleaseSourceRepo
+			kilnfile cargo.Kilnfile
 		)
 
 		JustBeforeEach(func() {
-			ruFactory = NewReleaseSourceFactory(log.New(GinkgoWriter, "", log.LstdFlags))
+			repo = NewReleaseSourceRepo(kilnfile, logger)
 		})
 
 		BeforeEach(func() {
@@ -145,7 +224,7 @@ var _ = Describe("ReleaseSourceFactory", func() {
 
 		Context("when the named source exists and accepts uploads", func() {
 			It("returns a valid release uploader", func() {
-				uploader, err := ruFactory.ReleaseUploader("bucket-2", kilnfile)
+				uploader, err := repo.FindReleaseUploader("bucket-2")
 				Expect(err).NotTo(HaveOccurred())
 
 				var s3ReleaseSource S3ReleaseSource
@@ -161,14 +240,14 @@ var _ = Describe("ReleaseSourceFactory", func() {
 			})
 
 			It("errors", func() {
-				_, err := ruFactory.ReleaseUploader("bosh.io", kilnfile)
+				_, err := repo.FindReleaseUploader("bosh.io")
 				Expect(err).To(MatchError(ContainSubstring("no upload-capable release sources were found")))
 			})
 		})
 
 		Context("when the named source doesn't accept uploads", func() {
 			It("errors with a list of valid sources", func() {
-				_, err := ruFactory.ReleaseUploader("bosh.io", kilnfile)
+				_, err := repo.FindReleaseUploader("bosh.io")
 				Expect(err).To(MatchError(ContainSubstring("could not find a valid matching release source")))
 				Expect(err).To(MatchError(ContainSubstring("bucket-1")))
 				Expect(err).To(MatchError(ContainSubstring("bucket-2")))
@@ -178,7 +257,7 @@ var _ = Describe("ReleaseSourceFactory", func() {
 
 		Context("when the named source doesn't exist", func() {
 			It("errors with a list of valid sources", func() {
-				_, err := ruFactory.ReleaseUploader("bucket-42", kilnfile)
+				_, err := repo.FindReleaseUploader("bucket-42")
 				Expect(err).To(MatchError(ContainSubstring("could not find a valid matching release source")))
 				Expect(err).To(MatchError(ContainSubstring("bucket-1")))
 				Expect(err).To(MatchError(ContainSubstring("bucket-2")))
@@ -189,12 +268,12 @@ var _ = Describe("ReleaseSourceFactory", func() {
 
 	Describe("RemotePather", func() {
 		var (
-			rpFactory commands.RemotePatherFactory
-			kilnfile  cargo.Kilnfile
+			repo     ReleaseSourceRepo
+			kilnfile cargo.Kilnfile
 		)
 
 		JustBeforeEach(func() {
-			rpFactory = NewReleaseSourceFactory(log.New(GinkgoWriter, "", log.LstdFlags))
+			repo = NewReleaseSourceRepo(kilnfile, logger)
 		})
 
 		BeforeEach(func() {
@@ -213,7 +292,7 @@ var _ = Describe("ReleaseSourceFactory", func() {
 
 		Context("when the named source exists and implements RemotePath", func() {
 			It("returns a valid release uploader", func() {
-				uploader, err := rpFactory.RemotePather("bucket-2", kilnfile)
+				uploader, err := repo.FindRemotePather("bucket-2")
 				Expect(err).NotTo(HaveOccurred())
 
 				var s3ReleaseSource S3ReleaseSource
@@ -229,14 +308,14 @@ var _ = Describe("ReleaseSourceFactory", func() {
 			})
 
 			It("errors", func() {
-				_, err := rpFactory.RemotePather("bosh.io", kilnfile)
+				_, err := repo.FindRemotePather("bosh.io")
 				Expect(err).To(MatchError(ContainSubstring("no path-generating release sources were found")))
 			})
 		})
 
 		Context("when the named source doesn't implement RemotePath", func() {
 			It("errors with a list of valid sources", func() {
-				_, err := rpFactory.RemotePather("bosh.io", kilnfile)
+				_, err := repo.FindRemotePather("bosh.io")
 				Expect(err).To(MatchError(ContainSubstring("could not find a valid matching release source")))
 				Expect(err).To(MatchError(ContainSubstring("bucket-1")))
 				Expect(err).To(MatchError(ContainSubstring("bucket-2")))
@@ -246,7 +325,7 @@ var _ = Describe("ReleaseSourceFactory", func() {
 
 		Context("when the named source doesn't exist", func() {
 			It("errors with a list of valid sources", func() {
-				_, err := rpFactory.RemotePather("bucket-42", kilnfile)
+				_, err := repo.FindRemotePather("bucket-42")
 				Expect(err).To(MatchError(ContainSubstring("could not find a valid matching release source")))
 				Expect(err).To(MatchError(ContainSubstring("bucket-1")))
 				Expect(err).To(MatchError(ContainSubstring("bucket-2")))

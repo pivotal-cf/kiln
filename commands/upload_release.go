@@ -14,10 +14,10 @@ import (
 )
 
 type UploadRelease struct {
-	FS                     billy.Filesystem
-	KilnfileLoader         KilnfileLoader
-	ReleaseUploaderFactory ReleaseUploaderFactory
-	Logger                 *log.Logger
+	FS                    billy.Filesystem
+	KilnfileLoader        KilnfileLoader
+	ReleaseUploaderFinder ReleaseUploaderFinder
+	Logger                *log.Logger
 
 	Options struct {
 		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
@@ -29,10 +29,8 @@ type UploadRelease struct {
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/release_uploader_factory.go --fake-name ReleaseUploaderFactory . ReleaseUploaderFactory
-type ReleaseUploaderFactory interface {
-	ReleaseUploader(sourceID string, kilnfile cargo.Kilnfile) (fetcher.ReleaseUploader, error)
-}
+//go:generate counterfeiter -o ./fakes/release_uploader_finder.go --fake-name ReleaseUploaderFinder . ReleaseUploaderFinder
+type ReleaseUploaderFinder func(cargo.Kilnfile, string) (fetcher.ReleaseUploader, error)
 
 func (command UploadRelease) Execute(args []string) error {
 	_, err := jhanda.Parse(&command.Options, args)
@@ -50,7 +48,7 @@ func (command UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
-	releaseSource, err := command.ReleaseUploaderFactory.ReleaseUploader(command.Options.ReleaseSource, kilnfile)
+	releaseSource, err := command.ReleaseUploaderFinder(kilnfile, command.Options.ReleaseSource)
 	if err != nil {
 		return fmt.Errorf("error finding release source: %w", err)
 	}

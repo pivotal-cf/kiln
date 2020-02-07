@@ -37,7 +37,7 @@ var _ = Describe("sync-with-local", func() {
 			syncWithLocal         SyncWithLocal
 			kilnfileLoader        *fakes.KilnfileLoader
 			localReleaseDirectory *fakes.LocalReleaseDirectory
-			remotePatherFactory   *fakes.RemotePatherFactory
+			remotePatherFinder    *fakes.RemotePatherFinder
 			remotePather          *fetcherFakes.RemotePather
 			fs                    billy.Filesystem
 			kilnfileLock          cargo.KilnfileLock
@@ -79,10 +79,10 @@ var _ = Describe("sync-with-local", func() {
 				},
 			}, nil)
 
-			remotePatherFactory = new(fakes.RemotePatherFactory)
+			remotePatherFinder = new(fakes.RemotePatherFinder)
 			remotePather = new(fetcherFakes.RemotePather)
 
-			remotePatherFactory.RemotePatherReturns(remotePather, nil)
+			remotePatherFinder.Returns(remotePather, nil)
 			remotePather.RemotePathCalls(func(requirement release.Requirement) (path string, err error) {
 				switch requirement.Name {
 				case release1Name:
@@ -97,7 +97,7 @@ var _ = Describe("sync-with-local", func() {
 			fs = memfs.New()
 			logger := log.New(GinkgoWriter, "", 0)
 
-			syncWithLocal = NewSyncWithLocal(kilnfileLoader, fs, localReleaseDirectory, remotePatherFactory, logger)
+			syncWithLocal = NewSyncWithLocal(kilnfileLoader, fs, localReleaseDirectory, remotePatherFinder.Spy, logger)
 		})
 
 		JustBeforeEach(func() {

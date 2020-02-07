@@ -3,10 +3,9 @@ package fetcher
 import (
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/release"
 	"io"
 	"log"
-
-	"github.com/pivotal-cf/kiln/release"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
@@ -18,6 +17,13 @@ const (
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
+	MultiReleaseSource
+	ID() string
+	Publishable() bool
+}
+
+//go:generate counterfeiter -o ./fakes/multi_release_source.go --fake-name MultiReleaseSource . MultiReleaseSource
+type MultiReleaseSource interface {
 	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
 	DownloadRelease(releasesDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error)
 }
@@ -33,20 +39,39 @@ type RemotePather interface {
 	RemotePath(release.Requirement) (string, error)
 }
 
-type releaseSourceFunction func(cargo.Kilnfile, bool) MultiReleaseSource
-
-func (rsf releaseSourceFunction) ReleaseSource(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) ReleaseSource {
-	return rsf(kilnfile, allowOnlyPublishable)
+type ReleaseSourceRepo struct {
+	ReleaseSources []ReleaseSource
 }
 
-func (rsf releaseSourceFunction) ReleaseUploader(sourceID string, kilnfile cargo.Kilnfile) (ReleaseUploader, error) {
+func NewReleaseSourceRepo(kilnfile cargo.Kilnfile, logger *log.Logger) ReleaseSourceRepo {
+	var releaseSources multiReleaseSource
+
+	for _, releaseConfig := range kilnfile.ReleaseSources {
+		releaseSources = append(releaseSources, releaseSourceFor(releaseConfig, logger))
+	}
+
+	panicIfDuplicateIDs(releaseSources)
+
+	return ReleaseSourceRepo{ReleaseSources: releaseSources}
+}
+
+func (repo ReleaseSourceRepo) MultiReleaseSource(allowOnlyPublishable bool) multiReleaseSource {
+	var sources []ReleaseSource
+	for _, source := range repo.ReleaseSources {
+		if !allowOnlyPublishable || source.Publishable() {
+			sources = append(sources, source)
+		}
+	}
+
+	return multiReleaseSource(sources)
+}
+
+func (repo ReleaseSourceRepo) FindReleaseUploader(sourceID string) (ReleaseUploader, error) {
 	var (
 		uploader     ReleaseUploader
 		availableIDs []string
 	)
-	sources := rsf(kilnfile, false)
-
-	for _, src := range sources {
+	for _, src := range repo.ReleaseSources {
 		u, ok := src.(ReleaseUploader)
 		if !ok {
 			continue
@@ -72,14 +97,13 @@ func (rsf releaseSourceFunction) ReleaseUploader(sourceID string, kilnfile cargo
 	return uploader, nil
 }
 
-func (rsf releaseSourceFunction) RemotePather(sourceID string, kilnfile cargo.Kilnfile) (RemotePather, error) {
+func (repo ReleaseSourceRepo) FindRemotePather(sourceID string) (RemotePather, error) {
 	var (
 		pather       RemotePather
 		availableIDs []string
 	)
-	sources := rsf(kilnfile, false)
 
-	for _, src := range sources {
+	for _, src := range repo.ReleaseSources {
 		u, ok := src.(RemotePather)
 		if !ok {
 			continue
@@ -105,29 +129,12 @@ func (rsf releaseSourceFunction) RemotePather(sourceID string, kilnfile cargo.Ki
 	return pather, nil
 }
 
-func NewReleaseSourceFactory(outLogger *log.Logger) releaseSourceFunction {
-	return func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) MultiReleaseSource {
-		var releaseSources MultiReleaseSource
-
-		for _, releaseConfig := range kilnfile.ReleaseSources {
-			if allowOnlyPublishable && !releaseConfig.Publishable {
-				continue
-			}
-			releaseSources = append(releaseSources, releaseSourceFor(releaseConfig, outLogger))
-		}
-
-		panicIfDuplicateIDs(releaseSources)
-
-		return releaseSources
-	}
-}
-
-func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSourceWithID {
+func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
 	switch releaseConfig.Type {
 	case ReleaseSourceTypeBOSHIO:
-		return NewBOSHIOReleaseSource(outLogger, "")
+		return NewBOSHIOReleaseSource(outLogger, releaseConfig.Publishable, "")
 	case ReleaseSourceTypeS3:
-		s3ReleaseSource := S3ReleaseSource{Logger: outLogger}
+		s3ReleaseSource := S3ReleaseSource{Logger: outLogger, IsPublishable: releaseConfig.Publishable}
 		s3ReleaseSource.Configure(releaseConfig)
 		return s3ReleaseSource
 	default:
@@ -135,7 +142,7 @@ func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Lo
 	}
 }
 
-func panicIfDuplicateIDs(releaseSources []ReleaseSourceWithID) {
+func panicIfDuplicateIDs(releaseSources []ReleaseSource) {
 	indexOfID := make(map[string]int)
 	for index, rs := range releaseSources {
 		id := rs.ID()

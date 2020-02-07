@@ -35,7 +35,7 @@ var _ = Describe("UpdateRelease", func() {
 		updateReleaseCommand      UpdateRelease
 		preexistingKilnfileLock   []byte
 		filesystem                billy.Filesystem
-		releaseSourceFactory      *fakes.ReleaseSourceFactory
+		multiReleaseSourceProvider      *fakes.MultiReleaseSourceProvider
 		releaseSource             *fetcherFakes.ReleaseSource
 		logger                    *log.Logger
 		downloadedReleasePath     string
@@ -46,10 +46,10 @@ var _ = Describe("UpdateRelease", func() {
 
 	Context("Execute", func() {
 		BeforeEach(func() {
-			releaseSourceFactory = new(fakes.ReleaseSourceFactory)
 			kilnFileLoader = new(fakes.KilnfileLoader)
 			releaseSource = new(fetcherFakes.ReleaseSource)
-			releaseSourceFactory.ReleaseSourceReturns(releaseSource)
+			multiReleaseSourceProvider = new(fakes.MultiReleaseSourceProvider)
+			multiReleaseSourceProvider.Returns(releaseSource)
 
 			filesystem = osfs.New("/tmp/")
 
@@ -108,7 +108,7 @@ var _ = Describe("UpdateRelease", func() {
 		})
 
 		JustBeforeEach(func() {
-			updateReleaseCommand = NewUpdateRelease(logger, filesystem, releaseSourceFactory, kilnFileLoader)
+			updateReleaseCommand = NewUpdateRelease(logger, filesystem, multiReleaseSourceProvider.Spy, kilnFileLoader)
 		})
 
 		When("updating to a version that exists in the remote", func() {
@@ -187,8 +187,8 @@ var _ = Describe("UpdateRelease", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(releaseSourceFactory.ReleaseSourceCallCount()).To(Equal(1))
-				_, allowOnlyPublishable := releaseSourceFactory.ReleaseSourceArgsForCall(0)
+				Expect(multiReleaseSourceProvider.CallCount()).To(Equal(1))
+				_, allowOnlyPublishable := multiReleaseSourceProvider.ArgsForCall(0)
 				Expect(allowOnlyPublishable).To(BeFalse())
 			})
 		})
@@ -213,8 +213,8 @@ var _ = Describe("UpdateRelease", func() {
 				})
 				Expect(err).To(MatchError(downloadErr))
 
-				Expect(releaseSourceFactory.ReleaseSourceCallCount()).To(Equal(1))
-				_, allowOnlyPublishable := releaseSourceFactory.ReleaseSourceArgsForCall(0)
+				Expect(multiReleaseSourceProvider.CallCount()).To(Equal(1))
+				_, allowOnlyPublishable := multiReleaseSourceProvider.ArgsForCall(0)
 				Expect(allowOnlyPublishable).To(BeTrue())
 			})
 		})
