@@ -14,10 +14,10 @@ import (
 
 type UpdateStemcell struct {
 	Options struct {
-		Kilnfile       string   `short:"kf" long:"kilnfile" required:"true" description:"path to Kilnfile"`
-		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
-		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
-		StemcellFile   string   `short:"sf" long:"stemcell-file" description:"path to the stemcell tarball on disk"`
+		Kilnfile       string   `short:"kf" long:"kilnfile"           default:"Kilnfile" description:"path to Kilnfile"`
+		VariablesFiles []string `short:"vf" long:"variables-file"                        description:"path to variables file"`
+		Variables      []string `short:"vr" long:"variable"                              description:"variable in key=value format"`
+		StemcellFile   string   `short:"sf" long:"stemcell-file"                         description:"path to the stemcell tarball on disk"`
 		ReleasesDir    string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 	}
 	KilnfileLoader             KilnfileLoader
