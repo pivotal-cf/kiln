@@ -1,9 +1,10 @@
 package main
 
 import (
-	"gopkg.in/src-d/go-billy.v4"
 	"log"
 	"os"
+
+	"gopkg.in/src-d/go-billy.v4"
 
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/commands"
@@ -82,16 +83,23 @@ func main() {
 	commandSet["upload-release"] = commands.UploadRelease{
 		FS:                    fs,
 		KilnfileLoader:        kilnfileLoader,
-		ReleaseUploaderFinder: ruFinder,
 		Logger:                outLogger,
+		ReleaseUploaderFinder: ruFinder,
 	}
 	commandSet["sync-with-local"] = commands.NewSyncWithLocal(kilnfileLoader, fs, localReleaseDirectory, rpFinder, outLogger)
 	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
 
 	commandSet["update-stemcell"] = commands.UpdateStemcell{
-		KilnfileLoader:             kilnfileLoader,
+		KilnfileLoader:       kilnfileLoader,
+		Logger:               outLogger,
 		MultiReleaseSourceProvider: mrsProvider,
-		Logger:                     outLogger,
+	}
+	commandSet["compile-built-releases"] = commands.CompileBuiltReleases{
+		BoshDirectorFactory:    commands.BoshDirectorFactory,
+		KilnfileLoader:         kilnfileLoader,
+		Logger:                 outLogger,
+		MultiReleaseSourceProvider:   mrsProvider,
+		ReleaseUploaderFinder: ruFinder,
 	}
 
 	err = commandSet.Execute(command, args)

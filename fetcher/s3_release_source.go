@@ -49,14 +49,20 @@ type S3ReleaseSource struct {
 
 func (src *S3ReleaseSource) Configure(config cargo.ReleaseSourceConfig) {
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
-	sess := session.Must(session.NewSession(&aws.Config{
+	awsConfig := &aws.Config{
 		Region: aws.String(config.Region),
 		Credentials: credentials.NewStaticCredentials(
 			config.AccessKeyId,
 			config.SecretAccessKey,
 			"",
 		),
-	}))
+	}
+	if config.Endpoint != "" {
+		awsConfig = awsConfig.WithEndpoint(config.Endpoint)
+		awsConfig = awsConfig.WithS3ForcePathStyle(true)
+	}
+
+	sess := session.Must(session.NewSession(awsConfig))
 	client := s3.New(sess)
 
 	src.S3Client = client
@@ -151,7 +157,7 @@ func (src S3ReleaseSource) UploadRelease(spec release.Requirement, file io.Reade
 		return err
 	}
 
-	src.Logger.Printf("Uploading release to %s at %q...\n", src.ID(), remotePath)
+	src.Logger.Printf("uploading release %q to %s at %q...\n", spec.Name, src.ID(), remotePath)
 
 	_, err = src.S3Uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(src.Bucket),

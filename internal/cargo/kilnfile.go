@@ -19,6 +19,7 @@ type ReleaseSourceConfig struct {
 	SecretAccessKey string `yaml:"secret_access_key"`
 	PathTemplate    string `yaml:"path_template"`
 	Publishable     bool   `yaml:"publishable"`
+	Endpoint        string `yaml:"endpoint"`
 }
 
 type ReleaseLock struct {

@@ -49,7 +49,7 @@ func (command UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
-	releaseSource, err := command.ReleaseUploaderFinder(kilnfile, command.Options.ReleaseSource)
+	releaseUploader, err := command.ReleaseUploaderFinder(kilnfile, command.Options.ReleaseSource)
 	if err != nil {
 		return fmt.Errorf("error finding release source: %w", err)
 	}
@@ -68,7 +68,7 @@ func (command UploadRelease) Execute(args []string) error {
 	manifest := part.Metadata.(builder.ReleaseManifest)
 
 	requirement := release.Requirement{Name: manifest.Name, Version: manifest.Version}
-	_, found, err := releaseSource.GetMatchedRelease(requirement)
+	_, found, err := releaseUploader.GetMatchedRelease(requirement)
 	if err != nil {
 		return fmt.Errorf("couldn't query release source: %w", err)
 	}
@@ -78,7 +78,7 @@ func (command UploadRelease) Execute(args []string) error {
 			manifest.Name, manifest.Version, command.Options.ReleaseSource)
 	}
 
-	err = releaseSource.UploadRelease(release.Requirement{
+	err = releaseUploader.UploadRelease(release.Requirement{
 		Name:    manifest.Name,
 		Version: manifest.Version,
 	}, file)

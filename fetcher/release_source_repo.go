@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	ReleaseSourceTypeBOSHIO = "bosh.io"
-	ReleaseSourceTypeS3     = "s3"
+	ReleaseSourceTypeBOSHIO    = "bosh.io"
+	ReleaseSourceTypeS3        = "s3"
+	DefaultDownloadThreadCount = 0
 )
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource

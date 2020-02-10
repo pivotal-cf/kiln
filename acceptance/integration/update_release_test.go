@@ -43,7 +43,7 @@ var _ = Context("Updating a release to a specific version", func() {
 		).To(Succeed())
 	})
 
-	AfterEach(func(){
+	AfterEach(func() {
 		Expect(
 			os.RemoveAll(tmpDir),
 		).To(Succeed())

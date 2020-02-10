@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/pivotal-cf/kiln/fetcher"
+
 	"github.com/pivotal-cf/kiln/release"
 
 	"github.com/pivotal-cf/jhanda"
@@ -70,7 +72,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
 	}
 
-	localRelease, err := releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease, 0)
+	localRelease, err := releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease, fetcher.DefaultDownloadThreadCount)
 	if err != nil {
 		return fmt.Errorf("error downloading the release: %w", err)
 	}

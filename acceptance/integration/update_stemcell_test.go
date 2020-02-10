@@ -100,7 +100,7 @@ stemcell_criteria:
 		).To(Succeed())
 	})
 
-	AfterEach(func(){
+	AfterEach(func() {
 		Expect(
 			os.RemoveAll(tmpDir),
 		).To(Succeed())

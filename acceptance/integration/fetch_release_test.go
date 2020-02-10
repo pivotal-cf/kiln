@@ -14,10 +14,10 @@ import (
 
 var _ = Describe("fetch", func() {
 	var (
-		tmpDir string
+		tmpDir       string
 		varsFilePath string
 
-		productDirectory   = os.Getenv("PRODUCT_DIRECTORY")
+		productDirectory = os.Getenv("PRODUCT_DIRECTORY")
 		varsFileContents = os.Getenv("KILN_ACCEPTANCE_VARS_FILE_CONTENTS")
 	)
 

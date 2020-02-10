@@ -2,14 +2,16 @@ package commands
 
 import (
 	"fmt"
+	"log"
+	"os"
+
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
+	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/helper"
 	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 	"gopkg.in/yaml.v2"
-	"log"
-	"os"
 )
 
 type UpdateStemcell struct {
@@ -81,7 +83,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 			continue
 		}
 
-		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote, 0)
+		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote, fetcher.DefaultDownloadThreadCount)
 		if err != nil {
 			return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
 		}
