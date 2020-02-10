@@ -21,12 +21,12 @@ type UploadRelease struct {
 	Logger                *log.Logger
 
 	Options struct {
+		UploadTargetID string `           long:"upload-target-id" required:"true" description:"the ID of the release source where the built release will be uploaded"`
+		LocalPath      string `short:"lp" long:"local-path"       required:"true" description:"path to BOSH release tarball"`
+
 		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
 		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
 		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
-
-		ReleaseSource string `short:"rs" long:"release-source" required:"true" description:"name of the release source specified in the Kilnfile"`
-		LocalPath     string `short:"lp" long:"local-path" required:"true" description:"path to BOSH release tarball"`
 	}
 }
 
@@ -49,7 +49,7 @@ func (command UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
-	releaseUploader, err := command.ReleaseUploaderFinder(kilnfile, command.Options.ReleaseSource)
+	releaseUploader, err := command.ReleaseUploaderFinder(kilnfile, command.Options.UploadTargetID)
 	if err != nil {
 		return fmt.Errorf("error finding release source: %w", err)
 	}
@@ -75,7 +75,7 @@ func (command UploadRelease) Execute(args []string) error {
 
 	if found {
 		return fmt.Errorf("a release with name %q and version %q already exists on %s",
-			manifest.Name, manifest.Version, command.Options.ReleaseSource)
+			manifest.Name, manifest.Version, command.Options.UploadTargetID)
 	}
 
 	err = releaseUploader.UploadRelease(release.Requirement{

@@ -55,7 +55,7 @@ var _ = Describe("UploadRelease", func() {
 			It("uploads the tarball to the release source", func() {
 				err := uploadRelease.Execute([]string{
 					"--local-path", "banana-release.tgz",
-					"--release-source", "orange-bucket",
+					"--upload-target-id", "orange-bucket",
 				})
 
 				Expect(err).NotTo(HaveOccurred())
@@ -86,7 +86,7 @@ var _ = Describe("UploadRelease", func() {
 				It("errors and does not upload", func() {
 					err := uploadRelease.Execute([]string{
 						"--local-path", "banana-release.tgz",
-						"--release-source", "orange-bucket",
+						"--upload-target-id", "orange-bucket",
 					})
 					Expect(err).To(MatchError(ContainSubstring("already exists")))
 
@@ -112,7 +112,7 @@ var _ = Describe("UploadRelease", func() {
 			It("errors", func() {
 				err := uploadRelease.Execute([]string{
 					"--local-path", "invalid-release.tgz",
-					"--release-source", "orange-bucket",
+					"--upload-target-id", "orange-bucket",
 				})
 				Expect(err).To(MatchError(ContainSubstring("error reading the release manifest")))
 			})
@@ -127,7 +127,7 @@ var _ = Describe("UploadRelease", func() {
 				It("returns the error", func() {
 					err := uploadRelease.Execute([]string{
 						"--local-path", "banana-release.tgz",
-						"--release-source", "orange-bucket",
+						"--upload-target-id", "orange-bucket",
 					})
 
 					Expect(err).To(MatchError(ContainSubstring("no release source eligible")))
@@ -143,7 +143,7 @@ var _ = Describe("UploadRelease", func() {
 			It("returns an error", func() {
 				err := uploadRelease.Execute([]string{
 					"--local-path", "banana-release.tgz",
-					"--release-source", "orange-bucket",
+					"--upload-target-id", "orange-bucket",
 				})
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(ContainSubstring("boom")))
@@ -152,7 +152,7 @@ var _ = Describe("UploadRelease", func() {
 			It("doesn't upload anything", func() {
 				_ = uploadRelease.Execute([]string{
 					"--local-path", "banana-release.tgz",
-					"--release-source", "orange-bucket",
+					"--upload-target-id", "orange-bucket",
 				})
 				Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
 			})
@@ -166,7 +166,7 @@ var _ = Describe("UploadRelease", func() {
 			It("returns an error", func() {
 				err := uploadRelease.Execute([]string{
 					"--local-path", "banana-release.tgz",
-					"--release-source", "orange-bucket",
+					"--upload-target-id", "orange-bucket",
 				})
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(ContainSubstring("upload")))
