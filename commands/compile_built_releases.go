@@ -241,18 +241,18 @@ func (f CompileBuiltReleases) uploadReleasesToDirector(builtReleases []release.R
 
 		localRelease, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease, fetcher.DefaultDownloadThreadCount)
 		if err != nil {
-			return nil,  fmt.Errorf("failure downloading built release %v: %w", remoteRelease.ID, err) // untested
+			return nil, fmt.Errorf("failure downloading built release %v: %w", remoteRelease.ID, err) // untested
 		}
 
 		builtReleaseForUploading, err := os.Open(localRelease.LocalPath)
 		if err != nil {
-			return nil,  fmt.Errorf("opening local built release %q: %w", localRelease.LocalPath, err) // untested
+			return nil, fmt.Errorf("opening local built release %q: %w", localRelease.LocalPath, err) // untested
 		}
 
 		f.Logger.Printf("uploading release %q to director\n", localRelease.LocalPath)
 		err = boshDirector.UploadReleaseFile(builtReleaseForUploading, false, false)
 		if err != nil {
-			return nil,  fmt.Errorf("failure uploading release %q to bosh director: %w", localRelease.LocalPath, err) // untested
+			return nil, fmt.Errorf("failure uploading release %q to bosh director: %w", localRelease.LocalPath, err) // untested
 		}
 	}
 	return releaseIDs, nil
@@ -267,20 +267,20 @@ func (f CompileBuiltReleases) uploadStemcellToDirector(boshDirector BoshDirector
 
 	err = boshDirector.UploadStemcellFile(stemcellFile, false)
 	if err != nil {
-		return builder.StemcellManifest{},  fmt.Errorf("failure uploading stemcell to bosh director: %w", err) // untested
+		return builder.StemcellManifest{}, fmt.Errorf("failure uploading stemcell to bosh director: %w", err) // untested
 	}
 
 	stemcellManifestReader := builder.NewStemcellManifestReader(helper.NewFilesystem())
 	stemcellPart, err := stemcellManifestReader.Read(f.Options.StemcellFile)
 	if err != nil {
-		return builder.StemcellManifest{},  fmt.Errorf("couldn't parse manifest of stemcell: %v", err) // untested
+		return builder.StemcellManifest{}, fmt.Errorf("couldn't parse manifest of stemcell: %v", err) // untested
 	}
 
 	stemcellManifest := stemcellPart.Metadata.(builder.StemcellManifest)
 	return stemcellManifest, err
 }
 
-func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.StemcellManifest, releaseIDs []release.ID, deployment boshdir.Deployment, boshDirector BoshDirector) ([]release.Local,  error) {
+func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.StemcellManifest, releaseIDs []release.ID, deployment boshdir.Deployment, boshDirector BoshDirector) ([]release.Local, error) {
 	osVersionSlug := boshdir.NewOSVersionSlug(stemcellManifest.OperatingSystem, stemcellManifest.Version)
 	var downloadedReleases []release.Local
 	for _, rel := range releaseIDs {
@@ -289,18 +289,18 @@ func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.
 
 		result, err := deployment.ExportRelease(boshdir.NewReleaseSlug(rel.Name, rel.Version), osVersionSlug, nil)
 		if err != nil {
-			return nil,  fmt.Errorf("exporting release %s: %w", rel.Name, err)
+			return nil, fmt.Errorf("exporting release %s: %w", rel.Name, err)
 		}
 
 		fd, err := os.OpenFile(compiledTarballPath, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			return nil,  fmt.Errorf("creating compiled release file %s: %w", compiledTarballPath, err) // untested
+			return nil, fmt.Errorf("creating compiled release file %s: %w", compiledTarballPath, err) // untested
 		}
 
 		f.Logger.Printf("downloading release %q from director\n", rel.Name)
 		err = boshDirector.DownloadResourceUnchecked(result.BlobstoreID, fd)
 		if err != nil {
-			return nil,  fmt.Errorf("downloading exported release %s: %w", rel.Name, err)
+			return nil, fmt.Errorf("downloading exported release %s: %w", rel.Name, err)
 		}
 
 		downloadedReleases = append(downloadedReleases, release.Local{
@@ -311,24 +311,23 @@ func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.
 
 		expectedMultipleDigest, err := boshcrypto.ParseMultipleDigest(result.SHA1)
 		if err != nil {
-			return nil,  fmt.Errorf("error parsing SHA of downloaded release %q: %w", rel.Name, err) // untested
+			return nil, fmt.Errorf("error parsing SHA of downloaded release %q: %w", rel.Name, err) // untested
 		}
 
 		ignoreMeLogger := boshlog.NewLogger(boshlog.LevelNone)
 		fs := boshsystem.NewOsFileSystem(ignoreMeLogger)
 		err = expectedMultipleDigest.VerifyFilePath(fd.Name(), fs)
 		if err != nil {
-			return nil,  fmt.Errorf("compiled release %q has an incorrect SHA: %w", rel.Name, err)
+			return nil, fmt.Errorf("compiled release %q has an incorrect SHA: %w", rel.Name, err)
 		}
 
 		err = fd.Close()
 		if err != nil {
-			return nil,  fmt.Errorf("failed closing file %s: %w", compiledTarballPath, err) // untested
+			return nil, fmt.Errorf("failed closing file %s: %w", compiledTarballPath, err) // untested
 		}
 	}
-	return downloadedReleases,  nil
+	return downloadedReleases, nil
 }
-
 
 func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []release.Local, releaseUploader fetcher.ReleaseUploader, stemcell builder.StemcellManifest) error {
 	for _, downloadedRelease := range downloadedReleases {

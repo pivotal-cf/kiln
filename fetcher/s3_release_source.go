@@ -38,6 +38,7 @@ type S3HeadObjecter interface {
 }
 
 type S3ReleaseSource struct {
+	id                 string
 	bucket             string
 	pathTemplateString string
 	publishable        bool
@@ -49,8 +50,9 @@ type S3ReleaseSource struct {
 	logger *log.Logger
 }
 
-func NewS3ReleaseSource(bucket, pathTemplate string, publishable bool, client S3HeadObjecter, downloader S3Downloader, uploader S3Uploader, logger *log.Logger) S3ReleaseSource {
+func NewS3ReleaseSource(id, bucket, pathTemplate string, publishable bool, client S3HeadObjecter, downloader S3Downloader, uploader S3Uploader, logger *log.Logger) S3ReleaseSource {
 	return S3ReleaseSource{
+		id:                 id,
 		bucket:             bucket,
 		pathTemplateString: pathTemplate,
 		publishable:        publishable,
@@ -75,19 +77,20 @@ func S3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.Log
 	sess := session.Must(session.NewSession(awsConfig))
 	client := s3.New(sess)
 
-	return S3ReleaseSource{
-		bucket:             config.Bucket,
-		pathTemplateString: config.PathTemplate,
-		publishable:        config.Publishable,
-		s3Client:           client,
-		s3Downloader:       s3manager.NewDownloaderWithClient(client),
-		s3Uploader:         s3manager.NewUploaderWithClient(client),
-		logger:             logger,
-	}
+	return NewS3ReleaseSource(
+		config.ID,
+		config.Bucket,
+		config.PathTemplate,
+		config.Publishable,
+		client,
+		s3manager.NewDownloaderWithClient(client),
+		s3manager.NewUploaderWithClient(client),
+		logger,
+	)
 }
 
 func (src S3ReleaseSource) ID() string {
-	return src.bucket
+	return src.id
 }
 
 func (src S3ReleaseSource) Publishable() bool {

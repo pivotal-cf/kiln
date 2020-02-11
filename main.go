@@ -90,16 +90,16 @@ func main() {
 	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
 
 	commandSet["update-stemcell"] = commands.UpdateStemcell{
-		KilnfileLoader:       kilnfileLoader,
-		Logger:               outLogger,
+		KilnfileLoader:             kilnfileLoader,
+		Logger:                     outLogger,
 		MultiReleaseSourceProvider: mrsProvider,
 	}
 	commandSet["compile-built-releases"] = commands.CompileBuiltReleases{
-		BoshDirectorFactory:    commands.BoshDirectorFactory,
-		KilnfileLoader:         kilnfileLoader,
-		Logger:                 outLogger,
-		MultiReleaseSourceProvider:   mrsProvider,
-		ReleaseUploaderFinder: ruFinder,
+		BoshDirectorFactory:        commands.BoshDirectorFactory,
+		KilnfileLoader:             kilnfileLoader,
+		Logger:                     outLogger,
+		MultiReleaseSourceProvider: mrsProvider,
+		ReleaseUploaderFinder:      ruFinder,
 	}
 
 	err = commandSet.Execute(command, args)

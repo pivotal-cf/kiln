@@ -50,11 +50,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/uaa.*")
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "73.3.0"}]`))
 
-				releaseSource = NewBOSHIOReleaseSource(
-					logger,
-					false,
-					testServer.URL(),
-				)
+				releaseSource = NewBOSHIOReleaseSource(ID, false, testServer.URL(), logger)
 			})
 
 			AfterEach(func() {
@@ -95,11 +91,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				path, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/zzz.*")
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
 
-				releaseSource = NewBOSHIOReleaseSource(
-					logger,
-					false,
-					testServer.URL(),
-				)
+				releaseSource = NewBOSHIOReleaseSource(ID, false, testServer.URL(), logger)
 			})
 
 			AfterEach(func() {
@@ -128,11 +120,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				pathRegex, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/.*")
 				testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `[{"version": "4.0.4"}]`))
 
-				releaseSource = NewBOSHIOReleaseSource(
-					log.New(GinkgoWriter, "", 0),
-					false,
-					testServer.URL(),
-				)
+				releaseSource = NewBOSHIOReleaseSource(ID, false, testServer.URL(), log.New(GinkgoWriter, "", 0))
 
 			})
 
@@ -164,11 +152,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			BeforeEach(func() {
 				testServer = ghttp.NewServer()
 
-				releaseSource = NewBOSHIOReleaseSource(
-					log.New(GinkgoWriter, "", 0),
-					false,
-					testServer.URL(),
-				)
+				releaseSource = NewBOSHIOReleaseSource(ID, false, testServer.URL(), log.New(GinkgoWriter, "", 0))
 			})
 
 			AfterEach(func() {
@@ -247,11 +231,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 			testServer = ghttp.NewServer()
 
-			releaseSource = NewBOSHIOReleaseSource(
-				log.New(GinkgoWriter, "", 0),
-				false,
-				testServer.URL(),
-			)
+			releaseSource = NewBOSHIOReleaseSource(ID, false, testServer.URL(), log.New(GinkgoWriter, "", 0))
 
 			release1ID = release.ID{Name: "some", Version: "1.2.3"}
 			release1 = release.Remote{ID: release1ID, RemotePath: testServer.URL() + release1ServerPath, SourceID: ReleaseSourceTypeBOSHIO}

@@ -133,8 +133,15 @@ func (repo ReleaseSourceRepo) FindRemotePather(sourceID string) (RemotePather, e
 func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
 	switch releaseConfig.Type {
 	case ReleaseSourceTypeBOSHIO:
-		return NewBOSHIOReleaseSource(outLogger, releaseConfig.Publishable, "")
+		id := releaseConfig.ID
+		if id == "" {
+			id = ReleaseSourceTypeBOSHIO
+		}
+		return NewBOSHIOReleaseSource(id, releaseConfig.Publishable, "", outLogger)
 	case ReleaseSourceTypeS3:
+		if releaseConfig.ID == "" {
+			releaseConfig.ID = releaseConfig.Bucket
+		}
 		return S3ReleaseSourceFromConfig(releaseConfig, outLogger)
 	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))

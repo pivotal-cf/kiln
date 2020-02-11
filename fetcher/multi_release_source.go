@@ -7,7 +7,7 @@ import (
 
 type multiReleaseSource []ReleaseSource
 
-func NewMultiReleaseSource(sources...ReleaseSource) multiReleaseSource {
+func NewMultiReleaseSource(sources ...ReleaseSource) multiReleaseSource {
 	return sources
 }
 

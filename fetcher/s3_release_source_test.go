@@ -37,12 +37,18 @@ func verifySetsConcurrency(opts []func(*s3manager.Downloader), concurrency int) 
 }
 
 var _ = Describe("S3ReleaseSource", func() {
+	const (
+		sourceID = "s3-source"
+	)
+
 	Describe("DownloadReleases", func() {
-		const bucket = "some-bucket"
+		const (
+			bucket = "some-bucket"
+		)
 
 		var (
-			logger           *log.Logger
 			releaseSource    S3ReleaseSource
+			logger           *log.Logger
 			releaseDir       string
 			remoteRelease    release.Remote
 			releaseID        release.ID
@@ -65,7 +71,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 				return int64(n), err
 			}
-			releaseSource = NewS3ReleaseSource(bucket, "", false, nil, fakeS3Downloader, nil, logger)
+			releaseSource = NewS3ReleaseSource(sourceID, bucket, "", false, nil, fakeS3Downloader, nil, logger)
 		})
 
 		AfterEach(func() {
@@ -136,7 +142,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			desiredRelease release.Requirement
 			bpmReleaseID   release.ID
 			bpmKey         string
-			logger *log.Logger
+			logger         *log.Logger
 		)
 
 		BeforeEach(func() {
@@ -154,6 +160,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			logger = log.New(nil, "", 0)
 
 			releaseSource = NewS3ReleaseSource(
+				sourceID,
 				bucket,
 				`2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
 				false,
@@ -178,7 +185,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(remoteRelease).To(Equal(release.Remote{
 				ID:         bpmReleaseID,
 				RemotePath: bpmKey,
-				SourceID:   bucket,
+				SourceID:   sourceID,
 			}))
 		})
 
@@ -199,6 +206,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
 				releaseSource = NewS3ReleaseSource(
+					sourceID,
 					bucket,
 					`{{.NoSuchField}}`,
 					false,
@@ -228,6 +236,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		BeforeEach(func() {
 			s3Uploader = new(fakes.S3Uploader)
 			releaseSource = NewS3ReleaseSource(
+				sourceID,
 				"orange-bucket",
 				`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
 				false,
@@ -263,6 +272,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
 				releaseSource = NewS3ReleaseSource(
+					sourceID,
 					"orange-bucket",
 					`{{.NoSuchField}}`,
 					false,
@@ -292,6 +302,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		BeforeEach(func() {
 			releaseSource = NewS3ReleaseSource(
+				sourceID,
 				"orange-bucket",
 				`{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
 				false,
@@ -317,6 +328,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
 				releaseSource = NewS3ReleaseSource(
+					sourceID,
 					"orange-bucket",
 					`{{.NoSuchField}}`,
 					false,

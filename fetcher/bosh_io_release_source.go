@@ -50,25 +50,27 @@ var suffixes = []string{
 }
 
 type BOSHIOReleaseSource struct {
-	serverURI string
+	id          string
+	serverURI   string
 	publishable bool
-	logger    *log.Logger
+	logger      *log.Logger
 }
 
-func NewBOSHIOReleaseSource(logger *log.Logger, publishable bool, customServerURI string) *BOSHIOReleaseSource {
+func NewBOSHIOReleaseSource(id string, publishable bool, customServerURI string, logger *log.Logger) *BOSHIOReleaseSource {
 	if customServerURI == "" {
 		customServerURI = "https://bosh.io"
 	}
 
 	return &BOSHIOReleaseSource{
-		logger:    logger,
-		serverURI: customServerURI,
+		logger:      logger,
+		serverURI:   customServerURI,
 		publishable: publishable,
+		id:          id,
 	}
 }
 
 func (src BOSHIOReleaseSource) ID() string {
-	return ReleaseSourceTypeBOSHIO
+	return src.id
 }
 
 func (src BOSHIOReleaseSource) Publishable() bool {

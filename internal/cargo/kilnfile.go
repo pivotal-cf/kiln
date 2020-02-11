@@ -13,12 +13,13 @@ type Kilnfile struct {
 
 type ReleaseSourceConfig struct {
 	Type            string `yaml:"type"`
+	ID              string `yaml:"id"`
+	Publishable     bool   `yaml:"publishable"`
 	Bucket          string `yaml:"bucket"`
 	Region          string `yaml:"region"`
 	AccessKeyId     string `yaml:"access_key_id"`
 	SecretAccessKey string `yaml:"secret_access_key"`
 	PathTemplate    string `yaml:"path_template"`
-	Publishable     bool   `yaml:"publishable"`
 	Endpoint        string `yaml:"endpoint"`
 }
 

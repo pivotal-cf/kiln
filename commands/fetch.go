@@ -17,7 +17,7 @@ type Fetch struct {
 	logger *log.Logger
 
 	multiReleaseSourceProvider MultiReleaseSourceProvider
-	localReleaseDirectory LocalReleaseDirectory
+	localReleaseDirectory      LocalReleaseDirectory
 
 	Options struct {
 		Kilnfile    string `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
@@ -36,8 +36,8 @@ type MultiReleaseSourceProvider func(cargo.Kilnfile, bool) fetcher.MultiReleaseS
 
 func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
-		logger:                logger,
-		localReleaseDirectory: localReleaseDirectory,
+		logger:                     logger,
+		localReleaseDirectory:      localReleaseDirectory,
 		multiReleaseSourceProvider: multiReleaseSourceProvider,
 	}
 }

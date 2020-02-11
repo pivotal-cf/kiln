@@ -32,16 +32,16 @@ var _ = Describe("UpdateRelease", func() {
 	)
 
 	var (
-		updateReleaseCommand      UpdateRelease
-		preexistingKilnfileLock   []byte
-		filesystem                billy.Filesystem
-		multiReleaseSourceProvider      *fakes.MultiReleaseSourceProvider
-		releaseSource             *fetcherFakes.ReleaseSource
-		logger                    *log.Logger
-		downloadedReleasePath     string
-		expectedDownloadedRelease release.Local
-		expectedRemoteRelease     release.Remote
-		kilnFileLoader            *fakes.KilnfileLoader
+		updateReleaseCommand       UpdateRelease
+		preexistingKilnfileLock    []byte
+		filesystem                 billy.Filesystem
+		multiReleaseSourceProvider *fakes.MultiReleaseSourceProvider
+		releaseSource              *fetcherFakes.ReleaseSource
+		logger                     *log.Logger
+		downloadedReleasePath      string
+		expectedDownloadedRelease  release.Local
+		expectedRemoteRelease      release.Remote
+		kilnFileLoader             *fakes.KilnfileLoader
 	)
 
 	Context("Execute", func() {

@@ -52,7 +52,6 @@ var _ = Describe("ReleaseSourceRepo", func() {
 				Expect(releaseSources[2].ID()).To(Equal("bosh.io"))
 				Expect(releaseSources[2].Publishable()).To(BeFalse())
 			})
-
 		})
 
 		Context("when bosh.io is publishable", func() {
@@ -78,8 +77,29 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			})
 		})
 
-		Context("when there are duplicate release source identifiers", func() {
+		Context("when the Kilnfile gives explicit IDs", func() {
+			BeforeEach(func() {
+				kilnfile = cargo.Kilnfile{
+					ReleaseSources: []cargo.ReleaseSourceConfig{
+						{ID: "comp", Type: "s3", Bucket: "compiled-releases", Region: "us-west-1", Publishable: true},
+						{ID: "buil", Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false},
+						{ID: "bosh", Type: "bosh.io", Publishable: false},
+					},
+				}
+			})
 
+			It("gives the correct IDs to the release sources", func() {
+				repo := NewReleaseSourceRepo(kilnfile, logger)
+				releaseSources := repo.ReleaseSources
+
+				Expect(releaseSources).To(HaveLen(3))
+				Expect(releaseSources[0].ID()).To(Equal("comp"))
+				Expect(releaseSources[1].ID()).To(Equal("buil"))
+				Expect(releaseSources[2].ID()).To(Equal("bosh"))
+			})
+		})
+
+		Context("when there are duplicate release source identifiers", func() {
 			BeforeEach(func() {
 				kilnfile = cargo.Kilnfile{
 					ReleaseSources: []cargo.ReleaseSourceConfig{
@@ -103,7 +123,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 		})
 	})
 
-	Describe("multiReleaseSource", func() {
+	Describe("MultiReleaseSource", func() {
 		var (
 			repo     ReleaseSourceRepo
 			kilnfile cargo.Kilnfile
