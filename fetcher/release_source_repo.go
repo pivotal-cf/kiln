@@ -135,9 +135,7 @@ func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Lo
 	case ReleaseSourceTypeBOSHIO:
 		return NewBOSHIOReleaseSource(outLogger, releaseConfig.Publishable, "")
 	case ReleaseSourceTypeS3:
-		s3ReleaseSource := S3ReleaseSource{Logger: outLogger, IsPublishable: releaseConfig.Publishable}
-		s3ReleaseSource.Configure(releaseConfig)
-		return s3ReleaseSource
+		return S3ReleaseSourceFromConfig(releaseConfig, outLogger)
 	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
 	}

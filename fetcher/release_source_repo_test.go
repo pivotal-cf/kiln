@@ -5,7 +5,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	. "github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
@@ -42,21 +41,16 @@ var _ = Describe("ReleaseSourceRepo", func() {
 				)
 
 				Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3ReleaseSource))
-				Expect(releaseSources[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Bucket":       Equal(kilnfile.ReleaseSources[0].Bucket),
-					"PathTemplate": Equal(kilnfile.ReleaseSources[0].PathTemplate),
-				}))
-				Expect(releaseSources[0].(S3ReleaseSource).Publishable()).To(BeTrue())
+				Expect(releaseSources[0].ID()).To(Equal(kilnfile.ReleaseSources[0].Bucket))
+				Expect(releaseSources[0].Publishable()).To(BeTrue())
 
 				Expect(releaseSources[1]).To(BeAssignableToTypeOf(s3ReleaseSource))
-				Expect(releaseSources[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Bucket":       Equal(kilnfile.ReleaseSources[1].Bucket),
-					"PathTemplate": Equal(kilnfile.ReleaseSources[1].PathTemplate),
-				}))
-				Expect(releaseSources[1].(S3ReleaseSource).Publishable()).To(BeFalse())
+				Expect(releaseSources[1].ID()).To(Equal(kilnfile.ReleaseSources[1].Bucket))
+				Expect(releaseSources[1].Publishable()).To(BeFalse())
 
 				Expect(releaseSources[2]).To(BeAssignableToTypeOf(boshIOReleaseSource))
-				Expect(releaseSources[2].(*BOSHIOReleaseSource).Publishable()).To(BeFalse())
+				Expect(releaseSources[2].ID()).To(Equal("bosh.io"))
+				Expect(releaseSources[2].Publishable()).To(BeFalse())
 			})
 
 		})
@@ -143,24 +137,16 @@ var _ = Describe("ReleaseSourceRepo", func() {
 				)
 
 				Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3ReleaseSource))
-				Expect(releaseSources[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Bucket":       Equal(kilnfile.ReleaseSources[0].Bucket),
-					"PathTemplate": Equal(kilnfile.ReleaseSources[0].PathTemplate),
-				}))
+				Expect(releaseSources[0].ID()).To(Equal(kilnfile.ReleaseSources[0].Bucket))
 
 				Expect(releaseSources[1]).To(BeAssignableToTypeOf(s3ReleaseSource))
-				Expect(releaseSources[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Bucket":       Equal(kilnfile.ReleaseSources[1].Bucket),
-					"PathTemplate": Equal(kilnfile.ReleaseSources[1].PathTemplate),
-				}))
+				Expect(releaseSources[1].ID()).To(Equal(kilnfile.ReleaseSources[1].Bucket))
 
 				Expect(releaseSources[2]).To(BeAssignableToTypeOf(boshIOReleaseSource))
+				Expect(releaseSources[2].ID()).To(Equal("bosh.io"))
 
 				Expect(releaseSources[3]).To(BeAssignableToTypeOf(s3ReleaseSource))
-				Expect(releaseSources[3]).To(MatchFields(IgnoreExtras, Fields{
-					"Bucket":       Equal(kilnfile.ReleaseSources[3].Bucket),
-					"PathTemplate": Equal(kilnfile.ReleaseSources[3].PathTemplate),
-				}))
+				Expect(releaseSources[3].ID()).To(Equal(kilnfile.ReleaseSources[3].Bucket))
 			})
 		})
 
@@ -185,15 +171,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 				var s3ReleaseSource S3ReleaseSource
 
 				Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3ReleaseSource))
-				Expect(releaseSources[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Bucket":       Equal(kilnfile.ReleaseSources[0].Bucket),
-					"PathTemplate": Equal(kilnfile.ReleaseSources[0].PathTemplate),
-				}))
-
-				releaseSource, ok := releaseSources[0].(ReleaseSource)
-				Expect(ok).To(BeTrue(), "Couldn't convert releaseSources[0] to type ReleaseSource")
-				Expect(releaseSource.Publishable()).To(BeTrue())
-
+				Expect(releaseSources[0].ID()).To(Equal(kilnfile.ReleaseSources[0].Bucket))
+				Expect(releaseSources[0].Publishable()).To(BeTrue())
 			})
 		})
 	})

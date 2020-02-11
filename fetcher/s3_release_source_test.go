@@ -65,11 +65,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 				return int64(n), err
 			}
-			releaseSource = S3ReleaseSource{
-				Logger:       logger,
-				S3Downloader: fakeS3Downloader,
-				Bucket:       bucket,
-			}
+			releaseSource = NewS3ReleaseSource(bucket, "", false, nil, fakeS3Downloader, nil, logger)
 		})
 
 		AfterEach(func() {
@@ -135,11 +131,12 @@ var _ = Describe("S3ReleaseSource", func() {
 		const bucket = "built-bucket"
 
 		var (
-			releaseSource  *S3ReleaseSource
+			releaseSource  S3ReleaseSource
 			fakeS3Client   *fakes.S3HeadObjecter
 			desiredRelease release.Requirement
 			bpmReleaseID   release.ID
 			bpmKey         string
+			logger *log.Logger
 		)
 
 		BeforeEach(func() {
@@ -154,14 +151,17 @@ var _ = Describe("S3ReleaseSource", func() {
 			fakeS3Client = new(fakes.S3HeadObjecter)
 			fakeS3Client.HeadObjectReturns(new(s3.HeadObjectOutput), nil)
 
-			logger := log.New(nil, "", 0)
+			logger = log.New(nil, "", 0)
 
-			releaseSource = &S3ReleaseSource{
-				Logger:       logger,
-				S3Client:     fakeS3Client,
-				PathTemplate: `2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
-				Bucket:       bucket,
-			}
+			releaseSource = NewS3ReleaseSource(
+				bucket,
+				`2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+				false,
+				fakeS3Client,
+				nil,
+				nil,
+				logger,
+			)
 			bpmKey = "2.5/bpm/bpm-release-1.2.3-ubuntu-xenial-190.0.0.tgz"
 		})
 
@@ -198,7 +198,15 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
-				releaseSource.PathTemplate = "{{.NoSuchField}}"
+				releaseSource = NewS3ReleaseSource(
+					bucket,
+					`{{.NoSuchField}}`,
+					false,
+					fakeS3Client,
+					nil,
+					nil,
+					logger,
+				)
 			})
 
 			It("returns a descriptive error", func() {
@@ -213,18 +221,21 @@ var _ = Describe("S3ReleaseSource", func() {
 	Describe("UploadRelease", func() {
 		var (
 			s3Uploader    *fakes.S3Uploader
-			releaseSource *S3ReleaseSource
+			releaseSource S3ReleaseSource
 			file          io.Reader
 		)
 
 		BeforeEach(func() {
 			s3Uploader = new(fakes.S3Uploader)
-			releaseSource = &S3ReleaseSource{
-				S3Uploader:   s3Uploader,
-				Bucket:       "orange-bucket",
-				Logger:       log.New(GinkgoWriter, "", 0),
-				PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
-			}
+			releaseSource = NewS3ReleaseSource(
+				"orange-bucket",
+				`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
+				false,
+				nil,
+				nil,
+				s3Uploader,
+				log.New(GinkgoWriter, "", 0),
+			)
 			file = strings.NewReader("banana banana")
 		})
 
@@ -251,7 +262,15 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
-				releaseSource.PathTemplate = "{{.NoSuchField}}"
+				releaseSource = NewS3ReleaseSource(
+					"orange-bucket",
+					`{{.NoSuchField}}`,
+					false,
+					nil,
+					nil,
+					s3Uploader,
+					log.New(GinkgoWriter, "", 0),
+				)
 			})
 
 			It("returns a descriptive error", func() {
@@ -267,17 +286,20 @@ var _ = Describe("S3ReleaseSource", func() {
 
 	Describe("RemotePath", func() {
 		var (
-			releaseSource *S3ReleaseSource
+			releaseSource S3ReleaseSource
 			requirement   release.Requirement
 		)
 
 		BeforeEach(func() {
-			releaseSource = &S3ReleaseSource{
-				S3Uploader:   nil,
-				Bucket:       "orange-bucket",
-				Logger:       log.New(GinkgoWriter, "", 0),
-				PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
-			}
+			releaseSource = NewS3ReleaseSource(
+				"orange-bucket",
+				`{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+				false,
+				nil,
+				nil,
+				nil,
+				log.New(GinkgoWriter, "", 0),
+			)
 			requirement = release.Requirement{
 				Name:            "bob",
 				Version:         "2.0",
@@ -294,7 +316,15 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
-				releaseSource.PathTemplate = "{{.NoSuchField}}"
+				releaseSource = NewS3ReleaseSource(
+					"orange-bucket",
+					`{{.NoSuchField}}`,
+					false,
+					nil,
+					nil,
+					nil,
+					log.New(GinkgoWriter, "", 0),
+				)
 			})
 
 			It("returns a descriptive error", func() {
