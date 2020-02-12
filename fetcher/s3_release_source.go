@@ -135,7 +135,7 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease rele
 
 	src.logger.Printf("downloading %s %s from %s", remoteRelease.Name, remoteRelease.Version, src.bucket)
 
-	outputFile := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
+	outputFile := filepath.Join(releaseDir, filepath.Base(remoteRelease.RemotePath))
 
 	file, err := os.Create(outputFile)
 	if err != nil {

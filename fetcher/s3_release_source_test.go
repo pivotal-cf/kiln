@@ -47,12 +47,13 @@ var _ = Describe("S3ReleaseSource", func() {
 		)
 
 		var (
-			releaseSource    S3ReleaseSource
-			logger           *log.Logger
-			releaseDir       string
-			remoteRelease    release.Remote
-			releaseID        release.ID
-			fakeS3Downloader *fakes.S3Downloader
+			releaseSource         S3ReleaseSource
+			logger                *log.Logger
+			releaseDir            string
+			remoteRelease         release.Remote
+			expectedLocalFilename string
+			releaseID             release.ID
+			fakeS3Downloader      *fakes.S3Downloader
 		)
 
 		BeforeEach(func() {
@@ -62,7 +63,8 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
-			remoteRelease = release.Remote{ID: releaseID, RemotePath: "some-uaa-key", SourceID: bucket}
+			remoteRelease = release.Remote{ID: releaseID, RemotePath: "2.10/uaa/uaa-1.2.3-ubuntu-xenial-621.55.tgz", SourceID: bucket}
+			expectedLocalFilename = filepath.Base(remoteRelease.RemotePath)
 
 			logger = log.New(GinkgoWriter, "", 0)
 			fakeS3Downloader = new(fakes.S3Downloader)
@@ -83,10 +85,10 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(1))
 
-			releasePath := filepath.Join(releaseDir, "uaa-1.2.3.tgz")
+			releasePath := filepath.Join(releaseDir, expectedLocalFilename)
 			releaseContents, err := ioutil.ReadFile(releasePath)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(releaseContents).To(Equal([]byte("some-bucket/some-uaa-key")))
+			Expect(releaseContents).To(Equal([]byte("some-bucket/" + remoteRelease.RemotePath)))
 
 			sha1, err := CalculateSum(releasePath, osfs.New(""))
 			Expect(err).NotTo(HaveOccurred())
