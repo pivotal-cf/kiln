@@ -98,6 +98,27 @@ var _ = Describe("UploadRelease", func() {
 					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
 				})
 			})
+
+			When("the release tarball is compiled", func() {
+				BeforeEach(func() {
+					_, err := test_helpers.WriteTarballWithFile("banana-release.tgz", "release.MF", `
+name: banana
+version: 1.2.3
+compiled_packages:
+- stemcell: plan9/42
+`, fs)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("errors and does not upload", func() {
+					err := uploadRelease.Execute([]string{
+						"--local-path", "banana-release.tgz",
+						"--upload-target-id", "orange-bucket",
+					})
+					Expect(err).To(MatchError(ContainSubstring("compiled release")))
+					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
+				})
+			})
 		})
 
 		When("the release tarball is invalid", func() {

@@ -66,6 +66,9 @@ func (command UploadRelease) Execute(args []string) error {
 	}
 
 	manifest := part.Metadata.(builder.ReleaseManifest)
+	if manifest.StemcellOS != "" {
+		return fmt.Errorf("cannot upload compiled release %q - only uncompiled releases are allowed", command.Options.LocalPath)
+	}
 
 	requirement := release.Requirement{Name: manifest.Name, Version: manifest.Version}
 	_, found, err := releaseUploader.GetMatchedRelease(requirement)
