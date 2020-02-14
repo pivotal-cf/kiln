@@ -3,63 +3,55 @@ package commands
 import (
 	"fmt"
 	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/release"
 	"log"
 
 	"github.com/pivotal-cf/kiln/builder"
 
-	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/src-d/go-billy.v4"
 )
 
-type UploadRelease struct {
-	FS                    billy.Filesystem
-	KilnfileLoader        KilnfileLoader
-	ReleaseUploaderFinder ReleaseUploaderFinder
-	Logger                *log.Logger
-
-	Options struct {
-		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
-		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
-		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
-
-		ReleaseSource string `short:"rs" long:"release-source" required:"true" description:"name of the release source specified in the Kilnfile"`
-		LocalPath     string `short:"lp" long:"local-path" required:"true" description:"path to BOSH release tarball"`
-	}
+type UploadReleaseCmd struct {
+	TargetSourceID string `short:"s" long:"release-source" required:"true" description:"name of the release source specified in the Kilnfile"`
+	LocalPath      string `short:"l" long:"local-path"     required:"true" description:"path to BOSH release tarball"`
+	panicCommand
 }
 
 //go:generate counterfeiter -o ./fakes/release_uploader_finder.go --fake-name ReleaseUploaderFinder . ReleaseUploaderFinder
-type ReleaseUploaderFinder func(cargo.Kilnfile, string) (fetcher.ReleaseUploader, error)
+type ReleaseUploaderFinder func(string) (fetcher.ReleaseUploader, error)
 
-func (command UploadRelease) Execute(args []string) error {
-	_, err := jhanda.Parse(&command.Options, args)
-	if err != nil {
-		return err
-	}
+func (u UploadReleaseCmd) Runner(deps Dependencies) (CommandRunner, error) {
+	return UploadRelease{
+		TargetSourceID:        u.TargetSourceID,
+		LocalPath:             u.LocalPath,
+		FS:                    deps.Filesystem,
+		ReleaseUploaderFinder: deps.ReleaseSourceRepo.FindReleaseUploader,
+		Logger:                deps.OutLogger,
+	}, nil
+}
 
-	kilnfile, _, err := command.KilnfileLoader.LoadKilnfiles(
-		command.FS,
-		command.Options.Kilnfile,
-		command.Options.VariablesFiles,
-		command.Options.Variables,
-	)
-	if err != nil {
-		return fmt.Errorf("error loading Kilnfiles: %w", err)
-	}
+type UploadRelease struct {
+	TargetSourceID string
+	LocalPath      string
 
-	releaseSource, err := command.ReleaseUploaderFinder(kilnfile, command.Options.ReleaseSource)
+	FS                    billy.Filesystem
+	ReleaseUploaderFinder ReleaseUploaderFinder
+	Logger                *log.Logger
+}
+
+func (command UploadRelease) Run(_ []string) error {
+	releaseSource, err := command.ReleaseUploaderFinder(command.TargetSourceID)
 	if err != nil {
 		return fmt.Errorf("error finding release source: %w", err)
 	}
 
-	file, err := command.FS.Open(command.Options.LocalPath)
+	file, err := command.FS.Open(command.LocalPath)
 	if err != nil {
 		return fmt.Errorf("could not open release: %w", err)
 	}
 
 	manifestReader := builder.NewReleaseManifestReader(command.FS)
-	part, err := manifestReader.Read(command.Options.LocalPath)
+	part, err := manifestReader.Read(command.LocalPath)
 	if err != nil {
 		return fmt.Errorf("error reading the release manifest: %w", err)
 	}
@@ -74,7 +66,7 @@ func (command UploadRelease) Execute(args []string) error {
 
 	if found {
 		return fmt.Errorf("a release with name %q and version %q already exists on %s",
-			manifest.Name, manifest.Version, command.Options.ReleaseSource)
+			manifest.Name, manifest.Version, command.TargetSourceID)
 	}
 
 	err = releaseSource.UploadRelease(manifest.Name, manifest.Version, file)
@@ -87,10 +79,3 @@ func (command UploadRelease) Execute(args []string) error {
 	return nil
 }
 
-func (command UploadRelease) Usage() jhanda.Usage {
-	return jhanda.Usage{
-		Description:      "Uploads a BOSH Release to an S3 release source for use in kiln fetch",
-		ShortDescription: "uploads a BOSH release to an s3 release_source",
-		Flags:            command.Options,
-	}
-}

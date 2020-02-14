@@ -10,6 +10,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/golang/protobuf v1.3.2 // indirect
+	github.com/jessevdk/go-flags v1.4.0
 	github.com/matt-royal/biloba v0.1.0
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect

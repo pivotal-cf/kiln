@@ -39,11 +39,18 @@ type RemotePather interface {
 	RemotePath(release.Requirement) (string, error)
 }
 
-type ReleaseSourceRepo struct {
+//go:generate counterfeiter -o ./fakes/release_source_repo.go --fake-name ReleaseSourceRepo . ReleaseSourceRepo
+type ReleaseSourceRepo interface {
+	MultiReleaseSource(allowOnlyPublishable bool) MultiReleaseSource
+	FindReleaseUploader(sourceID string) (ReleaseUploader, error)
+	FindRemotePather(sourceID string) (RemotePather, error)
+}
+
+type releaseSourceRepo struct {
 	ReleaseSources []ReleaseSource
 }
 
-func NewReleaseSourceRepo(kilnfile cargo.Kilnfile, logger *log.Logger) ReleaseSourceRepo {
+func NewReleaseSourceRepo(kilnfile cargo.Kilnfile, logger *log.Logger) releaseSourceRepo {
 	var releaseSources multiReleaseSource
 
 	for _, releaseConfig := range kilnfile.ReleaseSources {
@@ -52,10 +59,10 @@ func NewReleaseSourceRepo(kilnfile cargo.Kilnfile, logger *log.Logger) ReleaseSo
 
 	panicIfDuplicateIDs(releaseSources)
 
-	return ReleaseSourceRepo{ReleaseSources: releaseSources}
+	return releaseSourceRepo{ReleaseSources: releaseSources}
 }
 
-func (repo ReleaseSourceRepo) MultiReleaseSource(allowOnlyPublishable bool) multiReleaseSource {
+func (repo releaseSourceRepo) MultiReleaseSource(allowOnlyPublishable bool) MultiReleaseSource {
 	var sources []ReleaseSource
 	for _, source := range repo.ReleaseSources {
 		if !allowOnlyPublishable || source.Publishable() {
@@ -63,10 +70,10 @@ func (repo ReleaseSourceRepo) MultiReleaseSource(allowOnlyPublishable bool) mult
 		}
 	}
 
-	return multiReleaseSource(sources)
+	return NewMultiReleaseSource(sources...)
 }
 
-func (repo ReleaseSourceRepo) FindReleaseUploader(sourceID string) (ReleaseUploader, error) {
+func (repo releaseSourceRepo) FindReleaseUploader(sourceID string) (ReleaseUploader, error) {
 	var (
 		uploader     ReleaseUploader
 		availableIDs []string
@@ -97,7 +104,7 @@ func (repo ReleaseSourceRepo) FindReleaseUploader(sourceID string) (ReleaseUploa
 	return uploader, nil
 }
 
-func (repo ReleaseSourceRepo) FindRemotePather(sourceID string) (RemotePather, error) {
+func (repo releaseSourceRepo) FindRemotePather(sourceID string) (RemotePather, error) {
 	var (
 		pather       RemotePather
 		availableIDs []string

@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/release"
@@ -11,78 +10,70 @@ import (
 	"log"
 )
 
-type SyncWithLocal struct {
-	Options struct {
-		Kilnfile        string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
-		ReleasesDir     string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
-		ReleaseSourceID string   `long:"assume-release-source" description:"the release source to put in updated records" required:"true"`
-		Variables       []string `short:"vr" long:"variable" description:"variable in key=value format"`
-		VariablesFiles  []string `short:"vf" long:"variables-file" description:"path to variables file"`
-	}
-	fs                    billy.Filesystem
-	kilnfileLoader        KilnfileLoader
-	localReleaseDirectory LocalReleaseDirectory
-	logger                *log.Logger
-	remotePatherFinder    RemotePatherFinder
+type SyncWithLocalCmd struct {
+	ReleasesDir     string   `short:"r" long:"releases-directory"    default:"releases" description:"path to a directory to download releases into"`
+	ReleaseSourceID string   `          long:"assume-release-source" required:"true"    description:"the release source to put in updated records"`
+	panicCommand
 }
 
-func NewSyncWithLocal(kilnfileLoader KilnfileLoader, fs billy.Filesystem, localReleaseDirectory LocalReleaseDirectory, remotePatherFinder RemotePatherFinder, logger *log.Logger) SyncWithLocal {
+func (s SyncWithLocalCmd) Runner(deps Dependencies) (CommandRunner, error) {
 	return SyncWithLocal{
-		fs:                    fs,
-		kilnfileLoader:        kilnfileLoader,
-		localReleaseDirectory: localReleaseDirectory,
-		logger:                logger,
-		remotePatherFinder:    remotePatherFinder,
-	}
+		ReleasesDir: s.ReleasesDir,
+		ReleaseSourceID: s.ReleaseSourceID,
+
+		FS: deps.Filesystem,
+		KilnfileLock: deps.KilnfileLock,
+		KilnfileLockPath: deps.KilnfileLockPath,
+		LocalReleaseDirectory: deps.LocalReleaseDirectory,
+		Logger: deps.OutLogger,
+		RemotePatherFinder: deps.ReleaseSourceRepo.FindRemotePather,
+	}, nil
 }
 
 //go:generate counterfeiter -o ./fakes/remote_pather_finder.go --fake-name RemotePatherFinder . RemotePatherFinder
-type RemotePatherFinder func(cargo.Kilnfile, string) (fetcher.RemotePather, error)
+type RemotePatherFinder func(string) (fetcher.RemotePather, error)
 
-func (command SyncWithLocal) Execute(args []string) error {
-	_, err := jhanda.Parse(&command.Options, args)
-	if err != nil {
-		return err
-	}
+type SyncWithLocal struct {
+	ReleasesDir           string
+	ReleaseSourceID       string
 
-	kilnfile, kilnfileLock, err := command.kilnfileLoader.LoadKilnfiles(
-		command.fs,
-		command.Options.Kilnfile,
-		command.Options.VariablesFiles,
-		command.Options.Variables,
-	)
-	if err != nil {
-		return fmt.Errorf("couldn't load kilnfiles: %w", err) // untested
-	}
+	FS                    billy.Filesystem
+	KilnfileLock cargo.KilnfileLock
+	KilnfileLockPath string
+	LocalReleaseDirectory LocalReleaseDirectory
+	Logger                *log.Logger
+	RemotePatherFinder    RemotePatherFinder
+}
 
-	remotePather, err := command.remotePatherFinder(kilnfile, command.Options.ReleaseSourceID)
+func (command SyncWithLocal) Run(args []string) error {
+	remotePather, err := command.RemotePatherFinder(command.ReleaseSourceID)
 	if err != nil {
 		return fmt.Errorf("couldn't load the release source: %w", err) // untested
 	}
 
-	command.logger.Printf("Finding releases in %s...\n", command.Options.ReleasesDir)
-	releases, err := command.localReleaseDirectory.GetLocalReleases(command.Options.ReleasesDir)
+	command.Logger.Printf("Finding releases in %s...\n", command.ReleasesDir)
+	releases, err := command.LocalReleaseDirectory.GetLocalReleases(command.ReleasesDir)
 	if err != nil {
 		return fmt.Errorf("couldn't process releases in releases directory: %w", err) // untested
 	}
 
-	command.logger.Printf("Found %d releases on disk\n", len(releases))
+	command.Logger.Printf("Found %d releases on disk\n", len(releases))
 
 	for _, rel := range releases {
 		remotePath, err := remotePather.RemotePath(release.Requirement{
 			Name:            rel.Name,
 			Version:         rel.Version,
-			StemcellOS:      kilnfileLock.Stemcell.OS,
-			StemcellVersion: kilnfileLock.Stemcell.Version,
+			StemcellOS:      command.KilnfileLock.Stemcell.OS,
+			StemcellVersion: command.KilnfileLock.Stemcell.Version,
 		})
 		if err != nil {
 			return fmt.Errorf("couldn't generate a remote path for release %q: %w", rel.Name, err)
 		}
 
 		var matchingRelease *cargo.ReleaseLock
-		for i := range kilnfileLock.Releases {
-			if kilnfileLock.Releases[i].Name == rel.Name {
-				matchingRelease = &kilnfileLock.Releases[i]
+		for i := range command.KilnfileLock.Releases {
+			if command.KilnfileLock.Releases[i].Name == rel.Name {
+				matchingRelease = &command.KilnfileLock.Releases[i]
 				break
 			}
 		}
@@ -92,31 +83,23 @@ func (command SyncWithLocal) Execute(args []string) error {
 
 		matchingRelease.Version = rel.Version
 		matchingRelease.SHA1 = rel.SHA1
-		matchingRelease.RemoteSource = command.Options.ReleaseSourceID
+		matchingRelease.RemoteSource = command.ReleaseSourceID
 		matchingRelease.RemotePath = remotePath
 
-		command.logger.Printf("Updated %s to %s\n", rel.Name, rel.Version)
+		command.Logger.Printf("Updated %s to %s\n", rel.Name, rel.Version)
 	}
 
-	kilnfileLockFile, err := command.fs.Create(command.Options.Kilnfile + ".lock")
+	kilnfileLockFile, err := command.FS.Create(command.KilnfileLockPath)
 	if err != nil {
 		return fmt.Errorf("couldn't open the Kilnfile.lock for updating: %w", err) // untested
 	}
 
 	defer kilnfileLockFile.Close()
 
-	err = yaml.NewEncoder(kilnfileLockFile).Encode(kilnfileLock)
+	err = yaml.NewEncoder(kilnfileLockFile).Encode(command.KilnfileLock)
 	if err != nil {
 		return fmt.Errorf("couldn't write the updated Kilnfile.lock: %w", err) // untested
 	}
 
 	return nil
-}
-
-func (command SyncWithLocal) Usage() jhanda.Usage {
-	return jhanda.Usage{
-		Description:      "Update the Kilnfile.lock based on the local releases directory. Assume the given release source",
-		ShortDescription: "update the Kilnfile.lock based on local releases",
-		Flags:            command.Options,
-	}
 }

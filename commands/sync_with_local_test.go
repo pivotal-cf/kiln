@@ -16,7 +16,7 @@ import (
 )
 
 var _ = Describe("sync-with-local", func() {
-	Describe("Execute", func() {
+	Describe("Run", func() {
 		const (
 			releaseSourceID    = "some-source"
 			stemcellOS         = "linux-os"
@@ -34,8 +34,7 @@ var _ = Describe("sync-with-local", func() {
 		)
 
 		var (
-			syncWithLocal         SyncWithLocal
-			kilnfileLoader        *fakes.KilnfileLoader
+			syncWithLocal         *SyncWithLocal
 			localReleaseDirectory *fakes.LocalReleaseDirectory
 			remotePatherFinder    *fakes.RemotePatherFinder
 			remotePather          *fetcherFakes.RemotePather
@@ -44,7 +43,6 @@ var _ = Describe("sync-with-local", func() {
 		)
 
 		BeforeEach(func() {
-			kilnfileLoader = new(fakes.KilnfileLoader)
 			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ReleaseLock{
 					{
@@ -97,18 +95,24 @@ var _ = Describe("sync-with-local", func() {
 			fs = memfs.New()
 			logger := log.New(GinkgoWriter, "", 0)
 
-			syncWithLocal = NewSyncWithLocal(kilnfileLoader, fs, localReleaseDirectory, remotePatherFinder.Spy, logger)
+			syncWithLocal = &SyncWithLocal{
+				ReleasesDir: "releases",
+				ReleaseSourceID: releaseSourceID,
+
+				FS: fs,
+				KilnfileLockPath: kilnfilePath+".lock",
+				LocalReleaseDirectory: localReleaseDirectory,
+				Logger: logger,
+				RemotePatherFinder: remotePatherFinder.Spy,
+			}
 		})
 
 		JustBeforeEach(func() {
-			kilnfileLoader.LoadKilnfilesReturns(cargo.Kilnfile{}, kilnfileLock, nil)
+			syncWithLocal.KilnfileLock = kilnfileLock
 		})
 
 		It("updates the Kilnfile.lock to have the same version as the local releases", func() {
-			err := syncWithLocal.Execute([]string{
-				"--kilnfile", kilnfilePath,
-				"--assume-release-source", releaseSourceID,
-			})
+			err := syncWithLocal.Run(nil)
 
 			kilnfileLockFile, err := fs.Open(kilnfilePath + ".lock")
 			Expect(err).NotTo(HaveOccurred())
@@ -152,10 +156,7 @@ var _ = Describe("sync-with-local", func() {
 			})
 
 			It("returns an error", func() {
-				err := syncWithLocal.Execute([]string{
-					"--kilnfile", kilnfilePath,
-					"--assume-release-source", releaseSourceID,
-				})
+				err := syncWithLocal.Run(nil)
 
 				Expect(err).To(MatchError(ContainSubstring("does not exist")))
 				Expect(err).To(MatchError(ContainSubstring(release2Name)))
@@ -168,10 +169,7 @@ var _ = Describe("sync-with-local", func() {
 			})
 
 			It("returns an error", func() {
-				err := syncWithLocal.Execute([]string{
-					"--kilnfile", kilnfilePath,
-					"--assume-release-source", releaseSourceID,
-				})
+				err := syncWithLocal.Run(nil)
 
 				Expect(err).To(MatchError(ContainSubstring("bad bad stuff")))
 				Expect(err).To(MatchError(ContainSubstring(release1Name)))

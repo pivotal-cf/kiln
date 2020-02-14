@@ -11,9 +11,6 @@ import (
 
 	"github.com/pivotal-cf/kiln/release"
 
-	"gopkg.in/yaml.v2"
-
-	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/fetcher"
 
 	. "github.com/onsi/ginkgo"
@@ -25,22 +22,16 @@ import (
 
 var _ = Describe("Fetch", func() {
 	var (
-		fetch                       Fetch
-		logger                      *log.Logger
-		tmpDir                      string
-		someKilnfilePath            string
-		someKilnfileLockPath        string
-		lockContents                string
-		someReleasesDirectory       string
-		fakeS3CompiledReleaseSource *fetcherFakes.ReleaseSource
-		fakeBoshIOReleaseSource     *fetcherFakes.ReleaseSource
-		fakeS3BuiltReleaseSource    *fetcherFakes.ReleaseSource
-		fakeReleaseSources          fetcher.MultiReleaseSource
-		fakeLocalReleaseDirectory   *fakes.LocalReleaseDirectory
-		multiReleaseSourceProvider  MultiReleaseSourceProvider
-
-		fetchExecuteArgs []string
-		fetchExecuteErr  error
+		fetch                      *Fetch
+		logger                     *log.Logger
+		tmpDir                     string
+		releasesDirectory          string
+		kilnfileLock               cargo.KilnfileLock
+		s3CompiledReleaseSource    *fetcherFakes.ReleaseSource
+		boshIOReleaseSource        *fetcherFakes.ReleaseSource
+		s3BuiltReleaseSource       *fetcherFakes.ReleaseSource
+		multiReleaseSourceProvider *fakes.MultiReleaseSourceProvider
+		localReleaseDirectory      *fakes.LocalReleaseDirectory
 	)
 
 	const (
@@ -49,63 +40,57 @@ var _ = Describe("Fetch", func() {
 		boshIOReleaseSourceID     = fetcher.ReleaseSourceTypeBOSHIO
 	)
 
-	Describe("Execute", func() {
+	Describe("Run", func() {
 		BeforeEach(func() {
 			logger = log.New(GinkgoWriter, "", 0)
 
 			var err error
 			tmpDir, err = ioutil.TempDir("", "fetch-test")
 
-			someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
+			releasesDirectory, err = ioutil.TempDir(tmpDir, "releases")
 			Expect(err).NotTo(HaveOccurred())
 
-			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-			err = ioutil.WriteFile(someKilnfilePath, []byte(""), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			someKilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
-			lockContents = `
----
-releases:
-- name: some-release
-  version: "1.2.3"
-  remote_source: ` + s3CompiledReleaseSourceID + `
-  remote_path: my-remote-path
-stemcell_criteria:
-  os: some-os
-  version: "4.5.6"
-`
-
-			fakeLocalReleaseDirectory = new(fakes.LocalReleaseDirectory)
-
-			fakeS3CompiledReleaseSource = new(fetcherFakes.ReleaseSource)
-			fakeS3CompiledReleaseSource.IDReturns(s3CompiledReleaseSourceID)
-			fakeBoshIOReleaseSource = new(fetcherFakes.ReleaseSource)
-			fakeBoshIOReleaseSource.IDReturns(boshIOReleaseSourceID)
-			fakeS3BuiltReleaseSource = new(fetcherFakes.ReleaseSource)
-			fakeS3BuiltReleaseSource.IDReturns(s3BuiltReleaseSourceID)
-
-			fetchExecuteArgs = []string{
-				"--releases-directory", someReleasesDirectory,
-				"--kilnfile", someKilnfilePath,
+			kilnfileLock = cargo.KilnfileLock{
+				Releases: []cargo.ReleaseLock{
+					{
+						Name: "some-release", Version: "1.2.3",
+						RemoteSource: s3CompiledReleaseSourceID, RemotePath: "my-remote-path",
+					},
+				},
+				Stemcell: cargo.Stemcell{OS: "some-os", Version: "4.5.6"},
 			}
+			localReleaseDirectory = new(fakes.LocalReleaseDirectory)
+
+			s3CompiledReleaseSource = new(fetcherFakes.ReleaseSource)
+			s3CompiledReleaseSource.IDReturns(s3CompiledReleaseSourceID)
+			boshIOReleaseSource = new(fetcherFakes.ReleaseSource)
+			boshIOReleaseSource.IDReturns(boshIOReleaseSourceID)
+			s3BuiltReleaseSource = new(fetcherFakes.ReleaseSource)
+			s3BuiltReleaseSource.IDReturns(s3BuiltReleaseSourceID)
+			multiReleaseSourceProvider = new(fakes.MultiReleaseSourceProvider)
+
+			fetch = &Fetch{
+				ReleasesDir:                releasesDirectory,
+				Kilnfile:                   cargo.Kilnfile{},
+				Logger:                     logger,
+				LocalReleaseDirectory:      localReleaseDirectory,
+				MultiReleaseSourceProvider: multiReleaseSourceProvider.Spy,
+			}
+		})
+
+		JustBeforeEach(func() {
+			multiReleaseSourceProvider.Returns(
+				fetcher.NewMultiReleaseSource(
+					s3CompiledReleaseSource,
+					boshIOReleaseSource,
+					s3BuiltReleaseSource,
+				),
+			)
+			fetch.KilnfileLock = kilnfileLock
 		})
 
 		AfterEach(func() {
 			Expect(os.RemoveAll(tmpDir)).To(Succeed())
-		})
-
-		JustBeforeEach(func() {
-			fakeReleaseSources = fetcher.NewMultiReleaseSource(fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource)
-			multiReleaseSourceProvider = func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
-				return fakeReleaseSources
-			}
-
-			err := ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0644)
-			Expect(err).NotTo(HaveOccurred())
-			fetch = NewFetch(logger, multiReleaseSourceProvider, fakeLocalReleaseDirectory)
-
-			fetchExecuteErr = fetch.Execute(fetchExecuteArgs)
 		})
 
 		When("a local compiled release exists", func() {
@@ -119,23 +104,29 @@ stemcell_criteria:
 			)
 			BeforeEach(func() {
 				releaseID = release.ID{Name: "some-release", Version: "0.1.0"}
-				fakeS3CompiledReleaseSource.DownloadReleaseReturns(
+				localReleasePath := filepath.Join(releasesDirectory,
+					fmt.Sprintf("%s-%s.tgz", releaseID.Name, releaseID.Version))
+				s3CompiledReleaseSource.DownloadReleaseReturns(
 					release.Local{
 						ID:        releaseID,
-						LocalPath: fmt.Sprintf("releases/%s-%s.tgz", releaseID.Name, releaseID.Version),
+						LocalPath: localReleasePath,
 						SHA1:      "correct-sha",
 					}, nil)
-				lockContents = `---
-releases:
-- name: ` + releaseID.Name + `
-  version: "` + releaseID.Version + `"
-  remote_source: ` + s3CompiledReleaseSourceID + `
-  remote_path: not-used
-  sha1: correct-sha
-stemcell_criteria:
-  os: ` + expectedStemcellOS + `
-  version: "` + expectedStemcellVersion + `"`
-				fetchExecuteArgs = append(fetchExecuteArgs, "--no-confirm")
+				kilnfileLock = cargo.KilnfileLock{
+					Releases: []cargo.ReleaseLock{
+						{
+							Name: releaseID.Name, Version: releaseID.Version,
+							RemoteSource: s3CompiledReleaseSourceID, RemotePath: "not-used",
+							SHA1: "correct-sha",
+						},
+					},
+					Stemcell: cargo.Stemcell{OS: expectedStemcellOS, Version: expectedStemcellVersion},
+				}
+				fetch.NoConfirm = true
+
+				Expect(
+					ioutil.WriteFile(localReleasePath, []byte("some-release-contents"), 0600),
+				).To(Succeed())
 			})
 
 			When("the release on disk has the wrong SHA1", func() {
@@ -145,16 +136,16 @@ stemcell_criteria:
 						LocalPath: fmt.Sprintf("releases/%s-%s.tgz", releaseID.Name, releaseID.Version),
 						SHA1:      "wrong-sha",
 					}
-					fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.Local{releaseOnDisk}, nil)
+					localReleaseDirectory.GetLocalReleasesReturns([]release.Local{releaseOnDisk}, nil)
 				})
 
 				It("deletes the file from disk", func() {
-					Expect(fetchExecuteErr).NotTo(HaveOccurred())
+					Expect(fetch.Run(nil)).To(Succeed())
 
-					Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+					Expect(s3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
 
-					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
-					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
+					Expect(localReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
+					extras, noConfirm := localReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
 					Expect(noConfirm).To(Equal(true))
 					Expect(extras).To(HaveLen(1))
 					Expect(extras).To(ConsistOf(releaseOnDisk))
@@ -168,16 +159,16 @@ stemcell_criteria:
 						LocalPath: fmt.Sprintf("releases/%s-%s.tgz", releaseID.Name, releaseID.Version),
 						SHA1:      "correct-sha",
 					}
-					fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.Local{releaseOnDisk}, nil)
+					localReleaseDirectory.GetLocalReleasesReturns([]release.Local{releaseOnDisk}, nil)
 				})
 
 				It("does not delete the file from disk", func() {
-					Expect(fetchExecuteErr).NotTo(HaveOccurred())
+					Expect(fetch.Run(nil)).To(Succeed())
 
-					Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
+					Expect(s3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
 
-					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
-					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
+					Expect(localReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
+					extras, noConfirm := localReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
 					Expect(noConfirm).To(Equal(true))
 					Expect(extras).To(HaveLen(0))
 				})
@@ -191,51 +182,48 @@ stemcell_criteria:
 				boshIOReleaseID     = release.ID{Name: "boshio-release", Version: "1.4.16"}
 			)
 			BeforeEach(func() {
-				lockContents = `---
-releases:
-- name: lts-compiled-release
-  version: "1.2.4"
-  remote_source: ` + s3CompiledReleaseSourceID + `
-  remote_path: some-s3-key
-  sha1: correct-sha
-- name: lts-built-release
-  version: "1.3.9"
-  remote_source: ` + s3BuiltReleaseSourceID + `
-  remote_path: some-other-s3-key
-  sha1: correct-sha
-- name: boshio-release
-  version: "1.4.16"
-  remote_source: ` + boshIOReleaseSourceID + `
-  remote_path: some-bosh-io-url
-  sha1: correct-sha
-stemcell_criteria:
-  os: some-os
-  version: "30.1"
-`
-				fakeS3CompiledReleaseSource.DownloadReleaseReturns(
+				kilnfileLock = cargo.KilnfileLock{
+					Releases: []cargo.ReleaseLock{
+						{
+							Name: "lts-compiled-release", Version: "1.2.4",
+							RemoteSource: s3CompiledReleaseSourceID, RemotePath: "some-s3-key",
+							SHA1: "correct-sha",
+						},
+						{
+							Name: "lts-built-release", Version: "1.3.9",
+							RemoteSource: s3BuiltReleaseSourceID, RemotePath: "some-other-s3-key",
+							SHA1: "correct-sha",
+						},
+						{
+							Name: "boshio-release", Version: "1.4.16",
+							RemoteSource: boshIOReleaseSourceID, RemotePath: "some-bosh-io-url",
+							SHA1: "correct-sha",
+						},
+					},
+					Stemcell: cargo.Stemcell{OS: "some-os", Version: "30.1"},
+				}
+
+				s3CompiledReleaseSource.DownloadReleaseReturns(
 					release.Local{ID: s3CompiledReleaseID, LocalPath: "local-path", SHA1: "correct-sha"},
 					nil)
 
-				fakeS3BuiltReleaseSource.DownloadReleaseReturns(
+				s3BuiltReleaseSource.DownloadReleaseReturns(
 					release.Local{ID: s3BuiltReleaseID, LocalPath: "local-path2", SHA1: "correct-sha"},
 					nil)
 
-				fakeBoshIOReleaseSource.DownloadReleaseReturns(
+				boshIOReleaseSource.DownloadReleaseReturns(
 					release.Local{ID: boshIOReleaseID, LocalPath: "local-path3", SHA1: "correct-sha"},
 					nil)
 
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns(nil, nil)
-			})
-
-			It("completes successfully", func() {
-				Expect(fetchExecuteErr).NotTo(HaveOccurred())
+				localReleaseDirectory.GetLocalReleasesReturns(nil, nil)
 			})
 
 			It("fetches compiled release from s3 compiled release source", func() {
-				Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				Expect(fetch.Run(nil)).To(Succeed())
+				Expect(s3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
 
-				releasesDir, object, threads := fakeS3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
-				Expect(releasesDir).To(Equal(someReleasesDirectory))
+				releasesDir, object, threads := s3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
+				Expect(releasesDir).To(Equal(releasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(object).To(Equal(
 					release.Remote{ID: s3CompiledReleaseID, RemotePath: "some-s3-key", SourceID: s3CompiledReleaseSourceID},
@@ -243,9 +231,10 @@ stemcell_criteria:
 			})
 
 			It("fetches built release from s3 built release source", func() {
-				Expect(fakeS3BuiltReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				releasesDir, object, threads := fakeS3BuiltReleaseSource.DownloadReleaseArgsForCall(0)
-				Expect(releasesDir).To(Equal(someReleasesDirectory))
+				Expect(fetch.Run(nil)).To(Succeed())
+				Expect(s3BuiltReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				releasesDir, object, threads := s3BuiltReleaseSource.DownloadReleaseArgsForCall(0)
+				Expect(releasesDir).To(Equal(releasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(object).To(Equal(
 					release.Remote{ID: s3BuiltReleaseID, RemotePath: "some-other-s3-key", SourceID: s3BuiltReleaseSourceID},
@@ -253,9 +242,10 @@ stemcell_criteria:
 			})
 
 			It("fetches bosh.io release from bosh.io release source", func() {
-				Expect(fakeBoshIOReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				releasesDir, object, threads := fakeBoshIOReleaseSource.DownloadReleaseArgsForCall(0)
-				Expect(releasesDir).To(Equal(someReleasesDirectory))
+				Expect(fetch.Run(nil)).To(Succeed())
+				Expect(boshIOReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				releasesDir, object, threads := boshIOReleaseSource.DownloadReleaseArgsForCall(0)
+				Expect(releasesDir).To(Equal(releasesDirectory))
 				Expect(threads).To(Equal(0))
 				Expect(object).To(Equal(
 					release.Remote{ID: boshIOReleaseID, RemotePath: "some-bosh-io-url", SourceID: boshIOReleaseSourceID},
@@ -265,33 +255,32 @@ stemcell_criteria:
 
 		Context("when all releases are already present in releases directory", func() {
 			BeforeEach(func() {
-				lockContents = `---
-releases:
-- name: some-release-from-local-dir
-  version: "1.2.3"
-  remote_source: ` + s3CompiledReleaseSourceID + `
-  remote_path: not-used
-  sha1: correct-sha
-stemcell_criteria:
-  os: some-os
-  version: "4.5.6"
-`
+				kilnfileLock = cargo.KilnfileLock{
+					Releases: []cargo.ReleaseLock{
+						{
+							Name: "some-release-from-local-dir", Version: "1.2.3",
+							RemoteSource: s3CompiledReleaseSourceID, RemotePath: "not-used",
+							SHA1: "correct-sha",
+						},
+					},
+					Stemcell: cargo.Stemcell{OS: "some-os", Version: "4.5.6"},
+				}
 
 				someLocalReleaseID := release.ID{
 					Name:    "some-release-from-local-dir",
 					Version: "1.2.3",
 				}
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.Local{
+				localReleaseDirectory.GetLocalReleasesReturns([]release.Local{
 					{ID: someLocalReleaseID, LocalPath: "/path/to/some/release", SHA1: "correct-sha"},
 				}, nil)
 			})
 
 			It("no-ops", func() {
-				Expect(fetchExecuteErr).NotTo(HaveOccurred())
+				Expect(fetch.Run(nil)).To(Succeed())
 
-				Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
-				Expect(fakeS3BuiltReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
-				Expect(fakeBoshIOReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
+				Expect(s3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
+				Expect(s3BuiltReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
+				Expect(boshIOReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
 			})
 		})
 
@@ -309,42 +298,42 @@ stemcell_criteria:
 				missingReleaseS3Built release.Remote
 			)
 			BeforeEach(func() {
-				lockContents = `---
-releases:
-- name: some-release
-  version: "1.2.3"
-  remote_source: ` + s3BuiltReleaseSourceID + `
-  remote_path: not-used
-  sha1: correct-sha
-- name: some-tiny-release
-  version: "1.2.3"
-  remote_source: ` + boshIOReleaseSourceID + `
-  remote_path: not-used2
-  sha1: correct-sha
-- name: some-missing-release-on-s3-compiled
-  version: "4.5.6"
-  remote_source: ` + s3CompiledReleaseSourceID + `
-  remote_path: ` + missingReleaseS3CompiledPath + `
-  sha1: correct-sha
-- name: some-missing-release-on-boshio
-  version: "5.6.7"
-  remote_source: ` + boshIOReleaseSourceID + `
-  remote_path: ` + missingReleaseBoshIOPath + `
-  sha1: correct-sha
-- name: some-missing-release-on-s3-built
-  version: "8.9.0"
-  remote_source: ` + s3BuiltReleaseSourceID + `
-  remote_path: ` + missingReleaseS3BuiltPath + `
-  sha1: correct-sha
-stemcell_criteria:
-  os: some-os
-  version: "4.5.6"`
+				kilnfileLock = cargo.KilnfileLock{
+					Releases: []cargo.ReleaseLock{
+						{
+							Name: "some-release", Version: "1.2.3",
+							RemoteSource: s3BuiltReleaseSourceID, RemotePath: "not-used",
+							SHA1: "correct-sha",
+						},
+						{
+							Name: "some-tiny-release", Version: "1.2.3",
+							RemoteSource: boshIOReleaseSourceID, RemotePath: "not-used2",
+							SHA1: "correct-sha",
+						},
+						{
+							Name: "some-missing-release-on-s3-compiled", Version: "4.5.6",
+							RemoteSource: s3CompiledReleaseSourceID, RemotePath: missingReleaseS3CompiledPath,
+							SHA1: "correct-sha",
+						},
+						{
+							Name: "some-missing-release-on-boshio", Version: "5.6.7",
+							RemoteSource: boshIOReleaseSourceID, RemotePath: missingReleaseBoshIOPath,
+							SHA1: "correct-sha",
+						},
+						{
+							Name: "some-missing-release-on-s3-built", Version: "8.9.0",
+							RemoteSource: s3BuiltReleaseSourceID, RemotePath: missingReleaseS3BuiltPath,
+							SHA1: "correct-sha",
+						},
+					},
+					Stemcell: cargo.Stemcell{OS: "some-os", Version: "4.5.6"},
+				}
 
 				missingReleaseS3CompiledID = release.ID{Name: "some-missing-release-on-s3-compiled", Version: "4.5.6"}
 				missingReleaseBoshIOID = release.ID{Name: "some-missing-release-on-boshio", Version: "5.6.7"}
 				missingReleaseS3BuiltID = release.ID{Name: "some-missing-release-on-s3-built", Version: "8.9.0"}
 
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.Local{
+				localReleaseDirectory.GetLocalReleasesReturns([]release.Local{
 					{
 						ID:        release.ID{Name: "some-release", Version: "1.2.3"},
 						LocalPath: "path/to/some/release",
@@ -357,15 +346,15 @@ stemcell_criteria:
 					},
 				}, nil)
 
-				fakeS3CompiledReleaseSource.DownloadReleaseReturns(release.Local{
+				s3CompiledReleaseSource.DownloadReleaseReturns(release.Local{
 					ID: missingReleaseS3CompiledID, LocalPath: "local-path-1", SHA1: "correct-sha",
 				}, nil)
 
-				fakeBoshIOReleaseSource.DownloadReleaseReturns(release.Local{
+				boshIOReleaseSource.DownloadReleaseReturns(release.Local{
 					ID: missingReleaseBoshIOID, LocalPath: "local-path-2", SHA1: "correct-sha",
 				}, nil)
 
-				fakeS3BuiltReleaseSource.DownloadReleaseReturns(release.Local{
+				s3BuiltReleaseSource.DownloadReleaseReturns(release.Local{
 					ID: missingReleaseS3BuiltID, LocalPath: "local-path-3", SHA1: "correct-sha",
 				}, nil)
 
@@ -375,18 +364,18 @@ stemcell_criteria:
 			})
 
 			It("downloads only the missing releases", func() {
-				Expect(fetchExecuteErr).NotTo(HaveOccurred())
+				Expect(fetch.Run(nil)).To(Succeed())
 
-				Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				_, object, _ := fakeS3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
+				Expect(s3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				_, object, _ := s3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(object).To(Equal(missingReleaseS3Compiled))
 
-				Expect(fakeBoshIOReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				_, object, _ = fakeBoshIOReleaseSource.DownloadReleaseArgsForCall(0)
+				Expect(boshIOReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				_, object, _ = boshIOReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(object).To(Equal(missingReleaseBoshIO))
 
-				Expect(fakeS3BuiltReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				_, object, _ = fakeS3BuiltReleaseSource.DownloadReleaseArgsForCall(0)
+				Expect(s3BuiltReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				_, object, _ = s3BuiltReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(object).To(Equal(missingReleaseS3Built))
 			})
 
@@ -397,16 +386,17 @@ stemcell_criteria:
 
 				BeforeEach(func() {
 					wrappedErr = errors.New("kaboom")
-					fakeS3CompiledReleaseSource.DownloadReleaseReturns(
+					s3CompiledReleaseSource.DownloadReleaseReturns(
 						release.Local{},
 						wrappedErr,
 					)
 				})
 
 				It("returns an error", func() {
-					Expect(fetchExecuteErr).To(HaveOccurred())
-					Expect(fetchExecuteErr).To(MatchError(ContainSubstring("download failed")))
-					Expect(errors.Is(fetchExecuteErr, wrappedErr)).To(BeTrue())
+					err := fetch.Run(nil)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring("download failed")))
+					Expect(errors.Is(err, wrappedErr)).To(BeTrue())
 				})
 			})
 
@@ -414,9 +404,9 @@ stemcell_criteria:
 				var badReleasePath string
 
 				BeforeEach(func() {
-					badReleasePath = filepath.Join(someReleasesDirectory, "local-path-3")
+					badReleasePath = filepath.Join(releasesDirectory, "local-path-3")
 
-					fakeS3BuiltReleaseSource.DownloadReleaseCalls(func(string, release.Remote, int) (release.Local, error) {
+					s3BuiltReleaseSource.DownloadReleaseCalls(func(string, release.Remote, int) (release.Local, error) {
 						f, err := os.Create(badReleasePath)
 						Expect(err).NotTo(HaveOccurred())
 						defer f.Close()
@@ -428,9 +418,11 @@ stemcell_criteria:
 				})
 
 				It("errors", func() {
-					Expect(fetchExecuteErr).To(MatchError(ContainSubstring("incorrect SHA1")))
-					Expect(fetchExecuteErr).To(MatchError(ContainSubstring(`"correct-sha"`)))
-					Expect(fetchExecuteErr).To(MatchError(ContainSubstring(`"wrong-sha"`)))
+					err := fetch.Run(nil)
+
+					Expect(err).To(MatchError(ContainSubstring("incorrect SHA1")))
+					Expect(err).To(MatchError(ContainSubstring(`"correct-sha"`)))
+					Expect(err).To(MatchError(ContainSubstring(`"wrong-sha"`)))
 				})
 
 				It("deletes the release file from disk", func() {
@@ -447,22 +439,21 @@ stemcell_criteria:
 				localReleaseID  = release.ID{Name: "some-extra-release", Version: "1.2.3"}
 			)
 			BeforeEach(func() {
+				kilnfileLock = cargo.KilnfileLock{
+					Releases: []cargo.ReleaseLock{
+						{
+							Name: "some-release", Version: "1.2.3",
+							RemoteSource: s3CompiledReleaseSourceID, RemotePath: "not-used",
+						},
+					},
+					Stemcell: cargo.Stemcell{OS: "some-os", Version: "4.5.6"},
+				}
 
-				lockContents = `---
-releases:
-- name: some-release
-  version: "1.2.3"
-  remote_source: ` + s3CompiledReleaseSourceID + `
-  remote_path: not-used
-stemcell_criteria:
-  os: some-os
-  version: "4.5.6"
-`
-				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]release.Local{
+				localReleaseDirectory.GetLocalReleasesReturns([]release.Local{
 					{ID: localReleaseID, LocalPath: "path/to/some/extra/release", SHA1: "correct-sha"},
 				}, nil)
 
-				fakeBoshIOReleaseSource.DownloadReleaseReturns(
+				boshIOReleaseSource.DownloadReleaseReturns(
 					release.Local{ID: boshIOReleaseID, LocalPath: "local-path", SHA1: "correct-sha"},
 					nil)
 
@@ -470,21 +461,17 @@ stemcell_criteria:
 
 			Context("in non-interactive mode", func() {
 				BeforeEach(func() {
-					fetchExecuteArgs = []string{
-						"--releases-directory", someReleasesDirectory,
-						"--kilnfile", someKilnfilePath,
-						"--no-confirm",
-					}
+					fetch.NoConfirm = true
 				})
 
 				It("deletes the extra releases", func() {
-					Expect(fetchExecuteErr).NotTo(HaveOccurred())
+					Expect(fetch.Run(nil)).To(Succeed())
 
-					Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+					Expect(s3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
 
-					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
+					Expect(localReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
 
-					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
+					extras, noConfirm := localReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
 					Expect(extras).To(HaveLen(1))
 					Expect(noConfirm).To(Equal(true))
 					Expect(extras).To(ConsistOf(
@@ -497,120 +484,25 @@ stemcell_criteria:
 				})
 			})
 
-			Context("when multiple variable files are provided", func() {
-				const TemplatizedKilnfileYMLContents = `
----
-release_sources:
-  - type: s3
-    compiled: true
-    bucket: $( variable "bucket" )
-    region: $( variable "region" )
-    access_key_id: $( variable "access_key" )
-    secret_access_key: $( variable "secret_key" )
-    path_template: $( variable "path_template" )
-`
-
-				var (
-					someVariableFile, otherVariableFile *os.File
-				)
-
-				BeforeEach(func() {
-					var err error
-
-					someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-					err = ioutil.WriteFile(someKilnfilePath, []byte(TemplatizedKilnfileYMLContents), 0644)
-					Expect(err).NotTo(HaveOccurred())
-
-					someVariableFile, err = ioutil.TempFile(tmpDir, "variables-file1")
-					Expect(err).NotTo(HaveOccurred())
-					defer someVariableFile.Close()
-
-					variables := map[string]string{
-						"bucket": "my-releases",
-					}
-					data, err := yaml.Marshal(&variables)
-					Expect(err).NotTo(HaveOccurred())
-					n, err := someVariableFile.Write(data)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(data).To(HaveLen(n))
-
-					otherVariableFile, err = ioutil.TempFile(tmpDir, "variables-file2")
-					Expect(err).NotTo(HaveOccurred())
-					defer otherVariableFile.Close()
-
-					variables = map[string]string{
-						"access_key":    "newkey",
-						"secret_key":    "newsecret",
-						"path_template": `2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
-					}
-					data, err = yaml.Marshal(&variables)
-					Expect(err).NotTo(HaveOccurred())
-
-					n, err = otherVariableFile.Write(data)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(data).To(HaveLen(n))
-
-					fetchExecuteArgs = []string{
-						"--releases-directory", someReleasesDirectory,
-						"--kilnfile", someKilnfilePath,
-						"--variables-file", someVariableFile.Name(),
-						"--variables-file", otherVariableFile.Name(),
-						"--variable", "region=north-east-1",
-					}
-				})
-
-				It("interpolates variables from both files", func() {
-					Expect(fetchExecuteErr).NotTo(HaveOccurred())
-				})
-			})
-
 			Context("when # of download threads is specified", func() {
 				BeforeEach(func() {
-					fetchExecuteArgs = []string{
-						"--releases-directory", someReleasesDirectory,
-						"--kilnfile", someKilnfilePath,
-						"--download-threads", "10",
-					}
+					fetch.DownloadThreads = 10
 				})
 
 				It("passes concurrency parameter to DownloadReleases", func() {
-					Expect(fetchExecuteErr).NotTo(HaveOccurred())
-					_, _, threads := fakeS3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
+					Expect(fetch.Run(nil)).To(Succeed())
+					_, _, threads := s3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
 					Expect(threads).To(Equal(10))
 				})
 			})
 
 			Context("failure cases", func() {
-				Context("kilnfile is missing", func() {
-					It("returns an error", func() {
-						badKilnfilePath := filepath.Join(tmpDir, "non-existent-Kilnfile")
-						err := fetch.Execute([]string{
-							"--releases-directory", someReleasesDirectory,
-							"--kilnfile", badKilnfilePath,
-						})
-						Expect(err).To(MatchError(fmt.Sprintf("open %s: no such file or directory", badKilnfilePath)))
-					})
-				})
-				Context("# of download threads is not a number", func() {
-					It("returns an error", func() {
-						err := fetch.Execute([]string{
-							"--releases-directory", someReleasesDirectory,
-							"--kilnfile", someKilnfilePath,
-							"--download-threads", "not-a-number",
-						})
-						Expect(err).To(MatchError(fmt.Sprintf("invalid value \"not-a-number\" for flag -download-threads: parse error")))
-					})
-				})
-
 				Context("when local releases cannot be accessed", func() {
 					BeforeEach(func() {
-						fakeLocalReleaseDirectory.GetLocalReleasesReturns(nil, errors.New("some-error"))
+						localReleaseDirectory.GetLocalReleasesReturns(nil, errors.New("some-error"))
 					})
 					It("returns an error", func() {
-						err := fetch.Execute([]string{
-							"--releases-directory", someReleasesDirectory,
-							"--kilnfile", someKilnfilePath,
-						})
+						err := fetch.Run(nil)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("some-error"))
 					})
@@ -618,15 +510,5 @@ release_sources:
 			})
 		})
 
-	})
-
-	Describe("Usage", func() {
-		It("returns usage information for the command", func() {
-			Expect(fetch.Usage()).To(Equal(jhanda.Usage{
-				Description:      "Fetches releases listed in Kilnfile.lock from S3 and downloads it locally",
-				ShortDescription: "fetches releases",
-				Flags:            fetch.Options,
-			}))
-		})
 	})
 })

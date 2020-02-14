@@ -1,4 +1,4 @@
-package fetcher_test
+package fetcher
 
 import (
 	"log"
@@ -6,7 +6,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	. "github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
@@ -109,7 +108,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 		})
 	})
 
-	Describe("multiReleaseSource", func() {
+	Describe("MultiReleaseSource", func() {
 		var (
 			repo     ReleaseSourceRepo
 			kilnfile cargo.Kilnfile
@@ -135,8 +134,9 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			})
 
 			It("builds the correct release sources", func() {
-				releaseSources := repo.MultiReleaseSource(false)
+				releaseSources := repo.MultiReleaseSource(false).(multiReleaseSource)
 				Expect(releaseSources).To(HaveLen(4))
+
 				var (
 					s3ReleaseSource     S3ReleaseSource
 					boshIOReleaseSource *BOSHIOReleaseSource
@@ -180,7 +180,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			})
 
 			It("builds the correct release sources", func() {
-				releaseSources := repo.MultiReleaseSource(true)
+				releaseSources := repo.MultiReleaseSource(true).(multiReleaseSource)
 				Expect(releaseSources).To(HaveLen(1))
 				var s3ReleaseSource S3ReleaseSource
 
@@ -193,7 +193,6 @@ var _ = Describe("ReleaseSourceRepo", func() {
 				releaseSource, ok := releaseSources[0].(ReleaseSource)
 				Expect(ok).To(BeTrue(), "Couldn't convert releaseSources[0] to type ReleaseSource")
 				Expect(releaseSource.Publishable()).To(BeTrue())
-
 			})
 		})
 	})

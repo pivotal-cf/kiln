@@ -17,13 +17,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/jhanda"
 	. "github.com/pivotal-cf/kiln/commands"
 )
 
 var _ = Describe("UpdateStemcell", func() {
-	var _ jhanda.Command = UpdateStemcell{}
-
 	const (
 		initialKilnfileYAMLFileContents = `---
 `
@@ -52,12 +49,10 @@ stemcell_criteria:
 		releasesDirPath = "releases-dir"
 	)
 
-	Describe("Execute", func() {
+	Describe("Run", func() {
 		var (
 			update                                               *UpdateStemcell
 			tmpDir, kilnfilePath, kilnfileLockPath, stemcellPath string
-			kilnfileLoader                                       *fakes.KilnfileLoader
-			kilnfile                                             cargo.Kilnfile
 			kilnfileLock                                         cargo.KilnfileLock
 			releaseSource                                        *fetcherFakes.ReleaseSource
 			outputBuffer                                         *gbytes.Buffer
@@ -66,8 +61,6 @@ stemcell_criteria:
 		BeforeEach(func() {
 			var err error
 
-			kilnfileLoader = new(fakes.KilnfileLoader)
-			kilnfile = cargo.Kilnfile{}
 			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ReleaseLock{
 					{
@@ -158,7 +151,10 @@ stemcell_criteria:
 			logger := log.New(outputBuffer, "", 0)
 
 			update = &UpdateStemcell{
-				KilnfileLoader:             kilnfileLoader,
+				StemcellFile: stemcellPath,
+				ReleasesDir: releasesDirPath,
+
+				KilnfileLockPath: kilnfileLockPath,
 				MultiReleaseSourceProvider: multiReleaseSourceProvider.Spy,
 				Logger:                     logger,
 			}
@@ -167,10 +163,12 @@ stemcell_criteria:
 		JustBeforeEach(func() {
 			kilnfileLockFile, err := os.Create(kilnfileLockPath)
 			Expect(err).NotTo(HaveOccurred())
-			err = yaml.NewEncoder(kilnfileLockFile).Encode(kilnfileLock)
-			Expect(err).NotTo(HaveOccurred())
 
-			kilnfileLoader.LoadKilnfilesReturns(kilnfile, kilnfileLock, nil)
+			Expect(
+				yaml.NewEncoder(kilnfileLockFile).Encode(kilnfileLock),
+			).To(Succeed())
+
+			update.KilnfileLock = kilnfileLock
 		})
 
 		AfterEach(func() {
@@ -180,7 +178,7 @@ stemcell_criteria:
 		})
 
 		It("updates the Kilnfile.lock contents", func() {
-			err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
+			err := update.Run(nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			kilnfileLockFile, err := os.Open(kilnfileLockPath)
@@ -214,9 +212,7 @@ stemcell_criteria:
 		})
 
 		It("looks up the correct releases", func() {
-			err := update.Execute([]string{
-				"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath, "--releases-directory", releasesDirPath,
-			})
+			err := update.Run(nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(2))
@@ -235,9 +231,7 @@ stemcell_criteria:
 		})
 
 		It("downloads the correct releases", func() {
-			err := update.Execute([]string{
-				"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath, "--releases-directory", releasesDirPath,
-			})
+			err := update.Run(nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(2))
@@ -274,7 +268,7 @@ stemcell_criteria:
 			})
 
 			It("no-ops", func() {
-				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
+				err := update.Run(nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
@@ -300,7 +294,7 @@ stemcell_criteria:
 			})
 
 			It("doesn't download the release", func() {
-				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
+				err := update.Run(nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(1))
@@ -318,7 +312,7 @@ stemcell_criteria:
 			})
 
 			It("errors", func() {
-				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
+				err := update.Run(nil)
 
 				Expect(err).To(MatchError(ContainSubstring("couldn't find release")))
 				Expect(err).To(MatchError(ContainSubstring(release1Name)))
@@ -331,7 +325,7 @@ stemcell_criteria:
 			})
 
 			It("errors", func() {
-				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
+				err := update.Run(nil)
 
 				Expect(err).To(MatchError(ContainSubstring("finding release")))
 				Expect(err).To(MatchError(ContainSubstring(release1Name)))
@@ -345,7 +339,7 @@ stemcell_criteria:
 			})
 
 			It("errors", func() {
-				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
+				err := update.Run(nil)
 
 				Expect(err).To(MatchError(ContainSubstring("downloading release")))
 				Expect(err).To(MatchError(ContainSubstring(release1Name)))

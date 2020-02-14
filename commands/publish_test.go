@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"errors"
+	"github.com/pivotal-cf/kiln/internal/cargo"
 	"io/ioutil"
 	"log"
 	"strings"
@@ -24,24 +25,25 @@ var _ = Describe("Publish", func() {
 		userGroup1ID   = 123
 		userGroup2Name = "PCF R&D"
 		userGroup2ID   = 456
-
-		defaultKilnFileBody = `---
-slug: ` + slug + `
-pre_ga_user_groups:
-  - ` + userGroup1Name + `
-  - ` + userGroup2Name + `
-`
 	)
 
-	var someVersion *semver.Version
+	var (
+		someVersion *semver.Version
+		kilnfile cargo.Kilnfile
+	)
+
 	BeforeEach(func() {
 		someVersion = semver.MustParse("2.8.0-build.111")
+		kilnfile = cargo.Kilnfile{
+			Slug:            slug,
+			PreGaUserGroups: []string{userGroup1Name, userGroup2Name},
+		}
 	})
 
-	Describe("Execute", func() {
+	Describe("Run", func() {
 		When("on the happy-path", func() {
 			var (
-				publish          Publish
+				publish          *Publish
 				rs               *fakes.PivnetReleasesService
 				pfs              *fakes.PivnetProductFilesService
 				ugs              *fakes.PivnetUserGroupsService
@@ -60,6 +62,24 @@ pre_ga_user_groups:
 				releasesOnPivnet = []pivnet.Release{}
 				now = time.Now()
 				outLoggerBuffer = strings.Builder{}
+
+				fs := memfs.New()
+				publish = &Publish{
+					PivnetHost: "https://network.pivotal.io",
+					PivnetToken: "SOME_TOKEN",
+					Version: "version",
+
+					Kilnfile: kilnfile,
+					FS:                        fs,
+					PivnetReleaseService:      rs,
+					PivnetProductFilesService: pfs,
+					PivnetUserGroupsService:   ugs,
+					Now: func() time.Time {
+						return now
+					},
+					OutLogger: log.New(&outLoggerBuffer, "", 0),
+					ErrLogger: log.New(ioutil.Discard, "", 0),
+				}
 			})
 
 			JustBeforeEach(func() {
@@ -76,37 +96,19 @@ pre_ga_user_groups:
 					{ID: userGroup2ID, Name: userGroup2Name},
 				}, nil)
 
-				fs := memfs.New()
-				vf, _ := fs.Create("version")
+				vf, _ := publish.FS.Create("version")
 				vf.Write([]byte(versionStr))
 				vf.Close()
 
-				kf, _ := fs.Create("Kilnfile")
-				kf.Write([]byte(defaultKilnFileBody))
-				kf.Close()
-
-				publish = Publish{
-					FS:                        fs,
-					PivnetReleaseService:      rs,
-					PivnetProductFilesService: pfs,
-					PivnetUserGroupsService:   ugs,
-					Now: func() time.Time {
-						return now
-					},
-					OutLogger: log.New(&outLoggerBuffer, "", 0),
-					ErrLogger: log.New(ioutil.Discard, "", 0),
-				}
 			})
 
 			Context("during the alpha window", func() {
-				var args []string
-
 				BeforeEach(func() {
-					args = []string{"--window", "alpha", "--pivnet-token", "SOME_TOKEN"}
+					publish.Window = "alpha"
 				})
 
 				It("updates Pivnet release with the determined version and release type", func() {
-					err := publish.Execute(args)
+					err := publish.Run(nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(rs.ListCallCount()).To(Equal(1))
@@ -129,7 +131,7 @@ pre_ga_user_groups:
 				})
 
 				It("does not add a file to the release", func() {
-					err := publish.Execute(args)
+					err := publish.Run(nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
@@ -137,7 +139,7 @@ pre_ga_user_groups:
 				})
 
 				It("adds the pre-GA user groups to the release", func() {
-					err := publish.Execute(args)
+					err := publish.Run(nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(ugs.ListCallCount()).To(Equal(1))
@@ -171,7 +173,7 @@ pre_ga_user_groups:
 					})
 
 					It("publishes with a version that increments the alpha number", func() {
-						err := publish.Execute(args)
+						err := publish.Run(nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						s, r := rs.UpdateArgsForCall(0)
@@ -182,11 +184,11 @@ pre_ga_user_groups:
 
 				Context("when the --security-fix flag is given", func() {
 					BeforeEach(func() {
-						args = append(args, "--security-fix")
+						publish.IncludesSecurityFix = true
 					})
 
 					It("sets the correct release type", func() {
-						err := publish.Execute(args)
+						err := publish.Run(nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(rs.UpdateCallCount()).To(Equal(1))
@@ -197,14 +199,12 @@ pre_ga_user_groups:
 			})
 
 			Context("during the beta window", func() {
-				var args []string
-
 				BeforeEach(func() {
-					args = []string{"--window", "beta", "--pivnet-token", "SOME_TOKEN"}
+					publish.Window = "beta"
 				})
 
 				It("updates Pivnet release with the determined version and release type", func() {
-					err := publish.Execute(args)
+					err := publish.Run(nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(rs.ListCallCount()).To(Equal(1))
@@ -227,7 +227,7 @@ pre_ga_user_groups:
 				})
 
 				It("does not add a file to the release", func() {
-					err := publish.Execute(args)
+					err := publish.Run(nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
@@ -235,7 +235,7 @@ pre_ga_user_groups:
 				})
 
 				It("adds the pre-GA user groups to the release", func() {
-					err := publish.Execute(args)
+					err := publish.Run(nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(ugs.ListCallCount()).To(Equal(1))
@@ -262,7 +262,7 @@ pre_ga_user_groups:
 					})
 
 					It("publishes with a version that increments the alpha number", func() {
-						err := publish.Execute(args)
+						err := publish.Run(nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						s, r := rs.UpdateArgsForCall(0)
@@ -273,11 +273,11 @@ pre_ga_user_groups:
 
 				Context("when the --security-fix flag is given", func() {
 					BeforeEach(func() {
-						args = append(args, "--security-fix")
+						publish.IncludesSecurityFix = true
 					})
 
 					It("sets the correct release type", func() {
-						err := publish.Execute(args)
+						err := publish.Run(nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(rs.UpdateCallCount()).To(Equal(1))
@@ -288,14 +288,12 @@ pre_ga_user_groups:
 			})
 
 			Context("during the rc window", func() {
-				var args []string
-
 				BeforeEach(func() {
-					args = []string{"--window", "rc", "--pivnet-token", "SOME_TOKEN"}
+					publish.Window = "rc"
 				})
 
 				It("updates Pivnet release with the determined version and release type", func() {
-					err := publish.Execute(args)
+					err := publish.Run(nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(rs.ListCallCount()).To(Equal(1))
@@ -318,7 +316,7 @@ pre_ga_user_groups:
 				})
 
 				It("does not add a file to the release", func() {
-					err := publish.Execute(args)
+					err := publish.Run(nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(0))
@@ -326,7 +324,7 @@ pre_ga_user_groups:
 				})
 
 				It("adds the pre-GA user groups to the release", func() {
-					err := publish.Execute(args)
+					err := publish.Run(nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(ugs.ListCallCount()).To(Equal(1))
@@ -358,7 +356,7 @@ pre_ga_user_groups:
 					})
 
 					It("publishes with a version that increments the alpha number", func() {
-						err := publish.Execute(args)
+						err := publish.Run(nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						s, r := rs.UpdateArgsForCall(0)
@@ -369,11 +367,11 @@ pre_ga_user_groups:
 
 				Context("when the --security-fix flag is given", func() {
 					BeforeEach(func() {
-						args = append(args, "--security-fix")
+						publish.IncludesSecurityFix = true
 					})
 
 					It("sets the correct release type", func() {
-						err := publish.Execute(args)
+						err := publish.Run(nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(rs.UpdateCallCount()).To(Equal(1))
@@ -389,12 +387,11 @@ pre_ga_user_groups:
 					version21FileID = 43
 				)
 				var (
-					args             []string
 					endOfSupportDate string
 				)
 
 				BeforeEach(func() {
-					args = []string{"--window", "ga", "--pivnet-token", "SOME_TOKEN"}
+					publish.Window = "ga"
 
 					now = time.Date(2016, 5, 4, 3, 2, 1, 0, time.Local)
 					endOfSupportDate = "2017-02-28" // by default, PivNet does not have EOGS: now + 300 days
@@ -436,7 +433,7 @@ pre_ga_user_groups:
 					})
 
 					It("updates Pivnet release with the determined version and release type", func() {
-						err := publish.Execute(args)
+						err := publish.Run(nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(rs.ListCallCount()).To(Equal(1))
@@ -460,7 +457,7 @@ pre_ga_user_groups:
 					})
 
 					It("adds the appropriate OSL file", func() {
-						err := publish.Execute(args)
+						err := publish.Run(nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
@@ -474,11 +471,11 @@ pre_ga_user_groups:
 
 					Context("when the --security-fix flag is given", func() {
 						BeforeEach(func() {
-							args = append(args, "--security-fix")
+							publish.IncludesSecurityFix = true
 						})
 
 						It("sets the correct release type", func() {
-							err := publish.Execute(args)
+							err := publish.Run(nil)
 							Expect(err).NotTo(HaveOccurred())
 
 							Expect(rs.UpdateCallCount()).To(Equal(1))
@@ -494,7 +491,7 @@ pre_ga_user_groups:
 					})
 
 					It("updates Pivnet release with the determined version and release type", func() {
-						err := publish.Execute(args)
+						err := publish.Run(nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(rs.ListCallCount()).To(Equal(1))
@@ -518,7 +515,7 @@ pre_ga_user_groups:
 					})
 
 					It("adds the appropriate OSL file", func() {
-						err := publish.Execute(args)
+						err := publish.Run(nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
@@ -532,11 +529,11 @@ pre_ga_user_groups:
 
 					Context("when the --security-fix flag is given", func() {
 						BeforeEach(func() {
-							args = append(args, "--security-fix")
+							publish.IncludesSecurityFix = true
 						})
 
 						It("sets the correct release type", func() {
-							err := publish.Execute(args)
+							err := publish.Run(nil)
 							Expect(err).NotTo(HaveOccurred())
 
 							Expect(rs.UpdateCallCount()).To(Equal(1))
@@ -560,7 +557,7 @@ pre_ga_user_groups:
 					})
 
 					It("updates Pivnet release with the determined version and release type", func() {
-						err := publish.Execute(args)
+						err := publish.Run(nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(rs.ListCallCount()).To(Equal(1))
@@ -584,7 +581,7 @@ pre_ga_user_groups:
 					})
 
 					It("adds the appropriate OSL file", func() {
-						err := publish.Execute(args)
+						err := publish.Run(nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
@@ -598,11 +595,11 @@ pre_ga_user_groups:
 
 					Context("when the --security-fix flag is given", func() {
 						BeforeEach(func() {
-							args = append(args, "--security-fix")
+							publish.IncludesSecurityFix = true
 						})
 
 						It("sets the correct release type", func() {
-							err := publish.Execute(args)
+							err := publish.Run(nil)
 							Expect(err).NotTo(HaveOccurred())
 
 							Expect(rs.UpdateCallCount()).To(Equal(1))
@@ -617,36 +614,38 @@ pre_ga_user_groups:
 
 		When("the sad/unhappy case", func() {
 			var (
-				publish Publish
+				publish *Publish
 				now     time.Time
 				fs      billy.Filesystem
 
-				noVersionFile, noKilnFile     bool
-				versionFileBody, kilnFileBody string
+				noVersionFile      bool
+				versionFileBody  string
 				rs                            *fakes.PivnetReleasesService
 				pfs                           *fakes.PivnetProductFilesService
 				ugs                           *fakes.PivnetUserGroupsService
 
-				executeArgs     []string
 				outLoggerBuffer strings.Builder
 			)
 
 			BeforeEach(func() {
-				publish = Publish{}
-				publish.Options.Kilnfile = "Kilnfile"
 				outLoggerBuffer = strings.Builder{}
-				publish.OutLogger = log.New(&outLoggerBuffer, "", 0)
-				publish.ErrLogger = log.New(ioutil.Discard, "", 0)
-
 				rs = new(fakes.PivnetReleasesService)
 				pfs = new(fakes.PivnetProductFilesService)
 				ugs = new(fakes.PivnetUserGroupsService)
-
-				noVersionFile, noKilnFile = false, false
 				fs = memfs.New()
-				kilnFileBody = defaultKilnFileBody
 
-				executeArgs = []string{"--pivnet-token", "SOME_TOKEN", "--window", "ga"}
+				publish = &Publish{
+					PivnetHost: "https://network.pivotal.io",
+					PivnetToken: "SOME_TOKEN",
+					Version: "version",
+					Window: "ga",
+
+					OutLogger:log.New(&outLoggerBuffer, "", 0),
+					ErrLogger: log.New(ioutil.Discard, "", 0),
+				}
+
+
+				noVersionFile = false
 			})
 
 			JustBeforeEach(func() {
@@ -658,12 +657,7 @@ pre_ga_user_groups:
 					version.Close()
 				}
 
-				if !noKilnFile {
-					kilnFile, _ := fs.Create("Kilnfile")
-					kilnFile.Write([]byte(kilnFileBody))
-					kilnFile.Close()
-				}
-
+				publish.Kilnfile = kilnfile
 				publish.FS = fs
 				publish.PivnetReleaseService = rs
 				publish.PivnetProductFilesService = pfs
@@ -673,25 +667,13 @@ pre_ga_user_groups:
 				}
 			})
 
-			When("the window flag is not provided", func() {
-				BeforeEach(func() {
-					executeArgs = []string{"--pivnet-token", "SOME_TOKEN"}
-				})
-
-				It("returns an error", func() {
-					err := publish.Execute(executeArgs)
-					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError(ContainSubstring("missing required flag \"--window\"")))
-				})
-			})
-
 			When("the an unknown window is provided", func() {
 				BeforeEach(func() {
-					executeArgs = []string{"--window", "nosuchwindow", "--pivnet-token", "SOME_TOKEN"}
+					publish.Window = "nosuchwindow"
 				})
 
 				It("returns an error", func() {
-					err := publish.Execute(executeArgs)
+					err := publish.Run(nil)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring("unknown window: \"nosuchwindow\"")))
 				})
@@ -703,7 +685,7 @@ pre_ga_user_groups:
 				})
 
 				It("returns an error", func() {
-					err := publish.Execute(executeArgs)
+					err := publish.Run(nil)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring("release with version " + someVersion.String() + " not found")))
 				})
@@ -715,44 +697,20 @@ pre_ga_user_groups:
 				})
 
 				It("returns an error", func() {
-					err := publish.Execute(executeArgs)
+					err := publish.Run(nil)
 					Expect(err).To(HaveOccurred())
 				})
 			})
 
-			When("the Kilnfile does not exist", func() {
+			When("the version file does not exist", func() {
 				BeforeEach(func() {
 					noVersionFile = true
 				})
 
 				It("returns an error", func() {
-					err := publish.Execute(executeArgs)
+					err := publish.Run(nil)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring("file does not exist")))
-				})
-			})
-
-			When("the Kilnfile does not exist", func() {
-				BeforeEach(func() {
-					noKilnFile = true
-				})
-
-				It("returns an error", func() {
-					err := publish.Execute(executeArgs)
-					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError(ContainSubstring("file does not exist")))
-				})
-			})
-
-			When("there is bad yaml in the file", func() {
-				BeforeEach(func() {
-					kilnFileBody = `}`
-				})
-
-				It("returns an error", func() {
-					err := publish.Execute(executeArgs)
-					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError(ContainSubstring("yaml:")))
 				})
 			})
 
@@ -763,7 +721,7 @@ pre_ga_user_groups:
 				})
 
 				It("returns an error and makes no changes", func() {
-					err := publish.Execute(executeArgs)
+					err := publish.Run(nil)
 					Expect(err).To(HaveOccurred())
 
 					Expect(rs.UpdateCallCount()).To(Equal(0))
@@ -790,7 +748,7 @@ pre_ga_user_groups:
 				})
 
 				It("returns an error and makes no changes", func() {
-					err := publish.Execute(executeArgs)
+					err := publish.Run(nil)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring("file doesn't exist")))
 
@@ -818,7 +776,7 @@ pre_ga_user_groups:
 				})
 
 				It("returns an error and makes no changes", func() {
-					err := publish.Execute(executeArgs)
+					err := publish.Run(nil)
 					Expect(err).To(HaveOccurred())
 
 					Expect(rs.UpdateCallCount()).To(Equal(0))
@@ -848,7 +806,7 @@ pre_ga_user_groups:
 				})
 
 				It("ignores that release and updates the correct release", func() {
-					err := publish.Execute(executeArgs)
+					err := publish.Run(nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(rs.UpdateCallCount()).To(Equal(1))
@@ -886,7 +844,7 @@ pre_ga_user_groups:
 				})
 
 				It("returns an error instead of publishing the release", func() {
-					err := publish.Execute(executeArgs)
+					err := publish.Run(nil)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring("does not have an End of General Support date")))
 
@@ -896,13 +854,13 @@ pre_ga_user_groups:
 
 			When("there is an error fetching user groups from PivNet", func() {
 				BeforeEach(func() {
-					executeArgs = []string{"--pivnet-token", "SOME_TOKEN", "--window", "rc"}
+					publish.Window = "rc"
 					rs.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
 					ugs.ListReturns(nil, errors.New("error returning user groups"))
 				})
 
 				It("returns an error ", func() {
-					err := publish.Execute(executeArgs)
+					err := publish.Run(nil)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring("error returning user groups")))
 				})
@@ -910,7 +868,7 @@ pre_ga_user_groups:
 
 			When("there is an error adding a user group to release", func() {
 				BeforeEach(func() {
-					executeArgs = []string{"--pivnet-token", "SOME_TOKEN", "--window", "rc"}
+					publish.Window = "rc"
 					rs.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
 					ugs.ListReturns([]pivnet.UserGroup{
 						{ID: userGroup1ID, Name: userGroup1Name},
@@ -920,7 +878,7 @@ pre_ga_user_groups:
 				})
 
 				It("returns an error ", func() {
-					err := publish.Execute(executeArgs)
+					err := publish.Run(nil)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring("error adding user group to release")))
 				})
@@ -928,7 +886,7 @@ pre_ga_user_groups:
 
 			When("one of the required user groups doesn't exist", func() {
 				BeforeEach(func() {
-					executeArgs = []string{"--pivnet-token", "SOME_TOKEN", "--window", "rc"}
+					publish.Window = "rc"
 					rs.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
 					ugs.ListReturns([]pivnet.UserGroup{
 						{ID: userGroup2ID, Name: userGroup2Name},
@@ -936,7 +894,7 @@ pre_ga_user_groups:
 				})
 
 				It("returns an error", func() {
-					err := publish.Execute(executeArgs)
+					err := publish.Run(nil)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring(userGroup1Name)))
 				})

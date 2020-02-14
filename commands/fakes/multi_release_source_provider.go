@@ -6,15 +6,13 @@ import (
 
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 type MultiReleaseSourceProvider struct {
-	Stub        func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource
+	Stub        func(bool) fetcher.MultiReleaseSource
 	mutex       sync.RWMutex
 	argsForCall []struct {
-		arg1 cargo.Kilnfile
-		arg2 bool
+		arg1 bool
 	}
 	returns struct {
 		result1 fetcher.MultiReleaseSource
@@ -26,17 +24,16 @@ type MultiReleaseSourceProvider struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MultiReleaseSourceProvider) Spy(arg1 cargo.Kilnfile, arg2 bool) fetcher.MultiReleaseSource {
+func (fake *MultiReleaseSourceProvider) Spy(arg1 bool) fetcher.MultiReleaseSource {
 	fake.mutex.Lock()
 	ret, specificReturn := fake.returnsOnCall[len(fake.argsForCall)]
 	fake.argsForCall = append(fake.argsForCall, struct {
-		arg1 cargo.Kilnfile
-		arg2 bool
-	}{arg1, arg2})
-	fake.recordInvocation("MultiReleaseSourceProvider", []interface{}{arg1, arg2})
+		arg1 bool
+	}{arg1})
+	fake.recordInvocation("MultiReleaseSourceProvider", []interface{}{arg1})
 	fake.mutex.Unlock()
 	if fake.Stub != nil {
-		return fake.Stub(arg1, arg2)
+		return fake.Stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
@@ -50,16 +47,16 @@ func (fake *MultiReleaseSourceProvider) CallCount() int {
 	return len(fake.argsForCall)
 }
 
-func (fake *MultiReleaseSourceProvider) Calls(stub func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource) {
+func (fake *MultiReleaseSourceProvider) Calls(stub func(bool) fetcher.MultiReleaseSource) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = stub
 }
 
-func (fake *MultiReleaseSourceProvider) ArgsForCall(i int) (cargo.Kilnfile, bool) {
+func (fake *MultiReleaseSourceProvider) ArgsForCall(i int) bool {
 	fake.mutex.RLock()
 	defer fake.mutex.RUnlock()
-	return fake.argsForCall[i].arg1, fake.argsForCall[i].arg2
+	return fake.argsForCall[i].arg1
 }
 
 func (fake *MultiReleaseSourceProvider) Returns(result1 fetcher.MultiReleaseSource) {

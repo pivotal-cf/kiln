@@ -3,6 +3,8 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/helper"
+	"github.com/pivotal-cf/kiln/internal/baking"
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
@@ -81,7 +83,99 @@ type checksummer interface {
 	Sum(path string) error
 }
 
+type BakeOptions struct {
+	Metadata           string   `short:"m" long:"metadata"           required:"true" description:"path to the metadata file"`
+	OutputFile         string   `short:"o" long:"output-file"                        description:"path to where the tile will be output"`
+	ReleaseDirectories []string `short:"r" long:"releases-directory"                 description:"path to a directory containing release tarballs"`
+
+	BOSHVariableDirectories  []string `short:"b"  long:"bosh-variables-directory"  description:"path to a directory containing BOSH variables"`
+	EmbedPaths               []string `short:"e"  long:"embed"                     description:"path to files to include in the tile /embed directory"`
+	FormDirectories          []string `short:"f"  long:"forms-directory"           description:"path to a directory containing forms"`
+	IconPath                 string   `short:"i"  long:"icon"                      description:"path to icon file"`
+	InstanceGroupDirectories []string `short:"g"  long:"instance-groups-directory" description:"path to a directory containing instance groups"`
+	JobDirectories           []string `short:"j"  long:"jobs-directory"            description:"path to a directory containing jobs"`
+	MetadataOnly             bool     `           long:"metadata-only"             description:"don't build a tile, output the metadata to stdout"`
+	MigrationDirectories     []string `short:"d"  long:"migrations-directory"      description:"path to a directory containing migrations"`
+	PropertyDirectories      []string `short:"p"  long:"properties-directory"      description:"path to a directory containing property blueprints"`
+	RuntimeConfigDirectories []string `short:"c"  long:"runtime-configs-directory" description:"path to a directory containing runtime configs"`
+	Sha256                   bool     `           long:"sha256"                    description:"calculates a SHA256 checksum of the output file"`
+	StemcellTarball          string   `short:"t"  long:"stemcell-tarball"          description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)"`
+	StemcellsDirectories     []string `short:"s"  long:"stemcells-directory"       description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)"`
+	StubReleases             bool     `           long:"stub-releases"             description:"skips importing release tarballs into the tile"`
+	Version                  string   `short:"v"  long:"version"                   description:"version of the tile"`
+}
+
+type BakeCmd struct {
+	Options BakeOptions
+	panicCommand
+}
+
+func (b BakeCmd) Runner(deps Dependencies) (CommandRunner, error) {
+	errLogger := deps.ErrLogger
+
+	filesystem := helper.NewFilesystem()
+	zipper := builder.NewZipper()
+	interpolator := builder.NewInterpolator()
+	tileWriter := builder.NewTileWriter(filesystem, &zipper, errLogger)
+
+	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
+	stemcellService := baking.NewStemcellService(errLogger, stemcellManifestReader)
+
+	templateVariablesService := baking.NewTemplateVariablesService(deps.Filesystem)
+
+	boshVariableDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	boshVariablesService := baking.NewBOSHVariablesService(errLogger, boshVariableDirectoryReader)
+
+	formDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	formsService := baking.NewFormsService(errLogger, formDirectoryReader)
+
+	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	instanceGroupsService := baking.NewInstanceGroupsService(errLogger, instanceGroupDirectoryReader)
+
+	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	jobsService := baking.NewJobsService(errLogger, jobsDirectoryReader)
+
+	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	propertiesService := baking.NewPropertiesService(errLogger, propertiesDirectoryReader)
+
+	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	runtimeConfigsService := baking.NewRuntimeConfigsService(errLogger, runtimeConfigsDirectoryReader)
+
+	iconService := baking.NewIconService(errLogger)
+
+	metadataService := baking.NewMetadataService()
+	checksummer := baking.NewChecksummer(errLogger)
+
+	releaseManifestReader := builder.NewReleaseManifestReader(deps.Filesystem)
+	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
+
+	return NewBake(
+		b.Options,
+		deps.KilnfilePath,
+		deps.Variables,
+		deps.VariablesFiles,
+		interpolator,
+		tileWriter,
+		deps.OutLogger,
+		templateVariablesService,
+		boshVariablesService,
+		releasesService,
+		stemcellService,
+		formsService,
+		instanceGroupsService,
+		jobsService,
+		propertiesService,
+		runtimeConfigsService,
+		iconService,
+		metadataService,
+		checksummer,
+	), nil
+}
+
 type Bake struct {
+	kilnfilePath      string
+	variables         []string
+	variablesFiles    []string
 	interpolator      interpolator
 	checksummer       checksummer
 	tileWriter        tileWriter
@@ -98,33 +192,14 @@ type Bake struct {
 	icon              iconService
 	metadata          metadataService
 
-	Options struct {
-		Kilnfile           string   `short:"kf"  long:"kilnfile"                        description:"path to Kilnfile  (NOTE: mutually exclusive with --stemcell-directory)"`
-		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
-		OutputFile         string   `short:"o"  long:"output-file"                        description:"path to where the tile will be output"`
-		ReleaseDirectories []string `short:"rd" long:"releases-directory"               description:"path to a directory containing release tarballs"`
-
-		BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"  description:"path to a directory containing BOSH variables"`
-		EmbedPaths               []string `short:"e"   long:"embed"                     description:"path to files to include in the tile /embed directory"`
-		FormDirectories          []string `short:"f"   long:"forms-directory"           description:"path to a directory containing forms"`
-		IconPath                 string   `short:"i"   long:"icon"                      description:"path to icon file"`
-		InstanceGroupDirectories []string `short:"ig"  long:"instance-groups-directory" description:"path to a directory containing instance groups"`
-		JobDirectories           []string `short:"j"   long:"jobs-directory"            description:"path to a directory containing jobs"`
-		MetadataOnly             bool     `short:"mo"  long:"metadata-only"             description:"don't build a tile, output the metadata to stdout"`
-		MigrationDirectories     []string `short:"md"  long:"migrations-directory"      description:"path to a directory containing migrations"`
-		PropertyDirectories      []string `short:"pd"  long:"properties-directory"      description:"path to a directory containing property blueprints"`
-		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory" description:"path to a directory containing runtime configs"`
-		Sha256                   bool     `            long:"sha256"                    description:"calculates a SHA256 checksum of the output file"`
-		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"          description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)"`
-		StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"       description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)"`
-		StubReleases             bool     `short:"sr"  long:"stub-releases"             description:"skips importing release tarballs into the tile"`
-		VariableFiles            []string `short:"vf"  long:"variables-file"            description:"path to a file containing variables to interpolate"`
-		Variables                []string `short:"vr"  long:"variable"                  description:"key value pairs of variables to interpolate"`
-		Version                  string   `short:"v"   long:"version"                   description:"version of the tile"`
-	}
+	Options BakeOptions
 }
 
 func NewBake(
+	options BakeOptions,
+	kilnfilePath string,
+	variables []string,
+	variablesFiles []string,
 	interpolator interpolator,
 	tileWriter tileWriter,
 	output *log.Logger,
@@ -143,6 +218,11 @@ func NewBake(
 ) Bake {
 
 	return Bake{
+		Options: options,
+
+		kilnfilePath:      kilnfilePath,
+		variables:         variables,
+		variablesFiles:    variablesFiles,
 		interpolator:      interpolator,
 		tileWriter:        tileWriter,
 		checksummer:       checksummer,
@@ -161,26 +241,13 @@ func NewBake(
 	}
 }
 
-func (b Bake) Execute(args []string) error {
-	_, err := jhanda.Parse(&b.Options, args)
-	if err != nil {
-		return err
-	}
-
+func (b Bake) Run(_ []string) error {
 	if len(b.Options.InstanceGroupDirectories) == 0 && len(b.Options.JobDirectories) > 0 {
 		return errors.New("--jobs-directory flag requires --instance-groups-directory to also be specified")
 	}
 
 	if b.Options.OutputFile == "" && !b.Options.MetadataOnly {
 		return errors.New("--output-file must be provided unless using --metadata-only")
-	}
-
-	if b.Options.Kilnfile != "" && b.Options.StemcellTarball != "" {
-		return errors.New("--kilnfile cannot be provided when using --stemcell-tarball")
-	}
-
-	if b.Options.Kilnfile != "" && len(b.Options.StemcellsDirectories) > 0 {
-		return errors.New("--kilnfile cannot be provided when using --stemcells-directory")
 	}
 
 	if b.Options.StemcellTarball != "" && len(b.Options.StemcellsDirectories) > 0 {
@@ -206,16 +273,17 @@ func (b Bake) Execute(args []string) error {
 	if b.Options.StemcellTarball != "" {
 		// TODO remove when stemcell tarball is deprecated
 		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
-	} else if b.Options.Kilnfile != "" {
-		stemcellManifests, err = b.stemcell.FromKilnfile(b.Options.Kilnfile)
 	} else if len(b.Options.StemcellsDirectories) > 0 {
 		stemcellManifests, err = b.stemcell.FromDirectories(b.Options.StemcellsDirectories)
+	} else {
+		stemcellManifests, err = b.stemcell.FromKilnfile(b.kilnfilePath)
 	}
+
 	if err != nil {
 		return fmt.Errorf("failed to parse stemcell: %s", err)
 	}
 
-	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
+	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.variablesFiles, b.variables)
 	if err != nil {
 		return fmt.Errorf("failed to parse template variables: %s", err)
 	}

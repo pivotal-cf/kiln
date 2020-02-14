@@ -32,30 +32,47 @@ var _ = Describe("UpdateRelease", func() {
 	)
 
 	var (
-		updateReleaseCommand      UpdateRelease
-		preexistingKilnfileLock   []byte
-		filesystem                billy.Filesystem
-		multiReleaseSourceProvider      *fakes.MultiReleaseSourceProvider
-		releaseSource             *fetcherFakes.ReleaseSource
-		logger                    *log.Logger
-		downloadedReleasePath     string
-		expectedDownloadedRelease release.Local
-		expectedRemoteRelease     release.Remote
-		kilnFileLoader            *fakes.KilnfileLoader
+		updateReleaseCommand       *UpdateRelease
+		preexistingKilnfileLock    []byte
+		filesystem                 *fakeFilesystem
+		multiReleaseSourceProvider *fakes.MultiReleaseSourceProvider
+		releaseSource              *fetcherFakes.ReleaseSource
+		logger                     *log.Logger
+		downloadedReleasePath      string
+		expectedDownloadedRelease  release.Local
+		expectedRemoteRelease      release.Remote
 	)
 
-	Context("Execute", func() {
+	Context("Run", func() {
 		BeforeEach(func() {
-			kilnFileLoader = new(fakes.KilnfileLoader)
 			releaseSource = new(fetcherFakes.ReleaseSource)
 			multiReleaseSourceProvider = new(fakes.MultiReleaseSourceProvider)
 			multiReleaseSourceProvider.Returns(releaseSource)
 
-			filesystem = osfs.New("/tmp/")
-
-			kilnfile := cargo.Kilnfile{
-				ReleaseSources: []cargo.ReleaseSourceConfig{{Type: "bosh.io"}},
+			ogFilesystem := osfs.New("/tmp/")
+			filesystem = &fakeFilesystem{
+				Filesystem: ogFilesystem,
 			}
+
+			logger = log.New(GinkgoWriter, "", 0)
+
+			err := filesystem.MkdirAll(releasesDir, os.ModePerm)
+			Expect(err).NotTo(HaveOccurred())
+
+			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, releaseVersion))
+			expectedDownloadedRelease = release.Local{
+				ID:        release.ID{Name: releaseName, Version: releaseVersion},
+				LocalPath: downloadedReleasePath,
+				SHA1:      releaseSha1,
+			}
+			expectedRemoteRelease = release.Remote{
+				ID:         expectedDownloadedRelease.ID,
+				RemotePath: remotePath,
+				SourceID:   releaseSourceName,
+			}
+
+			releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, true, nil)
+			releaseSource.DownloadReleaseReturns(expectedDownloadedRelease, nil)
 
 			kilnFileLock := cargo.KilnfileLock{
 				Releases: []cargo.ReleaseLock{
@@ -75,52 +92,33 @@ var _ = Describe("UpdateRelease", func() {
 					Version: "4.5.6",
 				},
 			}
+			kilnfileLockPath := "Kilnfile.lock"
 
-			kilnFileLoader.LoadKilnfilesReturns(kilnfile, kilnFileLock, nil)
+			updateReleaseCommand = &UpdateRelease{
+				Name:                         releaseName,
+				Version:                      releaseVersion,
+				ReleasesDir:                  releasesDir,
+				AllowOnlyPublishableReleases: false,
 
-			kfl, err := filesystem.Create("Kilnfile.lock")
+				MultiReleaseSourceProvider:   multiReleaseSourceProvider.Spy,
+				Filesystem:                   filesystem,
+				Logger:                       logger,
+				KilnfileLock:                 kilnFileLock,
+				KilnfileLockPath:             kilnfileLockPath,
+			}
+
+			kfl, err := filesystem.Create(kilnfileLockPath)
 			Expect(err).NotTo(HaveOccurred())
 			defer kfl.Close()
 
 			preexistingKilnfileLock, err = yaml.Marshal(kilnFileLock)
 			_, err = kfl.Write(preexistingKilnfileLock)
 			Expect(err).NotTo(HaveOccurred())
-
-			logger = log.New(GinkgoWriter, "", 0)
-
-			err = filesystem.MkdirAll(releasesDir, os.ModePerm)
-			Expect(err).NotTo(HaveOccurred())
-
-			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, releaseVersion))
-			expectedDownloadedRelease = release.Local{
-				ID:        release.ID{Name: releaseName, Version: releaseVersion},
-				LocalPath: downloadedReleasePath,
-				SHA1:      releaseSha1,
-			}
-			expectedRemoteRelease = release.Remote{
-				ID:         expectedDownloadedRelease.ID,
-				RemotePath: remotePath,
-				SourceID:   releaseSourceName,
-			}
-
-			releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, true, nil)
-			releaseSource.DownloadReleaseReturns(expectedDownloadedRelease, nil)
-		})
-
-		JustBeforeEach(func() {
-			updateReleaseCommand = NewUpdateRelease(logger, filesystem, multiReleaseSourceProvider.Spy, kilnFileLoader)
 		})
 
 		When("updating to a version that exists in the remote", func() {
 			It("downloads the release", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-					"--variable", "someKey=someValue",
-					"--variables-file", "thisisafile",
-				})
+				err := updateReleaseCommand.Run(nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(1))
@@ -139,23 +137,10 @@ var _ = Describe("UpdateRelease", func() {
 				receivedReleasesDir, receivedRemoteRelease, _ := releaseSource.DownloadReleaseArgsForCall(0)
 				Expect(receivedReleasesDir).To(Equal(releasesDir))
 				Expect(receivedRemoteRelease).To(Equal(expectedRemoteRelease))
-
-				Expect(kilnFileLoader.LoadKilnfilesCallCount()).To(Equal(1))
-				fs, kilnfilePath, variablesFiles, variables := kilnFileLoader.LoadKilnfilesArgsForCall(0)
-
-				Expect(fs).To(Equal(filesystem))
-				Expect(kilnfilePath).To(Equal("Kilnfile"))
-				Expect(variablesFiles).To(Equal([]string{"thisisafile"}))
-				Expect(variables).To(Equal([]string{"someKey=someValue"}))
 			})
 
 			It("writes the new version to the Kilnfile.lock", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
+				err := updateReleaseCommand.Run(nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				newKilnfileLock, err := filesystem.Open("Kilnfile.lock")
@@ -177,18 +162,11 @@ var _ = Describe("UpdateRelease", func() {
 			})
 
 			It("considers all release sources", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-					"--variable", "someKey=someValue",
-					"--variables-file", "thisisafile",
-				})
+				err := updateReleaseCommand.Run(nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(multiReleaseSourceProvider.CallCount()).To(Equal(1))
-				_, allowOnlyPublishable := multiReleaseSourceProvider.ArgsForCall(0)
+				allowOnlyPublishable := multiReleaseSourceProvider.ArgsForCall(0)
 				Expect(allowOnlyPublishable).To(BeFalse())
 			})
 		})
@@ -199,87 +177,48 @@ var _ = Describe("UpdateRelease", func() {
 			BeforeEach(func() {
 				downloadErr = errors.New("asplode!!")
 				releaseSource.DownloadReleaseReturns(release.Local{}, downloadErr)
+				updateReleaseCommand.AllowOnlyPublishableReleases = true
 			})
 
 			It("tells the release downloader factory to allow only publishable releases", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--allow-only-publishable-releases",
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-					"--variable", "someKey=someValue",
-					"--variables-file", "thisisafile",
-				})
+				err := updateReleaseCommand.Run(nil)
 				Expect(err).To(MatchError(downloadErr))
 
 				Expect(multiReleaseSourceProvider.CallCount()).To(Equal(1))
-				_, allowOnlyPublishable := multiReleaseSourceProvider.ArgsForCall(0)
+				allowOnlyPublishable := multiReleaseSourceProvider.ArgsForCall(0)
 				Expect(allowOnlyPublishable).To(BeTrue())
 			})
 		})
 
 		When("the named release isn't in Kilnfile.lock", func() {
+			BeforeEach(func() {
+				updateReleaseCommand.Name = "no-such-release"
+			})
+
 			It("errors", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", "no-such-release",
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
+				err := updateReleaseCommand.Run(nil)
 				Expect(err).To(MatchError(ContainSubstring("no release named \"no-such-release\"")))
 			})
 
 			It("does not update the Kilnfile.lock", func() {
-				_ = updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", "no-such-release",
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
+				_ = updateReleaseCommand.Run(nil)
 
 				expectKilnfileLockIsUnchanged(filesystem, preexistingKilnfileLock)
 			})
 		})
 
-		When("there is an error loading the Kilnfiles", func() {
-			BeforeEach(func() {
-				kilnFileLoader.LoadKilnfilesReturns(cargo.Kilnfile{}, cargo.KilnfileLock{}, errors.New("big bada boom"))
-			})
-
-			It("errors", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
-				Expect(err).To(MatchError(ContainSubstring("big bada boom")))
-			})
-		})
-
-		When("the release can't be found", func() {
+		When("the release can't be found on the release sources", func() {
 			BeforeEach(func() {
 				releaseSource.GetMatchedReleaseReturns(release.Remote{}, false, errors.New("bad stuff"))
 			})
 
 			It("errors", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
+				err := updateReleaseCommand.Run(nil)
 				Expect(err).To(MatchError(ContainSubstring("bad stuff")))
 			})
 
 			It("does not update the Kilnfile.lock", func() {
-				_ = updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
+				_ = updateReleaseCommand.Run(nil)
 
 				expectKilnfileLockIsUnchanged(filesystem, preexistingKilnfileLock)
 			})
@@ -291,22 +230,12 @@ var _ = Describe("UpdateRelease", func() {
 			})
 
 			It("errors", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
+				err := updateReleaseCommand.Run(nil)
 				Expect(err).To(MatchError(ContainSubstring("bad stuff")))
 			})
 
 			It("does not update the Kilnfile.lock", func() {
-				_ = updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
+				_ = updateReleaseCommand.Run(nil)
 
 				expectKilnfileLockIsUnchanged(filesystem, preexistingKilnfileLock)
 			})
@@ -317,23 +246,13 @@ var _ = Describe("UpdateRelease", func() {
 
 			BeforeEach(func() {
 				expectedError = errors.New("very very bad")
-
-				ogFilesystem := filesystem
-				filesystem = fakeFilesystem{
-					Filesystem: ogFilesystem,
-					CreateFunc: func(path string) (billy.File, error) {
-						return nil, expectedError
-					},
+				filesystem.CreateFunc = func(path string) (billy.File, error) {
+					return nil, expectedError
 				}
 			})
 
 			It("errors", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
+				err := updateReleaseCommand.Run(nil)
 				Expect(err).To(MatchError(ContainSubstring(expectedError.Error())))
 			})
 		})
@@ -345,28 +264,12 @@ var _ = Describe("UpdateRelease", func() {
 				expectedError = errors.New("i don't feel so good")
 
 				badFile := unwritableFile{err: expectedError}
-				ogFilesystem := filesystem
-				filesystem = fakeFilesystem{
-					Filesystem: ogFilesystem,
-					CreateFunc: func(path string) (billy.File, error) { return badFile, nil },
-				}
+				filesystem.CreateFunc = func(path string) (billy.File, error) { return badFile, nil }
 			})
 
 			It("errors", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
+				err := updateReleaseCommand.Run(nil)
 				Expect(err).To(MatchError(ContainSubstring(expectedError.Error())))
-			})
-		})
-
-		When("invalid arguments are given", func() {
-			It("errors", func() {
-				err := updateReleaseCommand.Execute([]string{"--no-such-flag"})
-				Expect(err).To(MatchError(ContainSubstring("-no-such-flag")))
 			})
 		})
 	})
@@ -388,7 +291,10 @@ type fakeFilesystem struct {
 }
 
 func (fs fakeFilesystem) Create(path string) (billy.File, error) {
-	return fs.CreateFunc(path)
+	if fs.CreateFunc != nil {
+		return fs.CreateFunc(path)
+	}
+	return fs.Filesystem.Create(path)
 }
 
 type unwritableFile struct {

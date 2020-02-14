@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	. "github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
@@ -39,8 +38,11 @@ var _ = Describe("Bake", func() {
 		otherReleasesDirectory string
 		someReleasesDirectory  string
 		tmpDir                 string
+		variableFiles []string
+		variables []string
 
-		bake Bake
+		bake *Bake
+		options *BakeOptions
 	)
 
 	BeforeEach(func() {
@@ -150,7 +152,34 @@ var _ = Describe("Bake", func() {
 
 		fakeInterpolator.InterpolateReturns([]byte("some-interpolated-metadata"), nil)
 
-		bake = NewBake(
+
+		variableFiles = []string{"some-variables-file"}
+		variables = []string{"some-variable=some-variable-value"}
+		options = &BakeOptions{
+			EmbedPaths: []string{"some-embed-path"},
+			FormDirectories: []string{"some-forms-directory"},
+			IconPath: "some-icon-path",
+			InstanceGroupDirectories: []string{"some-instance-groups-directory"},
+			JobDirectories: []string{"some-jobs-directory"},
+			Metadata: "some-metadata",
+			OutputFile: "some-output-dir/some-product-file-1.2.3-build.4",
+			PropertyDirectories: []string{"some-properties-directory"},
+			ReleaseDirectories: []string{otherReleasesDirectory, someReleasesDirectory},
+			RuntimeConfigDirectories: []string{"some-other-runtime-configs-directory", "some-runtime-configs-directory"},
+			StemcellTarball: "some-stemcell-tarball",
+			BOSHVariableDirectories: []string{ "some-other-variables-directory", "some-variables-directory" },
+			Version: "1.2.3",
+			MigrationDirectories: []string{ "some-migrations-directory", "some-other-migrations-directory"},
+			Sha256: true,
+		}
+	})
+
+	JustBeforeEach(func() {
+		b := NewBake(
+			*options,
+			"Kilnfile",
+			variables,
+			variableFiles,
 			fakeInterpolator,
 			fakeTileWriter,
 			fakeLogger,
@@ -167,36 +196,16 @@ var _ = Describe("Bake", func() {
 			fakeMetadataService,
 			fakeChecksummer,
 		)
+		bake = &b
 	})
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
-	Describe("Execute", func() {
+	Describe("Run", func() {
 		It("builds the tile", func() {
-			err := bake.Execute([]string{
-				"--embed", "some-embed-path",
-				"--forms-directory", "some-forms-directory",
-				"--icon", "some-icon-path",
-				"--instance-groups-directory", "some-instance-groups-directory",
-				"--jobs-directory", "some-jobs-directory",
-				"--metadata", "some-metadata",
-				"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-				"--properties-directory", "some-properties-directory",
-				"--releases-directory", otherReleasesDirectory,
-				"--releases-directory", someReleasesDirectory,
-				"--runtime-configs-directory", "some-other-runtime-configs-directory",
-				"--runtime-configs-directory", "some-runtime-configs-directory",
-				"--stemcell-tarball", "some-stemcell-tarball",
-				"--bosh-variables-directory", "some-other-variables-directory",
-				"--bosh-variables-directory", "some-variables-directory",
-				"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
-				"--migrations-directory", "some-other-migrations-directory",
-				"--variable", "some-variable=some-variable-value",
-				"--variables-file", "some-variables-file",
-				"--sha256",
-			})
+			err := bake.Run(nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeTemplateVariablesService.FromPathsAndPairsCallCount()).To(Equal(1))
@@ -328,28 +337,12 @@ var _ = Describe("Bake", func() {
 		})
 
 		Context("when the --sha256 flag is not specified", func() {
+			BeforeEach(func() {
+				options.Sha256 = false
+			})
+
 			It("does not calculate a checksum", func() {
-				err := bake.Execute([]string{
-					"--embed", "some-embed-path",
-					"--forms-directory", "some-forms-directory",
-					"--icon", "some-icon-path",
-					"--instance-groups-directory", "some-instance-groups-directory",
-					"--jobs-directory", "some-jobs-directory",
-					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-					"--properties-directory", "some-properties-directory",
-					"--releases-directory", otherReleasesDirectory,
-					"--releases-directory", someReleasesDirectory,
-					"--runtime-configs-directory", "some-other-runtime-configs-directory",
-					"--runtime-configs-directory", "some-runtime-configs-directory",
-					"--stemcell-tarball", "some-stemcell-tarball",
-					"--bosh-variables-directory", "some-other-variables-directory",
-					"--bosh-variables-directory", "some-variables-directory",
-					"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
-					"--migrations-directory", "some-other-migrations-directory",
-					"--variable", "some-variable=some-variable-value",
-					"--variables-file", "some-variables-file",
-				})
+				err := bake.Run(nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeChecksummer.SumCallCount()).To(Equal(0))
@@ -357,13 +350,19 @@ var _ = Describe("Bake", func() {
 		})
 
 		Context("when the optional flags are not specified", func() {
+			BeforeEach(func() {
+				variables = nil
+				variableFiles = nil
+				options = &BakeOptions{
+					Metadata: "some-metadata",
+					ReleaseDirectories: []string{someReleasesDirectory},
+					OutputFile: "some-output-dir/some-product-file-1.2.3-build.4",
+					Version: "1.2.3",
+				}
+			})
+
 			It("builds the metadata", func() {
-				err := bake.Execute([]string{
-					"--metadata", "some-metadata",
-					"--releases-directory", someReleasesDirectory,
-					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-					"--version", "1.2.3",
-				})
+				err := bake.Run(nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -378,40 +377,22 @@ var _ = Describe("Bake", func() {
 				Expect(err).NotTo(HaveOccurred())
 				defer otherVariableFile.Close()
 
-				variables := map[string]string{
+				variableFileData := map[string]string{
 					"some-variable-from-file":       "override-variable-from-other-file",
 					"some-other-variable-from-file": "some-other-variable-value-from-file",
 				}
-				data, err := yaml.Marshal(&variables)
+				variableFileContents, err := yaml.Marshal(&variableFileData)
 				Expect(err).NotTo(HaveOccurred())
 
-				n, err := otherVariableFile.Write(data)
+				n, err := otherVariableFile.Write(variableFileContents)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(data).To(HaveLen(n))
+				Expect(variableFileContents).To(HaveLen(n))
+
+				variableFiles = []string{"some-variable-file-1","some-variable-file-2"}
 			})
 
 			It("interpolates variables from both files", func() {
-				err := bake.Execute([]string{
-					"--embed", "some-embed-path",
-					"--forms-directory", "some-forms-directory",
-					"--icon", "some-icon-path",
-					"--instance-groups-directory", "some-instance-groups-directory",
-					"--jobs-directory", "some-jobs-directory",
-					"--metadata", "some-metadata",
-					"--migrations-directory", "some-migrations-directory",
-					"--migrations-directory", "some-other-migrations-directory",
-					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-					"--releases-directory", otherReleasesDirectory,
-					"--releases-directory", someReleasesDirectory,
-					"--runtime-configs-directory", "some-runtime-configs-directory",
-					"--stemcell-tarball", "some-stemcell-tarball",
-					"--bosh-variables-directory", "some-variables-directory",
-					"--variable", "some-variable=some-variable-value",
-					"--variables-file", "some-variable-file-1",
-					"--variables-file", "some-variable-file-2",
-					"--version", "1.2.3",
-				})
-
+				err := bake.Run(nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				generatedMetadataContents, _ := fakeTileWriter.WriteArgsForCall(0)
@@ -420,13 +401,13 @@ var _ = Describe("Bake", func() {
 		})
 
 		Context("when stemcells-directory flag is specified", func() {
+			BeforeEach(func() {
+				options.StemcellsDirectories = []string{"some-stemcells-directory", "some-other-stemcells-directory"}
+				options.StemcellTarball = ""
+			})
+
 			It("correcty parses stemcell directory arguments", func() {
-				err := bake.Execute([]string{
-					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-					"--stemcells-directory", "some-stemcells-directory",
-					"--stemcells-directory", "some-other-stemcells-directory",
-				})
+				err := bake.Run(nil)
 
 				Expect(err).NotTo(HaveOccurred())
 
@@ -438,409 +419,212 @@ var _ = Describe("Bake", func() {
 			})
 		})
 
-		Context("when Kilnfile is specified", func() {
+		Context("when neither stemcell tarball nor stemcell directories are specified", func() {
+			BeforeEach(func() {
+				options.StemcellTarball = ""
+				options.StemcellsDirectories = nil
+			})
+
 			It("renders the stemcell criteria in tile metadata from that specified the Kilnfile.lock", func() {
-				outputFile := "some-output-dir/some-product-file-1.2.3-build.4"
-				err := bake.Execute([]string{
-					"--forms-directory", "some-forms-directory",
-					"--instance-groups-directory", "some-instance-groups-directory",
-					"--jobs-directory", "some-jobs-directory",
-					"--metadata", "some-metadata",
-					"--output-file", outputFile,
-					"--properties-directory", "some-properties-directory",
-					"--releases-directory", someReleasesDirectory,
-					"--runtime-configs-directory", "some-other-runtime-configs-directory",
-					"--kilnfile", "Kilnfile",
-					"--bosh-variables-directory", "some-variables-directory",
-					"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
-					"--migrations-directory", "some-other-migrations-directory",
-				})
+				err := bake.Run(nil)
+
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeStemcellService.FromKilnfileCallCount()).To(Equal(1))
 				Expect(fakeStemcellService.FromKilnfileArgsForCall(0)).To(Equal("Kilnfile"))
 			})
 		})
 
-		Context("when neither the --kilnfile nor --stemcell-tarball flags are provided", func() {
-			It("does not error", func() {
-				err := bake.Execute([]string{
-					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-					"--releases-directory", otherReleasesDirectory,
-					"--releases-directory", someReleasesDirectory,
-					"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
-				})
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-
 		Context("failure cases", func() {
 			Context("when the template variables service errors", func() {
-				It("returns an error", func() {
+				BeforeEach(func() {
 					fakeTemplateVariablesService.FromPathsAndPairsReturns(nil, errors.New("parsing template variables failed"))
+				})
 
-					err := bake.Execute([]string{
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--icon", "some-icon-path",
-						"--releases-directory", someReleasesDirectory,
-					})
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("failed to parse template variables: parsing template variables failed"))
 				})
 			})
 
 			Context("when the icon service fails", func() {
-				It("returns an error", func() {
+				BeforeEach(func() {
 					fakeIconService.EncodeReturns("", errors.New("encoding icon failed"))
+				})
 
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--releases-directory", someReleasesDirectory,
-					})
-
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("failed to encode icon: encoding icon failed"))
 				})
 			})
 
 			Context("when the metadata service fails", func() {
-				It("returns an error", func() {
+				BeforeEach(func() {
 					fakeMetadataService.ReadReturns(nil, errors.New("reading metadata failed"))
+				})
 
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--releases-directory", someReleasesDirectory,
-					})
-
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("failed to read metadata: reading metadata failed"))
 				})
 			})
 
 			Context("when the releases service fails", func() {
-				It("returns an error", func() {
+				BeforeEach(func() {
 					fakeReleasesService.FromDirectoriesReturns(nil, errors.New("parsing releases failed"))
+				})
 
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--releases-directory", someReleasesDirectory,
-					})
-
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("failed to parse releases: parsing releases failed"))
 				})
 			})
 
 			Context("when the stemcell service fails", func() {
-				It("returns an error", func() {
+				BeforeEach(func() {
 					fakeStemcellService.FromTarballReturns(nil, errors.New("parsing stemcell failed"))
+				})
 
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3",
-					})
-
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("failed to parse stemcell: parsing stemcell failed"))
 				})
 			})
 
 			Context("when the forms service fails", func() {
-				It("returns an error", func() {
+				BeforeEach(func() {
 					fakeFormsService.FromDirectoriesReturns(nil, errors.New("parsing forms failed"))
+				})
 
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--forms-directory", "some-form-directory",
-						"--version", "1.2.3",
-					})
-
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("failed to parse forms: parsing forms failed"))
 				})
 			})
 
 			Context("when the instance groups service fails", func() {
-				It("returns an error", func() {
+				BeforeEach(func() {
 					fakeInstanceGroupsService.FromDirectoriesReturns(nil, errors.New("parsing instance groups failed"))
-
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--forms-directory", "some-form-directory",
-						"--instance-groups-directory", "some-instance-group-directory",
-						"--version", "1.2.3",
-					})
-
+				})
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("failed to parse instance groups: parsing instance groups failed"))
 				})
 			})
 
 			Context("when the jobs service fails", func() {
-				It("returns an error", func() {
+				BeforeEach(func() {
 					fakeJobsService.FromDirectoriesReturns(nil, errors.New("parsing jobs failed"))
+				})
 
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--forms-directory", "some-form-directory",
-						"--instance-groups-directory", "some-instance-group-directory",
-						"--version", "1.2.3",
-					})
-
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("failed to parse jobs: parsing jobs failed"))
 				})
 			})
 
 			Context("when the properties service fails", func() {
-				It("returns an error", func() {
+				BeforeEach(func() {
 					fakePropertiesService.FromDirectoriesReturns(nil, errors.New("parsing properties failed"))
+				})
 
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--forms-directory", "some-form-directory",
-						"--instance-groups-directory", "some-instance-group-directory",
-						"--version", "1.2.3",
-					})
-
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("failed to parse properties: parsing properties failed"))
 				})
 			})
 
 			Context("when the runtime configs service fails", func() {
-				It("returns an error", func() {
+				BeforeEach(func() {
 					fakeRuntimeConfigsService.FromDirectoriesReturns(nil, errors.New("parsing runtime configs failed"))
+				})
 
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--runtime-configs-directory", "some-runtime-configs-directory",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--forms-directory", "some-form-directory",
-						"--instance-groups-directory", "some-instance-group-directory",
-						"--version", "1.2.3",
-					})
-
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("failed to parse runtime configs: parsing runtime configs failed"))
 				})
 			})
 
 			Context("when the template interpolator returns an error", func() {
-				It("returns the error", func() {
+				BeforeEach(func() {
 					fakeInterpolator.InterpolateReturns(nil, errors.New("some-error"))
+				})
 
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--forms-directory", "some-form-directory",
-						"--version", "1.2.3",
-					})
-
+				It("returns the error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError(ContainSubstring("some-error")))
 				})
 			})
 
-			Context("when the metadata flag is missing", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3",
-					})
-
-					Expect(err).To(MatchError("missing required flag \"--metadata\""))
-				})
-			})
-
 			Context("when the release-tarball flag is missing and we are stubbing releases", func() {
-				It("returns an error", func() {
-					bake.Options.StubReleases = true
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--stub-releases",
-						"--version", "1.2.3",
-					})
+				BeforeEach(func() {
+					options.ReleaseDirectories = nil
+					options.StubReleases = true
+				})
 
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
 			Context("when the output-file flag is missing", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3",
-					})
+				BeforeEach(func() {
+					options.OutputFile = ""
+				})
 
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("--output-file must be provided unless using --metadata-only"))
-				})
-			})
-
-			Context("when both the --kilnfile and --stemcells-directory are provided", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--stemcells-directory", "some-stemcell-directory",
-						"--kilnfile", "Kilnfile",
-					})
-					Expect(err).To(MatchError("--kilnfile cannot be provided when using --stemcells-directory"))
-				})
-			})
-
-			//todo: When --stemcell-tarball is removed, delete this test
-			Context("when both the --stemcell-tarball and --kilnfile are provided", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--kilnfile", "Kilnfile",
-					})
-					Expect(err).To(MatchError("--kilnfile cannot be provided when using --stemcell-tarball"))
 				})
 			})
 
 			//todo: When --stemcell-tarball is remove, delete this test
 			Context("when both the --stemcell-tarball and --stemcells-directory are provided", func() {
+				BeforeEach(func() {
+					options.StemcellTarball = "some-stemcell-tarball"
+					options.StemcellsDirectories = []string{"some-stemcell-directory"}
+				})
+
 				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--stemcells-directory", "some-stemcell-directory",
-					})
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("--stemcell-tarball cannot be provided when using --stemcells-directory"))
 				})
 			})
 
 			Context("when both the output-file and metadata-only flags are provided", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--metadata-only",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3",
-					})
+				BeforeEach(func() {
+					options.OutputFile = "some-output-dir/some-product-file-1.2.3-build.4"
+					options.MetadataOnly =  true
+				})
 
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("--output-file cannot be provided when using --metadata-only"))
 				})
 			})
 
 			Context("when the jobs-directory flag is passed without the instance-groups-directory flag", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--jobs-directory", "some-jobs-directory",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3",
-					})
+				BeforeEach(func() {
+					options.JobDirectories = []string{"some-jobs-directory"}
+					options.InstanceGroupDirectories = nil
+				})
 
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError("--jobs-directory flag requires --instance-groups-directory to also be specified"))
 				})
 			})
 
-			Context("when an invalid flag is passed", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--jobs-directory", "some-jobs-directory",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3",
-						"--non-existant-flag",
-					})
-
-					Expect(err).To(MatchError(ContainSubstring("non-existant-flag")))
-				})
-			})
-
 			Context("when the checksummer returns an error", func() {
-				It("returns an error", func() {
+				BeforeEach(func() {
 					fakeChecksummer.SumReturns(errors.New("failed"))
+				})
 
-					err := bake.Execute([]string{
-						"--embed", "some-embed-path",
-						"--forms-directory", "some-forms-directory",
-						"--icon", "some-icon-path",
-						"--instance-groups-directory", "some-instance-groups-directory",
-						"--jobs-directory", "some-jobs-directory",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", otherReleasesDirectory,
-						"--releases-directory", someReleasesDirectory,
-						"--runtime-configs-directory", "some-other-runtime-configs-directory",
-						"--runtime-configs-directory", "some-runtime-configs-directory",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--bosh-variables-directory", "some-other-variables-directory",
-						"--bosh-variables-directory", "some-variables-directory",
-						"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
-						"--migrations-directory", "some-other-migrations-directory",
-						"--variable", "some-variable=some-variable-value",
-						"--variables-file", "some-variables-file",
-						"--sha256",
-					})
-
+				It("returns an error", func() {
+					err := bake.Run(nil)
 					Expect(err).To(MatchError(ContainSubstring("failed to calculate checksum: failed")))
 				})
 			})
-		})
-	})
-
-	Describe("Usage", func() {
-		It("returns usage information for the command", func() {
-			Expect(bake.Usage()).To(Equal(jhanda.Usage{
-				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
-				ShortDescription: "bakes a tile",
-				Flags:            bake.Options,
-			}))
 		})
 	})
 })

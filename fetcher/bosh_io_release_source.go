@@ -50,9 +50,9 @@ var suffixes = []string{
 }
 
 type BOSHIOReleaseSource struct {
-	serverURI string
+	serverURI   string
 	publishable bool
-	logger    *log.Logger
+	logger      *log.Logger
 }
 
 func NewBOSHIOReleaseSource(logger *log.Logger, publishable bool, customServerURI string) *BOSHIOReleaseSource {
@@ -61,8 +61,8 @@ func NewBOSHIOReleaseSource(logger *log.Logger, publishable bool, customServerUR
 	}
 
 	return &BOSHIOReleaseSource{
-		logger:    logger,
-		serverURI: customServerURI,
+		logger:      logger,
+		serverURI:   customServerURI,
 		publishable: publishable,
 	}
 }

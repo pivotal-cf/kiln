@@ -21,26 +21,25 @@ var _ = Describe("UploadRelease", func() {
 	Context("Execute", func() {
 		var (
 			fs                    billy.Filesystem
-			loader                *fakes.KilnfileLoader
 			releaseUploaderFinder *fakes.ReleaseUploaderFinder
 			releaseUploader       *fetcherFakes.ReleaseUploader
 
-			uploadRelease commands.UploadRelease
+			uploadRelease *commands.UploadRelease
 
 			expectedReleaseSHA string
 		)
 
 		BeforeEach(func() {
 			fs = memfs.New()
-			loader = new(fakes.KilnfileLoader)
-
 			releaseUploader = new(fetcherFakes.ReleaseUploader)
 			releaseUploaderFinder = new(fakes.ReleaseUploaderFinder)
 			releaseUploaderFinder.Returns(releaseUploader, nil)
 
-			uploadRelease = commands.UploadRelease{
+			uploadRelease = &commands.UploadRelease{
+				LocalPath:      "banana-release.tgz",
+				TargetSourceID: "orange-bucket",
+
 				FS:                    fs,
-				KilnfileLoader:        loader,
 				Logger:                log.New(GinkgoWriter, "", 0),
 				ReleaseUploaderFinder: releaseUploaderFinder.Spy,
 			}
@@ -52,10 +51,7 @@ var _ = Describe("UploadRelease", func() {
 
 		When("it receives a correct tarball path", func() {
 			It("uploads the tarball to the release source", func() {
-				err := uploadRelease.Execute([]string{
-					"--local-path", "banana-release.tgz",
-					"--release-source", "orange-bucket",
-				})
+				err := uploadRelease.Run(nil)
 
 				Expect(err).NotTo(HaveOccurred())
 
@@ -83,10 +79,7 @@ var _ = Describe("UploadRelease", func() {
 				})
 
 				It("errors and does not upload", func() {
-					err := uploadRelease.Execute([]string{
-						"--local-path", "banana-release.tgz",
-						"--release-source", "orange-bucket",
-					})
+					err := uploadRelease.Run(nil)
 					Expect(err).To(MatchError(ContainSubstring("already exists")))
 
 					Expect(releaseUploader.GetMatchedReleaseCallCount()).To(Equal(1))
@@ -106,13 +99,12 @@ var _ = Describe("UploadRelease", func() {
 				f.Close()
 
 				Expect(err).NotTo(HaveOccurred())
+
+				uploadRelease.LocalPath = "invalid-release.tgz"
 			})
 
 			It("errors", func() {
-				err := uploadRelease.Execute([]string{
-					"--local-path", "invalid-release.tgz",
-					"--release-source", "orange-bucket",
-				})
+				err := uploadRelease.Run(nil)
 				Expect(err).To(MatchError(ContainSubstring("error reading the release manifest")))
 			})
 		})
@@ -124,10 +116,7 @@ var _ = Describe("UploadRelease", func() {
 				})
 
 				It("returns the error", func() {
-					err := uploadRelease.Execute([]string{
-						"--local-path", "banana-release.tgz",
-						"--release-source", "orange-bucket",
-					})
+					err := uploadRelease.Run(nil)
 
 					Expect(err).To(MatchError(ContainSubstring("no release source eligible")))
 				})
@@ -140,19 +129,13 @@ var _ = Describe("UploadRelease", func() {
 			})
 
 			It("returns an error", func() {
-				err := uploadRelease.Execute([]string{
-					"--local-path", "banana-release.tgz",
-					"--release-source", "orange-bucket",
-				})
+				err := uploadRelease.Run(nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(ContainSubstring("boom")))
 			})
 
 			It("doesn't upload anything", func() {
-				_ = uploadRelease.Execute([]string{
-					"--local-path", "banana-release.tgz",
-					"--release-source", "orange-bucket",
-				})
+				_ = uploadRelease.Run(nil)
 				Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
 			})
 		})
@@ -163,10 +146,7 @@ var _ = Describe("UploadRelease", func() {
 			})
 
 			It("returns an error", func() {
-				err := uploadRelease.Execute([]string{
-					"--local-path", "banana-release.tgz",
-					"--release-source", "orange-bucket",
-				})
+				err := uploadRelease.Run(nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(ContainSubstring("upload")))
 				Expect(err).To(MatchError(ContainSubstring("boom")))

@@ -27,20 +27,35 @@ type KilnfileLoader struct {
 }
 
 func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (Kilnfile, KilnfileLock, error) {
+	kilnfile, err := k.LoadKilnfile(fs, kilnfilePath, variablesFiles, variables)
+	if err != nil {
+		return Kilnfile{}, KilnfileLock{}, err
+	}
+
+	kilnfileLock, err := k.LoadKilnfileLock(fs, kilnfilePath)
+	if err != nil {
+		return Kilnfile{}, KilnfileLock{}, err
+	}
+
+	return kilnfile, kilnfileLock, nil
+}
+
+func (k KilnfileLoader) LoadKilnfile(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (Kilnfile, error) {
 	templateVariablesService := baking.NewTemplateVariablesService(fs)
 	templateVariables, err := templateVariablesService.FromPathsAndPairs(variablesFiles, variables)
 	if err != nil {
-		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("failed to parse template variables: %s", err)
+		return Kilnfile{}, fmt.Errorf("failed to parse template variables: %s", err)
 	}
 
 	kf, err := fs.Open(kilnfilePath)
 	if err != nil {
-		return Kilnfile{}, KilnfileLock{}, err
+		return Kilnfile{}, err
 	}
 	defer kf.Close()
+
 	kilnfileYAML, err := ioutil.ReadAll(kf)
 	if err != nil {
-		return Kilnfile{}, KilnfileLock{}, err
+		return Kilnfile{}, err
 	}
 
 	interpolator := builder.NewInterpolator()
@@ -48,26 +63,31 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 		Variables: templateVariables,
 	}, kilnfileYAML)
 	if err != nil {
-		return Kilnfile{}, KilnfileLock{}, ConfigFileError{err: err, HumanReadableConfigFileName: "interpolating variable files with Kilnfile"}
+		return Kilnfile{}, ConfigFileError{err: err, HumanReadableConfigFileName: "interpolating variable files with Kilnfile"}
 	}
 
 	var kilnfile Kilnfile
 	err = yaml.Unmarshal(interpolatedMetadata, &kilnfile)
 	if err != nil {
-		return Kilnfile{}, KilnfileLock{}, ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile specification " + kilnfilePath}
+		return Kilnfile{}, ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile specification " + kilnfilePath}
 	}
 
+	return kilnfile, nil
+}
+
+func (k KilnfileLoader) LoadKilnfileLock(fs billy.Filesystem, kilnfilePath string) (KilnfileLock, error) {
 	lockFileName := fmt.Sprintf("%s.lock", kilnfilePath)
 	lockFile, err := fs.Open(lockFileName)
 	if err != nil {
-		return Kilnfile{}, KilnfileLock{}, err
+		return KilnfileLock{}, err
 	}
 	defer lockFile.Close()
 
 	var kilnfileLock KilnfileLock
 	err = yaml.NewDecoder(lockFile).Decode(&kilnfileLock)
 	if err != nil {
-		return Kilnfile{}, KilnfileLock{}, ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile.lock " + lockFileName}
+		return KilnfileLock{}, ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile.lock " + lockFileName}
 	}
-	return kilnfile, kilnfileLock, nil
+
+	return kilnfileLock, nil
 }

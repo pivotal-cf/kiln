@@ -6,15 +6,13 @@ import (
 
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 type RemotePatherFinder struct {
-	Stub        func(cargo.Kilnfile, string) (fetcher.RemotePather, error)
+	Stub        func(string) (fetcher.RemotePather, error)
 	mutex       sync.RWMutex
 	argsForCall []struct {
-		arg1 cargo.Kilnfile
-		arg2 string
+		arg1 string
 	}
 	returns struct {
 		result1 fetcher.RemotePather
@@ -28,17 +26,16 @@ type RemotePatherFinder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *RemotePatherFinder) Spy(arg1 cargo.Kilnfile, arg2 string) (fetcher.RemotePather, error) {
+func (fake *RemotePatherFinder) Spy(arg1 string) (fetcher.RemotePather, error) {
 	fake.mutex.Lock()
 	ret, specificReturn := fake.returnsOnCall[len(fake.argsForCall)]
 	fake.argsForCall = append(fake.argsForCall, struct {
-		arg1 cargo.Kilnfile
-		arg2 string
-	}{arg1, arg2})
-	fake.recordInvocation("RemotePatherFinder", []interface{}{arg1, arg2})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("RemotePatherFinder", []interface{}{arg1})
 	fake.mutex.Unlock()
 	if fake.Stub != nil {
-		return fake.Stub(arg1, arg2)
+		return fake.Stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -52,16 +49,16 @@ func (fake *RemotePatherFinder) CallCount() int {
 	return len(fake.argsForCall)
 }
 
-func (fake *RemotePatherFinder) Calls(stub func(cargo.Kilnfile, string) (fetcher.RemotePather, error)) {
+func (fake *RemotePatherFinder) Calls(stub func(string) (fetcher.RemotePather, error)) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = stub
 }
 
-func (fake *RemotePatherFinder) ArgsForCall(i int) (cargo.Kilnfile, string) {
+func (fake *RemotePatherFinder) ArgsForCall(i int) string {
 	fake.mutex.RLock()
 	defer fake.mutex.RUnlock()
-	return fake.argsForCall[i].arg1, fake.argsForCall[i].arg2
+	return fake.argsForCall[i].arg1
 }
 
 func (fake *RemotePatherFinder) Returns(result1 fetcher.RemotePather, result2 error) {

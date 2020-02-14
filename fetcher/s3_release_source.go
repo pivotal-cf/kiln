@@ -37,12 +37,12 @@ type S3HeadObjecter interface {
 }
 
 type S3ReleaseSource struct {
-	Logger       *log.Logger
-	S3Client     S3HeadObjecter
-	S3Downloader S3Downloader
-	S3Uploader   S3Uploader
-	Bucket       string
-	PathTemplate string
+	Logger        *log.Logger
+	S3Client      S3HeadObjecter
+	S3Downloader  S3Downloader
+	S3Uploader    S3Uploader
+	Bucket        string
+	PathTemplate  string
 	IsPublishable bool
 }
 
