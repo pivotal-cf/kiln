@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/jessevdk/go-flags"
 	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4"
 	"log"
@@ -30,6 +31,7 @@ func (panicCommand) Execute(_ []string) error {
 }
 
 type Dependencies struct {
+	RootCmd               *flags.Parser
 	Kilnfile              cargo.Kilnfile
 	KilnfileLock          cargo.KilnfileLock
 	KilnfilePath          string
