@@ -252,12 +252,11 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		Context("happy path", func() {
 			It("uploads the file to the correct location", func() {
-				Expect(
-					releaseSource.UploadRelease(release.Requirement{
-						Name:    "banana",
-						Version: "1.2.3",
-					}, file),
-				).To(Succeed())
+				_, err := releaseSource.UploadRelease(release.Requirement{
+					Name:    "banana",
+					Version: "1.2.3",
+				}, file)
+				Expect(err).NotTo(HaveOccurred())
 
 				Expect(s3Uploader.UploadCallCount()).To(Equal(1))
 
@@ -268,6 +267,20 @@ var _ = Describe("S3ReleaseSource", func() {
 				Expect(opts.Bucket).To(PointTo(Equal("orange-bucket")))
 				Expect(opts.Key).To(PointTo(Equal("banana/banana-1.2.3.tgz")))
 				Expect(opts.Body).To(Equal(file))
+			})
+
+			It("returns the remote release", func() {
+				remoteRelease, err := releaseSource.UploadRelease(release.Requirement{
+					Name:    "banana",
+					Version: "1.2.3",
+				}, file)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(remoteRelease).To(Equal(release.Remote{
+					ID:         release.ID{Name: "banana", Version: "1.2.3"},
+					RemotePath: "banana/banana-1.2.3.tgz",
+					SourceID:   sourceID,
+				}))
 			})
 		})
 
@@ -286,7 +299,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns a descriptive error", func() {
-				err := releaseSource.UploadRelease(release.Requirement{
+				_, err := releaseSource.UploadRelease(release.Requirement{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)

@@ -167,10 +167,10 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease rele
 	return release.Local{ID: remoteRelease.ID, LocalPath: outputFile, SHA1: sha1}, nil
 }
 
-func (src S3ReleaseSource) UploadRelease(spec release.Requirement, file io.Reader) error {
+func (src S3ReleaseSource) UploadRelease(spec release.Requirement, file io.Reader) (release.Remote, error) {
 	remotePath, err := src.RemotePath(spec)
 	if err != nil {
-		return err
+		return release.Remote{}, err
 	}
 
 	src.logger.Printf("uploading release %q to %s at %q...\n", spec.Name, src.ID(), remotePath)
@@ -181,10 +181,14 @@ func (src S3ReleaseSource) UploadRelease(spec release.Requirement, file io.Reade
 		Body:   file,
 	})
 	if err != nil {
-		return err
+		return release.Remote{}, err
 	}
 
-	return nil
+	return release.Remote{
+		ID:         release.ID{Name: spec.Name, Version: spec.Version},
+		RemotePath: remotePath,
+		SourceID:   src.ID(),
+	}, nil
 }
 
 func (src S3ReleaseSource) RemotePath(requirement release.Requirement) (string, error) {

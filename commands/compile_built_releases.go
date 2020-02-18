@@ -2,15 +2,17 @@ package commands
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v2"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
+
 	boshcrypto "github.com/cloudfoundry/bosh-utils/crypto"
 	boshsystem "github.com/cloudfoundry/bosh-utils/system"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/helper"
 	"github.com/pivotal-cf/kiln/internal/manifest_generator"
-	"io"
-	"log"
-	"os"
-	"path/filepath"
 
 	"gopkg.in/src-d/go-billy.v4/osfs"
 
@@ -130,7 +132,9 @@ func (f CompileBuiltReleases) Execute(args []string) error {
 		return err
 	}
 
-	return f.uploadCompiledReleases(downloadedReleases, releaseUploader, stemcell)
+	uploadedReleases, err := f.uploadCompiledReleases(downloadedReleases, releaseUploader, stemcell)
+
+	return f.updateLockfile(uploadedReleases, kilnfileLock)
 }
 
 func (f CompileBuiltReleases) Usage() jhanda.Usage {
@@ -329,22 +333,66 @@ func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.
 	return downloadedReleases, nil
 }
 
-func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []release.Local, releaseUploader fetcher.ReleaseUploader, stemcell builder.StemcellManifest) error {
+type uploadedRelease struct {
+	release.Remote
+	SHA1 string
+}
+
+func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []release.Local, releaseUploader fetcher.ReleaseUploader, stemcell builder.StemcellManifest) ([]uploadedRelease, error) {
+	var uploadedReleases []uploadedRelease
+
 	for _, downloadedRelease := range downloadedReleases {
 		releaseFile, err := os.Open(downloadedRelease.LocalPath)
 		if err != nil {
-			return fmt.Errorf("opening compiled release %q for uploading: %w", downloadedRelease.LocalPath, err) // untested
+			return nil, fmt.Errorf("opening compiled release %q for uploading: %w", downloadedRelease.LocalPath, err) // untested
 		}
 
-		err = releaseUploader.UploadRelease(release.Requirement{
+		remoteRelease, err := releaseUploader.UploadRelease(release.Requirement{
 			Name:            downloadedRelease.Name,
 			Version:         downloadedRelease.Version,
 			StemcellOS:      stemcell.OperatingSystem,
 			StemcellVersion: stemcell.Version,
 		}, releaseFile)
 		if err != nil {
-			return fmt.Errorf("uploading compiled release %q failed: %w", downloadedRelease.LocalPath, err) // untested
+			return nil, fmt.Errorf("uploading compiled release %q failed: %w", downloadedRelease.LocalPath, err) // untested
 		}
+
+		uploadedReleases = append(uploadedReleases, uploadedRelease{Remote: remoteRelease, SHA1: downloadedRelease.SHA1})
+	}
+	return uploadedReleases, nil
+}
+
+func (f CompileBuiltReleases) updateLockfile(uploadedReleases []uploadedRelease, kilnfileLock cargo.KilnfileLock) (error) {
+	for _, uploaded := range uploadedReleases {
+		var matchingRelease *cargo.ReleaseLock
+		for i := range kilnfileLock.Releases {
+			if kilnfileLock.Releases[i].Name == uploaded.Name {
+				matchingRelease = &kilnfileLock.Releases[i]
+				break
+			}
+		}
+		if matchingRelease == nil {
+			return fmt.Errorf("no release named %q exists in your Kilnfile.lock", uploaded.Name) // untested (shouldn't be possible)
+		}
+
+		matchingRelease.RemoteSource = uploaded.SourceID
+		matchingRelease.RemotePath = uploaded.RemotePath
+		matchingRelease.SHA1 = uploaded.SHA1
+	}
+
+	updatedLockFileYAML, err := yaml.Marshal(kilnfileLock)
+	if err != nil {
+		return fmt.Errorf("error marshaling the Kilnfile.lock: %w", err) // untestable
+	}
+
+	lockFile, err := os.Create(f.Options.Kilnfile + ".lock") // overwrites the file
+	if err != nil {
+		return fmt.Errorf("error reopening the Kilnfile.lock for writing: %w", err) // untested
+	}
+
+	_, err = lockFile.Write(updatedLockFileYAML)
+	if err != nil {
+		return fmt.Errorf("error writing to Kilnfile.lock: %w", err) // untested
 	}
 	return nil
 }

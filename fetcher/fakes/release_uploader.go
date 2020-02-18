@@ -25,17 +25,19 @@ type ReleaseUploader struct {
 		result2 bool
 		result3 error
 	}
-	UploadReleaseStub        func(release.Requirement, io.Reader) error
+	UploadReleaseStub        func(release.Requirement, io.Reader) (release.Remote, error)
 	uploadReleaseMutex       sync.RWMutex
 	uploadReleaseArgsForCall []struct {
 		arg1 release.Requirement
 		arg2 io.Reader
 	}
 	uploadReleaseReturns struct {
-		result1 error
+		result1 release.Remote
+		result2 error
 	}
 	uploadReleaseReturnsOnCall map[int]struct {
-		result1 error
+		result1 release.Remote
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -107,7 +109,7 @@ func (fake *ReleaseUploader) GetMatchedReleaseReturnsOnCall(i int, result1 relea
 	}{result1, result2, result3}
 }
 
-func (fake *ReleaseUploader) UploadRelease(arg1 release.Requirement, arg2 io.Reader) error {
+func (fake *ReleaseUploader) UploadRelease(arg1 release.Requirement, arg2 io.Reader) (release.Remote, error) {
 	fake.uploadReleaseMutex.Lock()
 	ret, specificReturn := fake.uploadReleaseReturnsOnCall[len(fake.uploadReleaseArgsForCall)]
 	fake.uploadReleaseArgsForCall = append(fake.uploadReleaseArgsForCall, struct {
@@ -120,10 +122,10 @@ func (fake *ReleaseUploader) UploadRelease(arg1 release.Requirement, arg2 io.Rea
 		return fake.UploadReleaseStub(arg1, arg2)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
 	fakeReturns := fake.uploadReleaseReturns
-	return fakeReturns.result1
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *ReleaseUploader) UploadReleaseCallCount() int {
@@ -132,7 +134,7 @@ func (fake *ReleaseUploader) UploadReleaseCallCount() int {
 	return len(fake.uploadReleaseArgsForCall)
 }
 
-func (fake *ReleaseUploader) UploadReleaseCalls(stub func(release.Requirement, io.Reader) error) {
+func (fake *ReleaseUploader) UploadReleaseCalls(stub func(release.Requirement, io.Reader) (release.Remote, error)) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = stub
@@ -145,27 +147,30 @@ func (fake *ReleaseUploader) UploadReleaseArgsForCall(i int) (release.Requiremen
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *ReleaseUploader) UploadReleaseReturns(result1 error) {
+func (fake *ReleaseUploader) UploadReleaseReturns(result1 release.Remote, result2 error) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = nil
 	fake.uploadReleaseReturns = struct {
-		result1 error
-	}{result1}
+		result1 release.Remote
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *ReleaseUploader) UploadReleaseReturnsOnCall(i int, result1 error) {
+func (fake *ReleaseUploader) UploadReleaseReturnsOnCall(i int, result1 release.Remote, result2 error) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = nil
 	if fake.uploadReleaseReturnsOnCall == nil {
 		fake.uploadReleaseReturnsOnCall = make(map[int]struct {
-			result1 error
+			result1 release.Remote
+			result2 error
 		})
 	}
 	fake.uploadReleaseReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
+		result1 release.Remote
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *ReleaseUploader) Invocations() map[string][][]interface{} {

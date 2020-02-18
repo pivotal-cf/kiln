@@ -29,6 +29,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pivotal-cf/kiln/internal/cargo"
+
 	"github.com/onsi/gomega/gexec"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 	"gopkg.in/yaml.v2"
@@ -67,14 +69,17 @@ releases:
     version: 1.2.3
     remote_source: ` + builtReleasesID + `
     remote_path: release-a/release-a-1.2.3.tgz
+    sha1: original-sha
   - name: release-b  # already compiled
     version: 42
     remote_source: ` + compiledReleasesID + `
     remote_path: release-b/release-b-42-ubuntu-trusty-22.tgz
+    sha1: original-sha
   - name: release-c  # needs to be compiled
     version: 2.3.4
     remote_source: ` + builtReleasesID + `
     remote_path: release-c/release-c-2.3.4.tgz
+    sha1: original-sha
 stemcell_criteria:
   os: "ubuntu-trusty"
   version: "22"
@@ -433,6 +438,67 @@ stemcell_criteria:
 		Expect(cleanupWasCalled).To(Equal(1))
 	})
 
+	It("updates the Kilnfile.lock with the compiled releases", func() {
+		command := exec.Command(pathToMain, "compile-built-releases",
+			"--kilnfile", kilnfilePath,
+			"--releases-directory", releasesDirectoryPath,
+			"--stemcell-file", stemcellTarballPath,
+			"--upload-target-id", compiledReleasesID,
+		)
+
+		command.Env = append(command.Env, fmt.Sprintf("BOSH_ENVIRONMENT=%s", boshServer.URL))
+		command.Env = append(command.Env, "BOSH_CLIENT=some-bosh-user")
+		command.Env = append(command.Env, "BOSH_CLIENT_SECRET=some-bosh-password")
+		command.Env = append(command.Env, fmt.Sprintf("BOSH_CA_CERT=%s", string(caCert)))
+
+		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(session.Wait(2 * time.Second)).Should(gexec.Exit(0))
+
+		file, err := os.Open(kilnfilePath + ".lock")
+		Expect(err).NotTo(HaveOccurred())
+
+		var updatedLockfile cargo.KilnfileLock
+		Expect(
+			yaml.NewDecoder(file).Decode(&updatedLockfile),
+		).To(Succeed())
+
+		s := sha1.New()
+		io.Copy(s, strings.NewReader(compiledReleaseAContents))
+		releaseASha1 := hex.EncodeToString(s.Sum(nil))
+
+		s = sha1.New()
+		io.Copy(s, strings.NewReader(compiledReleaseCContents))
+		releaseCSha1 := hex.EncodeToString(s.Sum(nil))
+
+		Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
+			Releases: []cargo.ReleaseLock{
+				{
+					Name:         "release-a",
+					Version:      "1.2.3",
+					RemoteSource: compiledReleasesID,
+					RemotePath:   "release-a/release-a-1.2.3-ubuntu-trusty-22.tgz",
+					SHA1:         releaseASha1,
+				},
+				{
+					Name:         "release-b",
+					Version:      "42",
+					RemoteSource: compiledReleasesID,
+					RemotePath:   "release-b/release-b-42-ubuntu-trusty-22.tgz",
+					SHA1:         "original-sha",
+				},
+				{
+					Name:         "release-c",
+					Version:      "2.3.4",
+					RemoteSource: compiledReleasesID,
+					RemotePath:   "release-c/release-c-2.3.4-ubuntu-trusty-22.tgz",
+					SHA1:         releaseCSha1,
+				},
+			},
+			Stemcell: cargo.Stemcell{OS: "ubuntu-trusty", Version: "22"},
+		}))
+	})
 })
 
 func readManifestFromTarball(body io.Reader, manifestPath string) ([]byte, string) {

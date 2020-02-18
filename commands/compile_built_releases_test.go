@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/onsi/gomega/gbytes"
 
 	"github.com/charlievieth/fs"
@@ -50,6 +52,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 		releaseUploaderFinder      *fakes.ReleaseUploaderFinder
 		releaseUploader            *fetcherFakes.ReleaseUploader
 
+		kilnfilePath string
+
 		logger *log.Logger
 		logBuf *gbytes.Buffer
 
@@ -57,6 +61,10 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 		command CompileBuiltReleases
 	)
+
+	blobIDContents := func(blobID string) string {
+		return "contents of " + blobID
+	}
 
 	BeforeEach(func() {
 		builtReleaseSource = new(fetcherFakes.ReleaseSource)
@@ -73,9 +81,9 @@ var _ = Describe("CompileBuiltReleases", func() {
 		}
 		kilnfileLock = cargo.KilnfileLock{
 			Releases: []cargo.ReleaseLock{
-				{Name: "uaa", Version: "1.2.3", RemoteSource: builtSourceID, RemotePath: "/remote/path/uaa-1.2.3.tgz", SHA1: "not-used"},
-				{Name: "capi", Version: "2.3.4", RemoteSource: builtSourceID, RemotePath: "/remote/path/capi-2.3.4.tgz", SHA1: "not-used"},
-				{Name: "bpm", Version: "1.6", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "not-used"},
+				{Name: "uaa", Version: "1.2.3", RemoteSource: builtSourceID, RemotePath: "/remote/path/uaa-1.2.3.tgz", SHA1: "original-sha"},
+				{Name: "capi", Version: "2.3.4", RemoteSource: builtSourceID, RemotePath: "/remote/path/capi-2.3.4.tgz", SHA1: "original-sha"},
+				{Name: "bpm", Version: "1.6", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
 			},
 			Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 		}
@@ -87,11 +95,24 @@ var _ = Describe("CompileBuiltReleases", func() {
 		releaseUploaderFinder = new(fakes.ReleaseUploaderFinder)
 		releaseUploaderFinder.Returns(releaseUploader, nil)
 
+		releaseUploader.UploadReleaseCalls(func(requirement release.Requirement, reader io.Reader) (remote release.Remote, err error) {
+			return release.Remote{
+				ID:         release.ID{Name: requirement.Name, Version: requirement.Version},
+				RemotePath: fmt.Sprintf("%s/%s-%s-%s-%s.tgz", requirement.Name, requirement.Name, requirement.Version, requirement.StemcellOS, requirement.StemcellVersion),
+				SourceID:   compiledSourceID,
+			}, nil
+		})
+
 		tmpDir, err := ioutil.TempDir("", "compile-built-releases")
 		Expect(err).NotTo(HaveOccurred())
 
 		releasesPath = filepath.Join(tmpDir, "my-releases")
 		stemcellPath = filepath.Join(tmpDir, "my-stemcell.tgz")
+		kilnfilePath = filepath.Join(tmpDir, "Kilnfile")
+
+		Expect(
+			ioutil.WriteFile(kilnfilePath+".lock", []byte("{}"), 0600),
+		).To(Succeed())
 
 		Expect(
 			os.MkdirAll(releasesPath, 0755),
@@ -123,10 +144,6 @@ var _ = Describe("CompileBuiltReleases", func() {
 		boshDirector.UploadReleaseFileReturns(nil)
 		boshDirector.FindDeploymentReturns(boshDeployment, nil)
 		boshDeployment.UpdateReturns(nil)
-
-		blobIDContents := func(blobID string) string {
-			return "contents of " + blobID
-		}
 
 		boshDeployment.ExportReleaseCalls(func(releaseSlug boshdir.ReleaseSlug, _ boshdir.OSVersionSlug, _ []string) (boshdir.ExportReleaseResult, error) {
 			blobID := fmt.Sprintf("%s-%s", releaseSlug.Name(), releaseSlug.Version())
@@ -162,7 +179,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 	When("everything succeeds (happy path)", func() {
 		It("downloads the releases", func() {
 			err := command.Execute([]string{
-				"--kilnfile", "not-used",
+				"--kilnfile", kilnfilePath,
 				"--releases-directory", releasesPath,
 				"--stemcell-file", stemcellPath,
 				"--upload-target-id", compiledSourceID,
@@ -196,7 +213,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 		It("compiles and downloads the compiled releases", func() {
 			err := command.Execute([]string{
-				"--kilnfile", "not-used",
+				"--kilnfile", kilnfilePath,
 				"--releases-directory", releasesPath,
 				"--stemcell-file", stemcellPath,
 				"--upload-target-id", compiledSourceID,
@@ -288,7 +305,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 		It("uploads the compiled releases to the release source", func() {
 			err := command.Execute([]string{
-				"--kilnfile", "not-used",
+				"--kilnfile", kilnfilePath,
 				"--releases-directory", releasesPath,
 				"--stemcell-file", stemcellPath,
 				"--upload-target-id", compiledSourceID,
@@ -325,6 +342,59 @@ var _ = Describe("CompileBuiltReleases", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("contents of capi-2.3.4"))
 		})
+
+		It("updates the Kilnfile.lock with the compiled releases", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			file, err := os.Open(kilnfilePath + ".lock")
+			Expect(err).NotTo(HaveOccurred())
+
+			var updatedLockfile cargo.KilnfileLock
+			Expect(
+				yaml.NewDecoder(file).Decode(&updatedLockfile),
+			).To(Succeed())
+
+			s := sha1.New()
+			io.Copy(s, strings.NewReader(blobIDContents("uaa-1.2.3")))
+			expectedUaaSha := hex.EncodeToString(s.Sum(nil))
+
+			s = sha1.New()
+			io.Copy(s, strings.NewReader(blobIDContents("capi-2.3.4")))
+			expectedCapiSha := hex.EncodeToString(s.Sum(nil))
+
+			Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
+				Releases: []cargo.ReleaseLock{
+					{
+						Name:         "uaa",
+						Version:      "1.2.3",
+						RemoteSource: compiledSourceID,
+						RemotePath:   fmt.Sprintf("uaa/uaa-1.2.3-%s-%s.tgz", stemcellOS, stemcellVersion),
+						SHA1:         expectedUaaSha,
+					},
+					{
+						Name:         "capi",
+						Version:      "2.3.4",
+						RemoteSource: compiledSourceID,
+						RemotePath:   fmt.Sprintf("capi/capi-2.3.4-%s-%s.tgz", stemcellOS, stemcellVersion),
+						SHA1:         expectedCapiSha,
+					},
+					{
+						Name:         "bpm",
+						Version:      "1.6",
+						RemoteSource: compiledSourceID,
+						RemotePath:   "not-used",
+						SHA1:         "original-sha",
+					},
+				},
+				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+			}))
+		})
 	})
 
 	When("exporting the release fails", func() {
@@ -336,7 +406,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 		It("still deletes the compilation deployment and cleans up director assets", func() {
 			err := command.Execute([]string{
-				"--kilnfile", "not-used",
+				"--kilnfile", kilnfilePath,
 				"--releases-directory", releasesPath,
 				"--stemcell-file", stemcellPath,
 				"--upload-target-id", compiledSourceID,
@@ -365,7 +435,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 		It("still deletes the compilation deployment and cleans up director assets", func() {
 			err := command.Execute([]string{
-				"--kilnfile", "not-used",
+				"--kilnfile", kilnfilePath,
 				"--releases-directory", releasesPath,
 				"--stemcell-file", stemcellPath,
 				"--upload-target-id", compiledSourceID,
@@ -393,7 +463,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 		It("panics", func() {
 			Expect(func() {
 				command.Execute([]string{
-					"--kilnfile", "not-used",
+					"--kilnfile", kilnfilePath,
 					"--releases-directory", releasesPath,
 					"--stemcell-file", stemcellPath,
 					"--upload-target-id", compiledSourceID,
@@ -410,7 +480,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 		It("provides a warning", func() {
 			err := command.Execute([]string{
-				"--kilnfile", "not-used",
+				"--kilnfile", kilnfilePath,
 				"--releases-directory", releasesPath,
 				"--stemcell-file", stemcellPath,
 				"--upload-target-id", compiledSourceID,
@@ -434,7 +504,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 		It("errors", func() {
 			err := command.Execute([]string{
-				"--kilnfile", "not-used",
+				"--kilnfile", kilnfilePath,
 				"--releases-directory", releasesPath,
 				"--stemcell-file", stemcellPath,
 				"--upload-target-id", compiledSourceID,
@@ -454,7 +524,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 		It("errors", func() {
 			err := command.Execute([]string{
-				"--kilnfile", "not-used",
+				"--kilnfile", kilnfilePath,
 				"--releases-directory", releasesPath,
 				"--stemcell-file", stemcellPath,
 				"--upload-target-id", compiledSourceID,

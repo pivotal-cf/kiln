@@ -3,9 +3,10 @@ package fetcher
 import (
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/release"
 	"io"
 	"log"
+
+	"github.com/pivotal-cf/kiln/release"
 
 	"github.com/pivotal-cf/kiln/internal/cargo"
 )
@@ -32,7 +33,7 @@ type MultiReleaseSource interface {
 //go:generate counterfeiter -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
 type ReleaseUploader interface {
 	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
-	UploadRelease(spec release.Requirement, file io.Reader) error
+	UploadRelease(spec release.Requirement, file io.Reader) (release.Remote, error)
 }
 
 //go:generate counterfeiter -o ./fakes/remote_pather.go --fake-name RemotePather . RemotePather

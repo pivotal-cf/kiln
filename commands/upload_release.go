@@ -81,7 +81,7 @@ func (command UploadRelease) Execute(args []string) error {
 			manifest.Name, manifest.Version, command.Options.UploadTargetID)
 	}
 
-	err = releaseUploader.UploadRelease(release.Requirement{
+	_, err = releaseUploader.UploadRelease(release.Requirement{
 		Name:    manifest.Name,
 		Version: manifest.Version,
 	}, file)

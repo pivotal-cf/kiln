@@ -181,7 +181,7 @@ compiled_packages:
 
 		When("the upload fails", func() {
 			BeforeEach(func() {
-				releaseUploader.UploadReleaseReturns(errors.New("boom"))
+				releaseUploader.UploadReleaseReturns(release.Remote{}, errors.New("boom"))
 			})
 
 			It("returns an error", func() {
