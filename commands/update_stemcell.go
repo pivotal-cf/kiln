@@ -2,16 +2,13 @@ package commands
 
 import (
 	"fmt"
-	"log"
-	"os"
-
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/helper"
 	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4/osfs"
-	"gopkg.in/yaml.v2"
+	"log"
 )
 
 type UpdateStemcell struct {
@@ -97,15 +94,9 @@ func (update UpdateStemcell) Execute(args []string) error {
 	kilnfileLock.Stemcell.OS = newStemcellOS
 	kilnfileLock.Stemcell.Version = newStemcellVersion
 
-	kilnfileLockFile, err := os.Create(update.Options.Kilnfile + ".lock")
+	err = update.KilnfileLoader.SaveKilnfileLock(osfs.New(""), update.Options.Kilnfile, kilnfileLock)
 	if err != nil {
-		return fmt.Errorf("couldn't open the Kilnfile.lock for updating: %w", err) // untested
-	}
-	defer kilnfileLockFile.Close()
-
-	err = yaml.NewEncoder(kilnfileLockFile).Encode(kilnfileLock)
-	if err != nil {
-		return fmt.Errorf("couldn't write the updated Kilnfile.lock: %w", err) // untested
+		return err
 	}
 
 	update.Logger.Println("Finished updating Kilnfile.lock")

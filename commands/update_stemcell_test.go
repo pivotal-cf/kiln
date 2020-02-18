@@ -9,7 +9,6 @@ import (
 	test_helpers "github.com/pivotal-cf/kiln/internal/test-helpers"
 	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4/osfs"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
 	"os"
@@ -25,14 +24,6 @@ var _ = Describe("UpdateStemcell", func() {
 	var _ jhanda.Command = UpdateStemcell{}
 
 	const (
-		initialKilnfileYAMLFileContents = `---
-`
-
-		initialKilnfileLockFileContents = `---
-stemcell_criteria:
-  os: old-os
-  version: "0.1"
-`
 		newStemcellOS      = "some-os"
 		newStemcellVersion = "1.2.3"
 
@@ -55,7 +46,7 @@ stemcell_criteria:
 	Describe("Execute", func() {
 		var (
 			update                                               *UpdateStemcell
-			tmpDir, kilnfilePath, kilnfileLockPath, stemcellPath string
+			tmpDir, kilnfilePath, stemcellPath string
 			kilnfileLoader                                       *fakes.KilnfileLoader
 			kilnfile                                             cargo.Kilnfile
 			kilnfileLock                                         cargo.KilnfileLock
@@ -141,18 +132,9 @@ stemcell_criteria:
 			Expect(err).NotTo(HaveOccurred())
 
 			kilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-			kilnfileLockPath = kilnfilePath + ".lock"
 
 			stemcellPath = filepath.Join(tmpDir, "my-stemcell.tgz")
 			test_helpers.WriteStemcellTarball(stemcellPath, newStemcellOS, newStemcellVersion, osfs.New(""))
-
-			Expect(
-				ioutil.WriteFile(kilnfilePath, []byte(initialKilnfileYAMLFileContents), 0644),
-			).To(Succeed())
-
-			Expect(
-				ioutil.WriteFile(kilnfileLockPath, []byte(initialKilnfileLockFileContents), 0644),
-			).To(Succeed())
 
 			outputBuffer = gbytes.NewBuffer()
 			logger := log.New(outputBuffer, "", 0)
@@ -165,11 +147,6 @@ stemcell_criteria:
 		})
 
 		JustBeforeEach(func() {
-			kilnfileLockFile, err := os.Create(kilnfileLockPath)
-			Expect(err).NotTo(HaveOccurred())
-			err = yaml.NewEncoder(kilnfileLockFile).Encode(kilnfileLock)
-			Expect(err).NotTo(HaveOccurred())
-
 			kilnfileLoader.LoadKilnfilesReturns(kilnfile, kilnfileLock, nil)
 		})
 
@@ -183,19 +160,17 @@ stemcell_criteria:
 			err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
 			Expect(err).NotTo(HaveOccurred())
 
-			kilnfileLockFile, err := os.Open(kilnfileLockPath)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
 
-			var actualKilnfileLock cargo.KilnfileLock
-			err = yaml.NewDecoder(kilnfileLockFile).Decode(&actualKilnfileLock)
-			Expect(err).NotTo(HaveOccurred())
+			_, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
+			Expect(path).To(Equal(kilnfilePath))
 
-			Expect(actualKilnfileLock.Stemcell).To(Equal(cargo.Stemcell{
+			Expect(updatedLockfile.Stemcell).To(Equal(cargo.Stemcell{
 				OS:      newStemcellOS,
 				Version: newStemcellVersion,
 			}))
 
-			Expect(actualKilnfileLock.Releases).To(Equal([]cargo.ReleaseLock{
+			Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
 				{
 					Name:         release1Name,
 					Version:      release1Version,
@@ -278,17 +253,9 @@ stemcell_criteria:
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
-
 				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(0))
+				Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
 
-				kilnfileLockFile, err := os.Open(kilnfileLockPath)
-				Expect(err).NotTo(HaveOccurred())
-
-				var actualKilnfileLock cargo.KilnfileLock
-				err = yaml.NewDecoder(kilnfileLockFile).Decode(&actualKilnfileLock)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(actualKilnfileLock).To(Equal(kilnfileLock))
 				Expect(outputBuffer.Contents()).To(ContainSubstring("Nothing to update for product"))
 			})
 		})

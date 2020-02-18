@@ -12,8 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v2"
-
 	"github.com/onsi/gomega/gbytes"
 
 	"github.com/charlievieth/fs"
@@ -109,10 +107,6 @@ var _ = Describe("CompileBuiltReleases", func() {
 		releasesPath = filepath.Join(tmpDir, "my-releases")
 		stemcellPath = filepath.Join(tmpDir, "my-stemcell.tgz")
 		kilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-
-		Expect(
-			ioutil.WriteFile(kilnfilePath+".lock", []byte("{}"), 0600),
-		).To(Succeed())
 
 		Expect(
 			os.MkdirAll(releasesPath, 0755),
@@ -352,13 +346,10 @@ var _ = Describe("CompileBuiltReleases", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			file, err := os.Open(kilnfilePath + ".lock")
-			Expect(err).NotTo(HaveOccurred())
+			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
 
-			var updatedLockfile cargo.KilnfileLock
-			Expect(
-				yaml.NewDecoder(file).Decode(&updatedLockfile),
-			).To(Succeed())
+			_, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
+			Expect(path).To(Equal(kilnfilePath))
 
 			s := sha1.New()
 			io.Copy(s, strings.NewReader(blobIDContents("uaa-1.2.3")))

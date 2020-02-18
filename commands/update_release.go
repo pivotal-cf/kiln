@@ -11,7 +11,6 @@ import (
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	"gopkg.in/src-d/go-billy.v4"
-	"gopkg.in/yaml.v2"
 )
 
 type UpdateRelease struct {
@@ -42,6 +41,7 @@ func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, multiRele
 //go:generate counterfeiter -o ./fakes/kilnfile_loader.go --fake-name KilnfileLoader . KilnfileLoader
 type KilnfileLoader interface {
 	LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (cargo.Kilnfile, cargo.KilnfileLock, error)
+	SaveKilnfileLock(fs billy.Filesystem, kilnfilePath string, lockfile cargo.KilnfileLock) error
 }
 
 func (u UpdateRelease) Execute(args []string) error {
@@ -51,7 +51,6 @@ func (u UpdateRelease) Execute(args []string) error {
 	}
 
 	kilnfile, kilnfileLock, err := u.loader.LoadKilnfiles(u.filesystem, u.Options.Kilnfile, u.Options.VariablesFiles, u.Options.Variables)
-	kilnfileLockPath := fmt.Sprintf("%s.lock", u.Options.Kilnfile)
 	if err != nil {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
@@ -93,19 +92,9 @@ func (u UpdateRelease) Execute(args []string) error {
 	matchingRelease.RemoteSource = remoteRelease.SourceID
 	matchingRelease.RemotePath = remoteRelease.RemotePath
 
-	updatedLockFileYAML, err := yaml.Marshal(kilnfileLock)
+	err = u.loader.SaveKilnfileLock(u.filesystem, u.Options.Kilnfile, kilnfileLock)
 	if err != nil {
-		return fmt.Errorf("error marshaling the Kilnfile.lock: %w", err) // untestable
-	}
-
-	lockFile, err := u.filesystem.Create(kilnfileLockPath) // overwrites the file
-	if err != nil {
-		return fmt.Errorf("error reopening the Kilnfile.lock for writing: %w", err)
-	}
-
-	_, err = lockFile.Write(updatedLockFileYAML)
-	if err != nil {
-		return fmt.Errorf("error writing to Kilnfile.lock: %w", err)
+		return err
 	}
 
 	u.logger.Printf("Updated %s to %s. DON'T FORGET TO MAKE A COMMIT AND PR\n", u.Options.Name, u.Options.Version)

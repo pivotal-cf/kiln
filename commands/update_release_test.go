@@ -3,20 +3,17 @@ package commands_test
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/release"
-	"gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/cargo"
+	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 )
@@ -33,7 +30,6 @@ var _ = Describe("UpdateRelease", func() {
 
 	var (
 		updateReleaseCommand       UpdateRelease
-		preexistingKilnfileLock    []byte
 		filesystem                 billy.Filesystem
 		multiReleaseSourceProvider *fakes.MultiReleaseSourceProvider
 		releaseSource              *fetcherFakes.ReleaseSource
@@ -77,18 +73,9 @@ var _ = Describe("UpdateRelease", func() {
 			}
 
 			kilnFileLoader.LoadKilnfilesReturns(kilnfile, kilnFileLock, nil)
-
-			kfl, err := filesystem.Create("Kilnfile.lock")
-			Expect(err).NotTo(HaveOccurred())
-			defer kfl.Close()
-
-			preexistingKilnfileLock, err = yaml.Marshal(kilnFileLock)
-			_, err = kfl.Write(preexistingKilnfileLock)
-			Expect(err).NotTo(HaveOccurred())
-
 			logger = log.New(GinkgoWriter, "", 0)
 
-			err = filesystem.MkdirAll(releasesDir, os.ModePerm)
+			err := filesystem.MkdirAll(releasesDir, os.ModePerm)
 			Expect(err).NotTo(HaveOccurred())
 
 			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, releaseVersion))
@@ -158,14 +145,13 @@ var _ = Describe("UpdateRelease", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				newKilnfileLock, err := filesystem.Open("Kilnfile.lock")
-				Expect(err).NotTo(HaveOccurred())
+				Expect(kilnFileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
 
-				var kilnfileLock cargo.KilnfileLock
-				err = yaml.NewDecoder(newKilnfileLock).Decode(&kilnfileLock)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(kilnfileLock.Releases).To(HaveLen(2))
-				Expect(kilnfileLock.Releases).To(ContainElement(
+				fs, path, updatedLockfile := kilnFileLoader.SaveKilnfileLockArgsForCall(0)
+				Expect(fs).To(Equal(filesystem))
+				Expect(path).To(Equal("Kilnfile"))
+				Expect(updatedLockfile.Releases).To(HaveLen(2))
+				Expect(updatedLockfile.Releases).To(ContainElement(
 					cargo.ReleaseLock{
 						Name:         releaseName,
 						Version:      releaseVersion,
@@ -238,7 +224,7 @@ var _ = Describe("UpdateRelease", func() {
 					"--releases-directory", releasesDir,
 				})
 
-				expectKilnfileLockIsUnchanged(filesystem, preexistingKilnfileLock)
+				Expect(kilnFileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
 			})
 		})
 
@@ -281,7 +267,7 @@ var _ = Describe("UpdateRelease", func() {
 					"--releases-directory", releasesDir,
 				})
 
-				expectKilnfileLockIsUnchanged(filesystem, preexistingKilnfileLock)
+				Expect(kilnFileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
 			})
 		})
 
@@ -308,33 +294,7 @@ var _ = Describe("UpdateRelease", func() {
 					"--releases-directory", releasesDir,
 				})
 
-				expectKilnfileLockIsUnchanged(filesystem, preexistingKilnfileLock)
-			})
-		})
-
-		When("reopening the Kilnfile.lock fails", func() {
-			var expectedError error
-
-			BeforeEach(func() {
-				expectedError = errors.New("very very bad")
-
-				ogFilesystem := filesystem
-				filesystem = fakeFilesystem{
-					Filesystem: ogFilesystem,
-					CreateFunc: func(path string) (billy.File, error) {
-						return nil, expectedError
-					},
-				}
-			})
-
-			It("errors", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", releaseVersion,
-					"--releases-directory", releasesDir,
-				})
-				Expect(err).To(MatchError(ContainSubstring(expectedError.Error())))
+				Expect(kilnFileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
 			})
 		})
 
@@ -343,13 +303,7 @@ var _ = Describe("UpdateRelease", func() {
 
 			BeforeEach(func() {
 				expectedError = errors.New("i don't feel so good")
-
-				badFile := unwritableFile{err: expectedError}
-				ogFilesystem := filesystem
-				filesystem = fakeFilesystem{
-					Filesystem: ogFilesystem,
-					CreateFunc: func(path string) (billy.File, error) { return badFile, nil },
-				}
+				kilnFileLoader.SaveKilnfileLockReturns(expectedError)
 			})
 
 			It("errors", func() {
@@ -372,30 +326,3 @@ var _ = Describe("UpdateRelease", func() {
 	})
 })
 
-func expectKilnfileLockIsUnchanged(fs billy.Filesystem, originalContents []byte) {
-	file, err := fs.Open("Kilnfile.lock")
-	Expect(err).NotTo(HaveOccurred())
-
-	contents, err := ioutil.ReadAll(file)
-	Expect(err).NotTo(HaveOccurred())
-
-	Expect(contents).To(BeEquivalentTo(originalContents))
-}
-
-type fakeFilesystem struct {
-	billy.Filesystem
-	CreateFunc func(string) (billy.File, error)
-}
-
-func (fs fakeFilesystem) Create(path string) (billy.File, error) {
-	return fs.CreateFunc(path)
-}
-
-type unwritableFile struct {
-	billy.File
-	err error
-}
-
-func (f unwritableFile) Write(_ []byte) (int, error) {
-	return 0, f.err
-}

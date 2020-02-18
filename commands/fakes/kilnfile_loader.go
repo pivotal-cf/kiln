@@ -28,6 +28,19 @@ type KilnfileLoader struct {
 		result2 cargo.KilnfileLock
 		result3 error
 	}
+	SaveKilnfileLockStub        func(billy.Filesystem, string, cargo.KilnfileLock) error
+	saveKilnfileLockMutex       sync.RWMutex
+	saveKilnfileLockArgsForCall []struct {
+		arg1 billy.Filesystem
+		arg2 string
+		arg3 cargo.KilnfileLock
+	}
+	saveKilnfileLockReturns struct {
+		result1 error
+	}
+	saveKilnfileLockReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -111,11 +124,75 @@ func (fake *KilnfileLoader) LoadKilnfilesReturnsOnCall(i int, result1 cargo.Kiln
 	}{result1, result2, result3}
 }
 
+func (fake *KilnfileLoader) SaveKilnfileLock(arg1 billy.Filesystem, arg2 string, arg3 cargo.KilnfileLock) error {
+	fake.saveKilnfileLockMutex.Lock()
+	ret, specificReturn := fake.saveKilnfileLockReturnsOnCall[len(fake.saveKilnfileLockArgsForCall)]
+	fake.saveKilnfileLockArgsForCall = append(fake.saveKilnfileLockArgsForCall, struct {
+		arg1 billy.Filesystem
+		arg2 string
+		arg3 cargo.KilnfileLock
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("SaveKilnfileLock", []interface{}{arg1, arg2, arg3})
+	fake.saveKilnfileLockMutex.Unlock()
+	if fake.SaveKilnfileLockStub != nil {
+		return fake.SaveKilnfileLockStub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.saveKilnfileLockReturns
+	return fakeReturns.result1
+}
+
+func (fake *KilnfileLoader) SaveKilnfileLockCallCount() int {
+	fake.saveKilnfileLockMutex.RLock()
+	defer fake.saveKilnfileLockMutex.RUnlock()
+	return len(fake.saveKilnfileLockArgsForCall)
+}
+
+func (fake *KilnfileLoader) SaveKilnfileLockCalls(stub func(billy.Filesystem, string, cargo.KilnfileLock) error) {
+	fake.saveKilnfileLockMutex.Lock()
+	defer fake.saveKilnfileLockMutex.Unlock()
+	fake.SaveKilnfileLockStub = stub
+}
+
+func (fake *KilnfileLoader) SaveKilnfileLockArgsForCall(i int) (billy.Filesystem, string, cargo.KilnfileLock) {
+	fake.saveKilnfileLockMutex.RLock()
+	defer fake.saveKilnfileLockMutex.RUnlock()
+	argsForCall := fake.saveKilnfileLockArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *KilnfileLoader) SaveKilnfileLockReturns(result1 error) {
+	fake.saveKilnfileLockMutex.Lock()
+	defer fake.saveKilnfileLockMutex.Unlock()
+	fake.SaveKilnfileLockStub = nil
+	fake.saveKilnfileLockReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *KilnfileLoader) SaveKilnfileLockReturnsOnCall(i int, result1 error) {
+	fake.saveKilnfileLockMutex.Lock()
+	defer fake.saveKilnfileLockMutex.Unlock()
+	fake.SaveKilnfileLockStub = nil
+	if fake.saveKilnfileLockReturnsOnCall == nil {
+		fake.saveKilnfileLockReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.saveKilnfileLockReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *KilnfileLoader) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.loadKilnfilesMutex.RLock()
 	defer fake.loadKilnfilesMutex.RUnlock()
+	fake.saveKilnfileLockMutex.RLock()
+	defer fake.saveKilnfileLockMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

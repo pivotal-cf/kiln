@@ -7,7 +7,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4"
-	"gopkg.in/yaml.v2"
 	"log"
 )
 
@@ -98,16 +97,9 @@ func (command SyncWithLocal) Execute(args []string) error {
 		command.logger.Printf("Updated %s to %s\n", rel.Name, rel.Version)
 	}
 
-	kilnfileLockFile, err := command.fs.Create(command.Options.Kilnfile + ".lock")
+	err = command.kilnfileLoader.SaveKilnfileLock(command.fs, command.Options.Kilnfile, kilnfileLock)
 	if err != nil {
-		return fmt.Errorf("couldn't open the Kilnfile.lock for updating: %w", err) // untested
-	}
-
-	defer kilnfileLockFile.Close()
-
-	err = yaml.NewEncoder(kilnfileLockFile).Encode(kilnfileLock)
-	if err != nil {
-		return fmt.Errorf("couldn't write the updated Kilnfile.lock: %w", err) // untested
+		return err
 	}
 
 	return nil

@@ -11,7 +11,6 @@ import (
 	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/memfs"
-	"gopkg.in/yaml.v2"
 	"log"
 )
 
@@ -109,15 +108,14 @@ var _ = Describe("sync-with-local", func() {
 				"--kilnfile", kilnfilePath,
 				"--assume-release-source", releaseSourceID,
 			})
-
-			kilnfileLockFile, err := fs.Open(kilnfilePath + ".lock")
 			Expect(err).NotTo(HaveOccurred())
 
-			var kilnfileLockResult cargo.KilnfileLock
-			err = yaml.NewDecoder(kilnfileLockFile).Decode(&kilnfileLockResult)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
 
-			Expect(kilnfileLockResult.Releases).To(Equal([]cargo.ReleaseLock{
+			filesystem, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
+			Expect(filesystem).To(Equal(fs))
+			Expect(path).To(Equal(kilnfilePath))
+			Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
 				{
 					Name:         release1Name,
 					Version:      release1Version,

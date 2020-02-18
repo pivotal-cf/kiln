@@ -57,7 +57,7 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 		return Kilnfile{}, KilnfileLock{}, ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile specification " + kilnfilePath}
 	}
 
-	lockFileName := fmt.Sprintf("%s.lock", kilnfilePath)
+	lockFileName := kilnfileLockPath(kilnfilePath)
 	lockFile, err := fs.Open(lockFileName)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, err
@@ -70,4 +70,28 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 		return Kilnfile{}, KilnfileLock{}, ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile.lock " + lockFileName}
 	}
 	return kilnfile, kilnfileLock, nil
+}
+
+func (KilnfileLoader) SaveKilnfileLock(fs billy.Filesystem, kilnfilePath string, updatedKilnfileLock KilnfileLock) error {
+	updatedLockFileYAML, err := yaml.Marshal(updatedKilnfileLock)
+	if err != nil {
+		return fmt.Errorf("error marshaling the Kilnfile.lock: %w", err) // untestable
+	}
+
+	lockfilePath := kilnfileLockPath(kilnfilePath)
+	lockFile, err := fs.Create(lockfilePath) // overwrites the file
+	if err != nil {
+		return fmt.Errorf("error reopening the Kilnfile.lock for writing: %w", err)
+	}
+
+	_, err = lockFile.Write(updatedLockFileYAML)
+	if err != nil {
+		return fmt.Errorf("error writing to Kilnfile.lock: %w", err)
+	}
+
+	return nil
+}
+
+func kilnfileLockPath(kilnfilePath string) string {
+	return fmt.Sprintf("%s.lock", kilnfilePath)
 }

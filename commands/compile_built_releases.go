@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io"
 	"log"
 	"os"
@@ -134,7 +133,13 @@ func (f CompileBuiltReleases) Execute(args []string) error {
 
 	uploadedReleases, err := f.uploadCompiledReleases(downloadedReleases, releaseUploader, stemcell)
 
-	return f.updateLockfile(uploadedReleases, kilnfileLock)
+	err = f.updateLockfile(uploadedReleases, kilnfileLock)
+	if err != nil {
+		return err
+	}
+
+	f.Logger.Println("Updated Kilnfile.lock")
+	return nil
 }
 
 func (f CompileBuiltReleases) Usage() jhanda.Usage {
@@ -380,19 +385,5 @@ func (f CompileBuiltReleases) updateLockfile(uploadedReleases []uploadedRelease,
 		matchingRelease.SHA1 = uploaded.SHA1
 	}
 
-	updatedLockFileYAML, err := yaml.Marshal(kilnfileLock)
-	if err != nil {
-		return fmt.Errorf("error marshaling the Kilnfile.lock: %w", err) // untestable
-	}
-
-	lockFile, err := os.Create(f.Options.Kilnfile + ".lock") // overwrites the file
-	if err != nil {
-		return fmt.Errorf("error reopening the Kilnfile.lock for writing: %w", err) // untested
-	}
-
-	_, err = lockFile.Write(updatedLockFileYAML)
-	if err != nil {
-		return fmt.Errorf("error writing to Kilnfile.lock: %w", err) // untested
-	}
-	return nil
+	return f.KilnfileLoader.SaveKilnfileLock(osfs.New(""), f.Options.Kilnfile, kilnfileLock)
 }
