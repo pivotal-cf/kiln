@@ -115,7 +115,8 @@ func (f CompileBuiltReleases) Execute(args []string) error {
 		return fmt.Errorf("couldn't load Kilnfiles: %w", err) // untested
 	}
 
-	releaseSource := f.MultiReleaseSourceProvider(kilnfile, false)
+	publishableReleaseSources := f.MultiReleaseSourceProvider(kilnfile, true)
+	allReleaseSources := f.MultiReleaseSourceProvider(kilnfile, false)
 	releaseUploader, err := f.ReleaseUploaderFinder(kilnfile, f.Options.UploadTargetID)
 	if err != nil {
 		return fmt.Errorf("error loading release uploader: %w", err) // untested
@@ -126,19 +127,39 @@ func (f CompileBuiltReleases) Execute(args []string) error {
 		return err
 	}
 
-	downloadedReleases, stemcell, err := f.compileAndDownloadReleases(releaseSource, builtReleases)
+	if len(builtReleases) == 0 {
+		f.Logger.Println("All releases are compiled. Exiting early")
+		return nil
+	}
+
+	updatedReleases, remainingBuiltReleases, err := f.downloadPreCompiledReleases(publishableReleaseSources, builtReleases, kilnfileLock.Stemcell)
 	if err != nil {
 		return err
 	}
 
-	uploadedReleases, err := f.uploadCompiledReleases(downloadedReleases, releaseUploader, stemcell)
+	if len(remainingBuiltReleases) > 0 {
+		f.Logger.Printf("need to compile %d built releases\n", len(remainingBuiltReleases))
 
-	err = f.updateLockfile(uploadedReleases, kilnfileLock)
+		downloadedReleases, stemcell, err := f.compileAndDownloadReleases(allReleaseSources, remainingBuiltReleases)
+		if err != nil {
+			return err
+		}
+
+		uploadedReleases, err := f.uploadCompiledReleases(downloadedReleases, releaseUploader, stemcell)
+		if err != nil {
+			return err
+		}
+		updatedReleases = append(updatedReleases, uploadedReleases...)
+	} else {
+		f.Logger.Println("nothing left to compile")
+	}
+
+	err = f.updateLockfile(updatedReleases, kilnfileLock)
 	if err != nil {
 		return err
 	}
 
-	f.Logger.Println("Updated Kilnfile.lock")
+	f.Logger.Println("Updated Kilnfile.lock. DONE")
 	return nil
 }
 
@@ -148,6 +169,11 @@ func (f CompileBuiltReleases) Usage() jhanda.Usage {
 		ShortDescription: "compiles built releases and uploads them",
 		Flags:            f.Options,
 	}
+}
+
+type remoteReleaseWithSHA1 struct {
+	release.Remote
+	SHA1 string
 }
 
 func findBuiltReleases(kilnfile cargo.Kilnfile, kilnfileLock cargo.KilnfileLock) ([]release.Remote, error) {
@@ -183,6 +209,43 @@ func findBuiltReleases(kilnfile cargo.Kilnfile, kilnfileLock cargo.KilnfileLock)
 		}
 	}
 	return builtReleases, nil
+}
+
+func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSources fetcher.MultiReleaseSource, builtReleases []release.Remote, stemcell cargo.Stemcell) ([]remoteReleaseWithSHA1, []release.Remote, error) {
+	var (
+		remainingBuiltReleases []release.Remote
+		preCompiledReleases []remoteReleaseWithSHA1
+	)
+
+	f.Logger.Println("searching for pre-compiled releases")
+
+	for _, builtRelease := range builtReleases {
+		spec := release.Requirement{
+			Name:            builtRelease.Name,
+			Version:         builtRelease.Version,
+			StemcellOS:      stemcell.OS,
+			StemcellVersion: stemcell.Version,
+		}
+		remote, found, err := publishableReleaseSources.GetMatchedRelease(spec)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error searching for pre-compiled release for %q: %w", builtRelease.Name, err)
+		}
+		if !found {
+			remainingBuiltReleases = append(remainingBuiltReleases, builtRelease)
+			continue
+		}
+
+		local, err := publishableReleaseSources.DownloadRelease(f.Options.ReleasesDir, remote, fetcher.DefaultDownloadThreadCount)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error downloading pre-compiled release for %q: %w", builtRelease.Name, err)
+		}
+
+		preCompiledReleases = append(preCompiledReleases, remoteReleaseWithSHA1{Remote: remote, SHA1: local.SHA1})
+	}
+
+	f.Logger.Printf("found %d pre-compiled releases\n", len(preCompiledReleases))
+
+	return preCompiledReleases, remainingBuiltReleases, nil
 }
 
 func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource fetcher.MultiReleaseSource, builtReleases []release.Remote) ([]release.Local, builder.StemcellManifest, error) {
@@ -338,13 +401,8 @@ func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.
 	return downloadedReleases, nil
 }
 
-type uploadedRelease struct {
-	release.Remote
-	SHA1 string
-}
-
-func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []release.Local, releaseUploader fetcher.ReleaseUploader, stemcell builder.StemcellManifest) ([]uploadedRelease, error) {
-	var uploadedReleases []uploadedRelease
+func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []release.Local, releaseUploader fetcher.ReleaseUploader, stemcell builder.StemcellManifest) ([]remoteReleaseWithSHA1, error) {
+	var uploadedReleases []remoteReleaseWithSHA1
 
 	for _, downloadedRelease := range downloadedReleases {
 		releaseFile, err := os.Open(downloadedRelease.LocalPath)
@@ -362,12 +420,12 @@ func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []releas
 			return nil, fmt.Errorf("uploading compiled release %q failed: %w", downloadedRelease.LocalPath, err) // untested
 		}
 
-		uploadedReleases = append(uploadedReleases, uploadedRelease{Remote: remoteRelease, SHA1: downloadedRelease.SHA1})
+		uploadedReleases = append(uploadedReleases, remoteReleaseWithSHA1{Remote: remoteRelease, SHA1: downloadedRelease.SHA1})
 	}
 	return uploadedReleases, nil
 }
 
-func (f CompileBuiltReleases) updateLockfile(uploadedReleases []uploadedRelease, kilnfileLock cargo.KilnfileLock) (error) {
+func (f CompileBuiltReleases) updateLockfile(uploadedReleases []remoteReleaseWithSHA1, kilnfileLock cargo.KilnfileLock) (error) {
 	for _, uploaded := range uploadedReleases {
 		var matchingRelease *cargo.ReleaseLock
 		for i := range kilnfileLock.Releases {

@@ -333,6 +333,10 @@ stemcell_criteria:
 				Expect(err).NotTo(HaveOccurred())
 
 				s3UploadedFiles.Store(req.URL.Path, string(contents))
+			case "HEAD":
+				w.WriteHeader(404)
+				return
+
 			default:
 				panic(fmt.Sprintf("Fake S3 server received a request with unhandled path: %#v", req))
 			}

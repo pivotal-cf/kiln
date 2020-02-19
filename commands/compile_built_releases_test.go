@@ -87,7 +87,13 @@ var _ = Describe("CompileBuiltReleases", func() {
 		}
 
 		multiReleaseSourceProvider = new(fakes.MultiReleaseSourceProvider)
-		multiReleaseSourceProvider.Returns(fetcher.NewMultiReleaseSource(compiledReleaseSource, builtReleaseSource))
+		multiReleaseSourceProvider.Calls(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
+			if allowOnlyPublishable {
+				return compiledReleaseSource
+			} else {
+				return fetcher.NewMultiReleaseSource(compiledReleaseSource, builtReleaseSource)
+			}
+		})
 
 		releaseUploader = new(fetcherFakes.ReleaseUploader)
 		releaseUploaderFinder = new(fakes.ReleaseUploaderFinder)
@@ -388,6 +394,349 @@ var _ = Describe("CompileBuiltReleases", func() {
 		})
 	})
 
+	When("all of the releases are already compiled in the Kilnfile.lock", func() {
+		BeforeEach(func() {
+			kilnfileLock = cargo.KilnfileLock{
+				Releases: []cargo.ReleaseLock{
+					{Name: "uaa", Version: "1.2.3", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
+					{Name: "capi", Version: "2.3.4", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
+					{Name: "bpm", Version: "1.6", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
+				},
+				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+			}
+		})
+		It("doesn't compile any releases", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(boshDirector.FindDeploymentCallCount()).To(Equal(0))
+			Expect(boshDirector.UploadReleaseFileCallCount()).To(Equal(0))
+		})
+
+		It("doesn't upload any releases", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
+		})
+
+		It("doesn't download anything", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(compiledReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
+			Expect(builtReleaseSource.DownloadReleaseCallCount()).To(Equal(0))
+		})
+
+		It("doesn't update the Kilnfile.lock", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+		})
+	})
+
+	When("one of the releases have already been compiled and uploaded", func() {
+		const (
+			expectedUAASHA = "updated-uaa-sha"
+			expectedUAARemotePath = "compiled-uaa-remote-path"
+		)
+
+		BeforeEach(func() {
+			uaaID := release.ID{Name: "uaa", Version: "1.2.3"}
+
+			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement release.Requirement) (release.Remote, bool, error) {
+				if requirement.Name == "uaa" {
+					return release.Remote{
+						ID:         uaaID,
+						RemotePath: expectedUAARemotePath,
+						SourceID:   compiledSourceID,
+					}, true, nil
+				}
+				return release.Remote{}, false, nil
+			})
+			compiledReleaseSource.DownloadReleaseReturns(release.Local{
+				ID:        uaaID,
+				LocalPath: "not-used",
+				SHA1:      expectedUAASHA,
+			}, nil)
+		})
+
+		It("doesn't compile that release", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(boshDirector.UploadReleaseFileCallCount()).To(Equal(1))
+
+			capiReleaseFile, rebase, fix := boshDirector.UploadReleaseFileArgsForCall(0)
+			Expect(fix).To(BeFalse())
+			Expect(rebase).To(BeFalse())
+
+			capiReleaseFileStats, err := capiReleaseFile.Stat()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(capiReleaseFileStats.Name()).To(Equal("capi-2.3.4.tgz"))
+		})
+
+		It("doesn't upload that release", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(1))
+
+			spec, releaseFile := releaseUploader.UploadReleaseArgsForCall(0)
+			Expect(spec).To(Equal(release.Requirement{
+				Name:            "capi",
+				Version:         "2.3.4",
+				StemcellOS:      "plan9",
+				StemcellVersion: "42",
+			}))
+			contents, err := ioutil.ReadAll(releaseFile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(contents)).To(Equal("contents of capi-2.3.4"))
+		})
+
+		It("downloads the pre-compiled release", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(compiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+
+			downloadDir, remoteRelease, _ := compiledReleaseSource.DownloadReleaseArgsForCall(0)
+			Expect(downloadDir).To(Equal(releasesPath))
+			Expect(remoteRelease).To(Equal(release.Remote{
+				ID:         release.ID{Name: "uaa", Version: "1.2.3"},
+				RemotePath: expectedUAARemotePath,
+				SourceID:   compiledSourceID,
+			}))
+		})
+
+		It("updates the Kilnfile.lock with that release", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			s := sha1.New()
+			io.Copy(s, strings.NewReader(blobIDContents("capi-2.3.4")))
+			expectedCapiSha := hex.EncodeToString(s.Sum(nil))
+
+			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
+
+			_, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
+			Expect(path).To(Equal(kilnfilePath))
+			Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
+				Releases: []cargo.ReleaseLock{
+					{
+						Name:         "uaa",
+						Version:      "1.2.3",
+						RemoteSource: compiledSourceID,
+						RemotePath:   expectedUAARemotePath,
+						SHA1:         expectedUAASHA,
+					},
+					{
+						Name:         "capi",
+						Version:      "2.3.4",
+						RemoteSource: compiledSourceID,
+						RemotePath:   fmt.Sprintf("capi/capi-2.3.4-%s-%s.tgz", stemcellOS, stemcellVersion),
+						SHA1:         expectedCapiSha,
+					},
+					{
+						Name:         "bpm",
+						Version:      "1.6",
+						RemoteSource: compiledSourceID,
+						RemotePath:   "not-used",
+						SHA1:         "original-sha",
+					},
+				},
+				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+			}))
+		})
+	})
+
+	When("all of the releases have already been compiled and uploaded", func() {
+		const (
+			expectedUAASHA = "updated-uaa-sha"
+			expectedUAARemotePath = "compiled-uaa-remote-path"
+			expectedCAPISHA = "updated-capi-sha"
+			expectedCAPIRemotePath = "compiled-capi-remote-path"
+		)
+
+		BeforeEach(func() {
+			uaaID := release.ID{Name: "uaa", Version: "1.2.3"}
+			capiID := release.ID{Name: "capi", Version: "2.3.4"}
+
+			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement release.Requirement) (release.Remote, bool, error) {
+				switch requirement.Name {
+				case "uaa":
+					return release.Remote{
+						ID:         uaaID,
+						RemotePath: expectedUAARemotePath,
+						SourceID:   compiledSourceID,
+					}, true, nil
+				case "capi":
+					return release.Remote{
+						ID:         capiID,
+						RemotePath: expectedCAPIRemotePath,
+						SourceID:   compiledSourceID,
+					}, true, nil
+				default:
+					return release.Remote{}, false, nil
+				}
+			})
+
+			compiledReleaseSource.DownloadReleaseCalls(func(_ string, remote release.Remote, _ int) (release.Local,  error) {
+				switch remote.Name {
+				case "uaa":
+					return release.Local{
+						ID:        uaaID,
+						LocalPath: "not-used",
+						SHA1:      expectedUAASHA,
+					}, nil
+				case "capi":
+					return release.Local{
+						ID:        capiID,
+						LocalPath: "not-used",
+						SHA1:      expectedCAPISHA,
+					}, nil
+				default:
+					return release.Local{}, nil
+				}
+			})
+		})
+
+		It("doesn't compile any releases", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(boshDirector.FindDeploymentCallCount()).To(Equal(0))
+			Expect(boshDirector.UploadReleaseFileCallCount()).To(Equal(0))
+		})
+
+		It("doesn't upload any releases", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
+		})
+
+		It("downloads the pre-compiled releases", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(compiledReleaseSource.DownloadReleaseCallCount()).To(Equal(2))
+
+			downloadDir, remoteRelease, _ := compiledReleaseSource.DownloadReleaseArgsForCall(0)
+			Expect(downloadDir).To(Equal(releasesPath))
+			Expect(remoteRelease).To(Equal(release.Remote{
+				ID:         release.ID{Name: "uaa", Version: "1.2.3"},
+				RemotePath: expectedUAARemotePath,
+				SourceID:   compiledSourceID,
+			}))
+
+			downloadDir, remoteRelease, _ = compiledReleaseSource.DownloadReleaseArgsForCall(1)
+			Expect(downloadDir).To(Equal(releasesPath))
+			Expect(remoteRelease).To(Equal(release.Remote{
+				ID:         release.ID{Name: "capi", Version: "2.3.4"},
+				RemotePath: expectedCAPIRemotePath,
+				SourceID:   compiledSourceID,
+			}))
+		})
+
+		It("updates the Kilnfile.lock with those releases", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
+
+			_, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
+			Expect(path).To(Equal(kilnfilePath))
+			Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
+				Releases: []cargo.ReleaseLock{
+					{
+						Name:         "uaa",
+						Version:      "1.2.3",
+						RemoteSource: compiledSourceID,
+						RemotePath:   expectedUAARemotePath,
+						SHA1:         expectedUAASHA,
+					},
+					{
+						Name:         "capi",
+						Version:      "2.3.4",
+						RemoteSource: compiledSourceID,
+						RemotePath:   expectedCAPIRemotePath,
+						SHA1:         expectedCAPISHA,
+					},
+					{
+						Name:         "bpm",
+						Version:      "1.6",
+						RemoteSource: compiledSourceID,
+						RemotePath:   "not-used",
+						SHA1:         "original-sha",
+					},
+				},
+				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+			}))
+		})
+	})
+
 	When("exporting the release fails", func() {
 		const errorMsg = "absolutely no exportation >:("
 
@@ -522,6 +871,61 @@ var _ = Describe("CompileBuiltReleases", func() {
 			})
 			Expect(err).To(MatchError(ContainSubstring("incorrect SHA")))
 			Expect(err).To(MatchError(ContainSubstring("uaa")))
+		})
+	})
+
+	When("searching for pre-compiled releases fails", func() {
+		BeforeEach(func() {
+			compiledReleaseSource.GetMatchedReleaseReturns(release.Remote{}, false, errors.New("boom today"))
+		})
+
+		It("errors", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).To(MatchError(ContainSubstring("uaa")))
+			Expect(err).To(MatchError(ContainSubstring("boom today")))
+		})
+
+		It("doesn't update the Kilnfile.lock", func() {
+			_ = command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+		})
+	})
+
+	When("downloading a pre-compiled releases fails", func() {
+		BeforeEach(func() {
+			compiledReleaseSource.GetMatchedReleaseReturns(release.Remote{}, true, nil)
+			compiledReleaseSource.DownloadReleaseReturns(release.Local{}, errors.New("NOPE!"))
+		})
+
+		It("errors", func() {
+			err := command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(err).To(MatchError(ContainSubstring("uaa")))
+			Expect(err).To(MatchError(ContainSubstring("NOPE!")))
+		})
+
+		It("doesn't update the Kilnfile.lock", func() {
+			_ = command.Execute([]string{
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesPath,
+				"--stemcell-file", stemcellPath,
+				"--upload-target-id", compiledSourceID,
+			})
+			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
 		})
 	})
 })
