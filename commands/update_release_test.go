@@ -325,4 +325,3 @@ var _ = Describe("UpdateRelease", func() {
 		})
 	})
 })
-

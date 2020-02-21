@@ -267,28 +267,28 @@ stemcell_criteria:
 
 		BeforeEach(func() {
 			Expect(
-				 writeFile(filesystem, kilnfileLockPath, validKilnfileLockContents),
+				writeFile(filesystem, kilnfileLockPath, validKilnfileLockContents),
 			).To(Succeed())
 
 			updatedKilnfileLock = KilnfileLock{
 				Releases: []ReleaseLock{
 					{
-						Name: "release-A",
-						Version: "1.2.4",
+						Name:         "release-A",
+						Version:      "1.2.4",
 						RemoteSource: "new-source",
-						RemotePath: "new-remote-path",
-						SHA1: "new-sha1",
+						RemotePath:   "new-remote-path",
+						SHA1:         "new-sha1",
 					},
 					{
-						Name: "release-B",
-						Version: "42",
+						Name:         "release-B",
+						Version:      "42",
 						RemoteSource: "new-source2",
-						RemotePath: "new-remote-path2",
-						SHA1: "new-sha1-2",
+						RemotePath:   "new-remote-path2",
+						SHA1:         "new-sha1-2",
 					},
 				},
 				Stemcell: Stemcell{
-					OS: "new-os",
+					OS:      "new-os",
 					Version: "95",
 				},
 			}
