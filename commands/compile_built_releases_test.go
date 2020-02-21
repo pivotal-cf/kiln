@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	boshcrypto "github.com/cloudfoundry/bosh-utils/crypto"
 	"io"
 	"io/ioutil"
 	"log"
@@ -147,13 +148,15 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 		boshDeployment.ExportReleaseCalls(func(releaseSlug boshdir.ReleaseSlug, _ boshdir.OSVersionSlug, _ []string) (boshdir.ExportReleaseResult, error) {
 			blobID := fmt.Sprintf("%s-%s", releaseSlug.Name(), releaseSlug.Version())
-			s := sha1.New()
-			io.Copy(s, strings.NewReader(blobIDContents(blobID)))
-			sha1 := hex.EncodeToString(s.Sum(nil))
+			digest, err := boshcrypto.NewMultipleDigest(
+				strings.NewReader(blobIDContents(blobID)),
+				[]boshcrypto.Algorithm{boshcrypto.DigestAlgorithmSHA256},
+			)
+			Expect(err).NotTo(HaveOccurred())
 
 			return boshdir.ExportReleaseResult{
 				BlobstoreID: blobID,
-				SHA1:        sha1,
+				SHA1:        digest.String(),
 			}, nil
 		})
 		boshDirector.DownloadResourceUncheckedCalls(func(blobID string, writer io.Writer) error {
@@ -458,7 +461,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 	When("one of the releases have already been compiled and uploaded", func() {
 		const (
-			expectedUAASHA = "updated-uaa-sha"
+			expectedUAASHA        = "updated-uaa-sha"
 			expectedUAARemotePath = "compiled-uaa-remote-path"
 		)
 
@@ -593,9 +596,9 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 	When("all of the releases have already been compiled and uploaded", func() {
 		const (
-			expectedUAASHA = "updated-uaa-sha"
-			expectedUAARemotePath = "compiled-uaa-remote-path"
-			expectedCAPISHA = "updated-capi-sha"
+			expectedUAASHA         = "updated-uaa-sha"
+			expectedUAARemotePath  = "compiled-uaa-remote-path"
+			expectedCAPISHA        = "updated-capi-sha"
 			expectedCAPIRemotePath = "compiled-capi-remote-path"
 		)
 
@@ -622,7 +625,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 				}
 			})
 
-			compiledReleaseSource.DownloadReleaseCalls(func(_ string, remote release.Remote, _ int) (release.Local,  error) {
+			compiledReleaseSource.DownloadReleaseCalls(func(_ string, remote release.Remote, _ int) (release.Local, error) {
 				switch remote.Name {
 				case "uaa":
 					return release.Local{

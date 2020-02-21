@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -214,7 +216,7 @@ func findBuiltReleases(kilnfile cargo.Kilnfile, kilnfileLock cargo.KilnfileLock)
 func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSources fetcher.MultiReleaseSource, builtReleases []release.Remote, stemcell cargo.Stemcell) ([]remoteReleaseWithSHA1, []release.Remote, error) {
 	var (
 		remainingBuiltReleases []release.Remote
-		preCompiledReleases []remoteReleaseWithSHA1
+		preCompiledReleases    []remoteReleaseWithSHA1
 	)
 
 	f.Logger.Println("searching for pre-compiled releases")
@@ -375,10 +377,30 @@ func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.
 			return nil, fmt.Errorf("downloading exported release %s: %w", rel.Name, err)
 		}
 
+		err = fd.Close()
+		if err != nil {
+			return nil, fmt.Errorf("failed closing file %s: %w", compiledTarballPath, err) // untested
+		}
+
+		fd, err = os.Open(compiledTarballPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed reopening file %s: %w", compiledTarballPath, err) // untested
+		}
+
+		s := sha1.New()
+		_, err = io.Copy(s, fd)
+		if err != nil {
+			return nil, fmt.Errorf("failed calculating SHA1 for file file %s: %w", compiledTarballPath, err) // untested
+		}
+		err = fd.Close()
+		if err != nil {
+			return nil, fmt.Errorf("failed closing file %s: %w", compiledTarballPath, err) // untested
+		}
+
 		downloadedReleases = append(downloadedReleases, release.Local{
 			ID:        release.ID{Name: rel.Name, Version: rel.Version},
 			LocalPath: compiledTarballPath,
-			SHA1:      result.SHA1,
+			SHA1:      hex.EncodeToString(s.Sum(nil)),
 		})
 
 		expectedMultipleDigest, err := boshcrypto.ParseMultipleDigest(result.SHA1)
@@ -388,15 +410,11 @@ func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.
 
 		ignoreMeLogger := boshlog.NewLogger(boshlog.LevelNone)
 		fs := boshsystem.NewOsFileSystem(ignoreMeLogger)
-		err = expectedMultipleDigest.VerifyFilePath(fd.Name(), fs)
+		err = expectedMultipleDigest.VerifyFilePath(compiledTarballPath, fs)
 		if err != nil {
 			return nil, fmt.Errorf("compiled release %q has an incorrect SHA: %w", rel.Name, err)
 		}
 
-		err = fd.Close()
-		if err != nil {
-			return nil, fmt.Errorf("failed closing file %s: %w", compiledTarballPath, err) // untested
-		}
 	}
 	return downloadedReleases, nil
 }
@@ -425,7 +443,7 @@ func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []releas
 	return uploadedReleases, nil
 }
 
-func (f CompileBuiltReleases) updateLockfile(uploadedReleases []remoteReleaseWithSHA1, kilnfileLock cargo.KilnfileLock) (error) {
+func (f CompileBuiltReleases) updateLockfile(uploadedReleases []remoteReleaseWithSHA1, kilnfileLock cargo.KilnfileLock) error {
 	for _, uploaded := range uploadedReleases {
 		var matchingRelease *cargo.ReleaseLock
 		for i := range kilnfileLock.Releases {
