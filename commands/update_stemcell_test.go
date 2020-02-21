@@ -50,7 +50,7 @@ var _ = Describe("UpdateStemcell", func() {
 			kilnfileLoader                     *fakes.KilnfileLoader
 			kilnfile                           cargo.Kilnfile
 			kilnfileLock                       cargo.KilnfileLock
-			releaseSource                      *fetcherFakes.ReleaseSource
+			releaseSource                      *fetcherFakes.MultiReleaseSource
 			outputBuffer                       *gbytes.Buffer
 		)
 
@@ -82,7 +82,7 @@ var _ = Describe("UpdateStemcell", func() {
 				},
 			}
 
-			releaseSource = new(fetcherFakes.ReleaseSource)
+			releaseSource = new(fetcherFakes.MultiReleaseSource)
 			releaseSource.GetMatchedReleaseCalls(func(requirement release.Requirement) (release.Remote, bool, error) {
 				switch requirement.Name {
 				case release1Name:

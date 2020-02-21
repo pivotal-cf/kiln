@@ -147,4 +147,34 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 		})
 	})
+
+	Describe("FindByID", func() {
+		When("the source exists", func() {
+			It("returns it", func() {
+				match, err := multiSrc.FindByID("src-1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(match).To(Equal(src1))
+
+				match, err = multiSrc.FindByID("src-2")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(match).To(Equal(src2))
+
+				match, err = multiSrc.FindByID("src-3")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(match).To(Equal(src3))
+			})
+		})
+
+		When("the source doesn't exist", func() {
+			It("errors", func() {
+				_, err := multiSrc.FindByID("no-such-source")
+				Expect(err).To(MatchError(ContainSubstring("couldn't find")))
+				Expect(err).To(MatchError(ContainSubstring("no-such-source")))
+
+				Expect(err).To(MatchError(ContainSubstring("src-1")))
+				Expect(err).To(MatchError(ContainSubstring("src-2")))
+				Expect(err).To(MatchError(ContainSubstring("src-3")))
+			})
+		})
+	})
 })

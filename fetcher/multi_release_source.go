@@ -25,9 +25,23 @@ func (multiSrc multiReleaseSource) GetMatchedRelease(requirement release.Require
 }
 
 func (multiSrc multiReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error) {
+	src, err := multiSrc.FindByID(remoteRelease.SourceID)
+	if err != nil {
+		return release.Local{}, err
+	}
+
+	localRelease, err := src.DownloadRelease(releaseDir, remoteRelease, downloadThreads)
+	if err != nil {
+		return release.Local{}, scopedError(src.ID(), err)
+	}
+
+	return localRelease, nil
+}
+
+func (multiSrc multiReleaseSource) FindByID(id string) (ReleaseSource, error) {
 	var correctSrc ReleaseSource
 	for _, src := range multiSrc {
-		if src.ID() == remoteRelease.SourceID {
+		if src.ID() == id {
 			correctSrc = src
 			break
 		}
@@ -38,15 +52,10 @@ func (multiSrc multiReleaseSource) DownloadRelease(releaseDir string, remoteRele
 		for _, src := range multiSrc {
 			ids = append(ids, src.ID())
 		}
-		return release.Local{}, fmt.Errorf("couldn't find a release source with ID %q. Available choices: %q", remoteRelease.SourceID, ids)
+		return nil, fmt.Errorf("couldn't find a release source with ID %q. Available choices: %q", id, ids)
 	}
 
-	localRelease, err := correctSrc.DownloadRelease(releaseDir, remoteRelease, downloadThreads)
-	if err != nil {
-		return release.Local{}, scopedError(correctSrc.ID(), err)
-	}
-
-	return localRelease, nil
+	return correctSrc, nil
 }
 
 func scopedError(sourceID string, err error) error {

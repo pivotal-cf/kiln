@@ -124,7 +124,7 @@ func (f CompileBuiltReleases) Execute(args []string) error {
 		return fmt.Errorf("error loading release uploader: %w", err) // untested
 	}
 
-	builtReleases, err := findBuiltReleases(kilnfile, kilnfileLock)
+	builtReleases, err := findBuiltReleases(allReleaseSources, kilnfileLock)
 	if err != nil {
 		return err
 	}
@@ -178,30 +178,14 @@ type remoteReleaseWithSHA1 struct {
 	SHA1 string
 }
 
-func findBuiltReleases(kilnfile cargo.Kilnfile, kilnfileLock cargo.KilnfileLock) ([]release.Remote, error) {
-	sourceIsPublishable := make(map[string]bool)
-	for _, releaseSourceConfig := range kilnfile.ReleaseSources {
-		var id string
-		switch releaseSourceConfig.Type {
-		case fetcher.ReleaseSourceTypeBOSHIO:
-			id = fetcher.ReleaseSourceTypeBOSHIO
-		case fetcher.ReleaseSourceTypeS3:
-			id = releaseSourceConfig.Bucket
-		default:
-			panic(fmt.Sprintf("unknown release source type %q", releaseSourceConfig.Type))
-		}
-
-		sourceIsPublishable[id] = releaseSourceConfig.Publishable
-	}
-
+func findBuiltReleases(allReleaseSources fetcher.MultiReleaseSource, kilnfileLock cargo.KilnfileLock) ([]release.Remote, error) {
 	var builtReleases []release.Remote
 	for _, lock := range kilnfileLock.Releases {
-		publishable, ok := sourceIsPublishable[lock.RemoteSource]
-		if !ok {
-			return nil, fmt.Errorf("unknown release source %q specified for release %q in Kilnfile.lock", lock.RemoteSource, lock.Name)
+		src, err := allReleaseSources.FindByID(lock.RemoteSource)
+		if err != nil {
+			return nil, err
 		}
-
-		if !publishable {
+		if !src.Publishable() {
 			releaseID := release.ID{Name: lock.Name, Version: lock.Version}
 			builtReleases = append(builtReleases, release.Remote{
 				ID:         releaseID,

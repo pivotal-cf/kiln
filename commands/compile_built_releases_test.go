@@ -68,14 +68,16 @@ var _ = Describe("CompileBuiltReleases", func() {
 	BeforeEach(func() {
 		builtReleaseSource = new(fetcherFakes.ReleaseSource)
 		builtReleaseSource.IDReturns(builtSourceID)
+		builtReleaseSource.PublishableReturns(false)
 		compiledReleaseSource = new(fetcherFakes.ReleaseSource)
 		compiledReleaseSource.IDReturns(compiledSourceID)
+		compiledReleaseSource.PublishableReturns(true)
 
 		kilnfileLoader = new(fakes.KilnfileLoader)
 		kilnfile = cargo.Kilnfile{
 			ReleaseSources: []cargo.ReleaseSourceConfig{
-				{Type: "s3", Bucket: compiledSourceID, Publishable: true},
-				{Type: "s3", Bucket: builtSourceID},
+				{Type: "s3", ID: compiledSourceID, Bucket: "not-used", Publishable: true},
+				{Type: "s3", ID: builtSourceID, Bucket: "not-used-2"},
 			},
 		}
 		kilnfileLock = cargo.KilnfileLock{
@@ -90,7 +92,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 		multiReleaseSourceProvider = new(fakes.MultiReleaseSourceProvider)
 		multiReleaseSourceProvider.Calls(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
 			if allowOnlyPublishable {
-				return compiledReleaseSource
+				return fetcher.NewMultiReleaseSource(compiledReleaseSource)
 			} else {
 				return fetcher.NewMultiReleaseSource(compiledReleaseSource, builtReleaseSource)
 			}
@@ -852,7 +854,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 				"--stemcell-file", stemcellPath,
 				"--upload-target-id", compiledSourceID,
 			})
-			Expect(err).To(MatchError(ContainSubstring("unknown release source")))
+			Expect(err).To(MatchError(ContainSubstring("couldn't find")))
 			Expect(err).To(MatchError(ContainSubstring("no-such-source")))
 		})
 	})
@@ -906,7 +908,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 	When("downloading a pre-compiled releases fails", func() {
 		BeforeEach(func() {
-			compiledReleaseSource.GetMatchedReleaseReturns(release.Remote{}, true, nil)
+			compiledReleaseSource.GetMatchedReleaseReturns(release.Remote{SourceID: compiledSourceID}, true, nil)
 			compiledReleaseSource.DownloadReleaseReturns(release.Local{}, errors.New("NOPE!"))
 		})
 

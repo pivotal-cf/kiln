@@ -24,6 +24,19 @@ type MultiReleaseSource struct {
 		result1 release.Local
 		result2 error
 	}
+	FindByIDStub        func(string) (fetcher.ReleaseSource, error)
+	findByIDMutex       sync.RWMutex
+	findByIDArgsForCall []struct {
+		arg1 string
+	}
+	findByIDReturns struct {
+		result1 fetcher.ReleaseSource
+		result2 error
+	}
+	findByIDReturnsOnCall map[int]struct {
+		result1 fetcher.ReleaseSource
+		result2 error
+	}
 	GetMatchedReleaseStub        func(release.Requirement) (release.Remote, bool, error)
 	getMatchedReleaseMutex       sync.RWMutex
 	getMatchedReleaseArgsForCall []struct {
@@ -108,6 +121,69 @@ func (fake *MultiReleaseSource) DownloadReleaseReturnsOnCall(i int, result1 rele
 	}{result1, result2}
 }
 
+func (fake *MultiReleaseSource) FindByID(arg1 string) (fetcher.ReleaseSource, error) {
+	fake.findByIDMutex.Lock()
+	ret, specificReturn := fake.findByIDReturnsOnCall[len(fake.findByIDArgsForCall)]
+	fake.findByIDArgsForCall = append(fake.findByIDArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("FindByID", []interface{}{arg1})
+	fake.findByIDMutex.Unlock()
+	if fake.FindByIDStub != nil {
+		return fake.FindByIDStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.findByIDReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *MultiReleaseSource) FindByIDCallCount() int {
+	fake.findByIDMutex.RLock()
+	defer fake.findByIDMutex.RUnlock()
+	return len(fake.findByIDArgsForCall)
+}
+
+func (fake *MultiReleaseSource) FindByIDCalls(stub func(string) (fetcher.ReleaseSource, error)) {
+	fake.findByIDMutex.Lock()
+	defer fake.findByIDMutex.Unlock()
+	fake.FindByIDStub = stub
+}
+
+func (fake *MultiReleaseSource) FindByIDArgsForCall(i int) string {
+	fake.findByIDMutex.RLock()
+	defer fake.findByIDMutex.RUnlock()
+	argsForCall := fake.findByIDArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *MultiReleaseSource) FindByIDReturns(result1 fetcher.ReleaseSource, result2 error) {
+	fake.findByIDMutex.Lock()
+	defer fake.findByIDMutex.Unlock()
+	fake.FindByIDStub = nil
+	fake.findByIDReturns = struct {
+		result1 fetcher.ReleaseSource
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *MultiReleaseSource) FindByIDReturnsOnCall(i int, result1 fetcher.ReleaseSource, result2 error) {
+	fake.findByIDMutex.Lock()
+	defer fake.findByIDMutex.Unlock()
+	fake.FindByIDStub = nil
+	if fake.findByIDReturnsOnCall == nil {
+		fake.findByIDReturnsOnCall = make(map[int]struct {
+			result1 fetcher.ReleaseSource
+			result2 error
+		})
+	}
+	fake.findByIDReturnsOnCall[i] = struct {
+		result1 fetcher.ReleaseSource
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *MultiReleaseSource) GetMatchedRelease(arg1 release.Requirement) (release.Remote, bool, error) {
 	fake.getMatchedReleaseMutex.Lock()
 	ret, specificReturn := fake.getMatchedReleaseReturnsOnCall[len(fake.getMatchedReleaseArgsForCall)]
@@ -179,6 +255,8 @@ func (fake *MultiReleaseSource) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.downloadReleaseMutex.RLock()
 	defer fake.downloadReleaseMutex.RUnlock()
+	fake.findByIDMutex.RLock()
+	defer fake.findByIDMutex.RUnlock()
 	fake.getMatchedReleaseMutex.RLock()
 	defer fake.getMatchedReleaseMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

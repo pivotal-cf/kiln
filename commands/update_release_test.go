@@ -32,7 +32,7 @@ var _ = Describe("UpdateRelease", func() {
 		updateReleaseCommand       UpdateRelease
 		filesystem                 billy.Filesystem
 		multiReleaseSourceProvider *fakes.MultiReleaseSourceProvider
-		releaseSource              *fetcherFakes.ReleaseSource
+		releaseSource              *fetcherFakes.MultiReleaseSource
 		logger                     *log.Logger
 		downloadedReleasePath      string
 		expectedDownloadedRelease  release.Local
@@ -43,7 +43,7 @@ var _ = Describe("UpdateRelease", func() {
 	Context("Execute", func() {
 		BeforeEach(func() {
 			kilnFileLoader = new(fakes.KilnfileLoader)
-			releaseSource = new(fetcherFakes.ReleaseSource)
+			releaseSource = new(fetcherFakes.MultiReleaseSource)
 			multiReleaseSourceProvider = new(fakes.MultiReleaseSourceProvider)
 			multiReleaseSourceProvider.Returns(releaseSource)
 
