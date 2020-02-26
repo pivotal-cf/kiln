@@ -30,17 +30,17 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 	templateVariablesService := baking.NewTemplateVariablesService(fs)
 	templateVariables, err := templateVariablesService.FromPathsAndPairs(variablesFiles, variables)
 	if err != nil {
-		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("failed to parse template variables: %s", err)
+		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("error processing --variable or --variables-file arguments - are you logged into lpass? error: %s", err)
 	}
 
 	kf, err := fs.Open(kilnfilePath)
 	if err != nil {
-		return Kilnfile{}, KilnfileLock{}, err
+		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("unable to open file %q: %w", kilnfilePath, err)
 	}
 	defer kf.Close()
 	kilnfileYAML, err := ioutil.ReadAll(kf)
 	if err != nil {
-		return Kilnfile{}, KilnfileLock{}, err
+		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("unable to read file %q: %w", kilnfilePath, err)
 	}
 
 	interpolator := builder.NewInterpolator()

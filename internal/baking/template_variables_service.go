@@ -22,13 +22,13 @@ func (s TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []stri
 	for _, path := range paths {
 		file, err := s.filesystem.Open(path)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unable to open file %q: %w", path, err)
 		}
 
 		err = yaml.NewDecoder(file).Decode(&variables)
 		file.Close()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unable to YAML parse %q: %w", path, err)
 		}
 	}
 

@@ -588,7 +588,7 @@ release_sources:
 							"--releases-directory", someReleasesDirectory,
 							"--kilnfile", badKilnfilePath,
 						})
-						Expect(err).To(MatchError(fmt.Sprintf("open %s: no such file or directory", badKilnfilePath)))
+						Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("open %s: no such file or directory", badKilnfilePath))))
 					})
 				})
 				Context("# of download threads is not a number", func() {

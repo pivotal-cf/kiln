@@ -52,7 +52,7 @@ func (u UpdateRelease) Execute(args []string) error {
 
 	kilnfile, kilnfileLock, err := u.loader.LoadKilnfiles(u.filesystem, u.Options.Kilnfile, u.Options.VariablesFiles, u.Options.Variables)
 	if err != nil {
-		return fmt.Errorf("error loading Kilnfiles: %w", err)
+		return err
 	}
 
 	releaseSource := u.multiReleaseSourceProvider(kilnfile, u.Options.AllowOnlyPublishableReleases)

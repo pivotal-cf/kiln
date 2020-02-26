@@ -86,7 +86,7 @@ key-3: value-3
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = service.FromPathsAndPairs([]string{path}, nil)
-					Expect(err).To(MatchError("yaml: found character that cannot start any token"))
+					Expect(err).To(MatchError(ContainSubstring("yaml: found character that cannot start any token")))
 				})
 			})
 
