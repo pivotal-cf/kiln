@@ -214,6 +214,19 @@ var _ = Describe("UpdateRelease", func() {
 					"--releases-directory", releasesDir,
 				})
 				Expect(err).To(MatchError(ContainSubstring("no release named \"no-such-release\"")))
+				Expect(err).To(MatchError(ContainSubstring("try removing the -release")))
+			})
+
+			It("does not try to download anything", func() {
+				_ = updateReleaseCommand.Execute([]string{
+					"--kilnfile", "Kilnfile",
+					"--name", "no-such-release",
+					"--version", releaseVersion,
+					"--releases-directory", releasesDir,
+				})
+
+				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
+				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(0))
 			})
 
 			It("does not update the Kilnfile.lock", func() {

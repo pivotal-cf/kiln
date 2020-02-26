@@ -55,6 +55,20 @@ func (u UpdateRelease) Execute(args []string) error {
 		return err
 	}
 
+	var matchingRelease *cargo.ReleaseLock
+	for i := range kilnfileLock.Releases {
+		if kilnfileLock.Releases[i].Name == u.Options.Name {
+			matchingRelease = &kilnfileLock.Releases[i]
+			break
+		}
+	}
+	if matchingRelease == nil {
+		return fmt.Errorf(
+			"no release named %q exists in your Kilnfile.lock - try removing the -release, -boshrelease, or -bosh-release suffix if present",
+			u.Options.Name,
+		)
+	}
+
 	releaseSource := u.multiReleaseSourceProvider(kilnfile, u.Options.AllowOnlyPublishableReleases)
 
 	u.logger.Println("Searching for the release...")
@@ -74,17 +88,6 @@ func (u UpdateRelease) Execute(args []string) error {
 	localRelease, err := releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease, fetcher.DefaultDownloadThreadCount)
 	if err != nil {
 		return fmt.Errorf("error downloading the release: %w", err)
-	}
-
-	var matchingRelease *cargo.ReleaseLock
-	for i := range kilnfileLock.Releases {
-		if kilnfileLock.Releases[i].Name == u.Options.Name {
-			matchingRelease = &kilnfileLock.Releases[i]
-			break
-		}
-	}
-	if matchingRelease == nil {
-		return fmt.Errorf("no release named %q exists in your Kilnfile.lock", u.Options.Name)
 	}
 
 	matchingRelease.Version = localRelease.Version
