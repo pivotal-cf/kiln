@@ -23,8 +23,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			BeforeEach(func() {
 				kilnfile = cargo.Kilnfile{
 					ReleaseSources: []cargo.ReleaseSourceConfig{
-						{Type: "s3", Bucket: "compiled-releases", Region: "us-west-1", Publishable: true},
-						{Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false},
+						{Type: "s3", Bucket: "compiled-releases", Region: "us-west-1", Publishable: true, PathTemplate: "template"},
+						{Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false, PathTemplate: "template"},
 						{Type: "bosh.io", Publishable: false},
 					},
 				}
@@ -81,8 +81,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			BeforeEach(func() {
 				kilnfile = cargo.Kilnfile{
 					ReleaseSources: []cargo.ReleaseSourceConfig{
-						{ID: "comp", Type: "s3", Bucket: "compiled-releases", Region: "us-west-1", Publishable: true},
-						{ID: "buil", Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false},
+						{ID: "comp", Type: "s3", Bucket: "compiled-releases", Region: "us-west-1", Publishable: true, PathTemplate: "template"},
+						{ID: "buil", Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false, PathTemplate: "template"},
 						{ID: "bosh", Type: "bosh.io", Publishable: false},
 					},
 				}
@@ -103,8 +103,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			BeforeEach(func() {
 				kilnfile = cargo.Kilnfile{
 					ReleaseSources: []cargo.ReleaseSourceConfig{
-						{Type: "s3", Bucket: "some-bucket", Region: "us-west-1"},
-						{Type: "s3", Bucket: "some-bucket", Region: "us-west-1"},
+						{Type: "s3", Bucket: "some-bucket", Region: "us-west-1", PathTemplate: "template"},
+						{Type: "s3", Bucket: "some-bucket", Region: "us-west-1", PathTemplate: "template"},
 					},
 				}
 			})

@@ -3,6 +3,8 @@ package fetcher_test
 import (
 	"errors"
 	"fmt"
+	. "github.com/onsi/ginkgo/extensions/table"
+	"github.com/pivotal-cf/kiln/internal/cargo"
 	"io"
 	"io/ioutil"
 	"log"
@@ -40,6 +42,48 @@ var _ = Describe("S3ReleaseSource", func() {
 	const (
 		sourceID = "s3-source"
 	)
+
+	Describe("S3ReleaseSourceFromConfig", func() {
+		var (
+			config *cargo.ReleaseSourceConfig
+			logger *log.Logger
+		)
+
+		BeforeEach(func() {
+			config = &cargo.ReleaseSourceConfig{
+				Bucket:          "my-bucket",
+				PathTemplate:    "my-path-template",
+				Region:          "my-region",
+				AccessKeyId:     "my-access-key",
+				SecretAccessKey: "my-secret",
+			}
+			logger = log.New(GinkgoWriter, "", 0)
+		})
+
+		DescribeTable("bad config", func(before func(sourceConfig *cargo.ReleaseSourceConfig), expectedSubstring string) {
+			before(config)
+
+			var r interface{}
+			func() {
+				defer func() {
+					r = recover()
+				}()
+				S3ReleaseSourceFromConfig(*config, logger)
+			}()
+
+			Expect(r).To(ContainSubstring(expectedSubstring))
+		},
+			Entry("path_template is missing",
+				func(c *cargo.ReleaseSourceConfig) { c.PathTemplate = "" },
+				"path_template",
+			),
+
+			Entry("bucket is missing",
+				func(c *cargo.ReleaseSourceConfig) { c.Bucket = "" },
+				"bucket",
+			),
+		)
+	})
 
 	Describe("DownloadReleases", func() {
 		const (

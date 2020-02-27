@@ -64,6 +64,8 @@ func NewS3ReleaseSource(id, bucket, pathTemplate string, publishable bool, clien
 }
 
 func S3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.Logger) S3ReleaseSource {
+	validateConfig(config)
+
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
 	awsConfig := &aws.Config{
 		Region:      aws.String(config.Region),
@@ -87,6 +89,15 @@ func S3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.Log
 		s3manager.NewUploaderWithClient(client),
 		logger,
 	)
+}
+
+func validateConfig(config cargo.ReleaseSourceConfig) {
+	if config.PathTemplate == "" {
+		panic(`Missing required field "path_template" in release source config. Is your Kilnfile out of date?`)
+	}
+	if config.Bucket == "" {
+		panic(`Missing required field "bucket" in release source config. Is your Kilnfile out of date?`)
+	}
 }
 
 func (src S3ReleaseSource) ID() string {
