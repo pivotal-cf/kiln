@@ -89,6 +89,11 @@ func (command SyncWithLocal) Execute(args []string) error {
 			return fmt.Errorf("the local release %q does not exist in the Kilnfile.lock", rel.Name)
 		}
 
+		if matchingRelease.Version == rel.Version {
+			command.logger.Printf("Skipping %s. Release version hasn't changed\n", rel.Name)
+			continue
+		}
+
 		matchingRelease.Version = rel.Version
 		matchingRelease.SHA1 = rel.SHA1
 		matchingRelease.RemoteSource = command.Options.ReleaseSourceID

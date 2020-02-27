@@ -17,17 +17,25 @@ import (
 var _ = Describe("sync-with-local", func() {
 	Describe("Execute", func() {
 		const (
-			releaseSourceID    = "some-source"
-			stemcellOS         = "linux-os"
-			stemcellVersion    = "2.2"
-			release1Name       = "some-release"
-			release1Version    = "1"
-			release1NewSha     = "new-sha"
-			release1RemotePath = "new-path"
-			release2Name       = "some-release-2"
-			release2Version    = "2"
-			release2NewSha     = "new-sha-2"
-			release2RemotePath = "new-path-2"
+			releaseSourceID       = "some-source"
+			stemcellOS            = "linux-os"
+			stemcellVersion       = "2.2"
+			release1Name          = "some-release"
+			release1OldVersion    = "1"
+			release1NewVersion    = "2"
+			release1OldSha        = "old-sha"
+			release1NewSha        = "new-sha"
+			release1OldSourceID   = "old-source"
+			release1OldRemotePath = "old-path"
+			release1NewRemotePath = "new-path"
+			release2Name          = "some-release-2"
+			release2OldVersion    = "42"
+			release2NewVersion    = "43"
+			release2OldSha        = "old-sha-2"
+			release2NewSha        = "new-sha-2"
+			release2OldSourceID   = "old-source-2"
+			release2OldRemotePath = "old-path-2"
+			release2NewRemotePath = "new-path-2"
 
 			kilnfilePath = "Kilnfile"
 		)
@@ -48,17 +56,17 @@ var _ = Describe("sync-with-local", func() {
 				Releases: []cargo.ReleaseLock{
 					{
 						Name:         release1Name,
-						Version:      release1Version,
-						RemoteSource: "old-source",
-						RemotePath:   "old-path",
-						SHA1:         "old-sha",
+						Version:      release1OldVersion,
+						RemoteSource: release1OldSourceID,
+						RemotePath:   release1OldRemotePath,
+						SHA1:         release1OldSha,
 					},
 					{
 						Name:         release2Name,
-						Version:      release2Version,
-						RemoteSource: "old-source-2",
-						RemotePath:   "old-path-2",
-						SHA1:         "old-sha-2",
+						Version:      release2OldVersion,
+						RemoteSource: release2OldSourceID,
+						RemotePath:   release2OldRemotePath,
+						SHA1:         release2OldSha,
 					},
 				},
 				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
@@ -67,12 +75,12 @@ var _ = Describe("sync-with-local", func() {
 			localReleaseDirectory = new(fakes.LocalReleaseDirectory)
 			localReleaseDirectory.GetLocalReleasesReturns([]release.Local{
 				{
-					ID:        release.ID{Name: release1Name, Version: release1Version},
+					ID:        release.ID{Name: release1Name, Version: release1NewVersion},
 					LocalPath: "local-path",
 					SHA1:      release1NewSha,
 				},
 				{
-					ID:        release.ID{Name: release2Name, Version: release2Version},
+					ID:        release.ID{Name: release2Name, Version: release2NewVersion},
 					LocalPath: "local-path-2",
 					SHA1:      release2NewSha,
 				},
@@ -85,9 +93,9 @@ var _ = Describe("sync-with-local", func() {
 			remotePather.RemotePathCalls(func(requirement release.Requirement) (path string, err error) {
 				switch requirement.Name {
 				case release1Name:
-					return release1RemotePath, nil
+					return release1NewRemotePath, nil
 				case release2Name:
-					return release2RemotePath, nil
+					return release2NewRemotePath, nil
 				default:
 					panic("unexpected release name")
 				}
@@ -118,19 +126,66 @@ var _ = Describe("sync-with-local", func() {
 			Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
 				{
 					Name:         release1Name,
-					Version:      release1Version,
+					Version:      release1NewVersion,
 					RemoteSource: releaseSourceID,
-					RemotePath:   release1RemotePath,
+					RemotePath:   release1NewRemotePath,
 					SHA1:         release1NewSha,
 				},
 				{
 					Name:         release2Name,
-					Version:      release2Version,
+					Version:      release2NewVersion,
 					RemoteSource: releaseSourceID,
-					RemotePath:   release2RemotePath,
+					RemotePath:   release2NewRemotePath,
 					SHA1:         release2NewSha,
 				},
 			}))
+		})
+
+		When("one of the releases on disk is the same version as in the Kilnfile.lock", func() {
+			BeforeEach(func() {
+				localReleaseDirectory.GetLocalReleasesReturns([]release.Local{
+					{
+						ID:        release.ID{Name: release1Name, Version: release1OldVersion},
+						LocalPath: "local-path",
+						SHA1:      release1NewSha,
+					},
+					{
+						ID:        release.ID{Name: release2Name, Version: release2NewVersion},
+						LocalPath: "local-path-2",
+						SHA1:      release2NewSha,
+					},
+				}, nil)
+			})
+
+			It("doesn't modify that entry", func() {
+				err := syncWithLocal.Execute([]string{
+					"--kilnfile", kilnfilePath,
+					"--assume-release-source", releaseSourceID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
+
+				filesystem, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
+				Expect(filesystem).To(Equal(fs))
+				Expect(path).To(Equal(kilnfilePath))
+				Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
+					{
+						Name:         release1Name,
+						Version:      release1OldVersion,
+						RemoteSource: release1OldSourceID,
+						RemotePath:   release1OldRemotePath,
+						SHA1:         release1OldSha,
+					},
+					{
+						Name:         release2Name,
+						Version:      release2NewVersion,
+						RemoteSource: releaseSourceID,
+						RemotePath:   release2NewRemotePath,
+						SHA1:         release2NewSha,
+					},
+				}))
+			})
 		})
 
 		When("a release on disk doesn't exist in the Kilnfile.lock", func() {
@@ -139,10 +194,10 @@ var _ = Describe("sync-with-local", func() {
 					Releases: []cargo.ReleaseLock{
 						{
 							Name:         release1Name,
-							Version:      release1Version,
-							RemoteSource: "old-source",
-							RemotePath:   "old-path",
-							SHA1:         "old-sha",
+							Version:      release1OldVersion,
+							RemoteSource: release1OldSourceID,
+							RemotePath:   release1OldRemotePath,
+							SHA1:         release1OldSha,
 						},
 					},
 					Stemcell: cargo.Stemcell{},
