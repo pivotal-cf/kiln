@@ -55,14 +55,14 @@ func (u UpdateRelease) Execute(args []string) error {
 		return err
 	}
 
-	var matchingRelease *cargo.ReleaseLock
+	var releaseLock *cargo.ReleaseLock
 	for i := range kilnfileLock.Releases {
 		if kilnfileLock.Releases[i].Name == u.Options.Name {
-			matchingRelease = &kilnfileLock.Releases[i]
+			releaseLock = &kilnfileLock.Releases[i]
 			break
 		}
 	}
-	if matchingRelease == nil {
+	if releaseLock == nil {
 		return fmt.Errorf(
 			"no release named %q exists in your Kilnfile.lock - try removing the -release, -boshrelease, or -bosh-release suffix if present",
 			u.Options.Name,
@@ -90,10 +90,20 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("error downloading the release: %w", err)
 	}
 
-	matchingRelease.Version = localRelease.Version
-	matchingRelease.SHA1 = localRelease.SHA1
-	matchingRelease.RemoteSource = remoteRelease.SourceID
-	matchingRelease.RemotePath = remoteRelease.RemotePath
+	newVersion := localRelease.Version
+	newSHA1 := localRelease.SHA1
+	newSourceID := remoteRelease.SourceID
+	newRemotePath := remoteRelease.RemotePath
+
+	if releaseLock.Version == newVersion && releaseLock.SHA1 == newSHA1 && releaseLock.RemoteSource == newSourceID && releaseLock.RemotePath == newRemotePath {
+		u.logger.Println("Neither the version nor remote location of the release changed. No changes made.")
+		return nil
+	}
+
+	releaseLock.Version = newVersion
+	releaseLock.SHA1 = newSHA1
+	releaseLock.RemoteSource = newSourceID
+	releaseLock.RemotePath = newRemotePath
 
 	err = u.loader.SaveKilnfileLock(u.filesystem, u.Options.Kilnfile, kilnfileLock)
 	if err != nil {

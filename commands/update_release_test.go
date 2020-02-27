@@ -3,6 +3,7 @@ package commands_test
 import (
 	"errors"
 	"fmt"
+	"github.com/onsi/gomega/gbytes"
 	"log"
 	"os"
 	"path/filepath"
@@ -20,12 +21,17 @@ import (
 
 var _ = Describe("UpdateRelease", func() {
 	const (
-		releaseName       = "capi"
-		releaseVersion    = "1.8.7"
-		releasesDir       = "releases"
-		remotePath        = "s3://pivotal"
-		releaseSourceName = "LaBreaTarPit"
-		releaseSha1       = "new-sha1"
+		releaseName          = "capi"
+		oldReleaseVersion    = "1.8.0"
+		newReleaseVersion    = "1.8.7"
+		oldRemotePath        = "https://bosh.io/releases/some-release"
+		newRemotePath        = "some/s3/path"
+		oldReleaseSourceName = "bosh.io"
+		newReleaseSourceName = "final-pcf-bosh-releases"
+		oldReleaseSha1       = "old-sha1"
+		newReleaseSha1       = "new-sha1"
+
+		releasesDir = "releases"
 	)
 
 	var (
@@ -49,21 +55,23 @@ var _ = Describe("UpdateRelease", func() {
 
 			filesystem = osfs.New("/tmp/")
 
-			kilnfile := cargo.Kilnfile{
-				ReleaseSources: []cargo.ReleaseSourceConfig{{Type: "bosh.io"}},
-			}
+			kilnfile := cargo.Kilnfile{}
 
 			kilnFileLock := cargo.KilnfileLock{
 				Releases: []cargo.ReleaseLock{
 					{
-						Name:    "minecraft",
-						SHA1:    "developersdevelopersdevelopersdevelopers",
-						Version: "2.0.1",
+						Name:         "minecraft",
+						SHA1:         "developersdevelopersdevelopersdevelopers",
+						Version:      "2.0.1",
+						RemoteSource: "bosh.io",
+						RemotePath:   "not-used",
 					},
 					{
-						Name:    releaseName,
-						SHA1:    "old-sha1",
-						Version: "1.87.0",
+						Name:         releaseName,
+						SHA1:         oldReleaseSha1,
+						Version:      oldReleaseVersion,
+						RemoteSource: oldReleaseSourceName,
+						RemotePath:   oldRemotePath,
 					},
 				},
 				Stemcell: cargo.Stemcell{
@@ -78,16 +86,16 @@ var _ = Describe("UpdateRelease", func() {
 			err := filesystem.MkdirAll(releasesDir, os.ModePerm)
 			Expect(err).NotTo(HaveOccurred())
 
-			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, releaseVersion))
+			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, newReleaseVersion))
 			expectedDownloadedRelease = release.Local{
-				ID:        release.ID{Name: releaseName, Version: releaseVersion},
+				ID:        release.ID{Name: releaseName, Version: newReleaseVersion},
 				LocalPath: downloadedReleasePath,
-				SHA1:      releaseSha1,
+				SHA1:      newReleaseSha1,
 			}
 			expectedRemoteRelease = release.Remote{
 				ID:         expectedDownloadedRelease.ID,
-				RemotePath: remotePath,
-				SourceID:   releaseSourceName,
+				RemotePath: newRemotePath,
+				SourceID:   newReleaseSourceName,
 			}
 
 			releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, true, nil)
@@ -103,7 +111,7 @@ var _ = Describe("UpdateRelease", func() {
 				err := updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
 					"--name", releaseName,
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 					"--variable", "someKey=someValue",
 					"--variables-file", "thisisafile",
@@ -115,7 +123,7 @@ var _ = Describe("UpdateRelease", func() {
 				receivedReleaseRequirement := releaseSource.GetMatchedReleaseArgsForCall(0)
 				releaseRequirement := release.Requirement{
 					Name:            releaseName,
-					Version:         releaseVersion,
+					Version:         newReleaseVersion,
 					StemcellOS:      "some-os",
 					StemcellVersion: "4.5.6",
 				}
@@ -140,7 +148,7 @@ var _ = Describe("UpdateRelease", func() {
 				err := updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
 					"--name", releaseName,
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -154,10 +162,10 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(updatedLockfile.Releases).To(ContainElement(
 					cargo.ReleaseLock{
 						Name:         releaseName,
-						Version:      releaseVersion,
-						SHA1:         releaseSha1,
-						RemoteSource: releaseSourceName,
-						RemotePath:   remotePath,
+						Version:      newReleaseVersion,
+						SHA1:         newReleaseSha1,
+						RemoteSource: newReleaseSourceName,
+						RemotePath:   newRemotePath,
 					},
 				))
 			})
@@ -166,7 +174,7 @@ var _ = Describe("UpdateRelease", func() {
 				err := updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
 					"--name", releaseName,
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 					"--variable", "someKey=someValue",
 					"--variables-file", "thisisafile",
@@ -192,7 +200,7 @@ var _ = Describe("UpdateRelease", func() {
 					"--allow-only-publishable-releases",
 					"--kilnfile", "Kilnfile",
 					"--name", releaseName,
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 					"--variable", "someKey=someValue",
 					"--variables-file", "thisisafile",
@@ -205,12 +213,61 @@ var _ = Describe("UpdateRelease", func() {
 			})
 		})
 
+		When("none of the release's fields change", func() {
+			var logBuf *gbytes.Buffer
+
+			BeforeEach(func() {
+				expectedDownloadedRelease = release.Local{
+					ID:        release.ID{Name: releaseName, Version: oldReleaseVersion},
+					LocalPath: "not-used",
+					SHA1:      oldReleaseSha1,
+				}
+				expectedRemoteRelease = release.Remote{
+					ID:         expectedDownloadedRelease.ID,
+					RemotePath: oldRemotePath,
+					SourceID:   oldReleaseSourceName,
+				}
+
+				releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, true, nil)
+				releaseSource.DownloadReleaseReturns(expectedDownloadedRelease, nil)
+
+				logBuf = gbytes.NewBuffer()
+				logger = log.New(logBuf, "", 0)
+			})
+
+			It("doesn't update the Kilnfile.lock", func() {
+				err := updateReleaseCommand.Execute([]string{
+					"--kilnfile", "Kilnfile",
+					"--name", releaseName,
+					"--version", oldReleaseVersion,
+					"--releases-directory", releasesDir,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(kilnFileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+			})
+
+			It("notifies the user", func() {
+				err := updateReleaseCommand.Execute([]string{
+					"--kilnfile", "Kilnfile",
+					"--name", releaseName,
+					"--version", oldReleaseVersion,
+					"--releases-directory", releasesDir,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(string(logBuf.Contents())).To(ContainSubstring("No changes made"))
+				Expect(string(logBuf.Contents())).NotTo(ContainSubstring("Updated"))
+				Expect(string(logBuf.Contents())).NotTo(ContainSubstring("COMMIT"))
+			})
+		})
+
 		When("the named release isn't in Kilnfile.lock", func() {
 			It("errors", func() {
 				err := updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
 					"--name", "no-such-release",
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
 				Expect(err).To(MatchError(ContainSubstring("no release named \"no-such-release\"")))
@@ -221,7 +278,7 @@ var _ = Describe("UpdateRelease", func() {
 				_ = updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
 					"--name", "no-such-release",
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
 
@@ -233,7 +290,7 @@ var _ = Describe("UpdateRelease", func() {
 				_ = updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
 					"--name", "no-such-release",
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
 
@@ -250,7 +307,7 @@ var _ = Describe("UpdateRelease", func() {
 				err := updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
 					"--name", releaseName,
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
 				Expect(err).To(MatchError(ContainSubstring("big bada boom")))
@@ -266,7 +323,7 @@ var _ = Describe("UpdateRelease", func() {
 				err := updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
 					"--name", releaseName,
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
 				Expect(err).To(MatchError(ContainSubstring("bad stuff")))
@@ -276,7 +333,7 @@ var _ = Describe("UpdateRelease", func() {
 				_ = updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
 					"--name", releaseName,
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
 
@@ -293,7 +350,7 @@ var _ = Describe("UpdateRelease", func() {
 				err := updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
 					"--name", releaseName,
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
 				Expect(err).To(MatchError(ContainSubstring("bad stuff")))
@@ -303,7 +360,7 @@ var _ = Describe("UpdateRelease", func() {
 				_ = updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
 					"--name", releaseName,
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
 
@@ -323,7 +380,7 @@ var _ = Describe("UpdateRelease", func() {
 				err := updateReleaseCommand.Execute([]string{
 					"--kilnfile", "Kilnfile",
 					"--name", releaseName,
-					"--version", releaseVersion,
+					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
 				Expect(err).To(MatchError(ContainSubstring(expectedError.Error())))
