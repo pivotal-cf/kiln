@@ -157,7 +157,7 @@ var _ = Describe("sync-with-local", func() {
 				}, nil)
 			})
 
-			It("doesn't modify that entry", func() {
+			It("updates the Kilnfile.lock to have the correct remote info and SHA1", func() {
 				err := syncWithLocal.Execute([]string{
 					"--kilnfile", kilnfilePath,
 					"--assume-release-source", releaseSourceID,
@@ -173,9 +173,9 @@ var _ = Describe("sync-with-local", func() {
 					{
 						Name:         release1Name,
 						Version:      release1OldVersion,
-						RemoteSource: release1OldSourceID,
-						RemotePath:   release1OldRemotePath,
-						SHA1:         release1OldSha,
+						RemoteSource: releaseSourceID,
+						RemotePath:   release1NewRemotePath,
+						SHA1:         release1NewSha,
 					},
 					{
 						Name:         release2Name,
@@ -185,6 +185,39 @@ var _ = Describe("sync-with-local", func() {
 						SHA1:         release2NewSha,
 					},
 				}))
+			})
+
+			When("--skip-same-version is passed", func() {
+				It("doesn't modify that entry", func() {
+					err := syncWithLocal.Execute([]string{
+						"--kilnfile", kilnfilePath,
+						"--assume-release-source", releaseSourceID,
+						"--skip-same-version",
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
+
+					filesystem, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
+					Expect(filesystem).To(Equal(fs))
+					Expect(path).To(Equal(kilnfilePath))
+					Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
+						{
+							Name:         release1Name,
+							Version:      release1OldVersion,
+							RemoteSource: release1OldSourceID,
+							RemotePath:   release1OldRemotePath,
+							SHA1:         release1OldSha,
+						},
+						{
+							Name:         release2Name,
+							Version:      release2NewVersion,
+							RemoteSource: releaseSourceID,
+							RemotePath:   release2NewRemotePath,
+							SHA1:         release2NewSha,
+						},
+					}))
+				})
 			})
 		})
 

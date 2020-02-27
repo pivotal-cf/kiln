@@ -12,11 +12,12 @@ import (
 
 type SyncWithLocal struct {
 	Options struct {
-		Kilnfile        string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
-		ReleasesDir     string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
-		ReleaseSourceID string   `long:"assume-release-source" description:"the release source to put in updated records" required:"true"`
-		Variables       []string `short:"vr" long:"variable" description:"variable in key=value format"`
-		VariablesFiles  []string `short:"vf" long:"variables-file" description:"path to variables file"`
+		Kilnfile        string   `short:"kf" long:"kilnfile"            default:"Kilnfile" description:"path to Kilnfile"`
+		ReleasesDir     string   `short:"rd" long:"releases-directory"  default:"releases" description:"path to a directory to download releases into"`
+		ReleaseSourceID string   `           long:"assume-release-source"  required:"true" description:"the release source to put in updated records"`
+		SkipSameVersion bool     `           long:"skip-same-version"                      description:"only update the Kilnfile.lock when the release version has changed'"`
+		Variables       []string `short:"vr" long:"variable"                               description:"variable in key=value format"`
+		VariablesFiles  []string `short:"vf" long:"variables-file"                         description:"path to variables file"`
 	}
 	fs                    billy.Filesystem
 	kilnfileLoader        KilnfileLoader
@@ -89,7 +90,7 @@ func (command SyncWithLocal) Execute(args []string) error {
 			return fmt.Errorf("the local release %q does not exist in the Kilnfile.lock", rel.Name)
 		}
 
-		if matchingRelease.Version == rel.Version {
+		if command.Options.SkipSameVersion && matchingRelease.Version == rel.Version {
 			command.logger.Printf("Skipping %s. Release version hasn't changed\n", rel.Name)
 			continue
 		}
