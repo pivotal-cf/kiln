@@ -30,7 +30,7 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 	templateVariablesService := baking.NewTemplateVariablesService(fs)
 	templateVariables, err := templateVariablesService.FromPathsAndPairs(variablesFiles, variables)
 	if err != nil {
-		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("error processing --variable or --variables-file arguments - are you logged into lpass? error: %w", err)
+		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("error processing --variable or --variables-file arguments - are you logged into lpass? (error: %w)", err)
 	}
 
 	kf, err := fs.Open(kilnfilePath)
