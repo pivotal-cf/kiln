@@ -1,0 +1,45 @@
+# For documentation at http://goreleaser.com
+before:
+  hooks:
+    - go mod download
+release:
+  github:
+    owner: pivotal-cf
+    name: kiln
+builds:
+- env:
+  - CGO_ENABLED=0
+  goos:
+  - darwin
+  - linux
+  - windows
+  goarch:
+  - amd64
+  ldflags:
+  - -X "main.version={{.Version}}"
+archives:
+  - id: github
+    format: binary
+    name_template: "kiln-{{ .Os }}-{{ .Version }}"
+  - id: homebrew
+    format: "tar.gz"
+    name_template: "kiln-{{ .Os }}-{{ .Version }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+brews:
+  - name: kiln
+    github:
+      owner: pivotal-cf
+      name: kiln
+    folder: HomebrewFormula
+    ids:
+      - homebrew
+    test: |
+      system "#{bin}/kiln --version"
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  skip: true
