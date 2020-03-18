@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/Masterminds/semver"
+
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/release"
@@ -68,6 +70,14 @@ func (command UploadRelease) Execute(args []string) error {
 	manifest := part.Metadata.(builder.ReleaseManifest)
 	if manifest.StemcellOS != "" {
 		return fmt.Errorf("cannot upload compiled release %q - only uncompiled releases are allowed", command.Options.LocalPath)
+	}
+
+	version, err := semver.NewVersion(manifest.Version)
+	if err != nil {
+		return fmt.Errorf("error parsing release version %q - release version is not valid semver", manifest.Version)
+	}
+	if version.Prerelease() != "" {
+		return fmt.Errorf("cannot upload development release %q - only finalized releases are allowed", manifest.Version)
 	}
 
 	requirement := release.Requirement{Name: manifest.Name, Version: manifest.Version}

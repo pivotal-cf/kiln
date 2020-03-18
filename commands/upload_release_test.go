@@ -119,6 +119,54 @@ compiled_packages:
 					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
 				})
 			})
+
+			When("the release version is not a finalized release", func() {
+				var err error
+				var devReleases = []struct {
+					tarballName string
+					version     string
+				}{
+					{"banana-rc.tgz", "1.2.3-rc.100"},
+					{"banana-build.tgz", "1.2.3-build.56"},
+					{"banana-dev.tgz", "1.2.3-dev.14784"},
+					{"banana-alpha.tgz", "1.2.3-alpha.1"},
+				}
+
+				BeforeEach(func() {
+					for _, rel := range devReleases {
+						_, err = test_helpers.WriteReleaseTarball(rel.tarballName, "banana", rel.version, fs)
+						Expect(err).NotTo(HaveOccurred())
+					}
+				})
+
+				It("errors with a descriptive message", func() {
+					for _, rel := range devReleases {
+						err := uploadRelease.Execute([]string{
+							"--local-path", rel.tarballName,
+							"--upload-target-id", "orange-bucket",
+						})
+						Expect(err).To(MatchError(ContainSubstring("only finalized releases are allowed")))
+					}
+
+					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
+				})
+			})
+
+			When("the release version is malformed", func() {
+				BeforeEach(func() {
+					_, err := test_helpers.WriteReleaseTarball("banana-malformed.tgz", "banana", "v1_2_garbage", fs)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("errors with a descriptive message", func() {
+					err := uploadRelease.Execute([]string{
+						"--local-path", "banana-malformed.tgz",
+						"--upload-target-id", "orange-bucket",
+					})
+					Expect(err).To(MatchError(ContainSubstring("release version is not valid semver")))
+					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
+				})
+			})
 		})
 
 		When("the release tarball is invalid", func() {
