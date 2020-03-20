@@ -2,16 +2,16 @@
 class Kiln < Formula
   desc ""
   homepage ""
-  version "0.41.0"
+  version "0.42.0"
   bottle :unneeded
 
   if OS.mac?
-    url "https://github.com/pivotal-cf/kiln/releases/download/0.41.0/kiln-darwin-0.41.0.tar.gz"
-    sha256 "c767ecd099f46c75aefb9dfd738fb45c21832dfe859c4e4a8ee136ae02192def"
+    url "https://github.com/pivotal-cf/kiln/releases/download/0.42.0/kiln-darwin-0.42.0.tar.gz"
+    sha256 "21cd3f83316889c142124ccc627f158fcb0254f0f9d6ce6025439a769c66741e"
   elsif OS.linux?
     if Hardware::CPU.intel?
-      url "https://github.com/pivotal-cf/kiln/releases/download/0.41.0/kiln-linux-0.41.0.tar.gz"
-      sha256 "87cc9e5e7e7ada47dc21d730eea36f62db66dc684956ac4c7aea3f3185d3bed0"
+      url "https://github.com/pivotal-cf/kiln/releases/download/0.42.0/kiln-linux-0.42.0.tar.gz"
+      sha256 "0b320eb3aac12905dca0aa45d1b905f76969b2b9e51eeba1f30ac104767d6d76"
     end
   end
 
