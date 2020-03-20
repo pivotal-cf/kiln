@@ -707,6 +707,21 @@ pre_ga_user_groups:
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring("release with version " + someVersion.String() + " not found")))
 				})
+
+				When("the release to be updated is already published", func() {
+					BeforeEach(func() {
+						rs.ListReturns([]pivnet.Release{{Version: "2.8.0"}}, nil)
+					})
+
+					It("returns an error", func() {
+						err := publish.Execute(executeArgs)
+						Expect(err).To(HaveOccurred())
+						Expect(err).To(MatchError(ContainSubstring("release with version 2.8.0-build.111 was already published as 2.8.0")))
+					})
+
+
+				})
+
 			})
 
 			When("the version file contains an invalid semver", func() {
