@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 )
 
 type LocalReleaseDirectory struct {
@@ -60,6 +61,10 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []release.Loc
 		doDeletion = 'y'
 	} else {
 		l.logger.Println("Warning: kiln will delete the following files:")
+
+		sort.SliceStable(extraReleaseSet, func(i, j int) bool {
+			return extraReleaseSet[i].LocalPath < extraReleaseSet[j].LocalPath
+		})
 
 		for _, release := range extraReleaseSet {
 			l.logger.Printf("- %s\n", release.LocalPath)

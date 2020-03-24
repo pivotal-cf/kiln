@@ -1,6 +1,8 @@
 package fetcher_test
 
 import (
+	"fmt"
+	"github.com/onsi/gomega/gbytes"
 	"io/ioutil"
 	"log"
 	"os"
@@ -24,6 +26,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		releasesDir           string
 		releaseFile           string
 		fakeLogger            *log.Logger
+		logBuf                *gbytes.Buffer
 	)
 
 	BeforeEach(func() {
@@ -34,7 +37,9 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		releaseFile = filepath.Join(releasesDir, "some-release.tgz")
 
-		fakeLogger = log.New(GinkgoWriter, "", 0)
+		logBuf = gbytes.NewBuffer()
+		fakeLogger = log.New(logBuf, "", 0)
+
 		releaseManifestReader := builder.NewReleaseManifestReader(osfs.New(""))
 		releasesService := baking.NewReleasesService(fakeLogger, releaseManifestReader)
 
@@ -86,10 +91,14 @@ var _ = Describe("LocalReleaseDirectory", func() {
 	})
 
 	Describe("DeleteExtraReleases", func() {
-		var extraFilePath string
+		var extraFilePath, zFilePath string
 		BeforeEach(func() {
 			extraFilePath = filepath.Join(releasesDir, "extra-release-0.0-os-0-0.0.0.tgz")
 			err := ioutil.WriteFile(extraFilePath, []byte("abc"), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			zFilePath = filepath.Join(releasesDir, "z-release-0.0-os-0-0.0.0.tgz")
+			err = ioutil.WriteFile(zFilePath, []byte("xyz"), 0644)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -102,6 +111,21 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 			_, err = os.Stat(extraFilePath)
 			Expect(os.IsNotExist(err)).To(BeTrue())
+		})
+
+		It("sorts the list of releases to be deleted", func() {
+			extraReleaseID := release.ID{Name: "extra-release", Version: "0.0"}
+			extraRelease := release.Local{ID: extraReleaseID, LocalPath: extraFilePath}
+
+			zReleaseID := release.ID{Name: "z-release", Version: "0.0"}
+			zRelease := release.Local{ID: zReleaseID, LocalPath: zFilePath}
+
+			result := fmt.Sprintf("- %s\n- %s", extraFilePath, zFilePath)
+
+			err := localReleaseDirectory.DeleteExtraReleases([]release.Local{zRelease, extraRelease}, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(logBuf.Contents())).To(ContainSubstring(result))
+
 		})
 
 		Context("when a file cannot be removed", func() {
