@@ -191,14 +191,14 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 		return err
 	}
 
+	_, err = releases.Find(versionToPublish.String())
+	if err == nil {
+		return  fmt.Errorf("release %s already exists", versionToPublish.String())
+	}
+
 	release, err := releases.Find(buildVersion.String())
 	if err != nil {
-		_, err2 := releases.Find(versionToPublish.String())
-		if err2 == nil {
-			return  fmt.Errorf("release with version %s was already published as %s", buildVersion.String(), versionToPublish.String())
-		} else {
-			return err
-		}
+		return err
 	}
 
 	licenseFileName, err := p.attachLicenseFile(kilnfile.Slug, release.ID, versionToPublish)

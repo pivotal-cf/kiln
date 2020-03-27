@@ -697,6 +697,18 @@ pre_ga_user_groups:
 				})
 			})
 
+			When("the release is already published", func() {
+				BeforeEach(func() {
+					rs.ListReturns([]pivnet.Release{{Version: "2.8.0"}}, nil)
+				})
+
+				It("returns an error", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring("release 2.8.0 already exists")))
+				})
+			})
+
 			When("the release to be updated is not found", func() {
 				BeforeEach(func() {
 					rs.ListReturns([]pivnet.Release{{Version: "1.2.3-build.1"}}, nil)
@@ -707,21 +719,6 @@ pre_ga_user_groups:
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring("release with version " + someVersion.String() + " not found")))
 				})
-
-				When("the release to be updated is already published", func() {
-					BeforeEach(func() {
-						rs.ListReturns([]pivnet.Release{{Version: "2.8.0"}}, nil)
-					})
-
-					It("returns an error", func() {
-						err := publish.Execute(executeArgs)
-						Expect(err).To(HaveOccurred())
-						Expect(err).To(MatchError(ContainSubstring("release with version 2.8.0-build.111 was already published as 2.8.0")))
-					})
-
-
-				})
-
 			})
 
 			When("the version file contains an invalid semver", func() {
