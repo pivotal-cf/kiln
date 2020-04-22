@@ -100,6 +100,8 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 					val = map[string]interface{}{
 						"name":    name,
 						"version": "UNKNOWN",
+						"file":    fmt.Sprintf("%s-UNKNOWN.tgz", name),
+						"sha1":    "dead8e1ea5e00dead8e1ea5ed00ead8e1ea5e000",
 					}
 				} else {
 					return "", fmt.Errorf("could not find release with name '%s'", name)

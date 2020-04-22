@@ -376,7 +376,7 @@ some_runtime_configs:
 	})
 
 	Context("when release tgz file does not exist and stub releases is true", func() {
-		It("sets version to unknown", func() {
+		It("creates stub values for file, sha1, and version", func() {
 
 			interpolator := NewInterpolator()
 			input.StubReleases = true
@@ -385,6 +385,8 @@ some_runtime_configs:
 			Expect(err).NotTo(HaveOccurred())
 			Expect(interpolatedYAML).To(HelpfullyMatchYAML(`releases:
 - name: stub-release
+  file: stub-release-UNKNOWN.tgz
+  sha1: dead8e1ea5e00dead8e1ea5ed00ead8e1ea5e000
   version: UNKNOWN`))
 		})
 	})
