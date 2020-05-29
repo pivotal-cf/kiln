@@ -85,7 +85,8 @@ type Bake struct {
 	interpolator      interpolator
 	checksummer       checksummer
 	tileWriter        tileWriter
-	output            *log.Logger
+	outLogger         *log.Logger
+	errLogger         *log.Logger
 	templateVariables templateVariablesService
 	boshVariables     boshVariablesService
 	releases          releasesService
@@ -127,7 +128,8 @@ type Bake struct {
 func NewBake(
 	interpolator interpolator,
 	tileWriter tileWriter,
-	output *log.Logger,
+	outLogger *log.Logger,
+	errLogger *log.Logger,
 	templateVariablesService templateVariablesService,
 	boshVariablesService boshVariablesService,
 	releasesService releasesService,
@@ -146,7 +148,8 @@ func NewBake(
 		interpolator:      interpolator,
 		tileWriter:        tileWriter,
 		checksummer:       checksummer,
-		output:            output,
+		outLogger:         outLogger,
+		errLogger:         errLogger,
 		templateVariables: templateVariablesService,
 		boshVariables:     boshVariablesService,
 		releases:          releasesService,
@@ -193,7 +196,7 @@ func (b Bake) Execute(args []string) error {
 
 	// TODO: Remove check after deprecation of --stemcell-tarball
 	if b.Options.StemcellTarball != "" {
-		b.output.Println("warning: --stemcell-tarball is being deprecated in favor of --stemcells-directory")
+		b.errLogger.Println("warning: --stemcell-tarball is being deprecated in favor of --stemcells-directory")
 	}
 
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
@@ -280,7 +283,7 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	if b.Options.MetadataOnly {
-		b.output.Printf("%s", interpolatedMetadata)
+		b.outLogger.Printf("%s", interpolatedMetadata)
 		return nil
 	}
 

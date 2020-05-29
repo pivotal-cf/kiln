@@ -146,6 +146,7 @@ func bakeCommand(fs billy.Filesystem, releasesService baking.ReleasesService, ou
 		interpolator,
 		tileWriter,
 		outLogger,
+		errLogger,
 		templateVariablesService,
 		boshVariablesService,
 		releasesService,

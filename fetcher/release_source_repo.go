@@ -67,7 +67,7 @@ func (repo ReleaseSourceRepo) MultiReleaseSource(allowOnlyPublishable bool) mult
 		}
 	}
 
-	return multiReleaseSource(sources)
+	return sources
 }
 
 func (repo ReleaseSourceRepo) FindReleaseUploader(sourceID string) (ReleaseUploader, error) {
