@@ -7,7 +7,7 @@ require (
 	code.cloudfoundry.org/tlsconfig v0.0.0-20200125003142-b5ccaa4fedfc // indirect
 	github.com/Masterminds/semver v1.5.0
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/aws/aws-sdk-go v1.25.38
+	github.com/aws/aws-sdk-go v1.32.0
 	github.com/bmatcuk/doublestar v1.2.2 // indirect
 	github.com/charlievieth/fs v0.0.0-20170613215519-7dc373669fa1
 	github.com/cloudfoundry/bosh-cli v6.2.0+incompatible
