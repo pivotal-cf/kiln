@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go v1.25.38
 	github.com/bmatcuk/doublestar v1.2.2 // indirect
 	github.com/charlievieth/fs v0.0.0-20170613215519-7dc373669fa1
-	github.com/cloudfoundry/bosh-cli v6.2.0+incompatible
+	github.com/cloudfoundry/bosh-cli v6.3.0+incompatible
 	github.com/cloudfoundry/bosh-utils v0.0.0-20200125100212-7d4d758c7210
 	github.com/cloudfoundry/go-socks5 v0.0.0-20180221174514-54f73bdb8a8e // indirect
 	github.com/cloudfoundry/socks5-proxy v0.2.0 // indirect
