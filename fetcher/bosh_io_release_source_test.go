@@ -50,6 +50,9 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/uaa.*")
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "73.3.0"}]`))
 
+				path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/metrics.*")
+				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "2.3.0"}]`))
+
 				releaseSource = NewBOSHIOReleaseSource(ID, false, testServer.URL(), logger)
 			})
 
@@ -74,6 +77,9 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				Expect(found).To(BeTrue())
 				cfRabbitURL := fmt.Sprintf("%s/d/github.com/pivotal-cf/cf-rabbitmq-release?v=268.0.0", testServer.URL())
 				Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "268.0.0"}, RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
+
+
+
 			})
 
 		})

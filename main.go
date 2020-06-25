@@ -94,6 +94,10 @@ func main() {
 		Logger:                     outLogger,
 		MultiReleaseSourceProvider: mrsProvider,
 	}
+
+	commandSet["most-recent-release-version"] = commands.NewMostRecentReleseVersion(mrsProvider, outLogger)
+
+
 	commandSet["compile-built-releases"] = commands.CompileBuiltReleases{
 		BoshDirectorFactory:        commands.BoshDirectorFactory,
 		KilnfileLoader:             kilnfileLoader,

@@ -150,34 +150,46 @@ func (err ResponseStatusCodeError) Error() string {
 	return fmt.Sprintf("response to %s %s got status %d when a success was expected", err.Request.Method, err.Request.URL, err.StatusCode)
 }
 
-func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {
+func (src BOSHIOReleaseSource) getReleases(name string) ([]releaseResponse, error) {
 	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/github.com/%s", src.serverURI, name))
 	if err != nil {
-		return false, fmt.Errorf("bosh.io API is down with error: %w", err)
+		return nil, fmt.Errorf("bosh.io API is down with error: %w", err)
 	}
 	if resp.StatusCode >= 500 {
-		return false, (*ResponseStatusCodeError)(resp)
+		return nil, (*ResponseStatusCodeError)(resp)
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		return false, nil
+		return nil, nil
 	}
 	if resp.StatusCode >= 300 {
 		// we don't handle redirects yet
 		// also this will catch other client request errors (>= 400)
-		return false, (*ResponseStatusCodeError)(resp)
+		return nil, (*ResponseStatusCodeError)(resp)
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if string(body) == "null" {
-		return false, nil
+		return nil, nil
 	}
-	var releases []struct {
-		Version string `json:"version"`
-	}
+	var releases []releaseResponse
 	if err := json.Unmarshal(body, &releases); err != nil {
+		return nil, err
+	}
+
+	return releases, nil
+}
+
+type releaseResponse struct {
+	Version string `json:"version"`
+}
+
+func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {
+
+	releaseResponses, err := src.getReleases(name)
+	if err != nil {
 		return false, err
 	}
-	for _, rel := range releases {
+	for _, rel := range releaseResponses {
 		if rel.Version == version {
 			return true, nil
 		}
