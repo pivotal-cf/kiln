@@ -91,18 +91,33 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement release.Requirement
 			}
 
 			if exists {
-				downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, requirement.Version)
-				builtRelease := release.Remote{
-					ID:         release.ID{Name: requirement.Name, Version: requirement.Version},
-					RemotePath: downloadURL,
-					SourceID:   src.ID(),
-				}
+				builtRelease := src.createReleaseRemote(requirement.Name, requirement.Version, fullName)
 				return builtRelease, true, nil
 			}
 		}
 	}
 	return release.Remote{}, false, nil
 }
+
+func (src BOSHIOReleaseSource) GetLatestReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
+	for _, repo := range repos {
+		for _, suf := range suffixes {
+			fullName := repo + "/" + requirement.Name + suf
+			releaseResponses, err := src.getReleases(fullName)
+			if err != nil {
+				return release.Remote{}, false, err
+			}
+
+			if len(releaseResponses) > 0 {
+				latestReleaseVersion := releaseResponses[0].Version
+				builtRelease := src.createReleaseRemote(requirement.Name, latestReleaseVersion, fullName)
+				return builtRelease, true, nil
+			}
+		}
+	}
+	return release.Remote{}, false, nil
+}
+
 
 func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error) {
 	src.logger.Printf("downloading %s %s from %s", remoteRelease.Name, remoteRelease.Version, src.ID())
@@ -148,6 +163,16 @@ type ResponseStatusCodeError http.Response
 
 func (err ResponseStatusCodeError) Error() string {
 	return fmt.Sprintf("response to %s %s got status %d when a success was expected", err.Request.Method, err.Request.URL, err.StatusCode)
+}
+
+func (src BOSHIOReleaseSource) createReleaseRemote(name string, version string, fullName string) release.Remote {
+	downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, version)
+	releaseRemote := release.Remote{
+		ID:         release.ID{Name: name, Version: version},
+		RemotePath: downloadURL,
+		SourceID:   src.ID(),
+	}
+	return releaseRemote
 }
 
 func (src BOSHIOReleaseSource) getReleases(name string) ([]releaseResponse, error) {

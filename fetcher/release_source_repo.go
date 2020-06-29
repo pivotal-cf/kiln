@@ -20,6 +20,7 @@ const (
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
 	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
+	GetLatestReleaseVersion(release.Requirement) (release.Remote, bool, error)
 	DownloadRelease(releasesDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error)
 	ID() string
 	Publishable() bool
@@ -28,6 +29,7 @@ type ReleaseSource interface {
 //go:generate counterfeiter -o ./fakes/multi_release_source.go --fake-name MultiReleaseSource . MultiReleaseSource
 type MultiReleaseSource interface {
 	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
+	GetLatestReleaseVersion(release.Requirement) (release.Remote, bool, error)
 	DownloadRelease(releasesDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error)
 	FindByID(string) (ReleaseSource, error)
 }

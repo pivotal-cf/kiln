@@ -24,6 +24,21 @@ type ReleaseSource struct {
 		result1 release.Local
 		result2 error
 	}
+	GetLatestReleaseVersionStub        func(release.Requirement) (release.Remote, bool, error)
+	getLatestReleaseVersionMutex       sync.RWMutex
+	getLatestReleaseVersionArgsForCall []struct {
+		arg1 release.Requirement
+	}
+	getLatestReleaseVersionReturns struct {
+		result1 release.Remote
+		result2 bool
+		result3 error
+	}
+	getLatestReleaseVersionReturnsOnCall map[int]struct {
+		result1 release.Remote
+		result2 bool
+		result3 error
+	}
 	GetMatchedReleaseStub        func(release.Requirement) (release.Remote, bool, error)
 	getMatchedReleaseMutex       sync.RWMutex
 	getMatchedReleaseArgsForCall []struct {
@@ -126,6 +141,72 @@ func (fake *ReleaseSource) DownloadReleaseReturnsOnCall(i int, result1 release.L
 		result1 release.Local
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *ReleaseSource) GetLatestReleaseVersion(arg1 release.Requirement) (release.Remote, bool, error) {
+	fake.getLatestReleaseVersionMutex.Lock()
+	ret, specificReturn := fake.getLatestReleaseVersionReturnsOnCall[len(fake.getLatestReleaseVersionArgsForCall)]
+	fake.getLatestReleaseVersionArgsForCall = append(fake.getLatestReleaseVersionArgsForCall, struct {
+		arg1 release.Requirement
+	}{arg1})
+	fake.recordInvocation("GetLatestReleaseVersion", []interface{}{arg1})
+	fake.getLatestReleaseVersionMutex.Unlock()
+	if fake.GetLatestReleaseVersionStub != nil {
+		return fake.GetLatestReleaseVersionStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
+	}
+	fakeReturns := fake.getLatestReleaseVersionReturns
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+}
+
+func (fake *ReleaseSource) GetLatestReleaseVersionCallCount() int {
+	fake.getLatestReleaseVersionMutex.RLock()
+	defer fake.getLatestReleaseVersionMutex.RUnlock()
+	return len(fake.getLatestReleaseVersionArgsForCall)
+}
+
+func (fake *ReleaseSource) GetLatestReleaseVersionCalls(stub func(release.Requirement) (release.Remote, bool, error)) {
+	fake.getLatestReleaseVersionMutex.Lock()
+	defer fake.getLatestReleaseVersionMutex.Unlock()
+	fake.GetLatestReleaseVersionStub = stub
+}
+
+func (fake *ReleaseSource) GetLatestReleaseVersionArgsForCall(i int) release.Requirement {
+	fake.getLatestReleaseVersionMutex.RLock()
+	defer fake.getLatestReleaseVersionMutex.RUnlock()
+	argsForCall := fake.getLatestReleaseVersionArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *ReleaseSource) GetLatestReleaseVersionReturns(result1 release.Remote, result2 bool, result3 error) {
+	fake.getLatestReleaseVersionMutex.Lock()
+	defer fake.getLatestReleaseVersionMutex.Unlock()
+	fake.GetLatestReleaseVersionStub = nil
+	fake.getLatestReleaseVersionReturns = struct {
+		result1 release.Remote
+		result2 bool
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *ReleaseSource) GetLatestReleaseVersionReturnsOnCall(i int, result1 release.Remote, result2 bool, result3 error) {
+	fake.getLatestReleaseVersionMutex.Lock()
+	defer fake.getLatestReleaseVersionMutex.Unlock()
+	fake.GetLatestReleaseVersionStub = nil
+	if fake.getLatestReleaseVersionReturnsOnCall == nil {
+		fake.getLatestReleaseVersionReturnsOnCall = make(map[int]struct {
+			result1 release.Remote
+			result2 bool
+			result3 error
+		})
+	}
+	fake.getLatestReleaseVersionReturnsOnCall[i] = struct {
+		result1 release.Remote
+		result2 bool
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *ReleaseSource) GetMatchedRelease(arg1 release.Requirement) (release.Remote, bool, error) {
@@ -303,6 +384,8 @@ func (fake *ReleaseSource) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.downloadReleaseMutex.RLock()
 	defer fake.downloadReleaseMutex.RUnlock()
+	fake.getLatestReleaseVersionMutex.RLock()
+	defer fake.getLatestReleaseVersionMutex.RUnlock()
 	fake.getMatchedReleaseMutex.RLock()
 	defer fake.getMatchedReleaseMutex.RUnlock()
 	fake.iDMutex.RLock()

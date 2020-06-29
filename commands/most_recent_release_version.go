@@ -1,22 +1,72 @@
 package commands
 
 import (
-	"github.com/pivotal-cf/kiln/fetcher"
+	"encoding/json"
+	"github.com/pivotal-cf/jhanda"
+	"github.com/pivotal-cf/kiln/internal/cargo"
+	"github.com/pivotal-cf/kiln/release"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 	"log"
 )
 
 type MostRecentReleaseVersion struct {
-	mrsProvider fetcher.MultiReleaseSource
-	outLogger *log.Logger
-}
+	outLogger   *log.Logger
+	mrsProvider MultiReleaseSourceProvider
 
-func NewMostRecentReleaseVersion(mrsProvider fetcher.MultiReleaseSource, outLogger *log.Logger) MostRecentReleaseVersion {
-	return MostRecentReleaseVersion{
-		mrsProvider,
-		outLogger,
+	Options struct {
+		Kilnfile string `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
+		Release  string `short:"r" long:"release" default:"releases" description:"release name"`
 	}
 }
 
-func (cmd *MostRecentReleaseVersion) Execute(args []string) error {
-	return nil
+type mostRecentVersionOutput struct {
+	Version    string `json:"version"`
+	RemotePath string `json:"remote_path"`
+}
+
+func NewMostRecentReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider) MostRecentReleaseVersion {
+	return MostRecentReleaseVersion{
+		outLogger:   outLogger,
+		mrsProvider: multiReleaseSourceProvider,
+	}
+}
+
+func (cmd MostRecentReleaseVersion) Execute(args []string) error {
+	kilnfile, err := cmd.setup(args)
+	if err != nil {
+		return err
+	}
+	releaseSource := cmd.mrsProvider(kilnfile, false)
+
+	releaseRemote, _, err := releaseSource.GetLatestReleaseVersion(release.Requirement{
+		Name: cmd.Options.Release,
+	})
+
+	mostRecentVersionJson, _ := json.Marshal(mostRecentVersionOutput{
+		Version : releaseRemote.Version,
+		RemotePath: releaseRemote.RemotePath,
+	})
+	cmd.outLogger.Println(string(mostRecentVersionJson))
+	return err
+}
+
+func (cmd *MostRecentReleaseVersion) setup(args []string) (cargo.Kilnfile, error) {
+	_, err := jhanda.Parse(&cmd.Options, args)
+	if err != nil {
+		return cargo.Kilnfile{}, err
+	}
+
+	kilnfile, _, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), cmd.Options.Kilnfile, []string{}, []string{})
+	if err != nil {
+		return cargo.Kilnfile{}, err
+	}
+	return kilnfile, nil
+}
+
+func (cmd MostRecentReleaseVersion) Usage() jhanda.Usage {
+	return jhanda.Usage{
+		Description:      "Replace later",
+		ShortDescription: "rplce ltr",
+		Flags:            cmd.Options,
+	}
 }

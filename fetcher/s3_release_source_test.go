@@ -184,7 +184,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		var (
 			releaseSource  S3ReleaseSource
-			fakeS3Client   *fakes.S3HeadObjecter
+			fakeS3Client   *fakes.S3Client
 			desiredRelease release.Requirement
 			bpmReleaseID   release.ID
 			bpmKey         string
@@ -200,7 +200,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				StemcellVersion: "190.0.0",
 			}
 
-			fakeS3Client = new(fakes.S3HeadObjecter)
+			fakeS3Client = new(fakes.S3Client)
 			fakeS3Client.HeadObjectReturns(new(s3.HeadObjectOutput), nil)
 
 			logger = log.New(nil, "", 0)
@@ -269,6 +269,66 @@ var _ = Describe("S3ReleaseSource", func() {
 				Expect(err).To(MatchError(ContainSubstring(`unable to evaluate path_template`)))
 				Expect(found).To(BeFalse())
 			})
+		})
+	})
+
+	Describe("GetLatestReleaseVersion from S3", func() {
+		const bucket = "built-bucket"
+
+		var (
+			releaseSource  S3ReleaseSource
+			fakeS3Client   *fakes.S3Client
+			desiredRelease release.Requirement
+			bpmReleaseID   release.ID
+			bpmKey         string
+			logger         *log.Logger
+		)
+
+		BeforeEach(func() {
+			bpmReleaseID = release.ID{Name: "bpm-release", Version: "1.2.3"}
+			desiredRelease = release.Requirement{
+				Name:            "bpm-release",
+			}
+
+			fakeS3Client = new(fakes.S3Client)
+			object1Key := "2.5/uaa-release/uaa-release-1.2.2-ubuntux-xenial-190.0.0.tgz"
+			object2Key := "2.5/uaa-release/uaa-release-1.2.3-ubuntux-xenial-190.0.0.tgz"
+			fakeS3Client.ListObjectsV2Returns(&s3.ListObjectsV2Output{
+				Contents: []*s3.Object{
+					{Key: &object1Key},
+					{Key: &object2Key},
+				},
+			}, nil)
+
+			logger = log.New(nil, "", 0)
+
+			releaseSource = NewS3ReleaseSource(
+				sourceID,
+				bucket,
+				`2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+				false,
+				fakeS3Client,
+				nil,
+				nil,
+				logger,
+			)
+			bpmKey = "2.5/bpm/bpm-release-1.2.3-ubuntu-xenial-190.0.0.tgz"
+		})
+
+		It("gets the latest version of a release", func() {
+			remoteRelease, found, err := releaseSource.GetLatestReleaseVersion(desiredRelease)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(found).To(BeTrue())
+
+			Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
+			input := fakeS3Client.ListObjectsV2ArgsForCall(0)
+			Expect(input.Prefix).To(Equal("2.5/bpm/bpm-release"))
+
+			Expect(remoteRelease).To(Equal(release.Remote{
+				ID:         bpmReleaseID,
+				RemotePath: bpmKey,
+				SourceID:   sourceID,
+			}))
 		})
 	})
 

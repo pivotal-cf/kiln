@@ -32,9 +32,10 @@ type S3Uploader interface {
 	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
 }
 
-//go:generate counterfeiter -o ./fakes/s3_head_objecter.go --fake-name S3HeadObjecter . S3HeadObjecter
-type S3HeadObjecter interface {
+//go:generate counterfeiter -o ./fakes/s3_client.go --fake-name S3Client . S3Client
+type S3Client interface {
 	HeadObject(input *s3.HeadObjectInput) (*s3.HeadObjectOutput, error)
+	ListObjectsV2(input *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error)
 }
 
 type S3ReleaseSource struct {
@@ -43,14 +44,14 @@ type S3ReleaseSource struct {
 	pathTemplateString string
 	publishable        bool
 
-	s3Client     S3HeadObjecter
+	s3Client     S3Client
 	s3Downloader S3Downloader
 	s3Uploader   S3Uploader
 
 	logger *log.Logger
 }
 
-func NewS3ReleaseSource(id, bucket, pathTemplate string, publishable bool, client S3HeadObjecter, downloader S3Downloader, uploader S3Uploader, logger *log.Logger) S3ReleaseSource {
+func NewS3ReleaseSource(id, bucket, pathTemplate string, publishable bool, client S3Client, downloader S3Downloader, uploader S3Uploader, logger *log.Logger) S3ReleaseSource {
 	return S3ReleaseSource{
 		id:                 id,
 		bucket:             bucket,
@@ -133,6 +134,10 @@ func (src S3ReleaseSource) GetMatchedRelease(requirement release.Requirement) (r
 		RemotePath: remotePath,
 		SourceID:   src.ID(),
 	}, true, nil
+}
+
+func (src S3ReleaseSource) GetLatestReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
+	return release.Remote{}, false, nil
 }
 
 func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error) {

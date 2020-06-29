@@ -37,6 +37,21 @@ type MultiReleaseSource struct {
 		result1 fetcher.ReleaseSource
 		result2 error
 	}
+	GetLatestReleaseVersionStub        func(release.Requirement) (release.Remote, bool, error)
+	getLatestReleaseVersionMutex       sync.RWMutex
+	getLatestReleaseVersionArgsForCall []struct {
+		arg1 release.Requirement
+	}
+	getLatestReleaseVersionReturns struct {
+		result1 release.Remote
+		result2 bool
+		result3 error
+	}
+	getLatestReleaseVersionReturnsOnCall map[int]struct {
+		result1 release.Remote
+		result2 bool
+		result3 error
+	}
 	GetMatchedReleaseStub        func(release.Requirement) (release.Remote, bool, error)
 	getMatchedReleaseMutex       sync.RWMutex
 	getMatchedReleaseArgsForCall []struct {
@@ -184,6 +199,72 @@ func (fake *MultiReleaseSource) FindByIDReturnsOnCall(i int, result1 fetcher.Rel
 	}{result1, result2}
 }
 
+func (fake *MultiReleaseSource) GetLatestReleaseVersion(arg1 release.Requirement) (release.Remote, bool, error) {
+	fake.getLatestReleaseVersionMutex.Lock()
+	ret, specificReturn := fake.getLatestReleaseVersionReturnsOnCall[len(fake.getLatestReleaseVersionArgsForCall)]
+	fake.getLatestReleaseVersionArgsForCall = append(fake.getLatestReleaseVersionArgsForCall, struct {
+		arg1 release.Requirement
+	}{arg1})
+	fake.recordInvocation("GetLatestReleaseVersion", []interface{}{arg1})
+	fake.getLatestReleaseVersionMutex.Unlock()
+	if fake.GetLatestReleaseVersionStub != nil {
+		return fake.GetLatestReleaseVersionStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
+	}
+	fakeReturns := fake.getLatestReleaseVersionReturns
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+}
+
+func (fake *MultiReleaseSource) GetLatestReleaseVersionCallCount() int {
+	fake.getLatestReleaseVersionMutex.RLock()
+	defer fake.getLatestReleaseVersionMutex.RUnlock()
+	return len(fake.getLatestReleaseVersionArgsForCall)
+}
+
+func (fake *MultiReleaseSource) GetLatestReleaseVersionCalls(stub func(release.Requirement) (release.Remote, bool, error)) {
+	fake.getLatestReleaseVersionMutex.Lock()
+	defer fake.getLatestReleaseVersionMutex.Unlock()
+	fake.GetLatestReleaseVersionStub = stub
+}
+
+func (fake *MultiReleaseSource) GetLatestReleaseVersionArgsForCall(i int) release.Requirement {
+	fake.getLatestReleaseVersionMutex.RLock()
+	defer fake.getLatestReleaseVersionMutex.RUnlock()
+	argsForCall := fake.getLatestReleaseVersionArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *MultiReleaseSource) GetLatestReleaseVersionReturns(result1 release.Remote, result2 bool, result3 error) {
+	fake.getLatestReleaseVersionMutex.Lock()
+	defer fake.getLatestReleaseVersionMutex.Unlock()
+	fake.GetLatestReleaseVersionStub = nil
+	fake.getLatestReleaseVersionReturns = struct {
+		result1 release.Remote
+		result2 bool
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *MultiReleaseSource) GetLatestReleaseVersionReturnsOnCall(i int, result1 release.Remote, result2 bool, result3 error) {
+	fake.getLatestReleaseVersionMutex.Lock()
+	defer fake.getLatestReleaseVersionMutex.Unlock()
+	fake.GetLatestReleaseVersionStub = nil
+	if fake.getLatestReleaseVersionReturnsOnCall == nil {
+		fake.getLatestReleaseVersionReturnsOnCall = make(map[int]struct {
+			result1 release.Remote
+			result2 bool
+			result3 error
+		})
+	}
+	fake.getLatestReleaseVersionReturnsOnCall[i] = struct {
+		result1 release.Remote
+		result2 bool
+		result3 error
+	}{result1, result2, result3}
+}
+
 func (fake *MultiReleaseSource) GetMatchedRelease(arg1 release.Requirement) (release.Remote, bool, error) {
 	fake.getMatchedReleaseMutex.Lock()
 	ret, specificReturn := fake.getMatchedReleaseReturnsOnCall[len(fake.getMatchedReleaseArgsForCall)]
@@ -257,6 +338,8 @@ func (fake *MultiReleaseSource) Invocations() map[string][][]interface{} {
 	defer fake.downloadReleaseMutex.RUnlock()
 	fake.findByIDMutex.RLock()
 	defer fake.findByIDMutex.RUnlock()
+	fake.getLatestReleaseVersionMutex.RLock()
+	defer fake.getLatestReleaseVersionMutex.RUnlock()
 	fake.getMatchedReleaseMutex.RLock()
 	defer fake.getMatchedReleaseMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

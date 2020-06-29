@@ -78,8 +78,6 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				cfRabbitURL := fmt.Sprintf("%s/d/github.com/pivotal-cf/cf-rabbitmq-release?v=268.0.0", testServer.URL())
 				Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "268.0.0"}, RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
 
-
-
 			})
 
 		})
@@ -273,6 +271,63 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			Expect(release1DiskContents).To(BeEquivalentTo(release1ServerFileContents))
 
 			Expect(localRelease).To(Equal(release.Local{ID: release1ID, LocalPath: fullRelease1Path, SHA1: release1Sha1}))
+		})
+	})
+
+	Describe("GetLatestReleaseVersion from bosh.io", func() {
+		var (
+			releaseSource *BOSHIOReleaseSource
+			testServer    *ghttp.Server
+		)
+		When("a bosh release exist on bosh.io", func() {
+			BeforeEach(func() {
+				logger := log.New(GinkgoWriter, "", 0)
+				testServer = ghttp.NewServer()
+
+				path, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/cf-rabbitmq.*")
+				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "268.0.0"}, {"version": "267.0.0"}]`))
+
+				releaseSource = NewBOSHIOReleaseSource(ID, false, testServer.URL(), logger)
+			})
+
+			AfterEach(func() {
+				testServer.Close()
+			})
+
+			It("gets the latest version from bosh.io", func() {
+				rabbitmqRequirement := release.Requirement{Name: "cf-rabbitmq"}
+
+				foundRelease, found, err := releaseSource.GetLatestReleaseVersion(rabbitmqRequirement)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(found).To(BeTrue())
+				cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=268.0.0", testServer.URL())
+				Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "268.0.0"}, RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
+
+			})
+		})
+		When("a bosh release does not exist on bosh.io", func() {
+			BeforeEach(func() {
+				logger := log.New(GinkgoWriter, "", 0)
+				testServer = ghttp.NewServer()
+
+				path, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/cf-rabbitmq.*")
+				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
+
+				releaseSource = NewBOSHIOReleaseSource(ID, false, testServer.URL(), logger)
+			})
+
+			AfterEach(func() {
+				testServer.Close()
+			})
+
+			It("returns not found", func() {
+				rabbitmqRequirement := release.Requirement{Name: "cf-rabbitmq"}
+
+				foundRelease, found, err := releaseSource.GetLatestReleaseVersion(rabbitmqRequirement)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(found).To(BeFalse())
+				Expect(foundRelease).To(Equal(release.Remote{}))
+			})
 		})
 	})
 })

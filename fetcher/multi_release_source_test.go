@@ -19,6 +19,7 @@ var _ = Describe("multiReleaseSource", func() {
 	const (
 		releaseName    = "stuff-and-things"
 		releaseVersion = "42.42"
+		releaseVersionNewer = "43.43"
 	)
 
 	BeforeEach(func() {
@@ -174,6 +175,57 @@ var _ = Describe("multiReleaseSource", func() {
 				Expect(err).To(MatchError(ContainSubstring("src-1")))
 				Expect(err).To(MatchError(ContainSubstring("src-2")))
 				Expect(err).To(MatchError(ContainSubstring("src-3")))
+			})
+		})
+	})
+
+	Describe("GetLatestReleaseVersion", func() {
+		When("one of the release sources has a match", func() {
+			var (
+				matchedRelease release.Remote
+			)
+
+			BeforeEach(func() {
+				matchedRelease = release.Remote{
+					ID:         release.ID{Name: releaseName, Version: releaseVersion},
+					RemotePath: "/some/path",
+					SourceID:   src2.ID(),
+				}
+				src2.GetLatestReleaseVersionReturns(matchedRelease, true, nil)
+			})
+
+			It("returns that match", func() {
+				rel, found, err := multiSrc.GetLatestReleaseVersion(requirement)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(found).To(BeTrue())
+				Expect(rel).To(Equal(matchedRelease))
+			})
+		})
+		When("two of the release sources have a match", func() {
+			var (
+				matchedRelease release.Remote
+			)
+
+			BeforeEach(func() {
+				unMatchedRelease := release.Remote{
+					ID:         release.ID{Name: releaseName, Version: releaseVersion},
+					RemotePath: "/some/path",
+					SourceID:   src1.ID(),
+				}
+				matchedRelease = release.Remote{
+					ID:         release.ID{Name: releaseName, Version: releaseVersionNewer},
+					RemotePath: "/some/path",
+					SourceID:   src2.ID(),
+				}
+				src1.GetLatestReleaseVersionReturns(unMatchedRelease, true, nil)
+				src2.GetLatestReleaseVersionReturns(matchedRelease, true, nil)
+			})
+
+			It("returns that match", func() {
+				rel, found, err := multiSrc.GetLatestReleaseVersion(requirement)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(found).To(BeTrue())
+				Expect(rel).To(Equal(matchedRelease))
 			})
 		})
 	})

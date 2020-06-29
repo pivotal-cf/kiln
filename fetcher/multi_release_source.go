@@ -2,6 +2,7 @@ package fetcher
 
 import (
 	"fmt"
+	"github.com/Masterminds/semver"
 	"github.com/pivotal-cf/kiln/release"
 )
 
@@ -36,6 +37,30 @@ func (multiSrc multiReleaseSource) DownloadRelease(releaseDir string, remoteRele
 	}
 
 	return localRelease, nil
+}
+
+func (multiSrc multiReleaseSource) GetLatestReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
+	foundRelease := release.Remote{}
+	releaseWasFound := false
+	for _, src := range multiSrc {
+		rel, found, err := src.GetLatestReleaseVersion(requirement)
+		if err != nil {
+			return release.Remote{}, false, scopedError(src.ID(), err)
+		}
+		if found {
+			releaseWasFound = true
+			if (foundRelease == release.Remote{}) {
+				foundRelease = rel
+			} else {
+				newVersion, _ := semver.NewVersion(rel.ID.Version)
+				currentVersion, _ := semver.NewVersion(foundRelease.ID.Version)
+				if currentVersion.LessThan(newVersion) {
+					foundRelease = rel
+				}
+			}
+		}
+	}
+	return foundRelease, releaseWasFound, nil
 }
 
 func (multiSrc multiReleaseSource) FindByID(id string) (ReleaseSource, error) {

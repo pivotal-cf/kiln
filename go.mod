@@ -18,7 +18,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-ole/go-ole v1.2.4 // indirect
-	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/matt-royal/biloba v0.1.0
@@ -33,10 +32,8 @@ require (
 	github.com/pivotal-cf/jhanda v0.0.0-20191113141013-9cb1997202c0
 	github.com/pivotal-cf/paraphernalia v0.0.0-20180203224945-a64ae2051c20 // indirect
 	github.com/shirou/gopsutil v2.19.10+incompatible // indirect
-	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00 // indirect
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect
-	golang.org/x/net v0.0.0-20191119073136-fc4aabc6c914 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/text v0.3.2 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
