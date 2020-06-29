@@ -5,10 +5,13 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"github.com/Masterminds/semver"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -136,8 +139,47 @@ func (src S3ReleaseSource) GetMatchedRelease(requirement release.Requirement) (r
 	}, true, nil
 }
 
+type ByVersion []release.Remote
+
+func (a ByVersion) Len() int      { return len(a) }
+func (a ByVersion) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByVersion) Less(i, j int) bool {
+	v1, _ := semver.NewVersion(a[i].ID.Version)
+	v2, _ := semver.NewVersion(a[j].ID.Version)
+	return v1.LessThan(v2)
+}
+
 func (src S3ReleaseSource) GetLatestReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
-	return release.Remote{}, false, nil
+	prefix := requirement.Name + "/"
+	releaseResults, err := src.s3Client.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: &src.bucket,
+		Prefix: &prefix,
+	})
+	if err != nil {
+		return release.Remote{}, false, err
+	}
+
+	semverPattern, err := regexp.Compile("\\d+.\\d+.\\d+")
+	if err != nil {
+		return release.Remote{}, false, err
+	}
+
+	possibleRemotes := make([]release.Remote, len(releaseResults.Contents))
+	for i, result := range releaseResults.Contents {
+		version := semverPattern.FindString(*result.Key)
+		possibleRemotes[i] = release.Remote{
+			ID: release.ID{
+				Name:    requirement.Name,
+				Version: version,
+			},
+			RemotePath: *result.Key,
+			SourceID:   src.id,
+		}
+	}
+
+	sort.Sort(ByVersion(possibleRemotes))
+
+	return possibleRemotes[len(possibleRemotes)-1], true, nil
 }
 
 func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error) {

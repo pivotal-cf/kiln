@@ -279,24 +279,26 @@ var _ = Describe("S3ReleaseSource", func() {
 			releaseSource  S3ReleaseSource
 			fakeS3Client   *fakes.S3Client
 			desiredRelease release.Requirement
-			bpmReleaseID   release.ID
-			bpmKey         string
+			releaseID      release.ID
+			uaaKey         string
 			logger         *log.Logger
 		)
 
 		BeforeEach(func() {
-			bpmReleaseID = release.ID{Name: "bpm-release", Version: "1.2.3"}
+			releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
 			desiredRelease = release.Requirement{
-				Name:            "bpm-release",
+				Name: "uaa",
 			}
 
 			fakeS3Client = new(fakes.S3Client)
-			object1Key := "2.5/uaa-release/uaa-release-1.2.2-ubuntux-xenial-190.0.0.tgz"
-			object2Key := "2.5/uaa-release/uaa-release-1.2.3-ubuntux-xenial-190.0.0.tgz"
+			object1Key := "uaa/uaa-1.2.2-ubuntu-xenial-621.71.tgz"
+			object2Key := "uaa/uaa-1.2.3-ubuntu-xenial-621.71.tgz"
+			object3Key := "uaa/uaa-1.2.1-ubuntu-xenial-621.71.tgz"
 			fakeS3Client.ListObjectsV2Returns(&s3.ListObjectsV2Output{
 				Contents: []*s3.Object{
 					{Key: &object1Key},
 					{Key: &object2Key},
+					{Key: &object3Key},
 				},
 			}, nil)
 
@@ -305,28 +307,28 @@ var _ = Describe("S3ReleaseSource", func() {
 			releaseSource = NewS3ReleaseSource(
 				sourceID,
 				bucket,
-				`2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+				`{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
 				false,
 				fakeS3Client,
 				nil,
 				nil,
 				logger,
 			)
-			bpmKey = "2.5/bpm/bpm-release-1.2.3-ubuntu-xenial-190.0.0.tgz"
+			uaaKey = "uaa/uaa-1.2.3-ubuntu-xenial-621.71.tgz"
 		})
 
-		It("gets the latest version of a release", func() {
+		It("gets the latest version of a release from final-pcf-bosh-releases", func() {
 			remoteRelease, found, err := releaseSource.GetLatestReleaseVersion(desiredRelease)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(found).To(BeTrue())
 
 			Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
 			input := fakeS3Client.ListObjectsV2ArgsForCall(0)
-			Expect(input.Prefix).To(Equal("2.5/bpm/bpm-release"))
+			Expect(*input.Prefix).To(Equal("uaa/"))
 
 			Expect(remoteRelease).To(Equal(release.Remote{
-				ID:         bpmReleaseID,
-				RemotePath: bpmKey,
+				ID:         releaseID,
+				RemotePath: uaaKey,
 				SourceID:   sourceID,
 			}))
 		})
