@@ -159,7 +159,7 @@ func (src S3ReleaseSource) GetLatestReleaseVersion(requirement release.Requireme
 		return release.Remote{}, false, err
 	}
 
-	semverPattern, err := regexp.Compile("\\d+.\\d+.\\d+")
+	semverPattern, err := regexp.Compile("-\\d+.\\d+.\\d+-")
 	if err != nil {
 		return release.Remote{}, false, err
 	}
@@ -167,6 +167,16 @@ func (src S3ReleaseSource) GetLatestReleaseVersion(requirement release.Requireme
 	possibleRemotes := make([]release.Remote, len(releaseResults.Contents))
 	for i, result := range releaseResults.Contents {
 		version := semverPattern.FindString(*result.Key)
+		version = strings.Replace(version, "-", "", -1)
+		if version == "" {
+			//do some other parse
+			singleNumberPattern, err := regexp.Compile("-\\d+-")
+			if err != nil {
+				return release.Remote{}, false, err
+			}
+			version = singleNumberPattern.FindString(*result.Key)
+			version = strings.Replace(version, "-", "", -1)
+		}
 		possibleRemotes[i] = release.Remote{
 			ID: release.ID{
 				Name:    requirement.Name,
