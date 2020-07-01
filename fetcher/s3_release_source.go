@@ -146,11 +146,35 @@ func (a ByVersion) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByVersion) Less(i, j int) bool {
 	v1, _ := semver.NewVersion(a[i].ID.Version)
 	v2, _ := semver.NewVersion(a[j].ID.Version)
+	if v1.Equal(v2) {
+		// we have two files with the same version, so compare the stemcell versions
+		s1 := getStemcellVersion(a[i].RemotePath)
+		s2 := getStemcellVersion(a[j].RemotePath)
+		return s1.LessThan(s2)
+	}
 	return v1.LessThan(v2)
 }
 
+func getStemcellVersion(path string) *semver.Version {
+	stemcellVersion, _ := regexp.Compile(`-(\d+\.\d+).tgz`)
+	matchedVersions := stemcellVersion.FindStringSubmatch(path)
+	version := "0.0.0"
+	if matchedVersions != nil {
+		version = matchedVersions[1]
+	}
+	retVersion, _ := semver.NewVersion(version)
+	return retVersion
+}
+
 func (src S3ReleaseSource) GetLatestReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
-	prefix := requirement.Name + "/"
+	//src.logger.Println(src.pathTemplate())
+	//src.logger.Println(src.bucket)
+	pathTemplatePattern, _ := regexp.Compile(`^\d+\.\d+`)
+	tasVersion := pathTemplatePattern.FindString(src.pathTemplateString)
+	var prefix string
+	if tasVersion != "" { prefix = tasVersion + "/" }
+	prefix += requirement.Name + "/"
+
 	releaseResults, err := src.s3Client.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket: &src.bucket,
 		Prefix: &prefix,
@@ -159,32 +183,28 @@ func (src S3ReleaseSource) GetLatestReleaseVersion(requirement release.Requireme
 		return release.Remote{}, false, err
 	}
 
-	semverPattern, err := regexp.Compile("-\\d+.\\d+.\\d+-")
+	semverPattern, err := regexp.Compile("-\\d+(.\\d+)*-")
 	if err != nil {
 		return release.Remote{}, false, err
 	}
 
-	possibleRemotes := make([]release.Remote, len(releaseResults.Contents))
-	for i, result := range releaseResults.Contents {
+	var possibleRemotes []release.Remote
+	for _, result := range releaseResults.Contents {
 		version := semverPattern.FindString(*result.Key)
 		version = strings.Replace(version, "-", "", -1)
-		if version == "" {
-			//do some other parse
-			singleNumberPattern, err := regexp.Compile("-\\d+-")
-			if err != nil {
-				return release.Remote{}, false, err
-			}
-			version = singleNumberPattern.FindString(*result.Key)
-			version = strings.Replace(version, "-", "", -1)
+		if version != "" {
+			possibleRemotes = append(possibleRemotes,  release.Remote{
+				ID: release.ID{
+					Name:    requirement.Name,
+					Version: version,
+				},
+				RemotePath: *result.Key,
+				SourceID:   src.id,
+			})
 		}
-		possibleRemotes[i] = release.Remote{
-			ID: release.ID{
-				Name:    requirement.Name,
-				Version: version,
-			},
-			RemotePath: *result.Key,
-			SourceID:   src.id,
-		}
+	}
+	if len(possibleRemotes) < 1 {
+		return release.Remote{}, false, nil
 	}
 
 	sort.Sort(ByVersion(possibleRemotes))

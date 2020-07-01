@@ -272,8 +272,8 @@ var _ = Describe("S3ReleaseSource", func() {
 		})
 	})
 
-	Describe("GetLatestReleaseVersion from S3", func() {
-		const bucket = "built-bucket"
+	Describe("GetLatestReleaseVersion from S3 pcf-final-bosh-releases", func() {
+		const bucket = "pcf-final-bosh-releases"
 
 		var (
 			releaseSource  S3ReleaseSource
@@ -283,7 +283,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			uaaKey         string
 			logger         *log.Logger
 		)
-		When("version is semantic", func() {
+		When("version is semantic and has 2 latest versions with different stemcell versions", func() {
 			BeforeEach(func() {
 				releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
 				desiredRelease = release.Requirement{
@@ -294,11 +294,13 @@ var _ = Describe("S3ReleaseSource", func() {
 				object1Key := "uaa/uaa-1.2.2-ubuntu-xenial-621.71.tgz"
 				object2Key := "uaa/uaa-1.2.3-ubuntu-xenial-621.71.tgz"
 				object3Key := "uaa/uaa-1.2.1-ubuntu-xenial-621.71.tgz"
+				object4Key := "uaa/uaa-1.2.3-ubuntu-xenial-622.71.tgz"
 				fakeS3Client.ListObjectsV2Returns(&s3.ListObjectsV2Output{
 					Contents: []*s3.Object{
 						{Key: &object1Key},
-						{Key: &object2Key},
+						{Key: &object4Key},
 						{Key: &object3Key},
+						{Key: &object2Key},
 					},
 				}, nil)
 
@@ -314,7 +316,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					nil,
 					logger,
 				)
-				uaaKey = "uaa/uaa-1.2.3-ubuntu-xenial-621.71.tgz"
+				uaaKey = "uaa/uaa-1.2.3-ubuntu-xenial-622.71.tgz"
 			})
 
 			It("gets the latest version of a release", func() {
@@ -385,6 +387,72 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 		})
 	})
+
+	Describe("GetLatestReleaseVersion from S3 compiled-releases", func() {
+		const bucket = "compiled-releases"
+
+		var (
+			releaseSource  S3ReleaseSource
+			fakeS3Client   *fakes.S3Client
+			desiredRelease release.Requirement
+			releaseID      release.ID
+			uaaKey         string
+			logger         *log.Logger
+		)
+		When("version is semantic and has 2 latest versions with different stemcell versions", func() {
+			BeforeEach(func() {
+				releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
+				desiredRelease = release.Requirement{
+					Name: "uaa",
+				}
+
+				fakeS3Client = new(fakes.S3Client)
+				object1Key := "2.11/uaa/uaa-1.2.2-ubuntu-xenial-621.71.tgz"
+				object2Key := "2.11/uaa/uaa-1.2.3-ubuntu-xenial-621.71.tgz"
+				object3Key := "2.11/uaa/uaa-1.2.1-ubuntu-xenial-621.71.tgz"
+				object4Key := "2.11/uaa/uaa-1.2.3-ubuntu-xenial-622.71.tgz"
+				fakeS3Client.ListObjectsV2Returns(&s3.ListObjectsV2Output{
+					Contents: []*s3.Object{
+						{Key: &object1Key},
+						{Key: &object4Key},
+						{Key: &object3Key},
+						{Key: &object2Key},
+					},
+				}, nil)
+
+				logger = log.New(nil, "", 0)
+
+				releaseSource = NewS3ReleaseSource(
+					sourceID,
+					bucket,
+					`2.11/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+					false,
+					fakeS3Client,
+					nil,
+					nil,
+					logger,
+				)
+				uaaKey = "2.11/uaa/uaa-1.2.3-ubuntu-xenial-622.71.tgz"
+			})
+
+			It("gets the latest version of a release", func() {
+				remoteRelease, found, err := releaseSource.GetLatestReleaseVersion(desiredRelease)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(found).To(BeTrue())
+
+				Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
+				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
+				Expect(*input.Prefix).To(Equal("2.11/uaa/"))
+
+				Expect(remoteRelease).To(Equal(release.Remote{
+					ID:         releaseID,
+					RemotePath: uaaKey,
+					SourceID:   sourceID,
+				}))
+			})
+		})
+	})
+
 
 	Describe("UploadRelease", func() {
 		var (

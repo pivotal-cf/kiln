@@ -16,6 +16,7 @@ type MostRecentReleaseVersion struct {
 	Options struct {
 		Kilnfile string `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
 		Release  string `short:"r" long:"release" default:"releases" description:"release name"`
+		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
 	}
 }
 
@@ -56,10 +57,11 @@ func (cmd *MostRecentReleaseVersion) setup(args []string) (cargo.Kilnfile, error
 		return cargo.Kilnfile{}, err
 	}
 
-	kilnfile, _, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), cmd.Options.Kilnfile, []string{}, []string{})
+	kilnfile, _, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), cmd.Options.Kilnfile, cmd.Options.VariablesFiles, []string{})
 	if err != nil {
 		return cargo.Kilnfile{}, err
 	}
+
 	return kilnfile, nil
 }
 
