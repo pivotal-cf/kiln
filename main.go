@@ -95,7 +95,7 @@ func main() {
 		MultiReleaseSourceProvider: mrsProvider,
 	}
 
-	commandSet["most-recent-release-version"] = commands.NewMostRecentReleaseVersion(outLogger, mrsProvider)
+	commandSet["find-release-version"] = commands.NewFindReleaseVersion(outLogger, mrsProvider)
 
 
 	commandSet["compile-built-releases"] = commands.CompileBuiltReleases{

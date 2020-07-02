@@ -5,10 +5,16 @@ type KilnfileLock struct {
 	Stemcell Stemcell      `yaml:"stemcell_criteria"`
 }
 
+type ReleaseKiln struct {
+	Name    string `yaml:"name"`
+	Version string `yaml:"version"`
+}
+
 type Kilnfile struct {
 	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources"`
 	Slug            string                `yaml:"slug"`
 	PreGaUserGroups []string              `yaml:"pre_ga_user_groups"`
+	Releases        []ReleaseKiln         `yaml:"releases"`
 }
 
 type ReleaseSourceConfig struct {

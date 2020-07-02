@@ -180,7 +180,7 @@ var _ = Describe("multiReleaseSource", func() {
 		})
 	})
 
-	Describe("GetLatestReleaseVersion", func() {
+	Describe("FindReleaseVersion", func() {
 		When("one of the release sources has a match", func() {
 			var (
 				matchedRelease release.Remote
@@ -192,11 +192,11 @@ var _ = Describe("multiReleaseSource", func() {
 					RemotePath: "/some/path",
 					SourceID:   src2.ID(),
 				}
-				src2.GetLatestReleaseVersionReturns(matchedRelease, true, nil)
+				src2.FindReleaseVersionReturns(matchedRelease, true, nil)
 			})
 
 			It("returns that match", func() {
-				rel, found, err := multiSrc.GetLatestReleaseVersion(requirement)
+				rel, found, err := multiSrc.FindReleaseVersion(requirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 				Expect(rel).To(Equal(matchedRelease))
@@ -218,12 +218,12 @@ var _ = Describe("multiReleaseSource", func() {
 					RemotePath: "/some/path",
 					SourceID:   src2.ID(),
 				}
-				src1.GetLatestReleaseVersionReturns(unmatchedRelease, true, nil)
-				src2.GetLatestReleaseVersionReturns(matchedRelease, true, nil)
+				src1.FindReleaseVersionReturns(unmatchedRelease, true, nil)
+				src2.FindReleaseVersionReturns(matchedRelease, true, nil)
 			})
 
 			It("returns that match", func() {
-				rel, found, err := multiSrc.GetLatestReleaseVersion(requirement)
+				rel, found, err := multiSrc.FindReleaseVersion(requirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 				Expect(rel).To(Equal(matchedRelease))
@@ -245,12 +245,12 @@ var _ = Describe("multiReleaseSource", func() {
 					RemotePath: "/some/path",
 					SourceID:   src2.ID(),
 				}
-				src1.GetLatestReleaseVersionReturns(matchedRelease, true, nil)
-				src2.GetLatestReleaseVersionReturns(unmatchedRelease, true, nil)
+				src1.FindReleaseVersionReturns(matchedRelease, true, nil)
+				src2.FindReleaseVersionReturns(unmatchedRelease, true, nil)
 			})
 
 			It("returns the match from the first source", func() {
-				rel, found, err := multiSrc.GetLatestReleaseVersion(requirement)
+				rel, found, err := multiSrc.FindReleaseVersion(requirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 				Expect(rel).To(Equal(matchedRelease))

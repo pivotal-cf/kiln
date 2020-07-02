@@ -272,7 +272,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		})
 	})
 
-	Describe("GetLatestReleaseVersion from S3 pcf-final-bosh-releases", func() {
+	Describe("FindReleaseVersion from S3 pcf-final-bosh-releases", func() {
 		const bucket = "pcf-final-bosh-releases"
 
 		var (
@@ -283,22 +283,21 @@ var _ = Describe("S3ReleaseSource", func() {
 			uaaKey         string
 			logger         *log.Logger
 		)
-		When("version is semantic and has 2 latest versions with different stemcell versions", func() {
+		When("version is semantic and release has version constraint", func() {
 			BeforeEach(func() {
-				releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
+				releaseID = release.ID{Name: "uaa", Version: "1.1.1"}
 				desiredRelease = release.Requirement{
 					Name: "uaa",
+					Version: "~1.1",
 				}
 
 				fakeS3Client = new(fakes.S3Client)
-				object1Key := "uaa/uaa-1.2.2-ubuntu-xenial-621.71.tgz"
-				object2Key := "uaa/uaa-1.2.3-ubuntu-xenial-621.71.tgz"
-				object3Key := "uaa/uaa-1.2.1-ubuntu-xenial-621.71.tgz"
-				object4Key := "uaa/uaa-1.2.3-ubuntu-xenial-622.71.tgz"
+				object1Key := "uaa/uaa-1.2.2.tgz"
+				object2Key := "uaa/uaa-1.2.3.tgz"
+				object3Key := "uaa/uaa-1.1.1.tgz"
 				fakeS3Client.ListObjectsV2Returns(&s3.ListObjectsV2Output{
 					Contents: []*s3.Object{
 						{Key: &object1Key},
-						{Key: &object4Key},
 						{Key: &object3Key},
 						{Key: &object2Key},
 					},
@@ -309,18 +308,18 @@ var _ = Describe("S3ReleaseSource", func() {
 				releaseSource = NewS3ReleaseSource(
 					sourceID,
 					bucket,
-					`{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+					`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
 					false,
 					fakeS3Client,
 					nil,
 					nil,
 					logger,
 				)
-				uaaKey = "uaa/uaa-1.2.3-ubuntu-xenial-622.71.tgz"
+				uaaKey = "uaa/uaa-1.1.1.tgz"
 			})
 
-			It("gets the latest version of a release", func() {
-				remoteRelease, found, err := releaseSource.GetLatestReleaseVersion(desiredRelease)
+			It("gets the version that satisfies the constraint", func() {
+				remoteRelease, found, err := releaseSource.FindReleaseVersion(desiredRelease)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 
@@ -371,7 +370,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("gets the latest version of a release", func() {
-				remoteRelease, found, err := releaseSource.GetLatestReleaseVersion(desiredRelease)
+				remoteRelease, found, err := releaseSource.FindReleaseVersion(desiredRelease)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 
@@ -388,7 +387,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		})
 	})
 
-	Describe("GetLatestReleaseVersion from S3 compiled-releases", func() {
+	Describe("FindReleaseVersion from S3 compiled-releases", func() {
 		const bucket = "compiled-releases"
 
 		var (
@@ -436,7 +435,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("gets the latest version of a release", func() {
-				remoteRelease, found, err := releaseSource.GetLatestReleaseVersion(desiredRelease)
+				remoteRelease, found, err := releaseSource.FindReleaseVersion(desiredRelease)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 

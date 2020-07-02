@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/Masterminds/semver"
 	"io"
 	"io/ioutil"
 	"log"
@@ -99,7 +100,15 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement release.Requirement
 	return release.Remote{}, false, nil
 }
 
-func (src BOSHIOReleaseSource) GetLatestReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
+func (src BOSHIOReleaseSource) FindReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
+	var constraint *semver.Constraints
+	if requirement.Version != "" {
+		constraint, _ = semver.NewConstraint(requirement.Version)
+	} else {
+		constraint, _ = semver.NewConstraint(">0")
+	}
+	var validReleases []releaseResponse
+
 	for _, repo := range repos {
 		for _, suf := range suffixes {
 			fullName := repo + "/" + requirement.Name + suf
@@ -108,8 +117,14 @@ func (src BOSHIOReleaseSource) GetLatestReleaseVersion(requirement release.Requi
 				return release.Remote{}, false, err
 			}
 
-			if len(releaseResponses) > 0 {
-				latestReleaseVersion := releaseResponses[0].Version
+			for _, release := range releaseResponses {
+				version, _ := semver.NewVersion(release.Version)
+				if constraint.Check(version) {
+					validReleases = append(validReleases, release)
+				}
+			}
+			if len(validReleases) > 0 {
+				latestReleaseVersion := validReleases[0].Version
 				builtRelease := src.createReleaseRemote(requirement.Name, latestReleaseVersion, fullName)
 				return builtRelease, true, nil
 			}
@@ -117,7 +132,6 @@ func (src BOSHIOReleaseSource) GetLatestReleaseVersion(requirement release.Requi
 	}
 	return release.Remote{}, false, nil
 }
-
 
 func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error) {
 	src.logger.Printf("downloading %s %s from %s", remoteRelease.Name, remoteRelease.Version, src.ID())

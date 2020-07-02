@@ -39,11 +39,11 @@ func (multiSrc multiReleaseSource) DownloadRelease(releaseDir string, remoteRele
 	return localRelease, nil
 }
 
-func (multiSrc multiReleaseSource) GetLatestReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
+func (multiSrc multiReleaseSource) FindReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
 	foundRelease := release.Remote{}
 	releaseWasFound := false
 	for _, src := range multiSrc {
-		rel, found, err := src.GetLatestReleaseVersion(requirement)
+		rel, found, err := src.FindReleaseVersion(requirement)
 		if err != nil {
 			return release.Remote{}, false, scopedError(src.ID(), err)
 		}

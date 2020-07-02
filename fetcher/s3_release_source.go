@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"text/template"
 
@@ -166,13 +165,13 @@ func getStemcellVersion(path string) *semver.Version {
 	return retVersion
 }
 
-func (src S3ReleaseSource) GetLatestReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
-	//src.logger.Println(src.pathTemplate())
-	//src.logger.Println(src.bucket)
+func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
 	pathTemplatePattern, _ := regexp.Compile(`^\d+\.\d+`)
 	tasVersion := pathTemplatePattern.FindString(src.pathTemplateString)
 	var prefix string
-	if tasVersion != "" { prefix = tasVersion + "/" }
+	if tasVersion != "" {
+		prefix = tasVersion + "/"
+	}
 	prefix += requirement.Name + "/"
 
 	releaseResults, err := src.s3Client.ListObjectsV2(&s3.ListObjectsV2Input{
@@ -183,33 +182,53 @@ func (src S3ReleaseSource) GetLatestReleaseVersion(requirement release.Requireme
 		return release.Remote{}, false, err
 	}
 
-	semverPattern, err := regexp.Compile("-\\d+(.\\d+)*-")
+	semverPattern, err := regexp.Compile("-\\d+(.\\d+)*")
 	if err != nil {
 		return release.Remote{}, false, err
 	}
 
-	var possibleRemotes []release.Remote
+	foundRelease := release.Remote{}
+	var constraint *semver.Constraints
+	if requirement.Version != "" {
+		constraint, _ = semver.NewConstraint(requirement.Version)
+	} else {
+		constraint, _ = semver.NewConstraint(">0")
+	}
 	for _, result := range releaseResults.Contents {
 		version := semverPattern.FindString(*result.Key)
 		version = strings.Replace(version, "-", "", -1)
 		if version != "" {
-			possibleRemotes = append(possibleRemotes,  release.Remote{
-				ID: release.ID{
-					Name:    requirement.Name,
-					Version: version,
-				},
-				RemotePath: *result.Key,
-				SourceID:   src.id,
-			})
+			newVersion, _ := semver.NewVersion(version)
+			if !constraint.Check(newVersion) { continue }
+
+			if (foundRelease == release.Remote{}) {
+				foundRelease = release.Remote{
+					ID: release.ID{
+						Name:    requirement.Name,
+						Version: version,
+					},
+					RemotePath: *result.Key,
+					SourceID:   src.id,
+				}
+			} else {
+				foundVersion, _ := semver.NewVersion(foundRelease.Version)
+				if newVersion.GreaterThan(foundVersion) {
+					foundRelease = release.Remote{
+						ID: release.ID{
+							Name:    requirement.Name,
+							Version: version,
+						},
+						RemotePath: *result.Key,
+						SourceID:   src.id,
+					}
+				}
+			}
 		}
 	}
-	if len(possibleRemotes) < 1 {
+	if (foundRelease == release.Remote{}) {
 		return release.Remote{}, false, nil
 	}
-
-	sort.Sort(ByVersion(possibleRemotes))
-
-	return possibleRemotes[len(possibleRemotes)-1], true, nil
+	return foundRelease, true, nil
 }
 
 func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error) {

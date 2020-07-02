@@ -9,7 +9,7 @@ import (
 	"log"
 )
 
-type MostRecentReleaseVersion struct {
+type FindReleaseVersion struct {
 	outLogger   *log.Logger
 	mrsProvider MultiReleaseSourceProvider
 
@@ -21,38 +21,47 @@ type MostRecentReleaseVersion struct {
 	}
 }
 
-type mostRecentVersionOutput struct {
+type releaseVersionOutput struct {
 	Version    string `json:"version"`
 	RemotePath string `json:"remote_path"`
 }
 
-func NewMostRecentReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider) MostRecentReleaseVersion {
-	return MostRecentReleaseVersion{
+func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider) FindReleaseVersion {
+	return FindReleaseVersion{
 		outLogger:   outLogger,
 		mrsProvider: multiReleaseSourceProvider,
 	}
 }
 
-func (cmd MostRecentReleaseVersion) Execute(args []string) error {
+func (cmd FindReleaseVersion) Execute(args []string) error {
 	kilnfile, err := cmd.setup(args)
 	if err != nil {
 		return err
 	}
 	releaseSource := cmd.mrsProvider(kilnfile, false)
 
-	releaseRemote, _, err := releaseSource.GetLatestReleaseVersion(release.Requirement{
+	var version string
+	for _, release := range kilnfile.Releases {
+		if release.Name == cmd.Options.Release {
+			version = release.Version
+			break
+		}
+	}
+
+	releaseRemote, _, err := releaseSource.FindReleaseVersion(release.Requirement{
 		Name: cmd.Options.Release,
+		Version: version,
 	})
 
-	mostRecentVersionJson, _ := json.Marshal(mostRecentVersionOutput{
+	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{
 		Version:    releaseRemote.Version,
 		RemotePath: releaseRemote.RemotePath,
 	})
-	cmd.outLogger.Println(string(mostRecentVersionJson))
+	cmd.outLogger.Println(string(releaseVersionJson))
 	return err
 }
 
-func (cmd *MostRecentReleaseVersion) setup(args []string) (cargo.Kilnfile, error) {
+func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, error) {
 	_, err := jhanda.Parse(&cmd.Options, args)
 	if err != nil {
 		return cargo.Kilnfile{}, err
@@ -66,7 +75,7 @@ func (cmd *MostRecentReleaseVersion) setup(args []string) (cargo.Kilnfile, error
 	return kilnfile, nil
 }
 
-func (cmd MostRecentReleaseVersion) Usage() jhanda.Usage {
+func (cmd FindReleaseVersion) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Replace later",
 		ShortDescription: "rplce ltr",
