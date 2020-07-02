@@ -14,9 +14,10 @@ type MostRecentReleaseVersion struct {
 	mrsProvider MultiReleaseSourceProvider
 
 	Options struct {
-		Kilnfile string `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
-		Release  string `short:"r" long:"release" default:"releases" description:"release name"`
+		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
+		Release        string   `short:"r" long:"release" default:"releases" description:"release name"`
 		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
+		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
 	}
 }
 
@@ -44,7 +45,7 @@ func (cmd MostRecentReleaseVersion) Execute(args []string) error {
 	})
 
 	mostRecentVersionJson, _ := json.Marshal(mostRecentVersionOutput{
-		Version : releaseRemote.Version,
+		Version:    releaseRemote.Version,
 		RemotePath: releaseRemote.RemotePath,
 	})
 	cmd.outLogger.Println(string(mostRecentVersionJson))
@@ -57,7 +58,7 @@ func (cmd *MostRecentReleaseVersion) setup(args []string) (cargo.Kilnfile, error
 		return cargo.Kilnfile{}, err
 	}
 
-	kilnfile, _, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), cmd.Options.Kilnfile, cmd.Options.VariablesFiles, []string{})
+	kilnfile, _, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), cmd.Options.Kilnfile, cmd.Options.VariablesFiles, cmd.Options.Variables)
 	if err != nil {
 		return cargo.Kilnfile{}, err
 	}
