@@ -50,7 +50,7 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 
 	releaseRemote, _, err := releaseSource.FindReleaseVersion(release.Requirement{
 		Name: cmd.Options.Release,
-		Version: version,
+		VersionConstraint: version,
 		StemcellVersion: kilnfileLock.Stemcell.Version,
 		StemcellOS:  kilnfileLock.Stemcell.OS,
 	})

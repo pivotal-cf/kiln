@@ -117,7 +117,7 @@ releases:
 					It("returns the latest release version", func() {
 						Expect(executeErr).NotTo(HaveOccurred())
 						args := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
-						Expect(args.Version).To(Equal("~74.16.0"))
+						Expect(args.VersionConstraint).To(Equal("~74.16.0"))
 						Expect(args.StemcellVersion).To(Equal("4.5.6"))
 						Expect(args.StemcellOS).To(Equal("some-os"))
 						Expect((&writer).String()).To(ContainSubstring("\"74.16.5\""))

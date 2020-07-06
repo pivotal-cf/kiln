@@ -189,8 +189,8 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (
 
 	foundRelease := release.Remote{}
 	var constraint *semver.Constraints
-	if requirement.Version != "" {
-		constraint, _ = semver.NewConstraint(requirement.Version)
+	if requirement.VersionConstraint != "" {
+		constraint, _ = semver.NewConstraint(requirement.VersionConstraint)
 	} else {
 		constraint, _ = semver.NewConstraint(">0")
 	}

@@ -307,7 +307,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 			When("there is a version requirement", func() {
 				It("gets the latest version from bosh.io", func() {
-					rabbitmqRequirement := release.Requirement{Name: "cf-rabbitmq", Version: "~267"}
+					rabbitmqRequirement := release.Requirement{Name: "cf-rabbitmq", VersionConstraint: "~267"}
 
 					foundRelease, found, err := releaseSource.FindReleaseVersion(rabbitmqRequirement)
 					Expect(err).NotTo(HaveOccurred())

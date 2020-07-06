@@ -288,7 +288,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				releaseID = release.ID{Name: "uaa", Version: "1.1.1"}
 				desiredRelease = release.Requirement{
 					Name: "uaa",
-					Version: "~1.1",
+					VersionConstraint: "~1.1",
 					StemcellVersion: "621.71",
 				}
 

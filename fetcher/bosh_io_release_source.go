@@ -102,8 +102,8 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement release.Requirement
 
 func (src BOSHIOReleaseSource) FindReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
 	var constraint *semver.Constraints
-	if requirement.Version != "" {
-		constraint, _ = semver.NewConstraint(requirement.Version)
+	if requirement.VersionConstraint != "" {
+		constraint, _ = semver.NewConstraint(requirement.VersionConstraint)
 	} else {
 		constraint, _ = semver.NewConstraint(">0")
 	}
