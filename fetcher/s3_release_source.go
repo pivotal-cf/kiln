@@ -195,8 +195,14 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (
 		constraint, _ = semver.NewConstraint(">0")
 	}
 	for _, result := range releaseResults.Contents {
-		version := semverPattern.FindString(*result.Key)
+		versions := semverPattern.FindAllString(*result.Key, -1)
+		version := versions[0]
+		stemcellVersion := versions[len(versions)-1]
 		version = strings.Replace(version, "-", "", -1)
+		stemcellVersion = strings.Replace(stemcellVersion, "-", "", -1)
+		if len(versions) > 1 && stemcellVersion != requirement.StemcellVersion {
+			continue
+		}
 		if version != "" {
 			newVersion, _ := semver.NewVersion(version)
 			if !constraint.Check(newVersion) { continue }

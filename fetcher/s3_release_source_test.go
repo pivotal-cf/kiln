@@ -289,6 +289,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				desiredRelease = release.Requirement{
 					Name: "uaa",
 					Version: "~1.1",
+					StemcellVersion: "621.71",
 				}
 
 				fakeS3Client = new(fakes.S3Client)
@@ -340,17 +341,20 @@ var _ = Describe("S3ReleaseSource", func() {
 				releaseID = release.ID{Name: "uaa", Version: "123"}
 				desiredRelease = release.Requirement{
 					Name: "uaa",
+					StemcellVersion: "621.71",
 				}
 
 				fakeS3Client = new(fakes.S3Client)
-				object1Key := "uaa/uaa-122-ubuntu-xenial-621.71.tgz"
-				object2Key := "uaa/uaa-123-ubuntu-xenial-621.71.tgz"
-				object3Key := "uaa/uaa-121-ubuntu-xenial-621.71.tgz"
+				object1Key := "uaa/uaa-122.tgz"
+				object2Key := "uaa/uaa-123.tgz"
+				object3Key := "uaa/uaa-123.tgz"
+				object4Key := "uaa/uaa-121.tgz"
 				fakeS3Client.ListObjectsV2Returns(&s3.ListObjectsV2Output{
 					Contents: []*s3.Object{
 						{Key: &object1Key},
-						{Key: &object2Key},
 						{Key: &object3Key},
+						{Key: &object2Key},
+						{Key: &object4Key},
 					},
 				}, nil)
 
@@ -359,14 +363,14 @@ var _ = Describe("S3ReleaseSource", func() {
 				releaseSource = NewS3ReleaseSource(
 					sourceID,
 					bucket,
-					`{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+					`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
 					false,
 					fakeS3Client,
 					nil,
 					nil,
 					logger,
 				)
-				uaaKey = "uaa/uaa-123-ubuntu-xenial-621.71.tgz"
+				uaaKey = "uaa/uaa-123.tgz"
 			})
 
 			It("gets the latest version of a release", func() {
@@ -403,6 +407,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
 				desiredRelease = release.Requirement{
 					Name: "uaa",
+					StemcellVersion: "621.71",
 				}
 
 				fakeS3Client = new(fakes.S3Client)
@@ -425,13 +430,13 @@ var _ = Describe("S3ReleaseSource", func() {
 					sourceID,
 					bucket,
 					`2.11/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
-					false,
+					true,
 					fakeS3Client,
 					nil,
 					nil,
 					logger,
 				)
-				uaaKey = "2.11/uaa/uaa-1.2.3-ubuntu-xenial-622.71.tgz"
+				uaaKey = "2.11/uaa/uaa-1.2.3-ubuntu-xenial-621.71.tgz"
 			})
 
 			It("gets the latest version of a release", func() {

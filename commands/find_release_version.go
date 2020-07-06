@@ -34,7 +34,7 @@ func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider Mul
 }
 
 func (cmd FindReleaseVersion) Execute(args []string) error {
-	kilnfile, err := cmd.setup(args)
+	kilnfile, kilnfileLock, err := cmd.setup(args)
 	if err != nil {
 		return err
 	}
@@ -51,6 +51,8 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 	releaseRemote, _, err := releaseSource.FindReleaseVersion(release.Requirement{
 		Name: cmd.Options.Release,
 		Version: version,
+		StemcellVersion: kilnfileLock.Stemcell.Version,
+		StemcellOS:  kilnfileLock.Stemcell.OS,
 	})
 
 	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{
@@ -61,24 +63,24 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 	return err
 }
 
-func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, error) {
+func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, error) {
 	_, err := jhanda.Parse(&cmd.Options, args)
 	if err != nil {
-		return cargo.Kilnfile{}, err
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
 
-	kilnfile, _, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), cmd.Options.Kilnfile, cmd.Options.VariablesFiles, cmd.Options.Variables)
+	kilnfile, kilnfileLock, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), cmd.Options.Kilnfile, cmd.Options.VariablesFiles, cmd.Options.Variables)
 	if err != nil {
-		return cargo.Kilnfile{}, err
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
 
-	return kilnfile, nil
+	return kilnfile, kilnfileLock, nil
 }
 
 func (cmd FindReleaseVersion) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Replace later",
-		ShortDescription: "rplce ltr",
+		Description:      "Prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints.",
+		ShortDescription: "prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints",
 		Flags:            cmd.Options,
 	}
 }

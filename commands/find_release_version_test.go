@@ -51,10 +51,11 @@ stemcell_criteria:
 ---
 releases:
 - name: uaa
-  version: ~> 74.16.0
+  version: ~74.16.0
   source: bosh.io
 - name: uaac
   source: bosh.io`
+
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
 			err = ioutil.WriteFile(someKilnfilePath, []byte(kilnContents), 0644)
 			Expect(err).NotTo(HaveOccurred())
@@ -91,6 +92,8 @@ releases:
 					It("returns the latest release version", func() {
 						Expect(executeErr).NotTo(HaveOccurred())
 						args := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+						Expect(args.StemcellVersion).To(Equal("4.5.6"))
+						Expect(args.StemcellOS).To(Equal("some-os"))
 						Expect(args.Version).To(Equal(""))
 						Expect((&writer).String()).To(ContainSubstring("\"74.12.5\""))
 						Expect((&writer).String()).To(ContainSubstring("\"remote_path\":\"remote_url\""))
@@ -114,7 +117,9 @@ releases:
 					It("returns the latest release version", func() {
 						Expect(executeErr).NotTo(HaveOccurred())
 						args := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
-						Expect(args.Version).To(Equal("~> 74.16.0"))
+						Expect(args.Version).To(Equal("~74.16.0"))
+						Expect(args.StemcellVersion).To(Equal("4.5.6"))
+						Expect(args.StemcellOS).To(Equal("some-os"))
 						Expect((&writer).String()).To(ContainSubstring("\"74.16.5\""))
 						Expect((&writer).String()).To(ContainSubstring("\"remote_path\":\"remote_url\""))
 					})

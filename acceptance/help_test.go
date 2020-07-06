@@ -20,6 +20,7 @@ Commands:
   bake                    bakes a tile
   compile-built-releases  compiles built releases and uploads them
   fetch                   fetches releases
+  find-release-version    prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints
   help                    prints this usage information
   publish                 publish tile on Pivnet
   sync-with-local         update the Kilnfile.lock based on local releases
