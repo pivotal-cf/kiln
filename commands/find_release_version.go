@@ -24,6 +24,8 @@ type FindReleaseVersion struct {
 type releaseVersionOutput struct {
 	Version    string `json:"version"`
 	RemotePath string `json:"remote_path"`
+	Source     string `json:"source"`
+	SHA        string `json:"sha"`
 }
 
 func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider) FindReleaseVersion {
@@ -49,15 +51,17 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 	}
 
 	releaseRemote, _, err := releaseSource.FindReleaseVersion(release.Requirement{
-		Name: cmd.Options.Release,
+		Name:              cmd.Options.Release,
 		VersionConstraint: version,
-		StemcellVersion: kilnfileLock.Stemcell.Version,
-		StemcellOS:  kilnfileLock.Stemcell.OS,
+		StemcellVersion:   kilnfileLock.Stemcell.Version,
+		StemcellOS:        kilnfileLock.Stemcell.OS,
 	})
 
 	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{
 		Version:    releaseRemote.Version,
 		RemotePath: releaseRemote.RemotePath,
+		SHA:        releaseRemote.SHA,
+		Source:     releaseRemote.SourceID,
 	})
 	cmd.outLogger.Println(string(releaseVersionJson))
 	return err

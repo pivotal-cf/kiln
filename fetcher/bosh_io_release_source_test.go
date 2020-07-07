@@ -285,7 +285,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				testServer = ghttp.NewServer()
 
 				path, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/cf-rabbitmq.*")
-				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "268.0.0"}, {"version": "267.5.0"}]`))
+				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"309.0.5","url":"https://bosh.io/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.0","sha1":"5df538657c2cc830bda679420a9b162682018ded"},{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"308.0.0","url":"https://bosh.io/d/github.com/cloudfoundry/cf-rabbitmq-release?v=308.0.0","sha1":"56202c9a466a8394683ae432ee2dea21ef6ef865"}]`))
 
 				releaseSource = NewBOSHIOReleaseSource(ID, false, testServer.URL(), logger)
 			})
@@ -300,20 +300,23 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 					foundRelease, found, err := releaseSource.FindReleaseVersion(rabbitmqRequirement)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(found).To(BeTrue())
-					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=268.0.0", testServer.URL())
-					Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "268.0.0"}, RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
+					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.5", testServer.URL())
+					Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "309.0.5"}, SHA: "5df538657c2cc830bda679420a9b162682018ded",RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
 
 				})
 			})
 			When("there is a version requirement", func() {
 				It("gets the latest version from bosh.io", func() {
-					rabbitmqRequirement := release.Requirement{Name: "cf-rabbitmq", VersionConstraint: "~267"}
+					rabbitmqRequirement := release.Requirement{Name: "cf-rabbitmq", VersionConstraint: "~309"}
 
 					foundRelease, found, err := releaseSource.FindReleaseVersion(rabbitmqRequirement)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(found).To(BeTrue())
-					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=267.5.0", testServer.URL())
-					Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "267.5.0"}, RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
+					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.5", testServer.URL())
+					Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "309.0.5"},
+						SHA:        "5df538657c2cc830bda679420a9b162682018ded",
+						RemotePath: cfRabbitURL,
+						SourceID:   ReleaseSourceTypeBOSHIO}))
 				})
 			})
 		})

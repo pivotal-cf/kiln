@@ -125,7 +125,9 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(requirement release.Requiremen
 			}
 			if len(validReleases) > 0 {
 				latestReleaseVersion := validReleases[0].Version
+				latestSha := validReleases[0].SHA
 				builtRelease := src.createReleaseRemote(requirement.Name, latestReleaseVersion, fullName)
+				builtRelease.SHA = latestSha
 				return builtRelease, true, nil
 			}
 		}
@@ -220,6 +222,7 @@ func (src BOSHIOReleaseSource) getReleases(name string) ([]releaseResponse, erro
 
 type releaseResponse struct {
 	Version string `json:"version"`
+	SHA     string `json:"sha1"`
 }
 
 func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {

@@ -84,7 +84,8 @@ releases:
 					fakeReleasesSource.FindReleaseVersionReturns(release.Remote{
 						ID:         release.ID{Name: releaseName, Version: "74.12.5"},
 						RemotePath: "remote_url",
-						SourceID:   "sourceId",
+						SourceID:   "bosh.io",
+						SHA:        "some-sha",
 					}, true, nil)
 				})
 
@@ -97,6 +98,8 @@ releases:
 						Expect(args.Version).To(Equal(""))
 						Expect((&writer).String()).To(ContainSubstring("\"74.12.5\""))
 						Expect((&writer).String()).To(ContainSubstring("\"remote_path\":\"remote_url\""))
+						Expect((&writer).String()).To(ContainSubstring("\"source\":\"bosh.io\""))
+						Expect((&writer).String()).To(ContainSubstring("\"sha\":\"some-sha\""))
 					})
 				})
 			})

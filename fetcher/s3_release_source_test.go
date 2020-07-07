@@ -332,6 +332,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					ID:         releaseID,
 					RemotePath: uaaKey,
 					SourceID:   sourceID,
+					SHA:        "234",
 				}))
 			})
 		})

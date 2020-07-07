@@ -234,6 +234,9 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (
 	if (foundRelease == release.Remote{}) {
 		return release.Remote{}, false, nil
 	}
+	// get sha1 and append to foundRelease here?
+	releaseLocal, err := src.DownloadRelease("/tmp", foundRelease, DefaultDownloadThreadCount)
+	foundRelease.SHA = releaseLocal.SHA1
 	return foundRelease, true, nil
 }
 
