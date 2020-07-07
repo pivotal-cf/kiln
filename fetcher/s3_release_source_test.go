@@ -285,11 +285,12 @@ var _ = Describe("S3ReleaseSource", func() {
 		)
 		When("version is semantic and release has version constraint", func() {
 			BeforeEach(func() {
+
 				releaseID = release.ID{Name: "uaa", Version: "1.1.1"}
 				desiredRelease = release.Requirement{
-					Name: "uaa",
+					Name:              "uaa",
 					VersionConstraint: "~1.1",
-					StemcellVersion: "621.71",
+					StemcellVersion:   "621.71",
 				}
 
 				fakeS3Client = new(fakes.S3Client)
@@ -304,7 +305,14 @@ var _ = Describe("S3ReleaseSource", func() {
 					},
 				}, nil)
 
-				logger = log.New(nil, "", 0)
+				fakeS3Downloader := new(fakes.S3Downloader)
+				// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
+				fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
+					n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
+					return int64(n), err
+				}
+
+				logger = log.New(GinkgoWriter, "", 0)
 
 				releaseSource = NewS3ReleaseSource(
 					sourceID,
@@ -312,7 +320,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
 					false,
 					fakeS3Client,
-					nil,
+					fakeS3Downloader,
 					nil,
 					logger,
 				)
@@ -332,7 +340,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					ID:         releaseID,
 					RemotePath: uaaKey,
 					SourceID:   sourceID,
-					SHA:        "234",
+					SHA:        "1a77ff749f0f2f49493eb8a517fb7eaa04df9b62",
 				}))
 			})
 		})
@@ -341,7 +349,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			BeforeEach(func() {
 				releaseID = release.ID{Name: "uaa", Version: "123"}
 				desiredRelease = release.Requirement{
-					Name: "uaa",
+					Name:            "uaa",
 					StemcellVersion: "621.71",
 				}
 
@@ -359,7 +367,14 @@ var _ = Describe("S3ReleaseSource", func() {
 					},
 				}, nil)
 
-				logger = log.New(nil, "", 0)
+				logger = log.New(GinkgoWriter, "", 0)
+				fakeS3Downloader := new(fakes.S3Downloader)
+				// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
+				fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
+					n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
+					return int64(n), err
+				}
+
 
 				releaseSource = NewS3ReleaseSource(
 					sourceID,
@@ -367,7 +382,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
 					false,
 					fakeS3Client,
-					nil,
+					fakeS3Downloader,
 					nil,
 					logger,
 				)
@@ -387,6 +402,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					ID:         releaseID,
 					RemotePath: uaaKey,
 					SourceID:   sourceID,
+					SHA: "bc7cb372ee4b9a9d6f4e8a993d46405d2c114e9c",
 				}))
 			})
 		})
@@ -407,7 +423,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			BeforeEach(func() {
 				releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
 				desiredRelease = release.Requirement{
-					Name: "uaa",
+					Name:            "uaa",
 					StemcellVersion: "621.71",
 				}
 
@@ -425,7 +441,13 @@ var _ = Describe("S3ReleaseSource", func() {
 					},
 				}, nil)
 
-				logger = log.New(nil, "", 0)
+				logger = log.New(GinkgoWriter, "", 0)
+				fakeS3Downloader := new(fakes.S3Downloader)
+				// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
+				fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
+					n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
+					return int64(n), err
+				}
 
 				releaseSource = NewS3ReleaseSource(
 					sourceID,
@@ -433,7 +455,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					`2.11/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
 					true,
 					fakeS3Client,
-					nil,
+					fakeS3Downloader,
 					nil,
 					logger,
 				)
@@ -453,11 +475,11 @@ var _ = Describe("S3ReleaseSource", func() {
 					ID:         releaseID,
 					RemotePath: uaaKey,
 					SourceID:   sourceID,
+					SHA:        "78facf87f730395fb263fb5e89157c438fc1d8a9",
 				}))
 			})
 		})
 	})
-
 
 	Describe("UploadRelease", func() {
 		var (
