@@ -56,10 +56,14 @@ github.com/cheggaaa/pb v2.0.7+incompatible/go.mod h1:pQciLPpbU0oxA0h+VJYYLxO+XeD
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cloudfoundry/bosh-agent v2.322.0+incompatible h1:QMrfIngzcDObEFfwf6yL5wAF07d12iJOGESgt1OCaNw=
 github.com/cloudfoundry/bosh-agent v2.322.0+incompatible/go.mod h1:7UvVn5vc/d6icLrBx6GhBlpSMwe2+x1C2A7x4TbPhiU=
+github.com/cloudfoundry/bosh-agent v2.325.0+incompatible h1:JYK2mGX1FRc0Wm8/7J5xVdZQCjWZEd5HX43Y2s55EMw=
+github.com/cloudfoundry/bosh-agent v2.325.0+incompatible/go.mod h1:7UvVn5vc/d6icLrBx6GhBlpSMwe2+x1C2A7x4TbPhiU=
 github.com/cloudfoundry/bosh-cli v6.2.0+incompatible h1:+0uaMFZgpA3+iwBzXwK79/dNaMaCQ9cTKeqeOObuMA8=
 github.com/cloudfoundry/bosh-cli v6.2.0+incompatible/go.mod h1:rzIB+e1sn7wQL/TJ54bl/FemPKRhXby5BIMS3tLuWFM=
 github.com/cloudfoundry/bosh-cli v6.3.0+incompatible h1:fyiyS2d0vs3xNrS0Zd1TrCuO5eLizamWeA0ItqusBs4=
 github.com/cloudfoundry/bosh-cli v6.3.0+incompatible/go.mod h1:rzIB+e1sn7wQL/TJ54bl/FemPKRhXby5BIMS3tLuWFM=
+github.com/cloudfoundry/bosh-cli v6.3.1+incompatible h1:t56xCMktKPfp3/HyQ1jbnLJlHwFGDo5p5WnqDXyKcx0=
+github.com/cloudfoundry/bosh-cli v6.3.1+incompatible/go.mod h1:rzIB+e1sn7wQL/TJ54bl/FemPKRhXby5BIMS3tLuWFM=
 github.com/cloudfoundry/bosh-davcli v0.0.44 h1:y1G3B1+6aQ+xJ2/Bx6M8TF5wkwg9So1u5zn0IR2R4P8=
 github.com/cloudfoundry/bosh-davcli v0.0.44/go.mod h1:WERSlcwbbm6fF7GJfz421BeAduzbD6JlDF7NCpYTXUE=
 github.com/cloudfoundry/bosh-gcscli v0.0.18 h1:2ouLAiIcdF1pWSR+igurUPQu6fwedaXyKnpTD0RyVL8=
