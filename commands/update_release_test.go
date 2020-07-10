@@ -21,15 +21,19 @@ import (
 
 var _ = Describe("UpdateRelease", func() {
 	const (
-		releaseName          = "capi"
-		oldReleaseVersion    = "1.8.0"
-		newReleaseVersion    = "1.8.7"
-		oldRemotePath        = "https://bosh.io/releases/some-release"
-		newRemotePath        = "some/s3/path"
-		oldReleaseSourceName = "bosh.io"
-		newReleaseSourceName = "final-pcf-bosh-releases"
-		oldReleaseSha1       = "old-sha1"
-		newReleaseSha1       = "new-sha1"
+		releaseName                    = "capi"
+		oldReleaseVersion              = "1.8.0"
+		newReleaseVersion              = "1.8.7"
+		notDownloadedReleaseVersion    = "1.8.4"
+		oldRemotePath                  = "https://bosh.io/releases/some-release"
+		newRemotePath                  = "some/s3/path"
+		notDownloadedRemotePath        = "some-other/s3/path"
+		oldReleaseSourceName           = "bosh.io"
+		newReleaseSourceName           = "final-pcf-bosh-releases"
+		notDownloadedReleaseSourceName = "compiled-releases"
+		oldReleaseSha1                 = "old-sha1"
+		newReleaseSha1                 = "new-sha1"
+		notDownloadedReleaseSha1       = "some-other-new-sha1"
 
 		releasesDir = "releases"
 	)
@@ -97,8 +101,18 @@ var _ = Describe("UpdateRelease", func() {
 				RemotePath: newRemotePath,
 				SourceID:   newReleaseSourceName,
 			}
+			exepectedNotDownloadedRelease := release.Remote{
+				ID: release.ID {
+					Name: releaseName,
+					Version: notDownloadedReleaseVersion,
+				},
+				RemotePath: notDownloadedRemotePath,
+				SourceID: notDownloadedReleaseSourceName,
+				SHA: notDownloadedReleaseSha1,
+			}
 
 			releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, true, nil)
+			releaseSource.FindReleaseVersionReturns(exepectedNotDownloadedRelease, true, nil)
 			releaseSource.DownloadReleaseReturns(expectedDownloadedRelease, nil)
 		})
 
@@ -391,6 +405,37 @@ var _ = Describe("UpdateRelease", func() {
 			It("errors", func() {
 				err := updateReleaseCommand.Execute([]string{"--no-such-flag"})
 				Expect(err).To(MatchError(ContainSubstring("-no-such-flag")))
+			})
+		})
+
+		When("updating lock file without downloading", func() {
+			It("writes the new version to the Kilnfile.lock", func() {
+				err := updateReleaseCommand.Execute([]string{
+					"--kilnfile", "Kilnfile",
+					"--name", releaseName,
+					"--version", newReleaseVersion,
+					"--releases-directory", releasesDir,
+					"--without-download",
+					"--variable", "someKey=someValue",
+					"--variables-file", "thisisafile",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(kilnFileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
+
+				fs, path, updatedLockfile := kilnFileLoader.SaveKilnfileLockArgsForCall(0)
+				Expect(fs).To(Equal(filesystem))
+				Expect(path).To(Equal("Kilnfile"))
+				Expect(updatedLockfile.Releases).To(HaveLen(2))
+				Expect(updatedLockfile.Releases).To(ContainElement(
+					cargo.ReleaseLock{
+						Name:         releaseName,
+						Version:      notDownloadedReleaseVersion,
+						SHA1:         notDownloadedReleaseSha1,
+						RemoteSource: notDownloadedReleaseSourceName,
+						RemotePath:   notDownloadedRemotePath,
+					},
+				))
 			})
 		})
 	})

@@ -22,6 +22,7 @@ type UpdateRelease struct {
 		Variables                    []string `short:"vr" long:"variable" description:"variable in key=value format"`
 		VariablesFiles               []string `short:"vf" long:"variables-file" description:"path to variables file"`
 		AllowOnlyPublishableReleases bool     `long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
+		WithoutDownload              bool     `long:"without-download" description:"updates releases without downloading them"`
 	}
 	multiReleaseSourceProvider MultiReleaseSourceProvider
 	filesystem                 billy.Filesystem
@@ -56,9 +57,16 @@ func (u UpdateRelease) Execute(args []string) error {
 	}
 
 	var releaseLock *cargo.ReleaseLock
+	var releaseVersionConstraint string
 	for i := range kilnfileLock.Releases {
 		if kilnfileLock.Releases[i].Name == u.Options.Name {
 			releaseLock = &kilnfileLock.Releases[i]
+			break
+		}
+	}
+	for _, release := range kilnfile.Releases {
+		if release.Name == u.Options.Name {
+			releaseVersionConstraint = release.Version
 			break
 		}
 	}
@@ -72,28 +80,55 @@ func (u UpdateRelease) Execute(args []string) error {
 	releaseSource := u.multiReleaseSourceProvider(kilnfile, u.Options.AllowOnlyPublishableReleases)
 
 	u.logger.Println("Searching for the release...")
-	remoteRelease, found, err := releaseSource.GetMatchedRelease(release.Requirement{
-		Name:            u.Options.Name,
-		Version:         u.Options.Version,
-		StemcellOS:      kilnfileLock.Stemcell.OS,
-		StemcellVersion: kilnfileLock.Stemcell.Version,
-	})
-	if err != nil {
-		return fmt.Errorf("error finding the release: %w", err)
-	}
-	if !found {
-		return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
-	}
 
-	localRelease, err := releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease, fetcher.DefaultDownloadThreadCount)
-	if err != nil {
-		return fmt.Errorf("error downloading the release: %w", err)
-	}
+	var localRelease release.Local
+	var remoteRelease release.Remote
+	var found bool
+	var newVersion, newSHA1, newSourceID, newRemotePath string
+	if u.Options.WithoutDownload {
+		remoteRelease, found, err = releaseSource.FindReleaseVersion(release.Requirement{
+			Name:              u.Options.Name,
+			VersionConstraint: releaseVersionConstraint,
+			StemcellVersion:   kilnfileLock.Stemcell.Version,
+			StemcellOS:        kilnfileLock.Stemcell.OS,
+		})
 
-	newVersion := localRelease.Version
-	newSHA1 := localRelease.SHA1
-	newSourceID := remoteRelease.SourceID
-	newRemotePath := remoteRelease.RemotePath
+		if err != nil {
+			return fmt.Errorf("error finding the release: %w", err)
+		}
+		if !found {
+			return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
+		}
+
+		newVersion = remoteRelease.Version
+		newSHA1 = remoteRelease.SHA
+		newSourceID = remoteRelease.SourceID
+		newRemotePath = remoteRelease.RemotePath
+
+	} else {
+		remoteRelease, found, err = releaseSource.GetMatchedRelease(release.Requirement{
+			Name:            u.Options.Name,
+			Version:         u.Options.Version,
+			StemcellOS:      kilnfileLock.Stemcell.OS,
+			StemcellVersion: kilnfileLock.Stemcell.Version,
+		})
+
+		if err != nil {
+			return fmt.Errorf("error finding the release: %w", err)
+		}
+		if !found {
+			return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
+		}
+
+		localRelease, err = releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease, fetcher.DefaultDownloadThreadCount)
+		if err != nil {
+			return fmt.Errorf("error downloading the release: %w", err)
+		}
+		newVersion = localRelease.Version
+		newSHA1 = localRelease.SHA1
+		newSourceID = remoteRelease.SourceID
+		newRemotePath = remoteRelease.RemotePath
+	}
 
 	if releaseLock.Version == newVersion && releaseLock.SHA1 == newSHA1 && releaseLock.RemoteSource == newSourceID && releaseLock.RemotePath == newRemotePath {
 		u.logger.Println("Neither the version nor remote location of the release changed. No changes made.")
