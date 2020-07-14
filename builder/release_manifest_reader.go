@@ -124,7 +124,7 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 
 	return Part{
 		File:     releaseTarball,
-		Name:     inputReleaseManifest.Name,
+		Name:     outputReleaseManifest.Name,
 		Metadata: outputReleaseManifest,
 	}, nil
 }

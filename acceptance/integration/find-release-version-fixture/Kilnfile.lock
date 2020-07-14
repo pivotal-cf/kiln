@@ -1,0 +1,10 @@
+---
+releases:
+- name: uaa
+  sha1: somesha
+  version: 74.15.0
+  remote_source: bosh.io
+  remote_path: bosh.io/uaa
+stemcell_criteria:
+  os: ubuntu-xenial
+  version: "621.64"
