@@ -52,6 +52,7 @@ stemcell_criteria:
 releases:
 - name: uaa
   version: ~74.16.0
+  stemcell: ~4.5.6
   source: bosh.io
 - name: uaac
   source: bosh.io`
@@ -77,7 +78,7 @@ releases:
 			executeErr = findReleaseVersion.Execute(fetchExecuteArgs)
 		})
 
-		When("there is no version constraint", func() {
+		When("there is no version nor stemcell constraint", func() {
 			When("a latest release exists", func() {
 				BeforeEach(func() {
 					releaseName = "uaac"
@@ -105,7 +106,7 @@ releases:
 			})
 		})
 
-		When("there is a version constraint", func() {
+		When("there is a version and stemcell contraint", func() {
 			When("a release exists", func() {
 				BeforeEach(func() {
 					releaseName = "uaa"

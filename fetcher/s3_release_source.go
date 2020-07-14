@@ -188,24 +188,32 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (
 	}
 
 	foundRelease := release.Remote{}
-	var constraint *semver.Constraints
+	var versionConstraint, stemcellConstraint *semver.Constraints
 	if requirement.VersionConstraint != "" {
-		constraint, _ = semver.NewConstraint(requirement.VersionConstraint)
+		versionConstraint, _ = semver.NewConstraint(requirement.VersionConstraint)
 	} else {
-		constraint, _ = semver.NewConstraint(">0")
+		versionConstraint, _ = semver.NewConstraint(">0")
 	}
+	if requirement.StemcellConstraint != "" {
+		stemcellConstraint,_ = semver.NewConstraint(requirement.StemcellConstraint)
+	} else {
+		stemcellConstraint,_ = semver.NewConstraint(">0")
+	}
+
 	for _, result := range releaseResults.Contents {
 		versions := semverPattern.FindAllString(*result.Key, -1)
 		version := versions[0]
-		stemcellVersion := versions[len(versions)-1]
+		stemcellVer := versions[len(versions)-1]
 		version = strings.Replace(version, "-", "", -1)
-		stemcellVersion = strings.Replace(stemcellVersion, "-", "", -1)
-		if len(versions) > 1 && stemcellVersion != requirement.StemcellVersion {
+		stemcellVer = strings.Replace(stemcellVer, "-", "", -1)
+		stemcellVersion,_ := semver.NewVersion(stemcellVer)
+		//check if not stemcell within the constraint, continue to the next result
+		if len(versions) > 1 && !stemcellConstraint.Check(stemcellVersion) {
 			continue
 		}
 		if version != "" {
 			newVersion, _ := semver.NewVersion(version)
-			if !constraint.Check(newVersion) {
+			if !versionConstraint.Check(newVersion) {
 				continue
 			}
 

@@ -6,8 +6,9 @@ type KilnfileLock struct {
 }
 
 type ReleaseKiln struct {
-	Name    string `yaml:"name"`
-	Version string `yaml:"version"`
+	Name     string `yaml:"name"`
+	Version  string `yaml:"version"`
+	Stemcell string `yaml:"stemcell"`
 }
 
 type Kilnfile struct {

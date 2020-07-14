@@ -20,6 +20,7 @@ var _ = Describe("multiReleaseSource", func() {
 	const (
 		releaseName         = "stuff-and-things"
 		releaseVersion      = "42.42"
+		stemcellVersion     = "2.4.5"
 		releaseVersionNewer = "43.43"
 	)
 
@@ -35,8 +36,8 @@ var _ = Describe("multiReleaseSource", func() {
 		requirement = release.Requirement{
 			Name:            releaseName,
 			Version:         releaseVersion,
-			StemcellOS:      "not-used",
-			StemcellVersion: "not-used",
+			StemcellOS:      "some-os",
+			StemcellVersion: stemcellVersion,
 		}
 	})
 

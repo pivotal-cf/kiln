@@ -419,25 +419,25 @@ var _ = Describe("S3ReleaseSource", func() {
 			uaaKey         string
 			logger         *log.Logger
 		)
-		When("version is semantic and has 2 latest versions with different stemcell versions", func() {
+		When("version is semantic and has a stemcell constraint", func() {
 			BeforeEach(func() {
-				releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
+				releaseID = release.ID{Name: "uaa", Version: "1.2.2"}
 				desiredRelease = release.Requirement{
 					Name:            "uaa",
-					StemcellVersion: "621.71",
+					StemcellConstraint: "~621.72",
 				}
 
 				fakeS3Client = new(fakes.S3Client)
-				object1Key := "2.11/uaa/uaa-1.2.2-ubuntu-xenial-621.71.tgz"
+				object1Key := "2.11/uaa/uaa-1.2.3-ubuntu-xenial-621.72.tgz"
 				object2Key := "2.11/uaa/uaa-1.2.3-ubuntu-xenial-621.71.tgz"
 				object3Key := "2.11/uaa/uaa-1.2.1-ubuntu-xenial-621.71.tgz"
-				object4Key := "2.11/uaa/uaa-1.2.3-ubuntu-xenial-622.71.tgz"
+				object4Key := "2.11/uaa/uaa-1.2.3-ubuntu-xenial-623.71.tgz"
 				fakeS3Client.ListObjectsV2Returns(&s3.ListObjectsV2Output{
 					Contents: []*s3.Object{
-						{Key: &object1Key},
-						{Key: &object4Key},
-						{Key: &object3Key},
 						{Key: &object2Key},
+						{Key: &object4Key},
+						{Key: &object1Key},
+						{Key: &object3Key},
 					},
 				}, nil)
 
@@ -459,10 +459,10 @@ var _ = Describe("S3ReleaseSource", func() {
 					nil,
 					logger,
 				)
-				uaaKey = "2.11/uaa/uaa-1.2.3-ubuntu-xenial-621.71.tgz"
+				uaaKey = "2.11/uaa/uaa-1.2.2-ubuntu-xenial-621.72.tgz"
 			})
 
-			It("gets the latest version of a release", func() {
+			FIt("gets the latest version of a release and respects stemcell constraint", func() {
 				remoteRelease, found, err := releaseSource.FindReleaseVersion(desiredRelease)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
@@ -475,10 +475,11 @@ var _ = Describe("S3ReleaseSource", func() {
 					ID:         releaseID,
 					RemotePath: uaaKey,
 					SourceID:   sourceID,
-					SHA:        "78facf87f730395fb263fb5e89157c438fc1d8a9",
+					SHA:        "43663a6bb89f3fabc319900ca05ae090f4f2e2d6",
 				}))
 			})
 		})
+
 	})
 
 	Describe("UploadRelease", func() {
