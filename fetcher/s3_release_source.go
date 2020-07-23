@@ -156,7 +156,7 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (
 		return release.Remote{}, false, err
 	}
 
-	semverPattern, err := regexp.Compile("-\\d+(.\\d+)*")
+	semverPattern, err := regexp.Compile("(-|v)\\d+(.\\d+)*")
 	if err != nil {
 		return release.Remote{}, false, err
 	}
@@ -173,6 +173,7 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (
 		version := versions[0]
 		stemcellVersion := versions[len(versions)-1]
 		version = strings.Replace(version, "-", "", -1)
+		version = strings.Replace(version, "v", "", -1)
 		stemcellVersion = strings.Replace(stemcellVersion, "-", "", -1)
 		if len(versions) > 1 && stemcellVersion != requirement.StemcellVersion {
 			continue
