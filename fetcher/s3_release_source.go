@@ -138,32 +138,6 @@ func (src S3ReleaseSource) GetMatchedRelease(requirement release.Requirement) (r
 	}, true, nil
 }
 
-type ByVersion []release.Remote
-
-func (a ByVersion) Len() int      { return len(a) }
-func (a ByVersion) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByVersion) Less(i, j int) bool {
-	v1, _ := semver.NewVersion(a[i].ID.Version)
-	v2, _ := semver.NewVersion(a[j].ID.Version)
-	if v1.Equal(v2) {
-		// we have two files with the same version, so compare the stemcell versions
-		s1 := getStemcellVersion(a[i].RemotePath)
-		s2 := getStemcellVersion(a[j].RemotePath)
-		return s1.LessThan(s2)
-	}
-	return v1.LessThan(v2)
-}
-
-func getStemcellVersion(path string) *semver.Version {
-	stemcellVersion, _ := regexp.Compile(`-(\d+\.\d+).tgz`)
-	matchedVersions := stemcellVersion.FindStringSubmatch(path)
-	version := "0.0.0"
-	if matchedVersions != nil {
-		version = matchedVersions[1]
-	}
-	retVersion, _ := semver.NewVersion(version)
-	return retVersion
-}
 
 func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
 	pathTemplatePattern, _ := regexp.Compile(`^\d+\.\d+`)
