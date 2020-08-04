@@ -11,6 +11,8 @@ github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d h1:G0m3OIz70MZUW
 github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/aws/aws-sdk-go v1.33.5 h1:p2fr1ryvNTU6avUWLI+/H7FGv0TBIjzVM5WDgXBBv4U=
 github.com/aws/aws-sdk-go v1.33.5/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
+github.com/aws/aws-sdk-go v1.33.19 h1:SMna0QLInNqm+nNL9tb7OVWTqSfNYSxrCa2adnyVth4=
+github.com/aws/aws-sdk-go v1.33.19/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
 github.com/bmatcuk/doublestar v1.2.2 h1:oC24CykoSAB8zd7XgruHo33E0cHJf/WhQA/7BeXj+x0=
 github.com/bmatcuk/doublestar v1.2.2/go.mod h1:wiQtGV+rzVYxB7WIlirSN++5HPtPlXEo9MEoZQC/PmE=
 github.com/charlievieth/fs v0.0.0-20170613215519-7dc373669fa1 h1:vTlpHKxJqykyKdW9bkrDJNWeKNuSIAJ0TP/K4lRsz/Q=
