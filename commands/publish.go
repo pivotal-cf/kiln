@@ -44,6 +44,11 @@ type PivnetUserGroupsService interface {
 	AddToRelease(productSlug string, releaseID int, userGroupID int) error
 }
 
+//go:generate counterfeiter -o ./fakes/pivnet_release_upgrade_paths_service.go --fake-name PivnetReleaseUpgradePathsService . PivnetReleaseUpgradePathsService
+type PivnetReleaseUpgradePathsService interface {
+	Get(productSlug string, releaseID int) ([]pivnet.ReleaseUpgradePath, error)
+}
+
 type Publish struct {
 	Options struct {
 		Kilnfile            string `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
@@ -54,9 +59,10 @@ type Publish struct {
 		Window              string `long:"window" required:"true"`
 	}
 
-	PivnetReleaseService      PivnetReleasesService
-	PivnetProductFilesService PivnetProductFilesService
-	PivnetUserGroupsService   PivnetUserGroupsService
+	PivnetReleaseService             PivnetReleasesService
+	PivnetProductFilesService        PivnetProductFilesService
+	PivnetUserGroupsService          PivnetUserGroupsService
+	PivnetReleaseUpgradePathsService PivnetReleaseUpgradePathsService
 
 	FS  billy.Filesystem
 	Now func() time.Time
@@ -193,7 +199,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 
 	_, err = releases.Find(versionToPublish.String())
 	if err == nil {
-		return  fmt.Errorf("release %s already exists", versionToPublish.String())
+		return fmt.Errorf("release %s already exists", versionToPublish.String())
 	}
 
 	release, err := releases.Find(buildVersion.String())
@@ -206,6 +212,14 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 		return err
 	}
 
+	upgradePaths, err := p.PivnetReleaseUpgradePathsService.Get(kilnfile.Slug, release.ID)
+	if err != nil {
+		return err
+	}
+
+	if len(upgradePaths) == 0 {
+		return fmt.Errorf("no upgrade paths set for %s", release.Version)
+	}
 	endOfSupportDate, err := p.eogsDate(rv, releases)
 	if err != nil {
 		return err

@@ -41,14 +41,15 @@ pre_ga_user_groups:
 	Describe("Execute", func() {
 		When("on the happy-path", func() {
 			var (
-				publish          Publish
-				rs               *fakes.PivnetReleasesService
-				pfs              *fakes.PivnetProductFilesService
-				ugs              *fakes.PivnetUserGroupsService
-				now              time.Time
-				versionStr       string
-				releasesOnPivnet []pivnet.Release
-				outLoggerBuffer  strings.Builder
+				publish                    Publish
+				rs                         *fakes.PivnetReleasesService
+				pfs                        *fakes.PivnetProductFilesService
+				ugs                        *fakes.PivnetUserGroupsService
+				releaseUpgradePathsService *fakes.PivnetReleaseUpgradePathsService
+				now                        time.Time
+				versionStr                 string
+				releasesOnPivnet           []pivnet.Release
+				outLoggerBuffer            strings.Builder
 			)
 			const releaseID = 123
 
@@ -57,6 +58,8 @@ pre_ga_user_groups:
 				rs = new(fakes.PivnetReleasesService)
 				pfs = new(fakes.PivnetProductFilesService)
 				ugs = new(fakes.PivnetUserGroupsService)
+				releaseUpgradePathsService = new(fakes.PivnetReleaseUpgradePathsService)
+				releaseUpgradePathsService.GetReturns([]pivnet.ReleaseUpgradePath{{}}, nil)
 				releasesOnPivnet = []pivnet.Release{}
 				now = time.Now()
 				outLoggerBuffer = strings.Builder{}
@@ -86,10 +89,11 @@ pre_ga_user_groups:
 				kf.Close()
 
 				publish = Publish{
-					FS:                        fs,
-					PivnetReleaseService:      rs,
-					PivnetProductFilesService: pfs,
-					PivnetUserGroupsService:   ugs,
+					FS:                               fs,
+					PivnetReleaseService:             rs,
+					PivnetProductFilesService:        pfs,
+					PivnetUserGroupsService:          ugs,
+					PivnetReleaseUpgradePathsService: releaseUpgradePathsService,
 					Now: func() time.Time {
 						return now
 					},
@@ -626,6 +630,7 @@ pre_ga_user_groups:
 				rs                            *fakes.PivnetReleasesService
 				pfs                           *fakes.PivnetProductFilesService
 				ugs                           *fakes.PivnetUserGroupsService
+				releaseUpgradePathsService    *fakes.PivnetReleaseUpgradePathsService
 
 				executeArgs     []string
 				outLoggerBuffer strings.Builder
@@ -641,6 +646,8 @@ pre_ga_user_groups:
 				rs = new(fakes.PivnetReleasesService)
 				pfs = new(fakes.PivnetProductFilesService)
 				ugs = new(fakes.PivnetUserGroupsService)
+				releaseUpgradePathsService = new(fakes.PivnetReleaseUpgradePathsService)
+				releaseUpgradePathsService.GetReturns([]pivnet.ReleaseUpgradePath{{}}, nil)
 
 				noVersionFile, noKilnFile = false, false
 				fs = memfs.New()
@@ -668,6 +675,7 @@ pre_ga_user_groups:
 				publish.PivnetReleaseService = rs
 				publish.PivnetProductFilesService = pfs
 				publish.PivnetUserGroupsService = ugs
+				publish.PivnetReleaseUpgradePathsService = releaseUpgradePathsService
 				publish.Now = func() time.Time {
 					return now
 				}
@@ -955,6 +963,29 @@ pre_ga_user_groups:
 
 			})
 
+			When("upgrade path is empty", func() {
+				BeforeEach(func() {
+					rs.ListReturns([]pivnet.Release{{Version: someVersion.String()}}, nil)
+					pfs.ListReturns(
+						[]pivnet.ProductFile{
+							{
+								ID:          42,
+								Name:        "PCF Pivotal Application Service v2.8 OSL",
+								FileVersion: "2.8",
+								FileType:    "Open Source License",
+							},
+						},
+						nil,
+					)
+					releaseUpgradePathsService.GetReturns([]pivnet.ReleaseUpgradePath{}, nil)
+				})
+
+				It("returns an error", func() {
+					err := publish.Execute(executeArgs)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring("no upgrade paths set for 2.8")))
+				})
+			})
 		})
 	})
 })
