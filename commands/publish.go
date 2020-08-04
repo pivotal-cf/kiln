@@ -114,7 +114,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 		p.Now = time.Now
 	}
 
-	if p.PivnetReleaseService == nil || p.PivnetProductFilesService == nil || p.PivnetUserGroupsService == nil {
+	if p.PivnetReleaseService == nil || p.PivnetProductFilesService == nil || p.PivnetUserGroupsService == nil || p.PivnetReleaseUpgradePathsService == nil {
 		config := pivnet.ClientConfig{
 			Host:      p.Options.PivnetHost,
 			UserAgent: "kiln",
@@ -136,6 +136,10 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 
 		if p.PivnetUserGroupsService == nil {
 			p.PivnetUserGroupsService = client.UserGroups
+		}
+
+		if p.PivnetReleaseUpgradePathsService == nil {
+			p.PivnetReleaseUpgradePathsService = client.ReleaseUpgradePaths
 		}
 	}
 
