@@ -49,6 +49,11 @@ type PivnetReleaseUpgradePathsService interface {
 	Get(productSlug string, releaseID int) ([]pivnet.ReleaseUpgradePath, error)
 }
 
+//go:generate counterfeiter -o ./fakes/pivnet_release_dependencies_service.go --fake-name PivnetReleaseDependenciesService . PivnetReleaseDependenciesService
+type PivnetReleaseDependenciesService interface {
+	List(productSlug string, releaseID int) ([]pivnet.ReleaseDependency, error)
+}
+
 type Publish struct {
 	Options struct {
 		Kilnfile            string `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
@@ -63,6 +68,7 @@ type Publish struct {
 	PivnetProductFilesService        PivnetProductFilesService
 	PivnetUserGroupsService          PivnetUserGroupsService
 	PivnetReleaseUpgradePathsService PivnetReleaseUpgradePathsService
+	PivnetReleaseDependenciesService PivnetReleaseDependenciesService
 
 	FS  billy.Filesystem
 	Now func() time.Time
@@ -114,7 +120,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 		p.Now = time.Now
 	}
 
-	if p.PivnetReleaseService == nil || p.PivnetProductFilesService == nil || p.PivnetUserGroupsService == nil || p.PivnetReleaseUpgradePathsService == nil {
+	if p.PivnetReleaseService == nil || p.PivnetProductFilesService == nil || p.PivnetUserGroupsService == nil || p.PivnetReleaseUpgradePathsService == nil || p.PivnetReleaseDependenciesService == nil{
 		config := pivnet.ClientConfig{
 			Host:      p.Options.PivnetHost,
 			UserAgent: "kiln",
@@ -140,6 +146,10 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 
 		if p.PivnetReleaseUpgradePathsService == nil {
 			p.PivnetReleaseUpgradePathsService = client.ReleaseUpgradePaths
+		}
+
+		if p.PivnetReleaseDependenciesService == nil {
+			p.PivnetReleaseDependenciesService = client.ReleaseDependencies
 		}
 	}
 
@@ -224,6 +234,16 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 	if len(upgradePaths) == 0 {
 		return fmt.Errorf("no upgrade paths set for %s", release.Version)
 	}
+
+	dependencies, err := p.PivnetReleaseDependenciesService.List(kilnfile.Slug, release.ID)
+	if err != nil {
+		return err
+	}
+
+	if len(dependencies) == 0 {
+		return fmt.Errorf("no dependencies set for %s", release.Version)
+	}
+
 	endOfSupportDate, err := p.eogsDate(rv, releases)
 	if err != nil {
 		return err
