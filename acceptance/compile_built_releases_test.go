@@ -84,19 +84,47 @@ stemcell_criteria:
   os: "ubuntu-trusty"
   version: "22"
 `
+		kilnfileLock2Contents = `
+releases:
+  - name: release-a  # needs to be compiled
+    version: 1.2.3
+    remote_source: ` + builtReleasesID + `
+    remote_path: release-a/release-a-1.2.3.tgz
+    sha1: original-sha
+  - name: release-b  # already compiled
+    version: 42
+    remote_source: ` + compiledReleasesID + `
+    remote_path: release-b/release-b-42-ubuntu-trusty-22.tgz
+    sha1: original-sha
+  - name: release-c  # needs to be compiled
+    version: 2.3.4
+    remote_source: ` + builtReleasesID + `
+    remote_path: release-c/release-c-2.3.4.tgz
+    sha1: original-sha
+  - name: release-d  # needs to be compiled
+    version: 5.6.7
+    remote_source: ` + builtReleasesID + `
+    remote_path: release-d/release-d-5.6.7.tgz
+    sha1: original-sha
+stemcell_criteria:
+  os: "ubuntu-trusty"
+  version: "22"
+`
 		compiledReleaseAContents = "release-a-compiled-contents"
 		compiledReleaseCContents = "release-c-compiled-contents"
+		compiledReleaseDContents = "release-d-compiled-contents"
 	)
 
 	var (
-		tmpDirRoot                         string
-		stemcellTarballPath                string
-		releasesDirectoryPath              string
-		s3BucketDirectoryPath              string
-		kilnfilePath, kilnfileLockPath     string
-		releaseABuiltSHA, releaseCBuiltSHA string
-		releaseAS3LocalPath                string
-		releaseCS3LocalPath                string
+		tmpDirRoot                                           string
+		stemcellTarballPath                                  string
+		releasesDirectoryPath                                string
+		s3BucketDirectoryPath                                string
+		kilnfilePath, kilnfileLockPath                       string
+		releaseABuiltSHA, releaseCBuiltSHA, releaseDBuiltSHA string
+		releaseAS3LocalPath                                  string
+		releaseCS3LocalPath                                  string
+		releaseDS3LocalPath                                  string
 
 		deleteDeploymentWasCalled int
 		exportReleaseWasCalled    int
@@ -151,6 +179,10 @@ stemcell_criteria:
 
 		releaseCS3LocalPath = filepath.Join(s3BucketDirectoryPath, "release-c.tgz")
 		releaseCBuiltSHA, err = test_helpers.WriteReleaseTarball(releaseCS3LocalPath, "release-c", "2.3.4", osfs.New(""))
+		Expect(err).NotTo(HaveOccurred())
+
+		releaseDS3LocalPath = filepath.Join(s3BucketDirectoryPath, "release-d.tgz")
+		releaseDBuiltSHA, err = test_helpers.WriteReleaseTarball(releaseDS3LocalPath, "release-d", "5.6.7", osfs.New(""))
 		Expect(err).NotTo(HaveOccurred())
 
 		caCert, serverCert, err = GenerateCertificateChain()
@@ -234,6 +266,8 @@ stemcell_criteria:
 					desiredTaskID = 10
 				case "release-c":
 					desiredTaskID = 20
+				case "release-d":
+					desiredTaskID = 30
 				}
 
 				w.Header().Set("Location", fmt.Sprintf("https://%s/tasks/%d", req.Host, desiredTaskID))
@@ -266,6 +300,19 @@ stemcell_criteria:
 				))
 			case "/resources/67890":
 				w.Write([]byte(compiledReleaseCContents))
+
+			case "/tasks/30":
+				w.Write([]byte(`{"id":30, "state": "done"}`))
+			case "/tasks/30/output":
+				s := sha1.New()
+				io.Copy(s, strings.NewReader(compiledReleaseDContents))
+				sha1 := hex.EncodeToString(s.Sum(nil))
+				w.Write([]byte(
+					fmt.Sprintf(`{"blobstore_id": %q, "sha1": %q}`, "45678", sha1),
+				))
+			case "/resources/45678":
+				w.Write([]byte(compiledReleaseDContents))
+
 			case "/cleanup":
 				cleanupWasCalled++
 				w.Header().Set("Location", fmt.Sprintf("https://%s/tasks/1", req.Host))
@@ -300,6 +347,8 @@ stemcell_criteria:
 					filePath = releaseAS3LocalPath
 				case fmt.Sprintf("/%s/%s/%s-%s.tgz", builtReleasesID, "release-c", "release-c", "2.3.4"):
 					filePath = releaseCS3LocalPath
+				case fmt.Sprintf("/%s/%s/%s-%s.tgz", builtReleasesID, "release-d", "release-d", "5.6.7"):
+					filePath = releaseDS3LocalPath
 				}
 
 				byteRange := strings.TrimPrefix(req.Header.Get("RANGE"), "bytes=")
@@ -440,6 +489,117 @@ stemcell_criteria:
 
 		// clean up releases
 		Expect(cleanupWasCalled).To(Equal(1))
+	})
+
+	When("using parallel option", func() {
+		BeforeEach(func() {
+			Expect(
+				ioutil.WriteFile(kilnfileLockPath, []byte(kilnfileLock2Contents), 0600),
+			).To(Succeed())
+		})
+
+		It("compiles releases for a given stemcell", func() {
+			command := exec.Command(pathToMain, "compile-built-releases",
+				"--kilnfile", kilnfilePath,
+				"--releases-directory", releasesDirectoryPath,
+				"--stemcell-file", stemcellTarballPath,
+				"--upload-target-id", compiledReleasesID,
+				"--parallel", "2",
+			)
+
+			command.Env = append(command.Env, fmt.Sprintf("BOSH_ENVIRONMENT=%s", boshServer.URL))
+			command.Env = append(command.Env, "BOSH_CLIENT=some-bosh-user")
+			command.Env = append(command.Env, "BOSH_CLIENT_SECRET=some-bosh-password")
+			command.Env = append(command.Env, fmt.Sprintf("BOSH_CA_CERT=%s", string(caCert)))
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session.Wait(2 * time.Second)).Should(gexec.Exit(0))
+
+			// download releases to releases directory
+			built1File, err := os.Open(filepath.Join(releasesDirectoryPath, "release-a-1.2.3.tgz"))
+			Expect(err).NotTo(HaveOccurred())
+			defer built1File.Close()
+
+			s := sha1.New()
+			io.Copy(s, built1File)
+			actualSHA1 := hex.EncodeToString(s.Sum(nil))
+
+			expectedStat, _ := os.Stat(releaseAS3LocalPath)
+			actualStat, _ := os.Stat(filepath.Join(releasesDirectoryPath, "release-a-1.2.3.tgz"))
+			Expect(actualSHA1).To(Equal(releaseABuiltSHA), fmt.Sprintf("expected = %#v\nactual = %#v\n", expectedStat, actualStat))
+
+			built2File, err := os.Open(filepath.Join(releasesDirectoryPath, "release-c-2.3.4.tgz"))
+			Expect(err).NotTo(HaveOccurred())
+			defer built2File.Close()
+
+			s = sha1.New()
+			io.Copy(s, built2File)
+			actualSHA1 = hex.EncodeToString(s.Sum(nil))
+			Expect(actualSHA1).To(Equal(releaseCBuiltSHA), fmt.Sprintf("expected = %#v\nactual = %#v\n", expectedStat, actualStat))
+
+			built3File, err := os.Open(filepath.Join(releasesDirectoryPath, "release-d-5.6.7.tgz"))
+			Expect(err).NotTo(HaveOccurred())
+			defer built3File.Close()
+
+			s = sha1.New()
+			io.Copy(s, built3File)
+			actualSHA1 = hex.EncodeToString(s.Sum(nil))
+			Expect(actualSHA1).To(Equal(releaseDBuiltSHA), fmt.Sprintf("expected = %#v\nactual = %#v\n", expectedStat, actualStat))
+
+			// upload releases to director
+			actualReleaseSHA1, ok := boshUploadedReleases.Load("release-a-1.2.3")
+			Expect(ok).To(BeTrue())
+			Expect(actualReleaseSHA1.(string)).To(Equal(releaseABuiltSHA))
+
+			actualReleaseSHA1, ok = boshUploadedReleases.Load("release-c-2.3.4")
+			Expect(ok).To(BeTrue())
+			Expect(actualReleaseSHA1.(string)).To(Equal(releaseCBuiltSHA))
+
+			actualReleaseSHA1, ok = boshUploadedReleases.Load("release-d-5.6.7")
+			Expect(ok).To(BeTrue())
+			Expect(actualReleaseSHA1.(string)).To(Equal(releaseDBuiltSHA))
+
+			// upload stemcell to director
+			actualStemcellSHA1, ok := boshUploadedStemcells.Load("ubuntu-trusty-22")
+			Expect(ok).To(BeTrue())
+			Expect(actualStemcellSHA1.(string)).To(Equal(stemcellSHA))
+
+			// export releases
+			Expect(exportReleaseWasCalled).To(Equal(3))
+
+			compiledReleaseContents, err := ioutil.ReadFile(filepath.Join(releasesDirectoryPath, "release-a-1.2.3-ubuntu-trusty-22.tgz"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(compiledReleaseContents).To(Equal([]byte(compiledReleaseAContents)))
+
+			compiledReleaseContents, err = ioutil.ReadFile(filepath.Join(releasesDirectoryPath, "release-c-2.3.4-ubuntu-trusty-22.tgz"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(compiledReleaseContents).To(Equal([]byte(compiledReleaseCContents)))
+
+			compiledReleaseContents, err = ioutil.ReadFile(filepath.Join(releasesDirectoryPath, "release-d-5.6.7-ubuntu-trusty-22.tgz"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(compiledReleaseContents).To(Equal([]byte(compiledReleaseDContents)))
+
+			// upload releases to compiled bucket
+			uploadedContents, ok := s3UploadedFiles.Load(fmt.Sprintf("/%s/release-a/release-a-1.2.3-ubuntu-trusty-22.tgz", compiledReleasesID))
+			Expect(ok).To(BeTrue())
+			Expect(uploadedContents.(string)).To(Equal(compiledReleaseAContents))
+
+			uploadedContents, ok = s3UploadedFiles.Load(fmt.Sprintf("/%s/release-c/release-c-2.3.4-ubuntu-trusty-22.tgz", compiledReleasesID))
+			Expect(ok).To(BeTrue())
+			Expect(uploadedContents.(string)).To(Equal(compiledReleaseCContents))
+
+			uploadedContents, ok = s3UploadedFiles.Load(fmt.Sprintf("/%s/release-d/release-d-5.6.7-ubuntu-trusty-22.tgz", compiledReleasesID))
+			Expect(ok).To(BeTrue())
+			Expect(uploadedContents.(string)).To(Equal(compiledReleaseDContents))
+
+			// delete deployment
+			Expect(deleteDeploymentWasCalled).To(Equal(2))
+
+			// clean up releases
+			Expect(cleanupWasCalled).To(Equal(1))
+		})
 	})
 
 	It("updates the Kilnfile.lock with the compiled releases", func() {

@@ -44,7 +44,9 @@ var _ = Describe("CompileBuiltReleases", func() {
 		kilnfile              cargo.Kilnfile
 		kilnfileLock          cargo.KilnfileLock
 		boshDirector          *fakes.BoshDirector
-		boshDeployment        *fakes.BoshDeployment
+		boshDeployment1       *fakes.BoshDeployment
+		boshDeployment2       *fakes.BoshDeployment
+		boshDeployment3       *fakes.BoshDeployment
 
 		kilnfileLoader             *fakes.KilnfileLoader
 		multiReleaseSourceProvider *fakes.MultiReleaseSourceProvider
@@ -141,14 +143,30 @@ var _ = Describe("CompileBuiltReleases", func() {
 		})
 
 		boshDirector = new(fakes.BoshDirector)
-		boshDeployment = new(fakes.BoshDeployment)
+		boshDeployment1 = new(fakes.BoshDeployment)
+		boshDeployment1.NameReturns("deployment-1")
+		boshDeployment2 = new(fakes.BoshDeployment)
+		boshDeployment3 = new(fakes.BoshDeployment)
 
 		boshDirector.UploadStemcellFileReturns(nil)
 		boshDirector.UploadReleaseFileReturns(nil)
-		boshDirector.FindDeploymentReturns(boshDeployment, nil)
-		boshDeployment.UpdateReturns(nil)
+		boshDirector.FindDeploymentStub = func(deploymentName string) (boshdir.Deployment, error) {
+			switch {
+			case strings.HasPrefix(deploymentName, "compile-built-releases-0"):
+				return boshDeployment1, nil
+			case strings.HasPrefix(deploymentName, "compile-built-releases-1"):
+				return boshDeployment2, nil
+			case strings.HasPrefix(deploymentName, "compile-built-releases-2"):
+				return boshDeployment3, nil
+			default:
+				return nil, errors.New("unknown-deployment, test setup is incorrect")
+			}
+		}
+		boshDeployment1.UpdateReturns(nil)
+		boshDeployment2.UpdateReturns(nil)
+		boshDeployment3.UpdateReturns(nil)
 
-		boshDeployment.ExportReleaseCalls(func(releaseSlug boshdir.ReleaseSlug, _ boshdir.OSVersionSlug, _ []string) (boshdir.ExportReleaseResult, error) {
+		exportReleaseStub := func(releaseSlug boshdir.ReleaseSlug, _ boshdir.OSVersionSlug, _ []string) (boshdir.ExportReleaseResult, error) {
 			blobID := fmt.Sprintf("%s-%s", releaseSlug.Name(), releaseSlug.Version())
 			digest, err := boshcrypto.NewMultipleDigest(
 				strings.NewReader(blobIDContents(blobID)),
@@ -160,7 +178,12 @@ var _ = Describe("CompileBuiltReleases", func() {
 				BlobstoreID: blobID,
 				SHA1:        digest.String(),
 			}, nil
-		})
+		}
+
+		boshDeployment1.ExportReleaseCalls(exportReleaseStub)
+		boshDeployment2.ExportReleaseCalls(exportReleaseStub)
+		boshDeployment3.ExportReleaseCalls(exportReleaseStub)
+
 		boshDirector.DownloadResourceUncheckedCalls(func(blobID string, writer io.Writer) error {
 			_, err := writer.Write([]byte(blobIDContents(blobID)))
 			return err
@@ -266,39 +289,47 @@ var _ = Describe("CompileBuiltReleases", func() {
 			deploymentName := boshDirector.FindDeploymentArgsForCall(0)
 			Expect(deploymentName).To(MatchRegexp("^compile-built-releases-([[:alnum:]]+)"))
 
-			Expect(boshDeployment.UpdateCallCount()).To(Equal(1))
-			manifest, options := boshDeployment.UpdateArgsForCall(0)
+			Expect(boshDeployment1.UpdateCallCount()).To(Equal(1))
+			manifest, options := boshDeployment1.UpdateArgsForCall(0)
 			Expect(options).To(BeZero())
 			Expect(string(manifest)).To(MatchRegexp(`name: uaa\n\s+version: 1\.2\.3`))
 			Expect(string(manifest)).To(MatchRegexp(`name: capi\n\s+version: 2\.3\.4`))
 			Expect(string(manifest)).To(MatchRegexp(`alias: default\n\s+os: plan9\n\s+version: "42"`))
 
 			By("exporting the compiled releases")
-			Expect(boshDeployment.ExportReleaseCallCount()).To(Equal(2))
-			releaseSlug, osVersionSlug, jobs := boshDeployment.ExportReleaseArgsForCall(0)
-			Expect(releaseSlug.String()).To(Equal("uaa/1.2.3"))
+			Expect(boshDeployment1.ExportReleaseCallCount()).To(Equal(2))
+			var releaseSlugs []string
+			releaseSlug, osVersionSlug, jobs := boshDeployment1.ExportReleaseArgsForCall(0)
+			releaseSlugs = append(releaseSlugs, releaseSlug.String())
 			Expect(osVersionSlug.String()).To(Equal("plan9/42"))
 			Expect(jobs).To(BeEmpty())
 
-			releaseSlug, osVersionSlug, jobs = boshDeployment.ExportReleaseArgsForCall(1)
-			Expect(releaseSlug.String()).To(Equal("capi/2.3.4"))
+			releaseSlug, osVersionSlug, jobs = boshDeployment1.ExportReleaseArgsForCall(1)
+			releaseSlugs = append(releaseSlugs, releaseSlug.String())
 			Expect(osVersionSlug.String()).To(Equal("plan9/42"))
 			Expect(jobs).To(BeEmpty())
+
+			Expect(releaseSlugs).To(ContainElements([]string{"uaa/1.2.3", "capi/2.3.4"}))
 
 			By("Downloading the underlying exported release from bosh")
 			Expect(boshDirector.DownloadResourceUncheckedCallCount()).To(Equal(2))
 
+			var blobstoreIDs []string
+			var filehandlerNames []string
 			blobstoreID, filehandler := boshDirector.DownloadResourceUncheckedArgsForCall(0)
-			Expect(blobstoreID).To(Equal("uaa-1.2.3"))
-			Expect(filehandler.(*os.File).Name()).To(ContainSubstring("uaa-1.2.3-plan9-42.tgz"))
+			blobstoreIDs = append(blobstoreIDs, blobstoreID)
+			filehandlerNames = append(filehandlerNames, filehandler.(*os.File).Name())
 
 			blobstoreID, filehandler = boshDirector.DownloadResourceUncheckedArgsForCall(1)
-			Expect(blobstoreID).To(Equal("capi-2.3.4"))
-			Expect(filehandler.(*os.File).Name()).To(ContainSubstring("capi-2.3.4-plan9-42.tgz"))
+			blobstoreIDs = append(blobstoreIDs, blobstoreID)
+			filehandlerNames = append(filehandlerNames, filehandler.(*os.File).Name())
+
+			Expect(blobstoreIDs).To(ContainElements([]string{"uaa-1.2.3", "capi-2.3.4"}))
+			Expect(filehandlerNames).To(ConsistOf(ContainSubstring("uaa-1.2.3-plan9-42.tgz"), ContainSubstring("capi-2.3.4-plan9-42.tgz")))
 
 			By("Cleaning up the deployment")
-			Expect(boshDeployment.DeleteCallCount()).To(Equal(1))
-			force := boshDeployment.DeleteArgsForCall(0)
+			Expect(boshDeployment1.DeleteCallCount()).To(Equal(1))
+			force := boshDeployment1.DeleteArgsForCall(0)
 			Expect(force).To(BeTrue())
 
 			Expect(boshDirector.CleanUpCallCount()).To(Equal(1))
@@ -325,27 +356,30 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 			Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(2))
 
-			spec, releaseFile := releaseUploader.UploadReleaseArgsForCall(0)
-			Expect(spec).To(Equal(release.Requirement{
-				Name:            "uaa",
-				Version:         "1.2.3",
-				StemcellOS:      "plan9",
-				StemcellVersion: "42",
-			}))
-			contents, err := ioutil.ReadAll(releaseFile)
+			spec1, releaseFile := releaseUploader.UploadReleaseArgsForCall(0)
+			contents1, err := ioutil.ReadAll(releaseFile)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(contents)).To(Equal("contents of uaa-1.2.3"))
 
-			spec, releaseFile = releaseUploader.UploadReleaseArgsForCall(1)
-			Expect(spec).To(Equal(release.Requirement{
-				Name:            "capi",
-				Version:         "2.3.4",
-				StemcellOS:      "plan9",
-				StemcellVersion: "42",
-			}))
-			contents, err = ioutil.ReadAll(releaseFile)
+			spec2, releaseFile := releaseUploader.UploadReleaseArgsForCall(1)
+			contents2, err := ioutil.ReadAll(releaseFile)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(contents)).To(Equal("contents of capi-2.3.4"))
+
+			Expect([]release.Requirement{spec1, spec2}).To(ConsistOf(
+				release.Requirement{
+					Name:            "uaa",
+					Version:         "1.2.3",
+					StemcellOS:      "plan9",
+					StemcellVersion: "42",
+				},
+				release.Requirement{
+					Name:            "capi",
+					Version:         "2.3.4",
+					StemcellOS:      "plan9",
+					StemcellVersion: "42",
+				},
+			))
+
+			Expect([]string{string(contents1), string(contents2)}).To(ConsistOf("contents of capi-2.3.4", "contents of uaa-1.2.3"))
 		})
 
 		It("updates the Kilnfile.lock with the compiled releases", func() {
@@ -396,6 +430,179 @@ var _ = Describe("CompileBuiltReleases", func() {
 				},
 				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 			}))
+		})
+
+		When("using parallel option", func() {
+			BeforeEach(func() {
+				kilnfileLock = cargo.KilnfileLock{
+					Releases: []cargo.ReleaseLock{
+						{Name: "uaa", Version: "1.2.3", RemoteSource: builtSourceID, RemotePath: "/remote/path/uaa-1.2.3.tgz", SHA1: "original-sha"},
+						{Name: "capi", Version: "2.3.4", RemoteSource: builtSourceID, RemotePath: "/remote/path/capi-2.3.4.tgz", SHA1: "original-sha"},
+						{Name: "diego", Version: "5.6.7", RemoteSource: builtSourceID, RemotePath: "/remote/path/diego-4.5.6.tgz", SHA1: "original-sha"},
+						{Name: "route-emitter", Version: "8.9.10", RemoteSource: builtSourceID, RemotePath: "/remote/path/route-emitter-8.9.10.tgz", SHA1: "original-sha"},
+						{Name: "bpm", Version: "1.6", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
+					},
+					Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+				}
+			})
+
+			It("compiles and downloads the compiled releases", func() {
+				err := command.Execute([]string{
+					"--kilnfile", kilnfilePath,
+					"--releases-directory", releasesPath,
+					"--stemcell-file", stemcellPath,
+					"--upload-target-id", compiledSourceID,
+					"--parallel", "3",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				By("Uploading a release stemcell")
+				Expect(boshDirector.UploadStemcellFileCallCount()).To(Equal(1))
+
+				stemcellFile, fix := boshDirector.UploadStemcellFileArgsForCall(0)
+				Expect(fix).To(BeFalse())
+
+				_, err = stemcellFile.(*os.File).Seek(0, 0)
+				Expect(err).NotTo(HaveOccurred())
+
+				s := sha1.New()
+				defer stemcellFile.Close()
+
+				io.Copy(s, stemcellFile)
+				actualStemcellSHA1 := hex.EncodeToString(s.Sum(nil))
+				Expect(actualStemcellSHA1).To(Equal(stemcellSHA1))
+
+				By("Uploading the releases")
+				Expect(boshDirector.UploadReleaseFileCallCount()).To(Equal(4))
+
+				uaaReleaseFile, rebase, fix := boshDirector.UploadReleaseFileArgsForCall(0)
+				Expect(fix).To(BeFalse())
+				Expect(rebase).To(BeFalse())
+
+				uaaReleaseFileStats, err := uaaReleaseFile.Stat()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(uaaReleaseFileStats.Name()).To(Equal("uaa-1.2.3.tgz"))
+
+				capiReleaseFile, rebase, fix := boshDirector.UploadReleaseFileArgsForCall(1)
+				Expect(fix).To(BeFalse())
+				Expect(rebase).To(BeFalse())
+
+				capiReleaseFileStats, err := capiReleaseFile.Stat()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(capiReleaseFileStats.Name()).To(Equal("capi-2.3.4.tgz"))
+
+				diegoReleaseFile, rebase, fix := boshDirector.UploadReleaseFileArgsForCall(2)
+				Expect(fix).To(BeFalse())
+				Expect(rebase).To(BeFalse())
+
+				diegoReleaseFileStats, err := diegoReleaseFile.Stat()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(diegoReleaseFileStats.Name()).To(Equal("diego-5.6.7.tgz"))
+
+				routeEmitterReleaseFile, rebase, fix := boshDirector.UploadReleaseFileArgsForCall(3)
+				Expect(fix).To(BeFalse())
+				Expect(rebase).To(BeFalse())
+
+				routeEmitterReleaseFileStats, err := routeEmitterReleaseFile.Stat()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(routeEmitterReleaseFileStats.Name()).To(Equal("route-emitter-8.9.10.tgz"))
+
+				By("Creating a deployments for release compilation")
+				Expect(boshDirector.FindDeploymentCallCount()).To(Equal(3))
+
+				deploymentName1 := boshDirector.FindDeploymentArgsForCall(0)
+				Expect(deploymentName1).To(MatchRegexp("^compile-built-releases-([[:alnum:]]+)"))
+
+				deploymentName2 := boshDirector.FindDeploymentArgsForCall(1)
+				Expect(deploymentName2).To(MatchRegexp("^compile-built-releases-([[:alnum:]]+)"))
+				Expect(deploymentName2).NotTo(Equal(deploymentName1))
+
+				deploymentName3 := boshDirector.FindDeploymentArgsForCall(2)
+				Expect(deploymentName3).To(MatchRegexp("^compile-built-releases-([[:alnum:]]+)"))
+				Expect(deploymentName3).NotTo(Equal(deploymentName2))
+				Expect(deploymentName3).NotTo(Equal(deploymentName1))
+
+				Expect(boshDeployment1.UpdateCallCount()).To(Equal(1))
+				manifest, options := boshDeployment1.UpdateArgsForCall(0)
+				Expect(options).To(BeZero())
+				Expect(string(manifest)).To(MatchRegexp(`name: uaa\n\s+version: 1\.2\.3`))
+				Expect(string(manifest)).To(MatchRegexp(`name: capi\n\s+version: 2\.3\.4`))
+				Expect(string(manifest)).To(MatchRegexp(`name: diego\n\s+version: 5\.6\.7`))
+				Expect(string(manifest)).To(MatchRegexp(`name: route-emitter\n\s+version: 8\.9\.10`))
+				Expect(string(manifest)).To(MatchRegexp(`alias: default\n\s+os: plan9\n\s+version: "42"`))
+
+				Expect(boshDeployment2.UpdateCallCount()).To(Equal(1))
+				manifest, options = boshDeployment2.UpdateArgsForCall(0)
+				Expect(options).To(BeZero())
+				Expect(string(manifest)).To(MatchRegexp(`name: uaa\n\s+version: 1\.2\.3`))
+				Expect(string(manifest)).To(MatchRegexp(`name: capi\n\s+version: 2\.3\.4`))
+				Expect(string(manifest)).To(MatchRegexp(`name: diego\n\s+version: 5\.6\.7`))
+				Expect(string(manifest)).To(MatchRegexp(`name: route-emitter\n\s+version: 8\.9\.10`))
+				Expect(string(manifest)).To(MatchRegexp(`alias: default\n\s+os: plan9\n\s+version: "42"`))
+
+				Expect(boshDeployment3.UpdateCallCount()).To(Equal(1))
+				manifest, options = boshDeployment3.UpdateArgsForCall(0)
+				Expect(options).To(BeZero())
+				Expect(string(manifest)).To(MatchRegexp(`name: uaa\n\s+version: 1\.2\.3`))
+				Expect(string(manifest)).To(MatchRegexp(`name: capi\n\s+version: 2\.3\.4`))
+				Expect(string(manifest)).To(MatchRegexp(`name: diego\n\s+version: 5\.6\.7`))
+				Expect(string(manifest)).To(MatchRegexp(`name: route-emitter\n\s+version: 8\.9\.10`))
+				Expect(string(manifest)).To(MatchRegexp(`alias: default\n\s+os: plan9\n\s+version: "42"`))
+
+				By("exporting the compiled releases")
+				boshDeployment1CallCount := boshDeployment1.ExportReleaseCallCount()
+				boshDeployment2CallCount := boshDeployment2.ExportReleaseCallCount()
+				boshDeployment3CallCount := boshDeployment3.ExportReleaseCallCount()
+				Expect(boshDeployment1CallCount + boshDeployment2CallCount + boshDeployment3CallCount).To(Equal(4))
+				var releasesSlug []string
+				for i := 0; i < boshDeployment1CallCount; i++ {
+					releaseSlug, osVersionSlug, jobs := boshDeployment1.ExportReleaseArgsForCall(i)
+					releasesSlug = append(releasesSlug, releaseSlug.String())
+					Expect(osVersionSlug.String()).To(Equal("plan9/42"))
+					Expect(jobs).To(BeEmpty())
+				}
+				for i := 0; i < boshDeployment2CallCount; i++ {
+					releaseSlug, osVersionSlug, jobs := boshDeployment2.ExportReleaseArgsForCall(i)
+					releasesSlug = append(releasesSlug, releaseSlug.String())
+					Expect(osVersionSlug.String()).To(Equal("plan9/42"))
+					Expect(jobs).To(BeEmpty())
+				}
+				for i := 0; i < boshDeployment3CallCount; i++ {
+					releaseSlug, osVersionSlug, jobs := boshDeployment3.ExportReleaseArgsForCall(i)
+					releasesSlug = append(releasesSlug, releaseSlug.String())
+					Expect(osVersionSlug.String()).To(Equal("plan9/42"))
+					Expect(jobs).To(BeEmpty())
+				}
+
+				Expect(releasesSlug).To(ContainElements("uaa/1.2.3", "capi/2.3.4", "diego/5.6.7", "route-emitter/8.9.10"))
+
+				By("Downloading the underlying exported release from bosh")
+				Expect(boshDirector.DownloadResourceUncheckedCallCount()).To(Equal(4))
+
+				var blobstoreIDs []string
+				var filehandlerNames []string
+				for i := 0; i < 4; i++ {
+					blobstoreID, filehandler := boshDirector.DownloadResourceUncheckedArgsForCall(i)
+					blobstoreIDs = append(blobstoreIDs, blobstoreID)
+					filehandlerNames = append(filehandlerNames, filehandler.(*os.File).Name())
+				}
+				Expect(blobstoreIDs).To(ContainElements("uaa-1.2.3", "capi-2.3.4", "diego-5.6.7", "route-emitter-8.9.10"))
+				Expect(filehandlerNames).To(ContainElements(ContainSubstring("uaa-1.2.3-plan9-42.tgz"), ContainSubstring("capi-2.3.4-plan9-42.tgz"), ContainSubstring("diego-5.6.7-plan9-42.tgz"), ContainSubstring("route-emitter-8.9.10-plan9-42.tgz")))
+
+				By("Cleaning up the deployment")
+				Expect(boshDeployment1.DeleteCallCount()).To(Equal(1))
+				Expect(boshDeployment1.DeleteArgsForCall(0)).To(BeTrue())
+				Expect(boshDeployment2.DeleteCallCount()).To(Equal(1))
+				Expect(boshDeployment2.DeleteArgsForCall(0)).To(BeTrue())
+				Expect(boshDeployment3.DeleteCallCount()).To(Equal(1))
+				Expect(boshDeployment3.DeleteArgsForCall(0)).To(BeTrue())
+
+				Expect(boshDirector.CleanUpCallCount()).To(Equal(1))
+				all, dryRun, keepOrphanedDisks := boshDirector.CleanUpArgsForCall(0)
+				Expect(all).To(BeTrue())
+				Expect(dryRun).To(BeFalse())
+				Expect(keepOrphanedDisks).To(BeFalse())
+			})
 		})
 	})
 
@@ -746,7 +953,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 		const errorMsg = "absolutely no exportation >:("
 
 		BeforeEach(func() {
-			boshDeployment.ExportReleaseReturns(boshdir.ExportReleaseResult{}, errors.New(errorMsg))
+			boshDeployment1.ExportReleaseReturns(boshdir.ExportReleaseResult{}, errors.New(errorMsg))
 		})
 
 		It("still deletes the compilation deployment and cleans up director assets", func() {
@@ -757,10 +964,10 @@ var _ = Describe("CompileBuiltReleases", func() {
 				"--upload-target-id", compiledSourceID,
 			})
 			Expect(err).To(MatchError(ContainSubstring(errorMsg)))
-			Expect(err).To(MatchError(ContainSubstring("uaa")))
+			Expect(err).To(MatchError(MatchRegexp("capi|uaa")))
 
-			Expect(boshDeployment.DeleteCallCount()).To(Equal(1))
-			force := boshDeployment.DeleteArgsForCall(0)
+			Expect(boshDeployment1.DeleteCallCount()).To(Equal(1))
+			force := boshDeployment1.DeleteArgsForCall(0)
 			Expect(force).To(BeTrue())
 
 			Expect(boshDirector.CleanUpCallCount()).To(Equal(1))
@@ -786,10 +993,10 @@ var _ = Describe("CompileBuiltReleases", func() {
 				"--upload-target-id", compiledSourceID,
 			})
 			Expect(err).To(MatchError(ContainSubstring(errorMsg)))
-			Expect(err).To(MatchError(ContainSubstring("uaa")))
+			Expect(err).To(MatchError(MatchRegexp("uaa|capi")))
 
-			Expect(boshDeployment.DeleteCallCount()).To(Equal(1))
-			force := boshDeployment.DeleteArgsForCall(0)
+			Expect(boshDeployment1.DeleteCallCount()).To(Equal(1))
+			force := boshDeployment1.DeleteArgsForCall(0)
 			Expect(force).To(BeTrue())
 
 			Expect(boshDirector.CleanUpCallCount()).To(Equal(1))
@@ -802,7 +1009,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 	When("deleting the deployment fails", func() {
 		BeforeEach(func() {
-			boshDeployment.DeleteReturns(errors.New("panic now >:DDD"))
+			boshDeployment1.DeleteReturns(errors.New("panic now >:DDD"))
 		})
 
 		It("panics", func() {
@@ -861,7 +1068,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 	When("a downloaded compiled release has an incorrect SHA", func() {
 		BeforeEach(func() {
-			boshDeployment.ExportReleaseReturns(boshdir.ExportReleaseResult{
+			boshDeployment1.ExportReleaseReturns(boshdir.ExportReleaseResult{
 				BlobstoreID: "my-blob",
 				SHA1:        "aa64cc884828ae6e8f3d1a24f889e5b43843981f",
 			}, nil)
@@ -875,7 +1082,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 				"--upload-target-id", compiledSourceID,
 			})
 			Expect(err).To(MatchError(ContainSubstring("incorrect SHA")))
-			Expect(err).To(MatchError(ContainSubstring("uaa")))
+			Expect(err).To(MatchError(MatchRegexp("uaa|capi")))
 		})
 	})
 

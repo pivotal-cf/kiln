@@ -4,13 +4,14 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	boshcrypto "github.com/cloudfoundry/bosh-utils/crypto"
+	boshsystem "github.com/cloudfoundry/bosh-utils/system"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 
-	boshcrypto "github.com/cloudfoundry/bosh-utils/crypto"
-	boshsystem "github.com/cloudfoundry/bosh-utils/system"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/helper"
 	"github.com/pivotal-cf/kiln/internal/manifest_generator"
@@ -40,6 +41,7 @@ type CompileBuiltReleases struct {
 		ReleasesDir    string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 		StemcellFile   string `short:"sf" long:"stemcell-file"      required:"true"    description:"path to the stemcell tarball on disk"`
 		UploadTargetID string `           long:"upload-target-id"   required:"true"    description:"the ID of the release source where the compiled release will be uploaded"`
+		Parallel       int64  `short:"p" long:"parallel" default:"1" description:"number of parallel compile release jobs"`
 
 		Kilnfile       string   `short:"kf" long:"kilnfile"       default:"Kilnfile" description:"path to Kilnfile"`
 		VariablesFiles []string `short:"vf" long:"variables-file"                    description:"path to variables file"`
@@ -108,7 +110,7 @@ func BoshDirectorFactory() (BoshDirector, error) {
 func (f CompileBuiltReleases) Execute(args []string) error {
 	_, err := jhanda.Parse(&f.Options, args)
 	if err != nil {
-		return err // untested
+		return fmt.Errorf("couldn't parse options: %w", err) // untested
 	}
 
 	f.Logger.Println("loading Kilnfile")
@@ -251,29 +253,35 @@ func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource fetcher.M
 		return nil, builder.StemcellManifest{}, err
 	}
 
-	deploymentName := fmt.Sprintf("compile-built-releases-%s", uuid.Must(uuid.NewRandom()))
-	f.Logger.Printf("deploying compilation deployment %q\n", deploymentName)
-	deployment, err := boshDirector.FindDeployment(deploymentName)
-	if err != nil {
-		return nil, builder.StemcellManifest{}, fmt.Errorf("couldn't create deployment: %w", err) // untested
-	}
+	var deployments []boshdir.Deployment
+	for i := 0; i < int(f.Options.Parallel); i++ {
+		deploymentName := fmt.Sprintf("compile-built-releases-%d-%s", i, uuid.Must(uuid.NewRandom()))
+		f.Logger.Printf("deploying compilation deployment %q\n", deploymentName)
+		deployment, err := boshDirector.FindDeployment(deploymentName)
+		if err != nil {
+			return nil, builder.StemcellManifest{}, fmt.Errorf("couldn't create deployment: %w", err) // untested
+		}
+		deployments = append(deployments, deployment)
 
-	mg := manifest_generator.NewManifestGenerator()
-	manifest, err := mg.Generate(deploymentName, releaseIDs, stemcellManifest)
-	if err != nil {
-		return nil, builder.StemcellManifest{}, fmt.Errorf("couldn't generate bosh manifest: %v", err) // untested
-	}
+		mg := manifest_generator.NewManifestGenerator()
+		manifest, err := mg.Generate(deploymentName, releaseIDs, stemcellManifest)
+		if err != nil {
+			return nil, builder.StemcellManifest{}, fmt.Errorf("couldn't generate bosh manifest: %v", err) // untested
+		}
 
-	err = deployment.Update(manifest, boshdir.UpdateOpts{})
-	if err != nil {
-		return nil, builder.StemcellManifest{}, fmt.Errorf("updating the bosh deployment: %v", err) // untested
+		err = deployment.Update(manifest, boshdir.UpdateOpts{})
+		if err != nil {
+			return nil, builder.StemcellManifest{}, fmt.Errorf("updating the bosh deployment: %v", err) // untested
+		}
 	}
 
 	defer func() {
-		f.Logger.Println("deleting compilation deployment")
-		err = deployment.Delete(true)
-		if err != nil {
-			panic(fmt.Errorf("error deleting the deployment: %w", err))
+		f.Logger.Println("deleting compilation deployments")
+		for _, deployment := range deployments {
+			err = deployment.Delete(true)
+			if err != nil {
+				panic(fmt.Errorf("error deleting the deployment: %w", err))
+			}
 		}
 
 		f.Logger.Println("cleaning up unused releases and stemcells")
@@ -284,7 +292,7 @@ func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource fetcher.M
 		}
 	}()
 
-	downloadedReleases, err := f.downloadCompiledReleases(stemcellManifest, releaseIDs, deployment, boshDirector)
+	downloadedReleases, err := f.downloadCompiledReleases(stemcellManifest, releaseIDs, deployments, boshDirector)
 	if err != nil {
 		return nil, builder.StemcellManifest{}, err // untested
 	}
@@ -338,69 +346,141 @@ func (f CompileBuiltReleases) uploadStemcellToDirector(boshDirector BoshDirector
 	return stemcellManifest, err
 }
 
-func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.StemcellManifest, releaseIDs []release.ID, deployment boshdir.Deployment, boshDirector BoshDirector) ([]release.Local, error) {
-	osVersionSlug := boshdir.NewOSVersionSlug(stemcellManifest.OperatingSystem, stemcellManifest.Version)
+func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.StemcellManifest, releaseIDs []release.ID, deployments []boshdir.Deployment, boshDirector BoshDirector) ([]release.Local, error) {
 	var downloadedReleases []release.Local
-	for _, rel := range releaseIDs {
-		compiledTarballPath := filepath.Join(f.Options.ReleasesDir, fmt.Sprintf("%s-%s-%s-%s.tgz", rel.Name, rel.Version, stemcellManifest.OperatingSystem, stemcellManifest.Version))
-		f.Logger.Printf("exporting release %q\n", compiledTarballPath)
+	exportedReleases, err := f.exportReleasesInParallel(stemcellManifest, deployments, releaseIDs)
+	if err != nil {
+		return nil, err
+	}
 
-		result, err := deployment.ExportRelease(boshdir.NewReleaseSlug(rel.Name, rel.Version), osVersionSlug, nil)
+	for _, rel := range exportedReleases {
+		fd, err := os.OpenFile(rel.TarballPath, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			return nil, fmt.Errorf("exporting release %s: %w", rel.Name, err)
-		}
-
-		fd, err := os.OpenFile(compiledTarballPath, os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return nil, fmt.Errorf("creating compiled release file %s: %w", compiledTarballPath, err) // untested
+			return nil, fmt.Errorf("creating compiled release file %s: %w", rel.TarballPath, err) // untested
 		}
 
 		f.Logger.Printf("downloading release %q from director\n", rel.Name)
-		err = boshDirector.DownloadResourceUnchecked(result.BlobstoreID, fd)
+		err = boshDirector.DownloadResourceUnchecked(rel.BlobstoreID, fd)
 		if err != nil {
 			return nil, fmt.Errorf("downloading exported release %s: %w", rel.Name, err)
 		}
 
 		err = fd.Close()
 		if err != nil {
-			return nil, fmt.Errorf("failed closing file %s: %w", compiledTarballPath, err) // untested
+			return nil, fmt.Errorf("failed closing file %s: %w", rel.TarballPath, err) // untested
 		}
 
-		fd, err = os.Open(compiledTarballPath)
+		fd, err = os.Open(rel.TarballPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed reopening file %s: %w", compiledTarballPath, err) // untested
+			return nil, fmt.Errorf("failed reopening file %s: %w", rel.TarballPath, err) // untested
 		}
 
 		s := sha1.New()
 		_, err = io.Copy(s, fd)
 		if err != nil {
-			return nil, fmt.Errorf("failed calculating SHA1 for file file %s: %w", compiledTarballPath, err) // untested
+			return nil, fmt.Errorf("failed calculating SHA1 for file file %s: %w", rel.TarballPath, err) // untested
 		}
 		err = fd.Close()
 		if err != nil {
-			return nil, fmt.Errorf("failed closing file %s: %w", compiledTarballPath, err) // untested
+			return nil, fmt.Errorf("failed closing file %s: %w", rel.TarballPath, err) // untested
 		}
 
 		downloadedReleases = append(downloadedReleases, release.Local{
 			ID:        release.ID{Name: rel.Name, Version: rel.Version},
-			LocalPath: compiledTarballPath,
+			LocalPath: rel.TarballPath,
 			SHA1:      hex.EncodeToString(s.Sum(nil)),
 		})
 
-		expectedMultipleDigest, err := boshcrypto.ParseMultipleDigest(result.SHA1)
+		expectedMultipleDigest, err := boshcrypto.ParseMultipleDigest(rel.SHA1)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing SHA of downloaded release %q: %w", rel.Name, err) // untested
 		}
 
 		ignoreMeLogger := boshlog.NewLogger(boshlog.LevelNone)
 		fs := boshsystem.NewOsFileSystem(ignoreMeLogger)
-		err = expectedMultipleDigest.VerifyFilePath(compiledTarballPath, fs)
+		err = expectedMultipleDigest.VerifyFilePath(rel.TarballPath, fs)
 		if err != nil {
 			return nil, fmt.Errorf("compiled release %q has an incorrect SHA: %w", rel.Name, err)
 		}
-
 	}
+
 	return downloadedReleases, nil
+}
+
+func (f CompileBuiltReleases) exportReleasesInParallel(stemcellManifest builder.StemcellManifest, deployments []boshdir.Deployment, releaseIDs []release.ID) ([]release.Exported, error) {
+	osVersionSlug := boshdir.NewOSVersionSlug(stemcellManifest.OperatingSystem, stemcellManifest.Version)
+
+	errCh := make(chan error, len(releaseIDs))
+	wg := sync.WaitGroup{}
+	var exportedReleases []release.Exported
+	exportedReleasesMux := sync.Mutex{}
+
+	deploymentsPool := make(chan boshdir.Deployment, len(deployments))
+	for _, deployment := range deployments {
+		deploymentsPool <- deployment
+	}
+	cancelCh := make(chan error, 1)
+
+	for _, releaseID := range releaseIDs {
+		wg.Add(1)
+
+		go func(rel release.ID) {
+			defer wg.Done()
+
+			var deployment boshdir.Deployment
+
+			select {
+			case <-cancelCh:
+				return
+			case deployment = <-deploymentsPool:
+				defer func() {
+					// releasing deployment
+					deploymentsPool <- deployment
+				}()
+
+				compiledTarballPath := filepath.Join(f.Options.ReleasesDir, fmt.Sprintf("%s-%s-%s-%s.tgz", rel.Name, rel.Version, stemcellManifest.OperatingSystem, stemcellManifest.Version))
+				f.Logger.Printf("exporting release %q\n", compiledTarballPath)
+
+				result, err := deployment.ExportRelease(boshdir.NewReleaseSlug(rel.Name, rel.Version), osVersionSlug, nil)
+				if err != nil {
+					errCh <- fmt.Errorf("exporting release %s: %w", rel.Name, err)
+					return
+				}
+
+				exportedReleasesMux.Lock()
+				exportedReleases = append(exportedReleases, release.Exported{
+					ID:          release.ID{Name: rel.Name, Version: rel.Version},
+					TarballPath: compiledTarballPath,
+					BlobstoreID: result.BlobstoreID,
+					SHA1:        result.SHA1,
+				})
+				exportedReleasesMux.Unlock()
+
+				errCh <- nil
+				return
+			}
+		}(releaseID)
+	}
+
+	var err error
+	for i := 0; i < len(releaseIDs); i++ {
+		e := <-errCh
+		if e != nil {
+			close(cancelCh)
+			err = e
+			break
+		}
+	}
+
+	wg.Wait()
+
+	if err != nil {
+		return nil, err
+	}
+
+	exportedReleasesMux.Lock()
+	defer exportedReleasesMux.Unlock()
+	return exportedReleases, nil
 }
 
 func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []release.Local, releaseUploader fetcher.ReleaseUploader, stemcell builder.StemcellManifest) ([]remoteReleaseWithSHA1, error) {
