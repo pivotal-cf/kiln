@@ -69,6 +69,8 @@ github.com/aws/aws-sdk-go v1.34.20 h1:D9otznteZZyN5pRyFETqveYia/85Xzk7+RaPGB1I9f
 github.com/aws/aws-sdk-go v1.34.20/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
 github.com/aws/aws-sdk-go v1.34.21 h1:M97FXuiJgDHwD4mXhrIZ7RJ4xXV6uZVPvIC2qb+HfYE=
 github.com/aws/aws-sdk-go v1.34.21/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
+github.com/aws/aws-sdk-go v1.34.22 h1:7V2sKilVVgHqdjbW+O/xaVWYfnmuLwZdF/+6JuUh6Cw=
+github.com/aws/aws-sdk-go v1.34.22/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
 github.com/bmatcuk/doublestar v1.2.2 h1:oC24CykoSAB8zd7XgruHo33E0cHJf/WhQA/7BeXj+x0=
 github.com/bmatcuk/doublestar v1.2.2/go.mod h1:wiQtGV+rzVYxB7WIlirSN++5HPtPlXEo9MEoZQC/PmE=
 github.com/charlievieth/fs v0.0.0-20170613215519-7dc373669fa1 h1:vTlpHKxJqykyKdW9bkrDJNWeKNuSIAJ0TP/K4lRsz/Q=
