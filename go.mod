@@ -8,7 +8,7 @@ require (
 	code.cloudfoundry.org/workpool v0.0.0-20200131000409-2ac56b354115 // indirect
 	github.com/Masterminds/semver v1.5.0
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/aws/aws-sdk-go v1.34.34
+	github.com/aws/aws-sdk-go v1.35.0
 	github.com/bmatcuk/doublestar v1.2.2 // indirect
 	github.com/charlievieth/fs v0.0.0-20170613215519-7dc373669fa1
 	github.com/cheggaaa/pb v2.0.7+incompatible // indirect
