@@ -13,7 +13,7 @@ require (
 	github.com/charlievieth/fs v0.0.0-20170613215519-7dc373669fa1
 	github.com/cheggaaa/pb v2.0.7+incompatible // indirect
 	github.com/cloudfoundry/bosh-agent v2.332.0+incompatible // indirect
-	github.com/cloudfoundry/bosh-cli v6.4.0+incompatible
+	github.com/cloudfoundry/bosh-cli v6.4.1+incompatible
 	github.com/cloudfoundry/bosh-davcli v0.0.44 // indirect
 	github.com/cloudfoundry/bosh-gcscli v0.0.18 // indirect
 	github.com/cloudfoundry/bosh-s3cli v0.0.95 // indirect
