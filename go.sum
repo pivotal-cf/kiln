@@ -124,6 +124,8 @@ github.com/cloudfoundry/bosh-cli v6.3.1+incompatible h1:t56xCMktKPfp3/HyQ1jbnLJl
 github.com/cloudfoundry/bosh-cli v6.3.1+incompatible/go.mod h1:rzIB+e1sn7wQL/TJ54bl/FemPKRhXby5BIMS3tLuWFM=
 github.com/cloudfoundry/bosh-cli v6.4.0+incompatible h1:1x6jneOWujeiwKoY+nSSYaZdPtyfJOBLRt36SZCudKM=
 github.com/cloudfoundry/bosh-cli v6.4.0+incompatible/go.mod h1:rzIB+e1sn7wQL/TJ54bl/FemPKRhXby5BIMS3tLuWFM=
+github.com/cloudfoundry/bosh-cli v6.4.1+incompatible h1:n5/+NIF9QxvGINOrjh6DmO+GTen78MoCj5+LU9L8bR4=
+github.com/cloudfoundry/bosh-cli v6.4.1+incompatible/go.mod h1:rzIB+e1sn7wQL/TJ54bl/FemPKRhXby5BIMS3tLuWFM=
 github.com/cloudfoundry/bosh-davcli v0.0.44 h1:y1G3B1+6aQ+xJ2/Bx6M8TF5wkwg9So1u5zn0IR2R4P8=
 github.com/cloudfoundry/bosh-davcli v0.0.44/go.mod h1:WERSlcwbbm6fF7GJfz421BeAduzbD6JlDF7NCpYTXUE=
 github.com/cloudfoundry/bosh-gcscli v0.0.18 h1:2ouLAiIcdF1pWSR+igurUPQu6fwedaXyKnpTD0RyVL8=
