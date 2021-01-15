@@ -27,7 +27,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-ole/go-ole v1.2.4 // indirect
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.1.5
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/jessevdk/go-flags v1.4.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
