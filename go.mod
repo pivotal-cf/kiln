@@ -18,7 +18,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-ole/go-ole v1.2.4 // indirect
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.2.0
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/matt-royal/biloba v0.2.1
 	github.com/mattn/go-colorable v0.1.4 // indirect
