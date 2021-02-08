@@ -812,20 +812,17 @@ type counter struct {
 func (c *counter) reset() {
 	c.mut.Lock()
 	defer c.mut.Unlock()
-
 	c.n = 0
 }
 
 func (c *counter) increment() {
 	c.mut.Lock()
 	defer c.mut.Unlock()
-
 	c.n++
 }
 
 func (c *counter) count() int {
 	c.mut.Lock()
-
 	defer c.mut.Unlock()
 	return c.n
 }
