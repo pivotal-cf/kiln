@@ -97,7 +97,6 @@ func main() {
 
 	commandSet["find-release-version"] = commands.NewFindReleaseVersion(outLogger, mrsProvider)
 
-
 	commandSet["compile-built-releases"] = commands.CompileBuiltReleases{
 		BoshDirectorFactory:        commands.BoshDirectorFactory,
 		KilnfileLoader:             kilnfileLoader,

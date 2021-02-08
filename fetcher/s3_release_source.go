@@ -138,7 +138,6 @@ func (src S3ReleaseSource) GetMatchedRelease(requirement release.Requirement) (r
 	}, true, nil
 }
 
-
 func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
 	pathTemplatePattern, _ := regexp.Compile(`^\d+\.\d+`)
 	tasVersion := pathTemplatePattern.FindString(src.pathTemplateString)

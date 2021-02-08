@@ -375,7 +375,6 @@ var _ = Describe("S3ReleaseSource", func() {
 					return int64(n), err
 				}
 
-
 				releaseSource = NewS3ReleaseSource(
 					sourceID,
 					bucket,
@@ -402,7 +401,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					ID:         releaseID,
 					RemotePath: uaaKey,
 					SourceID:   sourceID,
-					SHA: "bc7cb372ee4b9a9d6f4e8a993d46405d2c114e9c",
+					SHA:        "bc7cb372ee4b9a9d6f4e8a993d46405d2c114e9c",
 				}))
 			})
 		})

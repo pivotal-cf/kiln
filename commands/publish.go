@@ -120,7 +120,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 		p.Now = time.Now
 	}
 
-	if p.PivnetReleaseService == nil || p.PivnetProductFilesService == nil || p.PivnetUserGroupsService == nil || p.PivnetReleaseUpgradePathsService == nil || p.PivnetReleaseDependenciesService == nil{
+	if p.PivnetReleaseService == nil || p.PivnetProductFilesService == nil || p.PivnetUserGroupsService == nil || p.PivnetReleaseUpgradePathsService == nil || p.PivnetReleaseDependenciesService == nil {
 		config := pivnet.ClientConfig{
 			Host:      p.Options.PivnetHost,
 			UserAgent: "kiln",

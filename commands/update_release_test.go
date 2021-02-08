@@ -102,13 +102,13 @@ var _ = Describe("UpdateRelease", func() {
 				SourceID:   newReleaseSourceName,
 			}
 			exepectedNotDownloadedRelease := release.Remote{
-				ID: release.ID {
-					Name: releaseName,
+				ID: release.ID{
+					Name:    releaseName,
 					Version: notDownloadedReleaseVersion,
 				},
 				RemotePath: notDownloadedRemotePath,
-				SourceID: notDownloadedReleaseSourceName,
-				SHA: notDownloadedReleaseSha1,
+				SourceID:   notDownloadedReleaseSourceName,
+				SHA:        notDownloadedReleaseSha1,
 			}
 
 			releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, true, nil)
