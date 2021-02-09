@@ -301,7 +301,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(found).To(BeTrue())
 					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.5", testServer.URL())
-					Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "309.0.5"}, SHA: "5df538657c2cc830bda679420a9b162682018ded",RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
+					Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "309.0.5"}, SHA: "5df538657c2cc830bda679420a9b162682018ded", RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
 
 				})
 			})

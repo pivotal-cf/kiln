@@ -127,12 +127,11 @@ stemcell_criteria:
 		releaseDS3LocalPath                                  string
 
 		deleteDeploymentWasCalled int
-		exportReleaseWasCalled    int
+		exportReleaseWasCalled    counter
 		cleanupWasCalled          int
-
-		s3UploadedFiles       sync.Map
-		boshUploadedReleases  sync.Map
-		boshUploadedStemcells sync.Map
+		s3UploadedFiles           sync.Map
+		boshUploadedReleases      sync.Map
+		boshUploadedStemcells     sync.Map
 
 		exportReleaseTask int32
 
@@ -163,7 +162,7 @@ stemcell_criteria:
 		).To(Succeed())
 
 		deleteDeploymentWasCalled = 0
-		exportReleaseWasCalled = 0
+		exportReleaseWasCalled.reset()
 		cleanupWasCalled = 0
 
 		atomic.StoreInt32(&exportReleaseTask, 1)
@@ -251,7 +250,7 @@ stemcell_criteria:
 
 				boshUploadedReleases.Store(fmt.Sprintf("%s-%s", manifest.Name, manifest.Version), sha1)
 			case "/releases/export":
-				exportReleaseWasCalled++
+				exportReleaseWasCalled.increment()
 
 				var parsedBody struct {
 					ReleaseVersion string `yaml:"release_name"`
@@ -465,7 +464,7 @@ stemcell_criteria:
 		Expect(actualStemcellSHA1.(string)).To(Equal(stemcellSHA))
 
 		// export releases
-		Expect(exportReleaseWasCalled).To(Equal(2))
+		Expect(exportReleaseWasCalled.count()).To(Equal(2))
 
 		compiledReleaseContents, err := ioutil.ReadFile(filepath.Join(releasesDirectoryPath, "release-a-1.2.3-ubuntu-trusty-22.tgz"))
 		Expect(err).NotTo(HaveOccurred())
@@ -567,7 +566,7 @@ stemcell_criteria:
 			Expect(actualStemcellSHA1.(string)).To(Equal(stemcellSHA))
 
 			// export releases
-			Expect(exportReleaseWasCalled).To(Equal(3))
+			Expect(exportReleaseWasCalled.count()).To(Equal(3))
 
 			compiledReleaseContents, err := ioutil.ReadFile(filepath.Join(releasesDirectoryPath, "release-a-1.2.3-ubuntu-trusty-22.tgz"))
 			Expect(err).NotTo(HaveOccurred())
@@ -803,4 +802,27 @@ func GenerateCertificateChain() ([]byte, tls.Certificate, error) {
 	}
 
 	return caCert, keyPair, nil
+}
+
+type counter struct {
+	n   int
+	mut sync.Mutex
+}
+
+func (c *counter) reset() {
+	c.mut.Lock()
+	defer c.mut.Unlock()
+	c.n = 0
+}
+
+func (c *counter) increment() {
+	c.mut.Lock()
+	defer c.mut.Unlock()
+	c.n++
+}
+
+func (c *counter) count() int {
+	c.mut.Lock()
+	defer c.mut.Unlock()
+	return c.n
 }

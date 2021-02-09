@@ -43,7 +43,10 @@ var _ = Describe("publish", func() {
 		stdoutLogger := log.New(os.Stdout, "", log.LstdFlags)
 		stderrLogger := log.New(os.Stderr, "", log.LstdFlags)
 		logger := logshim.NewLogShim(stdoutLogger, stderrLogger, false)
-		config := pivnet.ClientConfig{Host: host}
+		config := pivnet.ClientConfig{
+			Host:              host,
+			SkipSSLValidation: true,
+		}
 		accessTokenService := pivnet.NewAccessTokenOrLegacyToken(token, config.Host, false)
 		client = pivnet.NewClient(accessTokenService, config, logger)
 
