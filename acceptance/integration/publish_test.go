@@ -38,7 +38,7 @@ var _ = Describe("publish", func() {
 		if token == "" {
 			Fail("please provide the PIVNET_TOKEN environment variable")
 		}
-		host = "https://pivnet-integration.cfapps.io"
+		host = "https://network-integration.tanzu.vmware.com/"
 
 		stdoutLogger := log.New(os.Stdout, "", log.LstdFlags)
 		stderrLogger := log.New(os.Stderr, "", log.LstdFlags)
