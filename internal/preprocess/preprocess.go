@@ -10,6 +10,14 @@ import (
 	"text/template"
 )
 
+//
+//func Run(out, in billy.Filesystem, tileName string, tileNames []string) error {
+//
+//
+//
+//	return nil
+//}
+
 func main() {
 	var flags struct {
 		tileName   string
@@ -74,29 +82,10 @@ func processTemplateFile(inputFilePath, outputFilePath, tileName string) error {
 		return err
 	}
 
+	tileNames := []string{"ert", "srt"}
+
 	tmpl, err := template.New("tile-preprocess").
-		Funcs(template.FuncMap(map[string]interface{}{
-			"tile": func() (interface{}, error) {
-				if tileName != "ert" && tileName != "srt" {
-					return "", fmt.Errorf("unsupported tile name: %s\n", tileName)
-				}
-				return tileName, nil
-			},
-			"ert": func(value interface{}, tile interface{}) interface{} {
-				if tile == "ert" {
-					return value
-				}
-
-				return tile
-			},
-			"srt": func(value interface{}, tile interface{}) interface{} {
-				if tile == "srt" {
-					return value
-				}
-
-				return tile
-			},
-		})).
+		Funcs(helperFuncs(tileName, tileNames)).
 		Option("missingkey=error").
 		Parse(string(metadataFile))
 	if err != nil {
@@ -127,4 +116,34 @@ func processTemplateFile(inputFilePath, outputFilePath, tileName string) error {
 	}
 
 	return nil
+}
+
+func helperFuncs(currentTile string, tileNames []string) template.FuncMap {
+	funcs := make(template.FuncMap)
+
+	funcs["tile"] = func() (interface{}, error) {
+		for _, n := range tileNames {
+			if n == currentTile {
+				return currentTile, nil
+			}
+		}
+
+		return "", fmt.Errorf("unsupported tile name: %s\n", currentTile)
+	}
+
+	createPipeSwitchForTile := func(name string) func(value interface{}, tile interface{}) interface{} {
+		return func(value interface{}, tile interface{}) interface{} {
+			if tile == name {
+				return value
+			}
+
+			return tile
+		}
+	}
+
+	for _, n := range tileNames {
+		funcs[n] = createPipeSwitchForTile(n)
+	}
+
+	return funcs
 }
