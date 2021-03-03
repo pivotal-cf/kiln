@@ -1,0 +1,4 @@
+---
+metadata_version: some-metadata-version
+provides_product_versions:
+- name: Malformed template expression {{ tile | ert "ERT" | srt "SRT"
