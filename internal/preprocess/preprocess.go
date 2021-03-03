@@ -3,20 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"gopkg.in/src-d/go-billy.v4/osfs"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"text/template"
-)
 
-//
-//func Run(out, in billy.Filesystem, tileName string, tileNames []string) error {
-//
-//
-//
-//	return nil
-//}
+	"gopkg.in/src-d/go-billy.v4"
+)
 
 func main() {
 	var flags struct {
@@ -42,7 +38,14 @@ func main() {
 		log.Fatalln("please provide an output directory path using the --output-path option")
 	}
 
-	err := filepath.Walk(flags.inputPath, filepath.WalkFunc(func(path string, info os.FileInfo, err error) error {
+	err := Run(osfs.New(flags.outputPath), osfs.New(flags.inputPath), flags.tileName, []string{"ert", "srt"})
+	if err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func Run(out, in billy.Filesystem, currentTileName string, tileNames []string) error {
+	return Walk(in, "", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -59,30 +62,41 @@ func main() {
 			return nil
 		}
 
-		outputFile, err := filepath.Rel(flags.inputPath, path)
+		inFile, err := in.Open(path)
 		if err != nil {
-			return err // Not tested
+			return err
+		}
+		defer func() {
+			_ = inFile.Close()
+		}()
+
+		err = out.MkdirAll(filepath.Dir(path), 0755)
+		if err != nil {
+			return err
 		}
 
-		err = processTemplateFile(path, filepath.Join(flags.outputPath, outputFile), flags.tileName)
+		outFile, err := out.Create(path)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			_ = outFile.Close()
+		}()
+
+		err = processTemplateFile(outFile, inFile, currentTileName, tileNames)
 		if err != nil {
 			return err
 		}
 
 		return nil
-	}))
-	if err != nil {
-		log.Fatalln(err)
-	}
+	})
 }
 
-func processTemplateFile(inputFilePath, outputFilePath, tileName string) error {
-	metadataFile, err := ioutil.ReadFile(inputFilePath)
+func processTemplateFile(out io.Writer, in io.Reader, tileName string, tileNames []string) error {
+	metadataFile, err := ioutil.ReadAll(in)
 	if err != nil {
 		return err
 	}
-
-	tileNames := []string{"ert", "srt"}
 
 	tmpl, err := template.New("tile-preprocess").
 		Funcs(helperFuncs(tileName, tileNames)).
@@ -92,25 +106,7 @@ func processTemplateFile(inputFilePath, outputFilePath, tileName string) error {
 		return err
 	}
 
-	dir := filepath.Dir(outputFilePath)
-	err = os.MkdirAll(dir, 0755)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Create(outputFilePath)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		err := file.Close()
-		if err != nil {
-			log.Fatalln(err) // Not tested
-		}
-	}()
-
-	err = tmpl.Execute(file, nil)
+	err = tmpl.Execute(out, nil)
 	if err != nil {
 		return err
 	}
