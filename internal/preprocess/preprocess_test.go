@@ -113,6 +113,27 @@ templates:
 `))
 	})
 
+	Context("when tile names contain spaces", func() {
+		It("prints an error message", func() {
+			err := preprocess.Run(osfs.New(outputPath), osfs.New(metadataPartsPath), "ert", []string{" ert ", "\tsrt"})
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+	Context("when tile name is an strings", func() {
+		It("prints an error message", func() {
+			err := preprocess.Run(osfs.New(outputPath), osfs.New("test_data/nothing-to-pre-process"), "", []string{})
+			Expect(err).To(MatchError(ContainSubstring("empty")))
+		})
+	})
+
+	Context("when tile name is invalid identifier", func() {
+		It("prints an error message", func() {
+			err := preprocess.Run(osfs.New(outputPath), osfs.New("test_data/nothing-to-pre-process"), "bad-tile-name", []string{"bad-tile-name"})
+			Expect(err).To(MatchError(ContainSubstring("is not a valid identifier")))
+		})
+	})
+
 	Context("failure cases", func() {
 		Context("when the metadata file references a missing key", func() {
 			It("errors", func() {
@@ -133,11 +154,11 @@ templates:
 			})
 		})
 
-		Context("when an unsupported tile name is specified", func() {
+		Context("when an unlisted tile name is used", func() {
 			It("prints an error message", func() {
 				err := preprocess.Run(osfs.New(outputPath), osfs.New(metadataPartsPath), "some-other-tile", []string{"ert", "srt"})
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(ContainSubstring("unsupported tile name: some-other-tile")))
+				Expect(err).To(MatchError(And(ContainSubstring("not provided"), ContainSubstring("some-other-tile"))))
 			})
 		})
 	})

@@ -1,17 +1,40 @@
 package preprocess
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"gopkg.in/src-d/go-billy.v4"
 )
 
 func Run(out, in billy.Filesystem, currentTileName string, tileNames []string) error {
+	if currentTileName == "" {
+		return fmt.Errorf("tile name must not be empty")
+	}
+	tileNames = filterAndCleanTileNames(tileNames)
+
+	found := false
+	for _, n := range tileNames {
+		err := isValidTemplateFunctionIdentifier(n)
+		if err != nil {
+			return err
+		}
+		if n == currentTileName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("%q is not provided in tile names list %v", currentTileName, tileNames)
+	}
+
+	var outBuf bytes.Buffer
 	return Walk(in, "", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -42,6 +65,11 @@ func Run(out, in billy.Filesystem, currentTileName string, tileNames []string) e
 			return err
 		}
 
+		err = processTemplateFile(&outBuf, inFile, currentTileName, tileNames)
+		if err != nil {
+			return err
+		}
+
 		outFile, err := out.Create(path)
 		if err != nil {
 			return err
@@ -50,13 +78,36 @@ func Run(out, in billy.Filesystem, currentTileName string, tileNames []string) e
 			_ = outFile.Close()
 		}()
 
-		err = processTemplateFile(outFile, inFile, currentTileName, tileNames)
+		_, err = io.Copy(outFile, &outBuf)
 		if err != nil {
 			return err
 		}
 
 		return nil
 	})
+}
+
+func filterAndCleanTileNames(names []string) []string {
+	filtered := names[:0]
+	for _, n := range names {
+		n = strings.TrimSpace(n)
+		if n == "" {
+			continue
+		}
+		filtered = append(filtered, n)
+	}
+	return filtered
+}
+
+func isValidTemplateFunctionIdentifier(str string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%q is not a valid identifier", str)
+		}
+	}()
+
+	_, err = template.New("test " + str).Funcs(map[string]interface{}{str: func() string { return "" }}).Parse(fmt.Sprintf("{{%s}}", str))
+	return err
 }
 
 func processTemplateFile(out io.Writer, in io.Reader, tileName string, tileNames []string) error {
@@ -84,15 +135,7 @@ func processTemplateFile(out io.Writer, in io.Reader, tileName string, tileNames
 func helperFuncs(currentTile string, tileNames []string) template.FuncMap {
 	funcs := make(template.FuncMap)
 
-	funcs["tile"] = func() (interface{}, error) {
-		for _, n := range tileNames {
-			if n == currentTile {
-				return currentTile, nil
-			}
-		}
-
-		return "", fmt.Errorf("unsupported tile name: %s\n", currentTile)
-	}
+	funcs["tile"] = func() string { return currentTile }
 
 	createPipeSwitchForTile := func(name string) func(value interface{}, tile interface{}) interface{} {
 		return func(value interface{}, tile interface{}) interface{} {

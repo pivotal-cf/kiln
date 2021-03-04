@@ -24,7 +24,12 @@ type PreProcess struct {
 	}
 }
 
-func (cmd PreProcess) Execute(_ []string) error {
+func (cmd PreProcess) Execute(args []string) error {
+	_, err := jhanda.Parse(&cmd.Options, args)
+	if err != nil {
+		return err
+	}
+
 	kilnFile, err := os.Open(cmd.Options.Kilnfile)
 	if err != nil {
 		return err
@@ -39,9 +44,6 @@ func (cmd PreProcess) Execute(_ []string) error {
 	}
 	if len(kilnfile.TileNames) == 0 {
 		kilnfile.TileNames = strings.Split(cmd.Options.TileNames, ",")
-	}
-	for i := range kilnfile.TileNames {
-		kilnfile.TileNames[i] = strings.TrimSpace(kilnfile.TileNames[i])
 	}
 
 	err = preprocess.Run(osfs.New(cmd.Options.OutputPath), osfs.New(cmd.Options.InputPath), cmd.Options.TileName, kilnfile.TileNames)
