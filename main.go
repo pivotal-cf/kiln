@@ -105,6 +105,8 @@ func main() {
 		ReleaseUploaderFinder:      ruFinder,
 	}
 
+	commandSet["pre-process"] = commands.PreProcess{}
+
 	err = commandSet.Execute(command, args)
 	if err != nil {
 		log.Fatal(err)

@@ -15,6 +15,7 @@ type Kilnfile struct {
 	Slug            string                `yaml:"slug"`
 	PreGaUserGroups []string              `yaml:"pre_ga_user_groups"`
 	Releases        []ReleaseKiln         `yaml:"releases"`
+	TileNames       []string              `yaml:"tile_names"`
 }
 
 type ReleaseSourceConfig struct {

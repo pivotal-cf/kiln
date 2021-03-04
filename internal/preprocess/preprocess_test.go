@@ -1,13 +1,13 @@
-package main_test
+package preprocess_test
 
 import (
+	"github.com/pivotal-cf/kiln/internal/preprocess"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 	"io/ioutil"
-	"os/exec"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("preprocess", func() {
@@ -25,15 +25,8 @@ var _ = Describe("preprocess", func() {
 	})
 
 	It("processes the templates files for the ERT", func() {
-		command := exec.Command(pathToMain,
-			"--tile-name", "ert",
-			"--input-path", metadataPartsPath,
-			"--output-path", outputPath,
-		)
-
-		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+		err := preprocess.Run(osfs.New(outputPath), osfs.New(metadataPartsPath), "ert", []string{"ert", "srt"})
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(session).Should(gexec.Exit(0))
 
 		baseFilePath := filepath.Join(outputPath, "base.yml")
 		contents, err := ioutil.ReadFile(baseFilePath)
@@ -77,15 +70,8 @@ templates:
 	})
 
 	It("processes the templates files for the SRT", func() {
-		command := exec.Command(pathToMain,
-			"--tile-name", "srt",
-			"--input-path", metadataPartsPath,
-			"--output-path", outputPath,
-		)
-
-		session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+		err := preprocess.Run(osfs.New(outputPath), osfs.New(metadataPartsPath), "srt", []string{"ert", "srt"})
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(session).Should(gexec.Exit(0))
 
 		baseFilePath := filepath.Join(outputPath, "base.yml")
 		contents, err := ioutil.ReadFile(baseFilePath)
@@ -130,119 +116,28 @@ templates:
 	Context("failure cases", func() {
 		Context("when the metadata file references a missing key", func() {
 			It("errors", func() {
-				command := exec.Command(pathToMain,
-					"--tile-name", "ert",
-					"--input-path", filepath.Join("test_data", "missing-key"),
-					"--output-path", outputPath,
-				)
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("some_missing_key"))
+				inputPath := filepath.Join("test_data", "missing-key")
+				err := preprocess.Run(osfs.New(outputPath), osfs.New(inputPath), "ert", []string{"ert", "srt"})
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("some_missing_key")))
 			})
 		})
 
 		Context("when the metadata file contains a malformed expression", func() {
 			It("prints an error message", func() {
-				command := exec.Command(pathToMain,
-					"--tile-name", "ert",
-					"--input-path", filepath.Join("test_data", "malformed-expression"),
-					"--output-path", outputPath,
-				)
 
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err.Contents()).To(ContainSubstring("unclosed action"))
-			})
-		})
-
-		Context("when the --tile-name flag is not provided", func() {
-			It("prints an error message", func() {
-				command := exec.Command(pathToMain,
-					"--input-path", metadataPartsPath,
-					"--output-path", outputPath,
-				)
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err.Contents()).To(ContainSubstring("please provide a tile name using the --tile-name option"))
-			})
-		})
-
-		Context("when the --input-path flag is not provided", func() {
-			It("prints an error message", func() {
-				command := exec.Command(pathToMain,
-					"--tile-name", "ert",
-					"--output-path", outputPath,
-				)
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err.Contents()).To(ContainSubstring("please provide a metadata parts directory path using the --input-path option"))
-			})
-		})
-
-		Context("when the --output-path flag is not provided", func() {
-			It("prints an error message", func() {
-				command := exec.Command(pathToMain,
-					"--tile-name", "ert",
-					"--input-path", metadataPartsPath,
-				)
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err.Contents()).To(ContainSubstring("please provide an output directory path using the --output-path option"))
-			})
-		})
-
-		Context("when the output directory path is actually a file", func() {
-			var existingFilePath string
-
-			BeforeEach(func() {
-				existingFile, err := ioutil.TempFile("", "")
-				Expect(err).NotTo(HaveOccurred())
-
-				existingFilePath = existingFile.Name()
-			})
-
-			It("prints an error message", func() {
-				command := exec.Command(pathToMain,
-					"--tile-name", "ert",
-					"--input-path", metadataPartsPath,
-					"--output-path", existingFilePath,
-				)
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err.Contents()).To(ContainSubstring("not a directory"))
+				inputPath := filepath.Join("test_data", "malformed-expression")
+				err := preprocess.Run(osfs.New(outputPath), osfs.New(inputPath), "ert", []string{"ert", "srt"})
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("unclosed action")))
 			})
 		})
 
 		Context("when an unsupported tile name is specified", func() {
 			It("prints an error message", func() {
-				command := exec.Command(pathToMain,
-					"--tile-name", "some-other-tile",
-					"--input-path", metadataPartsPath,
-					"--output-path", outputPath,
-				)
-
-				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(session.Err.Contents()).To(ContainSubstring("unsupported tile name: some-other-tile"))
+				err := preprocess.Run(osfs.New(outputPath), osfs.New(metadataPartsPath), "some-other-tile", []string{"ert", "srt"})
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("unsupported tile name: some-other-tile")))
 			})
 		})
 	})

@@ -1,48 +1,15 @@
-package main
+package preprocess
 
 import (
-	"flag"
 	"fmt"
-	"gopkg.in/src-d/go-billy.v4/osfs"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"text/template"
 
 	"gopkg.in/src-d/go-billy.v4"
 )
-
-func main() {
-	var flags struct {
-		tileName   string
-		inputPath  string
-		outputPath string
-	}
-
-	flag.StringVar(&flags.tileName, "tile-name", "", "name of tile product")
-	flag.StringVar(&flags.inputPath, "input-path", "", "path to metadata parts directory")
-	flag.StringVar(&flags.outputPath, "output-path", "", "path to output directory")
-	flag.Parse()
-
-	if flags.tileName == "" {
-		log.Fatalln("please provide a tile name using the --tile-name option")
-	}
-
-	if flags.inputPath == "" {
-		log.Fatalln("please provide a metadata parts directory path using the --input-path option")
-	}
-
-	if flags.outputPath == "" {
-		log.Fatalln("please provide an output directory path using the --output-path option")
-	}
-
-	err := Run(osfs.New(flags.outputPath), osfs.New(flags.inputPath), flags.tileName, []string{"ert", "srt"})
-	if err != nil {
-		log.Fatalln(err)
-	}
-}
 
 func Run(out, in billy.Filesystem, currentTileName string, tileNames []string) error {
 	return Walk(in, "", func(path string, info os.FileInfo, err error) error {

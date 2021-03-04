@@ -1,4 +1,4 @@
-package main
+package preprocess
 
 import (
 	"os"
