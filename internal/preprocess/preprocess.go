@@ -34,7 +34,8 @@ func Run(out, in billy.Filesystem, currentTileName string, tileNames []string) e
 		return fmt.Errorf("%q is not provided in tile names list %v", currentTileName, tileNames)
 	}
 
-	var outBuf bytes.Buffer
+	outBuf := new(bytes.Buffer)
+
 	return Walk(in, "", func(path string, info os.FileInfo, err error) error {
 		defer outBuf.Reset()
 
@@ -67,7 +68,7 @@ func Run(out, in billy.Filesystem, currentTileName string, tileNames []string) e
 			return err
 		}
 
-		err = processTemplateFile(&outBuf, inFile, currentTileName, tileNames)
+		err = processTemplateFile(outBuf, inFile, currentTileName, tileNames)
 		if err != nil {
 			return err
 		}
@@ -80,7 +81,7 @@ func Run(out, in billy.Filesystem, currentTileName string, tileNames []string) e
 			_ = outFile.Close()
 		}()
 
-		_, err = io.Copy(outFile, &outBuf)
+		_, err = outBuf.WriteTo(outFile)
 		if err != nil {
 			return err
 		}
