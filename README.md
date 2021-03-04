@@ -16,16 +16,21 @@ kiln
 kiln helps you build ops manager compatible tiles
 
 Usage: kiln [options] <command> [<args>]
-  --help, -h                                               bool    prints this usage information (default: false)
-  --pivotal-network-token, -pt, PIVOTAL_NETWORK_API_TOKEN  string  uaa access token for network.pivotal.io
-  --version, -v                                            bool    prints the kiln release version (default: false)
+  --help, -h     bool  prints this usage information (default: false)
+  --version, -v  bool  prints the kiln release version (default: false)
 
 Commands:
-  bake     bakes a tile
-  fetch    fetches releases
-  help     prints this usage information
-  update   updates stemcell_criteria and releases
-  version  prints the kiln release version
+  bake                    bakes a tile
+  compile-built-releases  compiles built releases and uploads them
+  fetch                   fetches releases
+  find-release-version    prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints
+  help                    prints this usage information
+  publish                 publish tile on Pivnet
+  sync-with-local         update the Kilnfile.lock based on local releases
+  update-release          bumps a release to a new version
+  update-stemcell         updates Kilnfile.lock with stemcell info
+  upload-release          uploads a BOSH release to an s3 release_source
+  version                 prints the kiln release version
 ```
 
 ### `fetch`
