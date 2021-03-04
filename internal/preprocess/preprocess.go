@@ -109,7 +109,7 @@ func isValidTemplateFunctionIdentifier(str string) (err error) {
 		}
 	}()
 
-	_, err = template.New("test " + str).Funcs(map[string]interface{}{str: func() string { return "" }}).Parse(fmt.Sprintf("{{%s}}", str))
+	_, err = template.New("").Funcs(map[string]interface{}{str: func() string { return "" }}).Parse(fmt.Sprintf("{{%s}}", str))
 	return err
 }
 
