@@ -36,6 +36,8 @@ func Run(out, in billy.Filesystem, currentTileName string, tileNames []string) e
 
 	var outBuf bytes.Buffer
 	return Walk(in, "", func(path string, info os.FileInfo, err error) error {
+		defer outBuf.Reset()
+
 		if err != nil {
 			return err
 		}
