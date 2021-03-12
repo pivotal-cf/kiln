@@ -1,18 +1,3 @@
-# configuration:
-#  icon: icon.png
-#
-#  bosh-variables-directory: bosh-variables
-#  embed: extra
-#  forms-directory: forms
-#  instance-groups-directory: instance-groups
-#  jobs-directory: jobs
-#  migrations-directory: migrations
-#  properties-directory: properties
-#  releases-directory: releases
-#  runtime-configs-directory: runtime-configs
-#  stemcells-directory: stemcells
-#  variables-file: variables.yml
-
 release_sources:
 # - type: bosh.io
 

@@ -39,20 +39,20 @@ Usage: kiln [options] bake [<args>]
   --version, -v  bool  prints the kiln release version (default: false)
 
 Command Arguments:
-  --bosh-variables-directory, -vd    string (variadic)  path to a directory containing BOSH variables
+  --bosh-variables-directory, -vd    string (variadic)  path to a directory containing BOSH variables (default: bosh_variables)
   --embed, -e                        string (variadic)  path to files to include in the tile /embed directory
-  --forms-directory, -f              string (variadic)  path to a directory containing forms
-  --icon, -i                         string             path to icon file
-  --instance-groups-directory, -ig   string (variadic)  path to a directory containing instance groups
-  --jobs-directory, -j               string (variadic)  path to a directory containing jobs
-  --kilnfile, -kf                    string             path to Kilnfile  (NOTE: mutually exclusive with --stemcell-directory)
-  --metadata, -m                     string (required)  path to the metadata file
+  --forms-directory, -f              string (variadic)  path to a directory containing forms (default: forms)
+  --icon, -i                         string             path to icon file (default: icon.png)
+  --instance-groups-directory, -ig   string (variadic)  path to a directory containing instance groups (default: instance_groups)
+  --jobs-directory, -j               string (variadic)  path to a directory containing jobs (default: jobs)
+  --kilnfile, -kf                    string             path to Kilnfile  (NOTE: mutually exclusive with --stemcell-directory) (default: Kilnfile)
+  --metadata, -m                     string (required)  path to the metadata file (default: base.yml)
   --metadata-only, -mo               bool               don't build a tile, output the metadata to stdout
-  --migrations-directory, -md        string (variadic)  path to a directory containing migrations
+  --migrations-directory, -md        string (variadic)  path to a directory containing migrations (default: migrations)
   --output-file, -o                  string             path to where the tile will be output
-  --properties-directory, -pd        string (variadic)  path to a directory containing property blueprints
-  --releases-directory, -rd          string (variadic)  path to a directory containing release tarballs
-  --runtime-configs-directory, -rcd  string (variadic)  path to a directory containing runtime configs
+  --properties-directory, -pd        string (variadic)  path to a directory containing property blueprints (default: properties)
+  --releases-directory, -rd          string (variadic)  path to a directory containing release tarballs (default: releases)
+  --runtime-configs-directory, -rcd  string (variadic)  path to a directory containing runtime configs (default: runtime_configs)
   --sha256                           bool               calculates a SHA256 checksum of the output file
   --stemcell-tarball, -st            string             deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)
   --stemcells-directory, -sd         string (variadic)  path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)
