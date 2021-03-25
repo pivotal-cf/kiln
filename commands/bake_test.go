@@ -18,7 +18,7 @@ import (
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
 )
 
-var _ = Describe("Bake", func() {
+var _ = FDescribe("Bake", func() {
 	var (
 		fakeBOSHVariablesService     *fakes.BOSHVariablesService
 		fakeFormsService             *fakes.FormsService
@@ -702,7 +702,7 @@ var _ = Describe("Bake", func() {
 			})
 
 			Context("when the output-file flag is missing", func() {
-				It("returns an error", func() {
+				It("does not return an error", func() {
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
 						"--metadata", "some-metadata",
@@ -710,8 +710,11 @@ var _ = Describe("Bake", func() {
 						"--stemcell-tarball", "some-stemcell-tarball",
 						"--version", "1.2.3",
 					})
+					Expect(err).NotTo(HaveOccurred())
 
-					Expect(err).To(MatchError("--output-file must be provided unless using --metadata-only"))
+					Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
+					_, writeInput := fakeTileWriter.WriteArgsForCall(0)
+					Expect(writeInput.OutputFile).To(Equal("tile-1.2.3.pivotal"))
 				})
 			})
 

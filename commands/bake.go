@@ -180,10 +180,6 @@ func (b Bake) Execute(args []string) error {
 		return errors.New("--jobs-directory flag requires --instance-groups-directory to also be specified")
 	}
 
-	if b.Options.OutputFile == "" && !b.Options.MetadataOnly {
-		return errors.New("--output-file must be provided unless using --metadata-only")
-	}
-
 	if b.Options.Kilnfile != "" && b.Options.StemcellTarball != "" {
 		return errors.New("--kilnfile cannot be provided when using --stemcell-tarball")
 	}
@@ -291,6 +287,10 @@ func (b Bake) Execute(args []string) error {
 	if b.Options.MetadataOnly {
 		b.outLogger.Printf("%s", interpolatedMetadata)
 		return nil
+	}
+
+	if b.Options.OutputFile == "" {
+		b.Options.OutputFile = "tile-" + b.Options.Version + ".pivotal"
 	}
 
 	err = b.tileWriter.Write(interpolatedMetadata, builder.WriteInput{
