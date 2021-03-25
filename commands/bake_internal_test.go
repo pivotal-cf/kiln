@@ -109,3 +109,45 @@ func TestBake_loadFlags_sets_default_if_default_exists(t *testing.T) {
 	please.Expect(bake.Options.RuntimeConfigDirectories).To(Ω.Equal([]string{"runtime_configs"}))
 	please.Expect(bake.Options.BOSHVariableDirectories).To(Ω.Equal([]string{"bosh_variables"}))
 }
+
+func TestBake_loadFlags_sets_default_output_file_if_not_set(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	var bake Bake
+
+	fileIsFound := func(string) (os.FileInfo, error) { return nil, nil }
+
+	err := bake.loadFlags([]string{
+		"--version", "1.2.3",
+	}, fileIsFound)
+
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(bake.Options.OutputFile).To(Ω.Equal("tile-1.2.3.pivotal"))
+}
+
+func TestBake_loadFlagsAndDefaultsFromFiles_sets_version_option_if_flag_is_not_set(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	t.Run("version file exists", func(t *testing.T) {
+		var bake Bake
+
+		fileIsFound := func(string) (os.FileInfo, error) { return nil, nil }
+		readFile := func(filename string) ([]byte, error) { return []byte("1.2.3\n"), nil }
+
+		err := bake.loadFlagsAndDefaultsFromFiles([]string{}, fileIsFound, readFile)
+
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(bake.Options.Version).To(Ω.Equal("1.2.3"))
+	})
+
+	t.Run("version file does not exists", func(t *testing.T) {
+		var bake Bake
+
+		fileIsNotFound := func(string) (os.FileInfo, error) { return nil, os.ErrNotExist }
+		readFile := func(filename string) ([]byte, error) { return nil, os.ErrNotExist }
+
+		err := bake.loadFlagsAndDefaultsFromFiles([]string{}, fileIsNotFound, readFile)
+
+		please.Expect(err).To(Ω.MatchError("--version flag must be set"))
+	})
+}

@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"reflect"
@@ -167,7 +168,7 @@ func NewBake(
 }
 
 func (b Bake) Execute(args []string) error {
-	err := b.loadFlags(args, os.Stat)
+	err := b.loadFlagsAndDefaultsFromFiles(args, os.Stat, ioutil.ReadFile)
 	if err != nil {
 		return err
 	}
@@ -289,10 +290,6 @@ func (b Bake) Execute(args []string) error {
 		return nil
 	}
 
-	if b.Options.OutputFile == "" {
-		b.Options.OutputFile = "tile-" + b.Options.Version + ".pivotal"
-	}
-
 	err = b.tileWriter.Write(interpolatedMetadata, builder.WriteInput{
 		OutputFile:           b.Options.OutputFile,
 		StubReleases:         b.Options.StubReleases,
@@ -322,7 +319,10 @@ func (b Bake) Usage() jhanda.Usage {
 	}
 }
 
-type statFunc func(string) (os.FileInfo, error)
+type (
+	statFunc func(string) (os.FileInfo, error)
+	readFileFunc func(string) ([]byte, error)
+)
 
 func (b *Bake) loadFlags(args []string, stat statFunc) error {
 	_, err := jhanda.Parse(&b.Options, args)
@@ -333,6 +333,24 @@ func (b *Bake) loadFlags(args []string, stat statFunc) error {
 	// handle simple case first
 	b.configureArrayDefaults(args, stat)
 	b.configurePathDefaults(args, stat)
+
+	if b.Options.OutputFile == "" {
+		b.Options.OutputFile = "tile-" + b.Options.Version + ".pivotal"
+	}
+
+	return nil
+}
+
+func (b *Bake) loadFlagsAndDefaultsFromFiles(args []string, stat statFunc, readFile readFileFunc) error {
+	if err := b.loadFlags(args, stat); err != nil {
+		return err
+	}
+
+	versionBuf, err := readFile("version")
+	if err != nil {
+		return err
+	}
+	b.Options.Version = strings.TrimSpace(string(versionBuf))
 
 	return nil
 }

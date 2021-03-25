@@ -701,23 +701,6 @@ var _ = FDescribe("Bake", func() {
 				})
 			})
 
-			Context("when the output-file flag is missing", func() {
-				It("does not return an error", func() {
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3",
-					})
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
-					_, writeInput := fakeTileWriter.WriteArgsForCall(0)
-					Expect(writeInput.OutputFile).To(Equal("tile-1.2.3.pivotal"))
-				})
-			})
-
 			Context("when both the --kilnfile and --stemcells-directory are provided", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
