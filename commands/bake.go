@@ -320,7 +320,7 @@ func (b Bake) Usage() jhanda.Usage {
 }
 
 type (
-	statFunc func(string) (os.FileInfo, error)
+	statFunc     func(string) (os.FileInfo, error)
 	readFileFunc func(string) ([]byte, error)
 )
 
@@ -346,11 +346,13 @@ func (b *Bake) loadFlagsAndDefaultsFromFiles(args []string, stat statFunc, readF
 		return err
 	}
 
-	versionBuf, err := readFile("version")
-	if err != nil {
-		return err
+	if b.Options.Version == "" {
+		versionBuf, err := readFile("version")
+		if err != nil {
+			return errors.New("--version flag must be provided or a version file must exist")
+		}
+		b.Options.Version = strings.TrimSpace(string(versionBuf))
 	}
-	b.Options.Version = strings.TrimSpace(string(versionBuf))
 
 	return nil
 }

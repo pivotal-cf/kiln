@@ -148,6 +148,6 @@ func TestBake_loadFlagsAndDefaultsFromFiles_sets_version_option_if_flag_is_not_s
 
 		err := bake.loadFlagsAndDefaultsFromFiles([]string{}, fileIsNotFound, readFile)
 
-		please.Expect(err).To(Ω.MatchError("--version flag must be set"))
+		please.Expect(err).To(Ω.MatchError(Ω.And(Ω.ContainSubstring("--version"), Ω.ContainSubstring("version file"))))
 	})
 }
