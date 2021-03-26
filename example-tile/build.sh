@@ -6,10 +6,8 @@ function main() {
 
   go run "${cwd}/../main.go" bake \
     --embed "${cwd}/extra" \
-    --output-file "${cwd}/example-1.2.3-build.4.pivotal" \
     --variable "some-variable=some-value" \
     --variables-file "${cwd}/variables.yml" \
-    --version "1.2.3-build.4" \
     --sha256
 }
 
