@@ -46,7 +46,7 @@ Command Arguments:
   --instance-groups-directory, -ig   string (variadic)  path to a directory containing instance groups (default: instance_groups)
   --jobs-directory, -j               string (variadic)  path to a directory containing jobs (default: jobs)
   --kilnfile, -kf                    string             path to Kilnfile  (NOTE: mutually exclusive with --stemcell-directory) (default: Kilnfile)
-  --metadata, -m                     string (required)  path to the metadata file (default: base.yml)
+  --metadata, -m                     string             path to the metadata file (default: base.yml)
   --metadata-only, -mo               bool               don't build a tile, output the metadata to stdout
   --migrations-directory, -md        string (variadic)  path to a directory containing migrations (default: migrations)
   --output-file, -o                  string             path to where the tile will be output

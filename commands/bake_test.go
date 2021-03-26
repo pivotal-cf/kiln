@@ -18,7 +18,7 @@ import (
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
 )
 
-var _ = FDescribe("Bake", func() {
+var _ = Describe("Bake", func() {
 	var (
 		fakeBOSHVariablesService     *fakes.BOSHVariablesService
 		fakeFormsService             *fakes.FormsService

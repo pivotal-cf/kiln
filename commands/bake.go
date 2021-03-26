@@ -168,7 +168,7 @@ func NewBake(
 }
 
 func (b Bake) Execute(args []string) error {
-	err := b.loadFlagsAndDefaultsFromFiles(args, os.Stat, ioutil.ReadFile)
+	err := b.loadFlags(args, os.Stat, ioutil.ReadFile)
 	if err != nil {
 		return err
 	}
@@ -324,7 +324,7 @@ type (
 	readFileFunc func(string) ([]byte, error)
 )
 
-func (b *Bake) loadFlags(args []string, stat statFunc) error {
+func (b *Bake) loadFlags(args []string, stat statFunc, readFile readFileFunc) error {
 	_, err := jhanda.Parse(&b.Options, args)
 	if err != nil {
 		return err
@@ -334,27 +334,22 @@ func (b *Bake) loadFlags(args []string, stat statFunc) error {
 	b.configureArrayDefaults(args, stat)
 	b.configurePathDefaults(args, stat)
 
-	if b.Options.OutputFile == "" {
+	if b.Options.Version == "" && !flagIsSet("v", "version", args) {
+		versionBuf, _ := readFile("version")
+		b.Options.Version = strings.TrimSpace(string(versionBuf))
+	}
+
+	if shouldReadVersionFile(b, args) {
 		b.Options.OutputFile = "tile-" + b.Options.Version + ".pivotal"
 	}
 
 	return nil
 }
 
-func (b *Bake) loadFlagsAndDefaultsFromFiles(args []string, stat statFunc, readFile readFileFunc) error {
-	if err := b.loadFlags(args, stat); err != nil {
-		return err
-	}
-
-	if b.Options.Version == "" {
-		versionBuf, err := readFile("version")
-		if err != nil {
-			return errors.New("--version flag must be provided or a version file must exist")
-		}
-		b.Options.Version = strings.TrimSpace(string(versionBuf))
-	}
-
-	return nil
+func shouldReadVersionFile(b *Bake, args []string) bool {
+	return b.Options.OutputFile == "" &&
+		!b.Options.MetadataOnly &&
+		!flagIsSet("o", "output-file", args)
 }
 
 func (b *Bake) configureArrayDefaults(args []string, stat statFunc) {

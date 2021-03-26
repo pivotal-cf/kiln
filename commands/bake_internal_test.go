@@ -7,20 +7,64 @@ import (
 	Ω "github.com/onsi/gomega"
 )
 
-func TestBake_loadFlags_sets_empty_options_when_default_path_does_not_exist(t *testing.T) {
+func TestBake_loadFlags_sets_reasonable_defaults(t *testing.T) {
 	please := Ω.NewWithT(t)
 
-	var bake Bake
+	var (
+		bake Bake
 
-	statReturnsErrorNotExists := func(string) (os.FileInfo, error) { return nil, os.ErrNotExist }
+		statNoError = func(string) (os.FileInfo, error) { return nil, nil }
 
-	err := bake.loadFlags([]string{}, statReturnsErrorNotExists)
+		readFileCallCount = 0
+		readFile          = func(name string) ([]byte, error) {
+			readFileCallCount++
+			switch name {
+			case "version":
+				return []byte("4.2.0"), nil
+			default:
+				return nil, os.ErrNotExist
+			}
+		}
+	)
+
+	err := bake.loadFlags([]string{}, statNoError, readFile)
+
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+
+	please.Expect(bake.Options.Kilnfile).To(Ω.Equal("Kilnfile"))
+	please.Expect(bake.Options.Metadata).To(Ω.Equal("base.yml"))
+	please.Expect(bake.Options.IconPath).To(Ω.Equal("icon.png"))
+	please.Expect(bake.Options.OutputFile).To(Ω.Equal("tile-4.2.0.pivotal"))
+
+	please.Expect(bake.Options.ReleaseDirectories).To(Ω.Equal([]string{"releases"}))
+	please.Expect(bake.Options.FormDirectories).To(Ω.Equal([]string{"forms"}))
+	please.Expect(bake.Options.InstanceGroupDirectories).To(Ω.Equal([]string{"instance_groups"}))
+	please.Expect(bake.Options.JobDirectories).To(Ω.Equal([]string{"jobs"}))
+	please.Expect(bake.Options.MigrationDirectories).To(Ω.Equal([]string{"migrations"}))
+	please.Expect(bake.Options.PropertyDirectories).To(Ω.Equal([]string{"properties"}))
+	please.Expect(bake.Options.RuntimeConfigDirectories).To(Ω.Equal([]string{"runtime_configs"}))
+	please.Expect(bake.Options.BOSHVariableDirectories).To(Ω.Equal([]string{"bosh_variables"}))
+
+	please.Expect(readFileCallCount).To(Ω.Equal(1))
+}
+
+func TestBake_loadFlags_sets_empty_options_when_default_is_not_applicable(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	var (
+		bake Bake
+
+		statError = func(string) (os.FileInfo, error) { return nil, os.ErrNotExist }
+		readError = func(name string) ([]byte, error) { return nil, os.ErrNotExist }
+	)
+
+	err := bake.loadFlags([]string{}, statError, readError)
 
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 
 	please.Expect(bake.Options.Kilnfile).To(Ω.Equal(""))
 	please.Expect(bake.Options.Metadata).To(Ω.Equal(""))
-	please.Expect(bake.Options.IconPath).To(Ω.Equal(""))
+	please.Expect(bake.Options.Version).To(Ω.Equal(""))
 
 	please.Expect(bake.Options.ReleaseDirectories).To(Ω.HaveLen(0))
 	please.Expect(bake.Options.FormDirectories).To(Ω.HaveLen(0))
@@ -32,17 +76,28 @@ func TestBake_loadFlags_sets_empty_options_when_default_path_does_not_exist(t *t
 	please.Expect(bake.Options.BOSHVariableDirectories).To(Ω.HaveLen(0))
 }
 
-func TestBake_loadFlags_sets_provided_options(t *testing.T) {
+func TestBake_loadFlags_does_not_override_provided_flags(t *testing.T) {
 	please := Ω.NewWithT(t)
 
-	var bake Bake
+	var (
+		bake Bake
 
-	statReturnsErrorNotExists := func(string) (os.FileInfo, error) { return nil, os.ErrNotExist }
+		statError = func(string) (os.FileInfo, error) { return nil, os.ErrNotExist }
+
+		readFileCallCount = 0
+		readNotFound      = func(name string) ([]byte, error) {
+			readFileCallCount++
+			return nil, os.ErrNotExist
+		}
+	)
 
 	err := bake.loadFlags([]string{
 		"--kilnfile", "kilnfile",
 		"--metadata", "metadata",
 		"--icon", "icon",
+
+		"--version", "4.2.0",
+		"--output-file", "some-tile.pivotal",
 
 		"--releases-directory", "releases-directory-1",
 		"--releases-directory", "releases-directory-2",
@@ -67,13 +122,15 @@ func TestBake_loadFlags_sets_provided_options(t *testing.T) {
 
 		"--bosh-variables-directory", "bosh-variables-directory-1",
 		"--bosh-variables-directory", "bosh-variables-directory-2",
-	}, statReturnsErrorNotExists)
+	}, statError, readNotFound)
 
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 
 	please.Expect(bake.Options.Kilnfile).To(Ω.Equal("kilnfile"))
 	please.Expect(bake.Options.Metadata).To(Ω.Equal("metadata"))
 	please.Expect(bake.Options.IconPath).To(Ω.Equal("icon"))
+	please.Expect(bake.Options.Version).To(Ω.Equal("4.2.0"))
+	please.Expect(bake.Options.OutputFile).To(Ω.Equal("some-tile.pivotal"))
 
 	please.Expect(bake.Options.ReleaseDirectories).To(Ω.Equal([]string{"releases-directory-1", "releases-directory-2"}))
 	please.Expect(bake.Options.FormDirectories).To(Ω.Equal([]string{"forms-directory-1", "forms-directory-2"}))
@@ -83,71 +140,70 @@ func TestBake_loadFlags_sets_provided_options(t *testing.T) {
 	please.Expect(bake.Options.PropertyDirectories).To(Ω.Equal([]string{"properties-directory-1", "properties-directory-2"}))
 	please.Expect(bake.Options.RuntimeConfigDirectories).To(Ω.Equal([]string{"runtime-configs-directory-1", "runtime-configs-directory-2"}))
 	please.Expect(bake.Options.BOSHVariableDirectories).To(Ω.Equal([]string{"bosh-variables-directory-1", "bosh-variables-directory-2"}))
-}
 
-func TestBake_loadFlags_sets_default_if_default_exists(t *testing.T) {
-	please := Ω.NewWithT(t)
-
-	var bake Bake
-
-	fileIsFound := func(string) (os.FileInfo, error) { return nil, nil }
-
-	err := bake.loadFlags([]string{}, fileIsFound)
-
-	please.Expect(err).NotTo(Ω.HaveOccurred())
-
-	please.Expect(bake.Options.Kilnfile).To(Ω.Equal("Kilnfile"))
-	please.Expect(bake.Options.Metadata).To(Ω.Equal("base.yml"))
-	please.Expect(bake.Options.IconPath).To(Ω.Equal("icon.png"))
-
-	please.Expect(bake.Options.ReleaseDirectories).To(Ω.Equal([]string{"releases"}))
-	please.Expect(bake.Options.FormDirectories).To(Ω.Equal([]string{"forms"}))
-	please.Expect(bake.Options.InstanceGroupDirectories).To(Ω.Equal([]string{"instance_groups"}))
-	please.Expect(bake.Options.JobDirectories).To(Ω.Equal([]string{"jobs"}))
-	please.Expect(bake.Options.MigrationDirectories).To(Ω.Equal([]string{"migrations"}))
-	please.Expect(bake.Options.PropertyDirectories).To(Ω.Equal([]string{"properties"}))
-	please.Expect(bake.Options.RuntimeConfigDirectories).To(Ω.Equal([]string{"runtime_configs"}))
-	please.Expect(bake.Options.BOSHVariableDirectories).To(Ω.Equal([]string{"bosh_variables"}))
+	please.Expect(readFileCallCount).To(Ω.Equal(0))
 }
 
 func TestBake_loadFlags_sets_default_output_file_if_not_set(t *testing.T) {
 	please := Ω.NewWithT(t)
 
-	var bake Bake
+	var (
+		bake Bake
 
-	fileIsFound := func(string) (os.FileInfo, error) { return nil, nil }
+		statNoError = func(string) (os.FileInfo, error) { return nil, nil }
 
-	err := bake.loadFlags([]string{
-		"--version", "1.2.3",
-	}, fileIsFound)
+		readFileCallCount = 0
+		readFile          = func(name string) ([]byte, error) {
+			readFileCallCount++
+			switch name {
+			case "version":
+				return []byte("1.2.3"), nil
+			default:
+				return nil, os.ErrNotExist
+			}
+		}
+	)
+
+	err := bake.loadFlags([]string{}, statNoError, readFile)
 
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 	please.Expect(bake.Options.OutputFile).To(Ω.Equal("tile-1.2.3.pivotal"))
+	please.Expect(readFileCallCount).To(Ω.Equal(1))
 }
 
-func TestBake_loadFlagsAndDefaultsFromFiles_sets_version_option_if_flag_is_not_set(t *testing.T) {
+func TestBake_loadFlags_does_not_set_outputs_file_when_meta_data_only_is_true(t *testing.T) {
 	please := Ω.NewWithT(t)
 
-	t.Run("version file exists", func(t *testing.T) {
-		var bake Bake
+	var (
+		bake Bake
 
-		fileIsFound := func(string) (os.FileInfo, error) { return nil, nil }
-		readFile := func(filename string) ([]byte, error) { return []byte("1.2.3\n"), nil }
+		statNoError    = func(string) (os.FileInfo, error) { return nil, nil }
+		readFileError = func(name string) ([]byte, error) { return nil, os.ErrNotExist }
+	)
 
-		err := bake.loadFlagsAndDefaultsFromFiles([]string{}, fileIsFound, readFile)
+	err := bake.loadFlags([]string{
+		"--metadata-only",
+	}, statNoError, readFileError)
 
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(bake.Options.Version).To(Ω.Equal("1.2.3"))
-	})
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(bake.Options.OutputFile).To(Ω.Equal(""))
+}
 
-	t.Run("version file does not exists", func(t *testing.T) {
-		var bake Bake
+func TestBake_loadFlags_version_file_does_not_exist(t *testing.T) {
+	please := Ω.NewWithT(t)
 
-		fileIsNotFound := func(string) (os.FileInfo, error) { return nil, os.ErrNotExist }
-		readFile := func(filename string) ([]byte, error) { return nil, os.ErrNotExist }
+	var (
+		bake Bake
 
-		err := bake.loadFlagsAndDefaultsFromFiles([]string{}, fileIsNotFound, readFile)
+		statError = func(string) (os.FileInfo, error) {
+			return nil, os.ErrNotExist
+		}
+		readFileError = func(filename string) ([]byte, error) {
+			return nil, os.ErrNotExist
+		}
+	)
 
-		please.Expect(err).To(Ω.MatchError(Ω.And(Ω.ContainSubstring("--version"), Ω.ContainSubstring("version file"))))
-	})
+	err := bake.loadFlags([]string{}, statError, readFileError)
+
+	please.Expect(err).NotTo(Ω.HaveOccurred(), "it should not return an error")
 }
