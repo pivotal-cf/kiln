@@ -48,6 +48,53 @@ func TestBake_loadFlags_sets_reasonable_defaults(t *testing.T) {
 	please.Expect(readFileCallCount).To(Ω.Equal(1))
 }
 
+func TestBake_loadFlags_kilnfile_path_provided(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	var (
+		bake Bake
+
+		statNoError = func(string) (os.FileInfo, error) { return nil, nil }
+
+		readFileCallCount = 0
+		readFile          = func(name string) ([]byte, error) {
+			readFileCallCount++
+			switch name {
+			case "version":
+				return []byte("4.2.0"), nil
+			default:
+				return nil, os.ErrNotExist
+			}
+		}
+	)
+
+	err := bake.loadFlags([]string{
+		"--kilnfile", "some-dir/Kilnfile",
+		"--forms-directory", "do-not-change",
+	}, statNoError, readFile)
+
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+
+	please.Expect(bake.Options.Kilnfile).To(Ω.Equal("some-dir/Kilnfile"))
+
+	description := "it should prefix defaults with kiln path"
+	please.Expect(bake.Options.Metadata).To(Ω.Equal("some-dir/base.yml"), description)
+	please.Expect(bake.Options.IconPath).To(Ω.Equal("some-dir/icon.png"), description)
+	please.Expect(bake.Options.OutputFile).To(Ω.Equal("tile-4.2.0.pivotal"))
+
+	please.Expect(bake.Options.FormDirectories).To(Ω.Equal([]string{"do-not-change"}), "it should not prefix explicitly passed flags")
+
+	please.Expect(bake.Options.ReleaseDirectories).To(Ω.Equal([]string{"some-dir/releases"}), description)
+	please.Expect(bake.Options.InstanceGroupDirectories).To(Ω.Equal([]string{"some-dir/instance_groups"}), description)
+	please.Expect(bake.Options.JobDirectories).To(Ω.Equal([]string{"some-dir/jobs"}), description)
+	please.Expect(bake.Options.MigrationDirectories).To(Ω.Equal([]string{"some-dir/migrations"}), description)
+	please.Expect(bake.Options.PropertyDirectories).To(Ω.Equal([]string{"some-dir/properties"}), description)
+	please.Expect(bake.Options.RuntimeConfigDirectories).To(Ω.Equal([]string{"some-dir/runtime_configs"}), description)
+	please.Expect(bake.Options.BOSHVariableDirectories).To(Ω.Equal([]string{"some-dir/bosh_variables"}), description)
+
+	please.Expect(readFileCallCount).To(Ω.Equal(1))
+}
+
 func TestBake_loadFlags_sets_empty_options_when_default_is_not_applicable(t *testing.T) {
 	please := Ω.NewWithT(t)
 

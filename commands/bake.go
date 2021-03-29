@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -356,6 +357,11 @@ func (b *Bake) configureArrayDefaults(args []string, stat statFunc) {
 	v := reflect.ValueOf(&b.Options).Elem()
 	t := v.Type()
 
+	pathPrefix := filepath.Dir(b.Options.Kilnfile)
+	if pathPrefix == "." {
+		pathPrefix = ""
+	}
+
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
@@ -383,6 +389,9 @@ func (b *Bake) configureArrayDefaults(args []string, stat statFunc) {
 
 		filteredDefaults := defaultValues[:0]
 		for _, p := range defaultValues {
+			if pathPrefix != "" {
+				p = filepath.Join(pathPrefix, p)
+			}
 			_, err := stat(p)
 			if err != nil {
 				continue
@@ -401,6 +410,11 @@ func (b *Bake) configurePathDefaults(args []string, stat statFunc) {
 	v := reflect.ValueOf(&b.Options).Elem()
 	t := v.Type()
 
+	pathPrefix := filepath.Dir(b.Options.Kilnfile)
+	if pathPrefix == "." {
+		pathPrefix = ""
+	}
+
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
@@ -417,24 +431,29 @@ func (b *Bake) configurePathDefaults(args []string, stat statFunc) {
 			continue
 		}
 
-		flagValue, ok := v.Field(i).Interface().(string)
+		value, ok := v.Field(i).Interface().(string)
 		if !ok {
 			continue // this should not occur
 		}
 
-		isDefaultValue := defaultValue == flagValue
+		isDefaultValue := defaultValue == value
 
 		if !isDefaultValue {
 			continue
 		}
 
-		_, err := stat(flagValue)
-		if err == nil {
+		if pathPrefix != "" {
+			value = filepath.Join(pathPrefix, value)
+		}
+
+		_, err := stat(value)
+		if err != nil {
+			// set to zero value
+			v.Field(i).Set(reflect.Zero(v.Field(i).Type()))
 			continue
 		}
 
-		// set to zero value
-		v.Field(i).Set(reflect.Zero(v.Field(i).Type()))
+		v.Field(i).Set(reflect.ValueOf(value))
 	}
 }
 
