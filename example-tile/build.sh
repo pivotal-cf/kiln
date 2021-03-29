@@ -5,6 +5,7 @@ function main() {
   cwd="${1}"
 
   go run "${cwd}/../main.go" bake \
+    --kilnfile "${cwd}/Kilnfile" \
     --embed "${cwd}/extra" \
     --variable "some-variable=some-value" \
     --variables-file "${cwd}/variables.yml" \
