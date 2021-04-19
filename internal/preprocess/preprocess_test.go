@@ -1,10 +1,11 @@
 package preprocess_test
 
 import (
-	"github.com/pivotal-cf/kiln/internal/preprocess"
-	"gopkg.in/src-d/go-billy.v4/osfs"
 	"io/ioutil"
 	"path/filepath"
+
+	"github.com/pivotal-cf/kiln/internal/preprocess"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -2,12 +2,13 @@ package commands
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4"
-	"log"
 )
 
 type SyncWithLocal struct {

@@ -2,6 +2,7 @@ package fetcher
 
 import (
 	"fmt"
+
 	"github.com/Masterminds/semver"
 	"github.com/pivotal-cf/kiln/release"
 )

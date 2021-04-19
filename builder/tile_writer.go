@@ -2,13 +2,14 @@ package builder
 
 import (
 	"bytes"
-	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 type TileWriter struct {

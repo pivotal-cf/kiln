@@ -2,11 +2,12 @@ package fetcher_test
 
 import (
 	"fmt"
-	"github.com/onsi/gomega/gbytes"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/onsi/gomega/gbytes"
 
 	"gopkg.in/src-d/go-billy.v4/osfs"
 

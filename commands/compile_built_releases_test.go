@@ -5,13 +5,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	boshcrypto "github.com/cloudfoundry/bosh-utils/crypto"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	boshcrypto "github.com/cloudfoundry/bosh-utils/crypto"
 
 	"github.com/onsi/gomega/gbytes"
 

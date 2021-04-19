@@ -1,10 +1,11 @@
 package baking
 
 import (
-	"github.com/pivotal-cf/kiln/builder"
 	"os"
 	"path/filepath"
 	"regexp"
+
+	"github.com/pivotal-cf/kiln/builder"
 )
 
 type ReleasesService struct {

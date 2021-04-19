@@ -3,10 +3,11 @@ package commands_test
 import (
 	"errors"
 	"fmt"
-	"github.com/onsi/gomega/gbytes"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

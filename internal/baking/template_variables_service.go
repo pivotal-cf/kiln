@@ -2,8 +2,9 @@ package baking
 
 import (
 	"fmt"
-	"gopkg.in/src-d/go-billy.v4"
 	"strings"
+
+	"gopkg.in/src-d/go-billy.v4"
 
 	"gopkg.in/yaml.v2"
 )
