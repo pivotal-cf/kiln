@@ -4,13 +4,14 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	boshcrypto "github.com/cloudfoundry/bosh-utils/crypto"
-	boshsystem "github.com/cloudfoundry/bosh-utils/system"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"sync"
+
+	boshcrypto "github.com/cloudfoundry/bosh-utils/crypto"
+	boshsystem "github.com/cloudfoundry/bosh-utils/system"
 
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/helper"

@@ -1,8 +1,9 @@
 package fetcher_test
 
 import (
-	"github.com/matt-royal/biloba"
 	"testing"
+
+	"github.com/matt-royal/biloba"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -1,10 +1,11 @@
 package integration_test
 
 import (
-	"github.com/matt-royal/biloba"
-	"github.com/onsi/gomega/gexec"
 	"os"
 	"testing"
+
+	"github.com/matt-royal/biloba"
+	"github.com/onsi/gomega/gexec"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

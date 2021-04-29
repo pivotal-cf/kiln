@@ -2,11 +2,12 @@ package commands
 
 import (
 	"encoding/json"
+	"log"
+
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4/osfs"
-	"log"
 )
 
 type FindReleaseVersion struct {

@@ -2,6 +2,8 @@ package commands_test
 
 import (
 	"errors"
+	"log"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf/kiln/commands"
@@ -11,7 +13,6 @@ import (
 	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/memfs"
-	"log"
 )
 
 var _ = Describe("sync-with-local", func() {

@@ -2,6 +2,11 @@ package commands_test
 
 import (
 	"errors"
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
+
 	"github.com/onsi/gomega/gbytes"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
@@ -9,10 +14,6 @@ import (
 	test_helpers "github.com/pivotal-cf/kiln/internal/test-helpers"
 	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4/osfs"
-	"io/ioutil"
-	"log"
-	"os"
-	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

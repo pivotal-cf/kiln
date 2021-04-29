@@ -2,10 +2,11 @@ package commands
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/release"
-	"gopkg.in/src-d/go-billy.v4/osfs"
 	"log"
 	"os"
+
+	"github.com/pivotal-cf/kiln/release"
+	"gopkg.in/src-d/go-billy.v4/osfs"
 
 	"github.com/pivotal-cf/kiln/fetcher"
 

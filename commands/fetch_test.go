@@ -3,11 +3,12 @@ package commands_test
 import (
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/pivotal-cf/kiln/internal/cargo"
 
 	"github.com/pivotal-cf/kiln/release"
 

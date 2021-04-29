@@ -2,12 +2,13 @@ package baking_test
 
 import (
 	"errors"
-	"github.com/pivotal-cf/kiln/builder"
-	. "github.com/pivotal-cf/kiln/internal/baking"
-	"github.com/pivotal-cf/kiln/internal/baking/fakes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/pivotal-cf/kiln/builder"
+	. "github.com/pivotal-cf/kiln/internal/baking"
+	"github.com/pivotal-cf/kiln/internal/baking/fakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

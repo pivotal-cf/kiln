@@ -3,14 +3,15 @@ package fetcher_test
 import (
 	"errors"
 	"fmt"
-	. "github.com/onsi/ginkgo/extensions/table"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	. "github.com/onsi/ginkgo/extensions/table"
+	"github.com/pivotal-cf/kiln/internal/cargo"
 
 	. "github.com/onsi/gomega/gstruct"
 	"gopkg.in/src-d/go-billy.v4/osfs"

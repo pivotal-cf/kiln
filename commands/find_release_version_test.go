@@ -1,14 +1,15 @@
 package commands_test
 
 import (
-	"github.com/pivotal-cf/kiln/commands"
-	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/release"
 	"io/ioutil"
 	"log"
 	"path/filepath"
 	"strings"
+
+	"github.com/pivotal-cf/kiln/commands"
+	"github.com/pivotal-cf/kiln/fetcher"
+	"github.com/pivotal-cf/kiln/internal/cargo"
+	"github.com/pivotal-cf/kiln/release"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

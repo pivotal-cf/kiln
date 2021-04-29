@@ -11,9 +11,10 @@ import (
 
 	. "github.com/pivotal-cf/kiln/builder"
 
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 var _ = Describe("Zipper", func() {

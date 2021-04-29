@@ -2,13 +2,14 @@ package commands
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/helper"
 	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4/osfs"
-	"log"
 )
 
 type UpdateStemcell struct {
