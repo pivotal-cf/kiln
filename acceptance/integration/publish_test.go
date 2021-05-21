@@ -59,9 +59,9 @@ var _ = Describe("publish", func() {
 			rel.ReleaseType = "Developer Release"
 			rel.EndOfSupportDate = ""
 			rel.Availability = "Selected User Groups Only"
+			rel.EULA.Slug = "vmware-prerelease-eula"
 			_, err = client.Releases.Update(slug, rel)
 			Expect(err).NotTo(HaveOccurred())
-
 		}
 
 		userGroups, err := client.UserGroups.ListForRelease(slug, releaseID)
