@@ -3,7 +3,12 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
@@ -100,28 +105,27 @@ type Bake struct {
 	metadata          metadataService
 
 	Options struct {
-		Kilnfile           string   `short:"kf"  long:"kilnfile"                        description:"path to Kilnfile  (NOTE: mutually exclusive with --stemcell-directory)"`
-		Metadata           string   `short:"m"  long:"metadata"           required:"true" description:"path to the metadata file"`
-		OutputFile         string   `short:"o"  long:"output-file"                        description:"path to where the tile will be output"`
-		ReleaseDirectories []string `short:"rd" long:"releases-directory"               description:"path to a directory containing release tarballs"`
-
-		BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"  description:"path to a directory containing BOSH variables"`
-		EmbedPaths               []string `short:"e"   long:"embed"                     description:"path to files to include in the tile /embed directory"`
-		FormDirectories          []string `short:"f"   long:"forms-directory"           description:"path to a directory containing forms"`
-		IconPath                 string   `short:"i"   long:"icon"                      description:"path to icon file"`
-		InstanceGroupDirectories []string `short:"ig"  long:"instance-groups-directory" description:"path to a directory containing instance groups"`
-		JobDirectories           []string `short:"j"   long:"jobs-directory"            description:"path to a directory containing jobs"`
-		MetadataOnly             bool     `short:"mo"  long:"metadata-only"             description:"don't build a tile, output the metadata to stdout"`
-		MigrationDirectories     []string `short:"md"  long:"migrations-directory"      description:"path to a directory containing migrations"`
-		PropertyDirectories      []string `short:"pd"  long:"properties-directory"      description:"path to a directory containing property blueprints"`
-		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory" description:"path to a directory containing runtime configs"`
-		Sha256                   bool     `            long:"sha256"                    description:"calculates a SHA256 checksum of the output file"`
-		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"          description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)"`
-		StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"       description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)"`
-		StubReleases             bool     `short:"sr"  long:"stub-releases"             description:"skips importing release tarballs into the tile"`
-		VariableFiles            []string `short:"vf"  long:"variables-file"            description:"path to a file containing variables to interpolate"`
-		Variables                []string `short:"vr"  long:"variable"                  description:"key value pairs of variables to interpolate"`
-		Version                  string   `short:"v"   long:"version"                   description:"version of the tile"`
+		Kilnfile                 string   `short:"kf"  long:"kilnfile"                   default:"Kilnfile"         description:"path to Kilnfile  (NOTE: mutually exclusive with --stemcell-directory)"`
+		Metadata                 string   `short:"m"   long:"metadata"                   default:"base.yml"         description:"path to the metadata file"`
+		ReleaseDirectories       []string `short:"rd"  long:"releases-directory"         default:"releases"         description:"path to a directory containing release tarballs"`
+		FormDirectories          []string `short:"f"   long:"forms-directory"            default:"forms"            description:"path to a directory containing forms"`
+		IconPath                 string   `short:"i"   long:"icon"                       default:"icon.png"         description:"path to icon file"`
+		InstanceGroupDirectories []string `short:"ig"  long:"instance-groups-directory"  default:"instance_groups"  description:"path to a directory containing instance groups"`
+		JobDirectories           []string `short:"j"   long:"jobs-directory"             default:"jobs"             description:"path to a directory containing jobs"`
+		MigrationDirectories     []string `short:"md"  long:"migrations-directory"       default:"migrations"       description:"path to a directory containing migrations"`
+		PropertyDirectories      []string `short:"pd"  long:"properties-directory"       default:"properties"       description:"path to a directory containing property blueprints"`
+		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory"  default:"runtime_configs"  description:"path to a directory containing runtime configs"`
+		BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"   default:"bosh_variables"   description:"path to a directory containing BOSH variables"`
+		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"                                      description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)"`
+		StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"                                   description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)"`
+		EmbedPaths               []string `short:"e"   long:"embed"                                                 description:"path to files to include in the tile /embed directory"`
+		OutputFile               string   `short:"o"   long:"output-file"                                           description:"path to where the tile will be output"`
+		MetadataOnly             bool     `short:"mo"  long:"metadata-only"                                         description:"don't build a tile, output the metadata to stdout"`
+		Sha256                   bool     `            long:"sha256"                                                description:"calculates a SHA256 checksum of the output file"`
+		StubReleases             bool     `short:"sr"  long:"stub-releases"                                         description:"skips importing release tarballs into the tile"`
+		VariableFiles            []string `short:"vf"  long:"variables-file"                                        description:"path to a file containing variables to interpolate"`
+		Variables                []string `short:"vr"  long:"variable"                                              description:"key value pairs of variables to interpolate"`
+		Version                  string   `short:"v"   long:"version"                                               description:"version of the tile"`
 	}
 }
 
@@ -165,17 +169,17 @@ func NewBake(
 }
 
 func (b Bake) Execute(args []string) error {
-	_, err := jhanda.Parse(&b.Options, args)
+	err := b.loadFlags(args, os.Stat, ioutil.ReadFile)
 	if err != nil {
 		return err
 	}
 
-	if len(b.Options.InstanceGroupDirectories) == 0 && len(b.Options.JobDirectories) > 0 {
-		return errors.New("--jobs-directory flag requires --instance-groups-directory to also be specified")
+	if b.Options.Metadata == "" {
+		return errors.New("missing required flag \"--metadata\"")
 	}
 
-	if b.Options.OutputFile == "" && !b.Options.MetadataOnly {
-		return errors.New("--output-file must be provided unless using --metadata-only")
+	if len(b.Options.InstanceGroupDirectories) == 0 && len(b.Options.JobDirectories) > 0 {
+		return errors.New("--jobs-directory flag requires --instance-groups-directory to also be specified")
 	}
 
 	if b.Options.Kilnfile != "" && b.Options.StemcellTarball != "" {
@@ -314,4 +318,156 @@ func (b Bake) Usage() jhanda.Usage {
 		ShortDescription: "bakes a tile",
 		Flags:            b.Options,
 	}
+}
+
+type (
+	statFunc     func(string) (os.FileInfo, error)
+	readFileFunc func(string) ([]byte, error)
+)
+
+func (b *Bake) loadFlags(args []string, stat statFunc, readFile readFileFunc) error {
+	_, err := jhanda.Parse(&b.Options, args)
+	if err != nil {
+		return err
+	}
+
+	// handle simple case first
+	b.configureArrayDefaults(args, stat)
+	b.configurePathDefaults(args, stat)
+
+	if b.Options.Version == "" && !flagIsSet("v", "version", args) {
+		versionBuf, _ := readFile("version")
+		b.Options.Version = strings.TrimSpace(string(versionBuf))
+	}
+
+	if shouldReadVersionFile(b, args) {
+		b.Options.OutputFile = "tile-" + b.Options.Version + ".pivotal"
+	}
+
+	return nil
+}
+
+func shouldReadVersionFile(b *Bake, args []string) bool {
+	return b.Options.OutputFile == "" &&
+		!b.Options.MetadataOnly &&
+		!flagIsSet("o", "output-file", args)
+}
+
+func (b *Bake) configureArrayDefaults(args []string, stat statFunc) {
+	v := reflect.ValueOf(&b.Options).Elem()
+	t := v.Type()
+
+	pathPrefix := filepath.Dir(b.Options.Kilnfile)
+	if pathPrefix == "." {
+		pathPrefix = ""
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+
+		if field.Type.Kind() != reflect.Slice {
+			continue
+		}
+
+		defaultValueStr, ok := field.Tag.Lookup("default")
+		if !ok {
+			continue
+		}
+		defaultValues := strings.Split(defaultValueStr, ",")
+
+		flagValues, ok := v.Field(i).Interface().([]string)
+		if !ok {
+			// this might occur if we add non string slice params
+			// notice the field Kind check above was not super specific
+			continue
+		}
+
+		if flagIsSet(field.Tag.Get("short"), field.Tag.Get("long"), args) {
+			v.Field(i).Set(reflect.ValueOf(flagValues[len(defaultValues):]))
+			continue
+		}
+
+		filteredDefaults := defaultValues[:0]
+		for _, p := range defaultValues {
+			if pathPrefix != "" {
+				p = filepath.Join(pathPrefix, p)
+			}
+			_, err := stat(p)
+			if err != nil {
+				continue
+			}
+			filteredDefaults = append(filteredDefaults, p)
+		}
+
+		// if default values were found, use them,
+		// else filteredDefaults will be an empty slice
+		//   and the Bake command will continue as if they were not set
+		v.Field(i).Set(reflect.ValueOf(filteredDefaults))
+	}
+}
+
+func (b *Bake) configurePathDefaults(args []string, stat statFunc) {
+	v := reflect.ValueOf(&b.Options).Elem()
+	t := v.Type()
+
+	pathPrefix := filepath.Dir(b.Options.Kilnfile)
+	if pathPrefix == "." {
+		pathPrefix = ""
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+
+		if field.Type.Kind() != reflect.String {
+			continue
+		}
+
+		if flagIsSet(field.Tag.Get("short"), field.Tag.Get("long"), args) {
+			continue
+		}
+
+		defaultValue, ok := field.Tag.Lookup("default")
+		if !ok {
+			continue
+		}
+
+		value, ok := v.Field(i).Interface().(string)
+		if !ok {
+			continue // this should not occur
+		}
+
+		isDefaultValue := defaultValue == value
+
+		if !isDefaultValue {
+			continue
+		}
+
+		if pathPrefix != "" {
+			value = filepath.Join(pathPrefix, value)
+		}
+
+		_, err := stat(value)
+		if err != nil {
+			// set to zero value
+			v.Field(i).Set(reflect.Zero(v.Field(i).Type()))
+			continue
+		}
+
+		v.Field(i).Set(reflect.ValueOf(value))
+	}
+}
+
+func flagIsSet(short, long string, args []string) bool {
+	if long == "" || short == "" {
+		panic("both long and short must be set for flag options")
+	}
+	for _, a := range args {
+		if a == "--"+long ||
+			a == "-"+short ||
+			strings.HasPrefix(a, "-"+short+"=") ||
+			strings.HasPrefix(a, "--"+long+"=") {
+			return true
+		}
+	}
+	return false
 }

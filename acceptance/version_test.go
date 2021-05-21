@@ -40,7 +40,7 @@ var _ = Describe("version command", func() {
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(session).Should(gexec.Exit(0))
+			Eventually(session, time.Second*10).Should(gexec.Exit(0))
 			Expect(string(session.Out.Contents())).To(ContainSubstring(fmt.Sprintf("kiln version %s", version)))
 		})
 	})
@@ -51,7 +51,7 @@ var _ = Describe("version command", func() {
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(session).Should(gexec.Exit(0))
+			Eventually(session, time.Second*10).Should(gexec.Exit(0))
 			Expect(string(session.Out.Contents())).To(ContainSubstring(fmt.Sprintf("kiln version %s", version)))
 		})
 	})

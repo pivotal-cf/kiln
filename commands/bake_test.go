@@ -701,20 +701,6 @@ var _ = Describe("Bake", func() {
 				})
 			})
 
-			Context("when the output-file flag is missing", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3",
-					})
-
-					Expect(err).To(MatchError("--output-file must be provided unless using --metadata-only"))
-				})
-			})
-
 			Context("when both the --kilnfile and --stemcells-directory are provided", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{

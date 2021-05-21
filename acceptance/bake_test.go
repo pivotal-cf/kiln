@@ -496,7 +496,8 @@ var _ = Describe("bake command", func() {
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(session).Should(gexec.Exit(0))
+			// intervals added to make tests pass. it is taking too long locally
+			Eventually(session, time.Second*10).Should(gexec.Exit(0))
 
 			renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
 			Eventually(session.Out.Contents).Should(HelpfullyMatchYAML(renderedYAML))

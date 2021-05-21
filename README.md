@@ -165,7 +165,7 @@ key.
 This flag can be specified multiple times if you have organized your
 variables into subdirectories for development convenience.
 
-Example [variables](example-tile/bosh-variables) directory.
+Example [variables](example-tile/bosh_variables) directory.
 
 ##### `--embed`
 
@@ -219,7 +219,7 @@ job_types:
 - $( instance_group "my-instance-group" )
 ```
 
-Example [instance-groups](example-tile/instance-groups) directory.
+Example [instance-groups](example-tile/instance_groups) directory.
 
 ##### `--jobs-directory`
 
@@ -348,7 +348,7 @@ runtime_configs:
 - $( runtime_config "first-runtime-config" )
 ```
 
-Example [runtime-configs](example-tile/runtime-configs) directory.
+Example [runtime-configs](example-tile/runtime_configs) directory.
 
 ##### `--stemcells-directory`
 

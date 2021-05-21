@@ -1,0 +1,7 @@
+release_sources:
+# - type: bosh.io
+
+slug: example
+
+releases:
+# - name: my-release
