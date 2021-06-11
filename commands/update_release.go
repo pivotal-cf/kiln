@@ -15,7 +15,7 @@ import (
 
 type UpdateRelease struct {
 	Options struct {
-		Kilnfile                     string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
+		Kilnfile                     []string  `short:"kf" long:"kilnfile" description:"path to Kilnfile"`
 		Name                         string   `short:"n" long:"name" required:"true" description:"name of release to update"`
 		Version                      string   `short:"v" long:"version" required:"true" description:"desired version of release"`
 		ReleasesDir                  string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
@@ -41,7 +41,7 @@ func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, multiRele
 
 //go:generate counterfeiter -o ./fakes/kilnfile_loader.go --fake-name KilnfileLoader . KilnfileLoader
 type KilnfileLoader interface {
-	LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (cargo.Kilnfile, cargo.KilnfileLock, error)
+	LoadKilnfiles(fs billy.Filesystem, kilnfilePaths string, variablesFiles, variables []string) (cargo.Kilnfile, cargo.KilnfileLock, error)
 	SaveKilnfileLock(fs billy.Filesystem, kilnfilePath string, lockfile cargo.KilnfileLock) error
 }
 
@@ -50,8 +50,18 @@ func (u UpdateRelease) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+	
+	for _, kilnfilePath := range u.Options.Kilnfile {
+		err = u.updateReleaseForOneKilnfile(kilnfilePath)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-	kilnfile, kilnfileLock, err := u.loader.LoadKilnfiles(u.filesystem, u.Options.Kilnfile, u.Options.VariablesFiles, u.Options.Variables)
+func (u UpdateRelease) updateReleaseForOneKilnfile(kilnfilePath string) error {
+	kilnfile, kilnfileLock, err := u.loader.LoadKilnfiles(u.filesystem, kilnfilePath, u.Options.VariablesFiles, u.Options.Variables)
 	if err != nil {
 		return err
 	}
@@ -140,7 +150,7 @@ func (u UpdateRelease) Execute(args []string) error {
 	releaseLock.RemoteSource = newSourceID
 	releaseLock.RemotePath = newRemotePath
 
-	err = u.loader.SaveKilnfileLock(u.filesystem, u.Options.Kilnfile, kilnfileLock)
+	err = u.loader.SaveKilnfileLock(u.filesystem, kilnfilePath, kilnfileLock)
 	if err != nil {
 		return err
 	}

@@ -3,11 +3,10 @@ package commands_test
 import (
 	"errors"
 	"fmt"
+	"github.com/onsi/gomega/gbytes"
 	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,7 +19,7 @@ import (
 	"gopkg.in/src-d/go-billy.v4/osfs"
 )
 
-var _ = Describe("UpdateRelease", func() {
+var _ = FDescribe("UpdateRelease", func() {
 	const (
 		releaseName                    = "capi"
 		oldReleaseVersion              = "1.8.0"
@@ -157,6 +156,49 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(kilnfilePath).To(Equal("Kilnfile"))
 				Expect(variablesFiles).To(Equal([]string{"thisisafile"}))
 				Expect(variables).To(Equal([]string{"someKey=someValue"}))
+			})
+
+			It("downloads the release for multiple release files", func() {
+				err := updateReleaseCommand.Execute([]string{
+					"--kilnfile", "tas/Kilnfile",
+					"--kilnfile", "ist/Kilnfile",
+					"--name", releaseName,
+					"--version", newReleaseVersion,
+					"--releases-directory", releasesDir,
+					"--variable", "someKey=someValue",
+					"--variables-file", "thisisafile",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(kilnFileLoader.LoadKilnfilesCallCount()).To(Equal(2))
+
+				_, kilnfilePath, _, _ := kilnFileLoader.LoadKilnfilesArgsForCall(0)
+				Expect(kilnfilePath).To(Equal("tas/Kilnfile"))
+				_, kilnfilePath, _, _ = kilnFileLoader.LoadKilnfilesArgsForCall(1)
+				Expect(kilnfilePath).To(Equal("ist/Kilnfile"))
+
+				//receivedReleaseRequirement := releaseSource.GetMatchedReleaseArgsForCall(0)
+				//releaseRequirement := release.Requirement{
+				//	Name:            releaseName,
+				//	Version:         newReleaseVersion,
+				//	StemcellOS:      "some-os",
+				//	StemcellVersion: "4.5.6",
+				//}
+				//Expect(receivedReleaseRequirement).To(Equal(releaseRequirement))
+				//
+				//Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				//
+				//receivedReleasesDir, receivedRemoteRelease, _ := releaseSource.DownloadReleaseArgsForCall(0)
+				//Expect(receivedReleasesDir).To(Equal(releasesDir))
+				//Expect(receivedRemoteRelease).To(Equal(expectedRemoteRelease))
+				//
+				//Expect(kilnFileLoader.LoadKilnfilesCallCount()).To(Equal(1))
+				//fs, kilnfilePath, variablesFiles, variables := kilnFileLoader.LoadKilnfilesArgsForCall(0)
+				//
+				//Expect(fs).To(Equal(filesystem))
+				//Expect(kilnfilePath).To(Equal("Kilnfile"))
+				//Expect(variablesFiles).To(Equal([]string{"thisisafile"}))
+				//Expect(variables).To(Equal([]string{"someKey=someValue"}))
 			})
 
 			It("writes the new version to the Kilnfile.lock", func() {
