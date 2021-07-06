@@ -2,6 +2,7 @@ package fetcher_test
 
 import (
 	"fmt"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,8 +11,6 @@ import (
 	"github.com/onsi/gomega/gbytes"
 
 	"gopkg.in/src-d/go-billy.v4/osfs"
-
-	"github.com/pivotal-cf/kiln/release"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -65,8 +64,8 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(releases).To(HaveLen(1))
 				Expect(releases).To(ConsistOf(
-					release.Local{
-						ID:        release.ID{Name: "some-release", Version: "1.2.3"},
+					release2.Local{
+						ID:        release2.ID{Name: "some-release", Version: "1.2.3"},
 						LocalPath: releaseFile,
 						SHA1:      "6d96f7c98610fa6d8e7f45271111221b5b8497a2",
 					},
@@ -104,10 +103,10 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		})
 
 		It("deletes specified files", func() {
-			extraReleaseID := release.ID{Name: "extra-release", Version: "0.0"}
-			extraRelease := release.Local{ID: extraReleaseID, LocalPath: extraFilePath}
+			extraReleaseID := release2.ID{Name: "extra-release", Version: "0.0"}
+			extraRelease := release2.Local{ID: extraReleaseID, LocalPath: extraFilePath}
 
-			err := localReleaseDirectory.DeleteExtraReleases([]release.Local{extraRelease}, noConfirm)
+			err := localReleaseDirectory.DeleteExtraReleases([]release2.Local{extraRelease}, noConfirm)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = os.Stat(extraFilePath)
@@ -115,15 +114,15 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		})
 
 		It("sorts the list of releases to be deleted", func() {
-			extraReleaseID := release.ID{Name: "extra-release", Version: "0.0"}
-			extraRelease := release.Local{ID: extraReleaseID, LocalPath: extraFilePath}
+			extraReleaseID := release2.ID{Name: "extra-release", Version: "0.0"}
+			extraRelease := release2.Local{ID: extraReleaseID, LocalPath: extraFilePath}
 
-			zReleaseID := release.ID{Name: "z-release", Version: "0.0"}
-			zRelease := release.Local{ID: zReleaseID, LocalPath: zFilePath}
+			zReleaseID := release2.ID{Name: "z-release", Version: "0.0"}
+			zRelease := release2.Local{ID: zReleaseID, LocalPath: zFilePath}
 
 			result := fmt.Sprintf("- %s\n- %s", extraFilePath, zFilePath)
 
-			err := localReleaseDirectory.DeleteExtraReleases([]release.Local{zRelease, extraRelease}, false)
+			err := localReleaseDirectory.DeleteExtraReleases([]release2.Local{zRelease, extraRelease}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(logBuf.Contents())).To(ContainSubstring(result))
 
@@ -131,10 +130,10 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when a file cannot be removed", func() {
 			It("returns an error", func() {
-				extraReleaseID := release.ID{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
-				extraRelease := release.Local{ID: extraReleaseID, LocalPath: "file-does-not-exist"}
+				extraReleaseID := release2.ID{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
+				extraRelease := release2.Local{ID: extraReleaseID, LocalPath: "file-does-not-exist"}
 
-				err := localReleaseDirectory.DeleteExtraReleases([]release.Local{extraRelease}, noConfirm)
+				err := localReleaseDirectory.DeleteExtraReleases([]release2.Local{extraRelease}, noConfirm)
 				Expect(err).To(MatchError("failed to delete release extra-release-that-cannot-be-deleted"))
 			})
 		})

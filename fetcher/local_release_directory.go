@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"io"
 	"log"
 	"os"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
-	release "github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 )
@@ -28,8 +28,8 @@ func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.Release
 	}
 }
 
-func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]release.Local, error) {
-	var outputReleases []release.Local
+func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]release2.Local, error) {
+	var outputReleases []release2.Local
 
 	rawReleases, err := l.releasesService.ReleasesInDirectory(releasesDir)
 	if err != nil {
@@ -38,7 +38,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]release.L
 
 	for _, rel := range rawReleases {
 		releaseManifest := rel.Metadata.(builder.ReleaseManifest)
-		id := release.ID{Name: releaseManifest.Name, Version: releaseManifest.Version}
+		id := release2.ID{Name: releaseManifest.Name, Version: releaseManifest.Version}
 		localPath := rel.File
 		sha1, err := CalculateSum(localPath, osfs.New(""))
 
@@ -46,12 +46,12 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]release.L
 			return nil, fmt.Errorf("couldn't calculate SHA1 sum of %q: %w", localPath, err) // untested
 		}
 
-		outputReleases = append(outputReleases, release.Local{ID: id, LocalPath: localPath, SHA1: sha1})
+		outputReleases = append(outputReleases, release2.Local{ID: id, LocalPath: localPath, SHA1: sha1})
 	}
 	return outputReleases, nil
 }
 
-func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []release.Local, noConfirm bool) error {
+func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []release2.Local, noConfirm bool) error {
 	var doDeletion byte
 
 	if len(extraReleaseSet) == 0 {
@@ -85,7 +85,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []release.Loc
 	return nil
 }
 
-func (l LocalReleaseDirectory) deleteReleases(releasesToDelete []release.Local) error {
+func (l LocalReleaseDirectory) deleteReleases(releasesToDelete []release2.Local) error {
 	for _, release := range releasesToDelete {
 		err := os.Remove(release.LocalPath)
 

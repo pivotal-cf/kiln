@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"io"
 	"log"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
 	test_helpers "github.com/pivotal-cf/kiln/internal/test-helpers"
-	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/memfs"
 )
@@ -76,8 +76,8 @@ var _ = Describe("UploadRelease", func() {
 
 			When("the release already exists on the release source", func() {
 				BeforeEach(func() {
-					releaseUploader.GetMatchedReleaseReturns(release.Remote{
-						ID:         release.ID{Name: "banana", Version: "1.2.3"},
+					releaseUploader.GetMatchedReleaseReturns(release2.Remote{
+						ID:         release2.ID{Name: "banana", Version: "1.2.3"},
 						RemotePath: "banana/banana-1.2.3.tgz",
 						SourceID:   "orange-bucket",
 					}, true, nil)
@@ -93,7 +93,7 @@ var _ = Describe("UploadRelease", func() {
 					Expect(releaseUploader.GetMatchedReleaseCallCount()).To(Equal(1))
 
 					requirement := releaseUploader.GetMatchedReleaseArgsForCall(0)
-					Expect(requirement).To(Equal(release.Requirement{Name: "banana", Version: "1.2.3"}))
+					Expect(requirement).To(Equal(release2.Requirement{Name: "banana", Version: "1.2.3"}))
 
 					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
 				})
@@ -206,7 +206,7 @@ compiled_packages:
 
 		When("querying the release source fails", func() {
 			BeforeEach(func() {
-				releaseUploader.GetMatchedReleaseReturns(release.Remote{}, false, errors.New("boom"))
+				releaseUploader.GetMatchedReleaseReturns(release2.Remote{}, false, errors.New("boom"))
 			})
 
 			It("returns an error", func() {
@@ -229,7 +229,7 @@ compiled_packages:
 
 		When("the upload fails", func() {
 			BeforeEach(func() {
-				releaseUploader.UploadReleaseReturns(release.Remote{}, errors.New("boom"))
+				releaseUploader.UploadReleaseReturns(release2.Remote{}, errors.New("boom"))
 			})
 
 			It("returns an error", func() {

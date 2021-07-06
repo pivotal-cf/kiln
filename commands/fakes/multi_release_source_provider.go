@@ -2,18 +2,18 @@
 package fakes
 
 import (
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
 	"sync"
 
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 type MultiReleaseSourceProvider struct {
-	Stub        func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource
+	Stub        func(cargo2.Kilnfile, bool) fetcher.MultiReleaseSource
 	mutex       sync.RWMutex
 	argsForCall []struct {
-		arg1 cargo.Kilnfile
+		arg1 cargo2.Kilnfile
 		arg2 bool
 	}
 	returns struct {
@@ -26,11 +26,11 @@ type MultiReleaseSourceProvider struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MultiReleaseSourceProvider) Spy(arg1 cargo.Kilnfile, arg2 bool) fetcher.MultiReleaseSource {
+func (fake *MultiReleaseSourceProvider) Spy(arg1 cargo2.Kilnfile, arg2 bool) fetcher.MultiReleaseSource {
 	fake.mutex.Lock()
 	ret, specificReturn := fake.returnsOnCall[len(fake.argsForCall)]
 	fake.argsForCall = append(fake.argsForCall, struct {
-		arg1 cargo.Kilnfile
+		arg1 cargo2.Kilnfile
 		arg2 bool
 	}{arg1, arg2})
 	fake.recordInvocation("MultiReleaseSourceProvider", []interface{}{arg1, arg2})
@@ -50,13 +50,13 @@ func (fake *MultiReleaseSourceProvider) CallCount() int {
 	return len(fake.argsForCall)
 }
 
-func (fake *MultiReleaseSourceProvider) Calls(stub func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource) {
+func (fake *MultiReleaseSourceProvider) Calls(stub func(cargo2.Kilnfile, bool) fetcher.MultiReleaseSource) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = stub
 }
 
-func (fake *MultiReleaseSourceProvider) ArgsForCall(i int) (cargo.Kilnfile, bool) {
+func (fake *MultiReleaseSourceProvider) ArgsForCall(i int) (cargo2.Kilnfile, bool) {
 	fake.mutex.RLock()
 	defer fake.mutex.RUnlock()
 	return fake.argsForCall[i].arg1, fake.argsForCall[i].arg2

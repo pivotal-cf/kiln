@@ -2,19 +2,19 @@ package fetcher_test
 
 import (
 	"errors"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/fetcher/fakes"
-	"github.com/pivotal-cf/kiln/release"
 )
 
 var _ = Describe("multiReleaseSource", func() {
 	var (
 		multiSrc         MultiReleaseSource
 		src1, src2, src3 *fakes.ReleaseSource
-		requirement      release.Requirement
+		requirement      release2.Requirement
 	)
 
 	const (
@@ -32,7 +32,7 @@ var _ = Describe("multiReleaseSource", func() {
 		src3.IDReturns("src-3")
 		multiSrc = NewMultiReleaseSource(src1, src2, src3)
 
-		requirement = release.Requirement{
+		requirement = release2.Requirement{
 			Name:            releaseName,
 			Version:         releaseVersion,
 			StemcellOS:      "not-used",
@@ -43,12 +43,12 @@ var _ = Describe("multiReleaseSource", func() {
 	Describe("GetMatchedRelease", func() {
 		When("one of the release sources has a match", func() {
 			var (
-				matchedRelease release.Remote
+				matchedRelease release2.Remote
 			)
 
 			BeforeEach(func() {
-				matchedRelease = release.Remote{
-					ID:         release.ID{Name: releaseName, Version: releaseVersion},
+				matchedRelease = release2.Remote{
+					ID:         release2.ID{Name: releaseName, Version: releaseVersion},
 					RemotePath: "/some/path",
 					SourceID:   src2.ID(),
 				}
@@ -76,7 +76,7 @@ var _ = Describe("multiReleaseSource", func() {
 
 			BeforeEach(func() {
 				expectedErr = errors.New("bad stuff happened")
-				src2.GetMatchedReleaseReturns(release.Remote{}, false, expectedErr)
+				src2.GetMatchedReleaseReturns(release2.Remote{}, false, expectedErr)
 			})
 
 			It("returns that error", func() {
@@ -90,20 +90,20 @@ var _ = Describe("multiReleaseSource", func() {
 
 	Describe("DownloadRelease", func() {
 		var (
-			releaseID release.ID
-			remote    *release.Remote
+			releaseID release2.ID
+			remote    *release2.Remote
 		)
 
 		BeforeEach(func() {
-			releaseID = release.ID{Name: releaseName, Version: releaseVersion}
-			remote = &release.Remote{ID: releaseID, RemotePath: "/some/remote/path", SourceID: src2.ID()}
+			releaseID = release2.ID{Name: releaseName, Version: releaseVersion}
+			remote = &release2.Remote{ID: releaseID, RemotePath: "/some/remote/path", SourceID: src2.ID()}
 		})
 
 		When("the source exists and downloads without error", func() {
-			var local release.Local
+			var local release2.Local
 
 			BeforeEach(func() {
-				local = release.Local{ID: releaseID, LocalPath: "somewhere/on/disk", SHA1: "a-sha1"}
+				local = release2.Local{ID: releaseID, LocalPath: "somewhere/on/disk", SHA1: "a-sha1"}
 				src2.DownloadReleaseReturns(local, nil)
 			})
 
@@ -124,7 +124,7 @@ var _ = Describe("multiReleaseSource", func() {
 			var expectedErr error
 			BeforeEach(func() {
 				expectedErr = errors.New("big badda boom")
-				src2.DownloadReleaseReturns(release.Local{}, expectedErr)
+				src2.DownloadReleaseReturns(release2.Local{}, expectedErr)
 			})
 
 			It("returns the error", func() {
@@ -183,12 +183,12 @@ var _ = Describe("multiReleaseSource", func() {
 	Describe("FindReleaseVersion", func() {
 		When("one of the release sources has a match", func() {
 			var (
-				matchedRelease release.Remote
+				matchedRelease release2.Remote
 			)
 
 			BeforeEach(func() {
-				matchedRelease = release.Remote{
-					ID:         release.ID{Name: releaseName, Version: releaseVersion},
+				matchedRelease = release2.Remote{
+					ID:         release2.ID{Name: releaseName, Version: releaseVersion},
 					RemotePath: "/some/path",
 					SourceID:   src2.ID(),
 				}
@@ -204,17 +204,17 @@ var _ = Describe("multiReleaseSource", func() {
 		})
 		When("two of the release sources have a match", func() {
 			var (
-				matchedRelease release.Remote
+				matchedRelease release2.Remote
 			)
 
 			BeforeEach(func() {
-				unmatchedRelease := release.Remote{
-					ID:         release.ID{Name: releaseName, Version: releaseVersion},
+				unmatchedRelease := release2.Remote{
+					ID:         release2.ID{Name: releaseName, Version: releaseVersion},
 					RemotePath: "/some/path",
 					SourceID:   src1.ID(),
 				}
-				matchedRelease = release.Remote{
-					ID:         release.ID{Name: releaseName, Version: releaseVersionNewer},
+				matchedRelease = release2.Remote{
+					ID:         release2.ID{Name: releaseName, Version: releaseVersionNewer},
 					RemotePath: "/some/path",
 					SourceID:   src2.ID(),
 				}
@@ -231,17 +231,17 @@ var _ = Describe("multiReleaseSource", func() {
 		})
 		When("two of the release sources match the same version", func() {
 			var (
-				matchedRelease release.Remote
+				matchedRelease release2.Remote
 			)
 
 			BeforeEach(func() {
-				matchedRelease = release.Remote{
-					ID:         release.ID{Name: releaseName, Version: releaseVersion},
+				matchedRelease = release2.Remote{
+					ID:         release2.ID{Name: releaseName, Version: releaseVersion},
 					RemotePath: "/some/path",
 					SourceID:   src1.ID(),
 				}
-				unmatchedRelease := release.Remote{
-					ID:         release.ID{Name: releaseName, Version: releaseVersion},
+				unmatchedRelease := release2.Remote{
+					ID:         release2.ID{Name: releaseName, Version: releaseVersion},
 					RemotePath: "/some/path",
 					SourceID:   src2.ID(),
 				}

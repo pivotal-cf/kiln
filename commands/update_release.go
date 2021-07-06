@@ -2,14 +2,13 @@ package commands
 
 import (
 	"fmt"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"log"
 
 	"github.com/pivotal-cf/kiln/fetcher"
 
-	"github.com/pivotal-cf/kiln/release"
-
 	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"gopkg.in/src-d/go-billy.v4"
 )
 
@@ -41,8 +40,8 @@ func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, multiRele
 
 //go:generate counterfeiter -o ./fakes/kilnfile_loader.go --fake-name KilnfileLoader . KilnfileLoader
 type KilnfileLoader interface {
-	LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (cargo.Kilnfile, cargo.KilnfileLock, error)
-	SaveKilnfileLock(fs billy.Filesystem, kilnfilePath string, lockfile cargo.KilnfileLock) error
+	LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (cargo2.Kilnfile, cargo2.KilnfileLock, error)
+	SaveKilnfileLock(fs billy.Filesystem, kilnfilePath string, lockfile cargo2.KilnfileLock) error
 }
 
 func (u UpdateRelease) Execute(args []string) error {
@@ -56,7 +55,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		return err
 	}
 
-	var releaseLock *cargo.ReleaseLock
+	var releaseLock *cargo2.ReleaseLock
 	var releaseVersionConstraint string
 	for i := range kilnfileLock.Releases {
 		if kilnfileLock.Releases[i].Name == u.Options.Name {
@@ -81,12 +80,12 @@ func (u UpdateRelease) Execute(args []string) error {
 
 	u.logger.Println("Searching for the release...")
 
-	var localRelease release.Local
-	var remoteRelease release.Remote
+	var localRelease release2.Local
+	var remoteRelease release2.Remote
 	var found bool
 	var newVersion, newSHA1, newSourceID, newRemotePath string
 	if u.Options.WithoutDownload {
-		remoteRelease, found, err = releaseSource.FindReleaseVersion(release.Requirement{
+		remoteRelease, found, err = releaseSource.FindReleaseVersion(release2.Requirement{
 			Name:              u.Options.Name,
 			VersionConstraint: releaseVersionConstraint,
 			StemcellVersion:   kilnfileLock.Stemcell.Version,
@@ -106,7 +105,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		newRemotePath = remoteRelease.RemotePath
 
 	} else {
-		remoteRelease, found, err = releaseSource.GetMatchedRelease(release.Requirement{
+		remoteRelease, found, err = releaseSource.GetMatchedRelease(release2.Requirement{
 			Name:            u.Options.Name,
 			Version:         u.Options.Version,
 			StemcellOS:      kilnfileLock.Stemcell.OS,

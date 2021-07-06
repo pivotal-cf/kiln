@@ -29,16 +29,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pivotal-cf/kiln/internal/cargo"
-
 	"github.com/onsi/gomega/gexec"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 	"gopkg.in/yaml.v2"
 
-	test_helpers "github.com/pivotal-cf/kiln/internal/test-helpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	test_helpers "github.com/pivotal-cf/kiln/internal/test-helpers"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 var _ = Describe("kiln compile-built-releases", func() {

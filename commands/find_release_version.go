@@ -2,11 +2,11 @@ package commands
 
 import (
 	"encoding/json"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 )
 
@@ -51,7 +51,7 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 		}
 	}
 
-	releaseRemote, _, err := releaseSource.FindReleaseVersion(release.Requirement{
+	releaseRemote, _, err := releaseSource.FindReleaseVersion(release2.Requirement{
 		Name:              cmd.Options.Release,
 		VersionConstraint: version,
 		StemcellVersion:   kilnfileLock.Stemcell.Version,
@@ -68,15 +68,15 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 	return err
 }
 
-func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, error) {
+func (cmd *FindReleaseVersion) setup(args []string) (cargo2.Kilnfile, cargo2.KilnfileLock, error) {
 	_, err := jhanda.Parse(&cmd.Options, args)
 	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
+		return cargo2.Kilnfile{}, cargo2.KilnfileLock{}, err
 	}
 
-	kilnfile, kilnfileLock, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), cmd.Options.Kilnfile, cmd.Options.VariablesFiles, cmd.Options.Variables)
+	kilnfile, kilnfileLock, err := cargo2.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), cmd.Options.Kilnfile, cmd.Options.VariablesFiles, cmd.Options.Variables)
 	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
+		return cargo2.Kilnfile{}, cargo2.KilnfileLock{}, err
 	}
 
 	return kilnfile, kilnfileLock, nil

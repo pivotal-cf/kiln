@@ -2,6 +2,8 @@ package commands_test
 
 import (
 	"errors"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"log"
 
 	. "github.com/onsi/ginkgo"
@@ -9,8 +11,6 @@ import (
 	. "github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/memfs"
 )
@@ -48,13 +48,13 @@ var _ = Describe("sync-with-local", func() {
 			remotePatherFinder    *fakes.RemotePatherFinder
 			remotePather          *fetcherFakes.RemotePather
 			fs                    billy.Filesystem
-			kilnfileLock          cargo.KilnfileLock
+			kilnfileLock          cargo2.KilnfileLock
 		)
 
 		BeforeEach(func() {
 			kilnfileLoader = new(fakes.KilnfileLoader)
-			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.ReleaseLock{
+			kilnfileLock = cargo2.KilnfileLock{
+				Releases: []cargo2.ReleaseLock{
 					{
 						Name:         release1Name,
 						Version:      release1OldVersion,
@@ -70,18 +70,18 @@ var _ = Describe("sync-with-local", func() {
 						SHA1:         release2OldSha,
 					},
 				},
-				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+				Stemcell: cargo2.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 			}
 
 			localReleaseDirectory = new(fakes.LocalReleaseDirectory)
-			localReleaseDirectory.GetLocalReleasesReturns([]release.Local{
+			localReleaseDirectory.GetLocalReleasesReturns([]release2.Local{
 				{
-					ID:        release.ID{Name: release1Name, Version: release1NewVersion},
+					ID:        release2.ID{Name: release1Name, Version: release1NewVersion},
 					LocalPath: "local-path",
 					SHA1:      release1NewSha,
 				},
 				{
-					ID:        release.ID{Name: release2Name, Version: release2NewVersion},
+					ID:        release2.ID{Name: release2Name, Version: release2NewVersion},
 					LocalPath: "local-path-2",
 					SHA1:      release2NewSha,
 				},
@@ -91,7 +91,7 @@ var _ = Describe("sync-with-local", func() {
 			remotePather = new(fetcherFakes.RemotePather)
 
 			remotePatherFinder.Returns(remotePather, nil)
-			remotePather.RemotePathCalls(func(requirement release.Requirement) (path string, err error) {
+			remotePather.RemotePathCalls(func(requirement release2.Requirement) (path string, err error) {
 				switch requirement.Name {
 				case release1Name:
 					return release1NewRemotePath, nil
@@ -109,7 +109,7 @@ var _ = Describe("sync-with-local", func() {
 		})
 
 		JustBeforeEach(func() {
-			kilnfileLoader.LoadKilnfilesReturns(cargo.Kilnfile{}, kilnfileLock, nil)
+			kilnfileLoader.LoadKilnfilesReturns(cargo2.Kilnfile{}, kilnfileLock, nil)
 		})
 
 		It("updates the Kilnfile.lock to have the same version as the local releases", func() {
@@ -124,7 +124,7 @@ var _ = Describe("sync-with-local", func() {
 			filesystem, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
 			Expect(filesystem).To(Equal(fs))
 			Expect(path).To(Equal(kilnfilePath))
-			Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
+			Expect(updatedLockfile.Releases).To(Equal([]cargo2.ReleaseLock{
 				{
 					Name:         release1Name,
 					Version:      release1NewVersion,
@@ -144,14 +144,14 @@ var _ = Describe("sync-with-local", func() {
 
 		When("one of the releases on disk is the same version as in the Kilnfile.lock", func() {
 			BeforeEach(func() {
-				localReleaseDirectory.GetLocalReleasesReturns([]release.Local{
+				localReleaseDirectory.GetLocalReleasesReturns([]release2.Local{
 					{
-						ID:        release.ID{Name: release1Name, Version: release1OldVersion},
+						ID:        release2.ID{Name: release1Name, Version: release1OldVersion},
 						LocalPath: "local-path",
 						SHA1:      release1NewSha,
 					},
 					{
-						ID:        release.ID{Name: release2Name, Version: release2NewVersion},
+						ID:        release2.ID{Name: release2Name, Version: release2NewVersion},
 						LocalPath: "local-path-2",
 						SHA1:      release2NewSha,
 					},
@@ -170,7 +170,7 @@ var _ = Describe("sync-with-local", func() {
 				filesystem, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
 				Expect(filesystem).To(Equal(fs))
 				Expect(path).To(Equal(kilnfilePath))
-				Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
+				Expect(updatedLockfile.Releases).To(Equal([]cargo2.ReleaseLock{
 					{
 						Name:         release1Name,
 						Version:      release1OldVersion,
@@ -202,7 +202,7 @@ var _ = Describe("sync-with-local", func() {
 					filesystem, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
 					Expect(filesystem).To(Equal(fs))
 					Expect(path).To(Equal(kilnfilePath))
-					Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
+					Expect(updatedLockfile.Releases).To(Equal([]cargo2.ReleaseLock{
 						{
 							Name:         release1Name,
 							Version:      release1OldVersion,
@@ -224,8 +224,8 @@ var _ = Describe("sync-with-local", func() {
 
 		When("a release on disk doesn't exist in the Kilnfile.lock", func() {
 			BeforeEach(func() {
-				kilnfileLock = cargo.KilnfileLock{
-					Releases: []cargo.ReleaseLock{
+				kilnfileLock = cargo2.KilnfileLock{
+					Releases: []cargo2.ReleaseLock{
 						{
 							Name:         release1Name,
 							Version:      release1OldVersion,
@@ -234,7 +234,7 @@ var _ = Describe("sync-with-local", func() {
 							SHA1:         release1OldSha,
 						},
 					},
-					Stemcell: cargo.Stemcell{},
+					Stemcell: cargo2.Stemcell{},
 				}
 			})
 

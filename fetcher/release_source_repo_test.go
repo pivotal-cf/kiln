@@ -1,12 +1,12 @@
 package fetcher_test
 
 import (
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
 	"log"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 var _ = Describe("ReleaseSourceRepo", func() {
@@ -17,12 +17,12 @@ var _ = Describe("ReleaseSourceRepo", func() {
 	})
 
 	Describe("NewReleaseSourceRepo", func() {
-		var kilnfile cargo.Kilnfile
+		var kilnfile cargo2.Kilnfile
 
 		Context("happy path", func() {
 			BeforeEach(func() {
-				kilnfile = cargo.Kilnfile{
-					ReleaseSources: []cargo.ReleaseSourceConfig{
+				kilnfile = cargo2.Kilnfile{
+					ReleaseSources: []cargo2.ReleaseSourceConfig{
 						{Type: "s3", Bucket: "compiled-releases", Region: "us-west-1", Publishable: true, PathTemplate: "template"},
 						{Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false, PathTemplate: "template"},
 						{Type: "bosh.io", Publishable: false},
@@ -56,8 +56,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 		Context("when bosh.io is publishable", func() {
 			BeforeEach(func() {
-				kilnfile = cargo.Kilnfile{
-					ReleaseSources: []cargo.ReleaseSourceConfig{
+				kilnfile = cargo2.Kilnfile{
+					ReleaseSources: []cargo2.ReleaseSourceConfig{
 						{Type: "bosh.io", Publishable: true},
 					},
 				}
@@ -79,8 +79,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 		Context("when the Kilnfile gives explicit IDs", func() {
 			BeforeEach(func() {
-				kilnfile = cargo.Kilnfile{
-					ReleaseSources: []cargo.ReleaseSourceConfig{
+				kilnfile = cargo2.Kilnfile{
+					ReleaseSources: []cargo2.ReleaseSourceConfig{
 						{ID: "comp", Type: "s3", Bucket: "compiled-releases", Region: "us-west-1", Publishable: true, PathTemplate: "template"},
 						{ID: "buil", Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false, PathTemplate: "template"},
 						{ID: "bosh", Type: "bosh.io", Publishable: false},
@@ -101,8 +101,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 		Context("when there are duplicate release source identifiers", func() {
 			BeforeEach(func() {
-				kilnfile = cargo.Kilnfile{
-					ReleaseSources: []cargo.ReleaseSourceConfig{
+				kilnfile = cargo2.Kilnfile{
+					ReleaseSources: []cargo2.ReleaseSourceConfig{
 						{Type: "s3", Bucket: "some-bucket", Region: "us-west-1", PathTemplate: "template"},
 						{Type: "s3", Bucket: "some-bucket", Region: "us-west-1", PathTemplate: "template"},
 					},
@@ -126,7 +126,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 	Describe("MultiReleaseSource", func() {
 		var (
 			repo     ReleaseSourceRepo
-			kilnfile cargo.Kilnfile
+			kilnfile cargo2.Kilnfile
 		)
 
 		JustBeforeEach(func() {
@@ -135,8 +135,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 		Context("when allow-only-publishable-releases is false", func() {
 			BeforeEach(func() {
-				kilnfile = cargo.Kilnfile{
-					ReleaseSources: []cargo.ReleaseSourceConfig{
+				kilnfile = cargo2.Kilnfile{
+					ReleaseSources: []cargo2.ReleaseSourceConfig{
 						{Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
 							PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`},
 						{Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
@@ -172,8 +172,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 		Context("when allow-only-publishable-releases is true", func() {
 			BeforeEach(func() {
-				kilnfile = cargo.Kilnfile{
-					ReleaseSources: []cargo.ReleaseSourceConfig{
+				kilnfile = cargo2.Kilnfile{
+					ReleaseSources: []cargo2.ReleaseSourceConfig{
 						{Publishable: true, Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
 							PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`},
 						{Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
@@ -200,7 +200,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 	Describe("FindReleaseUploader", func() {
 		var (
 			repo     ReleaseSourceRepo
-			kilnfile cargo.Kilnfile
+			kilnfile cargo2.Kilnfile
 		)
 
 		JustBeforeEach(func() {
@@ -208,8 +208,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 		})
 
 		BeforeEach(func() {
-			kilnfile = cargo.Kilnfile{
-				ReleaseSources: []cargo.ReleaseSourceConfig{
+			kilnfile = cargo2.Kilnfile{
+				ReleaseSources: []cargo2.ReleaseSourceConfig{
 					{Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
 						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`},
 					{Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
@@ -233,8 +233,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 		Context("when no sources accept uploads", func() {
 			BeforeEach(func() {
-				kilnfile = cargo.Kilnfile{
-					ReleaseSources: []cargo.ReleaseSourceConfig{{Type: "bosh.io"}},
+				kilnfile = cargo2.Kilnfile{
+					ReleaseSources: []cargo2.ReleaseSourceConfig{{Type: "bosh.io"}},
 				}
 			})
 
@@ -268,7 +268,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 	Describe("RemotePather", func() {
 		var (
 			repo     ReleaseSourceRepo
-			kilnfile cargo.Kilnfile
+			kilnfile cargo2.Kilnfile
 		)
 
 		JustBeforeEach(func() {
@@ -276,8 +276,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 		})
 
 		BeforeEach(func() {
-			kilnfile = cargo.Kilnfile{
-				ReleaseSources: []cargo.ReleaseSourceConfig{
+			kilnfile = cargo2.Kilnfile{
+				ReleaseSources: []cargo2.ReleaseSourceConfig{
 					{Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
 						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`},
 					{Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
@@ -301,8 +301,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 		Context("when no sources implement RemotePath", func() {
 			BeforeEach(func() {
-				kilnfile = cargo.Kilnfile{
-					ReleaseSources: []cargo.ReleaseSourceConfig{{Type: "bosh.io"}},
+				kilnfile = cargo2.Kilnfile{
+					ReleaseSources: []cargo2.ReleaseSourceConfig{{Type: "bosh.io"}},
 				}
 			})
 

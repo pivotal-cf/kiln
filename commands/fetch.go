@@ -2,16 +2,16 @@ package commands
 
 import (
 	"fmt"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"log"
 	"os"
 
-	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 
 	"github.com/pivotal-cf/kiln/fetcher"
 
 	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 type Fetch struct {
@@ -33,7 +33,7 @@ type Fetch struct {
 }
 
 //go:generate counterfeiter -o ./fakes/multi_release_source_provider.go --fake-name MultiReleaseSourceProvider . MultiReleaseSourceProvider
-type MultiReleaseSourceProvider func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource
+type MultiReleaseSourceProvider func(cargo2.Kilnfile, bool) fetcher.MultiReleaseSource
 
 func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
@@ -45,8 +45,8 @@ func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceP
 
 //go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
-	GetLocalReleases(releasesDir string) ([]release.Local, error)
-	DeleteExtraReleases(extraReleases []release.Local, noConfirm bool) error
+	GetLocalReleases(releasesDir string) ([]release2.Local, error)
+	DeleteExtraReleases(extraReleases []release2.Local, noConfirm bool) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -76,11 +76,11 @@ func (f Fetch) Execute(args []string) error {
 	return nil
 }
 
-func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []release.Local, error) {
+func (f *Fetch) setup(args []string) (cargo2.Kilnfile, cargo2.KilnfileLock, []release2.Local, error) {
 	args, err := jhanda.Parse(&f.Options, args)
 
 	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
+		return cargo2.Kilnfile{}, cargo2.KilnfileLock{}, nil, err
 	}
 	if !f.Options.AllowOnlyPublishableReleases {
 		f.logger.Println("WARNING - the \"allow-only-publishable-releases\" flag was not set. Some fetched releases may be intended for development/testing only.\nEXERCISE CAUTION WHEN PUBLISHING A TILE WITH THESE RELEASES!")
@@ -89,30 +89,30 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []rele
 		if os.IsNotExist(err) {
 			os.MkdirAll(f.Options.ReleasesDir, 0777)
 		} else {
-			return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
+			return cargo2.Kilnfile{}, cargo2.KilnfileLock{}, nil, fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
 		}
 	}
-	kilnfile, kilnfileLock, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), f.Options.Kilnfile, f.Options.VariablesFiles, f.Options.Variables)
+	kilnfile, kilnfileLock, err := cargo2.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), f.Options.Kilnfile, f.Options.VariablesFiles, f.Options.Variables)
 	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
+		return cargo2.Kilnfile{}, cargo2.KilnfileLock{}, nil, err
 	}
 
 	availableLocalReleaseSet, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
 	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
+		return cargo2.Kilnfile{}, cargo2.KilnfileLock{}, nil, err
 	}
 
 	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
 }
 
-func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ReleaseLock) ([]release.Local, error) {
+func (f Fetch) downloadMissingReleases(kilnfile cargo2.Kilnfile, releaseLocks []cargo2.ReleaseLock) ([]release2.Local, error) {
 	releaseSource := f.multiReleaseSourceProvider(kilnfile, f.Options.AllowOnlyPublishableReleases)
 
-	var downloaded []release.Local
+	var downloaded []release2.Local
 
 	for _, rl := range releaseLocks {
-		remoteRelease := release.Remote{
-			ID:         release.ID{Name: rl.Name, Version: rl.Version},
+		remoteRelease := release2.Remote{
+			ID:         release2.ID{Name: rl.Name, Version: rl.Version},
 			RemotePath: rl.RemotePath,
 			SourceID:   rl.RemoteSource,
 		}
@@ -145,8 +145,8 @@ func (f Fetch) Usage() jhanda.Usage {
 	}
 }
 
-func partition(releaseLocks []cargo.ReleaseLock, localReleases []release.Local) (intersection []release.Local, missing []cargo.ReleaseLock, extra []release.Local) {
-	missing = make([]cargo.ReleaseLock, len(releaseLocks))
+func partition(releaseLocks []cargo2.ReleaseLock, localReleases []release2.Local) (intersection []release2.Local, missing []cargo2.ReleaseLock, extra []release2.Local) {
+	missing = make([]cargo2.ReleaseLock, len(releaseLocks))
 	copy(missing, releaseLocks)
 
 nextRelease:

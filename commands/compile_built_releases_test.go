@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"io"
 	"io/ioutil"
 	"log"
@@ -27,8 +29,6 @@ import (
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	"github.com/pivotal-cf/kiln/fetcher"
 	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/release"
 )
 
 var _ = Describe("CompileBuiltReleases", func() {
@@ -42,8 +42,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 	var (
 		builtReleaseSource    *fetcherFakes.ReleaseSource
 		compiledReleaseSource *fetcherFakes.ReleaseSource
-		kilnfile              cargo.Kilnfile
-		kilnfileLock          cargo.KilnfileLock
+		kilnfile              cargo2.Kilnfile
+		kilnfileLock          cargo2.KilnfileLock
 		boshDirector          *fakes.BoshDirector
 		boshDeployment1       *fakes.BoshDeployment
 		boshDeployment2       *fakes.BoshDeployment
@@ -77,23 +77,23 @@ var _ = Describe("CompileBuiltReleases", func() {
 		compiledReleaseSource.PublishableReturns(true)
 
 		kilnfileLoader = new(fakes.KilnfileLoader)
-		kilnfile = cargo.Kilnfile{
-			ReleaseSources: []cargo.ReleaseSourceConfig{
+		kilnfile = cargo2.Kilnfile{
+			ReleaseSources: []cargo2.ReleaseSourceConfig{
 				{Type: "s3", ID: compiledSourceID, Bucket: "not-used", Publishable: true},
 				{Type: "s3", ID: builtSourceID, Bucket: "not-used-2"},
 			},
 		}
-		kilnfileLock = cargo.KilnfileLock{
-			Releases: []cargo.ReleaseLock{
+		kilnfileLock = cargo2.KilnfileLock{
+			Releases: []cargo2.ReleaseLock{
 				{Name: "uaa", Version: "1.2.3", RemoteSource: builtSourceID, RemotePath: "/remote/path/uaa-1.2.3.tgz", SHA1: "original-sha"},
 				{Name: "capi", Version: "2.3.4", RemoteSource: builtSourceID, RemotePath: "/remote/path/capi-2.3.4.tgz", SHA1: "original-sha"},
 				{Name: "bpm", Version: "1.6", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
 			},
-			Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+			Stemcell: cargo2.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 		}
 
 		multiReleaseSourceProvider = new(fakes.MultiReleaseSourceProvider)
-		multiReleaseSourceProvider.Calls(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
+		multiReleaseSourceProvider.Calls(func(kilnfile cargo2.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
 			if allowOnlyPublishable {
 				return fetcher.NewMultiReleaseSource(compiledReleaseSource)
 			} else {
@@ -105,9 +105,9 @@ var _ = Describe("CompileBuiltReleases", func() {
 		releaseUploaderFinder = new(fakes.ReleaseUploaderFinder)
 		releaseUploaderFinder.Returns(releaseUploader, nil)
 
-		releaseUploader.UploadReleaseCalls(func(requirement release.Requirement, reader io.Reader) (remote release.Remote, err error) {
-			return release.Remote{
-				ID:         release.ID{Name: requirement.Name, Version: requirement.Version},
+		releaseUploader.UploadReleaseCalls(func(requirement release2.Requirement, reader io.Reader) (remote release2.Remote, err error) {
+			return release2.Remote{
+				ID:         release2.ID{Name: requirement.Name, Version: requirement.Version},
 				RemotePath: fmt.Sprintf("%s/%s-%s-%s-%s.tgz", requirement.Name, requirement.Name, requirement.Version, requirement.StemcellOS, requirement.StemcellVersion),
 				SourceID:   compiledSourceID,
 			}, nil
@@ -127,7 +127,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 		stemcellSHA1, err = test_helpers.WriteStemcellTarball(stemcellPath, stemcellOS, stemcellVersion, osfs.New(""))
 		Expect(err).NotTo(HaveOccurred())
 
-		builtReleaseSource.DownloadReleaseCalls(func(releaseDir string, remote release.Remote, threads int) (release.Local, error) {
+		builtReleaseSource.DownloadReleaseCalls(func(releaseDir string, remote release2.Remote, threads int) (release2.Local, error) {
 			localPath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remote.Name, remote.Version))
 
 			f, err := fs.Create(localPath)
@@ -136,7 +136,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 			f.Write([]byte("file contents"))
 
-			return release.Local{
+			return release2.Local{
 				ID:        remote.ID,
 				LocalPath: localPath,
 				SHA1:      "not-used",
@@ -221,8 +221,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 			downloadDir, remote, threads := builtReleaseSource.DownloadReleaseArgsForCall(0)
 			Expect(downloadDir).To(Equal(releasesPath))
-			Expect(remote).To(Equal(release.Remote{
-				ID:         release.ID{Name: "uaa", Version: "1.2.3"},
+			Expect(remote).To(Equal(release2.Remote{
+				ID:         release2.ID{Name: "uaa", Version: "1.2.3"},
 				RemotePath: "/remote/path/uaa-1.2.3.tgz",
 				SourceID:   builtSourceID,
 			}))
@@ -230,8 +230,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 			downloadDir, remote, threads = builtReleaseSource.DownloadReleaseArgsForCall(1)
 			Expect(downloadDir).To(Equal(releasesPath))
-			Expect(remote).To(Equal(release.Remote{
-				ID:         release.ID{Name: "capi", Version: "2.3.4"},
+			Expect(remote).To(Equal(release2.Remote{
+				ID:         release2.ID{Name: "capi", Version: "2.3.4"},
 				RemotePath: "/remote/path/capi-2.3.4.tgz",
 				SourceID:   builtSourceID,
 			}))
@@ -365,14 +365,14 @@ var _ = Describe("CompileBuiltReleases", func() {
 			contents2, err := ioutil.ReadAll(releaseFile)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect([]release.Requirement{spec1, spec2}).To(ConsistOf(
-				release.Requirement{
+			Expect([]release2.Requirement{spec1, spec2}).To(ConsistOf(
+				release2.Requirement{
 					Name:            "uaa",
 					Version:         "1.2.3",
 					StemcellOS:      "plan9",
 					StemcellVersion: "42",
 				},
-				release.Requirement{
+				release2.Requirement{
 					Name:            "capi",
 					Version:         "2.3.4",
 					StemcellOS:      "plan9",
@@ -405,8 +405,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 			io.Copy(s, strings.NewReader(blobIDContents("capi-2.3.4")))
 			expectedCapiSha := hex.EncodeToString(s.Sum(nil))
 
-			Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
-				Releases: []cargo.ReleaseLock{
+			Expect(updatedLockfile).To(Equal(cargo2.KilnfileLock{
+				Releases: []cargo2.ReleaseLock{
 					{
 						Name:         "uaa",
 						Version:      "1.2.3",
@@ -429,21 +429,21 @@ var _ = Describe("CompileBuiltReleases", func() {
 						SHA1:         "original-sha",
 					},
 				},
-				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+				Stemcell: cargo2.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 			}))
 		})
 
 		When("using parallel option", func() {
 			BeforeEach(func() {
-				kilnfileLock = cargo.KilnfileLock{
-					Releases: []cargo.ReleaseLock{
+				kilnfileLock = cargo2.KilnfileLock{
+					Releases: []cargo2.ReleaseLock{
 						{Name: "uaa", Version: "1.2.3", RemoteSource: builtSourceID, RemotePath: "/remote/path/uaa-1.2.3.tgz", SHA1: "original-sha"},
 						{Name: "capi", Version: "2.3.4", RemoteSource: builtSourceID, RemotePath: "/remote/path/capi-2.3.4.tgz", SHA1: "original-sha"},
 						{Name: "diego", Version: "5.6.7", RemoteSource: builtSourceID, RemotePath: "/remote/path/diego-4.5.6.tgz", SHA1: "original-sha"},
 						{Name: "route-emitter", Version: "8.9.10", RemoteSource: builtSourceID, RemotePath: "/remote/path/route-emitter-8.9.10.tgz", SHA1: "original-sha"},
 						{Name: "bpm", Version: "1.6", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
 					},
-					Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+					Stemcell: cargo2.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 				}
 			})
 
@@ -609,13 +609,13 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 	When("all of the releases are already compiled in the Kilnfile.lock", func() {
 		BeforeEach(func() {
-			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.ReleaseLock{
+			kilnfileLock = cargo2.KilnfileLock{
+				Releases: []cargo2.ReleaseLock{
 					{Name: "uaa", Version: "1.2.3", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
 					{Name: "capi", Version: "2.3.4", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
 					{Name: "bpm", Version: "1.6", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
 				},
-				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+				Stemcell: cargo2.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 			}
 		})
 		It("doesn't compile any releases", func() {
@@ -676,19 +676,19 @@ var _ = Describe("CompileBuiltReleases", func() {
 		)
 
 		BeforeEach(func() {
-			uaaID := release.ID{Name: "uaa", Version: "1.2.3"}
+			uaaID := release2.ID{Name: "uaa", Version: "1.2.3"}
 
-			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement release.Requirement) (release.Remote, bool, error) {
+			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement release2.Requirement) (release2.Remote, bool, error) {
 				if requirement.Name == "uaa" {
-					return release.Remote{
+					return release2.Remote{
 						ID:         uaaID,
 						RemotePath: expectedUAARemotePath,
 						SourceID:   compiledSourceID,
 					}, true, nil
 				}
-				return release.Remote{}, false, nil
+				return release2.Remote{}, false, nil
 			})
-			compiledReleaseSource.DownloadReleaseReturns(release.Local{
+			compiledReleaseSource.DownloadReleaseReturns(release2.Local{
 				ID:        uaaID,
 				LocalPath: "not-used",
 				SHA1:      expectedUAASHA,
@@ -727,7 +727,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 			Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(1))
 
 			spec, releaseFile := releaseUploader.UploadReleaseArgsForCall(0)
-			Expect(spec).To(Equal(release.Requirement{
+			Expect(spec).To(Equal(release2.Requirement{
 				Name:            "capi",
 				Version:         "2.3.4",
 				StemcellOS:      "plan9",
@@ -751,8 +751,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 			downloadDir, remoteRelease, _ := compiledReleaseSource.DownloadReleaseArgsForCall(0)
 			Expect(downloadDir).To(Equal(releasesPath))
-			Expect(remoteRelease).To(Equal(release.Remote{
-				ID:         release.ID{Name: "uaa", Version: "1.2.3"},
+			Expect(remoteRelease).To(Equal(release2.Remote{
+				ID:         release2.ID{Name: "uaa", Version: "1.2.3"},
 				RemotePath: expectedUAARemotePath,
 				SourceID:   compiledSourceID,
 			}))
@@ -775,8 +775,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 			_, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
 			Expect(path).To(Equal(kilnfilePath))
-			Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
-				Releases: []cargo.ReleaseLock{
+			Expect(updatedLockfile).To(Equal(cargo2.KilnfileLock{
+				Releases: []cargo2.ReleaseLock{
 					{
 						Name:         "uaa",
 						Version:      "1.2.3",
@@ -799,7 +799,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 						SHA1:         "original-sha",
 					},
 				},
-				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+				Stemcell: cargo2.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 			}))
 		})
 	})
@@ -813,44 +813,44 @@ var _ = Describe("CompileBuiltReleases", func() {
 		)
 
 		BeforeEach(func() {
-			uaaID := release.ID{Name: "uaa", Version: "1.2.3"}
-			capiID := release.ID{Name: "capi", Version: "2.3.4"}
+			uaaID := release2.ID{Name: "uaa", Version: "1.2.3"}
+			capiID := release2.ID{Name: "capi", Version: "2.3.4"}
 
-			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement release.Requirement) (release.Remote, bool, error) {
+			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement release2.Requirement) (release2.Remote, bool, error) {
 				switch requirement.Name {
 				case "uaa":
-					return release.Remote{
+					return release2.Remote{
 						ID:         uaaID,
 						RemotePath: expectedUAARemotePath,
 						SourceID:   compiledSourceID,
 					}, true, nil
 				case "capi":
-					return release.Remote{
+					return release2.Remote{
 						ID:         capiID,
 						RemotePath: expectedCAPIRemotePath,
 						SourceID:   compiledSourceID,
 					}, true, nil
 				default:
-					return release.Remote{}, false, nil
+					return release2.Remote{}, false, nil
 				}
 			})
 
-			compiledReleaseSource.DownloadReleaseCalls(func(_ string, remote release.Remote, _ int) (release.Local, error) {
+			compiledReleaseSource.DownloadReleaseCalls(func(_ string, remote release2.Remote, _ int) (release2.Local, error) {
 				switch remote.Name {
 				case "uaa":
-					return release.Local{
+					return release2.Local{
 						ID:        uaaID,
 						LocalPath: "not-used",
 						SHA1:      expectedUAASHA,
 					}, nil
 				case "capi":
-					return release.Local{
+					return release2.Local{
 						ID:        capiID,
 						LocalPath: "not-used",
 						SHA1:      expectedCAPISHA,
 					}, nil
 				default:
-					return release.Local{}, nil
+					return release2.Local{}, nil
 				}
 			})
 		})
@@ -893,16 +893,16 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 			downloadDir, remoteRelease, _ := compiledReleaseSource.DownloadReleaseArgsForCall(0)
 			Expect(downloadDir).To(Equal(releasesPath))
-			Expect(remoteRelease).To(Equal(release.Remote{
-				ID:         release.ID{Name: "uaa", Version: "1.2.3"},
+			Expect(remoteRelease).To(Equal(release2.Remote{
+				ID:         release2.ID{Name: "uaa", Version: "1.2.3"},
 				RemotePath: expectedUAARemotePath,
 				SourceID:   compiledSourceID,
 			}))
 
 			downloadDir, remoteRelease, _ = compiledReleaseSource.DownloadReleaseArgsForCall(1)
 			Expect(downloadDir).To(Equal(releasesPath))
-			Expect(remoteRelease).To(Equal(release.Remote{
-				ID:         release.ID{Name: "capi", Version: "2.3.4"},
+			Expect(remoteRelease).To(Equal(release2.Remote{
+				ID:         release2.ID{Name: "capi", Version: "2.3.4"},
 				RemotePath: expectedCAPIRemotePath,
 				SourceID:   compiledSourceID,
 			}))
@@ -921,8 +921,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 			_, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
 			Expect(path).To(Equal(kilnfilePath))
-			Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
-				Releases: []cargo.ReleaseLock{
+			Expect(updatedLockfile).To(Equal(cargo2.KilnfileLock{
+				Releases: []cargo2.ReleaseLock{
 					{
 						Name:         "uaa",
 						Version:      "1.2.3",
@@ -945,7 +945,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 						SHA1:         "original-sha",
 					},
 				},
-				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+				Stemcell: cargo2.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 			}))
 		})
 	})
@@ -1046,12 +1046,12 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 	When("the lockfile refers to a non-existent release source", func() {
 		BeforeEach(func() {
-			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.ReleaseLock{
+			kilnfileLock = cargo2.KilnfileLock{
+				Releases: []cargo2.ReleaseLock{
 					{Name: "uaa", Version: "1.2.3", RemoteSource: "no-such-source", RemotePath: "/remote/path/uaa-1.2.3.tgz", SHA1: "not-used"},
 					{Name: "bpm", Version: "1.6", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "not-used"},
 				},
-				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
+				Stemcell: cargo2.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 			}
 		})
 
@@ -1089,7 +1089,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 	When("searching for pre-compiled releases fails", func() {
 		BeforeEach(func() {
-			compiledReleaseSource.GetMatchedReleaseReturns(release.Remote{}, false, errors.New("boom today"))
+			compiledReleaseSource.GetMatchedReleaseReturns(release2.Remote{}, false, errors.New("boom today"))
 		})
 
 		It("errors", func() {
@@ -1116,8 +1116,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 	When("downloading a pre-compiled releases fails", func() {
 		BeforeEach(func() {
-			compiledReleaseSource.GetMatchedReleaseReturns(release.Remote{SourceID: compiledSourceID}, true, nil)
-			compiledReleaseSource.DownloadReleaseReturns(release.Local{}, errors.New("NOPE!"))
+			compiledReleaseSource.GetMatchedReleaseReturns(release2.Remote{SourceID: compiledSourceID}, true, nil)
+			compiledReleaseSource.DownloadReleaseReturns(release2.Local{}, errors.New("NOPE!"))
 		})
 
 		It("errors", func() {

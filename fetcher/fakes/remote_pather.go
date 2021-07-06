@@ -2,17 +2,17 @@
 package fakes
 
 import (
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"sync"
 
 	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/release"
 )
 
 type RemotePather struct {
-	RemotePathStub        func(release.Requirement) (string, error)
+	RemotePathStub        func(release2.Requirement) (string, error)
 	remotePathMutex       sync.RWMutex
 	remotePathArgsForCall []struct {
-		arg1 release.Requirement
+		arg1 release2.Requirement
 	}
 	remotePathReturns struct {
 		result1 string
@@ -26,11 +26,11 @@ type RemotePather struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *RemotePather) RemotePath(arg1 release.Requirement) (string, error) {
+func (fake *RemotePather) RemotePath(arg1 release2.Requirement) (string, error) {
 	fake.remotePathMutex.Lock()
 	ret, specificReturn := fake.remotePathReturnsOnCall[len(fake.remotePathArgsForCall)]
 	fake.remotePathArgsForCall = append(fake.remotePathArgsForCall, struct {
-		arg1 release.Requirement
+		arg1 release2.Requirement
 	}{arg1})
 	fake.recordInvocation("RemotePath", []interface{}{arg1})
 	fake.remotePathMutex.Unlock()
@@ -50,13 +50,13 @@ func (fake *RemotePather) RemotePathCallCount() int {
 	return len(fake.remotePathArgsForCall)
 }
 
-func (fake *RemotePather) RemotePathCalls(stub func(release.Requirement) (string, error)) {
+func (fake *RemotePather) RemotePathCalls(stub func(release2.Requirement) (string, error)) {
 	fake.remotePathMutex.Lock()
 	defer fake.remotePathMutex.Unlock()
 	fake.RemotePathStub = stub
 }
 
-func (fake *RemotePather) RemotePathArgsForCall(i int) release.Requirement {
+func (fake *RemotePather) RemotePathArgsForCall(i int) release2.Requirement {
 	fake.remotePathMutex.RLock()
 	defer fake.remotePathMutex.RUnlock()
 	argsForCall := fake.remotePathArgsForCall[i]

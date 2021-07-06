@@ -2,13 +2,13 @@ package commands
 
 import (
 	"fmt"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/helper"
-	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 )
 
@@ -63,7 +63,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 	for i, rel := range kilnfileLock.Releases {
 		update.Logger.Printf("Updating release %q with stemcell %s %s...", rel.Name, newStemcellOS, newStemcellVersion)
 
-		remote, found, err := releaseSource.GetMatchedRelease(release.Requirement{
+		remote, found, err := releaseSource.GetMatchedRelease(release2.Requirement{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      newStemcellOS,

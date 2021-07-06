@@ -2,12 +2,12 @@ package commands
 
 import (
 	"fmt"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4"
 )
 
@@ -38,7 +38,7 @@ func NewSyncWithLocal(kilnfileLoader KilnfileLoader, fs billy.Filesystem, localR
 }
 
 //go:generate counterfeiter -o ./fakes/remote_pather_finder.go --fake-name RemotePatherFinder . RemotePatherFinder
-type RemotePatherFinder func(cargo.Kilnfile, string) (fetcher.RemotePather, error)
+type RemotePatherFinder func(cargo2.Kilnfile, string) (fetcher.RemotePather, error)
 
 func (command SyncWithLocal) Execute(args []string) error {
 	_, err := jhanda.Parse(&command.Options, args)
@@ -70,7 +70,7 @@ func (command SyncWithLocal) Execute(args []string) error {
 	command.logger.Printf("Found %d releases on disk\n", len(releases))
 
 	for _, rel := range releases {
-		remotePath, err := remotePather.RemotePath(release.Requirement{
+		remotePath, err := remotePather.RemotePath(release2.Requirement{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      kilnfileLock.Stemcell.OS,
@@ -80,7 +80,7 @@ func (command SyncWithLocal) Execute(args []string) error {
 			return fmt.Errorf("couldn't generate a remote path for release %q: %w", rel.Name, err)
 		}
 
-		var matchingRelease *cargo.ReleaseLock
+		var matchingRelease *cargo2.ReleaseLock
 		for i := range kilnfileLock.Releases {
 			if kilnfileLock.Releases[i].Name == rel.Name {
 				matchingRelease = &kilnfileLock.Releases[i]

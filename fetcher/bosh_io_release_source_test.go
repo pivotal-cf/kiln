@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"io"
 	"io/ioutil"
 	"log"
@@ -12,8 +13,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/pivotal-cf/kiln/release"
 
 	. "github.com/onsi/ginkgo/extensions/table"
 
@@ -63,20 +62,20 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			It("finds built releases which exist on bosh.io", func() {
 				os := "ubuntu-xenial"
 				version := "190.0.0"
-				uaaRequirement := release.Requirement{Name: "uaa", Version: "73.3.0", StemcellOS: os, StemcellVersion: version}
-				rabbitmqRequirement := release.Requirement{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: os, StemcellVersion: version}
+				uaaRequirement := release2.Requirement{Name: "uaa", Version: "73.3.0", StemcellOS: os, StemcellVersion: version}
+				rabbitmqRequirement := release2.Requirement{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: os, StemcellVersion: version}
 
 				foundRelease, found, err := releaseSource.GetMatchedRelease(uaaRequirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 				uaaURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/uaa-release?v=73.3.0", testServer.URL())
-				Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "uaa", Version: "73.3.0"}, RemotePath: uaaURL, SourceID: ReleaseSourceTypeBOSHIO}))
+				Expect(foundRelease).To(Equal(release2.Remote{ID: release2.ID{Name: "uaa", Version: "73.3.0"}, RemotePath: uaaURL, SourceID: ReleaseSourceTypeBOSHIO}))
 
 				foundRelease, found, err = releaseSource.GetMatchedRelease(rabbitmqRequirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 				cfRabbitURL := fmt.Sprintf("%s/d/github.com/pivotal-cf/cf-rabbitmq-release?v=268.0.0", testServer.URL())
-				Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "268.0.0"}, RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
+				Expect(foundRelease).To(Equal(release2.Remote{ID: release2.ID{Name: "cf-rabbitmq", Version: "268.0.0"}, RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
 
 			})
 
@@ -103,7 +102,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			It("doesn't find releases which don't exist on bosh.io", func() {
-				zzzRequirement := release.Requirement{Name: "zzz", Version: "999", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}
+				zzzRequirement := release2.Requirement{Name: "zzz", Version: "999", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}
 				_, found, err := releaseSource.GetMatchedRelease(zzzRequirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeFalse())
@@ -133,7 +132,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			It("does not match that release", func() {
-				_, found, err := releaseSource.GetMatchedRelease(release.Requirement{
+				_, found, err := releaseSource.GetMatchedRelease(release2.Requirement{
 					Name:            releaseName,
 					Version:         releaseVersion,
 					StemcellOS:      "ignored",
@@ -171,8 +170,8 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 					pathRegex, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/.*")
 					testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `null`))
 
-					releaseID := release.ID{Name: releaseName, Version: releaseVersion}
-					releaseRequirement := release.Requirement{
+					releaseID := release2.ID{Name: releaseName, Version: releaseVersion}
+					releaseRequirement := release2.Requirement{
 						Name:            releaseName,
 						Version:         releaseVersion,
 						StemcellOS:      "generic-os",
@@ -192,7 +191,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 						releaseVersion,
 					)
 
-					Expect(foundRelease).To(Equal(release.Remote{ID: releaseID, RemotePath: expectedPath, SourceID: ReleaseSourceTypeBOSHIO}))
+					Expect(foundRelease).To(Equal(release2.Remote{ID: releaseID, RemotePath: expectedPath, SourceID: ReleaseSourceTypeBOSHIO}))
 				},
 
 				Entry("cloudfoundry org, no suffix", "cloudfoundry", ""),
@@ -222,8 +221,8 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			releaseSource *BOSHIOReleaseSource
 			testServer    *ghttp.Server
 
-			release1ID release.ID
-			release1   release.Remote
+			release1ID release2.ID
+			release1   release2.Remote
 
 			release1Sha1 string
 		)
@@ -237,8 +236,8 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 			releaseSource = NewBOSHIOReleaseSource(ID, false, testServer.URL(), log.New(GinkgoWriter, "", 0))
 
-			release1ID = release.ID{Name: "some", Version: "1.2.3"}
-			release1 = release.Remote{ID: release1ID, RemotePath: testServer.URL() + release1ServerPath, SourceID: ReleaseSourceTypeBOSHIO}
+			release1ID = release2.ID{Name: "some", Version: "1.2.3"}
+			release1 = release2.Remote{ID: release1ID, RemotePath: testServer.URL() + release1ServerPath, SourceID: ReleaseSourceTypeBOSHIO}
 
 			hash := sha1.New()
 			_, err = io.Copy(hash, strings.NewReader(release1ServerFileContents))
@@ -270,7 +269,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(release1DiskContents).To(BeEquivalentTo(release1ServerFileContents))
 
-			Expect(localRelease).To(Equal(release.Local{ID: release1ID, LocalPath: fullRelease1Path, SHA1: release1Sha1}))
+			Expect(localRelease).To(Equal(release2.Local{ID: release1ID, LocalPath: fullRelease1Path, SHA1: release1Sha1}))
 		})
 	})
 
@@ -295,25 +294,25 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 			When("there is no version requirement", func() {
 				It("gets the latest version from bosh.io", func() {
-					rabbitmqRequirement := release.Requirement{Name: "cf-rabbitmq"}
+					rabbitmqRequirement := release2.Requirement{Name: "cf-rabbitmq"}
 
 					foundRelease, found, err := releaseSource.FindReleaseVersion(rabbitmqRequirement)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(found).To(BeTrue())
 					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.5", testServer.URL())
-					Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "309.0.5"}, SHA: "5df538657c2cc830bda679420a9b162682018ded", RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
+					Expect(foundRelease).To(Equal(release2.Remote{ID: release2.ID{Name: "cf-rabbitmq", Version: "309.0.5"}, SHA: "5df538657c2cc830bda679420a9b162682018ded", RemotePath: cfRabbitURL, SourceID: ReleaseSourceTypeBOSHIO}))
 
 				})
 			})
 			When("there is a version requirement", func() {
 				It("gets the latest version from bosh.io", func() {
-					rabbitmqRequirement := release.Requirement{Name: "cf-rabbitmq", VersionConstraint: "~309"}
+					rabbitmqRequirement := release2.Requirement{Name: "cf-rabbitmq", VersionConstraint: "~309"}
 
 					foundRelease, found, err := releaseSource.FindReleaseVersion(rabbitmqRequirement)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(found).To(BeTrue())
 					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.5", testServer.URL())
-					Expect(foundRelease).To(Equal(release.Remote{ID: release.ID{Name: "cf-rabbitmq", Version: "309.0.5"},
+					Expect(foundRelease).To(Equal(release2.Remote{ID: release2.ID{Name: "cf-rabbitmq", Version: "309.0.5"},
 						SHA:        "5df538657c2cc830bda679420a9b162682018ded",
 						RemotePath: cfRabbitURL,
 						SourceID:   ReleaseSourceTypeBOSHIO}))
@@ -336,12 +335,12 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			It("returns not found", func() {
-				rabbitmqRequirement := release.Requirement{Name: "cf-rabbitmq"}
+				rabbitmqRequirement := release2.Requirement{Name: "cf-rabbitmq"}
 
 				foundRelease, found, err := releaseSource.FindReleaseVersion(rabbitmqRequirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeFalse())
-				Expect(foundRelease).To(Equal(release.Remote{}))
+				Expect(foundRelease).To(Equal(release2.Remote{}))
 			})
 		})
 	})

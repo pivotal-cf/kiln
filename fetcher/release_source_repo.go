@@ -3,12 +3,10 @@ package fetcher
 import (
 	"errors"
 	"fmt"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"io"
 	"log"
-
-	"github.com/pivotal-cf/kiln/release"
-
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 const (
@@ -19,37 +17,37 @@ const (
 
 //go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
-	FindReleaseVersion(release.Requirement) (release.Remote, bool, error)
-	DownloadRelease(releasesDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error)
+	GetMatchedRelease(release2.Requirement) (release2.Remote, bool, error)
+	FindReleaseVersion(release2.Requirement) (release2.Remote, bool, error)
+	DownloadRelease(releasesDir string, remoteRelease release2.Remote, downloadThreads int) (release2.Local, error)
 	ID() string
 	Publishable() bool
 }
 
 //go:generate counterfeiter -o ./fakes/multi_release_source.go --fake-name MultiReleaseSource . MultiReleaseSource
 type MultiReleaseSource interface {
-	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
-	FindReleaseVersion(release.Requirement) (release.Remote, bool, error)
-	DownloadRelease(releasesDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error)
+	GetMatchedRelease(release2.Requirement) (release2.Remote, bool, error)
+	FindReleaseVersion(release2.Requirement) (release2.Remote, bool, error)
+	DownloadRelease(releasesDir string, remoteRelease release2.Remote, downloadThreads int) (release2.Local, error)
 	FindByID(string) (ReleaseSource, error)
 }
 
 //go:generate counterfeiter -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
 type ReleaseUploader interface {
-	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
-	UploadRelease(spec release.Requirement, file io.Reader) (release.Remote, error)
+	GetMatchedRelease(release2.Requirement) (release2.Remote, bool, error)
+	UploadRelease(spec release2.Requirement, file io.Reader) (release2.Remote, error)
 }
 
 //go:generate counterfeiter -o ./fakes/remote_pather.go --fake-name RemotePather . RemotePather
 type RemotePather interface {
-	RemotePath(release.Requirement) (string, error)
+	RemotePath(release2.Requirement) (string, error)
 }
 
 type ReleaseSourceRepo struct {
 	ReleaseSources []ReleaseSource
 }
 
-func NewReleaseSourceRepo(kilnfile cargo.Kilnfile, logger *log.Logger) ReleaseSourceRepo {
+func NewReleaseSourceRepo(kilnfile cargo2.Kilnfile, logger *log.Logger) ReleaseSourceRepo {
 	var releaseSources multiReleaseSource
 
 	for _, releaseConfig := range kilnfile.ReleaseSources {
@@ -135,7 +133,7 @@ func (repo ReleaseSourceRepo) FindRemotePather(sourceID string) (RemotePather, e
 	return pather, nil
 }
 
-func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
+func releaseSourceFor(releaseConfig cargo2.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
 	switch releaseConfig.Type {
 	case ReleaseSourceTypeBOSHIO:
 		id := releaseConfig.ID

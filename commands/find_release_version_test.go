@@ -1,18 +1,17 @@
 package commands_test
 
 import (
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"io/ioutil"
 	"log"
 	"path/filepath"
 	"strings"
 
-	"github.com/pivotal-cf/kiln/commands"
-	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/release"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-cf/kiln/commands"
+	"github.com/pivotal-cf/kiln/fetcher"
 	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
 )
 
@@ -66,7 +65,7 @@ releases:
 		})
 
 		JustBeforeEach(func() {
-			multiReleaseSourceProvider := func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
+			multiReleaseSourceProvider := func(kilnfile cargo2.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
 				return fakeReleasesSource
 			}
 			findReleaseVersion = commands.NewFindReleaseVersion(logger, multiReleaseSourceProvider)
@@ -82,8 +81,8 @@ releases:
 			When("a latest release exists", func() {
 				BeforeEach(func() {
 					releaseName = "uaac"
-					fakeReleasesSource.FindReleaseVersionReturns(release.Remote{
-						ID:         release.ID{Name: releaseName, Version: "74.12.5"},
+					fakeReleasesSource.FindReleaseVersionReturns(release2.Remote{
+						ID:         release2.ID{Name: releaseName, Version: "74.12.5"},
 						RemotePath: "remote_url",
 						SourceID:   "bosh.io",
 						SHA:        "some-sha",
@@ -110,8 +109,8 @@ releases:
 			When("a release exists", func() {
 				BeforeEach(func() {
 					releaseName = "uaa"
-					fakeReleasesSource.FindReleaseVersionReturns(release.Remote{
-						ID:         release.ID{Name: releaseName, Version: "74.16.5"},
+					fakeReleasesSource.FindReleaseVersionReturns(release2.Remote{
+						ID:         release2.ID{Name: releaseName, Version: "74.16.5"},
 						RemotePath: "remote_url",
 						SourceID:   "sourceId",
 					}, true, nil)

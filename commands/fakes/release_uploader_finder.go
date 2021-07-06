@@ -2,18 +2,18 @@
 package fakes
 
 import (
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
 	"sync"
 
 	"github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 type ReleaseUploaderFinder struct {
-	Stub        func(cargo.Kilnfile, string) (fetcher.ReleaseUploader, error)
+	Stub        func(cargo2.Kilnfile, string) (fetcher.ReleaseUploader, error)
 	mutex       sync.RWMutex
 	argsForCall []struct {
-		arg1 cargo.Kilnfile
+		arg1 cargo2.Kilnfile
 		arg2 string
 	}
 	returns struct {
@@ -28,11 +28,11 @@ type ReleaseUploaderFinder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseUploaderFinder) Spy(arg1 cargo.Kilnfile, arg2 string) (fetcher.ReleaseUploader, error) {
+func (fake *ReleaseUploaderFinder) Spy(arg1 cargo2.Kilnfile, arg2 string) (fetcher.ReleaseUploader, error) {
 	fake.mutex.Lock()
 	ret, specificReturn := fake.returnsOnCall[len(fake.argsForCall)]
 	fake.argsForCall = append(fake.argsForCall, struct {
-		arg1 cargo.Kilnfile
+		arg1 cargo2.Kilnfile
 		arg2 string
 	}{arg1, arg2})
 	fake.recordInvocation("ReleaseUploaderFinder", []interface{}{arg1, arg2})
@@ -52,13 +52,13 @@ func (fake *ReleaseUploaderFinder) CallCount() int {
 	return len(fake.argsForCall)
 }
 
-func (fake *ReleaseUploaderFinder) Calls(stub func(cargo.Kilnfile, string) (fetcher.ReleaseUploader, error)) {
+func (fake *ReleaseUploaderFinder) Calls(stub func(cargo2.Kilnfile, string) (fetcher.ReleaseUploader, error)) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = stub
 }
 
-func (fake *ReleaseUploaderFinder) ArgsForCall(i int) (cargo.Kilnfile, string) {
+func (fake *ReleaseUploaderFinder) ArgsForCall(i int) (cargo2.Kilnfile, string) {
 	fake.mutex.RLock()
 	defer fake.mutex.RUnlock()
 	return fake.argsForCall[i].arg1, fake.argsForCall[i].arg2

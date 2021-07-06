@@ -2,6 +2,8 @@ package commands_test
 
 import (
 	"errors"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,9 +12,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	test_helpers "github.com/pivotal-cf/kiln/internal/test-helpers"
-	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 
 	. "github.com/onsi/ginkgo"
@@ -49,8 +49,8 @@ var _ = Describe("UpdateStemcell", func() {
 			update                             *UpdateStemcell
 			tmpDir, kilnfilePath, stemcellPath string
 			kilnfileLoader                     *fakes.KilnfileLoader
-			kilnfile                           cargo.Kilnfile
-			kilnfileLock                       cargo.KilnfileLock
+			kilnfile                           cargo2.Kilnfile
+			kilnfileLock                       cargo2.KilnfileLock
 			releaseSource                      *fetcherFakes.MultiReleaseSource
 			outputBuffer                       *gbytes.Buffer
 		)
@@ -59,9 +59,9 @@ var _ = Describe("UpdateStemcell", func() {
 			var err error
 
 			kilnfileLoader = new(fakes.KilnfileLoader)
-			kilnfile = cargo.Kilnfile{}
-			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.ReleaseLock{
+			kilnfile = cargo2.Kilnfile{}
+			kilnfileLock = cargo2.KilnfileLock{
+				Releases: []cargo2.ReleaseLock{
 					{
 						Name:         release1Name,
 						SHA1:         "old-sha-1",
@@ -77,25 +77,25 @@ var _ = Describe("UpdateStemcell", func() {
 						RemotePath:   "old-remote-path-2",
 					},
 				},
-				Stemcell: cargo.Stemcell{
+				Stemcell: cargo2.Stemcell{
 					OS:      "old-os",
 					Version: "0.1",
 				},
 			}
 
 			releaseSource = new(fetcherFakes.MultiReleaseSource)
-			releaseSource.GetMatchedReleaseCalls(func(requirement release.Requirement) (release.Remote, bool, error) {
+			releaseSource.GetMatchedReleaseCalls(func(requirement release2.Requirement) (release2.Remote, bool, error) {
 				switch requirement.Name {
 				case release1Name:
-					remote := release.Remote{
-						ID:         release.ID{Name: release1Name, Version: release1Version},
+					remote := release2.Remote{
+						ID:         release2.ID{Name: release1Name, Version: release1Version},
 						RemotePath: newRelease1RemotePath,
 						SourceID:   publishableReleaseSourceID,
 					}
 					return remote, true, nil
 				case release2Name:
-					remote := release.Remote{
-						ID:         release.ID{Name: release2Name, Version: release2Version},
+					remote := release2.Remote{
+						ID:         release2.ID{Name: release2Name, Version: release2Version},
 						RemotePath: newRelease2RemotePath,
 						SourceID:   unpublishableReleaseSourceID,
 					}
@@ -105,18 +105,18 @@ var _ = Describe("UpdateStemcell", func() {
 				}
 			})
 
-			releaseSource.DownloadReleaseCalls(func(_ string, remote release.Remote, _ int) (release.Local, error) {
+			releaseSource.DownloadReleaseCalls(func(_ string, remote release2.Remote, _ int) (release2.Local, error) {
 				switch remote.Name {
 				case release1Name:
-					local := release.Local{
-						ID:        release.ID{Name: release1Name, Version: release1Version},
+					local := release2.Local{
+						ID:        release2.ID{Name: release1Name, Version: release1Version},
 						LocalPath: "not-used",
 						SHA1:      newRelease1SHA,
 					}
 					return local, nil
 				case release2Name:
-					local := release.Local{
-						ID:        release.ID{Name: release2Name, Version: release2Version},
+					local := release2.Local{
+						ID:        release2.ID{Name: release2Name, Version: release2Version},
 						LocalPath: "not-used",
 						SHA1:      newRelease2SHA,
 					}
@@ -166,12 +166,12 @@ var _ = Describe("UpdateStemcell", func() {
 			_, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
 			Expect(path).To(Equal(kilnfilePath))
 
-			Expect(updatedLockfile.Stemcell).To(Equal(cargo.Stemcell{
+			Expect(updatedLockfile.Stemcell).To(Equal(cargo2.Stemcell{
 				OS:      newStemcellOS,
 				Version: newStemcellVersion,
 			}))
 
-			Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
+			Expect(updatedLockfile.Releases).To(Equal([]cargo2.ReleaseLock{
 				{
 					Name:         release1Name,
 					Version:      release1Version,
@@ -198,13 +198,13 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(2))
 
 			req1 := releaseSource.GetMatchedReleaseArgsForCall(0)
-			Expect(req1).To(Equal(release.Requirement{
+			Expect(req1).To(Equal(release2.Requirement{
 				Name: release1Name, Version: release1Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
 			}))
 
 			req2 := releaseSource.GetMatchedReleaseArgsForCall(1)
-			Expect(req2).To(Equal(release.Requirement{
+			Expect(req2).To(Equal(release2.Requirement{
 				Name: release2Name, Version: release2Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
 			}))
@@ -221,8 +221,8 @@ var _ = Describe("UpdateStemcell", func() {
 			actualDir, remote1, threads := releaseSource.DownloadReleaseArgsForCall(0)
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote1).To(Equal(
-				release.Remote{
-					ID:         release.ID{Name: release1Name, Version: release1Version},
+				release2.Remote{
+					ID:         release2.ID{Name: release1Name, Version: release1Version},
 					RemotePath: newRelease1RemotePath,
 					SourceID:   publishableReleaseSourceID,
 				},
@@ -232,8 +232,8 @@ var _ = Describe("UpdateStemcell", func() {
 			actualDir, remote2, threads := releaseSource.DownloadReleaseArgsForCall(1)
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote2).To(Equal(
-				release.Remote{
-					ID:         release.ID{Name: release2Name, Version: release2Version},
+				release2.Remote{
+					ID:         release2.ID{Name: release2Name, Version: release2Version},
 					RemotePath: newRelease2RemotePath,
 					SourceID:   unpublishableReleaseSourceID,
 				},
@@ -243,7 +243,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 		When("the stemcell didn't change", func() {
 			BeforeEach(func() {
-				kilnfileLock.Stemcell = cargo.Stemcell{
+				kilnfileLock.Stemcell = cargo2.Stemcell{
 					OS:      newStemcellOS,
 					Version: newStemcellVersion,
 				}
@@ -282,7 +282,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 		When("the release can't be found", func() {
 			BeforeEach(func() {
-				releaseSource.GetMatchedReleaseReturns(release.Remote{}, false, nil)
+				releaseSource.GetMatchedReleaseReturns(release2.Remote{}, false, nil)
 			})
 
 			It("errors", func() {
@@ -295,7 +295,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 		When("finding the release errors", func() {
 			BeforeEach(func() {
-				releaseSource.GetMatchedReleaseReturns(release.Remote{}, false, errors.New("big badda boom"))
+				releaseSource.GetMatchedReleaseReturns(release2.Remote{}, false, errors.New("big badda boom"))
 			})
 
 			It("errors", func() {
@@ -309,7 +309,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 		When("downloading the release errors", func() {
 			BeforeEach(func() {
-				releaseSource.DownloadReleaseReturns(release.Local{}, errors.New("big badda boom"))
+				releaseSource.DownloadReleaseReturns(release2.Local{}, errors.New("big badda boom"))
 			})
 
 			It("errors", func() {

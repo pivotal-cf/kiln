@@ -2,11 +2,11 @@ package commands
 
 import (
 	"fmt"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
 	"os"
 	"strings"
 
 	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"github.com/pivotal-cf/kiln/internal/preprocess"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 	"gopkg.in/yaml.v2"
@@ -38,7 +38,7 @@ func (cmd PreProcess) Execute(args []string) error {
 		_ = kilnFile.Close()
 	}()
 
-	var kilnfile cargo.Kilnfile
+	var kilnfile cargo2.Kilnfile
 	if err := yaml.NewDecoder(kilnFile).Decode(&kilnfile); err != nil {
 		return fmt.Errorf("could not parse Kilnfile: %s", err)
 	}

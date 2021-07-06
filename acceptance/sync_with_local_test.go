@@ -8,16 +8,16 @@ import (
 	"path/filepath"
 	"time"
 
-	test_helpers "github.com/pivotal-cf/kiln/internal/test-helpers"
 	"gopkg.in/src-d/go-billy.v4/osfs"
-
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+
+	test_helpers "github.com/pivotal-cf/kiln/internal/test-helpers"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 var _ = Context("Syncing the Kilnfile.lock to releases on disk", func() {

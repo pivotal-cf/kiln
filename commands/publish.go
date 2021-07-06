@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,8 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/pivotal-cf/kiln/internal/cargo"
 
 	"github.com/Masterminds/semver"
 	"github.com/pivotal-cf/go-pivnet/v2"
@@ -110,10 +109,10 @@ func (p Publish) recoverFromPanic() func() {
 	}
 }
 
-func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Version, error) {
+func (p *Publish) parseArgsAndSetup(args []string) (cargo2.Kilnfile, *semver.Version, error) {
 	_, err := jhanda.Parse(&p.Options, args)
 	if err != nil {
-		return cargo.Kilnfile{}, nil, err
+		return cargo2.Kilnfile{}, nil, err
 	}
 
 	if p.Now == nil {
@@ -155,40 +154,40 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 
 	versionFile, err := p.FS.Open(p.Options.Version)
 	if err != nil {
-		return cargo.Kilnfile{}, nil, err
+		return cargo2.Kilnfile{}, nil, err
 	}
 	defer versionFile.Close()
 
 	versionBuf, err := ioutil.ReadAll(versionFile)
 	if err != nil {
-		return cargo.Kilnfile{}, nil, err
+		return cargo2.Kilnfile{}, nil, err
 	}
 
 	version, err := semver.NewVersion(strings.TrimSpace(string(versionBuf)))
 	if err != nil {
-		return cargo.Kilnfile{}, nil, err
+		return cargo2.Kilnfile{}, nil, err
 	}
 
 	file, err := p.FS.Open(p.Options.Kilnfile)
 	if err != nil {
-		return cargo.Kilnfile{}, nil, err
+		return cargo2.Kilnfile{}, nil, err
 	}
 	defer file.Close()
 
-	var kilnfile cargo.Kilnfile
+	var kilnfile cargo2.Kilnfile
 	if err := yaml.NewDecoder(file).Decode(&kilnfile); err != nil {
-		return cargo.Kilnfile{}, nil, fmt.Errorf("could not parse Kilnfile: %s", err)
+		return cargo2.Kilnfile{}, nil, fmt.Errorf("could not parse Kilnfile: %s", err)
 	}
 
 	window := p.Options.Window
 	if window != "ga" && window != "rc" && window != "beta" && window != "alpha" {
-		return cargo.Kilnfile{}, nil, fmt.Errorf("unknown window: %q", window)
+		return cargo2.Kilnfile{}, nil, fmt.Errorf("unknown window: %q", window)
 	}
 
 	return kilnfile, version, nil
 }
 
-func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *semver.Version) error {
+func (p Publish) updateReleaseOnPivnet(kilnfile cargo2.Kilnfile, buildVersion *semver.Version) error {
 	p.OutLogger.Printf("Requesting list of releases for %s", kilnfile.Slug)
 
 	window := p.Options.Window
@@ -319,7 +318,7 @@ func (p Publish) updateRelease(release pivnet.Release, slug, version string, rel
 	return updatedRelease, nil
 }
 
-func (p Publish) addUserGroups(rv *releaseVersion, release pivnet.Release, kilnfile cargo.Kilnfile) error {
+func (p Publish) addUserGroups(rv *releaseVersion, release pivnet.Release, kilnfile cargo2.Kilnfile) error {
 	if rv.IsGA() {
 		return nil
 	}

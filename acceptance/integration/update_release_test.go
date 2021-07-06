@@ -7,13 +7,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pivotal-cf/kiln/internal/cargo"
 	"gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 var _ = Context("Updating a release to a specific version", func() {

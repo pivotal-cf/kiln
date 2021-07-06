@@ -2,15 +2,14 @@ package commands
 
 import (
 	"fmt"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"log"
 
 	"github.com/Masterminds/semver"
 
-	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/release"
-
 	"github.com/pivotal-cf/kiln/builder"
+	"github.com/pivotal-cf/kiln/fetcher"
 
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/src-d/go-billy.v4"
@@ -33,7 +32,7 @@ type UploadRelease struct {
 }
 
 //go:generate counterfeiter -o ./fakes/release_uploader_finder.go --fake-name ReleaseUploaderFinder . ReleaseUploaderFinder
-type ReleaseUploaderFinder func(cargo.Kilnfile, string) (fetcher.ReleaseUploader, error)
+type ReleaseUploaderFinder func(cargo2.Kilnfile, string) (fetcher.ReleaseUploader, error)
 
 func (command UploadRelease) Execute(args []string) error {
 	_, err := jhanda.Parse(&command.Options, args)
@@ -80,7 +79,7 @@ func (command UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("cannot upload development release %q - only finalized releases are allowed", manifest.Version)
 	}
 
-	requirement := release.Requirement{Name: manifest.Name, Version: manifest.Version}
+	requirement := release2.Requirement{Name: manifest.Name, Version: manifest.Version}
 	_, found, err := releaseUploader.GetMatchedRelease(requirement)
 	if err != nil {
 		return fmt.Errorf("couldn't query release source: %w", err)
@@ -91,7 +90,7 @@ func (command UploadRelease) Execute(args []string) error {
 			manifest.Name, manifest.Version, command.Options.UploadTargetID)
 	}
 
-	_, err = releaseUploader.UploadRelease(release.Requirement{
+	_, err = releaseUploader.UploadRelease(release2.Requirement{
 		Name:    manifest.Name,
 		Version: manifest.Version,
 	}, file)

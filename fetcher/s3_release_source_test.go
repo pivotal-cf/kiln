@@ -3,6 +3,8 @@ package fetcher_test
 import (
 	"errors"
 	"fmt"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"io"
 	"io/ioutil"
 	"log"
@@ -11,12 +13,8 @@ import (
 	"strings"
 
 	. "github.com/onsi/ginkgo/extensions/table"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-
 	. "github.com/onsi/gomega/gstruct"
 	"gopkg.in/src-d/go-billy.v4/osfs"
-
-	"github.com/pivotal-cf/kiln/release"
 
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
@@ -46,12 +44,12 @@ var _ = Describe("S3ReleaseSource", func() {
 
 	Describe("S3ReleaseSourceFromConfig", func() {
 		var (
-			config *cargo.ReleaseSourceConfig
+			config *cargo2.ReleaseSourceConfig
 			logger *log.Logger
 		)
 
 		BeforeEach(func() {
-			config = &cargo.ReleaseSourceConfig{
+			config = &cargo2.ReleaseSourceConfig{
 				Bucket:          "my-bucket",
 				PathTemplate:    "my-path-template",
 				Region:          "my-region",
@@ -61,7 +59,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			logger = log.New(GinkgoWriter, "", 0)
 		})
 
-		DescribeTable("bad config", func(before func(sourceConfig *cargo.ReleaseSourceConfig), expectedSubstring string) {
+		DescribeTable("bad config", func(before func(sourceConfig *cargo2.ReleaseSourceConfig), expectedSubstring string) {
 			before(config)
 
 			var r interface{}
@@ -75,12 +73,12 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(r).To(ContainSubstring(expectedSubstring))
 		},
 			Entry("path_template is missing",
-				func(c *cargo.ReleaseSourceConfig) { c.PathTemplate = "" },
+				func(c *cargo2.ReleaseSourceConfig) { c.PathTemplate = "" },
 				"path_template",
 			),
 
 			Entry("bucket is missing",
-				func(c *cargo.ReleaseSourceConfig) { c.Bucket = "" },
+				func(c *cargo2.ReleaseSourceConfig) { c.Bucket = "" },
 				"bucket",
 			),
 		)
@@ -95,9 +93,9 @@ var _ = Describe("S3ReleaseSource", func() {
 			releaseSource         S3ReleaseSource
 			logger                *log.Logger
 			releaseDir            string
-			remoteRelease         release.Remote
+			remoteRelease         release2.Remote
 			expectedLocalFilename string
-			releaseID             release.ID
+			releaseID             release2.ID
 			fakeS3Downloader      *fakes.S3Downloader
 		)
 
@@ -107,8 +105,8 @@ var _ = Describe("S3ReleaseSource", func() {
 			releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 			Expect(err).NotTo(HaveOccurred())
 
-			releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
-			remoteRelease = release.Remote{ID: releaseID, RemotePath: "2.10/uaa/uaa-1.2.3-ubuntu-xenial-621.55.tgz", SourceID: bucket}
+			releaseID = release2.ID{Name: "uaa", Version: "1.2.3"}
+			remoteRelease = release2.Remote{ID: releaseID, RemotePath: "2.10/uaa/uaa-1.2.3-ubuntu-xenial-621.55.tgz", SourceID: bucket}
 			expectedLocalFilename = filepath.Base(remoteRelease.RemotePath)
 
 			logger = log.New(GinkgoWriter, "", 0)
@@ -141,7 +139,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			_, _, opts := fakeS3Downloader.DownloadArgsForCall(0)
 			verifySetsConcurrency(opts, 7)
 
-			Expect(localRelease).To(Equal(release.Local{ID: releaseID, LocalPath: releasePath, SHA1: sha1}))
+			Expect(localRelease).To(Equal(release2.Local{ID: releaseID, LocalPath: releasePath, SHA1: sha1}))
 		})
 
 		Context("when number of threads is not specified", func() {
@@ -186,15 +184,15 @@ var _ = Describe("S3ReleaseSource", func() {
 		var (
 			releaseSource  S3ReleaseSource
 			fakeS3Client   *fakes.S3Client
-			desiredRelease release.Requirement
-			bpmReleaseID   release.ID
+			desiredRelease release2.Requirement
+			bpmReleaseID   release2.ID
 			bpmKey         string
 			logger         *log.Logger
 		)
 
 		BeforeEach(func() {
-			bpmReleaseID = release.ID{Name: "bpm-release", Version: "1.2.3"}
-			desiredRelease = release.Requirement{
+			bpmReleaseID = release2.ID{Name: "bpm-release", Version: "1.2.3"}
+			desiredRelease = release2.Requirement{
 				Name:            "bpm-release",
 				Version:         "1.2.3",
 				StemcellOS:      "ubuntu-xenial",
@@ -229,7 +227,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(input.Bucket).To(PointTo(BeEquivalentTo(bucket)))
 			Expect(input.Key).To(PointTo(BeEquivalentTo(bpmKey)))
 
-			Expect(remoteRelease).To(Equal(release.Remote{
+			Expect(remoteRelease).To(Equal(release2.Remote{
 				ID:         bpmReleaseID,
 				RemotePath: bpmKey,
 				SourceID:   sourceID,
@@ -279,16 +277,16 @@ var _ = Describe("S3ReleaseSource", func() {
 		var (
 			releaseSource  S3ReleaseSource
 			fakeS3Client   *fakes.S3Client
-			desiredRelease release.Requirement
-			releaseID      release.ID
+			desiredRelease release2.Requirement
+			releaseID      release2.ID
 			uaaKey         string
 			logger         *log.Logger
 		)
 		When("version is semantic and release has version constraint", func() {
 			BeforeEach(func() {
 
-				releaseID = release.ID{Name: "uaa", Version: "1.1.1"}
-				desiredRelease = release.Requirement{
+				releaseID = release2.ID{Name: "uaa", Version: "1.1.1"}
+				desiredRelease = release2.Requirement{
 					Name:              "uaa",
 					VersionConstraint: "~1.1",
 					StemcellVersion:   "621.71",
@@ -337,7 +335,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
 				Expect(*input.Prefix).To(Equal("uaa/"))
 
-				Expect(remoteRelease).To(Equal(release.Remote{
+				Expect(remoteRelease).To(Equal(release2.Remote{
 					ID:         releaseID,
 					RemotePath: uaaKey,
 					SourceID:   sourceID,
@@ -348,8 +346,8 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		When("version is a single number", func() {
 			BeforeEach(func() {
-				releaseID = release.ID{Name: "uaa", Version: "123"}
-				desiredRelease = release.Requirement{
+				releaseID = release2.ID{Name: "uaa", Version: "123"}
+				desiredRelease = release2.Requirement{
 					Name:            "uaa",
 					StemcellVersion: "621.71",
 				}
@@ -398,7 +396,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
 				Expect(*input.Prefix).To(Equal("uaa/"))
 
-				Expect(remoteRelease).To(Equal(release.Remote{
+				Expect(remoteRelease).To(Equal(release2.Remote{
 					ID:         releaseID,
 					RemotePath: uaaKey,
 					SourceID:   sourceID,
@@ -414,15 +412,15 @@ var _ = Describe("S3ReleaseSource", func() {
 		var (
 			releaseSource  S3ReleaseSource
 			fakeS3Client   *fakes.S3Client
-			desiredRelease release.Requirement
-			releaseID      release.ID
+			desiredRelease release2.Requirement
+			releaseID      release2.ID
 			uaaKey         string
 			logger         *log.Logger
 		)
 		When("version is semantic and has 2 latest versions with different stemcell versions", func() {
 			BeforeEach(func() {
-				releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
-				desiredRelease = release.Requirement{
+				releaseID = release2.ID{Name: "uaa", Version: "1.2.3"}
+				desiredRelease = release2.Requirement{
 					Name:            "uaa",
 					StemcellVersion: "621.71",
 				}
@@ -471,7 +469,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
 				Expect(*input.Prefix).To(Equal("2.11/uaa/"))
 
-				Expect(remoteRelease).To(Equal(release.Remote{
+				Expect(remoteRelease).To(Equal(release2.Remote{
 					ID:         releaseID,
 					RemotePath: uaaKey,
 					SourceID:   sourceID,
@@ -505,7 +503,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		Context("happy path", func() {
 			It("uploads the file to the correct location", func() {
-				_, err := releaseSource.UploadRelease(release.Requirement{
+				_, err := releaseSource.UploadRelease(release2.Requirement{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
@@ -523,14 +521,14 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns the remote release", func() {
-				remoteRelease, err := releaseSource.UploadRelease(release.Requirement{
+				remoteRelease, err := releaseSource.UploadRelease(release2.Requirement{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(remoteRelease).To(Equal(release.Remote{
-					ID:         release.ID{Name: "banana", Version: "1.2.3"},
+				Expect(remoteRelease).To(Equal(release2.Remote{
+					ID:         release2.ID{Name: "banana", Version: "1.2.3"},
 					RemotePath: "banana/banana-1.2.3.tgz",
 					SourceID:   sourceID,
 				}))
@@ -552,7 +550,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns a descriptive error", func() {
-				_, err := releaseSource.UploadRelease(release.Requirement{
+				_, err := releaseSource.UploadRelease(release2.Requirement{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
@@ -565,7 +563,7 @@ var _ = Describe("S3ReleaseSource", func() {
 	Describe("RemotePath", func() {
 		var (
 			releaseSource S3ReleaseSource
-			requirement   release.Requirement
+			requirement   release2.Requirement
 		)
 
 		BeforeEach(func() {
@@ -579,7 +577,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				nil,
 				log.New(GinkgoWriter, "", 0),
 			)
-			requirement = release.Requirement{
+			requirement = release2.Requirement{
 				Name:            "bob",
 				Version:         "2.0",
 				StemcellOS:      "plan9",

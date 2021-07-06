@@ -4,6 +4,8 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	cargo2 "github.com/pivotal-cf/kiln/pkg/cargo"
+	release2 "github.com/pivotal-cf/kiln/pkg/release"
 	"io"
 	"log"
 	"os"
@@ -22,13 +24,10 @@ import (
 	"github.com/google/uuid"
 
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
-	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/release"
-
 	boshuaa "github.com/cloudfoundry/bosh-cli/uaa"
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
+	"github.com/pivotal-cf/jhanda"
+	"github.com/pivotal-cf/kiln/fetcher"
 )
 
 type CompileBuiltReleases struct {
@@ -177,20 +176,20 @@ func (f CompileBuiltReleases) Usage() jhanda.Usage {
 }
 
 type remoteReleaseWithSHA1 struct {
-	release.Remote
+	release2.Remote
 	SHA1 string
 }
 
-func findBuiltReleases(allReleaseSources fetcher.MultiReleaseSource, kilnfileLock cargo.KilnfileLock) ([]release.Remote, error) {
-	var builtReleases []release.Remote
+func findBuiltReleases(allReleaseSources fetcher.MultiReleaseSource, kilnfileLock cargo2.KilnfileLock) ([]release2.Remote, error) {
+	var builtReleases []release2.Remote
 	for _, lock := range kilnfileLock.Releases {
 		src, err := allReleaseSources.FindByID(lock.RemoteSource)
 		if err != nil {
 			return nil, err
 		}
 		if !src.Publishable() {
-			releaseID := release.ID{Name: lock.Name, Version: lock.Version}
-			builtReleases = append(builtReleases, release.Remote{
+			releaseID := release2.ID{Name: lock.Name, Version: lock.Version}
+			builtReleases = append(builtReleases, release2.Remote{
 				ID:         releaseID,
 				SourceID:   lock.RemoteSource,
 				RemotePath: lock.RemotePath,
@@ -200,16 +199,16 @@ func findBuiltReleases(allReleaseSources fetcher.MultiReleaseSource, kilnfileLoc
 	return builtReleases, nil
 }
 
-func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSources fetcher.MultiReleaseSource, builtReleases []release.Remote, stemcell cargo.Stemcell) ([]remoteReleaseWithSHA1, []release.Remote, error) {
+func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSources fetcher.MultiReleaseSource, builtReleases []release2.Remote, stemcell cargo2.Stemcell) ([]remoteReleaseWithSHA1, []release2.Remote, error) {
 	var (
-		remainingBuiltReleases []release.Remote
+		remainingBuiltReleases []release2.Remote
 		preCompiledReleases    []remoteReleaseWithSHA1
 	)
 
 	f.Logger.Println("searching for pre-compiled releases")
 
 	for _, builtRelease := range builtReleases {
-		spec := release.Requirement{
+		spec := release2.Requirement{
 			Name:            builtRelease.Name,
 			Version:         builtRelease.Version,
 			StemcellOS:      stemcell.OS,
@@ -237,7 +236,7 @@ func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSour
 	return preCompiledReleases, remainingBuiltReleases, nil
 }
 
-func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource fetcher.MultiReleaseSource, builtReleases []release.Remote) ([]release.Local, builder.StemcellManifest, error) {
+func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource fetcher.MultiReleaseSource, builtReleases []release2.Remote) ([]release2.Local, builder.StemcellManifest, error) {
 	f.Logger.Println("connecting to the bosh director")
 	boshDirector, err := f.BoshDirectorFactory()
 	if err != nil {
@@ -264,7 +263,7 @@ func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource fetcher.M
 		}
 		deployments = append(deployments, deployment)
 
-		mg := manifest_generator.NewManifestGenerator()
+		mg := manifest_generator.New()
 		manifest, err := mg.Generate(deploymentName, releaseIDs, stemcellManifest)
 		if err != nil {
 			return nil, builder.StemcellManifest{}, fmt.Errorf("couldn't generate bosh manifest: %v", err) // untested
@@ -301,8 +300,8 @@ func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource fetcher.M
 	return downloadedReleases, stemcellManifest, nil
 }
 
-func (f CompileBuiltReleases) uploadReleasesToDirector(builtReleases []release.Remote, releaseSource fetcher.MultiReleaseSource, boshDirector BoshDirector) ([]release.ID, error) {
-	var releaseIDs []release.ID
+func (f CompileBuiltReleases) uploadReleasesToDirector(builtReleases []release2.Remote, releaseSource fetcher.MultiReleaseSource, boshDirector BoshDirector) ([]release2.ID, error) {
+	var releaseIDs []release2.ID
 	for _, remoteRelease := range builtReleases {
 		releaseIDs = append(releaseIDs, remoteRelease.ID)
 
@@ -347,8 +346,8 @@ func (f CompileBuiltReleases) uploadStemcellToDirector(boshDirector BoshDirector
 	return stemcellManifest, err
 }
 
-func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.StemcellManifest, releaseIDs []release.ID, deployments []boshdir.Deployment, boshDirector BoshDirector) ([]release.Local, error) {
-	var downloadedReleases []release.Local
+func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.StemcellManifest, releaseIDs []release2.ID, deployments []boshdir.Deployment, boshDirector BoshDirector) ([]release2.Local, error) {
+	var downloadedReleases []release2.Local
 	exportedReleases, err := f.exportReleasesInParallel(stemcellManifest, deployments, releaseIDs)
 	if err != nil {
 		return nil, err
@@ -386,8 +385,8 @@ func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.
 			return nil, fmt.Errorf("failed closing file %s: %w", rel.TarballPath, err) // untested
 		}
 
-		downloadedReleases = append(downloadedReleases, release.Local{
-			ID:        release.ID{Name: rel.Name, Version: rel.Version},
+		downloadedReleases = append(downloadedReleases, release2.Local{
+			ID:        release2.ID{Name: rel.Name, Version: rel.Version},
 			LocalPath: rel.TarballPath,
 			SHA1:      hex.EncodeToString(s.Sum(nil)),
 		})
@@ -408,12 +407,12 @@ func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.
 	return downloadedReleases, nil
 }
 
-func (f CompileBuiltReleases) exportReleasesInParallel(stemcellManifest builder.StemcellManifest, deployments []boshdir.Deployment, releaseIDs []release.ID) ([]release.Exported, error) {
+func (f CompileBuiltReleases) exportReleasesInParallel(stemcellManifest builder.StemcellManifest, deployments []boshdir.Deployment, releaseIDs []release2.ID) ([]release2.Exported, error) {
 	osVersionSlug := boshdir.NewOSVersionSlug(stemcellManifest.OperatingSystem, stemcellManifest.Version)
 
 	errCh := make(chan error, len(releaseIDs))
 	wg := sync.WaitGroup{}
-	var exportedReleases []release.Exported
+	var exportedReleases []release2.Exported
 	exportedReleasesMux := sync.Mutex{}
 
 	deploymentsPool := make(chan boshdir.Deployment, len(deployments))
@@ -425,7 +424,7 @@ func (f CompileBuiltReleases) exportReleasesInParallel(stemcellManifest builder.
 	for _, releaseID := range releaseIDs {
 		wg.Add(1)
 
-		go func(rel release.ID) {
+		go func(rel release2.ID) {
 			defer wg.Done()
 
 			var deployment boshdir.Deployment
@@ -449,8 +448,8 @@ func (f CompileBuiltReleases) exportReleasesInParallel(stemcellManifest builder.
 				}
 
 				exportedReleasesMux.Lock()
-				exportedReleases = append(exportedReleases, release.Exported{
-					ID:          release.ID{Name: rel.Name, Version: rel.Version},
+				exportedReleases = append(exportedReleases, release2.Exported{
+					ID:          release2.ID{Name: rel.Name, Version: rel.Version},
 					TarballPath: compiledTarballPath,
 					BlobstoreID: result.BlobstoreID,
 					SHA1:        result.SHA1,
@@ -484,7 +483,7 @@ func (f CompileBuiltReleases) exportReleasesInParallel(stemcellManifest builder.
 	return exportedReleases, nil
 }
 
-func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []release.Local, releaseUploader fetcher.ReleaseUploader, stemcell builder.StemcellManifest) ([]remoteReleaseWithSHA1, error) {
+func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []release2.Local, releaseUploader fetcher.ReleaseUploader, stemcell builder.StemcellManifest) ([]remoteReleaseWithSHA1, error) {
 	var uploadedReleases []remoteReleaseWithSHA1
 
 	for _, downloadedRelease := range downloadedReleases {
@@ -493,7 +492,7 @@ func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []releas
 			return nil, fmt.Errorf("opening compiled release %q for uploading: %w", downloadedRelease.LocalPath, err) // untested
 		}
 
-		remoteRelease, err := releaseUploader.UploadRelease(release.Requirement{
+		remoteRelease, err := releaseUploader.UploadRelease(release2.Requirement{
 			Name:            downloadedRelease.Name,
 			Version:         downloadedRelease.Version,
 			StemcellOS:      stemcell.OperatingSystem,
@@ -508,9 +507,9 @@ func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []releas
 	return uploadedReleases, nil
 }
 
-func (f CompileBuiltReleases) updateLockfile(uploadedReleases []remoteReleaseWithSHA1, kilnfileLock cargo.KilnfileLock) error {
+func (f CompileBuiltReleases) updateLockfile(uploadedReleases []remoteReleaseWithSHA1, kilnfileLock cargo2.KilnfileLock) error {
 	for _, uploaded := range uploadedReleases {
-		var matchingRelease *cargo.ReleaseLock
+		var matchingRelease *cargo2.ReleaseLock
 		for i := range kilnfileLock.Releases {
 			if kilnfileLock.Releases[i].Name == uploaded.Name {
 				matchingRelease = &kilnfileLock.Releases[i]
