@@ -1,9 +1,10 @@
 package manifest_generator
 
 import (
-	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/release"
 	"gopkg.in/yaml.v2"
+
+	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 type ManifestGenerator struct{}
@@ -36,7 +37,7 @@ type ManifestUpdate struct {
 
 // }
 
-func NewManifestGenerator() ManifestGenerator {
+func New() ManifestGenerator {
 	return ManifestGenerator{}
 }
 
