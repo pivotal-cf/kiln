@@ -42,6 +42,7 @@ brews:
 dockers:
   - image_templates:
       - "pivotalcfreleng/kiln:latest"
+      - "pivotalcfreleng/kiln:{{ .Tag }}"
 
     skip_push: false
 
