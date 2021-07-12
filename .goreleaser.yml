@@ -29,7 +29,7 @@ archives:
         format: zip
 brews:
   - name: kiln
-    github:
+    tap:
       owner: pivotal-cf
       name: kiln
     folder: HomebrewFormula
