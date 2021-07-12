@@ -42,10 +42,7 @@ brews:
 dockers:
   - image_templates:
       - "pivotalcfreleng/kiln:latest"
-      - "pivotalcfreleng/kiln:{{ .Tag }}"
-      - "pivotalcfreleng/kiln:{{ .Tag }}-{{ .Env.GO_VERSION }}"
-      - "pivotalcfreleng/kiln:v{{ .Major }}"
-      - "gcr.io/tas-ppe/kiln:latest"
+
     build_flag_templates:
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
