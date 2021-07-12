@@ -5,20 +5,20 @@
 class Kiln < Formula
   desc ""
   homepage ""
-  version "0.60.0"
+  version "0.60.2"
   bottle :unneeded
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/pivotal-cf/kiln/releases/download/0.60.0/kiln-darwin-0.60.0.tar.gz"
-      sha256 "5839088b5e51bd777bc4b9f56a106d48bd289792fb9e285ae9f30eafc8405f84"
+      url "https://github.com/pivotal-cf/kiln/releases/download/0.60.2/kiln-darwin-0.60.2.tar.gz"
+      sha256 "e4ba72335f8b6eb26a9cbf86ed3e53e40b5ad3528fd73476958d8fb0867b7750"
     end
   end
 
   on_linux do
     if Hardware::CPU.intel?
-      url "https://github.com/pivotal-cf/kiln/releases/download/0.60.0/kiln-linux-0.60.0.tar.gz"
-      sha256 "065b6fe60b989bd31f21256ec9368c04af6aa9066c8039661fbf24a7a447d285"
+      url "https://github.com/pivotal-cf/kiln/releases/download/0.60.2/kiln-linux-0.60.2.tar.gz"
+      sha256 "5fdb609f06ece9f7e7fba2e1d107d9dcc2ab1c71dda0fcd86b03f57952b650fa"
     end
   end
 
