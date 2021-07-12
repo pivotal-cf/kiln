@@ -1,5 +1,0 @@
-acceptance/init_test.go:37::warning: cyclomatic complexity 11 of function createTarball() is high (> 10) (gocyclo)
-builder/interpolator.go:48::warning: cyclomatic complexity 25 of function (Interpolator).interpolate() is high (> 10) (gocyclo)
-builder/metadata_parts_directory_reader.go:51::warning: cyclomatic complexity 11 of function (MetadataPartsDirectoryReader).readMetadataRecursivelyFromDir() is high (> 10) (gocyclo)
-builder/release_manifest_reader.go:29::warning: cyclomatic complexity 11 of function (ReleaseManifestReader).Read() is high (> 10) (gocyclo)
-commands/bake.go:156::warning: cyclomatic complexity 23 of function (Bake).Execute() is high (> 10) (gocyclo)
