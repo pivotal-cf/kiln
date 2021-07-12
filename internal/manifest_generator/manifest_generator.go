@@ -3,7 +3,7 @@ package manifest_generator
 import (
 	"gopkg.in/yaml.v2"
 
-	"github.com/pivotal-cf/kiln/builder"
+	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
 

@@ -20,9 +20,10 @@ func (fake *Logger) Println(arg1 ...interface{}) {
 	fake.printlnArgsForCall = append(fake.printlnArgsForCall, struct {
 		arg1 []interface{}
 	}{arg1})
+	stub := fake.PrintlnStub
 	fake.recordInvocation("Println", []interface{}{arg1})
 	fake.printlnMutex.Unlock()
-	if fake.PrintlnStub != nil {
+	if stub != nil {
 		fake.PrintlnStub(arg1...)
 	}
 }

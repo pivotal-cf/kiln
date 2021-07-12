@@ -6,12 +6,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pivotal-cf/kiln/builder"
-	. "github.com/pivotal-cf/kiln/internal/baking"
-	"github.com/pivotal-cf/kiln/internal/baking/fakes"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/pivotal-cf/kiln/internal/baking"
+	"github.com/pivotal-cf/kiln/internal/baking/fakes"
+	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
 var _ = Describe("ReleasesService", func() {

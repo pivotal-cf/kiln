@@ -6,10 +6,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/pkg/release"
-
+	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/manifest_generator"
+	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 var _ = Describe("ManifestGenerator", func() {

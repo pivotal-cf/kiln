@@ -7,8 +7,8 @@ import (
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/yaml.v2"
 
-	"github.com/pivotal-cf/kiln/builder"
 	"github.com/pivotal-cf/kiln/internal/baking"
+	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
 type ConfigFileError struct {
