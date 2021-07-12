@@ -40,12 +40,17 @@ brews:
       system "#{bin}/kiln --version"
 
 dockers:
-  image_templates:
-  - "pivotalcfreleng/kiln:latest"
-  - "pivotalcfreleng/kiln:{{ .Tag }}"
-  - "pivotalcfreleng/kiln:{{ .Tag }}-{{ .Env.GO_VERSION }}"
-  - "pivotalcfreleng/kiln:v{{ .Major }}"
-  - "gcr.io/tas-ppe/kiln:latest"
+  - image_templates:
+    - "pivotalcfreleng/kiln:latest"
+    - "pivotalcfreleng/kiln:{{ .Tag }}"
+    - "pivotalcfreleng/kiln:{{ .Tag }}-{{ .Env.GO_VERSION }}"
+    - "pivotalcfreleng/kiln:v{{ .Major }}"
+    - "gcr.io/tas-ppe/kiln:latest"
+  - build_flag_templates:
+    - "--label=org.opencontainers.image.created={{.Date}}"
+    - "--label=org.opencontainers.image.title={{.ProjectName}}"
+    - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+    - "--label=org.opencontainers.image.version={{.Version}}"
 
 checksum:
   name_template: 'checksums.txt'
