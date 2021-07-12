@@ -1,6 +1,6 @@
 module github.com/pivotal-cf/kiln
 
-go 1.12
+go 1.16
 
 require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
@@ -34,7 +34,6 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/shirou/gopsutil v3.21.1+incompatible // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
-	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00 // indirect
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
 	golang.org/x/net v0.0.0-20210410081132-afb366fc7cd1 // indirect
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a // indirect
