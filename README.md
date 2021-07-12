@@ -1,4 +1,4 @@
-# Kiln
+# Kiln [![Go Reference](https://pkg.go.dev/badge/github.com/pivotal-cf/kiln.svg)](https://pkg.go.dev/github.com/pivotal-cf/kiln)
 
 _Kiln bakes tiles_
 
