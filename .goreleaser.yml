@@ -38,6 +38,15 @@ brews:
       - homebrew
     test: |
       system "#{bin}/kiln --version"
+
+dockers:
+  image_templates:
+  - "pivotalcfreleng/kiln:latest"
+  - "pivotalcfreleng/kiln:{{ .Tag }}"
+  - "pivotalcfreleng/kiln:{{ .Tag }}-{{ .Env.GO_VERSION }}"
+  - "pivotalcfreleng/kiln:v{{ .Major }}"
+  - "gcr.io/tas-ppe/kiln:latest"
+
 checksum:
   name_template: 'checksums.txt'
 snapshot:
