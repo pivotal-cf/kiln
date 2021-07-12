@@ -105,6 +105,7 @@ func main() {
 		ReleaseUploaderFinder:      ruFinder,
 	}
 
+	commandSet["validate"] = commands.Validate{}
 	commandSet["pre-process"] = commands.PreProcess{}
 
 	err = commandSet.Execute(command, args)

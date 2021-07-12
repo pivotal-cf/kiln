@@ -28,6 +28,7 @@ Commands:
   update-release          bumps a release to a new version
   update-stemcell         updates Kilnfile.lock with stemcell info
   upload-release          uploads a BOSH release to an s3 release_source
+  validate                validate Kilnfile and Kilnfile.lock
   version                 prints the kiln release version
 `
 

@@ -1,0 +1,6 @@
+slug: example
+release_sources:
+  - type: bosh.io
+releases:
+  - name: bpm
+    version: ~1.1
