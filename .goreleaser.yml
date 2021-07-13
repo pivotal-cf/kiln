@@ -17,6 +17,11 @@ builds:
   - amd64
   ldflags:
   - -X "main.version={{.Version}}"
+  gcflags:
+  - all=-trimpath={{.Env.PWD}}
+  asmflags:
+  - all=-trimpath={{.Env.PWD}}
+  main: ./cmd/kiln
 archives:
   - id: github
     format: binary
