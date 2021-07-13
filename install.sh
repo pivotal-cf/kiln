@@ -7,6 +7,8 @@ function main() {
   pushd "${cwd}" > /dev/null
     go install \
       -ldflags "-X main.version=$(git rev-parse HEAD)" \
+      -gcflags=-trimpath="${cwd}" \
+      -asmflags=-trimpath="${cwd}" \
       ./cmd/kiln
   popd > /dev/null
 }
