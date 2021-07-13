@@ -17,6 +17,7 @@ builds:
   - amd64
   ldflags:
   - -X "main.version={{.Version}}"
+  main: ./cmd/kiln
 archives:
   - id: github
     format: binary
