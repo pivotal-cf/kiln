@@ -11,6 +11,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands"
+	fetchCompiledReleases "github.com/pivotal-cf/kiln/internal/commands/fetch-compiled-releases"
 	"github.com/pivotal-cf/kiln/internal/fetcher"
 	"github.com/pivotal-cf/kiln/internal/helper"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -103,6 +104,8 @@ func main() {
 		MultiReleaseSourceProvider: mrsProvider,
 		ReleaseUploaderFinder:      ruFinder,
 	}
+
+	commandSet["fetch-compiled-releases"] = fetchCompiledReleases.Command{}
 
 	commandSet["validate"] = commands.Validate{}
 	commandSet["pre-process"] = commands.PreProcess{}
