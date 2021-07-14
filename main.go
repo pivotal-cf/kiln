@@ -102,6 +102,8 @@ func main() {
 		ReleaseUploaderFinder:      ruFinder,
 	}
 
+	commandSet["cache-compiled-releases"] = commands.NewCacheCompiledReleases().WithLogger(outLogger)
+
 	commandSet["validate"] = commands.NewValidate(osfs.New(""))
 	commandSet["pre-process"] = commands.PreProcess{}
 

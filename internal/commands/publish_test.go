@@ -7,12 +7,13 @@ import (
 	"strings"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/go-pivnet/v2"
+	pivnet "github.com/pivotal-cf/go-pivnet/v2"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
@@ -86,7 +87,7 @@ pre_ga_user_groups:
 				fs := memfs.New()
 				vf, _ := fs.Create("version")
 				_, _ = vf.Write([]byte(versionStr))
-				defer func() { vf.Close() }()
+				defer func() { _ = vf.Close() }()
 
 				kf, _ := fs.Create("Kilnfile")
 				_, _ = kf.Write([]byte(defaultKilnFileBody))

@@ -13,7 +13,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-billy/v5"
-	"github.com/pivotal-cf/go-pivnet/v2"
+	pivnet "github.com/pivotal-cf/go-pivnet/v2"
 	"github.com/pivotal-cf/go-pivnet/v2/logshim"
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/yaml.v2"
