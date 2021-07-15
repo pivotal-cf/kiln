@@ -6,6 +6,36 @@ Kiln helps tile developers build products for Pivotal Operations Manager. It pro
 an opinionated folder structure and templating capabilities. It is designed to be used
 both in CI environments and in command-line to produce a tile.
 
+## Instalation
+
+To install the `kiln` CLI 
+- use Homebrew
+
+  ```sh
+    brew tap pivotal-cf/kiln https://github.com/pivotal-cf/kiln
+    brew install kiln
+  ```
+
+- download from the [releases page](https://github.com/pivotal-cf/kiln/releases)
+
+  ```sh
+    export KILN_VERSION
+    KILN_VERSION="$(curl -H "Accept: application/vnd.github.v3+json" 'https://api.github.com/repos/pivotal-cf/kiln/releases?per_page=1' | jq -r '.[0].name')"
+    curl -L -o kiln "https://github.com/pivotal-cf/kiln/releases/download/${KILN_VERSION}/kiln-darwin-${KILN_VERSION}"
+    # check the checksum
+    cp kiln "$(go env GOPATH)/bin"
+    kiln version
+  ```
+
+- build from source
+  
+  ```sh
+    git clone git@github.com:pivotal-cf/kiln.git
+    cd kiln
+    git checkout 0.60.2
+    ./install.sh
+  ```
+
 ## Subcommands
 
 ### `help`
