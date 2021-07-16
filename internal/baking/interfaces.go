@@ -1,6 +1,6 @@
 package baking
 
-import "github.com/pivotal-cf/kiln/builder"
+import "github.com/pivotal-cf/kiln/internal/builder"
 
 //go:generate counterfeiter -o ./fakes/logger.go --fake-name Logger . logger
 type logger interface {
