@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"log"
 
 	"github.com/Masterminds/semver"
@@ -16,17 +17,14 @@ import (
 
 type UploadRelease struct {
 	FS                    billy.Filesystem
-	KilnfileLoader        KilnfileLoader
 	ReleaseUploaderFinder ReleaseUploaderFinder
 	Logger                *log.Logger
 
 	Options struct {
+		flags.Standard
+
 		UploadTargetID string `           long:"upload-target-id" required:"true" description:"the ID of the release source where the built release will be uploaded"`
 		LocalPath      string `short:"lp" long:"local-path"       required:"true" description:"path to BOSH release tarball"`
-
-		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
-		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
-		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
 	}
 }
 
@@ -34,17 +32,12 @@ type UploadRelease struct {
 type ReleaseUploaderFinder func(cargo.Kilnfile, string) (fetcher.ReleaseUploader, error)
 
 func (command UploadRelease) Execute(args []string) error {
-	_, err := jhanda.Parse(&command.Options, args)
+	err := flags.LoadFlagsWithReasonableDefaults(&command.Options, args, command.FS.Stat)
 	if err != nil {
 		return err
 	}
 
-	kilnfile, _, err := command.KilnfileLoader.LoadKilnfiles(
-		command.FS,
-		command.Options.Kilnfile,
-		command.Options.VariablesFiles,
-		command.Options.Variables,
-	)
+	kilnfile, _, err := command.Options.Standard.LoadKilnfiles(command.FS, nil)
 	if err != nil {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}

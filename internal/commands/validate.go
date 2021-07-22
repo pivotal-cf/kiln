@@ -6,17 +6,14 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/pivotal-cf/jhanda"
-	"gopkg.in/src-d/go-billy.v4"
-	"gopkg.in/src-d/go-billy.v4/osfs"
-
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"gopkg.in/src-d/go-billy.v4"
 )
 
 type Validate struct {
 	Options struct {
-		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
-		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
-		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
+		flags.Standard
 	}
 
 	FS billy.Filesystem
@@ -25,20 +22,12 @@ type Validate struct {
 var _ jhanda.Command = (*Validate)(nil)
 
 func (v Validate) Execute(args []string) error {
-	if v.FS == nil {
-		v.FS = osfs.New("")
-	}
-
-	_, err := jhanda.Parse(&v.Options, args)
+	err := flags.LoadFlagsWithReasonableDefaults(&v.Options, args, v.FS.Stat)
 	if err != nil {
-		return fmt.Errorf("failed to parse comand arguments: %w", err)
+		return err
 	}
 
-	kilnfile, _, err := cargo.KilnfileLoader{}.LoadKilnfiles(v.FS,
-		v.Options.Kilnfile,
-		v.Options.VariablesFiles,
-		v.Options.Variables,
-	)
+	kilnfile, _, err := v.Options.Standard.LoadKilnfiles(v.FS, nil)
 	if err != nil {
 		return fmt.Errorf("failed to load kilnfiles: %w", err)
 	}

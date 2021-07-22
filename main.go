@@ -60,7 +60,6 @@ func main() {
 	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
 	pivnetService := fetcher.CreateNewPivnetService()
 	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(outLogger, releasesService)
-	kilnfileLoader := cargo.KilnfileLoader{}
 	mrsProvider := commands.MultiReleaseSourceProvider(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
 		repo := fetcher.NewReleaseSourceRepo(kilnfile, outLogger)
 		return repo.MultiReleaseSource(allowOnlyPublishable)
@@ -78,21 +77,20 @@ func main() {
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 	commandSet["bake"] = bakeCommand(fs, releasesService, outLogger, errLogger)
-	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider, kilnfileLoader)
+	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)
 	commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 	commandSet["upload-release"] = commands.UploadRelease{
 		FS:                    fs,
-		KilnfileLoader:        kilnfileLoader,
 		Logger:                outLogger,
 		ReleaseUploaderFinder: ruFinder,
 	}
-	commandSet["sync-with-local"] = commands.NewSyncWithLocal(kilnfileLoader, fs, localReleaseDirectory, rpFinder, outLogger)
+	commandSet["sync-with-local"] = commands.NewSyncWithLocal(fs, localReleaseDirectory, rpFinder, outLogger)
 	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
 
 	commandSet["update-stemcell"] = commands.UpdateStemcell{
-		KilnfileLoader:             kilnfileLoader,
 		Logger:                     outLogger,
 		MultiReleaseSourceProvider: mrsProvider,
+		FS:                         osfs.New(""),
 	}
 
 	commandSet["find-release-version"] = commands.NewFindReleaseVersion(outLogger, mrsProvider)
@@ -101,7 +99,6 @@ func main() {
 
 	commandSet["compile-built-releases"] = commands.CompileBuiltReleases{
 		BoshDirectorFactory:        commands.BoshDirectorFactory,
-		KilnfileLoader:             kilnfileLoader,
 		Logger:                     outLogger,
 		MultiReleaseSourceProvider: mrsProvider,
 		ReleaseUploaderFinder:      ruFinder,

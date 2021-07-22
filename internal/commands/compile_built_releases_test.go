@@ -48,12 +48,11 @@ var _ = Describe("CompileBuiltReleases", func() {
 		boshDeployment2       *commandsFakes.BoshDeployment
 		boshDeployment3       *commandsFakes.BoshDeployment
 
-		kilnfileLoader             *commandsFakes.KilnfileLoader
 		multiReleaseSourceProvider *commandsFakes.MultiReleaseSourceProvider
 		releaseUploaderFinder      *commandsFakes.ReleaseUploaderFinder
 		releaseUploader            *fetcherFakes.ReleaseUploader
 
-		kilnfilePath string
+		kilnfilePath, kilnfileLockPath string
 
 		logger *log.Logger
 		logBuf *gbytes.Buffer
@@ -75,12 +74,14 @@ var _ = Describe("CompileBuiltReleases", func() {
 		compiledReleaseSource.IDReturns(compiledSourceID)
 		compiledReleaseSource.PublishableReturns(true)
 
-		kilnfileLoader = new(commandsFakes.KilnfileLoader)
 		kilnfile = cargo.Kilnfile{
 			ReleaseSources: []cargo.ReleaseSourceConfig{
 				{Type: "s3", ID: compiledSourceID, Bucket: "not-used", Publishable: true},
 				{Type: "s3", ID: builtSourceID, Bucket: "not-used-2"},
 			},
+			PreGaUserGroups: []string{},
+			Releases:        []cargo.ReleaseKiln{},
+			TileNames:       []string{},
 		}
 		kilnfileLock = cargo.KilnfileLock{
 			Releases: []cargo.ReleaseLock{
@@ -118,6 +119,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 		releasesPath = filepath.Join(tmpDir, "my-releases")
 		stemcellPath = filepath.Join(tmpDir, "my-stemcell.tgz")
 		kilnfilePath = filepath.Join(tmpDir, "Kilnfile")
+		kilnfileLockPath = kilnfilePath + ".lock"
 
 		Expect(
 			os.MkdirAll(releasesPath, 0755),
@@ -191,7 +193,6 @@ var _ = Describe("CompileBuiltReleases", func() {
 		logBuf = gbytes.NewBuffer()
 		logger = log.New(logBuf, "", 0)
 		command = commands.CompileBuiltReleases{
-			KilnfileLoader:             kilnfileLoader,
 			MultiReleaseSourceProvider: multiReleaseSourceProvider.Spy,
 			ReleaseUploaderFinder:      releaseUploaderFinder.Spy,
 			BoshDirectorFactory:        func() (commands.BoshDirector, error) { return boshDirector, nil },
@@ -200,7 +201,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 	})
 
 	JustBeforeEach(func() {
-		kilnfileLoader.LoadKilnfilesReturns(kilnfile, kilnfileLock, nil)
+		Expect(writeYAML(kilnfilePath, kilnfile)).NotTo(HaveOccurred())
+		Expect(writeYAML(kilnfilePath+".lock", kilnfileLock)).NotTo(HaveOccurred())
 	})
 
 	When("everything succeeds (happy path)", func() {
@@ -390,10 +392,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
-
-			_, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
-			Expect(path).To(Equal(kilnfilePath))
+			var updatedLockfile cargo.KilnfileLock
+			Expect(readYAML(kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 
 			s := sha1.New()
 			_, _ = io.Copy(s, strings.NewReader(blobIDContents("uaa-1.2.3")))
@@ -663,7 +663,9 @@ var _ = Describe("CompileBuiltReleases", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+			var updatedLockfile cargo.KilnfileLock
+			Expect(readYAML(kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
+			Expect(updatedLockfile).To(Equal(kilnfileLock))
 		})
 	})
 
@@ -769,10 +771,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 			_, _ = io.Copy(s, strings.NewReader(blobIDContents("capi-2.3.4")))
 			expectedCapiSha := hex.EncodeToString(s.Sum(nil))
 
-			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
-
-			_, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
-			Expect(path).To(Equal(kilnfilePath))
+			var updatedLockfile cargo.KilnfileLock
+			Expect(readYAML(kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 			Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
 				Releases: []cargo.ReleaseLock{
 					{
@@ -915,10 +915,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
-
-			_, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
-			Expect(path).To(Equal(kilnfilePath))
+			var updatedLockfile cargo.KilnfileLock
+			Expect(readYAML(kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 			Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
 				Releases: []cargo.ReleaseLock{
 					{
@@ -1108,7 +1106,9 @@ var _ = Describe("CompileBuiltReleases", func() {
 				"--stemcell-file", stemcellPath,
 				"--upload-target-id", compiledSourceID,
 			})
-			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+			var updatedLockfile cargo.KilnfileLock
+			Expect(readYAML(kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
+			Expect(updatedLockfile).To(Equal(kilnfileLock))
 		})
 	})
 
@@ -1136,7 +1136,9 @@ var _ = Describe("CompileBuiltReleases", func() {
 				"--stemcell-file", stemcellPath,
 				"--upload-target-id", compiledSourceID,
 			})
-			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+			var updatedLockfile cargo.KilnfileLock
+			Expect(readYAML(kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
+			Expect(updatedLockfile).To(Equal(kilnfileLock))
 		})
 	})
 })

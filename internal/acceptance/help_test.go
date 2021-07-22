@@ -47,7 +47,7 @@ Command Arguments:
   --icon, -i                         string             path to icon file (default: icon.png)
   --instance-groups-directory, -ig   string (variadic)  path to a directory containing instance groups (default: instance_groups)
   --jobs-directory, -j               string (variadic)  path to a directory containing jobs (default: jobs)
-  --kilnfile, -kf                    string             path to Kilnfile  (NOTE: mutually exclusive with --stemcell-directory) (default: Kilnfile)
+  --kilnfile, -kf                    string             path to Kilnfile (default: Kilnfile)
   --metadata, -m                     string             path to the metadata file (default: base.yml)
   --metadata-only, -mo               bool               don't build a tile, output the metadata to stdout
   --migrations-directory, -md        string (variadic)  path to a directory containing migrations (default: migrations)

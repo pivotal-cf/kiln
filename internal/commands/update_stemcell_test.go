@@ -2,7 +2,6 @@ package commands_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -12,6 +11,10 @@ import (
 
 	"github.com/onsi/gomega/gbytes"
 	"github.com/pivotal-cf/jhanda"
+
+	"gopkg.in/src-d/go-billy.v4"
+	"gopkg.in/src-d/go-billy.v4/memfs"
+	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
@@ -46,8 +49,8 @@ var _ = Describe("UpdateStemcell", func() {
 	Describe("Execute", func() {
 		var (
 			update               *commands.UpdateStemcell
-			tmpDir, kilnfilePath string
-			kilnfileLoader       *fakes.KilnfileLoader
+			tmpDir, kilnfilePath, kilnfileLockPath string
+			fs                                     billy.Filesystem
 			kilnfile             cargo.Kilnfile
 			kilnfileLock         cargo.KilnfileLock
 			releaseSource        *fetcherFakes.MultiReleaseSource
@@ -55,8 +58,8 @@ var _ = Describe("UpdateStemcell", func() {
 		)
 
 		BeforeEach(func() {
-			var err error
-			kilnfileLoader = new(fakes.KilnfileLoader)
+			fs = memfs.New()
+
 			kilnfile = cargo.Kilnfile{
 				Stemcell: cargo.Stemcell{
 					OS:      "old-os",
@@ -132,23 +135,22 @@ var _ = Describe("UpdateStemcell", func() {
 			multiReleaseSourceProvider := new(fakes.MultiReleaseSourceProvider)
 			multiReleaseSourceProvider.Returns(releaseSource)
 
-			tmpDir, err = ioutil.TempDir("", "fetch-test")
-			Expect(err).NotTo(HaveOccurred())
-
-			kilnfilePath = filepath.Join(tmpDir, "Kilnfile")
+			kilnfilePath = filepath.Join("Kilnfile")
+			kilnfileLockPath = kilnfilePath + ".lock"
 
 			outputBuffer = gbytes.NewBuffer()
 			logger := log.New(outputBuffer, "", 0)
 
 			update = &commands.UpdateStemcell{
-				KilnfileLoader:             kilnfileLoader,
+				FS:                         fs,
 				MultiReleaseSourceProvider: multiReleaseSourceProvider.Spy,
 				Logger:                     logger,
 			}
 		})
 
 		JustBeforeEach(func() {
-			kilnfileLoader.LoadKilnfilesReturns(kilnfile, kilnfileLock, nil)
+			Expect(createYAMLFile(fs, kilnfilePath, kilnfile)).NotTo(HaveOccurred())
+			Expect(createYAMLFile(fs, kilnfileLockPath, kilnfileLock)).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
@@ -161,32 +163,31 @@ var _ = Describe("UpdateStemcell", func() {
 			err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
-
-			_, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
-			Expect(path).To(Equal(kilnfilePath))
-
+			var updatedLockfile cargo.KilnfileLock
+			Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 			Expect(updatedLockfile.Stemcell).To(Equal(cargo.Stemcell{
 				OS:      newStemcellOS,
 				Version: newStemcellVersion,
 			}))
-
-			Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
-				{
+			Expect(updatedLockfile.Releases).To(HaveLen(2))
+			Expect(updatedLockfile.Releases).To(ContainElement(
+				cargo.ReleaseLock{
 					Name:         release1Name,
 					Version:      release1Version,
 					SHA1:         newRelease1SHA,
 					RemoteSource: publishableReleaseSourceID,
 					RemotePath:   newRelease1RemotePath,
 				},
-				{
+			))
+			Expect(updatedLockfile.Releases).To(ContainElement(
+				cargo.ReleaseLock{
 					Name:         release2Name,
 					Version:      release2Version,
 					SHA1:         newRelease2SHA,
 					RemoteSource: unpublishableReleaseSourceID,
 					RemotePath:   newRelease2RemotePath,
 				},
-			}))
+			))
 		})
 
 		It("looks up the correct releases", func() {
@@ -286,7 +287,10 @@ var _ = Describe("UpdateStemcell", func() {
 
 				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
 				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(0))
-				Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+
+				var updatedLockfile cargo.KilnfileLock
+				Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
+				Expect(updatedLockfile).To(Equal(kilnfileLock))
 
 				Expect(outputBuffer.Contents()).To(ContainSubstring("Nothing to update for product"))
 			})
@@ -311,7 +315,10 @@ var _ = Describe("UpdateStemcell", func() {
 
 				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
 				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(0))
-				Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+
+				var updatedLockfile cargo.KilnfileLock
+				Expect(fsReadYAML(fs, "Kilnfile.lock", &updatedLockfile)).NotTo(HaveOccurred())
+				Expect(updatedLockfile).To(Equal(kilnfileLock))
 
 				Expect(string(outputBuffer.Contents())).To(ContainSubstring("Latest version does not satisfy the stemcell version constraint in kilnfile"))
 			})
@@ -331,7 +338,10 @@ var _ = Describe("UpdateStemcell", func() {
 
 				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
 				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(0))
-				Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+
+				var updatedLockfile cargo.KilnfileLock
+				Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
+				Expect(updatedLockfile).To(Equal(kilnfileLock))
 
 				Expect(string(outputBuffer.Contents())).To(ContainSubstring("Stemcell is up-to-date. Nothing to update for product"))
 			})
@@ -398,3 +408,14 @@ var _ = Describe("UpdateStemcell", func() {
 		})
 	})
 })
+
+func createYAMLFile(fs billy.Filesystem, fp string, data interface{}) error {
+	f, err := fs.Create(fp)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+	return yaml.NewEncoder(f).Encode(data)
+}

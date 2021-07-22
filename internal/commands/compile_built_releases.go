@@ -17,9 +17,9 @@ import (
 	boshsystem "github.com/cloudfoundry/bosh-utils/system"
 	"github.com/google/uuid"
 	"github.com/pivotal-cf/jhanda"
-	"gopkg.in/src-d/go-billy.v4/osfs"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/fetcher"
 	"github.com/pivotal-cf/kiln/internal/helper"
 	"github.com/pivotal-cf/kiln/internal/manifest_generator"
@@ -29,20 +29,17 @@ import (
 
 type CompileBuiltReleases struct {
 	Logger                     *log.Logger
-	KilnfileLoader             KilnfileLoader
 	MultiReleaseSourceProvider MultiReleaseSourceProvider
 	ReleaseUploaderFinder      ReleaseUploaderFinder
 	BoshDirectorFactory        func() (BoshDirector, error)
 
 	Options struct {
+		flags.Standard
+
 		ReleasesDir    string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 		StemcellFile   string `short:"sf" long:"stemcell-file"      required:"true"    description:"path to the stemcell tarball on disk"`
 		UploadTargetID string `           long:"upload-target-id"   required:"true"    description:"the ID of the release source where the compiled release will be uploaded"`
 		Parallel       int64  `short:"p" long:"parallel" default:"1" description:"number of parallel compile release jobs"`
-
-		Kilnfile       string   `short:"kf" long:"kilnfile"       default:"Kilnfile" description:"path to Kilnfile"`
-		VariablesFiles []string `short:"vf" long:"variables-file"                    description:"path to variables file"`
-		Variables      []string `short:"vr" long:"variable"                          description:"variable in key=value format"`
 	}
 }
 
@@ -105,13 +102,13 @@ func BoshDirectorFactory() (BoshDirector, error) {
 }
 
 func (f CompileBuiltReleases) Execute(args []string) error {
-	_, err := jhanda.Parse(&f.Options, args)
+	err := flags.LoadFlagsWithReasonableDefaults(&f.Options, args, nil)
 	if err != nil {
-		return fmt.Errorf("couldn't parse options: %w", err) // untested
+		return err
 	}
 
 	f.Logger.Println("loading Kilnfile")
-	kilnfile, kilnfileLock, err := f.KilnfileLoader.LoadKilnfiles(osfs.New(""), f.Options.Kilnfile, f.Options.VariablesFiles, f.Options.Variables)
+	kilnfile, kilnfileLock, err := f.Options.LoadKilnfiles(nil, nil)
 	if err != nil {
 		return fmt.Errorf("couldn't load Kilnfiles: %w", err) // untested
 	}
@@ -522,5 +519,5 @@ func (f CompileBuiltReleases) updateLockfile(uploadedReleases []remoteReleaseWit
 		matchingRelease.SHA1 = uploaded.SHA1
 	}
 
-	return f.KilnfileLoader.SaveKilnfileLock(osfs.New(""), f.Options.Kilnfile, kilnfileLock)
+	return f.Options.SaveKilnfileLock(nil, kilnfileLock)
 }

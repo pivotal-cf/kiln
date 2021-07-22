@@ -11,5 +11,5 @@ import (
 
 func TestCargo(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithCustomReporters(t, "internal/cargo", biloba.DefaultReporters())
+	RunSpecsWithCustomReporters(t, "internal/cargo", biloba.GoLandReporter())
 }

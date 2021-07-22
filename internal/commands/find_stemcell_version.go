@@ -3,6 +3,8 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"gopkg.in/src-d/go-billy.v4"
 	"log"
 	"regexp"
 	"strings"
@@ -26,10 +28,10 @@ type FindStemcellVersion struct {
 	pivnetService *fetcher.Pivnet
 
 	Options struct {
-		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
-		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
-		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
+		flags.Standard
 	}
+
+	FS billy.Filesystem
 }
 
 type stemcellVersionOutput struct {
@@ -42,6 +44,7 @@ func NewFindStemcellVersion(outLogger *log.Logger, pivnetService *fetcher.Pivnet
 	return FindStemcellVersion{
 		outLogger:     outLogger,
 		pivnetService: pivnetService,
+		FS:            osfs.New(""),
 	}
 }
 
@@ -129,9 +132,14 @@ func (cmd *FindStemcellVersion) setup(args []string) (cargo.Kilnfile, error) {
 		return cargo.Kilnfile{}, err
 	}
 
-	kilnfile, _, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), cmd.Options.Kilnfile, cmd.Options.VariablesFiles, cmd.Options.Variables)
+	err = flags.LoadFlagsWithReasonableDefaults(&cmd.Options, args, cmd.FS.Stat)
 	if err != nil {
 		return cargo.Kilnfile{}, err
+	}
+
+	kilnfile, _, err := cmd.Options.Standard.LoadKilnfiles(cmd.FS, nil)
+	if err != nil {
+		return cargo.Kilnfile{}, fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
 	return kilnfile, nil
