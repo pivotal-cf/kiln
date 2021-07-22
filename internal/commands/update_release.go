@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
@@ -14,45 +15,36 @@ import (
 
 type UpdateRelease struct {
 	Options struct {
-		Kilnfile                     string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
-		Name                         string   `short:"n" long:"name" required:"true" description:"name of release to update"`
-		Version                      string   `short:"v" long:"version" required:"true" description:"desired version of release"`
-		ReleasesDir                  string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
-		Variables                    []string `short:"vr" long:"variable" description:"variable in key=value format"`
-		VariablesFiles               []string `short:"vf" long:"variables-file" description:"path to variables file"`
-		AllowOnlyPublishableReleases bool     `long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
-		WithoutDownload              bool     `long:"without-download" description:"updates releases without downloading them"`
+		flags.Standard
+
+		Name                         string `short:"n" long:"name" required:"true" description:"name of release to update"`
+		Version                      string `short:"v" long:"version" required:"true" description:"desired version of release"`
+		ReleasesDir                  string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+		AllowOnlyPublishableReleases bool   `long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
+		WithoutDownload              bool   `long:"without-download" description:"updates releases without downloading them"`
 	}
 	multiReleaseSourceProvider MultiReleaseSourceProvider
 	filesystem                 billy.Filesystem
 	logger                     *log.Logger
-	loader                     KilnfileLoader
 }
 
-func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, multiReleaseSourceProvider MultiReleaseSourceProvider, loader KilnfileLoader) UpdateRelease {
+func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, multiReleaseSourceProvider MultiReleaseSourceProvider) UpdateRelease {
 	return UpdateRelease{
 		logger:                     logger,
 		multiReleaseSourceProvider: multiReleaseSourceProvider,
 		filesystem:                 filesystem,
-		loader:                     loader,
 	}
-}
-
-//go:generate counterfeiter -o ./fakes/kilnfile_loader.go --fake-name KilnfileLoader . KilnfileLoader
-type KilnfileLoader interface {
-	LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (cargo.Kilnfile, cargo.KilnfileLock, error)
-	SaveKilnfileLock(fs billy.Filesystem, kilnfilePath string, lockfile cargo.KilnfileLock) error
 }
 
 func (u UpdateRelease) Execute(args []string) error {
-	_, err := jhanda.Parse(&u.Options, args)
+	err := flags.LoadFlagsWithReasonableDefaults(&u.Options, args, u.filesystem.Stat)
 	if err != nil {
 		return err
 	}
 
-	kilnfile, kilnfileLock, err := u.loader.LoadKilnfiles(u.filesystem, u.Options.Kilnfile, u.Options.VariablesFiles, u.Options.Variables)
+	kilnfile, kilnfileLock, err := u.Options.Standard.LoadKilnfiles(u.filesystem, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
 	var releaseLock *cargo.ReleaseLock
@@ -139,7 +131,7 @@ func (u UpdateRelease) Execute(args []string) error {
 	releaseLock.RemoteSource = newSourceID
 	releaseLock.RemotePath = newRemotePath
 
-	err = u.loader.SaveKilnfileLock(u.filesystem, u.Options.Kilnfile, kilnfileLock)
+	err = u.Options.Standard.SaveKilnfileLock(u.filesystem, kilnfileLock)
 	if err != nil {
 		return err
 	}

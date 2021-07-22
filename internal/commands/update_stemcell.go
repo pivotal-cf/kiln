@@ -2,54 +2,47 @@ package commands
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"gopkg.in/src-d/go-billy.v4"
 	"log"
 	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/pivotal-cf/jhanda"
-	"gopkg.in/src-d/go-billy.v4/osfs"
-
 	"github.com/pivotal-cf/kiln/internal/fetcher"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 type UpdateStemcell struct {
 	Options struct {
-		Kilnfile       string   `short:"kf" long:"kilnfile"           default:"Kilnfile" description:"path to Kilnfile"`
-		Version        string   `short:"v"  long:"version"            required:"true"    description:"desired version of stemcell"`
-		VariablesFiles []string `short:"vf" long:"variables-file"                        description:"path to variables file"`
-		Variables      []string `short:"vr" long:"variable"                              description:"variable in key=value format"`
-		ReleasesDir    string   `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+		flags.Standard
+
+		Version     string `short:"v"  long:"version"            required:"true"    description:"desired version of stemcell"`
+		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 	}
-	KilnfileLoader             KilnfileLoader
+	FS                         billy.Filesystem
 	MultiReleaseSourceProvider MultiReleaseSourceProvider
 	Logger                     *log.Logger
 }
 
 func (update UpdateStemcell) Execute(args []string) error {
-	var releaseVersionConstraint *semver.Constraints
-
-	_, err := jhanda.Parse(&update.Options, args)
+	err := flags.LoadFlagsWithReasonableDefaults(&update.Options, args, update.FS.Stat)
 	if err != nil {
 		return err
 	}
 
+	kilnfile, kilnfileLock, err := update.Options.Standard.LoadKilnfiles(update.FS, nil)
+	if err != nil {
+		return fmt.Errorf("error loading Kilnfiles: %w", err)
+	}
+
+	var releaseVersionConstraint *semver.Constraints
+
 	trimmedInputVersion := strings.TrimSpace(update.Options.Version)
 
 	latestStemcellVersion, err := semver.NewVersion(trimmedInputVersion)
-
 	if err != nil {
 		return fmt.Errorf("Please enter a valid stemcell version to update: %w", err)
-	}
-
-	kilnfile, kilnfileLock, err := update.KilnfileLoader.LoadKilnfiles(
-		osfs.New(""),
-		update.Options.Kilnfile,
-		update.Options.VariablesFiles,
-		update.Options.Variables,
-	)
-	if err != nil {
-		return fmt.Errorf("couldn't load kilnfiles: %w", err) // untested
 	}
 
 	kilnStemcellVersion := kilnfile.Stemcell.Version
@@ -108,7 +101,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 
 	kilnfileLock.Stemcell.Version = trimmedInputVersion
 
-	err = update.KilnfileLoader.SaveKilnfileLock(osfs.New(""), update.Options.Kilnfile, kilnfileLock)
+	err = update.Options.Standard.SaveKilnfileLock(update.FS, kilnfileLock)
 	if err != nil {
 		return err
 	}

@@ -10,10 +10,10 @@ import (
 )
 
 type TemplateVariablesService struct {
-	filesystem billy.Filesystem
+	filesystem billy.Basic
 }
 
-func NewTemplateVariablesService(fs billy.Filesystem) TemplateVariablesService {
+func NewTemplateVariablesService(fs billy.Basic) TemplateVariablesService {
 	return TemplateVariablesService{filesystem: fs}
 }
 

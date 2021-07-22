@@ -38,6 +38,9 @@ var _ = Describe("UpdateRelease", func() {
 		notDownloadedReleaseSha1       = "some-other-new-sha1"
 
 		releasesDir = "releases"
+
+		kilnfilePath     = "Kilnfile"
+		kilnfileLockPath = kilnfilePath + ".lock"
 	)
 
 	var (
@@ -49,12 +52,11 @@ var _ = Describe("UpdateRelease", func() {
 		downloadedReleasePath      string
 		expectedDownloadedRelease  release.Local
 		expectedRemoteRelease      release.Remote
-		kilnFileLoader             *commandsFakes.KilnfileLoader
+		kilnfileLock               cargo.KilnfileLock
 	)
 
 	Context("Execute", func() {
 		BeforeEach(func() {
-			kilnFileLoader = new(commandsFakes.KilnfileLoader)
 			releaseSource = new(fetcherFakes.MultiReleaseSource)
 			multiReleaseSourceProvider = new(commandsFakes.MultiReleaseSourceProvider)
 			multiReleaseSourceProvider.Returns(releaseSource)
@@ -63,7 +65,7 @@ var _ = Describe("UpdateRelease", func() {
 
 			kilnfile := cargo.Kilnfile{}
 
-			kilnFileLock := cargo.KilnfileLock{
+			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ReleaseLock{
 					{
 						Name:         "minecraft",
@@ -86,7 +88,9 @@ var _ = Describe("UpdateRelease", func() {
 				},
 			}
 
-			kilnFileLoader.LoadKilnfilesReturns(kilnfile, kilnFileLock, nil)
+			Expect(fsWriteYAML(filesystem, kilnfilePath, kilnfile)).NotTo(HaveOccurred())
+			Expect(fsWriteYAML(filesystem, kilnfileLockPath, kilnfileLock)).NotTo(HaveOccurred())
+
 			logger = log.New(GinkgoWriter, "", 0)
 
 			err := filesystem.MkdirAll(releasesDir, os.ModePerm)
@@ -119,7 +123,7 @@ var _ = Describe("UpdateRelease", func() {
 		})
 
 		JustBeforeEach(func() {
-			updateReleaseCommand = commands.NewUpdateRelease(logger, filesystem, multiReleaseSourceProvider.Spy, kilnFileLoader)
+			updateReleaseCommand = commands.NewUpdateRelease(logger, filesystem, multiReleaseSourceProvider.Spy)
 		})
 
 		When("updating to a version that exists in the remote", func() {
@@ -129,8 +133,6 @@ var _ = Describe("UpdateRelease", func() {
 					"--name", releaseName,
 					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
-					"--variable", "someKey=someValue",
-					"--variables-file", "thisisafile",
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -150,14 +152,6 @@ var _ = Describe("UpdateRelease", func() {
 				receivedReleasesDir, receivedRemoteRelease, _ := releaseSource.DownloadReleaseArgsForCall(0)
 				Expect(receivedReleasesDir).To(Equal(releasesDir))
 				Expect(receivedRemoteRelease).To(Equal(expectedRemoteRelease))
-
-				Expect(kilnFileLoader.LoadKilnfilesCallCount()).To(Equal(1))
-				fs, kilnfilePath, variablesFiles, variables := kilnFileLoader.LoadKilnfilesArgsForCall(0)
-
-				Expect(fs).To(Equal(filesystem))
-				Expect(kilnfilePath).To(Equal("Kilnfile"))
-				Expect(variablesFiles).To(Equal([]string{"thisisafile"}))
-				Expect(variables).To(Equal([]string{"someKey=someValue"}))
 			})
 
 			It("writes the new version to the Kilnfile.lock", func() {
@@ -169,11 +163,8 @@ var _ = Describe("UpdateRelease", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(kilnFileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
-
-				fs, path, updatedLockfile := kilnFileLoader.SaveKilnfileLockArgsForCall(0)
-				Expect(fs).To(Equal(filesystem))
-				Expect(path).To(Equal("Kilnfile"))
+				var updatedLockfile cargo.KilnfileLock
+				Expect(fsReadYAML(filesystem, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
 					cargo.ReleaseLock{
@@ -192,8 +183,6 @@ var _ = Describe("UpdateRelease", func() {
 					"--name", releaseName,
 					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
-					"--variable", "someKey=someValue",
-					"--variables-file", "thisisafile",
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -218,8 +207,6 @@ var _ = Describe("UpdateRelease", func() {
 					"--name", releaseName,
 					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
-					"--variable", "someKey=someValue",
-					"--variables-file", "thisisafile",
 				})
 				Expect(err).To(MatchError(downloadErr))
 
@@ -260,7 +247,9 @@ var _ = Describe("UpdateRelease", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(kilnFileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+				var updatedLockfile cargo.KilnfileLock
+				Expect(fsReadYAML(filesystem, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
+				Expect(updatedLockfile).To(Equal(kilnfileLock))
 			})
 
 			It("notifies the user", func() {
@@ -310,23 +299,9 @@ var _ = Describe("UpdateRelease", func() {
 					"--releases-directory", releasesDir,
 				})
 
-				Expect(kilnFileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
-			})
-		})
-
-		When("there is an error loading the Kilnfiles", func() {
-			BeforeEach(func() {
-				kilnFileLoader.LoadKilnfilesReturns(cargo.Kilnfile{}, cargo.KilnfileLock{}, errors.New("big bada boom"))
-			})
-
-			It("errors", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", newReleaseVersion,
-					"--releases-directory", releasesDir,
-				})
-				Expect(err).To(MatchError(ContainSubstring("big bada boom")))
+				var updatedLockfile cargo.KilnfileLock
+				Expect(fsReadYAML(filesystem, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
+				Expect(updatedLockfile).To(Equal(kilnfileLock))
 			})
 		})
 
@@ -353,7 +328,9 @@ var _ = Describe("UpdateRelease", func() {
 					"--releases-directory", releasesDir,
 				})
 
-				Expect(kilnFileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+				var updatedLockfile cargo.KilnfileLock
+				Expect(fsReadYAML(filesystem, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
+				Expect(updatedLockfile).To(Equal(kilnfileLock))
 			})
 		})
 
@@ -380,26 +357,9 @@ var _ = Describe("UpdateRelease", func() {
 					"--releases-directory", releasesDir,
 				})
 
-				Expect(kilnFileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
-			})
-		})
-
-		When("writing to the Kilnfile.lock fails", func() {
-			var expectedError error
-
-			BeforeEach(func() {
-				expectedError = errors.New("i don't feel so good")
-				kilnFileLoader.SaveKilnfileLockReturns(expectedError)
-			})
-
-			It("errors", func() {
-				err := updateReleaseCommand.Execute([]string{
-					"--kilnfile", "Kilnfile",
-					"--name", releaseName,
-					"--version", newReleaseVersion,
-					"--releases-directory", releasesDir,
-				})
-				Expect(err).To(MatchError(ContainSubstring(expectedError.Error())))
+				var updatedLockfile cargo.KilnfileLock
+				Expect(fsReadYAML(filesystem, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
+				Expect(updatedLockfile).To(Equal(kilnfileLock))
 			})
 		})
 
@@ -418,16 +378,11 @@ var _ = Describe("UpdateRelease", func() {
 					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 					"--without-download",
-					"--variable", "someKey=someValue",
-					"--variables-file", "thisisafile",
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(kilnFileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
-
-				fs, path, updatedLockfile := kilnFileLoader.SaveKilnfileLockArgsForCall(0)
-				Expect(fs).To(Equal(filesystem))
-				Expect(path).To(Equal("Kilnfile"))
+				var updatedLockfile cargo.KilnfileLock
+				Expect(fsReadYAML(filesystem, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
 					cargo.ReleaseLock{

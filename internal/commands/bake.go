@@ -6,13 +6,12 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
-	"reflect"
 	"strings"
 
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 )
 
 //go:generate counterfeiter -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
@@ -106,7 +105,8 @@ type Bake struct {
 	metadata          metadataService
 
 	Options struct {
-		Kilnfile                 string   `short:"kf"  long:"kilnfile"                   default:"Kilnfile"         description:"path to Kilnfile  (NOTE: mutually exclusive with --stemcell-directory)"`
+		flags.Standard
+
 		Metadata                 string   `short:"m"   long:"metadata"                   default:"base.yml"         description:"path to the metadata file"`
 		ReleaseDirectories       []string `short:"rd"  long:"releases-directory"         default:"releases"         description:"path to a directory containing release tarballs"`
 		FormDirectories          []string `short:"f"   long:"forms-directory"            default:"forms"            description:"path to a directory containing forms"`
@@ -124,8 +124,6 @@ type Bake struct {
 		MetadataOnly             bool     `short:"mo"  long:"metadata-only"                                         description:"don't build a tile, output the metadata to stdout"`
 		Sha256                   bool     `            long:"sha256"                                                description:"calculates a SHA256 checksum of the output file"`
 		StubReleases             bool     `short:"sr"  long:"stub-releases"                                         description:"skips importing release tarballs into the tile"`
-		VariableFiles            []string `short:"vf"  long:"variables-file"                                        description:"path to a file containing variables to interpolate"`
-		Variables                []string `short:"vr"  long:"variable"                                              description:"key value pairs of variables to interpolate"`
 		Version                  string   `short:"v"   long:"version"                                               description:"version of the tile"`
 	}
 }
@@ -167,6 +165,43 @@ func NewBake(
 		icon:              iconService,
 		metadata:          metadataService,
 	}
+}
+
+func shouldGenerateTileFileName(b *Bake, args []string) bool {
+	return b.Options.OutputFile == "" &&
+		!b.Options.MetadataOnly &&
+		!flags.IsSet("o", "output-file", args)
+}
+
+func shouldReadVersionFile(b *Bake, args []string) bool {
+	return b.Options.Version == "" && !flags.IsSet("v", "version", args)
+}
+
+func shouldNotUseDefaultKilnfileFlag(args []string) bool {
+	return (flags.IsSet("st", "stemcell-tarball", args) || flags.IsSet("sd", "stemcells-directory", args)) &&
+		!flags.IsSet("kf", "kilnfile", args)
+}
+
+func (b *Bake) loadFlags(args []string, stat flags.StatFunc, readFile func(string) ([]byte, error)) error {
+	err := flags.LoadFlagsWithReasonableDefaults(&b.Options, args, stat)
+	if err != nil {
+		return err
+	}
+
+	if shouldReadVersionFile(b, args) {
+		versionBuf, _ := readFile("version")
+		b.Options.Version = strings.TrimSpace(string(versionBuf))
+	}
+
+	if shouldGenerateTileFileName(b, args) {
+		b.Options.OutputFile = "tile-" + b.Options.Version + ".pivotal"
+	}
+
+	if shouldNotUseDefaultKilnfileFlag(args) {
+		b.Options.Standard.Kilnfile = ""
+	}
+
+	return nil
 }
 
 func (b Bake) Execute(args []string) error {
@@ -319,156 +354,4 @@ func (b Bake) Usage() jhanda.Usage {
 		ShortDescription: "bakes a tile",
 		Flags:            b.Options,
 	}
-}
-
-type (
-	statFunc     func(string) (os.FileInfo, error)
-	readFileFunc func(string) ([]byte, error)
-)
-
-func (b *Bake) loadFlags(args []string, stat statFunc, readFile readFileFunc) error {
-	_, err := jhanda.Parse(&b.Options, args)
-	if err != nil {
-		return err
-	}
-
-	// handle simple case first
-	b.configureArrayDefaults(args, stat)
-	b.configurePathDefaults(args, stat)
-
-	if b.Options.Version == "" && !flagIsSet("v", "version", args) {
-		versionBuf, _ := readFile("version")
-		b.Options.Version = strings.TrimSpace(string(versionBuf))
-	}
-
-	if shouldReadVersionFile(b, args) {
-		b.Options.OutputFile = "tile-" + b.Options.Version + ".pivotal"
-	}
-
-	return nil
-}
-
-func shouldReadVersionFile(b *Bake, args []string) bool {
-	return b.Options.OutputFile == "" &&
-		!b.Options.MetadataOnly &&
-		!flagIsSet("o", "output-file", args)
-}
-
-func (b *Bake) configureArrayDefaults(args []string, stat statFunc) {
-	v := reflect.ValueOf(&b.Options).Elem()
-	t := v.Type()
-
-	pathPrefix := filepath.Dir(b.Options.Kilnfile)
-	if pathPrefix == "." {
-		pathPrefix = ""
-	}
-
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-
-		if field.Type.Kind() != reflect.Slice {
-			continue
-		}
-
-		defaultValueStr, ok := field.Tag.Lookup("default")
-		if !ok {
-			continue
-		}
-		defaultValues := strings.Split(defaultValueStr, ",")
-
-		flagValues, ok := v.Field(i).Interface().([]string)
-		if !ok {
-			// this might occur if we add non string slice params
-			// notice the field Kind check above was not super specific
-			continue
-		}
-
-		if flagIsSet(field.Tag.Get("short"), field.Tag.Get("long"), args) {
-			v.Field(i).Set(reflect.ValueOf(flagValues[len(defaultValues):]))
-			continue
-		}
-
-		filteredDefaults := defaultValues[:0]
-		for _, p := range defaultValues {
-			if pathPrefix != "" {
-				p = filepath.Join(pathPrefix, p)
-			}
-			_, err := stat(p)
-			if err != nil {
-				continue
-			}
-			filteredDefaults = append(filteredDefaults, p)
-		}
-
-		// if default values were found, use them,
-		// else filteredDefaults will be an empty slice
-		//   and the Bake command will continue as if they were not set
-		v.Field(i).Set(reflect.ValueOf(filteredDefaults))
-	}
-}
-
-func (b *Bake) configurePathDefaults(args []string, stat statFunc) {
-	v := reflect.ValueOf(&b.Options).Elem()
-	t := v.Type()
-
-	pathPrefix := filepath.Dir(b.Options.Kilnfile)
-	if pathPrefix == "." {
-		pathPrefix = ""
-	}
-
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-
-		if field.Type.Kind() != reflect.String {
-			continue
-		}
-
-		if flagIsSet(field.Tag.Get("short"), field.Tag.Get("long"), args) {
-			continue
-		}
-
-		defaultValue, ok := field.Tag.Lookup("default")
-		if !ok {
-			continue
-		}
-
-		value, ok := v.Field(i).Interface().(string)
-		if !ok {
-			continue // this should not occur
-		}
-
-		isDefaultValue := defaultValue == value
-
-		if !isDefaultValue {
-			continue
-		}
-
-		if pathPrefix != "" {
-			value = filepath.Join(pathPrefix, value)
-		}
-
-		_, err := stat(value)
-		if err != nil {
-			// set to zero value
-			v.Field(i).Set(reflect.Zero(v.Field(i).Type()))
-			continue
-		}
-
-		v.Field(i).Set(reflect.ValueOf(value))
-	}
-}
-
-func flagIsSet(short, long string, args []string) bool {
-	if long == "" || short == "" {
-		panic("both long and short must be set for flag options")
-	}
-	for _, a := range args {
-		if a == "--"+long ||
-			a == "-"+short ||
-			strings.HasPrefix(a, "-"+short+"=") ||
-			strings.HasPrefix(a, "--"+long+"=") {
-			return true
-		}
-	}
-	return false
 }

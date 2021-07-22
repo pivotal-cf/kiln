@@ -40,12 +40,12 @@ var _ = Describe("sync-with-local", func() {
 			releaseOldRemotePath  = "old-path-2"
 			releaseNewRemotePath  = "new-path-2"
 
-			kilnfilePath = "Kilnfile"
+			kilnfilePath     = "Kilnfile"
+			kilnfileLockPath = kilnfilePath + ".lock"
 		)
 
 		var (
 			syncWithLocal         commands.SyncWithLocal
-			kilnfileLoader        *commandsFakes.KilnfileLoader
 			localReleaseDirectory *commandsFakes.LocalReleaseDirectory
 			remotePatherFinder    *commandsFakes.RemotePatherFinder
 			remotePather          *fetcherFakes.RemotePather
@@ -54,7 +54,6 @@ var _ = Describe("sync-with-local", func() {
 		)
 
 		BeforeEach(func() {
-			kilnfileLoader = new(commandsFakes.KilnfileLoader)
 			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ReleaseLock{
 					{
@@ -107,11 +106,12 @@ var _ = Describe("sync-with-local", func() {
 			fs = memfs.New()
 			logger := log.New(GinkgoWriter, "", 0)
 
-			syncWithLocal = commands.NewSyncWithLocal(kilnfileLoader, fs, localReleaseDirectory, remotePatherFinder.Spy, logger)
+			syncWithLocal = commands.NewSyncWithLocal(fs, localReleaseDirectory, remotePatherFinder.Spy, logger)
 		})
 
 		JustBeforeEach(func() {
-			kilnfileLoader.LoadKilnfilesReturns(cargo.Kilnfile{}, kilnfileLock, nil)
+			Expect(fsWriteYAML(fs, kilnfileLockPath, kilnfileLock)).NotTo(HaveOccurred())
+			Expect(fsWriteYAML(fs, kilnfilePath, cargo.Kilnfile{})).NotTo(HaveOccurred())
 		})
 
 		It("updates the Kilnfile.lock to have the same version as the local releases", func() {
@@ -121,11 +121,8 @@ var _ = Describe("sync-with-local", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
-
-			filesystem, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
-			Expect(filesystem).To(Equal(fs))
-			Expect(path).To(Equal(kilnfilePath))
+			var updatedLockfile cargo.KilnfileLock
+			Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 			Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
 				{
 					Name:         release1Name,
@@ -167,11 +164,8 @@ var _ = Describe("sync-with-local", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
-
-				filesystem, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
-				Expect(filesystem).To(Equal(fs))
-				Expect(path).To(Equal(kilnfilePath))
+				var updatedLockfile cargo.KilnfileLock
+				Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 				Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
 					{
 						Name:         release1Name,
@@ -199,11 +193,8 @@ var _ = Describe("sync-with-local", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
-
-					filesystem, path, updatedLockfile := kilnfileLoader.SaveKilnfileLockArgsForCall(0)
-					Expect(filesystem).To(Equal(fs))
-					Expect(path).To(Equal(kilnfilePath))
+					var updatedLockfile cargo.KilnfileLock
+					Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 					Expect(updatedLockfile.Releases).To(Equal([]cargo.ReleaseLock{
 						{
 							Name:         release1Name,

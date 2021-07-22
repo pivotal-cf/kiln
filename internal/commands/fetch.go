@@ -5,10 +5,9 @@ import (
 	"log"
 	"os"
 
-	"gopkg.in/src-d/go-billy.v4/osfs"
-
 	"github.com/pivotal-cf/jhanda"
 
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/fetcher"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/release"
@@ -21,14 +20,13 @@ type Fetch struct {
 	localReleaseDirectory      LocalReleaseDirectory
 
 	Options struct {
-		Kilnfile    string `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
+		flags.Standard
+
 		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 
-		VariablesFiles               []string `short:"vf" long:"variables-file" description:"path to variables file"`
-		Variables                    []string `short:"vr" long:"variable" description:"variable in key=value format"`
-		DownloadThreads              int      `short:"dt" long:"download-threads" description:"number of parallel threads to download parts from S3"`
-		NoConfirm                    bool     `short:"n" long:"no-confirm" description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
-		AllowOnlyPublishableReleases bool     `long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
+		DownloadThreads              int  `short:"dt" long:"download-threads" description:"number of parallel threads to download parts from S3"`
+		NoConfirm                    bool `short:"n" long:"no-confirm" description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
+		AllowOnlyPublishableReleases bool `long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
 	}
 }
 
@@ -75,7 +73,7 @@ func (f Fetch) Execute(args []string) error {
 }
 
 func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []release.Local, error) {
-	_, err := jhanda.Parse(&f.Options, args)
+	err := flags.LoadFlagsWithReasonableDefaults(&f.Options, args, nil)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 	}
@@ -92,7 +90,8 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []rele
 			return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
 		}
 	}
-	kilnfile, kilnfileLock, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), f.Options.Kilnfile, f.Options.VariablesFiles, f.Options.Variables)
+
+	kilnfile, kilnfileLock, err := f.Options.LoadKilnfiles(nil, nil)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 	}

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
@@ -14,24 +15,21 @@ import (
 
 type SyncWithLocal struct {
 	Options struct {
-		Kilnfile        string   `short:"kf" long:"kilnfile"            default:"Kilnfile" description:"path to Kilnfile"`
-		ReleasesDir     string   `short:"rd" long:"releases-directory"  default:"releases" description:"path to a directory to download releases into"`
-		ReleaseSourceID string   `           long:"assume-release-source"  required:"true" description:"the release source to put in updated records"`
-		SkipSameVersion bool     `           long:"skip-same-version"                      description:"only update the Kilnfile.lock when the release version has changed'"`
-		Variables       []string `short:"vr" long:"variable"                               description:"variable in key=value format"`
-		VariablesFiles  []string `short:"vf" long:"variables-file"                         description:"path to variables file"`
+		flags.Standard
+
+		ReleasesDir     string `short:"rd" long:"releases-directory"  default:"releases" description:"path to a directory to download releases into"`
+		ReleaseSourceID string `           long:"assume-release-source"  required:"true" description:"the release source to put in updated records"`
+		SkipSameVersion bool   `           long:"skip-same-version"                      description:"only update the Kilnfile.lock when the release version has changed'"`
 	}
 	fs                    billy.Filesystem
-	kilnfileLoader        KilnfileLoader
 	localReleaseDirectory LocalReleaseDirectory
 	logger                *log.Logger
 	remotePatherFinder    RemotePatherFinder
 }
 
-func NewSyncWithLocal(kilnfileLoader KilnfileLoader, fs billy.Filesystem, localReleaseDirectory LocalReleaseDirectory, remotePatherFinder RemotePatherFinder, logger *log.Logger) SyncWithLocal {
+func NewSyncWithLocal(fs billy.Filesystem, localReleaseDirectory LocalReleaseDirectory, remotePatherFinder RemotePatherFinder, logger *log.Logger) SyncWithLocal {
 	return SyncWithLocal{
 		fs:                    fs,
-		kilnfileLoader:        kilnfileLoader,
 		localReleaseDirectory: localReleaseDirectory,
 		logger:                logger,
 		remotePatherFinder:    remotePatherFinder,
@@ -42,19 +40,14 @@ func NewSyncWithLocal(kilnfileLoader KilnfileLoader, fs billy.Filesystem, localR
 type RemotePatherFinder func(cargo.Kilnfile, string) (fetcher.RemotePather, error)
 
 func (command SyncWithLocal) Execute(args []string) error {
-	_, err := jhanda.Parse(&command.Options, args)
+	err := flags.LoadFlagsWithReasonableDefaults(&command.Options, args, command.fs.Stat)
 	if err != nil {
 		return err
 	}
 
-	kilnfile, kilnfileLock, err := command.kilnfileLoader.LoadKilnfiles(
-		command.fs,
-		command.Options.Kilnfile,
-		command.Options.VariablesFiles,
-		command.Options.Variables,
-	)
+	kilnfile, kilnfileLock, err := command.Options.Standard.LoadKilnfiles(command.fs, nil)
 	if err != nil {
-		return fmt.Errorf("couldn't load kilnfiles: %w", err) // untested
+		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
 	remotePather, err := command.remotePatherFinder(kilnfile, command.Options.ReleaseSourceID)
@@ -105,7 +98,7 @@ func (command SyncWithLocal) Execute(args []string) error {
 		command.logger.Printf("Updated %s to %s\n", rel.Name, rel.Version)
 	}
 
-	err = command.kilnfileLoader.SaveKilnfileLock(command.fs, command.Options.Kilnfile, kilnfileLock)
+	err = command.Options.SaveKilnfileLock(command.fs, kilnfileLock)
 	if err != nil {
 		return err
 	}

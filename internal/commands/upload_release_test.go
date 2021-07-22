@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"log"
 
@@ -24,7 +25,6 @@ var _ = Describe("UploadRelease", func() {
 	Context("Execute", func() {
 		var (
 			fs                    billy.Filesystem
-			loader                *commandsFakes.KilnfileLoader
 			releaseUploaderFinder *commandsFakes.ReleaseUploaderFinder
 			releaseUploader       *fakes.ReleaseUploader
 
@@ -35,7 +35,6 @@ var _ = Describe("UploadRelease", func() {
 
 		BeforeEach(func() {
 			fs = memfs.New()
-			loader = new(commandsFakes.KilnfileLoader)
 
 			releaseUploader = new(fakes.ReleaseUploader)
 			releaseUploaderFinder = new(commandsFakes.ReleaseUploaderFinder)
@@ -43,10 +42,12 @@ var _ = Describe("UploadRelease", func() {
 
 			uploadRelease = commands.UploadRelease{
 				FS:                    fs,
-				KilnfileLoader:        loader,
 				Logger:                log.New(GinkgoWriter, "", 0),
 				ReleaseUploaderFinder: releaseUploaderFinder.Spy,
 			}
+
+			Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{})).NotTo(HaveOccurred())
+			Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{})).NotTo(HaveOccurred())
 
 			var err error
 			expectedReleaseSHA, err = testHelpers.WriteReleaseTarball("banana-release.tgz", "banana", "1.2.3", fs)
