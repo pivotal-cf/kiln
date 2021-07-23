@@ -59,6 +59,7 @@ func main() {
 
 	releaseManifestReader := builder.NewReleaseManifestReader(fs)
 	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
+	pivnetService := fetcher.CreateNewPivnetService()
 	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(outLogger, releasesService)
 	kilnfileLoader := cargo.KilnfileLoader{}
 	mrsProvider := commands.MultiReleaseSourceProvider(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
@@ -96,6 +97,8 @@ func main() {
 	}
 
 	commandSet["find-release-version"] = commands.NewFindReleaseVersion(outLogger, mrsProvider)
+
+	commandSet["find-stemcell-version"] = commands.NewFindStemcellVersion(outLogger, pivnetService)
 
 	commandSet["compile-built-releases"] = commands.CompileBuiltReleases{
 		BoshDirectorFactory:        commands.BoshDirectorFactory,

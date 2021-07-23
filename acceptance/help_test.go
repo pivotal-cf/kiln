@@ -21,12 +21,13 @@ Commands:
   compile-built-releases  compiles built releases and uploads them
   fetch                   fetches releases
   find-release-version    prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints
+  find-stemcell-version   prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile
   help                    prints this usage information
   pre-process             preprocess yaml files
   publish                 publish tile on Pivnet
   sync-with-local         update the Kilnfile.lock based on local releases
   update-release          bumps a release to a new version
-  update-stemcell         updates Kilnfile.lock with stemcell info
+  update-stemcell         updates stemcell and release information in Kilnfile.lock
   upload-release          uploads a BOSH release to an s3 release_source
   validate                validate Kilnfile and Kilnfile.lock
   version                 prints the kiln release version
