@@ -63,7 +63,8 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 
 			stemcellSlug string
 
-			gotVersions []string
+			stemcellVersion string
+			majorStemcellVersion string
 			gotErr      error
 		)
 
@@ -72,16 +73,28 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 			serverMock.Results.Res = &http.Response{}
 			pivnet.Client = &http.Client{Transport: serverMock}
 			stemcellSlug = ""
+			majorStemcellVersion = "456"
 		})
 
 		JustBeforeEach(func() {
-			gotVersions, gotErr = pivnet.Versions(stemcellSlug)
+			stemcellVersion, gotErr = pivnet.StemcellVersion(stemcellSlug, majorStemcellVersion)
 		})
 
-		When("fetching with an empty line as a string", func() {
+		When("fetching with an empty product Slug", func() {
 			It("returns an error", func() {
 				Expect(gotErr).To(Equal(fetcher.ErrProductSlugMustNotBeEmpty))
-				Expect(gotVersions).To(BeNil())
+				Expect(stemcellVersion).To(Equal(""))
+			})
+		})
+
+		When("fetching with an empty major stemcell version", func() {
+			BeforeEach(func() {
+				stemcellSlug = "some-stemcell"
+				majorStemcellVersion = ""
+			})
+			It("returns an error", func() {
+				Expect(gotErr).To(Equal(fetcher.ErrStemcellMajorVersionMustNotBeEmpty))
+				Expect(stemcellVersion).To(Equal(""))
 			})
 		})
 
@@ -131,15 +144,15 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 					Expect(gotErr).To(MatchError(ContainSubstring("request was not successful, response had status")))
 				})
 			})
-			When("the json parsing fails", func() {
+			When("the json parsing succeeds", func() {
 				BeforeEach(func() {
-					serverMock.Results.Res.Body = fakes.NewReadCloser(`{"releases": [{"version": "1.0"}, {"version": "2.1"}]}`)
+					serverMock.Results.Res.Body = fakes.NewReadCloser(`{"version": "2.1"}`)
 					serverMock.Results.Res.StatusCode = http.StatusOK
 					serverMock.Results.Err = nil
 				})
 				It("returns the versions", func() {
 					Expect(gotErr).NotTo(HaveOccurred())
-					Expect(gotVersions).To(Equal([]string{"1.0", "2.1"}))
+					Expect(stemcellVersion).To(Equal("2.1"))
 				})
 			})
 		})

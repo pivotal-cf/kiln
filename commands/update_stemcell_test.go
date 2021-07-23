@@ -7,26 +7,23 @@ import (
 	"os"
 	"path/filepath"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/pivotal-cf/jhanda"
+	. "github.com/pivotal-cf/kiln/commands"
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
 	"github.com/pivotal-cf/kiln/internal/cargo"
-	test_helpers "github.com/pivotal-cf/kiln/internal/test-helpers"
 	"github.com/pivotal-cf/kiln/release"
-	"gopkg.in/src-d/go-billy.v4/osfs"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/jhanda"
-	. "github.com/pivotal-cf/kiln/commands"
 )
 
 var _ = Describe("UpdateStemcell", func() {
 	var _ jhanda.Command = UpdateStemcell{}
 
 	const (
-		newStemcellOS      = "some-os"
-		newStemcellVersion = "1.2.3"
+		newStemcellOS      = "old-os"
+		newStemcellVersion = "1.100"
 
 		release1Name    = "release1"
 		release1Version = "1"
@@ -47,7 +44,7 @@ var _ = Describe("UpdateStemcell", func() {
 	Describe("Execute", func() {
 		var (
 			update                             *UpdateStemcell
-			tmpDir, kilnfilePath, stemcellPath string
+			tmpDir, kilnfilePath               string
 			kilnfileLoader                     *fakes.KilnfileLoader
 			kilnfile                           cargo.Kilnfile
 			kilnfileLock                       cargo.KilnfileLock
@@ -57,9 +54,13 @@ var _ = Describe("UpdateStemcell", func() {
 
 		BeforeEach(func() {
 			var err error
-
 			kilnfileLoader = new(fakes.KilnfileLoader)
-			kilnfile = cargo.Kilnfile{}
+			kilnfile = cargo.Kilnfile{
+				Stemcell: cargo.Stemcell{
+					OS:      "old-os",
+					Version: "^1",
+				},
+			}
 			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ReleaseLock{
 					{
@@ -79,7 +80,7 @@ var _ = Describe("UpdateStemcell", func() {
 				},
 				Stemcell: cargo.Stemcell{
 					OS:      "old-os",
-					Version: "0.1",
+					Version: "1.1",
 				},
 			}
 
@@ -134,9 +135,6 @@ var _ = Describe("UpdateStemcell", func() {
 
 			kilnfilePath = filepath.Join(tmpDir, "Kilnfile")
 
-			stemcellPath = filepath.Join(tmpDir, "my-stemcell.tgz")
-			test_helpers.WriteStemcellTarball(stemcellPath, newStemcellOS, newStemcellVersion, osfs.New(""))
-
 			outputBuffer = gbytes.NewBuffer()
 			logger := log.New(outputBuffer, "", 0)
 
@@ -158,7 +156,7 @@ var _ = Describe("UpdateStemcell", func() {
 		})
 
 		It("updates the Kilnfile.lock contents", func() {
-			err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
+			err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
@@ -191,7 +189,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 		It("looks up the correct releases", func() {
 			err := update.Execute([]string{
-				"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath, "--releases-directory", releasesDirPath,
+				"--kilnfile", kilnfilePath, "--version", "1.100", "--releases-directory", releasesDirPath,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -212,7 +210,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 		It("downloads the correct releases", func() {
 			err := update.Execute([]string{
-				"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath, "--releases-directory", releasesDirPath,
+				"--kilnfile", kilnfilePath, "--version", newStemcellVersion, "--releases-directory", releasesDirPath,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -241,6 +239,37 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(threads).To(Equal(0))
 		})
 
+		When("the version input is invalid", func() {
+			BeforeEach(func() {
+				kilnfileLock.Stemcell = cargo.Stemcell{
+					OS:      newStemcellOS,
+					Version: newStemcellVersion,
+				}
+			})
+
+			It("no-ops", func() {
+				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", "34$5235.32235"})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Please enter a valid stemcell version to update"))
+
+			})
+		})
+
+		When("the kilnfile version constraint is invalid", func() {
+			BeforeEach(func() {
+				kilnfile.Stemcell = cargo.Stemcell{
+					OS:      newStemcellOS,
+					Version: "$2353",
+				}
+			})
+
+			It("no-ops", func() {
+				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", "2.100"})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Invalid stemcell constraint in kilnfile:"))
+			})
+		})
+
 		When("the stemcell didn't change", func() {
 			BeforeEach(func() {
 				kilnfileLock.Stemcell = cargo.Stemcell{
@@ -250,7 +279,7 @@ var _ = Describe("UpdateStemcell", func() {
 			})
 
 			It("no-ops", func() {
-				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
+				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
@@ -261,6 +290,51 @@ var _ = Describe("UpdateStemcell", func() {
 			})
 		})
 
+		When("the input stemcell version does not match kilnfile version constraint", func() {
+			BeforeEach(func() {
+				kilnfileLock.Stemcell = cargo.Stemcell{
+					OS:      newStemcellOS,
+					Version: "~2019",
+				}
+
+				kilnfileLock.Stemcell = cargo.Stemcell{
+					OS:      newStemcellOS,
+					Version: "2019.118",
+				}
+			})
+
+			It("no-ops", func() {
+				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", "621.113"})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
+				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(0))
+				Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+
+				Expect(string(outputBuffer.Contents())).To(ContainSubstring("Latest version does not satisfy the stemcell version constraint in kilnfile"))
+			})
+		})
+
+		When("the kilnlockfile stemcell version is greater than input stemcell version", func() {
+			BeforeEach(func() {
+				kilnfileLock.Stemcell = cargo.Stemcell{
+					OS:      newStemcellOS,
+					Version: "1.102",
+				}
+			})
+
+			It("no-ops", func() {
+				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
+				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(0))
+				Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(0))
+
+				Expect(string(outputBuffer.Contents())).To(ContainSubstring("Stemcell is up-to-date. Nothing to update for product"))
+			})
+		})
+
 		When("the remote information for a release doesn't change", func() {
 			BeforeEach(func() {
 				kilnfileLock.Releases[1].RemoteSource = unpublishableReleaseSourceID
@@ -268,7 +342,7 @@ var _ = Describe("UpdateStemcell", func() {
 			})
 
 			It("doesn't download the release", func() {
-				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
+				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(1))
@@ -286,7 +360,7 @@ var _ = Describe("UpdateStemcell", func() {
 			})
 
 			It("errors", func() {
-				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
+				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
 
 				Expect(err).To(MatchError(ContainSubstring("couldn't find release")))
 				Expect(err).To(MatchError(ContainSubstring(release1Name)))
@@ -299,7 +373,7 @@ var _ = Describe("UpdateStemcell", func() {
 			})
 
 			It("errors", func() {
-				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
+				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
 
 				Expect(err).To(MatchError(ContainSubstring("finding release")))
 				Expect(err).To(MatchError(ContainSubstring(release1Name)))
@@ -313,7 +387,7 @@ var _ = Describe("UpdateStemcell", func() {
 			})
 
 			It("errors", func() {
-				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--stemcell-file", stemcellPath})
+				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
 
 				Expect(err).To(MatchError(ContainSubstring("downloading release")))
 				Expect(err).To(MatchError(ContainSubstring(release1Name)))

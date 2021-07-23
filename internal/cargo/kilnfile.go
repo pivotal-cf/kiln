@@ -16,6 +16,7 @@ type Kilnfile struct {
 	PreGaUserGroups []string              `yaml:"pre_ga_user_groups"`
 	Releases        []ReleaseKiln         `yaml:"releases"`
 	TileNames       []string              `yaml:"tile_names"`
+	Stemcell        Stemcell              `yaml:"stemcell_criteria"`
 }
 
 type ReleaseSourceConfig struct {
