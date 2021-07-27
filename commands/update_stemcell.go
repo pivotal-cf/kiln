@@ -5,11 +5,12 @@ import (
 	"log"
 	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/pivotal-cf/jhanda"
+	"gopkg.in/src-d/go-billy.v4/osfs"
+
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/release"
-	"github.com/Masterminds/semver"
-	"gopkg.in/src-d/go-billy.v4/osfs"
 )
 
 type UpdateStemcell struct {
@@ -58,12 +59,12 @@ func (update UpdateStemcell) Execute(args []string) error {
 		return fmt.Errorf("Invalid stemcell constraint in kilnfile: %w", err)
 	}
 
-	if (! releaseVersionConstraint.Check(latestStemcellVersion)) {
+	if !releaseVersionConstraint.Check(latestStemcellVersion) {
 		update.Logger.Println("Latest version does not satisfy the stemcell version constraint in kilnfile. Nothing to update.")
 		return nil
 	}
 
-	currentStemcellVersion, _  := semver.NewVersion(kilnfileLock.Stemcell.Version)
+	currentStemcellVersion, _ := semver.NewVersion(kilnfileLock.Stemcell.Version)
 
 	if currentStemcellVersion.Equal(latestStemcellVersion) ||
 		currentStemcellVersion.GreaterThan(latestStemcellVersion) {

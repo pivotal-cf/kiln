@@ -1,9 +1,6 @@
 package commands_test
 
 import (
-	"github.com/pivotal-cf/kiln/commands"
-	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/fetcher/fakes"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,26 +9,29 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	_ "github.com/pivotal-cf/kiln/fetcher/fakes"
+
+	"github.com/pivotal-cf/kiln/commands"
+	"github.com/pivotal-cf/kiln/fetcher"
+	"github.com/pivotal-cf/kiln/fetcher/fakes"
 )
 
 var _ = Describe("Find the stemcell version", func() {
 	var (
 		findStemcellVersion commands.FindStemcellVersion
-		logger             *log.Logger
+		logger              *log.Logger
 
 		writer strings.Builder
 
-		fetchExecuteArgs []string
-		executeErr       error
-		someKilnfilePath string
+		fetchExecuteArgs     []string
+		executeErr           error
+		someKilnfilePath     string
 		someKilnfileLockPath string
-		kilnfileContents string
-		lockContents string
-		pivnet        fetcher.Pivnet
-		serverMock    *fakes.RoundTripper
-		simpleRequest *http.Request
-		requestErr    error
+		kilnfileContents     string
+		lockContents         string
+		pivnet               fetcher.Pivnet
+		serverMock           *fakes.RoundTripper
+		simpleRequest        *http.Request
+		requestErr           error
 	)
 
 	Describe("Execute", func() {
@@ -156,11 +156,11 @@ stemcell_criteria:
 		})
 	})
 
-	Describe("Execute", func() {
+	Describe("ExtractMajorVersion", func() {
 		var (
 			stemcellVersionSpecifier string
-			majorVersion string
-			error error
+			majorVersion             string
+			error                    error
 		)
 
 		BeforeEach(func() {

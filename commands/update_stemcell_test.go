@@ -9,9 +9,11 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/pivotal-cf/kiln/commands"
+
 	"github.com/onsi/gomega/gbytes"
 	"github.com/pivotal-cf/jhanda"
-	. "github.com/pivotal-cf/kiln/commands"
+
 	"github.com/pivotal-cf/kiln/commands/fakes"
 	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
 	"github.com/pivotal-cf/kiln/internal/cargo"
@@ -43,13 +45,13 @@ var _ = Describe("UpdateStemcell", func() {
 
 	Describe("Execute", func() {
 		var (
-			update                             *UpdateStemcell
-			tmpDir, kilnfilePath               string
-			kilnfileLoader                     *fakes.KilnfileLoader
-			kilnfile                           cargo.Kilnfile
-			kilnfileLock                       cargo.KilnfileLock
-			releaseSource                      *fetcherFakes.MultiReleaseSource
-			outputBuffer                       *gbytes.Buffer
+			update               *UpdateStemcell
+			tmpDir, kilnfilePath string
+			kilnfileLoader       *fakes.KilnfileLoader
+			kilnfile             cargo.Kilnfile
+			kilnfileLock         cargo.KilnfileLock
+			releaseSource        *fetcherFakes.MultiReleaseSource
+			outputBuffer         *gbytes.Buffer
 		)
 
 		BeforeEach(func() {

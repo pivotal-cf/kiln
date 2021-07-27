@@ -6,6 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/pivotal-cf/kiln/fetcher"
 	"github.com/pivotal-cf/kiln/fetcher/fakes"
 )
@@ -63,9 +64,9 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 
 			stemcellSlug string
 
-			stemcellVersion string
+			stemcellVersion      string
 			majorStemcellVersion string
-			gotErr      error
+			gotErr               error
 		)
 
 		BeforeEach(func() {

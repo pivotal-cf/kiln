@@ -224,7 +224,7 @@ func TestBake_loadFlags_does_not_set_outputs_file_when_meta_data_only_is_true(t 
 	var (
 		bake Bake
 
-		statNoError    = func(string) (os.FileInfo, error) { return nil, nil }
+		statNoError   = func(string) (os.FileInfo, error) { return nil, nil }
 		readFileError = func(name string) ([]byte, error) { return nil, os.ErrNotExist }
 	)
 
