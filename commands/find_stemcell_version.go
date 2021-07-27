@@ -3,28 +3,30 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Masterminds/semver"
-	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"gopkg.in/src-d/go-billy.v4/osfs"
 	"log"
 	"regexp"
 	"strings"
+
+	"github.com/Masterminds/semver"
+	"github.com/pivotal-cf/jhanda"
+	"gopkg.in/src-d/go-billy.v4/osfs"
+
+	"github.com/pivotal-cf/kiln/fetcher"
+	"github.com/pivotal-cf/kiln/internal/cargo"
 )
 
 const (
 	ErrStemcellOSInfoMustBeValid       = "Stemcell OS information is missing or invalid"
 	ErrStemcellMajorVersionMustBeValid = "Stemcell Major Version is missing or invalid"
-	TanzunetRemotePath                  = "network.pivotal.io"
+	TanzunetRemotePath                 = "network.pivotal.io"
 )
 
 type FindStemcellVersion struct {
-	outLogger   *log.Logger
+	outLogger     *log.Logger
 	pivnetService *fetcher.Pivnet
 
 	Options struct {
-		Kilnfile         string  `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
+		Kilnfile       string   `short:"kf" long:"kilnfile" default:"Kilnfile" description:"path to Kilnfile"`
 		VariablesFiles []string `short:"vf" long:"variables-file" description:"path to variables file"`
 		Variables      []string `short:"vr" long:"variable" description:"variable in key=value format"`
 	}
@@ -38,7 +40,7 @@ type stemcellVersionOutput struct {
 
 func NewFindStemcellVersion(outLogger *log.Logger, pivnetService *fetcher.Pivnet) FindStemcellVersion {
 	return FindStemcellVersion{
-		outLogger:   outLogger,
+		outLogger:     outLogger,
 		pivnetService: pivnetService,
 	}
 }
@@ -50,7 +52,7 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 		return err
 	}
 
-	var productSlug=""
+	var productSlug = ""
 
 	//Get Stemcell OS and major from Kilnfile
 	if kilnfile.Stemcell.OS == "ubuntu-xenial" {
@@ -59,32 +61,39 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 		productSlug = "stemcells-windows-server"
 	}
 
-    if productSlug == "" {
+	if productSlug == "" {
 		return fmt.Errorf(ErrStemcellOSInfoMustBeValid)
-	} else if kilnfile.Stemcell.Version == "" {
-		return fmt.Errorf(ErrStemcellMajorVersionMustBeValid)
-	} else {
-
-		majorVersion, err := ExtractMajorVersion(kilnfile.Stemcell.Version)
-
-		if err != nil {
-			return err
-		}
-
-		//Get stemcell version from pivnet
-		stemcellVersion, err := cmd.pivnetService.StemcellVersion(productSlug, majorVersion)
-
-		if err != nil {
-			return err
-		}
-
-		stemcellVersionJson, _ := json.Marshal(stemcellVersionOutput{
-			Version: stemcellVersion,
-			Source: "Tanzunet",
-			RemotePath: TanzunetRemotePath,
-		})
-		cmd.outLogger.Println(string(stemcellVersionJson))
 	}
+
+	if kilnfile.Stemcell.Version == "" {
+		return fmt.Errorf(ErrStemcellMajorVersionMustBeValid)
+	}
+
+	majorVersion, err := ExtractMajorVersion(kilnfile.Stemcell.Version)
+
+	if err != nil {
+		return err
+	}
+
+	//Get stemcell version from pivnet
+	stemcellVersion, err := cmd.pivnetService.StemcellVersion(productSlug, majorVersion)
+
+	if err != nil {
+		return err
+	}
+
+	stemcellVersionJson, err := json.Marshal(stemcellVersionOutput{
+		Version:    stemcellVersion,
+		Source:     "Tanzunet",
+		RemotePath: TanzunetRemotePath,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	cmd.outLogger.Println(string(stemcellVersionJson))
+
 	return nil
 }
 
@@ -120,14 +129,13 @@ func (cmd *FindStemcellVersion) setup(args []string) (cargo.Kilnfile, error) {
 		return cargo.Kilnfile{}, err
 	}
 
-	kilnfile, _ , err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), cmd.Options.Kilnfile, cmd.Options.VariablesFiles, cmd.Options.Variables)
+	kilnfile, _, err := cargo.KilnfileLoader{}.LoadKilnfiles(osfs.New(""), cmd.Options.Kilnfile, cmd.Options.VariablesFiles, cmd.Options.Variables)
 	if err != nil {
 		return cargo.Kilnfile{}, err
 	}
 
 	return kilnfile, nil
 }
-
 
 func (cmd FindStemcellVersion) Usage() jhanda.Usage {
 	return jhanda.Usage{

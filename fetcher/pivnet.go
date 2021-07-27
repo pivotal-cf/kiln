@@ -6,13 +6,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 )
 
 const (
-	ErrDecodingURLRequest = stringError("error while decoding the url")
-	ErrCouldNotCreateRequest     = stringError("could not create valid http request")
-	ErrProductSlugMustNotBeEmpty = stringError("product slug must not be empty")
+	ErrDecodingURLRequest                 = stringError("error while decoding the url")
+	ErrCouldNotCreateRequest              = stringError("could not create valid http request")
+	ErrProductSlugMustNotBeEmpty          = stringError("product slug must not be empty")
 	ErrStemcellMajorVersionMustNotBeEmpty = stringError("stemcell major version must not be empty")
 )
 
@@ -46,9 +47,10 @@ func (pivnet *Pivnet) StemcellVersion(slug string, majorStemcellVersion string) 
 	}
 
 	locator := url.URL{
-		Scheme: "https",
-		Host:   "network.pivotal.io",
-		Path:   fmt.Sprintf("/api/v2/products/%s/releases/latest?major=%s", slug, majorStemcellVersion),
+		Scheme:   "https",
+		Host:     "network.pivotal.io",
+		Path:     path.Join("/api/v2/products", string(slug), "releases/latest"),
+		RawQuery: fmt.Sprintf("major=%s", majorStemcellVersion),
 	}
 
 	getURL, err := url.PathUnescape(locator.String())
@@ -57,7 +59,7 @@ func (pivnet *Pivnet) StemcellVersion(slug string, majorStemcellVersion string) 
 		return "", ErrDecodingURLRequest
 	}
 
-	req, err := http.NewRequest(http.MethodGet,getURL , nil)
+	req, err := http.NewRequest(http.MethodGet, getURL, nil)
 	if err != nil {
 		return "", ErrCouldNotCreateRequest
 	}
@@ -87,7 +89,7 @@ func (pivnet *Pivnet) StemcellVersion(slug string, majorStemcellVersion string) 
 		return "", err
 	}
 
-	version :=  body.Version
+	version := body.Version
 
 	return version, nil
 }
