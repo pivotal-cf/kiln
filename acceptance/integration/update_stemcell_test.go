@@ -7,22 +7,20 @@ import (
 	"path/filepath"
 	"time"
 
-	test_helpers "github.com/pivotal-cf/kiln/internal/test-helpers"
-	"gopkg.in/src-d/go-billy.v4/osfs"
-
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"gopkg.in/yaml.v2"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"gopkg.in/yaml.v2"
 	"github.com/onsi/gomega/gexec"
+
+	"github.com/pivotal-cf/kiln/internal/cargo"
+
 )
 
 var _ = Context("Updating the stemcell", func() {
 	var (
 		kilnfileLockPath,
 		kilnfilePath,
-		stemcellPath,
 		releasesPath,
 		varsFilePath,
 		tmpDir string
@@ -41,6 +39,9 @@ release_sources:
   path_template: 2.10/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz
   publishable: true
 - type: bosh.io
+stemcell_criteria:
+  os: ubuntu-xenial
+  version: '~621'
 `
 
 		previousKilnfileLock = `---
@@ -62,7 +63,7 @@ releases:
   sha1: cda431fa1e550c28bf6f5c82b3a3cf2c168771f2
 stemcell_criteria:
   os: ubuntu-xenial
-  version: '456.30'
+  version: '621.41'
 `
 	)
 
@@ -78,11 +79,7 @@ stemcell_criteria:
 		kilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
 		kilnfilePath = filepath.Join(tmpDir, "Kilnfile")
 		releasesPath = filepath.Join(tmpDir, "releases")
-		stemcellPath = filepath.Join(tmpDir, "updated-stemcell.tgz")
 		varsFilePath = filepath.Join(tmpDir, "variables.yml")
-
-		_, err = test_helpers.WriteStemcellTarball(stemcellPath, "ubuntu-xenial", "621.51", osfs.New(""))
-		Expect(err).NotTo(HaveOccurred())
 
 		Expect(
 			ioutil.WriteFile(kilnfilePath, []byte(kilnfileContents), 0600),
@@ -109,7 +106,7 @@ stemcell_criteria:
 
 	It("updates the Kilnfile.lock", func() {
 		command := exec.Command(pathToMain, "update-stemcell",
-			"--stemcell-file", stemcellPath,
+			"--version", "621.51",
 			"--kilnfile", kilnfilePath,
 			"--releases-directory", releasesPath,
 			"--variables-file", varsFilePath,
