@@ -10,11 +10,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"gopkg.in/yaml.v2"
 	"github.com/onsi/gomega/gexec"
+	"gopkg.in/yaml.v2"
 
-	"github.com/pivotal-cf/kiln/internal/cargo"
-
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 var _ = Context("Updating the stemcell", func() {
