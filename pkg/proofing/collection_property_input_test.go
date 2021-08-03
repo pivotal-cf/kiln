@@ -14,7 +14,7 @@ var _ = Describe("CollectionPropertyInput", func() {
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/form_types.yml")
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		Expect(err).NotTo(HaveOccurred())
 
 		productTemplate, err := proofing.Parse(f)

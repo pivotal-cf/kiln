@@ -26,7 +26,7 @@ func (c Checksummer) Sum(path string) error {
 		return err
 	}
 
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	_, err = io.Copy(hash, file)
 	if err != nil {

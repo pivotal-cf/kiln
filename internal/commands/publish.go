@@ -156,7 +156,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 	if err != nil {
 		return cargo.Kilnfile{}, nil, err
 	}
-	defer versionFile.Close()
+	defer func() { _ = versionFile.Close() }()
 
 	versionBuf, err := ioutil.ReadAll(versionFile)
 	if err != nil {
@@ -172,7 +172,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 	if err != nil {
 		return cargo.Kilnfile{}, nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var kilnfile cargo.Kilnfile
 	if err := yaml.NewDecoder(file).Decode(&kilnfile); err != nil {

@@ -62,25 +62,25 @@ var _ = Describe("TileWriter", func() {
 			filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 				switch root {
 				case "/some/path/releases":
-					walkFn("/some/path/releases", dirInfo, nil)
-					walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
-					walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
+					_ = walkFn("/some/path/releases", dirInfo, nil)
+					_ = walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
+					_ = walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
 				case "/some/other/path/releases":
-					walkFn("/some/other/path/releases", dirInfo, nil)
-					walkFn("/some/other/path/releases/release-3.tgz", releaseInfo, nil)
-					walkFn("/some/other/path/releases/release-4.tgz", releaseInfo, nil)
+					_ = walkFn("/some/other/path/releases", dirInfo, nil)
+					_ = walkFn("/some/other/path/releases/release-3.tgz", releaseInfo, nil)
+					_ = walkFn("/some/other/path/releases/release-4.tgz", releaseInfo, nil)
 				case "/some/path/migrations":
-					walkFn("/some/path/migrations", dirInfo, nil)
-					walkFn("/some/path/migrations/migration-1.js", migrationInfo, nil)
-					walkFn("/some/path/migrations/migration-2.js", migrationInfo, nil)
-					walkFn("/some/path/migrations/node_modules/random-1.js", migrationInfo, nil)
-					walkFn("/some/path/migrations/node_modules/random-2.js", migrationInfo, nil)
-					walkFn("/some/path/migrations/tests/migration-2_test.js", migrationInfo, nil)
-					walkFn("/some/path/migrations/tests/migration-2.js", migrationInfo, nil)
-					walkFn("/some/path/migrations/not-a-js-migration.txt", migrationInfo, nil)
+					_ = walkFn("/some/path/migrations", dirInfo, nil)
+					_ = walkFn("/some/path/migrations/migration-1.js", migrationInfo, nil)
+					_ = walkFn("/some/path/migrations/migration-2.js", migrationInfo, nil)
+					_ = walkFn("/some/path/migrations/node_modules/random-1.js", migrationInfo, nil)
+					_ = walkFn("/some/path/migrations/node_modules/random-2.js", migrationInfo, nil)
+					_ = walkFn("/some/path/migrations/tests/migration-2_test.js", migrationInfo, nil)
+					_ = walkFn("/some/path/migrations/tests/migration-2.js", migrationInfo, nil)
+					_ = walkFn("/some/path/migrations/not-a-js-migration.txt", migrationInfo, nil)
 				case "/some/other/path/migrations":
-					walkFn("/some/other/path/migrations", dirInfo, nil)
-					walkFn("/some/other/path/migrations/other-migration.js", migrationInfo, nil)
+					_ = walkFn("/some/other/path/migrations", dirInfo, nil)
+					_ = walkFn("/some/other/path/migrations/other-migration.js", migrationInfo, nil)
 				default:
 					return nil
 				}
@@ -197,7 +197,7 @@ releases:
 				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 					switch root {
 					case "/some/path/releases":
-						walkFn("/some/path/releases", dirInfo, nil)
+						_ = walkFn("/some/path/releases", dirInfo, nil)
 					default:
 						return nil
 					}
@@ -239,13 +239,13 @@ releases:
 				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 					switch root {
 					case "/some/path/releases":
-						walkFn("/some/path/releases", dirInfo, nil)
-						walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
-						walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
-						walkFn("/some/path/releases/not-a-release.txt", releaseInfo, nil)
-						walkFn(root, dirInfo, nil)
+						_ = walkFn("/some/path/releases", dirInfo, nil)
+						_ = walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
+						_ = walkFn("/some/path/releases/release-2.tgz", releaseInfo, nil)
+						_ = walkFn("/some/path/releases/not-a-release.txt", releaseInfo, nil)
+						_ = walkFn(root, dirInfo, nil)
 					case "/some/path/migrations":
-						walkFn("/some/path/migrations", dirInfo, nil)
+						_ = walkFn("/some/path/migrations", dirInfo, nil)
 					default:
 						return nil
 					}
@@ -331,11 +331,11 @@ releases:
 
 				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 					if root == "/some/path/releases" {
-						walkFn(root, dirInfo, nil)
-						walkFn(filepath.Join(root, "release-1.tgz"), releaseInfo, nil)
-						walkFn(filepath.Join(root, "release-2.tgz"), releaseInfo, nil)
+						_ = walkFn(root, dirInfo, nil)
+						_ = walkFn(filepath.Join(root, "release-1.tgz"), releaseInfo, nil)
+						_ = walkFn(filepath.Join(root, "release-2.tgz"), releaseInfo, nil)
 					} else if root == "/some/path/to-embed/my-file.txt" {
-						walkFn(root, embedFileInfo, nil)
+						_ = walkFn(root, embedFileInfo, nil)
 					}
 					return nil
 				}
@@ -392,13 +392,13 @@ releases:
 
 				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
 					if root == "/some/path/releases" {
-						walkFn(root, dirInfo, nil)
-						walkFn(filepath.Join(root, "release-1.tgz"), releaseInfo, nil)
-						walkFn(filepath.Join(root, "release-2.tgz"), releaseInfo, nil)
+						_ = walkFn(root, dirInfo, nil)
+						_ = walkFn(filepath.Join(root, "release-1.tgz"), releaseInfo, nil)
+						_ = walkFn(filepath.Join(root, "release-2.tgz"), releaseInfo, nil)
 					} else if root == "/some/path/to-embed" {
-						walkFn(root, dirInfo, nil)
-						walkFn(filepath.Join(root, "my-file-1.txt"), embedFileInfo, nil)
-						walkFn(filepath.Join(root, "my-file-2.txt"), embedFileInfo, nil)
+						_ = walkFn(root, dirInfo, nil)
+						_ = walkFn(filepath.Join(root, "my-file-1.txt"), embedFileInfo, nil)
+						_ = walkFn(filepath.Join(root, "my-file-2.txt"), embedFileInfo, nil)
 					}
 					return nil
 				}
@@ -548,7 +548,7 @@ releases:
 					releaseInfo.IsDirReturns(false)
 
 					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
-						walkFn("/some/path/releases", dirInfo, nil)
+						_ = walkFn("/some/path/releases", dirInfo, nil)
 						err := walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
 
 						return err
@@ -608,13 +608,13 @@ releases:
 					migrationInfo.IsDirReturns(false)
 
 					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
-						walkFn("/some/path/migrations", dirInfo, nil)
+						_ = walkFn("/some/path/migrations", dirInfo, nil)
 						err := walkFn("/some/path/migrations/migration-1.js", migrationInfo, nil)
 						if err != nil {
 							return err
 						}
 
-						walkFn("/some/path/releases", dirInfo, nil)
+						_ = walkFn("/some/path/releases", dirInfo, nil)
 						err = walkFn("/some/path/releases/release-1.tgz", releaseInfo, nil)
 
 						return err
@@ -677,7 +677,7 @@ releases:
 					embedInfo.IsDirReturns(false)
 
 					filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
-						walkFn("/some/path/embed", dirInfo, nil)
+						_ = walkFn("/some/path/embed", dirInfo, nil)
 						err := walkFn("/some/path/embed/my-file-1.tgz", embedInfo, nil)
 
 						return err

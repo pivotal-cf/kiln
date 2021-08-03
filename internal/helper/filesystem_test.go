@@ -36,7 +36,7 @@ var _ = Describe("Filesystem", func() {
 
 			file, err := filesystem.Create(fileToCreate)
 			Expect(err).NotTo(HaveOccurred())
-			defer file.Close()
+			defer func() { _ = file.Close() }()
 
 			fi, err := os.Stat(fileToCreate)
 			Expect(err).NotTo(HaveOccurred())
@@ -94,7 +94,7 @@ var _ = Describe("Filesystem", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			files := []string{}
-			filesystem.Walk(tempDir, func(filePath string, info os.FileInfo, err error) error {
+			_ = filesystem.Walk(tempDir, func(filePath string, info os.FileInfo, err error) error {
 				files = append(files, filePath)
 				return nil
 			})

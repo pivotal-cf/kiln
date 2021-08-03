@@ -18,7 +18,7 @@ func writeFile(fs billy.Filesystem, path string, contents string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	_, err = file.Write([]byte(contents))
 	return err
@@ -45,8 +45,6 @@ var _ = Describe("LoadKilnfiles", func() {
 			"access_key=id",
 			"secret_key=key",
 		}
-
-		kilnfileLoader = cargo.KilnfileLoader{}
 	})
 
 	const validKilnfileContents = `
@@ -248,8 +246,6 @@ var _ = Describe("SaveKilnfileLock", func() {
 
 		kilnfilePath = "my-kilnfile"
 		kilnfileLockPath = kilnfilePath + ".lock"
-
-		kilnfileLoader = cargo.KilnfileLoader{}
 	})
 
 	const validKilnfileLockContents = `

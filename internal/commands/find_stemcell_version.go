@@ -107,7 +107,7 @@ func ExtractMajorVersion(version string) (string, error) {
 
 	semVer := strings.Split(version, ".")
 
-	reg, err := regexp.Compile("[^0-9]+")
+	reg, err := regexp.Compile(`[^0-9]+`)
 
 	if err != nil {
 		return "", err

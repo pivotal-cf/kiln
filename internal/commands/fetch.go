@@ -55,7 +55,7 @@ func (f Fetch) Execute(args []string) error {
 		return err
 	}
 
-	localReleases, missingReleases, extraReleases := partition(kilnfileLock.Releases, availableLocalReleaseSet)
+	_, missingReleases, extraReleases := partition(kilnfileLock.Releases, availableLocalReleaseSet)
 
 	err = f.localReleaseDirectory.DeleteExtraReleases(extraReleases, f.Options.NoConfirm)
 	if err != nil {
@@ -65,20 +65,17 @@ func (f Fetch) Execute(args []string) error {
 	if len(missingReleases) > 0 {
 		f.logger.Printf("Found %d missing releases to download", len(missingReleases))
 
-		downloadedReleases, err := f.downloadMissingReleases(kilnfile, missingReleases)
+		_, err := f.downloadMissingReleases(kilnfile, missingReleases)
 		if err != nil {
 			return err
 		}
-
-		localReleases = append(localReleases, downloadedReleases...)
 	}
 
 	return nil
 }
 
 func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []release.Local, error) {
-	args, err := jhanda.Parse(&f.Options, args)
-
+	_, err := jhanda.Parse(&f.Options, args)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 	}
@@ -87,7 +84,10 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []rele
 	}
 	if _, err := os.Stat(f.Options.ReleasesDir); err != nil {
 		if os.IsNotExist(err) {
-			os.MkdirAll(f.Options.ReleasesDir, 0777)
+			err = os.MkdirAll(f.Options.ReleasesDir, 0777)
+			if err != nil {
+				return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
+			}
 		} else {
 			return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
 		}

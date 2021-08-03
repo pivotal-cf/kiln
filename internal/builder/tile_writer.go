@@ -69,7 +69,7 @@ func (w TileWriter) Write(generatedMetadataContents []byte, input WriteInput) er
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	w.zipper.SetWriter(f)
 
@@ -153,12 +153,11 @@ func (w TileWriter) addReleaseTarballs(releasesDir string, outputFile string) er
 			return nil
 		}
 
-		file := ioutil.NopCloser(strings.NewReader(""))
-		file, err = w.filesystem.Open(filePath)
+		file, err := w.filesystem.Open(filePath)
 		if err != nil {
 			return err
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		return w.addToZipper(filepath.Join("releases", filepath.Base(filePath)), file, outputFile)
 	})
@@ -189,7 +188,7 @@ func (w TileWriter) addEmbeddedPath(pathToEmbed, outputFile string) error {
 		if err != nil {
 			return err
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		relativePath, err := filepath.Rel(pathToEmbed, filePath)
 		if err != nil {
@@ -228,7 +227,7 @@ func (w TileWriter) addMigrations(migrationsDir []string, outputFile string) err
 			if err != nil {
 				return err
 			}
-			defer file.Close()
+			defer func() { _ = file.Close() }()
 
 			return w.addToZipper(filepath.Join("migrations", "v1", filepath.Base(filePath)), file, outputFile)
 		})
@@ -255,16 +254,6 @@ func (w TileWriter) addToZipperWithMode(path string, contents io.Reader, mode os
 	w.logger.Printf("Adding %s to %s...", path, outputFile)
 
 	return w.zipper.AddWithMode(path, contents, mode)
-}
-
-func (w TileWriter) containsMigrations(entries []string) bool {
-	migrationsPrefix := filepath.Join("migrations", "v1")
-	for _, entry := range entries {
-		if strings.HasPrefix(entry, migrationsPrefix) {
-			return true
-		}
-	}
-	return false
 }
 
 func (w TileWriter) addEmptyMigrationsDirectory(outputFile string) error {

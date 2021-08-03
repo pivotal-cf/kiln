@@ -131,9 +131,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 			f, err := fs.Create(localPath)
 			Expect(err).NotTo(HaveOccurred())
-			defer f.Close()
-
-			f.Write([]byte("file contents"))
+			defer func() { _ = f.Close() }()
+			_, _ = f.Write([]byte("file contents"))
 
 			return release.Local{
 				ID:        remote.ID,
@@ -258,9 +257,9 @@ var _ = Describe("CompileBuiltReleases", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			s := sha1.New()
-			defer stemcellFile.Close()
+			defer func() { _ = stemcellFile.Close() }()
 
-			io.Copy(s, stemcellFile)
+			_, _ = io.Copy(s, stemcellFile)
 			actualStemcellSHA1 := hex.EncodeToString(s.Sum(nil))
 			Expect(actualStemcellSHA1).To(Equal(stemcellSHA1))
 
@@ -397,11 +396,11 @@ var _ = Describe("CompileBuiltReleases", func() {
 			Expect(path).To(Equal(kilnfilePath))
 
 			s := sha1.New()
-			io.Copy(s, strings.NewReader(blobIDContents("uaa-1.2.3")))
+			_, _ = io.Copy(s, strings.NewReader(blobIDContents("uaa-1.2.3")))
 			expectedUaaSha := hex.EncodeToString(s.Sum(nil))
 
 			s = sha1.New()
-			io.Copy(s, strings.NewReader(blobIDContents("capi-2.3.4")))
+			_, _ = io.Copy(s, strings.NewReader(blobIDContents("capi-2.3.4")))
 			expectedCapiSha := hex.EncodeToString(s.Sum(nil))
 
 			Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
@@ -466,9 +465,9 @@ var _ = Describe("CompileBuiltReleases", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				s := sha1.New()
-				defer stemcellFile.Close()
+				defer func() { _ = stemcellFile.Close() }()
 
-				io.Copy(s, stemcellFile)
+				_, _ = io.Copy(s, stemcellFile)
 				actualStemcellSHA1 := hex.EncodeToString(s.Sum(nil))
 				Expect(actualStemcellSHA1).To(Equal(stemcellSHA1))
 
@@ -767,7 +766,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			s := sha1.New()
-			io.Copy(s, strings.NewReader(blobIDContents("capi-2.3.4")))
+			_, _ = io.Copy(s, strings.NewReader(blobIDContents("capi-2.3.4")))
 			expectedCapiSha := hex.EncodeToString(s.Sum(nil))
 
 			Expect(kilnfileLoader.SaveKilnfileLockCallCount()).To(Equal(1))
@@ -1014,7 +1013,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 		It("panics", func() {
 			Expect(func() {
-				command.Execute([]string{
+				_ = command.Execute([]string{
 					"--kilnfile", kilnfilePath,
 					"--releases-directory", releasesPath,
 					"--stemcell-file", stemcellPath,

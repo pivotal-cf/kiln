@@ -54,6 +54,7 @@ var _ = Describe("Fetch", func() {
 
 			var err error
 			tmpDir, err = ioutil.TempDir("", "fetch-test")
+			Expect(err).NotTo(HaveOccurred())
 
 			someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
 			Expect(err).NotTo(HaveOccurred())
@@ -418,7 +419,9 @@ stemcell_criteria:
 					fakeS3BuiltReleaseSource.DownloadReleaseCalls(func(string, release.Remote, int) (release.Local, error) {
 						f, err := os.Create(badReleasePath)
 						Expect(err).NotTo(HaveOccurred())
-						defer f.Close()
+						defer func () {
+							_ = f.Close()
+						}()
 
 						return release.Local{
 							ID: missingReleaseS3BuiltID, LocalPath: badReleasePath, SHA1: "wrong-sha",
@@ -522,7 +525,7 @@ release_sources:
 
 					someVariableFile, err = ioutil.TempFile(tmpDir, "variables-file1")
 					Expect(err).NotTo(HaveOccurred())
-					defer someVariableFile.Close()
+					defer func() { _ = someVariableFile.Close() }()
 
 					variables := map[string]string{
 						"bucket": "my-releases",
@@ -535,7 +538,7 @@ release_sources:
 
 					otherVariableFile, err = ioutil.TempFile(tmpDir, "variables-file2")
 					Expect(err).NotTo(HaveOccurred())
-					defer otherVariableFile.Close()
+					defer func() { _ = otherVariableFile.Close() }()
 
 					variables = map[string]string{
 						"access_key":    "newkey",
@@ -597,7 +600,7 @@ release_sources:
 							"--kilnfile", someKilnfilePath,
 							"--download-threads", "not-a-number",
 						})
-						Expect(err).To(MatchError(fmt.Sprintf("invalid value \"not-a-number\" for flag -download-threads: parse error")))
+						Expect(err).To(MatchError(`invalid value "not-a-number" for flag -download-threads: parse error`))
 					})
 				})
 

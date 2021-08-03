@@ -86,14 +86,17 @@ pre_ga_user_groups:
 		tmpDir, err = ioutil.TempDir("", "kiln-publish-test")
 		Expect(err).NotTo(HaveOccurred())
 		initialDir, _ = os.Getwd()
-		os.Chdir(tmpDir)
-		ioutil.WriteFile("version", []byte(releaseVersion), 0777)
-		ioutil.WriteFile("Kilnfile", []byte(kilnfileBody), 0777)
+		err = os.Chdir(tmpDir)
+		Expect(err).NotTo(HaveOccurred())
+		_ = ioutil.WriteFile("version", []byte(releaseVersion), 0777)
+		_ = ioutil.WriteFile("Kilnfile", []byte(kilnfileBody), 0777)
 	})
 
 	AfterEach(func() {
-		os.Chdir(initialDir)
-		os.RemoveAll(tmpDir)
+		err := os.Chdir(initialDir)
+		Expect(err).NotTo(HaveOccurred())
+		err = os.RemoveAll(tmpDir)
+		Expect(err).NotTo(HaveOccurred())
 		restoreState()
 	})
 

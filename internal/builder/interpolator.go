@@ -254,37 +254,6 @@ func (i Interpolator) yamlMarshalOneLine(yamlContents []byte) ([]byte, error) {
 	return yamlConverter.YAMLToJSON(yamlContents)
 }
 
-func (i Interpolator) prettifyRuntimeConfig(interpolatedYAML string) (string, error) {
-	var runtimeConfig map[string]interface{}
-	err := yaml.Unmarshal([]byte(interpolatedYAML), &runtimeConfig)
-	if err != nil {
-		return "", err
-	}
-
-	if _, ok := runtimeConfig["runtime_config"]; !ok {
-		return interpolatedYAML, err
-	}
-
-	prettyRuntimeConfig, err := i.prettyPrint([]byte(runtimeConfig["runtime_config"].(string)))
-	if err != nil {
-		return "", err
-	}
-
-	runtimeConfig["runtime_config"] = string(prettyRuntimeConfig)
-
-	prettyInterpolatedYAML, err := yaml.Marshal(runtimeConfig)
-	if err != nil {
-		return "", err // should never happen
-	}
-
-	inlinedYAML, err := i.yamlMarshalOneLine(prettyInterpolatedYAML)
-	if err != nil {
-		return "", err // un-tested
-	}
-
-	return string(inlinedYAML), nil
-}
-
 func (i Interpolator) prettyPrint(inputYAML []byte) ([]byte, error) {
 	var data interface{}
 	err := yaml.Unmarshal(inputYAML, &data)

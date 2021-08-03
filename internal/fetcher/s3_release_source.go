@@ -156,7 +156,7 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (
 		return release.Remote{}, false, err
 	}
 
-	semverPattern, err := regexp.Compile("(-|v)\\d+(.\\d+)*")
+	semverPattern, err := regexp.Compile(`(-|v)\d+(.\d+)*`)
 	if err != nil {
 		return release.Remote{}, false, err
 	}
@@ -237,7 +237,7 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease rele
 	if err != nil {
 		return release.Local{}, fmt.Errorf("failed to create file %q: %w", outputFile, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	_, err = src.s3Downloader.Download(file, &s3.GetObjectInput{
 		Bucket: aws.String(src.bucket),

@@ -106,7 +106,7 @@ func CalculateSum(releasePath string, fs billy.Filesystem) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	h := sha1.New()
 	_, err = io.Copy(h, f)

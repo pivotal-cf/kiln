@@ -19,3 +19,5 @@ func TestCommands(t *testing.T) {
 type command interface {
 	jhanda.Command
 }
+
+var _ command

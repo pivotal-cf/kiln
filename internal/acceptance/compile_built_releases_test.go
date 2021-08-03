@@ -206,13 +206,13 @@ stemcell_criteria:
 
 			switch req.URL.Path {
 			case "/oauth/token":
-				w.Write([]byte(`{
+				_, _ = w.Write([]byte(`{
 					"access_token": "some-weird-token",
 					"token_type": "Bearer",
 					"expires_in": 3600
 				}`))
 			case "/info":
-				w.Write(directorInfo)
+				_, _ = w.Write(directorInfo)
 			case "/deployments":
 				if req.Method == "POST" {
 					w.Header().Set("Location", fmt.Sprintf("https://%s/tasks/1", req.Host))
@@ -271,45 +271,45 @@ stemcell_criteria:
 				w.Header().Set("Location", fmt.Sprintf("https://%s/tasks/%d", req.Host, desiredTaskID))
 				w.WriteHeader(http.StatusFound)
 			case "/tasks/1":
-				w.Write([]byte(`{"id":1, "state": "done"}`))
+				_, _ = w.Write([]byte(`{"id":1, "state": "done"}`))
 			case "/tasks/1/output":
-				w.Write([]byte(`{"blobstore_id": "12345", "sha1": "0732aaa8a43e0776e549f5036ce2aff2ae735572"}`))
+				_, _ = w.Write([]byte(`{"blobstore_id": "12345", "sha1": "0732aaa8a43e0776e549f5036ce2aff2ae735572"}`))
 
 			case "/tasks/10":
-				w.Write([]byte(`{"id":10, "state": "done"}`))
+				_, _ = w.Write([]byte(`{"id":10, "state": "done"}`))
 			case "/tasks/10/output":
 				s := sha1.New()
-				io.Copy(s, strings.NewReader(compiledReleaseAContents))
+				_, _ = io.Copy(s, strings.NewReader(compiledReleaseAContents))
 				sha1 := hex.EncodeToString(s.Sum(nil))
-				w.Write([]byte(
+				_, _ = w.Write([]byte(
 					fmt.Sprintf(`{"blobstore_id": %q, "sha1": %q}`, "34567", sha1),
 				))
 			case "/resources/34567":
-				w.Write([]byte(compiledReleaseAContents))
+				_, _ = w.Write([]byte(compiledReleaseAContents))
 
 			case "/tasks/20":
-				w.Write([]byte(`{"id":20, "state": "done"}`))
+				_, _ = w.Write([]byte(`{"id":20, "state": "done"}`))
 			case "/tasks/20/output":
 				s := sha1.New()
-				io.Copy(s, strings.NewReader(compiledReleaseCContents))
+				_, _ = io.Copy(s, strings.NewReader(compiledReleaseCContents))
 				sha1 := hex.EncodeToString(s.Sum(nil))
-				w.Write([]byte(
+				_, _ = w.Write([]byte(
 					fmt.Sprintf(`{"blobstore_id": %q, "sha1": %q}`, "67890", sha1),
 				))
 			case "/resources/67890":
-				w.Write([]byte(compiledReleaseCContents))
+				_, _ = w.Write([]byte(compiledReleaseCContents))
 
 			case "/tasks/30":
-				w.Write([]byte(`{"id":30, "state": "done"}`))
+				_, _ = w.Write([]byte(`{"id":30, "state": "done"}`))
 			case "/tasks/30/output":
 				s := sha1.New()
-				io.Copy(s, strings.NewReader(compiledReleaseDContents))
+				_, _ = io.Copy(s, strings.NewReader(compiledReleaseDContents))
 				sha1 := hex.EncodeToString(s.Sum(nil))
-				w.Write([]byte(
+				_, _ = w.Write([]byte(
 					fmt.Sprintf(`{"blobstore_id": %q, "sha1": %q}`, "45678", sha1),
 				))
 			case "/resources/45678":
-				w.Write([]byte(compiledReleaseDContents))
+				_, _ = w.Write([]byte(compiledReleaseDContents))
 
 			case "/cleanup":
 				cleanupWasCalled++
@@ -402,7 +402,7 @@ stemcell_criteria:
 	})
 
 	AfterEach(func() {
-		boshServer.Close()
+		defer func() { boshServer.Close() }()
 		Expect(
 			os.RemoveAll(tmpDirRoot),
 		).To(Succeed())
@@ -429,10 +429,10 @@ stemcell_criteria:
 		// download releases to releases directory
 		built1File, err := os.Open(filepath.Join(releasesDirectoryPath, "release-a-1.2.3.tgz"))
 		Expect(err).NotTo(HaveOccurred())
-		defer built1File.Close()
+		defer func() { _ = built1File.Close() }()
 
 		s := sha1.New()
-		io.Copy(s, built1File)
+		_, _ = io.Copy(s, built1File)
 		actualSHA1 := hex.EncodeToString(s.Sum(nil))
 
 		expectedStat, _ := os.Stat(releaseAS3LocalPath)
@@ -441,10 +441,10 @@ stemcell_criteria:
 
 		built2File, err := os.Open(filepath.Join(releasesDirectoryPath, "release-c-2.3.4.tgz"))
 		Expect(err).NotTo(HaveOccurred())
-		defer built2File.Close()
+		defer func() { _ = built2File.Close() }()
 
 		s = sha1.New()
-		io.Copy(s, built2File)
+		_, _ = io.Copy(s, built2File)
 		actualSHA1 = hex.EncodeToString(s.Sum(nil))
 		Expect(actualSHA1).To(Equal(releaseCBuiltSHA), fmt.Sprintf("expected = %#v\nactual = %#v\n", expectedStat, actualStat))
 
@@ -518,10 +518,10 @@ stemcell_criteria:
 			// download releases to releases directory
 			built1File, err := os.Open(filepath.Join(releasesDirectoryPath, "release-a-1.2.3.tgz"))
 			Expect(err).NotTo(HaveOccurred())
-			defer built1File.Close()
+			defer func() { _ = built1File.Close() }()
 
 			s := sha1.New()
-			io.Copy(s, built1File)
+			_, _ = io.Copy(s, built1File)
 			actualSHA1 := hex.EncodeToString(s.Sum(nil))
 
 			expectedStat, _ := os.Stat(releaseAS3LocalPath)
@@ -530,19 +530,19 @@ stemcell_criteria:
 
 			built2File, err := os.Open(filepath.Join(releasesDirectoryPath, "release-c-2.3.4.tgz"))
 			Expect(err).NotTo(HaveOccurred())
-			defer built2File.Close()
+			defer func() { _ = built2File.Close() }()
 
 			s = sha1.New()
-			io.Copy(s, built2File)
+			_, _ = io.Copy(s, built2File)
 			actualSHA1 = hex.EncodeToString(s.Sum(nil))
 			Expect(actualSHA1).To(Equal(releaseCBuiltSHA), fmt.Sprintf("expected = %#v\nactual = %#v\n", expectedStat, actualStat))
 
 			built3File, err := os.Open(filepath.Join(releasesDirectoryPath, "release-d-5.6.7.tgz"))
 			Expect(err).NotTo(HaveOccurred())
-			defer built3File.Close()
+			defer func() { _ = built3File.Close() }()
 
 			s = sha1.New()
-			io.Copy(s, built3File)
+			_, _ = io.Copy(s, built3File)
 			actualSHA1 = hex.EncodeToString(s.Sum(nil))
 			Expect(actualSHA1).To(Equal(releaseDBuiltSHA), fmt.Sprintf("expected = %#v\nactual = %#v\n", expectedStat, actualStat))
 
@@ -627,11 +627,11 @@ stemcell_criteria:
 		).To(Succeed())
 
 		s := sha1.New()
-		io.Copy(s, strings.NewReader(compiledReleaseAContents))
+		_, _ = io.Copy(s, strings.NewReader(compiledReleaseAContents))
 		releaseASha1 := hex.EncodeToString(s.Sum(nil))
 
 		s = sha1.New()
-		io.Copy(s, strings.NewReader(compiledReleaseCContents))
+		_, _ = io.Copy(s, strings.NewReader(compiledReleaseCContents))
 		releaseCSha1 := hex.EncodeToString(s.Sum(nil))
 
 		Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{

@@ -25,7 +25,7 @@ var _ = Describe("Generator", func() {
 	Describe("Execute", func() {
 		It("generates a well-formed manifest", func() {
 			f, err := os.Open("fixtures/metadata.yml")
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 			Expect(err).NotTo(HaveOccurred())
 
 			template, err := proofing.Parse(f)

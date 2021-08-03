@@ -79,6 +79,7 @@ stemcell_criteria:
 			Expect(requestErr).NotTo(HaveOccurred())
 
 			tmpDir, err := ioutil.TempDir("", "fetch-stemcell-test")
+			Expect(err).NotTo(HaveOccurred())
 
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
 

@@ -79,9 +79,7 @@ func (src BOSHIOReleaseSource) Publishable() bool {
 	return src.publishable
 }
 
-func (src *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {
-	return
-}
+func (src *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {}
 
 func (src BOSHIOReleaseSource) GetMatchedRelease(requirement release.Requirement) (release.Remote, bool, error) {
 	for _, repo := range repos {
@@ -152,7 +150,7 @@ func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease 
 	if err != nil {
 		return release.Local{}, err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	_, err = io.Copy(out, resp.Body)
 	resp.Body.Close()
@@ -208,8 +206,13 @@ func (src BOSHIOReleaseSource) getReleases(name string) ([]releaseResponse, erro
 		// also this will catch other client request errors (>= 400)
 		return nil, (*ResponseStatusCodeError)(resp)
 	}
-	defer resp.Body.Close()
+	defer func () {
+		_ = resp.Body.Close()
+	}()
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 	if string(body) == "null" {
 		return nil, nil
 	}

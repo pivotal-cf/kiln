@@ -43,13 +43,13 @@ func (r StemcellManifestReader) Read(stemcellTarball string) (Part, error) {
 	if err != nil {
 		return Part{}, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	gr, err := gzip.NewReader(file)
 	if err != nil {
 		return Part{}, err
 	}
-	defer gr.Close()
+	defer func() { _ = gr.Close() }()
 
 	tr := tar.NewReader(gr)
 

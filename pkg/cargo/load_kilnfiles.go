@@ -38,7 +38,7 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("unable to open file %q: %w", kilnfilePath, err)
 	}
-	defer kf.Close()
+	defer func() { _ = kf.Close() }()
 	kilnfileYAML, err := ioutil.ReadAll(kf)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("unable to read file %q: %w", kilnfilePath, err)
@@ -63,7 +63,7 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, err
 	}
-	defer lockFile.Close()
+	defer func() { _ = lockFile.Close() }()
 
 	var kilnfileLock KilnfileLock
 	err = yaml.NewDecoder(lockFile).Decode(&kilnfileLock)

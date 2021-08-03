@@ -27,7 +27,7 @@ func (s TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []stri
 		}
 
 		err = yaml.NewDecoder(file).Decode(&variables)
-		file.Close()
+		defer func() { file.Close() }()
 		if err != nil {
 			return nil, fmt.Errorf("unable to YAML parse %q: %w", path, err)
 		}

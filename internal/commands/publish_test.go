@@ -85,12 +85,12 @@ pre_ga_user_groups:
 
 				fs := memfs.New()
 				vf, _ := fs.Create("version")
-				vf.Write([]byte(versionStr))
-				vf.Close()
+				_, _ = vf.Write([]byte(versionStr))
+				defer func() { vf.Close() }()
 
 				kf, _ := fs.Create("Kilnfile")
-				kf.Write([]byte(defaultKilnFileBody))
-				kf.Close()
+				_, _ = kf.Write([]byte(defaultKilnFileBody))
+				defer func() { kf.Close() }()
 
 				publish = commands.Publish{
 					FS:                               fs,
@@ -670,14 +670,14 @@ pre_ga_user_groups:
 
 				if !noVersionFile {
 					version, _ := fs.Create("version")
-					version.Write([]byte(versionFileBody))
-					version.Close()
+					_, _ = version.Write([]byte(versionFileBody))
+					defer func() { version.Close() }()
 				}
 
 				if !noKilnFile {
 					kilnFile, _ := fs.Create("Kilnfile")
-					kilnFile.Write([]byte(kilnFileBody))
-					kilnFile.Close()
+					_, _ = kilnFile.Write([]byte(kilnFileBody))
+					defer func() { kilnFile.Close() }()
 				}
 
 				publish.FS = fs

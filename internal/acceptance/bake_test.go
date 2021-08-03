@@ -304,7 +304,7 @@ var _ = Describe("bake command", func() {
 			contents, err := ioutil.ReadFile(fmt.Sprintf("%s.sha256", outputFile))
 			Expect(err).NotTo(HaveOccurred())
 
-			re := regexp.MustCompile("SHA256 checksum: ([0-9a-f]{64})")
+			re := regexp.MustCompile(`SHA256 checksum: ([0-9a-f]{64})`)
 			expectedChecksum := re.FindStringSubmatch(string(session.Err.Contents()))[1]
 
 			Expect(string(contents)).To(Equal(expectedChecksum))

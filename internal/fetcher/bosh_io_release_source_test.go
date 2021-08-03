@@ -40,23 +40,23 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				logger := log.New(GinkgoWriter, "", 0)
 				testServer = ghttp.NewServer()
 
-				path, _ := regexp.Compile("/api/v1/releases/github.com/pivotal-cf/cf-rabbitmq.*")
+				path, _ := regexp.Compile(`/api/v1/releases/github.com/pivotal-cf/cf-rabbitmq.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "268.0.0"}]`))
 
-				path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/cf-rabbitmq.*")
+				path, _ = regexp.Compile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
 
-				path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/uaa.*")
+				path, _ = regexp.Compile(`/api/v1/releases/github.com/\S+/uaa.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "73.3.0"}]`))
 
-				path, _ = regexp.Compile("/api/v1/releases/github.com/\\S+/metrics.*")
+				path, _ = regexp.Compile(`/api/v1/releases/github.com/\S+/metrics.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "2.3.0"}]`))
 
 				releaseSource = fetcher.NewBOSHIOReleaseSource(ID, false, testServer.URL(), logger)
 			})
 
 			AfterEach(func() {
-				testServer.Close()
+				defer func() { testServer.Close() }()
 			})
 
 			It("finds built releases which exist on bosh.io", func() {
@@ -91,14 +91,14 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				logger := log.New(GinkgoWriter, "", 0)
 				testServer = ghttp.NewServer()
 
-				path, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/zzz.*")
+				path, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/zzz.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
 
 				releaseSource = fetcher.NewBOSHIOReleaseSource(ID, false, testServer.URL(), logger)
 			})
 
 			AfterEach(func() {
-				testServer.Close()
+				defer func() { testServer.Close() }()
 			})
 
 			It("doesn't find releases which don't exist on bosh.io", func() {
@@ -120,7 +120,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			BeforeEach(func() {
 				testServer = ghttp.NewServer()
 
-				pathRegex, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/.*")
+				pathRegex, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/.*`)
 				testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `[{"version": "4.0.4"}]`))
 
 				releaseSource = fetcher.NewBOSHIOReleaseSource(ID, false, testServer.URL(), log.New(GinkgoWriter, "", 0))
@@ -128,7 +128,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				testServer.Close()
+				defer func() { testServer.Close() }()
 			})
 
 			It("does not match that release", func() {
@@ -159,7 +159,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				testServer.Close()
+				defer func() { testServer.Close() }()
 			})
 
 			DescribeTable("searching multiple paths for each release",
@@ -167,7 +167,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 					path := fmt.Sprintf("/api/v1/releases/github.com/%s/%s%s", organization, releaseName, suffix)
 					testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, fmt.Sprintf(`[{"version": %q}]`, releaseVersion)))
 
-					pathRegex, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/.*")
+					pathRegex, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/.*`)
 					testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `null`))
 
 					releaseID := release.ID{Name: releaseName, Version: releaseVersion}
@@ -253,7 +253,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 		})
 
 		AfterEach(func() {
-			testServer.Close()
+			defer func() { testServer.Close() }()
 			_ = os.RemoveAll(releaseDir)
 		})
 
@@ -283,14 +283,14 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				logger := log.New(GinkgoWriter, "", 0)
 				testServer = ghttp.NewServer()
 
-				path, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/cf-rabbitmq.*")
+				path, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"309.0.5","url":"https://bosh.io/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.0","sha1":"5df538657c2cc830bda679420a9b162682018ded"},{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"308.0.0","url":"https://bosh.io/d/github.com/cloudfoundry/cf-rabbitmq-release?v=308.0.0","sha1":"56202c9a466a8394683ae432ee2dea21ef6ef865"}]`))
 
 				releaseSource = fetcher.NewBOSHIOReleaseSource(ID, false, testServer.URL(), logger)
 			})
 
 			AfterEach(func() {
-				testServer.Close()
+				defer func() { testServer.Close() }()
 			})
 			When("there is no version requirement", func() {
 				It("gets the latest version from bosh.io", func() {
@@ -324,14 +324,14 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				logger := log.New(GinkgoWriter, "", 0)
 				testServer = ghttp.NewServer()
 
-				path, _ := regexp.Compile("/api/v1/releases/github.com/\\S+/cf-rabbitmq.*")
+				path, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
 
 				releaseSource = fetcher.NewBOSHIOReleaseSource(ID, false, testServer.URL(), logger)
 			})
 
 			AfterEach(func() {
-				testServer.Close()
+				defer func() { testServer.Close() }()
 			})
 
 			It("returns not found", func() {

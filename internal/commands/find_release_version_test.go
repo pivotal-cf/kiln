@@ -36,6 +36,7 @@ var _ = Describe("Find the release version", func() {
 			fakeReleasesSource = new(fakes.MultiReleaseSource)
 
 			tmpDir, err := ioutil.TempDir("", "fetch-test")
+			Expect(err).NotTo(HaveOccurred())
 			lockContents := `
 ---
 releases:

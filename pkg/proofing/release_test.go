@@ -14,7 +14,7 @@ var _ = Describe("Release", func() {
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/metadata.yml")
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		Expect(err).NotTo(HaveOccurred())
 
 		productTemplate, err := proofing.Parse(f)

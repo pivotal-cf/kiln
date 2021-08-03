@@ -175,7 +175,7 @@ compiled_packages:
 			BeforeEach(func() {
 				f, err := fs.Create("invalid-release.tgz")
 				_, _ = f.Write([]byte("invalid"))
-				f.Close()
+				defer func() { f.Close() }()
 
 				Expect(err).NotTo(HaveOccurred())
 			})
