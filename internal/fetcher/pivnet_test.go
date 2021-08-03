@@ -7,8 +7,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/fetcher/fakes"
 )
 
 var _ = Describe("PivNet (network.pivotal.io)", func() {

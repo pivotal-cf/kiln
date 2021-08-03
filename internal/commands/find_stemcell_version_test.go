@@ -10,9 +10,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/pivotal-cf/kiln/commands"
-	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/commands"
+	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/fetcher/fakes"
 )
 
 var _ = Describe("Find the stemcell version", func() {

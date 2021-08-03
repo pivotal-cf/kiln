@@ -9,19 +9,19 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/pivotal-cf/kiln/commands"
 
 	"github.com/onsi/gomega/gbytes"
 	"github.com/pivotal-cf/jhanda"
 
-	"github.com/pivotal-cf/kiln/commands/fakes"
-	fetcherFakes "github.com/pivotal-cf/kiln/fetcher/fakes"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-	"github.com/pivotal-cf/kiln/release"
+	"github.com/pivotal-cf/kiln/internal/commands"
+	"github.com/pivotal-cf/kiln/internal/commands/fakes"
+	fetcherFakes "github.com/pivotal-cf/kiln/internal/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 var _ = Describe("UpdateStemcell", func() {
-	var _ jhanda.Command = UpdateStemcell{}
+	var _ jhanda.Command = commands.UpdateStemcell{}
 
 	const (
 		newStemcellOS      = "old-os"
@@ -45,7 +45,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 	Describe("Execute", func() {
 		var (
-			update               *UpdateStemcell
+			update               *commands.UpdateStemcell
 			tmpDir, kilnfilePath string
 			kilnfileLoader       *fakes.KilnfileLoader
 			kilnfile             cargo.Kilnfile
@@ -140,7 +140,7 @@ var _ = Describe("UpdateStemcell", func() {
 			outputBuffer = gbytes.NewBuffer()
 			logger := log.New(outputBuffer, "", 0)
 
-			update = &UpdateStemcell{
+			update = &commands.UpdateStemcell{
 				KilnfileLoader:             kilnfileLoader,
 				MultiReleaseSourceProvider: multiReleaseSourceProvider.Spy,
 				Logger:                     logger,
