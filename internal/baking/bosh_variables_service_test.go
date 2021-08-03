@@ -3,9 +3,9 @@ package baking_test
 import (
 	"errors"
 
-	"github.com/pivotal-cf/kiln/builder"
 	. "github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/baking/fakes"
+	"github.com/pivotal-cf/kiln/internal/builder"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

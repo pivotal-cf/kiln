@@ -9,8 +9,9 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/pivotal-cf/kiln/builder"
 	"gopkg.in/yaml.v2"
+
+	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
 type StemcellService struct {

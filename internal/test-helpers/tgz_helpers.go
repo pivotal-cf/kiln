@@ -75,7 +75,7 @@ func WriteTarballWithFile(tarballPath, internalFilePath, fileContents string, fs
 	if err != nil {
 		return "", err
 	}
-	defer tarball.Close()
+	defer func() { _ = tarball.Close() }()
 
 	hash := sha1.New()
 	_, err = io.Copy(hash, tarball)

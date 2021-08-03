@@ -3,12 +3,12 @@ package manifest_generator_test
 import (
 	"fmt"
 
-	"github.com/pivotal-cf/kiln/builder"
-	. "github.com/pivotal-cf/kiln/internal/manifest_generator"
-	"github.com/pivotal-cf/kiln/release"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/internal/manifest_generator"
+	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 var _ = Describe("ManifestGenerator", func() {
@@ -34,7 +34,7 @@ var _ = Describe("ManifestGenerator", func() {
 	})
 
 	It("creates a manifest with the given releases and stemcell", func() {
-		generator := NewManifestGenerator()
+		generator := manifest_generator.New()
 		manifest, err := generator.Generate(
 			deploymentName,
 			desiredReleases,

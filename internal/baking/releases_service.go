@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/pivotal-cf/kiln/builder"
+	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
 type ReleasesService struct {

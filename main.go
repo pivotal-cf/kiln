@@ -4,17 +4,16 @@ import (
 	"log"
 	"os"
 
-	"gopkg.in/src-d/go-billy.v4"
-
-	"github.com/pivotal-cf/kiln/builder"
-	"github.com/pivotal-cf/kiln/commands"
-	"github.com/pivotal-cf/kiln/fetcher"
-	"github.com/pivotal-cf/kiln/helper"
-	"github.com/pivotal-cf/kiln/internal/baking"
-	"github.com/pivotal-cf/kiln/internal/cargo"
-
 	"github.com/pivotal-cf/jhanda"
+	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/osfs"
+
+	"github.com/pivotal-cf/kiln/internal/baking"
+	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/internal/commands"
+	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/helper"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 var version = "unknown"
