@@ -32,7 +32,7 @@ type UploadRelease struct {
 type ReleaseUploaderFinder func(cargo.Kilnfile, string) (fetcher.ReleaseUploader, error)
 
 func (command UploadRelease) Execute(args []string) error {
-	err := flags.LoadFlagsWithReasonableDefaults(&command.Options, args, command.FS.Stat)
+	err := flags.LoadFlagsWithDefaults(&command.Options, args, command.FS.Stat)
 	if err != nil {
 		return err
 	}

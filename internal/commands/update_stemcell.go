@@ -26,7 +26,7 @@ type UpdateStemcell struct {
 }
 
 func (update UpdateStemcell) Execute(args []string) error {
-	err := flags.LoadFlagsWithReasonableDefaults(&update.Options, args, update.FS.Stat)
+	err := flags.LoadFlagsWithDefaults(&update.Options, args, update.FS.Stat)
 	if err != nil {
 		return err
 	}

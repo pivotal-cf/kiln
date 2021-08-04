@@ -73,7 +73,7 @@ func (f Fetch) Execute(args []string) error {
 }
 
 func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []release.Local, error) {
-	err := flags.LoadFlagsWithReasonableDefaults(&f.Options, args, nil)
+	err := flags.LoadFlagsWithDefaults(&f.Options, args, nil)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 	}
