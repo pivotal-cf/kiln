@@ -123,10 +123,10 @@ func (options Standard) KilnfileLockPath() string {
 	return options.Kilnfile + ".lock"
 }
 
-// LoadFlagsWithReasonableDefaults only sets default values if the flag is not set
+// LoadFlagsWithDefaults only sets default values if the flag is not set
 // this permits explicitly setting "zero values" for in arguments without them being
 // overwritten.
-func LoadFlagsWithReasonableDefaults(options KilnfileOptions, args []string, statOverride StatFunc) error {
+func LoadFlagsWithDefaults(options KilnfileOptions, args []string, statOverride StatFunc) error {
 	if statOverride == nil {
 		statOverride = os.Stat
 	}
