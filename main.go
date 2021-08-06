@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pivotal-cf/jhanda"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/fetcher"
-	"github.com/pivotal-cf/kiln/internal/helper"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -76,7 +74,7 @@ func main() {
 	commandSet := jhanda.CommandSet{}
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
-	commandSet["bake"] = bakeCommand(fs, releasesService, outLogger, errLogger)
+	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger)
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)
 	commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 	commandSet["upload-release"] = commands.UploadRelease{
@@ -113,56 +111,3 @@ func main() {
 	}
 }
 
-func bakeCommand(fs billy.Filesystem, releasesService baking.ReleasesService, outLogger *log.Logger, errLogger *log.Logger) commands.Bake {
-	filesystem := helper.NewFilesystem()
-	zipper := builder.NewZipper()
-	interpolator := builder.NewInterpolator()
-	tileWriter := builder.NewTileWriter(filesystem, &zipper, errLogger)
-
-	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
-	stemcellService := baking.NewStemcellService(errLogger, stemcellManifestReader)
-
-	templateVariablesService := baking.NewTemplateVariablesService(fs)
-
-	boshVariableDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	boshVariablesService := baking.NewBOSHVariablesService(errLogger, boshVariableDirectoryReader)
-
-	formDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	formsService := baking.NewFormsService(errLogger, formDirectoryReader)
-
-	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	instanceGroupsService := baking.NewInstanceGroupsService(errLogger, instanceGroupDirectoryReader)
-
-	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	jobsService := baking.NewJobsService(errLogger, jobsDirectoryReader)
-
-	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	propertiesService := baking.NewPropertiesService(errLogger, propertiesDirectoryReader)
-
-	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	runtimeConfigsService := baking.NewRuntimeConfigsService(errLogger, runtimeConfigsDirectoryReader)
-
-	iconService := baking.NewIconService(errLogger)
-
-	metadataService := baking.NewMetadataService()
-	checksummer := baking.NewChecksummer(errLogger)
-
-	return commands.NewBake(
-		interpolator,
-		tileWriter,
-		outLogger,
-		errLogger,
-		templateVariablesService,
-		boshVariablesService,
-		releasesService,
-		stemcellService,
-		formsService,
-		instanceGroupsService,
-		jobsService,
-		propertiesService,
-		runtimeConfigsService,
-		iconService,
-		metadataService,
-		checksummer,
-	)
-}

@@ -8,10 +8,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
 
+	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/helper"
 )
 
 //go:generate counterfeiter -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
@@ -86,6 +89,60 @@ type checksummer interface {
 	Sum(path string) error
 }
 
+func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLogger *log.Logger, errLogger *log.Logger) Bake {
+	filesystem := helper.NewFilesystem()
+	zipper := builder.NewZipper()
+	interpolator := builder.NewInterpolator()
+	tileWriter := builder.NewTileWriter(filesystem, &zipper, errLogger)
+
+	stemcellManifestReader := builder.NewStemcellManifestReader(filesystem)
+	stemcellService := baking.NewStemcellService(errLogger, stemcellManifestReader)
+
+	templateVariablesService := baking.NewTemplateVariablesService(fs)
+
+	boshVariableDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	boshVariablesService := baking.NewBOSHVariablesService(errLogger, boshVariableDirectoryReader)
+
+	formDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	formsService := baking.NewFormsService(errLogger, formDirectoryReader)
+
+	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	instanceGroupsService := baking.NewInstanceGroupsService(errLogger, instanceGroupDirectoryReader)
+
+	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	jobsService := baking.NewJobsService(errLogger, jobsDirectoryReader)
+
+	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	propertiesService := baking.NewPropertiesService(errLogger, propertiesDirectoryReader)
+
+	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
+	runtimeConfigsService := baking.NewRuntimeConfigsService(errLogger, runtimeConfigsDirectoryReader)
+
+	iconService := baking.NewIconService(errLogger)
+
+	metadataService := baking.NewMetadataService()
+	checksummer := baking.NewChecksummer(errLogger)
+
+	return Bake{
+		interpolator:      interpolator,
+		tileWriter:        tileWriter,
+		checksummer:       checksummer,
+		outLogger:         outLogger,
+		errLogger:         errLogger,
+		templateVariables: templateVariablesService,
+		boshVariables:     boshVariablesService,
+		releases:          releasesService,
+		stemcell:          stemcellService,
+		forms:             formsService,
+		instanceGroups:    instanceGroupsService,
+		jobs:              jobsService,
+		properties:        propertiesService,
+		runtimeConfigs:    runtimeConfigsService,
+		icon:              iconService,
+		metadata:          metadataService,
+	}
+}
+
 type Bake struct {
 	interpolator      interpolator
 	checksummer       checksummer
@@ -128,7 +185,7 @@ type Bake struct {
 	}
 }
 
-func NewBake(
+func NewBakeWithInterfaces(
 	interpolator interpolator,
 	tileWriter tileWriter,
 	outLogger *log.Logger,
