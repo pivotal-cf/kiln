@@ -151,7 +151,7 @@ var _ = Describe("Bake", func() {
 
 		fakeInterpolator.InterpolateReturns([]byte("some-interpolated-metadata"), nil)
 
-		bake = commands.NewBake(
+		bake = commands.NewBakeWithInterfaces(
 			fakeInterpolator,
 			fakeTileWriter,
 			fakeLogger,
