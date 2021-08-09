@@ -1,12 +1,12 @@
-name: golangci-lint
+name: test
 on:
   push:
     branches:
       - main
   pull_request:
 jobs:
-  golangci:
-    name: lint
+  test:
+    name: test
     runs-on: ubuntu-latest
     steps:
       -
