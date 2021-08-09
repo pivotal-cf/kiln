@@ -332,18 +332,36 @@ var _ = Describe("UpdateStemcell", func() {
 				}
 			})
 
-			It("no-ops", func() {
+			It("allows downgrades and updates the Kilnfile.lock contents", func() {
 				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
-				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(0))
-
 				var updatedLockfile cargo.KilnfileLock
 				Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
-				Expect(updatedLockfile).To(Equal(kilnfileLock))
+				Expect(updatedLockfile.Stemcell).To(Equal(cargo.Stemcell{
+					OS:      newStemcellOS,
+					Version: newStemcellVersion,
+				}))
 
-				Expect(string(outputBuffer.Contents())).To(ContainSubstring("Stemcell is up-to-date. Nothing to update for product"))
+				Expect(updatedLockfile.Releases).To(HaveLen(2))
+				Expect(updatedLockfile.Releases).To(ContainElement(
+					cargo.ReleaseLock{
+						Name:         release1Name,
+						Version:      release1Version,
+						SHA1:         newRelease1SHA,
+						RemoteSource: publishableReleaseSourceID,
+						RemotePath:   newRelease1RemotePath,
+					},
+				))
+				Expect(updatedLockfile.Releases).To(ContainElement(
+					cargo.ReleaseLock{
+						Name:         release2Name,
+						Version:      release2Version,
+						SHA1:         newRelease2SHA,
+						RemoteSource: unpublishableReleaseSourceID,
+						RemotePath:   newRelease2RemotePath,
+					},
+				))
 			})
 		})
 
