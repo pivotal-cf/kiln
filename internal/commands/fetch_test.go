@@ -419,7 +419,7 @@ stemcell_criteria:
 					fakeS3BuiltReleaseSource.DownloadReleaseCalls(func(string, release.Remote, int) (release.Local, error) {
 						f, err := os.Create(badReleasePath)
 						Expect(err).NotTo(HaveOccurred())
-						defer func () {
+						defer func() {
 							_ = f.Close()
 						}()
 
