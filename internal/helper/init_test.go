@@ -3,8 +3,6 @@ package helper_test
 import (
 	"bytes"
 
-	"github.com/matt-royal/biloba"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -13,7 +11,7 @@ import (
 
 func TestHelper(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithCustomReporters(t, "helper", biloba.DefaultReporters())
+	RunSpecs(t, "helper")
 }
 
 func NewBuffer(b *bytes.Buffer) *Buffer {

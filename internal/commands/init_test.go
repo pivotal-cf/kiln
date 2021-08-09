@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/matt-royal/biloba"
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/yaml.v2"
@@ -17,7 +16,7 @@ import (
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithCustomReporters(t, "commands", biloba.GoLandReporter())
+	RunSpecs(t, "commands")
 }
 
 //go:generate counterfeiter -o ./fakes/command.go --fake-name Command . command

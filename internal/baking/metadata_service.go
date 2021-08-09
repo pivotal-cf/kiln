@@ -2,7 +2,7 @@ package baking
 
 import "io/ioutil"
 
-type MetadataService struct {}
+type MetadataService struct{}
 
 func NewMetadataService() MetadataService {
 	return MetadataService{}

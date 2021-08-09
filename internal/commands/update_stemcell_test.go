@@ -48,13 +48,13 @@ var _ = Describe("UpdateStemcell", func() {
 
 	Describe("Execute", func() {
 		var (
-			update               *commands.UpdateStemcell
+			update                                 *commands.UpdateStemcell
 			tmpDir, kilnfilePath, kilnfileLockPath string
 			fs                                     billy.Filesystem
-			kilnfile             cargo.Kilnfile
-			kilnfileLock         cargo.KilnfileLock
-			releaseSource        *fetcherFakes.MultiReleaseSource
-			outputBuffer         *gbytes.Buffer
+			kilnfile                               cargo.Kilnfile
+			kilnfileLock                           cargo.KilnfileLock
+			releaseSource                          *fetcherFakes.MultiReleaseSource
+			outputBuffer                           *gbytes.Buffer
 		)
 
 		BeforeEach(func() {

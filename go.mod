@@ -20,7 +20,6 @@ require (
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/jpillora/backoff v1.0.0 // indirect
-	github.com/matt-royal/biloba v0.2.1
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/mattn/go-runewidth v0.0.10 // indirect

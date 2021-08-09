@@ -4,7 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/matt-royal/biloba"
 	"github.com/onsi/gomega/gexec"
 
 	. "github.com/onsi/ginkgo"
@@ -15,7 +14,7 @@ var pathToMain string
 
 func TestIntegration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithCustomReporters(t, "acceptance/integration", biloba.DefaultReporters())
+	RunSpecs(t, "acceptance/integration")
 }
 
 var _ = BeforeSuite(func() {

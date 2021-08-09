@@ -206,7 +206,7 @@ func (src BOSHIOReleaseSource) getReleases(name string) ([]releaseResponse, erro
 		// also this will catch other client request errors (>= 400)
 		return nil, (*ResponseStatusCodeError)(resp)
 	}
-	defer func () {
+	defer func() {
 		_ = resp.Body.Close()
 	}()
 	body, err := ioutil.ReadAll(resp.Body)

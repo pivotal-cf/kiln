@@ -1,7 +1,6 @@
 package acceptance_test
 
 import (
-	"github.com/matt-royal/biloba"
 	"github.com/onsi/gomega/gexec"
 
 	. "github.com/onsi/ginkgo"
@@ -14,7 +13,7 @@ var pathToMain string
 
 func TestAcceptance(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecsWithCustomReporters(t, "acceptance", biloba.DefaultReporters())
+	RunSpecs(t, "acceptance")
 }
 
 var _ = BeforeSuite(func() {
