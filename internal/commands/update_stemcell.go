@@ -59,8 +59,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 
 	currentStemcellVersion, _ := semver.NewVersion(kilnfileLock.Stemcell.Version)
 
-	if currentStemcellVersion.Equal(latestStemcellVersion) ||
-		currentStemcellVersion.GreaterThan(latestStemcellVersion) {
+	if currentStemcellVersion.Equal(latestStemcellVersion) {
 		update.Logger.Println("Stemcell is up-to-date. Nothing to update for product")
 		return nil
 	}
