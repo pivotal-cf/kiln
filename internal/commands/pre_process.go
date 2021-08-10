@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pivotal-cf/jhanda"
 	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/internal/preprocess"

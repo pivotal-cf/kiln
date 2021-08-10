@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
+	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/go-git/go-billy/v5"
 )
 
 type Validate struct {

@@ -6,8 +6,8 @@ import (
 	"log"
 
 	"github.com/Masterminds/semver"
-	"github.com/pivotal-cf/jhanda"
 	"github.com/go-git/go-billy/v5"
+	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/fetcher"
