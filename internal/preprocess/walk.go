@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"gopkg.in/src-d/go-billy.v4"
+	"github.com/go-git/go-billy/v5"
 )
 
 func Walk(fs billy.Filesystem, root string, walkFn filepath.WalkFunc) error {

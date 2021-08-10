@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"gopkg.in/src-d/go-billy.v4"
+	"github.com/go-git/go-billy/v5"
 	"log"
 	"regexp"
 	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/pivotal-cf/jhanda"
-	"gopkg.in/src-d/go-billy.v4/osfs"
+	"github.com/go-git/go-billy/v5/osfs"
 
 	"github.com/pivotal-cf/kiln/internal/fetcher"
 	"github.com/pivotal-cf/kiln/pkg/cargo"

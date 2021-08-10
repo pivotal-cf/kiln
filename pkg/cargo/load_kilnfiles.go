@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"gopkg.in/src-d/go-billy.v4"
+	"github.com/go-git/go-billy/v5"
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/internal/baking"

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/src-d/go-billy.v4"
+	"github.com/go-git/go-billy/v5"
 )
 
 func WriteReleaseTarball(path, name, version string, fs billy.Filesystem) (string, error) {

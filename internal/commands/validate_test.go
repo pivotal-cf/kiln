@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	Ω "github.com/onsi/gomega"
-	"gopkg.in/src-d/go-billy.v4/osfs"
+	"github.com/go-git/go-billy/v5/osfs"
 )
 
 func TestValidate_FloatingRelease(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	"io"
 	"log"
 
-	"gopkg.in/src-d/go-billy.v4"
-	"gopkg.in/src-d/go-billy.v4/memfs"
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/memfs"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

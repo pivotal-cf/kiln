@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"gopkg.in/src-d/go-billy.v4/osfs"
+	"github.com/go-git/go-billy/v5/osfs"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
