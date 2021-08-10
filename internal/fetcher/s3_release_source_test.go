@@ -17,7 +17,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"gopkg.in/src-d/go-billy.v4/osfs"
+	"github.com/go-git/go-billy/v5/osfs"
 
 	"github.com/pivotal-cf/kiln/internal/fetcher"
 	fetcherFakes "github.com/pivotal-cf/kiln/internal/fetcher/fakes"

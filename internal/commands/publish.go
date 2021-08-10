@@ -16,7 +16,7 @@ import (
 	"github.com/pivotal-cf/go-pivnet/v2"
 	"github.com/pivotal-cf/go-pivnet/v2/logshim"
 	"github.com/pivotal-cf/jhanda"
-	"gopkg.in/src-d/go-billy.v4"
+	"github.com/go-git/go-billy/v5"
 	"gopkg.in/yaml.v2"
 )
 

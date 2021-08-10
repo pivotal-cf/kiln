@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/src-d/go-billy.v4"
-	"gopkg.in/src-d/go-billy.v4/osfs"
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/osfs"
 
 	"gopkg.in/yaml.v2"
 )

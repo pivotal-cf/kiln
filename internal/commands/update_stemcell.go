@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"gopkg.in/src-d/go-billy.v4"
+	"github.com/go-git/go-billy/v5"
 	"log"
 	"strings"
 
