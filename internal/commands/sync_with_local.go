@@ -5,8 +5,8 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"log"
 
-	"github.com/pivotal-cf/jhanda"
 	"github.com/go-git/go-billy/v5"
+	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/fetcher"
 	"github.com/pivotal-cf/kiln/pkg/cargo"

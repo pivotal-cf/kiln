@@ -4,11 +4,12 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/pivotal-cf/kiln/internal/preprocess"
-	"github.com/go-git/go-billy/v5/osfs"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/go-git/go-billy/v5/osfs"
+
+	"github.com/pivotal-cf/kiln/internal/preprocess"
 )
 
 var _ = Describe("preprocess", func() {

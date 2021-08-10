@@ -3,8 +3,8 @@ package commands
 import (
 	"testing"
 
-	Ω "github.com/onsi/gomega"
 	"github.com/go-git/go-billy/v5/osfs"
+	Ω "github.com/onsi/gomega"
 )
 
 func TestValidate_FloatingRelease(t *testing.T) {

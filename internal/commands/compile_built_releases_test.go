@@ -15,8 +15,8 @@ import (
 	"github.com/charlievieth/fs"
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
 	boshcrypto "github.com/cloudfoundry/bosh-utils/crypto"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

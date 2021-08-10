@@ -29,8 +29,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/onsi/gomega/gexec"
 	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/onsi/gomega/gexec"
 	"gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
