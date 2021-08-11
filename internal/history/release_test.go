@@ -1,0 +1,69 @@
+package history_test
+
+import (
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"os"
+	"regexp"
+	"testing"
+
+	Ω "github.com/onsi/gomega"
+
+	"github.com/go-git/go-git/v5"
+
+	"github.com/pivotal-cf/kiln/internal/history"
+)
+
+func checkIfLocalTasRepo(t *testing.T) string {
+	t.Helper()
+	p := os.Getenv("TAS_REPO_PATH")
+	if p == "" {
+		p = "../tas"
+	}
+	if _, err := os.Stat(p); err != nil {
+		t.Logf("skipping: no TAS repo: %s", err)
+		t.SkipNow()
+	}
+	return p
+}
+
+func TestTileVersionFileBoshReleaseList(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	repo, err := git.PlainOpen(checkIfLocalTasRepo(t))
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+
+	result, err := history.TileVersionFileBoshReleaseList(repo, regexp.MustCompile(`^rel/2\.7|8$`), []string{"garden-runc", "cflinuxfs3"}, func(i int, _ object.Commit) bool {
+		return i > 10
+	})
+
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(len(result) >= 12).To(Ω.BeTrue())
+}
+
+func TestVersionFileBoshReleaseList(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	repo, err := git.PlainOpen(checkIfLocalTasRepo(t))
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+
+	records, err := history.TileReleaseBoshReleaseList(repo, "garden-runc", "cflinuxfs3")
+
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+
+	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
+		Tile: history.Release{Name: "tas", Version: "2.11.4"},
+		Bosh: history.Release{Name: "garden-runc", Version: "1.19.29"},
+	}))
+	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
+		Tile: history.Release{Name: "ist", Version: "2.11.3"},
+		Bosh: history.Release{Name: "garden-runc", Version: "1.19.28"},
+	}))
+	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
+		Tile: history.Release{Name: "tasw", Version: "2.7.29"},
+		Bosh: history.Release{Name: "garden-runc", Version: "1.19.25"},
+	}))
+	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
+		Tile: history.Release{Name: "ist", Version: "2.9.20"},
+		Bosh: history.Release{Name: "cflinuxfs3", Version: "0.238.0"},
+	}))
+}
