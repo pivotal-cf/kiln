@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/release"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
@@ -28,13 +29,8 @@ var (
 )
 
 type ReleaseMapping struct {
-	Tile Release
-	Bosh Release
-}
-
-type Release struct {
-	Name    string
-	Version string
+	Tile release.ID
+	Bosh release.ID
 }
 
 type TileVersionFileBoshReleaseListStopFunc = func(i int, commit object.Commit, result []ReleaseMapping) bool
@@ -56,7 +52,7 @@ func StopAfter(commitHistoryLen int) TileVersionFileBoshReleaseListStopFunc {
 	}
 }
 
-func FindBoshRelease(release Release) TileVersionFileBoshReleaseListStopFunc {
+func FindBoshRelease(release release.ID) TileVersionFileBoshReleaseListStopFunc {
 	return func(_ int, _ object.Commit, list []ReleaseMapping) bool {
 		for _, m := range list {
 			if release == m.Bosh {
@@ -67,7 +63,7 @@ func FindBoshRelease(release Release) TileVersionFileBoshReleaseListStopFunc {
 	}
 }
 
-func FindBoshTileRelease(release Release) TileVersionFileBoshReleaseListStopFunc {
+func FindBoshTileRelease(release release.ID) TileVersionFileBoshReleaseListStopFunc {
 	return func(_ int, _ object.Commit, list []ReleaseMapping) bool {
 		for _, m := range list {
 			if release == m.Tile {
@@ -160,11 +156,11 @@ func buildNumberBoshRelease(tree *object.Tree, root string, releaseNames []strin
 		}
 
 		result = append(result, ReleaseMapping{
-			Tile: Release{
+			Tile: release.ID{
 				Name:    strings.TrimSpace(root),
 				Version: strings.TrimSpace(vBuf),
 			},
-			Bosh: Release{
+			Bosh: release.ID{
 				Name:    strings.TrimSpace(rel.Name),
 				Version: strings.TrimSpace(rel.Version),
 			},
@@ -202,8 +198,8 @@ func TileReleaseBoshReleaseList(repo *git.Repository, releaseNames ...string) ([
 
 				for _, v := range tileVersions {
 					result = append(result, ReleaseMapping{
-						Bosh: Release{Name: boshReleaseName, Version: boshReleaseVersion.String()},
-						Tile: Release{Name: tilePath, Version: v.String()},
+						Bosh: release.ID{Name: boshReleaseName, Version: boshReleaseVersion.String()},
+						Tile: release.ID{Name: tilePath, Version: v.String()},
 					})
 				}
 			}

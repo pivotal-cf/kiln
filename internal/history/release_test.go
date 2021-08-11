@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 
+	"github.com/pivotal-cf/kiln/pkg/release"
 	"github.com/pivotal-cf/kiln/internal/history"
 )
 
@@ -33,7 +34,7 @@ func TestTileVersionFileBoshReleaseList(t *testing.T) {
 
 	result, err := history.TileVersionFileBoshReleaseList(repo, regexp.MustCompile(`^rel/2\.\d+$`), []string{"garden-runc"},
 		history.StopAfter(10000),
-		history.FindBoshRelease(history.Release{Name: "garden-runc", Version: "1.19.29"}),
+		history.FindBoshRelease(release.ID{Name: "garden-runc", Version: "1.19.29"}),
 	)
 
 	please.Expect(err).NotTo(Ω.HaveOccurred())
@@ -51,19 +52,19 @@ func TestVersionFileBoshReleaseList(t *testing.T) {
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 
 	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
-		Tile: history.Release{Name: "tas", Version: "2.11.4"},
-		Bosh: history.Release{Name: "garden-runc", Version: "1.19.29"},
+		Tile: release.ID{Name: "tas", Version: "2.11.4"},
+		Bosh: release.ID{Name: "garden-runc", Version: "1.19.29"},
 	}))
 	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
-		Tile: history.Release{Name: "ist", Version: "2.11.3"},
-		Bosh: history.Release{Name: "garden-runc", Version: "1.19.28"},
+		Tile: release.ID{Name: "ist", Version: "2.11.3"},
+		Bosh: release.ID{Name: "garden-runc", Version: "1.19.28"},
 	}))
 	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
-		Tile: history.Release{Name: "tasw", Version: "2.7.29"},
-		Bosh: history.Release{Name: "garden-runc", Version: "1.19.25"},
+		Tile: release.ID{Name: "tasw", Version: "2.7.29"},
+		Bosh: release.ID{Name: "garden-runc", Version: "1.19.25"},
 	}))
 	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
-		Tile: history.Release{Name: "ist", Version: "2.9.20"},
-		Bosh: history.Release{Name: "cflinuxfs3", Version: "0.238.0"},
+		Tile: release.ID{Name: "ist", Version: "2.9.20"},
+		Bosh: release.ID{Name: "cflinuxfs3", Version: "0.238.0"},
 	}))
 }
