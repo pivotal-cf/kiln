@@ -1,7 +1,6 @@
 package history_test
 
 import (
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"os"
 	"regexp"
 	"testing"
@@ -17,7 +16,7 @@ func checkIfLocalTasRepo(t *testing.T) string {
 	t.Helper()
 	p := os.Getenv("TAS_REPO_PATH")
 	if p == "" {
-		p = "../tas"
+		p = "../../../tas"
 	}
 	if _, err := os.Stat(p); err != nil {
 		t.Logf("skipping: no TAS repo: %s", err)
@@ -32,12 +31,13 @@ func TestTileVersionFileBoshReleaseList(t *testing.T) {
 	repo, err := git.PlainOpen(checkIfLocalTasRepo(t))
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 
-	result, err := history.TileVersionFileBoshReleaseList(repo, regexp.MustCompile(`^rel/2\.7|8$`), []string{"garden-runc", "cflinuxfs3"}, func(i int, _ object.Commit) bool {
-		return i > 10
-	})
+	result, err := history.TileVersionFileBoshReleaseList(repo, regexp.MustCompile(`^rel/2\.\d+$`), []string{"garden-runc"},
+		history.StopAfter(10000),
+		history.FindBoshRelease(history.Release{Name: "garden-runc", Version: "1.19.29"}),
+	)
 
 	please.Expect(err).NotTo(Ω.HaveOccurred())
-	please.Expect(len(result) >= 12).To(Ω.BeTrue())
+	please.Expect(result).To(Ω.HaveLen(15))
 }
 
 func TestVersionFileBoshReleaseList(t *testing.T) {
