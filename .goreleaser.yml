@@ -18,9 +18,9 @@ builds:
   ldflags:
   - -X "main.version={{.Version}}"
   gcflags:
-  - all=-trimpath={{.Env.PWD}}
+  - all=-trimpath={{.Env.GOPATH}}
   asmflags:
-  - all=-trimpath={{.Env.PWD}}
+  - all=-trimpath={{.Env.GOPATH}}
   main: .
 archives:
   - id: github
