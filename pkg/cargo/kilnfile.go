@@ -1,5 +1,7 @@
 package cargo
 
+import "errors"
+
 type KilnfileLock struct {
 	Releases []ReleaseLock `yaml:"releases"`
 	Stemcell Stemcell      `yaml:"stemcell_criteria"`
@@ -37,4 +39,13 @@ type ReleaseLock struct {
 	Version      string `yaml:"version"`
 	RemoteSource string `yaml:"remote_source"`
 	RemotePath   string `yaml:"remote_path"`
+}
+
+func (k KilnfileLock) FindReleaseWithName(name string) (ReleaseLock, error) {
+	for _, r := range k.Releases {
+		if r.Name == name {
+			return r, nil
+		}
+	}
+	return ReleaseLock{}, errors.New("not found")
 }
