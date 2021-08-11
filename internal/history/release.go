@@ -392,17 +392,17 @@ func mapBoshReleaseToHistoricTileReleases(releaseNames []string, repo *git.Repos
 		}
 
 		for _, releaseName := range releaseNames {
-			release, err := lock.FindReleaseWithName(releaseName)
+			rel, err := lock.FindReleaseWithName(releaseName)
 			if err != nil {
 				continue
 			}
 
-			boshReleaseVersion, err := semver.NewVersion(strings.TrimPrefix(release.Version, "v"))
+			boshReleaseVersion, err := semver.NewVersion(strings.TrimPrefix(rel.Version, "v"))
 			if err != nil {
 				continue
 			}
 
-			relID := releaseID{Name: release.Name, Version: boshReleaseVersion.String()}
+			relID := releaseID{Name: rel.Name, Version: boshReleaseVersion.String()}
 			tileReleases, ok := mapping[relID]
 			if !ok {
 				tileReleases = make(map[releaseID]struct{})

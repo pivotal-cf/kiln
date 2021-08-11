@@ -1,6 +1,7 @@
 package history_test
 
 import (
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"os"
 	"regexp"
 	"testing"
@@ -9,8 +10,8 @@ import (
 
 	"github.com/go-git/go-git/v5"
 
-	"github.com/pivotal-cf/kiln/pkg/release"
 	"github.com/pivotal-cf/kiln/internal/history"
+	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 func checkIfLocalTasRepo(t *testing.T) string {
@@ -67,4 +68,25 @@ func TestVersionFileBoshReleaseList(t *testing.T) {
 		Tile: release.ID{Name: "ist", Version: "2.9.20"},
 		Bosh: release.ID{Name: "cflinuxfs3", Version: "0.238.0"},
 	}))
+}
+
+func TestFindBoshTileRelease(t *testing.T) {
+	result := history.FindBoshTileRelease(release.ID{
+		Name:    "product",
+		Version: "1.2,3",
+	})(0, object.Commit{}, []history.ReleaseMapping{
+		{
+			Tile: release.ID{
+				Name:    "product",
+				Version: "1.2,3",
+			},
+			Bosh: release.ID{
+				Name:    "release",
+				Version: "1.2,3",
+			},
+		},
+	})
+	if !result {
+		t.Fail()
+	}
 }
