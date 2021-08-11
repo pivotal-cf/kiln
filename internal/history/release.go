@@ -269,10 +269,9 @@ func lockFiles(repo *git.Repository, fn func(tileDir string, ref plumbing.Refere
 				continue
 			}
 			var data cargo.KilnfileLock
-			err = decodeHistoricFile(repo, ref, &data, prefixEach(path, billOfMaterialFileNames)...)
+			err := decodeHistoricFile(repo, ref, &data, prefixEach(path, billOfMaterialFileNames)...)
 			if err != nil {
 				if errors.Is(err, object.ErrFileNotFound) {
-					err = nil
 					continue
 				}
 				return nil, err
@@ -339,7 +338,7 @@ func readDataFromTree(tree *object.Tree, data interface{}, names ...string) erro
 	case ".json":
 		err = json.Unmarshal(buf, data)
 	}
-	return nil
+	return err
 }
 
 func findTileRootsInTree(repo *git.Repository, tree *object.Tree) []string {
