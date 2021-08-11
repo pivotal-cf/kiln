@@ -1,10 +1,11 @@
+// Package history provides fast utility functions for
+// navigating the history of of a tile repo.
 package history
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-git/go-git/v5/plumbing/filemode"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
@@ -14,6 +15,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/filemode"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"gopkg.in/yaml.v2"
 
@@ -21,8 +23,8 @@ import (
 )
 
 var (
- 	billOfMaterialFileNames = []string{"Kilnfile.lock", "assets.lock"}
- 	tileRootSentinelFiles  = []string{"Kilnfile", "base.yml"}
+	billOfMaterialFileNames = []string{"Kilnfile.lock", "assets.lock"}
+	tileRootSentinelFiles   = []string{"Kilnfile", "base.yml"}
 )
 
 type ReleaseMapping struct {
@@ -35,14 +37,55 @@ type Release struct {
 	Version string
 }
 
-func TileVersionFileBoshReleaseList(repo *git.Repository, branchFilter *regexp.Regexp, releaseNames []string, stop func(i int, commit object.Commit) bool) ([]ReleaseMapping, error) {
+type TileVersionFileBoshReleaseListStopFunc = func(i int, commit object.Commit, result []ReleaseMapping) bool
+
+func stopAfterAnyTrueReturn(fns []TileVersionFileBoshReleaseListStopFunc) TileVersionFileBoshReleaseListStopFunc {
+	return func(i int, commit object.Commit, result []ReleaseMapping) bool {
+		for _, fn := range fns {
+			if fn(i, commit, result) {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+func StopAfter(commitHistoryLen int) TileVersionFileBoshReleaseListStopFunc {
+	return func(i int, _ object.Commit, _ []ReleaseMapping) bool {
+		return i > commitHistoryLen
+	}
+}
+
+func FindBoshRelease(release Release) TileVersionFileBoshReleaseListStopFunc {
+	return func(_ int, _ object.Commit, list []ReleaseMapping) bool {
+		for _, m := range list {
+			if release == m.Bosh {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+func FindBoshTileRelease(release Release) TileVersionFileBoshReleaseListStopFunc {
+	return func(_ int, _ object.Commit, list []ReleaseMapping) bool {
+		for _, m := range list {
+			if release == m.Tile {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+func TileVersionFileBoshReleaseList(repo *git.Repository, branchFilter *regexp.Regexp, releaseNames []string, stopFns ...TileVersionFileBoshReleaseListStopFunc) ([]ReleaseMapping, error) {
 	branchIter, err := repo.Branches()
 	if err != nil {
 		return nil, err
 	}
 
 	var result []ReleaseMapping
-	
+
 	iterErr := branchIter.ForEach(func(reference *plumbing.Reference) error {
 		if !branchFilter.MatchString(reference.Name().Short()) {
 			return nil
@@ -59,9 +102,6 @@ func TileVersionFileBoshReleaseList(repo *git.Repository, branchFilter *regexp.R
 			if !ok {
 				break
 			}
-			if stop(i, *commit) {
-				break
-			}
 			tree, err := commit.Tree()
 			if err != nil {
 				return err
@@ -73,6 +113,9 @@ func TileVersionFileBoshReleaseList(repo *git.Repository, branchFilter *regexp.R
 					return err
 				}
 				result = append(result, mappings...)
+			}
+			if stopAfterAnyTrueReturn(stopFns)(i, *commit, result) {
+				break
 			}
 
 			// iter
@@ -88,7 +131,6 @@ func TileVersionFileBoshReleaseList(repo *git.Repository, branchFilter *regexp.R
 
 		return nil
 	})
-
 
 	return ensureUnique(result), iterErr
 }
@@ -119,11 +161,11 @@ func buildNumberBoshRelease(tree *object.Tree, root string, releaseNames []strin
 
 		result = append(result, ReleaseMapping{
 			Tile: Release{
-				Name: strings.TrimSpace(root),
+				Name:    strings.TrimSpace(root),
 				Version: strings.TrimSpace(vBuf),
 			},
 			Bosh: Release{
-				Name: strings.TrimSpace(rel.Name),
+				Name:    strings.TrimSpace(rel.Name),
 				Version: strings.TrimSpace(rel.Version),
 			},
 		})
@@ -243,9 +285,6 @@ func lockFiles(repo *git.Repository, fn func(tileDir string, ref plumbing.Refere
 	return paths, nil
 }
 
-
-
-
 func decodeHistoricFile(repository *git.Repository, ref *plumbing.Reference, data interface{}, names ...string) error {
 	obj, err := repository.Object(plumbing.CommitObject, ref.Hash())
 	if err != nil {
@@ -265,11 +304,11 @@ func decodeHistoricFile(repository *git.Repository, ref *plumbing.Reference, dat
 	return readDataFromTree(tree, data, names...)
 }
 
-func readDataFromTree(tree *object.Tree, data interface{}, names... string) error {
+func readDataFromTree(tree *object.Tree, data interface{}, names ...string) error {
 	var (
 		lock     *object.File
 		fileName string
-		err error
+		err      error
 	)
 	for _, name := range names {
 		fileName = name
@@ -455,7 +494,6 @@ func (x sorter) Len() int           { return x.len }
 func (x sorter) Swap(i, j int)      { x.swap(i, j) }
 func (x sorter) Less(i, j int) bool { return x.less(i, j) }
 
-
 func prefixEach(prefix string, names []string) []string {
 	result := make([]string, 0, len(names))
 	for _, name := range names {
@@ -463,7 +501,6 @@ func prefixEach(prefix string, names []string) []string {
 	}
 	return result
 }
-
 
 func contains(values []string, has string) bool {
 	for _, v := range values {
@@ -492,9 +529,9 @@ func ensureUnique(list []ReleaseMapping) []ReleaseMapping {
 	sort.Sort(sorter{
 		len: len(list),
 		swap: func(i, j int) {
-			list[i], list[j] =  list[j], list[i]
+			list[i], list[j] = list[j], list[i]
 		},
-		less: func(i, j int) bool{
+		less: func(i, j int) bool {
 			itv := vs[list[i].Tile.Version]
 			jtv := vs[list[j].Tile.Version]
 			// sort by tile version
