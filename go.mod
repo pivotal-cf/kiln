@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.93.3 // indirect
 	cloud.google.com/go/storage v1.16.0 // indirect
 	code.cloudfoundry.org/clock v1.0.0 // indirect
+	code.cloudfoundry.org/tlsconfig v0.0.0-20210615191307-5d92ef3894a7 // indirect
 	github.com/Azure/azure-sdk-for-go v56.3.0+incompatible // indirect
 	github.com/Azure/go-autorest/autorest v0.11.19 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.9.14 // indirect
@@ -21,6 +22,7 @@ require (
 	github.com/cloudfoundry/bosh-cli v6.4.1+incompatible
 	github.com/cloudfoundry/bosh-utils v0.0.270
 	github.com/cloudfoundry/go-socks5 v0.0.0-20180221174514-54f73bdb8a8e // indirect
+	github.com/cloudfoundry/socks5-proxy v0.2.17 // indirect
 	github.com/cppforlife/go-semi-semantic v0.0.0-20160921010311-576b6af77ae4 // indirect
 	github.com/fatih/color v1.12.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
@@ -45,14 +47,14 @@ require (
 	github.com/pivotal-cf-experimental/gomegamatchers v0.0.0-20180326192815-e36bfcc98c3a
 	github.com/pivotal-cf/go-pivnet/v2 v2.0.11
 	github.com/pivotal-cf/jhanda v0.0.0-20200619200912-8de8eb943a43
-	github.com/pivotal-cf/om v0.0.0-20210802022639-ca9f0f846ec7 // indirect
+	github.com/pivotal-cf/om v0.0.0-20210802022639-ca9f0f846ec7
 	github.com/pivotal-cf/paraphernalia v0.0.0-20180203224945-a64ae2051c20 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shirou/gopsutil v3.21.7+incompatible // indirect
 	github.com/vmware/govmomi v0.26.1 // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
 	golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf // indirect
 	golang.org/x/text v0.3.7 // indirect
