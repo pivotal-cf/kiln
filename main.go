@@ -102,7 +102,7 @@ func main() {
 		ReleaseUploaderFinder:      ruFinder,
 	}
 
-	commandSet["validate"] = commands.Validate{}
+	commandSet["validate"] = commands.NewValidate(osfs.New(""))
 	commandSet["pre-process"] = commands.PreProcess{}
 
 	err = commandSet.Execute(command, args)
