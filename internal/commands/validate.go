@@ -21,6 +21,12 @@ type Validate struct {
 
 var _ jhanda.Command = (*Validate)(nil)
 
+func NewValidate(fs billy.Filesystem) Validate {
+	return Validate{
+		FS: fs,
+	}
+}
+
 func (v Validate) Execute(args []string) error {
 	err := flags.LoadFlagsWithDefaults(&v.Options, args, v.FS.Stat)
 	if err != nil {
