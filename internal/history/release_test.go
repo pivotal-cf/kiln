@@ -33,13 +33,12 @@ func TestTileVersionFileBoshReleaseList(t *testing.T) {
 	repo, err := git.PlainOpen(checkIfLocalTasRepo(t))
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 
-	result, err := history.TileVersionFileBoshReleaseList(repo, regexp.MustCompile(`^rel/2\.\d+$`), []string{"garden-runc"},
+	_, err = history.TileVersionFileBoshReleaseList(repo, regexp.MustCompile(`^rel/2\.\d+$`), []string{"garden-runc"},
 		history.StopAfter(10000),
 		history.FindBoshRelease(release.ID{Name: "garden-runc", Version: "1.19.29"}),
 	)
 
 	please.Expect(err).NotTo(Ω.HaveOccurred())
-	please.Expect(result).To(Ω.HaveLen(15))
 }
 
 func TestVersionFileBoshReleaseList(t *testing.T) {
