@@ -21,17 +21,17 @@ import (
 
 var _ = Describe("Bake", func() {
 	var (
-		fakeBOSHVariablesService     *fakes.BOSHVariablesService
-		fakeFormsService             *fakes.FormsService
+		fakeBOSHVariablesService     *fakes.FromDirectories
+		fakeFormsService             *fakes.FromDirectories
 		fakeIconService              *fakes.IconService
-		fakeInstanceGroupsService    *fakes.InstanceGroupsService
+		fakeInstanceGroupsService    *fakes.FromDirectories
 		fakeInterpolator             *fakes.Interpolator
-		fakeJobsService              *fakes.JobsService
+		fakeJobsService              *fakes.FromDirectories
 		fakeLogger                   *log.Logger
 		fakeMetadataService          *fakes.MetadataService
-		fakePropertiesService        *fakes.PropertiesService
-		fakeReleasesService          *fakes.ReleasesService
-		fakeRuntimeConfigsService    *fakes.RuntimeConfigsService
+		fakePropertiesService        *fakes.FromDirectories
+		fakeReleasesService          *fakes.FromDirectories
+		fakeRuntimeConfigsService    *fakes.FromDirectories
 		fakeStemcellService          *fakes.StemcellService
 		fakeTemplateVariablesService *fakes.TemplateVariablesService
 		fakeTileWriter               *fakes.TileWriter
@@ -59,17 +59,17 @@ var _ = Describe("Bake", func() {
 		err = ioutil.WriteFile(nonTarballRelease, []byte(""), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		fakeBOSHVariablesService = &fakes.BOSHVariablesService{}
-		fakeFormsService = &fakes.FormsService{}
+		fakeBOSHVariablesService = &fakes.FromDirectories{}
+		fakeFormsService = &fakes.FromDirectories{}
 		fakeIconService = &fakes.IconService{}
-		fakeInstanceGroupsService = &fakes.InstanceGroupsService{}
+		fakeInstanceGroupsService = &fakes.FromDirectories{}
 		fakeInterpolator = &fakes.Interpolator{}
-		fakeJobsService = &fakes.JobsService{}
+		fakeJobsService = &fakes.FromDirectories{}
 		fakeLogger = log.New(GinkgoWriter, "", 0)
 		fakeMetadataService = &fakes.MetadataService{}
-		fakePropertiesService = &fakes.PropertiesService{}
-		fakeReleasesService = &fakes.ReleasesService{}
-		fakeRuntimeConfigsService = &fakes.RuntimeConfigsService{}
+		fakePropertiesService = &fakes.FromDirectories{}
+		fakeReleasesService = &fakes.FromDirectories{}
+		fakeRuntimeConfigsService = &fakes.FromDirectories{}
 		fakeStemcellService = &fakes.StemcellService{}
 		fakeTemplateVariablesService = &fakes.TemplateVariablesService{}
 		fakeTileWriter = &fakes.TileWriter{}

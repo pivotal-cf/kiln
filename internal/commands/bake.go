@@ -27,19 +27,14 @@ type tileWriter interface {
 	Write(generatedMetadataContents []byte, input builder.WriteInput) error
 }
 
-//counterfeiter:generate -o ./fakes/bosh_variables_service.go --fake-name BOSHVariablesService . boshVariablesService
-type boshVariablesService interface {
-	FromDirectories(directories []string) (boshVariables map[string]interface{}, err error)
-}
-
-//counterfeiter:generate -o ./fakes/releases_service.go --fake-name ReleasesService . releasesService
-type releasesService interface {
-	FromDirectories(directories []string) (releases map[string]interface{}, err error)
+//counterfeiter:generate -o ./fakes/from_directories.go --fake-name FromDirectories . fromDirectories
+type fromDirectories interface {
+	FromDirectories(directories []string) (map[string]interface{}, error)
 }
 
 //counterfeiter:generate -o ./fakes/stemcell_service.go --fake-name StemcellService . stemcellService
 type stemcellService interface {
-	FromDirectories(directories []string) (stemcell map[string]interface{}, err error)
+	fromDirectories
 	FromKilnfile(path string) (stemcell map[string]interface{}, err error)
 	FromTarball(path string) (stemcell interface{}, err error)
 }
@@ -47,31 +42,6 @@ type stemcellService interface {
 //counterfeiter:generate -o ./fakes/template_variables_service.go --fake-name TemplateVariablesService . templateVariablesService
 type templateVariablesService interface {
 	FromPathsAndPairs(paths []string, pairs []string) (templateVariables map[string]interface{}, err error)
-}
-
-//counterfeiter:generate -o ./fakes/forms_service.go --fake-name FormsService . formsService
-type formsService interface {
-	FromDirectories(directories []string) (forms map[string]interface{}, err error)
-}
-
-//counterfeiter:generate -o ./fakes/instance_groups_service.go --fake-name InstanceGroupsService . instanceGroupsService
-type instanceGroupsService interface {
-	FromDirectories(directories []string) (instanceGroups map[string]interface{}, err error)
-}
-
-//counterfeiter:generate -o ./fakes/jobs_service.go --fake-name JobsService . jobsService
-type jobsService interface {
-	FromDirectories(directories []string) (jobs map[string]interface{}, err error)
-}
-
-//counterfeiter:generate -o ./fakes/properties_service.go --fake-name PropertiesService . propertiesService
-type propertiesService interface {
-	FromDirectories(directories []string) (properties map[string]interface{}, err error)
-}
-
-//counterfeiter:generate -o ./fakes/runtime_configs_service.go --fake-name RuntimeConfigsService . runtimeConfigsService
-type runtimeConfigsService interface {
-	FromDirectories(directories []string) (runtimeConfigs map[string]interface{}, err error)
 }
 
 //counterfeiter:generate -o ./fakes/icon_service.go --fake-name IconService . iconService
@@ -150,14 +120,16 @@ type Bake struct {
 	outLogger         *log.Logger
 	errLogger         *log.Logger
 	templateVariables templateVariablesService
-	boshVariables     boshVariablesService
-	releases          releasesService
 	stemcell          stemcellService
-	forms             formsService
-	instanceGroups    instanceGroupsService
-	jobs              jobsService
-	properties        propertiesService
-	runtimeConfigs    runtimeConfigsService
+
+	boshVariables,
+	releases,
+	forms,
+	instanceGroups,
+	jobs,
+	properties,
+	runtimeConfigs    fromDirectories
+
 	icon              iconService
 	metadata          metadataService
 
@@ -191,14 +163,14 @@ func NewBakeWithInterfaces(
 	outLogger *log.Logger,
 	errLogger *log.Logger,
 	templateVariablesService templateVariablesService,
-	boshVariablesService boshVariablesService,
-	releasesService releasesService,
+	boshVariablesService fromDirectories,
+	releasesService fromDirectories,
 	stemcellService stemcellService,
-	formsService formsService,
-	instanceGroupsService instanceGroupsService,
-	jobsService jobsService,
-	propertiesService propertiesService,
-	runtimeConfigsService runtimeConfigsService,
+	formsService fromDirectories,
+	instanceGroupsService fromDirectories,
+	jobsService fromDirectories,
+	propertiesService fromDirectories,
+	runtimeConfigsService fromDirectories,
 	iconService iconService,
 	metadataService metadataService,
 	checksummer checksummer,
