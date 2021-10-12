@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"log"
 
 	"github.com/Masterminds/semver"
@@ -10,6 +9,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/fetcher"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/release"

@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	cargo "github.com/pivotal-cf/kiln/pkg/cargo"
 	"io/ioutil"
 	"log"
 	"os"
@@ -18,6 +17,8 @@ import (
 	"github.com/pivotal-cf/go-pivnet/v2/logshim"
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/yaml.v2"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 const (
