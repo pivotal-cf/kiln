@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-type RuntimeConfigsService struct {
+type FromDirectories struct {
 	FromDirectoriesStub        func([]string) (map[string]interface{}, error)
 	fromDirectoriesMutex       sync.RWMutex
 	fromDirectoriesArgsForCall []struct {
@@ -23,7 +23,7 @@ type RuntimeConfigsService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *RuntimeConfigsService) FromDirectories(arg1 []string) (map[string]interface{}, error) {
+func (fake *FromDirectories) FromDirectories(arg1 []string) (map[string]interface{}, error) {
 	var arg1Copy []string
 	if arg1 != nil {
 		arg1Copy = make([]string, len(arg1))
@@ -47,26 +47,26 @@ func (fake *RuntimeConfigsService) FromDirectories(arg1 []string) (map[string]in
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *RuntimeConfigsService) FromDirectoriesCallCount() int {
+func (fake *FromDirectories) FromDirectoriesCallCount() int {
 	fake.fromDirectoriesMutex.RLock()
 	defer fake.fromDirectoriesMutex.RUnlock()
 	return len(fake.fromDirectoriesArgsForCall)
 }
 
-func (fake *RuntimeConfigsService) FromDirectoriesCalls(stub func([]string) (map[string]interface{}, error)) {
+func (fake *FromDirectories) FromDirectoriesCalls(stub func([]string) (map[string]interface{}, error)) {
 	fake.fromDirectoriesMutex.Lock()
 	defer fake.fromDirectoriesMutex.Unlock()
 	fake.FromDirectoriesStub = stub
 }
 
-func (fake *RuntimeConfigsService) FromDirectoriesArgsForCall(i int) []string {
+func (fake *FromDirectories) FromDirectoriesArgsForCall(i int) []string {
 	fake.fromDirectoriesMutex.RLock()
 	defer fake.fromDirectoriesMutex.RUnlock()
 	argsForCall := fake.fromDirectoriesArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *RuntimeConfigsService) FromDirectoriesReturns(result1 map[string]interface{}, result2 error) {
+func (fake *FromDirectories) FromDirectoriesReturns(result1 map[string]interface{}, result2 error) {
 	fake.fromDirectoriesMutex.Lock()
 	defer fake.fromDirectoriesMutex.Unlock()
 	fake.FromDirectoriesStub = nil
@@ -76,7 +76,7 @@ func (fake *RuntimeConfigsService) FromDirectoriesReturns(result1 map[string]int
 	}{result1, result2}
 }
 
-func (fake *RuntimeConfigsService) FromDirectoriesReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
+func (fake *FromDirectories) FromDirectoriesReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
 	fake.fromDirectoriesMutex.Lock()
 	defer fake.fromDirectoriesMutex.Unlock()
 	fake.FromDirectoriesStub = nil
@@ -92,7 +92,7 @@ func (fake *RuntimeConfigsService) FromDirectoriesReturnsOnCall(i int, result1 m
 	}{result1, result2}
 }
 
-func (fake *RuntimeConfigsService) Invocations() map[string][][]interface{} {
+func (fake *FromDirectories) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.fromDirectoriesMutex.RLock()
@@ -104,7 +104,7 @@ func (fake *RuntimeConfigsService) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *RuntimeConfigsService) recordInvocation(key string, args []interface{}) {
+func (fake *FromDirectories) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
