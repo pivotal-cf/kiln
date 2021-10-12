@@ -43,9 +43,9 @@ type CompileBuiltReleases struct {
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/bosh_deployment.go --fake-name BoshDeployment github.com/cloudfoundry/bosh-cli/director.Deployment
+//counterfeiter:generate -o ./fakes/bosh_deployment.go --fake-name BoshDeployment github.com/cloudfoundry/bosh-cli/director.Deployment
 
-//go:generate counterfeiter -o ./fakes/bosh_director.go --fake-name BoshDirector . BoshDirector
+//counterfeiter:generate -o ./fakes/bosh_director.go --fake-name BoshDirector . BoshDirector
 type BoshDirector interface {
 	UploadStemcellFile(file boshdir.UploadFile, fix bool) error
 	UploadReleaseFile(file boshdir.UploadFile, rebase, fix bool) error

@@ -18,7 +18,7 @@ type TileWriter struct {
 	logger     logger
 }
 
-//go:generate counterfeiter -o ./fakes/filesystem.go --fake-name Filesystem . filesystem
+//counterfeiter:generate -o ./fakes/filesystem.go --fake-name Filesystem . filesystem
 type filesystem interface {
 	Create(path string) (io.WriteCloser, error)
 	Open(path string) (io.ReadCloser, error)
@@ -26,7 +26,7 @@ type filesystem interface {
 	Remove(path string) error
 }
 
-//go:generate counterfeiter -o ./fakes/zipper.go --fake-name Zipper . zipper
+//counterfeiter:generate -o ./fakes/zipper.go --fake-name Zipper . zipper
 
 type zipper interface {
 	SetWriter(writer io.Writer)
@@ -36,7 +36,7 @@ type zipper interface {
 	Close() error
 }
 
-//go:generate counterfeiter -o ./fakes/file_info.go --fake-name FileInfo os.FileInfo
+//counterfeiter:generate -o ./fakes/file_info.go --fake-name FileInfo os.FileInfo
 
 func NewTileWriter(filesystem filesystem, zipper zipper, logger logger) TileWriter {
 	return TileWriter{

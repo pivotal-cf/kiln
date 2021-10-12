@@ -35,8 +35,6 @@ type ManifestUpdate struct {
 	UpdateWatchTime string `yaml:"update_watch_time"`
 }
 
-// }
-
 func New() ManifestGenerator {
 	return ManifestGenerator{}
 }

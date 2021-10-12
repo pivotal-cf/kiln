@@ -19,7 +19,9 @@ func TestCommands(t *testing.T) {
 	RunSpecs(t, "commands")
 }
 
-//go:generate counterfeiter -o ./fakes/command.go --fake-name Command . command
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+
+//counterfeiter:generate -o ./fakes/command.go --fake-name Command . command
 type command interface {
 	jhanda.Command
 }

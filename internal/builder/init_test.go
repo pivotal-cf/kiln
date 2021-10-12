@@ -8,7 +8,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-//go:generate counterfeiter -o ./fakes/read_closer.go --fake-name ReadCloser io.ReadCloser
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+
+//counterfeiter:generate -o ./fakes/read_closer.go --fake-name ReadCloser io.ReadCloser
 
 func TestBuilder(t *testing.T) {
 	RegisterFailHandler(Fail)

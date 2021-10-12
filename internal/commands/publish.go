@@ -26,30 +26,30 @@ const (
 	oslFileType       = "Open Source License"
 )
 
-//go:generate counterfeiter -o ./fakes/pivnet_releases_service.go --fake-name PivnetReleasesService . PivnetReleasesService
+//counterfeiter:generate -o ./fakes/pivnet_releases_service.go --fake-name PivnetReleasesService . PivnetReleasesService
 type PivnetReleasesService interface {
 	List(productSlug string) ([]pivnet.Release, error)
 	Update(productSlug string, release pivnet.Release) (pivnet.Release, error)
 }
 
-//go:generate counterfeiter -o ./fakes/pivnet_product_files_service.go --fake-name PivnetProductFilesService . PivnetProductFilesService
+//counterfeiter:generate -o ./fakes/pivnet_product_files_service.go --fake-name PivnetProductFilesService . PivnetProductFilesService
 type PivnetProductFilesService interface {
 	List(productSlug string) ([]pivnet.ProductFile, error)
 	AddToRelease(productSlug string, releaseID int, productFileID int) error
 }
 
-//go:generate counterfeiter -o ./fakes/pivnet_user_groups_service.go --fake-name PivnetUserGroupsService . PivnetUserGroupsService
+//counterfeiter:generate -o ./fakes/pivnet_user_groups_service.go --fake-name PivnetUserGroupsService . PivnetUserGroupsService
 type PivnetUserGroupsService interface {
 	List() ([]pivnet.UserGroup, error)
 	AddToRelease(productSlug string, releaseID int, userGroupID int) error
 }
 
-//go:generate counterfeiter -o ./fakes/pivnet_release_upgrade_paths_service.go --fake-name PivnetReleaseUpgradePathsService . PivnetReleaseUpgradePathsService
+//counterfeiter:generate -o ./fakes/pivnet_release_upgrade_paths_service.go --fake-name PivnetReleaseUpgradePathsService . PivnetReleaseUpgradePathsService
 type PivnetReleaseUpgradePathsService interface {
 	Get(productSlug string, releaseID int) ([]pivnet.ReleaseUpgradePath, error)
 }
 
-//go:generate counterfeiter -o ./fakes/pivnet_release_dependencies_service.go --fake-name PivnetReleaseDependenciesService . PivnetReleaseDependenciesService
+//counterfeiter:generate -o ./fakes/pivnet_release_dependencies_service.go --fake-name PivnetReleaseDependenciesService . PivnetReleaseDependenciesService
 type PivnetReleaseDependenciesService interface {
 	List(productSlug string, releaseID int) ([]pivnet.ReleaseDependency, error)
 }

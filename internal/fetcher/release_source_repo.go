@@ -16,7 +16,7 @@ const (
 	DefaultDownloadThreadCount = 0
 )
 
-//go:generate counterfeiter -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
+//counterfeiter:generate -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
 	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
 	FindReleaseVersion(release.Requirement) (release.Remote, bool, error)
@@ -25,7 +25,7 @@ type ReleaseSource interface {
 	Publishable() bool
 }
 
-//go:generate counterfeiter -o ./fakes/multi_release_source.go --fake-name MultiReleaseSource . MultiReleaseSource
+//counterfeiter:generate -o ./fakes/multi_release_source.go --fake-name MultiReleaseSource . MultiReleaseSource
 type MultiReleaseSource interface {
 	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
 	FindReleaseVersion(release.Requirement) (release.Remote, bool, error)
@@ -33,13 +33,13 @@ type MultiReleaseSource interface {
 	FindByID(string) (ReleaseSource, error)
 }
 
-//go:generate counterfeiter -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
+//counterfeiter:generate -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
 type ReleaseUploader interface {
 	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
 	UploadRelease(spec release.Requirement, file io.Reader) (release.Remote, error)
 }
 
-//go:generate counterfeiter -o ./fakes/remote_pather.go --fake-name RemotePather . RemotePather
+//counterfeiter:generate -o ./fakes/remote_pather.go --fake-name RemotePather . RemotePather
 type RemotePather interface {
 	RemotePath(release.Requirement) (string, error)
 }

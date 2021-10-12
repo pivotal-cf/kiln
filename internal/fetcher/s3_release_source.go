@@ -25,17 +25,17 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
-//go:generate counterfeiter -o ./fakes/s3_downloader.go --fake-name S3Downloader . S3Downloader
+//counterfeiter:generate -o ./fakes/s3_downloader.go --fake-name S3Downloader . S3Downloader
 type S3Downloader interface {
 	Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/s3_uploader.go --fake-name S3Uploader . S3Uploader
+//counterfeiter:generate -o ./fakes/s3_uploader.go --fake-name S3Uploader . S3Uploader
 type S3Uploader interface {
 	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
 }
 
-//go:generate counterfeiter -o ./fakes/s3_client.go --fake-name S3Client . S3Client
+//counterfeiter:generate -o ./fakes/s3_client.go --fake-name S3Client . S3Client
 type S3Client interface {
 	HeadObject(input *s3.HeadObjectInput) (*s3.HeadObjectOutput, error)
 	ListObjectsV2(input *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error)
@@ -112,7 +112,7 @@ func (src S3ReleaseSource) Publishable() bool {
 	return src.publishable
 }
 
-//go:generate counterfeiter -o ./fakes/s3_request_failure.go --fake-name S3RequestFailure github.com/aws/aws-sdk-go/service/s3.RequestFailure
+//counterfeiter:generate -o ./fakes/s3_request_failure.go --fake-name S3RequestFailure github.com/aws/aws-sdk-go/service/s3.RequestFailure
 func (src S3ReleaseSource) GetMatchedRelease(requirement release.Requirement) (release.Remote, bool, error) {
 	remotePath, err := src.RemotePath(requirement)
 	if err != nil {

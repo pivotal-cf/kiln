@@ -17,74 +17,74 @@ import (
 	"github.com/pivotal-cf/kiln/internal/helper"
 )
 
-//go:generate counterfeiter -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
+//counterfeiter:generate -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
 type interpolator interface {
 	Interpolate(input builder.InterpolateInput, templateYAML []byte) ([]byte, error)
 }
 
-//go:generate counterfeiter -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
+//counterfeiter:generate -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
 type tileWriter interface {
 	Write(generatedMetadataContents []byte, input builder.WriteInput) error
 }
 
-//go:generate counterfeiter -o ./fakes/bosh_variables_service.go --fake-name BOSHVariablesService . boshVariablesService
+//counterfeiter:generate -o ./fakes/bosh_variables_service.go --fake-name BOSHVariablesService . boshVariablesService
 type boshVariablesService interface {
 	FromDirectories(directories []string) (boshVariables map[string]interface{}, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/releases_service.go --fake-name ReleasesService . releasesService
+//counterfeiter:generate -o ./fakes/releases_service.go --fake-name ReleasesService . releasesService
 type releasesService interface {
 	FromDirectories(directories []string) (releases map[string]interface{}, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/stemcell_service.go --fake-name StemcellService . stemcellService
+//counterfeiter:generate -o ./fakes/stemcell_service.go --fake-name StemcellService . stemcellService
 type stemcellService interface {
 	FromDirectories(directories []string) (stemcell map[string]interface{}, err error)
 	FromKilnfile(path string) (stemcell map[string]interface{}, err error)
 	FromTarball(path string) (stemcell interface{}, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/template_variables_service.go --fake-name TemplateVariablesService . templateVariablesService
+//counterfeiter:generate -o ./fakes/template_variables_service.go --fake-name TemplateVariablesService . templateVariablesService
 type templateVariablesService interface {
 	FromPathsAndPairs(paths []string, pairs []string) (templateVariables map[string]interface{}, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/forms_service.go --fake-name FormsService . formsService
+//counterfeiter:generate -o ./fakes/forms_service.go --fake-name FormsService . formsService
 type formsService interface {
 	FromDirectories(directories []string) (forms map[string]interface{}, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/instance_groups_service.go --fake-name InstanceGroupsService . instanceGroupsService
+//counterfeiter:generate -o ./fakes/instance_groups_service.go --fake-name InstanceGroupsService . instanceGroupsService
 type instanceGroupsService interface {
 	FromDirectories(directories []string) (instanceGroups map[string]interface{}, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/jobs_service.go --fake-name JobsService . jobsService
+//counterfeiter:generate -o ./fakes/jobs_service.go --fake-name JobsService . jobsService
 type jobsService interface {
 	FromDirectories(directories []string) (jobs map[string]interface{}, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/properties_service.go --fake-name PropertiesService . propertiesService
+//counterfeiter:generate -o ./fakes/properties_service.go --fake-name PropertiesService . propertiesService
 type propertiesService interface {
 	FromDirectories(directories []string) (properties map[string]interface{}, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/runtime_configs_service.go --fake-name RuntimeConfigsService . runtimeConfigsService
+//counterfeiter:generate -o ./fakes/runtime_configs_service.go --fake-name RuntimeConfigsService . runtimeConfigsService
 type runtimeConfigsService interface {
 	FromDirectories(directories []string) (runtimeConfigs map[string]interface{}, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/icon_service.go --fake-name IconService . iconService
+//counterfeiter:generate -o ./fakes/icon_service.go --fake-name IconService . iconService
 type iconService interface {
 	Encode(path string) (encodedIcon string, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/metadata_service.go --fake-name MetadataService . metadataService
+//counterfeiter:generate -o ./fakes/metadata_service.go --fake-name MetadataService . metadataService
 type metadataService interface {
 	Read(path string) (metadata []byte, err error)
 }
 
-//go:generate counterfeiter -o ./fakes/checksummer.go --fake-name Checksummer . checksummer
+//counterfeiter:generate -o ./fakes/checksummer.go --fake-name Checksummer . checksummer
 type checksummer interface {
 	Sum(path string) error
 }
