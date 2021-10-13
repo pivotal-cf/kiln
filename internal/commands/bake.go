@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
@@ -15,6 +16,11 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/helper"
+)
+
+const (
+	GitMetadataShaVariable = "metadata-git-sha"
+	BuildVersionVariable = "build-version"
 )
 
 //counterfeiter:generate -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
@@ -262,6 +268,18 @@ func (b Bake) Execute(args []string) error {
 	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
 	if err != nil {
 		return fmt.Errorf("failed to parse template variables: %s", err)
+	}
+
+	_, ok := templateVariables[GitMetadataShaVariable]
+	if !ok {
+		templateVariables[GitMetadataShaVariable], err = baking.GitMetadataSha(filepath.Dir(b.Options.Kilnfile))
+		if err != nil {
+			templateVariables[GitMetadataShaVariable] = "development"
+		}
+	}
+	_, ok = templateVariables[BuildVersionVariable]
+	if !ok {
+		templateVariables[BuildVersionVariable] = b.Options.Version
 	}
 
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
