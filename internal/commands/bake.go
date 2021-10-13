@@ -20,7 +20,7 @@ import (
 
 const (
 	GitMetadataShaVariable = "metadata-git-sha"
-	BuildVersionVariable = "build-version"
+	BuildVersionVariable   = "build-version"
 )
 
 //counterfeiter:generate -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
@@ -272,8 +272,9 @@ func (b Bake) Execute(args []string) error {
 
 	_, ok := templateVariables[GitMetadataShaVariable]
 	if !ok {
-		templateVariables[GitMetadataShaVariable], err = baking.GitMetadataSha(filepath.Dir(b.Options.Kilnfile))
+		templateVariables[GitMetadataShaVariable], err = baking.GitMetadataSha(filepath.Dir(b.Options.Kilnfile), b.Options.MetadataOnly || b.Options.StubReleases)
 		if err != nil {
+			fmt.Println("WARNING", err)
 			templateVariables[GitMetadataShaVariable] = "development"
 		}
 	}
