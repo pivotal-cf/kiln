@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"text/template"
 
 	yamlConverter "github.com/ghodss/yaml"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 type Interpolator struct{}
@@ -28,6 +29,32 @@ type InterpolateInput struct {
 	PropertyBlueprints map[string]interface{}
 	RuntimeConfigs     map[string]interface{}
 	StubReleases       bool
+
+	PreProcess func(in []byte) ([]byte, error)
+	RDelim, LDelim string
+}
+
+func (input InterpolateInput) WithDefaultMetadataPreprocessor() InterpolateInput {
+	var names []string
+	for name := range (Interpolator{}).functions(InterpolateInput{}) {
+		names = append(names, name)
+	}
+	input.RDelim = "}}"
+	input.LDelim = "{{"
+	input.PreProcess = func(in []byte) ([]byte, error) {
+		re := regexp.MustCompile(`\$\( (?P<func>((` + strings.Join(names, ")|(") + `))) (?P<line>.*)\)`)
+		matches :=  re.FindAllSubmatchIndex(in, -1)
+		var result []byte
+		if len(matches) == 0 {
+			result = in
+		} else {
+			for _, match := range matches {
+				result = re.Expand(result, []byte(input.LDelim + ` ${func} ${line}` + input.RDelim), in, match)
+			}
+		}
+		return result, nil
+	}
+	return input
 }
 
 func NewInterpolator() Interpolator {
@@ -35,6 +62,13 @@ func NewInterpolator() Interpolator {
 }
 
 func (i Interpolator) Interpolate(input InterpolateInput, templateYAML []byte) ([]byte, error) {
+	if input.LDelim == "" {
+		input.LDelim = "$("
+	}
+	if input.RDelim == "" {
+		input.RDelim = ")"
+	}
+
 	interpolatedYAML, err := i.interpolate(input, templateYAML)
 	if err != nil {
 		return nil, err
@@ -48,8 +82,8 @@ func (i Interpolator) Interpolate(input InterpolateInput, templateYAML []byte) (
 	return prettyMetadata, nil
 }
 
-func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) ([]byte, error) {
-	templateHelpers := template.FuncMap{
+func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
+	return template.FuncMap{
 		"bosh_variable": func(key string) (string, error) {
 			if input.BOSHVariables == nil {
 				return "", errors.New("--bosh-variables-directory must be specified")
@@ -210,11 +244,34 @@ func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) (
 
 			return string(output), nil
 		},
+		"tile": func() (string, error) {
+			const key = "tile-name"
+			val, ok := input.Variables[key]
+			if !ok {
+				return "", fmt.Errorf("could not find variable with key '%s'", key)
+			}
+			str, ok := val.(string)
+			if !ok {
+				return "", fmt.Errorf("variable %[1]q is %[2]T expected string: %[1]s=%[2]v", key, val)
+			}
+			return strings.ToLower(str), nil
+		},
+	}
+}
+
+func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) ([]byte, error) {
+	if input.PreProcess != nil {
+		var err error
+		templateYAML, err = input.PreProcess(templateYAML)
+		if err != nil {
+			return nil, fmt.Errorf("pre-process failure: %w", err)
+		}
 	}
 
 	t, err := template.New("metadata").
-		Delims("$(", ")").
-		Funcs(templateHelpers).
+		Delims(input.LDelim, input.RDelim).
+		Funcs(i.functions(input)).
+		Option("missingkey=error").
 		Parse(string(templateYAML))
 
 	if err != nil {

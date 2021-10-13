@@ -1,3 +1,0 @@
----
-metadata_version: some-metadata-version
-name: {{.some_missing_key}}
