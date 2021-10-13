@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/yaml.v2"
@@ -21,21 +22,25 @@ import (
 
 var _ = Describe("Bake", func() {
 	var (
-		fakeBOSHVariablesService     *fakes.FromDirectories
-		fakeFormsService             *fakes.FromDirectories
-		fakeIconService              *fakes.IconService
-		fakeInstanceGroupsService    *fakes.FromDirectories
-		fakeInterpolator             *fakes.Interpolator
-		fakeJobsService              *fakes.FromDirectories
-		fakeLogger                   *log.Logger
-		fakeMetadataService          *fakes.MetadataService
-		fakePropertiesService        *fakes.FromDirectories
-		fakeReleasesService          *fakes.FromDirectories
-		fakeRuntimeConfigsService    *fakes.FromDirectories
-		fakeStemcellService          *fakes.StemcellService
+		fakeInterpolator *fakes.Interpolator
+		fakeLogger       *log.Logger
+
+		fakeIconService     *fakes.IconService
+		fakeStemcellService *fakes.StemcellService
+		fakeReleasesService *fakes.FromDirectories
+
 		fakeTemplateVariablesService *fakes.TemplateVariablesService
-		fakeTileWriter               *fakes.TileWriter
-		fakeChecksummer              *fakes.Checksummer
+		fakeMetadataService          *fakes.MetadataService
+
+		fakeBOSHVariablesService,
+		fakeFormsService,
+		fakeInstanceGroupsService,
+		fakeJobsService,
+		fakePropertiesService,
+		fakeRuntimeConfigsService *fakes.MetadataTemplatesParser
+
+		fakeTileWriter  *fakes.TileWriter
+		fakeChecksummer *fakes.Checksummer
 
 		otherReleasesDirectory string
 		someReleasesDirectory  string
@@ -59,21 +64,24 @@ var _ = Describe("Bake", func() {
 		err = ioutil.WriteFile(nonTarballRelease, []byte(""), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		fakeBOSHVariablesService = &fakes.FromDirectories{}
-		fakeFormsService = &fakes.FromDirectories{}
-		fakeIconService = &fakes.IconService{}
-		fakeInstanceGroupsService = &fakes.FromDirectories{}
-		fakeInterpolator = &fakes.Interpolator{}
-		fakeJobsService = &fakes.FromDirectories{}
-		fakeLogger = log.New(GinkgoWriter, "", 0)
-		fakeMetadataService = &fakes.MetadataService{}
-		fakePropertiesService = &fakes.FromDirectories{}
-		fakeReleasesService = &fakes.FromDirectories{}
-		fakeRuntimeConfigsService = &fakes.FromDirectories{}
-		fakeStemcellService = &fakes.StemcellService{}
-		fakeTemplateVariablesService = &fakes.TemplateVariablesService{}
 		fakeTileWriter = &fakes.TileWriter{}
 		fakeChecksummer = &fakes.Checksummer{}
+		fakeIconService = &fakes.IconService{}
+		fakeInterpolator = &fakes.Interpolator{}
+
+		fakeLogger = log.New(GinkgoWriter, "", 0)
+
+		fakeStemcellService = &fakes.StemcellService{}
+		fakeReleasesService = &fakes.FromDirectories{}
+
+		fakeTemplateVariablesService = &fakes.TemplateVariablesService{}
+		fakeMetadataService = &fakes.MetadataService{}
+		fakeInstanceGroupsService = &fakes.MetadataTemplatesParser{}
+		fakeBOSHVariablesService = &fakes.MetadataTemplatesParser{}
+		fakeFormsService = &fakes.MetadataTemplatesParser{}
+		fakeJobsService = &fakes.MetadataTemplatesParser{}
+		fakePropertiesService = &fakes.MetadataTemplatesParser{}
+		fakeRuntimeConfigsService = &fakes.MetadataTemplatesParser{}
 
 		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
 			"some-variable-from-file": "some-variable-value-from-file",
@@ -98,21 +106,21 @@ var _ = Describe("Bake", func() {
 			OperatingSystem: "an-operating-system",
 		}, nil)
 
-		fakeFormsService.FromDirectoriesReturns(map[string]interface{}{
+		fakeFormsService.ParseMetadataTemplatesReturns(map[string]interface{}{
 			"some-form": builder.Metadata{
 				"name":  "some-form",
 				"label": "some-form-label",
 			},
 		}, nil)
 
-		fakeBOSHVariablesService.FromDirectoriesReturns(map[string]interface{}{
+		fakeBOSHVariablesService.ParseMetadataTemplatesReturns(map[string]interface{}{
 			"some-secret": builder.Metadata{
 				"name": "some-secret",
 				"type": "password",
 			},
 		}, nil)
 
-		fakeInstanceGroupsService.FromDirectoriesReturns(map[string]interface{}{
+		fakeInstanceGroupsService.ParseMetadataTemplatesReturns(map[string]interface{}{
 			"some-instance-group": builder.Metadata{
 				"name":     "some-instance-group",
 				"manifest": "some-manifest",
@@ -121,7 +129,7 @@ var _ = Describe("Bake", func() {
 			},
 		}, nil)
 
-		fakeJobsService.FromDirectoriesReturns(map[string]interface{}{
+		fakeJobsService.ParseMetadataTemplatesReturns(map[string]interface{}{
 			"some-job": builder.Metadata{
 				"name":     "some-job",
 				"release":  "some-release",
@@ -129,7 +137,7 @@ var _ = Describe("Bake", func() {
 			},
 		}, nil)
 
-		fakePropertiesService.FromDirectoriesReturns(map[string]interface{}{
+		fakePropertiesService.ParseMetadataTemplatesReturns(map[string]interface{}{
 			"some-property": builder.Metadata{
 				"name":         "some-property",
 				"type":         "boolean",
@@ -138,7 +146,7 @@ var _ = Describe("Bake", func() {
 			},
 		}, nil)
 
-		fakeRuntimeConfigsService.FromDirectoriesReturns(map[string]interface{}{
+		fakeRuntimeConfigsService.ParseMetadataTemplatesReturns(map[string]interface{}{
 			"some-runtime-config": builder.Metadata{
 				"name":           "some-runtime-config",
 				"runtime_config": "some-addon-runtime-config",
@@ -206,8 +214,9 @@ var _ = Describe("Bake", func() {
 			Expect(varFiles).To(Equal([]string{"some-variables-file"}))
 			Expect(variables).To(Equal([]string{"some-variable=some-variable-value"}))
 
-			Expect(fakeBOSHVariablesService.FromDirectoriesCallCount()).To(Equal(1))
-			Expect(fakeBOSHVariablesService.FromDirectoriesArgsForCall(0)).To(Equal([]string{
+			Expect(fakeBOSHVariablesService.ParseMetadataTemplatesCallCount()).To(Equal(1))
+			paths, _ := fakeBOSHVariablesService.ParseMetadataTemplatesArgsForCall(0)
+			Expect(paths).To(Equal([]string{
 				"some-other-variables-directory",
 				"some-variables-directory",
 			}))
@@ -218,20 +227,25 @@ var _ = Describe("Bake", func() {
 			Expect(fakeStemcellService.FromTarballCallCount()).To(Equal(1))
 			Expect(fakeStemcellService.FromTarballArgsForCall(0)).To(Equal("some-stemcell-tarball"))
 
-			Expect(fakeFormsService.FromDirectoriesCallCount()).To(Equal(1))
-			Expect(fakeFormsService.FromDirectoriesArgsForCall(0)).To(Equal([]string{"some-forms-directory"}))
+			Expect(fakeFormsService.ParseMetadataTemplatesCallCount()).To(Equal(1))
+			paths, _ = fakeFormsService.ParseMetadataTemplatesArgsForCall(0)
+			Expect(paths).To(Equal([]string{"some-forms-directory"}))
 
-			Expect(fakeInstanceGroupsService.FromDirectoriesCallCount()).To(Equal(1))
-			Expect(fakeInstanceGroupsService.FromDirectoriesArgsForCall(0)).To(Equal([]string{"some-instance-groups-directory"}))
+			Expect(fakeInstanceGroupsService.ParseMetadataTemplatesCallCount()).To(Equal(1))
+			paths, _ = fakeInstanceGroupsService.ParseMetadataTemplatesArgsForCall(0)
+			Expect(paths).To(Equal([]string{"some-instance-groups-directory"}))
 
-			Expect(fakeJobsService.FromDirectoriesCallCount()).To(Equal(1))
-			Expect(fakeJobsService.FromDirectoriesArgsForCall(0)).To(Equal([]string{"some-jobs-directory"}))
+			Expect(fakeJobsService.ParseMetadataTemplatesCallCount()).To(Equal(1))
+			paths, _ = fakeJobsService.ParseMetadataTemplatesArgsForCall(0)
+			Expect(paths).To(Equal([]string{"some-jobs-directory"}))
 
-			Expect(fakePropertiesService.FromDirectoriesCallCount()).To(Equal(1))
-			Expect(fakePropertiesService.FromDirectoriesArgsForCall(0)).To(Equal([]string{"some-properties-directory"}))
+			Expect(fakePropertiesService.ParseMetadataTemplatesCallCount()).To(Equal(1))
+			paths, _ = fakePropertiesService.ParseMetadataTemplatesArgsForCall(0)
+			Expect(paths).To(Equal([]string{"some-properties-directory"}))
 
-			Expect(fakeRuntimeConfigsService.FromDirectoriesCallCount()).To(Equal(1))
-			Expect(fakeRuntimeConfigsService.FromDirectoriesArgsForCall(0)).To(Equal([]string{
+			Expect(fakeRuntimeConfigsService.ParseMetadataTemplatesCallCount()).To(Equal(1))
+			paths, _ = fakeRuntimeConfigsService.ParseMetadataTemplatesArgsForCall(0)
+			Expect(paths).To(Equal([]string{
 				"some-other-runtime-configs-directory",
 				"some-runtime-configs-directory",
 			}))
@@ -556,7 +570,7 @@ var _ = Describe("Bake", func() {
 
 			Context("when the forms service fails", func() {
 				It("returns an error", func() {
-					fakeFormsService.FromDirectoriesReturns(nil, errors.New("parsing forms failed"))
+					fakeFormsService.ParseMetadataTemplatesReturns(nil, errors.New("parsing forms failed"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -575,7 +589,7 @@ var _ = Describe("Bake", func() {
 
 			Context("when the instance groups service fails", func() {
 				It("returns an error", func() {
-					fakeInstanceGroupsService.FromDirectoriesReturns(nil, errors.New("parsing instance groups failed"))
+					fakeInstanceGroupsService.ParseMetadataTemplatesReturns(nil, errors.New("parsing instance groups failed"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -595,7 +609,7 @@ var _ = Describe("Bake", func() {
 
 			Context("when the jobs service fails", func() {
 				It("returns an error", func() {
-					fakeJobsService.FromDirectoriesReturns(nil, errors.New("parsing jobs failed"))
+					fakeJobsService.ParseMetadataTemplatesReturns(nil, errors.New("parsing jobs failed"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -615,7 +629,7 @@ var _ = Describe("Bake", func() {
 
 			Context("when the properties service fails", func() {
 				It("returns an error", func() {
-					fakePropertiesService.FromDirectoriesReturns(nil, errors.New("parsing properties failed"))
+					fakePropertiesService.ParseMetadataTemplatesReturns(nil, errors.New("parsing properties failed"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -635,7 +649,7 @@ var _ = Describe("Bake", func() {
 
 			Context("when the runtime configs service fails", func() {
 				It("returns an error", func() {
-					fakeRuntimeConfigsService.FromDirectoriesReturns(nil, errors.New("parsing runtime configs failed"))
+					fakeRuntimeConfigsService.ParseMetadataTemplatesReturns(nil, errors.New("parsing runtime configs failed"))
 
 					err := bake.Execute([]string{
 						"--icon", "some-icon-path",
@@ -832,3 +846,13 @@ var _ = Describe("Bake", func() {
 		})
 	})
 })
+
+func setEmptyZeroValues(ptrPtrs ...interface{}) {
+	for i := range ptrPtrs {
+		v := reflect.ValueOf(ptrPtrs[i])
+		if v.Kind() != reflect.Ptr && v.Elem().Kind() != reflect.Ptr {
+			continue
+		}
+		v.Elem().Set(reflect.New(v.Type()))
+	}
+}

@@ -32,6 +32,11 @@ type fromDirectories interface {
 	FromDirectories(directories []string) (map[string]interface{}, error)
 }
 
+//counterfeiter:generate -o ./fakes/parse_metadata_templates.go --fake-name MetadataTemplatesParser . metadataTemplatesParser
+type metadataTemplatesParser interface {
+	ParseMetadataTemplates(directories []string, variables map[string]interface{}) (map[string]interface{}, error)
+}
+
 //counterfeiter:generate -o ./fakes/stemcell_service.go --fake-name StemcellService . stemcellService
 type stemcellService interface {
 	fromDirectories
@@ -70,46 +75,31 @@ func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLog
 
 	templateVariablesService := baking.NewTemplateVariablesService(fs)
 
-	boshVariableDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	boshVariablesService := baking.NewBOSHVariablesService(errLogger, boshVariableDirectoryReader)
-
-	formDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	formsService := baking.NewFormsService(errLogger, formDirectoryReader)
-
-	instanceGroupDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	instanceGroupsService := baking.NewInstanceGroupsService(errLogger, instanceGroupDirectoryReader)
-
-	jobsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	jobsService := baking.NewJobsService(errLogger, jobsDirectoryReader)
-
-	propertiesDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	propertiesService := baking.NewPropertiesService(errLogger, propertiesDirectoryReader)
-
-	runtimeConfigsDirectoryReader := builder.NewMetadataPartsDirectoryReader()
-	runtimeConfigsService := baking.NewRuntimeConfigsService(errLogger, runtimeConfigsDirectoryReader)
-
 	iconService := baking.NewIconService(errLogger)
 
 	metadataService := baking.NewMetadataService()
 	checksummer := baking.NewChecksummer(errLogger)
 
 	return Bake{
-		interpolator:      interpolator,
-		tileWriter:        tileWriter,
-		checksummer:       checksummer,
-		outLogger:         outLogger,
-		errLogger:         errLogger,
+		interpolator: interpolator,
+		tileWriter:   tileWriter,
+		checksummer:  checksummer,
+		outLogger:    outLogger,
+		errLogger:    errLogger,
+
 		templateVariables: templateVariablesService,
-		boshVariables:     boshVariablesService,
 		releases:          releasesService,
 		stemcell:          stemcellService,
-		forms:             formsService,
-		instanceGroups:    instanceGroupsService,
-		jobs:              jobsService,
-		properties:        propertiesService,
-		runtimeConfigs:    runtimeConfigsService,
 		icon:              iconService,
-		metadata:          metadataService,
+
+		metadata: metadataService,
+
+		boshVariables:  builder.MetadataPartsDirectoryReader{},
+		forms:          builder.MetadataPartsDirectoryReader{},
+		instanceGroups: builder.MetadataPartsDirectoryReader{},
+		jobs:           builder.MetadataPartsDirectoryReader{},
+		properties:     builder.MetadataPartsDirectoryReader{},
+		runtimeConfigs: builder.MetadataPartsDirectoryReader{},
 	}
 }
 
@@ -121,17 +111,17 @@ type Bake struct {
 	errLogger         *log.Logger
 	templateVariables templateVariablesService
 	stemcell          stemcellService
+	releases          fromDirectories
 
 	boshVariables,
-	releases,
 	forms,
 	instanceGroups,
 	jobs,
 	properties,
-	runtimeConfigs    fromDirectories
+	runtimeConfigs metadataTemplatesParser
 
-	icon              iconService
-	metadata          metadataService
+	icon     iconService
+	metadata metadataService
 
 	Options struct {
 		flags.Standard
@@ -163,14 +153,14 @@ func NewBakeWithInterfaces(
 	outLogger *log.Logger,
 	errLogger *log.Logger,
 	templateVariablesService templateVariablesService,
-	boshVariablesService fromDirectories,
+	boshVariablesService metadataTemplatesParser,
 	releasesService fromDirectories,
 	stemcellService stemcellService,
-	formsService fromDirectories,
-	instanceGroupsService fromDirectories,
-	jobsService fromDirectories,
-	propertiesService fromDirectories,
-	runtimeConfigsService fromDirectories,
+	formsService metadataTemplatesParser,
+	instanceGroupsService metadataTemplatesParser,
+	jobsService metadataTemplatesParser,
+	propertiesService metadataTemplatesParser,
+	runtimeConfigsService metadataTemplatesParser,
 	iconService iconService,
 	metadataService metadataService,
 	checksummer checksummer,
@@ -183,16 +173,17 @@ func NewBakeWithInterfaces(
 		outLogger:         outLogger,
 		errLogger:         errLogger,
 		templateVariables: templateVariablesService,
-		boshVariables:     boshVariablesService,
 		releases:          releasesService,
 		stemcell:          stemcellService,
-		forms:             formsService,
-		instanceGroups:    instanceGroupsService,
-		jobs:              jobsService,
-		properties:        propertiesService,
-		runtimeConfigs:    runtimeConfigsService,
 		icon:              iconService,
 		metadata:          metadataService,
+
+		boshVariables:  boshVariablesService,
+		forms:          formsService,
+		instanceGroups: instanceGroupsService,
+		jobs:           jobsService,
+		properties:     propertiesService,
+		runtimeConfigs: runtimeConfigsService,
 	}
 }
 
@@ -268,6 +259,11 @@ func (b Bake) Execute(args []string) error {
 		b.errLogger.Println("warning: --stemcell-tarball is being deprecated in favor of --stemcells-directory")
 	}
 
+	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
+	if err != nil {
+		return fmt.Errorf("failed to parse template variables: %s", err)
+	}
+
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
 	if err != nil {
 		return fmt.Errorf("failed to parse releases: %s", err)
@@ -287,37 +283,32 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to parse stemcell: %s", err)
 	}
 
-	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
-	if err != nil {
-		return fmt.Errorf("failed to parse template variables: %s", err)
-	}
-
-	boshVariables, err := b.boshVariables.FromDirectories(b.Options.BOSHVariableDirectories)
+	boshVariables, err := b.boshVariables.ParseMetadataTemplates(b.Options.BOSHVariableDirectories, templateVariables)
 	if err != nil {
 		return fmt.Errorf("failed to parse bosh variables: %s", err)
 	}
 
-	forms, err := b.forms.FromDirectories(b.Options.FormDirectories)
+	forms, err := b.forms.ParseMetadataTemplates(b.Options.FormDirectories, templateVariables)
 	if err != nil {
 		return fmt.Errorf("failed to parse forms: %s", err)
 	}
 
-	instanceGroups, err := b.instanceGroups.FromDirectories(b.Options.InstanceGroupDirectories)
+	instanceGroups, err := b.instanceGroups.ParseMetadataTemplates(b.Options.InstanceGroupDirectories, templateVariables)
 	if err != nil {
 		return fmt.Errorf("failed to parse instance groups: %s", err)
 	}
 
-	jobs, err := b.jobs.FromDirectories(b.Options.JobDirectories)
+	jobs, err := b.jobs.ParseMetadataTemplates(b.Options.JobDirectories, templateVariables)
 	if err != nil {
 		return fmt.Errorf("failed to parse jobs: %s", err)
 	}
 
-	propertyBlueprints, err := b.properties.FromDirectories(b.Options.PropertyDirectories)
+	propertyBlueprints, err := b.properties.ParseMetadataTemplates(b.Options.PropertyDirectories, templateVariables)
 	if err != nil {
 		return fmt.Errorf("failed to parse properties: %s", err)
 	}
 
-	runtimeConfigs, err := b.runtimeConfigs.FromDirectories(b.Options.RuntimeConfigDirectories)
+	runtimeConfigs, err := b.runtimeConfigs.ParseMetadataTemplates(b.Options.RuntimeConfigDirectories, templateVariables)
 	if err != nil {
 		return fmt.Errorf("failed to parse runtime configs: %s", err)
 	}
@@ -346,7 +337,7 @@ func (b Bake) Execute(args []string) error {
 		PropertyBlueprints: propertyBlueprints,
 		RuntimeConfigs:     runtimeConfigs,
 		StubReleases:       b.Options.StubReleases,
-	}.WithDefaultMetadataPreprocessor(), metadata)
+	}, metadata)
 	if err != nil {
 		return err
 	}

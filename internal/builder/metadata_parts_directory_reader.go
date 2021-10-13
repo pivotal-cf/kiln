@@ -1,15 +1,15 @@
 package builder
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 
-	pathpkg "path"
-
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 type MetadataPartsDirectoryReader struct {
@@ -36,7 +36,7 @@ func NewMetadataPartsDirectoryReaderWithOrder(topLevelKey, orderKey string) Meta
 }
 
 func (r MetadataPartsDirectoryReader) Read(path string) ([]Part, error) {
-	parts, err := r.readMetadataRecursivelyFromDir(path)
+	parts, err := r.readMetadataRecursivelyFromDir(path, nil)
 	if err != nil {
 		return []Part{}, err
 	}
@@ -48,27 +48,70 @@ func (r MetadataPartsDirectoryReader) Read(path string) ([]Part, error) {
 	return r.orderAlphabeticallyByName(path, parts)
 }
 
-func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string) ([]Part, error) {
-	parts := []Part{}
+func (r MetadataPartsDirectoryReader) ParseMetadataTemplates(directories []string, variables map[string]interface{}) (map[string]interface{}, error) {
+	var releases []Part
+	for _, directory := range directories {
+		newReleases, err := r.ReadPreProcess(directory, variables)
+		if err != nil {
+			return nil, err
+		}
 
-	err := filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
+		releases = append(releases, newReleases...)
+	}
+
+	manifests := map[string]interface{}{}
+	for _, rel := range releases {
+		manifests[rel.Name] = rel.Metadata
+	}
+
+	return manifests, nil
+}
+
+func (r MetadataPartsDirectoryReader) ReadPreProcess(path string, variables map[string]interface{}) ([]Part, error) {
+	parts, err := r.readMetadataRecursivelyFromDir(path, variables)
+	if err != nil {
+		return []Part{}, err
+	}
+
+	if r.orderKey != "" {
+		return r.orderWithOrderFromFile(path, parts)
+	}
+
+	return r.orderAlphabeticallyByName(path, parts)
+}
+
+func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(p string, variables map[string]interface{}) ([]Part, error) {
+	var parts []Part
+
+	var buf bytes.Buffer
+
+	err := filepath.Walk(p, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if info.IsDir() || filepath.Ext(filePath) != ".yml" || pathpkg.Base(filePath) == "_order.yml" {
+		if info.IsDir() || filepath.Ext(filePath) != ".yml" || path.Base(filePath) == "_order.yml" {
 			return nil
 		}
+		defer buf.Reset()
 
 		data, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			return err
 		}
 
+		if variables != nil {
+			err = PreProcessMetadataWithTileFunction(variables, p, &buf, data)
+			if err != nil {
+				return err
+			}
+			data = buf.Bytes()
+		}
+
 		var vars interface{}
 		if r.topLevelKey != "" {
 			var fileVars map[string]interface{}
-			err = yaml.Unmarshal([]byte(data), &fileVars)
+			err = yaml.Unmarshal(data, &fileVars)
 			if err != nil {
 				return fmt.Errorf("cannot unmarshal '%s': %s", filePath, err)
 			}
@@ -79,13 +122,13 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(path string
 				return fmt.Errorf("not a %s file: %q", r.topLevelKey, filePath)
 			}
 		} else {
-			err = yaml.Unmarshal([]byte(data), &vars)
+			err = yaml.Unmarshal(data, &vars)
 			if err != nil {
 				return fmt.Errorf("cannot unmarshal '%s': %s", filePath, err)
 			}
 		}
 
-		parts, err = r.readMetadataIntoParts(pathpkg.Base(filePath), vars, parts)
+		parts, err = r.readMetadataIntoParts(path.Base(filePath), vars, parts)
 		if err != nil {
 			return fmt.Errorf("file '%s' with top-level key '%s' has an invalid format: %s", filePath, r.topLevelKey, err)
 		}
@@ -152,14 +195,14 @@ func (r MetadataPartsDirectoryReader) orderWithOrderFromFile(path string, parts 
 	}
 
 	var files map[string][]interface{}
-	err = yaml.Unmarshal([]byte(data), &files)
+	err = yaml.Unmarshal(data, &files)
 	if err != nil {
-		return []Part{}, fmt.Errorf("Invalid format for '%s': %s", orderPath, err)
+		return []Part{}, fmt.Errorf("invalid format for %q: %w", orderPath, err)
 	}
 
 	orderedNames, ok := files[r.orderKey]
 	if !ok {
-		return []Part{}, fmt.Errorf("Could not find top-level order key '%s' in '%s'", r.orderKey, orderPath)
+		return []Part{}, fmt.Errorf("could not find top-level order key %q in %q", r.orderKey, orderPath)
 	}
 
 	var outputs []Part
@@ -179,7 +222,7 @@ func (r MetadataPartsDirectoryReader) orderWithOrderFromFile(path string, parts 
 	return outputs, err
 }
 
-func (r MetadataPartsDirectoryReader) orderAlphabeticallyByName(path string, parts []Part) ([]Part, error) {
+func (r MetadataPartsDirectoryReader) orderAlphabeticallyByName(_ string, parts []Part) ([]Part, error) {
 	var orderedKeys []string
 	for _, part := range parts {
 		orderedKeys = append(orderedKeys, part.Name)
