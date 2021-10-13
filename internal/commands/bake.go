@@ -19,7 +19,7 @@ import (
 
 //counterfeiter:generate -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
 type interpolator interface {
-	Interpolate(input builder.InterpolateInput, templateYAML []byte) ([]byte, error)
+	Interpolate(input builder.InterpolateInput, templateName string, templateYAML []byte) ([]byte, error)
 }
 
 //counterfeiter:generate -o ./fakes/tile_writer.go --fake-name TileWriter . tileWriter
@@ -337,7 +337,7 @@ func (b Bake) Execute(args []string) error {
 		PropertyBlueprints: propertyBlueprints,
 		RuntimeConfigs:     runtimeConfigs,
 		StubReleases:       b.Options.StubReleases,
-	}, metadata)
+	}, b.Options.Metadata, metadata)
 	if err != nil {
 		return err
 	}

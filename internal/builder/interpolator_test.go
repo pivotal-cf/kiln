@@ -136,7 +136,7 @@ name: foo
 	})
 
 	It("interpolates metadata templates", func() {
-		interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
+		interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(interpolatedYAML).To(HelpfullyMatchYAML(`
 name: some-value
@@ -200,7 +200,7 @@ some_form_types:
 			},
 		}
 
-		interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
+		interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(interpolatedYAML).To(HelpfullyMatchYAML(`
 some_form_types:
@@ -243,7 +243,7 @@ additional_stemcells_criteria:
 - $( stemcell "windows")
 `
 
-			interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
+			interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(interpolatedYAML).To(HelpfullyMatchYAML(`
 ---
@@ -264,7 +264,7 @@ additional_stemcells_criteria:
 - $( stemcell )
 `
 
-			_, err := interpolator.Interpolate(input, []byte(templateYAML))
+			_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("stemcell template helper requires osname argument if multiple stemcells are specified"))
 		})
@@ -297,7 +297,7 @@ stemcell_criteria: $( stemcell )`
 		})
 
 		It("interpolates stemcell key properly", func() {
-			interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
+			interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(interpolatedYAML).To(HelpfullyMatchYAML(`
 ---
@@ -339,7 +339,7 @@ some_runtime_configs:
 		})
 
 		It("allows interpolation helpers inside runtime_configs", func() {
-			interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
+			interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 			Expect(err).NotTo(HaveOccurred())
 
 			var output map[string]interface{}
@@ -370,7 +370,7 @@ releases:
 				}
 			})
 			It("does not error", func() {
-				interpolatedYAML, err := interpolator.Interpolate(input, []byte(templateYAML))
+				interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(interpolatedYAML).To(HelpfullyMatchYAML(`
 some_runtime_configs:
@@ -385,7 +385,7 @@ some_runtime_configs:
 
 			interpolator := builder.NewInterpolator()
 			input.StubReleases = true
-			interpolatedYAML, err := interpolator.Interpolate(input, []byte(`releases: [$(release "stub-release")]`))
+			interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(`releases: [$(release "stub-release")]`))
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(interpolatedYAML).To(HelpfullyMatchYAML(`releases:
@@ -401,7 +401,7 @@ some_runtime_configs:
 			It("returns an error", func() {
 				input.FormTypes = map[string]interface{}{}
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not find form with key 'some-form'"))
@@ -412,7 +412,7 @@ some_runtime_configs:
 			It("returns an error", func() {
 				input.PropertyBlueprints = map[string]interface{}{}
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not find property blueprint with name 'some-templated-property'"))
@@ -423,7 +423,7 @@ some_runtime_configs:
 			It("returns an error", func() {
 				input.RuntimeConfigs = map[string]interface{}{}
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not find runtime_config with name 'some-runtime-config'"))
@@ -439,7 +439,7 @@ some_runtime_configs:
 					},
 				}
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to interpolate value"))
 			})
@@ -449,9 +449,9 @@ some_runtime_configs:
 			It("returns an error", func() {
 
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte("$(variable"))
+				_, err := interpolator.Interpolate(input, "", []byte("$(variable"))
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("template parsing failed"))
+				Expect(err.Error()).To(ContainSubstring("failed when parsing a template"))
 			})
 		})
 
@@ -459,10 +459,10 @@ some_runtime_configs:
 			It("returns an error", func() {
 
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(`name: $( variable "some-missing-variable" )`))
+				_, err := interpolator.Interpolate(input, "", []byte(`name: $( variable "some-missing-variable" )`))
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("template execution failed"))
+				Expect(err.Error()).To(ContainSubstring("failed when rendering a template"))
 				Expect(err.Error()).To(ContainSubstring("could not find variable with key"))
 			})
 		})
@@ -471,7 +471,7 @@ some_runtime_configs:
 			It("returns an error", func() {
 
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(`releases: [$(release "some-release-does-not-exist")]`))
+				_, err := interpolator.Interpolate(input, "", []byte(`releases: [$(release "some-release-does-not-exist")]`))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not find release with name 'some-release-does-not-exist'"))
@@ -482,7 +482,7 @@ some_runtime_configs:
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.BOSHVariables = nil
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("--bosh-variables-directory must be specified"))
@@ -493,7 +493,7 @@ some_runtime_configs:
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.FormTypes = nil
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("--forms-directory must be specified"))
@@ -504,7 +504,7 @@ some_runtime_configs:
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.PropertyBlueprints = nil
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("--properties-directory must be specified"))
@@ -515,7 +515,7 @@ some_runtime_configs:
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.ReleaseManifests = nil
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("missing ReleaseManifests"))
@@ -526,7 +526,7 @@ some_runtime_configs:
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.StemcellManifest = nil
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("stemcell specification must be provided through either --stemcells-directory or --kilnfile"))
@@ -541,7 +541,7 @@ some_releases:
 stemcell_criteria: $( stemcell "windows" )
 `
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(templateWithStemcellName))
+				_, err := interpolator.Interpolate(input, "", []byte(templateWithStemcellName))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("$( stemcell \"<osname>\" ) cannot be used without --stemcells-directory being provided"))
@@ -552,7 +552,7 @@ stemcell_criteria: $( stemcell "windows" )
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.Version = ""
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("--version must be specified"))
@@ -563,7 +563,7 @@ stemcell_criteria: $( stemcell "windows" )
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.Variables = nil
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("--variable or --variables-file must be specified"))
@@ -574,7 +574,7 @@ stemcell_criteria: $( stemcell "windows" )
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.IconImage = ""
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("--icon must be specified"))
@@ -585,7 +585,7 @@ stemcell_criteria: $( stemcell "windows" )
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.InstanceGroups = nil
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("--instance-groups-directory must be specified"))
@@ -596,7 +596,7 @@ stemcell_criteria: $( stemcell "windows" )
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.Jobs = nil
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("--jobs-directory must be specified"))
@@ -607,7 +607,7 @@ stemcell_criteria: $( stemcell "windows" )
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
 				input.RuntimeConfigs = nil
-				_, err := interpolator.Interpolate(input, []byte(templateYAML))
+				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("--runtime-configs-directory must be specified"))
@@ -617,7 +617,7 @@ stemcell_criteria: $( stemcell "windows" )
 		Context("when a specified instance group is not included in the interpolate input", func() {
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(`job_types: [$(instance_group "some-instance-group-does-not-exist")]`))
+				_, err := interpolator.Interpolate(input, "", []byte(`job_types: [$(instance_group "some-instance-group-does-not-exist")]`))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not find instance_group with name 'some-instance-group-does-not-exist'"))
@@ -627,7 +627,7 @@ stemcell_criteria: $( stemcell "windows" )
 		Context("when a specified job is not included in the interpolate input", func() {
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(`job: [$(job "some-job-does-not-exist")]`))
+				_, err := interpolator.Interpolate(input, "", []byte(`job: [$(job "some-job-does-not-exist")]`))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not find job with name 'some-job-does-not-exist'"))
@@ -637,7 +637,7 @@ stemcell_criteria: $( stemcell "windows" )
 		Context("input to the select function cannot be JSON unmarshalled", func() {
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(`job: [$( "%%%" | select "value" )]`))
+				_, err := interpolator.Interpolate(input, "", []byte(`job: [$( "%%%" | select "value" )]`))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not JSON unmarshal \"%%%\": invalid character"))
@@ -647,7 +647,7 @@ stemcell_criteria: $( stemcell "windows" )
 		Context("input to the select function cannot be JSON unmarshalled", func() {
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(`release: [$( release "some-release" | select "key-not-there" )]`))
+				_, err := interpolator.Interpolate(input, "", []byte(`release: [$( release "some-release" | select "key-not-there" )]`))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not select \"key-not-there\", key does not exist"))
@@ -657,7 +657,7 @@ stemcell_criteria: $( stemcell "windows" )
 		Context("input to regexReplaceAll is not valid regex", func() {
 			It("returns an error", func() {
 				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input, []byte(`regex: $( regexReplaceAll "**" "" "" )`))
+				_, err := interpolator.Interpolate(input, "", []byte(`regex: $( regexReplaceAll "**" "" "" )`))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("regex"))

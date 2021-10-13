@@ -258,7 +258,7 @@ var _ = Describe("Bake", func() {
 
 			Expect(fakeInterpolator.InterpolateCallCount()).To(Equal(1))
 
-			input, metadata := fakeInterpolator.InterpolateArgsForCall(0)
+			input, interpolateName, metadata := fakeInterpolator.InterpolateArgsForCall(0)
 			Expect(input).To(Equal(builder.InterpolateInput{
 				Version: "1.2.3",
 				BOSHVariables: map[string]interface{}{
@@ -324,7 +324,7 @@ var _ = Describe("Bake", func() {
 					},
 				},
 			}))
-
+			Expect(interpolateName).To(Equal("some-metadata"))
 			Expect(string(metadata)).To(Equal("some-metadata"))
 
 			Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
