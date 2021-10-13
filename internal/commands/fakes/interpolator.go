@@ -8,11 +8,12 @@ import (
 )
 
 type Interpolator struct {
-	InterpolateStub        func(builder.InterpolateInput, []byte) ([]byte, error)
+	InterpolateStub        func(builder.InterpolateInput, string, []byte) ([]byte, error)
 	interpolateMutex       sync.RWMutex
 	interpolateArgsForCall []struct {
 		arg1 builder.InterpolateInput
-		arg2 []byte
+		arg2 string
+		arg3 []byte
 	}
 	interpolateReturns struct {
 		result1 []byte
@@ -26,24 +27,25 @@ type Interpolator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Interpolator) Interpolate(arg1 builder.InterpolateInput, arg2 []byte) ([]byte, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
+func (fake *Interpolator) Interpolate(arg1 builder.InterpolateInput, arg2 string, arg3 []byte) ([]byte, error) {
+	var arg3Copy []byte
+	if arg3 != nil {
+		arg3Copy = make([]byte, len(arg3))
+		copy(arg3Copy, arg3)
 	}
 	fake.interpolateMutex.Lock()
 	ret, specificReturn := fake.interpolateReturnsOnCall[len(fake.interpolateArgsForCall)]
 	fake.interpolateArgsForCall = append(fake.interpolateArgsForCall, struct {
 		arg1 builder.InterpolateInput
-		arg2 []byte
-	}{arg1, arg2Copy})
+		arg2 string
+		arg3 []byte
+	}{arg1, arg2, arg3Copy})
 	stub := fake.InterpolateStub
 	fakeReturns := fake.interpolateReturns
-	fake.recordInvocation("Interpolate", []interface{}{arg1, arg2Copy})
+	fake.recordInvocation("Interpolate", []interface{}{arg1, arg2, arg3Copy})
 	fake.interpolateMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -57,17 +59,17 @@ func (fake *Interpolator) InterpolateCallCount() int {
 	return len(fake.interpolateArgsForCall)
 }
 
-func (fake *Interpolator) InterpolateCalls(stub func(builder.InterpolateInput, []byte) ([]byte, error)) {
+func (fake *Interpolator) InterpolateCalls(stub func(builder.InterpolateInput, string, []byte) ([]byte, error)) {
 	fake.interpolateMutex.Lock()
 	defer fake.interpolateMutex.Unlock()
 	fake.InterpolateStub = stub
 }
 
-func (fake *Interpolator) InterpolateArgsForCall(i int) (builder.InterpolateInput, []byte) {
+func (fake *Interpolator) InterpolateArgsForCall(i int) (builder.InterpolateInput, string, []byte) {
 	fake.interpolateMutex.RLock()
 	defer fake.interpolateMutex.RUnlock()
 	argsForCall := fake.interpolateArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *Interpolator) InterpolateReturns(result1 []byte, result2 error) {

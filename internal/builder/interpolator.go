@@ -36,8 +36,8 @@ func NewInterpolator() Interpolator {
 	return Interpolator{}
 }
 
-func (i Interpolator) Interpolate(input InterpolateInput, templateYAML []byte) ([]byte, error) {
-	interpolatedYAML, err := i.interpolate(input, templateYAML)
+func (i Interpolator) Interpolate(input InterpolateInput, name string, templateYAML []byte) ([]byte, error) {
+	interpolatedYAML, err := i.interpolate(input, name, templateYAML)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 			if !ok {
 				return "", fmt.Errorf("could not find bosh variable with key '%s'", key)
 			}
-			return i.interpolateValueIntoYAML(input, val)
+			return i.interpolateValueIntoYAML(input, key, val)
 		},
 		"form": func(key string) (string, error) {
 			if input.FormTypes == nil {
@@ -71,7 +71,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 				return "", fmt.Errorf("could not find form with key '%s'", key)
 			}
 
-			return i.interpolateValueIntoYAML(input, val)
+			return i.interpolateValueIntoYAML(input, key, val)
 		},
 		"property": func(name string) (string, error) {
 			if input.PropertyBlueprints == nil {
@@ -81,7 +81,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 			if !ok {
 				return "", fmt.Errorf("could not find property blueprint with name '%s'", name)
 			}
-			return i.interpolateValueIntoYAML(input, val)
+			return i.interpolateValueIntoYAML(input, name, val)
 		},
 		"regexReplaceAll": func(regex, inputString, replaceString string) (string, error) {
 			re, err := regexp.Compile(regex)
@@ -110,7 +110,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 				}
 			}
 
-			return i.interpolateValueIntoYAML(input, val)
+			return i.interpolateValueIntoYAML(input, name, val)
 		},
 		"stemcell": func(osname ...string) (string, error) {
 			if input.StemcellManifest == nil && len(input.StemcellManifests) == 0 {
@@ -126,22 +126,22 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 			}
 
 			if len(osname) > 0 {
-				return i.interpolateValueIntoYAML(input, input.StemcellManifests[osname[0]])
+				return i.interpolateValueIntoYAML(input, osname[0], input.StemcellManifests[osname[0]])
 			}
 
 			if len(input.StemcellManifests) == 1 {
-				for _, stemcell := range input.StemcellManifests {
-					return i.interpolateValueIntoYAML(input, stemcell)
+				for name, stemcell := range input.StemcellManifests {
+					return i.interpolateValueIntoYAML(input, name, stemcell)
 				}
 			}
 
-			return i.interpolateValueIntoYAML(input, input.StemcellManifest)
+			return i.interpolateValueIntoYAML(input, "stemcell", input.StemcellManifest)
 		},
 		"version": func() (string, error) {
 			if input.Version == "" {
 				return "", errors.New("--version must be specified")
 			}
-			return i.interpolateValueIntoYAML(input, input.Version)
+			return i.interpolateValueIntoYAML(input, "", input.Version)
 		},
 		"variable": func(key string) (string, error) {
 			if input.Variables == nil {
@@ -151,7 +151,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 			if !ok {
 				return "", fmt.Errorf("could not find variable with key '%s'", key)
 			}
-			return i.interpolateValueIntoYAML(input, val)
+			return i.interpolateValueIntoYAML(input, key, val)
 		},
 		"icon": func() (string, error) {
 			if input.IconImage == "" {
@@ -168,7 +168,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 				return "", fmt.Errorf("could not find instance_group with name '%s'", name)
 			}
 
-			return i.interpolateValueIntoYAML(input, val)
+			return i.interpolateValueIntoYAML(input, name, val)
 		},
 		"job": func(name string) (string, error) {
 			if input.Jobs == nil {
@@ -179,7 +179,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 				return "", fmt.Errorf("could not find job with name '%s'", name)
 			}
 
-			return i.interpolateValueIntoYAML(input, val)
+			return i.interpolateValueIntoYAML(input, name, val)
 		},
 		"runtime_config": func(name string) (string, error) {
 			if input.RuntimeConfigs == nil {
@@ -190,7 +190,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 				return "", fmt.Errorf("could not find runtime_config with name '%s'", name)
 			}
 
-			return i.interpolateValueIntoYAML(input, val)
+			return i.interpolateValueIntoYAML(input, name, val)
 		},
 		"select": func(field, input string) (string, error) {
 			object := map[string]interface{}{}
@@ -216,33 +216,32 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 	}
 }
 
-func (i Interpolator) interpolate(input InterpolateInput, templateYAML []byte) ([]byte, error) {
-	t, err := template.New("metadata").
+func (i Interpolator) interpolate(input InterpolateInput, name string, templateYAML []byte) ([]byte, error) {
+	t, err := template.New(name).
 		Funcs(i.functions(input)).
 		Delims("$(", ")").
 		Option("missingkey=error").
 		Parse(string(templateYAML))
-
 	if err != nil {
-		return nil, fmt.Errorf("template parsing failed: %s", err)
+		return nil, fmt.Errorf("failed when parsing a %w", err)
 	}
 
 	var buffer bytes.Buffer
 	err = t.Execute(&buffer, input.Variables)
 	if err != nil {
-		return nil, fmt.Errorf("template execution failed: %s", err)
+		return nil, fmt.Errorf("failed when rendering a %w", err)
 	}
 
 	return buffer.Bytes(), nil
 }
 
-func (i Interpolator) interpolateValueIntoYAML(input InterpolateInput, val interface{}) (string, error) {
+func (i Interpolator) interpolateValueIntoYAML(input InterpolateInput, name string, val interface{}) (string, error) {
 	initialYAML, err := yaml.Marshal(val)
 	if err != nil {
 		return "", err // should never happen
 	}
 
-	interpolatedYAML, err := i.interpolate(input, initialYAML)
+	interpolatedYAML, err := i.interpolate(input, name, initialYAML)
 	if err != nil {
 		return "", fmt.Errorf("unable to interpolate value: %s", err)
 	}
