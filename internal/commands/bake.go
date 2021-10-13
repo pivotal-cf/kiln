@@ -346,7 +346,7 @@ func (b Bake) Execute(args []string) error {
 		PropertyBlueprints: propertyBlueprints,
 		RuntimeConfigs:     runtimeConfigs,
 		StubReleases:       b.Options.StubReleases,
-	}, metadata)
+	}.WithDefaultMetadataPreprocessor(), metadata)
 	if err != nil {
 		return err
 	}

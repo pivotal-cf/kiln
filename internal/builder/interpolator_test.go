@@ -1,16 +1,16 @@
 package builder_test
 
 import (
-	"gopkg.in/yaml.v2"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
-var _ = Describe("interpolator", func() {
+var _ = FDescribe("interpolator", func() {
 	const templateYAML = `
 name: $( variable "some-variable" )
 icon_img: $( icon )
@@ -657,6 +657,86 @@ stemcell_criteria: $( stemcell "windows" )
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("regex"))
+			})
+		})
+
+		Context("when the metadata file contains a malformed expression", func() {
+			It("prints an error message", func() {
+				partYML := `---
+metadata_version: some-metadata-version
+provides_product_versions:
+- name: Malformed template expression {{ tile |`
+
+				interpolator := builder.NewInterpolator()
+				_, err := interpolator.Interpolate(input.WithDefaultMetadataPreprocessor(), []byte(partYML))
+
+				Expect(err).To(And(
+					HaveOccurred(),
+					MatchError(ContainSubstring("unclosed action")),
+				))
+			})
+		})
+
+		Context("when the metadata file references a missing key", func() {
+			It("errors", func() {
+				partYML := `---
+metadata_version: some-metadata-version
+name: {{.some_missing_key}}
+`
+				interpolator := builder.NewInterpolator()
+				_, err := interpolator.Interpolate(input.WithDefaultMetadataPreprocessor(), []byte(partYML))
+				Expect(err).To(And(
+					HaveOccurred(),
+					MatchError(ContainSubstring("some_missing_key")),
+				))
+			})
+		})
+
+		Context("when tile-name is set", func() {
+			It("errors", func() {
+				partYML := `---
+tile: {{if eq tile "ert" -}}
+	big-foot
+{{- else if eq tile "srt" -}}
+	small-foot
+{{- end -}}
+`
+				interpolator := builder.NewInterpolator()
+				input.Variables["tile-name"] = "ERT"
+				resultERT, err := interpolator.Interpolate(input.WithDefaultMetadataPreprocessor(), []byte(partYML))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resultERT).To(MatchYAML(`tile: big-foot`))
+
+				input.Variables["tile-name"] = "SRT"
+				resultSRT, err := interpolator.Interpolate(input.WithDefaultMetadataPreprocessor(), []byte(partYML))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resultSRT).To(MatchYAML(`tile: small-foot`))
+			})
+		})
+
+		Context("when tile-name is not set", func() {
+			It("errors", func() {
+				partYML := `tile: {{tile}}`
+				interpolator := builder.NewInterpolator()
+				input.Variables["tile-name"] = 27
+				_, err := interpolator.Interpolate(input.WithDefaultMetadataPreprocessor(), []byte(partYML))
+				Expect(err).To(And(
+					HaveOccurred(),
+					MatchError(ContainSubstring("expected string")),
+				))
+			})
+		})
+
+		Context("when tile-name is a number", func() {
+			It("errors", func() {
+				partYML := `tile: {{tile}}`
+				interpolator := builder.NewInterpolator()
+				delete(input.Variables, "tile-name")
+				_, err := interpolator.Interpolate(input.WithDefaultMetadataPreprocessor(), []byte(partYML))
+				Expect(err).To(And(
+					HaveOccurred(),
+					MatchError(ContainSubstring("tile-name")),
+				))
 			})
 		})
 	})
