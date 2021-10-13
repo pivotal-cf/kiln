@@ -1,6 +1,10 @@
 package builder_test
 
 import (
+	"bytes"
+	"io"
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
@@ -10,7 +14,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
-var _ = FDescribe("interpolator", func() {
+var _ = Describe("interpolator", func() {
 	const templateYAML = `
 name: $( variable "some-variable" )
 icon_img: $( icon )
@@ -659,85 +663,80 @@ stemcell_criteria: $( stemcell "windows" )
 				Expect(err.Error()).To(ContainSubstring("regex"))
 			})
 		})
+	})
+})
 
-		Context("when the metadata file contains a malformed expression", func() {
-			It("prints an error message", func() {
-				partYML := `---
+func TestPreProcess(t *testing.T) {
+	t.Run("when the metadata file contains a malformed expression", func(t *testing.T) {
+		please := NewWithT(t)
+
+		partYML := `---
 metadata_version: some-metadata-version
 provides_product_versions:
 - name: Malformed template expression {{ tile |`
 
-				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input.WithDefaultMetadataPreprocessor(), []byte(partYML))
+		err := builder.PreProcessMetadataWithTileFunction(nil, "m.yml", io.Discard, []byte(partYML))
+		please.Expect(err).To(And(
+			HaveOccurred(),
+			MatchError(ContainSubstring("unclosed action")),
+		))
+	})
 
-				Expect(err).To(And(
-					HaveOccurred(),
-					MatchError(ContainSubstring("unclosed action")),
-				))
-			})
-		})
+	t.Run("when the metadata file references a missing key", func(t *testing.T) {
+		please := NewWithT(t)
 
-		Context("when the metadata file references a missing key", func() {
-			It("errors", func() {
-				partYML := `---
+		partYML := `---
 metadata_version: some-metadata-version
 name: {{.some_missing_key}}
 `
-				interpolator := builder.NewInterpolator()
-				_, err := interpolator.Interpolate(input.WithDefaultMetadataPreprocessor(), []byte(partYML))
-				Expect(err).To(And(
-					HaveOccurred(),
-					MatchError(ContainSubstring("some_missing_key")),
-				))
-			})
-		})
+		err := builder.PreProcessMetadataWithTileFunction(nil, "m.yml", io.Discard, []byte(partYML))
+		please.Expect(err).To(And(
+			HaveOccurred(),
+			MatchError(ContainSubstring("some_missing_key")),
+		))
+	})
 
-		Context("when tile-name is set", func() {
-			It("errors", func() {
-				partYML := `---
+	t.Run("when tile-name is set", func(t *testing.T) {
+		please := NewWithT(t)
+
+		partYML := `---
 tile: {{if eq tile "ert" -}}
 	big-foot
 {{- else if eq tile "srt" -}}
 	small-foot
 {{- end -}}
 `
-				interpolator := builder.NewInterpolator()
-				input.Variables["tile-name"] = "ERT"
-				resultERT, err := interpolator.Interpolate(input.WithDefaultMetadataPreprocessor(), []byte(partYML))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(resultERT).To(MatchYAML(`tile: big-foot`))
+		var buf bytes.Buffer
+		err := builder.PreProcessMetadataWithTileFunction(map[string]interface{}{"tile-name": "ERT"}, "m.yml", &buf, []byte(partYML))
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(buf.Bytes()).To(MatchYAML(`tile: big-foot`))
 
-				input.Variables["tile-name"] = "SRT"
-				resultSRT, err := interpolator.Interpolate(input.WithDefaultMetadataPreprocessor(), []byte(partYML))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(resultSRT).To(MatchYAML(`tile: small-foot`))
-			})
-		})
+		buf.Reset()
 
-		Context("when tile-name is not set", func() {
-			It("errors", func() {
-				partYML := `tile: {{tile}}`
-				interpolator := builder.NewInterpolator()
-				input.Variables["tile-name"] = 27
-				_, err := interpolator.Interpolate(input.WithDefaultMetadataPreprocessor(), []byte(partYML))
-				Expect(err).To(And(
-					HaveOccurred(),
-					MatchError(ContainSubstring("expected string")),
-				))
-			})
-		})
-
-		Context("when tile-name is a number", func() {
-			It("errors", func() {
-				partYML := `tile: {{tile}}`
-				interpolator := builder.NewInterpolator()
-				delete(input.Variables, "tile-name")
-				_, err := interpolator.Interpolate(input.WithDefaultMetadataPreprocessor(), []byte(partYML))
-				Expect(err).To(And(
-					HaveOccurred(),
-					MatchError(ContainSubstring("tile-name")),
-				))
-			})
-		})
+		err = builder.PreProcessMetadataWithTileFunction(map[string]interface{}{"tile-name": "SRT"}, "m.yml", &buf, []byte(partYML))
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(buf.Bytes()).To(MatchYAML(`tile: small-foot`))
 	})
-})
+
+	t.Run("when tile-name value has the wrong type", func(t *testing.T) {
+		please := NewWithT(t)
+
+		partYML := `tile: {{tile}}`
+		err := builder.PreProcessMetadataWithTileFunction(map[string]interface{}{"tile-name": 27}, "m.yml", io.Discard, []byte(partYML))
+		please.Expect(err).To(And(
+			HaveOccurred(),
+			MatchError(ContainSubstring("expected string")),
+		))
+	})
+
+	t.Run("when tile-name does not exist", func(t *testing.T) {
+		please := NewWithT(t)
+
+		partYML := `tile: {{tile}}`
+		err := builder.PreProcessMetadataWithTileFunction(make(map[string]interface{}), "m.yml", io.Discard, []byte(partYML))
+		please.Expect(err).To(And(
+			HaveOccurred(),
+			MatchError(ContainSubstring("could not find variable")),
+		))
+	})
+}

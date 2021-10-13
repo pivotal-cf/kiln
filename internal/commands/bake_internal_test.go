@@ -1,11 +1,14 @@
 package commands
 
 import (
+	"github.com/pivotal-cf/kiln/internal/builder"
 	"os"
 	"testing"
 
 	Ω "github.com/onsi/gomega"
 )
+
+var _ metadataTemplatesParser = (*builder.MetadataPartsDirectoryReader)(nil)
 
 func TestBake_loadFlags_sets_reasonable_defaults(t *testing.T) {
 	please := Ω.NewWithT(t)

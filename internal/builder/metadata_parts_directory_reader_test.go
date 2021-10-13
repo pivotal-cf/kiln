@@ -320,7 +320,7 @@ variables:
 
 					It("returns an error", func() {
 						_, err := reader.Read(tempDir)
-						Expect(err.Error()).To(ContainSubstring("Invalid format"))
+						Expect(err.Error()).To(ContainSubstring("invalid format"))
 					})
 				})
 
