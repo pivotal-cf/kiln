@@ -6,7 +6,7 @@ import (
 )
 
 func GitMetadataSha(p string, allowDirty bool) (string, error) {
-	repo, err := git.PlainOpen(p)
+	repo, err := git.PlainOpenWithOptions(p, &git.PlainOpenOptions{DetectDotGit: true})
 	if err != nil {
 		return "", err
 	}
