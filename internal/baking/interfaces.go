@@ -11,8 +11,3 @@ type logger interface {
 type partReader interface {
 	Read(path string) (builder.Part, error)
 }
-
-//counterfeiter:generate -o ./fakes/directory_reader.go --fake-name DirectoryReader . directoryReader
-type directoryReader interface {
-	Read(path string) ([]builder.Part, error)
-}
