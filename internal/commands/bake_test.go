@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"reflect"
 
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/yaml.v2"
@@ -270,6 +269,8 @@ var _ = Describe("Bake", func() {
 				Variables: map[string]interface{}{
 					"some-variable-from-file": "some-variable-value-from-file",
 					"some-variable":           "some-variable-value",
+					"metadata-git-sha":        "development",
+					"build-version":           "1.2.3",
 				},
 				ReleaseManifests: map[string]interface{}{
 					"some-release-1": builder.ReleaseManifest{
@@ -846,13 +847,3 @@ var _ = Describe("Bake", func() {
 		})
 	})
 })
-
-func setEmptyZeroValues(ptrPtrs ...interface{}) {
-	for i := range ptrPtrs {
-		v := reflect.ValueOf(ptrPtrs[i])
-		if v.Kind() != reflect.Ptr && v.Elem().Kind() != reflect.Ptr {
-			continue
-		}
-		v.Elem().Set(reflect.New(v.Type()))
-	}
-}
