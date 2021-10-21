@@ -18,11 +18,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/helper"
 )
 
-const (
-	GitMetadataShaVariable = "metadata-git-sha"
-	BuildVersionVariable   = "build-version"
-)
-
 //counterfeiter:generate -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
 type interpolator interface {
 	Interpolate(input builder.InterpolateInput, templateName string, templateYAML []byte) ([]byte, error)
@@ -270,19 +265,6 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to parse template variables: %s", err)
 	}
 
-	_, ok := templateVariables[GitMetadataShaVariable]
-	if !ok {
-		templateVariables[GitMetadataShaVariable], err = baking.GitMetadataSha(filepath.Dir(b.Options.Kilnfile), b.Options.MetadataOnly || b.Options.StubReleases)
-		if err != nil {
-			fmt.Println("WARNING", err)
-			templateVariables[GitMetadataShaVariable] = "development"
-		}
-	}
-	_, ok = templateVariables[BuildVersionVariable]
-	if !ok {
-		templateVariables[BuildVersionVariable] = b.Options.Version
-	}
-
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
 	if err != nil {
 		return fmt.Errorf("failed to parse releases: %s", err)
@@ -356,6 +338,7 @@ func (b Bake) Execute(args []string) error {
 		PropertyBlueprints: propertyBlueprints,
 		RuntimeConfigs:     runtimeConfigs,
 		StubReleases:       b.Options.StubReleases,
+		MetadataGitSHA:     builder.GitMetadataSHA(filepath.Dir(b.Options.Kilnfile), b.Options.MetadataOnly || b.Options.StubReleases),
 	}, b.Options.Metadata, metadata)
 	if err != nil {
 		return err

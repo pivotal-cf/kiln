@@ -1,23 +1,29 @@
-package baking
+package builder
 
 import (
 	"errors"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"io/fs"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 )
 
-func GitMetadataSha(p string, allowDirty bool) (string, error) {
-	repo, err := git.PlainOpenWithOptions(p, &git.PlainOpenOptions{DetectDotGit: true})
-	if err != nil {
-		return "", err
-	}
+func GitMetadataSHA(p string, isDev bool) func() (string, error) {
+	var cache string
+	return func() (s string, err error) {
+		if cache != "" {
+			return cache, nil
+		}
 
-	if !allowDirty {
+		repo, err := git.PlainOpenWithOptions(p, &git.PlainOpenOptions{DetectDotGit: true})
+		if err != nil {
+			return "", err
+		}
+
 		wt, err := repo.Worktree()
 		if err != nil {
 			return "", nil
@@ -35,16 +41,21 @@ func GitMetadataSha(p string, allowDirty bool) (string, error) {
 		}
 
 		if !status.IsClean() {
+			if !isDev {
+				cache = plumbing.ZeroHash.String()
+				return cache, nil
+			}
 			return "", errors.New("worktree is not clean")
 		}
-	}
 
-	head, err := repo.Head()
-	if err != nil {
-		return "", err
-	}
+		head, err := repo.Head()
+		if err != nil {
+			return "", err
+		}
 
-	return head.Hash().String(), nil
+		cache = head.Hash().String()
+		return cache, nil
+	}
 }
 
 func getExcludePatterns(p string) ([]gitignore.Pattern, error) {

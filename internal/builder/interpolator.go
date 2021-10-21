@@ -14,6 +14,11 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const (
+	MetadataGitSHAVariable = "metadata-git-sha"
+	BuildVersionVariable   = "build-version"
+)
+
 type Interpolator struct{}
 
 type InterpolateInput struct {
@@ -30,6 +35,7 @@ type InterpolateInput struct {
 	PropertyBlueprints map[string]interface{}
 	RuntimeConfigs     map[string]interface{}
 	StubReleases       bool
+	MetadataGitSHA     func() (string, error)
 }
 
 func NewInterpolator() Interpolator {
@@ -51,6 +57,13 @@ func (i Interpolator) Interpolate(input InterpolateInput, name string, templateY
 }
 
 func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
+	versionFunc := func() (string, error) {
+		if input.Version == "" {
+			return "", errors.New("--version must be specified")
+		}
+		return i.interpolateValueIntoYAML(input, "", input.Version)
+	}
+
 	return template.FuncMap{
 		"bosh_variable": func(key string) (string, error) {
 			if input.BOSHVariables == nil {
@@ -137,18 +150,21 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 
 			return i.interpolateValueIntoYAML(input, "stemcell", input.StemcellManifest)
 		},
-		"version": func() (string, error) {
-			if input.Version == "" {
-				return "", errors.New("--version must be specified")
-			}
-			return i.interpolateValueIntoYAML(input, "", input.Version)
-		},
+		"version": versionFunc,
 		"variable": func(key string) (string, error) {
 			if input.Variables == nil {
 				return "", errors.New("--variable or --variables-file must be specified")
 			}
 			val, ok := input.Variables[key]
 			if !ok {
+				switch key {
+				case MetadataGitSHAVariable:
+					if input.MetadataGitSHA != nil {
+						return input.MetadataGitSHA()
+					}
+				case BuildVersionVariable:
+					return versionFunc()
+				}
 				return "", fmt.Errorf("could not find variable with key '%s'", key)
 			}
 			return i.interpolateValueIntoYAML(input, key, val)
