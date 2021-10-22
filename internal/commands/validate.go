@@ -7,6 +7,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
+
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -33,7 +34,7 @@ func (v Validate) Execute(args []string) error {
 		return err
 	}
 
-	kilnfile, _, err := v.Options.Standard.LoadKilnfiles(v.FS, nil)
+	kilnfile, lock, err := v.Options.Standard.LoadKilnfiles(v.FS, nil)
 	if err != nil {
 		return fmt.Errorf("failed to load kilnfiles: %w", err)
 	}
@@ -41,7 +42,14 @@ func (v Validate) Execute(args []string) error {
 	var releaseErrors errorList
 
 	for index, release := range kilnfile.Releases {
-		if err := validateRelease(release, index); err != nil {
+		releaseLock, err := lock.FindReleaseWithName(release.Name)
+		if err != nil {
+			releaseErrors = append(releaseErrors,
+				fmt.Errorf("release %q not found in lock", release.Name))
+			continue
+		}
+
+		if err := validateRelease(release, releaseLock, index); err != nil {
 			releaseErrors = append(releaseErrors, err)
 		}
 	}
@@ -63,17 +71,29 @@ func (list errorList) Error() string {
 	return strings.Join(messages, "\n")
 }
 
-func validateRelease(release cargo.ReleaseKiln, index int) error {
+func validateRelease(release cargo.ReleaseKiln, lock cargo.ReleaseLock, index int) error {
 	if release.Name == "" {
 		return fmt.Errorf("release at index %d missing name", index)
 	}
 
-	if release.Version == "" {
-		return nil
-	}
+	if release.Version != "" {
+		c, err := semver.NewConstraint(release.Version)
+		if err != nil {
+			return fmt.Errorf("release %s (index %d in Kilnfile) has invalid version constraint: %w",
+				release.Name, index, err)
+		}
 
-	if _, err := semver.NewConstraint(release.Version); err != nil {
-		return fmt.Errorf("release %s (index %d) has invalid version constraint: %w", release.Name, index, err)
+		v, err := semver.NewVersion(lock.Version)
+		if err != nil {
+			return fmt.Errorf("release %s (index %d in Kilnfile.lock) has invalid lock version %q: %w",
+				release.Name, index, lock.Version, err)
+		}
+
+		matches, errs := c.Validate(v)
+		if !matches {
+			return fmt.Errorf("release %s version in lock %q does not match constraint %q: %v",
+				release.Name, lock.Version, release.Version, errs)
+		}
 	}
 
 	return nil
