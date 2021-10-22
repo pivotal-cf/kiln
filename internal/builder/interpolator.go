@@ -15,8 +15,20 @@ import (
 )
 
 const (
+	// MetadataGitSHAVariable is the name of a special variable computed just in time
+	// when referenced. The value is computed by MetadataGitSHA func on InterpolateInput.
+	// If the value computed value can be over-written by setting it the variable
+	// explicitly like --variable="metadata-git-sha=$(git rev-parse HEAD)".
 	MetadataGitSHAVariable = "metadata-git-sha"
-	BuildVersionVariable   = "build-version"
+
+	// BuildVersionVariable is the name of a special variable when not set has the value of
+	// Version field on InterpolateInput returned.
+	BuildVersionVariable = "build-version"
+
+	// TileNameVariable is the name of a special variable that is used as the return variable
+	// of the tile function during interpolation. When it is not set, the function returns
+	// an error.
+	TileNameVariable = "tile-name"
 )
 
 type Interpolator struct{}
@@ -299,8 +311,6 @@ func PreProcessMetadataWithTileFunction(variables map[string]interface{}, name s
 	return t.Execute(dst, struct{}{})
 }
 
-const TileNameVariableKey = "tile-name"
-
 // tileFunc is used both in pre-processing and is also available
 // to Interpolator
 func tileFunc(variables map[string]interface{}) func() (string, error) {
@@ -309,13 +319,13 @@ func tileFunc(variables map[string]interface{}) func() (string, error) {
 	}
 
 	return func() (string, error) {
-		val, ok := variables[TileNameVariableKey]
+		val, ok := variables[TileNameVariable]
 		if !ok {
-			return "", fmt.Errorf("could not find variable with key %q", TileNameVariableKey)
+			return "", fmt.Errorf("could not find variable with key %q", TileNameVariable)
 		}
 		str, ok := val.(string)
 		if !ok {
-			return "", fmt.Errorf("variable %[1]q is %[2]T expected string: %[1]s=%[2]v", TileNameVariableKey, val)
+			return "", fmt.Errorf("variable %[1]q is %[2]T expected string: %[1]s=%[2]v", TileNameVariable, val)
 		}
 		return strings.ToLower(str), nil
 	}
