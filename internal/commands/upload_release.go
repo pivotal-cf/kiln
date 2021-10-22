@@ -28,7 +28,7 @@ type UploadRelease struct {
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/release_uploader_finder.go --fake-name ReleaseUploaderFinder . ReleaseUploaderFinder
+//counterfeiter:generate -o ./fakes/release_uploader_finder.go --fake-name ReleaseUploaderFinder . ReleaseUploaderFinder
 type ReleaseUploaderFinder func(cargo.Kilnfile, string) (fetcher.ReleaseUploader, error)
 
 func (command UploadRelease) Execute(args []string) error {

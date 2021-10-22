@@ -30,7 +30,7 @@ type Fetch struct {
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/multi_release_source_provider.go --fake-name MultiReleaseSourceProvider . MultiReleaseSourceProvider
+//counterfeiter:generate -o ./fakes/multi_release_source_provider.go --fake-name MultiReleaseSourceProvider . MultiReleaseSourceProvider
 type MultiReleaseSourceProvider func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource
 
 func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider, localReleaseDirectory LocalReleaseDirectory) Fetch {
@@ -41,7 +41,7 @@ func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceP
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
+//counterfeiter:generate -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
 	GetLocalReleases(releasesDir string) ([]release.Local, error)
 	DeleteExtraReleases(extraReleases []release.Local, noConfirm bool) error

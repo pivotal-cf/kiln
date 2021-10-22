@@ -36,7 +36,7 @@ func NewSyncWithLocal(fs billy.Filesystem, localReleaseDirectory LocalReleaseDir
 	}
 }
 
-//go:generate counterfeiter -o ./fakes/remote_pather_finder.go --fake-name RemotePatherFinder . RemotePatherFinder
+//counterfeiter:generate -o ./fakes/remote_pather_finder.go --fake-name RemotePatherFinder . RemotePatherFinder
 type RemotePatherFinder func(cargo.Kilnfile, string) (fetcher.RemotePather, error)
 
 func (command SyncWithLocal) Execute(args []string) error {
