@@ -10,7 +10,7 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
@@ -29,7 +29,7 @@ type UploadRelease struct {
 }
 
 //counterfeiter:generate -o ./fakes/release_uploader_finder.go --fake-name ReleaseUploaderFinder . ReleaseUploaderFinder
-type ReleaseUploaderFinder func(cargo.Kilnfile, string) (fetcher.ReleaseUploader, error)
+type ReleaseUploaderFinder func(cargo.Kilnfile, string) (component.ReleaseUploader, error)
 
 func (command UploadRelease) Execute(args []string) error {
 	err := flags.LoadFlagsWithDefaults(&command.Options, args, command.FS.Stat)

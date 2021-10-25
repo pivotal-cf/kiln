@@ -5,30 +5,30 @@ import (
 	"sync"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type ReleaseUploaderFinder struct {
-	Stub        func(cargo.Kilnfile, string) (fetcher.ReleaseUploader, error)
+	Stub        func(cargo.Kilnfile, string) (component.ReleaseUploader, error)
 	mutex       sync.RWMutex
 	argsForCall []struct {
 		arg1 cargo.Kilnfile
 		arg2 string
 	}
 	returns struct {
-		result1 fetcher.ReleaseUploader
+		result1 component.ReleaseUploader
 		result2 error
 	}
 	returnsOnCall map[int]struct {
-		result1 fetcher.ReleaseUploader
+		result1 component.ReleaseUploader
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseUploaderFinder) Spy(arg1 cargo.Kilnfile, arg2 string) (fetcher.ReleaseUploader, error) {
+func (fake *ReleaseUploaderFinder) Spy(arg1 cargo.Kilnfile, arg2 string) (component.ReleaseUploader, error) {
 	fake.mutex.Lock()
 	ret, specificReturn := fake.returnsOnCall[len(fake.argsForCall)]
 	fake.argsForCall = append(fake.argsForCall, struct {
@@ -54,7 +54,7 @@ func (fake *ReleaseUploaderFinder) CallCount() int {
 	return len(fake.argsForCall)
 }
 
-func (fake *ReleaseUploaderFinder) Calls(stub func(cargo.Kilnfile, string) (fetcher.ReleaseUploader, error)) {
+func (fake *ReleaseUploaderFinder) Calls(stub func(cargo.Kilnfile, string) (component.ReleaseUploader, error)) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = stub
@@ -66,28 +66,28 @@ func (fake *ReleaseUploaderFinder) ArgsForCall(i int) (cargo.Kilnfile, string) {
 	return fake.argsForCall[i].arg1, fake.argsForCall[i].arg2
 }
 
-func (fake *ReleaseUploaderFinder) Returns(result1 fetcher.ReleaseUploader, result2 error) {
+func (fake *ReleaseUploaderFinder) Returns(result1 component.ReleaseUploader, result2 error) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = nil
 	fake.returns = struct {
-		result1 fetcher.ReleaseUploader
+		result1 component.ReleaseUploader
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseUploaderFinder) ReturnsOnCall(i int, result1 fetcher.ReleaseUploader, result2 error) {
+func (fake *ReleaseUploaderFinder) ReturnsOnCall(i int, result1 component.ReleaseUploader, result2 error) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = nil
 	if fake.returnsOnCall == nil {
 		fake.returnsOnCall = make(map[int]struct {
-			result1 fetcher.ReleaseUploader
+			result1 component.ReleaseUploader
 			result2 error
 		})
 	}
 	fake.returnsOnCall[i] = struct {
-		result1 fetcher.ReleaseUploader
+		result1 component.ReleaseUploader
 		result2 error
 	}{result1, result2}
 }

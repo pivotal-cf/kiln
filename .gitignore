@@ -3,3 +3,4 @@
 .idea
 *debug.test
 dist
+*.test

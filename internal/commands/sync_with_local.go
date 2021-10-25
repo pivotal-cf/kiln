@@ -8,7 +8,7 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
 
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
@@ -37,7 +37,7 @@ func NewSyncWithLocal(fs billy.Filesystem, localReleaseDirectory LocalReleaseDir
 }
 
 //counterfeiter:generate -o ./fakes/remote_pather_finder.go --fake-name RemotePatherFinder . RemotePatherFinder
-type RemotePatherFinder func(cargo.Kilnfile, string) (fetcher.RemotePather, error)
+type RemotePatherFinder func(cargo.Kilnfile, string) (component.RemotePather, error)
 
 func (command SyncWithLocal) Execute(args []string) error {
 	err := flags.LoadFlagsWithDefaults(&command.Options, args, command.fs.Stat)

@@ -1,4 +1,4 @@
-package fetcher_test
+package component_test
 
 import (
 	"log"
@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -32,13 +32,13 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			})
 
 			It("constructs the ReleaseSources properly", func() {
-				repo := fetcher.NewReleaseSourceRepo(kilnfile, logger)
+				repo := component.NewReleaseSourceRepo(kilnfile, logger)
 				releaseSources := repo.ReleaseSources
 
 				Expect(releaseSources).To(HaveLen(3))
 				var (
-					s3ReleaseSource     fetcher.S3ReleaseSource
-					boshIOReleaseSource *fetcher.BOSHIOReleaseSource
+					s3ReleaseSource     component.S3ReleaseSource
+					boshIOReleaseSource *component.BOSHIOReleaseSource
 				)
 
 				Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3ReleaseSource))
@@ -65,16 +65,16 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			})
 
 			It("marks it correctly", func() {
-				repo := fetcher.NewReleaseSourceRepo(kilnfile, logger)
+				repo := component.NewReleaseSourceRepo(kilnfile, logger)
 				releaseSources := repo.ReleaseSources
 
 				Expect(releaseSources).To(HaveLen(1))
 				var (
-					boshIOReleaseSource *fetcher.BOSHIOReleaseSource
+					boshIOReleaseSource *component.BOSHIOReleaseSource
 				)
 
 				Expect(releaseSources[0]).To(BeAssignableToTypeOf(boshIOReleaseSource))
-				Expect(releaseSources[0].(*fetcher.BOSHIOReleaseSource).Publishable()).To(BeTrue())
+				Expect(releaseSources[0].(*component.BOSHIOReleaseSource).Publishable()).To(BeTrue())
 			})
 		})
 
@@ -90,7 +90,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			})
 
 			It("gives the correct IDs to the release sources", func() {
-				repo := fetcher.NewReleaseSourceRepo(kilnfile, logger)
+				repo := component.NewReleaseSourceRepo(kilnfile, logger)
 				releaseSources := repo.ReleaseSources
 
 				Expect(releaseSources).To(HaveLen(3))
@@ -116,7 +116,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 					defer func() {
 						r = recover()
 					}()
-					fetcher.NewReleaseSourceRepo(kilnfile, logger)
+					component.NewReleaseSourceRepo(kilnfile, logger)
 				}()
 				Expect(r).To(ContainSubstring("unique"))
 				Expect(r).To(ContainSubstring(`"some-bucket"`))
@@ -126,12 +126,12 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 	Describe("MultiReleaseSource", func() {
 		var (
-			repo     fetcher.ReleaseSourceRepo
+			repo     component.ReleaseSourceRepo
 			kilnfile cargo.Kilnfile
 		)
 
 		JustBeforeEach(func() {
-			repo = fetcher.NewReleaseSourceRepo(kilnfile, logger)
+			repo = component.NewReleaseSourceRepo(kilnfile, logger)
 		})
 
 		Context("when allow-only-publishable-releases is false", func() {
@@ -153,8 +153,8 @@ var _ = Describe("ReleaseSourceRepo", func() {
 				releaseSources := repo.MultiReleaseSource(false)
 				Expect(releaseSources).To(HaveLen(4))
 				var (
-					s3ReleaseSource     fetcher.S3ReleaseSource
-					boshIOReleaseSource *fetcher.BOSHIOReleaseSource
+					s3ReleaseSource     component.S3ReleaseSource
+					boshIOReleaseSource *component.BOSHIOReleaseSource
 				)
 
 				Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3ReleaseSource))
@@ -189,7 +189,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			It("builds the correct release sources", func() {
 				releaseSources := repo.MultiReleaseSource(true)
 				Expect(releaseSources).To(HaveLen(1))
-				var s3ReleaseSource fetcher.S3ReleaseSource
+				var s3ReleaseSource component.S3ReleaseSource
 
 				Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3ReleaseSource))
 				Expect(releaseSources[0].ID()).To(Equal(kilnfile.ReleaseSources[0].Bucket))
@@ -200,12 +200,12 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 	Describe("FindReleaseUploader", func() {
 		var (
-			repo     fetcher.ReleaseSourceRepo
+			repo     component.ReleaseSourceRepo
 			kilnfile cargo.Kilnfile
 		)
 
 		JustBeforeEach(func() {
-			repo = fetcher.NewReleaseSourceRepo(kilnfile, logger)
+			repo = component.NewReleaseSourceRepo(kilnfile, logger)
 		})
 
 		BeforeEach(func() {
@@ -227,7 +227,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 				uploader, err := repo.FindReleaseUploader("bucket-2")
 				Expect(err).NotTo(HaveOccurred())
 
-				var s3ReleaseSource fetcher.S3ReleaseSource
+				var s3ReleaseSource component.S3ReleaseSource
 				Expect(uploader).To(BeAssignableToTypeOf(s3ReleaseSource))
 			})
 		})
@@ -268,12 +268,12 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 	Describe("RemotePather", func() {
 		var (
-			repo     fetcher.ReleaseSourceRepo
+			repo     component.ReleaseSourceRepo
 			kilnfile cargo.Kilnfile
 		)
 
 		JustBeforeEach(func() {
-			repo = fetcher.NewReleaseSourceRepo(kilnfile, logger)
+			repo = component.NewReleaseSourceRepo(kilnfile, logger)
 		})
 
 		BeforeEach(func() {
@@ -295,7 +295,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 				uploader, err := repo.FindRemotePather("bucket-2")
 				Expect(err).NotTo(HaveOccurred())
 
-				var s3ReleaseSource fetcher.S3ReleaseSource
+				var s3ReleaseSource component.S3ReleaseSource
 				Expect(uploader).To(BeAssignableToTypeOf(s3ReleaseSource))
 			})
 		})

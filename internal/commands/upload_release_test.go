@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"log"
 
@@ -16,8 +15,9 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
-	"github.com/pivotal-cf/kiln/internal/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/component/fakes"
 	testHelpers "github.com/pivotal-cf/kiln/internal/test-helpers"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
 

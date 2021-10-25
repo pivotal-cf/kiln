@@ -1,4 +1,4 @@
-package fetcher
+package component
 
 import (
 	"errors"
@@ -146,7 +146,7 @@ func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Lo
 		if releaseConfig.ID == "" {
 			releaseConfig.ID = releaseConfig.Bucket
 		}
-		return S3ReleaseSourceFromConfig(releaseConfig, outLogger)
+		return NewS3ReleaseSourceFromConfig(releaseConfig, outLogger)
 	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
 	}

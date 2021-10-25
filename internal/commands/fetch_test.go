@@ -16,8 +16,8 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
-	fetcherFakes "github.com/pivotal-cf/kiln/internal/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/component"
+	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
@@ -34,7 +34,7 @@ var _ = Describe("Fetch", func() {
 		fakeS3CompiledReleaseSource *fetcherFakes.ReleaseSource
 		fakeBoshIOReleaseSource     *fetcherFakes.ReleaseSource
 		fakeS3BuiltReleaseSource    *fetcherFakes.ReleaseSource
-		fakeReleaseSources          fetcher.MultiReleaseSource
+		fakeReleaseSources          component.MultiReleaseSource
 		fakeLocalReleaseDirectory   *commandsFakes.LocalReleaseDirectory
 		multiReleaseSourceProvider  commands.MultiReleaseSourceProvider
 
@@ -45,7 +45,7 @@ var _ = Describe("Fetch", func() {
 	const (
 		s3CompiledReleaseSourceID = "s3-compiled"
 		s3BuiltReleaseSourceID    = "s3-built"
-		boshIOReleaseSourceID     = fetcher.ReleaseSourceTypeBOSHIO
+		boshIOReleaseSourceID     = component.ReleaseSourceTypeBOSHIO
 	)
 
 	Describe("Execute", func() {
@@ -96,8 +96,8 @@ stemcell_criteria:
 		})
 
 		JustBeforeEach(func() {
-			fakeReleaseSources = fetcher.NewMultiReleaseSource(fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource)
-			multiReleaseSourceProvider = func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
+			fakeReleaseSources = component.NewMultiReleaseSource(fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource)
+			multiReleaseSourceProvider = func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
 				return fakeReleaseSources
 			}
 

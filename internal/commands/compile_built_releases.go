@@ -20,7 +20,7 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/helper"
 	"github.com/pivotal-cf/kiln/internal/manifest_generator"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -174,7 +174,7 @@ type remoteReleaseWithSHA1 struct {
 	SHA1 string
 }
 
-func findBuiltReleases(allReleaseSources fetcher.MultiReleaseSource, kilnfileLock cargo.KilnfileLock) ([]release.Remote, error) {
+func findBuiltReleases(allReleaseSources component.MultiReleaseSource, kilnfileLock cargo.KilnfileLock) ([]release.Remote, error) {
 	var builtReleases []release.Remote
 	for _, lock := range kilnfileLock.Releases {
 		src, err := allReleaseSources.FindByID(lock.RemoteSource)
@@ -193,7 +193,7 @@ func findBuiltReleases(allReleaseSources fetcher.MultiReleaseSource, kilnfileLoc
 	return builtReleases, nil
 }
 
-func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSources fetcher.MultiReleaseSource, builtReleases []release.Remote, stemcell cargo.Stemcell) ([]remoteReleaseWithSHA1, []release.Remote, error) {
+func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSources component.MultiReleaseSource, builtReleases []release.Remote, stemcell cargo.Stemcell) ([]remoteReleaseWithSHA1, []release.Remote, error) {
 	var (
 		remainingBuiltReleases []release.Remote
 		preCompiledReleases    []remoteReleaseWithSHA1
@@ -217,7 +217,7 @@ func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSour
 			continue
 		}
 
-		local, err := publishableReleaseSources.DownloadRelease(f.Options.ReleasesDir, remote, fetcher.DefaultDownloadThreadCount)
+		local, err := publishableReleaseSources.DownloadRelease(f.Options.ReleasesDir, remote, component.DefaultDownloadThreadCount)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error downloading pre-compiled release for %q: %w", builtRelease.Name, err)
 		}
@@ -230,7 +230,7 @@ func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSour
 	return preCompiledReleases, remainingBuiltReleases, nil
 }
 
-func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource fetcher.MultiReleaseSource, builtReleases []release.Remote) ([]release.Local, builder.StemcellManifest, error) {
+func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource component.MultiReleaseSource, builtReleases []release.Remote) ([]release.Local, builder.StemcellManifest, error) {
 	f.Logger.Println("connecting to the bosh director")
 	boshDirector, err := f.BoshDirectorFactory()
 	if err != nil {
@@ -294,12 +294,12 @@ func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource fetcher.M
 	return downloadedReleases, stemcellManifest, nil
 }
 
-func (f CompileBuiltReleases) uploadReleasesToDirector(builtReleases []release.Remote, releaseSource fetcher.MultiReleaseSource, boshDirector BoshDirector) ([]release.ID, error) {
+func (f CompileBuiltReleases) uploadReleasesToDirector(builtReleases []release.Remote, releaseSource component.MultiReleaseSource, boshDirector BoshDirector) ([]release.ID, error) {
 	var releaseIDs []release.ID
 	for _, remoteRelease := range builtReleases {
 		releaseIDs = append(releaseIDs, remoteRelease.ID)
 
-		localRelease, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease, fetcher.DefaultDownloadThreadCount)
+		localRelease, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease, component.DefaultDownloadThreadCount)
 		if err != nil {
 			return nil, fmt.Errorf("failure downloading built release %v: %w", remoteRelease.ID, err) // untested
 		}
@@ -477,7 +477,7 @@ func (f CompileBuiltReleases) exportReleasesInParallel(stemcellManifest builder.
 	return exportedReleases, nil
 }
 
-func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []release.Local, releaseUploader fetcher.ReleaseUploader, stemcell builder.StemcellManifest) ([]remoteReleaseWithSHA1, error) {
+func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []release.Local, releaseUploader component.ReleaseUploader, stemcell builder.StemcellManifest) ([]remoteReleaseWithSHA1, error) {
 	var uploadedReleases []remoteReleaseWithSHA1
 
 	for _, downloadedRelease := range downloadedReleases {

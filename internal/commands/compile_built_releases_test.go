@@ -23,8 +23,8 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
-	fetcherFakes "github.com/pivotal-cf/kiln/internal/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/component"
+	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	testHelpers "github.com/pivotal-cf/kiln/internal/test-helpers"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/release"
@@ -93,11 +93,11 @@ var _ = Describe("CompileBuiltReleases", func() {
 		}
 
 		multiReleaseSourceProvider = new(commandsFakes.MultiReleaseSourceProvider)
-		multiReleaseSourceProvider.Calls(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
+		multiReleaseSourceProvider.Calls(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
 			if allowOnlyPublishable {
-				return fetcher.NewMultiReleaseSource(compiledReleaseSource)
+				return component.NewMultiReleaseSource(compiledReleaseSource)
 			} else {
-				return fetcher.NewMultiReleaseSource(compiledReleaseSource, builtReleaseSource)
+				return component.NewMultiReleaseSource(compiledReleaseSource, builtReleaseSource)
 			}
 		})
 

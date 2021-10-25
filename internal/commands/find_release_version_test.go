@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
-	"github.com/pivotal-cf/kiln/internal/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
@@ -67,7 +67,7 @@ releases:
 		})
 
 		JustBeforeEach(func() {
-			multiReleaseSourceProvider := func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
+			multiReleaseSourceProvider := func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
 				return fakeReleasesSource
 			}
 			findReleaseVersion = commands.NewFindReleaseVersion(logger, multiReleaseSourceProvider)

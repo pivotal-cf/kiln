@@ -1,4 +1,4 @@
-package fetcher_test
+package component_test
 
 import (
 	"errors"
@@ -19,8 +19,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/go-git/go-billy/v5/osfs"
 
-	"github.com/pivotal-cf/kiln/internal/fetcher"
-	fetcherFakes "github.com/pivotal-cf/kiln/internal/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/component"
+	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
@@ -42,7 +42,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		sourceID = "s3-source"
 	)
 
-	Describe("S3ReleaseSourceFromConfig", func() {
+	Describe("NewS3ReleaseSourceFromConfig", func() {
 		var (
 			config *cargo.ReleaseSourceConfig
 			logger *log.Logger
@@ -67,7 +67,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				defer func() {
 					r = recover()
 				}()
-				fetcher.S3ReleaseSourceFromConfig(*config, logger)
+				component.NewS3ReleaseSourceFromConfig(*config, logger)
 			}()
 
 			Expect(r).To(ContainSubstring(expectedSubstring))
@@ -90,7 +90,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		)
 
 		var (
-			releaseSource         fetcher.S3ReleaseSource
+			releaseSource         component.S3ReleaseSource
 			logger                *log.Logger
 			releaseDir            string
 			remoteRelease         release.Remote
@@ -116,7 +116,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 				return int64(n), err
 			}
-			releaseSource = fetcher.NewS3ReleaseSource(sourceID, bucket, "", false, nil, fakeS3Downloader, nil, logger)
+			releaseSource = component.NewS3ReleaseSource(sourceID, bucket, "", false, nil, fakeS3Downloader, nil, logger)
 		})
 
 		AfterEach(func() {
@@ -133,7 +133,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(releaseContents).To(Equal([]byte("some-bucket/" + remoteRelease.RemotePath)))
 
-			sha1, err := fetcher.CalculateSum(releasePath, osfs.New(""))
+			sha1, err := component.CalculateSum(releasePath, osfs.New(""))
 			Expect(err).NotTo(HaveOccurred())
 
 			_, _, opts := fakeS3Downloader.DownloadArgsForCall(0)
@@ -182,7 +182,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		const bucket = "built-bucket"
 
 		var (
-			releaseSource  fetcher.S3ReleaseSource
+			releaseSource  component.S3ReleaseSource
 			fakeS3Client   *fetcherFakes.S3Client
 			desiredRelease release.Requirement
 			bpmReleaseID   release.ID
@@ -204,7 +204,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 			logger = log.New(nil, "", 0)
 
-			releaseSource = fetcher.NewS3ReleaseSource(
+			releaseSource = component.NewS3ReleaseSource(
 				sourceID,
 				bucket,
 				`2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
@@ -250,7 +250,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
-				releaseSource = fetcher.NewS3ReleaseSource(
+				releaseSource = component.NewS3ReleaseSource(
 					sourceID,
 					bucket,
 					`{{.NoSuchField}}`,
@@ -275,7 +275,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		const bucket = "pcf-final-bosh-releases"
 
 		var (
-			releaseSource  fetcher.S3ReleaseSource
+			releaseSource  component.S3ReleaseSource
 			fakeS3Client   *fetcherFakes.S3Client
 			desiredRelease release.Requirement
 			releaseID      release.ID
@@ -313,7 +313,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 				logger = log.New(GinkgoWriter, "", 0)
 
-				releaseSource = fetcher.NewS3ReleaseSource(
+				releaseSource = component.NewS3ReleaseSource(
 					sourceID,
 					bucket,
 					`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
@@ -374,7 +374,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					return int64(n), err
 				}
 
-				releaseSource = fetcher.NewS3ReleaseSource(
+				releaseSource = component.NewS3ReleaseSource(
 					sourceID,
 					bucket,
 					`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
@@ -410,7 +410,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		const bucket = "compiled-releases"
 
 		var (
-			releaseSource  fetcher.S3ReleaseSource
+			releaseSource  component.S3ReleaseSource
 			fakeS3Client   *fetcherFakes.S3Client
 			desiredRelease release.Requirement
 			releaseID      release.ID
@@ -447,7 +447,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					return int64(n), err
 				}
 
-				releaseSource = fetcher.NewS3ReleaseSource(
+				releaseSource = component.NewS3ReleaseSource(
 					sourceID,
 					bucket,
 					`2.11/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
@@ -482,13 +482,13 @@ var _ = Describe("S3ReleaseSource", func() {
 	Describe("UploadRelease", func() {
 		var (
 			s3Uploader    *fetcherFakes.S3Uploader
-			releaseSource fetcher.S3ReleaseSource
+			releaseSource component.S3ReleaseSource
 			file          io.Reader
 		)
 
 		BeforeEach(func() {
 			s3Uploader = new(fetcherFakes.S3Uploader)
-			releaseSource = fetcher.NewS3ReleaseSource(
+			releaseSource = component.NewS3ReleaseSource(
 				sourceID,
 				"orange-bucket",
 				`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
@@ -537,7 +537,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
-				releaseSource = fetcher.NewS3ReleaseSource(
+				releaseSource = component.NewS3ReleaseSource(
 					sourceID,
 					"orange-bucket",
 					`{{.NoSuchField}}`,
@@ -562,12 +562,12 @@ var _ = Describe("S3ReleaseSource", func() {
 
 	Describe("RemotePath", func() {
 		var (
-			releaseSource fetcher.S3ReleaseSource
+			releaseSource component.S3ReleaseSource
 			requirement   release.Requirement
 		)
 
 		BeforeEach(func() {
-			releaseSource = fetcher.NewS3ReleaseSource(
+			releaseSource = component.NewS3ReleaseSource(
 				sourceID,
 				"orange-bucket",
 				`{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
@@ -593,7 +593,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
-				releaseSource = fetcher.NewS3ReleaseSource(
+				releaseSource = component.NewS3ReleaseSource(
 					sourceID,
 					"orange-bucket",
 					`{{.NoSuchField}}`,

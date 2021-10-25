@@ -1,4 +1,4 @@
-package fetcher
+package component
 
 import (
 	"bytes"
@@ -67,7 +67,7 @@ func NewS3ReleaseSource(id, bucket, pathTemplate string, publishable bool, clien
 	}
 }
 
-func S3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.Logger) S3ReleaseSource {
+func NewS3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.Logger) S3ReleaseSource {
 	validateConfig(config)
 
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/

@@ -11,8 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
-	"github.com/pivotal-cf/kiln/internal/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/internal/component/fakes"
 )
 
 var _ = Describe("Find the stemcell version", func() {
@@ -28,7 +28,7 @@ var _ = Describe("Find the stemcell version", func() {
 		someKilnfileLockPath string
 		kilnfileContents     string
 		lockContents         string
-		pivnet               fetcher.Pivnet
+		pivnet               component.Pivnet
 		serverMock           *fakes.RoundTripper
 		simpleRequest        *http.Request
 		requestErr           error
@@ -38,7 +38,7 @@ var _ = Describe("Find the stemcell version", func() {
 		BeforeEach(func() {
 			logger = log.New(&writer, "", 0)
 
-			pivnet = fetcher.Pivnet{}
+			pivnet = component.Pivnet{}
 			simpleRequest, _ = http.NewRequest(http.MethodGet, "/", nil)
 
 			serverMock = &fakes.RoundTripper{}

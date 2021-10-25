@@ -10,7 +10,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
@@ -88,7 +88,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 			continue
 		}
 
-		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote, fetcher.DefaultDownloadThreadCount)
+		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote, component.DefaultDownloadThreadCount)
 		if err != nil {
 			return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
 		}

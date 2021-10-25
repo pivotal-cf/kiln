@@ -8,7 +8,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
@@ -31,7 +31,7 @@ type Fetch struct {
 }
 
 //counterfeiter:generate -o ./fakes/multi_release_source_provider.go --fake-name MultiReleaseSourceProvider . MultiReleaseSourceProvider
-type MultiReleaseSourceProvider func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource
+type MultiReleaseSourceProvider func(cargo.Kilnfile, bool) component.MultiReleaseSource
 
 func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{

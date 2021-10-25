@@ -5,7 +5,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
@@ -201,4 +201,4 @@ func (fake *ReleaseUploader) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ fetcher.ReleaseUploader = new(ReleaseUploader)
+var _ component.ReleaseUploader = new(ReleaseUploader)

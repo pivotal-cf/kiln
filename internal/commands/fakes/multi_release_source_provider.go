@@ -5,28 +5,28 @@ import (
 	"sync"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type MultiReleaseSourceProvider struct {
-	Stub        func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource
+	Stub        func(cargo.Kilnfile, bool) component.MultiReleaseSource
 	mutex       sync.RWMutex
 	argsForCall []struct {
 		arg1 cargo.Kilnfile
 		arg2 bool
 	}
 	returns struct {
-		result1 fetcher.MultiReleaseSource
+		result1 component.MultiReleaseSource
 	}
 	returnsOnCall map[int]struct {
-		result1 fetcher.MultiReleaseSource
+		result1 component.MultiReleaseSource
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MultiReleaseSourceProvider) Spy(arg1 cargo.Kilnfile, arg2 bool) fetcher.MultiReleaseSource {
+func (fake *MultiReleaseSourceProvider) Spy(arg1 cargo.Kilnfile, arg2 bool) component.MultiReleaseSource {
 	fake.mutex.Lock()
 	ret, specificReturn := fake.returnsOnCall[len(fake.argsForCall)]
 	fake.argsForCall = append(fake.argsForCall, struct {
@@ -52,7 +52,7 @@ func (fake *MultiReleaseSourceProvider) CallCount() int {
 	return len(fake.argsForCall)
 }
 
-func (fake *MultiReleaseSourceProvider) Calls(stub func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource) {
+func (fake *MultiReleaseSourceProvider) Calls(stub func(cargo.Kilnfile, bool) component.MultiReleaseSource) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = stub
@@ -64,26 +64,26 @@ func (fake *MultiReleaseSourceProvider) ArgsForCall(i int) (cargo.Kilnfile, bool
 	return fake.argsForCall[i].arg1, fake.argsForCall[i].arg2
 }
 
-func (fake *MultiReleaseSourceProvider) Returns(result1 fetcher.MultiReleaseSource) {
+func (fake *MultiReleaseSourceProvider) Returns(result1 component.MultiReleaseSource) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = nil
 	fake.returns = struct {
-		result1 fetcher.MultiReleaseSource
+		result1 component.MultiReleaseSource
 	}{result1}
 }
 
-func (fake *MultiReleaseSourceProvider) ReturnsOnCall(i int, result1 fetcher.MultiReleaseSource) {
+func (fake *MultiReleaseSourceProvider) ReturnsOnCall(i int, result1 component.MultiReleaseSource) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = nil
 	if fake.returnsOnCall == nil {
 		fake.returnsOnCall = make(map[int]struct {
-			result1 fetcher.MultiReleaseSource
+			result1 component.MultiReleaseSource
 		})
 	}
 	fake.returnsOnCall[i] = struct {
-		result1 fetcher.MultiReleaseSource
+		result1 component.MultiReleaseSource
 	}{result1}
 }
 

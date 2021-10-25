@@ -1,4 +1,4 @@
-package fetcher_test
+package component_test
 
 import (
 	"testing"

@@ -1,4 +1,4 @@
-package fetcher_test
+package component_test
 
 import (
 	"errors"
@@ -6,15 +6,15 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/pivotal-cf/kiln/internal/fetcher"
-	fetcherFakes "github.com/pivotal-cf/kiln/internal/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 var _ = Describe("multiReleaseSource", func() {
 	var (
-		multiSrc         fetcher.MultiReleaseSource
-		src1, src2, src3 *fetcherFakes.ReleaseSource
+		multiSrc         component.MultiReleaseSource
+		src1, src2, src3 *fakes.ReleaseSource
 		requirement      release.Requirement
 	)
 
@@ -25,13 +25,13 @@ var _ = Describe("multiReleaseSource", func() {
 	)
 
 	BeforeEach(func() {
-		src1 = new(fetcherFakes.ReleaseSource)
+		src1 = new(fakes.ReleaseSource)
 		src1.IDReturns("src-1")
-		src2 = new(fetcherFakes.ReleaseSource)
+		src2 = new(fakes.ReleaseSource)
 		src2.IDReturns("src-2")
-		src3 = new(fetcherFakes.ReleaseSource)
+		src3 = new(fakes.ReleaseSource)
 		src3.IDReturns("src-3")
-		multiSrc = fetcher.NewMultiReleaseSource(src1, src2, src3)
+		multiSrc = component.NewMultiReleaseSource(src1, src2, src3)
 
 		requirement = release.Requirement{
 			Name:            releaseName,

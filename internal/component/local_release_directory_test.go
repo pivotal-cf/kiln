@@ -1,4 +1,4 @@
-package fetcher_test
+package component_test
 
 import (
 	"fmt"
@@ -15,13 +15,13 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 var _ = Describe("LocalReleaseDirectory", func() {
 	var (
-		localReleaseDirectory fetcher.LocalReleaseDirectory
+		localReleaseDirectory component.LocalReleaseDirectory
 		noConfirm             bool
 		releasesDir           string
 		releaseFile           string
@@ -43,7 +43,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		releaseManifestReader := builder.NewReleaseManifestReader(osfs.New(""))
 		releasesService := baking.NewReleasesService(fakeLogger, releaseManifestReader)
 
-		localReleaseDirectory = fetcher.NewLocalReleaseDirectory(fakeLogger, releasesService)
+		localReleaseDirectory = component.NewLocalReleaseDirectory(fakeLogger, releasesService)
 	})
 
 	AfterEach(func() {

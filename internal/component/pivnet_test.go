@@ -1,4 +1,4 @@
-package fetcher_test
+package component_test
 
 import (
 	"errors"
@@ -7,21 +7,21 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/pivotal-cf/kiln/internal/fetcher"
-	"github.com/pivotal-cf/kiln/internal/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/internal/component/fakes"
 )
 
 var _ = Describe("PivNet (network.pivotal.io)", func() {
 	When("making an http request to pivotal network", func() {
 		var (
-			pivnet        fetcher.Pivnet
+			pivnet        component.Pivnet
 			serverMock    *fakes.RoundTripper
 			simpleRequest *http.Request
 			requestErr    error
 		)
 
 		BeforeEach(func() {
-			pivnet = fetcher.Pivnet{}
+			pivnet = component.Pivnet{}
 			simpleRequest, _ = http.NewRequest(http.MethodGet, "/", nil)
 
 			serverMock = &fakes.RoundTripper{}
@@ -59,7 +59,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 
 	When("fetching versions", func() {
 		var (
-			pivnet     fetcher.Pivnet
+			pivnet     component.Pivnet
 			serverMock *fakes.RoundTripper
 
 			stemcellSlug string
@@ -83,7 +83,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 
 		When("fetching with an empty product Slug", func() {
 			It("returns an error", func() {
-				Expect(gotErr).To(Equal(fetcher.ErrProductSlugMustNotBeEmpty))
+				Expect(gotErr).To(Equal(component.ErrProductSlugMustNotBeEmpty))
 				Expect(stemcellVersion).To(Equal(""))
 			})
 		})
@@ -94,7 +94,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 				majorStemcellVersion = ""
 			})
 			It("returns an error", func() {
-				Expect(gotErr).To(Equal(fetcher.ErrStemcellMajorVersionMustNotBeEmpty))
+				Expect(gotErr).To(Equal(component.ErrStemcellMajorVersionMustNotBeEmpty))
 				Expect(stemcellVersion).To(Equal(""))
 			})
 		})

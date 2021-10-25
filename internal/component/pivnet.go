@@ -1,4 +1,4 @@
-package fetcher
+package component
 
 import (
 	"encoding/json"

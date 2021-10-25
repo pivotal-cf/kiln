@@ -8,7 +8,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/release"
 )
@@ -111,7 +111,7 @@ func (u UpdateRelease) Execute(args []string) error {
 			return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
 		}
 
-		localRelease, err = releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease, fetcher.DefaultDownloadThreadCount)
+		localRelease, err = releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease, component.DefaultDownloadThreadCount)
 		if err != nil {
 			return fmt.Errorf("error downloading the release: %w", err)
 		}
