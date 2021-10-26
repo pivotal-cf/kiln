@@ -155,7 +155,7 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement Requirement) (Lock, bo
 		return Lock{}, false, err
 	}
 
-	semverPattern, err := regexp.Compile(`(-|v)\d+(.\d+)*`)
+	semverPattern, err := regexp.Compile(`([-v])\d+(.\d+)*`)
 	if err != nil {
 		return Lock{}, false, err
 	}

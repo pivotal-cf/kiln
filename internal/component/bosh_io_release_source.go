@@ -78,7 +78,7 @@ func (src BOSHIOReleaseSource) Publishable() bool {
 	return src.publishable
 }
 
-func (src *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {}
+func (src *BOSHIOReleaseSource) Configure(_ cargo.Kilnfile) {}
 
 func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Requirement) (Lock, bool, error) {
 	for _, repo := range repos {
@@ -133,7 +133,7 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(requirement Requirement) (Lock
 	return Lock{}, false, nil
 }
 
-func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock, downloadThreads int) (Local, error) {
+func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock, _ int) (Local, error) {
 	src.logger.Printf("downloading %s %s from %s", remoteRelease.Name, remoteRelease.Version, src.ID())
 
 	downloadURL := remoteRelease.RemotePath
@@ -152,7 +152,7 @@ func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease 
 	defer func() { _ = out.Close() }()
 
 	_, err = io.Copy(out, resp.Body)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if err != nil {
 		return Local{}, err
 	}
@@ -168,9 +168,9 @@ func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease 
 		return Local{}, fmt.Errorf("error hashing file contents: %w", err) // untested
 	}
 
-	sha1 := hex.EncodeToString(hash.Sum(nil))
+	sum := hex.EncodeToString(hash.Sum(nil))
 
-	return Local{Spec: remoteRelease.ComponentSpec, LocalPath: filePath, SHA1: sha1}, nil
+	return Local{Spec: remoteRelease.ComponentSpec, LocalPath: filePath, SHA1: sum}, nil
 }
 
 type ResponseStatusCodeError http.Response

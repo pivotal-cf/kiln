@@ -40,13 +40,13 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]Local, er
 		releaseManifest := rel.Metadata.(builder.ReleaseManifest)
 		id := Spec{Name: releaseManifest.Name, Version: releaseManifest.Version}
 		localPath := rel.File
-		sha1, err := CalculateSum(localPath, osfs.New(""))
+		sum, err := CalculateSum(localPath, osfs.New(""))
 
 		if err != nil {
 			return nil, fmt.Errorf("couldn't calculate SHA1 sum of %q: %w", localPath, err) // untested
 		}
 
-		outputReleases = append(outputReleases, Local{Spec: id, LocalPath: localPath, SHA1: sha1})
+		outputReleases = append(outputReleases, Local{Spec: id, LocalPath: localPath, SHA1: sum})
 	}
 	return outputReleases, nil
 }
@@ -73,7 +73,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []Local, noCo
 
 		l.logger.Printf("Are you sure you want to delete these files? [yN]")
 
-		fmt.Scanf("%c", &doDeletion)
+		_, _ = fmt.Scanf("%c", &doDeletion)
 	}
 
 	if doDeletion == 'y' || doDeletion == 'Y' {

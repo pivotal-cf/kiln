@@ -49,7 +49,7 @@ func (pivnet *Pivnet) StemcellVersion(slug string, majorStemcellVersion string) 
 	locator := url.URL{
 		Scheme:   "https",
 		Host:     "network.pivotal.io",
-		Path:     path.Join("/api/v2/products", string(slug), "releases/latest"),
+		Path:     path.Join("/api/v2/products", slug, "releases/latest"),
 		RawQuery: fmt.Sprintf("major=%s", majorStemcellVersion),
 	}
 
