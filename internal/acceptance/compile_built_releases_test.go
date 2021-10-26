@@ -635,24 +635,30 @@ stemcell_criteria:
 		releaseCSha1 := hex.EncodeToString(s.Sum(nil))
 
 		Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
-			Releases: []cargo.ReleaseLock{
+			Releases: []cargo.ComponentLock{
 				{
-					Name:         "release-a",
-					Version:      "1.2.3",
+					ComponentSpec: cargo.ComponentSpec{
+						Name:    "release-a",
+						Version: "1.2.3",
+					},
 					RemoteSource: compiledReleasesID,
 					RemotePath:   "release-a/release-a-1.2.3-ubuntu-trusty-22.tgz",
 					SHA1:         releaseASha1,
 				},
 				{
-					Name:         "release-b",
-					Version:      "42",
+					ComponentSpec: cargo.ComponentSpec{
+						Name:    "release-b",
+						Version: "42",
+					},
 					RemoteSource: compiledReleasesID,
 					RemotePath:   "release-b/release-b-42-ubuntu-trusty-22.tgz",
 					SHA1:         "original-sha",
 				},
 				{
-					Name:         "release-c",
-					Version:      "2.3.4",
+					ComponentSpec: cargo.ComponentSpec{
+						Name:    "release-c",
+						Version: "2.3.4",
+					},
 					RemoteSource: compiledReleasesID,
 					RemotePath:   "release-c/release-c-2.3.4-ubuntu-trusty-22.tgz",
 					SHA1:         releaseCSha1,

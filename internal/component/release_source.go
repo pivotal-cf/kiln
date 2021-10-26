@@ -7,7 +7,6 @@ import (
 	"log"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 const (
@@ -18,30 +17,30 @@ const (
 
 //counterfeiter:generate -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
-	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
-	FindReleaseVersion(release.Requirement) (release.Remote, bool, error)
-	DownloadRelease(releasesDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error)
+	GetMatchedRelease(Requirement) (Lock, bool, error)
+	FindReleaseVersion(Requirement) (Lock, bool, error)
+	DownloadRelease(releasesDir string, remoteRelease Lock, downloadThreads int) (Local, error)
 	ID() string
 	Publishable() bool
 }
 
 //counterfeiter:generate -o ./fakes/multi_release_source.go --fake-name MultiReleaseSource . MultiReleaseSource
 type MultiReleaseSource interface {
-	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
-	FindReleaseVersion(release.Requirement) (release.Remote, bool, error)
-	DownloadRelease(releasesDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error)
+	GetMatchedRelease(Requirement) (Lock, bool, error)
+	FindReleaseVersion(Requirement) (Lock, bool, error)
+	DownloadRelease(releasesDir string, remoteRelease Lock, downloadThreads int) (Local, error)
 	FindByID(string) (ReleaseSource, error)
 }
 
 //counterfeiter:generate -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
 type ReleaseUploader interface {
-	GetMatchedRelease(release.Requirement) (release.Remote, bool, error)
-	UploadRelease(spec release.Requirement, file io.Reader) (release.Remote, error)
+	GetMatchedRelease(Requirement) (Lock, bool, error)
+	UploadRelease(spec Requirement, file io.Reader) (Lock, error)
 }
 
 //counterfeiter:generate -o ./fakes/remote_pather.go --fake-name RemotePather . RemotePather
 type RemotePather interface {
-	RemotePath(release.Requirement) (string, error)
+	RemotePath(Requirement) (string, error)
 }
 
 type ReleaseSourceRepo struct {

@@ -15,7 +15,6 @@ import (
 	"github.com/Masterminds/semver"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 var repos = []string{
@@ -81,13 +80,13 @@ func (src BOSHIOReleaseSource) Publishable() bool {
 
 func (src *BOSHIOReleaseSource) Configure(kilnfile cargo.Kilnfile) {}
 
-func (src BOSHIOReleaseSource) GetMatchedRelease(requirement release.Requirement) (release.Remote, bool, error) {
+func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Requirement) (Lock, bool, error) {
 	for _, repo := range repos {
 		for _, suf := range suffixes {
 			fullName := repo + "/" + requirement.Name + suf
 			exists, err := src.releaseExistOnBoshio(fullName, requirement.Version)
 			if err != nil {
-				return release.Remote{}, false, err
+				return Lock{}, false, err
 			}
 
 			if exists {
@@ -96,10 +95,10 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement release.Requirement
 			}
 		}
 	}
-	return release.Remote{}, false, nil
+	return Lock{}, false, nil
 }
 
-func (src BOSHIOReleaseSource) FindReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
+func (src BOSHIOReleaseSource) FindReleaseVersion(requirement Requirement) (Lock, bool, error) {
 	var constraint *semver.Constraints
 	if requirement.VersionConstraint != "" {
 		constraint, _ = semver.NewConstraint(requirement.VersionConstraint)
@@ -113,7 +112,7 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(requirement release.Requiremen
 			fullName := repo + "/" + requirement.Name + suf
 			releaseResponses, err := src.getReleases(fullName)
 			if err != nil {
-				return release.Remote{}, false, err
+				return Lock{}, false, err
 			}
 
 			for _, release := range releaseResponses {
@@ -126,52 +125,52 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(requirement release.Requiremen
 				latestReleaseVersion := validReleases[0].Version
 				latestSha := validReleases[0].SHA
 				builtRelease := src.createReleaseRemote(requirement.Name, latestReleaseVersion, fullName)
-				builtRelease.SHA = latestSha
+				builtRelease.SHA1 = latestSha
 				return builtRelease, true, nil
 			}
 		}
 	}
-	return release.Remote{}, false, nil
+	return Lock{}, false, nil
 }
 
-func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error) {
+func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock, downloadThreads int) (Local, error) {
 	src.logger.Printf("downloading %s %s from %s", remoteRelease.Name, remoteRelease.Version, src.ID())
 
 	downloadURL := remoteRelease.RemotePath
 
 	resp, err := http.Get(downloadURL)
 	if err != nil {
-		return release.Local{}, err
+		return Local{}, err
 	}
 
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
 
 	out, err := os.Create(filePath)
 	if err != nil {
-		return release.Local{}, err
+		return Local{}, err
 	}
 	defer func() { _ = out.Close() }()
 
 	_, err = io.Copy(out, resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return release.Local{}, err
+		return Local{}, err
 	}
 
 	_, err = out.Seek(0, 0)
 	if err != nil {
-		return release.Local{}, fmt.Errorf("error reseting file cursor: %w", err) // untested
+		return Local{}, fmt.Errorf("error reseting file cursor: %w", err) // untested
 	}
 
 	hash := sha1.New()
 	_, err = io.Copy(hash, out)
 	if err != nil {
-		return release.Local{}, fmt.Errorf("error hashing file contents: %w", err) // untested
+		return Local{}, fmt.Errorf("error hashing file contents: %w", err) // untested
 	}
 
 	sha1 := hex.EncodeToString(hash.Sum(nil))
 
-	return release.Local{ID: remoteRelease.ID, LocalPath: filePath, SHA1: sha1}, nil
+	return Local{Spec: remoteRelease.ComponentSpec, LocalPath: filePath, SHA1: sha1}, nil
 }
 
 type ResponseStatusCodeError http.Response
@@ -180,12 +179,12 @@ func (err ResponseStatusCodeError) Error() string {
 	return fmt.Sprintf("response to %s %s got status %d when a success was expected", err.Request.Method, err.Request.URL, err.StatusCode)
 }
 
-func (src BOSHIOReleaseSource) createReleaseRemote(name string, version string, fullName string) release.Remote {
+func (src BOSHIOReleaseSource) createReleaseRemote(name string, version string, fullName string) Lock {
 	downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, version)
-	releaseRemote := release.Remote{
-		ID:         release.ID{Name: name, Version: version},
-		RemotePath: downloadURL,
-		SourceID:   src.ID(),
+	releaseRemote := Lock{
+		ComponentSpec: Spec{Name: name, Version: version},
+		RemotePath:    downloadURL,
+		RemoteSource:  src.ID(),
 	}
 	return releaseRemote
 }

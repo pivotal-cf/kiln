@@ -7,13 +7,13 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/manifest_generator"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 var _ = Describe("ManifestGenerator", func() {
 	var (
-		desiredReleases []release.ID
+		desiredReleases []component.Spec
 		desiredStemcell builder.StemcellManifest
 	)
 
@@ -22,7 +22,7 @@ var _ = Describe("ManifestGenerator", func() {
 	)
 
 	BeforeEach(func() {
-		desiredReleases = []release.ID{
+		desiredReleases = []component.Spec{
 			{Name: "potato-release", Version: "9000.0.1"},
 			{Name: "rutabaga-release", Version: "42.0.0"},
 		}

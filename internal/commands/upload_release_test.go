@@ -15,10 +15,10 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
 	testHelpers "github.com/pivotal-cf/kiln/internal/test-helpers"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 var _ = Describe("UploadRelease", func() {
@@ -79,10 +79,10 @@ var _ = Describe("UploadRelease", func() {
 
 			When("the release already exists on the release source", func() {
 				BeforeEach(func() {
-					releaseUploader.GetMatchedReleaseReturns(release.Remote{
-						ID:         release.ID{Name: "banana", Version: "1.2.3"},
-						RemotePath: "banana/banana-1.2.3.tgz",
-						SourceID:   "orange-bucket",
+					releaseUploader.GetMatchedReleaseReturns(component.Lock{
+						ComponentSpec: component.Spec{Name: "banana", Version: "1.2.3"},
+						RemotePath:    "banana/banana-1.2.3.tgz",
+						RemoteSource:  "orange-bucket",
 					}, true, nil)
 				})
 
@@ -96,7 +96,7 @@ var _ = Describe("UploadRelease", func() {
 					Expect(releaseUploader.GetMatchedReleaseCallCount()).To(Equal(1))
 
 					requirement := releaseUploader.GetMatchedReleaseArgsForCall(0)
-					Expect(requirement).To(Equal(release.Requirement{Name: "banana", Version: "1.2.3"}))
+					Expect(requirement).To(Equal(component.Requirement{Name: "banana", Version: "1.2.3"}))
 
 					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
 				})
@@ -209,7 +209,7 @@ compiled_packages:
 
 		When("querying the release source fails", func() {
 			BeforeEach(func() {
-				releaseUploader.GetMatchedReleaseReturns(release.Remote{}, false, errors.New("boom"))
+				releaseUploader.GetMatchedReleaseReturns(component.Lock{}, false, errors.New("boom"))
 			})
 
 			It("returns an error", func() {
@@ -232,7 +232,7 @@ compiled_packages:
 
 		When("the upload fails", func() {
 			BeforeEach(func() {
-				releaseUploader.UploadReleaseReturns(release.Remote{}, errors.New("boom"))
+				releaseUploader.UploadReleaseReturns(component.Lock{}, errors.New("boom"))
 			})
 
 			It("returns an error", func() {

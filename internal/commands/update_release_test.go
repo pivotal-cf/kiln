@@ -16,9 +16,9 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
+	"github.com/pivotal-cf/kiln/internal/component"
 	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 var _ = Describe("UpdateRelease", func() {
@@ -50,8 +50,8 @@ var _ = Describe("UpdateRelease", func() {
 		releaseSource              *fetcherFakes.MultiReleaseSource
 		logger                     *log.Logger
 		downloadedReleasePath      string
-		expectedDownloadedRelease  release.Local
-		expectedRemoteRelease      release.Remote
+		expectedDownloadedRelease  component.Local
+		expectedRemoteRelease      component.Lock
 		kilnfileLock               cargo.KilnfileLock
 	)
 
@@ -66,18 +66,22 @@ var _ = Describe("UpdateRelease", func() {
 			kilnfile := cargo.Kilnfile{}
 
 			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.ReleaseLock{
+				Releases: []cargo.ComponentLock{
 					{
-						Name:         "minecraft",
+						ComponentSpec: cargo.ComponentSpec{
+							Name:    "minecraft",
+							Version: "2.0.1",
+						},
 						SHA1:         "developersdevelopersdevelopersdevelopers",
-						Version:      "2.0.1",
 						RemoteSource: "bosh.io",
 						RemotePath:   "not-used",
 					},
 					{
-						Name:         releaseName,
+						ComponentSpec: cargo.ComponentSpec{
+							Name:    releaseName,
+							Version: oldReleaseVersion,
+						},
 						SHA1:         oldReleaseSha1,
-						Version:      oldReleaseVersion,
 						RemoteSource: oldReleaseSourceName,
 						RemotePath:   oldRemotePath,
 					},
@@ -97,24 +101,24 @@ var _ = Describe("UpdateRelease", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, newReleaseVersion))
-			expectedDownloadedRelease = release.Local{
-				ID:        release.ID{Name: releaseName, Version: newReleaseVersion},
+			expectedDownloadedRelease = component.Local{
+				Spec:      component.Spec{Name: releaseName, Version: newReleaseVersion},
 				LocalPath: downloadedReleasePath,
 				SHA1:      newReleaseSha1,
 			}
-			expectedRemoteRelease = release.Remote{
-				ID:         expectedDownloadedRelease.ID,
-				RemotePath: newRemotePath,
-				SourceID:   newReleaseSourceName,
+			expectedRemoteRelease = component.Lock{
+				ComponentSpec: expectedDownloadedRelease.Spec,
+				RemotePath:    newRemotePath,
+				RemoteSource:  newReleaseSourceName,
 			}
-			exepectedNotDownloadedRelease := release.Remote{
-				ID: release.ID{
+			exepectedNotDownloadedRelease := component.Lock{
+				ComponentSpec: component.Spec{
 					Name:    releaseName,
 					Version: notDownloadedReleaseVersion,
 				},
-				RemotePath: notDownloadedRemotePath,
-				SourceID:   notDownloadedReleaseSourceName,
-				SHA:        notDownloadedReleaseSha1,
+				RemotePath:   notDownloadedRemotePath,
+				RemoteSource: notDownloadedReleaseSourceName,
+				SHA1:         notDownloadedReleaseSha1,
 			}
 
 			releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, true, nil)
@@ -139,7 +143,7 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(1))
 
 				receivedReleaseRequirement := releaseSource.GetMatchedReleaseArgsForCall(0)
-				releaseRequirement := release.Requirement{
+				releaseRequirement := component.Requirement{
 					Name:            releaseName,
 					Version:         newReleaseVersion,
 					StemcellOS:      "some-os",
@@ -167,9 +171,11 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(fsReadYAML(filesystem, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
-					cargo.ReleaseLock{
-						Name:         releaseName,
-						Version:      newReleaseVersion,
+					cargo.ComponentLock{
+						ComponentSpec: cargo.ComponentSpec{
+							Name:    releaseName,
+							Version: newReleaseVersion,
+						},
 						SHA1:         newReleaseSha1,
 						RemoteSource: newReleaseSourceName,
 						RemotePath:   newRemotePath,
@@ -197,7 +203,7 @@ var _ = Describe("UpdateRelease", func() {
 
 			BeforeEach(func() {
 				downloadErr = errors.New("asplode!!")
-				releaseSource.DownloadReleaseReturns(release.Local{}, downloadErr)
+				releaseSource.DownloadReleaseReturns(component.Local{}, downloadErr)
 			})
 
 			It("tells the release downloader factory to allow only publishable releases", func() {
@@ -220,15 +226,15 @@ var _ = Describe("UpdateRelease", func() {
 			var logBuf *gbytes.Buffer
 
 			BeforeEach(func() {
-				expectedDownloadedRelease = release.Local{
-					ID:        release.ID{Name: releaseName, Version: oldReleaseVersion},
+				expectedDownloadedRelease = component.Local{
+					Spec:      component.Spec{Name: releaseName, Version: oldReleaseVersion},
 					LocalPath: "not-used",
 					SHA1:      oldReleaseSha1,
 				}
-				expectedRemoteRelease = release.Remote{
-					ID:         expectedDownloadedRelease.ID,
-					RemotePath: oldRemotePath,
-					SourceID:   oldReleaseSourceName,
+				expectedRemoteRelease = component.Lock{
+					ComponentSpec: expectedDownloadedRelease.Spec,
+					RemotePath:    oldRemotePath,
+					RemoteSource:  oldReleaseSourceName,
 				}
 
 				releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, true, nil)
@@ -307,7 +313,7 @@ var _ = Describe("UpdateRelease", func() {
 
 		When("the release can't be found", func() {
 			BeforeEach(func() {
-				releaseSource.GetMatchedReleaseReturns(release.Remote{}, false, errors.New("bad stuff"))
+				releaseSource.GetMatchedReleaseReturns(component.Lock{}, false, errors.New("bad stuff"))
 			})
 
 			It("errors", func() {
@@ -336,7 +342,7 @@ var _ = Describe("UpdateRelease", func() {
 
 		When("downloading the release fails", func() {
 			BeforeEach(func() {
-				releaseSource.DownloadReleaseReturns(release.Local{}, errors.New("bad stuff"))
+				releaseSource.DownloadReleaseReturns(component.Local{}, errors.New("bad stuff"))
 			})
 
 			It("errors", func() {
@@ -385,9 +391,11 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(fsReadYAML(filesystem, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
-					cargo.ReleaseLock{
-						Name:         releaseName,
-						Version:      notDownloadedReleaseVersion,
+					cargo.ComponentLock{
+						ComponentSpec: component.Spec{
+							Name:    releaseName,
+							Version: notDownloadedReleaseVersion,
+						},
 						SHA1:         notDownloadedReleaseSha1,
 						RemoteSource: notDownloadedReleaseSourceName,
 						RemotePath:   notDownloadedRemotePath,

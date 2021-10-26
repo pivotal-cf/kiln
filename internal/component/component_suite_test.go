@@ -11,5 +11,5 @@ import (
 
 func TestFetcher(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Fetcher Suite")
+	RunSpecs(t, "Component Suite")
 }

@@ -16,7 +16,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 var _ = Describe("LocalReleaseDirectory", func() {
@@ -64,8 +63,8 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(releases).To(HaveLen(1))
 				Expect(releases).To(ConsistOf(
-					release.Local{
-						ID:        release.ID{Name: "some-release", Version: "1.2.3"},
+					component.Local{
+						Spec:      component.Spec{Name: "some-release", Version: "1.2.3"},
 						LocalPath: releaseFile,
 						SHA1:      "6d96f7c98610fa6d8e7f45271111221b5b8497a2",
 					},
@@ -103,10 +102,10 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		})
 
 		It("deletes specified files", func() {
-			extraReleaseID := release.ID{Name: "extra-release", Version: "0.0"}
-			extraRelease := release.Local{ID: extraReleaseID, LocalPath: extraFilePath}
+			extraReleaseID := component.Spec{Name: "extra-release", Version: "0.0"}
+			extraRelease := component.Local{Spec: extraReleaseID, LocalPath: extraFilePath}
 
-			err := localReleaseDirectory.DeleteExtraReleases([]release.Local{extraRelease}, noConfirm)
+			err := localReleaseDirectory.DeleteExtraReleases([]component.Local{extraRelease}, noConfirm)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = os.Stat(extraFilePath)
@@ -114,15 +113,15 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		})
 
 		It("sorts the list of releases to be deleted", func() {
-			extraReleaseID := release.ID{Name: "extra-release", Version: "0.0"}
-			extraRelease := release.Local{ID: extraReleaseID, LocalPath: extraFilePath}
+			extraReleaseID := component.Spec{Name: "extra-release", Version: "0.0"}
+			extraRelease := component.Local{Spec: extraReleaseID, LocalPath: extraFilePath}
 
-			zReleaseID := release.ID{Name: "z-release", Version: "0.0"}
-			zRelease := release.Local{ID: zReleaseID, LocalPath: zFilePath}
+			zReleaseID := component.Spec{Name: "z-release", Version: "0.0"}
+			zRelease := component.Local{Spec: zReleaseID, LocalPath: zFilePath}
 
 			result := fmt.Sprintf("- %s\n- %s", extraFilePath, zFilePath)
 
-			err := localReleaseDirectory.DeleteExtraReleases([]release.Local{zRelease, extraRelease}, false)
+			err := localReleaseDirectory.DeleteExtraReleases([]component.Local{zRelease, extraRelease}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(logBuf.Contents())).To(ContainSubstring(result))
 
@@ -130,10 +129,10 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		Context("when a file cannot be removed", func() {
 			It("returns an error", func() {
-				extraReleaseID := release.ID{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
-				extraRelease := release.Local{ID: extraReleaseID, LocalPath: "file-does-not-exist"}
+				extraReleaseID := component.Spec{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
+				extraRelease := component.Local{Spec: extraReleaseID, LocalPath: "file-does-not-exist"}
 
-				err := localReleaseDirectory.DeleteExtraReleases([]release.Local{extraRelease}, noConfirm)
+				err := localReleaseDirectory.DeleteExtraReleases([]component.Local{extraRelease}, noConfirm)
 				Expect(err).To(MatchError("failed to delete release extra-release-that-cannot-be-deleted"))
 			})
 		})

@@ -3,11 +3,11 @@ package commands
 import (
 	"encoding/json"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 type FindReleaseVersion struct {
@@ -49,7 +49,7 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 		}
 	}
 
-	releaseRemote, _, err := releaseSource.FindReleaseVersion(release.Requirement{
+	releaseRemote, _, err := releaseSource.FindReleaseVersion(component.Requirement{
 		Name:              cmd.Options.Release,
 		VersionConstraint: version,
 		StemcellVersion:   kilnfileLock.Stemcell.Version,
@@ -59,8 +59,8 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{
 		Version:    releaseRemote.Version,
 		RemotePath: releaseRemote.RemotePath,
-		SHA:        releaseRemote.SHA,
-		Source:     releaseRemote.SourceID,
+		Source:     releaseRemote.RemoteSource,
+		SHA:        releaseRemote.SHA1,
 	})
 	cmd.outLogger.Println(string(releaseVersionJson))
 	return err

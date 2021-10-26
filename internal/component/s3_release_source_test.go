@@ -22,7 +22,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/component"
 	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 func verifySetsConcurrency(opts []func(*s3manager.Downloader), concurrency int) {
@@ -93,9 +92,9 @@ var _ = Describe("S3ReleaseSource", func() {
 			releaseSource         component.S3ReleaseSource
 			logger                *log.Logger
 			releaseDir            string
-			remoteRelease         release.Remote
+			remoteRelease         component.Lock
 			expectedLocalFilename string
-			releaseID             release.ID
+			releaseID             component.Spec
 			fakeS3Downloader      *fetcherFakes.S3Downloader
 		)
 
@@ -105,8 +104,8 @@ var _ = Describe("S3ReleaseSource", func() {
 			releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 			Expect(err).NotTo(HaveOccurred())
 
-			releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
-			remoteRelease = release.Remote{ID: releaseID, RemotePath: "2.10/uaa/uaa-1.2.3-ubuntu-xenial-621.55.tgz", SourceID: bucket}
+			releaseID = component.Spec{Name: "uaa", Version: "1.2.3"}
+			remoteRelease = component.Lock{ComponentSpec: releaseID, RemotePath: "2.10/uaa/uaa-1.2.3-ubuntu-xenial-621.55.tgz", RemoteSource: bucket}
 			expectedLocalFilename = filepath.Base(remoteRelease.RemotePath)
 
 			logger = log.New(GinkgoWriter, "", 0)
@@ -139,7 +138,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			_, _, opts := fakeS3Downloader.DownloadArgsForCall(0)
 			verifySetsConcurrency(opts, 7)
 
-			Expect(localRelease).To(Equal(release.Local{ID: releaseID, LocalPath: releasePath, SHA1: sha1}))
+			Expect(localRelease).To(Equal(component.Local{Spec: releaseID, LocalPath: releasePath, SHA1: sha1}))
 		})
 
 		Context("when number of threads is not specified", func() {
@@ -184,15 +183,15 @@ var _ = Describe("S3ReleaseSource", func() {
 		var (
 			releaseSource  component.S3ReleaseSource
 			fakeS3Client   *fetcherFakes.S3Client
-			desiredRelease release.Requirement
-			bpmReleaseID   release.ID
+			desiredRelease component.Requirement
+			bpmReleaseID   component.Spec
 			bpmKey         string
 			logger         *log.Logger
 		)
 
 		BeforeEach(func() {
-			bpmReleaseID = release.ID{Name: "bpm-release", Version: "1.2.3"}
-			desiredRelease = release.Requirement{
+			bpmReleaseID = component.Spec{Name: "bpm-release", Version: "1.2.3"}
+			desiredRelease = component.Requirement{
 				Name:            "bpm-release",
 				Version:         "1.2.3",
 				StemcellOS:      "ubuntu-xenial",
@@ -227,10 +226,10 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(input.Bucket).To(PointTo(BeEquivalentTo(bucket)))
 			Expect(input.Key).To(PointTo(BeEquivalentTo(bpmKey)))
 
-			Expect(remoteRelease).To(Equal(release.Remote{
-				ID:         bpmReleaseID,
-				RemotePath: bpmKey,
-				SourceID:   sourceID,
+			Expect(remoteRelease).To(Equal(component.Lock{
+				ComponentSpec: bpmReleaseID,
+				RemotePath:    bpmKey,
+				RemoteSource:  sourceID,
 			}))
 		})
 
@@ -277,16 +276,16 @@ var _ = Describe("S3ReleaseSource", func() {
 		var (
 			releaseSource  component.S3ReleaseSource
 			fakeS3Client   *fetcherFakes.S3Client
-			desiredRelease release.Requirement
-			releaseID      release.ID
+			desiredRelease component.Requirement
+			releaseID      component.Spec
 			uaaKey         string
 			logger         *log.Logger
 		)
 		When("version is semantic and release has version constraint", func() {
 			BeforeEach(func() {
 
-				releaseID = release.ID{Name: "uaa", Version: "1.1.1"}
-				desiredRelease = release.Requirement{
+				releaseID = component.Spec{Name: "uaa", Version: "1.1.1"}
+				desiredRelease = component.Requirement{
 					Name:              "uaa",
 					VersionConstraint: "~1.1",
 					StemcellVersion:   "621.71",
@@ -335,19 +334,19 @@ var _ = Describe("S3ReleaseSource", func() {
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
 				Expect(*input.Prefix).To(Equal("uaa/"))
 
-				Expect(remoteRelease).To(Equal(release.Remote{
-					ID:         releaseID,
-					RemotePath: uaaKey,
-					SourceID:   sourceID,
-					SHA:        "1a77ff749f0f2f49493eb8a517fb7eaa04df9b62",
+				Expect(remoteRelease).To(Equal(component.Lock{
+					ComponentSpec: releaseID,
+					RemotePath:    uaaKey,
+					RemoteSource:  sourceID,
+					SHA1:          "1a77ff749f0f2f49493eb8a517fb7eaa04df9b62",
 				}))
 			})
 		})
 
 		When("version is a single number", func() {
 			BeforeEach(func() {
-				releaseID = release.ID{Name: "uaa", Version: "123"}
-				desiredRelease = release.Requirement{
+				releaseID = component.Spec{Name: "uaa", Version: "123"}
+				desiredRelease = component.Requirement{
 					Name:            "uaa",
 					StemcellVersion: "621.71",
 				}
@@ -396,11 +395,11 @@ var _ = Describe("S3ReleaseSource", func() {
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
 				Expect(*input.Prefix).To(Equal("uaa/"))
 
-				Expect(remoteRelease).To(Equal(release.Remote{
-					ID:         releaseID,
-					RemotePath: uaaKey,
-					SourceID:   sourceID,
-					SHA:        "bc7cb372ee4b9a9d6f4e8a993d46405d2c114e9c",
+				Expect(remoteRelease).To(Equal(component.Lock{
+					ComponentSpec: releaseID,
+					RemotePath:    uaaKey,
+					RemoteSource:  sourceID,
+					SHA1:          "bc7cb372ee4b9a9d6f4e8a993d46405d2c114e9c",
 				}))
 			})
 		})
@@ -412,15 +411,15 @@ var _ = Describe("S3ReleaseSource", func() {
 		var (
 			releaseSource  component.S3ReleaseSource
 			fakeS3Client   *fetcherFakes.S3Client
-			desiredRelease release.Requirement
-			releaseID      release.ID
+			desiredRelease component.Requirement
+			releaseID      component.Spec
 			uaaKey         string
 			logger         *log.Logger
 		)
 		When("version is semantic and has 2 latest versions with different stemcell versions", func() {
 			BeforeEach(func() {
-				releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
-				desiredRelease = release.Requirement{
+				releaseID = component.Spec{Name: "uaa", Version: "1.2.3"}
+				desiredRelease = component.Requirement{
 					Name:            "uaa",
 					StemcellVersion: "621.71",
 				}
@@ -469,11 +468,11 @@ var _ = Describe("S3ReleaseSource", func() {
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
 				Expect(*input.Prefix).To(Equal("2.11/uaa/"))
 
-				Expect(remoteRelease).To(Equal(release.Remote{
-					ID:         releaseID,
-					RemotePath: uaaKey,
-					SourceID:   sourceID,
-					SHA:        "78facf87f730395fb263fb5e89157c438fc1d8a9",
+				Expect(remoteRelease).To(Equal(component.Lock{
+					ComponentSpec: releaseID,
+					RemotePath:    uaaKey,
+					RemoteSource:  sourceID,
+					SHA1:          "78facf87f730395fb263fb5e89157c438fc1d8a9",
 				}))
 			})
 		})
@@ -503,7 +502,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		Context("happy path", func() {
 			It("uploads the file to the correct location", func() {
-				_, err := releaseSource.UploadRelease(release.Requirement{
+				_, err := releaseSource.UploadRelease(component.Requirement{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
@@ -521,16 +520,16 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns the remote release", func() {
-				remoteRelease, err := releaseSource.UploadRelease(release.Requirement{
+				remoteRelease, err := releaseSource.UploadRelease(component.Requirement{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(remoteRelease).To(Equal(release.Remote{
-					ID:         release.ID{Name: "banana", Version: "1.2.3"},
-					RemotePath: "banana/banana-1.2.3.tgz",
-					SourceID:   sourceID,
+				Expect(remoteRelease).To(Equal(component.Lock{
+					ComponentSpec: component.Spec{Name: "banana", Version: "1.2.3"},
+					RemotePath:    "banana/banana-1.2.3.tgz",
+					RemoteSource:  sourceID,
 				}))
 			})
 		})
@@ -550,7 +549,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns a descriptive error", func() {
-				_, err := releaseSource.UploadRelease(release.Requirement{
+				_, err := releaseSource.UploadRelease(component.Requirement{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
@@ -563,7 +562,7 @@ var _ = Describe("S3ReleaseSource", func() {
 	Describe("RemotePath", func() {
 		var (
 			releaseSource component.S3ReleaseSource
-			requirement   release.Requirement
+			requirement   component.Requirement
 		)
 
 		BeforeEach(func() {
@@ -577,7 +576,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				nil,
 				log.New(GinkgoWriter, "", 0),
 			)
-			requirement = release.Requirement{
+			requirement = component.Requirement{
 				Name:            "bob",
 				Version:         "2.0",
 				StemcellOS:      "plan9",

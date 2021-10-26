@@ -109,7 +109,7 @@ path_template: "not-used"
 			_, kilnfileLock, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kilnfileLock).To(Equal(cargo.KilnfileLock{
-				Releases: []cargo.ReleaseLock{{Name: "some-release", Version: "1.2.3"}},
+				Releases: []cargo.ComponentLock{{ComponentSpec: cargo.ComponentSpec{Name: "some-release", Version: "1.2.3"}}},
 				Stemcell: cargo.Stemcell{OS: "some-os", Version: "4.5.6"},
 			}))
 		})
@@ -270,17 +270,21 @@ stemcell_criteria:
 			).To(Succeed())
 
 			updatedKilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.ReleaseLock{
+				Releases: []cargo.ComponentLock{
 					{
-						Name:         "release-A",
-						Version:      "1.2.4",
+						ComponentSpec: cargo.ComponentSpec{
+							Name:    "release-A",
+							Version: "1.2.4",
+						},
 						RemoteSource: "new-source",
 						RemotePath:   "new-remote-path",
 						SHA1:         "new-sha1",
 					},
 					{
-						Name:         "release-B",
-						Version:      "42",
+						ComponentSpec: cargo.ComponentSpec{
+							Name:    "release-B",
+							Version: "42",
+						},
 						RemoteSource: "new-source2",
 						RemotePath:   "new-remote-path2",
 						SHA1:         "new-sha1-2",

@@ -5,14 +5,14 @@ import (
 	"sync"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
-	"github.com/pivotal-cf/kiln/pkg/release"
+	"github.com/pivotal-cf/kiln/internal/component"
 )
 
 type LocalReleaseDirectory struct {
-	DeleteExtraReleasesStub        func([]release.Local, bool) error
+	DeleteExtraReleasesStub        func([]component.Local, bool) error
 	deleteExtraReleasesMutex       sync.RWMutex
 	deleteExtraReleasesArgsForCall []struct {
-		arg1 []release.Local
+		arg1 []component.Local
 		arg2 bool
 	}
 	deleteExtraReleasesReturns struct {
@@ -21,33 +21,33 @@ type LocalReleaseDirectory struct {
 	deleteExtraReleasesReturnsOnCall map[int]struct {
 		result1 error
 	}
-	GetLocalReleasesStub        func(string) ([]release.Local, error)
+	GetLocalReleasesStub        func(string) ([]component.Local, error)
 	getLocalReleasesMutex       sync.RWMutex
 	getLocalReleasesArgsForCall []struct {
 		arg1 string
 	}
 	getLocalReleasesReturns struct {
-		result1 []release.Local
+		result1 []component.Local
 		result2 error
 	}
 	getLocalReleasesReturnsOnCall map[int]struct {
-		result1 []release.Local
+		result1 []component.Local
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *LocalReleaseDirectory) DeleteExtraReleases(arg1 []release.Local, arg2 bool) error {
-	var arg1Copy []release.Local
+func (fake *LocalReleaseDirectory) DeleteExtraReleases(arg1 []component.Local, arg2 bool) error {
+	var arg1Copy []component.Local
 	if arg1 != nil {
-		arg1Copy = make([]release.Local, len(arg1))
+		arg1Copy = make([]component.Local, len(arg1))
 		copy(arg1Copy, arg1)
 	}
 	fake.deleteExtraReleasesMutex.Lock()
 	ret, specificReturn := fake.deleteExtraReleasesReturnsOnCall[len(fake.deleteExtraReleasesArgsForCall)]
 	fake.deleteExtraReleasesArgsForCall = append(fake.deleteExtraReleasesArgsForCall, struct {
-		arg1 []release.Local
+		arg1 []component.Local
 		arg2 bool
 	}{arg1Copy, arg2})
 	stub := fake.DeleteExtraReleasesStub
@@ -69,13 +69,13 @@ func (fake *LocalReleaseDirectory) DeleteExtraReleasesCallCount() int {
 	return len(fake.deleteExtraReleasesArgsForCall)
 }
 
-func (fake *LocalReleaseDirectory) DeleteExtraReleasesCalls(stub func([]release.Local, bool) error) {
+func (fake *LocalReleaseDirectory) DeleteExtraReleasesCalls(stub func([]component.Local, bool) error) {
 	fake.deleteExtraReleasesMutex.Lock()
 	defer fake.deleteExtraReleasesMutex.Unlock()
 	fake.DeleteExtraReleasesStub = stub
 }
 
-func (fake *LocalReleaseDirectory) DeleteExtraReleasesArgsForCall(i int) ([]release.Local, bool) {
+func (fake *LocalReleaseDirectory) DeleteExtraReleasesArgsForCall(i int) ([]component.Local, bool) {
 	fake.deleteExtraReleasesMutex.RLock()
 	defer fake.deleteExtraReleasesMutex.RUnlock()
 	argsForCall := fake.deleteExtraReleasesArgsForCall[i]
@@ -105,7 +105,7 @@ func (fake *LocalReleaseDirectory) DeleteExtraReleasesReturnsOnCall(i int, resul
 	}{result1}
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleases(arg1 string) ([]release.Local, error) {
+func (fake *LocalReleaseDirectory) GetLocalReleases(arg1 string) ([]component.Local, error) {
 	fake.getLocalReleasesMutex.Lock()
 	ret, specificReturn := fake.getLocalReleasesReturnsOnCall[len(fake.getLocalReleasesArgsForCall)]
 	fake.getLocalReleasesArgsForCall = append(fake.getLocalReleasesArgsForCall, struct {
@@ -130,7 +130,7 @@ func (fake *LocalReleaseDirectory) GetLocalReleasesCallCount() int {
 	return len(fake.getLocalReleasesArgsForCall)
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleasesCalls(stub func(string) ([]release.Local, error)) {
+func (fake *LocalReleaseDirectory) GetLocalReleasesCalls(stub func(string) ([]component.Local, error)) {
 	fake.getLocalReleasesMutex.Lock()
 	defer fake.getLocalReleasesMutex.Unlock()
 	fake.GetLocalReleasesStub = stub
@@ -143,28 +143,28 @@ func (fake *LocalReleaseDirectory) GetLocalReleasesArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleasesReturns(result1 []release.Local, result2 error) {
+func (fake *LocalReleaseDirectory) GetLocalReleasesReturns(result1 []component.Local, result2 error) {
 	fake.getLocalReleasesMutex.Lock()
 	defer fake.getLocalReleasesMutex.Unlock()
 	fake.GetLocalReleasesStub = nil
 	fake.getLocalReleasesReturns = struct {
-		result1 []release.Local
+		result1 []component.Local
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *LocalReleaseDirectory) GetLocalReleasesReturnsOnCall(i int, result1 []release.Local, result2 error) {
+func (fake *LocalReleaseDirectory) GetLocalReleasesReturnsOnCall(i int, result1 []component.Local, result2 error) {
 	fake.getLocalReleasesMutex.Lock()
 	defer fake.getLocalReleasesMutex.Unlock()
 	fake.GetLocalReleasesStub = nil
 	if fake.getLocalReleasesReturnsOnCall == nil {
 		fake.getLocalReleasesReturnsOnCall = make(map[int]struct {
-			result1 []release.Local
+			result1 []component.Local
 			result2 error
 		})
 	}
 	fake.getLocalReleasesReturnsOnCall[i] = struct {
-		result1 []release.Local
+		result1 []component.Local
 		result2 error
 	}{result1, result2}
 }

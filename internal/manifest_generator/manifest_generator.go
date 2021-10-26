@@ -4,7 +4,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
-	"github.com/pivotal-cf/kiln/pkg/release"
+	"github.com/pivotal-cf/kiln/internal/component"
 )
 
 type ManifestGenerator struct{}
@@ -39,7 +39,7 @@ func New() ManifestGenerator {
 	return ManifestGenerator{}
 }
 
-func (g ManifestGenerator) Generate(deploymentName string, releases []release.ID, stemcell builder.StemcellManifest) ([]byte, error) {
+func (g ManifestGenerator) Generate(deploymentName string, releases []component.Spec, stemcell builder.StemcellManifest) ([]byte, error) {
 	manifest := Manifest{
 		Name:           deploymentName,
 		Releases:       []ManifestRelease{},

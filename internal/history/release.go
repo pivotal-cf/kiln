@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/release"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
@@ -29,8 +29,8 @@ var (
 )
 
 type ReleaseMapping struct {
-	Tile release.ID
-	Bosh release.ID
+	Tile component.Spec
+	Bosh component.Spec
 }
 
 type TileVersionFileBoshReleaseListStopFunc = func(i int, commit object.Commit, result []ReleaseMapping) bool
@@ -52,7 +52,7 @@ func StopAfter(commitHistoryLen int) TileVersionFileBoshReleaseListStopFunc {
 	}
 }
 
-func FindBoshRelease(release release.ID) TileVersionFileBoshReleaseListStopFunc {
+func FindBoshRelease(release component.Spec) TileVersionFileBoshReleaseListStopFunc {
 	return func(_ int, _ object.Commit, list []ReleaseMapping) bool {
 		for _, m := range list {
 			if release == m.Bosh {
@@ -63,7 +63,7 @@ func FindBoshRelease(release release.ID) TileVersionFileBoshReleaseListStopFunc 
 	}
 }
 
-func FindBoshTileRelease(release release.ID) TileVersionFileBoshReleaseListStopFunc {
+func FindBoshTileRelease(release component.Spec) TileVersionFileBoshReleaseListStopFunc {
 	return func(_ int, _ object.Commit, list []ReleaseMapping) bool {
 		for _, m := range list {
 			if release == m.Tile {
@@ -156,11 +156,11 @@ func buildNumberBoshRelease(tree *object.Tree, root string, releaseNames []strin
 		}
 
 		result = append(result, ReleaseMapping{
-			Tile: release.ID{
+			Tile: component.Spec{
 				Name:    strings.TrimSpace(root),
 				Version: strings.TrimSpace(vBuf),
 			},
-			Bosh: release.ID{
+			Bosh: component.Spec{
 				Name:    strings.TrimSpace(rel.Name),
 				Version: strings.TrimSpace(rel.Version),
 			},
@@ -198,8 +198,8 @@ func TileReleaseBoshReleaseList(repo *git.Repository, releaseNames ...string) ([
 
 				for _, v := range tileVersions {
 					result = append(result, ReleaseMapping{
-						Bosh: release.ID{Name: boshReleaseName, Version: boshReleaseVersion.String()},
-						Tile: release.ID{Name: tilePath, Version: v.String()},
+						Bosh: component.Spec{Name: boshReleaseName, Version: boshReleaseVersion.String()},
+						Tile: component.Spec{Name: tilePath, Version: v.String()},
 					})
 				}
 			}

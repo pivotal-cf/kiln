@@ -12,7 +12,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 type UploadRelease struct {
@@ -71,7 +70,7 @@ func (command UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("cannot upload development release %q - only finalized releases are allowed", manifest.Version)
 	}
 
-	requirement := release.Requirement{Name: manifest.Name, Version: manifest.Version}
+	requirement := component.Requirement{Name: manifest.Name, Version: manifest.Version}
 	_, found, err := releaseUploader.GetMatchedRelease(requirement)
 	if err != nil {
 		return fmt.Errorf("couldn't query release source: %w", err)
@@ -82,7 +81,7 @@ func (command UploadRelease) Execute(args []string) error {
 			manifest.Name, manifest.Version, command.Options.UploadTargetID)
 	}
 
-	_, err = releaseUploader.UploadRelease(release.Requirement{
+	_, err = releaseUploader.UploadRelease(component.Requirement{
 		Name:    manifest.Name,
 		Version: manifest.Version,
 	}, file)

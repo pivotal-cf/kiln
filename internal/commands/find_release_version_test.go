@@ -13,7 +13,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 var _ = Describe("Find the release version", func() {
@@ -83,11 +82,11 @@ releases:
 			When("a latest release exists", func() {
 				BeforeEach(func() {
 					releaseName = "uaac"
-					fakeReleasesSource.FindReleaseVersionReturns(release.Remote{
-						ID:         release.ID{Name: releaseName, Version: "74.12.5"},
-						RemotePath: "remote_url",
-						SourceID:   "bosh.io",
-						SHA:        "some-sha",
+					fakeReleasesSource.FindReleaseVersionReturns(component.Lock{
+						ComponentSpec: component.Spec{Name: releaseName, Version: "74.12.5"},
+						RemotePath:    "remote_url",
+						RemoteSource:  "bosh.io",
+						SHA1:          "some-sha",
 					}, true, nil)
 				})
 
@@ -111,10 +110,10 @@ releases:
 			When("a release exists", func() {
 				BeforeEach(func() {
 					releaseName = "uaa"
-					fakeReleasesSource.FindReleaseVersionReturns(release.Remote{
-						ID:         release.ID{Name: releaseName, Version: "74.16.5"},
-						RemotePath: "remote_url",
-						SourceID:   "sourceId",
+					fakeReleasesSource.FindReleaseVersionReturns(component.Lock{
+						ComponentSpec: component.Spec{Name: releaseName, Version: "74.16.5"},
+						RemotePath:    "remote_url",
+						RemoteSource:  "sourceId",
 					}, true, nil)
 				})
 

@@ -3,11 +3,11 @@ package cargo
 import "errors"
 
 type KilnfileLock struct {
-	Releases []ReleaseLock `yaml:"releases"`
-	Stemcell Stemcell      `yaml:"stemcell_criteria"`
+	Releases []ComponentLock `yaml:"releases"`
+	Stemcell Stemcell        `yaml:"stemcell_criteria"`
 }
 
-type ReleaseKiln struct {
+type ComponentSpec struct {
 	Name    string `yaml:"name"`
 	Version string `yaml:"version"`
 }
@@ -16,7 +16,7 @@ type Kilnfile struct {
 	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources"`
 	Slug            string                `yaml:"slug"`
 	PreGaUserGroups []string              `yaml:"pre_ga_user_groups"`
-	Releases        []ReleaseKiln         `yaml:"releases"`
+	Releases        []ComponentSpec       `yaml:"releases"`
 	TileNames       []string              `yaml:"tile_names"`
 	Stemcell        Stemcell              `yaml:"stemcell_criteria"`
 }
@@ -33,19 +33,19 @@ type ReleaseSourceConfig struct {
 	Endpoint        string `yaml:"endpoint"`
 }
 
-type ReleaseLock struct {
-	Name         string `yaml:"name"`
+type ComponentLock struct {
+	ComponentSpec `yaml:",inline"`
+
 	SHA1         string `yaml:"sha1"`
-	Version      string `yaml:"version"`
 	RemoteSource string `yaml:"remote_source"`
 	RemotePath   string `yaml:"remote_path"`
 }
 
-func (k KilnfileLock) FindReleaseWithName(name string) (ReleaseLock, error) {
+func (k KilnfileLock) FindReleaseWithName(name string) (ComponentLock, error) {
 	for _, r := range k.Releases {
 		if r.Name == name {
 			return r, nil
 		}
 	}
-	return ReleaseLock{}, errors.New("not found")
+	return ComponentLock{}, errors.New("not found")
 }

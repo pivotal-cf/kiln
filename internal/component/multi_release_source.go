@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
-
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 type multiReleaseSource []ReleaseSource
@@ -14,48 +12,48 @@ func NewMultiReleaseSource(sources ...ReleaseSource) multiReleaseSource {
 	return sources
 }
 
-func (multiSrc multiReleaseSource) GetMatchedRelease(requirement release.Requirement) (release.Remote, bool, error) {
+func (multiSrc multiReleaseSource) GetMatchedRelease(requirement Requirement) (Lock, bool, error) {
 	for _, src := range multiSrc {
 		rel, found, err := src.GetMatchedRelease(requirement)
 		if err != nil {
-			return release.Remote{}, false, scopedError(src.ID(), err)
+			return Lock{}, false, scopedError(src.ID(), err)
 		}
 		if found {
 			return rel, true, nil
 		}
 	}
-	return release.Remote{}, false, nil
+	return Lock{}, false, nil
 }
 
-func (multiSrc multiReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error) {
-	src, err := multiSrc.FindByID(remoteRelease.SourceID)
+func (multiSrc multiReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock, downloadThreads int) (Local, error) {
+	src, err := multiSrc.FindByID(remoteRelease.RemoteSource)
 	if err != nil {
-		return release.Local{}, err
+		return Local{}, err
 	}
 
 	localRelease, err := src.DownloadRelease(releaseDir, remoteRelease, downloadThreads)
 	if err != nil {
-		return release.Local{}, scopedError(src.ID(), err)
+		return Local{}, scopedError(src.ID(), err)
 	}
 
 	return localRelease, nil
 }
 
-func (multiSrc multiReleaseSource) FindReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
-	foundRelease := release.Remote{}
+func (multiSrc multiReleaseSource) FindReleaseVersion(requirement Requirement) (Lock, bool, error) {
+	foundRelease := Lock{}
 	releaseWasFound := false
 	for _, src := range multiSrc {
 		rel, found, err := src.FindReleaseVersion(requirement)
 		if err != nil {
-			return release.Remote{}, false, scopedError(src.ID(), err)
+			return Lock{}, false, scopedError(src.ID(), err)
 		}
 		if found {
 			releaseWasFound = true
-			if (foundRelease == release.Remote{}) {
+			if (foundRelease == Lock{}) {
 				foundRelease = rel
 			} else {
-				newVersion, _ := semver.NewVersion(rel.ID.Version)
-				currentVersion, _ := semver.NewVersion(foundRelease.ID.Version)
+				newVersion, _ := semver.NewVersion(rel.Version)
+				currentVersion, _ := semver.NewVersion(foundRelease.Version)
 				if currentVersion.LessThan(newVersion) {
 					foundRelease = rel
 				}

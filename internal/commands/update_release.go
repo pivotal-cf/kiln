@@ -10,7 +10,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 type UpdateRelease struct {
@@ -47,7 +46,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
-	var releaseLock *cargo.ReleaseLock
+	var releaseLock *cargo.ComponentLock
 	var releaseVersionConstraint string
 	for i := range kilnfileLock.Releases {
 		if kilnfileLock.Releases[i].Name == u.Options.Name {
@@ -72,12 +71,12 @@ func (u UpdateRelease) Execute(args []string) error {
 
 	u.logger.Println("Searching for the release...")
 
-	var localRelease release.Local
-	var remoteRelease release.Remote
+	var localRelease component.Local
+	var remoteRelease component.Lock
 	var found bool
 	var newVersion, newSHA1, newSourceID, newRemotePath string
 	if u.Options.WithoutDownload {
-		remoteRelease, found, err = releaseSource.FindReleaseVersion(release.Requirement{
+		remoteRelease, found, err = releaseSource.FindReleaseVersion(component.Requirement{
 			Name:              u.Options.Name,
 			VersionConstraint: releaseVersionConstraint,
 			StemcellVersion:   kilnfileLock.Stemcell.Version,
@@ -92,12 +91,12 @@ func (u UpdateRelease) Execute(args []string) error {
 		}
 
 		newVersion = remoteRelease.Version
-		newSHA1 = remoteRelease.SHA
-		newSourceID = remoteRelease.SourceID
+		newSHA1 = remoteRelease.SHA1
+		newSourceID = remoteRelease.RemoteSource
 		newRemotePath = remoteRelease.RemotePath
 
 	} else {
-		remoteRelease, found, err = releaseSource.GetMatchedRelease(release.Requirement{
+		remoteRelease, found, err = releaseSource.GetMatchedRelease(component.Requirement{
 			Name:            u.Options.Name,
 			Version:         u.Options.Version,
 			StemcellOS:      kilnfileLock.Stemcell.OS,
@@ -117,7 +116,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		}
 		newVersion = localRelease.Version
 		newSHA1 = localRelease.SHA1
-		newSourceID = remoteRelease.SourceID
+		newSourceID = remoteRelease.RemoteSource
 		newRemotePath = remoteRelease.RemotePath
 	}
 
