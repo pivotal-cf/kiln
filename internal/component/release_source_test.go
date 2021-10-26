@@ -10,7 +10,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-var _ = Describe("ReleaseSourceRepo", func() {
+var _ = Describe("ReleaseSourceList", func() {
 	var logger *log.Logger
 
 	BeforeEach(func() {
@@ -32,8 +32,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			})
 
 			It("constructs the ReleaseSources properly", func() {
-				repo := component.NewReleaseSourceRepo(kilnfile, logger)
-				releaseSources := repo.ReleaseSources
+				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
 
 				Expect(releaseSources).To(HaveLen(3))
 				var (
@@ -65,8 +64,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			})
 
 			It("marks it correctly", func() {
-				repo := component.NewReleaseSourceRepo(kilnfile, logger)
-				releaseSources := repo.ReleaseSources
+				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
 
 				Expect(releaseSources).To(HaveLen(1))
 				var (
@@ -90,8 +88,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			})
 
 			It("gives the correct IDs to the release sources", func() {
-				repo := component.NewReleaseSourceRepo(kilnfile, logger)
-				releaseSources := repo.ReleaseSources
+				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
 
 				Expect(releaseSources).To(HaveLen(3))
 				Expect(releaseSources[0].ID()).To(Equal("comp"))
@@ -126,12 +123,12 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 	Describe("MultiReleaseSource", func() {
 		var (
-			repo     component.ReleaseSourceRepo
+			list     component.ReleaseSourceList
 			kilnfile cargo.Kilnfile
 		)
 
 		JustBeforeEach(func() {
-			repo = component.NewReleaseSourceRepo(kilnfile, logger)
+			list = component.NewReleaseSourceRepo(kilnfile, logger)
 		})
 
 		Context("when allow-only-publishable-releases is false", func() {
@@ -150,7 +147,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			})
 
 			It("builds the correct release sources", func() {
-				releaseSources := repo.MultiReleaseSource(false)
+				releaseSources := list.Filter(false)
 				Expect(releaseSources).To(HaveLen(4))
 				var (
 					s3ReleaseSource     component.S3ReleaseSource
@@ -187,7 +184,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			})
 
 			It("builds the correct release sources", func() {
-				releaseSources := repo.MultiReleaseSource(true)
+				releaseSources := list.Filter(true)
 				Expect(releaseSources).To(HaveLen(1))
 				var s3ReleaseSource component.S3ReleaseSource
 
@@ -200,7 +197,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 	Describe("FindReleaseUploader", func() {
 		var (
-			repo     component.ReleaseSourceRepo
+			repo     component.ReleaseSourceList
 			kilnfile cargo.Kilnfile
 		)
 
@@ -268,12 +265,12 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 	Describe("RemotePather", func() {
 		var (
-			repo     component.ReleaseSourceRepo
+			list     component.ReleaseSourceList
 			kilnfile cargo.Kilnfile
 		)
 
 		JustBeforeEach(func() {
-			repo = component.NewReleaseSourceRepo(kilnfile, logger)
+			list = component.NewReleaseSourceRepo(kilnfile, logger)
 		})
 
 		BeforeEach(func() {
@@ -292,7 +289,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 		Context("when the named source exists and implements RemotePath", func() {
 			It("returns a valid release uploader", func() {
-				uploader, err := repo.FindRemotePather("bucket-2")
+				uploader, err := list.FindRemotePather("bucket-2")
 				Expect(err).NotTo(HaveOccurred())
 
 				var s3ReleaseSource component.S3ReleaseSource
@@ -308,14 +305,14 @@ var _ = Describe("ReleaseSourceRepo", func() {
 			})
 
 			It("errors", func() {
-				_, err := repo.FindRemotePather("bosh.io")
+				_, err := list.FindRemotePather("bosh.io")
 				Expect(err).To(MatchError(ContainSubstring("no path-generating release sources were found")))
 			})
 		})
 
 		Context("when the named source doesn't implement RemotePath", func() {
 			It("errors with a list of valid sources", func() {
-				_, err := repo.FindRemotePather("bosh.io")
+				_, err := list.FindRemotePather("bosh.io")
 				Expect(err).To(MatchError(ContainSubstring("could not find a valid matching release source")))
 				Expect(err).To(MatchError(ContainSubstring("bucket-1")))
 				Expect(err).To(MatchError(ContainSubstring("bucket-2")))
@@ -325,7 +322,7 @@ var _ = Describe("ReleaseSourceRepo", func() {
 
 		Context("when the named source doesn't exist", func() {
 			It("errors with a list of valid sources", func() {
-				_, err := repo.FindRemotePather("bucket-42")
+				_, err := list.FindRemotePather("bucket-42")
 				Expect(err).To(MatchError(ContainSubstring("could not find a valid matching release source")))
 				Expect(err).To(MatchError(ContainSubstring("bucket-1")))
 				Expect(err).To(MatchError(ContainSubstring("bucket-2")))

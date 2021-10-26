@@ -24,6 +24,10 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
+const (
+	DefaultDownloadThreadCount = 0
+)
+
 //counterfeiter:generate -o ./fakes/s3_downloader.go --fake-name S3Downloader . S3Downloader
 type S3Downloader interface {
 	Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)

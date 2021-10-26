@@ -60,7 +60,7 @@ func main() {
 	localReleaseDirectory := component.NewLocalReleaseDirectory(outLogger, releasesService)
 	mrsProvider := commands.MultiReleaseSourceProvider(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
 		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
-		return repo.MultiReleaseSource(allowOnlyPublishable)
+		return repo.Filter(allowOnlyPublishable)
 	})
 	ruFinder := commands.ReleaseUploaderFinder(func(kilnfile cargo.Kilnfile, sourceID string) (component.ReleaseUploader, error) {
 		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
