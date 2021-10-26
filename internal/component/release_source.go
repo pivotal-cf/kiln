@@ -51,7 +51,7 @@ func NewReleaseSourceRepo(kilnfile cargo.Kilnfile, logger *log.Logger) ReleaseSo
 	var releaseSources multiReleaseSource
 
 	for _, releaseConfig := range kilnfile.ReleaseSources {
-		releaseSources = append(releaseSources, releaseSourceFor(releaseConfig, logger))
+		releaseSources = append(releaseSources, ReleaseSourceFactory(releaseConfig, logger))
 	}
 
 	panicIfDuplicateIDs(releaseSources)
@@ -133,7 +133,7 @@ func (repo ReleaseSourceRepo) FindRemotePather(sourceID string) (RemotePather, e
 	return pather, nil
 }
 
-func releaseSourceFor(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
+func ReleaseSourceFactory(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
 	switch releaseConfig.Type {
 	case ReleaseSourceTypeBOSHIO:
 		id := releaseConfig.ID
