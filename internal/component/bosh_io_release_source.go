@@ -51,34 +51,33 @@ var suffixes = []string{
 }
 
 type BOSHIOReleaseSource struct {
-	id          string
-	serverURI   string
-	publishable bool
-	logger      *log.Logger
+	cargo.ReleaseSourceConfig
+	serverURI string
+	logger    *log.Logger
 }
 
-func NewBOSHIOReleaseSource(id string, publishable bool, customServerURI string, logger *log.Logger) *BOSHIOReleaseSource {
+func NewBOSHIOReleaseSource(c cargo.ReleaseSourceConfig, customServerURI string, logger *log.Logger) *BOSHIOReleaseSource {
+	if c.Type != "" && c.Type != ReleaseSourceTypeBOSHIO {
+		panic(panicMessageWrongReleaseSourceType)
+	}
 	if customServerURI == "" {
 		customServerURI = "https://bosh.io"
 	}
-
+	if logger == nil {
+		logger = log.New(os.Stdout, "[bosh.io release source] ", log.Default().Flags())
+	}
 	return &BOSHIOReleaseSource{
-		logger:      logger,
-		serverURI:   customServerURI,
-		publishable: publishable,
-		id:          id,
+		ReleaseSourceConfig: c,
+		logger:              logger,
+		serverURI:           customServerURI,
 	}
 }
 
-func (src BOSHIOReleaseSource) ID() string {
-	return src.id
+func (src BOSHIOReleaseSource) ID() string        { return src.ReleaseSourceConfig.ID }
+func (src BOSHIOReleaseSource) Publishable() bool { return src.ReleaseSourceConfig.Publishable }
+func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSourceConfig {
+	return src.ReleaseSourceConfig
 }
-
-func (src BOSHIOReleaseSource) Publishable() bool {
-	return src.publishable
-}
-
-func (src *BOSHIOReleaseSource) Configure(_ cargo.Kilnfile) {}
 
 func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Requirement) (Lock, bool, error) {
 	for _, repo := range repos {

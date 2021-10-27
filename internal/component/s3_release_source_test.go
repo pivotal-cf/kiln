@@ -115,7 +115,12 @@ var _ = Describe("S3ReleaseSource", func() {
 				n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 				return int64(n), err
 			}
-			releaseSource = component.NewS3ReleaseSource(sourceID, bucket, "", false, nil, fakeS3Downloader, nil, logger)
+			releaseSource = component.NewS3ReleaseSource(cargo.ReleaseSourceConfig{
+				ID:           sourceID,
+				Bucket:       bucket,
+				PathTemplate: "",
+				Publishable:  false,
+			}, nil, fakeS3Downloader, nil, logger)
 		})
 
 		AfterEach(func() {
@@ -204,10 +209,11 @@ var _ = Describe("S3ReleaseSource", func() {
 			logger = log.New(nil, "", 0)
 
 			releaseSource = component.NewS3ReleaseSource(
-				sourceID,
-				bucket,
-				`2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
-				false,
+				cargo.ReleaseSourceConfig{
+					ID:           sourceID,
+					Bucket:       bucket,
+					PathTemplate: `2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+				},
 				fakeS3Client,
 				nil,
 				nil,
@@ -250,10 +256,12 @@ var _ = Describe("S3ReleaseSource", func() {
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
 				releaseSource = component.NewS3ReleaseSource(
-					sourceID,
-					bucket,
-					`{{.NoSuchField}}`,
-					false,
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       bucket,
+						PathTemplate: `{{.NoSuchField}}`,
+						Publishable:  false,
+					},
 					fakeS3Client,
 					nil,
 					nil,
@@ -313,10 +321,12 @@ var _ = Describe("S3ReleaseSource", func() {
 				logger = log.New(GinkgoWriter, "", 0)
 
 				releaseSource = component.NewS3ReleaseSource(
-					sourceID,
-					bucket,
-					`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
-					false,
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       bucket,
+						PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
+						Publishable:  false,
+					},
 					fakeS3Client,
 					fakeS3Downloader,
 					nil,
@@ -374,10 +384,12 @@ var _ = Describe("S3ReleaseSource", func() {
 				}
 
 				releaseSource = component.NewS3ReleaseSource(
-					sourceID,
-					bucket,
-					`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
-					false,
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       bucket,
+						PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
+						Publishable:  false,
+					},
 					fakeS3Client,
 					fakeS3Downloader,
 					nil,
@@ -447,10 +459,12 @@ var _ = Describe("S3ReleaseSource", func() {
 				}
 
 				releaseSource = component.NewS3ReleaseSource(
-					sourceID,
-					bucket,
-					`2.11/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
-					true,
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       bucket,
+						PathTemplate: `2.11/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+						Publishable:  true,
+					},
 					fakeS3Client,
 					fakeS3Downloader,
 					nil,
@@ -488,10 +502,12 @@ var _ = Describe("S3ReleaseSource", func() {
 		BeforeEach(func() {
 			s3Uploader = new(fetcherFakes.S3Uploader)
 			releaseSource = component.NewS3ReleaseSource(
-				sourceID,
-				"orange-bucket",
-				`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
-				false,
+				cargo.ReleaseSourceConfig{
+					ID:           sourceID,
+					Bucket:       "orange-bucket",
+					PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
+					Publishable:  false,
+				},
 				nil,
 				nil,
 				s3Uploader,
@@ -537,10 +553,12 @@ var _ = Describe("S3ReleaseSource", func() {
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
 				releaseSource = component.NewS3ReleaseSource(
-					sourceID,
-					"orange-bucket",
-					`{{.NoSuchField}}`,
-					false,
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       "orange-bucket",
+						PathTemplate: `{{.NoSuchField}}`,
+						Publishable:  false,
+					},
 					nil,
 					nil,
 					s3Uploader,
@@ -567,10 +585,12 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		BeforeEach(func() {
 			releaseSource = component.NewS3ReleaseSource(
-				sourceID,
-				"orange-bucket",
-				`{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
-				false,
+				cargo.ReleaseSourceConfig{
+					ID:           sourceID,
+					Bucket:       "orange-bucket",
+					PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+					Publishable:  false,
+				},
 				nil,
 				nil,
 				nil,
@@ -593,10 +613,12 @@ var _ = Describe("S3ReleaseSource", func() {
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
 				releaseSource = component.NewS3ReleaseSource(
-					sourceID,
-					"orange-bucket",
-					`{{.NoSuchField}}`,
-					false,
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       "orange-bucket",
+						PathTemplate: `{{.NoSuchField}}`,
+						Publishable:  false,
+					},
 					nil,
 					nil,
 					nil,

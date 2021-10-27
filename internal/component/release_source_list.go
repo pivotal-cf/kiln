@@ -27,7 +27,7 @@ func NewReleaseSourceRepo(kilnfile cargo.Kilnfile, logger *log.Logger) ReleaseSo
 func (list ReleaseSourceList) Filter(allowOnlyPublishable bool) ReleaseSourceList {
 	var sources ReleaseSourceList
 	for _, source := range list {
-		if allowOnlyPublishable && !source.Publishable() {
+		if allowOnlyPublishable && !source.Configuration().Publishable {
 			continue
 		}
 		sources = append(sources, source)
@@ -45,8 +45,8 @@ func (list ReleaseSourceList) FindReleaseUploader(sourceID string) (ReleaseUploa
 		if !ok {
 			continue
 		}
-		availableIDs = append(availableIDs, src.ID())
-		if src.ID() == sourceID {
+		availableIDs = append(availableIDs, src.Configuration().ID)
+		if src.Configuration().ID == sourceID {
 			uploader = u
 			break
 		}
@@ -77,8 +77,9 @@ func (list ReleaseSourceList) FindRemotePather(sourceID string) (RemotePather, e
 		if !ok {
 			continue
 		}
-		availableIDs = append(availableIDs, src.ID())
-		if src.ID() == sourceID {
+		id := src.Configuration().ID
+		availableIDs = append(availableIDs, id)
+		if id == sourceID {
 			pather = u
 			break
 		}
@@ -101,7 +102,7 @@ func (list ReleaseSourceList) FindRemotePather(sourceID string) (RemotePather, e
 func panicIfDuplicateIDs(releaseSources []ReleaseSource) {
 	indexOfID := make(map[string]int)
 	for index, rs := range releaseSources {
-		id := rs.ID()
+		id := rs.Configuration().ID
 		previousIndex, seen := indexOfID[id]
 		if seen {
 			panic(fmt.Sprintf(`release_sources must have unique IDs; items at index %d and %d both have ID %q`, previousIndex, index, id))
@@ -118,7 +119,7 @@ func (list ReleaseSourceList) GetMatchedRelease(requirement Requirement) (Lock, 
 	for _, src := range list {
 		rel, found, err := src.GetMatchedRelease(requirement)
 		if err != nil {
-			return Lock{}, false, scopedError(src.ID(), err)
+			return Lock{}, false, scopedError(src.Configuration().ID, err)
 		}
 		if found {
 			return rel, true, nil
@@ -135,7 +136,7 @@ func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease L
 
 	localRelease, err := src.DownloadRelease(releaseDir, remoteRelease, downloadThreads)
 	if err != nil {
-		return Local{}, scopedError(src.ID(), err)
+		return Local{}, scopedError(src.Configuration().ID, err)
 	}
 
 	return localRelease, nil
@@ -147,7 +148,7 @@ func (list ReleaseSourceList) FindReleaseVersion(requirement Requirement) (Lock,
 	for _, src := range list {
 		rel, found, err := src.FindReleaseVersion(requirement)
 		if err != nil {
-			return Lock{}, false, scopedError(src.ID(), err)
+			return Lock{}, false, scopedError(src.Configuration().ID, err)
 		}
 		if found {
 			releaseWasFound = true
@@ -168,7 +169,7 @@ func (list ReleaseSourceList) FindReleaseVersion(requirement Requirement) (Lock,
 func (list ReleaseSourceList) FindByID(id string) (ReleaseSource, error) {
 	var correctSrc ReleaseSource
 	for _, src := range list {
-		if src.ID() == id {
+		if src.Configuration().ID == id {
 			correctSrc = src
 			break
 		}
@@ -177,7 +178,7 @@ func (list ReleaseSourceList) FindByID(id string) (ReleaseSource, error) {
 	if correctSrc == nil {
 		ids := make([]string, 0, len(list))
 		for _, src := range list {
-			ids = append(ids, src.ID())
+			ids = append(ids, src.Configuration().ID)
 		}
 		return nil, fmt.Errorf("couldn't find a release source with ID %q. Available choices: %q", id, ids)
 	}

@@ -41,16 +41,16 @@ var _ = Describe("ReleaseSourceList", func() {
 				)
 
 				Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3ReleaseSource))
-				Expect(releaseSources[0].ID()).To(Equal(kilnfile.ReleaseSources[0].Bucket))
-				Expect(releaseSources[0].Publishable()).To(BeTrue())
+				Expect(releaseSources[0].Configuration().ID).To(Equal(kilnfile.ReleaseSources[0].Bucket))
+				Expect(releaseSources[0].Configuration().Publishable).To(BeTrue())
 
 				Expect(releaseSources[1]).To(BeAssignableToTypeOf(s3ReleaseSource))
-				Expect(releaseSources[1].ID()).To(Equal(kilnfile.ReleaseSources[1].Bucket))
-				Expect(releaseSources[1].Publishable()).To(BeFalse())
+				Expect(releaseSources[1].Configuration().ID).To(Equal(kilnfile.ReleaseSources[1].Bucket))
+				Expect(releaseSources[1].Configuration().Publishable).To(BeFalse())
 
 				Expect(releaseSources[2]).To(BeAssignableToTypeOf(boshIOReleaseSource))
-				Expect(releaseSources[2].ID()).To(Equal("bosh.io"))
-				Expect(releaseSources[2].Publishable()).To(BeFalse())
+				Expect(releaseSources[2].Configuration().ID).To(Equal("bosh.io"))
+				Expect(releaseSources[2].Configuration().Publishable).To(BeFalse())
 			})
 		})
 
@@ -91,9 +91,9 @@ var _ = Describe("ReleaseSourceList", func() {
 				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
 
 				Expect(releaseSources).To(HaveLen(3))
-				Expect(releaseSources[0].ID()).To(Equal("comp"))
-				Expect(releaseSources[1].ID()).To(Equal("buil"))
-				Expect(releaseSources[2].ID()).To(Equal("bosh"))
+				Expect(releaseSources[0].Configuration().ID).To(Equal("comp"))
+				Expect(releaseSources[1].Configuration().ID).To(Equal("buil"))
+				Expect(releaseSources[2].Configuration().ID).To(Equal("bosh"))
 			})
 		})
 
@@ -155,16 +155,16 @@ var _ = Describe("ReleaseSourceList", func() {
 				)
 
 				Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3ReleaseSource))
-				Expect(releaseSources[0].ID()).To(Equal(kilnfile.ReleaseSources[0].Bucket))
+				Expect(releaseSources[0].Configuration().ID).To(Equal(kilnfile.ReleaseSources[0].Bucket))
 
 				Expect(releaseSources[1]).To(BeAssignableToTypeOf(s3ReleaseSource))
-				Expect(releaseSources[1].ID()).To(Equal(kilnfile.ReleaseSources[1].Bucket))
+				Expect(releaseSources[1].Configuration().ID).To(Equal(kilnfile.ReleaseSources[1].Bucket))
 
 				Expect(releaseSources[2]).To(BeAssignableToTypeOf(boshIOReleaseSource))
-				Expect(releaseSources[2].ID()).To(Equal("bosh.io"))
+				Expect(releaseSources[2].Configuration().ID).To(Equal("bosh.io"))
 
 				Expect(releaseSources[3]).To(BeAssignableToTypeOf(s3ReleaseSource))
-				Expect(releaseSources[3].ID()).To(Equal(kilnfile.ReleaseSources[3].Bucket))
+				Expect(releaseSources[3].Configuration().ID).To(Equal(kilnfile.ReleaseSources[3].Bucket))
 			})
 		})
 
@@ -189,8 +189,8 @@ var _ = Describe("ReleaseSourceList", func() {
 				var s3ReleaseSource component.S3ReleaseSource
 
 				Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3ReleaseSource))
-				Expect(releaseSources[0].ID()).To(Equal(kilnfile.ReleaseSources[0].Bucket))
-				Expect(releaseSources[0].Publishable()).To(BeTrue())
+				Expect(releaseSources[0].Configuration().ID).To(Equal(kilnfile.ReleaseSources[0].Bucket))
+				Expect(releaseSources[0].Configuration().Publishable).To(BeTrue())
 			})
 		})
 	})

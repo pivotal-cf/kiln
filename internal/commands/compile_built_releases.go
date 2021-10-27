@@ -180,7 +180,7 @@ func findBuiltReleases(allReleaseSources component.MultiReleaseSource, kilnfileL
 		if err != nil {
 			return nil, err
 		}
-		if !src.Publishable() {
+		if !src.Configuration().Publishable {
 			releaseID := component.Spec{Name: lock.Name, Version: lock.Version}
 			builtReleases = append(builtReleases, component.Lock{
 				ComponentSpec: releaseID,

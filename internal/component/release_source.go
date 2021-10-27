@@ -29,15 +29,16 @@ type RemotePather interface {
 
 //counterfeiter:generate -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 type ReleaseSource interface {
+	Configuration() cargo.ReleaseSourceConfig
+
 	GetMatchedRelease(Requirement) (Lock, bool, error)
 	FindReleaseVersion(Requirement) (Lock, bool, error)
 	DownloadRelease(releasesDir string, remoteRelease Lock, downloadThreads int) (Local, error)
-
-	ID() string
-	Publishable() bool
 }
 
 const (
+	panicMessageWrongReleaseSourceType = "wrong constructor for release source configuration"
+
 	ReleaseSourceTypeBOSHIO = "bosh.io"
 	ReleaseSourceTypeS3     = "s3"
 )
@@ -45,11 +46,10 @@ const (
 func ReleaseSourceFactory(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
 	switch releaseConfig.Type {
 	case ReleaseSourceTypeBOSHIO:
-		id := releaseConfig.ID
-		if id == "" {
-			id = ReleaseSourceTypeBOSHIO
+		if releaseConfig.ID == "" {
+			releaseConfig.ID = ReleaseSourceTypeBOSHIO
 		}
-		return NewBOSHIOReleaseSource(id, releaseConfig.Publishable, "", outLogger)
+		return NewBOSHIOReleaseSource(releaseConfig, "", outLogger)
 	case ReleaseSourceTypeS3:
 		if releaseConfig.ID == "" {
 			releaseConfig.ID = releaseConfig.Bucket

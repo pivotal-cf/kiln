@@ -67,12 +67,15 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 	BeforeEach(func() {
 		builtReleaseSource = new(fetcherFakes.ReleaseSource)
-		builtReleaseSource.IDReturns(builtSourceID)
-		builtReleaseSource.PublishableReturns(false)
+		builtReleaseSource.ConfigurationReturns(cargo.ReleaseSourceConfig{
+			ID:          builtSourceID,
+			Publishable: false,
+		})
 		compiledReleaseSource = new(fetcherFakes.ReleaseSource)
-		compiledReleaseSource.IDReturns(compiledSourceID)
-		compiledReleaseSource.PublishableReturns(true)
-
+		compiledReleaseSource.ConfigurationReturns(cargo.ReleaseSourceConfig{
+			ID:          compiledSourceID,
+			Publishable: true,
+		})
 		kilnfile = cargo.Kilnfile{
 			ReleaseSources: []cargo.ReleaseSourceConfig{
 				{Type: "s3", ID: compiledSourceID, Bucket: "not-used", Publishable: true},
@@ -1132,7 +1135,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 	When("downloading a pre-compiled releases fails", func() {
 		BeforeEach(func() {
 			compiledReleaseSource.GetMatchedReleaseReturns(component.Lock{RemoteSource: compiledSourceID}, true, nil)
-			compiledReleaseSource.DownloadReleaseReturns(component.Local{}, errors.New("NOPE!"))
+			compiledReleaseSource.DownloadReleaseReturns(component.Local{}, errors.New("banana"))
 		})
 
 		It("errors", func() {
@@ -1143,7 +1146,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 				"--upload-target-id", compiledSourceID,
 			})
 			Expect(err).To(MatchError(ContainSubstring("uaa")))
-			Expect(err).To(MatchError(ContainSubstring("NOPE!")))
+			Expect(err).To(MatchError(ContainSubstring("banana")))
 		})
 
 		It("doesn't update the Kilnfile.lock", func() {
