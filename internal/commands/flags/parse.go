@@ -18,17 +18,20 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+
 type (
 	StatFunc func(string) (os.FileInfo, error)
 
 	KilnfileOptions interface {
 		KilnfilePathPrefix() string
 	}
-
-	VariablesService interface {
-		FromPathsAndPairs(paths []string, pairs []string) (templateVariables map[string]interface{}, err error)
-	}
 )
+
+//counterfeiter:generate -o ../fakes/variables_service.go --fake-name VariablesService . VariablesService
+type VariablesService interface {
+	FromPathsAndPairs(paths []string, pairs []string) (templateVariables map[string]interface{}, err error)
+}
 
 type Standard struct {
 	Kilnfile      string   `short:"kf"  long:"kilnfile"                   default:"Kilnfile"         description:"path to Kilnfile"`
