@@ -41,7 +41,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		return err
 	}
 
-	kilnfile, kilnfileLock, err := u.Options.Standard.LoadKilnfiles(u.filesystem, nil)
+	kilnfile, kilnfileLock, err := u.Options.Standard.LoadKilnfiles(u.filesystem, nil, nil)
 	if err != nil {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}

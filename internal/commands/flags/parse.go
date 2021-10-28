@@ -3,8 +3,10 @@ package flags
 import (
 	"fmt"
 	"go/ast"
+	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -39,25 +41,36 @@ type Standard struct {
 	Variables     []string `short:"vr"  long:"variable"                                              description:"key value pairs of variables to interpolate"`
 }
 
-// LoadKilnfiles parses and interpolates the Kilnfile and parsed the Kilnfile.lock.
-// The function parameters are for overriding default services. These parameters are
-// helpful for testing, in most cases nil can be passed for both.
-func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceOverride VariablesService) (cargo.Kilnfile, cargo.KilnfileLock, error) {
-	fs := fsOverride
+func defaults(fs billy.Basic, vs VariablesService, run RunFunc) (billy.Basic, VariablesService, RunFunc) {
 	if fs == nil {
 		fs = osfs.New("")
 	}
-	variablesService := variablesServiceOverride
-	if variablesService == nil {
-		variablesService = baking.NewTemplateVariablesService(fs)
+	if run == nil {
+		run = func(stdOut io.Writer, cmd *exec.Cmd) error {
+			cmd.Stdout = stdOut
+			return cmd.Run()
+		}
 	}
+	if vs == nil {
+		vs = baking.NewTemplateVariablesService(fs)
+	}
+	return fs, vs, run
+}
 
-	templateVariables, err := variablesService.FromPathsAndPairs(options.VariableFiles, options.Variables)
+type RunFunc func(stdOut io.Writer, cmd *exec.Cmd) error
+
+// LoadKilnfiles parses and interpolates the Kilnfile and parsed the Kilnfile.lock.
+// The function parameters are for overriding default services. These parameters are
+// helpful for testing, in most cases nil can be passed for both.
+func (std *Standard) LoadKilnfiles(fs billy.Basic, vs VariablesService, run RunFunc) (cargo.Kilnfile, cargo.KilnfileLock, error) {
+	fs, vs, run = defaults(fs, vs, run)
+
+	templateVariables, err := vs.FromPathsAndPairs(std.VariableFiles, std.Variables)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to parse template variables: %s", err)
 	}
 
-	kilnfileFP, err := fs.Open(options.Kilnfile)
+	kilnfileFP, err := fs.Open(std.Kilnfile)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
@@ -70,7 +83,7 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
 
-	lockFP, err := fs.Open(options.KilnfileLockPath())
+	lockFP, err := fs.Open(std.KilnfileLockPath())
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
@@ -91,18 +104,15 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 	return kilnfile, lock, nil
 }
 
-func (options *Standard) SaveKilnfileLock(fsOverride billy.Basic, kilnfileLock cargo.KilnfileLock) error {
-	fs := fsOverride
-	if fs == nil {
-		fs = osfs.New("")
-	}
+func (std *Standard) SaveKilnfileLock(fs billy.Basic, kilnfileLock cargo.KilnfileLock) error {
+	fs, _, _ = defaults(fs, nil, nil)
 
 	updatedLockFileYAML, err := yaml.Marshal(kilnfileLock)
 	if err != nil {
 		return fmt.Errorf("error marshaling the Kilnfile.lock: %w", err) // untestable
 	}
 
-	lockFile, err := fs.Create(options.KilnfileLockPath()) // overwrites the file
+	lockFile, err := fs.Create(std.KilnfileLockPath()) // overwrites the file
 	if err != nil {
 		return fmt.Errorf("error reopening the Kilnfile.lock for writing: %w", err)
 	}
@@ -115,16 +125,16 @@ func (options *Standard) SaveKilnfileLock(fsOverride billy.Basic, kilnfileLock c
 	return nil
 }
 
-func (options Standard) KilnfilePathPrefix() string {
-	pathPrefix := filepath.Dir(options.Kilnfile)
+func (std Standard) KilnfilePathPrefix() string {
+	pathPrefix := filepath.Dir(std.Kilnfile)
 	if pathPrefix == "." {
 		pathPrefix = ""
 	}
 	return pathPrefix
 }
 
-func (options Standard) KilnfileLockPath() string {
-	return options.Kilnfile + ".lock"
+func (std Standard) KilnfileLockPath() string {
+	return std.Kilnfile + ".lock"
 }
 
 // LoadFlagsWithDefaults only sets default values if the flag is not set
@@ -279,4 +289,10 @@ func IsSet(short, long string, args []string) bool {
 	}
 
 	return false
+}
+
+func mergeMaps(dst, src map[string]interface{}) {
+	for k, v := range src {
+		dst[k] = v
+	}
 }

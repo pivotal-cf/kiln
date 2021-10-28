@@ -107,7 +107,7 @@ func (f CompileBuiltReleases) Execute(args []string) error {
 	}
 
 	f.Logger.Println("loading Kilnfile")
-	kilnfile, kilnfileLock, err := f.Options.LoadKilnfiles(nil, nil)
+	kilnfile, kilnfileLock, err := f.Options.LoadKilnfiles(nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("couldn't load Kilnfiles: %w", err) // untested
 	}
