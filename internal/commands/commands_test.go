@@ -78,7 +78,7 @@ func TestCommand_Execute(t *testing.T) {
 		please.Expect(w.Options.Other).To(Ω.Equal("config"))
 	})
 
-	t.Run("with variables in the Kilnfile", func(t *testing.T) {
+	t.Run("reads from an fs", func(t *testing.T) {
 		please := Ω.NewWithT(t)
 
 		fs := memfs.New()
