@@ -1,18 +1,19 @@
 package commands_test
 
 import (
-	"io/ioutil"
+	"errors"
 	"log"
 	"net/http"
-	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
+	"github.com/pivotal-cf/kiln/internal/commands/options"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 var _ = Describe("Find the stemcell version", func() {
@@ -22,16 +23,15 @@ var _ = Describe("Find the stemcell version", func() {
 
 		writer strings.Builder
 
-		fetchExecuteArgs     []string
-		executeErr           error
-		someKilnfilePath     string
-		someKilnfileLockPath string
-		kilnfileContents     string
-		lockContents         string
-		pivnet               component.Pivnet
-		serverMock           *fakes.RoundTripper
-		simpleRequest        *http.Request
-		requestErr           error
+		kf       cargo.Kilnfile
+		kl       cargo.KilnfileLock
+		parseErr error
+
+		pivnet        component.Pivnet
+		serverMock    *fakes.RoundTripper
+		simpleRequest *http.Request
+		requestErr    error
+		executeErr    error
 	)
 
 	Describe("Execute", func() {
@@ -47,69 +47,68 @@ var _ = Describe("Find the stemcell version", func() {
 				Transport: serverMock,
 			}
 
-			kilnfileContents = `
-release_sources:
-- type: s3
-  bucket: compiled-releases
-  region: us-west-1
-  access_key_id: my-access-key-id
-  secret_access_key: my-secret-access-key
-  path_template: 2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz
-  publishable: true
-stemcell_criteria:
-  os: ubuntu-xenial
-  version: "~456"
-`
-			lockContents = `
----
-releases:
-- name: some-release
-  version: "1.2.3"
-  remote_source:
-  remote_path: my-remote-path
-stemcell_criteria:
-  os: some-os
-  version: "4.5.6"
-`
+			kf = cargo.Kilnfile{
+				ReleaseSources: []cargo.ReleaseSourceConfig{
+					{
+						Type:            "s3",
+						Bucket:          "compiled-releases",
+						Region:          "us-west-1",
+						AccessKeyId:     "my-access-key-id",
+						SecretAccessKey: "secret_access_key",
+						PathTemplate:    `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+						Publishable:     true,
+					},
+				},
+				Stemcell: cargo.Stemcell{
+					OS:      "ubuntu-xenial",
+					Version: "~456",
+				},
+			}
+
+			kl = cargo.KilnfileLock{
+				Releases: []cargo.ComponentLock{
+					{
+						Name:         "some-release",
+						Version:      "1.2.3",
+						RemoteSource: "compiled-releases",
+						RemotePath:   "my-remote-path",
+					},
+				},
+				Stemcell: cargo.Stemcell{
+					OS:      "some-os",
+					Version: "4.5.6",
+				},
+			}
+
+			parseErr = nil
 		})
 
 		JustBeforeEach(func() {
-
 			_, requestErr = pivnet.Do(simpleRequest)
 			Expect(requestErr).NotTo(HaveOccurred())
 
-			tmpDir, err := ioutil.TempDir("", "fetch-stemcell-test")
-			Expect(err).NotTo(HaveOccurred())
-
-			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-
-			err = ioutil.WriteFile(someKilnfilePath, []byte(kilnfileContents), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			someKilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
-			err = ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
 			findStemcellVersion = commands.NewFindStemcellVersion(logger, &pivnet)
 
-			fetchExecuteArgs = []string{
-				"--kilnfile", someKilnfilePath,
-			}
-			executeErr = findStemcellVersion.Execute(fetchExecuteArgs)
+			executeErr = findStemcellVersion.KilnExecute(nil,
+				func(args []string, ops options.StandardOptionsEmbedder) (cargo.Kilnfile, cargo.KilnfileLock, []string, error) {
+					return kf, kl, nil, parseErr
+				},
+			)
+		})
+
+		When("parsing fails", func() {
+			BeforeEach(func() {
+				parseErr = errors.New("banana")
+			})
+			It("returns the stemcell os info missing error message", func() {
+				Expect(executeErr).To(HaveOccurred())
+				Expect(executeErr).To(MatchError(ContainSubstring("banana")))
+			})
 		})
 
 		When("stemcell criteria does not exist in the kilnfile", func() {
 			BeforeEach(func() {
-				kilnfileContents = `
-release_sources:
-- type: s3
-  bucket: compiled-releases
-  region: us-west-1
-  access_key_id: my-access-key-id
-  secret_access_key: my-secret-access-key
-  path_template: 2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz
-  publishable: true
-`
+				kf.Stemcell = cargo.Stemcell{}
 			})
 			It("returns the stemcell os info missing error message", func() {
 				Expect(executeErr).To(HaveOccurred())
@@ -119,18 +118,7 @@ release_sources:
 
 		When("stemcell major version does not exist in the kilnfile", func() {
 			BeforeEach(func() {
-				kilnfileContents = `
-release_sources:
-- type: s3
-  bucket: compiled-releases
-  region: us-west-1
-  access_key_id: my-access-key-id
-  secret_access_key: my-secret-access-key
-  path_template: 2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz
-  publishable: true
-stemcell_criteria:
-  os: ubuntu-xenial
-`
+				kf.Stemcell.Version = ""
 			})
 
 			It("returns stemcell major version missing error message", func() {
@@ -161,7 +149,7 @@ stemcell_criteria:
 		var (
 			stemcellVersionSpecifier string
 			majorVersion             string
-			error                    error
+			err                      error
 		)
 
 		BeforeEach(func() {
@@ -169,7 +157,7 @@ stemcell_criteria:
 		})
 
 		JustBeforeEach(func() {
-			majorVersion, error = commands.ExtractMajorVersion(stemcellVersionSpecifier)
+			majorVersion, err = commands.ExtractMajorVersion(stemcellVersionSpecifier)
 		})
 
 		When("Invalid Stemcell Version Specifier is provided", func() {
@@ -179,8 +167,8 @@ stemcell_criteria:
 				})
 
 				It("returns the latest stemcell version", func() {
-					Expect(error).To(HaveOccurred())
-					Expect(error.Error()).To(Equal(commands.ErrStemcellMajorVersionMustBeValid))
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal(commands.ErrStemcellMajorVersionMustBeValid))
 				})
 			})
 		})
@@ -192,7 +180,7 @@ stemcell_criteria:
 				})
 
 				It("returns the latest stemcell version", func() {
-					Expect(error).NotTo(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 					Expect(majorVersion).To(Equal("456"))
 				})
 			})
@@ -202,7 +190,7 @@ stemcell_criteria:
 				})
 
 				It("returns the latest stemcell version", func() {
-					Expect(error).NotTo(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 					Expect(majorVersion).To(Equal("777"))
 				})
 			})
@@ -213,7 +201,7 @@ stemcell_criteria:
 				})
 
 				It("returns the latest stemcell version", func() {
-					Expect(error).NotTo(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 					Expect(majorVersion).To(Equal("1234"))
 				})
 			})
@@ -224,7 +212,7 @@ stemcell_criteria:
 				})
 
 				It("returns the latest stemcell version", func() {
-					Expect(error).NotTo(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 					Expect(majorVersion).To(Equal("456"))
 				})
 			})
@@ -235,7 +223,7 @@ stemcell_criteria:
 				})
 
 				It("returns the latest stemcell version", func() {
-					Expect(error).NotTo(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 					Expect(majorVersion).To(Equal("333"))
 				})
 			})
