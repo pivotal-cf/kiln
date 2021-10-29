@@ -149,7 +149,7 @@ func (s KilnfileStore) loadVariables(std options.Standard) (map[string]interface
 }
 
 func (s KilnfileStore) SaveLock(kilnfileLockPath string, l cargo.KilnfileLock) error {
-	s.FS, _ = kilnfileLoadingDefaults(s.FS, s.VS)
+	s.FS, _ = kilnfileLoadingDefaults(s.FS, nil)
 
 	updatedLockFileYAML, err := yaml.Marshal(l)
 	if err != nil {
