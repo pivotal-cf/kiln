@@ -23,7 +23,7 @@ type kilnfileReciever interface {
 }
 
 type kilnfileLockReturner interface {
-	KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, error)
+	KilnExecute(args []string, parseOpts OptionsParseFunc) (_ cargo.KilnfileLock, saveLockfile bool, _ error)
 }
 
 type Kiln struct {
@@ -64,9 +64,12 @@ func (cmd Kiln) Execute(args []string) error {
 	case kilnfileReciever:
 		return c.KilnExecute(args, parseOpts)
 	case kilnfileLockReturner:
-		updatedLock, err := c.KilnExecute(args, parseOpts)
+		updatedLock, saveLockfile, err := c.KilnExecute(args, parseOpts)
 		if err != nil {
 			return err
+		}
+		if !saveLockfile {
+			return nil
 		}
 		return cmd.KilnfileStore.SaveLock(kilnfileLockPath, updatedLock)
 	default:

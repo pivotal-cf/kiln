@@ -43,9 +43,9 @@ func TestCommand_Execute(t *testing.T) {
 		s.LoadReturns(cargo.Kilnfile{}, cargo.KilnfileLock{}, nil)
 
 		var w CommandUpdatingKilnfileLock
-		w.E = func(args []string, parseFunc commands.OptionsParseFunc) (cargo.KilnfileLock, error) {
+		w.E = func(args []string, parseFunc commands.OptionsParseFunc) (cargo.KilnfileLock, bool, error) {
 			_, _, _, _ = parseFunc(args, &w.Options)
-			return cargo.KilnfileLock{}, nil
+			return cargo.KilnfileLock{}, false, nil
 		}
 
 		err := commands.Kiln{
@@ -81,15 +81,15 @@ func TestCommand_Execute(t *testing.T) {
 	t.Run("reads from an fs", func(t *testing.T) {
 		please := Ω.NewWithT(t)
 
-		fs := memfs.New()
+		filesystem := memfs.New()
 
-		please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
+		please.Expect(fsWriteYAML(filesystem, "Kilnfile", cargo.Kilnfile{
 			Slug: "example",
 		})).NotTo(Ω.HaveOccurred())
-		please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{})).NotTo(Ω.HaveOccurred())
+		please.Expect(fsWriteYAML(filesystem, "Kilnfile.lock", cargo.KilnfileLock{})).NotTo(Ω.HaveOccurred())
 
 		s := commands.KilnfileStore{
-			FS: fs,
+			FS: filesystem,
 		}
 
 		var (
@@ -105,7 +105,7 @@ func TestCommand_Execute(t *testing.T) {
 		err := commands.Kiln{
 			Wrapped:       &w,
 			KilnfileStore: s,
-			StatFn:        fs.Stat,
+			StatFn:        filesystem.Stat,
 		}.Execute([]string{})
 
 		please.Expect(err).NotTo(Ω.HaveOccurred())
@@ -128,7 +128,7 @@ func TestKilnfileStore_Load(t *testing.T) {
 	setup := func(t *testing.T, kilnfileContent, kilnfileLockContent string, vars map[string]interface{}) (options.Standard, commands.KilnfileStore) {
 		t.Helper()
 
-		fs := memfs.New()
+		filesystem := memfs.New()
 		vs := new(fakes.VariablesService)
 		if vars == nil {
 			vars = make(map[string]interface{})
@@ -137,14 +137,14 @@ func TestKilnfileStore_Load(t *testing.T) {
 		sf := options.Standard{
 			Kilnfile: "Kilnfile",
 		}
-		s := commands.KilnfileStore{FS: fs, VS: vs}
+		s := commands.KilnfileStore{FS: filesystem, VS: vs}
 		{
-			f, _ := fs.Create(sf.Kilnfile)
+			f, _ := filesystem.Create(sf.Kilnfile)
 			_, _ = f.Write([]byte(kilnfileContent))
 			_ = f.Close()
 		}
 		{
-			f, _ := fs.Create(sf.KilnfileLockPath())
+			f, _ := filesystem.Create(sf.KilnfileLockPath())
 			_, _ = f.Write([]byte(kilnfileLockContent))
 			_ = f.Close()
 		}
@@ -206,10 +206,10 @@ type CommandUpdatingKilnfileLock struct {
 		options.Standard
 	}
 
-	E func([]string, commands.OptionsParseFunc) (cargo.KilnfileLock, error)
+	E func([]string, commands.OptionsParseFunc) (cargo.KilnfileLock, bool, error)
 }
 
 func (c CommandUpdatingKilnfileLock) Usage() jhanda.Usage { return jhanda.Usage{} }
-func (c CommandUpdatingKilnfileLock) KilnExecute(args []string, fn commands.OptionsParseFunc) (cargo.KilnfileLock, error) {
-	return c.E(args, fn)
+func (c CommandUpdatingKilnfileLock) KilnExecute(args []string, parseOpts commands.OptionsParseFunc) (cargo.KilnfileLock, bool, error) {
+	return c.E(args, parseOpts)
 }

@@ -35,10 +35,10 @@ func (s UpdateStemcell) Execute(args []string) error {
 	}.Execute(args)
 }
 
-func (s UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFunc) (cargo.KilnfileLock, error) {
+func (s UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFunc) (cargo.KilnfileLock, bool, error) {
 	kilnfile, kilnfileLock, _, err := parseOps(args, &s.Options)
 	if err != nil {
-		return cargo.KilnfileLock{}, err
+		return cargo.KilnfileLock{}, false, err
 	}
 
 	var releaseVersionConstraint *semver.Constraints
@@ -47,26 +47,26 @@ func (s UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFunc) (c
 
 	latestStemcellVersion, err := semver.NewVersion(trimmedInputVersion)
 	if err != nil {
-		return cargo.KilnfileLock{}, fmt.Errorf("Please enter a valid stemcell version to update: %w", err)
+		return cargo.KilnfileLock{}, false, fmt.Errorf("Please enter a valid stemcell version to update: %w", err)
 	}
 
 	kilnStemcellVersion := kilnfile.Stemcell.Version
 	releaseVersionConstraint, err = semver.NewConstraint(kilnStemcellVersion)
 
 	if err != nil {
-		return cargo.KilnfileLock{}, fmt.Errorf("Invalid stemcell constraint in kilnfile: %w", err)
+		return cargo.KilnfileLock{}, false, fmt.Errorf("Invalid stemcell constraint in kilnfile: %w", err)
 	}
 
 	if !releaseVersionConstraint.Check(latestStemcellVersion) {
 		s.Logger.Println("Latest version does not satisfy the stemcell version constraint in kilnfile. Nothing to update.")
-		return kilnfileLock, nil
+		return kilnfileLock, false, nil
 	}
 
 	currentStemcellVersion, _ := semver.NewVersion(kilnfileLock.Stemcell.Version)
 
 	if currentStemcellVersion.Equal(latestStemcellVersion) {
 		s.Logger.Println("Stemcell is up-to-date. Nothing to update for product")
-		return kilnfileLock, nil
+		return kilnfileLock, false, nil
 	}
 
 	releaseSource := s.MultiReleaseSourceProvider(kilnfile, false)
@@ -81,10 +81,10 @@ func (s UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFunc) (c
 			StemcellVersion: trimmedInputVersion,
 		})
 		if err != nil {
-			return cargo.KilnfileLock{}, fmt.Errorf("while finding release %q, encountered error: %w", rel.Name, err)
+			return cargo.KilnfileLock{}, false, fmt.Errorf("while finding release %q, encountered error: %w", rel.Name, err)
 		}
 		if !found {
-			return cargo.KilnfileLock{}, fmt.Errorf("couldn't find release %q", rel.Name)
+			return cargo.KilnfileLock{}, false, fmt.Errorf("couldn't find release %q", rel.Name)
 		}
 
 		if remote.RemotePath == rel.RemotePath && remote.RemoteSource == rel.RemoteSource {
@@ -94,7 +94,7 @@ func (s UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFunc) (c
 
 		local, err := releaseSource.DownloadRelease(s.Options.ReleasesDir, remote)
 		if err != nil {
-			return cargo.KilnfileLock{}, fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
+			return cargo.KilnfileLock{}, false, fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
 		}
 
 		lock := &kilnfileLock.Releases[i]
@@ -105,7 +105,7 @@ func (s UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFunc) (c
 
 	kilnfileLock.Stemcell.Version = trimmedInputVersion
 
-	return kilnfileLock, nil
+	return kilnfileLock, true, nil
 }
 
 func (s UpdateStemcell) Usage() jhanda.Usage {

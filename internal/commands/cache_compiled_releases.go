@@ -99,19 +99,19 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	}.Execute(args)
 }
 
-func (cmd CacheCompiledReleases) KilnExecute(args []string, parseOps OptionsParseFunc) (cargo.KilnfileLock, error) {
+func (cmd CacheCompiledReleases) KilnExecute(args []string, parseOps OptionsParseFunc) (cargo.KilnfileLock, bool, error) {
 	kilnfile, lock, _, err := parseOps(args, &cmd.Options)
 	if err != nil {
-		return cargo.KilnfileLock{}, err
+		return cargo.KilnfileLock{}, false, err
 	}
 
 	omAPI, deploymentName, stagedStemcellOS, stagedStemcellVersion, err := cmd.fetchProductDeploymentData()
 	if err != nil {
-		return cargo.KilnfileLock{}, err
+		return cargo.KilnfileLock{}, false, err
 	}
 
 	if stagedStemcellOS != lock.Stemcell.OS || stagedStemcellVersion != lock.Stemcell.Version {
-		return cargo.KilnfileLock{}, fmt.Errorf(
+		return cargo.KilnfileLock{}, false, fmt.Errorf(
 			"staged stemcell (%s %s) and lock stemcell (%s %s) do not match",
 			stagedStemcellOS, stagedStemcellVersion,
 			lock.Stemcell.OS, lock.Stemcell.Version,
@@ -128,7 +128,7 @@ func (cmd CacheCompiledReleases) KilnExecute(args []string, parseOps OptionsPars
 			StemcellVersion: lock.Stemcell.Version,
 		})
 		if err != nil {
-			return cargo.KilnfileLock{}, fmt.Errorf("failed check for matched release: %w", err)
+			return cargo.KilnfileLock{}, false, fmt.Errorf("failed check for matched release: %w", err)
 		}
 		if !found {
 			nonCompiledReleases = append(nonCompiledReleases, rel)
@@ -136,14 +136,14 @@ func (cmd CacheCompiledReleases) KilnExecute(args []string, parseOps OptionsPars
 		}
 		err = updateLock(lock, remote)
 		if err != nil {
-			return cargo.KilnfileLock{}, fmt.Errorf("failed to update lock file: %w", err)
+			return cargo.KilnfileLock{}, false, fmt.Errorf("failed to update lock file: %w", err)
 		}
 	}
 
 	switch len(nonCompiledReleases) {
 	case 0:
 		cmd.Logger.Print("cache already contains releases matching constraint\n")
-		return cargo.KilnfileLock{}, nil
+		return cargo.KilnfileLock{}, false, nil
 	case 1:
 		cmd.Logger.Printf("1 release is not publishable\n")
 	default:
@@ -156,26 +156,26 @@ func (cmd CacheCompiledReleases) KilnExecute(args []string, parseOps OptionsPars
 
 	bucket, err := cmd.Bucket(kilnfile)
 	if err != nil {
-		return cargo.KilnfileLock{}, fmt.Errorf("failed to configure release cache: %w", err)
+		return cargo.KilnfileLock{}, false, fmt.Errorf("failed to configure release cache: %w", err)
 	}
 
 	bosh, err := cmd.Director(cmd.Options.ClientConfiguration, omAPI)
 	if err != nil {
-		return cargo.KilnfileLock{}, err
+		return cargo.KilnfileLock{}, false, err
 	}
 
 	osVersionSlug := boshdir.NewOSVersionSlug(stagedStemcellOS, stagedStemcellVersion)
 
 	deployment, err := bosh.FindDeployment(deploymentName)
 	if err != nil {
-		return cargo.KilnfileLock{}, err
+		return cargo.KilnfileLock{}, false, err
 	}
 
 	cmd.Logger.Printf("exporting from bosh deployment %s\n", deploymentName)
 
 	err = cmd.FS.MkdirAll(cmd.Options.ReleasesDir, 0777)
 	if err != nil {
-		return cargo.KilnfileLock{}, fmt.Errorf("failed to create release directory: %w", err)
+		return cargo.KilnfileLock{}, false, fmt.Errorf("failed to create release directory: %w", err)
 	}
 
 	for _, rel := range nonCompiledReleases {
@@ -188,18 +188,18 @@ func (cmd CacheCompiledReleases) KilnExecute(args []string, parseOps OptionsPars
 
 		newRemote, err := cmd.cacheRelease(bosh, bucket, deployment, requirement, osVersionSlug)
 		if err != nil {
-			return cargo.KilnfileLock{}, fmt.Errorf("failed to cache release %s: %w", rel.Name, err)
+			return cargo.KilnfileLock{}, false, fmt.Errorf("failed to cache release %s: %w", rel.Name, err)
 		}
 
 		err = updateLock(lock, newRemote)
 		if err != nil {
-			return cargo.KilnfileLock{}, fmt.Errorf("failed to lock release %s: %w", rel.Name, err)
+			return cargo.KilnfileLock{}, false, fmt.Errorf("failed to lock release %s: %w", rel.Name, err)
 		}
 	}
 
 	cmd.Logger.Printf("DON'T FORGET TO MAKE A COMMIT AND PR\n")
 
-	return lock, nil
+	return lock, true, nil
 }
 
 func (cmd CacheCompiledReleases) fetchProductDeploymentData() (_ OpsManagerReleaseCacheSource, deploymentName, stemcellOS, stemcellVersion string, _ error) {

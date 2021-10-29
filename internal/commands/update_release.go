@@ -44,10 +44,10 @@ func (u UpdateRelease) Execute(args []string) error {
 	}.Execute(args)
 }
 
-func (u UpdateRelease) KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, error) {
+func (u UpdateRelease) KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, bool, error) {
 	kilnfile, kilnfileLock, _, err := parseOpts(args, &u.Options)
 	if err != nil {
-		return cargo.KilnfileLock{}, err
+		return cargo.KilnfileLock{}, false, err
 	}
 
 	var releaseLock *cargo.ComponentLock
@@ -65,7 +65,7 @@ func (u UpdateRelease) KilnExecute(args []string, parseOpts OptionsParseFunc) (c
 		}
 	}
 	if releaseLock == nil {
-		return cargo.KilnfileLock{}, fmt.Errorf(
+		return cargo.KilnfileLock{}, false, fmt.Errorf(
 			"no release named %q exists in your Kilnfile.lock - try removing the -release, -boshrelease, or -bosh-release suffix if present",
 			u.Options.Name,
 		)
@@ -90,10 +90,10 @@ func (u UpdateRelease) KilnExecute(args []string, parseOpts OptionsParseFunc) (c
 		})
 
 		if err != nil {
-			return kilnfileLock, fmt.Errorf("error finding the release: %w", err)
+			return kilnfileLock, false, fmt.Errorf("error finding the release: %w", err)
 		}
 		if !found {
-			return kilnfileLock, fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
+			return kilnfileLock, false, fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
 		}
 
 		newVersion = remoteRelease.Version
@@ -111,15 +111,15 @@ func (u UpdateRelease) KilnExecute(args []string, parseOpts OptionsParseFunc) (c
 		})
 
 		if err != nil {
-			return cargo.KilnfileLock{}, fmt.Errorf("error finding the release: %w", err)
+			return cargo.KilnfileLock{}, false, fmt.Errorf("error finding the release: %w", err)
 		}
 		if !found {
-			return cargo.KilnfileLock{}, fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
+			return cargo.KilnfileLock{}, false, fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
 		}
 
 		localRelease, err = releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease)
 		if err != nil {
-			return cargo.KilnfileLock{}, fmt.Errorf("error downloading the release: %w", err)
+			return cargo.KilnfileLock{}, false, fmt.Errorf("error downloading the release: %w", err)
 		}
 		newVersion = localRelease.Version
 		newSHA1 = localRelease.SHA1
@@ -129,7 +129,7 @@ func (u UpdateRelease) KilnExecute(args []string, parseOpts OptionsParseFunc) (c
 
 	if releaseLock.Version == newVersion && releaseLock.SHA1 == newSHA1 && releaseLock.RemoteSource == newSourceID && releaseLock.RemotePath == newRemotePath {
 		u.logger.Println("Neither the version nor remote location of the release changed. No changes made.")
-		return kilnfileLock, nil
+		return kilnfileLock, false, nil
 	}
 
 	releaseLock.Version = newVersion
@@ -139,7 +139,7 @@ func (u UpdateRelease) KilnExecute(args []string, parseOpts OptionsParseFunc) (c
 
 	u.logger.Printf("Updated %s to %s. DON'T FORGET TO MAKE A COMMIT AND PR\n", u.Options.Name, u.Options.Version)
 
-	return kilnfileLock, nil
+	return kilnfileLock, true, nil
 }
 
 func (u UpdateRelease) Usage() jhanda.Usage {

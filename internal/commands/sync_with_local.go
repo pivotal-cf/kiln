@@ -47,26 +47,21 @@ func (s SyncWithLocal) Execute(args []string) error {
 	}.Execute(args)
 }
 
-<<<<<<< HEAD
-func (command SyncWithLocal) KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, error) {
-	kilnfile, kilnfileLock, _, err := parseOpts(args, &command.Options)
-=======
-func (s SyncWithLocal) KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, error) {
-	kilnfile, kilnfileLock, err := parseOpts(args, &s.Options)
->>>>>>> c95c5849 (refactor: standardize receiver names)
+func (s SyncWithLocal) KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, bool, error) {
+	kilnfile, kilnfileLock, _, err := parseOpts(args, &s.Options)
 	if err != nil {
-		return kilnfileLock, err
+		return kilnfileLock, false, err
 	}
 
 	remotePather, err := s.remotePatherFinder(kilnfile, s.Options.ReleaseSourceID)
 	if err != nil {
-		return kilnfileLock, fmt.Errorf("couldn't load the release source: %w", err) // untested
+		return kilnfileLock, false, fmt.Errorf("couldn't load the release source: %w", err) // untested
 	}
 
 	s.logger.Printf("Finding releases in %s...\n", s.Options.ReleasesDir)
 	releases, err := s.localReleaseDirectory.GetLocalReleases(s.Options.ReleasesDir)
 	if err != nil {
-		return kilnfileLock, fmt.Errorf("couldn't process releases in releases directory: %w", err) // untested
+		return kilnfileLock, false, fmt.Errorf("couldn't process releases in releases directory: %w", err) // untested
 	}
 
 	s.logger.Printf("Found %d releases on disk\n", len(releases))
@@ -79,7 +74,7 @@ func (s SyncWithLocal) KilnExecute(args []string, parseOpts OptionsParseFunc) (c
 			StemcellVersion: kilnfileLock.Stemcell.Version,
 		})
 		if err != nil {
-			return kilnfileLock, fmt.Errorf("couldn't generate a remote path for release %q: %w", rel.Name, err)
+			return kilnfileLock, false, fmt.Errorf("couldn't generate a remote path for release %q: %w", rel.Name, err)
 		}
 
 		var matchingRelease *cargo.ComponentLock
@@ -90,7 +85,7 @@ func (s SyncWithLocal) KilnExecute(args []string, parseOpts OptionsParseFunc) (c
 			}
 		}
 		if matchingRelease == nil {
-			return kilnfileLock, fmt.Errorf("the local release %q does not exist in the Kilnfile.lock", rel.Name)
+			return kilnfileLock, false, fmt.Errorf("the local release %q does not exist in the Kilnfile.lock", rel.Name)
 		}
 
 		if s.Options.SkipSameVersion && matchingRelease.Version == rel.Version {
@@ -106,7 +101,7 @@ func (s SyncWithLocal) KilnExecute(args []string, parseOpts OptionsParseFunc) (c
 		s.logger.Printf("Updated %s to %s\n", rel.Name, rel.Version)
 	}
 
-	return kilnfileLock, nil
+	return kilnfileLock, true, nil
 }
 
 func (s SyncWithLocal) Usage() jhanda.Usage {
