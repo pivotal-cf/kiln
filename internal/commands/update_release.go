@@ -44,8 +44,8 @@ func (u UpdateRelease) Execute(args []string) error {
 	}.Execute(args)
 }
 
-func (u UpdateRelease) KilnExecute(args []string, parseOps OptionsParseFunc) (cargo.KilnfileLock, error) {
-	kilnfile, kilnfileLock, _, err := parseOps(args, &u.Options)
+func (u UpdateRelease) KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, error) {
+	kilnfile, kilnfileLock, _, err := parseOpts(args, &u.Options)
 	if err != nil {
 		return cargo.KilnfileLock{}, err
 	}

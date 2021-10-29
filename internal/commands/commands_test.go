@@ -125,7 +125,7 @@ release_sources:
 )
 
 func TestKilnfileStore_Load(t *testing.T) {
-	setup := func(t *testing.T, kilnfileContent string, vars map[string]interface{}) (options.Standard, commands.KilnfileStore) {
+	setup := func(t *testing.T, kilnfileContent, kilnfileLockContent string, vars map[string]interface{}) (options.Standard, commands.KilnfileStore) {
 		t.Helper()
 
 		fs := memfs.New()
@@ -145,7 +145,7 @@ func TestKilnfileStore_Load(t *testing.T) {
 		}
 		{
 			f, _ := fs.Create(sf.KilnfileLockPath())
-			_, _ = f.Write(nil)
+			_, _ = f.Write([]byte(kilnfileLockContent))
 			_ = f.Close()
 		}
 		return sf, s
@@ -154,7 +154,7 @@ func TestKilnfileStore_Load(t *testing.T) {
 	t.Run("no interpolation required", func(t *testing.T) {
 		please := Ω.NewWithT(t)
 
-		sf, sv := setup(t, kilnfileWithKey, nil)
+		sf, sv := setup(t, kilnfileWithKey, "", nil)
 		_, _, err := sv.Load(sf)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 	})
@@ -162,7 +162,7 @@ func TestKilnfileStore_Load(t *testing.T) {
 	t.Run("variable from flag/file", func(t *testing.T) {
 		please := Ω.NewWithT(t)
 
-		sf, sv := setup(t, kilnfileWithVar, map[string]interface{}{
+		sf, sv := setup(t, kilnfileWithVar, "", map[string]interface{}{
 			"some-key": "key",
 		})
 

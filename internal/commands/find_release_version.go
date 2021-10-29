@@ -41,13 +41,8 @@ func (f FindReleaseVersion) Execute(args []string) error {
 	}.Execute(args)
 }
 
-<<<<<<< HEAD
-func (cmd FindReleaseVersion) KilnExecute(args []string, parseOps OptionsParseFunc) error {
-	kilnfile, kilnfileLock, _, err := parseOps(args, &cmd.Options)
-=======
-func (f FindReleaseVersion) KilnExecute(args []string, parseOps OptionsParseFunc) error {
-	kilnfile, kilnfileLock, err := parseOps(args, &f.Options)
->>>>>>> c95c5849 (refactor: standardize receiver names)
+func (f FindReleaseVersion) KilnExecute(args []string, parseOpts OptionsParseFunc) error {
+	kilnfile, kilnfileLock, _, err := parseOpts(args, &f.Options)
 	if err != nil {
 		return err
 	}
@@ -62,19 +57,11 @@ func (f FindReleaseVersion) KilnExecute(args []string, parseOps OptionsParseFunc
 		}
 	}
 
-<<<<<<< HEAD
 	releaseRemote, _, err := releaseSource.FindReleaseVersion(component.Spec{
-		Name:            cmd.Options.Release,
+		Name:            f.Options.Release,
 		Version:         version,
 		StemcellVersion: kilnfileLock.Stemcell.Version,
 		StemcellOS:      kilnfileLock.Stemcell.OS,
-=======
-	releaseRemote, _, err := releaseSource.FindReleaseVersion(release.Requirement{
-		Name:              f.Options.Release,
-		VersionConstraint: version,
-		StemcellVersion:   kilnfileLock.Stemcell.Version,
-		StemcellOS:        kilnfileLock.Stemcell.OS,
->>>>>>> c95c5849 (refactor: standardize receiver names)
 	})
 
 	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{

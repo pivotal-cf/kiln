@@ -16,14 +16,14 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type OptionsParseFunc func([]string, options.StandardOptionsEmbedder) (cargo.Kilnfile, cargo.KilnfileLock, []string, error)
+type OptionsParseFunc func(args []string, opts options.StandardOptionsEmbedder) (cargo.Kilnfile, cargo.KilnfileLock, []string, error)
 
 type kilnfileReciever interface {
-	KilnExecute(args []string, fn OptionsParseFunc) error
+	KilnExecute(args []string, parseOpts OptionsParseFunc) error
 }
 
 type kilnfileLockReturner interface {
-	KilnExecute(args []string, fn OptionsParseFunc) (cargo.KilnfileLock, error)
+	KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, error)
 }
 
 type Kiln struct {
@@ -44,7 +44,7 @@ func (cmd Kiln) Execute(args []string) error {
 
 	var kilnfileLockPath string
 
-	parseOps := func(arguments []string, ops options.StandardOptionsEmbedder) (cargo.Kilnfile, cargo.KilnfileLock, []string, error) {
+	parseOpts := func(arguments []string, ops options.StandardOptionsEmbedder) (cargo.Kilnfile, cargo.KilnfileLock, []string, error) {
 		argsAfterFlags, err := options.FlagsWithDefaults(ops, arguments, cmd.StatFn)
 		if err != nil {
 			return cargo.Kilnfile{}, cargo.KilnfileLock{}, argsAfterFlags, err
@@ -62,9 +62,9 @@ func (cmd Kiln) Execute(args []string) error {
 
 	switch c := cmd.Wrapped.(type) {
 	case kilnfileReciever:
-		return c.KilnExecute(args, parseOps)
+		return c.KilnExecute(args, parseOpts)
 	case kilnfileLockReturner:
-		updatedLock, err := c.KilnExecute(args, parseOps)
+		updatedLock, err := c.KilnExecute(args, parseOpts)
 		if err != nil {
 			return err
 		}

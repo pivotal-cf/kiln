@@ -39,13 +39,8 @@ func (u UploadRelease) Execute(args []string) error {
 	}.Execute(args)
 }
 
-<<<<<<< HEAD
-func (command UploadRelease) KilnExecute(args []string, parseOps OptionsParseFunc) error {
-	kilnfile, _, _, err := parseOps(args, &command.Options)
-=======
 func (u UploadRelease) KilnExecute(args []string, parseOps OptionsParseFunc) error {
-	kilnfile, _, err := parseOps(args, &u.Options)
->>>>>>> c95c5849 (refactor: standardize receiver names)
+	kilnfile, _, _, err := parseOps(args, &u.Options)
 	if err != nil {
 		return err
 	}

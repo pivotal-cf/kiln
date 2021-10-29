@@ -35,13 +35,8 @@ func (s UpdateStemcell) Execute(args []string) error {
 	}.Execute(args)
 }
 
-<<<<<<< HEAD
-func (update UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFunc) (cargo.KilnfileLock, error) {
-	kilnfile, kilnfileLock, _, err := parseOps(args, &update.Options)
-=======
 func (s UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFunc) (cargo.KilnfileLock, error) {
-	kilnfile, kilnfileLock, err := parseOps(args, &s.Options)
->>>>>>> c95c5849 (refactor: standardize receiver names)
+	kilnfile, kilnfileLock, _, err := parseOps(args, &s.Options)
 	if err != nil {
 		return cargo.KilnfileLock{}, err
 	}
@@ -92,21 +87,12 @@ func (s UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFunc) (c
 			return cargo.KilnfileLock{}, fmt.Errorf("couldn't find release %q", rel.Name)
 		}
 
-<<<<<<< HEAD
 		if remote.RemotePath == rel.RemotePath && remote.RemoteSource == rel.RemoteSource {
-			update.Logger.Printf("No change for release %q\n", rel.Name)
-			continue
-		}
-
-		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
-=======
-		if remote.RemotePath == rel.RemotePath && remote.SourceID == rel.RemoteSource {
 			s.Logger.Printf("No change for release %q\n", rel.Name)
 			continue
 		}
 
-		local, err := releaseSource.DownloadRelease(s.Options.ReleasesDir, remote, fetcher.DefaultDownloadThreadCount)
->>>>>>> c95c5849 (refactor: standardize receiver names)
+		local, err := releaseSource.DownloadRelease(s.Options.ReleasesDir, remote)
 		if err != nil {
 			return cargo.KilnfileLock{}, fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
 		}

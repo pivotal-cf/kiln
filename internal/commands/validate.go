@@ -36,8 +36,8 @@ func (v Validate) Execute(args []string) error {
 	}.Execute(args)
 }
 
-func (v Validate) KilnExecute(args []string, parseOps OptionsParseFunc) error {
-	kilnfile, kilnfileLock, _, err := parseOps(args, &v.Options)
+func (v Validate) KilnExecute(args []string, parseOpts OptionsParseFunc) error {
+	kilnfile, kilnfileLock, _, err := parseOpts(args, &v.Options)
 	if err != nil {
 		return err
 	}
