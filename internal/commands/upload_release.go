@@ -29,41 +29,46 @@ type UploadRelease struct {
 //counterfeiter:generate -o ./fakes/release_uploader_finder.go --fake-name ReleaseUploaderFinder . ReleaseUploaderFinder
 type ReleaseUploaderFinder func(cargo.Kilnfile, string) (component.ReleaseUploader, error)
 
-func (command UploadRelease) Execute(args []string) error {
+func (u UploadRelease) Execute(args []string) error {
 	return Kiln{
-		Wrapped: command,
+		Wrapped: u,
 		KilnfileStore: KilnfileStore{
-			FS: command.FS,
+			FS: u.FS,
 		},
-		StatFn: command.FS.Stat,
+		StatFn: u.FS.Stat,
 	}.Execute(args)
 }
 
+<<<<<<< HEAD
 func (command UploadRelease) KilnExecute(args []string, parseOps OptionsParseFunc) error {
 	kilnfile, _, _, err := parseOps(args, &command.Options)
+=======
+func (u UploadRelease) KilnExecute(args []string, parseOps OptionsParseFunc) error {
+	kilnfile, _, err := parseOps(args, &u.Options)
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	if err != nil {
 		return err
 	}
 
-	releaseUploader, err := command.ReleaseUploaderFinder(kilnfile, command.Options.UploadTargetID)
+	releaseUploader, err := u.ReleaseUploaderFinder(kilnfile, u.Options.UploadTargetID)
 	if err != nil {
 		return fmt.Errorf("error finding release source: %w", err)
 	}
 
-	file, err := command.FS.Open(command.Options.LocalPath)
+	file, err := u.FS.Open(u.Options.LocalPath)
 	if err != nil {
 		return fmt.Errorf("could not open release: %w", err)
 	}
 
-	manifestReader := builder.NewReleaseManifestReader(command.FS)
-	part, err := manifestReader.Read(command.Options.LocalPath)
+	manifestReader := builder.NewReleaseManifestReader(u.FS)
+	part, err := manifestReader.Read(u.Options.LocalPath)
 	if err != nil {
 		return fmt.Errorf("error reading the release manifest: %w", err)
 	}
 
 	manifest := part.Metadata.(builder.ReleaseManifest)
 	if manifest.StemcellOS != "" {
-		return fmt.Errorf("cannot upload compiled release %q - only uncompiled releases are allowed", command.Options.LocalPath)
+		return fmt.Errorf("cannot upload compiled release %q - only uncompiled releases are allowed", u.Options.LocalPath)
 	}
 
 	version, err := semver.NewVersion(manifest.Version)
@@ -82,7 +87,7 @@ func (command UploadRelease) KilnExecute(args []string, parseOps OptionsParseFun
 
 	if found {
 		return fmt.Errorf("a release with name %q and version %q already exists on %s",
-			manifest.Name, manifest.Version, command.Options.UploadTargetID)
+			manifest.Name, manifest.Version, u.Options.UploadTargetID)
 	}
 
 	_, err = releaseUploader.UploadRelease(component.Spec{
@@ -93,15 +98,15 @@ func (command UploadRelease) KilnExecute(args []string, parseOps OptionsParseFun
 		return fmt.Errorf("error uploading the release: %w", err)
 	}
 
-	command.Logger.Println("Upload succeeded")
+	u.Logger.Println("Upload succeeded")
 
 	return nil
 }
 
-func (command UploadRelease) Usage() jhanda.Usage {
+func (u UploadRelease) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Uploads a BOSH Release to an S3 release source for use in kiln fetch",
 		ShortDescription: "uploads a BOSH release to an s3 release_source",
-		Flags:            command.Options,
+		Flags:            u.Options,
 	}
 }

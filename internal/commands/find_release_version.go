@@ -41,27 +41,40 @@ func (f FindReleaseVersion) Execute(args []string) error {
 	}.Execute(args)
 }
 
+<<<<<<< HEAD
 func (cmd FindReleaseVersion) KilnExecute(args []string, parseOps OptionsParseFunc) error {
 	kilnfile, kilnfileLock, _, err := parseOps(args, &cmd.Options)
+=======
+func (f FindReleaseVersion) KilnExecute(args []string, parseOps OptionsParseFunc) error {
+	kilnfile, kilnfileLock, err := parseOps(args, &f.Options)
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	if err != nil {
 		return err
 	}
 
-	releaseSource := cmd.mrsProvider(kilnfile, false)
+	releaseSource := f.mrsProvider(kilnfile, false)
 
 	var version string
 	for _, r := range kilnfile.Releases {
-		if r.Name == cmd.Options.Release {
+		if r.Name == f.Options.Release {
 			version = r.Version
 			break
 		}
 	}
 
+<<<<<<< HEAD
 	releaseRemote, _, err := releaseSource.FindReleaseVersion(component.Spec{
 		Name:            cmd.Options.Release,
 		Version:         version,
 		StemcellVersion: kilnfileLock.Stemcell.Version,
 		StemcellOS:      kilnfileLock.Stemcell.OS,
+=======
+	releaseRemote, _, err := releaseSource.FindReleaseVersion(release.Requirement{
+		Name:              f.Options.Release,
+		VersionConstraint: version,
+		StemcellVersion:   kilnfileLock.Stemcell.Version,
+		StemcellOS:        kilnfileLock.Stemcell.OS,
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	})
 
 	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{
@@ -70,14 +83,14 @@ func (cmd FindReleaseVersion) KilnExecute(args []string, parseOps OptionsParseFu
 		Source:     releaseRemote.RemoteSource,
 		SHA:        releaseRemote.SHA1,
 	})
-	cmd.outLogger.Println(string(releaseVersionJson))
+	f.outLogger.Println(string(releaseVersionJson))
 	return err
 }
 
-func (cmd FindReleaseVersion) Usage() jhanda.Usage {
+func (f FindReleaseVersion) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints.",
 		ShortDescription: "prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints",
-		Flags:            cmd.Options,
+		Flags:            f.Options,
 	}
 }

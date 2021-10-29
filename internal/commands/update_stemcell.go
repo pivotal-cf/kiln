@@ -25,25 +25,30 @@ type UpdateStemcell struct {
 	Logger                     *log.Logger
 }
 
-func (update UpdateStemcell) Execute(args []string) error {
+func (s UpdateStemcell) Execute(args []string) error {
 	return Kiln{
-		Wrapped: update,
+		Wrapped: s,
 		KilnfileStore: KilnfileStore{
-			FS: update.FS,
+			FS: s.FS,
 		},
-		StatFn: update.FS.Stat,
+		StatFn: s.FS.Stat,
 	}.Execute(args)
 }
 
+<<<<<<< HEAD
 func (update UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFunc) (cargo.KilnfileLock, error) {
 	kilnfile, kilnfileLock, _, err := parseOps(args, &update.Options)
+=======
+func (s UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFunc) (cargo.KilnfileLock, error) {
+	kilnfile, kilnfileLock, err := parseOps(args, &s.Options)
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	if err != nil {
 		return cargo.KilnfileLock{}, err
 	}
 
 	var releaseVersionConstraint *semver.Constraints
 
-	trimmedInputVersion := strings.TrimSpace(update.Options.Version)
+	trimmedInputVersion := strings.TrimSpace(s.Options.Version)
 
 	latestStemcellVersion, err := semver.NewVersion(trimmedInputVersion)
 	if err != nil {
@@ -58,21 +63,21 @@ func (update UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFun
 	}
 
 	if !releaseVersionConstraint.Check(latestStemcellVersion) {
-		update.Logger.Println("Latest version does not satisfy the stemcell version constraint in kilnfile. Nothing to update.")
+		s.Logger.Println("Latest version does not satisfy the stemcell version constraint in kilnfile. Nothing to update.")
 		return kilnfileLock, nil
 	}
 
 	currentStemcellVersion, _ := semver.NewVersion(kilnfileLock.Stemcell.Version)
 
 	if currentStemcellVersion.Equal(latestStemcellVersion) {
-		update.Logger.Println("Stemcell is up-to-date. Nothing to update for product")
+		s.Logger.Println("Stemcell is up-to-date. Nothing to update for product")
 		return kilnfileLock, nil
 	}
 
-	releaseSource := update.MultiReleaseSourceProvider(kilnfile, false)
+	releaseSource := s.MultiReleaseSourceProvider(kilnfile, false)
 
 	for i, rel := range kilnfileLock.Releases {
-		update.Logger.Printf("Updating release %q with stemcell %s %s...", rel.Name, kilnfileLock.Stemcell.OS, trimmedInputVersion)
+		s.Logger.Printf("Updating release %q with stemcell %s %s...", rel.Name, kilnfileLock.Stemcell.OS, trimmedInputVersion)
 
 		remote, found, err := releaseSource.GetMatchedRelease(component.Spec{
 			Name:            rel.Name,
@@ -87,12 +92,21 @@ func (update UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFun
 			return cargo.KilnfileLock{}, fmt.Errorf("couldn't find release %q", rel.Name)
 		}
 
+<<<<<<< HEAD
 		if remote.RemotePath == rel.RemotePath && remote.RemoteSource == rel.RemoteSource {
 			update.Logger.Printf("No change for release %q\n", rel.Name)
 			continue
 		}
 
 		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
+=======
+		if remote.RemotePath == rel.RemotePath && remote.SourceID == rel.RemoteSource {
+			s.Logger.Printf("No change for release %q\n", rel.Name)
+			continue
+		}
+
+		local, err := releaseSource.DownloadRelease(s.Options.ReleasesDir, remote, fetcher.DefaultDownloadThreadCount)
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 		if err != nil {
 			return cargo.KilnfileLock{}, fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
 		}
@@ -108,10 +122,10 @@ func (update UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFun
 	return kilnfileLock, nil
 }
 
-func (update UpdateStemcell) Usage() jhanda.Usage {
+func (s UpdateStemcell) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Updates stemcell and release information in Kilnfile.lock",
 		ShortDescription: "updates stemcell and release information in Kilnfile.lock",
-		Flags:            update.Options,
+		Flags:            s.Options,
 	}
 }

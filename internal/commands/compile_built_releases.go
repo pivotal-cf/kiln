@@ -100,22 +100,27 @@ func BoshDirectorFactory() (BoshDirector, error) {
 	return factory.New(config, boshdir.NewNoopTaskReporter(), boshdir.NewNoopFileReporter())
 }
 
-func (f CompileBuiltReleases) Execute(args []string) error {
+func (c CompileBuiltReleases) Execute(args []string) error {
 	return Kiln{
-		Wrapped:       f,
+		Wrapped:       c,
 		KilnfileStore: KilnfileStore{},
 	}.Execute(args)
 }
 
+<<<<<<< HEAD
 func (f CompileBuiltReleases) KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, error) {
 	kilnfile, kilnfileLock, _, err := parseOpts(args, &f.Options)
+=======
+func (c CompileBuiltReleases) KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, error) {
+	kilnfile, kilnfileLock, err := parseOpts(args, &c.Options)
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	if err != nil {
 		return cargo.KilnfileLock{}, err
 	}
 
-	publishableReleaseSources := f.MultiReleaseSourceProvider(kilnfile, true)
-	allReleaseSources := f.MultiReleaseSourceProvider(kilnfile, false)
-	releaseUploader, err := f.ReleaseUploaderFinder(kilnfile, f.Options.UploadTargetID)
+	publishableReleaseSources := c.MultiReleaseSourceProvider(kilnfile, true)
+	allReleaseSources := c.MultiReleaseSourceProvider(kilnfile, false)
+	releaseUploader, err := c.ReleaseUploaderFinder(kilnfile, c.Options.UploadTargetID)
 	if err != nil {
 		return kilnfileLock, fmt.Errorf("error loading release uploader: %w", err) // untested
 	}
@@ -126,46 +131,46 @@ func (f CompileBuiltReleases) KilnExecute(args []string, parseOpts OptionsParseF
 	}
 
 	if len(builtReleases) == 0 {
-		f.Logger.Println("All releases are compiled. Exiting early")
+		c.Logger.Println("All releases are compiled. Exiting early")
 		return kilnfileLock, nil
 	}
 
-	updatedReleases, remainingBuiltReleases, err := f.downloadPreCompiledReleases(publishableReleaseSources, builtReleases, kilnfileLock.Stemcell)
+	updatedReleases, remainingBuiltReleases, err := c.downloadPreCompiledReleases(publishableReleaseSources, builtReleases, kilnfileLock.Stemcell)
 	if err != nil {
 		return kilnfileLock, err
 	}
 
 	if len(remainingBuiltReleases) > 0 {
-		f.Logger.Printf("need to compile %d built releases\n", len(remainingBuiltReleases))
+		c.Logger.Printf("need to compile %d built releases\n", len(remainingBuiltReleases))
 
-		downloadedReleases, stemcell, err := f.compileAndDownloadReleases(allReleaseSources, remainingBuiltReleases)
+		downloadedReleases, stemcell, err := c.compileAndDownloadReleases(allReleaseSources, remainingBuiltReleases)
 		if err != nil {
 			return kilnfileLock, err
 		}
 
-		uploadedReleases, err := f.uploadCompiledReleases(downloadedReleases, releaseUploader, stemcell)
+		uploadedReleases, err := c.uploadCompiledReleases(downloadedReleases, releaseUploader, stemcell)
 		if err != nil {
 			return kilnfileLock, err
 		}
 		updatedReleases = append(updatedReleases, uploadedReleases...)
 	} else {
-		f.Logger.Println("nothing left to compile")
+		c.Logger.Println("nothing left to compile")
 	}
 
-	err = f.updateLockfile(&kilnfileLock, updatedReleases)
+	err = c.updateLockfile(&kilnfileLock, updatedReleases)
 	if err != nil {
 		return kilnfileLock, err
 	}
 
-	f.Logger.Println("Updated Kilnfile.lock. DONE")
+	c.Logger.Println("Updated Kilnfile.lock. DONE")
 	return kilnfileLock, nil
 }
 
-func (f CompileBuiltReleases) Usage() jhanda.Usage {
+func (c CompileBuiltReleases) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Compiles built releases in the Kilnfile.lock and uploads them to the release source",
 		ShortDescription: "compiles built releases and uploads them",
-		Flags:            f.Options,
+		Flags:            c.Options,
 	}
 }
 
@@ -189,13 +194,17 @@ func findBuiltReleases(allReleaseSources component.MultiReleaseSource, kilnfileL
 	return builtReleases, nil
 }
 
+<<<<<<< HEAD
 func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSources component.MultiReleaseSource, builtReleases []component.Lock, stemcell cargo.Stemcell) ([]remoteReleaseWithSHA1, []component.Lock, error) {
+=======
+func (c CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSources fetcher.MultiReleaseSource, builtReleases []release.Remote, stemcell cargo.Stemcell) ([]remoteReleaseWithSHA1, []release.Remote, error) {
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	var (
 		remainingBuiltReleases []component.Lock
 		preCompiledReleases    []remoteReleaseWithSHA1
 	)
 
-	f.Logger.Println("searching for pre-compiled releases")
+	c.Logger.Println("searching for pre-compiled releases")
 
 	for _, builtRelease := range builtReleases {
 		spec := component.Spec{
@@ -213,7 +222,11 @@ func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSour
 			continue
 		}
 
+<<<<<<< HEAD
 		local, err := publishableReleaseSources.DownloadRelease(f.Options.ReleasesDir, remote)
+=======
+		local, err := publishableReleaseSources.DownloadRelease(c.Options.ReleasesDir, remote, fetcher.DefaultDownloadThreadCount)
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error downloading pre-compiled release for %q: %w", builtRelease.Name, err)
 		}
@@ -221,32 +234,38 @@ func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSour
 		preCompiledReleases = append(preCompiledReleases, remoteReleaseWithSHA1{Lock: remote, SHA1: local.SHA1})
 	}
 
-	f.Logger.Printf("found %d pre-compiled releases\n", len(preCompiledReleases))
+	c.Logger.Printf("found %d pre-compiled releases\n", len(preCompiledReleases))
 
 	return preCompiledReleases, remainingBuiltReleases, nil
 }
 
+<<<<<<< HEAD
 func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource component.MultiReleaseSource, builtReleases []component.Lock) ([]component.Local, builder.StemcellManifest, error) {
 	f.Logger.Println("connecting to the bosh director")
 	boshDirector, err := f.BoshDirectorFactory()
+=======
+func (c CompileBuiltReleases) compileAndDownloadReleases(releaseSource fetcher.MultiReleaseSource, builtReleases []release.Remote) ([]release.Local, builder.StemcellManifest, error) {
+	c.Logger.Println("connecting to the bosh director")
+	boshDirector, err := c.BoshDirectorFactory()
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	if err != nil {
 		return nil, builder.StemcellManifest{}, fmt.Errorf("unable to connect to bosh director: %w", err) // untested
 	}
 
-	releaseIDs, err := f.uploadReleasesToDirector(builtReleases, releaseSource, boshDirector)
+	releaseIDs, err := c.uploadReleasesToDirector(builtReleases, releaseSource, boshDirector)
 	if err != nil {
 		return nil, builder.StemcellManifest{}, err
 	}
 
-	stemcellManifest, err := f.uploadStemcellToDirector(boshDirector)
+	stemcellManifest, err := c.uploadStemcellToDirector(boshDirector)
 	if err != nil {
 		return nil, builder.StemcellManifest{}, err
 	}
 
 	var deployments []boshdir.Deployment
-	for i := 0; i < int(f.Options.Parallel); i++ {
+	for i := 0; i < int(c.Options.Parallel); i++ {
 		deploymentName := fmt.Sprintf("compile-built-releases-%d-%s", i, uuid.Must(uuid.NewRandom()))
-		f.Logger.Printf("deploying compilation deployment %q\n", deploymentName)
+		c.Logger.Printf("deploying compilation deployment %q\n", deploymentName)
 		deployment, err := boshDirector.FindDeployment(deploymentName)
 		if err != nil {
 			return nil, builder.StemcellManifest{}, fmt.Errorf("couldn't create deployment: %w", err) // untested
@@ -266,7 +285,7 @@ func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource component
 	}
 
 	defer func() {
-		f.Logger.Println("deleting compilation deployments")
+		c.Logger.Println("deleting compilation deployments")
 		for _, deployment := range deployments {
 			err = deployment.Delete(true)
 			if err != nil {
@@ -274,15 +293,15 @@ func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource component
 			}
 		}
 
-		f.Logger.Println("cleaning up unused releases and stemcells")
+		c.Logger.Println("cleaning up unused releases and stemcells")
 		_, err = boshDirector.CleanUp(true, false, false)
 		if err != nil {
-			f.Logger.Println(fmt.Sprintf("warning: bosh director failed cleanup with the following error: %v", err))
+			c.Logger.Println(fmt.Sprintf("warning: bosh director failed cleanup with the following error: %v", err))
 			return
 		}
 	}()
 
-	downloadedReleases, err := f.downloadCompiledReleases(stemcellManifest, releaseIDs, deployments, boshDirector)
+	downloadedReleases, err := c.downloadCompiledReleases(stemcellManifest, releaseIDs, deployments, boshDirector)
 	if err != nil {
 		return nil, builder.StemcellManifest{}, err // untested
 	}
@@ -290,12 +309,21 @@ func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource component
 	return downloadedReleases, stemcellManifest, nil
 }
 
+<<<<<<< HEAD
 func (f CompileBuiltReleases) uploadReleasesToDirector(builtReleases []component.Lock, releaseSource component.MultiReleaseSource, boshDirector BoshDirector) ([]component.Spec, error) {
 	var releaseIDs []component.Spec
+=======
+func (c CompileBuiltReleases) uploadReleasesToDirector(builtReleases []release.Remote, releaseSource fetcher.MultiReleaseSource, boshDirector BoshDirector) ([]release.ID, error) {
+	var releaseIDs []release.ID
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	for _, remoteRelease := range builtReleases {
 		releaseIDs = append(releaseIDs, remoteRelease.Spec())
 
+<<<<<<< HEAD
 		localRelease, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease)
+=======
+		localRelease, err := releaseSource.DownloadRelease(c.Options.ReleasesDir, remoteRelease, fetcher.DefaultDownloadThreadCount)
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 		if err != nil {
 			return nil, fmt.Errorf("failure downloading built release %s@%s: %w", remoteRelease.Name, remoteRelease.Version, err) // untested
 		}
@@ -305,7 +333,7 @@ func (f CompileBuiltReleases) uploadReleasesToDirector(builtReleases []component
 			return nil, fmt.Errorf("opening local built release %q: %w", localRelease.LocalPath, err) // untested
 		}
 
-		f.Logger.Printf("uploading release %q to director\n", localRelease.LocalPath)
+		c.Logger.Printf("uploading release %q to director\n", localRelease.LocalPath)
 		err = boshDirector.UploadReleaseFile(builtReleaseForUploading, false, false)
 		if err != nil {
 			return nil, fmt.Errorf("failure uploading release %q to bosh director: %w", localRelease.LocalPath, err) // untested
@@ -314,9 +342,9 @@ func (f CompileBuiltReleases) uploadReleasesToDirector(builtReleases []component
 	return releaseIDs, nil
 }
 
-func (f CompileBuiltReleases) uploadStemcellToDirector(boshDirector BoshDirector) (builder.StemcellManifest, error) {
-	f.Logger.Printf("uploading stemcell %q to director\n", f.Options.StemcellFile)
-	stemcellFile, err := os.Open(f.Options.StemcellFile)
+func (c CompileBuiltReleases) uploadStemcellToDirector(boshDirector BoshDirector) (builder.StemcellManifest, error) {
+	c.Logger.Printf("uploading stemcell %q to director\n", c.Options.StemcellFile)
+	stemcellFile, err := os.Open(c.Options.StemcellFile)
 	if err != nil {
 		return builder.StemcellManifest{}, fmt.Errorf("opening stemcell: %w", err) // untested
 	}
@@ -327,7 +355,7 @@ func (f CompileBuiltReleases) uploadStemcellToDirector(boshDirector BoshDirector
 	}
 
 	stemcellManifestReader := builder.NewStemcellManifestReader(helper.NewFilesystem())
-	stemcellPart, err := stemcellManifestReader.Read(f.Options.StemcellFile)
+	stemcellPart, err := stemcellManifestReader.Read(c.Options.StemcellFile)
 	if err != nil {
 		return builder.StemcellManifest{}, fmt.Errorf("couldn't parse manifest of stemcell: %v", err) // untested
 	}
@@ -336,9 +364,15 @@ func (f CompileBuiltReleases) uploadStemcellToDirector(boshDirector BoshDirector
 	return stemcellManifest, err
 }
 
+<<<<<<< HEAD
 func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.StemcellManifest, releaseIDs []component.Spec, deployments []boshdir.Deployment, boshDirector BoshDirector) ([]component.Local, error) {
 	var downloadedReleases []component.Local
 	exportedReleases, err := f.exportReleasesInParallel(stemcellManifest, deployments, releaseIDs)
+=======
+func (c CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.StemcellManifest, releaseIDs []release.ID, deployments []boshdir.Deployment, boshDirector BoshDirector) ([]release.Local, error) {
+	var downloadedReleases []release.Local
+	exportedReleases, err := c.exportReleasesInParallel(stemcellManifest, deployments, releaseIDs)
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +383,7 @@ func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.
 			return nil, fmt.Errorf("creating compiled release file %s: %w", rel.TarballPath, err) // untested
 		}
 
-		f.Logger.Printf("downloading release %q from director\n", rel.Name)
+		c.Logger.Printf("downloading release %q from director\n", rel.Name)
 		err = boshDirector.DownloadResourceUnchecked(rel.BlobstoreID, fd)
 		if err != nil {
 			return nil, fmt.Errorf("downloading exported release %s: %w", rel.Name, err)
@@ -396,7 +430,11 @@ func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.
 	return downloadedReleases, nil
 }
 
+<<<<<<< HEAD
 func (f CompileBuiltReleases) exportReleasesInParallel(stemcellManifest builder.StemcellManifest, deployments []boshdir.Deployment, releaseIDs []component.Spec) ([]component.Exported, error) {
+=======
+func (c CompileBuiltReleases) exportReleasesInParallel(stemcellManifest builder.StemcellManifest, deployments []boshdir.Deployment, releaseIDs []release.ID) ([]release.Exported, error) {
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	osVersionSlug := boshdir.NewOSVersionSlug(stemcellManifest.OperatingSystem, stemcellManifest.Version)
 
 	errCh := make(chan error, len(releaseIDs))
@@ -427,8 +465,8 @@ func (f CompileBuiltReleases) exportReleasesInParallel(stemcellManifest builder.
 					deploymentsPool <- deployment
 				}()
 
-				compiledTarballPath := filepath.Join(f.Options.ReleasesDir, fmt.Sprintf("%s-%s-%s-%s.tgz", rel.Name, rel.Version, stemcellManifest.OperatingSystem, stemcellManifest.Version))
-				f.Logger.Printf("exporting release %q\n", compiledTarballPath)
+				compiledTarballPath := filepath.Join(c.Options.ReleasesDir, fmt.Sprintf("%s-%s-%s-%s.tgz", rel.Name, rel.Version, stemcellManifest.OperatingSystem, stemcellManifest.Version))
+				c.Logger.Printf("exporting release %q\n", compiledTarballPath)
 
 				result, err := deployment.ExportRelease(boshdir.NewReleaseSlug(rel.Name, rel.Version), osVersionSlug, nil)
 				if err != nil {
@@ -475,7 +513,11 @@ func (f CompileBuiltReleases) exportReleasesInParallel(stemcellManifest builder.
 	return exportedReleases, nil
 }
 
+<<<<<<< HEAD
 func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []component.Local, releaseUploader component.ReleaseUploader, stemcell builder.StemcellManifest) ([]remoteReleaseWithSHA1, error) {
+=======
+func (c CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []release.Local, releaseUploader fetcher.ReleaseUploader, stemcell builder.StemcellManifest) ([]remoteReleaseWithSHA1, error) {
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	var uploadedReleases []remoteReleaseWithSHA1
 
 	for _, downloadedRelease := range downloadedReleases {
@@ -499,7 +541,7 @@ func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []compon
 	return uploadedReleases, nil
 }
 
-func (f CompileBuiltReleases) updateLockfile(kilnfileLock *cargo.KilnfileLock, uploadedReleases []remoteReleaseWithSHA1) error {
+func (c CompileBuiltReleases) updateLockfile(kilnfileLock *cargo.KilnfileLock, uploadedReleases []remoteReleaseWithSHA1) error {
 	for _, uploaded := range uploadedReleases {
 		var matchingRelease *cargo.ComponentLock
 		for i := range kilnfileLock.Releases {

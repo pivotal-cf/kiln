@@ -48,18 +48,23 @@ func NewFindStemcellVersion(outLogger *log.Logger, pivnetService *component.Pivn
 	}
 }
 
-func (cmd FindStemcellVersion) Execute(args []string) error {
+func (f FindStemcellVersion) Execute(args []string) error {
 	return Kiln{
-		Wrapped: cmd,
+		Wrapped: f,
 		KilnfileStore: KilnfileStore{
-			FS: cmd.FS,
+			FS: f.FS,
 		},
-		StatFn: cmd.FS.Stat,
+		StatFn: f.FS.Stat,
 	}.Execute(args)
 }
 
+<<<<<<< HEAD
 func (cmd FindStemcellVersion) KilnExecute(args []string, parseOpts OptionsParseFunc) error {
 	kilnfile, _, _, err := parseOpts(args, &cmd.Options)
+=======
+func (f FindStemcellVersion) KilnExecute(args []string, parseOpts OptionsParseFunc) error {
+	kilnfile, _, err := parseOpts(args, &f.Options)
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	if err != nil {
 		return err
 	}
@@ -92,7 +97,7 @@ func (cmd FindStemcellVersion) KilnExecute(args []string, parseOpts OptionsParse
 	}
 
 	//Get stemcell version from pivnet
-	stemcellVersion, err := cmd.pivnetService.StemcellVersion(productSlug, majorVersion)
+	stemcellVersion, err := f.pivnetService.StemcellVersion(productSlug, majorVersion)
 
 	if err != nil {
 		return err
@@ -108,7 +113,7 @@ func (cmd FindStemcellVersion) KilnExecute(args []string, parseOpts OptionsParse
 		return err
 	}
 
-	cmd.outLogger.Println(string(stemcellVersionJson))
+	f.outLogger.Println(string(stemcellVersionJson))
 
 	return nil
 }
@@ -139,10 +144,10 @@ func ExtractMajorVersion(version string) (string, error) {
 
 }
 
-func (cmd FindStemcellVersion) Usage() jhanda.Usage {
+func (f FindStemcellVersion) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile",
 		ShortDescription: "prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile",
-		Flags:            cmd.Options,
+		Flags:            f.Options,
 	}
 }

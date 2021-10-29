@@ -37,34 +37,39 @@ func NewSyncWithLocal(fs billy.Filesystem, localReleaseDirectory LocalReleaseDir
 //counterfeiter:generate -o ./fakes/remote_pather_finder.go --fake-name RemotePatherFinder . RemotePatherFinder
 type RemotePatherFinder func(cargo.Kilnfile, string) (component.RemotePather, error)
 
-func (command SyncWithLocal) Execute(args []string) error {
+func (s SyncWithLocal) Execute(args []string) error {
 	return Kiln{
-		Wrapped: command,
+		Wrapped: s,
 		KilnfileStore: KilnfileStore{
-			FS: command.fs,
+			FS: s.fs,
 		},
-		StatFn: command.fs.Stat,
+		StatFn: s.fs.Stat,
 	}.Execute(args)
 }
 
+<<<<<<< HEAD
 func (command SyncWithLocal) KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, error) {
 	kilnfile, kilnfileLock, _, err := parseOpts(args, &command.Options)
+=======
+func (s SyncWithLocal) KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, error) {
+	kilnfile, kilnfileLock, err := parseOpts(args, &s.Options)
+>>>>>>> c95c5849 (refactor: standardize receiver names)
 	if err != nil {
 		return kilnfileLock, err
 	}
 
-	remotePather, err := command.remotePatherFinder(kilnfile, command.Options.ReleaseSourceID)
+	remotePather, err := s.remotePatherFinder(kilnfile, s.Options.ReleaseSourceID)
 	if err != nil {
 		return kilnfileLock, fmt.Errorf("couldn't load the release source: %w", err) // untested
 	}
 
-	command.logger.Printf("Finding releases in %s...\n", command.Options.ReleasesDir)
-	releases, err := command.localReleaseDirectory.GetLocalReleases(command.Options.ReleasesDir)
+	s.logger.Printf("Finding releases in %s...\n", s.Options.ReleasesDir)
+	releases, err := s.localReleaseDirectory.GetLocalReleases(s.Options.ReleasesDir)
 	if err != nil {
 		return kilnfileLock, fmt.Errorf("couldn't process releases in releases directory: %w", err) // untested
 	}
 
-	command.logger.Printf("Found %d releases on disk\n", len(releases))
+	s.logger.Printf("Found %d releases on disk\n", len(releases))
 
 	for _, rel := range releases {
 		remotePath, err := remotePather.RemotePath(component.Spec{
@@ -88,26 +93,26 @@ func (command SyncWithLocal) KilnExecute(args []string, parseOpts OptionsParseFu
 			return kilnfileLock, fmt.Errorf("the local release %q does not exist in the Kilnfile.lock", rel.Name)
 		}
 
-		if command.Options.SkipSameVersion && matchingRelease.Version == rel.Version {
-			command.logger.Printf("Skipping %s. Release version hasn't changed\n", rel.Name)
+		if s.Options.SkipSameVersion && matchingRelease.Version == rel.Version {
+			s.logger.Printf("Skipping %s. Release version hasn't changed\n", rel.Name)
 			continue
 		}
 
 		matchingRelease.Version = rel.Version
 		matchingRelease.SHA1 = rel.SHA1
-		matchingRelease.RemoteSource = command.Options.ReleaseSourceID
+		matchingRelease.RemoteSource = s.Options.ReleaseSourceID
 		matchingRelease.RemotePath = remotePath
 
-		command.logger.Printf("Updated %s to %s\n", rel.Name, rel.Version)
+		s.logger.Printf("Updated %s to %s\n", rel.Name, rel.Version)
 	}
 
 	return kilnfileLock, nil
 }
 
-func (command SyncWithLocal) Usage() jhanda.Usage {
+func (s SyncWithLocal) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Update the Kilnfile.lock based on the local releases directory. Assume the given release source",
 		ShortDescription: "update the Kilnfile.lock based on local releases",
-		Flags:            command.Options,
+		Flags:            s.Options,
 	}
 }
