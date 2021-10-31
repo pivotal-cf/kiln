@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"io/fs"
 	"testing"
 
 	Ω "github.com/onsi/gomega"
@@ -88,10 +89,6 @@ func TestCommand_Execute(t *testing.T) {
 		})).NotTo(Ω.HaveOccurred())
 		please.Expect(fsWriteYAML(filesystem, "Kilnfile.lock", cargo.KilnfileLock{})).NotTo(Ω.HaveOccurred())
 
-		s := commands.KilnfileStore{
-			FS: filesystem,
-		}
-
 		var (
 			kf cargo.Kilnfile
 			w  CommandWithMoreFlags
@@ -102,14 +99,34 @@ func TestCommand_Execute(t *testing.T) {
 			return err
 		}
 
+		err := commands.NewKilnCommand(w, filesystem).Execute(nil)
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(kf.Slug).To(Ω.Equal("example"))
+	})
+
+	t.Run("kilnfile update result saveLockfile is false", func(t *testing.T) {
+		please := Ω.NewWithT(t)
+
+		s := new(fakes.KilnfileStorer)
+		s.LoadReturns(cargo.Kilnfile{}, cargo.KilnfileLock{}, nil)
+
+		var (
+			w CommandUpdatingKilnfileLock
+		)
+		w.E = func(args []string, parseFunc commands.OptionsParseFunc) (cargo.KilnfileLock, bool, error) {
+			_, _, _, _ = parseFunc(args, &w.Options)
+			return cargo.KilnfileLock{}, false, nil
+		}
+
 		err := commands.Kiln{
 			Wrapped:       &w,
 			KilnfileStore: s,
-			StatFn:        filesystem.Stat,
+			StatFn: func(string) (fs.FileInfo, error) {
+				return nil, nil
+			},
 		}.Execute([]string{})
-
 		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(kf.Slug).To(Ω.Equal("example"))
+		please.Expect(s.SaveLockCallCount()).To(Ω.Equal(0))
 	})
 }
 

@@ -26,12 +26,24 @@ type kilnfileLockReturner interface {
 	KilnExecute(args []string, parseOpts OptionsParseFunc) (_ cargo.KilnfileLock, saveLockfile bool, _ error)
 }
 
+type Usager interface {
+	Usage() jhanda.Usage
+}
+
 type Kiln struct {
-	Wrapped interface {
-		Usage() jhanda.Usage
-	}
+	Wrapped       Usager
 	KilnfileStore KilnfileStorer
 	StatFn        func(name string) (fs.FileInfo, error)
+}
+
+func NewKilnCommand(c Usager, fs billy.Filesystem) Kiln {
+	return Kiln{
+		Wrapped: c,
+		KilnfileStore: KilnfileStore{
+			FS: fs,
+		},
+		StatFn: fs.Stat,
+	}
 }
 
 func (cmd Kiln) Execute(args []string) error {
