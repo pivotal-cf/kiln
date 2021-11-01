@@ -2,11 +2,12 @@ package commands
 
 import (
 	"encoding/json"
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/component"
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
+
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
