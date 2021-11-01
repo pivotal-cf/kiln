@@ -2,19 +2,20 @@ package flags
 
 import (
 	"fmt"
-	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/osfs"
-	"github.com/pivotal-cf/kiln/internal/baking"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"go/ast"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pivotal-cf/jhanda"
+	"gopkg.in/yaml.v2"
+
+	"github.com/pivotal-cf/kiln/internal/baking"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type (
