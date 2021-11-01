@@ -17,10 +17,9 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/om"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 //go:generate counterfeiter -o ./fakes/ops_manager_release_cache_source.go --fake-name OpsManagerReleaseCacheSource . OpsManagerReleaseCacheSource
@@ -34,7 +33,7 @@ type (
 	}
 
 	ReleaseCacheBucket interface {
-		UploadRelease(spec release.Requirement, file io.Reader) (release.Remote, error)
+		UploadRelease(spec component.Requirement, file io.Reader) (component.Lock, error)
 	}
 )
 
@@ -51,7 +50,7 @@ type CacheCompiledReleases struct {
 	Logger *log.Logger
 	FS     billy.Filesystem
 
-	ReleaseCache   func(kilnfile cargo.Kilnfile) fetcher.MultiReleaseSource
+	ReleaseCache   func(kilnfile cargo.Kilnfile) component.MultiReleaseSource
 	Bucket         func(kilnfile cargo.Kilnfile) (ReleaseCacheBucket, error)
 	OpsManager     func(om.ClientConfiguration) (OpsManagerReleaseCacheSource, error)
 	Director       func(om.ClientConfiguration, om.GetBoshEnvironmentAndSecurityRootCACertificateProvider) (boshdir.Director, error)
@@ -62,9 +61,8 @@ func NewCacheCompiledReleases() *CacheCompiledReleases {
 		FS:     osfs.New(""),
 		Logger: log.Default(),
 	}
-	cmd.ReleaseCache = func(kilnfile cargo.Kilnfile) fetcher.MultiReleaseSource {
-		releaseSourceProvider := fetcher.NewReleaseSourceRepo(kilnfile, cmd.Logger)
-		return releaseSourceProvider.MultiReleaseSource(false)
+	cmd.ReleaseCache = func(kilnfile cargo.Kilnfile) component.MultiReleaseSource {
+		return component.NewReleaseSourceRepo(kilnfile, cmd.Logger)
 	}
 	cmd.Bucket = func(kilnfile cargo.Kilnfile) (ReleaseCacheBucket, error) {
 		return cmd.s3Bucket(kilnfile)
@@ -108,11 +106,11 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		)
 	}
 
-	var nonCompiledReleases []cargo.ReleaseLock
+	var nonCompiledReleases []cargo.ComponentLock
 
 	cache := cmd.ReleaseCache(kilnfile)
 	for _, rel := range lock.Releases {
-		remote, found, err := cache.GetMatchedRelease(release.Requirement{
+		remote, found, err := cache.GetMatchedRelease(component.Requirement{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      lock.Stemcell.OS,
@@ -170,7 +168,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	}
 
 	for _, rel := range nonCompiledReleases {
-		requirement := release.Requirement{
+		requirement := component.Requirement{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      stagedStemcellOS,
@@ -234,59 +232,61 @@ func (cmd CacheCompiledReleases) fetchProductDeploymentData() (_ OpsManagerRelea
 	return omAPI, manifest.Name, stagedStemcell.OS, stagedStemcell.Version, nil
 }
 
-func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket ReleaseCacheBucket, deployment boshdir.Deployment, req release.Requirement, osVersionSlug boshdir.OSVersionSlug) (release.Remote, error) {
+func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket ReleaseCacheBucket, deployment boshdir.Deployment, req component.Requirement, osVersionSlug boshdir.OSVersionSlug) (component.Lock, error) {
 	cmd.Logger.Printf("\texporting %s %s\n", req.Name, req.Version)
 	result, err := deployment.ExportRelease(boshdir.NewReleaseSlug(req.Name, req.Version), osVersionSlug, nil)
 	if err != nil {
-		return release.Remote{}, err
+		return component.Lock{}, err
 	}
 
 	cmd.Logger.Printf("\tdownloading %s %s\n", req.Name, req.Version)
 	releaseFilePath, err := cmd.saveReleaseLocally(bosh, cmd.Options.ReleasesDir, req, result)
 	if err != nil {
-		return release.Remote{}, err
+		return component.Lock{}, err
 	}
 
 	cmd.Logger.Printf("\tuploading %s %s\n", req.Name, req.Version)
 	remoteRelease, err := cmd.uploadLocalRelease(req, releaseFilePath, bucket)
 	if err != nil {
-		return release.Remote{}, err
+		return component.Lock{}, err
 	}
 
 	return remoteRelease, nil
 }
 
-func (cmd *CacheCompiledReleases) s3Bucket(kilnfile cargo.Kilnfile) (fetcher.S3ReleaseSource, error) {
+func (cmd *CacheCompiledReleases) s3Bucket(kilnfile cargo.Kilnfile) (component.S3ReleaseSource, error) {
 	for _, source := range kilnfile.ReleaseSources {
 		if source.ID != cmd.Options.UploadTargetID {
 			continue
 		}
-		return fetcher.S3ReleaseSourceFromConfig(source, cmd.Logger), nil
+		return component.NewS3ReleaseSourceFromConfig(source, cmd.Logger), nil
 	}
-	return fetcher.S3ReleaseSource{}, errors.New("release source not found")
+	return component.S3ReleaseSource{}, errors.New("release source not found")
 }
 
-func updateLock(lock cargo.KilnfileLock, release release.Remote) error {
+func updateLock(lock cargo.KilnfileLock, release component.Lock) error {
 	for index, releaseLock := range lock.Releases {
 		if release.Name != releaseLock.Name {
 			continue
 		}
-		lock.Releases[index] = cargo.ReleaseLock{
-			Name:         release.Name,
-			Version:      release.Version,
-			RemoteSource: release.SourceID,
+		lock.Releases[index] = cargo.ComponentLock{
+			ComponentSpec: cargo.ComponentSpec{
+				Name:         release.Name,
+				Version:      release.Version,
+			},
+			RemoteSource: release.RemoteSource,
 			RemotePath:   release.RemotePath,
-			SHA1:         release.SHA,
+			SHA1:         release.SHA1,
 		}
 		return nil
 	}
 	return fmt.Errorf("existing release not found in Kilnfile.lock")
 }
 
-func (cmd *CacheCompiledReleases) uploadLocalRelease(spec release.Requirement, fp string, uploader ReleaseCacheBucket) (release.Remote, error) {
+func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Requirement, fp string, uploader ReleaseCacheBucket) (component.Lock, error) {
 	f, err := cmd.FS.Open(fp)
 	if err != nil {
-		return release.Remote{}, err
+		return component.Lock{}, err
 	}
 	defer func() {
 		_ = f.Close()
@@ -294,7 +294,7 @@ func (cmd *CacheCompiledReleases) uploadLocalRelease(spec release.Requirement, f
 	return uploader.UploadRelease(spec, f)
 }
 
-func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, relDir string, req release.Requirement, res boshdir.ExportReleaseResult) (string, error) {
+func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, relDir string, req component.Requirement, res boshdir.ExportReleaseResult) (string, error) {
 	fileName := fmt.Sprintf("%s-%s-%s-%s.tgz", req.Name, req.Version, req.StemcellOS, req.StemcellVersion)
 	filePath := filepath.Join(relDir, fileName)
 
