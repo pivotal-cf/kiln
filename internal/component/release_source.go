@@ -7,7 +7,6 @@ import (
 	"log"
 )
 
-
 // MultiReleaseSource wraps a set of release sources. It is mostly used to generate fakes
 // for testing commands. See ReleaseSourceList for the concrete implementation.
 type MultiReleaseSource interface {
@@ -17,6 +16,7 @@ type MultiReleaseSource interface {
 
 	FindByID(string) (ReleaseSource, error)
 }
+
 //counterfeiter:generate -o ./fakes/multi_release_source.go --fake-name MultiReleaseSource . MultiReleaseSource
 
 // ReleaseUploader represents a place to put releases. Some implementations of ReleaseSource
@@ -26,6 +26,7 @@ type ReleaseUploader interface {
 	GetMatchedRelease(Requirement) (Lock, bool, error)
 	UploadRelease(spec Requirement, file io.Reader) (Lock, error)
 }
+
 //counterfeiter:generate -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
 
 // RemotePather is used to get the remote path for a remote release. For example
@@ -35,6 +36,7 @@ type ReleaseUploader interface {
 type RemotePather interface {
 	RemotePath(Requirement) (string, error)
 }
+
 //counterfeiter:generate -o ./fakes/remote_pather.go --fake-name RemotePather . RemotePather
 
 // ReleaseSource represents a source where a tile component BOSH releases may come from.
@@ -57,6 +59,7 @@ type ReleaseSource interface {
 	// to ensure the sums match, the caller must verify this.
 	DownloadRelease(releasesDir string, remoteRelease Lock, downloadThreads int) (Local, error)
 }
+
 //counterfeiter:generate -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
 
 const (
@@ -68,7 +71,7 @@ const (
 
 	// ReleaseSourceTypeS3 is the value for the Type field on cargo.ReleaseSourceConfig
 	// for releases stored on
-	ReleaseSourceTypeS3     = "s3"
+	ReleaseSourceTypeS3 = "s3"
 )
 
 // ReleaseSourceFactory returns a configured ReleaseSource based on the Type field on the
