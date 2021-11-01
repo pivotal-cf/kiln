@@ -113,7 +113,7 @@ var _ = Describe("UpdateStemcell", func() {
 				}
 			})
 
-			releaseSource.DownloadReleaseCalls(func(_ string, remote component.Lock, _ int) (component.Local, error) {
+			releaseSource.DownloadReleaseCalls(func(_ string, remote component.Lock) (component.Local, error) {
 				switch remote.Name {
 				case release1Name:
 					local := component.Local{
@@ -225,7 +225,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 			Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(2))
 
-			actualDir, remote1, threads := releaseSource.DownloadReleaseArgsForCall(0)
+			actualDir, remote1 := releaseSource.DownloadReleaseArgsForCall(0)
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote1).To(Equal(
 				component.Lock{
@@ -234,9 +234,8 @@ var _ = Describe("UpdateStemcell", func() {
 					RemoteSource:  publishableReleaseSourceID,
 				},
 			))
-			Expect(threads).To(Equal(0))
 
-			actualDir, remote2, threads := releaseSource.DownloadReleaseArgsForCall(1)
+			actualDir, remote2 := releaseSource.DownloadReleaseArgsForCall(1)
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote2).To(Equal(
 				component.Lock{
@@ -245,7 +244,6 @@ var _ = Describe("UpdateStemcell", func() {
 					RemoteSource:  unpublishableReleaseSourceID,
 				},
 			))
-			Expect(threads).To(Equal(0))
 		})
 
 		When("the version input is invalid", func() {
@@ -386,7 +384,7 @@ var _ = Describe("UpdateStemcell", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				_, remote, _ := releaseSource.DownloadReleaseArgsForCall(0)
+				_, remote := releaseSource.DownloadReleaseArgsForCall(0)
 				Expect(remote.Name).To(Equal(release1Name))
 
 				Expect(string(outputBuffer.Contents())).To(ContainSubstring("No change"))

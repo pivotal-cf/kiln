@@ -51,6 +51,8 @@ type S3ReleaseSource struct {
 	s3Downloader S3Downloader
 	s3Uploader   S3Uploader
 
+	DownloadThreads int
+
 	logger *log.Logger
 }
 
@@ -205,7 +207,7 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement Requirement) (Lock, bo
 		return Lock{}, false, nil
 	}
 	var releaseLocal Local
-	releaseLocal, err = src.DownloadRelease("/tmp", foundRelease, DefaultDownloadThreadCount)
+	releaseLocal, err = src.DownloadRelease("/tmp", foundRelease)
 	if err != nil {
 		return Lock{}, false, err
 	}
@@ -213,10 +215,10 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement Requirement) (Lock, bo
 	return foundRelease, true, nil
 }
 
-func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock, downloadThreads int) (Local, error) {
+func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
 	setConcurrency := func(dl *s3manager.Downloader) {
-		if downloadThreads > 0 {
-			dl.Concurrency = downloadThreads
+		if src.DownloadThreads > 0 {
+			dl.Concurrency = src.DownloadThreads
 		} else {
 			dl.Concurrency = s3manager.DefaultDownloadConcurrency
 		}

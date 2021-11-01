@@ -9,12 +9,11 @@ import (
 )
 
 type MultiReleaseSource struct {
-	DownloadReleaseStub        func(string, cargo.ComponentLock, int) (component.Local, error)
+	DownloadReleaseStub        func(string, cargo.ComponentLock) (component.Local, error)
 	downloadReleaseMutex       sync.RWMutex
 	downloadReleaseArgsForCall []struct {
 		arg1 string
 		arg2 cargo.ComponentLock
-		arg3 int
 	}
 	downloadReleaseReturns struct {
 		result1 component.Local
@@ -67,24 +66,28 @@ type MultiReleaseSource struct {
 		result2 bool
 		result3 error
 	}
+	SetDownloadThreadsStub        func(int)
+	setDownloadThreadsMutex       sync.RWMutex
+	setDownloadThreadsArgsForCall []struct {
+		arg1 int
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MultiReleaseSource) DownloadRelease(arg1 string, arg2 cargo.ComponentLock, arg3 int) (component.Local, error) {
+func (fake *MultiReleaseSource) DownloadRelease(arg1 string, arg2 cargo.ComponentLock) (component.Local, error) {
 	fake.downloadReleaseMutex.Lock()
 	ret, specificReturn := fake.downloadReleaseReturnsOnCall[len(fake.downloadReleaseArgsForCall)]
 	fake.downloadReleaseArgsForCall = append(fake.downloadReleaseArgsForCall, struct {
 		arg1 string
 		arg2 cargo.ComponentLock
-		arg3 int
-	}{arg1, arg2, arg3})
+	}{arg1, arg2})
 	stub := fake.DownloadReleaseStub
 	fakeReturns := fake.downloadReleaseReturns
-	fake.recordInvocation("DownloadRelease", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("DownloadRelease", []interface{}{arg1, arg2})
 	fake.downloadReleaseMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -98,17 +101,17 @@ func (fake *MultiReleaseSource) DownloadReleaseCallCount() int {
 	return len(fake.downloadReleaseArgsForCall)
 }
 
-func (fake *MultiReleaseSource) DownloadReleaseCalls(stub func(string, cargo.ComponentLock, int) (component.Local, error)) {
+func (fake *MultiReleaseSource) DownloadReleaseCalls(stub func(string, cargo.ComponentLock) (component.Local, error)) {
 	fake.downloadReleaseMutex.Lock()
 	defer fake.downloadReleaseMutex.Unlock()
 	fake.DownloadReleaseStub = stub
 }
 
-func (fake *MultiReleaseSource) DownloadReleaseArgsForCall(i int) (string, cargo.ComponentLock, int) {
+func (fake *MultiReleaseSource) DownloadReleaseArgsForCall(i int) (string, cargo.ComponentLock) {
 	fake.downloadReleaseMutex.RLock()
 	defer fake.downloadReleaseMutex.RUnlock()
 	argsForCall := fake.downloadReleaseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *MultiReleaseSource) DownloadReleaseReturns(result1 component.Local, result2 error) {
@@ -335,6 +338,38 @@ func (fake *MultiReleaseSource) GetMatchedReleaseReturnsOnCall(i int, result1 ca
 	}{result1, result2, result3}
 }
 
+func (fake *MultiReleaseSource) SetDownloadThreads(arg1 int) {
+	fake.setDownloadThreadsMutex.Lock()
+	fake.setDownloadThreadsArgsForCall = append(fake.setDownloadThreadsArgsForCall, struct {
+		arg1 int
+	}{arg1})
+	stub := fake.SetDownloadThreadsStub
+	fake.recordInvocation("SetDownloadThreads", []interface{}{arg1})
+	fake.setDownloadThreadsMutex.Unlock()
+	if stub != nil {
+		fake.SetDownloadThreadsStub(arg1)
+	}
+}
+
+func (fake *MultiReleaseSource) SetDownloadThreadsCallCount() int {
+	fake.setDownloadThreadsMutex.RLock()
+	defer fake.setDownloadThreadsMutex.RUnlock()
+	return len(fake.setDownloadThreadsArgsForCall)
+}
+
+func (fake *MultiReleaseSource) SetDownloadThreadsCalls(stub func(int)) {
+	fake.setDownloadThreadsMutex.Lock()
+	defer fake.setDownloadThreadsMutex.Unlock()
+	fake.SetDownloadThreadsStub = stub
+}
+
+func (fake *MultiReleaseSource) SetDownloadThreadsArgsForCall(i int) int {
+	fake.setDownloadThreadsMutex.RLock()
+	defer fake.setDownloadThreadsMutex.RUnlock()
+	argsForCall := fake.setDownloadThreadsArgsForCall[i]
+	return argsForCall.arg1
+}
+
 func (fake *MultiReleaseSource) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -346,6 +381,8 @@ func (fake *MultiReleaseSource) Invocations() map[string][][]interface{} {
 	defer fake.findReleaseVersionMutex.RUnlock()
 	fake.getMatchedReleaseMutex.RLock()
 	defer fake.getMatchedReleaseMutex.RUnlock()
+	fake.setDownloadThreadsMutex.RLock()
+	defer fake.setDownloadThreadsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

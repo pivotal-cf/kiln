@@ -12,9 +12,12 @@ import (
 type MultiReleaseSource interface {
 	GetMatchedRelease(Requirement) (Lock, bool, error)
 	FindReleaseVersion(Requirement) (Lock, bool, error)
-	DownloadRelease(releasesDir string, remoteRelease Lock, downloadThreads int) (Local, error)
+	DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error)
 
 	FindByID(string) (ReleaseSource, error)
+
+	// SetDownloadThreads allows configuring the concurrency for the s3 release source.
+	SetDownloadThreads(n int)
 }
 
 //counterfeiter:generate -o ./fakes/multi_release_source.go --fake-name MultiReleaseSource . MultiReleaseSource
@@ -57,7 +60,7 @@ type ReleaseSource interface {
 	// DownloadRelease downloads the release and writes the resulting file to the releasesDir.
 	// It should also calculate and set the SHA1 field on the Local result; it does not need
 	// to ensure the sums match, the caller must verify this.
-	DownloadRelease(releasesDir string, remoteRelease Lock, downloadThreads int) (Local, error)
+	DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error)
 }
 
 //counterfeiter:generate -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource

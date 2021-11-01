@@ -128,7 +128,8 @@ var _ = Describe("S3ReleaseSource", func() {
 		})
 
 		It("downloads the appropriate versions of built releases listed in remoteReleases", func() {
-			localRelease, err := releaseSource.DownloadRelease(releaseDir, remoteRelease, 7)
+			releaseSource.DownloadThreads = 7
+			localRelease, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(1))
 
@@ -148,7 +149,8 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		Context("when number of threads is not specified", func() {
 			It("uses the s3manager package's default download concurrency", func() {
-				_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease, 0)
+				releaseSource.DownloadThreads = 0
+				_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(1))
 
@@ -160,7 +162,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		Context("failure cases", func() {
 			Context("when a file can't be created", func() {
 				It("returns an error", func() {
-					_, err := releaseSource.DownloadRelease("/non-existent-folder", remoteRelease, 0)
+					_, err := releaseSource.DownloadRelease("/non-existent-folder", remoteRelease)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("/non-existent-folder"))
 				})
@@ -174,7 +176,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease, 0)
+					_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError("failed to download file: 503 Service Unavailable\n"))
 				})

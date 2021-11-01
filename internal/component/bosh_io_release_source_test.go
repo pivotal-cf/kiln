@@ -266,7 +266,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 		})
 
 		It("downloads the given releases into the release dir", func() {
-			localRelease, err := releaseSource.DownloadRelease(releaseDir, release1, 1)
+			localRelease, err := releaseSource.DownloadRelease(releaseDir, release1)
 
 			Expect(err).NotTo(HaveOccurred())
 

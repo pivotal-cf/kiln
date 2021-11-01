@@ -128,13 +128,23 @@ func (list ReleaseSourceList) GetMatchedRelease(requirement Requirement) (Lock, 
 	return Lock{}, false, nil
 }
 
-func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease Lock, downloadThreads int) (Local, error) {
+func (list ReleaseSourceList) SetDownloadThreads(n int) {
+	for i, rs := range list {
+		s3rs, ok := rs.(S3ReleaseSource)
+		if ok {
+			s3rs.DownloadThreads = n
+			list[i] = s3rs
+		}
+	}
+}
+
+func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
 	src, err := list.FindByID(remoteRelease.RemoteSource)
 	if err != nil {
 		return Local{}, err
 	}
 
-	localRelease, err := src.DownloadRelease(releaseDir, remoteRelease, downloadThreads)
+	localRelease, err := src.DownloadRelease(releaseDir, remoteRelease)
 	if err != nil {
 		return Local{}, scopedError(src.Configuration().ID, err)
 	}

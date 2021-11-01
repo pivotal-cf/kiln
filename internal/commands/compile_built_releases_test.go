@@ -130,7 +130,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 		stemcellSHA1, err = testHelpers.WriteStemcellTarball(stemcellPath, stemcellOS, stemcellVersion, osfs.New(""))
 		Expect(err).NotTo(HaveOccurred())
 
-		builtReleaseSource.DownloadReleaseCalls(func(releaseDir string, remote component.Lock, threads int) (component.Local, error) {
+		builtReleaseSource.DownloadReleaseCalls(func(releaseDir string, remote component.Lock) (component.Local, error) {
 			localPath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remote.Name, remote.Version))
 
 			f, err := fs.Create(localPath)
@@ -221,23 +221,21 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 			Expect(builtReleaseSource.DownloadReleaseCallCount()).To(Equal(2))
 
-			downloadDir, remote, threads := builtReleaseSource.DownloadReleaseArgsForCall(0)
+			downloadDir, remote := builtReleaseSource.DownloadReleaseArgsForCall(0)
 			Expect(downloadDir).To(Equal(releasesPath))
 			Expect(remote).To(Equal(component.Lock{
 				ComponentSpec: component.Spec{Name: "uaa", Version: "1.2.3"},
 				RemotePath:    "/remote/path/uaa-1.2.3.tgz",
 				RemoteSource:  builtSourceID,
 			}))
-			Expect(threads).To(Equal(0))
 
-			downloadDir, remote, threads = builtReleaseSource.DownloadReleaseArgsForCall(1)
+			downloadDir, remote = builtReleaseSource.DownloadReleaseArgsForCall(1)
 			Expect(downloadDir).To(Equal(releasesPath))
 			Expect(remote).To(Equal(component.Lock{
 				ComponentSpec: component.Spec{Name: "capi", Version: "2.3.4"},
 				RemotePath:    "/remote/path/capi-2.3.4.tgz",
 				RemoteSource:  builtSourceID,
 			}))
-			Expect(threads).To(Equal(0))
 
 			Expect(logBuf.Contents()).To(ContainSubstring(""))
 		})
@@ -757,7 +755,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 			Expect(compiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
 
-			downloadDir, remoteRelease, _ := compiledReleaseSource.DownloadReleaseArgsForCall(0)
+			downloadDir, remoteRelease := compiledReleaseSource.DownloadReleaseArgsForCall(0)
 			Expect(downloadDir).To(Equal(releasesPath))
 			Expect(remoteRelease).To(Equal(component.Lock{
 				ComponentSpec: component.Spec{Name: "uaa", Version: "1.2.3"},
@@ -847,7 +845,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 				}
 			})
 
-			compiledReleaseSource.DownloadReleaseCalls(func(_ string, remote component.Lock, _ int) (component.Local, error) {
+			compiledReleaseSource.DownloadReleaseCalls(func(_ string, remote component.Lock) (component.Local, error) {
 				switch remote.Name {
 				case "uaa":
 					return component.Local{
@@ -903,7 +901,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 			Expect(compiledReleaseSource.DownloadReleaseCallCount()).To(Equal(2))
 
-			downloadDir, remoteRelease, _ := compiledReleaseSource.DownloadReleaseArgsForCall(0)
+			downloadDir, remoteRelease := compiledReleaseSource.DownloadReleaseArgsForCall(0)
 			Expect(downloadDir).To(Equal(releasesPath))
 			Expect(remoteRelease).To(Equal(component.Lock{
 				ComponentSpec: component.Spec{Name: "uaa", Version: "1.2.3"},
@@ -911,7 +909,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 				RemoteSource:  compiledSourceID,
 			}))
 
-			downloadDir, remoteRelease, _ = compiledReleaseSource.DownloadReleaseArgsForCall(1)
+			downloadDir, remoteRelease = compiledReleaseSource.DownloadReleaseArgsForCall(1)
 			Expect(downloadDir).To(Equal(releasesPath))
 			Expect(remoteRelease).To(Equal(component.Lock{
 				ComponentSpec: component.Spec{Name: "capi", Version: "2.3.4"},

@@ -216,7 +216,7 @@ func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSour
 			continue
 		}
 
-		local, err := publishableReleaseSources.DownloadRelease(f.Options.ReleasesDir, remote, component.DefaultDownloadThreadCount)
+		local, err := publishableReleaseSources.DownloadRelease(f.Options.ReleasesDir, remote)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error downloading pre-compiled release for %q: %w", builtRelease.Name, err)
 		}
@@ -298,7 +298,7 @@ func (f CompileBuiltReleases) uploadReleasesToDirector(builtReleases []component
 	for _, remoteRelease := range builtReleases {
 		releaseIDs = append(releaseIDs, remoteRelease.ComponentSpec)
 
-		localRelease, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease, component.DefaultDownloadThreadCount)
+		localRelease, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease)
 		if err != nil {
 			return nil, fmt.Errorf("failure downloading built release %v: %w", remoteRelease.ComponentSpec, err) // untested
 		}

@@ -87,7 +87,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 			continue
 		}
 
-		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote, component.DefaultDownloadThreadCount)
+		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
 		if err != nil {
 			return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
 		}

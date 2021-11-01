@@ -19,12 +19,11 @@ type ReleaseSource struct {
 	configurationReturnsOnCall map[int]struct {
 		result1 cargo.ReleaseSourceConfig
 	}
-	DownloadReleaseStub        func(string, cargo.ComponentLock, int) (component.Local, error)
+	DownloadReleaseStub        func(string, cargo.ComponentLock) (component.Local, error)
 	downloadReleaseMutex       sync.RWMutex
 	downloadReleaseArgsForCall []struct {
 		arg1 string
 		arg2 cargo.ComponentLock
-		arg3 int
 	}
 	downloadReleaseReturns struct {
 		result1 component.Local
@@ -121,20 +120,19 @@ func (fake *ReleaseSource) ConfigurationReturnsOnCall(i int, result1 cargo.Relea
 	}{result1}
 }
 
-func (fake *ReleaseSource) DownloadRelease(arg1 string, arg2 cargo.ComponentLock, arg3 int) (component.Local, error) {
+func (fake *ReleaseSource) DownloadRelease(arg1 string, arg2 cargo.ComponentLock) (component.Local, error) {
 	fake.downloadReleaseMutex.Lock()
 	ret, specificReturn := fake.downloadReleaseReturnsOnCall[len(fake.downloadReleaseArgsForCall)]
 	fake.downloadReleaseArgsForCall = append(fake.downloadReleaseArgsForCall, struct {
 		arg1 string
 		arg2 cargo.ComponentLock
-		arg3 int
-	}{arg1, arg2, arg3})
+	}{arg1, arg2})
 	stub := fake.DownloadReleaseStub
 	fakeReturns := fake.downloadReleaseReturns
-	fake.recordInvocation("DownloadRelease", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("DownloadRelease", []interface{}{arg1, arg2})
 	fake.downloadReleaseMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -148,17 +146,17 @@ func (fake *ReleaseSource) DownloadReleaseCallCount() int {
 	return len(fake.downloadReleaseArgsForCall)
 }
 
-func (fake *ReleaseSource) DownloadReleaseCalls(stub func(string, cargo.ComponentLock, int) (component.Local, error)) {
+func (fake *ReleaseSource) DownloadReleaseCalls(stub func(string, cargo.ComponentLock) (component.Local, error)) {
 	fake.downloadReleaseMutex.Lock()
 	defer fake.downloadReleaseMutex.Unlock()
 	fake.DownloadReleaseStub = stub
 }
 
-func (fake *ReleaseSource) DownloadReleaseArgsForCall(i int) (string, cargo.ComponentLock, int) {
+func (fake *ReleaseSource) DownloadReleaseArgsForCall(i int) (string, cargo.ComponentLock) {
 	fake.downloadReleaseMutex.RLock()
 	defer fake.downloadReleaseMutex.RUnlock()
 	argsForCall := fake.downloadReleaseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *ReleaseSource) DownloadReleaseReturns(result1 component.Local, result2 error) {

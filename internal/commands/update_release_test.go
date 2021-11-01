@@ -153,7 +153,7 @@ var _ = Describe("UpdateRelease", func() {
 
 				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(1))
 
-				receivedReleasesDir, receivedRemoteRelease, _ := releaseSource.DownloadReleaseArgsForCall(0)
+				receivedReleasesDir, receivedRemoteRelease := releaseSource.DownloadReleaseArgsForCall(0)
 				Expect(receivedReleasesDir).To(Equal(releasesDir))
 				Expect(receivedRemoteRelease).To(Equal(expectedRemoteRelease))
 			})

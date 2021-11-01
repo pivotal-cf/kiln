@@ -2,13 +2,13 @@ package component_test
 
 import (
 	"errors"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 var _ = Describe("multiReleaseSource", func() {
@@ -112,15 +112,14 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns the local release", func() {
-				l, err := multiSrc.DownloadRelease("somewhere", *remote, 42)
+				l, err := multiSrc.DownloadRelease("somewhere", *remote)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(l).To(Equal(local))
 
 				Expect(src2.DownloadReleaseCallCount()).To(Equal(1))
-				dir, r, threads := src2.DownloadReleaseArgsForCall(0)
+				dir, r := src2.DownloadReleaseArgsForCall(0)
 				Expect(dir).To(Equal("somewhere"))
 				Expect(r).To(Equal(*remote))
-				Expect(threads).To(Equal(42))
 			})
 		})
 
@@ -132,7 +131,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns the error", func() {
-				_, err := multiSrc.DownloadRelease("somewhere", *remote, 42)
+				_, err := multiSrc.DownloadRelease("somewhere", *remote)
 				Expect(err).To(MatchError(ContainSubstring(src2.Configuration().ID)))
 				Expect(err).To(MatchError(ContainSubstring(expectedErr.Error())))
 			})
@@ -144,7 +143,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("errors", func() {
-				_, err := multiSrc.DownloadRelease("somewhere", *remote, 42)
+				_, err := multiSrc.DownloadRelease("somewhere", *remote)
 				Expect(err).To(MatchError(ContainSubstring("couldn't find a release source")))
 				Expect(err).To(MatchError(ContainSubstring("no-such-source")))
 				Expect(err).To(MatchError(ContainSubstring(src1.Configuration().ID)))

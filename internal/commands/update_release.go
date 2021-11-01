@@ -110,7 +110,7 @@ func (u UpdateRelease) Execute(args []string) error {
 			return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
 		}
 
-		localRelease, err = releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease, component.DefaultDownloadThreadCount)
+		localRelease, err = releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease)
 		if err != nil {
 			return fmt.Errorf("error downloading the release: %w", err)
 		}

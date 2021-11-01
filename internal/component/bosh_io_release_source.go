@@ -132,7 +132,7 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(requirement Requirement) (Lock
 	return Lock{}, false, nil
 }
 
-func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock, _ int) (Local, error) {
+func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
 	src.logger.Printf("downloading %s %s from %s", remoteRelease.Name, remoteRelease.Version, src.ID())
 
 	downloadURL := remoteRelease.RemotePath
