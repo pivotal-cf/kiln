@@ -18,7 +18,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-const releaseDateFormat = "01/02/2006"
+const releaseDateFormat = "2006-01-02"
 
 type ReleaseNotes struct {
 	Options struct {
@@ -33,7 +33,6 @@ type ReleaseNotes struct {
 	KilnfileLockAtCommit HistoricKilnfileLockFunc
 	RevisionResolver
 	Stat func(string) (os.FileInfo, error)
-	Now  func() time.Time
 	io.Writer
 }
 
@@ -61,7 +60,6 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 		RevisionResolver:     repo,
 		Stat:                 os.Stat,
 		Writer:               os.Stdout,
-		Now:                  time.Now,
 		pathRelativeToDotGit: rp,
 	}, nil
 }
@@ -84,8 +82,6 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	// TODO ensure len(nonFlagArgs) < 2
 
-	releaseDate, _ := r.releaseDate()
-
 	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(nonFlagArgs[0])) // TODO handle error
 	if err != nil {
 		panic(err)
@@ -103,6 +99,8 @@ func (r ReleaseNotes) Execute(args []string) error {
 	if err != nil {
 		panic(err)
 	}
+
+	releaseDate, _ := time.Parse(releaseDateFormat, r.Options.ReleaseDate)
 
 	info := ReleaseNotesInformation{
 		Version:           r.Options.Version, // TODO version should come from version file at final revision and then maybe override with flag
@@ -133,13 +131,6 @@ func (r ReleaseNotes) Usage() jhanda.Usage {
 		ShortDescription: "generates release notes from bosh-release release notes",
 		Flags:            r.Options,
 	}
-}
-
-func (r ReleaseNotes) releaseDate() (time.Time, error) {
-	if r.Options.ReleaseDate == "" {
-		return r.Now(), nil
-	}
-	return time.Parse(releaseDateFormat, r.Options.ReleaseDate) // TODO handle error
 }
 
 //go:embed release_notes.md.template
