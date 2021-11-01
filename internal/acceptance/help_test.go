@@ -25,6 +25,7 @@ Commands:
   find-stemcell-version    prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile
   help                     prints this usage information
   publish                  publish tile on Pivnet
+  release-notes            generates release notes from bosh-release release notes
   sync-with-local          update the Kilnfile.lock based on local releases
   update-release           bumps a release to a new version
   update-stemcell          updates stemcell and release information in Kilnfile.lock

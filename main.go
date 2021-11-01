@@ -105,6 +105,7 @@ func main() {
 	commandSet["cache-compiled-releases"] = commands.NewCacheCompiledReleases().WithLogger(outLogger)
 
 	commandSet["validate"] = commands.NewValidate(osfs.New(""))
+	commandSet["release-notes"] = commands.ReleaseNotes{}
 
 	err = commandSet.Execute(command, args)
 	if err != nil {
