@@ -1,4 +1,4 @@
-package fetcher
+package component
 
 import (
 	"crypto/sha1"
@@ -14,7 +14,6 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 type LocalReleaseDirectory struct {
@@ -29,8 +28,8 @@ func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.Release
 	}
 }
 
-func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]release.Local, error) {
-	var outputReleases []release.Local
+func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]Local, error) {
+	var outputReleases []Local
 
 	rawReleases, err := l.releasesService.ReleasesInDirectory(releasesDir)
 	if err != nil {
@@ -39,20 +38,20 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]release.L
 
 	for _, rel := range rawReleases {
 		releaseManifest := rel.Metadata.(builder.ReleaseManifest)
-		id := release.ID{Name: releaseManifest.Name, Version: releaseManifest.Version}
+		id := Spec{Name: releaseManifest.Name, Version: releaseManifest.Version}
 		localPath := rel.File
-		sha1, err := CalculateSum(localPath, osfs.New(""))
+		sum, err := CalculateSum(localPath, osfs.New(""))
 
 		if err != nil {
 			return nil, fmt.Errorf("couldn't calculate SHA1 sum of %q: %w", localPath, err) // untested
 		}
 
-		outputReleases = append(outputReleases, release.Local{ID: id, LocalPath: localPath, SHA1: sha1})
+		outputReleases = append(outputReleases, Local{Spec: id, LocalPath: localPath, SHA1: sum})
 	}
 	return outputReleases, nil
 }
 
-func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []release.Local, noConfirm bool) error {
+func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []Local, noConfirm bool) error {
 	var doDeletion byte
 
 	if len(extraReleaseSet) == 0 {
@@ -74,7 +73,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []release.Loc
 
 		l.logger.Printf("Are you sure you want to delete these files? [yN]")
 
-		fmt.Scanf("%c", &doDeletion)
+		_, _ = fmt.Scanf("%c", &doDeletion)
 	}
 
 	if doDeletion == 'y' || doDeletion == 'Y' {
@@ -86,7 +85,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []release.Loc
 	return nil
 }
 
-func (l LocalReleaseDirectory) deleteReleases(releasesToDelete []release.Local) error {
+func (l LocalReleaseDirectory) deleteReleases(releasesToDelete []Local) error {
 	for _, release := range releasesToDelete {
 		err := os.Remove(release.LocalPath)
 

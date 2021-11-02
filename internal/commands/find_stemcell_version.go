@@ -13,7 +13,7 @@ import (
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pivotal-cf/jhanda"
 
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -25,7 +25,7 @@ const (
 
 type FindStemcellVersion struct {
 	outLogger     *log.Logger
-	pivnetService *fetcher.Pivnet
+	pivnetService *component.Pivnet
 
 	Options struct {
 		flags.Standard
@@ -40,7 +40,7 @@ type stemcellVersionOutput struct {
 	RemotePath string `json:"remote_path"`
 }
 
-func NewFindStemcellVersion(outLogger *log.Logger, pivnetService *fetcher.Pivnet) FindStemcellVersion {
+func NewFindStemcellVersion(outLogger *log.Logger, pivnetService *component.Pivnet) FindStemcellVersion {
 	return FindStemcellVersion{
 		outLogger:     outLogger,
 		pivnetService: pivnetService,

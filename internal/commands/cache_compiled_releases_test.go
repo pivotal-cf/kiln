@@ -10,17 +10,16 @@ import (
 
 	"github.com/cloudfoundry/bosh-cli/director"
 	boshdirFakes "github.com/cloudfoundry/bosh-cli/director/directorfakes"
+	"github.com/go-git/go-billy/v5/memfs"
 	Ω "github.com/onsi/gomega"
 	"github.com/pivotal-cf/jhanda"
-	"github.com/go-git/go-billy/v5/memfs"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
-	fetcherFakes "github.com/pivotal-cf/kiln/internal/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/component"
+	componentFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/internal/om"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 var _ jhanda.Command = (*commands.CacheCompiledReleases)(nil)
@@ -52,10 +51,12 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 		},
 	})).NotTo(Ω.HaveOccurred())
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
-		Releases: []cargo.ReleaseLock{
+		Releases: []cargo.ComponentLock{
 			{
-				Name: "banana",
-				Version: "2.0.0",
+				ComponentSpec: component.Spec{
+					Name: "banana",
+					Version: "2.0.0",
+				},
 				RemoteSource: "cached-compiled-releases",
 				RemotePath: "banana-2.0.0-alpine-9.0.0",
 			},
@@ -69,7 +70,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	opsManager := new(fakes.OpsManagerReleaseCacheSource)
 	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "9.0.0"}]}`, nil)
 
-	cache := new(fetcherFakes.MultiReleaseSource)
+	cache := new(componentFakes.MultiReleaseSource)
 	cache.GetMatchedReleaseCalls(fakeCacheData)
 
 	deployment := new(boshdirFakes.FakeDeployment)
@@ -87,7 +88,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
 			return bucket, nil
 		},
-		ReleaseCache: func(kilnfile cargo.Kilnfile) fetcher.MultiReleaseSource {
+		ReleaseCache: func(kilnfile cargo.Kilnfile) component.MultiReleaseSource {
 			return cache
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
@@ -138,22 +139,28 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 		},
 	})).NotTo(Ω.HaveOccurred())
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
-		Releases: []cargo.ReleaseLock{
+		Releases: []cargo.ComponentLock{
 			{
+				ComponentSpec: component.Spec{
 				Name: "orange",
 				Version: "1.0.0",
+				},
 				RemoteSource: "new-releases",
 				RemotePath: "orange-1.0.0",
 			},
 			{
+				ComponentSpec: component.Spec{
 				Name: "banana",
 				Version: "2.0.0",
+				},
 				RemoteSource: "cached-compiled-releases",
 				RemotePath: "banana-2.0.0-alpine-9.0.0",
 			},
 			{
+				ComponentSpec: component.Spec{
 				Name: "lemon",
 				Version: "3.0.0",
+				},
 				RemoteSource: "new-releases",
 				RemotePath: "lemon-3.0.0",
 			},
@@ -167,7 +174,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	opsManager := new(fakes.OpsManagerReleaseCacheSource)
 	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "9.0.0"}]}`, nil)
 
-	cache := new(fetcherFakes.MultiReleaseSource)
+	cache := new(componentFakes.MultiReleaseSource)
 	cache.GetMatchedReleaseCalls(fakeCacheData)
 
 	releaseInBlobstore := []byte(`lemon-release-buffer`)
@@ -186,13 +193,13 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 
 	bucket := new(fakes.ReleaseCacheBucket)
 	var uploadedRelease bytes.Buffer
-	bucket.UploadReleaseCalls(func(_ release.Requirement, reader io.Reader) (release.Remote, error) {
+	bucket.UploadReleaseCalls(func(_ component.Requirement, reader io.Reader) (component.Lock, error) {
 		_, _ = io.Copy(&uploadedRelease, reader)
-		return release.Remote{
-			ID: release.ID{
+		return component.Lock{
+			ComponentSpec: component.Spec{
 				Name: "lemon", Version: "3.0.0",
 			},
-			SourceID: "cached-compiled-releases",
+			RemoteSource: "cached-compiled-releases",
 			RemotePath: "lemon-3.0.0-alpine-9.0.0",
 		}, nil
 	})
@@ -206,7 +213,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
 			return bucket, nil
 		},
-		ReleaseCache: func(kilnfile cargo.Kilnfile) fetcher.MultiReleaseSource {
+		ReleaseCache: func(kilnfile cargo.Kilnfile) component.MultiReleaseSource {
 			return cache
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
@@ -244,9 +251,11 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 
 	var updatedKilnfile cargo.KilnfileLock
 	please.Expect(fsReadYAML(fs, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
-	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(cargo.ReleaseLock{
-		Name: "lemon",
-		Version: "3.0.0",
+	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(component.Lock{
+		ComponentSpec: component.Spec{
+			Name: "lemon",
+			Version: "3.0.0",
+		},
 		RemoteSource: "cached-compiled-releases",
 		RemotePath: "lemon-3.0.0-alpine-9.0.0",
 	}))
@@ -276,22 +285,28 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 		},
 	})).NotTo(Ω.HaveOccurred())
 	initialLock := cargo.KilnfileLock{
-		Releases: []cargo.ReleaseLock{
+		Releases: []component.Lock{
 			{
-				Name: "orange",
-				Version: "1.0.0",
+				ComponentSpec: component.Spec{
+					Name: "orange",
+					Version: "1.0.0",
+				},
 				RemoteSource: "new-releases",
 				RemotePath: "orange-1.0.0",
 			},
 			{
-				Name: "banana",
-				Version: "2.0.0",
+				ComponentSpec: component.Spec{
+					Name: "banana",
+					Version: "2.0.0",
+				},
 				RemoteSource: "cached-compiled-releases",
 				RemotePath: "banana-2.0.0-alpine-9.0.0",
 			},
 			{
-				Name: "lemon",
-				Version: "3.0.0",
+				ComponentSpec: component.Spec{
+					Name: "lemon",
+					Version: "3.0.0",
+				},
 				RemoteSource: "new-releases",
 				RemotePath: "lemon-3.0.0",
 			},
@@ -306,7 +321,7 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	opsManager := new(fakes.OpsManagerReleaseCacheSource)
 	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "9.0.1"}]}`, nil)
 
-	cache := new(fetcherFakes.MultiReleaseSource)
+	cache := new(componentFakes.MultiReleaseSource)
 	cache.GetMatchedReleaseCalls(fakeCacheData)
 
 	bosh := new(boshdirFakes.FakeDirector)
@@ -321,7 +336,7 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
 			return bucket, nil
 		},
-		ReleaseCache: func(kilnfile cargo.Kilnfile) fetcher.MultiReleaseSource {
+		ReleaseCache: func(kilnfile cargo.Kilnfile) component.MultiReleaseSource {
 			return cache
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
@@ -349,26 +364,26 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	please.Expect(updatedLock).To(Ω.Equal(initialLock))
 }
 
-func fakeCacheData(requirement release.Requirement) (release.Remote, bool, error) {
+func fakeCacheData(requirement component.Requirement) (component.Lock, bool, error) {
 	switch requirement {
-	case release.Requirement{Name: "orange", Version: "1.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
-		return release.Remote{
-			ID: release.ID{
+	case component.Requirement{Name: "orange", Version: "1.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
+		return component.Lock{
+			ComponentSpec: component.Spec{
 				Name: "orange", Version: "1.0.0",
 			},
-			SourceID: "cached-compiled-releases",
+			RemoteSource: "cached-compiled-releases",
 			RemotePath: "orange-1.0.0-alpine-9.0.0",
 		}, true, nil
-	case release.Requirement{Name: "banana", Version: "2.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
-		return release.Remote{
-			ID: release.ID{
+	case component.Requirement{Name: "banana", Version: "2.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
+		return component.Lock{
+			ComponentSpec: component.Spec{
 				Name: "banana", Version: "2.0.0",
 			},
-			SourceID: "cached-compiled-releases",
+			RemoteSource: "cached-compiled-releases",
 			RemotePath: "banana-2.0.0-alpine-9.0.0",
 		}, true, nil
-	case release.Requirement{Name: "lemon", Version: "3.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
-		return release.Remote{}, false, nil
+	case component.Requirement{Name: "lemon", Version: "3.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
+		return component.Lock{}, false, nil
 	}
 
 	panic(fmt.Sprintf("unexpected requirement %#v", requirement))

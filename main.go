@@ -10,7 +10,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -56,18 +56,18 @@ func main() {
 
 	releaseManifestReader := builder.NewReleaseManifestReader(fs)
 	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
-	pivnetService := fetcher.CreateNewPivnetService()
-	localReleaseDirectory := fetcher.NewLocalReleaseDirectory(outLogger, releasesService)
-	mrsProvider := commands.MultiReleaseSourceProvider(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) fetcher.MultiReleaseSource {
-		repo := fetcher.NewReleaseSourceRepo(kilnfile, outLogger)
-		return repo.MultiReleaseSource(allowOnlyPublishable)
+	pivnetService := component.CreateNewPivnetService()
+	localReleaseDirectory := component.NewLocalReleaseDirectory(outLogger, releasesService)
+	mrsProvider := commands.MultiReleaseSourceProvider(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
+		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
+		return repo.Filter(allowOnlyPublishable)
 	})
-	ruFinder := commands.ReleaseUploaderFinder(func(kilnfile cargo.Kilnfile, sourceID string) (fetcher.ReleaseUploader, error) {
-		repo := fetcher.NewReleaseSourceRepo(kilnfile, outLogger)
+	ruFinder := commands.ReleaseUploaderFinder(func(kilnfile cargo.Kilnfile, sourceID string) (component.ReleaseUploader, error) {
+		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
 		return repo.FindReleaseUploader(sourceID)
 	})
-	rpFinder := commands.RemotePatherFinder(func(kilnfile cargo.Kilnfile, sourceID string) (fetcher.RemotePather, error) {
-		repo := fetcher.NewReleaseSourceRepo(kilnfile, outLogger)
+	rpFinder := commands.RemotePatherFinder(func(kilnfile cargo.Kilnfile, sourceID string) (component.RemotePather, error) {
+		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
 		return repo.FindRemotePather(sourceID)
 	})
 

@@ -1,4 +1,4 @@
-package fetcher
+package component
 
 import (
 	"bytes"
@@ -22,7 +22,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
+)
+
+const (
+	DefaultDownloadThreadCount = 0
 )
 
 //counterfeiter:generate -o ./fakes/s3_downloader.go --fake-name S3Downloader . S3Downloader
@@ -42,32 +45,31 @@ type S3Client interface {
 }
 
 type S3ReleaseSource struct {
-	id                 string
-	bucket             string
-	pathTemplateString string
-	publishable        bool
+	cargo.ReleaseSourceConfig
 
 	s3Client     S3Client
 	s3Downloader S3Downloader
 	s3Uploader   S3Uploader
 
+	DownloadThreads int
+
 	logger *log.Logger
 }
 
-func NewS3ReleaseSource(id, bucket, pathTemplate string, publishable bool, client S3Client, downloader S3Downloader, uploader S3Uploader, logger *log.Logger) S3ReleaseSource {
+func NewS3ReleaseSource(c cargo.ReleaseSourceConfig, client S3Client, downloader S3Downloader, uploader S3Uploader, logger *log.Logger) S3ReleaseSource {
+	if c.Type != "" && c.Type != ReleaseSourceTypeS3 {
+		panic(panicMessageWrongReleaseSourceType)
+	}
 	return S3ReleaseSource{
-		id:                 id,
-		bucket:             bucket,
-		pathTemplateString: pathTemplate,
-		publishable:        publishable,
-		s3Client:           client,
-		s3Downloader:       downloader,
-		s3Uploader:         uploader,
-		logger:             logger,
+		ReleaseSourceConfig: c,
+		s3Client:            client,
+		s3Downloader:        downloader,
+		s3Uploader:          uploader,
+		logger:              logger,
 	}
 }
 
-func S3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.Logger) S3ReleaseSource {
+func NewS3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.Logger) S3ReleaseSource {
 	validateConfig(config)
 
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
@@ -84,10 +86,7 @@ func S3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.Log
 	client := s3.New(sess)
 
 	return NewS3ReleaseSource(
-		config.ID,
-		config.Bucket,
-		config.PathTemplate,
-		config.Publishable,
+		config,
 		client,
 		s3manager.NewDownloaderWithClient(client),
 		s3manager.NewUploaderWithClient(client),
@@ -104,44 +103,40 @@ func validateConfig(config cargo.ReleaseSourceConfig) {
 	}
 }
 
-func (src S3ReleaseSource) ID() string {
-	return src.id
-}
-
-func (src S3ReleaseSource) Publishable() bool {
-	return src.publishable
-}
+func (src S3ReleaseSource) ID() string                               { return src.ReleaseSourceConfig.ID }
+func (src S3ReleaseSource) Publishable() bool                        { return src.ReleaseSourceConfig.Publishable }
+func (src S3ReleaseSource) Configuration() cargo.ReleaseSourceConfig { return src.ReleaseSourceConfig }
 
 //counterfeiter:generate -o ./fakes/s3_request_failure.go --fake-name S3RequestFailure github.com/aws/aws-sdk-go/service/s3.RequestFailure
-func (src S3ReleaseSource) GetMatchedRelease(requirement release.Requirement) (release.Remote, bool, error) {
+func (src S3ReleaseSource) GetMatchedRelease(requirement Requirement) (Lock, bool, error) {
 	remotePath, err := src.RemotePath(requirement)
 	if err != nil {
-		return release.Remote{}, false, err
+		return Lock{}, false, err
 	}
 
 	headRequest := new(s3.HeadObjectInput)
-	headRequest.SetBucket(src.bucket)
+	headRequest.SetBucket(src.ReleaseSourceConfig.Bucket)
 	headRequest.SetKey(remotePath)
 
 	_, err = src.s3Client.HeadObject(headRequest)
 	if err != nil {
 		requestFailure, ok := err.(s3.RequestFailure)
 		if ok && requestFailure.StatusCode() == 404 {
-			return release.Remote{}, false, nil
+			return Lock{}, false, nil
 		}
-		return release.Remote{}, false, err
+		return Lock{}, false, err
 	}
 
-	return release.Remote{
-		ID:         release.ID{Name: requirement.Name, Version: requirement.Version},
-		RemotePath: remotePath,
-		SourceID:   src.ID(),
+	return Lock{
+		ComponentSpec: Spec{Name: requirement.Name, Version: requirement.Version},
+		RemotePath:    remotePath,
+		RemoteSource:  src.ID(),
 	}, true, nil
 }
 
-func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (release.Remote, bool, error) {
+func (src S3ReleaseSource) FindReleaseVersion(requirement Requirement) (Lock, bool, error) {
 	pathTemplatePattern, _ := regexp.Compile(`^\d+\.\d+`)
-	tasVersion := pathTemplatePattern.FindString(src.pathTemplateString)
+	tasVersion := pathTemplatePattern.FindString(src.ReleaseSourceConfig.PathTemplate)
 	var prefix string
 	if tasVersion != "" {
 		prefix = tasVersion + "/"
@@ -149,19 +144,19 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (
 	prefix += requirement.Name + "/"
 
 	releaseResults, err := src.s3Client.ListObjectsV2(&s3.ListObjectsV2Input{
-		Bucket: &src.bucket,
+		Bucket: &src.ReleaseSourceConfig.Bucket,
 		Prefix: &prefix,
 	})
 	if err != nil {
-		return release.Remote{}, false, err
+		return Lock{}, false, err
 	}
 
-	semverPattern, err := regexp.Compile(`(-|v)\d+(.\d+)*`)
+	semverPattern, err := regexp.Compile(`([-v])\d+(.\d+)*`)
 	if err != nil {
-		return release.Remote{}, false, err
+		return Lock{}, false, err
 	}
 
-	foundRelease := release.Remote{}
+	foundRelease := Lock{}
 	var constraint *semver.Constraints
 	if requirement.VersionConstraint != "" {
 		constraint, _ = semver.NewConstraint(requirement.VersionConstraint)
@@ -184,110 +179,110 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement release.Requirement) (
 				continue
 			}
 
-			if (foundRelease == release.Remote{}) {
-				foundRelease = release.Remote{
-					ID: release.ID{
+			if (foundRelease == Lock{}) {
+				foundRelease = Lock{
+					ComponentSpec: Spec{
 						Name:    requirement.Name,
 						Version: version,
 					},
-					RemotePath: *result.Key,
-					SourceID:   src.id,
+					RemotePath:   *result.Key,
+					RemoteSource: src.ReleaseSourceConfig.ID,
 				}
 			} else {
 				foundVersion, _ := semver.NewVersion(foundRelease.Version)
 				if newVersion.GreaterThan(foundVersion) {
-					foundRelease = release.Remote{
-						ID: release.ID{
+					foundRelease = Lock{
+						ComponentSpec: Spec{
 							Name:    requirement.Name,
 							Version: version,
 						},
-						RemotePath: *result.Key,
-						SourceID:   src.id,
+						RemotePath:   *result.Key,
+						RemoteSource: src.ReleaseSourceConfig.ID,
 					}
 				}
 			}
 		}
 	}
-	if (foundRelease == release.Remote{}) {
-		return release.Remote{}, false, nil
+	if (foundRelease == Lock{}) {
+		return Lock{}, false, nil
 	}
-	var releaseLocal release.Local
-	releaseLocal, err = src.DownloadRelease("/tmp", foundRelease, DefaultDownloadThreadCount)
+	var releaseLocal Local
+	releaseLocal, err = src.DownloadRelease("/tmp", foundRelease)
 	if err != nil {
-		return release.Remote{}, false, err
+		return Lock{}, false, err
 	}
-	foundRelease.SHA = releaseLocal.SHA1
+	foundRelease.SHA1 = releaseLocal.SHA1
 	return foundRelease, true, nil
 }
 
-func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease release.Remote, downloadThreads int) (release.Local, error) {
+func (src S3ReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
 	setConcurrency := func(dl *s3manager.Downloader) {
-		if downloadThreads > 0 {
-			dl.Concurrency = downloadThreads
+		if src.DownloadThreads > 0 {
+			dl.Concurrency = src.DownloadThreads
 		} else {
 			dl.Concurrency = s3manager.DefaultDownloadConcurrency
 		}
 	}
 
-	src.logger.Printf("downloading %s %s from %s", remoteRelease.Name, remoteRelease.Version, src.bucket)
+	src.logger.Printf("downloading %s %s from %s", remoteRelease.Name, remoteRelease.Version, src.ReleaseSourceConfig.Bucket)
 
 	outputFile := filepath.Join(releaseDir, filepath.Base(remoteRelease.RemotePath))
 
 	file, err := os.Create(outputFile)
 	if err != nil {
-		return release.Local{}, fmt.Errorf("failed to create file %q: %w", outputFile, err)
+		return Local{}, fmt.Errorf("failed to create file %q: %w", outputFile, err)
 	}
 	defer func() { _ = file.Close() }()
 
 	_, err = src.s3Downloader.Download(file, &s3.GetObjectInput{
-		Bucket: aws.String(src.bucket),
+		Bucket: aws.String(src.ReleaseSourceConfig.Bucket),
 		Key:    aws.String(remoteRelease.RemotePath),
 	}, setConcurrency)
 	if err != nil {
-		return release.Local{}, fmt.Errorf("failed to download file: %w\n", err)
+		return Local{}, fmt.Errorf("failed to download file: %w\n", err)
 	}
 
 	_, err = file.Seek(0, 0)
 	if err != nil {
-		return release.Local{}, fmt.Errorf("error reseting file cursor: %w", err) // untested
+		return Local{}, fmt.Errorf("error reseting file cursor: %w", err) // untested
 	}
 
 	hash := sha1.New()
 	_, err = io.Copy(hash, file)
 	if err != nil {
-		return release.Local{}, fmt.Errorf("error hashing file contents: %w", err) // untested
+		return Local{}, fmt.Errorf("error hashing file contents: %w", err) // untested
 	}
 
-	sha1 := hex.EncodeToString(hash.Sum(nil))
+	sum := hex.EncodeToString(hash.Sum(nil))
 
-	return release.Local{ID: remoteRelease.ID, LocalPath: outputFile, SHA1: sha1}, nil
+	return Local{Spec: remoteRelease.ComponentSpec, LocalPath: outputFile, SHA1: sum}, nil
 }
 
-func (src S3ReleaseSource) UploadRelease(spec release.Requirement, file io.Reader) (release.Remote, error) {
+func (src S3ReleaseSource) UploadRelease(spec Requirement, file io.Reader) (Lock, error) {
 	remotePath, err := src.RemotePath(spec)
 	if err != nil {
-		return release.Remote{}, err
+		return Lock{}, err
 	}
 
 	src.logger.Printf("uploading release %q to %s at %q...\n", spec.Name, src.ID(), remotePath)
 
 	_, err = src.s3Uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(src.bucket),
+		Bucket: aws.String(src.ReleaseSourceConfig.Bucket),
 		Key:    aws.String(remotePath),
 		Body:   file,
 	})
 	if err != nil {
-		return release.Remote{}, err
+		return Lock{}, err
 	}
 
-	return release.Remote{
-		ID:         release.ID{Name: spec.Name, Version: spec.Version},
-		RemotePath: remotePath,
-		SourceID:   src.ID(),
+	return Lock{
+		ComponentSpec: Spec{Name: spec.Name, Version: spec.Version},
+		RemotePath:    remotePath,
+		RemoteSource:  src.ID(),
 	}, nil
 }
 
-func (src S3ReleaseSource) RemotePath(requirement release.Requirement) (string, error) {
+func (src S3ReleaseSource) RemotePath(requirement Requirement) (string, error) {
 	pathBuf := new(bytes.Buffer)
 
 	err := src.pathTemplate().Execute(pathBuf, requirement)
@@ -302,5 +297,5 @@ func (src S3ReleaseSource) pathTemplate() *template.Template {
 	return template.Must(
 		template.New("remote-path").
 			Funcs(template.FuncMap{"trimSuffix": strings.TrimSuffix}).
-			Parse(src.pathTemplateString))
+			Parse(src.ReleaseSourceConfig.PathTemplate))
 }

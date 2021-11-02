@@ -2,6 +2,7 @@ package history_test
 
 import (
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"os"
 	"regexp"
 	"testing"
@@ -11,7 +12,6 @@ import (
 	"github.com/go-git/go-git/v5"
 
 	"github.com/pivotal-cf/kiln/internal/history"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 func checkIfLocalTasRepo(t *testing.T) string {
@@ -35,7 +35,7 @@ func TestTileVersionFileBoshReleaseList(t *testing.T) {
 
 	_, err = history.TileVersionFileBoshReleaseList(repo, regexp.MustCompile(`^rel/2\.\d+$`), []string{"garden-runc"},
 		history.StopAfter(10000),
-		history.FindBoshRelease(release.ID{Name: "garden-runc", Version: "1.19.29"}),
+		history.FindBoshRelease(component.Spec{Name: "garden-runc", Version: "1.19.29"}),
 	)
 
 	please.Expect(err).NotTo(Ω.HaveOccurred())
@@ -52,34 +52,34 @@ func TestVersionFileBoshReleaseList(t *testing.T) {
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 
 	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
-		Tile: release.ID{Name: "tas", Version: "2.11.4"},
-		Bosh: release.ID{Name: "garden-runc", Version: "1.19.29"},
+		Tile: component.Spec{Name: "tas", Version: "2.11.4"},
+		Bosh: component.Spec{Name: "garden-runc", Version: "1.19.29"},
 	}))
 	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
-		Tile: release.ID{Name: "ist", Version: "2.11.3"},
-		Bosh: release.ID{Name: "garden-runc", Version: "1.19.28"},
+		Tile: component.Spec{Name: "ist", Version: "2.11.3"},
+		Bosh: component.Spec{Name: "garden-runc", Version: "1.19.28"},
 	}))
 	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
-		Tile: release.ID{Name: "tasw", Version: "2.7.29"},
-		Bosh: release.ID{Name: "garden-runc", Version: "1.19.25"},
+		Tile: component.Spec{Name: "tasw", Version: "2.7.29"},
+		Bosh: component.Spec{Name: "garden-runc", Version: "1.19.25"},
 	}))
 	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
-		Tile: release.ID{Name: "ist", Version: "2.9.20"},
-		Bosh: release.ID{Name: "cflinuxfs3", Version: "0.238.0"},
+		Tile: component.Spec{Name: "ist", Version: "2.9.20"},
+		Bosh: component.Spec{Name: "cflinuxfs3", Version: "0.238.0"},
 	}))
 }
 
 func TestFindBoshTileRelease(t *testing.T) {
-	result := history.FindBoshTileRelease(release.ID{
+	result := history.FindBoshTileRelease(component.Spec{
 		Name:    "product",
 		Version: "1.2,3",
 	})(0, object.Commit{}, []history.ReleaseMapping{
 		{
-			Tile: release.ID{
+			Tile: component.Spec{
 				Name:    "product",
 				Version: "1.2,3",
 			},
-			Bosh: release.ID{
+			Bosh: component.Spec{
 				Name:    "release",
 				Version: "1.2,3",
 			},

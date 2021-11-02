@@ -8,9 +8,8 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 type Fetch struct {
@@ -31,7 +30,7 @@ type Fetch struct {
 }
 
 //counterfeiter:generate -o ./fakes/multi_release_source_provider.go --fake-name MultiReleaseSourceProvider . MultiReleaseSourceProvider
-type MultiReleaseSourceProvider func(cargo.Kilnfile, bool) fetcher.MultiReleaseSource
+type MultiReleaseSourceProvider func(cargo.Kilnfile, bool) component.MultiReleaseSource
 
 func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider, localReleaseDirectory LocalReleaseDirectory) Fetch {
 	return Fetch{
@@ -43,8 +42,8 @@ func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceP
 
 //counterfeiter:generate -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
 type LocalReleaseDirectory interface {
-	GetLocalReleases(releasesDir string) ([]release.Local, error)
-	DeleteExtraReleases(extraReleases []release.Local, noConfirm bool) error
+	GetLocalReleases(releasesDir string) ([]component.Local, error)
+	DeleteExtraReleases(extraReleases []component.Local, noConfirm bool) error
 }
 
 func (f Fetch) Execute(args []string) error {
@@ -72,7 +71,7 @@ func (f Fetch) Execute(args []string) error {
 	return nil
 }
 
-func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []release.Local, error) {
+func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []component.Local, error) {
 	err := flags.LoadFlagsWithDefaults(&f.Options, args, nil)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
@@ -104,19 +103,21 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []rele
 	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
 }
 
-func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ReleaseLock) ([]release.Local, error) {
+func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ComponentLock) ([]component.Local, error) {
 	releaseSource := f.multiReleaseSourceProvider(kilnfile, f.Options.AllowOnlyPublishableReleases)
 
-	var downloaded []release.Local
+	// f.Options.DownloadThreads
+
+	var downloaded []component.Local
 
 	for _, rl := range releaseLocks {
-		remoteRelease := release.Remote{
-			ID:         release.ID{Name: rl.Name, Version: rl.Version},
-			RemotePath: rl.RemotePath,
-			SourceID:   rl.RemoteSource,
+		remoteRelease := component.Lock{
+			ComponentSpec: component.Spec{Name: rl.Name, Version: rl.Version},
+			RemotePath:    rl.RemotePath,
+			RemoteSource:  rl.RemoteSource,
 		}
 
-		local, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease, f.Options.DownloadThreads)
+		local, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease)
 		if err != nil {
 			return nil, fmt.Errorf("download failed: %w", err)
 		}
@@ -144,8 +145,8 @@ func (f Fetch) Usage() jhanda.Usage {
 	}
 }
 
-func partition(releaseLocks []cargo.ReleaseLock, localReleases []release.Local) (intersection []release.Local, missing []cargo.ReleaseLock, extra []release.Local) {
-	missing = make([]cargo.ReleaseLock, len(releaseLocks))
+func partition(releaseLocks []cargo.ComponentLock, localReleases []component.Local) (intersection []component.Local, missing []cargo.ComponentLock, extra []component.Local) {
+	missing = make([]cargo.ComponentLock, len(releaseLocks))
 	copy(missing, releaseLocks)
 
 nextRelease:

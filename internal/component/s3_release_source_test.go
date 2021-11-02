@@ -1,4 +1,4 @@
-package fetcher_test
+package component_test
 
 import (
 	"errors"
@@ -19,10 +19,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/go-git/go-billy/v5/osfs"
 
-	"github.com/pivotal-cf/kiln/internal/fetcher"
-	fetcherFakes "github.com/pivotal-cf/kiln/internal/fetcher/fakes"
+	"github.com/pivotal-cf/kiln/internal/component"
+	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/release"
 )
 
 func verifySetsConcurrency(opts []func(*s3manager.Downloader), concurrency int) {
@@ -42,7 +41,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		sourceID = "s3-source"
 	)
 
-	Describe("S3ReleaseSourceFromConfig", func() {
+	Describe("NewS3ReleaseSourceFromConfig", func() {
 		var (
 			config *cargo.ReleaseSourceConfig
 			logger *log.Logger
@@ -67,7 +66,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				defer func() {
 					r = recover()
 				}()
-				fetcher.S3ReleaseSourceFromConfig(*config, logger)
+				component.NewS3ReleaseSourceFromConfig(*config, logger)
 			}()
 
 			Expect(r).To(ContainSubstring(expectedSubstring))
@@ -90,12 +89,12 @@ var _ = Describe("S3ReleaseSource", func() {
 		)
 
 		var (
-			releaseSource         fetcher.S3ReleaseSource
+			releaseSource         component.S3ReleaseSource
 			logger                *log.Logger
 			releaseDir            string
-			remoteRelease         release.Remote
+			remoteRelease         component.Lock
 			expectedLocalFilename string
-			releaseID             release.ID
+			releaseID             component.Spec
 			fakeS3Downloader      *fetcherFakes.S3Downloader
 		)
 
@@ -105,8 +104,8 @@ var _ = Describe("S3ReleaseSource", func() {
 			releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 			Expect(err).NotTo(HaveOccurred())
 
-			releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
-			remoteRelease = release.Remote{ID: releaseID, RemotePath: "2.10/uaa/uaa-1.2.3-ubuntu-xenial-621.55.tgz", SourceID: bucket}
+			releaseID = component.Spec{Name: "uaa", Version: "1.2.3"}
+			remoteRelease = component.Lock{ComponentSpec: releaseID, RemotePath: "2.10/uaa/uaa-1.2.3-ubuntu-xenial-621.55.tgz", RemoteSource: bucket}
 			expectedLocalFilename = filepath.Base(remoteRelease.RemotePath)
 
 			logger = log.New(GinkgoWriter, "", 0)
@@ -116,7 +115,12 @@ var _ = Describe("S3ReleaseSource", func() {
 				n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 				return int64(n), err
 			}
-			releaseSource = fetcher.NewS3ReleaseSource(sourceID, bucket, "", false, nil, fakeS3Downloader, nil, logger)
+			releaseSource = component.NewS3ReleaseSource(cargo.ReleaseSourceConfig{
+				ID:           sourceID,
+				Bucket:       bucket,
+				PathTemplate: "",
+				Publishable:  false,
+			}, nil, fakeS3Downloader, nil, logger)
 		})
 
 		AfterEach(func() {
@@ -124,7 +128,8 @@ var _ = Describe("S3ReleaseSource", func() {
 		})
 
 		It("downloads the appropriate versions of built releases listed in remoteReleases", func() {
-			localRelease, err := releaseSource.DownloadRelease(releaseDir, remoteRelease, 7)
+			releaseSource.DownloadThreads = 7
+			localRelease, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(1))
 
@@ -133,18 +138,19 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(releaseContents).To(Equal([]byte("some-bucket/" + remoteRelease.RemotePath)))
 
-			sha1, err := fetcher.CalculateSum(releasePath, osfs.New(""))
+			sha1, err := component.CalculateSum(releasePath, osfs.New(""))
 			Expect(err).NotTo(HaveOccurred())
 
 			_, _, opts := fakeS3Downloader.DownloadArgsForCall(0)
 			verifySetsConcurrency(opts, 7)
 
-			Expect(localRelease).To(Equal(release.Local{ID: releaseID, LocalPath: releasePath, SHA1: sha1}))
+			Expect(localRelease).To(Equal(component.Local{Spec: releaseID, LocalPath: releasePath, SHA1: sha1}))
 		})
 
 		Context("when number of threads is not specified", func() {
 			It("uses the s3manager package's default download concurrency", func() {
-				_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease, 0)
+				releaseSource.DownloadThreads = 0
+				_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(1))
 
@@ -156,7 +162,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		Context("failure cases", func() {
 			Context("when a file can't be created", func() {
 				It("returns an error", func() {
-					_, err := releaseSource.DownloadRelease("/non-existent-folder", remoteRelease, 0)
+					_, err := releaseSource.DownloadRelease("/non-existent-folder", remoteRelease)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("/non-existent-folder"))
 				})
@@ -170,7 +176,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease, 0)
+					_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError("failed to download file: 503 Service Unavailable\n"))
 				})
@@ -182,17 +188,17 @@ var _ = Describe("S3ReleaseSource", func() {
 		const bucket = "built-bucket"
 
 		var (
-			releaseSource  fetcher.S3ReleaseSource
+			releaseSource  component.S3ReleaseSource
 			fakeS3Client   *fetcherFakes.S3Client
-			desiredRelease release.Requirement
-			bpmReleaseID   release.ID
+			desiredRelease component.Requirement
+			bpmReleaseID   component.Spec
 			bpmKey         string
 			logger         *log.Logger
 		)
 
 		BeforeEach(func() {
-			bpmReleaseID = release.ID{Name: "bpm-release", Version: "1.2.3"}
-			desiredRelease = release.Requirement{
+			bpmReleaseID = component.Spec{Name: "bpm-release", Version: "1.2.3"}
+			desiredRelease = component.Requirement{
 				Name:            "bpm-release",
 				Version:         "1.2.3",
 				StemcellOS:      "ubuntu-xenial",
@@ -204,11 +210,12 @@ var _ = Describe("S3ReleaseSource", func() {
 
 			logger = log.New(nil, "", 0)
 
-			releaseSource = fetcher.NewS3ReleaseSource(
-				sourceID,
-				bucket,
-				`2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
-				false,
+			releaseSource = component.NewS3ReleaseSource(
+				cargo.ReleaseSourceConfig{
+					ID:           sourceID,
+					Bucket:       bucket,
+					PathTemplate: `2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+				},
 				fakeS3Client,
 				nil,
 				nil,
@@ -227,10 +234,10 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(input.Bucket).To(PointTo(BeEquivalentTo(bucket)))
 			Expect(input.Key).To(PointTo(BeEquivalentTo(bpmKey)))
 
-			Expect(remoteRelease).To(Equal(release.Remote{
-				ID:         bpmReleaseID,
-				RemotePath: bpmKey,
-				SourceID:   sourceID,
+			Expect(remoteRelease).To(Equal(component.Lock{
+				ComponentSpec: bpmReleaseID,
+				RemotePath:    bpmKey,
+				RemoteSource:  sourceID,
 			}))
 		})
 
@@ -250,11 +257,13 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
-				releaseSource = fetcher.NewS3ReleaseSource(
-					sourceID,
-					bucket,
-					`{{.NoSuchField}}`,
-					false,
+				releaseSource = component.NewS3ReleaseSource(
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       bucket,
+						PathTemplate: `{{.NoSuchField}}`,
+						Publishable:  false,
+					},
 					fakeS3Client,
 					nil,
 					nil,
@@ -275,18 +284,18 @@ var _ = Describe("S3ReleaseSource", func() {
 		const bucket = "pcf-final-bosh-releases"
 
 		var (
-			releaseSource  fetcher.S3ReleaseSource
+			releaseSource  component.S3ReleaseSource
 			fakeS3Client   *fetcherFakes.S3Client
-			desiredRelease release.Requirement
-			releaseID      release.ID
+			desiredRelease component.Requirement
+			releaseID      component.Spec
 			uaaKey         string
 			logger         *log.Logger
 		)
 		When("version is semantic and release has version constraint", func() {
 			BeforeEach(func() {
 
-				releaseID = release.ID{Name: "uaa", Version: "1.1.1"}
-				desiredRelease = release.Requirement{
+				releaseID = component.Spec{Name: "uaa", Version: "1.1.1"}
+				desiredRelease = component.Requirement{
 					Name:              "uaa",
 					VersionConstraint: "~1.1",
 					StemcellVersion:   "621.71",
@@ -313,11 +322,13 @@ var _ = Describe("S3ReleaseSource", func() {
 
 				logger = log.New(GinkgoWriter, "", 0)
 
-				releaseSource = fetcher.NewS3ReleaseSource(
-					sourceID,
-					bucket,
-					`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
-					false,
+				releaseSource = component.NewS3ReleaseSource(
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       bucket,
+						PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
+						Publishable:  false,
+					},
 					fakeS3Client,
 					fakeS3Downloader,
 					nil,
@@ -335,19 +346,19 @@ var _ = Describe("S3ReleaseSource", func() {
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
 				Expect(*input.Prefix).To(Equal("uaa/"))
 
-				Expect(remoteRelease).To(Equal(release.Remote{
-					ID:         releaseID,
-					RemotePath: uaaKey,
-					SourceID:   sourceID,
-					SHA:        "1a77ff749f0f2f49493eb8a517fb7eaa04df9b62",
+				Expect(remoteRelease).To(Equal(component.Lock{
+					ComponentSpec: releaseID,
+					RemotePath:    uaaKey,
+					RemoteSource:  sourceID,
+					SHA1:          "1a77ff749f0f2f49493eb8a517fb7eaa04df9b62",
 				}))
 			})
 		})
 
 		When("version is a single number", func() {
 			BeforeEach(func() {
-				releaseID = release.ID{Name: "uaa", Version: "123"}
-				desiredRelease = release.Requirement{
+				releaseID = component.Spec{Name: "uaa", Version: "123"}
+				desiredRelease = component.Requirement{
 					Name:            "uaa",
 					StemcellVersion: "621.71",
 				}
@@ -374,11 +385,13 @@ var _ = Describe("S3ReleaseSource", func() {
 					return int64(n), err
 				}
 
-				releaseSource = fetcher.NewS3ReleaseSource(
-					sourceID,
-					bucket,
-					`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
-					false,
+				releaseSource = component.NewS3ReleaseSource(
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       bucket,
+						PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
+						Publishable:  false,
+					},
 					fakeS3Client,
 					fakeS3Downloader,
 					nil,
@@ -396,11 +409,11 @@ var _ = Describe("S3ReleaseSource", func() {
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
 				Expect(*input.Prefix).To(Equal("uaa/"))
 
-				Expect(remoteRelease).To(Equal(release.Remote{
-					ID:         releaseID,
-					RemotePath: uaaKey,
-					SourceID:   sourceID,
-					SHA:        "bc7cb372ee4b9a9d6f4e8a993d46405d2c114e9c",
+				Expect(remoteRelease).To(Equal(component.Lock{
+					ComponentSpec: releaseID,
+					RemotePath:    uaaKey,
+					RemoteSource:  sourceID,
+					SHA1:          "bc7cb372ee4b9a9d6f4e8a993d46405d2c114e9c",
 				}))
 			})
 		})
@@ -410,17 +423,17 @@ var _ = Describe("S3ReleaseSource", func() {
 		const bucket = "compiled-releases"
 
 		var (
-			releaseSource  fetcher.S3ReleaseSource
+			releaseSource  component.S3ReleaseSource
 			fakeS3Client   *fetcherFakes.S3Client
-			desiredRelease release.Requirement
-			releaseID      release.ID
+			desiredRelease component.Requirement
+			releaseID      component.Spec
 			uaaKey         string
 			logger         *log.Logger
 		)
 		When("version is semantic and has 2 latest versions with different stemcell versions", func() {
 			BeforeEach(func() {
-				releaseID = release.ID{Name: "uaa", Version: "1.2.3"}
-				desiredRelease = release.Requirement{
+				releaseID = component.Spec{Name: "uaa", Version: "1.2.3"}
+				desiredRelease = component.Requirement{
 					Name:            "uaa",
 					StemcellVersion: "621.71",
 				}
@@ -447,11 +460,13 @@ var _ = Describe("S3ReleaseSource", func() {
 					return int64(n), err
 				}
 
-				releaseSource = fetcher.NewS3ReleaseSource(
-					sourceID,
-					bucket,
-					`2.11/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
-					true,
+				releaseSource = component.NewS3ReleaseSource(
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       bucket,
+						PathTemplate: `2.11/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+						Publishable:  true,
+					},
 					fakeS3Client,
 					fakeS3Downloader,
 					nil,
@@ -469,11 +484,11 @@ var _ = Describe("S3ReleaseSource", func() {
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
 				Expect(*input.Prefix).To(Equal("2.11/uaa/"))
 
-				Expect(remoteRelease).To(Equal(release.Remote{
-					ID:         releaseID,
-					RemotePath: uaaKey,
-					SourceID:   sourceID,
-					SHA:        "78facf87f730395fb263fb5e89157c438fc1d8a9",
+				Expect(remoteRelease).To(Equal(component.Lock{
+					ComponentSpec: releaseID,
+					RemotePath:    uaaKey,
+					RemoteSource:  sourceID,
+					SHA1:          "78facf87f730395fb263fb5e89157c438fc1d8a9",
 				}))
 			})
 		})
@@ -482,17 +497,19 @@ var _ = Describe("S3ReleaseSource", func() {
 	Describe("UploadRelease", func() {
 		var (
 			s3Uploader    *fetcherFakes.S3Uploader
-			releaseSource fetcher.S3ReleaseSource
+			releaseSource component.S3ReleaseSource
 			file          io.Reader
 		)
 
 		BeforeEach(func() {
 			s3Uploader = new(fetcherFakes.S3Uploader)
-			releaseSource = fetcher.NewS3ReleaseSource(
-				sourceID,
-				"orange-bucket",
-				`{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
-				false,
+			releaseSource = component.NewS3ReleaseSource(
+				cargo.ReleaseSourceConfig{
+					ID:           sourceID,
+					Bucket:       "orange-bucket",
+					PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
+					Publishable:  false,
+				},
 				nil,
 				nil,
 				s3Uploader,
@@ -503,7 +520,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		Context("happy path", func() {
 			It("uploads the file to the correct location", func() {
-				_, err := releaseSource.UploadRelease(release.Requirement{
+				_, err := releaseSource.UploadRelease(component.Requirement{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
@@ -521,27 +538,29 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns the remote release", func() {
-				remoteRelease, err := releaseSource.UploadRelease(release.Requirement{
+				remoteRelease, err := releaseSource.UploadRelease(component.Requirement{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(remoteRelease).To(Equal(release.Remote{
-					ID:         release.ID{Name: "banana", Version: "1.2.3"},
-					RemotePath: "banana/banana-1.2.3.tgz",
-					SourceID:   sourceID,
+				Expect(remoteRelease).To(Equal(component.Lock{
+					ComponentSpec: component.Spec{Name: "banana", Version: "1.2.3"},
+					RemotePath:    "banana/banana-1.2.3.tgz",
+					RemoteSource:  sourceID,
 				}))
 			})
 		})
 
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
-				releaseSource = fetcher.NewS3ReleaseSource(
-					sourceID,
-					"orange-bucket",
-					`{{.NoSuchField}}`,
-					false,
+				releaseSource = component.NewS3ReleaseSource(
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       "orange-bucket",
+						PathTemplate: `{{.NoSuchField}}`,
+						Publishable:  false,
+					},
 					nil,
 					nil,
 					s3Uploader,
@@ -550,7 +569,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns a descriptive error", func() {
-				_, err := releaseSource.UploadRelease(release.Requirement{
+				_, err := releaseSource.UploadRelease(component.Requirement{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
@@ -562,22 +581,24 @@ var _ = Describe("S3ReleaseSource", func() {
 
 	Describe("RemotePath", func() {
 		var (
-			releaseSource fetcher.S3ReleaseSource
-			requirement   release.Requirement
+			releaseSource component.S3ReleaseSource
+			requirement   component.Requirement
 		)
 
 		BeforeEach(func() {
-			releaseSource = fetcher.NewS3ReleaseSource(
-				sourceID,
-				"orange-bucket",
-				`{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
-				false,
+			releaseSource = component.NewS3ReleaseSource(
+				cargo.ReleaseSourceConfig{
+					ID:           sourceID,
+					Bucket:       "orange-bucket",
+					PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+					Publishable:  false,
+				},
 				nil,
 				nil,
 				nil,
 				log.New(GinkgoWriter, "", 0),
 			)
-			requirement = release.Requirement{
+			requirement = component.Requirement{
 				Name:            "bob",
 				Version:         "2.0",
 				StemcellOS:      "plan9",
@@ -593,11 +614,13 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
-				releaseSource = fetcher.NewS3ReleaseSource(
-					sourceID,
-					"orange-bucket",
-					`{{.NoSuchField}}`,
-					false,
+				releaseSource = component.NewS3ReleaseSource(
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       "orange-bucket",
+						PathTemplate: `{{.NoSuchField}}`,
+						Publishable:  false,
+					},
 					nil,
 					nil,
 					nil,

@@ -10,8 +10,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/fetcher"
-	"github.com/pivotal-cf/kiln/pkg/release"
+	"github.com/pivotal-cf/kiln/internal/component"
 )
 
 type UpdateStemcell struct {
@@ -70,7 +69,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 	for i, rel := range kilnfileLock.Releases {
 		update.Logger.Printf("Updating release %q with stemcell %s %s...", rel.Name, kilnfileLock.Stemcell.OS, trimmedInputVersion)
 
-		remote, found, err := releaseSource.GetMatchedRelease(release.Requirement{
+		remote, found, err := releaseSource.GetMatchedRelease(component.Requirement{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      kilnfileLock.Stemcell.OS,
@@ -83,12 +82,12 @@ func (update UpdateStemcell) Execute(args []string) error {
 			return fmt.Errorf("couldn't find release %q", rel.Name)
 		}
 
-		if remote.RemotePath == rel.RemotePath && remote.SourceID == rel.RemoteSource {
+		if remote.RemotePath == rel.RemotePath && remote.RemoteSource == rel.RemoteSource {
 			update.Logger.Printf("No change for release %q\n", rel.Name)
 			continue
 		}
 
-		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote, fetcher.DefaultDownloadThreadCount)
+		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
 		if err != nil {
 			return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
 		}
@@ -96,7 +95,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 		lock := &kilnfileLock.Releases[i]
 		lock.SHA1 = local.SHA1
 		lock.RemotePath = remote.RemotePath
-		lock.RemoteSource = remote.SourceID
+		lock.RemoteSource = remote.RemoteSource
 	}
 
 	kilnfileLock.Stemcell.Version = trimmedInputVersion
