@@ -696,7 +696,7 @@ name: {{.some_missing_key}}
 		))
 	})
 
-	t.Run("when tile-name is set", func(t *testing.T) {
+	t.Run("when tile_name is set", func(t *testing.T) {
 		please := NewWithT(t)
 
 		partYML := `---
@@ -707,29 +707,29 @@ tile: {{if eq tile "ert" -}}
 {{- end -}}
 `
 		var buf bytes.Buffer
-		err := builder.PreProcessMetadataWithTileFunction(map[string]interface{}{"tile-name": "ERT"}, "m.yml", &buf, []byte(partYML))
+		err := builder.PreProcessMetadataWithTileFunction(map[string]interface{}{"tile_name": "ERT"}, "m.yml", &buf, []byte(partYML))
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(buf.Bytes()).To(MatchYAML(`tile: big-foot`))
 
 		buf.Reset()
 
-		err = builder.PreProcessMetadataWithTileFunction(map[string]interface{}{"tile-name": "SRT"}, "m.yml", &buf, []byte(partYML))
+		err = builder.PreProcessMetadataWithTileFunction(map[string]interface{}{"tile_name": "SRT"}, "m.yml", &buf, []byte(partYML))
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(buf.Bytes()).To(MatchYAML(`tile: small-foot`))
 	})
 
-	t.Run("when tile-name value has the wrong type", func(t *testing.T) {
+	t.Run("when tile_name value has the wrong type", func(t *testing.T) {
 		please := NewWithT(t)
 
 		partYML := `tile: {{tile}}`
-		err := builder.PreProcessMetadataWithTileFunction(map[string]interface{}{"tile-name": 27}, "m.yml", io.Discard, []byte(partYML))
+		err := builder.PreProcessMetadataWithTileFunction(map[string]interface{}{"tile_name": 27}, "m.yml", io.Discard, []byte(partYML))
 		please.Expect(err).To(And(
 			HaveOccurred(),
 			MatchError(ContainSubstring("expected string")),
 		))
 	})
 
-	t.Run("when tile-name does not exist", func(t *testing.T) {
+	t.Run("when tile_name does not exist", func(t *testing.T) {
 		please := NewWithT(t)
 
 		partYML := `tile: {{tile}}`
