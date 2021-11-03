@@ -54,15 +54,15 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 		Releases: []cargo.ComponentLock{
 			{
 				ComponentSpec: component.Spec{
-					Name: "banana",
+					Name:    "banana",
 					Version: "2.0.0",
 				},
 				RemoteSource: "cached-compiled-releases",
-				RemotePath: "banana-2.0.0-alpine-9.0.0",
+				RemotePath:   "banana-2.0.0-alpine-9.0.0",
 			},
 		},
 		Stemcell: cargo.Stemcell{
-			OS: "alpine",
+			OS:      "alpine",
 			Version: "9.0.0",
 		},
 	})).NotTo(Ω.HaveOccurred())
@@ -83,7 +83,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	logger := log.New(&output, "", 0)
 
 	cmd := commands.CacheCompiledReleases{
-		FS: fs,
+		FS:     fs,
 		Logger: logger,
 		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
 			return bucket, nil
@@ -127,13 +127,13 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
 		ReleaseSources: []cargo.ReleaseSourceConfig{
 			{
-				ID:          "cached-compiled-releases",
-				Publishable: true,
+				ID:           "cached-compiled-releases",
+				Publishable:  true,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
 			{
-				ID:          "new-releases",
-				Publishable: false,
+				ID:           "new-releases",
+				Publishable:  false,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
 		},
@@ -142,31 +142,31 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 		Releases: []cargo.ComponentLock{
 			{
 				ComponentSpec: component.Spec{
-				Name: "orange",
-				Version: "1.0.0",
+					Name:    "orange",
+					Version: "1.0.0",
 				},
 				RemoteSource: "new-releases",
-				RemotePath: "orange-1.0.0",
+				RemotePath:   "orange-1.0.0",
 			},
 			{
 				ComponentSpec: component.Spec{
-				Name: "banana",
-				Version: "2.0.0",
+					Name:    "banana",
+					Version: "2.0.0",
 				},
 				RemoteSource: "cached-compiled-releases",
-				RemotePath: "banana-2.0.0-alpine-9.0.0",
+				RemotePath:   "banana-2.0.0-alpine-9.0.0",
 			},
 			{
 				ComponentSpec: component.Spec{
-				Name: "lemon",
-				Version: "3.0.0",
+					Name:    "lemon",
+					Version: "3.0.0",
 				},
 				RemoteSource: "new-releases",
-				RemotePath: "lemon-3.0.0",
+				RemotePath:   "lemon-3.0.0",
 			},
 		},
 		Stemcell: cargo.Stemcell{
-			OS: "alpine",
+			OS:      "alpine",
 			Version: "9.0.0",
 		},
 	})).NotTo(Ω.HaveOccurred())
@@ -184,7 +184,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	bosh.FindDeploymentReturns(deployment, nil)
 	deployment.ExportReleaseReturns(director.ExportReleaseResult{
 		BlobstoreID: "some-blob-id",
-		SHA1: fmt.Sprintf("sha256:%x", sha256.Sum256(releaseInBlobstore)),
+		SHA1:        fmt.Sprintf("sha256:%x", sha256.Sum256(releaseInBlobstore)),
 	}, nil)
 	bosh.DownloadResourceUncheckedCalls(func(_ string, writer io.Writer) error {
 		_, _ = writer.Write(releaseInBlobstore)
@@ -200,7 +200,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 				Name: "lemon", Version: "3.0.0",
 			},
 			RemoteSource: "cached-compiled-releases",
-			RemotePath: "lemon-3.0.0-alpine-9.0.0",
+			RemotePath:   "lemon-3.0.0-alpine-9.0.0",
 		}, nil
 	})
 
@@ -208,7 +208,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	logger := log.New(&output, "", 0)
 
 	cmd := commands.CacheCompiledReleases{
-		FS: fs,
+		FS:     fs,
 		Logger: logger,
 		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
 			return bucket, nil
@@ -253,11 +253,11 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	please.Expect(fsReadYAML(fs, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
 	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(component.Lock{
 		ComponentSpec: component.Spec{
-			Name: "lemon",
+			Name:    "lemon",
 			Version: "3.0.0",
 		},
 		RemoteSource: "cached-compiled-releases",
-		RemotePath: "lemon-3.0.0-alpine-9.0.0",
+		RemotePath:   "lemon-3.0.0-alpine-9.0.0",
 	}))
 }
 
@@ -273,13 +273,13 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
 		ReleaseSources: []cargo.ReleaseSourceConfig{
 			{
-				ID:          "cached-compiled-releases",
-				Publishable: true,
+				ID:           "cached-compiled-releases",
+				Publishable:  true,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
 			{
-				ID:          "new-releases",
-				Publishable: false,
+				ID:           "new-releases",
+				Publishable:  false,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
 		},
@@ -288,31 +288,31 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 		Releases: []component.Lock{
 			{
 				ComponentSpec: component.Spec{
-					Name: "orange",
+					Name:    "orange",
 					Version: "1.0.0",
 				},
 				RemoteSource: "new-releases",
-				RemotePath: "orange-1.0.0",
+				RemotePath:   "orange-1.0.0",
 			},
 			{
 				ComponentSpec: component.Spec{
-					Name: "banana",
+					Name:    "banana",
 					Version: "2.0.0",
 				},
 				RemoteSource: "cached-compiled-releases",
-				RemotePath: "banana-2.0.0-alpine-9.0.0",
+				RemotePath:   "banana-2.0.0-alpine-9.0.0",
 			},
 			{
 				ComponentSpec: component.Spec{
-					Name: "lemon",
+					Name:    "lemon",
 					Version: "3.0.0",
 				},
 				RemoteSource: "new-releases",
-				RemotePath: "lemon-3.0.0",
+				RemotePath:   "lemon-3.0.0",
 			},
 		},
 		Stemcell: cargo.Stemcell{
-			OS: "alpine",
+			OS:      "alpine",
 			Version: "9.0.0",
 		},
 	}
@@ -331,7 +331,7 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	logger := log.New(&output, "", 0)
 
 	cmd := commands.CacheCompiledReleases{
-		FS: fs,
+		FS:     fs,
 		Logger: logger,
 		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
 			return bucket, nil
@@ -372,7 +372,7 @@ func fakeCacheData(requirement component.Requirement) (component.Lock, bool, err
 				Name: "orange", Version: "1.0.0",
 			},
 			RemoteSource: "cached-compiled-releases",
-			RemotePath: "orange-1.0.0-alpine-9.0.0",
+			RemotePath:   "orange-1.0.0-alpine-9.0.0",
 		}, true, nil
 	case component.Requirement{Name: "banana", Version: "2.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
 		return component.Lock{
@@ -380,7 +380,7 @@ func fakeCacheData(requirement component.Requirement) (component.Lock, bool, err
 				Name: "banana", Version: "2.0.0",
 			},
 			RemoteSource: "cached-compiled-releases",
-			RemotePath: "banana-2.0.0-alpine-9.0.0",
+			RemotePath:   "banana-2.0.0-alpine-9.0.0",
 		}, true, nil
 	case component.Requirement{Name: "lemon", Version: "3.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
 		return component.Lock{}, false, nil

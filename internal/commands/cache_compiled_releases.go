@@ -50,10 +50,10 @@ type CacheCompiledReleases struct {
 	Logger *log.Logger
 	FS     billy.Filesystem
 
-	ReleaseCache   func(kilnfile cargo.Kilnfile) component.MultiReleaseSource
-	Bucket         func(kilnfile cargo.Kilnfile) (ReleaseCacheBucket, error)
-	OpsManager     func(om.ClientConfiguration) (OpsManagerReleaseCacheSource, error)
-	Director       func(om.ClientConfiguration, om.GetBoshEnvironmentAndSecurityRootCACertificateProvider) (boshdir.Director, error)
+	ReleaseCache func(kilnfile cargo.Kilnfile) component.MultiReleaseSource
+	Bucket       func(kilnfile cargo.Kilnfile) (ReleaseCacheBucket, error)
+	OpsManager   func(om.ClientConfiguration) (OpsManagerReleaseCacheSource, error)
+	Director     func(om.ClientConfiguration, om.GetBoshEnvironmentAndSecurityRootCACertificateProvider) (boshdir.Director, error)
 }
 
 func NewCacheCompiledReleases() *CacheCompiledReleases {
@@ -271,8 +271,8 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock) error {
 		}
 		lock.Releases[index] = cargo.ComponentLock{
 			ComponentSpec: cargo.ComponentSpec{
-				Name:         release.Name,
-				Version:      release.Version,
+				Name:    release.Name,
+				Version: release.Version,
 			},
 			RemoteSource: release.RemoteSource,
 			RemotePath:   release.RemotePath,
