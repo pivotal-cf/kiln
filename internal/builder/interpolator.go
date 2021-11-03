@@ -28,7 +28,7 @@ const (
 	// TileNameVariable is the name of a special variable that is used as the return variable
 	// of the tile function during interpolation. When it is not set, the function returns
 	// an error.
-	TileNameVariable = "tile-name"
+	TileNameVariable = "tile_name"
 )
 
 type Interpolator struct{}
