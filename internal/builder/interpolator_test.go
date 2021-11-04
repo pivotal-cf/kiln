@@ -135,6 +135,16 @@ name: foo
 		Expect(t.Name).To(Equal("foo"))
 	})
 
+	It("does not wrap long lines", func() {
+		const templateYAML = `- description: "Select how UAA handles LDAP server referrals to other external\nuser stores. \n"` + "\n"
+
+		Expect(len(templateYAML)).To(BeNumerically(">", 80))
+
+		interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(interpolatedYAML)).To(Equal(templateYAML))
+	})
+
 	It("interpolates metadata templates", func() {
 		interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 		Expect(err).NotTo(HaveOccurred())
