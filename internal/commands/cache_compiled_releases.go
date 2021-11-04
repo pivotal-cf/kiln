@@ -23,8 +23,8 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-//go:generate counterfeiter -o ./fakes/ops_manager_release_cache_source.go --fake-name OpsManagerReleaseCacheSource . OpsManagerReleaseCacheSource
-//go:generate counterfeiter -o ./fakes/release_cache_bucket.go --fake-name ReleaseCacheBucket . ReleaseCacheBucket
+//counterfeiter:generate -o ./fakes/ops_manager_release_cache_source.go --fake-name OpsManagerReleaseCacheSource . OpsManagerReleaseCacheSource
+//counterfeiter:generate -o ./fakes/release_cache_bucket.go --fake-name ReleaseCacheBucket . ReleaseCacheBucket
 
 type (
 	OpsManagerReleaseCacheSource interface {
