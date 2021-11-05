@@ -79,6 +79,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 
 		err := rn.Execute([]string{
 			"--version=0.1.0",
+			"--date=11/05/2021",
 			"tile/1.1.0",
 			"tile/1.2.0",
 		})
@@ -92,6 +93,25 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		expected, err := ioutil.ReadFile("testdata/release_notes_output.md")
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 		please.Expect(output.String()).To(Ω.Equal(string(expected)))
+	})
+
+	t.Run("release-date", func(t *testing.T) {
+
+		t.Run("flag is required", func(t *testing.T) {
+			please := Ω.NewWithT(t)
+
+			var r commands.ReleaseNotes
+			_, err := jhanda.Parse(&r.Options, nil)
+			please.Expect(err).To(Ω.HaveOccurred())
+		})
+
+		//t.Run("", func(t *testing.T) {
+		//	please := Ω.NewWithT(t)
+		//
+		//	var r commands.ReleaseNotes
+		//	_, err := jhanda.Parse(&r.Options, nil)
+		//	please.Expect(err).To(Ω.HaveOccurred())
+		//})
 	})
 }
 
