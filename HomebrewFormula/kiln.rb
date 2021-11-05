@@ -5,12 +5,12 @@
 class Kiln < Formula
   desc ""
   homepage ""
-  version "0.62.0"
+  version "0.62.1"
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/pivotal-cf/kiln/releases/download/0.62.0/kiln-darwin-0.62.0.tar.gz"
-      sha256 "e46edb3f5d1722ef85e613ef45258e78ba956301774dd65cd06d43afaf91fff0"
+      url "https://github.com/pivotal-cf/kiln/releases/download/0.62.1/kiln-darwin-0.62.1.tar.gz"
+      sha256 "8bccebe41b7416b04a1f8b5f25a7e33b5f7f1f75aa0d7648d55080e1bd89f42d"
 
       def install
         bin.install "kiln"
@@ -20,8 +20,8 @@ class Kiln < Formula
 
   on_linux do
     if Hardware::CPU.intel?
-      url "https://github.com/pivotal-cf/kiln/releases/download/0.62.0/kiln-linux-0.62.0.tar.gz"
-      sha256 "793fcbf3ce55db04cca766e98fdf749424bea525c770c7cd92d5cbb8dcdc8828"
+      url "https://github.com/pivotal-cf/kiln/releases/download/0.62.1/kiln-linux-0.62.1.tar.gz"
+      sha256 "4f6759f8746cd7eca618c9d8b2c9e489c7230deccc8e2f95e77e520a894e192a"
 
       def install
         bin.install "kiln"
