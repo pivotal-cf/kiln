@@ -22,9 +22,9 @@ const releaseDateFormat = "2006-01-02"
 
 type ReleaseNotes struct {
 	Options struct {
-		Version      string `short:"v" long:"version" description:"version of the tile"`    // TODO version should come from final revision not flag
-		ReleaseDate  string `short:"rd" long:"date" description:"release date of the tile"` // TODO version should come from final revision not flag
-		TemplateName string `short:"t" long:"template" description:"path to template"`
+		Version      string `long:"version"  short:"v"  description:"version of the tile"`      // TODO version should come from final revision not flag
+		ReleaseDate  string `long:"date"     short:"rd" description:"release date of the tile"` // TODO version should come from final revision not flag
+		TemplateName string `long:"template" short:"t"  description:"path to template"`
 	}
 
 	pathRelativeToDotGit string
@@ -82,6 +82,8 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	// TODO ensure len(nonFlagArgs) < 2
 
+	releaseDate, _ := time.Parse(releaseDateFormat, r.Options.ReleaseDate)
+
 	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(nonFlagArgs[0])) // TODO handle error
 	if err != nil {
 		panic(err)
@@ -100,12 +102,9 @@ func (r ReleaseNotes) Execute(args []string) error {
 		panic(err)
 	}
 
-	releaseDate, _ := time.Parse(releaseDateFormat, r.Options.ReleaseDate)
-
 	info := ReleaseNotesInformation{
-		Version:           r.Options.Version, // TODO version should come from version file at final revision and then maybe override with flag
-		ReleaseDate:       releaseDate,
-		ReleaseDateFormat: releaseDateFormat,
+		Version:     r.Options.Version, // TODO version should come from version file at final revision and then maybe override with flag
+		ReleaseDate: releaseDate,
 		// Issues:      issues,
 		Components: klFinal.Releases,
 		Bumps:      calculateReleaseBumps(klFinal.Releases, klInitial.Releases),
@@ -137,9 +136,8 @@ func (r ReleaseNotes) Usage() jhanda.Usage {
 var defaultReleaseNotesTemplate string
 
 type ReleaseNotesInformation struct {
-	Version           string
-	ReleaseDate       time.Time
-	ReleaseDateFormat string
+	Version     string
+	ReleaseDate time.Time
 	// Issues      []*github.Issue
 	Bumps      []component.Lock
 	Components []component.Lock
