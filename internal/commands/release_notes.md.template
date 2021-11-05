@@ -2,7 +2,8 @@
 
 **Release Date:** {{ .ReleaseDate.Format "01/02/2006" }}
 
-{{range .Bumps }}* Bump {{ .Name }} to version `{{ .Version }}`
+{{range .Bumps -}}
+  * Bump {{ .Name }} to version `{{ .Version }}`
 {{ end }}
 <table border="1" class="nice">
   <thead>
@@ -13,6 +14,7 @@
   </thead>
   <tbody>
   {{- range .Components }}
-    <tr><td>{{ .Name }}</td><td>{{ .Version }}</td></tr>{{ end }}
+    <tr><td>{{ .Name }}</td><td>{{ .Version }}</td></tr>
+  {{- end }}
   </tbody>
 </table>
