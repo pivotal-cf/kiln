@@ -62,6 +62,13 @@ func NewCacheCompiledReleases() *CacheCompiledReleases {
 		Logger: log.Default(),
 	}
 	cmd.ReleaseCache = func(kilnfile cargo.Kilnfile) component.MultiReleaseSource {
+		releaseSourceConfig := []cargo.ReleaseSourceConfig{}
+		for i := range kilnfile.ReleaseSources {
+			if kilnfile.ReleaseSources[i].ID == cmd.Options.Target {
+				releaseSourceConfig = append(releaseSourceConfig, kilnfile.ReleaseSources[i])
+			}
+		}
+		kilnfile.ReleaseSources = releaseSourceConfig
 		return component.NewReleaseSourceRepo(kilnfile, cmd.Logger)
 	}
 	cmd.Bucket = func(kilnfile cargo.Kilnfile) (ReleaseCacheBucket, error) {
