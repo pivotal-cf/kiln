@@ -1,10 +1,12 @@
 package historic
 
 import (
+	"bytes"
+	"path/filepath"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"path/filepath"
 )
 
 func KilnfileLock(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (cargo.KilnfileLock, error) {
@@ -32,5 +34,5 @@ func Version(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string
 	if err != nil {
 		return "", err
 	}
-	return string(buf), nil
+	return string(bytes.TrimSpace(buf)), nil
 }
