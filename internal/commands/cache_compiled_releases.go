@@ -50,7 +50,7 @@ type CacheCompiledReleases struct {
 	Logger *log.Logger
 	FS     billy.Filesystem
 
-	ReleaseCache func(kilnfile cargo.Kilnfile) component.MultiReleaseSource
+	ReleaseCache func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource
 	Bucket       func(kilnfile cargo.Kilnfile) (ReleaseCacheBucket, error)
 	OpsManager   func(om.ClientConfiguration) (OpsManagerReleaseCacheSource, error)
 	Director     func(om.ClientConfiguration, om.GetBoshEnvironmentAndSecurityRootCACertificateProvider) (boshdir.Director, error)
@@ -61,10 +61,10 @@ func NewCacheCompiledReleases() *CacheCompiledReleases {
 		FS:     osfs.New(""),
 		Logger: log.Default(),
 	}
-	cmd.ReleaseCache = func(kilnfile cargo.Kilnfile) component.MultiReleaseSource {
+	cmd.ReleaseCache = func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource {
 		releaseSourceConfig := []cargo.ReleaseSourceConfig{}
 		for i := range kilnfile.ReleaseSources {
-			if kilnfile.ReleaseSources[i].ID == cmd.Options.Target {
+			if kilnfile.ReleaseSources[i].Bucket == targetID {
 				releaseSourceConfig = append(releaseSourceConfig, kilnfile.ReleaseSources[i])
 			}
 		}
@@ -114,8 +114,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	}
 
 	var nonCompiledReleases []cargo.ComponentLock
-
-	cache := cmd.ReleaseCache(kilnfile)
+	cache := cmd.ReleaseCache(kilnfile, cmd.Options.UploadTargetID)
 	for _, rel := range lock.Releases {
 		remote, found, err := cache.GetMatchedRelease(component.Requirement{
 			Name:            rel.Name,

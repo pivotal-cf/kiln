@@ -88,7 +88,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
 			return bucket, nil
 		},
-		ReleaseCache: func(kilnfile cargo.Kilnfile) component.MultiReleaseSource {
+		ReleaseCache: func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource {
 			return cache
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
@@ -213,7 +213,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
 			return bucket, nil
 		},
-		ReleaseCache: func(kilnfile cargo.Kilnfile) component.MultiReleaseSource {
+		ReleaseCache: func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource {
 			return cache
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
@@ -336,7 +336,7 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
 			return bucket, nil
 		},
-		ReleaseCache: func(kilnfile cargo.Kilnfile) component.MultiReleaseSource {
+		ReleaseCache: func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource {
 			return cache
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
