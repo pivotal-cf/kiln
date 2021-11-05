@@ -1,4 +1,4 @@
-package history_test
+package historic_test
 
 import (
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -11,7 +11,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 
-	"github.com/pivotal-cf/kiln/internal/history"
+	"github.com/pivotal-cf/kiln/internal/historic"
 )
 
 func checkIfLocalTasRepo(t *testing.T) string {
@@ -33,9 +33,9 @@ func TestTileVersionFileBoshReleaseList(t *testing.T) {
 	repo, err := git.PlainOpen(checkIfLocalTasRepo(t))
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 
-	_, err = history.TileVersionFileBoshReleaseList(repo, regexp.MustCompile(`^rel/2\.\d+$`), []string{"garden-runc"},
-		history.StopAfter(10000),
-		history.FindBoshRelease(component.Spec{Name: "garden-runc", Version: "1.19.29"}),
+	_, err = historic.TileVersionFileBoshReleaseList(repo, regexp.MustCompile(`^rel/2\.\d+$`), []string{"garden-runc"},
+		historic.StopAfter(10000),
+		historic.FindBoshRelease(component.Spec{Name: "garden-runc", Version: "1.19.29"}),
 	)
 
 	please.Expect(err).NotTo(Ω.HaveOccurred())
@@ -47,33 +47,33 @@ func TestVersionFileBoshReleaseList(t *testing.T) {
 	repo, err := git.PlainOpen(checkIfLocalTasRepo(t))
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 
-	records, err := history.TileReleaseBoshReleaseList(repo, "garden-runc", "cflinuxfs3")
+	records, err := historic.TileReleaseBoshReleaseList(repo, "garden-runc", "cflinuxfs3")
 
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 
-	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
+	please.Expect(records).To(Ω.ContainElement(historic.ReleaseMapping{
 		Tile: component.Spec{Name: "tas", Version: "2.11.4"},
 		Bosh: component.Spec{Name: "garden-runc", Version: "1.19.29"},
 	}))
-	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
+	please.Expect(records).To(Ω.ContainElement(historic.ReleaseMapping{
 		Tile: component.Spec{Name: "ist", Version: "2.11.3"},
 		Bosh: component.Spec{Name: "garden-runc", Version: "1.19.28"},
 	}))
-	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
+	please.Expect(records).To(Ω.ContainElement(historic.ReleaseMapping{
 		Tile: component.Spec{Name: "tasw", Version: "2.7.29"},
 		Bosh: component.Spec{Name: "garden-runc", Version: "1.19.25"},
 	}))
-	please.Expect(records).To(Ω.ContainElement(history.ReleaseMapping{
+	please.Expect(records).To(Ω.ContainElement(historic.ReleaseMapping{
 		Tile: component.Spec{Name: "ist", Version: "2.9.20"},
 		Bosh: component.Spec{Name: "cflinuxfs3", Version: "0.238.0"},
 	}))
 }
 
 func TestFindBoshTileRelease(t *testing.T) {
-	result := history.FindBoshTileRelease(component.Spec{
+	result := historic.FindBoshTileRelease(component.Spec{
 		Name:    "product",
 		Version: "1.2,3",
-	})(0, object.Commit{}, []history.ReleaseMapping{
+	})(0, object.Commit{}, []historic.ReleaseMapping{
 		{
 			Tile: component.Spec{
 				Name:    "product",

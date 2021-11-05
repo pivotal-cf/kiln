@@ -35,7 +35,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 
 		repo, _ := git.Init(memory.NewStorage(), memfs.New())
 
-		revisionResolver := &fakes.RevisionResolver{}
+		revisionResolver := new(fakes.RevisionResolver)
 		var (
 			initialHash, finalHash plumbing.Hash
 		)
@@ -44,19 +44,22 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		revisionResolver.ResolveRevisionReturnsOnCall(0, &initialHash, nil)
 		revisionResolver.ResolveRevisionReturnsOnCall(1, &finalHash, nil)
 
-		historicKilnfileLockFunc := &fakes.HistoricKilnfileLockFunc{}
-		historicKilnfileLockFunc.ReturnsOnCall(0, cargo.KilnfileLock{
+		historicKilnfileLock := new(fakes.HistoricKilnfileLock)
+		historicKilnfileLock.ReturnsOnCall(0, cargo.KilnfileLock{
 			Releases: []cargo.ComponentLock{
 				{Name: "banana", Version: "0.1.0"},
 				{Name: "lemon", Version: "1.1.0"},
 			},
 		}, nil)
-		historicKilnfileLockFunc.ReturnsOnCall(1, cargo.KilnfileLock{
+		historicKilnfileLock.ReturnsOnCall(1, cargo.KilnfileLock{
 			Releases: []cargo.ComponentLock{
 				{Name: "banana", Version: "0.1.0"},
 				{Name: "lemon", Version: "1.2.0"},
 			},
 		}, nil)
+
+		historicVersion := new(fakes.HistoricVersion)
+		historicVersion.Returns("0.1.0", nil)
 
 		readFileCount := 0
 		readFileFunc := func(fp string) ([]byte, error) {
@@ -68,13 +71,13 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		rn := commands.ReleaseNotes{
 			Repository:           repo,
 			RevisionResolver:     revisionResolver,
-			KilnfileLockAtCommit: historicKilnfileLockFunc.Spy,
+			HistoricKilnfileLock: historicKilnfileLock.Spy,
+			HistoricVersion:      historicVersion.Spy,
 			Writer:               &output,
 			ReadFile:             readFileFunc,
 		}
 
 		err := rn.Execute([]string{
-			"--version=0.1.0",
 			"--date=2021-11-05",
 			"tile/1.1.0",
 			"tile/1.2.0",
@@ -84,6 +87,10 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		please.Expect(revisionResolver.ResolveRevisionCallCount()).To(Ω.Equal(2))
 		please.Expect(revisionResolver.ResolveRevisionArgsForCall(0)).To(Ω.Equal(plumbing.Revision("tile/1.1.0")))
 		please.Expect(revisionResolver.ResolveRevisionArgsForCall(1)).To(Ω.Equal(plumbing.Revision("tile/1.2.0")))
+
+		please.Expect(historicVersion.CallCount()).To(Ω.Equal(1))
+		_, historicVersionHashArg, _ := historicVersion.ArgsForCall(0)
+		please.Expect(historicVersionHashArg).To(Ω.Equal(finalHash))
 
 		please.Expect(readFileCount).To(Ω.Equal(0))
 		expected, err := ioutil.ReadFile("testdata/release_notes_output.md")
@@ -105,17 +112,42 @@ func TestReleaseNotes_Execute(t *testing.T) {
 			please := Ω.NewWithT(t)
 
 			repo, _ := git.Init(memory.NewStorage(), memfs.New())
-			revisionResolver := &fakes.RevisionResolver{}
+			revisionResolver := new(fakes.RevisionResolver)
 			revisionResolver.ResolveRevisionReturns(&plumbing.ZeroHash, nil)
-			historicKilnfileLockFunc := &fakes.HistoricKilnfileLockFunc{}
+			historicKilnfileLockFunc := new(fakes.HistoricKilnfileLock)
 			historicKilnfileLockFunc.Returns(cargo.KilnfileLock{}, nil)
 
 			err := commands.ReleaseNotes{
 				Repository:           repo,
 				RevisionResolver:     revisionResolver,
-				KilnfileLockAtCommit: historicKilnfileLockFunc.Spy,
+				HistoricKilnfileLock: historicKilnfileLockFunc.Spy,
 				Writer:               &bytes.Buffer{},
-				ReadFile: func(fp string) (_ []byte, _ error) { return },
+				ReadFile:             func(fp string) (_ []byte, _ error) { return },
+			}.Execute([]string{`--date="Nov, 2020"`, "ref1", "ref2"})
+
+			please.Expect(err).To(Ω.MatchError(Ω.And(
+				Ω.ContainSubstring("release date could not be parsed:"),
+				Ω.ContainSubstring("cannot parse"),
+			)))
+		})
+	})
+
+	t.Run("version", func(t *testing.T) {
+		t.Run("is set via flag", func(t *testing.T) {
+			please := Ω.NewWithT(t)
+
+			repo, _ := git.Init(memory.NewStorage(), memfs.New())
+			revisionResolver := new(fakes.RevisionResolver)
+			revisionResolver.ResolveRevisionReturns(&plumbing.ZeroHash, nil)
+			historicKilnfileLockFunc := new(fakes.HistoricKilnfileLock)
+			historicKilnfileLockFunc.Returns(cargo.KilnfileLock{}, nil)
+
+			err := commands.ReleaseNotes{
+				Repository:           repo,
+				RevisionResolver:     revisionResolver,
+				HistoricKilnfileLock: historicKilnfileLockFunc.Spy,
+				Writer:               &bytes.Buffer{},
+				ReadFile:             func(fp string) (_ []byte, _ error) { return },
 			}.Execute([]string{`--date="Nov, 2020"`, "ref1", "ref2"})
 
 			please.Expect(err).To(Ω.MatchError(Ω.And(

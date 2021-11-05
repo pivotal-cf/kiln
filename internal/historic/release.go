@@ -1,12 +1,11 @@
 // Package history provides fast utility functions for
 // navigating the history of of a tile repo.
-package history
+package historic
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/component"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
@@ -20,6 +19,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"gopkg.in/yaml.v2"
 
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -143,7 +143,7 @@ func buildNumberBoshRelease(tree *object.Tree, root string, releaseNames []strin
 
 	var lock cargo.KilnfileLock
 
-	err = readDataFromTree(tree, &lock, prefixEach(root, billOfMaterialFileNames)...)
+	err = readDataFromTree(tree, &lock, prefixEach(root, billOfMaterialFileNames))
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +265,7 @@ func lockFiles(repo *git.Repository, fn func(tileDir string, ref plumbing.Refere
 				continue
 			}
 			var data cargo.KilnfileLock
-			err := decodeHistoricFile(repo, ref.Hash(), &data, prefixEach(path, billOfMaterialFileNames)...)
+			err := decodeHistoricFile(repo, ref.Hash(), &data, prefixEach(path, billOfMaterialFileNames))
 			if err != nil {
 				if errors.Is(err, object.ErrFileNotFound) {
 					continue
@@ -280,26 +280,49 @@ func lockFiles(repo *git.Repository, fn func(tileDir string, ref plumbing.Refere
 	return paths, nil
 }
 
-func decodeHistoricFile(repository *git.Repository, commitHash plumbing.Hash, data interface{}, names ...string) error {
-	obj, err := repository.Object(plumbing.CommitObject, commitHash)
+func decodeHistoricFile(repository *git.Repository, commitHash plumbing.Hash, data interface{}, names []string) error {
+	buf, fileName, err := fileAtCommit(repository, commitHash, names)
 	if err != nil {
 		return err
 	}
-
-	commit, ok := obj.(*object.Commit)
-	if !ok {
-		return err
-	}
-
-	tree, err := commit.Tree()
-	if err != nil {
-		return err
-	}
-
-	return readDataFromTree(tree, data, names...)
+	return decodeFile(buf, fileName, data)
 }
 
-func readDataFromTree(tree *object.Tree, data interface{}, names ...string) error {
+func readDataFromTree(tree *object.Tree, data interface{}, names []string) error {
+	buf, fileName, err := readBytesFromTree(tree, names)
+	if err != nil {
+		return err
+	}
+	return decodeFile(buf, fileName, data)
+}
+
+func decodeFile(buf []byte, fileName string, data interface{}) error {
+	switch filepath.Ext(fileName) {
+	case ".yaml", ".yml", ".lock":
+		return yaml.Unmarshal(buf, data)
+	case ".json":
+		return json.Unmarshal(buf, data)
+	}
+	return nil
+}
+
+func fileAtCommit(repository *git.Repository, commitHash plumbing.Hash, names []string) ([]byte, string, error) {
+	obj, err := repository.Object(plumbing.CommitObject, commitHash)
+	if err != nil {
+		return nil, "", err
+	}
+	commit, ok := obj.(*object.Commit)
+	if !ok {
+		return nil, "", err
+	}
+	tree, err := commit.Tree()
+	if !ok {
+		return nil, "", err
+	}
+	return readBytesFromTree(tree, names)
+}
+
+func readBytesFromTree(tree *object.Tree, names []string) ([]byte, string, error) {
 	var (
 		lock     *object.File
 		fileName string
@@ -313,11 +336,11 @@ func readDataFromTree(tree *object.Tree, data interface{}, names ...string) erro
 		}
 	}
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	lockFile, err := lock.Reader()
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	defer func() {
 		_ = lockFile.Close()
@@ -325,16 +348,9 @@ func readDataFromTree(tree *object.Tree, data interface{}, names ...string) erro
 
 	buf, err := ioutil.ReadAll(lockFile)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
-
-	switch filepath.Ext(fileName) {
-	case ".yaml", ".yml", ".lock":
-		err = yaml.Unmarshal(buf, data)
-	case ".json":
-		err = json.Unmarshal(buf, data)
-	}
-	return err
+	return buf, fileName, nil
 }
 
 func findTileRootsInTree(repo *git.Repository, tree *object.Tree) []string {
