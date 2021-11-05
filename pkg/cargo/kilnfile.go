@@ -81,6 +81,7 @@ type ReleaseSourceConfig struct {
 	SecretAccessKey string `yaml:"secret_access_key"`
 	PathTemplate    string `yaml:"path_template"`
 	Endpoint        string `yaml:"endpoint"`
+	Org             string `yaml:"org"`
 }
 
 // ComponentLock represents an exact build of a bosh release

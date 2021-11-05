@@ -1,6 +1,6 @@
 ### <a id='{{ .Version }}'></a> {{ .Version }}
 
-**Release Date:** {{ .ReleaseDate.Format "01/02/2006" }}
+**Release Date:** {{ .ReleaseDate.Format .ReleaseDateFormat }}
 
 {{range .Bumps }}* Bump {{ .Name }} to version `{{ .Version }}`
 {{ end }}

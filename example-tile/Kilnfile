@@ -1,7 +1,21 @@
 release_sources:
-# - type: bosh.io
+- type: bosh.io
+- type: github
+  org: cloudfoundry
+- type: github
+  org: pivotal
+  token: $(variable "github_token" )
+- type: github
+  org: pivotal-cf
+  token: $(variable "github_token" )
 
 slug: example
 
 releases:
-# - name: my-release
+- name: haproxy
+  git_repos:
+    - git@github.com:cloudfoundry/haproxy-boshrelease.git
+- name: routing
+  git_repos:
+    - git@github.com:pivotal-cf/lts-routing-release.git
+    - https://github.com/cloudfoundry/routing-release

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
@@ -72,6 +73,9 @@ func TestReleaseNotes_Execute(t *testing.T) {
 			KilnfileLockAtCommit: historicKilnfileLockFunc.Spy,
 			Writer:               &output,
 			ReadFile:             readFileFunc,
+			Now: func() time.Time {
+				return time.Unix(1636135229, 0)
+			},
 		}
 
 		err := rn.Execute([]string{

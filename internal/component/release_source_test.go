@@ -27,30 +27,46 @@ var _ = Describe("ReleaseSourceList", func() {
 						{Type: "s3", Bucket: "compiled-releases", Region: "us-west-1", Publishable: true, PathTemplate: "template"},
 						{Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false, PathTemplate: "template"},
 						{Type: "bosh.io", Publishable: false},
+						{Type: "github", Org: "cloudfoundry"},
 					},
 				}
 			})
 
-			It("constructs the ReleaseSources properly", func() {
+			It("constructs all the release sources", func() {
+				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
+				Expect(releaseSources).To(HaveLen(4))
+			})
+
+			It("constructs the compiled release source properly", func() {
+				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
+				Expect(releaseSources[0]).To(BeAssignableToTypeOf(component.S3ReleaseSource{}))
+			})
+
+			It("sets the release source id to bucket id for s3", func() {
 				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
 
-				Expect(releaseSources).To(HaveLen(3))
-				var (
-					s3ReleaseSource     component.S3ReleaseSource
-					boshIOReleaseSource *component.BOSHIOReleaseSource
-				)
-
-				Expect(releaseSources[0]).To(BeAssignableToTypeOf(s3ReleaseSource))
 				Expect(releaseSources[0].Configuration().ID).To(Equal(kilnfile.ReleaseSources[0].Bucket))
-				Expect(releaseSources[0].Configuration().Publishable).To(BeTrue())
-
-				Expect(releaseSources[1]).To(BeAssignableToTypeOf(s3ReleaseSource))
 				Expect(releaseSources[1].Configuration().ID).To(Equal(kilnfile.ReleaseSources[1].Bucket))
-				Expect(releaseSources[1].Configuration().Publishable).To(BeFalse())
+			})
 
-				Expect(releaseSources[2]).To(BeAssignableToTypeOf(boshIOReleaseSource))
-				Expect(releaseSources[2].Configuration().ID).To(Equal("bosh.io"))
-				Expect(releaseSources[2].Configuration().Publishable).To(BeFalse())
+			It("constructs the built release source properly", func() {
+				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
+
+				Expect(releaseSources[1]).To(BeAssignableToTypeOf(component.S3ReleaseSource{}))
+				Expect(releaseSources[1].Configuration().ID).To(Equal(kilnfile.ReleaseSources[1].Bucket))
+			})
+
+			It("sets the bosh.io release source id properly", func() {
+				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
+
+				Expect(releaseSources[2].Configuration().ID).To(Equal(component.ReleaseSourceTypeBOSHIO))
+			})
+
+			It("constructs the github release source properly", func() {
+				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
+
+				Expect(releaseSources[3]).To(BeAssignableToTypeOf(component.GithubReleaseSource{}))
+				Expect(releaseSources[3].Configuration().ID).To(Equal(kilnfile.ReleaseSources[3].Org))
 			})
 		})
 
