@@ -13,6 +13,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.3.1
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-ole/go-ole v1.2.5 // indirect
+	github.com/google/go-github/v39 v39.2.0 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/kevinburke/ssh_config v1.1.0 // indirect
@@ -28,7 +29,7 @@ require (
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shirou/gopsutil v3.21.1+incompatible // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
 	golang.org/x/sys v0.0.0-20210809222454-d867a43fc93e // indirect
 	gopkg.in/yaml.v2 v2.4.0

@@ -128,12 +128,17 @@ func (options Standard) KilnfileLockPath() string {
 // this permits explicitly setting "zero values" for in arguments without them being
 // overwritten.
 func LoadFlagsWithDefaults(options KilnfileOptions, args []string, statOverride StatFunc) error {
+	_, err := LoadFlagsWithDefaultsAndReturnArgs(options, args, statOverride)
+	return err
+}
+
+func LoadFlagsWithDefaultsAndReturnArgs(options KilnfileOptions, args []string, statOverride StatFunc) ([]string, error) {
 	if statOverride == nil {
 		statOverride = os.Stat
 	}
-	_, err := jhanda.Parse(options, args)
+	resultArgs, err := jhanda.Parse(options, args)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	v := reflect.ValueOf(options).Elem()
@@ -144,7 +149,7 @@ func LoadFlagsWithDefaults(options KilnfileOptions, args []string, statOverride 
 	configureArrayDefaults(v, pathPrefix, args, statOverride)
 	configurePathDefaults(v, pathPrefix, args, statOverride)
 
-	return nil
+	return resultArgs, nil
 }
 
 func configureArrayDefaults(v reflect.Value, pathPrefix string, args []string, stat StatFunc) {
