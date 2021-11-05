@@ -22,9 +22,9 @@ const releaseDateFormat = "01/02/2006"
 
 type ReleaseNotes struct {
 	Options struct {
-		Version      string `short:"v" long:"version" description:"version of the tile"`    // TODO version should come from final revision not flag
-		ReleaseDate  string `short:"rd" long:"date" description:"release date of the tile"` // TODO version should come from final revision not flag
-		TemplateName string `short:"t" long:"template" description:"path to template"`
+		Version      string `                long:"version"  short:"v"  description:"version of the tile"`      // TODO version should come from final revision not flag
+		ReleaseDate  string `required:"true" long:"date"     short:"rd" description:"release date of the tile"` // TODO version should come from final revision not flag
+		TemplateName string `                long:"template" short:"t"  description:"path to template"`
 	}
 
 	pathRelativeToDotGit string
@@ -84,7 +84,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	// TODO ensure len(nonFlagArgs) < 2
 
-	releaseDate, _ := r.releaseDate()
+	releaseDate, _ := time.Parse(releaseDateFormat, r.Options.ReleaseDate)
 
 	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(nonFlagArgs[0])) // TODO handle error
 	if err != nil {
@@ -133,13 +133,6 @@ func (r ReleaseNotes) Usage() jhanda.Usage {
 		ShortDescription: "generates release notes from bosh-release release notes",
 		Flags:            r.Options,
 	}
-}
-
-func (r ReleaseNotes) releaseDate() (time.Time, error) {
-	if r.Options.ReleaseDate == "" {
-		return r.Now(), nil
-	}
-	return time.Parse(releaseDateFormat, r.Options.ReleaseDate) // TODO handle error
 }
 
 //go:embed release_notes.md.template
