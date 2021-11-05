@@ -2,6 +2,7 @@ package commands
 
 import (
 	_ "embed"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -18,7 +19,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-const releaseDateFormat = "01/02/2006"
+const releaseDateFormat = "2006-01-02"
 
 type ReleaseNotes struct {
 	Options struct {
@@ -33,7 +34,6 @@ type ReleaseNotes struct {
 	KilnfileLockAtCommit HistoricKilnfileLockFunc
 	RevisionResolver
 	Stat func(string) (os.FileInfo, error)
-	Now  func() time.Time
 	io.Writer
 }
 
@@ -61,7 +61,6 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 		RevisionResolver:     repo,
 		Stat:                 os.Stat,
 		Writer:               os.Stdout,
-		Now:                  time.Now,
 		pathRelativeToDotGit: rp,
 	}, nil
 }
@@ -84,7 +83,10 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	// TODO ensure len(nonFlagArgs) < 2
 
-	releaseDate, _ := time.Parse(releaseDateFormat, r.Options.ReleaseDate)
+	releaseDate, err := time.Parse(releaseDateFormat, r.Options.ReleaseDate)
+	if err != nil {
+		return fmt.Errorf("release date could not be parsed: %w", err)
+	}
 
 	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(nonFlagArgs[0])) // TODO handle error
 	if err != nil {
