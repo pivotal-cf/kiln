@@ -76,7 +76,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		err := rn.Execute([]string{
 			"--date=2021-11-04",
 			"--version=0.1.0",
-			"--date=11/05/2021",
+			"--date=2021-11-05",
 			"tile/1.1.0",
 			"tile/1.2.0",
 		})
@@ -99,16 +99,31 @@ func TestReleaseNotes_Execute(t *testing.T) {
 
 			var r commands.ReleaseNotes
 			_, err := jhanda.Parse(&r.Options, nil)
-			please.Expect(err).To(Ω.HaveOccurred())
+			please.Expect(err).To(Ω.MatchError(Ω.ContainSubstring("required")))
 		})
 
-		//t.Run("", func(t *testing.T) {
-		//	please := Ω.NewWithT(t)
-		//
-		//	var r commands.ReleaseNotes
-		//	_, err := jhanda.Parse(&r.Options, nil)
-		//	please.Expect(err).To(Ω.HaveOccurred())
-		//})
+		t.Run("invalid date", func(t *testing.T) {
+			please := Ω.NewWithT(t)
+
+			repo, _ := git.Init(memory.NewStorage(), memfs.New())
+			revisionResolver := &fakes.RevisionResolver{}
+			revisionResolver.ResolveRevisionReturns(&plumbing.ZeroHash, nil)
+			historicKilnfileLockFunc := &fakes.HistoricKilnfileLockFunc{}
+			historicKilnfileLockFunc.Returns(cargo.KilnfileLock{}, nil)
+
+			err := commands.ReleaseNotes{
+				Repository:           repo,
+				RevisionResolver:     revisionResolver,
+				KilnfileLockAtCommit: historicKilnfileLockFunc.Spy,
+				Writer:               &bytes.Buffer{},
+				ReadFile: func(fp string) (_ []byte, _ error) { return },
+			}.Execute([]string{`--date="Nov, 2020"`, "ref1", "ref2"})
+
+			please.Expect(err).To(Ω.MatchError(Ω.And(
+				Ω.ContainSubstring("release date could not be parsed:"),
+				Ω.ContainSubstring("cannot parse"),
+			)))
+		})
 	})
 }
 
