@@ -22,7 +22,7 @@ func TestVersion(t *testing.T) {
 	initialHash := commit(t, repo, "alpha release", func(wt *git.Worktree) error {
 		p := wt.Filesystem.Join(tileDir, "version")
 		kf, _ := wt.Filesystem.Create(p)
-		_, _ = kf.Write([]byte("1.0.0-alpha.1"))
+		_, _ = kf.Write([]byte("1.0.0-alpha.1\n"))
 		_ = kf.Close()
 		_, _ = wt.Add(p)
 		return nil
@@ -38,7 +38,7 @@ func TestVersion(t *testing.T) {
 	finalHash := commit(t, repo, "ga release", func(wt *git.Worktree) error {
 		p := wt.Filesystem.Join(tileDir, "version")
 		kf, _ := wt.Filesystem.Create(p)
-		_, _ = kf.Write([]byte("1.0.0"))
+		_, _ = kf.Write([]byte("1.0.0\n"))
 		_ = kf.Close()
 		_, _ = wt.Add(p)
 		return nil
