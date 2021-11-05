@@ -2,6 +2,7 @@ package commands
 
 import (
 	_ "embed"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -82,7 +83,10 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	// TODO ensure len(nonFlagArgs) < 2
 
-	releaseDate, _ := time.Parse(releaseDateFormat, r.Options.ReleaseDate)
+	releaseDate, err := time.Parse(releaseDateFormat, r.Options.ReleaseDate)
+	if err != nil {
+		return fmt.Errorf("release date could not be parsed: %w", err)
+	}
 
 	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(nonFlagArgs[0])) // TODO handle error
 	if err != nil {
