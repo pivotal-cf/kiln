@@ -265,7 +265,7 @@ func lockFiles(repo *git.Repository, fn func(tileDir string, ref plumbing.Refere
 				continue
 			}
 			var data cargo.KilnfileLock
-			err := decodeHistoricFile(repo, ref, &data, prefixEach(path, billOfMaterialFileNames)...)
+			err := decodeHistoricFile(repo, ref.Hash(), &data, prefixEach(path, billOfMaterialFileNames)...)
 			if err != nil {
 				if errors.Is(err, object.ErrFileNotFound) {
 					continue
@@ -280,8 +280,8 @@ func lockFiles(repo *git.Repository, fn func(tileDir string, ref plumbing.Refere
 	return paths, nil
 }
 
-func decodeHistoricFile(repository *git.Repository, ref *plumbing.Reference, data interface{}, names ...string) error {
-	obj, err := repository.Object(plumbing.CommitObject, ref.Hash())
+func decodeHistoricFile(repository *git.Repository, commitHash plumbing.Hash, data interface{}, names ...string) error {
+	obj, err := repository.Object(plumbing.CommitObject, commitHash)
 	if err != nil {
 		return err
 	}
