@@ -18,10 +18,12 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
+const releaseDateFormat = "01/02/2006"
+
 type ReleaseNotes struct {
 	Options struct {
-		Version      string `short:"v" long:"version" description:"version of the tile"` // TODO version should come from final revision not flag
-		ReleaseDate  time.Time `short:"rd" long:"date" description:"release date of the tile"` // TODO version should come from final revision not flag
+		Version      string `short:"v" long:"version" description:"version of the tile"`    // TODO version should come from final revision not flag
+		ReleaseDate  string `short:"rd" long:"date" description:"release date of the tile"` // TODO version should come from final revision not flag
 		TemplateName string `short:"t" long:"template" description:"path to template"`
 	}
 
@@ -31,6 +33,7 @@ type ReleaseNotes struct {
 	KilnfileLockAtCommit HistoricKilnfileLockFunc
 	RevisionResolver
 	Stat func(string) (os.FileInfo, error)
+	Now  func() time.Time
 	io.Writer
 }
 
@@ -58,6 +61,7 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 		RevisionResolver:     repo,
 		Stat:                 os.Stat,
 		Writer:               os.Stdout,
+		Now:                  time.Now,
 		pathRelativeToDotGit: rp,
 	}, nil
 }
@@ -80,11 +84,13 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	// TODO ensure len(nonFlagArgs) < 2
 
+	releaseDate, _ := r.releaseDate()
+
 	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(nonFlagArgs[0])) // TODO handle error
 	if err != nil {
 		panic(err)
 	}
-	finalCommitSHA, err := r.ResolveRevision(plumbing.Revision(nonFlagArgs[1]))   // TODO handle error
+	finalCommitSHA, err := r.ResolveRevision(plumbing.Revision(nonFlagArgs[1])) // TODO handle error
 	if err != nil {
 		panic(err)
 	}
@@ -93,17 +99,19 @@ func (r ReleaseNotes) Execute(args []string) error {
 	if err != nil {
 		panic(err)
 	}
-	klFinal, err := r.KilnfileLockAtCommit(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit)     // TODO handle error
+	klFinal, err := r.KilnfileLockAtCommit(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
 	if err != nil {
 		panic(err)
 	}
 
-	info := newReleaseInfoInformation(
-		r.Options.Version, // TODO version should come from version file at final revision and then maybe override with flag
-		r.Options.ReleaseDate,
-		klFinal.Releases,
-		klInitial.Releases,
-	)
+	info := ReleaseNotesInformation{
+		Version:           r.Options.Version, // TODO version should come from version file at final revision and then maybe override with flag
+		ReleaseDate:       releaseDate,
+		ReleaseDateFormat: releaseDateFormat,
+		// Issues:      issues,
+		Components: klFinal.Releases,
+		Bumps:      calculateReleaseBumps(klFinal.Releases, klInitial.Releases),
+	}
 
 	releaseNotesTemplate := defaultReleaseNotesTemplate
 	if r.Options.TemplateName != "" {
@@ -127,12 +135,20 @@ func (r ReleaseNotes) Usage() jhanda.Usage {
 	}
 }
 
+func (r ReleaseNotes) releaseDate() (time.Time, error) {
+	if r.Options.ReleaseDate == "" {
+		return time.Now(), nil
+	}
+	return time.Parse(releaseDateFormat, r.Options.ReleaseDate) // TODO handle error
+}
+
 //go:embed release_notes.md.template
 var defaultReleaseNotesTemplate string
 
 type ReleaseNotesInformation struct {
-	Version     string
-	ReleaseDate time.Time
+	Version           string
+	ReleaseDate       time.Time
+	ReleaseDateFormat string
 	// Issues      []*github.Issue
 	Bumps      []component.Lock
 	Components []component.Lock
@@ -140,15 +156,11 @@ type ReleaseNotesInformation struct {
 
 type BoshReleaseBump = component.Spec
 
-func newReleaseInfoInformation(v string, rd time.Time, current, previous []component.Lock /* issues []*github.Issue*/) ReleaseNotesInformation {
-	info := ReleaseNotesInformation{
-		Version:     v,
-		ReleaseDate: rd,
-		// Issues:      issues,
-		Components: current,
-	}
-
-	previousSpecs := make(map[component.Spec]struct{}, len(previous))
+func calculateReleaseBumps(current, previous []component.Lock) []component.Lock {
+	var (
+		bumps         []component.Lock
+		previousSpecs = make(map[component.Spec]struct{}, len(previous))
+	)
 	for _, cs := range previous {
 		previousSpecs[cs.ComponentSpec] = struct{}{}
 	}
@@ -157,8 +169,7 @@ func newReleaseInfoInformation(v string, rd time.Time, current, previous []compo
 		if isSame {
 			continue
 		}
-		info.Bumps = append(info.Bumps, cs)
+		bumps = append(bumps, cs)
 	}
-
-	return info
+	return bumps
 }
