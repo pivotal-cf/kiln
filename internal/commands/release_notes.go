@@ -15,7 +15,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/internal/history"
+	"github.com/pivotal-cf/kiln/internal/historic"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -23,7 +23,6 @@ const releaseDateFormat = "2006-01-02"
 
 type ReleaseNotes struct {
 	Options struct {
-		Version      string `                long:"version"  short:"v"  description:"version of the tile"`      // TODO version should come from final revision not flag
 		ReleaseDate  string `required:"true" long:"date"     short:"rd" description:"release date of the tile"` // TODO version should come from final revision not flag
 		TemplateName string `                long:"template" short:"t"  description:"path to template"`
 	}
@@ -31,7 +30,8 @@ type ReleaseNotes struct {
 	pathRelativeToDotGit string
 	Repository           *git.Repository
 	ReadFile             func(fp string) ([]byte, error)
-	KilnfileLockAtCommit HistoricKilnfileLockFunc
+	HistoricKilnfileLock
+	HistoricVersion
 	RevisionResolver
 	Stat func(string) (os.FileInfo, error)
 	io.Writer
@@ -57,7 +57,8 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	return ReleaseNotes{
 		Repository:           repo,
 		ReadFile:             ioutil.ReadFile,
-		KilnfileLockAtCommit: history.KilnfileLock,
+		HistoricKilnfileLock: historic.KilnfileLock,
+		HistoricVersion:      historic.Version,
 		RevisionResolver:     repo,
 		Stat:                 os.Stat,
 		Writer:               os.Stdout,
@@ -65,9 +66,13 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	}, nil
 }
 
-//counterfeiter:generate -o ./fakes/historic_kilnfile_lock_func.go --fake-name HistoricKilnfileLockFunc . HistoricKilnfileLockFunc
+//counterfeiter:generate -o ./fakes/historic_kilnfile_lock.go --fake-name HistoricKilnfileLock . HistoricKilnfileLock
 
-type HistoricKilnfileLockFunc func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (cargo.KilnfileLock, error)
+type HistoricKilnfileLock func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (cargo.KilnfileLock, error)
+
+//counterfeiter:generate -o ./fakes/historic_version.go --fake-name HistoricVersion . HistoricVersion
+
+type HistoricVersion func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (string, error)
 
 //counterfeiter:generate -o ./fakes/revision_resolver.go --fake-name RevisionResolver . RevisionResolver
 
@@ -97,17 +102,21 @@ func (r ReleaseNotes) Execute(args []string) error {
 		panic(err)
 	}
 
-	klInitial, err := r.KilnfileLockAtCommit(r.Repository, *initialCommitSHA, r.pathRelativeToDotGit) // TODO handle error
+	klInitial, err := r.HistoricKilnfileLock(r.Repository, *initialCommitSHA, r.pathRelativeToDotGit) // TODO handle error
 	if err != nil {
 		panic(err)
 	}
-	klFinal, err := r.KilnfileLockAtCommit(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
+	klFinal, err := r.HistoricKilnfileLock(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
+	if err != nil {
+		panic(err)
+	}
+	version, err := r.HistoricVersion(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
 	if err != nil {
 		panic(err)
 	}
 
 	info := ReleaseNotesInformation{
-		Version:           r.Options.Version, // TODO version should come from version file at final revision and then maybe override with flag
+		Version:           version, // TODO version should come from version file at final revision and then maybe override with flag
 		ReleaseDate:       releaseDate,
 		ReleaseDateFormat: releaseDateFormat,
 		// Issues:      issues,

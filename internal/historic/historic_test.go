@@ -1,4 +1,4 @@
-package history
+package historic
 
 import (
 	Ω "github.com/onsi/gomega"
@@ -12,6 +12,53 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
 )
+
+func TestVersion(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	// START setup
+	tileDir := "tile"
+	repo, _ := git.Init(memory.NewStorage(), memfs.New())
+	initialHash := commit(t, repo, "alpha release", func(wt *git.Worktree) error {
+		p := wt.Filesystem.Join(tileDir, "version")
+		kf, _ := wt.Filesystem.Create(p)
+		_, _ = kf.Write([]byte("1.0.0-alpha.1"))
+		_ = kf.Close()
+		_, _ = wt.Add(p)
+		return nil
+	})
+	_ = commit(t, repo, "some other change", func(wt *git.Worktree) error {
+		p := wt.Filesystem.Join(tileDir, "base.yml")
+		kf, _ := wt.Filesystem.Create(p)
+		_, _ = kf.Write([]byte("---\nname: something\n"))
+		_ = kf.Close()
+		_, _ = wt.Add(p)
+		return nil
+	})
+	finalHash := commit(t, repo, "ga release", func(wt *git.Worktree) error {
+		p := wt.Filesystem.Join(tileDir, "version")
+		kf, _ := wt.Filesystem.Create(p)
+		_, _ = kf.Write([]byte("1.0.0"))
+		_ = kf.Close()
+		_, _ = wt.Add(p)
+		return nil
+	})
+	// END setup
+
+	t.Run("alpha", func(t *testing.T) {
+		version, err := Version(repo, initialHash, "tile")
+
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(version).To(Ω.Equal("1.0.0-alpha.1"))
+	})
+
+	t.Run("ga release", func(t *testing.T) {
+		version, err := Version(repo, finalHash, "tile")
+
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(version).To(Ω.Equal("1.0.0"))
+	})
+}
 
 func TestKilnfileLock(t *testing.T) {
 	please := Ω.NewWithT(t)
