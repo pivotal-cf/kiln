@@ -53,6 +53,8 @@ dockers:
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
 
+preerelease: auto
+
 checksum:
   name_template: 'checksums.txt'
 snapshot:
