@@ -117,11 +117,13 @@ func NewMultiReleaseSource(sources ...ReleaseSource) ReleaseSourceList {
 
 func (list ReleaseSourceList) GetMatchedRelease(requirement Spec) (Lock, bool, error) {
 	for _, src := range list {
+		fmt.Printf("checking %s %s in %s", requirement.Name, requirement.Version, src.Configuration().ID)
 		rel, found, err := src.GetMatchedRelease(requirement)
 		if err != nil {
 			return Lock{}, false, scopedError(src.Configuration().ID, err)
 		}
 		if found {
+			fmt.Printf("found %s %s in %s", requirement.Name, requirement.Version, src.Configuration().ID)
 			return rel, true, nil
 		}
 	}
