@@ -66,6 +66,7 @@ func NewCacheCompiledReleases() *CacheCompiledReleases {
 		for i := range kilnfile.ReleaseSources {
 			if kilnfile.ReleaseSources[i].Bucket == targetID {
 				releaseSourceConfig = append(releaseSourceConfig, kilnfile.ReleaseSources[i])
+				break
 			}
 		}
 		kilnfile.ReleaseSources = releaseSourceConfig
