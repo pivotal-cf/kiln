@@ -256,6 +256,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 			Name:    "lemon",
 			Version: "3.0.0",
 		},
+		SHA1:         "sha256:75a7261038c7380cd867216d2878376c64d905d7e4fcb6c4f2714a3f78ae10f2",
 		RemoteSource: "cached-compiled-releases",
 		RemotePath:   "lemon-3.0.0-alpine-9.0.0",
 	}))
