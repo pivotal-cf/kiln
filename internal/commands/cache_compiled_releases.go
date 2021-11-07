@@ -184,7 +184,8 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 
 		newRemote, err := cmd.cacheRelease(bosh, bucket, deployment, requirement, osVersionSlug)
 		if err != nil {
-			return fmt.Errorf("failed to cache release %s: %w", rel.Name, err)
+			fmt.Errorf("failed to cache release %s: %w", rel.Name, err)
+			continue
 		}
 
 		err = updateLock(lock, newRemote)
