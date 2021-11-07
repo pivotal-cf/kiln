@@ -184,7 +184,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 
 		newRemote, err := cmd.cacheRelease(bosh, bucket, deployment, requirement, osVersionSlug)
 		if err != nil {
-			fmt.Printf("failed to cache release %s: %s", rel.Name, err)
+			cmd.Logger.Printf("\tfailed to cache release %s/%s for %s: %s\n", rel.Name, rel.Version, osVersionSlug, err)
 			continue
 		}
 
