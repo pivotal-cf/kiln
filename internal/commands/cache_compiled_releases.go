@@ -258,6 +258,7 @@ func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket Rele
 	if err != nil {
 		return component.Lock{}, err
 	}
+	remoteRelease.SHA1 = result.SHA1
 
 	return remoteRelease, nil
 }
