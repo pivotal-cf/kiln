@@ -1,14 +1,7 @@
-releases:
-- name: haproxy
-  sha1: 8baef53d89139513562d614ce1f303f44405266e
-  version: 11.7.1
-  remote_path: https://github.com/cloudfoundry/haproxy-boshrelease/releases/download/v11.7.1/haproxy-11.7.1.tgz
-  release_source: cloudfoundry
-- name: routing
-  sha1: f06634bb776b4c2e0219a557e02b59330c73c6f4
-  version: 0.188.9
-  remote_path: https://github.com/pivotal-cf/lts-routing-release/releases/download/0.188.9/routing-release-0.188.9.tgz
-  release_source: pivotal-cf
+#releases:
+#- name: my-release
+#  sha1: 040d8b5fafc70630f872f2945496b579846934f8
+#  version: 1.2.3
 stemcell_criteria:
   os: ubuntu-trusty
   version: "3468.1"
