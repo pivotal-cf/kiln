@@ -2,9 +2,10 @@ package component
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"log"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 // MultiReleaseSource wraps a set of release sources. It is mostly used to generate fakes
