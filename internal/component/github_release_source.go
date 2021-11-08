@@ -1,8 +1,13 @@
 package component
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"os"
+
+	"github.com/google/go-github/v40/github"
+	"golang.org/x/oauth2"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -16,30 +21,32 @@ type GHRequirement struct {
 
 type GithubReleaseSource struct {
 	cargo.ReleaseSourceConfig
-	Token     string
-	serverURI string
-	logger    *log.Logger
+	Token  string
+	Logger *log.Logger
+	Client *github.Client
 }
 
-func NewGithubReleaseSource(c cargo.ReleaseSourceConfig, customServerURI string, logger *log.Logger) *GithubReleaseSource {
+// NewGithubReleaseSource will provision a new GithubReleaseSource Project
+// from the Kilnfile (ReleaseSourceConfig). If type is incorrect it will PANIC
+func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
+
 	if c.Type != "" && c.Type != ReleaseSourceTypeGithub {
 		panic(panicMessageWrongReleaseSourceType)
 	}
-	if customServerURI == "" {
-		customServerURI = "https://www.github.com"
+	if c.GithubToken == "" {
+		panic("no token passed for github release source")
 	}
-	if logger == nil {
-		logger = log.New(os.Stdout, "[Github release source] ", log.Default().Flags())
-	}
+
+	ctx := context.TODO()
+	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: c.GithubToken})
+	tokenClient := oauth2.NewClient(ctx, tokenSource)
+	githubClient := github.NewClient(tokenClient)
+
 	return &GithubReleaseSource{
 		ReleaseSourceConfig: c,
-		logger:              logger,
-		serverURI:           customServerURI,
+		Logger:              log.New(os.Stdout, "[Github release source] ", log.Default().Flags()),
+		Client:              githubClient,
 	}
-}
-
-func NewGithubReleaseSourceFromConfig(config cargo.ReleaseSourceConfig) (_ GithubReleaseSource) {
-	return
 }
 
 // Configuration returns the configuration of the ReleaseSource that came from the kilnfile.
@@ -50,8 +57,19 @@ func (src GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
-func (GithubReleaseSource) GetMatchedRelease(spec Spec) (Lock, bool, error) {
-	panic("blah")
+func (grs GithubReleaseSource) GetMatchedRelease(req Spec) (Lock, bool, error) {
+	return grs.GetMatchedReleaseImpl(grs.Client.Repositories, req)
+}
+
+//counterfeiter:generate -o ./fakes/github_release_lister.go --fake-name GithubReleaseLister . GithubReleaseLister
+
+type GithubReleaseLister interface {
+	ListReleases(ctx context.Context, owner, repo string, opts *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error)
+}
+
+func (GithubReleaseSource) GetMatchedReleaseImpl(lister GithubReleaseLister, req Spec) (_ Lock, _ bool, _ error) {
+	lister.ListReleases(context.TODO(), "", "", nil)
+	return
 }
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
@@ -65,4 +83,23 @@ func (GithubReleaseSource) FindReleaseVersion(Spec) (Lock, bool, error) {
 // to ensure the sums match, the caller must verify this.
 func (GithubReleaseSource) DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error) {
 	panic("blah")
+}
+
+func (grs GithubReleaseSource) ListAllOfTheCrap(ctx context.Context, org string) {
+	var allRepos []*github.Repository
+	opt := &github.RepositoryListByOrgOptions{Sort: "name"}
+	for {
+		repos, resp, err := grs.Client.Repositories.ListByOrg(ctx, "github", opt)
+		if err != nil {
+			panic("bad crap: " + err.Error())
+		}
+		allRepos = append(allRepos, repos...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+	for _, r := range allRepos {
+		fmt.Println(r.GetName())
+	}
 }
