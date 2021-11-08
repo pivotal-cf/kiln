@@ -82,6 +82,7 @@ type ReleaseSourceConfig struct {
 	PathTemplate    string `yaml:"path_template"`
 	Endpoint        string `yaml:"endpoint"`
 	Org             string `yaml:"org"`
+	GithubToken     string `yaml:"github_token"`
 }
 
 // ComponentLock represents an exact build of a bosh release
