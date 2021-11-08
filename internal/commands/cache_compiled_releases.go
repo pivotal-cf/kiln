@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"crypto/sha1"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -248,7 +249,7 @@ func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket Rele
 	}
 
 	cmd.Logger.Printf("\tdownloading %s %s\n", req.Name, req.Version)
-	releaseFilePath, err := cmd.saveReleaseLocally(bosh, cmd.Options.ReleasesDir, req, result)
+	releaseFilePath, _, sha1sum, err := cmd.saveReleaseLocally(bosh, cmd.Options.ReleasesDir, req, result)
 	if err != nil {
 		return component.Lock{}, err
 	}
@@ -258,7 +259,8 @@ func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket Rele
 	if err != nil {
 		return component.Lock{}, err
 	}
-	remoteRelease.SHA1 = result.SHA1
+
+	remoteRelease.SHA1 = sha1sum
 
 	return remoteRelease, nil
 }
@@ -301,33 +303,37 @@ func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Spec, fp str
 	return uploader.UploadRelease(spec, f)
 }
 
-func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, relDir string, req component.Spec, res boshdir.ExportReleaseResult) (string, error) {
+func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, relDir string, req component.Spec, res boshdir.ExportReleaseResult) (string, string, string, error) {
 	fileName := fmt.Sprintf("%s-%s-%s-%s.tgz", req.Name, req.Version, req.StemcellOS, req.StemcellVersion)
 	filePath := filepath.Join(relDir, fileName)
 
 	f, err := cmd.FS.Create(filePath)
 	if err != nil {
-		return "", err
+		return "", "", "", err
 	}
 	defer func() {
 		_ = f.Close()
 	}()
 
-	checkSum := sha256.New()
+	sha256sum := sha256.New()
+	sha1sum := sha1.New()
 
-	w := io.MultiWriter(f, checkSum)
+	w := io.MultiWriter(f, sha256sum, sha1sum)
 
 	err = director.DownloadResourceUnchecked(res.BlobstoreID, w)
 	if err != nil {
 		_ = os.Remove(filePath)
-		return "", err
+		return "", "", "", err
 	}
 
-	if sum := fmt.Sprintf("sha256:%x", checkSum.Sum(nil)); sum != res.SHA1 {
-		return "", fmt.Errorf("checksums do not match got %q but expected %q", sum, res.SHA1)
+	sha256sumString := fmt.Sprintf("%x", sha256sum.Sum(nil))
+	sha1sumString := fmt.Sprintf("%x", sha1sum.Sum(nil))
+
+	if sum := fmt.Sprintf("sha256:%s", sha256sumString); sum != res.SHA1 {
+		return "", "", "", fmt.Errorf("checksums do not match got %q but expected %q", sum, res.SHA1)
 	}
 
-	return filePath, nil
+	return filePath, sha256sumString, sha1sumString, nil
 }
 
 func (cmd CacheCompiledReleases) Usage() jhanda.Usage {
