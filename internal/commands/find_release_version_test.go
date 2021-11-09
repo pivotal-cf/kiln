@@ -83,7 +83,7 @@ releases:
 				BeforeEach(func() {
 					releaseName = "uaac"
 					fakeReleasesSource.FindReleaseVersionReturns(component.Lock{
-						ComponentSpec: component.Spec{Name: releaseName, Version: "74.12.5"},
+						Name: releaseName, Version: "74.12.5",
 						RemotePath:    "remote_url",
 						RemoteSource:  "bosh.io",
 						SHA1:          "some-sha",
@@ -111,7 +111,7 @@ releases:
 				BeforeEach(func() {
 					releaseName = "uaa"
 					fakeReleasesSource.FindReleaseVersionReturns(component.Lock{
-						ComponentSpec: component.Spec{Name: releaseName, Version: "74.16.5"},
+						Name: releaseName, Version: "74.16.5",
 						RemotePath:    "remote_url",
 						RemoteSource:  "sourceId",
 					}, true, nil)
@@ -121,7 +121,7 @@ releases:
 					It("returns the latest release version", func() {
 						Expect(executeErr).NotTo(HaveOccurred())
 						args := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
-						Expect(args.VersionConstraint).To(Equal("~74.16.0"))
+						Expect(args.Version).To(Equal("~74.16.0"))
 						Expect(args.StemcellVersion).To(Equal("4.5.6"))
 						Expect(args.StemcellOS).To(Equal("some-os"))
 						Expect((&writer).String()).To(ContainSubstring("\"74.16.5\""))

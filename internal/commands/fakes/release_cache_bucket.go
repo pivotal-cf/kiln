@@ -6,15 +6,14 @@ import (
 	"sync"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type ReleaseCacheBucket struct {
-	UploadReleaseStub        func(component.Requirement, io.Reader) (cargo.ComponentLock, error)
+	UploadReleaseStub        func(cargo.ComponentSpec, io.Reader) (cargo.ComponentLock, error)
 	uploadReleaseMutex       sync.RWMutex
 	uploadReleaseArgsForCall []struct {
-		arg1 component.Requirement
+		arg1 cargo.ComponentSpec
 		arg2 io.Reader
 	}
 	uploadReleaseReturns struct {
@@ -29,11 +28,11 @@ type ReleaseCacheBucket struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseCacheBucket) UploadRelease(arg1 component.Requirement, arg2 io.Reader) (cargo.ComponentLock, error) {
+func (fake *ReleaseCacheBucket) UploadRelease(arg1 cargo.ComponentSpec, arg2 io.Reader) (cargo.ComponentLock, error) {
 	fake.uploadReleaseMutex.Lock()
 	ret, specificReturn := fake.uploadReleaseReturnsOnCall[len(fake.uploadReleaseArgsForCall)]
 	fake.uploadReleaseArgsForCall = append(fake.uploadReleaseArgsForCall, struct {
-		arg1 component.Requirement
+		arg1 cargo.ComponentSpec
 		arg2 io.Reader
 	}{arg1, arg2})
 	stub := fake.UploadReleaseStub
@@ -55,13 +54,13 @@ func (fake *ReleaseCacheBucket) UploadReleaseCallCount() int {
 	return len(fake.uploadReleaseArgsForCall)
 }
 
-func (fake *ReleaseCacheBucket) UploadReleaseCalls(stub func(component.Requirement, io.Reader) (cargo.ComponentLock, error)) {
+func (fake *ReleaseCacheBucket) UploadReleaseCalls(stub func(cargo.ComponentSpec, io.Reader) (cargo.ComponentLock, error)) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = stub
 }
 
-func (fake *ReleaseCacheBucket) UploadReleaseArgsForCall(i int) (component.Requirement, io.Reader) {
+func (fake *ReleaseCacheBucket) UploadReleaseArgsForCall(i int) (cargo.ComponentSpec, io.Reader) {
 	fake.uploadReleaseMutex.RLock()
 	defer fake.uploadReleaseMutex.RUnlock()
 	argsForCall := fake.uploadReleaseArgsForCall[i]

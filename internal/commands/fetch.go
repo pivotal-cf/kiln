@@ -112,9 +112,10 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []c
 
 	for _, rl := range releaseLocks {
 		remoteRelease := component.Lock{
-			ComponentSpec: component.Spec{Name: rl.Name, Version: rl.Version},
-			RemotePath:    rl.RemotePath,
-			RemoteSource:  rl.RemoteSource,
+			Name:         rl.Name,
+			Version:      rl.Version,
+			RemotePath:   rl.RemotePath,
+			RemoteSource: rl.RemoteSource,
 		}
 
 		local, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease)

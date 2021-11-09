@@ -80,7 +80,7 @@ var _ = Describe("UploadRelease", func() {
 			When("the release already exists on the release source", func() {
 				BeforeEach(func() {
 					releaseUploader.GetMatchedReleaseReturns(component.Lock{
-						ComponentSpec: component.Spec{Name: "banana", Version: "1.2.3"},
+						Name: "banana", Version: "1.2.3",
 						RemotePath:    "banana/banana-1.2.3.tgz",
 						RemoteSource:  "orange-bucket",
 					}, true, nil)
@@ -96,7 +96,7 @@ var _ = Describe("UploadRelease", func() {
 					Expect(releaseUploader.GetMatchedReleaseCallCount()).To(Equal(1))
 
 					requirement := releaseUploader.GetMatchedReleaseArgsForCall(0)
-					Expect(requirement).To(Equal(component.Requirement{Name: "banana", Version: "1.2.3"}))
+					Expect(requirement).To(Equal(component.Spec{Name: "banana", Version: "1.2.3"}))
 
 					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
 				})
