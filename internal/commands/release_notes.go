@@ -137,7 +137,7 @@ func (r ReleaseNotes) Usage() jhanda.Usage {
 
 func (r ReleaseNotes) releaseDate() (time.Time, error) {
 	if r.Options.ReleaseDate == "" {
-		return time.Now(), nil
+		return r.Now(), nil
 	}
 	return time.Parse(releaseDateFormat, r.Options.ReleaseDate) // TODO handle error
 }
@@ -159,13 +159,13 @@ type BoshReleaseBump = component.Spec
 func calculateReleaseBumps(current, previous []component.Lock) []component.Lock {
 	var (
 		bumps         []component.Lock
-		previousSpecs = make(map[component.Spec]struct{}, len(previous))
+		previousSpecs = make(map[component.Lock]struct{}, len(previous))
 	)
 	for _, cs := range previous {
-		previousSpecs[cs.ComponentSpec] = struct{}{}
+		previousSpecs[cs] = struct{}{}
 	}
 	for _, cs := range current {
-		_, isSame := previousSpecs[cs.ComponentSpec]
+		_, isSame := previousSpecs[cs]
 		if isSame {
 			continue
 		}
