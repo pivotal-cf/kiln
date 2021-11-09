@@ -1,6 +1,9 @@
 package cargo
 
-import "errors"
+import (
+	"errors"
+	"github.com/Masterminds/semver"
+)
 
 type KilnfileLock struct {
 	Releases []ComponentLock `yaml:"releases"`
@@ -8,8 +11,55 @@ type KilnfileLock struct {
 }
 
 type ComponentSpec struct {
-	Name    string `yaml:"name"`
-	Version string `yaml:"version"`
+	// Name is a required field and must be set with the bosh release name
+	Name string `yaml:"name"`
+
+	// Version if not set, it will default to ">0".
+	// See https://github.com/Masterminds/semver for syntax
+	Version string `yaml:"version,omitempty"`
+
+	// StemcellOS may be set when a specifying a component
+	// compiled with a particular stemcell. Usually you should
+	// also set StemcellVersion when setting this field.
+	StemcellOS string `yaml:"os,omitempty"`
+
+	// StemcellVersion may be set when a specifying a component
+	// compiled with a particular stemcell. Usually you should
+	// also set StemcellOS when setting this field.
+	StemcellVersion string `yaml:"stemcell_version,omitempty"`
+
+	//// Repositories are where the BOSH release source code is
+	//Repositories []string `yaml:"repositories,omitempty"`
+}
+
+
+// VersionConstraints must be passed a spec with a parsable
+// semver. The Kiln Validate command ensures that the versions
+// in this field continue to stay valid.
+func (spec ComponentSpec) VersionConstraints() *semver.Constraints {
+	if spec.Version == "" {
+		spec.Version = ">0"
+	}
+	c, err := semver.NewConstraint(spec.Version)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
+func (spec ComponentSpec) Lock() ComponentLock {
+	return ComponentLock{
+		Name:            spec.Name,
+		Version:         spec.Version,
+		StemcellOS:      spec.StemcellOS,
+		StemcellVersion: spec.StemcellVersion,
+	}
+}
+
+func (spec ComponentSpec) UnsetStemcell() ComponentSpec {
+	spec.StemcellOS = ""
+	spec.StemcellVersion = ""
+	return spec
 }
 
 type Kilnfile struct {
@@ -33,12 +83,48 @@ type ReleaseSourceConfig struct {
 	Endpoint        string `yaml:"endpoint"`
 }
 
+// ComponentLock represents an exact build of a bosh release
+// It may identify the where the release is cached;
+// it may identify the stemcell used to compile the release.
+//
+// All fields must be comparable because this struct may be
+// used as a key type in a map. Don't add array or map fields.
 type ComponentLock struct {
-	ComponentSpec `yaml:",inline"`
+	Name    string `yaml:"name"`
+	Version string `yaml:"version,omitempty"`
+	SHA1    string `yaml:"sha1"`
 
-	SHA1         string `yaml:"sha1"`
+	StemcellOS      string `yaml:"os,omitempty"`
+	StemcellVersion string `yaml:"stemcell_version,omitempty"`
+
 	RemoteSource string `yaml:"remote_source"`
 	RemotePath   string `yaml:"remote_path"`
+}
+
+func (lock ComponentLock) Spec() ComponentSpec {
+	return ComponentSpec{
+		Name:            lock.Name,
+		Version:         lock.Version,
+		StemcellOS:      lock.StemcellOS,
+		StemcellVersion: lock.StemcellVersion,
+	}
+}
+
+func (lock ComponentLock) WithSHA1(sum string) ComponentLock {
+	lock.SHA1 = sum
+	return lock
+}
+
+func (lock ComponentLock) WithRemote(source, path string) ComponentLock {
+	lock.RemoteSource = source
+	lock.RemotePath = path
+	return lock
+}
+
+func (lock ComponentLock) UnsetStemcell() ComponentLock {
+	lock.StemcellOS = ""
+	lock.StemcellVersion = ""
+	return lock
 }
 
 func (k KilnfileLock) FindReleaseWithName(name string) (ComponentLock, error) {

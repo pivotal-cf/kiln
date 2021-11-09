@@ -79,7 +79,9 @@ func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 	return src.ReleaseSourceConfig
 }
 
-func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Requirement) (Lock, bool, error) {
+func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, bool, error) {
+	requirement = requirement.UnsetStemcell()
+
 	for _, repo := range repos {
 		for _, suf := range suffixes {
 			fullName := repo + "/" + requirement.Name + suf
@@ -89,7 +91,7 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Requirement) (Lock,
 			}
 
 			if exists {
-				builtRelease := src.createReleaseRemote(requirement.Name, requirement.Version, fullName)
+				builtRelease := src.createReleaseRemote(requirement, fullName)
 				return builtRelease, true, nil
 			}
 		}
@@ -97,18 +99,15 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Requirement) (Lock,
 	return Lock{}, false, nil
 }
 
-func (src BOSHIOReleaseSource) FindReleaseVersion(requirement Requirement) (Lock, bool, error) {
-	var constraint *semver.Constraints
-	if requirement.VersionConstraint != "" {
-		constraint, _ = semver.NewConstraint(requirement.VersionConstraint)
-	} else {
-		constraint, _ = semver.NewConstraint(">0")
-	}
+func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, bool, error) {
+	spec = spec.UnsetStemcell()
+
+	constraint := spec.VersionConstraints()
 	var validReleases []releaseResponse
 
 	for _, repo := range repos {
 		for _, suf := range suffixes {
-			fullName := repo + "/" + requirement.Name + suf
+			fullName := repo + "/" + spec.Name + suf
 			releaseResponses, err := src.getReleases(fullName)
 			if err != nil {
 				return Lock{}, false, err
@@ -120,13 +119,13 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(requirement Requirement) (Lock
 					validReleases = append(validReleases, release)
 				}
 			}
-			if len(validReleases) > 0 {
-				latestReleaseVersion := validReleases[0].Version
-				latestSha := validReleases[0].SHA
-				builtRelease := src.createReleaseRemote(requirement.Name, latestReleaseVersion, fullName)
-				builtRelease.SHA1 = latestSha
-				return builtRelease, true, nil
+			if len(validReleases) == 0 {
+				continue
 			}
+			spec.Version = validReleases[0].Version
+			lock := src.createReleaseRemote(spec, fullName)
+			lock.SHA1 = validReleases[0].SHA
+			return lock, true, nil
 		}
 	}
 	return Lock{}, false, nil
@@ -167,9 +166,9 @@ func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease 
 		return Local{}, fmt.Errorf("error hashing file contents: %w", err) // untested
 	}
 
-	sum := hex.EncodeToString(hash.Sum(nil))
+	remoteRelease.SHA1 = hex.EncodeToString(hash.Sum(nil))
 
-	return Local{Spec: remoteRelease.ComponentSpec, LocalPath: filePath, SHA1: sum}, nil
+	return Local{Lock: remoteRelease, LocalPath: filePath}, nil
 }
 
 type ResponseStatusCodeError http.Response
@@ -178,13 +177,11 @@ func (err ResponseStatusCodeError) Error() string {
 	return fmt.Sprintf("response to %s %s got status %d when a success was expected", err.Request.Method, err.Request.URL, err.StatusCode)
 }
 
-func (src BOSHIOReleaseSource) createReleaseRemote(name string, version string, fullName string) Lock {
-	downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, version)
-	releaseRemote := Lock{
-		ComponentSpec: Spec{Name: name, Version: version},
-		RemotePath:    downloadURL,
-		RemoteSource:  src.ID(),
-	}
+func (src BOSHIOReleaseSource) createReleaseRemote(spec Spec, fullName string) Lock {
+	downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, spec.Version)
+	releaseRemote := spec.Lock()
+	releaseRemote.RemoteSource = src.ID()
+	releaseRemote.RemotePath = downloadURL
 	return releaseRemote
 }
 

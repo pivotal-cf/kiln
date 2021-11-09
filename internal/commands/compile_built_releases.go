@@ -182,11 +182,7 @@ func findBuiltReleases(allReleaseSources component.MultiReleaseSource, kilnfileL
 		}
 		if !src.Configuration().Publishable {
 			releaseID := component.Spec{Name: lock.Name, Version: lock.Version}
-			builtReleases = append(builtReleases, component.Lock{
-				ComponentSpec: releaseID,
-				RemoteSource:  lock.RemoteSource,
-				RemotePath:    lock.RemotePath,
-			})
+			builtReleases = append(builtReleases, releaseID.Lock().WithRemote(lock.RemoteSource, lock.RemotePath))
 		}
 	}
 	return builtReleases, nil
@@ -201,7 +197,7 @@ func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSour
 	f.Logger.Println("searching for pre-compiled releases")
 
 	for _, builtRelease := range builtReleases {
-		spec := component.Requirement{
+		spec := component.Spec{
 			Name:            builtRelease.Name,
 			Version:         builtRelease.Version,
 			StemcellOS:      stemcell.OS,
@@ -296,11 +292,11 @@ func (f CompileBuiltReleases) compileAndDownloadReleases(releaseSource component
 func (f CompileBuiltReleases) uploadReleasesToDirector(builtReleases []component.Lock, releaseSource component.MultiReleaseSource, boshDirector BoshDirector) ([]component.Spec, error) {
 	var releaseIDs []component.Spec
 	for _, remoteRelease := range builtReleases {
-		releaseIDs = append(releaseIDs, remoteRelease.ComponentSpec)
+		releaseIDs = append(releaseIDs, remoteRelease.Spec())
 
 		localRelease, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease)
 		if err != nil {
-			return nil, fmt.Errorf("failure downloading built release %v: %w", remoteRelease.ComponentSpec, err) // untested
+			return nil, fmt.Errorf("failure downloading built release %s@%s: %w", remoteRelease.Name, remoteRelease.Version, err) // untested
 		}
 
 		builtReleaseForUploading, err := os.Open(localRelease.LocalPath)
@@ -379,9 +375,8 @@ func (f CompileBuiltReleases) downloadCompiledReleases(stemcellManifest builder.
 		}
 
 		downloadedReleases = append(downloadedReleases, component.Local{
-			Spec:      component.Spec{Name: rel.Name, Version: rel.Version},
+			Lock:      rel.Lock.WithSHA1(hex.EncodeToString(s.Sum(nil))),
 			LocalPath: rel.TarballPath,
-			SHA1:      hex.EncodeToString(s.Sum(nil)),
 		})
 
 		expectedMultipleDigest, err := boshcrypto.ParseMultipleDigest(rel.SHA1)
@@ -442,10 +437,13 @@ func (f CompileBuiltReleases) exportReleasesInParallel(stemcellManifest builder.
 
 				exportedReleasesMux.Lock()
 				exportedReleases = append(exportedReleases, component.Exported{
-					Spec:        component.Spec{Name: rel.Name, Version: rel.Version},
+					Lock: component.Lock{
+						Name:    rel.Name,
+						Version: rel.Version,
+						SHA1:    result.SHA1,
+					},
 					TarballPath: compiledTarballPath,
 					BlobstoreID: result.BlobstoreID,
-					SHA1:        result.SHA1,
 				})
 				exportedReleasesMux.Unlock()
 
@@ -485,11 +483,11 @@ func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []compon
 			return nil, fmt.Errorf("opening compiled release %q for uploading: %w", downloadedRelease.LocalPath, err) // untested
 		}
 
-		remoteRelease, err := releaseUploader.UploadRelease(component.Requirement{
+		remoteRelease, err := releaseUploader.UploadRelease(component.Spec{
 			Name:            downloadedRelease.Name,
-			Version:         downloadedRelease.Version,
 			StemcellOS:      stemcell.OperatingSystem,
 			StemcellVersion: stemcell.Version,
+			Version:         downloadedRelease.Version,
 		}, releaseFile)
 		if err != nil {
 			return nil, fmt.Errorf("uploading compiled release %q failed: %w", downloadedRelease.LocalPath, err) // untested

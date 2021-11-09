@@ -57,15 +57,15 @@ var _ = Describe("sync-with-local", func() {
 			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ComponentLock{
 					{
-						ComponentSpec: cargo.ComponentSpec{Name: release1Name,
-							Version: release1OldVersion},
+						Name:         release1Name,
+						Version:      release1OldVersion,
 						RemoteSource: release1OldSourceID,
 						RemotePath:   release1OldRemotePath,
 						SHA1:         release1OldSha,
 					},
 					{
-						ComponentSpec: cargo.ComponentSpec{Name: releaseName,
-							Version: releaseOldVersion},
+						Name:         releaseName,
+						Version:      releaseOldVersion,
 						RemoteSource: releaseOldSourceID,
 						RemotePath:   releaseOldRemotePath,
 						SHA1:         releaseOldSha,
@@ -77,14 +77,12 @@ var _ = Describe("sync-with-local", func() {
 			localReleaseDirectory = new(commandsFakes.LocalReleaseDirectory)
 			localReleaseDirectory.GetLocalReleasesReturns([]component.Local{
 				{
-					Spec:      component.Spec{Name: release1Name, Version: release1NewVersion},
+					Lock:      component.Lock{Name: release1Name, Version: release1NewVersion, SHA1: release1NewSha},
 					LocalPath: "local-path",
-					SHA1:      release1NewSha,
 				},
 				{
-					Spec:      component.Spec{Name: releaseName, Version: releaseNewVersion},
+					Lock:      component.Lock{Name: releaseName, Version: releaseNewVersion, SHA1: releaseNewSha},
 					LocalPath: "local-path-2",
-					SHA1:      releaseNewSha,
 				},
 			}, nil)
 
@@ -92,7 +90,7 @@ var _ = Describe("sync-with-local", func() {
 			remotePather = new(fetcherFakes.RemotePather)
 
 			remotePatherFinder.Returns(remotePather, nil)
-			remotePather.RemotePathCalls(func(requirement component.Requirement) (path string, err error) {
+			remotePather.RemotePathCalls(func(requirement component.Spec) (path string, err error) {
 				switch requirement.Name {
 				case release1Name:
 					return release1NewRemotePath, nil
@@ -125,15 +123,15 @@ var _ = Describe("sync-with-local", func() {
 			Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 			Expect(updatedLockfile.Releases).To(Equal([]cargo.ComponentLock{
 				{
-					ComponentSpec: cargo.ComponentSpec{Name: release1Name,
-						Version: release1NewVersion},
+					Name:         release1Name,
+					Version:      release1NewVersion,
 					RemoteSource: releaseSourceID,
 					RemotePath:   release1NewRemotePath,
 					SHA1:         release1NewSha,
 				},
 				{
-					ComponentSpec: cargo.ComponentSpec{Name: releaseName,
-						Version: releaseNewVersion},
+					Name:         releaseName,
+					Version:      releaseNewVersion,
 					RemoteSource: releaseSourceID,
 					RemotePath:   releaseNewRemotePath,
 					SHA1:         releaseNewSha,
@@ -145,14 +143,12 @@ var _ = Describe("sync-with-local", func() {
 			BeforeEach(func() {
 				localReleaseDirectory.GetLocalReleasesReturns([]component.Local{
 					{
-						Spec:      cargo.ComponentSpec{Name: release1Name, Version: release1OldVersion},
+						Lock:      component.Lock{Name: release1Name, Version: release1OldVersion, SHA1: release1NewSha},
 						LocalPath: "local-path",
-						SHA1:      release1NewSha,
 					},
 					{
-						Spec:      cargo.ComponentSpec{Name: releaseName, Version: releaseNewVersion},
+						Lock:      component.Lock{Name: releaseName, Version: releaseNewVersion, SHA1: releaseNewSha},
 						LocalPath: "local-path-2",
-						SHA1:      releaseNewSha,
 					},
 				}, nil)
 			})
@@ -168,15 +164,15 @@ var _ = Describe("sync-with-local", func() {
 				Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 				Expect(updatedLockfile.Releases).To(Equal([]cargo.ComponentLock{
 					{
-						ComponentSpec: cargo.ComponentSpec{Name: release1Name,
-							Version: release1OldVersion},
+						Name:         release1Name,
+						Version:      release1OldVersion,
 						RemoteSource: releaseSourceID,
 						RemotePath:   release1NewRemotePath,
 						SHA1:         release1NewSha,
 					},
 					{
-						ComponentSpec: cargo.ComponentSpec{Name: releaseName,
-							Version: releaseNewVersion},
+						Name:         releaseName,
+						Version:      releaseNewVersion,
 						RemoteSource: releaseSourceID,
 						RemotePath:   releaseNewRemotePath,
 						SHA1:         releaseNewSha,
@@ -197,15 +193,15 @@ var _ = Describe("sync-with-local", func() {
 					Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
 					Expect(updatedLockfile.Releases).To(Equal([]cargo.ComponentLock{
 						{
-							ComponentSpec: cargo.ComponentSpec{Name: release1Name,
-								Version: release1OldVersion},
+							Name:         release1Name,
+							Version:      release1OldVersion,
 							RemoteSource: release1OldSourceID,
 							RemotePath:   release1OldRemotePath,
 							SHA1:         release1OldSha,
 						},
 						{
-							ComponentSpec: cargo.ComponentSpec{Name: releaseName,
-								Version: releaseNewVersion},
+							Name:         releaseName,
+							Version:      releaseNewVersion,
 							RemoteSource: releaseSourceID,
 							RemotePath:   releaseNewRemotePath,
 							SHA1:         releaseNewSha,
@@ -220,8 +216,8 @@ var _ = Describe("sync-with-local", func() {
 				kilnfileLock = cargo.KilnfileLock{
 					Releases: []cargo.ComponentLock{
 						{
-							ComponentSpec: cargo.ComponentSpec{Name: release1Name,
-								Version: release1OldVersion},
+							Name:         release1Name,
+							Version:      release1OldVersion,
 							RemoteSource: release1OldSourceID,
 							RemotePath:   release1OldRemotePath,
 							SHA1:         release1OldSha,

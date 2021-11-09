@@ -76,10 +76,8 @@ func TestValidate_validateRelease(t *testing.T) {
 			Name: "capi",
 		}
 		l := cargo.ComponentLock{
-			ComponentSpec: cargo.ComponentSpec{
-				Name:    "capi",
-				Version: "2.3.4",
-			},
+			Name:    "capi",
+			Version: "2.3.4",
 		}
 		err := validateRelease(r, l, 0)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
@@ -92,10 +90,8 @@ func TestValidate_validateRelease(t *testing.T) {
 			Version: "meh",
 		}
 		l := cargo.ComponentLock{
-			ComponentSpec: cargo.ComponentSpec{
-				Name:    "capi",
-				Version: "2.3.4",
-			},
+			Name:    "capi",
+			Version: "2.3.4",
 		}
 		err := validateRelease(r, l, 0)
 		please.Expect(err).To(Ω.And(
@@ -111,10 +107,8 @@ func TestValidate_validateRelease(t *testing.T) {
 			Version: "~2",
 		}
 		l := cargo.ComponentLock{
-			ComponentSpec: cargo.ComponentSpec{
-				Name:    "capi",
-				Version: "3.0.5",
-			},
+			Name:    "capi",
+			Version: "3.0.5",
 		}
 		err := validateRelease(r, l, 0)
 		please.Expect(err).To(Ω.And(
@@ -130,10 +124,8 @@ func TestValidate_validateRelease(t *testing.T) {
 			Version: "~2",
 		}
 		l := cargo.ComponentLock{
-			ComponentSpec: cargo.ComponentSpec{
-				Name:    "capi",
-				Version: "BAD",
-			},
+			Name:    "capi",
+			Version: "BAD",
 		}
 		err := validateRelease(r, l, 0)
 		please.Expect(err).To(Ω.And(

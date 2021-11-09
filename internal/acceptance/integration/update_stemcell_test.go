@@ -128,29 +128,23 @@ stemcell_criteria:
 		Expect(err).NotTo(HaveOccurred())
 
 		upgradeStemcell := cargo.ComponentLock{
-			ComponentSpec: cargo.ComponentSpec{
-				Name:    "push-apps-manager-release",
-				Version: "672.0.0",
-			},
+			Name:         "push-apps-manager-release",
+			Version:      "672.0.0",
 			SHA1:         "dd51c8b05cce325d68b7fc0c0c4e563b72c63006",
 			RemoteSource: "compiled-releases",
 			RemotePath:   "2.10/push-apps-manager/push-apps-manager-release-672.0.0-ubuntu-xenial-621.51.tgz",
 		}
 		notCompiledAgainstNewStemcell := cargo.ComponentLock{
-			ComponentSpec: cargo.ComponentSpec{
-				Name:    "capi",
-				Version: "1.89.0",
-			},
+			Name:         "capi",
+			Version:      "1.89.0",
 			SHA1:         "472966da017bda3118eb9cf71f9bcca1c23c344a",
 			RemoteSource: "bosh.io",
 			RemotePath:   "https://bosh.io/d/github.com/cloudfoundry/capi-release?v=1.89.0",
 		}
 
 		remainsBuilt := cargo.ComponentLock{
-			ComponentSpec: cargo.ComponentSpec{
-				Name:    "cf-cli",
-				Version: "1.23.0",
-			},
+			Name:         "cf-cli",
+			Version:      "1.23.0",
 			SHA1:         "cda431fa1e550c28bf6f5c82b3a3cf2c168771f2",
 			RemoteSource: "bosh.io",
 			RemotePath:   "https://bosh.io/d/github.com/bosh-packages/cf-cli-release?v=1.23.0",

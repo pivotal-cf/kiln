@@ -64,9 +64,12 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				Expect(releases).To(HaveLen(1))
 				Expect(releases).To(ConsistOf(
 					component.Local{
-						Spec:      component.Spec{Name: "some-release", Version: "1.2.3"},
+						Lock: component.Lock{
+							Name:    "some-release",
+							Version: "1.2.3",
+							SHA1:    "6d96f7c98610fa6d8e7f45271111221b5b8497a2",
+						},
 						LocalPath: releaseFile,
-						SHA1:      "6d96f7c98610fa6d8e7f45271111221b5b8497a2",
 					},
 				))
 			})
@@ -103,7 +106,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		It("deletes specified files", func() {
 			extraReleaseID := component.Spec{Name: "extra-release", Version: "0.0"}
-			extraRelease := component.Local{Spec: extraReleaseID, LocalPath: extraFilePath}
+			extraRelease := component.Local{Lock: extraReleaseID.Lock(), LocalPath: extraFilePath}
 
 			err := localReleaseDirectory.DeleteExtraReleases([]component.Local{extraRelease}, noConfirm)
 			Expect(err).NotTo(HaveOccurred())
@@ -114,10 +117,10 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 		It("sorts the list of releases to be deleted", func() {
 			extraReleaseID := component.Spec{Name: "extra-release", Version: "0.0"}
-			extraRelease := component.Local{Spec: extraReleaseID, LocalPath: extraFilePath}
+			extraRelease := component.Local{Lock: extraReleaseID.Lock(), LocalPath: extraFilePath}
 
 			zReleaseID := component.Spec{Name: "z-release", Version: "0.0"}
-			zRelease := component.Local{Spec: zReleaseID, LocalPath: zFilePath}
+			zRelease := component.Local{Lock: zReleaseID.Lock(), LocalPath: zFilePath}
 
 			result := fmt.Sprintf("- %s\n- %s", extraFilePath, zFilePath)
 
@@ -130,7 +133,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		Context("when a file cannot be removed", func() {
 			It("returns an error", func() {
 				extraReleaseID := component.Spec{Name: "extra-release-that-cannot-be-deleted", Version: "0.0"}
-				extraRelease := component.Local{Spec: extraReleaseID, LocalPath: "file-does-not-exist"}
+				extraRelease := component.Local{Lock: extraReleaseID.Lock(), LocalPath: "file-does-not-exist"}
 
 				err := localReleaseDirectory.DeleteExtraReleases([]component.Local{extraRelease}, noConfirm)
 				Expect(err).To(MatchError("failed to delete release extra-release-that-cannot-be-deleted"))

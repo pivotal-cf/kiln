@@ -69,7 +69,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 	for i, rel := range kilnfileLock.Releases {
 		update.Logger.Printf("Updating release %q with stemcell %s %s...", rel.Name, kilnfileLock.Stemcell.OS, trimmedInputVersion)
 
-		remote, found, err := releaseSource.GetMatchedRelease(component.Requirement{
+		remote, found, err := releaseSource.GetMatchedRelease(component.Spec{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      kilnfileLock.Stemcell.OS,

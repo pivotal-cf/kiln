@@ -76,11 +76,11 @@ func (u UpdateRelease) Execute(args []string) error {
 	var found bool
 	var newVersion, newSHA1, newSourceID, newRemotePath string
 	if u.Options.WithoutDownload {
-		remoteRelease, found, err = releaseSource.FindReleaseVersion(component.Requirement{
-			Name:              u.Options.Name,
-			VersionConstraint: releaseVersionConstraint,
-			StemcellVersion:   kilnfileLock.Stemcell.Version,
-			StemcellOS:        kilnfileLock.Stemcell.OS,
+		remoteRelease, found, err = releaseSource.FindReleaseVersion(component.Spec{
+			Name:            u.Options.Name,
+			Version:         releaseVersionConstraint,
+			StemcellVersion: kilnfileLock.Stemcell.Version,
+			StemcellOS:      kilnfileLock.Stemcell.OS,
 		})
 
 		if err != nil {
@@ -96,7 +96,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		newRemotePath = remoteRelease.RemotePath
 
 	} else {
-		remoteRelease, found, err = releaseSource.GetMatchedRelease(component.Requirement{
+		remoteRelease, found, err = releaseSource.GetMatchedRelease(component.Spec{
 			Name:            u.Options.Name,
 			Version:         u.Options.Version,
 			StemcellOS:      kilnfileLock.Stemcell.OS,

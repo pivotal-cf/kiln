@@ -5,13 +5,14 @@ import (
 	"sync"
 
 	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type RemotePather struct {
-	RemotePathStub        func(component.Requirement) (string, error)
+	RemotePathStub        func(cargo.ComponentSpec) (string, error)
 	remotePathMutex       sync.RWMutex
 	remotePathArgsForCall []struct {
-		arg1 component.Requirement
+		arg1 cargo.ComponentSpec
 	}
 	remotePathReturns struct {
 		result1 string
@@ -25,11 +26,11 @@ type RemotePather struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *RemotePather) RemotePath(arg1 component.Requirement) (string, error) {
+func (fake *RemotePather) RemotePath(arg1 cargo.ComponentSpec) (string, error) {
 	fake.remotePathMutex.Lock()
 	ret, specificReturn := fake.remotePathReturnsOnCall[len(fake.remotePathArgsForCall)]
 	fake.remotePathArgsForCall = append(fake.remotePathArgsForCall, struct {
-		arg1 component.Requirement
+		arg1 cargo.ComponentSpec
 	}{arg1})
 	stub := fake.RemotePathStub
 	fakeReturns := fake.remotePathReturns
@@ -50,13 +51,13 @@ func (fake *RemotePather) RemotePathCallCount() int {
 	return len(fake.remotePathArgsForCall)
 }
 
-func (fake *RemotePather) RemotePathCalls(stub func(component.Requirement) (string, error)) {
+func (fake *RemotePather) RemotePathCalls(stub func(cargo.ComponentSpec) (string, error)) {
 	fake.remotePathMutex.Lock()
 	defer fake.remotePathMutex.Unlock()
 	fake.RemotePathStub = stub
 }
 
-func (fake *RemotePather) RemotePathArgsForCall(i int) component.Requirement {
+func (fake *RemotePather) RemotePathArgsForCall(i int) cargo.ComponentSpec {
 	fake.remotePathMutex.RLock()
 	defer fake.remotePathMutex.RUnlock()
 	argsForCall := fake.remotePathArgsForCall[i]
