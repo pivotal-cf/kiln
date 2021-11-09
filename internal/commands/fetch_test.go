@@ -106,10 +106,10 @@ stemcell_criteria:
 			fakeReleaseSources.DownloadReleaseStub = func(s string, lock cargo.ComponentLock) (component.Local, error) {
 				return releaseSourceList.DownloadRelease(s, lock)
 			}
-			fakeReleaseSources.FindReleaseVersionStub = func(requirement component.Requirement) (cargo.ComponentLock, bool, error) {
+			fakeReleaseSources.FindReleaseVersionStub = func(requirement component.Spec) (cargo.ComponentLock, bool, error) {
 				return releaseSourceList.FindReleaseVersion(requirement)
 			}
-			fakeReleaseSources.GetMatchedReleaseStub = func(requirement component.Requirement) (cargo.ComponentLock, bool, error) {
+			fakeReleaseSources.GetMatchedReleaseStub = func(requirement component.Spec) (cargo.ComponentLock, bool, error) {
 				return releaseSourceList.GetMatchedRelease(requirement)
 			}
 			multiReleaseSourceProvider = func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
@@ -136,9 +136,8 @@ stemcell_criteria:
 				releaseID = component.Spec{Name: "some-release", Version: "0.1.0"}
 				fakeS3CompiledReleaseSource.DownloadReleaseReturns(
 					component.Local{
-						Spec:      releaseID,
+						Lock:      releaseID.Lock().WithSHA1("correct-sha"),
 						LocalPath: fmt.Sprintf("releases/%s-%s.tgz", releaseID.Name, releaseID.Version),
-						SHA1:      "correct-sha",
 					}, nil)
 				lockContents = `---
 releases:
@@ -156,9 +155,8 @@ stemcell_criteria:
 			When("the release on disk has the wrong SHA1", func() {
 				BeforeEach(func() {
 					releaseOnDisk = component.Local{
-						Spec:      releaseID,
+						Lock:      releaseID.Lock().WithSHA1("wrong-sha"),
 						LocalPath: fmt.Sprintf("releases/%s-%s.tgz", releaseID.Name, releaseID.Version),
-						SHA1:      "wrong-sha",
 					}
 					fakeLocalReleaseDirectory.GetLocalReleasesReturns([]component.Local{releaseOnDisk}, nil)
 				})
@@ -179,9 +177,8 @@ stemcell_criteria:
 			When("the release on disk has the correct SHA1", func() {
 				BeforeEach(func() {
 					releaseOnDisk = component.Local{
-						Spec:      releaseID,
+						Lock:      releaseID.Lock().WithSHA1("correct-sha"),
 						LocalPath: fmt.Sprintf("releases/%s-%s.tgz", releaseID.Name, releaseID.Version),
-						SHA1:      "correct-sha",
 					}
 					fakeLocalReleaseDirectory.GetLocalReleasesReturns([]component.Local{releaseOnDisk}, nil)
 				})
@@ -228,15 +225,15 @@ stemcell_criteria:
   version: "30.1"
 `
 				fakeS3CompiledReleaseSource.DownloadReleaseReturns(
-					component.Local{Spec: s3CompiledReleaseID, LocalPath: "local-path", SHA1: "correct-sha"},
+					component.Local{Lock: s3CompiledReleaseID.Lock().WithSHA1("correct-sha"), LocalPath: "local-path"},
 					nil)
 
 				fakeS3BuiltReleaseSource.DownloadReleaseReturns(
-					component.Local{Spec: s3BuiltReleaseID, LocalPath: "local-path2", SHA1: "correct-sha"},
+					component.Local{Lock: s3BuiltReleaseID.Lock().WithSHA1("correct-sha"), LocalPath: "local-path2"},
 					nil)
 
 				fakeBoshIOReleaseSource.DownloadReleaseReturns(
-					component.Local{Spec: boshIOReleaseID, LocalPath: "local-path3", SHA1: "correct-sha"},
+					component.Local{Lock: boshIOReleaseID.Lock().WithSHA1("correct-sha"), LocalPath: "local-path3"},
 					nil)
 
 				fakeLocalReleaseDirectory.GetLocalReleasesReturns(nil, nil)
@@ -252,7 +249,7 @@ stemcell_criteria:
 				releasesDir, object := fakeS3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(object).To(Equal(
-					component.Lock{ComponentSpec: s3CompiledReleaseID, RemotePath: "some-s3-key", RemoteSource: s3CompiledReleaseSourceID},
+					s3CompiledReleaseID.Lock().WithRemote(s3CompiledReleaseSourceID, "some-s3-key"),
 				))
 			})
 
@@ -261,7 +258,7 @@ stemcell_criteria:
 				releasesDir, object := fakeS3BuiltReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(object).To(Equal(
-					component.Lock{ComponentSpec: s3BuiltReleaseID, RemotePath: "some-other-s3-key", RemoteSource: s3BuiltReleaseSourceID},
+					s3BuiltReleaseID.Lock().WithRemote(s3BuiltReleaseSourceID, "some-other-s3-key"),
 				))
 			})
 
@@ -270,7 +267,7 @@ stemcell_criteria:
 				releasesDir, object := fakeBoshIOReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(object).To(Equal(
-					component.Lock{ComponentSpec: boshIOReleaseID, RemotePath: "some-bosh-io-url", RemoteSource: boshIOReleaseSourceID},
+					boshIOReleaseID.Lock().WithRemote(boshIOReleaseSourceID, "some-bosh-io-url"),
 				))
 			})
 		})
@@ -294,7 +291,7 @@ stemcell_criteria:
 					Version: "1.2.3",
 				}
 				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]component.Local{
-					{Spec: someLocalReleaseID, LocalPath: "/path/to/some/release", SHA1: "correct-sha"},
+					{Lock: someLocalReleaseID.Lock().WithSHA1("correct-sha"), LocalPath: "/path/to/some/release"},
 				}, nil)
 			})
 
@@ -358,32 +355,30 @@ stemcell_criteria:
 
 				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]component.Local{
 					{
-						Spec:      component.Spec{Name: "some-release", Version: "1.2.3"},
+						Lock:      component.Lock{Name: "some-release", Version: "1.2.3", SHA1: "correct-sha"},
 						LocalPath: "path/to/some/release",
-						SHA1:      "correct-sha",
 					},
 					{
-						Spec:      component.Spec{Name: "some-tiny-release", Version: "1.2.3"},
+						Lock:      component.Lock{Name: "some-tiny-release", Version: "1.2.3", SHA1: "correct-sha"},
 						LocalPath: "path/to/some/tiny/release",
-						SHA1:      "correct-sha",
 					},
 				}, nil)
 
 				fakeS3CompiledReleaseSource.DownloadReleaseReturns(component.Local{
-					Spec: missingReleaseS3CompiledID, LocalPath: "local-path-1", SHA1: "correct-sha",
+					Lock: missingReleaseS3CompiledID.Lock().WithSHA1("correct-sha"), LocalPath: "local-path-1",
 				}, nil)
 
 				fakeBoshIOReleaseSource.DownloadReleaseReturns(component.Local{
-					Spec: missingReleaseBoshIOID, LocalPath: "local-path-2", SHA1: "correct-sha",
+					Lock: missingReleaseBoshIOID.Lock().WithSHA1("correct-sha"), LocalPath: "local-path-2",
 				}, nil)
 
 				fakeS3BuiltReleaseSource.DownloadReleaseReturns(component.Local{
-					Spec: missingReleaseS3BuiltID, LocalPath: "local-path-3", SHA1: "correct-sha",
+					Lock: missingReleaseS3BuiltID.Lock().WithSHA1("correct-sha"), LocalPath: "local-path-3",
 				}, nil)
 
-				missingReleaseS3Compiled = component.Lock{ComponentSpec: missingReleaseS3CompiledID, RemotePath: missingReleaseS3CompiledPath, RemoteSource: s3CompiledReleaseSourceID}
-				missingReleaseBoshIO = component.Lock{ComponentSpec: missingReleaseBoshIOID, RemotePath: missingReleaseBoshIOPath, RemoteSource: boshIOReleaseSourceID}
-				missingReleaseS3Built = component.Lock{ComponentSpec: missingReleaseS3BuiltID, RemotePath: missingReleaseS3BuiltPath, RemoteSource: s3BuiltReleaseSourceID}
+				missingReleaseS3Compiled = missingReleaseS3CompiledID.Lock().WithRemote(s3CompiledReleaseSourceID, missingReleaseS3CompiledPath)
+				missingReleaseBoshIO = missingReleaseBoshIOID.Lock().WithRemote(boshIOReleaseSourceID, missingReleaseBoshIOPath)
+				missingReleaseS3Built = missingReleaseS3BuiltID.Lock().WithRemote(s3BuiltReleaseSourceID, missingReleaseS3BuiltPath)
 			})
 
 			It("downloads only the missing releases", func() {
@@ -436,7 +431,7 @@ stemcell_criteria:
 						}()
 
 						return component.Local{
-							Spec: missingReleaseS3BuiltID, LocalPath: badReleasePath, SHA1: "wrong-sha",
+							Lock: missingReleaseS3BuiltID.Lock().WithSHA1("wrong-sha"), LocalPath: badReleasePath,
 						}, nil
 					})
 				})
@@ -473,11 +468,11 @@ stemcell_criteria:
   version: "4.5.6"
 `
 				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]component.Local{
-					{Spec: localReleaseID, LocalPath: "path/to/some/extra/release", SHA1: "correct-sha"},
+					{Lock: localReleaseID.Lock().WithSHA1("correct-sha"), LocalPath: "path/to/some/extra/release"},
 				}, nil)
 
 				fakeBoshIOReleaseSource.DownloadReleaseReturns(
-					component.Local{Spec: boshIOReleaseID, LocalPath: "local-path", SHA1: "correct-sha"},
+					component.Local{Lock: boshIOReleaseID.Lock().WithSHA1("correct-sha"), LocalPath: "local-path"},
 					nil)
 
 			})
@@ -503,9 +498,8 @@ stemcell_criteria:
 					Expect(noConfirm).To(Equal(true))
 					Expect(extras).To(ConsistOf(
 						component.Local{
-							Spec:      component.Spec{Name: "some-extra-release", Version: "1.2.3"},
+							Lock:      component.Lock{Name: "some-extra-release", Version: "1.2.3", SHA1: "correct-sha"},
 							LocalPath: "path/to/some/extra/release",
-							SHA1:      "correct-sha",
 						},
 					))
 				})

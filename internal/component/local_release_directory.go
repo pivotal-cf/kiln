@@ -38,15 +38,15 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]Local, er
 
 	for _, rel := range rawReleases {
 		releaseManifest := rel.Metadata.(builder.ReleaseManifest)
-		id := Spec{Name: releaseManifest.Name, Version: releaseManifest.Version}
-		localPath := rel.File
-		sum, err := CalculateSum(localPath, osfs.New(""))
 
+		lock := Lock{Name: releaseManifest.Name, Version: releaseManifest.Version}
+
+		lock.SHA1, err = CalculateSum(rel.File, osfs.New(""))
 		if err != nil {
-			return nil, fmt.Errorf("couldn't calculate SHA1 sum of %q: %w", localPath, err) // untested
+			return nil, fmt.Errorf("couldn't calculate SHA1 sum of %q: %w", rel.File, err) // untested
 		}
 
-		outputReleases = append(outputReleases, Local{Spec: id, LocalPath: localPath, SHA1: sum})
+		outputReleases = append(outputReleases, Local{Lock: lock, LocalPath: rel.File})
 	}
 	return outputReleases, nil
 }

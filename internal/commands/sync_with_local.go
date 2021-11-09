@@ -63,7 +63,7 @@ func (command SyncWithLocal) Execute(args []string) error {
 	command.logger.Printf("Found %d releases on disk\n", len(releases))
 
 	for _, rel := range releases {
-		remotePath, err := remotePather.RemotePath(component.Requirement{
+		remotePath, err := remotePather.RemotePath(component.Spec{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      kilnfileLock.Stemcell.OS,

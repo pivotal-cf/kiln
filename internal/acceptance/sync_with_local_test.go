@@ -111,19 +111,15 @@ release_sources:
 			cargo.KilnfileLock{
 				Releases: []cargo.ComponentLock{
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    "loggregator-agent",
-							Version: "5.3.6",
-						},
+						Name:         "loggregator-agent",
+						Version:      "5.3.6",
 						SHA1:         expectedReleaseSHA,
 						RemoteSource: "compiled-releases",
 						RemotePath:   "2.8/loggregator-agent/loggregator-agent-5.3.6-some-os-4.5.6.tgz",
 					},
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    "capi",
-							Version: "1.87.0",
-						},
+						Name:         "capi",
+						Version:      "1.87.0",
 						SHA1:         "03ac801323cd23205dde357cc7d2dc9e92bc0c93",
 						RemoteSource: "bosh.io",
 						RemotePath:   "https://bosh.io/d/github.com/cloudfoundry/capi-release?v=1.87.0",

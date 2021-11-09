@@ -87,9 +87,9 @@ var _ = Describe("CompileBuiltReleases", func() {
 		}
 		kilnfileLock = cargo.KilnfileLock{
 			Releases: []cargo.ComponentLock{
-				{ComponentSpec: cargo.ComponentSpec{Name: "uaa", Version: "1.2.3"}, RemoteSource: builtSourceID, RemotePath: "/remote/path/uaa-1.2.3.tgz", SHA1: "original-sha"},
-				{ComponentSpec: cargo.ComponentSpec{Name: "capi", Version: "2.3.4"}, RemoteSource: builtSourceID, RemotePath: "/remote/path/capi-2.3.4.tgz", SHA1: "original-sha"},
-				{ComponentSpec: cargo.ComponentSpec{Name: "bpm", Version: "1.6"}, RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
+				{Name: "uaa", Version: "1.2.3", RemoteSource: builtSourceID, RemotePath: "/remote/path/uaa-1.2.3.tgz", SHA1: "original-sha"},
+				{Name: "capi", Version: "2.3.4", RemoteSource: builtSourceID, RemotePath: "/remote/path/capi-2.3.4.tgz", SHA1: "original-sha"},
+				{Name: "bpm", Version: "1.6", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
 			},
 			Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 		}
@@ -107,11 +107,11 @@ var _ = Describe("CompileBuiltReleases", func() {
 		releaseUploaderFinder = new(commandsFakes.ReleaseUploaderFinder)
 		releaseUploaderFinder.Returns(releaseUploader, nil)
 
-		releaseUploader.UploadReleaseCalls(func(requirement component.Requirement, reader io.Reader) (remote component.Lock, err error) {
+		releaseUploader.UploadReleaseCalls(func(requirement component.Spec, reader io.Reader) (remote component.Lock, err error) {
 			return component.Lock{
-				ComponentSpec: component.Spec{Name: requirement.Name, Version: requirement.Version},
-				RemotePath:    fmt.Sprintf("%s/%s-%s-%s-%s.tgz", requirement.Name, requirement.Name, requirement.Version, requirement.StemcellOS, requirement.StemcellVersion),
-				RemoteSource:  compiledSourceID,
+				Name: requirement.Name, Version: requirement.Version,
+				RemotePath:   fmt.Sprintf("%s/%s-%s-%s-%s.tgz", requirement.Name, requirement.Name, requirement.Version, requirement.StemcellOS, requirement.StemcellVersion),
+				RemoteSource: compiledSourceID,
 			}, nil
 		})
 
@@ -139,9 +139,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 			_, _ = f.Write([]byte("file contents"))
 
 			return component.Local{
-				Spec:      remote.ComponentSpec,
+				Lock:      remote.WithSHA1("not-used"),
 				LocalPath: localPath,
-				SHA1:      "not-used",
 			}, nil
 		})
 
@@ -224,17 +223,17 @@ var _ = Describe("CompileBuiltReleases", func() {
 			downloadDir, remote := builtReleaseSource.DownloadReleaseArgsForCall(0)
 			Expect(downloadDir).To(Equal(releasesPath))
 			Expect(remote).To(Equal(component.Lock{
-				ComponentSpec: component.Spec{Name: "uaa", Version: "1.2.3"},
-				RemotePath:    "/remote/path/uaa-1.2.3.tgz",
-				RemoteSource:  builtSourceID,
+				Name: "uaa", Version: "1.2.3",
+				RemotePath:   "/remote/path/uaa-1.2.3.tgz",
+				RemoteSource: builtSourceID,
 			}))
 
 			downloadDir, remote = builtReleaseSource.DownloadReleaseArgsForCall(1)
 			Expect(downloadDir).To(Equal(releasesPath))
 			Expect(remote).To(Equal(component.Lock{
-				ComponentSpec: component.Spec{Name: "capi", Version: "2.3.4"},
-				RemotePath:    "/remote/path/capi-2.3.4.tgz",
-				RemoteSource:  builtSourceID,
+				Name: "capi", Version: "2.3.4",
+				RemotePath:   "/remote/path/capi-2.3.4.tgz",
+				RemoteSource: builtSourceID,
 			}))
 
 			Expect(logBuf.Contents()).To(ContainSubstring(""))
@@ -365,14 +364,14 @@ var _ = Describe("CompileBuiltReleases", func() {
 			contents2, err := ioutil.ReadAll(releaseFile)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect([]component.Requirement{spec1, spec2}).To(ConsistOf(
-				component.Requirement{
+			Expect([]component.Spec{spec1, spec2}).To(ConsistOf(
+				component.Spec{
 					Name:            "uaa",
 					Version:         "1.2.3",
 					StemcellOS:      "plan9",
 					StemcellVersion: "42",
 				},
-				component.Requirement{
+				component.Spec{
 					Name:            "capi",
 					Version:         "2.3.4",
 					StemcellOS:      "plan9",
@@ -406,28 +405,22 @@ var _ = Describe("CompileBuiltReleases", func() {
 			Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
 				Releases: []cargo.ComponentLock{
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    "uaa",
-							Version: "1.2.3",
-						},
+						Name:         "uaa",
+						Version:      "1.2.3",
 						RemoteSource: compiledSourceID,
 						RemotePath:   fmt.Sprintf("uaa/uaa-1.2.3-%s-%s.tgz", stemcellOS, stemcellVersion),
 						SHA1:         expectedUaaSha,
 					},
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    "capi",
-							Version: "2.3.4",
-						},
+						Name:         "capi",
+						Version:      "2.3.4",
 						RemoteSource: compiledSourceID,
 						RemotePath:   fmt.Sprintf("capi/capi-2.3.4-%s-%s.tgz", stemcellOS, stemcellVersion),
 						SHA1:         expectedCapiSha,
 					},
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    "bpm",
-							Version: "1.6",
-						},
+						Name:         "bpm",
+						Version:      "1.6",
 						RemoteSource: compiledSourceID,
 						RemotePath:   "not-used",
 						SHA1:         "original-sha",
@@ -441,11 +434,11 @@ var _ = Describe("CompileBuiltReleases", func() {
 			BeforeEach(func() {
 				kilnfileLock = cargo.KilnfileLock{
 					Releases: []cargo.ComponentLock{
-						{ComponentSpec: cargo.ComponentSpec{Name: "uaa", Version: "1.2.3"}, RemoteSource: builtSourceID, RemotePath: "/remote/path/uaa-1.2.3.tgz", SHA1: "original-sha"},
-						{ComponentSpec: cargo.ComponentSpec{Name: "capi", Version: "2.3.4"}, RemoteSource: builtSourceID, RemotePath: "/remote/path/capi-2.3.4.tgz", SHA1: "original-sha"},
-						{ComponentSpec: cargo.ComponentSpec{Name: "diego", Version: "5.6.7"}, RemoteSource: builtSourceID, RemotePath: "/remote/path/diego-4.5.6.tgz", SHA1: "original-sha"},
-						{ComponentSpec: cargo.ComponentSpec{Name: "route-emitter", Version: "8.9.10"}, RemoteSource: builtSourceID, RemotePath: "/remote/path/route-emitter-8.9.10.tgz", SHA1: "original-sha"},
-						{ComponentSpec: cargo.ComponentSpec{Name: "bpm", Version: "1.6"}, RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
+						{Name: "uaa", Version: "1.2.3", RemoteSource: builtSourceID, RemotePath: "/remote/path/uaa-1.2.3.tgz", SHA1: "original-sha"},
+						{Name: "capi", Version: "2.3.4", RemoteSource: builtSourceID, RemotePath: "/remote/path/capi-2.3.4.tgz", SHA1: "original-sha"},
+						{Name: "diego", Version: "5.6.7", RemoteSource: builtSourceID, RemotePath: "/remote/path/diego-4.5.6.tgz", SHA1: "original-sha"},
+						{Name: "route-emitter", Version: "8.9.10", RemoteSource: builtSourceID, RemotePath: "/remote/path/route-emitter-8.9.10.tgz", SHA1: "original-sha"},
+						{Name: "bpm", Version: "1.6", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
 					},
 					Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 				}
@@ -615,9 +608,9 @@ var _ = Describe("CompileBuiltReleases", func() {
 		BeforeEach(func() {
 			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ComponentLock{
-					{ComponentSpec: cargo.ComponentSpec{Name: "uaa", Version: "1.2.3"}, RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
-					{ComponentSpec: cargo.ComponentSpec{Name: "capi", Version: "2.3.4"}, RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
-					{ComponentSpec: cargo.ComponentSpec{Name: "bpm", Version: "1.6"}, RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
+					{Name: "uaa", Version: "1.2.3", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
+					{Name: "capi", Version: "2.3.4", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
+					{Name: "bpm", Version: "1.6", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "original-sha"},
 				},
 				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 			}
@@ -682,22 +675,22 @@ var _ = Describe("CompileBuiltReleases", func() {
 		)
 
 		BeforeEach(func() {
-			uaaID := component.Spec{Name: "uaa", Version: "1.2.3"}
-
-			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement component.Requirement) (component.Lock, bool, error) {
+			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement component.Spec) (component.Lock, bool, error) {
 				if requirement.Name == "uaa" {
 					return component.Lock{
-						ComponentSpec: uaaID,
-						RemotePath:    expectedUAARemotePath,
-						RemoteSource:  compiledSourceID,
+						Name: "uaa", Version: "1.2.3",
+						RemotePath:   expectedUAARemotePath,
+						RemoteSource: compiledSourceID,
 					}, true, nil
 				}
 				return component.Lock{}, false, nil
 			})
 			compiledReleaseSource.DownloadReleaseReturns(component.Local{
-				Spec:      uaaID,
+				Lock: component.Lock{
+					Name: "uaa", Version: "1.2.3",
+					SHA1: expectedUAASHA,
+				},
 				LocalPath: "not-used",
-				SHA1:      expectedUAASHA,
 			}, nil)
 		})
 
@@ -733,7 +726,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 			Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(1))
 
 			spec, releaseFile := releaseUploader.UploadReleaseArgsForCall(0)
-			Expect(spec).To(Equal(component.Requirement{
+			Expect(spec).To(Equal(component.Spec{
 				Name:            "capi",
 				Version:         "2.3.4",
 				StemcellOS:      "plan9",
@@ -758,9 +751,9 @@ var _ = Describe("CompileBuiltReleases", func() {
 			downloadDir, remoteRelease := compiledReleaseSource.DownloadReleaseArgsForCall(0)
 			Expect(downloadDir).To(Equal(releasesPath))
 			Expect(remoteRelease).To(Equal(component.Lock{
-				ComponentSpec: component.Spec{Name: "uaa", Version: "1.2.3"},
-				RemotePath:    expectedUAARemotePath,
-				RemoteSource:  compiledSourceID,
+				Name: "uaa", Version: "1.2.3",
+				RemotePath:   expectedUAARemotePath,
+				RemoteSource: compiledSourceID,
 			}))
 		})
 
@@ -782,28 +775,25 @@ var _ = Describe("CompileBuiltReleases", func() {
 			Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
 				Releases: []cargo.ComponentLock{
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    "uaa",
-							Version: "1.2.3",
-						},
+
+						Name:         "uaa",
+						Version:      "1.2.3",
 						RemoteSource: compiledSourceID,
 						RemotePath:   expectedUAARemotePath,
 						SHA1:         expectedUAASHA,
 					},
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    "capi",
-							Version: "2.3.4",
-						},
+
+						Name:         "capi",
+						Version:      "2.3.4",
 						RemoteSource: compiledSourceID,
 						RemotePath:   fmt.Sprintf("capi/capi-2.3.4-%s-%s.tgz", stemcellOS, stemcellVersion),
 						SHA1:         expectedCapiSha,
 					},
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    "bpm",
-							Version: "1.6",
-						},
+
+						Name:         "bpm",
+						Version:      "1.6",
 						RemoteSource: compiledSourceID,
 						RemotePath:   "not-used",
 						SHA1:         "original-sha",
@@ -823,22 +813,19 @@ var _ = Describe("CompileBuiltReleases", func() {
 		)
 
 		BeforeEach(func() {
-			uaaID := component.Spec{Name: "uaa", Version: "1.2.3"}
-			capiID := component.Spec{Name: "capi", Version: "2.3.4"}
-
-			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement component.Requirement) (component.Lock, bool, error) {
+			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement component.Spec) (component.Lock, bool, error) {
 				switch requirement.Name {
 				case "uaa":
 					return component.Lock{
-						ComponentSpec: uaaID,
-						RemotePath:    expectedUAARemotePath,
-						RemoteSource:  compiledSourceID,
+						Name: "uaa", Version: "1.2.3",
+						RemotePath:   expectedUAARemotePath,
+						RemoteSource: compiledSourceID,
 					}, true, nil
 				case "capi":
 					return component.Lock{
-						ComponentSpec: capiID,
-						RemotePath:    expectedCAPIRemotePath,
-						RemoteSource:  compiledSourceID,
+						Name: "capi", Version: "2.3.4",
+						RemotePath:   expectedCAPIRemotePath,
+						RemoteSource: compiledSourceID,
 					}, true, nil
 				default:
 					return component.Lock{}, false, nil
@@ -849,15 +836,13 @@ var _ = Describe("CompileBuiltReleases", func() {
 				switch remote.Name {
 				case "uaa":
 					return component.Local{
-						Spec:      uaaID,
+						Lock:      component.Lock{Name: "uaa", Version: "1.2.3", SHA1: expectedUAASHA},
 						LocalPath: "not-used",
-						SHA1:      expectedUAASHA,
 					}, nil
 				case "capi":
 					return component.Local{
-						Spec:      capiID,
+						Lock:      component.Lock{Name: "capi", Version: "2.3.4", SHA1: expectedCAPISHA},
 						LocalPath: "not-used",
-						SHA1:      expectedCAPISHA,
 					}, nil
 				default:
 					return component.Local{}, nil
@@ -904,17 +889,17 @@ var _ = Describe("CompileBuiltReleases", func() {
 			downloadDir, remoteRelease := compiledReleaseSource.DownloadReleaseArgsForCall(0)
 			Expect(downloadDir).To(Equal(releasesPath))
 			Expect(remoteRelease).To(Equal(component.Lock{
-				ComponentSpec: component.Spec{Name: "uaa", Version: "1.2.3"},
-				RemotePath:    expectedUAARemotePath,
-				RemoteSource:  compiledSourceID,
+				Name: "uaa", Version: "1.2.3",
+				RemotePath:   expectedUAARemotePath,
+				RemoteSource: compiledSourceID,
 			}))
 
 			downloadDir, remoteRelease = compiledReleaseSource.DownloadReleaseArgsForCall(1)
 			Expect(downloadDir).To(Equal(releasesPath))
 			Expect(remoteRelease).To(Equal(component.Lock{
-				ComponentSpec: component.Spec{Name: "capi", Version: "2.3.4"},
-				RemotePath:    expectedCAPIRemotePath,
-				RemoteSource:  compiledSourceID,
+				Name: "capi", Version: "2.3.4",
+				RemotePath:   expectedCAPIRemotePath,
+				RemoteSource: compiledSourceID,
 			}))
 		})
 
@@ -932,28 +917,25 @@ var _ = Describe("CompileBuiltReleases", func() {
 			Expect(updatedLockfile).To(Equal(cargo.KilnfileLock{
 				Releases: []cargo.ComponentLock{
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    "uaa",
-							Version: "1.2.3",
-						},
+
+						Name:         "uaa",
+						Version:      "1.2.3",
 						RemoteSource: compiledSourceID,
 						RemotePath:   expectedUAARemotePath,
 						SHA1:         expectedUAASHA,
 					},
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    "capi",
-							Version: "2.3.4",
-						},
+
+						Name:         "capi",
+						Version:      "2.3.4",
 						RemoteSource: compiledSourceID,
 						RemotePath:   expectedCAPIRemotePath,
 						SHA1:         expectedCAPISHA,
 					},
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    "bpm",
-							Version: "1.6",
-						},
+
+						Name:         "bpm",
+						Version:      "1.6",
 						RemoteSource: compiledSourceID,
 						RemotePath:   "not-used",
 						SHA1:         "original-sha",
@@ -1062,8 +1044,8 @@ var _ = Describe("CompileBuiltReleases", func() {
 		BeforeEach(func() {
 			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ComponentLock{
-					{ComponentSpec: cargo.ComponentSpec{Name: "uaa", Version: "1.2.3"}, RemoteSource: "no-such-source", RemotePath: "/remote/path/uaa-1.2.3.tgz", SHA1: "not-used"},
-					{ComponentSpec: cargo.ComponentSpec{Name: "bpm", Version: "1.6"}, RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "not-used"},
+					{Name: "uaa", Version: "1.2.3", RemoteSource: "no-such-source", RemotePath: "/remote/path/uaa-1.2.3.tgz", SHA1: "not-used"},
+					{Name: "bpm", Version: "1.6", RemoteSource: compiledSourceID, RemotePath: "not-used", SHA1: "not-used"},
 				},
 				Stemcell: cargo.Stemcell{OS: stemcellOS, Version: stemcellVersion},
 			}

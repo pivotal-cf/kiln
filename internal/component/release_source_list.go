@@ -115,7 +115,7 @@ func NewMultiReleaseSource(sources ...ReleaseSource) ReleaseSourceList {
 	return sources
 }
 
-func (list ReleaseSourceList) GetMatchedRelease(requirement Requirement) (Lock, bool, error) {
+func (list ReleaseSourceList) GetMatchedRelease(requirement Spec) (Lock, bool, error) {
 	for _, src := range list {
 		rel, found, err := src.GetMatchedRelease(requirement)
 		if err != nil {
@@ -152,7 +152,7 @@ func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease L
 	return localRelease, nil
 }
 
-func (list ReleaseSourceList) FindReleaseVersion(requirement Requirement) (Lock, bool, error) {
+func (list ReleaseSourceList) FindReleaseVersion(requirement Spec) (Lock, bool, error) {
 	foundRelease := Lock{}
 	releaseWasFound := false
 	for _, src := range list {

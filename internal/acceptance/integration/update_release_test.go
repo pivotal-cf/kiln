@@ -109,19 +109,15 @@ stemcell_criteria:
 				cargo.KilnfileLock{
 					Releases: []cargo.ComponentLock{
 						{
-							ComponentSpec: cargo.ComponentSpec{
-								Name:    "loggregator-agent",
-								Version: "5.1.0",
-							},
+							Name:         "loggregator-agent",
+							Version:      "5.1.0",
 							SHA1:         "a86e10219b0ed9b7b82f0610b7cdc03c13765722",
 							RemoteSource: "bosh.io",
 							RemotePath:   "https://bosh.io/d/github.com/cloudfoundry/loggregator-agent-release?v=5.1.0",
 						},
 						{
-							ComponentSpec: cargo.ComponentSpec{
-								Name:    "capi",
-								Version: "1.88.0",
-							},
+							Name:         "capi",
+							Version:      "1.88.0",
 							SHA1:         "7a7ef183de3252724b6f8e6ca39ad7cf4995fe27",
 							RemoteSource: "bosh.io",
 							RemotePath:   "https://bosh.io/d/github.com/cloudfoundry/capi-release?v=1.88.0",
@@ -218,19 +214,15 @@ stemcell_criteria:
 				cargo.KilnfileLock{
 					Releases: []cargo.ComponentLock{
 						{
-							ComponentSpec: cargo.ComponentSpec{
-								Name:    "loggregator-agent",
-								Version: "5.1.0",
-							},
+							Name:         "loggregator-agent",
+							Version:      "5.1.0",
 							SHA1:         "a86e10219b0ed9b7b82f0610b7cdc03c13765722",
 							RemoteSource: "compiled-releases",
 							RemotePath:   "2.8/loggregator-agent/loggregator-agent-5.1.0-ubuntu-xenial-456.30.tgz",
 						},
 						{
-							ComponentSpec: cargo.ComponentSpec{
-								Name:    "capi",
-								Version: "1.86.0",
-							},
+							Name:         "capi",
+							Version:      "1.86.0",
 							SHA1:         "32f40c3006e3b0b401b855da99cbd701c3c5be33",
 							RemoteSource: "compiled-releases",
 							RemotePath:   "2.8/capi/capi-1.86.0-ubuntu-xenial-456.30.tgz",

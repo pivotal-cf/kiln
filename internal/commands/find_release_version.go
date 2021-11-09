@@ -50,11 +50,11 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 		}
 	}
 
-	releaseRemote, _, err := releaseSource.FindReleaseVersion(component.Requirement{
-		Name:              cmd.Options.Release,
-		VersionConstraint: version,
-		StemcellVersion:   kilnfileLock.Stemcell.Version,
-		StemcellOS:        kilnfileLock.Stemcell.OS,
+	releaseRemote, _, err := releaseSource.FindReleaseVersion(component.Spec{
+		Name:            cmd.Options.Release,
+		Version:         version,
+		StemcellVersion: kilnfileLock.Stemcell.Version,
+		StemcellOS:      kilnfileLock.Stemcell.OS,
 	})
 
 	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{

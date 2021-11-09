@@ -68,19 +68,17 @@ var _ = Describe("UpdateRelease", func() {
 			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ComponentLock{
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    "minecraft",
+													Name:    "minecraft",
 							Version: "2.0.1",
-						},
+
 						SHA1:         "developersdevelopersdevelopersdevelopers",
 						RemoteSource: "bosh.io",
 						RemotePath:   "not-used",
 					},
 					{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    releaseName,
+													Name:    releaseName,
 							Version: oldReleaseVersion,
-						},
+
 						SHA1:         oldReleaseSha1,
 						RemoteSource: oldReleaseSourceName,
 						RemotePath:   oldRemotePath,
@@ -102,20 +100,13 @@ var _ = Describe("UpdateRelease", func() {
 
 			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, newReleaseVersion))
 			expectedDownloadedRelease = component.Local{
-				Spec:      component.Spec{Name: releaseName, Version: newReleaseVersion},
+				Lock:      component.Lock{Name: releaseName, Version: newReleaseVersion, SHA1:      newReleaseSha1},
 				LocalPath: downloadedReleasePath,
-				SHA1:      newReleaseSha1,
 			}
-			expectedRemoteRelease = component.Lock{
-				ComponentSpec: expectedDownloadedRelease.Spec,
-				RemotePath:    newRemotePath,
-				RemoteSource:  newReleaseSourceName,
-			}
+			expectedRemoteRelease = expectedDownloadedRelease.Lock.WithRemote(newReleaseSourceName, newRemotePath)
 			exepectedNotDownloadedRelease := component.Lock{
-				ComponentSpec: component.Spec{
-					Name:    releaseName,
-					Version: notDownloadedReleaseVersion,
-				},
+				Name:    releaseName,
+				Version: notDownloadedReleaseVersion,
 				RemotePath:   notDownloadedRemotePath,
 				RemoteSource: notDownloadedReleaseSourceName,
 				SHA1:         notDownloadedReleaseSha1,
@@ -143,7 +134,7 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(1))
 
 				receivedReleaseRequirement := releaseSource.GetMatchedReleaseArgsForCall(0)
-				releaseRequirement := component.Requirement{
+				releaseRequirement := component.Spec{
 					Name:            releaseName,
 					Version:         newReleaseVersion,
 					StemcellOS:      "some-os",
@@ -172,10 +163,9 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
 					cargo.ComponentLock{
-						ComponentSpec: cargo.ComponentSpec{
-							Name:    releaseName,
+													Name:    releaseName,
 							Version: newReleaseVersion,
-						},
+
 						SHA1:         newReleaseSha1,
 						RemoteSource: newReleaseSourceName,
 						RemotePath:   newRemotePath,
@@ -227,12 +217,11 @@ var _ = Describe("UpdateRelease", func() {
 
 			BeforeEach(func() {
 				expectedDownloadedRelease = component.Local{
-					Spec:      component.Spec{Name: releaseName, Version: oldReleaseVersion},
+					Lock:      component.Lock{Name: releaseName, Version: oldReleaseVersion, SHA1:      oldReleaseSha1},
 					LocalPath: "not-used",
-					SHA1:      oldReleaseSha1,
 				}
 				expectedRemoteRelease = component.Lock{
-					ComponentSpec: expectedDownloadedRelease.Spec,
+					Name: releaseName, Version: oldReleaseVersion,
 					RemotePath:    oldRemotePath,
 					RemoteSource:  oldReleaseSourceName,
 				}
@@ -392,10 +381,8 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
 					cargo.ComponentLock{
-						ComponentSpec: component.Spec{
-							Name:    releaseName,
-							Version: notDownloadedReleaseVersion,
-						},
+						Name:    releaseName,
+						Version: notDownloadedReleaseVersion,
 						SHA1:         notDownloadedReleaseSha1,
 						RemoteSource: notDownloadedReleaseSourceName,
 						RemotePath:   notDownloadedRemotePath,

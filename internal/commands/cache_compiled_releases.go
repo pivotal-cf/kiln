@@ -33,7 +33,7 @@ type (
 	}
 
 	ReleaseCacheBucket interface {
-		UploadRelease(spec component.Requirement, file io.Reader) (component.Lock, error)
+		UploadRelease(spec component.Spec, file io.Reader) (component.Lock, error)
 	}
 )
 
@@ -116,7 +116,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	var nonCompiledReleases []cargo.ComponentLock
 	cache := cmd.ReleaseCache(kilnfile, cmd.Options.UploadTargetID)
 	for _, rel := range lock.Releases {
-		remote, found, err := cache.GetMatchedRelease(component.Requirement{
+		remote, found, err := cache.GetMatchedRelease(component.Spec{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      lock.Stemcell.OS,
@@ -174,7 +174,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	}
 
 	for _, rel := range nonCompiledReleases {
-		requirement := component.Requirement{
+		requirement := component.Spec{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      stagedStemcellOS,
@@ -238,7 +238,7 @@ func (cmd CacheCompiledReleases) fetchProductDeploymentData() (_ OpsManagerRelea
 	return omAPI, manifest.Name, stagedStemcell.OS, stagedStemcell.Version, nil
 }
 
-func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket ReleaseCacheBucket, deployment boshdir.Deployment, req component.Requirement, osVersionSlug boshdir.OSVersionSlug) (component.Lock, error) {
+func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket ReleaseCacheBucket, deployment boshdir.Deployment, req component.Spec, osVersionSlug boshdir.OSVersionSlug) (component.Lock, error) {
 	cmd.Logger.Printf("\texporting %s %s\n", req.Name, req.Version)
 	result, err := deployment.ExportRelease(boshdir.NewReleaseSlug(req.Name, req.Version), osVersionSlug, nil)
 	if err != nil {
@@ -276,10 +276,8 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock) error {
 			continue
 		}
 		lock.Releases[index] = cargo.ComponentLock{
-			ComponentSpec: cargo.ComponentSpec{
-				Name:    release.Name,
-				Version: release.Version,
-			},
+			Name:         release.Name,
+			Version:      release.Version,
 			RemoteSource: release.RemoteSource,
 			RemotePath:   release.RemotePath,
 			SHA1:         release.SHA1,
@@ -289,7 +287,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock) error {
 	return fmt.Errorf("existing release not found in Kilnfile.lock")
 }
 
-func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Requirement, fp string, uploader ReleaseCacheBucket) (component.Lock, error) {
+func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Spec, fp string, uploader ReleaseCacheBucket) (component.Lock, error) {
 	f, err := cmd.FS.Open(fp)
 	if err != nil {
 		return component.Lock{}, err
@@ -300,7 +298,7 @@ func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Requirement,
 	return uploader.UploadRelease(spec, f)
 }
 
-func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, relDir string, req component.Requirement, res boshdir.ExportReleaseResult) (string, error) {
+func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, relDir string, req component.Spec, res boshdir.ExportReleaseResult) (string, error) {
 	fileName := fmt.Sprintf("%s-%s-%s-%s.tgz", req.Name, req.Version, req.StemcellOS, req.StemcellVersion)
 	filePath := filepath.Join(relDir, fileName)
 

@@ -69,17 +69,15 @@ var _ = Describe("UpdateStemcell", func() {
 			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ComponentLock{
 					{
-						ComponentSpec: cargo.ComponentSpec{Name: release1Name,
-							Version: release1Version,
-						},
+						Name: release1Name,
+						Version: release1Version,
 						SHA1:         "old-sha-1",
 						RemoteSource: "old-remote-source-1",
 						RemotePath:   "old-remote-path-1",
 					},
 					{
-						ComponentSpec: cargo.ComponentSpec{Name: release2Name,
-							Version: release2Version,
-						},
+						Name: release2Name,
+						Version: release2Version,
 						SHA1:         "old-sha-2",
 						RemoteSource: "old-remote-source-2",
 						RemotePath:   "old-remote-path-2",
@@ -92,18 +90,18 @@ var _ = Describe("UpdateStemcell", func() {
 			}
 
 			releaseSource = new(fetcherFakes.MultiReleaseSource)
-			releaseSource.GetMatchedReleaseCalls(func(requirement component.Requirement) (component.Lock, bool, error) {
+			releaseSource.GetMatchedReleaseCalls(func(requirement component.Spec) (component.Lock, bool, error) {
 				switch requirement.Name {
 				case release1Name:
 					remote := component.Lock{
-						ComponentSpec: component.Spec{Name: release1Name, Version: release1Version},
+						Name: release1Name, Version: release1Version,
 						RemotePath:    newRelease1RemotePath,
 						RemoteSource:  publishableReleaseSourceID,
 					}
 					return remote, true, nil
 				case release2Name:
 					remote := component.Lock{
-						ComponentSpec: component.Spec{Name: release2Name, Version: release2Version},
+						Name: release2Name, Version: release2Version,
 						RemotePath:    newRelease2RemotePath,
 						RemoteSource:  unpublishableReleaseSourceID,
 					}
@@ -117,16 +115,14 @@ var _ = Describe("UpdateStemcell", func() {
 				switch remote.Name {
 				case release1Name:
 					local := component.Local{
-						Spec:      component.Spec{Name: release1Name, Version: release1Version},
+						Lock:      component.Lock{Name: release1Name, Version: release1Version, SHA1:      newRelease1SHA},
 						LocalPath: "not-used",
-						SHA1:      newRelease1SHA,
 					}
 					return local, nil
 				case release2Name:
 					local := component.Local{
-						Spec:      component.Spec{Name: release2Name, Version: release2Version},
+						Lock:      component.Lock{Name: release2Name, Version: release2Version, SHA1:      newRelease2SHA},
 						LocalPath: "not-used",
-						SHA1:      newRelease2SHA,
 					}
 					return local, nil
 				default:
@@ -174,10 +170,8 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(updatedLockfile.Releases).To(HaveLen(2))
 			Expect(updatedLockfile.Releases).To(ContainElement(
 				cargo.ComponentLock{
-					ComponentSpec: cargo.ComponentSpec{
 						Name:    release1Name,
 						Version: release1Version,
-					},
 					SHA1:         newRelease1SHA,
 					RemoteSource: publishableReleaseSourceID,
 					RemotePath:   newRelease1RemotePath,
@@ -185,10 +179,8 @@ var _ = Describe("UpdateStemcell", func() {
 			))
 			Expect(updatedLockfile.Releases).To(ContainElement(
 				cargo.ComponentLock{
-					ComponentSpec: cargo.ComponentSpec{
 						Name:    release2Name,
 						Version: release2Version,
-					},
 					SHA1:         newRelease2SHA,
 					RemoteSource: unpublishableReleaseSourceID,
 					RemotePath:   newRelease2RemotePath,
@@ -205,13 +197,13 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(2))
 
 			req1 := releaseSource.GetMatchedReleaseArgsForCall(0)
-			Expect(req1).To(Equal(component.Requirement{
+			Expect(req1).To(Equal(component.Spec{
 				Name: release1Name, Version: release1Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
 			}))
 
 			req2 := releaseSource.GetMatchedReleaseArgsForCall(1)
-			Expect(req2).To(Equal(component.Requirement{
+			Expect(req2).To(Equal(component.Spec{
 				Name: release2Name, Version: release2Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
 			}))
@@ -229,7 +221,7 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote1).To(Equal(
 				component.Lock{
-					ComponentSpec: component.Spec{Name: release1Name, Version: release1Version},
+				Name: release1Name, Version: release1Version,
 					RemotePath:    newRelease1RemotePath,
 					RemoteSource:  publishableReleaseSourceID,
 				},
@@ -239,7 +231,7 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote2).To(Equal(
 				component.Lock{
-					ComponentSpec: component.Spec{Name: release2Name, Version: release2Version},
+				Name: release2Name, Version: release2Version,
 					RemotePath:    newRelease2RemotePath,
 					RemoteSource:  unpublishableReleaseSourceID,
 				},
@@ -350,10 +342,8 @@ var _ = Describe("UpdateStemcell", func() {
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
 					cargo.ComponentLock{
-						ComponentSpec: cargo.ComponentSpec{
 							Name:    release1Name,
 							Version: release1Version,
-						},
 						SHA1:         newRelease1SHA,
 						RemoteSource: publishableReleaseSourceID,
 						RemotePath:   newRelease1RemotePath,
@@ -361,10 +351,8 @@ var _ = Describe("UpdateStemcell", func() {
 				))
 				Expect(updatedLockfile.Releases).To(ContainElement(
 					cargo.ComponentLock{
-						ComponentSpec: cargo.ComponentSpec{
 							Name:    release2Name,
 							Version: release2Version,
-						},
 						SHA1:         newRelease2SHA,
 						RemoteSource: unpublishableReleaseSourceID,
 						RemotePath:   newRelease2RemotePath,
