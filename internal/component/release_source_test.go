@@ -27,7 +27,7 @@ var _ = Describe("ReleaseSourceList", func() {
 						{Type: "s3", Bucket: "compiled-releases", Region: "us-west-1", Publishable: true, PathTemplate: "template"},
 						{Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false, PathTemplate: "template"},
 						{Type: "bosh.io", Publishable: false},
-						{Type: "github"},
+						{Type: "github", Org: "cloudfoundry"},
 					},
 				}
 			})
