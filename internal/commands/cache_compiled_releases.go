@@ -133,10 +133,6 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		} else {
 			cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
 		}
-		err = updateLock(lock, remote)
-		if err != nil {
-			return fmt.Errorf("failed to update lock file: %w", err)
-		}
 	}
 
 	switch len(nonCompiledReleases) {
