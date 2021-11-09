@@ -130,15 +130,18 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		if !found {
 			nonCompiledReleases = append(nonCompiledReleases, rel)
 			continue
-		} else {
-			cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
+		}
+
+		cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
+		err = updateLock(lock, remote)
+		if err != nil {
+			return fmt.Errorf("failed to update lock file: %w", err)
 		}
 	}
 
 	switch len(nonCompiledReleases) {
 	case 0:
 		cmd.Logger.Print("cache already contains releases matching constraint\n")
-		return nil
 	case 1:
 		cmd.Logger.Printf("1 release is not publishable\n")
 	default:
