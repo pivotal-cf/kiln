@@ -2,7 +2,6 @@ package history
 
 import (
 	Ω "github.com/onsi/gomega"
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"testing"
 	"time"
@@ -59,8 +58,8 @@ func TestKilnfileLock(t *testing.T) {
 
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 		please.Expect(kf.Releases).To(Ω.Equal([]cargo.ComponentLock{
-			{ComponentSpec: component.Spec{Name: "banana", Version: "0.1.0"}},
-			{ComponentSpec: component.Spec{Name: "lemon", Version: "1.1.0"}},
+			{Name: "banana", Version: "0.1.0"},
+			{Name: "lemon", Version: "1.1.0"},
 		}))
 	})
 
@@ -69,9 +68,9 @@ func TestKilnfileLock(t *testing.T) {
 
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 		please.Expect(finalKF.Releases).To(Ω.Equal([]cargo.ComponentLock{
-			{ComponentSpec: component.Spec{Name: "banana", Version: "0.9.0"}},
-			{ComponentSpec: component.Spec{Name: "lemon", Version: "1.9.0"}},
-			{ComponentSpec: component.Spec{Name: "apple", Version: "0.0.1"}},
+			{Name: "banana", Version: "0.9.0"},
+			{Name: "lemon", Version: "1.9.0"},
+			{Name: "apple", Version: "0.0.1"},
 		}))
 	})
 

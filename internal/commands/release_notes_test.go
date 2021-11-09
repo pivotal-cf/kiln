@@ -15,7 +15,6 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -49,14 +48,14 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		historicKilnfileLockFunc := &fakes.HistoricKilnfileLockFunc{}
 		historicKilnfileLockFunc.ReturnsOnCall(0, cargo.KilnfileLock{
 			Releases: []cargo.ComponentLock{
-				{ComponentSpec: component.Spec{Name: "banana", Version: "0.1.0"}},
-				{ComponentSpec: component.Spec{Name: "lemon", Version: "1.1.0"}},
+				{Name: "banana", Version: "0.1.0"},
+				{Name: "lemon", Version: "1.1.0"},
 			},
 		}, nil)
 		historicKilnfileLockFunc.ReturnsOnCall(1, cargo.KilnfileLock{
 			Releases: []cargo.ComponentLock{
-				{ComponentSpec: component.Spec{Name: "banana", Version: "0.1.0"}},
-				{ComponentSpec: component.Spec{Name: "lemon", Version: "1.2.0"}},
+				{Name: "banana", Version: "0.1.0"},
+				{Name: "lemon", Version: "1.2.0"},
 			},
 		}, nil)
 

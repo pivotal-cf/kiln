@@ -27,14 +27,14 @@ var _ = Describe("ReleaseSourceList", func() {
 						{Type: "s3", Bucket: "compiled-releases", Region: "us-west-1", Publishable: true, PathTemplate: "template"},
 						{Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false, PathTemplate: "template"},
 						{Type: "bosh.io", Publishable: false},
-						{Type: "github", Org: "cloudfoundry"},
+						{Type: "github"},
 					},
 				}
 			})
 
 			It("constructs all the release sources", func() {
 				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
-				Expect(releaseSources).To(HaveLen(4))
+				Expect(len(releaseSources)).To(Equal(4)) // not using HaveLen because S3 struct is so huge
 			})
 
 			It("constructs the compiled release source properly", func() {
@@ -54,12 +54,6 @@ var _ = Describe("ReleaseSourceList", func() {
 
 				Expect(releaseSources[1]).To(BeAssignableToTypeOf(component.S3ReleaseSource{}))
 				Expect(releaseSources[1].Configuration().ID).To(Equal(kilnfile.ReleaseSources[1].Bucket))
-			})
-
-			It("sets the bosh.io release source id properly", func() {
-				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
-
-				Expect(releaseSources[2].Configuration().ID).To(Equal(component.ReleaseSourceTypeBOSHIO))
 			})
 
 			It("constructs the github release source properly", func() {

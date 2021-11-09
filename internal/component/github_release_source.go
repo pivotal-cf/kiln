@@ -50,13 +50,13 @@ func (src GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
-func (GithubReleaseSource) GetMatchedRelease(Requirement) (Lock, bool, error) {
+func (GithubReleaseSource) GetMatchedRelease(spec Spec) (Lock, bool, error) {
 	panic("blah")
 }
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
-func (GithubReleaseSource) FindReleaseVersion(Requirement) (Lock, bool, error) {
+func (GithubReleaseSource) FindReleaseVersion(Spec) (Lock, bool, error) {
 	panic("blah")
 }
 
