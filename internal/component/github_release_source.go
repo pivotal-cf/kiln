@@ -12,7 +12,6 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-// Thinking Names should be an array of repo names we're getting the releases for.
 type GHRequirement struct {
 	RepoNames   []string
 	Releases    []string
@@ -51,25 +50,28 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 
 // Configuration returns the configuration of the ReleaseSource that came from the kilnfile.
 // It should not be modified.
-func (src GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
-	return src.ReleaseSourceConfig
+func (grs GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
+	return grs.ReleaseSourceConfig
 }
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
 func (grs GithubReleaseSource) GetMatchedRelease(req Spec) (Lock, bool, error) {
-	return grs.GetMatchedReleaseImpl(grs.Client.Repositories, req)
+	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, req)
 }
 
-//counterfeiter:generate -o ./fakes/github_release_lister.go --fake-name GithubReleaseLister . GithubReleaseLister
+//counterfeiter:generate -o ./fakes/get_release_by_tagger.go --fake-name GetReleaseByTagger . GetReleaseByTagger
 
-type GithubReleaseLister interface {
-	ListReleases(ctx context.Context, owner, repo string, opts *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error)
+type GetReleaseByTagger interface {
+	GetReleaseByTag(ctx context.Context, owner, repo, tag string) (*github.RepositoryRelease, *github.Response, error)
 }
 
-func (GithubReleaseSource) GetMatchedReleaseImpl(lister GithubReleaseLister, req Spec) (_ Lock, _ bool, _ error) {
-	lister.ListReleases(context.TODO(), "", "", nil)
-	return
+func LockFromGithubRelease(ctx context.Context, repo GetReleaseByTagger, _ Spec) (Lock, bool, error) {
+	release, _, _ := repo.GetReleaseByTag(ctx, "", "", "")
+
+	return Lock{
+		Version: release.GetTagName(),
+	}, false, nil
 }
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching

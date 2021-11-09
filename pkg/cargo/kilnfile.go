@@ -28,10 +28,9 @@ type ComponentSpec struct {
 	// also set StemcellOS when setting this field.
 	StemcellVersion string `yaml:"stemcell_version,omitempty"`
 
-	//// Repositories are where the BOSH release source code is
-	//Repositories []string `yaml:"repositories,omitempty"`
+	// Repositories are where the BOSH release source code is
+	Repositories []string `yaml:"repositories,omitempty"`
 }
-
 
 // VersionConstraints must be passed a spec with a parsable
 // semver. The Kiln Validate command ensures that the versions
