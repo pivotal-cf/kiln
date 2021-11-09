@@ -3,10 +3,14 @@ package component
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/url"
+	"os"
+	"path"
+	"strings"
+
 	"github.com/google/go-github/v40/github"
 	"golang.org/x/oauth2"
-	"log"
-	"os"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -55,8 +59,8 @@ func (grs GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
-func (grs GithubReleaseSource) GetMatchedRelease(req Spec) (Lock, bool, error) {
-	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.ID, req)
+func (grs GithubReleaseSource) GetMatchedRelease(s Spec) (Lock, bool, error) {
+	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s)
 }
 
 //counterfeiter:generate -o ./fakes/get_release_by_tagger.go --fake-name GetReleaseByTagger . GetReleaseByTagger
@@ -65,24 +69,38 @@ type GetReleaseByTagger interface {
 	GetReleaseByTag(ctx context.Context, owner, repo, tag string) (*github.RepositoryRelease, *github.Response, error)
 }
 
-func LockFromGithubRelease(ctx context.Context, repo GetReleaseByTagger, owner string, spec Spec) (Lock, bool, error) {
-	//getRepoAndOwner := func(string) (owner, repo string) { return } //  can use url.Parse and strings.Split
-	//
-	//for _, repoURL := range spec.Repositories {
-	//	o, r := getRepoAndOwner(repoURL)
-	//	if o != owner || r == "" {
-	//		continue
-	//	}
-	//	release, _, _ := repo.GetReleaseByTag(ctx, owner, r, spec.Version)  // TODO: handle error
-	//	return Lock{
-	//		Version: release.GetTagName(),
-	//	}, false, nil
-	//}
+func LockFromGithubRelease(ctx context.Context, releaseGetter GetReleaseByTagger, owner string, spec Spec) (Lock, bool, error) {
+	getOwnerAndRepo := func(urlStr string) (owner, repo string) {
+		u, err := url.Parse(urlStr)
+		if err != nil {
+			return
+		}
+		u.Path, repo = path.Split(u.Path)
+		_, owner = path.Split(strings.TrimSuffix(u.Path, "/"))
+		return owner, repo
+	}
 
-	release, _, _ := repo.GetReleaseByTag(ctx, owner, "", "")
-	return Lock{
-		Version: release.GetTagName(),
-	}, false, nil // return error?
+	for _, repoURL := range spec.GitRepositories {
+		repoOwner, repoName := getOwnerAndRepo(repoURL)
+		if repoOwner != owner || repoName == "" {
+			continue
+		}
+		release, _, _ := releaseGetter.GetReleaseByTag(ctx, owner, repoName, spec.Version)
+		expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, spec.Version)
+		for _, asset := range release.Assets {
+			if asset.GetName() != expectedAssetName {
+				continue
+			}
+			return Lock{
+				Name:         spec.Name,
+				Version:      release.GetTagName(),
+				RemoteSource: ReleaseSourceTypeGithub,
+				RemotePath:   asset.GetBrowserDownloadURL(),
+			}, true, nil // return error?
+		}
+
+	}
+	return Lock{}, false, nil
 }
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching

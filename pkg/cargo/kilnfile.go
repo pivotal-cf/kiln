@@ -2,6 +2,7 @@ package cargo
 
 import (
 	"errors"
+
 	"github.com/Masterminds/semver"
 )
 
@@ -29,7 +30,7 @@ type ComponentSpec struct {
 	StemcellVersion string `yaml:"stemcell_version,omitempty"`
 
 	// Repositories are where the BOSH release source code is
-	Repositories []string `yaml:"repositories,omitempty"`
+	GitRepositories []string `yaml:"git_repos,omitempty"`
 }
 
 // VersionConstraints must be passed a spec with a parsable
