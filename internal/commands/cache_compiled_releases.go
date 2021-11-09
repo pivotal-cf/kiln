@@ -130,6 +130,8 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		if !found {
 			nonCompiledReleases = append(nonCompiledReleases, rel)
 			continue
+		} else {
+			cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
 		}
 		err = updateLock(lock, remote)
 		if err != nil {
@@ -285,7 +287,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock) error {
 			Version:      release.Version,
 			RemoteSource: release.RemoteSource,
 			RemotePath:   release.RemotePath,
-			SHA1:         release.SHA1,
+			SHA1:         releaseLock.SHA1,
 		}
 		return nil
 	}
