@@ -164,7 +164,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		return err
 	}
 	defer func() {
-		cmd.Logger.Printf("Cleaning exported BOSH releases:")
+		cmd.Logger.Printf("Cleaning exported BOSH releases")
 		_, err = bosh.CleanUp(false, false, false)
 		if err != nil {
 			cmd.Logger.Printf("%s", err)
