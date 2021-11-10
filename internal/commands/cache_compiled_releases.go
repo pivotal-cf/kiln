@@ -133,7 +133,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		}
 
 		cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
-		err = updateLock(lock, remote)
+		err = updateLock(lock, remote, cmd.Options.UploadTargetID)
 		if err != nil {
 			return fmt.Errorf("failed to update lock file: %w", err)
 		}
@@ -161,6 +161,13 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		cmd.Logger.Printf("Cleaning exported BOSH releases", err)
+		_, err = bosh.CleanUp(false, false, false)
+		if err != nil {
+			cmd.Logger.Printf("%s", err)
+		}
+	}()
 
 	osVersionSlug := boshdir.NewOSVersionSlug(stagedStemcellOS, stagedStemcellVersion)
 
@@ -190,7 +197,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			continue
 		}
 
-		err = updateLock(lock, newRemote)
+		err = updateLock(lock, newRemote, cmd.Options.UploadTargetID)
 		if err != nil {
 			return fmt.Errorf("failed to lock release %s: %w", rel.Name, err)
 		}
@@ -276,11 +283,17 @@ func (cmd *CacheCompiledReleases) s3Bucket(kilnfile cargo.Kilnfile) (component.S
 	return component.S3ReleaseSource{}, errors.New("release source not found")
 }
 
-func updateLock(lock cargo.KilnfileLock, release component.Lock) error {
+func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string) error {
 	for index, releaseLock := range lock.Releases {
 		if release.Name != releaseLock.Name {
 			continue
 		}
+
+		sha1 := release.SHA1
+		if releaseLock.RemoteSource == targetID {
+			sha1 = releaseLock.SHA1
+		}
+
 		lock.Releases[index] = cargo.ComponentLock{
 			ComponentSpec: cargo.ComponentSpec{
 				Name:    release.Name,
@@ -288,7 +301,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock) error {
 			},
 			RemoteSource: release.RemoteSource,
 			RemotePath:   release.RemotePath,
-			SHA1:         releaseLock.SHA1,
+			SHA1:         sha1,
 		}
 		return nil
 	}
