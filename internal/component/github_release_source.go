@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -69,6 +70,10 @@ type GetReleaseByTagger interface {
 	GetReleaseByTag(ctx context.Context, owner, repo, tag string) (*github.RepositoryRelease, *github.Response, error)
 }
 
+func statusError(code int) error {
+	return fmt.Errorf("status not okay: %s (%d)", http.StatusText(code), code)
+}
+
 func LockFromGithubRelease(ctx context.Context, releaseGetter GetReleaseByTagger, owner string, spec Spec) (Lock, bool, error) {
 	getOwnerAndRepo := func(urlStr string) (owner, repo string) {
 		u, err := url.Parse(urlStr)
@@ -85,7 +90,13 @@ func LockFromGithubRelease(ctx context.Context, releaseGetter GetReleaseByTagger
 		if repoOwner != owner || repoName == "" {
 			continue
 		}
-		release, _, _ := releaseGetter.GetReleaseByTag(ctx, owner, repoName, spec.Version)
+		release, response, err := releaseGetter.GetReleaseByTag(ctx, owner, repoName, spec.Version)
+		if err != nil {
+			return Lock{}, false, err
+		}
+		if response.StatusCode != http.StatusOK {
+			return Lock{}, false, statusError(response.StatusCode)
+		}
 		expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, spec.Version)
 		for _, asset := range release.Assets {
 			if asset.GetName() != expectedAssetName {

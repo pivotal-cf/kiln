@@ -2,6 +2,8 @@ package component_test
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"os"
 	"testing"
 
@@ -14,7 +16,6 @@ import (
 )
 
 func TestListAllOfTheCrap(t *testing.T) {
-
 	grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{
 		Type:        component.ReleaseSourceTypeGithub,
 		GithubToken: os.Getenv("GITHUB_TOKEN"),
@@ -22,19 +23,26 @@ func TestListAllOfTheCrap(t *testing.T) {
 	//grs.ListAllOfTheCrap(context.TODO(), "cloudfoundry")
 
 	//grs.Client.Repositories.GetReleaseByTag()
-	release, _, _ := grs.Client.Repositories.GetReleaseByTag(context.TODO(), "cloudfoundry", "routing-release", "0.226.0")
-	for _, a := range release.Assets {
-		t.Log(a)
+	release, response, err := grs.Client.Repositories.GetReleaseByTag(context.TODO(), "cloudfoundry", "routing-release", "0.226.0")
+	if err != nil {
+		t.Error(err)
+	}
+	// t.Log(request)
+	if release.Assets != nil {
+		for _, a := range release.Assets {
+			t.Log(a)
+		}
 	}
 
+	for key, val := range response.Header {
+		t.Logf("%s: %s", key, val)
+	}
 }
 
 func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 	strPtr := func(s string) *string { return &s }
 
-	t.Run("release is found in first repo", func(t *testing.T) {
-		damnit := Ω.NewWithT(t)
-
+	t.Run("when release is found in first repo", func(t *testing.T) {
 		tagger := new(fakes.GetReleaseByTagger)
 
 		tagger.GetReleaseByTagReturns(&github.RepositoryRelease{
@@ -61,20 +69,87 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 			},
 		})
 
-		damnit.Expect(err).NotTo(Ω.HaveOccurred())
-		damnit.Expect(found).To(Ω.BeTrue())
-		damnit.Expect(lock.Version).To(Ω.Equal("0.226.0"))
+		t.Run("it returns success stuff", func(t *testing.T) {
+			damnIt := Ω.NewWithT(t)
 
-		damnit.Expect(tagger.GetReleaseByTagCallCount()).To(Ω.Equal(1))
-		_, org, repo, tag := tagger.GetReleaseByTagArgsForCall(0)
-		damnit.Expect(org).To(Ω.Equal("cloudfoundry"))
-		damnit.Expect(repo).To(Ω.Equal("routing-release"))
-		damnit.Expect(tag).To(Ω.Equal("0.226.0"))
+			damnIt.Expect(err).NotTo(Ω.HaveOccurred())
+			damnIt.Expect(found).To(Ω.BeTrue())
+		})
 
-		damnit.Expect(lock.Name).To(Ω.Equal("routing"))
-		damnit.Expect(lock.Version).To(Ω.Equal("0.226.0"))
-		damnit.Expect(lock.RemoteSource).To(Ω.Equal(component.ReleaseSourceTypeGithub))
-		damnit.Expect(lock.RemotePath).To(Ω.Equal("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz"))
-		// damnit.Expect(lock.SHA1).To(Ω.Equal("???")) // not sure how we will get this... maybe we should just switch to using sha256 everywhere?
+		t.Run("it sets the lock fields properly", func(t *testing.T) {
+			damnIt := Ω.NewWithT(t)
+
+			damnIt.Expect(lock.Version).To(Ω.Equal("0.226.0"))
+			damnIt.Expect(lock.Name).To(Ω.Equal("routing"))
+			damnIt.Expect(lock.Version).To(Ω.Equal("0.226.0"))
+			damnIt.Expect(lock.RemoteSource).To(Ω.Equal(component.ReleaseSourceTypeGithub))
+			damnIt.Expect(lock.RemotePath).To(Ω.Equal("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz"))
+		})
+
+		t.Run("it makes the right request", func(t *testing.T) {
+			damnIt := Ω.NewWithT(t)
+
+			damnIt.Expect(tagger.GetReleaseByTagCallCount()).To(Ω.Equal(1))
+			_, org, repo, tag := tagger.GetReleaseByTagArgsForCall(0)
+			damnIt.Expect(org).To(Ω.Equal("cloudfoundry"))
+			damnIt.Expect(repo).To(Ω.Equal("routing-release"))
+			damnIt.Expect(tag).To(Ω.Equal("0.226.0"))
+
+			t.Run("it sets the tarball hash", func(t *testing.T) {
+				t.Skip()
+				doubleDamnIt := Ω.NewWithT(t)
+				doubleDamnIt.Expect(lock.SHA1).To(Ω.Equal("???"))
+			})
+		})
+	})
+
+	t.Run("the github api request fails", func(t *testing.T) {
+		damnIt := Ω.NewWithT(t)
+
+		tagger := new(fakes.GetReleaseByTagger)
+
+		tagger.GetReleaseByTagReturns(&github.RepositoryRelease{}, nil, errors.New("banana"))
+
+		ctx := context.TODO()
+
+		_, _, err := component.LockFromGithubRelease(ctx, tagger, "cloudfoundry", component.Spec{
+			Name:    "routing",
+			Version: "0.226.0",
+			GitRepositories: []string{
+				"https://github.com/cloudfoundry/routing-release",
+			},
+		})
+		damnIt.Expect(err).To(Ω.HaveOccurred())
+	})
+
+	t.Run("the status code is unauthorized and the error is nil", func(t *testing.T) {
+		// yes this happened... how is this not an error
+		damnIt := Ω.NewWithT(t)
+
+		defer func() {
+			r := recover()
+			if r != nil {
+				t.Error("it should not panic")
+			}
+		}()
+
+		tagger := new(fakes.GetReleaseByTagger)
+
+		tagger.GetReleaseByTagReturns(nil, &github.Response{
+			Response: &http.Response{
+				StatusCode: http.StatusUnauthorized,
+			},
+		}, nil)
+
+		ctx := context.TODO()
+
+		_, _, err := component.LockFromGithubRelease(ctx, tagger, "cloudfoundry", component.Spec{
+			Name:    "routing",
+			Version: "0.226.0",
+			GitRepositories: []string{
+				"https://github.com/cloudfoundry/routing-release",
+			},
+		})
+		damnIt.Expect(err).To(Ω.HaveOccurred())
 	})
 }
