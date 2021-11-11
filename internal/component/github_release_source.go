@@ -16,12 +16,6 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type GHRequirement struct {
-	RepoNames   []string
-	Releases    []string
-	TarballPath string
-}
-
 type GithubReleaseSource struct {
 	cargo.ReleaseSourceConfig
 	Token  string

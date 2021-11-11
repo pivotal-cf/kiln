@@ -123,7 +123,7 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 	})
 
 	t.Run("the status code is unauthorized and the error is nil", func(t *testing.T) {
-		// yes this happened... how is this not an error
+		// yes this happened... how is this not an error?
 		damnIt := Ω.NewWithT(t)
 
 		defer func() {
