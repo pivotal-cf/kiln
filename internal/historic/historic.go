@@ -11,7 +11,7 @@ import (
 
 var (
 	billOfMaterialFileNames = []string{"Kilnfile.lock", "assets.lock"}
-	tileRootSentinelFiles   = []string{"Kilnfile", "base.yml"}
+	// tileRootSentinelFiles   = []string{"Kilnfile", "base.yml"}
 )
 
 func KilnfileLock(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (cargo.KilnfileLock, error) {
