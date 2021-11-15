@@ -3,6 +3,7 @@ package component
 import (
 	"context"
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -58,7 +59,27 @@ func (grs GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
 func (grs GithubReleaseSource) GetMatchedRelease(s Spec) (Lock, bool, error) {
+	// TODO: fail if spec.Version is a multiple value constraint (meaning a range of versions)
+	versionArray := strings.Split(s.Version, ".")
+	if len(versionArray) < 3 {
+		return Lock{}, false, errors.New("shit, man")
+	}
 	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s)
+}
+
+// FindReleaseVersion may use any of the fields on Requirement to return the best matching
+// release.
+func (grs GithubReleaseSource) FindReleaseVersion(s Spec) (Lock, bool, error) {
+	// TODO: fail if spec.Version is a single value constraint (meaning a single version)
+	// if spec.Version is a range, find the latest, and make that the version we use in 129.
+	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s)
+}
+
+// DownloadRelease downloads the release and writes the resulting file to the releasesDir.
+// It should also calculate and set the SHA1 field on the Local result; it does not need
+// to ensure the sums match, the caller must verify this.
+func (GithubReleaseSource) DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error) {
+	panic("blah")
 }
 
 //counterfeiter:generate -o ./fakes/git_hub_repo_api.go --fake-name GitHubRepositoryAPI . GitHubRepositoryAPI
@@ -159,17 +180,4 @@ func calculateSHA1(rc io.ReadCloser) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%x", w.Sum(nil)), nil
-}
-
-// FindReleaseVersion may use any of the fields on Requirement to return the best matching
-// release.
-func (GithubReleaseSource) FindReleaseVersion(Spec) (Lock, bool, error) {
-	panic("blah")
-}
-
-// DownloadRelease downloads the release and writes the resulting file to the releasesDir.
-// It should also calculate and set the SHA1 field on the Local result; it does not need
-// to ensure the sums match, the caller must verify this.
-func (GithubReleaseSource) DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error) {
-	panic("blah")
 }
