@@ -81,8 +81,8 @@ var _ = Describe("UploadRelease", func() {
 				BeforeEach(func() {
 					releaseUploader.GetMatchedReleaseReturns(component.Lock{
 						Name: "banana", Version: "1.2.3",
-						RemotePath:    "banana/banana-1.2.3.tgz",
-						RemoteSource:  "orange-bucket",
+						RemotePath:   "banana/banana-1.2.3.tgz",
+						RemoteSource: "orange-bucket",
 					}, true, nil)
 				})
 

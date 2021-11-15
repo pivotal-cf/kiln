@@ -87,7 +87,7 @@ func (err ErrorUnexpectedStatus) Error() string {
 	)
 }
 
-func GetOwnerAndRepo(urlStr string) (owner, repo string) {
+func OwnerAndRepoFromGitHubURI(urlStr string) (owner, repo string) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		if !strings.HasPrefix(urlStr, "git@github.com:") {
@@ -112,7 +112,7 @@ func GetOwnerAndRepo(urlStr string) (owner, repo string) {
 
 func LockFromGithubRelease(ctx context.Context, releaseGetter GitHubRepositoryAPI, owner string, spec Spec) (Lock, bool, error) {
 	for _, repoURL := range spec.GitRepositories {
-		repoOwner, repoName := GetOwnerAndRepo(repoURL)
+		repoOwner, repoName := OwnerAndRepoFromGitHubURI(repoURL)
 		if repoOwner != owner || repoName == "" {
 			continue
 		}

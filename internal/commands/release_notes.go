@@ -1,13 +1,18 @@
 package commands
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
+	"github.com/google/go-github/v40/github"
+	"golang.org/x/oauth2"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 	"time"
 
@@ -24,8 +29,10 @@ const releaseDateFormat = "2006-01-02"
 
 type ReleaseNotes struct {
 	Options struct {
-		ReleaseDate  string `required:"true" long:"date"     short:"rd" description:"release date of the tile"` // TODO version should come from final revision not flag
-		TemplateName string `                long:"template" short:"t"  description:"path to template"`
+		ReleaseDate  string `required:"true" long:"date"         short:"rd" description:"release date of the tile"`
+		TemplateName string `                long:"template"     short:"t"  description:"path to template"`
+		GithubToken  string `                long:"github-token" short:"g"  description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
+		IssueIDs     []int  `                long:"github-issue" short:"i"  description:"a list of issues to include in the release notes"`
 	}
 
 	pathRelativeToDotGit string
@@ -88,7 +95,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 	}
 
 	if len(nonFlagArgs) != 2 {
-		return errors.New("expected two arguments: <Git Revision> <Git Revision>")
+		return errors.New("expected two arguments: <Git-Revision> <Git-Revision>")
 	}
 
 	releaseDate, err := time.Parse(releaseDateFormat, r.Options.ReleaseDate)
@@ -122,9 +129,13 @@ func (r ReleaseNotes) Execute(args []string) error {
 		Version:           version, // TODO version should come from version file at final revision and then maybe override with flag
 		ReleaseDate:       releaseDate,
 		ReleaseDateFormat: releaseDateFormat,
-		// Issues:      issues,
-		Components: klFinal.Releases,
-		Bumps:      calculateReleaseBumps(klFinal.Releases, klInitial.Releases),
+		Components:        klFinal.Releases,
+		Bumps:             calculateReleaseBumps(klFinal.Releases, klInitial.Releases),
+	}
+
+	info.Issues, err = r.listGithubIssues(context.TODO())
+	if err != nil {
+		return err
 	}
 
 	releaseNotesTemplate := defaultReleaseNotesTemplate
@@ -161,7 +172,9 @@ type ReleaseNotesInformation struct {
 	Version           string
 	ReleaseDate       time.Time
 	ReleaseDateFormat string
-	// Issues      []*github.Issue
+
+	Issues []*github.Issue
+
 	Bumps      []component.Lock
 	Components []component.Lock
 }
@@ -184,4 +197,61 @@ func calculateReleaseBumps(current, previous []component.Lock) []component.Lock 
 		bumps = append(bumps, cs)
 	}
 	return bumps
+}
+
+func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, error) {
+	if r.Options.GithubToken == "" || len(r.Options.IssueIDs) == 0 {
+		return nil, nil
+	}
+
+	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: r.Options.GithubToken})
+	tokenClient := oauth2.NewClient(ctx, tokenSource)
+	githubClient := github.NewClient(tokenClient)
+
+	remote, err := r.getGithubRemote()
+	if err != nil {
+		return nil, err
+	}
+	ownerName, repoName := component.OwnerAndRepoFromGitHubURI(remote)
+	if ownerName == "" || repoName == "" {
+		return nil, errors.New("could not determine owner and repo for tile")
+	}
+
+	var issues []*github.Issue
+	for _, id := range r.Options.IssueIDs {
+		issue, response, err := githubClient.Issues.Get(ctx, ownerName, repoName, id)
+		if err != nil {
+			return nil, err
+		}
+		if response.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed to get issue %d: %w", id, err)
+		}
+		issues = append(issues, issue)
+	}
+
+	return issues, nil
+}
+
+func (r ReleaseNotes) getGithubRemote() (string, error) {
+	repo, err := git.PlainOpenWithOptions(r.pathRelativeToDotGit, &git.PlainOpenOptions{
+		DetectDotGit: true,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	remotes, err := repo.Remotes()
+	if err != nil {
+		return "", err
+	}
+
+	for _, remote := range remotes {
+		s := remote.String()
+		if !strings.Contains(s, "github.com") {
+			continue
+		}
+		return s, nil
+	}
+
+	return "", errors.New("remote github repository not found")
 }
