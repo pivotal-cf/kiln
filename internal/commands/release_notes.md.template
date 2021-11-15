@@ -2,6 +2,9 @@
 
 **Release Date:** {{ .ReleaseDate.Format "01/02/2006" }}
 
+{{range .Issues -}}
+  * {{.GetTitle}}
+{{ end -}}
 {{range .Bumps -}}
   * Bump {{ .Name }} to version `{{ .Version }}`
 {{ end }}

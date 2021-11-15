@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -29,11 +30,10 @@ const releaseDateFormat = "2006-01-02"
 
 type ReleaseNotes struct {
 	Options struct {
-		ReleaseDate  string `required:"true" long:"date"         short:"rd" description:"release date of the tile"`
-		Version      string `                long:"version"  short:"v"  description:"version of the tile"` // TODO version should come from final revision not flag
-		TemplateName string `                long:"template"     short:"t"  description:"path to template"`
-		GithubToken  string `                long:"github-token" short:"g"  description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
-		IssueIDs     []int  `                long:"github-issue" short:"i"  description:"a list of issues to include in the release notes"`
+		ReleaseDate  string   `required:"true" long:"date"         short:"rd" description:"release date of the tile"`
+		TemplateName string   `                long:"template"     short:"t"  description:"path to template"`
+		GithubToken  string   `                long:"github-token" short:"g"  description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
+		IssueIDs     []string `             long:"github-issue" short:"i"  description:"a list of issues to include in the release notes"`
 	}
 
 	pathRelativeToDotGit string
@@ -42,8 +42,11 @@ type ReleaseNotes struct {
 	HistoricKilnfileLock
 	HistoricVersion
 	RevisionResolver
+	GetIssueFunc
 	Stat func(string) (os.FileInfo, error)
 	io.Writer
+
+	RemoteURL, RepoOwner, RepoName string
 }
 
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
@@ -63,6 +66,12 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	if err != nil {
 		return ReleaseNotes{}, err
 	}
+
+	repoURL, repoOwner, repoName, err := getGithubRemoteRepoOwnerAndName(repo)
+	if err != nil {
+		return ReleaseNotes{}, err
+	}
+
 	return ReleaseNotes{
 		Repository:           repo,
 		ReadFile:             ioutil.ReadFile,
@@ -72,6 +81,9 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 		Stat:                 os.Stat,
 		Writer:               os.Stdout,
 		pathRelativeToDotGit: rp,
+		RepoName:             repoName,
+		RepoOwner:            repoOwner,
+		RemoteURL:            repoURL,
 	}, nil
 }
 
@@ -82,6 +94,14 @@ type HistoricVersion func(repo *git.Repository, commitHash plumbing.Hash, kilnfi
 //counterfeiter:generate -o ./fakes/historic_kilnfile_lock_func.go --fake-name HistoricKilnfileLock . HistoricKilnfileLock
 
 type HistoricKilnfileLock func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (cargo.KilnfileLock, error)
+
+//counterfeiter:generate -o ./fakes/historic_version.go --fake-name HistoricVersionFunc . HistoricVersionFunc
+
+type HistoricVersionFunc func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (string, error)
+
+//counterfeiter:generate -o ./fakes/get_github_issue.go --fake-name GetGithubIssue . GetGithubIssue
+
+type GetIssueFunc func(ctx context.Context, owner string, repo string, number int) (*github.Issue, *github.Response, error)
 
 //counterfeiter:generate -o ./fakes/revision_resolver.go --fake-name RevisionResolver . RevisionResolver
 
@@ -208,18 +228,13 @@ func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, er
 	tokenClient := oauth2.NewClient(ctx, tokenSource)
 	githubClient := github.NewClient(tokenClient)
 
-	remote, err := r.getGithubRemote()
-	if err != nil {
-		return nil, err
-	}
-	ownerName, repoName := component.OwnerAndRepoFromGitHubURI(remote)
-	if ownerName == "" || repoName == "" {
-		return nil, errors.New("could not determine owner and repo for tile")
-	}
-
 	var issues []*github.Issue
 	for _, id := range r.Options.IssueIDs {
-		issue, response, err := githubClient.Issues.Get(ctx, ownerName, repoName, id)
+		n, err := strconv.Atoi(id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse issue id %q: %w", id, err)
+		}
+		issue, response, err := githubClient.Issues.Get(ctx, r.RepoOwner, r.RepoName, n)
 		if err != nil {
 			return nil, err
 		}
@@ -232,26 +247,35 @@ func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, er
 	return issues, nil
 }
 
-func (r ReleaseNotes) getGithubRemote() (string, error) {
-	repo, err := git.PlainOpenWithOptions(r.pathRelativeToDotGit, &git.PlainOpenOptions{
-		DetectDotGit: true,
-	})
-	if err != nil {
-		return "", err
-	}
-
+func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, string, error) {
 	remotes, err := repo.Remotes()
 	if err != nil {
-		return "", err
+		return "", "", "", err
 	}
 
+	var remoteURL string
 	for _, remote := range remotes {
-		s := remote.String()
-		if !strings.Contains(s, "github.com") {
+		config := remote.Config()
+		if config == nil {
 			continue
 		}
-		return s, nil
+		for _, u := range config.URLs {
+			if !strings.Contains(u, "github.com") {
+				continue
+			}
+			remoteURL = u
+			break
+		}
+	}
+	if remoteURL == "" {
+		return "", "", "", fmt.Errorf("remote github URL not found for repo")
 	}
 
-	return "", errors.New("remote github repository not found")
+	repoOwner, repoName := component.OwnerAndRepoFromGitHubURI(remoteURL)
+	if repoOwner == "" || repoName == "" {
+		return "", "", "", errors.New("could not determine owner and repo for tile")
+	}
+
+	return fmt.Sprintf("https://github.com/%s/%s", repoOwner, repoName),
+		repoOwner, repoName, nil
 }
