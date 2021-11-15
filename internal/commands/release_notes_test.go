@@ -69,12 +69,12 @@ func TestReleaseNotes_Execute(t *testing.T) {
 
 		var output bytes.Buffer
 		rn := commands.ReleaseNotes{
-			Repository:           repo,
-			RevisionResolver:     revisionResolver,
-			HistoricKilnfileLock: historicKilnfileLock.Spy,
-			HistoricVersion:      historicVersion.Spy,
-			Writer:               &output,
-			ReadFile:             readFileFunc,
+			Repository:               repo,
+			RevisionResolver:         revisionResolver,
+			HistoricKilnfileLockFunc: historicKilnfileLock.Spy,
+			HistoricVersionFunc:      historicVersion.Spy,
+			Writer:                   &output,
+			ReadFile:                 readFileFunc,
 		}
 
 		err := rn.Execute([]string{
@@ -118,11 +118,11 @@ func TestReleaseNotes_Execute(t *testing.T) {
 			historicKilnfileLockFunc.Returns(cargo.KilnfileLock{}, nil)
 
 			err := commands.ReleaseNotes{
-				Repository:           repo,
-				RevisionResolver:     revisionResolver,
-				HistoricKilnfileLock: historicKilnfileLockFunc.Spy,
-				Writer:               &bytes.Buffer{},
-				ReadFile:             func(fp string) (_ []byte, _ error) { return },
+				Repository:               repo,
+				RevisionResolver:         revisionResolver,
+				HistoricKilnfileLockFunc: historicKilnfileLockFunc.Spy,
+				Writer:                   &bytes.Buffer{},
+				ReadFile:                 func(fp string) (_ []byte, _ error) { return },
 			}.Execute([]string{`--date="Nov, 2020"`, "ref1", "ref2"})
 
 			t.Run("it returns an error", func(t *testing.T) {
@@ -146,11 +146,11 @@ func TestReleaseNotes_Execute(t *testing.T) {
 			historicKilnfileLockFunc.Returns(cargo.KilnfileLock{}, nil)
 
 			err := commands.ReleaseNotes{
-				Repository:           repo,
-				RevisionResolver:     revisionResolver,
-				HistoricKilnfileLock: historicKilnfileLockFunc.Spy,
-				Writer:               &bytes.Buffer{},
-				ReadFile:             func(fp string) (_ []byte, _ error) { return },
+				Repository:               repo,
+				RevisionResolver:         revisionResolver,
+				HistoricKilnfileLockFunc: historicKilnfileLockFunc.Spy,
+				Writer:                   &bytes.Buffer{},
+				ReadFile:                 func(fp string) (_ []byte, _ error) { return },
 			}.Execute([]string{`--date="Nov, 2020"`, "ref1", "ref2"})
 
 			please.Expect(err).To(Ω.MatchError(Ω.And(
@@ -167,13 +167,13 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	//		repo, _ := git.Init(memory.NewStorage(), memfs.New())
 	//		revisionResolver := new(fakes.RevisionResolver)
 	//		revisionResolver.ResolveRevisionReturns(&plumbing.ZeroHash, nil)
-	//		historicKilnfileLockFunc := new(fakes.HistoricKilnfileLock)
+	//		historicKilnfileLockFunc := new(fakes.HistoricKilnfileLockFunc)
 	//		historicKilnfileLockFunc.Returns(cargo.KilnfileLock{}, nil)
 	//
 	//		err := commands.ReleaseNotes{
 	//			Repository:           repo,
 	//			RevisionResolver:     revisionResolver,
-	//			HistoricKilnfileLock: historicKilnfileLockFunc.Spy,
+	//			HistoricKilnfileLockFunc: historicKilnfileLockFunc.Spy,
 	//			Writer:               &bytes.Buffer{},
 	//			ReadFile:             func(fp string) (_ []byte, _ error) { return },
 	//		}.Execute([]string{"--date=2021-11-05", "ref1", "ref2"})
