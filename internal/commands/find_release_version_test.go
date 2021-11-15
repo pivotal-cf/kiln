@@ -84,9 +84,9 @@ releases:
 					releaseName = "uaac"
 					fakeReleasesSource.FindReleaseVersionReturns(component.Lock{
 						Name: releaseName, Version: "74.12.5",
-						RemotePath:    "remote_url",
-						RemoteSource:  "bosh.io",
-						SHA1:          "some-sha",
+						RemotePath:   "remote_url",
+						RemoteSource: "bosh.io",
+						SHA1:         "some-sha",
 					}, true, nil)
 				})
 
@@ -112,8 +112,8 @@ releases:
 					releaseName = "uaa"
 					fakeReleasesSource.FindReleaseVersionReturns(component.Lock{
 						Name: releaseName, Version: "74.16.5",
-						RemotePath:    "remote_url",
-						RemoteSource:  "sourceId",
+						RemotePath:   "remote_url",
+						RemoteSource: "sourceId",
 					}, true, nil)
 				})
 

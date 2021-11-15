@@ -207,12 +207,12 @@ func TestGetOwnerAndRepo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotOwner, gotRepo := component.GetOwnerAndRepo(tt.givenURLStr)
+			gotOwner, gotRepo := component.OwnerAndRepoFromGitHubURI(tt.givenURLStr)
 			if gotOwner != tt.wantOwner {
-				t.Errorf("GetOwnerAndRepo() gotOwner = %v, want %v", gotOwner, tt.wantOwner)
+				t.Errorf("OwnerAndRepoFromGitHubURI() gotOwner = %v, want %v", gotOwner, tt.wantOwner)
 			}
 			if gotRepo != tt.wantRepo {
-				t.Errorf("GetOwnerAndRepo() gotRepo = %v, want %v", gotRepo, tt.wantRepo)
+				t.Errorf("OwnerAndRepoFromGitHubURI() gotRepo = %v, want %v", gotRepo, tt.wantRepo)
 			}
 		})
 	}

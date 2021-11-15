@@ -69,15 +69,15 @@ var _ = Describe("UpdateStemcell", func() {
 			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ComponentLock{
 					{
-						Name: release1Name,
-						Version: release1Version,
+						Name:         release1Name,
+						Version:      release1Version,
 						SHA1:         "old-sha-1",
 						RemoteSource: "old-remote-source-1",
 						RemotePath:   "old-remote-path-1",
 					},
 					{
-						Name: release2Name,
-						Version: release2Version,
+						Name:         release2Name,
+						Version:      release2Version,
 						SHA1:         "old-sha-2",
 						RemoteSource: "old-remote-source-2",
 						RemotePath:   "old-remote-path-2",
@@ -95,15 +95,15 @@ var _ = Describe("UpdateStemcell", func() {
 				case release1Name:
 					remote := component.Lock{
 						Name: release1Name, Version: release1Version,
-						RemotePath:    newRelease1RemotePath,
-						RemoteSource:  publishableReleaseSourceID,
+						RemotePath:   newRelease1RemotePath,
+						RemoteSource: publishableReleaseSourceID,
 					}
 					return remote, true, nil
 				case release2Name:
 					remote := component.Lock{
 						Name: release2Name, Version: release2Version,
-						RemotePath:    newRelease2RemotePath,
-						RemoteSource:  unpublishableReleaseSourceID,
+						RemotePath:   newRelease2RemotePath,
+						RemoteSource: unpublishableReleaseSourceID,
 					}
 					return remote, true, nil
 				default:
@@ -115,13 +115,13 @@ var _ = Describe("UpdateStemcell", func() {
 				switch remote.Name {
 				case release1Name:
 					local := component.Local{
-						Lock:      component.Lock{Name: release1Name, Version: release1Version, SHA1:      newRelease1SHA},
+						Lock:      component.Lock{Name: release1Name, Version: release1Version, SHA1: newRelease1SHA},
 						LocalPath: "not-used",
 					}
 					return local, nil
 				case release2Name:
 					local := component.Local{
-						Lock:      component.Lock{Name: release2Name, Version: release2Version, SHA1:      newRelease2SHA},
+						Lock:      component.Lock{Name: release2Name, Version: release2Version, SHA1: newRelease2SHA},
 						LocalPath: "not-used",
 					}
 					return local, nil
@@ -170,8 +170,8 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(updatedLockfile.Releases).To(HaveLen(2))
 			Expect(updatedLockfile.Releases).To(ContainElement(
 				cargo.ComponentLock{
-						Name:    release1Name,
-						Version: release1Version,
+					Name:         release1Name,
+					Version:      release1Version,
 					SHA1:         newRelease1SHA,
 					RemoteSource: publishableReleaseSourceID,
 					RemotePath:   newRelease1RemotePath,
@@ -179,8 +179,8 @@ var _ = Describe("UpdateStemcell", func() {
 			))
 			Expect(updatedLockfile.Releases).To(ContainElement(
 				cargo.ComponentLock{
-						Name:    release2Name,
-						Version: release2Version,
+					Name:         release2Name,
+					Version:      release2Version,
 					SHA1:         newRelease2SHA,
 					RemoteSource: unpublishableReleaseSourceID,
 					RemotePath:   newRelease2RemotePath,
@@ -221,9 +221,9 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote1).To(Equal(
 				component.Lock{
-				Name: release1Name, Version: release1Version,
-					RemotePath:    newRelease1RemotePath,
-					RemoteSource:  publishableReleaseSourceID,
+					Name: release1Name, Version: release1Version,
+					RemotePath:   newRelease1RemotePath,
+					RemoteSource: publishableReleaseSourceID,
 				},
 			))
 
@@ -231,9 +231,9 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote2).To(Equal(
 				component.Lock{
-				Name: release2Name, Version: release2Version,
-					RemotePath:    newRelease2RemotePath,
-					RemoteSource:  unpublishableReleaseSourceID,
+					Name: release2Name, Version: release2Version,
+					RemotePath:   newRelease2RemotePath,
+					RemoteSource: unpublishableReleaseSourceID,
 				},
 			))
 		})
@@ -342,8 +342,8 @@ var _ = Describe("UpdateStemcell", func() {
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
 					cargo.ComponentLock{
-							Name:    release1Name,
-							Version: release1Version,
+						Name:         release1Name,
+						Version:      release1Version,
 						SHA1:         newRelease1SHA,
 						RemoteSource: publishableReleaseSourceID,
 						RemotePath:   newRelease1RemotePath,
@@ -351,8 +351,8 @@ var _ = Describe("UpdateStemcell", func() {
 				))
 				Expect(updatedLockfile.Releases).To(ContainElement(
 					cargo.ComponentLock{
-							Name:    release2Name,
-							Version: release2Version,
+						Name:         release2Name,
+						Version:      release2Version,
 						SHA1:         newRelease2SHA,
 						RemoteSource: unpublishableReleaseSourceID,
 						RemotePath:   newRelease2RemotePath,
