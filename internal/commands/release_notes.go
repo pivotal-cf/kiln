@@ -39,10 +39,9 @@ type ReleaseNotes struct {
 	pathRelativeToDotGit string
 	Repository           *git.Repository
 	ReadFile             func(fp string) ([]byte, error)
-	HistoricKilnfileLockFunc
-	HistoricVersionFunc
+	HistoricKilnfileLock
+	HistoricVersion
 	RevisionResolver
-	GetIssueFunc
 	Stat func(string) (os.FileInfo, error)
 	io.Writer
 
@@ -73,31 +72,27 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	}
 
 	return ReleaseNotes{
-		Repository:               repo,
-		ReadFile:                 ioutil.ReadFile,
-		HistoricKilnfileLockFunc: historic.KilnfileLock,
-		HistoricVersionFunc:      historic.Version,
-		RevisionResolver:         repo,
-		Stat:                     os.Stat,
-		Writer:                   os.Stdout,
-		pathRelativeToDotGit:     rp,
-		RepoName:                 repoName,
-		RepoOwner:                repoOwner,
-		RemoteURL:                repoURL,
+		Repository:           repo,
+		ReadFile:             ioutil.ReadFile,
+		HistoricKilnfileLock: historic.KilnfileLock,
+		HistoricVersion:      historic.Version,
+		RevisionResolver:     repo,
+		Stat:                 os.Stat,
+		Writer:               os.Stdout,
+		pathRelativeToDotGit: rp,
+		RepoName:             repoName,
+		RepoOwner:            repoOwner,
+		RemoteURL:            repoURL,
 	}, nil
 }
 
-//counterfeiter:generate -o ./fakes/historic_kilnfile_lock.go --fake-name HistoricKilnfileLockFunc . HistoricKilnfileLockFunc
+//counterfeiter:generate -o ./fakes/historic_kilnfile_lock.go --fake-name HistoricKilnfileLock . HistoricKilnfileLock
 
-type HistoricKilnfileLockFunc func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (cargo.KilnfileLock, error)
+type HistoricKilnfileLock func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (cargo.KilnfileLock, error)
 
-//counterfeiter:generate -o ./fakes/historic_version.go --fake-name HistoricVersionFunc . HistoricVersionFunc
+//counterfeiter:generate -o ./fakes/historic_version.go --fake-name HistoricVersion . HistoricVersion
 
-type HistoricVersionFunc func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (string, error)
-
-//counterfeiter:generate -o ./fakes/get_github_issue.go --fake-name GetGithubIssue . GetGithubIssue
-
-type GetIssueFunc func(ctx context.Context, owner string, repo string, number int) (*github.Issue, *github.Response, error)
+type HistoricVersion func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (string, error)
 
 //counterfeiter:generate -o ./fakes/revision_resolver.go --fake-name RevisionResolver . RevisionResolver
 
@@ -129,15 +124,15 @@ func (r ReleaseNotes) Execute(args []string) error {
 		panic(err)
 	}
 
-	klInitial, err := r.HistoricKilnfileLockFunc(r.Repository, *initialCommitSHA, r.pathRelativeToDotGit) // TODO handle error
+	klInitial, err := r.HistoricKilnfileLock(r.Repository, *initialCommitSHA, r.pathRelativeToDotGit) // TODO handle error
 	if err != nil {
 		panic(err)
 	}
-	klFinal, err := r.HistoricKilnfileLockFunc(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
+	klFinal, err := r.HistoricKilnfileLock(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
 	if err != nil {
 		panic(err)
 	}
-	version, err := r.HistoricVersionFunc(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
+	version, err := r.HistoricVersion(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
 	if err != nil {
 		panic(err)
 	}
