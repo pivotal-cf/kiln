@@ -119,9 +119,7 @@ func LockFromGithubRelease(ctx context.Context, releaseGetter GitHubRepositoryAP
 			if err != nil {
 				return Lock{}, false, err
 			}
-			defer rc.Close()
-			w := sha1.New()
-			_, err = io.Copy(w, rc)
+			sum, err := calculateSHA1(rc)
 			if err != nil {
 				return Lock{}, false, err
 			}
@@ -130,11 +128,23 @@ func LockFromGithubRelease(ctx context.Context, releaseGetter GitHubRepositoryAP
 				Version:      release.GetTagName(),
 				RemoteSource: ReleaseSourceTypeGithub,
 				RemotePath:   asset.GetBrowserDownloadURL(),
-				SHA1:         fmt.Sprintf("%x", w.Sum(nil)),
-			}, true, nil // return error?
+				SHA1: sum,
+			}, true, nil
 		}
 	}
 	return Lock{}, false, nil
+}
+
+func calculateSHA1(rc io.ReadCloser) (string, error) {
+	defer func() {
+		_ = rc.Close()
+	}()
+	w := sha1.New()
+	_, err := io.Copy(w, rc)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", w.Sum(nil)), nil
 }
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
