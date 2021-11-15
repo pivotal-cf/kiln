@@ -191,3 +191,29 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 		damnIt.Expect(err).To(Ω.HaveOccurred())
 	})
 }
+
+func TestGetOwnerAndRepo(t *testing.T) {
+	tests := []struct {
+		name        string
+		givenURLStr string
+		wantOwner   string
+		wantRepo    string
+	}{
+		{name: "https", givenURLStr: "https://github.com/some-org/some-repo.git", wantOwner: "some-org", wantRepo: "some-repo"},
+		{name: "git", givenURLStr: "git@github.com:some-org/some-repo.git", wantOwner: "some-org", wantRepo: "some-repo"},
+
+		{name: "empty", givenURLStr: "", wantOwner: "", wantRepo: ""},
+		{name: "incomplete", givenURLStr: "github.com/example", wantOwner: "", wantRepo: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotOwner, gotRepo := component.GetOwnerAndRepo(tt.givenURLStr)
+			if gotOwner != tt.wantOwner {
+				t.Errorf("GetOwnerAndRepo() gotOwner = %v, want %v", gotOwner, tt.wantOwner)
+			}
+			if gotRepo != tt.wantRepo {
+				t.Errorf("GetOwnerAndRepo() gotRepo = %v, want %v", gotRepo, tt.wantRepo)
+			}
+		})
+	}
+}

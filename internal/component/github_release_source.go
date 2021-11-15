@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/go-github/v40/github"
@@ -86,19 +87,32 @@ func (err ErrorUnexpectedStatus) Error() string {
 	)
 }
 
-func LockFromGithubRelease(ctx context.Context, releaseGetter GitHubRepositoryAPI, owner string, spec Spec) (Lock, bool, error) {
-	getOwnerAndRepo := func(urlStr string) (owner, repo string) {
-		u, err := url.Parse(urlStr)
+func GetOwnerAndRepo(urlStr string) (owner, repo string) {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		if !strings.HasPrefix(urlStr, "git@github.com:") {
+			return
+		}
+		u, err = url.Parse("/" + strings.TrimPrefix(urlStr, "git@github.com:"))
 		if err != nil {
 			return
 		}
-		u.Path, repo = path.Split(u.Path)
-		_, owner = path.Split(strings.TrimSuffix(u.Path, "/"))
-		return owner, repo
+		u.Host = "github.com"
 	}
+	if u.Host != "github.com" {
+		return
+	}
+	if filepath.Ext(u.Path) == ".git" {
+		u.Path = strings.TrimSuffix(u.Path, ".git")
+	}
+	u.Path, repo = path.Split(u.Path)
+	_, owner = path.Split(strings.TrimSuffix(u.Path, "/"))
+	return owner, repo
+}
 
+func LockFromGithubRelease(ctx context.Context, releaseGetter GitHubRepositoryAPI, owner string, spec Spec) (Lock, bool, error) {
 	for _, repoURL := range spec.GitRepositories {
-		repoOwner, repoName := getOwnerAndRepo(repoURL)
+		repoOwner, repoName := GetOwnerAndRepo(repoURL)
 		if repoOwner != owner || repoName == "" {
 			continue
 		}
@@ -128,7 +142,7 @@ func LockFromGithubRelease(ctx context.Context, releaseGetter GitHubRepositoryAP
 				Version:      release.GetTagName(),
 				RemoteSource: ReleaseSourceTypeGithub,
 				RemotePath:   asset.GetBrowserDownloadURL(),
-				SHA1: sum,
+				SHA1:         sum,
 			}, true, nil
 		}
 	}
