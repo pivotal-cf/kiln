@@ -1,8 +1,10 @@
 package component_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -16,6 +18,8 @@ import (
 )
 
 func TestListAllOfTheCrap(t *testing.T) {
+	t.SkipNow()
+
 	grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{
 		Type:        component.ReleaseSourceTypeGithub,
 		GithubToken: os.Getenv("GITHUB_TOKEN"),
@@ -39,29 +43,48 @@ func TestListAllOfTheCrap(t *testing.T) {
 	}
 }
 
+type SetTrueOnClose struct {
+	io.Reader
+	CloseCalled bool
+}
+
+func (c *SetTrueOnClose) Close() error {
+	c.CloseCalled = true
+	return nil
+}
+
 func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 	strPtr := func(s string) *string { return &s }
+	intPtr := func(n int64) *int64 { return &n }
 
 	t.Run("when release is found in first repo", func(t *testing.T) {
-		tagger := new(fakes.GetReleaseByTagger)
+		ghRepoAPI := new(fakes.GitHubRepositoryAPI)
 
-		tagger.GetReleaseByTagReturns(&github.RepositoryRelease{
-			TagName: strPtr("0.226.0"),
-			Assets: []*github.ReleaseAsset{
-				{
-					Name:               strPtr("routing-0.226.0.tgz.sha256"),
-					BrowserDownloadURL: strPtr("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz.sha256"),
-				},
-				{
-					Name:               strPtr("routing-0.226.0.tgz"),
-					BrowserDownloadURL: strPtr("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz"),
+		ghRepoAPI.GetReleaseByTagReturns(
+			&github.RepositoryRelease{
+				TagName: strPtr("0.226.0"),
+				Assets: []*github.ReleaseAsset{
+					{
+						Name:               strPtr("routing-0.226.0.tgz.sha256"),
+						BrowserDownloadURL: strPtr("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz.sha256"),
+					},
+					{
+						Name:               strPtr("routing-0.226.0.tgz"),
+						BrowserDownloadURL: strPtr("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz"),
+						ID:                 intPtr(420),
+					},
 				},
 			},
-		}, nil, nil)
+			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+			nil,
+		)
+
+		file := &SetTrueOnClose{Reader: bytes.NewBufferString("hello")}
+		ghRepoAPI.DownloadReleaseAssetReturns(file, "", nil)
 
 		ctx := context.TODO()
 
-		lock, found, err := component.LockFromGithubRelease(ctx, tagger, "cloudfoundry", component.Spec{
+		lock, found, err := component.LockFromGithubRelease(ctx, ghRepoAPI, "cloudfoundry", component.Spec{
 			Name:    "routing",
 			Version: "0.226.0",
 			GitRepositories: []string{
@@ -86,33 +109,48 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 			damnIt.Expect(lock.RemotePath).To(Ω.Equal("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz"))
 		})
 
+		t.Run("it downloads the file", func(t *testing.T) {
+			damnIt := Ω.NewWithT(t)
+
+			damnIt.Expect(ghRepoAPI.DownloadReleaseAssetCallCount()).To(Ω.Equal(1))
+			_, org, repo, build, client := ghRepoAPI.DownloadReleaseAssetArgsForCall(0)
+			damnIt.Expect(org).To(Ω.Equal("cloudfoundry"))
+			damnIt.Expect(repo).To(Ω.Equal("routing-release"))
+			damnIt.Expect(build).To(Ω.Equal("0.226.0"))
+			damnIt.Expect(client).NotTo(Ω.BeNil())
+
+			t.Run("it sets the tarball hash", func(t *testing.T) {
+				doubleDamnIt := Ω.NewWithT(t)
+				doubleDamnIt.Expect(lock.SHA1).To(Ω.Equal("f572d396fae9206628714fb2ce00f72e94f2258f"))
+				doubleDamnIt.Expect(file.CloseCalled).To(Ω.BeTrue())
+			})
+		})
+
 		t.Run("it makes the right request", func(t *testing.T) {
 			damnIt := Ω.NewWithT(t)
 
-			damnIt.Expect(tagger.GetReleaseByTagCallCount()).To(Ω.Equal(1))
-			_, org, repo, tag := tagger.GetReleaseByTagArgsForCall(0)
+			damnIt.Expect(ghRepoAPI.GetReleaseByTagCallCount()).To(Ω.Equal(1))
+			_, org, repo, tag := ghRepoAPI.GetReleaseByTagArgsForCall(0)
 			damnIt.Expect(org).To(Ω.Equal("cloudfoundry"))
 			damnIt.Expect(repo).To(Ω.Equal("routing-release"))
 			damnIt.Expect(tag).To(Ω.Equal("0.226.0"))
-
-			t.Run("it sets the tarball hash", func(t *testing.T) {
-				t.Skip()
-				doubleDamnIt := Ω.NewWithT(t)
-				doubleDamnIt.Expect(lock.SHA1).To(Ω.Equal("???"))
-			})
 		})
 	})
 
 	t.Run("the github api request fails", func(t *testing.T) {
 		damnIt := Ω.NewWithT(t)
 
-		tagger := new(fakes.GetReleaseByTagger)
+		ghRepoAPI := new(fakes.GitHubRepositoryAPI)
 
-		tagger.GetReleaseByTagReturns(&github.RepositoryRelease{}, nil, errors.New("banana"))
+		ghRepoAPI.GetReleaseByTagReturns(
+			&github.RepositoryRelease{},
+			&github.Response{Response: &http.Response{StatusCode: http.StatusUnauthorized}},
+			errors.New("banana"),
+		)
 
 		ctx := context.TODO()
 
-		_, _, err := component.LockFromGithubRelease(ctx, tagger, "cloudfoundry", component.Spec{
+		_, _, err := component.LockFromGithubRelease(ctx, ghRepoAPI, "cloudfoundry", component.Spec{
 			Name:    "routing",
 			Version: "0.226.0",
 			GitRepositories: []string{
@@ -133,9 +171,9 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 			}
 		}()
 
-		tagger := new(fakes.GetReleaseByTagger)
+		ghRepoAPI := new(fakes.GitHubRepositoryAPI)
 
-		tagger.GetReleaseByTagReturns(nil, &github.Response{
+		ghRepoAPI.GetReleaseByTagReturns(nil, &github.Response{
 			Response: &http.Response{
 				StatusCode: http.StatusUnauthorized,
 			},
@@ -143,7 +181,7 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 
 		ctx := context.TODO()
 
-		_, _, err := component.LockFromGithubRelease(ctx, tagger, "cloudfoundry", component.Spec{
+		_, _, err := component.LockFromGithubRelease(ctx, ghRepoAPI, "cloudfoundry", component.Spec{
 			Name:    "routing",
 			Version: "0.226.0",
 			GitRepositories: []string{
