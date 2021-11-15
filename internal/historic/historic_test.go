@@ -155,38 +155,100 @@ func TestWalk(t *testing.T) {
 		// START setup
 		tileDir := "tile"
 		repo, _ := git.Init(memory.NewStorage(), memfs.New())
-		finalHash := commit(t, repo, "ga release", func(wt *git.Worktree) error {
-			p := wt.Filesystem.Join(tileDir, "version")
-			kf, _ := wt.Filesystem.Create(p)
-			_, _ = kf.Write([]byte("1.0.0\n"))
-			_ = kf.Close()
-			_, _ = wt.Add(p)
-			return nil
-		}, commit(t, repo, "some other change", func(wt *git.Worktree) error {
-			p := wt.Filesystem.Join(tileDir, "base.yml")
-			kf, _ := wt.Filesystem.Create(p)
-			_, _ = kf.Write([]byte("---\nname: something\n"))
-			_ = kf.Close()
-			_, _ = wt.Add(p)
-			return nil
-		}, commit(t, repo, "alpha release", func(wt *git.Worktree) error {
+
+		h0 := commit(t, repo, "alpha release", func(wt *git.Worktree) error {
 			p := wt.Filesystem.Join(tileDir, "version")
 			kf, _ := wt.Filesystem.Create(p)
 			_, _ = kf.Write([]byte("1.0.0-alpha.1\n"))
 			_ = kf.Close()
 			_, _ = wt.Add(p)
 			return nil
-		})))
+		})
+		h1 := commit(t, repo, "some other change", func(wt *git.Worktree) error {
+			p := wt.Filesystem.Join(tileDir, "base.yml")
+			kf, _ := wt.Filesystem.Create(p)
+			_, _ = kf.Write([]byte("---\nname: something\n"))
+			_ = kf.Close()
+			_, _ = wt.Add(p)
+			return nil
+		}, h0)
+		hf := commit(t, repo, "ga release", func(wt *git.Worktree) error {
+			p := wt.Filesystem.Join(tileDir, "version")
+			kf, _ := wt.Filesystem.Create(p)
+			_, _ = kf.Write([]byte("1.0.0\n"))
+			_ = kf.Close()
+			_, _ = wt.Add(p)
+			return nil
+		}, h1)
 		// END setup
 
 		please := Ω.NewWithT(t)
 
 		callCount := 0
-		err := Walk(repo, finalHash, func(*object.Commit) {
+		err := Walk(repo, hf, func(*object.Commit) {
 			callCount++
 		})
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 		please.Expect(callCount).To(Ω.Equal(3))
+	})
+
+	t.Run("with branch", func(t *testing.T) {
+		// START setup
+		tileDir := "tile"
+		repo, _ := git.Init(memory.NewStorage(), memfs.New())
+
+		h0 := commit(t, repo, "alpha release", func(wt *git.Worktree) error {
+			p := wt.Filesystem.Join(tileDir, "version")
+			kf, _ := wt.Filesystem.Create(p)
+			_, _ = kf.Write([]byte("1.0.0-alpha.1\n"))
+			_ = kf.Close()
+			_, _ = wt.Add(p)
+			return nil
+		})
+		h1 := commit(t, repo, "some other change", func(wt *git.Worktree) error {
+			p := wt.Filesystem.Join(tileDir, "base.yml")
+			kf, _ := wt.Filesystem.Create(p)
+			_, _ = kf.Write([]byte("---\nname: something-else\n"))
+			_ = kf.Close()
+			_, _ = wt.Add(p)
+			return nil
+		}, h0)
+
+		b1 := commit(t, repo, "some other change", func(wt *git.Worktree) error {
+			p := wt.Filesystem.Join(tileDir, "base.yml")
+			kf, _ := wt.Filesystem.Create(p)
+			_, _ = kf.Write([]byte("---\nname: something\n"))
+			_ = kf.Close()
+			_, _ = wt.Add(p)
+			return nil
+		}, h0)
+		b2 := commit(t, repo, "some other change", func(wt *git.Worktree) error {
+			p := wt.Filesystem.Join(tileDir, "base.yml")
+			kf, _ := wt.Filesystem.Create(p)
+			_, _ = kf.Write([]byte("---\nname: something-else\n"))
+			_ = kf.Close()
+			_, _ = wt.Add(p)
+			return nil
+		}, b1)
+
+		hf := commit(t, repo, "ga release", func(wt *git.Worktree) error {
+			p := wt.Filesystem.Join(tileDir, "version")
+			kf, _ := wt.Filesystem.Create(p)
+			_, _ = kf.Write([]byte("1.0.0\n"))
+			_ = kf.Close()
+			_, _ = wt.Add(p)
+			return nil
+		}, h1, b2)
+		// END setup
+
+		please := Ω.NewWithT(t)
+
+		callCount := 0
+		err := Walk(repo, hf, func(*object.Commit) {
+			callCount++
+		})
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(callCount).To(Ω.Equal(5))
 	})
 }
 
