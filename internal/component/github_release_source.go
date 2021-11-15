@@ -2,6 +2,7 @@ package component
 
 import (
 	"context"
+	"crypto/sha1"
 	"fmt"
 	"io"
 	"log"
@@ -114,15 +115,24 @@ func LockFromGithubRelease(ctx context.Context, releaseGetter GitHubRepositoryAP
 			if asset.GetName() != expectedAssetName {
 				continue
 			}
-			releaseGetter.DownloadReleaseAsset(ctx, repoOwner, repoName, 0, nil)
+			rc, _, err := releaseGetter.DownloadReleaseAsset(ctx, repoOwner, repoName, *asset.ID, http.DefaultClient)
+			if err != nil {
+				return Lock{}, false, err
+			}
+			defer rc.Close()
+			w := sha1.New()
+			_, err = io.Copy(w, rc)
+			if err != nil {
+				return Lock{}, false, err
+			}
 			return Lock{
 				Name:         spec.Name,
 				Version:      release.GetTagName(),
 				RemoteSource: ReleaseSourceTypeGithub,
 				RemotePath:   asset.GetBrowserDownloadURL(),
+				SHA1:         fmt.Sprintf("%x", w.Sum(nil)),
 			}, true, nil // return error?
 		}
-
 	}
 	return Lock{}, false, nil
 }
