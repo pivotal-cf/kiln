@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -40,4 +41,19 @@ func Version(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string
 		return "", err
 	}
 	return string(bytes.TrimSpace(buf)), nil
+}
+
+func Walk(repo *git.Repository, commitHash plumbing.Hash, fn func(commit *object.Commit)) error {
+	h := commitHash
+	for {
+		commit, err := repo.CommitObject(h)
+		if err != nil {
+			return err
+		}
+		fn(commit)
+		if len(commit.ParentHashes) == 0 {
+			return nil
+		}
+		h = commit.ParentHashes[0]
+	}
 }
