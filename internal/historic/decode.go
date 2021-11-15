@@ -4,13 +4,10 @@ import (
 	"encoding/json"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/filemode"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"path/filepath"
-	"regexp"
-	"strings"
 )
 
 func decodeHistoricFile(repository *git.Repository, commitHash plumbing.Hash, data interface{}, names []string) error {
@@ -21,13 +18,13 @@ func decodeHistoricFile(repository *git.Repository, commitHash plumbing.Hash, da
 	return decodeFile(buf, fileName, data)
 }
 
-func readDataFromTree(tree *object.Tree, data interface{}, names []string) error {
-	buf, fileName, err := readBytesFromTree(tree, names)
-	if err != nil {
-		return err
-	}
-	return decodeFile(buf, fileName, data)
-}
+//func readDataFromTree(tree *object.Tree, data interface{}, names []string) error {
+//	buf, fileName, err := readBytesFromTree(tree, names)
+//	if err != nil {
+//		return err
+//	}
+//	return decodeFile(buf, fileName, data)
+//}
 
 func decodeFile(buf []byte, fileName string, data interface{}) error {
 	switch filepath.Ext(fileName) {
@@ -86,56 +83,56 @@ func readBytesFromTree(tree *object.Tree, names []string) ([]byte, string, error
 	return buf, fileName, nil
 }
 
-func findTileRootsInTree(repo *git.Repository, tree *object.Tree) []string {
-	for _, sentinelFileName := range tileRootSentinelFiles {
-		_, err := tree.File(sentinelFileName)
-		if err != nil {
-			continue
-		}
-		return []string{""}
-	}
+//func findTileRootsInTree(repo *git.Repository, tree *object.Tree) []string {
+//	for _, sentinelFileName := range tileRootSentinelFiles {
+//		_, err := tree.File(sentinelFileName)
+//		if err != nil {
+//			continue
+//		}
+//		return []string{""}
+//	}
+//
+//	var result []string
+//
+//	for _, entree := range tree.Entries {
+//		if strings.HasPrefix(entree.Name, ".") {
+//			continue
+//		}
+//		if entree.Mode != filemode.Dir {
+//			continue
+//		}
+//		child, err := repo.TreeObject(entree.Hash)
+//		if err != nil {
+//			continue
+//		}
+//		childRoots := findTileRootsInTree(repo, child)
+//		for i := range childRoots {
+//			childRoots[i] = filepath.Join(entree.Name, childRoots[i])
+//		}
+//		result = append(result, childRoots...)
+//	}
+//
+//	return result
+//}
 
-	var result []string
+//var releasedVersionTag = regexp.MustCompile(`^((\w+/)*)(\d+\.\d+\.\d+)$`)
 
-	for _, entree := range tree.Entries {
-		if strings.HasPrefix(entree.Name, ".") {
-			continue
-		}
-		if entree.Mode != filemode.Dir {
-			continue
-		}
-		child, err := repo.TreeObject(entree.Hash)
-		if err != nil {
-			continue
-		}
-		childRoots := findTileRootsInTree(repo, child)
-		for i := range childRoots {
-			childRoots[i] = filepath.Join(entree.Name, childRoots[i])
-		}
-		result = append(result, childRoots...)
-	}
-
-	return result
-}
-
-var releasedVersionTag = regexp.MustCompile(`^((\w+/)*)(\d+\.\d+\.\d+)$`)
-
-func isReleaseTag(reference *plumbing.Reference) (string, string, bool) {
-	if !reference.Name().IsTag() {
-		return "", "", false
-	}
-	isMatch := releasedVersionTag.MatchString(reference.Name().Short())
-	if !isMatch {
-		return "", "", false
-	}
-
-	matches := releasedVersionTag.FindStringSubmatch(reference.Name().Short())
-	if len(matches) > 2 {
-		return strings.TrimSuffix(matches[1], "/"), matches[len(matches)-1], true
-	}
-
-	return "", matches[len(matches)-1], true
-}
+//func isReleaseTag(reference *plumbing.Reference) (string, string, bool) {
+//	if !reference.Name().IsTag() {
+//		return "", "", false
+//	}
+//	isMatch := releasedVersionTag.MatchString(reference.Name().Short())
+//	if !isMatch {
+//		return "", "", false
+//	}
+//
+//	matches := releasedVersionTag.FindStringSubmatch(reference.Name().Short())
+//	if len(matches) > 2 {
+//		return strings.TrimSuffix(matches[1], "/"), matches[len(matches)-1], true
+//	}
+//
+//	return "", matches[len(matches)-1], true
+//}
 
 func prefixEach(prefix string, names []string) []string {
 	result := make([]string, 0, len(names))
