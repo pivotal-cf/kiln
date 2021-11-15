@@ -30,7 +30,7 @@ func TestReleaseNotes_Usage(t *testing.T) {
 }
 
 func TestReleaseNotes_Execute(t *testing.T) {
-	t.Run("bump one release and use the default template", func(t *testing.T) {
+	t.Run("it generates complete release notes", func(t *testing.T) {
 		please := Ω.NewWithT(t)
 
 		repo, _ := git.Init(memory.NewStorage(), memfs.New())
