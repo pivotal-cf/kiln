@@ -44,16 +44,25 @@ func Version(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string
 }
 
 func Walk(repo *git.Repository, commitHash plumbing.Hash, fn func(commit *object.Commit)) error {
-	h := commitHash
-	for {
-		commit, err := repo.CommitObject(h)
-		if err != nil {
+	c := make(map[plumbing.Hash]struct{})
+	return walk(repo, commitHash, fn, c)
+}
+
+func walk(repo *git.Repository, commitHash plumbing.Hash, fn func(commit *object.Commit), c map[plumbing.Hash]struct{}) error {
+	if _, visited := c[commitHash]; visited {
+		return nil
+	}
+	c[commitHash] = struct{}{}
+
+	commit, err := repo.CommitObject(commitHash)
+	if err != nil {
+		return err
+	}
+	fn(commit)
+	for _, p := range commit.ParentHashes {
+		if err := walk(repo, p, fn, c); err != nil {
 			return err
 		}
-		fn(commit)
-		if len(commit.ParentHashes) == 0 {
-			return nil
-		}
-		h = commit.ParentHashes[0]
 	}
+	return nil
 }
