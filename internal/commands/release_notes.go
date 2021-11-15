@@ -2,6 +2,7 @@ package commands
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -86,7 +87,9 @@ func (r ReleaseNotes) Execute(args []string) error {
 		return err
 	}
 
-	// TODO ensure len(nonFlagArgs) < 2
+	if len(nonFlagArgs) != 2 {
+		return errors.New("expected two arguments: <Git Revision> <Git Revision>")
+	}
 
 	releaseDate, err := time.Parse(releaseDateFormat, r.Options.ReleaseDate)
 	if err != nil {
