@@ -116,12 +116,12 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 			_, org, repo, build, client := ghRepoAPI.DownloadReleaseAssetArgsForCall(0)
 			damnIt.Expect(org).To(Ω.Equal("cloudfoundry"))
 			damnIt.Expect(repo).To(Ω.Equal("routing-release"))
-			damnIt.Expect(build).To(Ω.Equal("0.226.0"))
+			damnIt.Expect(build).To(Ω.Equal(int64(420)))
 			damnIt.Expect(client).NotTo(Ω.BeNil())
 
 			t.Run("it sets the tarball hash", func(t *testing.T) {
 				doubleDamnIt := Ω.NewWithT(t)
-				doubleDamnIt.Expect(lock.SHA1).To(Ω.Equal("f572d396fae9206628714fb2ce00f72e94f2258f"))
+				doubleDamnIt.Expect(lock.SHA1).To(Ω.Equal("aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"))
 				doubleDamnIt.Expect(file.CloseCalled).To(Ω.BeTrue())
 			})
 		})
