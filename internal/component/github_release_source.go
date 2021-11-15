@@ -3,6 +3,7 @@ package component
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -58,17 +59,33 @@ func (grs GithubReleaseSource) GetMatchedRelease(s Spec) (Lock, bool, error) {
 	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s)
 }
 
-//counterfeiter:generate -o ./fakes/get_release_by_tagger.go --fake-name GetReleaseByTagger . GetReleaseByTagger
+//counterfeiter:generate -o ./fakes/git_hub_repo_api.go --fake-name GitHubRepositoryAPI . GitHubRepositoryAPI
 
-type GetReleaseByTagger interface {
+type GitHubRepositoryAPI interface {
 	GetReleaseByTag(ctx context.Context, owner, repo, tag string) (*github.RepositoryRelease, *github.Response, error)
+	DownloadReleaseAsset(ctx context.Context, owner, repo string, id int64, followRedirectsClient *http.Client) (rc io.ReadCloser, redirectURL string, err error)
 }
 
-func statusError(code int) error {
-	return fmt.Errorf("status not okay: %s (%d)", http.StatusText(code), code)
+type ErrorUnexpectedStatus struct {
+	Want, Got int
 }
 
-func LockFromGithubRelease(ctx context.Context, releaseGetter GetReleaseByTagger, owner string, spec Spec) (Lock, bool, error) {
+func checkStatus(want, got int) error {
+	if want != got {
+		return ErrorUnexpectedStatus{
+			Want: want, Got: got,
+		}
+	}
+	return nil
+}
+
+func (err ErrorUnexpectedStatus) Error() string {
+	return fmt.Sprintf("request responded with %s (%d)",
+		http.StatusText(err.Got), err.Got,
+	)
+}
+
+func LockFromGithubRelease(ctx context.Context, releaseGetter GitHubRepositoryAPI, owner string, spec Spec) (Lock, bool, error) {
 	getOwnerAndRepo := func(urlStr string) (owner, repo string) {
 		u, err := url.Parse(urlStr)
 		if err != nil {
@@ -88,14 +105,16 @@ func LockFromGithubRelease(ctx context.Context, releaseGetter GetReleaseByTagger
 		if err != nil {
 			return Lock{}, false, err
 		}
-		if response.StatusCode != http.StatusOK {
-			return Lock{}, false, statusError(response.StatusCode)
+		err = checkStatus(http.StatusOK, response.StatusCode)
+		if err != nil {
+			return Lock{}, false, err
 		}
 		expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, spec.Version)
 		for _, asset := range release.Assets {
 			if asset.GetName() != expectedAssetName {
 				continue
 			}
+			releaseGetter.DownloadReleaseAsset(ctx, repoOwner, repoName, 0, nil)
 			return Lock{
 				Name:         spec.Name,
 				Version:      release.GetTagName(),
@@ -119,23 +138,4 @@ func (GithubReleaseSource) FindReleaseVersion(Spec) (Lock, bool, error) {
 // to ensure the sums match, the caller must verify this.
 func (GithubReleaseSource) DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error) {
 	panic("blah")
-}
-
-func (grs GithubReleaseSource) ListAllOfTheCrap(ctx context.Context, org string) {
-	var allRepos []*github.Repository
-	opt := &github.RepositoryListByOrgOptions{Sort: "name"}
-	for {
-		repos, resp, err := grs.Client.Repositories.ListByOrg(ctx, "github", opt)
-		if err != nil {
-			panic("bad crap: " + err.Error())
-		}
-		allRepos = append(allRepos, repos...)
-		if resp.NextPage == 0 {
-			break
-		}
-		opt.Page = resp.NextPage
-	}
-	for _, r := range allRepos {
-		fmt.Println(r.GetName())
-	}
 }
