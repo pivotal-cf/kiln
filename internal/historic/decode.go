@@ -2,12 +2,13 @@ package historic
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"path/filepath"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
-	"path/filepath"
 )
 
 func decodeHistoricFile(repository *git.Repository, commitHash plumbing.Hash, data interface{}, names []string) error {
