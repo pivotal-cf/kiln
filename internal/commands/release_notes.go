@@ -224,7 +224,7 @@ func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, er
 			return nil, err
 		}
 		if response.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("failed to get issue %d: %w", id, err)
+			return nil, fmt.Errorf("failed to get issue %q: %w", id, err)
 		}
 		issues = append(issues, issue)
 	}
