@@ -138,7 +138,12 @@ func (r ReleaseNotes) Execute(args []string) error {
 		panic(err)
 	}
 
-	return t.Execute(r.Writer, info)
+	err = t.Execute(r.Writer, info)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r ReleaseNotes) Usage() jhanda.Usage {
