@@ -203,17 +203,6 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 	return Lock{}, false, nil
 }
 
-// addVersionToSet appends v to col if v is not already in col
-// the second result indicates whether the version was added
-func addVersionToSet(col semver.Collection, v *semver.Version) (semver.Collection, bool) {
-	for _, e := range col {
-		if e.Equal(v) {
-			return col, false
-		}
-	}
-	return append(col, v), true
-}
-
 func calculateSHA1(rc io.ReadCloser) (string, error) {
 	defer func() {
 		_ = rc.Close()
