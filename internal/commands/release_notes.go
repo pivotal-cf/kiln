@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"github.com/Masterminds/semver"
 	"golang.org/x/oauth2"
 	"io"
 	"io/ioutil"
@@ -146,8 +147,13 @@ func (r ReleaseNotes) Execute(args []string) error {
 		panic(err)
 	}
 
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return fmt.Errorf("failed to parse version: %w", err)
+	}
+
 	info := ReleaseNotesInformation{
-		Version:           version, // TODO version should come from version file at final revision and then maybe override with flag
+		Version:           v, // TODO version should come from version file at final revision and then maybe override with flag
 		ReleaseDate:       releaseDate,
 		ReleaseDateFormat: releaseDateFormat,
 		Components:        klFinal.Releases,
@@ -190,7 +196,7 @@ func (r ReleaseNotes) Usage() jhanda.Usage {
 var defaultReleaseNotesTemplate string
 
 type ReleaseNotesInformation struct {
-	Version           string
+	Version           *semver.Version
 	ReleaseDate       time.Time
 	ReleaseDateFormat string
 
