@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -37,7 +38,7 @@ type ReleaseNotes struct {
 		IssueIDs       []string `long:"github-issue"           short:"i" description:"a list of issues to include in the release notes; these are deduplicated with the issue results"`
 		IssueMilestone string   `long:"github-issue-milestone" short:"m" description:"issue milestone to use, it may be the milestone number or the milestone name"`
 		IssueLabels    []string `long:"github-issue-labels"    short:"l" description:"issue query used to query github issues; test your query on this page https://github.com/issues"`
-		IssueTitleExp  string   `long:"issues-title-exp"       short:"x" description:"issues with title matching regular expression will be added, issues must first be fetched with github-issue* flags"`
+		IssueTitleExp  string   `long:"issues-title-exp"       short:"x" description:"issues with title matching regular expression will be added, issues must first be fetched with github-issue* flags" default:"(?i)^\\*\\*\\[(Bug Fix)|(Security Fix)|(Feature Improvement)|(Feature)\\]\\*\\*.*$"`
 	}
 
 	pathRelativeToDotGit string
@@ -140,7 +141,6 @@ func (r ReleaseNotes) Execute(args []string) error {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(r, r.Repository, finalCommitSHA, r.pathRelativeToDotGit)
 	version, err := r.HistoricVersion(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
 	if err != nil {
 		panic(err)
@@ -246,15 +246,28 @@ func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, er
 	}
 
 	if r.Options.IssueMilestone != "" || len(r.Options.IssueLabels) > 0 {
-		milestoneID := r.Options.IssueMilestone
-		_, err := strconv.Atoi(milestoneID)
+		milestoneNumber := r.Options.IssueMilestone
+		_, err := strconv.Atoi(milestoneNumber)
 		if err != nil {
-			// search based on name to get ID
+			milestoneNumber = ""
+			ms, _, err := githubClient.Issues.ListMilestones(ctx, r.RepoOwner, r.RepoName, &github.MilestoneListOptions{})
+			if err != nil {
+				return nil, err
+			}
+			for _, m := range ms {
+				if m.GetTitle() == r.Options.IssueMilestone {
+					milestoneNumber = strconv.Itoa(m.GetNumber())
+					break
+				}
+			}
+			if milestoneNumber == "" {
+				return nil, fmt.Errorf("failed to find milestone with title %q", r.Options.IssueMilestone)
+			}
 		}
 
 		githubClient.Client()
 		issueList, response, err := githubClient.Issues.ListByRepo(ctx, r.RepoOwner, r.RepoName, &github.IssueListByRepoOptions{
-			Milestone: milestoneID,
+			Milestone: milestoneNumber,
 			Labels:    r.Options.IssueLabels,
 		})
 		if err != nil {
@@ -280,6 +293,8 @@ func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, er
 		}
 		issues = filtered
 	}
+
+	sort.Sort(IssuesBySemanticTitlePrefix(issues))
 
 	return issues, nil
 }
@@ -348,4 +363,37 @@ func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, stri
 
 	return fmt.Sprintf("https://github.com/%s/%s", repoOwner, repoName),
 		repoOwner, repoName, nil
+}
+
+type IssuesBySemanticTitlePrefix []*github.Issue
+
+func (list IssuesBySemanticTitlePrefix) Len() int { return len(list) }
+
+func (list IssuesBySemanticTitlePrefix) Swap(i, j int) { list[i], list[j] = list[j], list[i] }
+
+func (list IssuesBySemanticTitlePrefix) Less(i, j int) bool {
+	it := list[i].GetTitle()
+	jt := list[j].GetTitle()
+	iv := issuesTitlePrefixSemanticValue(it)
+	jv := issuesTitlePrefixSemanticValue(jt)
+	if iv != jv {
+		return iv > jv
+	}
+	return strings.Compare(it, jt) < 0
+}
+
+func issuesTitlePrefixSemanticValue(title string) int {
+	prefixes := []string{
+		"**[Security Fix]**",
+		"**[Feature]**",
+		"**[Feature Improvement]**",
+		"**[Bug Fix]**",
+		"**[None]**",
+	}
+	for i, v := range prefixes {
+		if strings.HasPrefix(title, v) {
+			return len(prefixes) - i
+		}
+	}
+	return 0
 }
