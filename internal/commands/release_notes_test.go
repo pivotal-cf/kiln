@@ -59,7 +59,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		}, nil)
 
 		historicVersion := new(fakes.HistoricVersion)
-		historicVersion.Returns("0.1.0", nil)
+		historicVersion.Returns("0.1.0-build.50000", nil)
 
 		readFileCount := 0
 		readFileFunc := func(fp string) ([]byte, error) {
