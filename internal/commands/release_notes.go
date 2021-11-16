@@ -5,8 +5,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/Masterminds/semver"
-	"golang.org/x/oauth2"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -19,10 +17,12 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/jhanda"
+	"golang.org/x/oauth2"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/historic"
