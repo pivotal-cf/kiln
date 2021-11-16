@@ -51,7 +51,7 @@ type ReleaseNotes struct {
 	Stat func(string) (os.FileInfo, error)
 	io.Writer
 
-	RemoteURL, RepoOwner, RepoName string
+	RepoOwner, RepoName string
 }
 
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
@@ -72,7 +72,7 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 		return ReleaseNotes{}, err
 	}
 
-	repoURL, repoOwner, repoName, err := getGithubRemoteRepoOwnerAndName(repo)
+	repoOwner, repoName, err := getGithubRemoteRepoOwnerAndName(repo)
 	if err != nil {
 		return ReleaseNotes{}, err
 	}
@@ -88,7 +88,6 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 		pathRelativeToDotGit: rp,
 		RepoName:             repoName,
 		RepoOwner:            repoOwner,
-		RemoteURL:            repoURL,
 	}, nil
 }
 
@@ -115,8 +114,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-
-	releaseDate, err := r.parseReleaseDate()
+	releaseDate, err := parseReleaseDate(r.Options.ReleaseDate)
 	if err != nil {
 		return err
 	}
@@ -180,18 +178,11 @@ func (r ReleaseNotes) Execute(args []string) error {
 	return nil
 }
 
-func (r ReleaseNotes) parseReleaseDate() (time.Time, error) {
-	var releaseDate time.Time
-
-	if r.Options.ReleaseDate != "" {
-		var err error
-		releaseDate, err = time.Parse(releaseDateFormat, r.Options.ReleaseDate)
-		if err != nil {
-			return time.Time{}, fmt.Errorf("release date could not be parsed: %w", err)
-		}
+func parseReleaseDate(rd string) (time.Time, error) {
+	if rd == "" {
+		return time.Time{}, nil
 	}
-
-	return releaseDate, nil
+	return time.Parse(releaseDateFormat, rd)
 }
 
 //go:embed release_notes.md.template
@@ -361,37 +352,30 @@ func (r ReleaseNotes) checkInputs(nonFlagArgs []string) error {
 	return nil
 }
 
-func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, string, error) {
-	remotes, err := repo.Remotes()
-	if err != nil {
-		return "", "", "", err
-	}
-
+func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, error) {
 	var remoteURL string
-	for _, remote := range remotes {
-		config := remote.Config()
-		if config == nil {
+	remote, err := repo.Remote("origin")
+	if err != nil {
+		return "", "", err
+	}
+	config := remote.Config()
+	for _, u := range config.URLs {
+		if !strings.Contains(u, "github.com") {
 			continue
 		}
-		for _, u := range config.URLs {
-			if !strings.Contains(u, "github.com") {
-				continue
-			}
-			remoteURL = u
-			break
-		}
+		remoteURL = u
+		break
 	}
 	if remoteURL == "" {
-		return "", "", "", fmt.Errorf("remote github URL not found for repo")
+		return "", "", fmt.Errorf("remote github URL not found for repo")
 	}
 
 	repoOwner, repoName := component.OwnerAndRepoFromGitHubURI(remoteURL)
 	if repoOwner == "" || repoName == "" {
-		return "", "", "", errors.New("could not determine owner and repo for tile")
+		return "", "", errors.New("could not determine owner and repo for tile")
 	}
 
-	return fmt.Sprintf("https://github.com/%s/%s", repoOwner, repoName),
-		repoOwner, repoName, nil
+	return repoOwner, repoName, nil
 }
 
 func insertUnique(list []*github.Issue, equal func(a, b *github.Issue) bool, additional ...*github.Issue) []*github.Issue {
