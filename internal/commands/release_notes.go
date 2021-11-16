@@ -33,7 +33,8 @@ type ReleaseNotes struct {
 		ReleaseDate  string   `required:"true" long:"date"         short:"rd" description:"release date of the tile"`
 		TemplateName string   `                long:"template"     short:"t"  description:"path to template"`
 		GithubToken  string   `                long:"github-token" short:"g"  description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
-		IssueIDs     []string `             long:"github-issue" short:"i"  description:"a list of issues to include in the release notes"`
+		IssueIDs     []string `                long:"github-issue" short:"i"  description:"a list of issues to include in the release notes"`
+		// MilestoneNumber string `            long:"github-milestone" short:"m"  description:"a list of issues to include in the release notes"`
 	}
 
 	pathRelativeToDotGit string
