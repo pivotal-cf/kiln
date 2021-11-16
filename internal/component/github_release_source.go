@@ -12,7 +12,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -107,8 +106,8 @@ func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Cons
 		ops := &github.ListOptions{}
 
 		var (
-			versions                             semver.Collection
-			matchingReleases                     []*github.RepositoryRelease
+			highestMatchingVersion               *semver.Version
+			matchingReleases                     *github.RepositoryRelease
 			numberOfPagesWithoutMatchingVersions = 0
 		)
 		for numberOfPagesWithoutMatchingVersions < 2 {
@@ -121,7 +120,7 @@ func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Cons
 				break
 			}
 
-			prevLen := versions.Len()
+			foundHigherVersion := false
 			for _, release := range releases {
 				v, err := semver.NewVersion(release.GetTagName())
 				if err != nil {
@@ -130,33 +129,24 @@ func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Cons
 				if !constraints.Check(v) {
 					continue
 				}
-				var wasAdded bool
-				versions, wasAdded = addVersionToSet(versions, v)
-				if wasAdded {
-					matchingReleases = append(matchingReleases, release)
+				if highestMatchingVersion != nil && v.LessThan(highestMatchingVersion) {
+					continue
 				}
+				matchingReleases = release
+				highestMatchingVersion = v
+				foundHigherVersion = true
 			}
-			sort.Sort(sort.Reverse(versions))
-			if prevLen == versions.Len() && len(versions) > 0 {
-				numberOfPagesWithoutMatchingVersions++
-			} else {
+			if foundHigherVersion {
 				numberOfPagesWithoutMatchingVersions = 0
+			} else {
+				numberOfPagesWithoutMatchingVersions++
 			}
 
 			ops.Page++
 		}
 
-		if versions.Len() < 1 {
-			return nil, errors.New("release not found")
-		}
-
-		highestMatchingVersion := versions[0]
-
-		for _, r := range matchingReleases {
-			v := semver.MustParse(r.GetTagName())
-			if v.Equal(highestMatchingVersion) {
-				return r, nil
-			}
+		if matchingReleases != nil {
+			return matchingReleases, nil
 		}
 
 		return nil, errors.New("release not found")
