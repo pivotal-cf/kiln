@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"golang.org/x/oauth2"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -18,10 +17,12 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/jhanda"
+	"golang.org/x/oauth2"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/historic"
@@ -151,8 +152,13 @@ func (r ReleaseNotes) Execute(args []string) error {
 		panic(err)
 	}
 
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return fmt.Errorf("failed to parse version: %w", err)
+	}
+
 	info := ReleaseNotesInformation{
-		Version:           version,
+		Version:           v,
 		ReleaseDate:       releaseDate,
 		ReleaseDateFormat: releaseDateFormat,
 		Components:        klFinal.Releases,
@@ -195,7 +201,7 @@ func (r ReleaseNotes) Usage() jhanda.Usage {
 var defaultReleaseNotesTemplate string
 
 type ReleaseNotesInformation struct {
-	Version           string
+	Version           *semver.Version
 	ReleaseDate       time.Time
 	ReleaseDateFormat string
 
