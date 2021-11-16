@@ -12,8 +12,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
 	"golang.org/x/oauth2"
 
@@ -59,20 +61,106 @@ func (grs GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
 func (grs GithubReleaseSource) GetMatchedRelease(s Spec) (Lock, bool, error) {
-	// TODO: fail if spec.Version is a multiple value constraint (meaning a range of versions)
-	versionArray := strings.Split(s.Version, ".")
-	if len(versionArray) < 3 {
-		return Lock{}, false, errors.New("shit, man")
+	_, err := semver.NewVersion(s.Version)
+	if err != nil {
+		return Lock{}, false, fmt.Errorf("expected version to be an exact version")
 	}
-	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s)
+	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s,
+		GetGithubReleaseWithTag(grs.Client.Repositories, s.Version))
+}
+
+//counterfeiter:generate -o ./fakes/release_by_tag_getter.go --fake-name ReleaseByTagGetter . ReleaseByTagGetter
+
+type ReleaseByTagGetter interface {
+	GetReleaseByTag(ctx context.Context, owner, repo, tag string) (*github.RepositoryRelease, *github.Response, error)
+}
+
+func GetGithubReleaseWithTag(ghAPI ReleaseByTagGetter, tag string) GetGithubReleaseFunc {
+	return func(ctx context.Context, repoOwner, repoName string) (*github.RepositoryRelease, error) {
+		release, response, err := ghAPI.GetReleaseByTag(ctx, repoOwner, repoName, tag)
+		if err != nil {
+			return nil, err
+		}
+		return release, checkStatus(http.StatusOK, response.StatusCode)
+	}
 }
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
 func (grs GithubReleaseSource) FindReleaseVersion(s Spec) (Lock, bool, error) {
-	// TODO: fail if spec.Version is a single value constraint (meaning a single version)
-	// if spec.Version is a range, find the latest, and make that the version we use in 129.
-	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s)
+	c, err := semver.NewConstraint(s.Version)
+	if err != nil {
+		return Lock{}, false, fmt.Errorf("expected version to be an exact version")
+	}
+	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s,
+		GetReleaseMatchingConstraint(grs.Client.Repositories, c))
+}
+
+//counterfeiter:generate -o ./fakes/releases_lister.go --fake-name ReleasesLister . ReleasesLister
+
+type ReleasesLister interface {
+	ListReleases(ctx context.Context, owner, repo string, opts *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error)
+}
+
+func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Constraints) GetGithubReleaseFunc {
+	return func(ctx context.Context, repoOwner, repoName string) (*github.RepositoryRelease, error) {
+		ops := &github.ListOptions{}
+
+		var (
+			versions                             semver.Collection
+			matchingReleases                     []*github.RepositoryRelease
+			numberOfPagesWithoutMatchingVersions = 0
+		)
+		for numberOfPagesWithoutMatchingVersions < 2 {
+			releases, response, err := ghAPI.ListReleases(ctx, repoOwner, repoName, ops)
+			if err != nil {
+				return nil, err
+			}
+			err = checkStatus(http.StatusOK, response.StatusCode)
+			if err != nil {
+				break
+			}
+
+			prevLen := versions.Len()
+			for _, release := range releases {
+				v, err := semver.NewVersion(release.GetTagName())
+				if err != nil {
+					continue
+				}
+				if !constraints.Check(v) {
+					continue
+				}
+				var wasAdded bool
+				versions, wasAdded = addVersionToSet(versions, v)
+				if wasAdded {
+					matchingReleases = append(matchingReleases, release)
+				}
+			}
+			sort.Sort(sort.Reverse(versions))
+			if prevLen == versions.Len() && len(versions) > 0 {
+				numberOfPagesWithoutMatchingVersions++
+			} else {
+				numberOfPagesWithoutMatchingVersions = 0
+			}
+
+			ops.Page++
+		}
+
+		if versions.Len() < 1 {
+			return nil, errors.New("release not found")
+		}
+
+		highestMatchingVersion := versions[0]
+
+		for _, r := range matchingReleases {
+			v := semver.MustParse(r.GetTagName())
+			if v.Equal(highestMatchingVersion) {
+				return r, nil
+			}
+		}
+
+		return nil, errors.New("release not found")
+	}
 }
 
 // DownloadRelease downloads the release and writes the resulting file to the releasesDir.
@@ -82,11 +170,70 @@ func (GithubReleaseSource) DownloadRelease(releasesDir string, remoteRelease Loc
 	panic("blah")
 }
 
-//counterfeiter:generate -o ./fakes/git_hub_repo_api.go --fake-name GitHubRepositoryAPI . GitHubRepositoryAPI
+//counterfeiter:generate -o ./fakes/release_asset_downloader.go --fake-name ReleaseAssetDownloader . ReleaseAssetDownloader
 
-type GitHubRepositoryAPI interface {
-	GetReleaseByTag(ctx context.Context, owner, repo, tag string) (*github.RepositoryRelease, *github.Response, error)
+type ReleaseAssetDownloader interface {
 	DownloadReleaseAsset(ctx context.Context, owner, repo string, id int64, followRedirectsClient *http.Client) (rc io.ReadCloser, redirectURL string, err error)
+}
+
+type GetGithubReleaseFunc func(ctx context.Context, org, repo string) (*github.RepositoryRelease, error)
+
+func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloader, owner string, spec Spec, getRelease GetGithubReleaseFunc) (Lock, bool, error) {
+	for _, repoURL := range spec.GitRepositories {
+		repoOwner, repoName := OwnerAndRepoFromGitHubURI(repoURL)
+		if repoOwner != owner || repoName == "" {
+			continue
+		}
+		release, err := getRelease(ctx, repoOwner, repoName)
+		if err != nil {
+			return Lock{}, false, err
+		}
+		expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, spec.Version)
+		for _, asset := range release.Assets {
+			if asset.GetName() != expectedAssetName {
+				continue
+			}
+			rc, _, err := downloader.DownloadReleaseAsset(ctx, repoOwner, repoName, *asset.ID, http.DefaultClient)
+			if err != nil {
+				return Lock{}, false, err
+			}
+			sum, err := calculateSHA1(rc)
+			if err != nil {
+				return Lock{}, false, err
+			}
+			return Lock{
+				Name:         spec.Name,
+				Version:      release.GetTagName(),
+				RemoteSource: ReleaseSourceTypeGithub,
+				RemotePath:   asset.GetBrowserDownloadURL(),
+				SHA1:         sum,
+			}, true, nil
+		}
+	}
+	return Lock{}, false, nil
+}
+
+// addVersionToSet appends v to col if v is not already in col
+// the second result indicates whether the version was added
+func addVersionToSet(col semver.Collection, v *semver.Version) (semver.Collection, bool) {
+	for _, e := range col {
+		if e.Equal(v) {
+			return col, false
+		}
+	}
+	return append(col, v), true
+}
+
+func calculateSHA1(rc io.ReadCloser) (string, error) {
+	defer func() {
+		_ = rc.Close()
+	}()
+	w := sha1.New()
+	_, err := io.Copy(w, rc)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", w.Sum(nil)), nil
 }
 
 type ErrorUnexpectedStatus struct {
@@ -129,55 +276,4 @@ func OwnerAndRepoFromGitHubURI(urlStr string) (owner, repo string) {
 	u.Path, repo = path.Split(u.Path)
 	_, owner = path.Split(strings.TrimSuffix(u.Path, "/"))
 	return owner, repo
-}
-
-func LockFromGithubRelease(ctx context.Context, releaseGetter GitHubRepositoryAPI, owner string, spec Spec) (Lock, bool, error) {
-	for _, repoURL := range spec.GitRepositories {
-		repoOwner, repoName := OwnerAndRepoFromGitHubURI(repoURL)
-		if repoOwner != owner || repoName == "" {
-			continue
-		}
-		release, response, err := releaseGetter.GetReleaseByTag(ctx, owner, repoName, spec.Version)
-		if err != nil {
-			return Lock{}, false, err
-		}
-		err = checkStatus(http.StatusOK, response.StatusCode)
-		if err != nil {
-			return Lock{}, false, err
-		}
-		expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, spec.Version)
-		for _, asset := range release.Assets {
-			if asset.GetName() != expectedAssetName {
-				continue
-			}
-			rc, _, err := releaseGetter.DownloadReleaseAsset(ctx, repoOwner, repoName, *asset.ID, http.DefaultClient)
-			if err != nil {
-				return Lock{}, false, err
-			}
-			sum, err := calculateSHA1(rc)
-			if err != nil {
-				return Lock{}, false, err
-			}
-			return Lock{
-				Name:         spec.Name,
-				Version:      release.GetTagName(),
-				RemoteSource: ReleaseSourceTypeGithub,
-				RemotePath:   asset.GetBrowserDownloadURL(),
-				SHA1:         sum,
-			}, true, nil
-		}
-	}
-	return Lock{}, false, nil
-}
-
-func calculateSHA1(rc io.ReadCloser) (string, error) {
-	defer func() {
-		_ = rc.Close()
-	}()
-	w := sha1.New()
-	_, err := io.Copy(w, rc)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", w.Sum(nil)), nil
 }
