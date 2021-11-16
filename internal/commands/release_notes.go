@@ -388,12 +388,13 @@ func (list IssuesBySemanticTitlePrefix) Less(i, j int) bool {
 }
 
 func issuesTitlePrefixSemanticValue(title string) int {
+	title = strings.ToLower(title)
 	prefixes := []string{
-		"**[Security Fix]**",
-		"**[Feature]**",
-		"**[Feature Improvement]**",
-		"**[Bug Fix]**",
-		"**[None]**",
+		"**[security fix]**",
+		"**[feature]**",
+		"**[feature improvement]**",
+		"**[bug fix]**",
+		"**[none]**",
 	}
 	for i, v := range prefixes {
 		if strings.HasPrefix(title, v) {
