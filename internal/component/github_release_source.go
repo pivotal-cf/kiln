@@ -157,6 +157,14 @@ func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Cons
 // It should also calculate and set the SHA1 field on the Local result; it does not need
 // to ensure the sums match, the caller must verify this.
 func (GithubReleaseSource) DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error) {
+	/*
+		if releasesDir == "" {
+			return Local{}, fmt.Errorf("expected releasesDir to contain directory")
+		}
+		if remoteRelease.RemotePath == "" {
+			return Local{}, fmt.Errorf("expected Lock RemotePath to contain path")
+		}
+	*/
 	panic("blah")
 }
 
