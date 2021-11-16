@@ -24,9 +24,6 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-const (
-	DefaultDownloadThreadCount = 0
-)
 
 //counterfeiter:generate -o ./fakes/s3_downloader.go --fake-name S3Downloader . S3Downloader
 type S3Downloader interface {
@@ -108,8 +105,8 @@ func (src S3ReleaseSource) Publishable() bool                        { return sr
 func (src S3ReleaseSource) Configuration() cargo.ReleaseSourceConfig { return src.ReleaseSourceConfig }
 
 //counterfeiter:generate -o ./fakes/s3_request_failure.go --fake-name S3RequestFailure github.com/aws/aws-sdk-go/service/s3.RequestFailure
-func (src S3ReleaseSource) GetMatchedRelease(requirement Spec) (Lock, bool, error) {
-	remotePath, err := src.RemotePath(requirement)
+func (src S3ReleaseSource) GetMatchedRelease(spec Spec) (Lock, bool, error) {
+	remotePath, err := src.RemotePath(spec)
 	if err != nil {
 		return Lock{}, false, err
 	}
@@ -128,21 +125,21 @@ func (src S3ReleaseSource) GetMatchedRelease(requirement Spec) (Lock, bool, erro
 	}
 
 	return Lock{
-		Name:         requirement.Name,
-		Version:      requirement.Version,
+		Name:         spec.Name,
+		Version:      spec.Version,
 		RemotePath:   remotePath,
 		RemoteSource: src.ID(),
 	}, true, nil
 }
 
-func (src S3ReleaseSource) FindReleaseVersion(requirement Spec) (Lock, bool, error) {
+func (src S3ReleaseSource) FindReleaseVersion(spec Spec) (Lock, bool, error) {
 	pathTemplatePattern, _ := regexp.Compile(`^\d+\.\d+`)
 	tasVersion := pathTemplatePattern.FindString(src.ReleaseSourceConfig.PathTemplate)
 	var prefix string
 	if tasVersion != "" {
 		prefix = tasVersion + "/"
 	}
-	prefix += requirement.Name + "/"
+	prefix += spec.Name + "/"
 
 	releaseResults, err := src.s3Client.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket: &src.ReleaseSourceConfig.Bucket,
@@ -158,7 +155,11 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement Spec) (Lock, bool, err
 	}
 
 	foundRelease := Lock{}
-	constraint := requirement.VersionConstraints()
+	constraint, err := spec.VersionConstraints()
+	if err != nil {
+		return Lock{}, false, err
+	}
+
 	for _, result := range releaseResults.Contents {
 		versions := semverPattern.FindAllString(*result.Key, -1)
 		version := versions[0]
@@ -166,7 +167,7 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement Spec) (Lock, bool, err
 		version = strings.Replace(version, "-", "", -1)
 		version = strings.Replace(version, "v", "", -1)
 		stemcellVersion = strings.Replace(stemcellVersion, "-", "", -1)
-		if len(versions) > 1 && stemcellVersion != requirement.StemcellVersion {
+		if len(versions) > 1 && stemcellVersion != spec.StemcellVersion {
 			continue
 		}
 		if version != "" {
@@ -177,7 +178,7 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement Spec) (Lock, bool, err
 
 			if (foundRelease == Lock{}) {
 				foundRelease = Lock{
-					Name:         requirement.Name,
+					Name:         spec.Name,
 					Version:      version,
 					RemotePath:   *result.Key,
 					RemoteSource: src.ReleaseSourceConfig.ID,
@@ -186,7 +187,7 @@ func (src S3ReleaseSource) FindReleaseVersion(requirement Spec) (Lock, bool, err
 				foundVersion, _ := semver.NewVersion(foundRelease.Version)
 				if newVersion.GreaterThan(foundVersion) {
 					foundRelease = Lock{
-						Name:         requirement.Name,
+						Name:         spec.Name,
 						Version:      version,
 						RemotePath:   *result.Key,
 						RemoteSource: src.ReleaseSourceConfig.ID,
@@ -275,10 +276,10 @@ func (src S3ReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error
 	}, nil
 }
 
-func (src S3ReleaseSource) RemotePath(requirement Spec) (string, error) {
+func (src S3ReleaseSource) RemotePath(spec Spec) (string, error) {
 	pathBuf := new(bytes.Buffer)
 
-	err := src.pathTemplate().Execute(pathBuf, requirement)
+	err := src.pathTemplate().Execute(pathBuf, spec)
 	if err != nil {
 		return "", fmt.Errorf("unable to evaluate path_template: %w", err)
 	}

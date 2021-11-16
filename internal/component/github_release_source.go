@@ -87,9 +87,9 @@ func GetGithubReleaseWithTag(ghAPI ReleaseByTagGetter, tag string) GetGithubRele
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
 func (grs GithubReleaseSource) FindReleaseVersion(s Spec) (Lock, bool, error) {
-	c, err := semver.NewConstraint(s.Version)
+	c, err := s.VersionConstraints()
 	if err != nil {
-		return Lock{}, false, fmt.Errorf("expected version to be an exact version")
+		return Lock{}, false, fmt.Errorf("expected version to be a constraint")
 	}
 	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s,
 		GetReleaseMatchingConstraint(grs.Client.Repositories, c))

@@ -102,7 +102,11 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, bool, 
 func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, bool, error) {
 	spec = spec.UnsetStemcell()
 
-	constraint := spec.VersionConstraints()
+	constraint, err := spec.VersionConstraints()
+	if err != nil {
+		return Lock{}, false, err
+	}
+
 	var validReleases []releaseResponse
 
 	for _, repo := range repos {
