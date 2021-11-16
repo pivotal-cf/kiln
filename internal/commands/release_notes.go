@@ -252,21 +252,23 @@ func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, er
 
 	if r.Options.IssueMilestone != "" || len(r.Options.IssueLabels) > 0 {
 		milestoneNumber := r.Options.IssueMilestone
-		_, err := strconv.Atoi(milestoneNumber)
-		if err != nil {
-			milestoneNumber = ""
-			ms, _, err := githubClient.Issues.ListMilestones(ctx, r.RepoOwner, r.RepoName, &github.MilestoneListOptions{})
+		if milestoneNumber != "" {
+			_, err := strconv.Atoi(milestoneNumber)
 			if err != nil {
-				return nil, err
-			}
-			for _, m := range ms {
-				if m.GetTitle() == r.Options.IssueMilestone {
-					milestoneNumber = strconv.Itoa(m.GetNumber())
-					break
+				milestoneNumber = ""
+				ms, _, err := githubClient.Issues.ListMilestones(ctx, r.RepoOwner, r.RepoName, &github.MilestoneListOptions{})
+				if err != nil {
+					return nil, err
 				}
-			}
-			if milestoneNumber == "" {
-				return nil, fmt.Errorf("failed to find milestone with title %q", r.Options.IssueMilestone)
+				for _, m := range ms {
+					if m.GetTitle() == r.Options.IssueMilestone {
+						milestoneNumber = strconv.Itoa(m.GetNumber())
+						break
+					}
+				}
+				if milestoneNumber == "" {
+					return nil, fmt.Errorf("failed to find milestone with title %q", r.Options.IssueMilestone)
+				}
 			}
 		}
 
