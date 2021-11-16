@@ -5,13 +5,13 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/google/go-github/v40/github"
 	"golang.org/x/oauth2"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
@@ -19,6 +19,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/component"
@@ -30,11 +31,13 @@ const releaseDateFormat = "2006-01-02"
 
 type ReleaseNotes struct {
 	Options struct {
-		ReleaseDate  string   `required:"true" long:"date"         short:"rd" description:"release date of the tile"`
-		TemplateName string   `                long:"template"     short:"t"  description:"path to template"`
-		GithubToken  string   `                long:"github-token" short:"g"  description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
-		IssueIDs     []string `                long:"github-issue" short:"i"  description:"a list of issues to include in the release notes"`
-		// MilestoneNumber string `            long:"github-milestone" short:"m"  description:"a list of issues to include in the release notes"`
+		ReleaseDate    string   `long:"release-date"           short:"d" description:"release date of the tile"`
+		TemplateName   string   `long:"template"               short:"t" description:"path to template"`
+		GithubToken    string   `long:"github-token"           short:"g" description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
+		IssueIDs       []string `long:"github-issue"           short:"i" description:"a list of issues to include in the release notes; these are deduplicated with the issue results"`
+		IssueMilestone string   `long:"github-issue-milestone" short:"m" description:"issue milestone to use, it may be the milestone number or the milestone name"`
+		IssueLabels    []string `long:"github-issue-labels"    short:"l" description:"issue query used to query github issues; test your query on this page https://github.com/issues"`
+		IssueTitleExp  string   `long:"issues-title-exp"       short:"x" description:"issues with title matching regular expression will be added, issues must first be fetched with github-issue* flags"`
 	}
 
 	pathRelativeToDotGit string
@@ -106,14 +109,18 @@ func (r ReleaseNotes) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-
-	if len(nonFlagArgs) != 2 {
-		return errors.New("expected two arguments: <Git-Revision> <Git-Revision>")
+	err = r.checkInputs(nonFlagArgs)
+	if err != nil {
+		return err
 	}
 
-	releaseDate, err := time.Parse(releaseDateFormat, r.Options.ReleaseDate)
-	if err != nil {
-		return fmt.Errorf("release date could not be parsed: %w", err)
+	var releaseDate time.Time
+
+	if r.Options.ReleaseDate != "" {
+		releaseDate, err = time.Parse(releaseDateFormat, r.Options.ReleaseDate)
+		if err != nil {
+			return fmt.Errorf("release date could not be parsed: %w", err)
+		}
 	}
 
 	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(nonFlagArgs[0])) // TODO handle error
@@ -133,6 +140,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(r, r.Repository, finalCommitSHA, r.pathRelativeToDotGit)
 	version, err := r.HistoricVersion(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
 	if err != nil {
 		panic(err)
@@ -213,7 +221,7 @@ func calculateReleaseBumps(current, previous []component.Lock) []component.Lock 
 }
 
 func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, error) {
-	if r.Options.GithubToken == "" || len(r.Options.IssueIDs) == 0 {
+	if r.Options.GithubToken == "" {
 		return nil, nil
 	}
 
@@ -237,7 +245,76 @@ func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, er
 		issues = append(issues, issue)
 	}
 
+	if r.Options.IssueMilestone != "" || len(r.Options.IssueLabels) > 0 {
+		milestoneID := r.Options.IssueMilestone
+		_, err := strconv.Atoi(milestoneID)
+		if err != nil {
+			// search based on name to get ID
+		}
+
+		githubClient.Client()
+		issueList, response, err := githubClient.Issues.ListByRepo(ctx, r.RepoOwner, r.RepoName, &github.IssueListByRepoOptions{
+			Milestone: milestoneID,
+			Labels:    r.Options.IssueLabels,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if response.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed to get issues %q: %w", response.Request.URL, err)
+		}
+		issues = insertUnique(issues, func(a, b *github.Issue) bool {
+			return a.GetID() == b.GetID()
+		}, issueList...)
+	}
+
+	if r.Options.IssueTitleExp != "" {
+		titleCheck := regexp.MustCompile(r.Options.IssueTitleExp)
+
+		filtered := issues[:0]
+		for _, issue := range issues {
+			if !titleCheck.MatchString(issue.GetTitle()) {
+				continue
+			}
+			filtered = append(filtered, issue)
+		}
+		issues = filtered
+	}
+
 	return issues, nil
+}
+
+func (r ReleaseNotes) checkInputs(nonFlagArgs []string) error {
+	if len(nonFlagArgs) != 2 {
+		return errors.New("expected two arguments: <Git-Revision> <Git-Revision>")
+	}
+
+	if r.Options.IssueTitleExp != "" {
+		_, err := regexp.Compile(r.Options.IssueTitleExp)
+		if err != nil {
+			return fmt.Errorf("failed to parse issues-title-exp: %w", err)
+		}
+	}
+
+	if r.Options.GithubToken == "" &&
+		(r.Options.IssueTitleExp != "" || len(r.Options.IssueIDs) > 0 || len(r.Options.IssueLabels) > 0) {
+		return errors.New("github-token (env: GITHUB_TOKEN) must be set to interact with the github api")
+	}
+
+	return nil
+}
+
+func insertUnique(list []*github.Issue, compare func(a, b *github.Issue) bool, additional ...*github.Issue) []*github.Issue {
+nextNewIssue:
+	for _, newIssue := range additional {
+		for _, existingIssue := range list {
+			if compare(newIssue, existingIssue) {
+				continue nextNewIssue
+			}
+		}
+		list = append(list, newIssue)
+	}
+	return list
 }
 
 func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, string, error) {
