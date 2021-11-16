@@ -37,8 +37,8 @@ type ReleaseNotes struct {
 		GithubToken    string   `long:"github-token"           short:"g" description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
 		IssueIDs       []string `long:"github-issue"           short:"i" description:"a list of issues to include in the release notes; these are deduplicated with the issue results"`
 		IssueMilestone string   `long:"github-issue-milestone" short:"m" description:"issue milestone to use, it may be the milestone number or the milestone name"`
-		IssueLabels    []string `long:"github-issue-labels"    short:"l" description:"issue query used to query github issues; test your query on this page https://github.com/issues"`
-		IssueTitleExp  string   `long:"issues-title-exp"       short:"x" description:"issues with title matching regular expression will be added, issues must first be fetched with github-issue* flags" default:"(?i)^\\*\\*\\[(Bug Fix)|(Security Fix)|(Feature Improvement)|(Feature)\\]\\*\\*.*$"`
+		IssueLabels    []string `long:"github-issue-label"     short:"l" description:"issue labels to add to issues query"`
+		IssueTitleExp  string   `long:"issues-title-exp"       short:"x" description:"issues with title matching regular expression will be added. Issues must first be fetched with github-issue* flags. The default expression can be disabled by setting an empty string" default:"(?i)^\\*\\*\\[(security fix)|(feature)|(feature improvement)|(bug fix)\\]\\*\\*.*$"`
 	}
 
 	pathRelativeToDotGit string
@@ -370,6 +370,9 @@ func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, stri
 		repoOwner, repoName, nil
 }
 
+// IssuesBySemanticTitlePrefix sorts issues by title lexicographically. It handles issues with a prefix like
+// \*\*\[(security fix)|(feature)|(feature improvement)|(bug fix)|(none)\]\*\*, differently and sorts them
+// in order of importance.
 type IssuesBySemanticTitlePrefix []*github.Issue
 
 func (list IssuesBySemanticTitlePrefix) Len() int { return len(list) }
