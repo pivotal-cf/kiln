@@ -240,32 +240,6 @@ func TestGetReleaseMatchingConstraint(t *testing.T) {
 		damnIt.Expect(rel.GetTagName()).To(Ω.Equal("2.0.4"))
 		damnIt.Expect(releaseGetter.ListReleasesCallCount()).To(Ω.Equal(3))
 	})
-
-	t.Run("when the status code is unauthorized and the error is nil", func(t *testing.T) {
-		// yes this happened... how is this not an error?
-		damnIt := Ω.NewWithT(t)
-
-		defer func() {
-			r := recover()
-			if r != nil {
-				t.Error("it should not panic")
-			}
-		}()
-
-		releaseGetter := new(fakes.ReleaseByTagGetter)
-
-		releaseGetter.GetReleaseByTagReturns(nil, &github.Response{
-			Response: &http.Response{
-				StatusCode: http.StatusUnauthorized,
-			},
-		}, nil)
-
-		ctx := context.TODO()
-
-		fn := component.GetGithubReleaseWithTag(releaseGetter, "0.226.0")
-		_, err := fn(ctx, "org", "repo")
-		damnIt.Expect(err).To(Ω.HaveOccurred())
-	})
 }
 
 func TestGetOwnerAndRepo(t *testing.T) {
