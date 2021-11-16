@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/Masterminds/semver"
 	"io"
 	"net/http"
 	"os"
@@ -58,9 +59,10 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 	intPtr := func(n int64) *int64 { return &n }
 
 	t.Run("when release is found in first repo", func(t *testing.T) {
-		ghRepoAPI := new(fakes.GitHubRepositoryAPI)
+		releaseGetter := new(fakes.ReleaseByTagGetter)
+		downloader := new(fakes.ReleaseAssetDownloader)
 
-		ghRepoAPI.GetReleaseByTagReturns(
+		releaseGetter.GetReleaseByTagReturns(
 			&github.RepositoryRelease{
 				TagName: strPtr("0.226.0"),
 				Assets: []*github.ReleaseAsset{
@@ -80,17 +82,17 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 		)
 
 		file := &SetTrueOnClose{Reader: bytes.NewBufferString("hello")}
-		ghRepoAPI.DownloadReleaseAssetReturns(file, "", nil)
+		downloader.DownloadReleaseAssetReturns(file, "", nil)
 
 		ctx := context.TODO()
 
-		lock, found, err := component.LockFromGithubRelease(ctx, ghRepoAPI, "cloudfoundry", component.Spec{
+		lock, found, err := component.LockFromGithubRelease(ctx, downloader, "cloudfoundry", component.Spec{
 			Name:    "routing",
 			Version: "0.226.0",
 			GitRepositories: []string{
 				"https://github.com/cloudfoundry/routing-release",
 			},
-		})
+		}, component.GetGithubReleaseWithTag(releaseGetter, "0.226.0"))
 
 		t.Run("it returns success stuff", func(t *testing.T) {
 			damnIt := Ω.NewWithT(t)
@@ -112,8 +114,8 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 		t.Run("it downloads the file", func(t *testing.T) {
 			damnIt := Ω.NewWithT(t)
 
-			damnIt.Expect(ghRepoAPI.DownloadReleaseAssetCallCount()).To(Ω.Equal(1))
-			_, org, repo, build, client := ghRepoAPI.DownloadReleaseAssetArgsForCall(0)
+			damnIt.Expect(downloader.DownloadReleaseAssetCallCount()).To(Ω.Equal(1))
+			_, org, repo, build, client := downloader.DownloadReleaseAssetArgsForCall(0)
 			damnIt.Expect(org).To(Ω.Equal("cloudfoundry"))
 			damnIt.Expect(repo).To(Ω.Equal("routing-release"))
 			damnIt.Expect(build).To(Ω.Equal(int64(420)))
@@ -129,20 +131,22 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 		t.Run("it makes the right request", func(t *testing.T) {
 			damnIt := Ω.NewWithT(t)
 
-			damnIt.Expect(ghRepoAPI.GetReleaseByTagCallCount()).To(Ω.Equal(1))
-			_, org, repo, tag := ghRepoAPI.GetReleaseByTagArgsForCall(0)
+			damnIt.Expect(releaseGetter.GetReleaseByTagCallCount()).To(Ω.Equal(1))
+			_, org, repo, tag := releaseGetter.GetReleaseByTagArgsForCall(0)
 			damnIt.Expect(org).To(Ω.Equal("cloudfoundry"))
 			damnIt.Expect(repo).To(Ω.Equal("routing-release"))
 			damnIt.Expect(tag).To(Ω.Equal("0.226.0"))
 		})
 	})
+}
 
-	t.Run("the github api request fails", func(t *testing.T) {
+func TestGetGithubReleaseWithTag(t *testing.T) {
+	t.Run("when get release with tag api request fails", func(t *testing.T) {
 		damnIt := Ω.NewWithT(t)
 
-		ghRepoAPI := new(fakes.GitHubRepositoryAPI)
+		releaseGetter := new(fakes.ReleaseByTagGetter)
 
-		ghRepoAPI.GetReleaseByTagReturns(
+		releaseGetter.GetReleaseByTagReturns(
 			&github.RepositoryRelease{},
 			&github.Response{Response: &http.Response{StatusCode: http.StatusUnauthorized}},
 			errors.New("banana"),
@@ -150,17 +154,12 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 
 		ctx := context.TODO()
 
-		_, _, err := component.LockFromGithubRelease(ctx, ghRepoAPI, "cloudfoundry", component.Spec{
-			Name:    "routing",
-			Version: "0.226.0",
-			GitRepositories: []string{
-				"https://github.com/cloudfoundry/routing-release",
-			},
-		})
+		fn := component.GetGithubReleaseWithTag(releaseGetter, "0.226.0")
+		_, err := fn(ctx, "org", "repo")
 		damnIt.Expect(err).To(Ω.HaveOccurred())
 	})
 
-	t.Run("the status code is unauthorized and the error is nil", func(t *testing.T) {
+	t.Run("when the status code is unauthorized and the error is nil", func(t *testing.T) {
 		// yes this happened... how is this not an error?
 		damnIt := Ω.NewWithT(t)
 
@@ -171,9 +170,9 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 			}
 		}()
 
-		ghRepoAPI := new(fakes.GitHubRepositoryAPI)
+		releaseGetter := new(fakes.ReleaseByTagGetter)
 
-		ghRepoAPI.GetReleaseByTagReturns(nil, &github.Response{
+		releaseGetter.GetReleaseByTagReturns(nil, &github.Response{
 			Response: &http.Response{
 				StatusCode: http.StatusUnauthorized,
 			},
@@ -181,13 +180,90 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 
 		ctx := context.TODO()
 
-		_, _, err := component.LockFromGithubRelease(ctx, ghRepoAPI, "cloudfoundry", component.Spec{
-			Name:    "routing",
-			Version: "0.226.0",
-			GitRepositories: []string{
-				"https://github.com/cloudfoundry/routing-release",
+		fn := component.GetGithubReleaseWithTag(releaseGetter, "0.226.0")
+		_, err := fn(ctx, "org", "repo")
+		damnIt.Expect(err).To(Ω.HaveOccurred())
+	})
+}
+
+func TestGetReleaseMatchingConstraint(t *testing.T) {
+	strPtr := func(s string) *string { return &s }
+
+	t.Run("when get release with tag api request fails", func(t *testing.T) {
+		damnIt := Ω.NewWithT(t)
+
+		releaseGetter := new(fakes.ReleasesLister)
+
+		releaseGetter.ListReleasesReturnsOnCall(0,
+			[]*github.RepositoryRelease{
+				{TagName: strPtr("3.0.0")},
+				{TagName: strPtr("2.2.1")},
+				{TagName: strPtr("2.2.0")},
+				{TagName: strPtr("2.1.0")},
+				{TagName: strPtr("2.0.4")},
+				{TagName: strPtr("2.0.3")},
 			},
-		})
+			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+			nil,
+		)
+		releaseGetter.ListReleasesReturnsOnCall(1,
+			[]*github.RepositoryRelease{
+				{TagName: strPtr("2.0.0-beta.1")},
+				{TagName: strPtr("1.9.42")},
+				{TagName: strPtr("1.8.0")},
+			},
+			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+			nil,
+		)
+		releaseGetter.ListReleasesReturnsOnCall(2,
+			[]*github.RepositoryRelease{
+				{TagName: strPtr("2.0.0-alpha.0")},
+			},
+			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+			nil,
+		)
+		releaseGetter.ListReleasesReturnsOnCall(3,
+			[]*github.RepositoryRelease{
+				{TagName: strPtr("1.7.5")},
+			},
+			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+			nil,
+		)
+
+		ctx := context.TODO()
+
+		c, err := semver.NewConstraint("~2.0")
+		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
+		fn := component.GetReleaseMatchingConstraint(releaseGetter, c)
+		rel, err := fn(ctx, "org", "repo")
+		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
+		damnIt.Expect(rel.GetTagName()).To(Ω.Equal("2.0.4"))
+		damnIt.Expect(releaseGetter.ListReleasesCallCount()).To(Ω.Equal(3))
+	})
+
+	t.Run("when the status code is unauthorized and the error is nil", func(t *testing.T) {
+		// yes this happened... how is this not an error?
+		damnIt := Ω.NewWithT(t)
+
+		defer func() {
+			r := recover()
+			if r != nil {
+				t.Error("it should not panic")
+			}
+		}()
+
+		releaseGetter := new(fakes.ReleaseByTagGetter)
+
+		releaseGetter.GetReleaseByTagReturns(nil, &github.Response{
+			Response: &http.Response{
+				StatusCode: http.StatusUnauthorized,
+			},
+		}, nil)
+
+		ctx := context.TODO()
+
+		fn := component.GetGithubReleaseWithTag(releaseGetter, "0.226.0")
+		_, err := fn(ctx, "org", "repo")
 		damnIt.Expect(err).To(Ω.HaveOccurred())
 	})
 }
