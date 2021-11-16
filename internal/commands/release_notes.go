@@ -116,13 +116,9 @@ func (r ReleaseNotes) Execute(args []string) error {
 		return err
 	}
 
-	var releaseDate time.Time
-
-	if r.Options.ReleaseDate != "" {
-		releaseDate, err = time.Parse(releaseDateFormat, r.Options.ReleaseDate)
-		if err != nil {
-			return fmt.Errorf("release date could not be parsed: %w", err)
-		}
+	releaseDate, err := r.parseReleaseDate()
+	if err != nil {
+		return err
 	}
 
 	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(nonFlagArgs[0])) // TODO handle error
@@ -184,12 +180,18 @@ func (r ReleaseNotes) Execute(args []string) error {
 	return nil
 }
 
-func (r ReleaseNotes) Usage() jhanda.Usage {
-	return jhanda.Usage{
-		Description:      "generates release notes from bosh-release release notes on GitHub between two tile repo git references",
-		ShortDescription: "generates release notes from bosh-release release notes",
-		Flags:            r.Options,
+func (r ReleaseNotes) parseReleaseDate() (time.Time, error) {
+	var releaseDate time.Time
+
+	if r.Options.ReleaseDate != "" {
+		var err error
+		releaseDate, err = time.Parse(releaseDateFormat, r.Options.ReleaseDate)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("release date could not be parsed: %w", err)
+		}
 	}
+
+	return releaseDate, nil
 }
 
 //go:embed release_notes.md.template
@@ -206,11 +208,11 @@ type ReleaseNotesInformation struct {
 	Components []component.Lock
 }
 
-type BoshReleaseBump = component.Spec
+type BoshReleaseBump = component.Lock
 
-func calculateReleaseBumps(current, previous []component.Lock) []component.Lock {
+func calculateReleaseBumps(current, previous []component.Lock) []BoshReleaseBump {
 	var (
-		bumps         []component.Lock
+		bumps         []BoshReleaseBump
 		previousSpecs = make(map[component.Lock]struct{}, len(previous))
 	)
 	for _, cs := range previous {
@@ -235,13 +237,99 @@ func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, er
 	tokenClient := oauth2.NewClient(ctx, tokenSource)
 	githubClient := github.NewClient(tokenClient)
 
+	issues, err := issuesFromIssueIDs(ctx, githubClient, r.RepoOwner, r.RepoName, r.Options.IssueIDs)
+	if err != nil {
+		return nil, err
+	}
+	milestoneNumber, err := resolveMilestoneNumber(ctx, githubClient, r.RepoOwner, r.RepoName, r.Options.IssueMilestone)
+	if err != nil {
+		return nil, err
+	}
+	milestoneLabeledIssues, err := fetchIssuesWithLabelAndMilestone(ctx, githubClient, r.RepoOwner, r.RepoName, milestoneNumber, r.Options.IssueLabels)
+	if err != nil {
+		return nil, err
+	}
+	return appendFilterAndSortIssues(issues, milestoneLabeledIssues, r.Options.IssueTitleExp), nil
+}
+
+func appendFilterAndSortIssues(issuesA, issuesB []*github.Issue, filterExp string) []*github.Issue {
+	fullList := insertUnique(issuesA, func(a, b *github.Issue) bool {
+		return a.GetID() == b.GetID()
+	}, issuesB...)
+
+	filtered := filterIssuesByTitle(filterExp, fullList)
+
+	sort.Sort(IssuesBySemanticTitlePrefix(filtered))
+
+	return filtered
+}
+
+func fetchIssuesWithLabelAndMilestone(ctx context.Context, githubClient *github.Client, repoOwner, repoName, milestoneNumber string, labels []string) ([]*github.Issue, error) {
+	if milestoneNumber == "" && len(labels) == 0 {
+		return nil, nil
+	}
+	issueList, response, err := githubClient.Issues.ListByRepo(ctx, repoOwner, repoName, &github.IssueListByRepoOptions{
+		Milestone: milestoneNumber,
+		Labels:    labels,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get issues %q: %w", response.Request.URL, err)
+	}
+	return issueList, nil
+}
+
+func filterIssuesByTitle(exp string, issues []*github.Issue) []*github.Issue {
+	if exp == "" {
+		return issues
+	}
+	titleCheck := regexp.MustCompile(exp)
+	filtered := issues[:0]
+	for _, issue := range issues {
+		if !titleCheck.MatchString(issue.GetTitle()) {
+			continue
+		}
+		filtered = append(filtered, issue)
+	}
+	return filtered
+}
+
+func resolveMilestoneNumber(ctx context.Context, githubClient *github.Client, repoOwner, repoName, milestone string) (string, error) {
+	if milestone == "" {
+		return "", nil
+	}
+	_, parseErr := strconv.Atoi(milestone)
+	if parseErr == nil {
+		return milestone, nil
+	}
+
+	queryOptions := &github.MilestoneListOptions{}
+	for {
+		ms, _, err := githubClient.Issues.ListMilestones(ctx, repoOwner, repoName, queryOptions)
+		if err != nil {
+			break
+		}
+		for _, m := range ms {
+			if m.GetTitle() == milestone {
+				return strconv.Itoa(m.GetNumber()), nil
+			}
+		}
+		queryOptions.Page++
+	}
+
+	return "", fmt.Errorf("failed to find milestone with title or number %q", milestone)
+}
+
+func issuesFromIssueIDs(ctx context.Context, githubClient *github.Client, repoOwner, repoName string, issueIDs []string) ([]*github.Issue, error) {
 	var issues []*github.Issue
-	for _, id := range r.Options.IssueIDs {
+	for _, id := range issueIDs {
 		n, err := strconv.Atoi(id)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse issue id %q: %w", id, err)
 		}
-		issue, response, err := githubClient.Issues.Get(ctx, r.RepoOwner, r.RepoName, n)
+		issue, response, err := githubClient.Issues.Get(ctx, repoOwner, repoName, n)
 		if err != nil {
 			return nil, err
 		}
@@ -250,60 +338,6 @@ func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, er
 		}
 		issues = append(issues, issue)
 	}
-
-	if r.Options.IssueMilestone != "" || len(r.Options.IssueLabels) > 0 {
-		milestoneNumber := r.Options.IssueMilestone
-		if milestoneNumber != "" {
-			_, err := strconv.Atoi(milestoneNumber)
-			if err != nil {
-				milestoneNumber = ""
-				ms, _, err := githubClient.Issues.ListMilestones(ctx, r.RepoOwner, r.RepoName, &github.MilestoneListOptions{})
-				if err != nil {
-					return nil, err
-				}
-				for _, m := range ms {
-					if m.GetTitle() == r.Options.IssueMilestone {
-						milestoneNumber = strconv.Itoa(m.GetNumber())
-						break
-					}
-				}
-				if milestoneNumber == "" {
-					return nil, fmt.Errorf("failed to find milestone with title %q", r.Options.IssueMilestone)
-				}
-			}
-		}
-
-		githubClient.Client()
-		issueList, response, err := githubClient.Issues.ListByRepo(ctx, r.RepoOwner, r.RepoName, &github.IssueListByRepoOptions{
-			Milestone: milestoneNumber,
-			Labels:    r.Options.IssueLabels,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if response.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("failed to get issues %q: %w", response.Request.URL, err)
-		}
-		issues = insertUnique(issues, func(a, b *github.Issue) bool {
-			return a.GetID() == b.GetID()
-		}, issueList...)
-	}
-
-	if r.Options.IssueTitleExp != "" {
-		titleCheck := regexp.MustCompile(r.Options.IssueTitleExp)
-
-		filtered := issues[:0]
-		for _, issue := range issues {
-			if !titleCheck.MatchString(issue.GetTitle()) {
-				continue
-			}
-			filtered = append(filtered, issue)
-		}
-		issues = filtered
-	}
-
-	sort.Sort(IssuesBySemanticTitlePrefix(issues))
-
 	return issues, nil
 }
 
@@ -325,19 +359,6 @@ func (r ReleaseNotes) checkInputs(nonFlagArgs []string) error {
 	}
 
 	return nil
-}
-
-func insertUnique(list []*github.Issue, compare func(a, b *github.Issue) bool, additional ...*github.Issue) []*github.Issue {
-nextNewIssue:
-	for _, newIssue := range additional {
-		for _, existingIssue := range list {
-			if compare(newIssue, existingIssue) {
-				continue nextNewIssue
-			}
-		}
-		list = append(list, newIssue)
-	}
-	return list
 }
 
 func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, string, error) {
@@ -371,6 +392,19 @@ func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, stri
 
 	return fmt.Sprintf("https://github.com/%s/%s", repoOwner, repoName),
 		repoOwner, repoName, nil
+}
+
+func insertUnique(list []*github.Issue, equal func(a, b *github.Issue) bool, additional ...*github.Issue) []*github.Issue {
+nextNewIssue:
+	for _, newIssue := range additional {
+		for _, existingIssue := range list {
+			if equal(newIssue, existingIssue) {
+				continue nextNewIssue
+			}
+		}
+		list = append(list, newIssue)
+	}
+	return list
 }
 
 // IssuesBySemanticTitlePrefix sorts issues by title lexicographically. It handles issues with a prefix like
@@ -408,4 +442,12 @@ func issuesTitlePrefixSemanticValue(title string) int {
 		}
 	}
 	return 0
+}
+
+func (r ReleaseNotes) Usage() jhanda.Usage {
+	return jhanda.Usage{
+		Description:      "generates release notes from bosh-release release notes on GitHub between two tile repo git references",
+		ShortDescription: "generates release notes from bosh-release release notes",
+		Flags:            r.Options,
+	}
 }
