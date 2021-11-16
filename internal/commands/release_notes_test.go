@@ -78,7 +78,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		}
 
 		err := rn.Execute([]string{
-			"--date=2021-11-05",
+			"--release-date=2021-11-05",
 			"tile/1.1.0",
 			"tile/1.2.0",
 		})
@@ -99,17 +99,6 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	})
 
 	t.Run("release-date", func(t *testing.T) {
-
-		t.Run("when the flag is not set", func(t *testing.T) {
-			var r commands.ReleaseNotes
-			_, err := jhanda.Parse(&r.Options, nil)
-
-			t.Run("it returns an error", func(t *testing.T) {
-				please := Ω.NewWithT(t)
-				please.Expect(err).To(Ω.MatchError(Ω.ContainSubstring("required")))
-			})
-		})
-
 		t.Run("when the flag value is invalid", func(t *testing.T) {
 			repo, _ := git.Init(memory.NewStorage(), memfs.New())
 			revisionResolver := new(fakes.RevisionResolver)
@@ -123,7 +112,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 				HistoricKilnfileLock: historicKilnfileLockFunc.Spy,
 				Writer:               &bytes.Buffer{},
 				ReadFile:             func(fp string) (_ []byte, _ error) { return },
-			}.Execute([]string{`--date="Nov, 2020"`, "ref1", "ref2"})
+			}.Execute([]string{`--release-date="Nov, 2020"`, "ref1", "ref2"})
 
 			t.Run("it returns an error", func(t *testing.T) {
 				please := Ω.NewWithT(t)
@@ -132,31 +121,6 @@ func TestReleaseNotes_Execute(t *testing.T) {
 					Ω.ContainSubstring("cannot parse"),
 				)))
 			})
-		})
-	})
-
-	t.Run("issues", func(t *testing.T) {
-		t.Run("when the token is not set", func(t *testing.T) {
-			please := Ω.NewWithT(t)
-
-			repo, _ := git.Init(memory.NewStorage(), memfs.New())
-			revisionResolver := new(fakes.RevisionResolver)
-			revisionResolver.ResolveRevisionReturns(&plumbing.ZeroHash, nil)
-			historicKilnfileLockFunc := new(fakes.HistoricKilnfileLock)
-			historicKilnfileLockFunc.Returns(cargo.KilnfileLock{}, nil)
-
-			err := commands.ReleaseNotes{
-				Repository:           repo,
-				RevisionResolver:     revisionResolver,
-				HistoricKilnfileLock: historicKilnfileLockFunc.Spy,
-				Writer:               &bytes.Buffer{},
-				ReadFile:             func(fp string) (_ []byte, _ error) { return },
-			}.Execute([]string{`--date="Nov, 2020"`, "ref1", "ref2"})
-
-			please.Expect(err).To(Ω.MatchError(Ω.And(
-				Ω.ContainSubstring("release date could not be parsed:"),
-				Ω.ContainSubstring("cannot parse"),
-			)))
 		})
 	})
 
