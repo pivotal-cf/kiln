@@ -2,6 +2,7 @@ package cargo
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/Masterminds/semver"
 )
@@ -33,18 +34,15 @@ type ComponentSpec struct {
 	GitRepositories []string `yaml:"git_repos,omitempty"`
 }
 
-// VersionConstraints must be passed a spec with a parsable
-// semver. The Kiln Validate command ensures that the versions
-// in this field continue to stay valid.
-func (spec ComponentSpec) VersionConstraints() *semver.Constraints {
+func (spec ComponentSpec) VersionConstraints() (*semver.Constraints, error) {
 	if spec.Version == "" {
 		spec.Version = ">0"
 	}
 	c, err := semver.NewConstraint(spec.Version)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("expected version to be a Constraint: %w", err)
 	}
-	return c
+	return c, nil
 }
 
 func (spec ComponentSpec) Lock() ComponentLock {

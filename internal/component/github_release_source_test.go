@@ -141,6 +141,38 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 	})
 }
 
+func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
+	t.Run("when spec contains a version string other than semver", func(t *testing.T) {
+		s := component.Spec{
+			Version: "garbage",
+		}
+		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token"})
+		_, _, err := grs.FindReleaseVersion(s)
+
+		t.Run("it returns an error about version not being specific", func(t *testing.T) {
+			damnIt := Ω.NewWithT(t)
+			damnIt.Expect(err).To(Ω.HaveOccurred())
+			damnIt.Expect(err.Error()).To(Ω.ContainSubstring("expected version to be a constraint"))
+		})
+	})
+}
+
+func TestGithubReleaseSource_GetMatchedRelease(t *testing.T) {
+	t.Run("when spec contains a version string other than semver", func(t *testing.T) {
+		s := component.Spec{
+			Version: ">1.0.0",
+		}
+		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token"})
+		_, _, err := grs.GetMatchedRelease(s)
+
+		t.Run("it returns an error about version not being specific", func(t *testing.T) {
+			damnIt := Ω.NewWithT(t)
+			damnIt.Expect(err).To(Ω.HaveOccurred())
+			damnIt.Expect(err.Error()).To(Ω.ContainSubstring("expected version to be an exact version"))
+		})
+	})
+}
+
 func TestGetGithubReleaseWithTag(t *testing.T) {
 	t.Run("when get release with tag api request fails", func(t *testing.T) {
 		damnIt := Ω.NewWithT(t)
@@ -185,6 +217,32 @@ func TestGetGithubReleaseWithTag(t *testing.T) {
 		_, err := fn(ctx, "org", "repo")
 		damnIt.Expect(err).To(Ω.HaveOccurred())
 	})
+}
+
+func TestGetOwnerAndRepo(t *testing.T) {
+	tests := []struct {
+		name        string
+		givenURLStr string
+		wantOwner   string
+		wantRepo    string
+	}{
+		{name: "https", givenURLStr: "https://github.com/some-org/some-repo.git", wantOwner: "some-org", wantRepo: "some-repo"},
+		{name: "git", givenURLStr: "git@github.com:some-org/some-repo.git", wantOwner: "some-org", wantRepo: "some-repo"},
+
+		{name: "empty", givenURLStr: "", wantOwner: "", wantRepo: ""},
+		{name: "incomplete", givenURLStr: "github.com/example", wantOwner: "", wantRepo: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotOwner, gotRepo := component.OwnerAndRepoFromGitHubURI(tt.givenURLStr)
+			if gotOwner != tt.wantOwner {
+				t.Errorf("OwnerAndRepoFromGitHubURI() gotOwner = %v, want %v", gotOwner, tt.wantOwner)
+			}
+			if gotRepo != tt.wantRepo {
+				t.Errorf("OwnerAndRepoFromGitHubURI() gotRepo = %v, want %v", gotRepo, tt.wantRepo)
+			}
+		})
+	}
 }
 
 func TestGetReleaseMatchingConstraint(t *testing.T) {
@@ -241,32 +299,6 @@ func TestGetReleaseMatchingConstraint(t *testing.T) {
 		damnIt.Expect(rel.GetTagName()).To(Ω.Equal("2.0.4"))
 		damnIt.Expect(releaseGetter.ListReleasesCallCount()).To(Ω.Equal(3))
 	})
-}
-
-func TestGetOwnerAndRepo(t *testing.T) {
-	tests := []struct {
-		name        string
-		givenURLStr string
-		wantOwner   string
-		wantRepo    string
-	}{
-		{name: "https", givenURLStr: "https://github.com/some-org/some-repo.git", wantOwner: "some-org", wantRepo: "some-repo"},
-		{name: "git", givenURLStr: "git@github.com:some-org/some-repo.git", wantOwner: "some-org", wantRepo: "some-repo"},
-
-		{name: "empty", givenURLStr: "", wantOwner: "", wantRepo: ""},
-		{name: "incomplete", givenURLStr: "github.com/example", wantOwner: "", wantRepo: ""},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotOwner, gotRepo := component.OwnerAndRepoFromGitHubURI(tt.givenURLStr)
-			if gotOwner != tt.wantOwner {
-				t.Errorf("OwnerAndRepoFromGitHubURI() gotOwner = %v, want %v", gotOwner, tt.wantOwner)
-			}
-			if gotRepo != tt.wantRepo {
-				t.Errorf("OwnerAndRepoFromGitHubURI() gotRepo = %v, want %v", gotRepo, tt.wantRepo)
-			}
-		})
-	}
 }
 
 /*
