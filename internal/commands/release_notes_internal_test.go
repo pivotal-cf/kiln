@@ -3,9 +3,10 @@ package commands
 import (
 	"context"
 	"errors"
-	Ω "github.com/onsi/gomega"
 	"net/http"
 	"testing"
+
+	Ω "github.com/onsi/gomega"
 
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
@@ -104,7 +105,7 @@ func TestInternal_ReleaseNotes_checkInputs(t *testing.T) {
 			rn := ReleaseNotes{}
 			rn.Options.IssueTitleExp = "s"
 			err := rn.checkInputs([]string{"a", "b"})
-			please.Expect(err).To(Ω.MatchError(Ω.ContainSubstring("github-token")))
+			please.Expect(err).NotTo(Ω.HaveOccurred())
 		})
 	})
 }
