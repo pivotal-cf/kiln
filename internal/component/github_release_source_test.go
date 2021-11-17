@@ -27,6 +27,7 @@ func TestListAllOfTheCrap(t *testing.T) {
 	grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{
 		Type:        component.ReleaseSourceTypeGithub,
 		GithubToken: os.Getenv("GITHUB_TOKEN"),
+		Org:         "cloudfoundry",
 	})
 	//grs.ListAllOfTheCrap(context.TODO(), "cloudfoundry")
 
@@ -148,7 +149,7 @@ func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 		s := component.Spec{
 			Version: "garbage",
 		}
-		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token"})
+		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
 		_, _, err := grs.FindReleaseVersion(s)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
@@ -164,7 +165,7 @@ func TestGithubReleaseSource_GetMatchedRelease(t *testing.T) {
 		s := component.Spec{
 			Version: ">1.0.0",
 		}
-		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token"})
+		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
 		_, _, err := grs.GetMatchedRelease(s)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
@@ -324,6 +325,13 @@ func TestDownloadReleaseAsset(t *testing.T) {
 	response, _ := grs.Client.Do(context.TODO(), request, file)
 	buff, _ := httputil.DumpResponse(response.Response, false)
 	fmt.Println(string(buff))
+
+
+	t.Run("when the release is downloaded", func(t *testing.T) {
+		damnIt := Ω.NewWithT(t)
+		_, err := os.Stat("/tmp/somefile.tgz")
+		damnIt.Expect(err).NotTo(Ω.HaveOccurred(), "it creates the expected asset")
+	})
 	//grs.Client.Repositories.DownloadReleaseAsset(context.TODO(), testLock.)
 
 	//Mocking up the Lock we'll need to test
