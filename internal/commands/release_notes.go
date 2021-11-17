@@ -347,8 +347,11 @@ func resolveMilestoneNumber(ctx context.Context, issuesService milestoneLister, 
 	queryOptions := &github.MilestoneListOptions{}
 	for {
 		ms, res, err := issuesService.ListMilestones(ctx, repoOwner, repoName, queryOptions)
-		if err != nil || res == nil || res.Response.StatusCode != http.StatusOK {
-			break
+		if err != nil {
+			return "", err
+		}
+		if res.Response.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("unexpedted status code %d", res.Response.StatusCode)
 		}
 		for _, m := range ms {
 			if m.GetTitle() == milestone {
@@ -357,8 +360,6 @@ func resolveMilestoneNumber(ctx context.Context, issuesService milestoneLister, 
 		}
 		queryOptions.Page++
 	}
-
-	return "", fmt.Errorf("failed to find milestone with title or number %q", milestone)
 }
 
 //counterfeiter:generate -o ./fakes_internal/issues_by_repo_lister.go --fake-name IssuesByRepoLister . issuesByRepoLister
