@@ -316,6 +316,44 @@ func TestInternal_resolveMilestoneNumber(t *testing.T) {
 		please.Expect(result).To(Ω.Equal(""))
 	})
 
+	t.Run("when passed a number", func(t *testing.T) {
+		please := Ω.NewWithT(t)
+		issuesService := new(fakes.MilestoneLister)
+
+		result, err := resolveMilestoneNumber(context.TODO(), issuesService, "o", "n", "42")
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(result).To(Ω.Equal("42"), "it returns that number")
+		please.Expect(issuesService.ListMilestonesCallCount()).To(Ω.Equal(0), "it does not reach out o")
+	})
+
+	t.Run("when the milestone is found on the second page", func(t *testing.T) {
+		please := Ω.NewWithT(t)
+		issuesService := new(fakes.MilestoneLister)
+
+		issuesService.ListMilestonesReturnsOnCall(0,
+			[]*github.Milestone{
+				{Title: strPtr("orange")},
+				{Title: strPtr("lemon")},
+			},
+			githubResponse(t, 200),
+			nil,
+		)
+		issuesService.ListMilestonesReturnsOnCall(1,
+			[]*github.Milestone{
+				{Title: strPtr("kiwi")},
+				{Title: strPtr("banana"), Number: intPtr(42)},
+			},
+			githubResponse(t, 200),
+			nil,
+		)
+
+		result, err := resolveMilestoneNumber(context.TODO(), issuesService, "o", "n", "banana")
+
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(issuesService.ListMilestonesCallCount()).To(Ω.Equal(2))
+		please.Expect(result).To(Ω.Equal("42"))
+	})
+
 	// TODO: test pagination
 
 	t.Run("the issues service returns an error", func(t *testing.T) {
@@ -385,4 +423,5 @@ func githubResponse(t *testing.T, status int) *github.Response {
 	}
 }
 
-func intPtr(n int) *int { return &n }
+func intPtr(n int) *int       { return &n }
+func strPtr(n string) *string { return &n }
