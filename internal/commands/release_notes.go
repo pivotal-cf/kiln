@@ -286,13 +286,13 @@ func calculateComponentBumps(current, previous []component.Lock) []BoshReleaseBu
 	return bumps
 }
 
-// listGithubIssues is not tested. By not testing we are getting reduced abstraction and improved readability
-// at the cost of high level testing. This function therefore must stay as small as possible and rely on type checking
-// and a manual test to ensure it continues to behave as expected during refactors.
+// listGithubIssues is not tested. By not testing we are getting reduced abstraction and improved readability at the
+// cost of high level testing. This function therefore must stay as small as possible and rely on type checking and a
+// manual test to ensure it continues to behave as expected during refactors.
 //
-// The function can be tested by generating release notes for a tile with issue ids and a milestone set.
-// The happy path test for Execute does not set GithubToken intentionally so this code is not triggered and Execute
-// does not actually reach out to GitHub.
+// The function can be tested by generating release notes for a tile with issue ids and a milestone set. The happy path
+// test for Execute does not set GithubToken intentionally so this code is not triggered and Execute does not actually
+// reach out to GitHub.
 func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, error) {
 	if r.Options.GithubToken == "" {
 		return nil, nil
