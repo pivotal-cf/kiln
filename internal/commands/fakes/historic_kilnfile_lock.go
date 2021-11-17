@@ -40,7 +40,7 @@ func (fake *HistoricKilnfileLock) Spy(arg1 *git.Repository, arg2 plumbing.Hash, 
 	}{arg1, arg2, arg3})
 	stub := fake.Stub
 	returns := fake.returns
-	fake.recordInvocation("HistoricKilnfileLockFunc", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("HistoricKilnfileLock", []interface{}{arg1, arg2, arg3})
 	fake.mutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3)
@@ -119,4 +119,4 @@ func (fake *HistoricKilnfileLock) recordInvocation(key string, args []interface{
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ commands.HistoricKilnfileLockFunc = new(HistoricKilnfileLock).Spy
+var _ commands.HistoricKilnfileLock = new(HistoricKilnfileLock).Spy
