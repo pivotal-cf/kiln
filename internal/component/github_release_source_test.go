@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httputil"
 	"os"
 	"testing"
 
@@ -316,20 +315,14 @@ func TestDownloadReleaseAsset(t *testing.T) {
 	if err != nil {
 		fmt.Println(testLock.Spec())
 	}
-	request, _ := grs.Client.NewRequest(http.MethodGet, testLock.RemotePath, nil)
-	file, err := os.Create("/tmp/somefile.tgz")
-	if err != nil {
-		panic("oh shit")
-	}
-	defer file.Close()
-	response, _ := grs.Client.Do(context.TODO(), request, file)
-	buff, _ := httputil.DumpResponse(response.Response, false)
-	fmt.Println(string(buff))
-
 
 	t.Run("when the release is downloaded", func(t *testing.T) {
 		damnIt := Ω.NewWithT(t)
-		_, err := os.Stat("/tmp/somefile.tgz")
+
+		local, err := grs.DownloadRelease("/tmp", testLock)
+		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
+
+		_, err = os.Stat(local.LocalPath)
 		damnIt.Expect(err).NotTo(Ω.HaveOccurred(), "it creates the expected asset")
 	})
 	//grs.Client.Repositories.DownloadReleaseAsset(context.TODO(), testLock.)
