@@ -48,7 +48,6 @@ type ReleaseNotes struct {
 	HistoricKilnfileLock
 	HistoricVersion
 	RevisionResolver
-	GetIssueFunc
 	Stat func(string) (os.FileInfo, error)
 	io.Writer
 
@@ -79,16 +78,16 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	}
 
 	return ReleaseNotes{
-		Repository:               repo,
-		ReadFile:                 ioutil.ReadFile,
-		HistoricKilnfileLockFunc: historic.KilnfileLock,
-		HistoricVersionFunc:      historic.Version,
-		RevisionResolver:         repo,
-		Stat:                     os.Stat,
-		Writer:                   os.Stdout,
-		pathRelativeToDotGit:     rp,
-		RepoName:                 repoName,
-		RepoOwner:                repoOwner,
+		Repository:           repo,
+		ReadFile:             ioutil.ReadFile,
+		HistoricKilnfileLock: historic.KilnfileLock,
+		HistoricVersion:      historic.Version,
+		RevisionResolver:     repo,
+		Stat:                 os.Stat,
+		Writer:               os.Stdout,
+		pathRelativeToDotGit: rp,
+		RepoName:             repoName,
+		RepoOwner:            repoOwner,
 	}, nil
 }
 
@@ -96,13 +95,9 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 
 type HistoricVersion func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (string, error)
 
-//counterfeiter:generate -o ./fakes/historic_kilnfile_lock_func.go --fake-name HistoricKilnfileLock . HistoricKilnfileLock
+//counterfeiter:generate -o ./fakes/historic_kilnfile_lock.go --fake-name HistoricKilnfileLock . HistoricKilnfileLock
 
 type HistoricKilnfileLock func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (cargo.KilnfileLock, error)
-
-//counterfeiter:generate -o ./fakes/get_github_issue.go --fake-name GetGithubIssue . GetGithubIssue
-
-type GetIssueFunc func(ctx context.Context, owner string, repo string, number int) (*github.Issue, *github.Response, error)
 
 //counterfeiter:generate -o ./fakes/revision_resolver.go --fake-name RevisionResolver . RevisionResolver
 
@@ -123,7 +118,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 		return err
 	}
 
-	releaseDate, err := parseReleaseDate(r.Options.ReleaseDate)
+	releaseDate, err := r.parseReleaseDate()
 	if err != nil {
 		return err
 	}
@@ -214,14 +209,13 @@ func (r ReleaseNotes) checkInputs(nonFlagArgs []string) error {
 	}
 
 	if r.Options.GithubToken == "" &&
-		(r.Options.IssueTitleExp != "" ||
-			r.Options.IssueMilestone != "" ||
+		(r.Options.IssueMilestone != "" ||
 			len(r.Options.IssueIDs) > 0 ||
 			len(r.Options.IssueLabels) > 0) {
 		return errors.New("github-token (env: GITHUB_TOKEN) must be set to interact with the github api")
 	}
 
-	_, err := parseReleaseDate(r.Options.ReleaseDate)
+	_, err := r.parseReleaseDate()
 	if err != nil {
 		return err
 	}

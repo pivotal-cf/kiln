@@ -39,7 +39,7 @@ func (fake *HistoricVersion) Spy(arg1 *git.Repository, arg2 plumbing.Hash, arg3 
 	}{arg1, arg2, arg3})
 	stub := fake.Stub
 	returns := fake.returns
-	fake.recordInvocation("HistoricVersionFunc", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("HistoricVersion", []interface{}{arg1, arg2, arg3})
 	fake.mutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3)
@@ -118,4 +118,4 @@ func (fake *HistoricVersion) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ commands.HistoricVersionFunc = new(HistoricVersion).Spy
+var _ commands.HistoricVersion = new(HistoricVersion).Spy
