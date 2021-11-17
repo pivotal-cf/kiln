@@ -33,6 +33,8 @@ func TestReleaseNotes_Usage(t *testing.T) {
 func TestReleaseNotes_Execute(t *testing.T) {
 	please := Ω.NewWithT(t)
 
+	t.Setenv("GITHUB_TOKEN", "")
+
 	repo, _ := git.Init(memory.NewStorage(), memfs.New())
 
 	revisionResolver := new(fakes.RevisionResolver)
@@ -78,7 +80,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	}
 
 	err := rn.Execute([]string{
-		"--release-date=2021-11-05",
+		"--release-date=2021-11-04",
 		"tile/1.1.0",
 		"tile/1.2.0",
 	})
