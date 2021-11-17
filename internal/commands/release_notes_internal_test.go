@@ -338,6 +338,7 @@ func TestInternal_resolveMilestoneNumber(t *testing.T) {
 		please.Expect(err).To(Ω.HaveOccurred())
 	})
 }
+
 func TestInternal_fetchIssuesWithLabelAndMilestone(t *testing.T) {
 	t.Parallel()
 
