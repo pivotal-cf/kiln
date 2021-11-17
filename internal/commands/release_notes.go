@@ -385,6 +385,7 @@ func fetchIssuesWithLabelAndMilestone(ctx context.Context, issuesService issuesB
 	if milestoneNumber == "" && len(labels) == 0 {
 		return nil, nil
 	}
+	// TODO: handle pagination
 	issueList, response, err := issuesService.ListByRepo(ctx, repoOwner, repoName, &github.IssueListByRepoOptions{
 		Milestone: milestoneNumber,
 		Labels:    labels,
@@ -399,9 +400,10 @@ func fetchIssuesWithLabelAndMilestone(ctx context.Context, issuesService issuesB
 }
 
 func appendFilterAndSortIssues(issuesA, issuesB []*github.Issue, filterExp string) []*github.Issue {
-	fullList := insertUnique(issuesA, func(a, b *github.Issue) bool {
+	isIDEqual := func(a, b *github.Issue) bool {
 		return a.GetID() == b.GetID()
-	}, issuesB...)
+	}
+	fullList := appendUnique(issuesA, isIDEqual, issuesB...)
 
 	filtered := filterIssuesByTitle(filterExp, fullList)
 
@@ -410,7 +412,7 @@ func appendFilterAndSortIssues(issuesA, issuesB []*github.Issue, filterExp strin
 	return filtered
 }
 
-func insertUnique(list []*github.Issue, equal func(a, b *github.Issue) bool, additional ...*github.Issue) []*github.Issue {
+func appendUnique(list []*github.Issue, equal func(a, b *github.Issue) bool, additional ...*github.Issue) []*github.Issue {
 nextNewIssue:
 	for _, newIssue := range additional {
 		for _, existingIssue := range list {
