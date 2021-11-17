@@ -150,7 +150,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 	}
 
 	info := ReleaseNotesInformation{
-		Version:           v, // TODO version should come from version file at final revision and then maybe override with flag
+		Version:           v,
 		ReleaseDate:       releaseDate,
 		ReleaseDateFormat: releaseDateFormat,
 		Components:        klFinal.Releases,
