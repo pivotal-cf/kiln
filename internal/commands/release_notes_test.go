@@ -33,6 +33,8 @@ func TestReleaseNotes_Usage(t *testing.T) {
 func TestReleaseNotes_Execute(t *testing.T) {
 	please := Ω.NewWithT(t)
 
+	t.Setenv("GITHUB_TOKEN", "")
+
 	repo, _ := git.Init(memory.NewStorage(), memfs.New())
 
 	revisionResolver := new(fakes.RevisionResolver)

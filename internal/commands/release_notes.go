@@ -201,8 +201,7 @@ func (r ReleaseNotes) checkInputs(nonFlagArgs []string) error {
 	}
 
 	if r.Options.GithubToken == "" &&
-		(r.Options.IssueTitleExp != "" ||
-			r.Options.IssueMilestone != "" ||
+		(r.Options.IssueMilestone != "" ||
 			len(r.Options.IssueIDs) > 0 ||
 			len(r.Options.IssueLabels) > 0) {
 		return errors.New("github-token (env: GITHUB_TOKEN) must be set to interact with the github api")

@@ -303,12 +303,11 @@ func TestGetReleaseMatchingConstraint(t *testing.T) {
 	})
 }
 
-
 func TestDownloadReleaseAsset(t *testing.T) {
 	grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{
 		Type:        component.ReleaseSourceTypeGithub,
 		GithubToken: os.Getenv("GITHUB_TOKEN"),
-		Org:		 "cloudfoundry",
+		Org:         "cloudfoundry",
 	})
 	testLock, _, err := grs.GetMatchedRelease(component.Spec{Name: "routing", Version: "0.226.0", GitRepositories: []string{
 		"https://github.com/cloudfoundry/routing-release",
@@ -327,46 +326,43 @@ func TestDownloadReleaseAsset(t *testing.T) {
 	fmt.Println(string(buff))
 	//grs.Client.Repositories.DownloadReleaseAsset(context.TODO(), testLock.)
 
-
-
 	//Mocking up the Lock we'll need to test
 	/*
-	strPtr := func(s string) *string { return &s }
-	intPtr := func(i int64) *int64 { return &i }
-	releaseGetter := new(fakes.ReleaseByTagGetter)
-	downloader := new(fakes.ReleaseAssetDownloader)
+		strPtr := func(s string) *string { return &s }
+		intPtr := func(i int64) *int64 { return &i }
+		releaseGetter := new(fakes.ReleaseByTagGetter)
+		downloader := new(fakes.ReleaseAssetDownloader)
 
-	releaseGetter.GetReleaseByTagReturns(
-		&github.RepositoryRelease{
-			TagName: strPtr("0.226.0"),
-			Assets: []*github.ReleaseAsset{
-				{
-					Name:               strPtr("routing-0.226.0.tgz.sha256"),
-					BrowserDownloadURL: strPtr("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz.sha256"),
-				},
-				{
-					Name:               strPtr("routing-0.226.0.tgz"),
-					BrowserDownloadURL: strPtr("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz"),
-					ID:                 intPtr(420),
+		releaseGetter.GetReleaseByTagReturns(
+			&github.RepositoryRelease{
+				TagName: strPtr("0.226.0"),
+				Assets: []*github.ReleaseAsset{
+					{
+						Name:               strPtr("routing-0.226.0.tgz.sha256"),
+						BrowserDownloadURL: strPtr("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz.sha256"),
+					},
+					{
+						Name:               strPtr("routing-0.226.0.tgz"),
+						BrowserDownloadURL: strPtr("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz"),
+						ID:                 intPtr(420),
+					},
 				},
 			},
-		},
-		&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
-		nil,
-	)
+			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+			nil,
+		)
 
-	file := &SetTrueOnClose{Reader: bytes.NewBufferString("hello")}
-	downloader.DownloadReleaseAssetReturns(file, "", nil)
+		file := &SetTrueOnClose{Reader: bytes.NewBufferString("hello")}
+		downloader.DownloadReleaseAssetReturns(file, "", nil)
 
-	ctx := context.TODO()
+		ctx := context.TODO()
 
-	testReleaseLock, _, _ := component.LockFromGithubRelease(ctx, downloader, "cloudfoundry", component.Spec{
-		Name:    "routing",
-		Version: "0.226.0",
-		GitRepositories: []string{
-			"https://github.com/cloudfoundry/routing-release",
-		},
-	}, component.GetGithubReleaseWithTag(releaseGetter, "0.226.0"))
+		testReleaseLock, _, _ := component.LockFromGithubRelease(ctx, downloader, "cloudfoundry", component.Spec{
+			Name:    "routing",
+			Version: "0.226.0",
+			GitRepositories: []string{
+				"https://github.com/cloudfoundry/routing-release",
+			},
+		}, component.GetGithubReleaseWithTag(releaseGetter, "0.226.0"))
 	*/
 }
-
