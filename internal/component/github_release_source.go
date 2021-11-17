@@ -3,6 +3,7 @@ package component
 import (
 	"context"
 	"crypto/sha1"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -159,16 +160,35 @@ func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Cons
 // DownloadRelease downloads the release and writes the resulting file to the releasesDir.
 // It should also calculate and set the SHA1 field on the Local result; it does not need
 // to ensure the sums match, the caller must verify this.
-func (GithubReleaseSource) DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error) {
-	/*
-		if releasesDir == "" {
-			return Local{}, fmt.Errorf("expected releasesDir to contain directory")
-		}
-		if remoteRelease.RemotePath == "" {
-			return Local{}, fmt.Errorf("expected Lock RemotePath to contain path")
-		}
-	*/
-	panic("blah")
+func (grs GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
+	// TODO: add loggers so we can be cool, too!
+	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
+
+	file, err := os.Create(filePath)
+	if err != nil {
+		return Local{}, err
+	}
+	defer func() { _ = file.Close() }()
+
+	request, err := grs.Client.NewRequest(http.MethodGet, remoteRelease.RemotePath, nil)
+	if err != nil {
+		return Local{}, err
+	}
+
+	hash := sha1.New()
+	response, err := grs.Client.Do(context.TODO(), request, io.MultiWriter(file, hash))
+	if err != nil {
+		return Local{}, err
+	}
+
+	err = checkStatus(http.StatusOK, response.StatusCode)
+	if err != nil {
+		return Local{}, err
+	}
+
+	remoteRelease.SHA1 = hex.EncodeToString(hash.Sum(nil))
+
+	return Local{Lock: remoteRelease, LocalPath: filePath}, nil
 }
 
 //counterfeiter:generate -o ./fakes/release_asset_downloader.go --fake-name ReleaseAssetDownloader . ReleaseAssetDownloader
