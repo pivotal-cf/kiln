@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"testing"
 
@@ -301,9 +303,34 @@ func TestGetReleaseMatchingConstraint(t *testing.T) {
 	})
 }
 
-/*
+
 func TestDownloadReleaseAsset(t *testing.T) {
+	grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{
+		Type:        component.ReleaseSourceTypeGithub,
+		GithubToken: os.Getenv("GITHUB_TOKEN"),
+		Org:		 "cloudfoundry",
+	})
+	testLock, _, err := grs.GetMatchedRelease(component.Spec{Name: "routing", Version: "0.226.0", GitRepositories: []string{
+		"https://github.com/cloudfoundry/routing-release",
+	}})
+	if err != nil {
+		fmt.Println(testLock.Spec())
+	}
+	request, _ := grs.Client.NewRequest(http.MethodGet, testLock.RemotePath, nil)
+	file, err := os.Create("/tmp/somefile.tgz")
+	if err != nil {
+		panic("oh shit")
+	}
+	defer file.Close()
+	response, _ := grs.Client.Do(context.TODO(), request, file)
+	buff, _ := httputil.DumpResponse(response.Response, false)
+	fmt.Println(string(buff))
+	//grs.Client.Repositories.DownloadReleaseAsset(context.TODO(), testLock.)
+
+
+
 	//Mocking up the Lock we'll need to test
+	/*
 	strPtr := func(s string) *string { return &s }
 	intPtr := func(i int64) *int64 { return &i }
 	releaseGetter := new(fakes.ReleaseByTagGetter)
@@ -340,6 +367,6 @@ func TestDownloadReleaseAsset(t *testing.T) {
 			"https://github.com/cloudfoundry/routing-release",
 		},
 	}, component.GetGithubReleaseWithTag(releaseGetter, "0.226.0"))
-
+	*/
 }
-*/
+

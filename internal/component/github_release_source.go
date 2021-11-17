@@ -38,6 +38,9 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 	if c.GithubToken == "" {
 		panic("no token passed for github release source")
 	}
+	if c.Org == "" {
+		panic("no github org passed for github release source")
+	}
 
 	ctx := context.TODO()
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: c.GithubToken})
