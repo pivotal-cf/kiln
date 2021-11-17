@@ -289,30 +289,36 @@ func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, er
 	tokenClient := oauth2.NewClient(ctx, tokenSource)
 	githubClient := github.NewClient(tokenClient)
 
-	issues, err := issuesFromIssueIDs(ctx, githubClient, r.RepoOwner, r.RepoName, r.Options.IssueIDs)
+	milestoneNumber, err := resolveMilestoneNumber(ctx, githubClient.Issues, r.RepoOwner, r.RepoName, r.Options.IssueMilestone)
 	if err != nil {
 		return nil, err
 	}
-	milestoneNumber, err := resolveMilestoneNumber(ctx, githubClient, r.RepoOwner, r.RepoName, r.Options.IssueMilestone)
+	issues, err := fetchIssuesWithLabelAndMilestone(ctx, githubClient.Issues, r.RepoOwner, r.RepoName, milestoneNumber, r.Options.IssueLabels)
 	if err != nil {
 		return nil, err
 	}
-	milestoneLabeledIssues, err := fetchIssuesWithLabelAndMilestone(ctx, githubClient, r.RepoOwner, r.RepoName, milestoneNumber, r.Options.IssueLabels)
+	additionalIssues, err := issuesFromIssueIDs(ctx, githubClient.Issues, r.RepoOwner, r.RepoName, r.Options.IssueIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	return appendFilterAndSortIssues(issues, milestoneLabeledIssues, r.Options.IssueTitleExp), nil
+	return appendFilterAndSortIssues(issues, additionalIssues, r.Options.IssueTitleExp), nil
 }
 
-func issuesFromIssueIDs(ctx context.Context, githubClient *github.Client, repoOwner, repoName string, issueIDs []string) ([]*github.Issue, error) {
+//counterfeiter:generate -o ./fakes_internal/issue_getter.go --fake-name IssueGetter . issueGetter
+
+type issueGetter interface {
+	Get(ctx context.Context, owner string, repo string, number int) (*github.Issue, *github.Response, error)
+}
+
+func issuesFromIssueIDs(ctx context.Context, issuesService issueGetter, repoOwner, repoName string, issueIDs []string) ([]*github.Issue, error) {
 	var issues []*github.Issue
 	for _, id := range issueIDs {
 		n, err := strconv.Atoi(id)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse issue id %q: %w", id, err)
 		}
-		issue, response, err := githubClient.Issues.Get(ctx, repoOwner, repoName, n)
+		issue, response, err := issuesService.Get(ctx, repoOwner, repoName, n)
 		if err != nil {
 			return nil, err
 		}
@@ -324,7 +330,13 @@ func issuesFromIssueIDs(ctx context.Context, githubClient *github.Client, repoOw
 	return issues, nil
 }
 
-func resolveMilestoneNumber(ctx context.Context, githubClient *github.Client, repoOwner, repoName, milestone string) (string, error) {
+//counterfeiter:generate -o ./fakes_internal/milestone_lister.go --fake-name MilestoneLister . milestoneLister
+
+type milestoneLister interface {
+	ListMilestones(ctx context.Context, owner string, repo string, opts *github.MilestoneListOptions) ([]*github.Milestone, *github.Response, error)
+}
+
+func resolveMilestoneNumber(ctx context.Context, issuesService milestoneLister, repoOwner, repoName, milestone string) (string, error) {
 	if milestone == "" {
 		return "", nil
 	}
@@ -335,8 +347,8 @@ func resolveMilestoneNumber(ctx context.Context, githubClient *github.Client, re
 
 	queryOptions := &github.MilestoneListOptions{}
 	for {
-		ms, _, err := githubClient.Issues.ListMilestones(ctx, repoOwner, repoName, queryOptions)
-		if err != nil {
+		ms, res, err := issuesService.ListMilestones(ctx, repoOwner, repoName, queryOptions)
+		if err != nil || res == nil || res.Response.StatusCode != http.StatusOK {
 			break
 		}
 		for _, m := range ms {
@@ -350,11 +362,17 @@ func resolveMilestoneNumber(ctx context.Context, githubClient *github.Client, re
 	return "", fmt.Errorf("failed to find milestone with title or number %q", milestone)
 }
 
-func fetchIssuesWithLabelAndMilestone(ctx context.Context, githubClient *github.Client, repoOwner, repoName, milestoneNumber string, labels []string) ([]*github.Issue, error) {
+//counterfeiter:generate -o ./fakes_internal/issues_by_repo_lister.go --fake-name IssuesByRepoLister . issuesByRepoLister
+
+type issuesByRepoLister interface {
+	ListByRepo(ctx context.Context, owner string, repo string, opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error)
+}
+
+func fetchIssuesWithLabelAndMilestone(ctx context.Context, issuesService issuesByRepoLister, repoOwner, repoName, milestoneNumber string, labels []string) ([]*github.Issue, error) {
 	if milestoneNumber == "" && len(labels) == 0 {
 		return nil, nil
 	}
-	issueList, response, err := githubClient.Issues.ListByRepo(ctx, repoOwner, repoName, &github.IssueListByRepoOptions{
+	issueList, response, err := issuesService.ListByRepo(ctx, repoOwner, repoName, &github.IssueListByRepoOptions{
 		Milestone: milestoneNumber,
 		Labels:    labels,
 	})
@@ -362,7 +380,7 @@ func fetchIssuesWithLabelAndMilestone(ctx context.Context, githubClient *github.
 		return nil, err
 	}
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get issues %q: %w", response.Request.URL, err)
+		return nil, fmt.Errorf("failed to get issues: %w", err)
 	}
 	return issueList, nil
 }
