@@ -101,7 +101,7 @@ func BoshDirectorFactory() (BoshDirector, error) {
 }
 
 func (f CompileBuiltReleases) Execute(args []string) error {
-	err := flags.LoadFlagsWithDefaults(&f.Options, args, nil)
+	_, err := flags.LoadFlagsWithDefaults(&f.Options, args, nil)
 	if err != nil {
 		return err
 	}

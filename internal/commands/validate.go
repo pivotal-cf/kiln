@@ -29,7 +29,7 @@ func NewValidate(fs billy.Filesystem) Validate {
 }
 
 func (v Validate) Execute(args []string) error {
-	err := flags.LoadFlagsWithDefaults(&v.Options, args, v.FS.Stat)
+	_, err := flags.LoadFlagsWithDefaults(&v.Options, args, v.FS.Stat)
 	if err != nil {
 		return err
 	}

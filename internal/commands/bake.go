@@ -204,7 +204,7 @@ func shouldNotUseDefaultKilnfileFlag(args []string) bool {
 }
 
 func (b *Bake) loadFlags(args []string, stat flags.StatFunc, readFile func(string) ([]byte, error)) error {
-	err := flags.LoadFlagsWithDefaults(&b.Options, args, stat)
+	_, err := flags.LoadFlagsWithDefaults(&b.Options, args, stat)
 	if err != nil {
 		return err
 	}
