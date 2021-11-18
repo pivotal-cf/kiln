@@ -212,7 +212,7 @@ func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSour
 			continue
 		}
 
-		local, err := publishableReleaseSources.DownloadRelease(f.Options.ReleasesDir, remote)
+		err = publishableReleaseSources.DownloadComponent(f.Options.ReleasesDir, remote)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error downloading pre-compiled release for %q: %w", builtRelease.Name, err)
 		}

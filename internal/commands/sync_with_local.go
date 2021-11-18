@@ -21,12 +21,12 @@ type SyncWithLocal struct {
 		SkipSameVersion bool   `           long:"skip-same-version"                      description:"only update the Kilnfile.lock when the release version has changed'"`
 	}
 	fs                    billy.Filesystem
-	localReleaseDirectory LocalReleaseDirectory
+	localReleaseDirectory ReleaseDirectory
 	logger                *log.Logger
 	remotePatherFinder    RemotePatherFinder
 }
 
-func NewSyncWithLocal(fs billy.Filesystem, localReleaseDirectory LocalReleaseDirectory, remotePatherFinder RemotePatherFinder, logger *log.Logger) SyncWithLocal {
+func NewSyncWithLocal(fs billy.Filesystem, localReleaseDirectory ReleaseDirectory, remotePatherFinder RemotePatherFinder, logger *log.Logger) SyncWithLocal {
 	return SyncWithLocal{
 		fs:                    fs,
 		localReleaseDirectory: localReleaseDirectory,

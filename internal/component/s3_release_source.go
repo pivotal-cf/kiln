@@ -2,13 +2,14 @@ package component
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
@@ -26,7 +27,7 @@ import (
 
 //counterfeiter:generate -o ./fakes/s3_downloader.go --fake-name S3Downloader . S3Downloader
 type S3Downloader interface {
-	Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
+	DownloadWithContext(ctx aws.Context, w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
 }
 
 //counterfeiter:generate -o ./fakes/s3_uploader.go --fake-name S3Uploader . S3Uploader
@@ -198,16 +199,18 @@ func (src S3ReleaseSource) FindReleaseVersion(spec Spec) (Lock, bool, error) {
 	if (foundRelease == Lock{}) {
 		return Lock{}, false, nil
 	}
-	var releaseLocal Local
-	releaseLocal, err = src.DownloadRelease("/tmp", foundRelease)
+	hash := sha1.New()
+	err = src.DownloadComponent(context.TODO(), hash, foundRelease)
 	if err != nil {
 		return Lock{}, false, err
 	}
-	foundRelease.SHA1 = releaseLocal.SHA1
+	foundRelease.SHA1 = hex.EncodeToString(hash.Sum(nil))
 	return foundRelease, true, nil
 }
 
-func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock Lock) (Local, error) {
+// TODO add logger for all release sources: src.logger.Printf("downloading %s %s from %s", lock.Name, lock.Version, src.ReleaseSourceConfig.Bucket)
+
+func (src S3ReleaseSource) DownloadComponent(ctx context.Context, w io.Writer, remoteRelease Lock) error {
 	setConcurrency := func(dl *s3manager.Downloader) {
 		if src.DownloadThreads > 0 {
 			dl.Concurrency = src.DownloadThreads
@@ -216,38 +219,25 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock Lock) (Local,
 		}
 	}
 
-	src.logger.Printf("downloading %s %s from %s", lock.Name, lock.Version, src.ReleaseSourceConfig.Bucket)
-
-	outputFile := filepath.Join(releaseDir, filepath.Base(lock.RemotePath))
-
-	file, err := os.Create(outputFile)
+	temporaryFile, err := ioutil.TempFile("", "")
 	if err != nil {
-		return Local{}, fmt.Errorf("failed to create file %q: %w", outputFile, err)
+		return err
 	}
-	defer func() { _ = file.Close() }()
+	defer func() {
+		_ = os.Remove(temporaryFile.Name())
+	}()
 
-	_, err = src.s3Downloader.Download(file, &s3.GetObjectInput{
+	_, err = src.s3Downloader.DownloadWithContext(ctx, temporaryFile, &s3.GetObjectInput{
 		Bucket: aws.String(src.ReleaseSourceConfig.Bucket),
-		Key:    aws.String(lock.RemotePath),
+		Key:    aws.String(remoteRelease.RemotePath),
 	}, setConcurrency)
 	if err != nil {
-		return Local{}, fmt.Errorf("failed to download file: %w\n", err)
+		return err
 	}
 
-	_, err = file.Seek(0, 0)
-	if err != nil {
-		return Local{}, fmt.Errorf("error reseting file cursor: %w", err) // untested
-	}
+	_, err = io.Copy(w, temporaryFile)
 
-	hash := sha1.New()
-	_, err = io.Copy(hash, file)
-	if err != nil {
-		return Local{}, fmt.Errorf("error hashing file contents: %w", err) // untested
-	}
-
-	lock.SHA1 = hex.EncodeToString(hash.Sum(nil))
-
-	return Local{Lock: lock, LocalPath: outputFile}, nil
+	return err
 }
 
 func (src S3ReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error) {

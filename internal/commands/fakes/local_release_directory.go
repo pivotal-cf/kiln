@@ -195,4 +195,4 @@ func (fake *LocalReleaseDirectory) recordInvocation(key string, args []interface
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ commands.LocalReleaseDirectory = new(LocalReleaseDirectory)
+var _ commands.ReleaseDirectory = new(LocalReleaseDirectory)

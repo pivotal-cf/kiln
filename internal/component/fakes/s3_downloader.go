@@ -2,6 +2,7 @@
 package fakes
 
 import (
+	"context"
 	"io"
 	"sync"
 
@@ -11,18 +12,19 @@ import (
 )
 
 type S3Downloader struct {
-	DownloadStub        func(io.WriterAt, *s3.GetObjectInput, ...func(*s3manager.Downloader)) (int64, error)
-	downloadMutex       sync.RWMutex
-	downloadArgsForCall []struct {
-		arg1 io.WriterAt
-		arg2 *s3.GetObjectInput
-		arg3 []func(*s3manager.Downloader)
+	DownloadWithContextStub        func(context.Context, io.WriterAt, *s3.GetObjectInput, ...func(*s3manager.Downloader)) (int64, error)
+	downloadWithContextMutex       sync.RWMutex
+	downloadWithContextArgsForCall []struct {
+		arg1 context.Context
+		arg2 io.WriterAt
+		arg3 *s3.GetObjectInput
+		arg4 []func(*s3manager.Downloader)
 	}
-	downloadReturns struct {
+	downloadWithContextReturns struct {
 		result1 int64
 		result2 error
 	}
-	downloadReturnsOnCall map[int]struct {
+	downloadWithContextReturnsOnCall map[int]struct {
 		result1 int64
 		result2 error
 	}
@@ -30,20 +32,21 @@ type S3Downloader struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *S3Downloader) Download(arg1 io.WriterAt, arg2 *s3.GetObjectInput, arg3 ...func(*s3manager.Downloader)) (int64, error) {
-	fake.downloadMutex.Lock()
-	ret, specificReturn := fake.downloadReturnsOnCall[len(fake.downloadArgsForCall)]
-	fake.downloadArgsForCall = append(fake.downloadArgsForCall, struct {
-		arg1 io.WriterAt
-		arg2 *s3.GetObjectInput
-		arg3 []func(*s3manager.Downloader)
-	}{arg1, arg2, arg3})
-	stub := fake.DownloadStub
-	fakeReturns := fake.downloadReturns
-	fake.recordInvocation("Download", []interface{}{arg1, arg2, arg3})
-	fake.downloadMutex.Unlock()
+func (fake *S3Downloader) DownloadWithContext(arg1 context.Context, arg2 io.WriterAt, arg3 *s3.GetObjectInput, arg4 ...func(*s3manager.Downloader)) (int64, error) {
+	fake.downloadWithContextMutex.Lock()
+	ret, specificReturn := fake.downloadWithContextReturnsOnCall[len(fake.downloadWithContextArgsForCall)]
+	fake.downloadWithContextArgsForCall = append(fake.downloadWithContextArgsForCall, struct {
+		arg1 context.Context
+		arg2 io.WriterAt
+		arg3 *s3.GetObjectInput
+		arg4 []func(*s3manager.Downloader)
+	}{arg1, arg2, arg3, arg4})
+	stub := fake.DownloadWithContextStub
+	fakeReturns := fake.downloadWithContextReturns
+	fake.recordInvocation("DownloadWithContext", []interface{}{arg1, arg2, arg3, arg4})
+	fake.downloadWithContextMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3...)
+		return stub(arg1, arg2, arg3, arg4...)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -51,46 +54,46 @@ func (fake *S3Downloader) Download(arg1 io.WriterAt, arg2 *s3.GetObjectInput, ar
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *S3Downloader) DownloadCallCount() int {
-	fake.downloadMutex.RLock()
-	defer fake.downloadMutex.RUnlock()
-	return len(fake.downloadArgsForCall)
+func (fake *S3Downloader) DownloadWithContextCallCount() int {
+	fake.downloadWithContextMutex.RLock()
+	defer fake.downloadWithContextMutex.RUnlock()
+	return len(fake.downloadWithContextArgsForCall)
 }
 
-func (fake *S3Downloader) DownloadCalls(stub func(io.WriterAt, *s3.GetObjectInput, ...func(*s3manager.Downloader)) (int64, error)) {
-	fake.downloadMutex.Lock()
-	defer fake.downloadMutex.Unlock()
-	fake.DownloadStub = stub
+func (fake *S3Downloader) DownloadWithContextCalls(stub func(context.Context, io.WriterAt, *s3.GetObjectInput, ...func(*s3manager.Downloader)) (int64, error)) {
+	fake.downloadWithContextMutex.Lock()
+	defer fake.downloadWithContextMutex.Unlock()
+	fake.DownloadWithContextStub = stub
 }
 
-func (fake *S3Downloader) DownloadArgsForCall(i int) (io.WriterAt, *s3.GetObjectInput, []func(*s3manager.Downloader)) {
-	fake.downloadMutex.RLock()
-	defer fake.downloadMutex.RUnlock()
-	argsForCall := fake.downloadArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+func (fake *S3Downloader) DownloadWithContextArgsForCall(i int) (context.Context, io.WriterAt, *s3.GetObjectInput, []func(*s3manager.Downloader)) {
+	fake.downloadWithContextMutex.RLock()
+	defer fake.downloadWithContextMutex.RUnlock()
+	argsForCall := fake.downloadWithContextArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
-func (fake *S3Downloader) DownloadReturns(result1 int64, result2 error) {
-	fake.downloadMutex.Lock()
-	defer fake.downloadMutex.Unlock()
-	fake.DownloadStub = nil
-	fake.downloadReturns = struct {
+func (fake *S3Downloader) DownloadWithContextReturns(result1 int64, result2 error) {
+	fake.downloadWithContextMutex.Lock()
+	defer fake.downloadWithContextMutex.Unlock()
+	fake.DownloadWithContextStub = nil
+	fake.downloadWithContextReturns = struct {
 		result1 int64
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *S3Downloader) DownloadReturnsOnCall(i int, result1 int64, result2 error) {
-	fake.downloadMutex.Lock()
-	defer fake.downloadMutex.Unlock()
-	fake.DownloadStub = nil
-	if fake.downloadReturnsOnCall == nil {
-		fake.downloadReturnsOnCall = make(map[int]struct {
+func (fake *S3Downloader) DownloadWithContextReturnsOnCall(i int, result1 int64, result2 error) {
+	fake.downloadWithContextMutex.Lock()
+	defer fake.downloadWithContextMutex.Unlock()
+	fake.DownloadWithContextStub = nil
+	if fake.downloadWithContextReturnsOnCall == nil {
+		fake.downloadWithContextReturnsOnCall = make(map[int]struct {
 			result1 int64
 			result2 error
 		})
 	}
-	fake.downloadReturnsOnCall[i] = struct {
+	fake.downloadWithContextReturnsOnCall[i] = struct {
 		result1 int64
 		result2 error
 	}{result1, result2}
@@ -99,8 +102,8 @@ func (fake *S3Downloader) DownloadReturnsOnCall(i int, result1 int64, result2 er
 func (fake *S3Downloader) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.downloadMutex.RLock()
-	defer fake.downloadMutex.RUnlock()
+	fake.downloadWithContextMutex.RLock()
+	defer fake.downloadWithContextMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

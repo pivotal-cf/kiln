@@ -1,8 +1,8 @@
 package component_test
 
 import (
+	"context"
 	"crypto/sha1"
-	"encoding/hex"
 	"fmt"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
@@ -232,8 +232,6 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 			release1ID component.Spec
 			release1   component.Lock
-
-			release1Sha1 string
 		)
 
 		BeforeEach(func() {
@@ -252,8 +250,6 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			_, err = io.Copy(hash, strings.NewReader(release1ServerFileContents))
 			Expect(err).NotTo(HaveOccurred())
 
-			release1Sha1 = hex.EncodeToString(hash.Sum(nil))
-
 			testServer.RouteToHandler("GET", release1ServerPath,
 				ghttp.RespondWith(http.StatusOK, release1ServerFileContents,
 					nil,
@@ -267,28 +263,19 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 		})
 
 		It("downloads the given releases into the release dir", func() {
-			localRelease, err := releaseSource.DownloadRelease(releaseDir, release1)
+			fullRelease1Path := filepath.Join(releaseDir, release1Filename)
 
+			f, err := os.Create(fullRelease1Path)
 			Expect(err).NotTo(HaveOccurred())
 
-			fullRelease1Path := filepath.Join(releaseDir, release1Filename)
+			err = releaseSource.DownloadComponent(context.TODO(), f, release1)
+			Expect(err).NotTo(HaveOccurred())
+
 			Expect(fullRelease1Path).To(BeAnExistingFile())
 
 			release1DiskContents, err := ioutil.ReadFile(fullRelease1Path)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(release1DiskContents).To(BeEquivalentTo(release1ServerFileContents))
-
-			lock := release1ID.Lock()
-			lock.SHA1 = release1Sha1
-			Expect(localRelease).To(Equal(
-				component.Local{
-					Lock: lock.WithRemote(
-						component.ReleaseSourceTypeBOSHIO,
-						testServer.URL()+"/some-release",
-					),
-					LocalPath: fullRelease1Path,
-				},
-			))
 		})
 	})
 

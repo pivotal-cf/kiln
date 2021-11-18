@@ -16,19 +16,19 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
-type LocalReleaseDirectory struct {
+type ReleaseDirectory struct {
 	logger          *log.Logger
 	releasesService baking.ReleasesService
 }
 
-func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.ReleasesService) LocalReleaseDirectory {
-	return LocalReleaseDirectory{
+func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.ReleasesService) ReleaseDirectory {
+	return ReleaseDirectory{
 		logger:          logger,
 		releasesService: releasesService,
 	}
 }
 
-func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]Local, error) {
+func (l ReleaseDirectory) GetLocalReleases(releasesDir string) ([]Local, error) {
 	var outputReleases []Local
 
 	rawReleases, err := l.releasesService.ReleasesInDirectory(releasesDir)
@@ -51,7 +51,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]Local, er
 	return outputReleases, nil
 }
 
-func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []Local, noConfirm bool) error {
+func (l ReleaseDirectory) DeleteExtraReleases(extraReleaseSet []Local, noConfirm bool) error {
 	var doDeletion byte
 
 	if len(extraReleaseSet) == 0 {
@@ -85,7 +85,7 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []Local, noCo
 	return nil
 }
 
-func (l LocalReleaseDirectory) deleteReleases(releasesToDelete []Local) error {
+func (l ReleaseDirectory) deleteReleases(releasesToDelete []Local) error {
 	for _, release := range releasesToDelete {
 		err := os.Remove(release.LocalPath)
 

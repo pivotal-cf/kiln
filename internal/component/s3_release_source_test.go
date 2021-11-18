@@ -1,13 +1,14 @@
 package component_test
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -17,8 +18,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/go-git/go-billy/v5/osfs"
-
 	"github.com/pivotal-cf/kiln/internal/component"
 	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -83,7 +82,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		)
 	})
 
-	Describe("DownloadReleases", func() {
+	Describe("DownloadComponent", func() {
 		const (
 			bucket = "some-bucket"
 		)
@@ -93,8 +92,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			logger                *log.Logger
 			releaseDir            string
 			remoteRelease         component.Lock
-			expectedLocalFilename string
-			releaseID             component.Spec
+			expectedTarballContent string
 			fakeS3Downloader      *fetcherFakes.S3Downloader
 		)
 
@@ -104,15 +102,14 @@ var _ = Describe("S3ReleaseSource", func() {
 			releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
 			Expect(err).NotTo(HaveOccurred())
 
-			releaseID = component.Spec{Name: "uaa", Version: "1.2.3"}
-			remoteRelease = releaseID.Lock().WithRemote(bucket, "2.10/uaa/uaa-1.2.3-ubuntu-xenial-621.55.tgz")
-			expectedLocalFilename = filepath.Base(remoteRelease.RemotePath)
+			remoteRelease = component.Lock{Name: "uaa", Version: "1.2.3"}.WithRemote(bucket, "2.10/uaa/uaa-1.2.3-ubuntu-xenial-621.55.tgz")
 
 			logger = log.New(GinkgoWriter, "", 0)
 			fakeS3Downloader = new(fetcherFakes.S3Downloader)
 			// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
-			fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
-				n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
+			fakeS3Downloader.DownloadWithContextStub = func(_ context.Context, writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
+				expectedTarballContent = fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)
+				n, err := writer.WriteAt([]byte(expectedTarballContent), 0)
 				return int64(n), err
 			}
 			releaseSource = component.NewS3ReleaseSource(cargo.ReleaseSourceConfig{
@@ -129,60 +126,41 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		It("downloads the appropriate versions of built releases listed in remoteReleases", func() {
 			releaseSource.DownloadThreads = 7
-			localRelease, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(1))
 
-			releasePath := filepath.Join(releaseDir, expectedLocalFilename)
-			releaseContents, err := ioutil.ReadFile(releasePath)
+			var buf bytes.Buffer
+			err := releaseSource.DownloadComponent(context.Background(), &buf, remoteRelease)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(releaseContents).To(Equal([]byte("some-bucket/" + remoteRelease.RemotePath)))
+			Expect(fakeS3Downloader.DownloadWithContextCallCount()).To(Equal(1))
 
-			sha1, err := component.CalculateSum(releasePath, osfs.New(""))
-			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal(expectedTarballContent))
 
-			_, _, opts := fakeS3Downloader.DownloadArgsForCall(0)
+			_, _, _, opts := fakeS3Downloader.DownloadWithContextArgsForCall(0)
 			verifySetsConcurrency(opts, 7)
-
-			Expect(localRelease).To(Equal(component.Local{
-				Lock:      remoteRelease.WithSHA1(sha1),
-				LocalPath: releasePath,
-			}))
 		})
 
 		Context("when number of threads is not specified", func() {
 			It("uses the s3manager package's default download concurrency", func() {
 				releaseSource.DownloadThreads = 0
-				_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
+				err := releaseSource.DownloadComponent(context.Background(), io.Discard, remoteRelease)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(1))
+				Expect(fakeS3Downloader.DownloadWithContextCallCount()).To(Equal(1))
 
-				_, _, opts := fakeS3Downloader.DownloadArgsForCall(0)
+				_, _, _, opts := fakeS3Downloader.DownloadWithContextArgsForCall(0)
 				verifySetsConcurrency(opts, s3manager.DefaultDownloadConcurrency)
 			})
 		})
 
-		Context("failure cases", func() {
-			Context("when a file can't be created", func() {
-				It("returns an error", func() {
-					_, err := releaseSource.DownloadRelease("/non-existent-folder", remoteRelease)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("/non-existent-folder"))
-				})
+		Context("when a file can't be downloaded", func() {
+			BeforeEach(func() {
+				fakeS3Downloader.DownloadWithContextStub = func(context.Context, io.WriterAt, *s3.GetObjectInput, ...func(*s3manager.Downloader)) (int64, error) {
+					return 0, errors.New("503 Service Unavailable")
+				}
 			})
 
-			Context("when a file can't be downloaded", func() {
-				BeforeEach(func() {
-					fakeS3Downloader.DownloadCalls(func(w io.WriterAt, i *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (int64, error) {
-						return 0, errors.New("503 Service Unavailable")
-					})
-				})
-
-				It("returns an error", func() {
-					_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
-					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("failed to download file: 503 Service Unavailable\n"))
-				})
+			It("returns an error", func() {
+				err := releaseSource.DownloadComponent(context.Background(), io.Discard, remoteRelease)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("503 Service Unavailable")))
 			})
 		})
 	})
@@ -319,7 +297,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 				fakeS3Downloader := new(fetcherFakes.S3Downloader)
 				// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
-				fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
+				fakeS3Downloader.DownloadWithContextStub = func(_ context.Context, writer io.WriterAt, objectInput *s3.GetObjectInput, _ ...func(dl *s3manager.Downloader)) (int64, error) {
 					n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 					return int64(n), err
 				}
@@ -384,7 +362,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				logger = log.New(GinkgoWriter, "", 0)
 				fakeS3Downloader := new(fetcherFakes.S3Downloader)
 				// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
-				fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
+				fakeS3Downloader.DownloadWithContextStub = func(_ context.Context, writer io.WriterAt, objectInput *s3.GetObjectInput, _ ...func(dl *s3manager.Downloader)) (int64, error) {
 					n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 					return int64(n), err
 				}
@@ -460,7 +438,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				logger = log.New(GinkgoWriter, "", 0)
 				fakeS3Downloader := new(fetcherFakes.S3Downloader)
 				// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
-				fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
+				fakeS3Downloader.DownloadWithContextStub = func(_ context.Context, writer io.WriterAt, objectInput *s3.GetObjectInput, _ ...func(dl *s3manager.Downloader)) (int64, error) {
 					n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 					return int64(n), err
 				}

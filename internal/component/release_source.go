@@ -1,6 +1,7 @@
 package component
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -13,7 +14,7 @@ import (
 type MultiReleaseSource interface {
 	GetMatchedRelease(Spec) (Lock, bool, error)
 	FindReleaseVersion(Spec) (Lock, bool, error)
-	DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error)
+	DownloadComponent(ctx context.Context, w io.Writer, remoteRelease Lock) error
 
 	FindByID(string) (ReleaseSource, error)
 
@@ -58,10 +59,8 @@ type ReleaseSource interface {
 	// release.
 	FindReleaseVersion(Spec) (Lock, bool, error)
 
-	// DownloadRelease downloads the release and writes the resulting file to the releasesDir.
-	// It should also calculate and set the SHA1 field on the Local result; it does not need
-	// to ensure the sums match, the caller must verify this.
-	DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error)
+	// DownloadComponent downloads the release and writes the tarball to w.
+	DownloadComponent(ctx context.Context, w io.Writer, remoteRelease Lock) error
 }
 
 //counterfeiter:generate -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource

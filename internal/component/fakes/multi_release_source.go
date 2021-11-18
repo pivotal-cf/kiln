@@ -2,6 +2,8 @@
 package fakes
 
 import (
+	"context"
+	"io"
 	"sync"
 
 	"github.com/pivotal-cf/kiln/internal/component"
@@ -9,19 +11,18 @@ import (
 )
 
 type MultiReleaseSource struct {
-	DownloadReleaseStub        func(string, cargo.ComponentLock) (component.Local, error)
-	downloadReleaseMutex       sync.RWMutex
-	downloadReleaseArgsForCall []struct {
-		arg1 string
-		arg2 cargo.ComponentLock
+	DownloadComponentStub        func(context.Context, io.Writer, cargo.ComponentLock) error
+	downloadComponentMutex       sync.RWMutex
+	downloadComponentArgsForCall []struct {
+		arg1 context.Context
+		arg2 io.Writer
+		arg3 cargo.ComponentLock
 	}
-	downloadReleaseReturns struct {
-		result1 component.Local
-		result2 error
+	downloadComponentReturns struct {
+		result1 error
 	}
-	downloadReleaseReturnsOnCall map[int]struct {
-		result1 component.Local
-		result2 error
+	downloadComponentReturnsOnCall map[int]struct {
+		result1 error
 	}
 	FindByIDStub        func(string) (component.ReleaseSource, error)
 	findByIDMutex       sync.RWMutex
@@ -75,69 +76,67 @@ type MultiReleaseSource struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MultiReleaseSource) DownloadRelease(arg1 string, arg2 cargo.ComponentLock) (component.Local, error) {
-	fake.downloadReleaseMutex.Lock()
-	ret, specificReturn := fake.downloadReleaseReturnsOnCall[len(fake.downloadReleaseArgsForCall)]
-	fake.downloadReleaseArgsForCall = append(fake.downloadReleaseArgsForCall, struct {
-		arg1 string
-		arg2 cargo.ComponentLock
-	}{arg1, arg2})
-	stub := fake.DownloadReleaseStub
-	fakeReturns := fake.downloadReleaseReturns
-	fake.recordInvocation("DownloadRelease", []interface{}{arg1, arg2})
-	fake.downloadReleaseMutex.Unlock()
+func (fake *MultiReleaseSource) DownloadComponent(arg1 context.Context, arg2 io.Writer, arg3 cargo.ComponentLock) error {
+	fake.downloadComponentMutex.Lock()
+	ret, specificReturn := fake.downloadComponentReturnsOnCall[len(fake.downloadComponentArgsForCall)]
+	fake.downloadComponentArgsForCall = append(fake.downloadComponentArgsForCall, struct {
+		arg1 context.Context
+		arg2 io.Writer
+		arg3 cargo.ComponentLock
+	}{arg1, arg2, arg3})
+	stub := fake.DownloadComponentStub
+	fakeReturns := fake.downloadComponentReturns
+	fake.recordInvocation("DownloadComponent", []interface{}{arg1, arg2, arg3})
+	fake.downloadComponentMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1
 	}
-	return fakeReturns.result1, fakeReturns.result2
+	return fakeReturns.result1
 }
 
-func (fake *MultiReleaseSource) DownloadReleaseCallCount() int {
-	fake.downloadReleaseMutex.RLock()
-	defer fake.downloadReleaseMutex.RUnlock()
-	return len(fake.downloadReleaseArgsForCall)
+func (fake *MultiReleaseSource) DownloadComponentCallCount() int {
+	fake.downloadComponentMutex.RLock()
+	defer fake.downloadComponentMutex.RUnlock()
+	return len(fake.downloadComponentArgsForCall)
 }
 
-func (fake *MultiReleaseSource) DownloadReleaseCalls(stub func(string, cargo.ComponentLock) (component.Local, error)) {
-	fake.downloadReleaseMutex.Lock()
-	defer fake.downloadReleaseMutex.Unlock()
-	fake.DownloadReleaseStub = stub
+func (fake *MultiReleaseSource) DownloadComponentCalls(stub func(context.Context, io.Writer, cargo.ComponentLock) error) {
+	fake.downloadComponentMutex.Lock()
+	defer fake.downloadComponentMutex.Unlock()
+	fake.DownloadComponentStub = stub
 }
 
-func (fake *MultiReleaseSource) DownloadReleaseArgsForCall(i int) (string, cargo.ComponentLock) {
-	fake.downloadReleaseMutex.RLock()
-	defer fake.downloadReleaseMutex.RUnlock()
-	argsForCall := fake.downloadReleaseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+func (fake *MultiReleaseSource) DownloadComponentArgsForCall(i int) (context.Context, io.Writer, cargo.ComponentLock) {
+	fake.downloadComponentMutex.RLock()
+	defer fake.downloadComponentMutex.RUnlock()
+	argsForCall := fake.downloadComponentArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *MultiReleaseSource) DownloadReleaseReturns(result1 component.Local, result2 error) {
-	fake.downloadReleaseMutex.Lock()
-	defer fake.downloadReleaseMutex.Unlock()
-	fake.DownloadReleaseStub = nil
-	fake.downloadReleaseReturns = struct {
-		result1 component.Local
-		result2 error
-	}{result1, result2}
+func (fake *MultiReleaseSource) DownloadComponentReturns(result1 error) {
+	fake.downloadComponentMutex.Lock()
+	defer fake.downloadComponentMutex.Unlock()
+	fake.DownloadComponentStub = nil
+	fake.downloadComponentReturns = struct {
+		result1 error
+	}{result1}
 }
 
-func (fake *MultiReleaseSource) DownloadReleaseReturnsOnCall(i int, result1 component.Local, result2 error) {
-	fake.downloadReleaseMutex.Lock()
-	defer fake.downloadReleaseMutex.Unlock()
-	fake.DownloadReleaseStub = nil
-	if fake.downloadReleaseReturnsOnCall == nil {
-		fake.downloadReleaseReturnsOnCall = make(map[int]struct {
-			result1 component.Local
-			result2 error
+func (fake *MultiReleaseSource) DownloadComponentReturnsOnCall(i int, result1 error) {
+	fake.downloadComponentMutex.Lock()
+	defer fake.downloadComponentMutex.Unlock()
+	fake.DownloadComponentStub = nil
+	if fake.downloadComponentReturnsOnCall == nil {
+		fake.downloadComponentReturnsOnCall = make(map[int]struct {
+			result1 error
 		})
 	}
-	fake.downloadReleaseReturnsOnCall[i] = struct {
-		result1 component.Local
-		result2 error
-	}{result1, result2}
+	fake.downloadComponentReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *MultiReleaseSource) FindByID(arg1 string) (component.ReleaseSource, error) {
@@ -373,8 +372,8 @@ func (fake *MultiReleaseSource) SetDownloadThreadsArgsForCall(i int) int {
 func (fake *MultiReleaseSource) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.downloadReleaseMutex.RLock()
-	defer fake.downloadReleaseMutex.RUnlock()
+	fake.downloadComponentMutex.RLock()
+	defer fake.downloadComponentMutex.RUnlock()
 	fake.findByIDMutex.RLock()
 	defer fake.findByIDMutex.RUnlock()
 	fake.findReleaseVersionMutex.RLock()

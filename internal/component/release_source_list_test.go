@@ -1,7 +1,9 @@
 package component_test
 
 import (
+	"context"
 	"errors"
+	"io"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -91,49 +93,40 @@ var _ = Describe("multiReleaseSource", func() {
 	})
 
 	Describe("DownloadRelease", func() {
-		var (
-			releaseID component.Spec
-			remote    component.Lock
-		)
+		var remote component.Lock
 
 		BeforeEach(func() {
-			releaseID = component.Spec{Name: releaseName, Version: releaseVersion}
-			remote = releaseID.Lock().WithRemote(src2.Configuration().ID, "/some/remote/path")
+			remote = component.Lock{Name: releaseName, Version: releaseVersion}.
+				WithRemote(src2.Configuration().ID, "/some/remote/path")
 		})
 
 		When("the source exists and downloads without error", func() {
-			var local component.Local
-
 			BeforeEach(func() {
-				l := releaseID.Lock()
-				l.SHA1 = "a-sha1"
-				local = component.Local{Lock: releaseID.Lock(), LocalPath: "somewhere/on/disk"}
-				src2.DownloadReleaseReturns(local, nil)
+				src2.DownloadComponentReturns(nil)
 			})
 
-			It("returns the local release", func() {
-				l, err := multiSrc.DownloadRelease("somewhere", remote)
+			It("returns without an error", func() {
+				err := multiSrc.DownloadComponent(context.Background(), io.Discard, remote)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(l).To(Equal(local))
 
-				Expect(src2.DownloadReleaseCallCount()).To(Equal(1))
-				dir, r := src2.DownloadReleaseArgsForCall(0)
-				Expect(dir).To(Equal("somewhere"))
+				Expect(src2.DownloadComponentCallCount()).To(Equal(1))
+				ctx, w, r := src2.DownloadComponentArgsForCall(0)
+				Expect(ctx).NotTo(BeNil())
+				Expect(w).NotTo(BeNil())
 				Expect(r).To(Equal(remote))
 			})
 		})
 
 		When("the source exists and the download errors", func() {
-			var expectedErr error
+			const expectedErrMessage = "big badda boom"
 			BeforeEach(func() {
-				expectedErr = errors.New("big badda boom")
-				src2.DownloadReleaseReturns(component.Local{}, expectedErr)
+				src2.DownloadComponentReturns(errors.New(expectedErrMessage))
 			})
 
 			It("returns the error", func() {
-				_, err := multiSrc.DownloadRelease("somewhere", remote)
+				err := multiSrc.DownloadComponent(context.Background(), io.Discard, remote)
 				Expect(err).To(MatchError(ContainSubstring(src2.Configuration().ID)))
-				Expect(err).To(MatchError(ContainSubstring(expectedErr.Error())))
+				Expect(err).To(MatchError(ContainSubstring(expectedErrMessage)))
 			})
 		})
 
@@ -143,7 +136,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("errors", func() {
-				_, err := multiSrc.DownloadRelease("somewhere", remote)
+				err := multiSrc.DownloadComponent(context.Background(), io.Discard, remote)
 				Expect(err).To(MatchError(ContainSubstring("couldn't find a release source")))
 				Expect(err).To(MatchError(ContainSubstring("no-such-source")))
 				Expect(err).To(MatchError(ContainSubstring(src1.Configuration().ID)))

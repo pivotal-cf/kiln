@@ -1,18 +1,15 @@
 package component
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Masterminds/semver"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
-
-	"github.com/Masterminds/semver"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -135,44 +132,27 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, bool, error)
 	return Lock{}, false, nil
 }
 
-func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
-	src.logger.Printf("downloading %s %s from %s", remoteRelease.Name, remoteRelease.Version, src.ID())
-
-	downloadURL := remoteRelease.RemotePath
-
-	resp, err := http.Get(downloadURL)
+func (src BOSHIOReleaseSource) DownloadComponent(ctx context.Context, w io.Writer, remoteRelease Lock) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, remoteRelease.RemotePath, nil)
 	if err != nil {
-		return Local{}, err
+		return err
 	}
-
-	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
-
-	out, err := os.Create(filePath)
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return Local{}, err
+		return err
 	}
-	defer func() { _ = out.Close() }()
-
-	_, err = io.Copy(out, resp.Body)
-	_ = resp.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
+	err = checkStatus(http.StatusOK, res.StatusCode)
 	if err != nil {
-		return Local{}, err
+		return err
 	}
-
-	_, err = out.Seek(0, 0)
+	_, err = io.Copy(w, res.Body)
 	if err != nil {
-		return Local{}, fmt.Errorf("error reseting file cursor: %w", err) // untested
+		return err
 	}
-
-	hash := sha1.New()
-	_, err = io.Copy(hash, out)
-	if err != nil {
-		return Local{}, fmt.Errorf("error hashing file contents: %w", err) // untested
-	}
-
-	remoteRelease.SHA1 = hex.EncodeToString(hash.Sum(nil))
-
-	return Local{Lock: remoteRelease, LocalPath: filePath}, nil
+	return nil
 }
 
 type ResponseStatusCodeError http.Response

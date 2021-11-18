@@ -16,7 +16,7 @@ type Fetch struct {
 	logger *log.Logger
 
 	multiReleaseSourceProvider MultiReleaseSourceProvider
-	localReleaseDirectory      LocalReleaseDirectory
+	localReleaseDirectory      ReleaseDirectory
 
 	Options struct {
 		flags.Standard
@@ -32,7 +32,7 @@ type Fetch struct {
 //counterfeiter:generate -o ./fakes/multi_release_source_provider.go --fake-name MultiReleaseSourceProvider . MultiReleaseSourceProvider
 type MultiReleaseSourceProvider func(cargo.Kilnfile, bool) component.MultiReleaseSource
 
-func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider, localReleaseDirectory LocalReleaseDirectory) Fetch {
+func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider, localReleaseDirectory ReleaseDirectory) Fetch {
 	return Fetch{
 		logger:                     logger,
 		localReleaseDirectory:      localReleaseDirectory,
@@ -40,8 +40,8 @@ func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceP
 	}
 }
 
-//counterfeiter:generate -o ./fakes/local_release_directory.go --fake-name LocalReleaseDirectory . LocalReleaseDirectory
-type LocalReleaseDirectory interface {
+//counterfeiter:generate -o ./fakes/local_release_directory.go --fake-name ReleaseDirectory . ReleaseDirectory
+type ReleaseDirectory interface {
 	GetLocalReleases(releasesDir string) ([]component.Local, error)
 	DeleteExtraReleases(extraReleases []component.Local, noConfirm bool) error
 }

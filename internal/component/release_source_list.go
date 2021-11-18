@@ -1,8 +1,10 @@
 package component
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 
 	"github.com/Masterminds/semver"
@@ -138,18 +140,17 @@ func (list ReleaseSourceList) SetDownloadThreads(n int) {
 	}
 }
 
-func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
+func (list ReleaseSourceList) DownloadComponent(ctx context.Context, w io.Writer, remoteRelease Lock) error {
 	src, err := list.FindByID(remoteRelease.RemoteSource)
 	if err != nil {
-		return Local{}, err
+		return err
 	}
-
-	localRelease, err := src.DownloadRelease(releaseDir, remoteRelease)
+	err = src.DownloadComponent(ctx, w, remoteRelease)
 	if err != nil {
-		return Local{}, scopedError(src.Configuration().ID, err)
+		c := src.Configuration()
+		return fmt.Errorf("download error from release source %s type %s: %w", c.ID, c.Type, err)
 	}
-
-	return localRelease, nil
+	return nil
 }
 
 func (list ReleaseSourceList) FindReleaseVersion(requirement Spec) (Lock, bool, error) {

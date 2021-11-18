@@ -18,9 +18,9 @@ import (
 	"github.com/pivotal-cf/kiln/internal/component"
 )
 
-var _ = Describe("LocalReleaseDirectory", func() {
+var _ = Describe("ReleaseDirectory", func() {
 	var (
-		localReleaseDirectory component.LocalReleaseDirectory
+		localReleaseDirectory component.ReleaseDirectory
 		noConfirm             bool
 		releasesDir           string
 		releaseFile           string
