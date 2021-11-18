@@ -98,9 +98,7 @@ func ReleaseSourceFactory(releaseConfig cargo.ReleaseSourceConfig, outLogger *lo
 		return NewS3ReleaseSourceFromConfig(releaseConfig, outLogger)
 	case ReleaseSourceTypeGithub:
 		releaseConfig.ID = releaseConfig.Org
-		return GithubReleaseSource{
-			ReleaseSourceConfig: releaseConfig,
-		}
+		return NewGithubReleaseSource(releaseConfig)
 	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
 	}

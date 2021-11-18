@@ -27,7 +27,7 @@ var _ = Describe("ReleaseSourceList", func() {
 						{Type: "s3", Bucket: "compiled-releases", Region: "us-west-1", Publishable: true, PathTemplate: "template"},
 						{Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false, PathTemplate: "template"},
 						{Type: "bosh.io", Publishable: false},
-						{Type: "github", Org: "cloudfoundry"},
+						{Type: "github", Org: "cloudfoundry", GithubToken: "banana"},
 					},
 				}
 			})
@@ -59,7 +59,7 @@ var _ = Describe("ReleaseSourceList", func() {
 			It("constructs the github release source properly", func() {
 				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
 
-				Expect(releaseSources[3]).To(BeAssignableToTypeOf(component.GithubReleaseSource{}))
+				Expect(releaseSources[3]).To(BeAssignableToTypeOf(&component.GithubReleaseSource{}))
 				Expect(releaseSources[3].Configuration().ID).To(Equal(kilnfile.ReleaseSources[3].Org))
 			})
 		})
