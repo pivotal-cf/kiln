@@ -69,6 +69,15 @@ type Kilnfile struct {
 	Stemcell        Stemcell              `yaml:"stemcell_criteria"`
 }
 
+func (k Kilnfile) FindReleaseWithName(name string) (ComponentSpec, error) {
+	for _, r := range k.Releases {
+		if r.Name == name {
+			return r, nil
+		}
+	}
+	return ComponentSpec{}, errors.New("not found")
+}
+
 type ReleaseSourceConfig struct {
 	Type            string `yaml:"type"`
 	ID              string `yaml:"id"`

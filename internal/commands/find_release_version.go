@@ -8,7 +8,6 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -37,26 +36,18 @@ func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider Mul
 }
 
 func (cmd FindReleaseVersion) Execute(args []string) error {
-	kilnfile, kilnfileLock, err := cmd.setup(args)
+	kilnfile, _, err := cmd.setup(args)
 	if err != nil {
 		return err
 	}
 	releaseSource := cmd.mrsProvider(kilnfile, false)
 
-	var version string
-	for _, release := range kilnfile.Releases {
-		if release.Name == cmd.Options.Release {
-			version = release.Version
-			break
-		}
+	spec, err := kilnfile.FindReleaseWithName(cmd.Options.Release)
+	if err != nil {
+		return err
 	}
 
-	releaseRemote, _, err := releaseSource.FindReleaseVersion(component.Spec{
-		Name:            cmd.Options.Release,
-		Version:         version,
-		StemcellVersion: kilnfileLock.Stemcell.Version,
-		StemcellOS:      kilnfileLock.Stemcell.OS,
-	})
+	releaseRemote, _, err := releaseSource.FindReleaseVersion(spec)
 
 	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{
 		Version:    releaseRemote.Version,
