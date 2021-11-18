@@ -318,8 +318,12 @@ func TestDownloadReleaseAsset(t *testing.T) {
 
 	t.Run("when the release is downloaded", func(t *testing.T) {
 		damnIt := Ω.NewWithT(t)
+		tempDir := t.TempDir()
+		t.Cleanup(func() {
+			_ = os.RemoveAll(tempDir)
+		})
 
-		local, err := grs.DownloadRelease("/tmp", testLock)
+		local, err := grs.DownloadRelease(tempDir, testLock)
 		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
 
 		_, err = os.Stat(local.LocalPath)
