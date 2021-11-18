@@ -161,6 +161,17 @@ func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Cons
 // It should also calculate and set the SHA1 field on the Local result; it does not need
 // to ensure the sums match, the caller must verify this.
 func (grs GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
+	return downloadRelease(releaseDir, remoteRelease, grs.Client)
+}
+
+//counterfeiter:generate -o ./fakes/github_new_request_doer.go --fake-name GithubNewRequestDoer . githubNewRequestDoer
+
+type githubNewRequestDoer interface {
+	NewRequest(method, urlStr string, body interface{}) (*http.Request, error)
+	Do(ctx context.Context, req *http.Request, v interface{}) (*github.Response, error)
+}
+
+func downloadRelease(releaseDir string, remoteRelease Lock, client githubNewRequestDoer) (Local, error) {
 	// TODO: add loggers so we can be cool, too!
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
 
@@ -170,13 +181,13 @@ func (grs GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease 
 	}
 	defer func() { _ = file.Close() }()
 
-	request, err := grs.Client.NewRequest(http.MethodGet, remoteRelease.RemotePath, nil)
+	request, err := client.NewRequest(http.MethodGet, remoteRelease.RemotePath, nil)
 	if err != nil {
 		return Local{}, err
 	}
 
 	hash := sha1.New()
-	response, err := grs.Client.Do(context.TODO(), request, io.MultiWriter(file, hash))
+	response, err := client.Do(context.TODO(), request, io.MultiWriter(file, hash))
 	if err != nil {
 		return Local{}, err
 	}
