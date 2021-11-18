@@ -2,6 +2,7 @@ package commands
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
@@ -68,9 +69,13 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 }
 
 func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, error) {
-	_, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, nil)
+	argsAfterFlags, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, nil)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
+	}
+
+	if len(argsAfterFlags) != 0 {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("unexpected arguments: %v", argsAfterFlags)
 	}
 
 	kilnfile, kilnfileLock, err := cmd.Options.LoadKilnfiles(nil, nil)
