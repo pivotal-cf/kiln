@@ -56,7 +56,7 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 
 	kilnfileFP, err := fs.Open(options.Kilnfile)
 	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to open Kilnfile: %w", err)
 	}
 	defer func() {
 		_ = kilnfileFP.Close()
@@ -69,7 +69,7 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 
 	lockFP, err := fs.Open(options.KilnfileLockPath())
 	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to open Kilnfile.lock: %w", err)
 	}
 	defer func() {
 		_ = lockFP.Close()

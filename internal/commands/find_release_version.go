@@ -2,6 +2,7 @@ package commands
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
@@ -17,7 +18,7 @@ type FindReleaseVersion struct {
 
 	Options struct {
 		flags.Standard
-		Release string `short:"r" long:"release" default:"releases" description:"release name"`
+		Release string `short:"r" long:"release" description:"release name"`
 	}
 }
 
@@ -65,12 +66,17 @@ func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, cargo.Kilnf
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
 
+	if cmd.Options.Release == "" {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, errors.New("missing required flag \"--release\"")
+	}
+
 	if len(argsAfterFlags) != 0 {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("unexpected arguments: %v", argsAfterFlags)
 	}
 
 	kilnfile, kilnfileLock, err := cmd.Options.LoadKilnfiles(nil, nil)
 	if err != nil {
+		fmt.Println(err)
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
 
