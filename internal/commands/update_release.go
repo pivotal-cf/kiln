@@ -57,6 +57,9 @@ func (u UpdateRelease) Execute(args []string) error {
 		return err
 	}
 	releaseVersionConstraint := releaseSpec.Version
+	if u.Options.Version != "" {
+		releaseVersionConstraint = u.Options.Version
+	}
 
 	releaseSource := u.multiReleaseSourceProvider(kilnfile, u.Options.AllowOnlyPublishableReleases)
 
@@ -72,6 +75,7 @@ func (u UpdateRelease) Execute(args []string) error {
 			Version:         releaseVersionConstraint,
 			StemcellVersion: kilnfileLock.Stemcell.Version,
 			StemcellOS:      kilnfileLock.Stemcell.OS,
+			GitRepositories: releaseSpec.GitRepositories,
 		})
 
 		if err != nil {
@@ -92,6 +96,7 @@ func (u UpdateRelease) Execute(args []string) error {
 			Version:         u.Options.Version,
 			StemcellOS:      kilnfileLock.Stemcell.OS,
 			StemcellVersion: kilnfileLock.Stemcell.Version,
+			GitRepositories: releaseSpec.GitRepositories,
 		})
 
 		if err != nil {

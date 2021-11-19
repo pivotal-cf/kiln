@@ -25,11 +25,11 @@ func TestGithubReleaseSource_downloadRelease(t *testing.T) {
 
 	ghClient.DoStub = func(_ context.Context, _ *http.Request, i interface{}) (*github.Response, error) {
 		w, ok := i.(io.Writer)
-		if !ok{
+		if !ok {
 			t.Error("expected a writer")
 		}
-		_,_ = w.Write([]byte("hello"))
-		return &github.Response{Response:&http.Response{StatusCode: http.StatusOK}}, nil
+		_, _ = w.Write([]byte("hello"))
+		return &github.Response{Response: &http.Response{StatusCode: http.StatusOK}}, nil
 	}
 
 	local, err := downloadRelease(context.Background(), tempDir, lock, ghClient)
