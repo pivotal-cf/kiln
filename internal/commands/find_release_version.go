@@ -37,7 +37,7 @@ func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider Mul
 }
 
 func (cmd FindReleaseVersion) Execute(args []string) error {
-	kilnfile, _, err := cmd.setup(args)
+	kilnfile, kilnfileLock, err := cmd.setup(args)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,13 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 		return err
 	}
 
+	spec.StemcellOS = kilnfileLock.Stemcell.OS
+	spec.StemcellVersion = kilnfileLock.Stemcell.Version
+
 	releaseRemote, _, err := releaseSource.FindReleaseVersion(spec)
+	if err != nil {
+		return err
+	}
 
 	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{
 		Version:    releaseRemote.Version,
