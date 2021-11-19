@@ -161,7 +161,8 @@ func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Cons
 // It should also calculate and set the SHA1 field on the Local result; it does not need
 // to ensure the sums match, the caller must verify this.
 func (grs GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
-	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs.Client)
+	grs.Logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeGithub, grs.ID)
+	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs.Client, grs.Logger)
 }
 
 //counterfeiter:generate -o ./fakes_internal/github_new_request_doer.go --fake-name GithubNewRequestDoer . githubNewRequestDoer
@@ -171,8 +172,7 @@ type githubNewRequestDoer interface {
 	Do(ctx context.Context, req *http.Request, v interface{}) (*github.Response, error)
 }
 
-func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client githubNewRequestDoer) (Local, error) {
-	// TODO: add loggers so we can be cool, too!
+func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client githubNewRequestDoer, logger *log.Logger) (Local, error) {
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
 
 	file, err := os.Create(filePath)
