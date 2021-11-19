@@ -9,7 +9,6 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type UpdateRelease struct {
@@ -46,26 +45,18 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
-	var releaseLock *cargo.ComponentLock
-	var releaseVersionConstraint string
-	for i := range kilnfileLock.Releases {
-		if kilnfileLock.Releases[i].Name == u.Options.Name {
-			releaseLock = &kilnfileLock.Releases[i]
-			break
-		}
-	}
-	for _, release := range kilnfile.Releases {
-		if release.Name == u.Options.Name {
-			releaseVersionConstraint = release.Version
-			break
-		}
-	}
-	if releaseLock == nil {
+	releaseLock, err := kilnfileLock.FindReleaseWithName(u.Options.Name)
+	if err != nil {
 		return fmt.Errorf(
 			"no release named %q exists in your Kilnfile.lock - try removing the -release, -boshrelease, or -bosh-release suffix if present",
 			u.Options.Name,
 		)
 	}
+	releaseSpec, err := kilnfile.FindReleaseWithName(u.Options.Name)
+	if err != nil {
+		return err
+	}
+	releaseVersionConstraint := releaseSpec.Version
 
 	releaseSource := u.multiReleaseSourceProvider(kilnfile, u.Options.AllowOnlyPublishableReleases)
 
@@ -129,6 +120,8 @@ func (u UpdateRelease) Execute(args []string) error {
 	releaseLock.SHA1 = newSHA1
 	releaseLock.RemoteSource = newSourceID
 	releaseLock.RemotePath = newRemotePath
+
+	_ = kilnfileLock.UpdateReleaseLockWithName(u.Options.Name, releaseLock)
 
 	err = u.Options.Standard.SaveKilnfileLock(u.filesystem, kilnfileLock)
 	if err != nil {

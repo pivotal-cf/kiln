@@ -144,3 +144,13 @@ func (k KilnfileLock) FindReleaseWithName(name string) (ComponentLock, error) {
 	}
 	return ComponentLock{}, errors.New("not found")
 }
+
+func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock ComponentLock) error {
+	for i, r := range k.Releases {
+		if r.Name == name {
+			k.Releases[i] = lock
+			return nil
+		}
+	}
+	return errors.New("not found")
+}

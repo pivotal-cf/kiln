@@ -63,7 +63,12 @@ var _ = Describe("UpdateRelease", func() {
 
 			filesystem = osfs.New("/tmp/")
 
-			kilnfile := cargo.Kilnfile{}
+			kilnfile := cargo.Kilnfile{
+				Releases: []cargo.ComponentSpec{
+					{Name: "minecraft"},
+					{Name: releaseName},
+				},
+			}
 
 			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ComponentLock{

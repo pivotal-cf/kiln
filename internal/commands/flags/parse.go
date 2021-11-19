@@ -39,7 +39,8 @@ type Standard struct {
 // LoadKilnfiles parses and interpolates the Kilnfile and parsed the Kilnfile.lock.
 // The function parameters are for overriding default services. These parameters are
 // helpful for testing, in most cases nil can be passed for both.
-func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceOverride VariablesService) (cargo.Kilnfile, cargo.KilnfileLock, error) {
+func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceOverride VariablesService) (_ cargo.Kilnfile, _ cargo.KilnfileLock, err error) {
+
 	fs := fsOverride
 	if fs == nil {
 		fs = osfs.New("")
