@@ -99,9 +99,11 @@ type ReleaseSourceConfig struct {
 // All fields must be comparable because this struct may be
 // used as a key type in a map. Don't add array or map fields.
 type ComponentLock struct {
-	Name    string `yaml:"name"`
+	Name string `yaml:"name"`
+
+	SHA1 string `yaml:"sha1"`
+
 	Version string `yaml:"version,omitempty"`
-	SHA1    string `yaml:"sha1"`
 
 	StemcellOS      string `yaml:"os,omitempty"`
 	StemcellVersion string `yaml:"stemcell_version,omitempty"`
