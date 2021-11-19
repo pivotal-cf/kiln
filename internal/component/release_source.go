@@ -68,6 +68,7 @@ type ReleaseSource interface {
 
 const (
 	panicMessageWrongReleaseSourceType = "wrong constructor for release source configuration"
+	logLineDownload                    = "downloading %s from %s release source %s"
 
 	// ReleaseSourceTypeBOSHIO is the value of the Type field on cargo.ReleaseSourceConfig
 	// for fetching https://bosh.io releases.

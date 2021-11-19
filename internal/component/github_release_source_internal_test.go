@@ -6,6 +6,7 @@ import (
 	Ω "github.com/onsi/gomega"
 	fakes "github.com/pivotal-cf/kiln/internal/component/fakes_internal"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"testing"
@@ -32,7 +33,8 @@ func TestGithubReleaseSource_downloadRelease(t *testing.T) {
 		return &github.Response{Response: &http.Response{StatusCode: http.StatusOK}}, nil
 	}
 
-	local, err := downloadRelease(context.Background(), tempDir, lock, ghClient)
+	logger := log.New(io.Discard, "", 0)
+	local, err := downloadRelease(context.Background(), tempDir, lock, ghClient, logger)
 	damnIt.Expect(err).NotTo(Ω.HaveOccurred())
 
 	damnIt.Expect(local.LocalPath).To(Ω.BeAnExistingFile(), "it finds the created asset file")
