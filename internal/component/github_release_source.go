@@ -236,7 +236,7 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 			return Lock{
 				Name:         spec.Name,
 				Version:      release.GetTagName(),
-				RemoteSource: ReleaseSourceTypeGithub,
+				RemoteSource: owner,
 				RemotePath:   asset.GetBrowserDownloadURL(),
 				SHA1:         sum,
 			}, true, nil

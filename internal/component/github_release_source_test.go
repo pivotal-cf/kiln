@@ -65,6 +65,8 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 		releaseGetter := new(fakes.ReleaseByTagGetter)
 		downloader := new(fakes.ReleaseAssetDownloader)
 
+		const owner = "cloudfoundry"
+
 		releaseGetter.GetReleaseByTagReturns(
 			&github.RepositoryRelease{
 				TagName: strPtr("0.226.0"),
@@ -89,7 +91,7 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 
 		ctx := context.TODO()
 
-		lock, found, err := component.LockFromGithubRelease(ctx, downloader, "cloudfoundry", component.Spec{
+		lock, found, err := component.LockFromGithubRelease(ctx, downloader, owner, component.Spec{
 			Name:    "routing",
 			Version: "0.226.0",
 			GitRepositories: []string{
@@ -110,7 +112,7 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 			damnIt.Expect(lock.Version).To(Ω.Equal("0.226.0"))
 			damnIt.Expect(lock.Name).To(Ω.Equal("routing"))
 			damnIt.Expect(lock.Version).To(Ω.Equal("0.226.0"))
-			damnIt.Expect(lock.RemoteSource).To(Ω.Equal(component.ReleaseSourceTypeGithub))
+			damnIt.Expect(lock.RemoteSource).To(Ω.Equal(owner))
 			damnIt.Expect(lock.RemotePath).To(Ω.Equal("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz"))
 		})
 
