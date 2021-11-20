@@ -76,6 +76,10 @@ const (
 	// ReleaseSourceTypeS3 is the value for the Type field on cargo.ReleaseSourceConfig
 	// for releases stored on
 	ReleaseSourceTypeS3 = "s3"
+
+	// ReleaseSourceTypeGithub is the value for the Type field on cargo.ReleaseSourceConfig
+	// for releases stored on Github.
+	ReleaseSourceTypeGithub = "github"
 )
 
 // ReleaseSourceFactory returns a configured ReleaseSource based on the Type field on the
@@ -92,6 +96,9 @@ func ReleaseSourceFactory(releaseConfig cargo.ReleaseSourceConfig, outLogger *lo
 			releaseConfig.ID = releaseConfig.Bucket
 		}
 		return NewS3ReleaseSourceFromConfig(releaseConfig, outLogger)
+	case ReleaseSourceTypeGithub:
+		releaseConfig.ID = releaseConfig.Org
+		return NewGithubReleaseSource(releaseConfig)
 	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
 	}
