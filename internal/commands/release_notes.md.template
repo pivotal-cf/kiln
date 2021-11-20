@@ -1,0 +1,18 @@
+### <a id='{{ .Version }}'></a> {{ .Version }}
+
+**Release Date:** {{ .ReleaseDate.Format .ReleaseDateFormat }}
+
+{{range .Bumps }}* Bump {{ .Name }} to version `{{ .Version }}`
+{{ end }}
+<table border="1" class="nice">
+  <thead>
+  <tr>
+    <th>Component</th>
+    <th>Version</th>
+  </tr>
+  </thead>
+  <tbody>
+  {{- range .Components }}
+    <tr><td>{{ .Name }}</td><td>{{ .Version }}</td></tr>{{ end }}
+  </tbody>
+</table>
