@@ -2,12 +2,13 @@ package commands
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -17,7 +18,7 @@ type FindReleaseVersion struct {
 
 	Options struct {
 		flags.Standard
-		Release string `short:"r" long:"release" default:"releases" description:"release name"`
+		Release string `short:"r" long:"release" description:"release name"`
 	}
 }
 
@@ -42,20 +43,18 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 	}
 	releaseSource := cmd.mrsProvider(kilnfile, false)
 
-	var version string
-	for _, release := range kilnfile.Releases {
-		if release.Name == cmd.Options.Release {
-			version = release.Version
-			break
-		}
+	spec, err := kilnfile.FindReleaseWithName(cmd.Options.Release)
+	if err != nil {
+		return err
 	}
 
-	releaseRemote, _, err := releaseSource.FindReleaseVersion(component.Spec{
-		Name:            cmd.Options.Release,
-		Version:         version,
-		StemcellVersion: kilnfileLock.Stemcell.Version,
-		StemcellOS:      kilnfileLock.Stemcell.OS,
-	})
+	spec.StemcellOS = kilnfileLock.Stemcell.OS
+	spec.StemcellVersion = kilnfileLock.Stemcell.Version
+
+	releaseRemote, _, err := releaseSource.FindReleaseVersion(spec)
+	if err != nil {
+		return err
+	}
 
 	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{
 		Version:    releaseRemote.Version,
@@ -68,13 +67,22 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 }
 
 func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, error) {
-	_, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, nil)
+	argsAfterFlags, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, nil)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
 
+	if cmd.Options.Release == "" {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, errors.New("missing required flag \"--release\"")
+	}
+
+	if len(argsAfterFlags) != 0 {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("unexpected arguments: %v", argsAfterFlags)
+	}
+
 	kilnfile, kilnfileLock, err := cmd.Options.LoadKilnfiles(nil, nil)
 	if err != nil {
+		fmt.Println(err)
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
 

@@ -2,6 +2,8 @@ package cargo
 
 import (
 	"errors"
+	"fmt"
+
 	"github.com/Masterminds/semver"
 )
 
@@ -28,22 +30,19 @@ type ComponentSpec struct {
 	// also set StemcellOS when setting this field.
 	StemcellVersion string `yaml:"stemcell_version,omitempty"`
 
-	//// Repositories are where the BOSH release source code is
-	//Repositories []string `yaml:"repositories,omitempty"`
+	// GitRepositories are where the BOSH release source code is
+	GitRepositories []string `yaml:"git_repositories,omitempty"`
 }
 
-// VersionConstraints must be passed a spec with a parsable
-// semver. The Kiln Validate command ensures that the versions
-// in this field continue to stay valid.
-func (spec ComponentSpec) VersionConstraints() *semver.Constraints {
+func (spec ComponentSpec) VersionConstraints() (*semver.Constraints, error) {
 	if spec.Version == "" {
 		spec.Version = ">0"
 	}
 	c, err := semver.NewConstraint(spec.Version)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("expected version to be a Constraint: %w", err)
 	}
-	return c
+	return c, nil
 }
 
 func (spec ComponentSpec) Lock() ComponentLock {
@@ -70,6 +69,15 @@ type Kilnfile struct {
 	Stemcell        Stemcell              `yaml:"stemcell_criteria"`
 }
 
+func (k Kilnfile) FindReleaseWithName(name string) (ComponentSpec, error) {
+	for _, r := range k.Releases {
+		if r.Name == name {
+			return r, nil
+		}
+	}
+	return ComponentSpec{}, errors.New("not found")
+}
+
 type ReleaseSourceConfig struct {
 	Type            string `yaml:"type"`
 	ID              string `yaml:"id"`
@@ -80,6 +88,8 @@ type ReleaseSourceConfig struct {
 	SecretAccessKey string `yaml:"secret_access_key"`
 	PathTemplate    string `yaml:"path_template"`
 	Endpoint        string `yaml:"endpoint"`
+	Org             string `yaml:"org"`
+	GithubToken     string `yaml:"github_token"`
 }
 
 // ComponentLock represents an exact build of a bosh release
@@ -133,4 +143,14 @@ func (k KilnfileLock) FindReleaseWithName(name string) (ComponentLock, error) {
 		}
 	}
 	return ComponentLock{}, errors.New("not found")
+}
+
+func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock ComponentLock) error {
+	for i, r := range k.Releases {
+		if r.Name == name {
+			k.Releases[i] = lock
+			return nil
+		}
+	}
+	return errors.New("not found")
 }

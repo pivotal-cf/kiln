@@ -4,3 +4,4 @@
 *debug.test
 dist
 *.test
+**.DS_Store

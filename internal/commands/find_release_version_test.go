@@ -75,7 +75,16 @@ releases:
 				"--kilnfile", someKilnfilePath,
 				"--release", releaseName,
 			}
+			logger.Printf("releaseName is: %s", releaseName)
 			executeErr = findReleaseVersion.Execute(fetchExecuteArgs)
+		})
+
+		Context("when the release flag is missing", func() {
+			It("returns an error", func() {
+				err := findReleaseVersion.Execute([]string{})
+
+				Expect(err).To(MatchError("missing required flag \"--release\""))
+			})
 		})
 
 		When("there is no version constraint", func() {
@@ -84,9 +93,9 @@ releases:
 					releaseName = "uaac"
 					fakeReleasesSource.FindReleaseVersionReturns(component.Lock{
 						Name: releaseName, Version: "74.12.5",
-						RemotePath:    "remote_url",
-						RemoteSource:  "bosh.io",
-						SHA1:          "some-sha",
+						RemotePath:   "remote_url",
+						RemoteSource: "bosh.io",
+						SHA1:         "some-sha",
 					}, true, nil)
 				})
 
@@ -112,8 +121,8 @@ releases:
 					releaseName = "uaa"
 					fakeReleasesSource.FindReleaseVersionReturns(component.Lock{
 						Name: releaseName, Version: "74.16.5",
-						RemotePath:    "remote_url",
-						RemoteSource:  "sourceId",
+						RemotePath:   "remote_url",
+						RemoteSource: "sourceId",
 					}, true, nil)
 				})
 
