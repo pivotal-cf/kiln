@@ -46,19 +46,19 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	revisionResolver.ResolveRevisionReturnsOnCall(0, &initialHash, nil)
 	revisionResolver.ResolveRevisionReturnsOnCall(1, &finalHash, nil)
 
-	historicKilnfileLock := new(fakes.HistoricKilnfileLock)
-	historicKilnfileLock.ReturnsOnCall(0, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
-			{Name: "banana", Version: "0.1.0"},
-			{Name: "lemon", Version: "1.1.0"},
-		},
-	}, nil)
-	historicKilnfileLock.ReturnsOnCall(1, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
-			{Name: "banana", Version: "0.1.0"},
-			{Name: "lemon", Version: "1.2.0"},
-		},
-	}, nil)
+		historicKilnfileLock := new(fakes.HistoricKilnfileLock)
+		historicKilnfileLock.ReturnsOnCall(0, cargo.KilnfileLock{
+			Releases: []cargo.ComponentLock{
+				{Name: "banana", Version: "0.1.0"},
+				{Name: "lemon", Version: "1.1.0"},
+			},
+		}, nil)
+		historicKilnfileLock.ReturnsOnCall(1, cargo.KilnfileLock{
+			Releases: []cargo.ComponentLock{
+				{Name: "banana", Version: "0.1.0"},
+				{Name: "lemon", Version: "1.2.0"},
+			},
+		}, nil)
 
 	historicVersion := new(fakes.HistoricVersion)
 	historicVersion.Returns("0.1.0-build.50000", nil)
