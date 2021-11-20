@@ -39,7 +39,7 @@ type Standard struct {
 // LoadKilnfiles parses and interpolates the Kilnfile and parsed the Kilnfile.lock.
 // The function parameters are for overriding default services. These parameters are
 // helpful for testing, in most cases nil can be passed for both.
-func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceOverride VariablesService) (cargo.Kilnfile, cargo.KilnfileLock, error) {
+func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceOverride VariablesService) (_ cargo.Kilnfile, _ cargo.KilnfileLock, err error) {
 	fs := fsOverride
 	if fs == nil {
 		fs = osfs.New("")
@@ -56,7 +56,7 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 
 	kilnfileFP, err := fs.Open(options.Kilnfile)
 	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to open Kilnfile: %w", err)
 	}
 	defer func() {
 		_ = kilnfileFP.Close()
@@ -69,7 +69,7 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 
 	lockFP, err := fs.Open(options.KilnfileLockPath())
 	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to open Kilnfile.lock: %w", err)
 	}
 	defer func() {
 		_ = lockFP.Close()

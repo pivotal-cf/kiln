@@ -4,5 +4,7 @@
 *debug.test
 dist
 *.test
+**.DS_Store
+
 internal/release/exp.txt
 internal/release/got.txt

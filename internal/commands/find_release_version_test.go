@@ -75,7 +75,16 @@ releases:
 				"--kilnfile", someKilnfilePath,
 				"--release", releaseName,
 			}
+			logger.Printf("releaseName is: %s", releaseName)
 			executeErr = findReleaseVersion.Execute(fetchExecuteArgs)
+		})
+
+		Context("when the release flag is missing", func() {
+			It("returns an error", func() {
+				err := findReleaseVersion.Execute([]string{})
+
+				Expect(err).To(MatchError("missing required flag \"--release\""))
+			})
 		})
 
 		When("there is no version constraint", func() {
