@@ -14,7 +14,7 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/commands/options"
 	"github.com/pivotal-cf/kiln/internal/helper"
 )
 
@@ -125,8 +125,7 @@ type Bake struct {
 	metadata metadataService
 
 	Options struct {
-		flags.Standard
-
+		options.Standard
 		Metadata                 string   `short:"m"   long:"metadata"                   default:"base.yml"         description:"path to the metadata file"`
 		ReleaseDirectories       []string `short:"rd"  long:"releases-directory"         default:"releases"         description:"path to a directory containing release tarballs"`
 		FormDirectories          []string `short:"f"   long:"forms-directory"            default:"forms"            description:"path to a directory containing forms"`
@@ -191,20 +190,20 @@ func NewBakeWithInterfaces(
 func shouldGenerateTileFileName(b *Bake, args []string) bool {
 	return b.Options.OutputFile == "" &&
 		!b.Options.MetadataOnly &&
-		!flags.IsSet("o", "output-file", args)
+		!options.IsSet("o", "output-file", args)
 }
 
 func shouldReadVersionFile(b *Bake, args []string) bool {
-	return b.Options.Version == "" && !flags.IsSet("v", "version", args)
+	return b.Options.Version == "" && !options.IsSet("v", "version", args)
 }
 
 func shouldNotUseDefaultKilnfileFlag(args []string) bool {
-	return (flags.IsSet("st", "stemcell-tarball", args) || flags.IsSet("sd", "stemcells-directory", args)) &&
-		!flags.IsSet("kf", "kilnfile", args)
+	return (options.IsSet("st", "stemcell-tarball", args) || options.IsSet("sd", "stemcells-directory", args)) &&
+		!options.IsSet("kf", "kilnfile", args)
 }
 
-func (b *Bake) loadFlags(args []string, stat flags.StatFunc, readFile func(string) ([]byte, error)) error {
-	_, err := flags.LoadFlagsWithDefaults(&b.Options, args, stat)
+func (b *Bake) loadFlags(args []string, stat options.StatFunc, readFile func(string) ([]byte, error)) error {
+	_, err := options.FlagsWithDefaults(&b.Options, args, stat)
 	if err != nil {
 		return err
 	}

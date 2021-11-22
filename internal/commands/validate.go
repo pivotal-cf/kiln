@@ -8,19 +8,17 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
 
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/commands/options"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type Validate struct {
 	Options struct {
-		flags.Standard
+		options.Standard
 	}
 
 	FS billy.Filesystem
 }
-
-var _ jhanda.Command = (*Validate)(nil)
 
 func NewValidate(fs billy.Filesystem) Validate {
 	return Validate{
@@ -29,23 +27,28 @@ func NewValidate(fs billy.Filesystem) Validate {
 }
 
 func (v Validate) Execute(args []string) error {
-	_, err := flags.LoadFlagsWithDefaults(&v.Options, args, v.FS.Stat)
+	return Kiln{
+		Wrapped: v,
+		KilnfileStore: KilnfileStore{
+			FS: v.FS,
+		},
+		StatFn: v.FS.Stat,
+	}.Execute(args)
+}
+
+func (v Validate) KilnExecute(args []string, parseOps OptionsParseFunc) error {
+	kilnfile, kilnfileLock, _, err := parseOps(args, &v.Options)
 	if err != nil {
 		return err
-	}
-
-	kilnfile, lock, err := v.Options.Standard.LoadKilnfiles(v.FS, nil, nil)
-	if err != nil {
-		return fmt.Errorf("failed to load kilnfiles: %w", err)
 	}
 
 	var releaseErrors errorList
 
 	for index, release := range kilnfile.Releases {
-		releaseLock, err := lock.FindReleaseWithName(release.Name)
+		releaseLock, err := kilnfileLock.FindReleaseWithName(release.Name)
 		if err != nil {
 			releaseErrors = append(releaseErrors,
-				fmt.Errorf("release %q not found in lock", release.Name))
+				fmt.Errorf("release %q not found in kilnfileLock", release.Name))
 			continue
 		}
 

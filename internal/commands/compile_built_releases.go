@@ -19,7 +19,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/commands/options"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/helper"
 	"github.com/pivotal-cf/kiln/internal/manifest_generator"
@@ -33,7 +33,7 @@ type CompileBuiltReleases struct {
 	BoshDirectorFactory        func() (BoshDirector, error)
 
 	Options struct {
-		flags.Standard
+		options.Standard
 
 		ReleasesDir    string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 		StemcellFile   string `short:"sf" long:"stemcell-file"      required:"true"    description:"path to the stemcell tarball on disk"`
@@ -101,37 +101,38 @@ func BoshDirectorFactory() (BoshDirector, error) {
 }
 
 func (f CompileBuiltReleases) Execute(args []string) error {
-	_, err := flags.LoadFlagsWithDefaults(&f.Options, args, nil)
-	if err != nil {
-		return err
-	}
+	return Kiln{
+		Wrapped:       f,
+		KilnfileStore: KilnfileStore{},
+	}.Execute(args)
+}
 
-	f.Logger.Println("loading Kilnfile")
-	kilnfile, kilnfileLock, err := f.Options.LoadKilnfiles(nil, nil, nil)
+func (f CompileBuiltReleases) KilnExecute(args []string, parseOpts OptionsParseFunc) (cargo.KilnfileLock, error) {
+	kilnfile, kilnfileLock, _, err := parseOpts(args, &f.Options)
 	if err != nil {
-		return fmt.Errorf("couldn't load Kilnfiles: %w", err) // untested
+		return cargo.KilnfileLock{}, err
 	}
 
 	publishableReleaseSources := f.MultiReleaseSourceProvider(kilnfile, true)
 	allReleaseSources := f.MultiReleaseSourceProvider(kilnfile, false)
 	releaseUploader, err := f.ReleaseUploaderFinder(kilnfile, f.Options.UploadTargetID)
 	if err != nil {
-		return fmt.Errorf("error loading release uploader: %w", err) // untested
+		return kilnfileLock, fmt.Errorf("error loading release uploader: %w", err) // untested
 	}
 
 	builtReleases, err := findBuiltReleases(allReleaseSources, kilnfileLock)
 	if err != nil {
-		return err
+		return kilnfileLock, err
 	}
 
 	if len(builtReleases) == 0 {
 		f.Logger.Println("All releases are compiled. Exiting early")
-		return nil
+		return kilnfileLock, nil
 	}
 
 	updatedReleases, remainingBuiltReleases, err := f.downloadPreCompiledReleases(publishableReleaseSources, builtReleases, kilnfileLock.Stemcell)
 	if err != nil {
-		return err
+		return kilnfileLock, err
 	}
 
 	if len(remainingBuiltReleases) > 0 {
@@ -139,25 +140,25 @@ func (f CompileBuiltReleases) Execute(args []string) error {
 
 		downloadedReleases, stemcell, err := f.compileAndDownloadReleases(allReleaseSources, remainingBuiltReleases)
 		if err != nil {
-			return err
+			return kilnfileLock, err
 		}
 
 		uploadedReleases, err := f.uploadCompiledReleases(downloadedReleases, releaseUploader, stemcell)
 		if err != nil {
-			return err
+			return kilnfileLock, err
 		}
 		updatedReleases = append(updatedReleases, uploadedReleases...)
 	} else {
 		f.Logger.Println("nothing left to compile")
 	}
 
-	err = f.updateLockfile(updatedReleases, kilnfileLock)
+	err = f.updateLockfile(&kilnfileLock, updatedReleases)
 	if err != nil {
-		return err
+		return kilnfileLock, err
 	}
 
 	f.Logger.Println("Updated Kilnfile.lock. DONE")
-	return nil
+	return kilnfileLock, nil
 }
 
 func (f CompileBuiltReleases) Usage() jhanda.Usage {
@@ -498,7 +499,7 @@ func (f CompileBuiltReleases) uploadCompiledReleases(downloadedReleases []compon
 	return uploadedReleases, nil
 }
 
-func (f CompileBuiltReleases) updateLockfile(uploadedReleases []remoteReleaseWithSHA1, kilnfileLock cargo.KilnfileLock) error {
+func (f CompileBuiltReleases) updateLockfile(kilnfileLock *cargo.KilnfileLock, uploadedReleases []remoteReleaseWithSHA1) error {
 	for _, uploaded := range uploadedReleases {
 		var matchingRelease *cargo.ComponentLock
 		for i := range kilnfileLock.Releases {
@@ -515,6 +516,5 @@ func (f CompileBuiltReleases) updateLockfile(uploadedReleases []remoteReleaseWit
 		matchingRelease.RemotePath = uploaded.RemotePath
 		matchingRelease.SHA1 = uploaded.SHA1
 	}
-
-	return f.Options.SaveKilnfileLock(nil, kilnfileLock)
+	return nil
 }

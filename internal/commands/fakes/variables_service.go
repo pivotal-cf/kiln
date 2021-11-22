@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/commands"
 )
 
 type VariablesService struct {
@@ -125,4 +125,4 @@ func (fake *VariablesService) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ flags.VariablesService = new(VariablesService)
+var _ commands.VariablesService = new(VariablesService)

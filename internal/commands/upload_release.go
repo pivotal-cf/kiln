@@ -9,7 +9,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/commands/options"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -20,8 +20,7 @@ type UploadRelease struct {
 	Logger                *log.Logger
 
 	Options struct {
-		flags.Standard
-
+		options.Standard
 		UploadTargetID string `           long:"upload-target-id" required:"true" description:"the ID of the release source where the built release will be uploaded"`
 		LocalPath      string `short:"lp" long:"local-path"       required:"true" description:"path to BOSH release tarball"`
 	}
@@ -31,14 +30,19 @@ type UploadRelease struct {
 type ReleaseUploaderFinder func(cargo.Kilnfile, string) (component.ReleaseUploader, error)
 
 func (command UploadRelease) Execute(args []string) error {
-	_, err := flags.LoadFlagsWithDefaults(&command.Options, args, command.FS.Stat)
+	return Kiln{
+		Wrapped: command,
+		KilnfileStore: KilnfileStore{
+			FS: command.FS,
+		},
+		StatFn: command.FS.Stat,
+	}.Execute(args)
+}
+
+func (command UploadRelease) KilnExecute(args []string, parseOps OptionsParseFunc) error {
+	kilnfile, _, _, err := parseOps(args, &command.Options)
 	if err != nil {
 		return err
-	}
-
-	kilnfile, _, err := command.Options.Standard.LoadKilnfiles(command.FS, nil, nil)
-	if err != nil {
-		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
 	releaseUploader, err := command.ReleaseUploaderFinder(kilnfile, command.Options.UploadTargetID)

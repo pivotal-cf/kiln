@@ -6,9 +6,8 @@ import (
 
 	"github.com/pivotal-cf/jhanda"
 
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/commands/options"
 	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type FindReleaseVersion struct {
@@ -16,7 +15,7 @@ type FindReleaseVersion struct {
 	mrsProvider MultiReleaseSourceProvider
 
 	Options struct {
-		flags.Standard
+		options.Standard
 		Release string `short:"r" long:"release" default:"releases" description:"release name"`
 	}
 }
@@ -35,17 +34,25 @@ func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider Mul
 	}
 }
 
-func (cmd FindReleaseVersion) Execute(args []string) error {
-	kilnfile, kilnfileLock, err := cmd.setup(args)
+func (f FindReleaseVersion) Execute(args []string) error {
+	return Kiln{
+		Wrapped:       f,
+		KilnfileStore: KilnfileStore{},
+	}.Execute(args)
+}
+
+func (cmd FindReleaseVersion) KilnExecute(args []string, parseOps OptionsParseFunc) error {
+	kilnfile, kilnfileLock, _, err := parseOps(args, &cmd.Options)
 	if err != nil {
 		return err
 	}
+
 	releaseSource := cmd.mrsProvider(kilnfile, false)
 
 	var version string
-	for _, release := range kilnfile.Releases {
-		if release.Name == cmd.Options.Release {
-			version = release.Version
+	for _, r := range kilnfile.Releases {
+		if r.Name == cmd.Options.Release {
+			version = r.Version
 			break
 		}
 	}
@@ -65,20 +72,6 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 	})
 	cmd.outLogger.Println(string(releaseVersionJson))
 	return err
-}
-
-func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, error) {
-	_, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, nil)
-	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
-	}
-
-	kilnfile, kilnfileLock, err := cmd.Options.LoadKilnfiles(nil, nil, nil)
-	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
-	}
-
-	return kilnfile, kilnfileLock, nil
 }
 
 func (cmd FindReleaseVersion) Usage() jhanda.Usage {

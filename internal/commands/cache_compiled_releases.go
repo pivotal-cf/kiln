@@ -16,7 +16,7 @@ import (
 	"github.com/pivotal-cf/om/api"
 	"gopkg.in/yaml.v2"
 
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/commands/options"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/om"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -39,7 +39,7 @@ type (
 
 type CacheCompiledReleases struct {
 	Options struct {
-		flags.Standard
+		options.Standard
 		om.ClientConfiguration
 
 		UploadTargetID string `           long:"upload-target-id"   required:"true"    description:"the ID of the release source where the built release will be uploaded"`
@@ -90,23 +90,28 @@ func (cmd *CacheCompiledReleases) WithLogger(logger *log.Logger) *CacheCompiledR
 }
 
 func (cmd CacheCompiledReleases) Execute(args []string) error {
-	_, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, cmd.FS.Stat)
-	if err != nil {
-		return err
-	}
+	return Kiln{
+		Wrapped: cmd,
+		KilnfileStore: KilnfileStore{
+			FS: cmd.FS,
+		},
+		StatFn: cmd.FS.Stat,
+	}.Execute(args)
+}
 
-	kilnfile, lock, err := cmd.Options.LoadKilnfiles(cmd.FS, nil)
+func (cmd CacheCompiledReleases) KilnExecute(args []string, parseOps OptionsParseFunc) (cargo.KilnfileLock, error) {
+	kilnfile, lock, _, err := parseOps(args, &cmd.Options)
 	if err != nil {
-		return fmt.Errorf("failed to load kilnfiles: %w", err)
+		return cargo.KilnfileLock{}, err
 	}
 
 	omAPI, deploymentName, stagedStemcellOS, stagedStemcellVersion, err := cmd.fetchProductDeploymentData()
 	if err != nil {
-		return err
+		return cargo.KilnfileLock{}, err
 	}
 
 	if stagedStemcellOS != lock.Stemcell.OS || stagedStemcellVersion != lock.Stemcell.Version {
-		return fmt.Errorf(
+		return cargo.KilnfileLock{}, fmt.Errorf(
 			"staged stemcell (%s %s) and lock stemcell (%s %s) do not match",
 			stagedStemcellOS, stagedStemcellVersion,
 			lock.Stemcell.OS, lock.Stemcell.Version,
@@ -123,7 +128,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			StemcellVersion: lock.Stemcell.Version,
 		})
 		if err != nil {
-			return fmt.Errorf("failed check for matched release: %w", err)
+			return cargo.KilnfileLock{}, fmt.Errorf("failed check for matched release: %w", err)
 		}
 		if !found {
 			nonCompiledReleases = append(nonCompiledReleases, rel)
@@ -131,14 +136,14 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		}
 		err = updateLock(lock, remote)
 		if err != nil {
-			return fmt.Errorf("failed to update lock file: %w", err)
+			return cargo.KilnfileLock{}, fmt.Errorf("failed to update lock file: %w", err)
 		}
 	}
 
 	switch len(nonCompiledReleases) {
 	case 0:
 		cmd.Logger.Print("cache already contains releases matching constraint\n")
-		return nil
+		return cargo.KilnfileLock{}, nil
 	case 1:
 		cmd.Logger.Printf("1 release is not publishable\n")
 	default:
@@ -151,26 +156,26 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 
 	bucket, err := cmd.Bucket(kilnfile)
 	if err != nil {
-		return fmt.Errorf("failed to configure release cache: %w", err)
+		return cargo.KilnfileLock{}, fmt.Errorf("failed to configure release cache: %w", err)
 	}
 
 	bosh, err := cmd.Director(cmd.Options.ClientConfiguration, omAPI)
 	if err != nil {
-		return err
+		return cargo.KilnfileLock{}, err
 	}
 
 	osVersionSlug := boshdir.NewOSVersionSlug(stagedStemcellOS, stagedStemcellVersion)
 
 	deployment, err := bosh.FindDeployment(deploymentName)
 	if err != nil {
-		return err
+		return cargo.KilnfileLock{}, err
 	}
 
 	cmd.Logger.Printf("exporting from bosh deployment %s\n", deploymentName)
 
 	err = cmd.FS.MkdirAll(cmd.Options.ReleasesDir, 0777)
 	if err != nil {
-		return fmt.Errorf("failed to create release directory: %w", err)
+		return cargo.KilnfileLock{}, fmt.Errorf("failed to create release directory: %w", err)
 	}
 
 	for _, rel := range nonCompiledReleases {
@@ -183,23 +188,18 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 
 		newRemote, err := cmd.cacheRelease(bosh, bucket, deployment, requirement, osVersionSlug)
 		if err != nil {
-			return fmt.Errorf("failed to cache release %s: %w", rel.Name, err)
+			return cargo.KilnfileLock{}, fmt.Errorf("failed to cache release %s: %w", rel.Name, err)
 		}
 
 		err = updateLock(lock, newRemote)
 		if err != nil {
-			return fmt.Errorf("failed to lock release %s: %w", rel.Name, err)
+			return cargo.KilnfileLock{}, fmt.Errorf("failed to lock release %s: %w", rel.Name, err)
 		}
-	}
-
-	err = cmd.Options.Standard.SaveKilnfileLock(cmd.FS, lock)
-	if err != nil {
-		return err
 	}
 
 	cmd.Logger.Printf("DON'T FORGET TO MAKE A COMMIT AND PR\n")
 
-	return nil
+	return lock, nil
 }
 
 func (cmd CacheCompiledReleases) fetchProductDeploymentData() (_ OpsManagerReleaseCacheSource, deploymentName, stemcellOS, stemcellVersion string, _ error) {

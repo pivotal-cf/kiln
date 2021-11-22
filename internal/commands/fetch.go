@@ -7,7 +7,7 @@ import (
 
 	"github.com/pivotal-cf/jhanda"
 
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/commands/options"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -19,7 +19,7 @@ type Fetch struct {
 	localReleaseDirectory      LocalReleaseDirectory
 
 	Options struct {
-		flags.Standard
+		options.Standard
 
 		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 
@@ -47,7 +47,19 @@ type LocalReleaseDirectory interface {
 }
 
 func (f Fetch) Execute(args []string) error {
-	kilnfile, kilnfileLock, availableLocalReleaseSet, err := f.setup(args)
+	return Kiln{
+		Wrapped:       f,
+		KilnfileStore: KilnfileStore{},
+	}.Execute(args)
+}
+
+func (f Fetch) KilnExecute(args []string, parseOpts OptionsParseFunc) error {
+	kilnfile, kilnfileLock, _, err := parseOpts(args, &f.Options)
+	if err != nil {
+		return err
+	}
+
+	availableLocalReleaseSet, err := f.localReleases()
 	if err != nil {
 		return err
 	}
@@ -71,36 +83,24 @@ func (f Fetch) Execute(args []string) error {
 	return nil
 }
 
-func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []component.Local, error) {
-	_, err := flags.LoadFlagsWithDefaults(&f.Options, args, nil)
-	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
-	}
-	if !f.Options.AllowOnlyPublishableReleases {
-		f.logger.Println("WARNING - the \"allow-only-publishable-releases\" flag was not set. Some fetched releases may be intended for development/testing only.\nEXERCISE CAUTION WHEN PUBLISHING A TILE WITH THESE RELEASES!")
-	}
+func (f *Fetch) localReleases() ([]component.Local, error) {
 	if _, err := os.Stat(f.Options.ReleasesDir); err != nil {
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(f.Options.ReleasesDir, 0777)
 			if err != nil {
-				return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
+				return nil, err
 			}
 		} else {
-			return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
+			return nil, fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
 		}
-	}
-
-	kilnfile, kilnfileLock, err := f.Options.LoadKilnfiles(nil, nil, nil)
-	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 	}
 
 	availableLocalReleaseSet, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
 	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
+		return nil, err
 	}
 
-	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
+	return availableLocalReleaseSet, nil
 }
 
 func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ComponentLock) ([]component.Local, error) {

@@ -9,14 +9,14 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
 
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/commands/options"
 	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type UpdateStemcell struct {
 	Options struct {
-		flags.Standard
-
+		options.Standard
 		Version     string `short:"v"  long:"version"            required:"true"    description:"desired version of stemcell"`
 		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 	}
@@ -26,14 +26,19 @@ type UpdateStemcell struct {
 }
 
 func (update UpdateStemcell) Execute(args []string) error {
-	_, err := flags.LoadFlagsWithDefaults(&update.Options, args, update.FS.Stat)
-	if err != nil {
-		return err
-	}
+	return Kiln{
+		Wrapped: update,
+		KilnfileStore: KilnfileStore{
+			FS: update.FS,
+		},
+		StatFn: update.FS.Stat,
+	}.Execute(args)
+}
 
-	kilnfile, kilnfileLock, err := update.Options.Standard.LoadKilnfiles(update.FS, nil, nil)
+func (update UpdateStemcell) KilnExecute(args []string, parseOps OptionsParseFunc) (cargo.KilnfileLock, error) {
+	kilnfile, kilnfileLock, _, err := parseOps(args, &update.Options)
 	if err != nil {
-		return fmt.Errorf("error loading Kilnfiles: %w", err)
+		return cargo.KilnfileLock{}, err
 	}
 
 	var releaseVersionConstraint *semver.Constraints
@@ -42,26 +47,26 @@ func (update UpdateStemcell) Execute(args []string) error {
 
 	latestStemcellVersion, err := semver.NewVersion(trimmedInputVersion)
 	if err != nil {
-		return fmt.Errorf("Please enter a valid stemcell version to update: %w", err)
+		return cargo.KilnfileLock{}, fmt.Errorf("Please enter a valid stemcell version to update: %w", err)
 	}
 
 	kilnStemcellVersion := kilnfile.Stemcell.Version
 	releaseVersionConstraint, err = semver.NewConstraint(kilnStemcellVersion)
 
 	if err != nil {
-		return fmt.Errorf("Invalid stemcell constraint in kilnfile: %w", err)
+		return cargo.KilnfileLock{}, fmt.Errorf("Invalid stemcell constraint in kilnfile: %w", err)
 	}
 
 	if !releaseVersionConstraint.Check(latestStemcellVersion) {
 		update.Logger.Println("Latest version does not satisfy the stemcell version constraint in kilnfile. Nothing to update.")
-		return nil
+		return kilnfileLock, nil
 	}
 
 	currentStemcellVersion, _ := semver.NewVersion(kilnfileLock.Stemcell.Version)
 
 	if currentStemcellVersion.Equal(latestStemcellVersion) {
 		update.Logger.Println("Stemcell is up-to-date. Nothing to update for product")
-		return nil
+		return kilnfileLock, nil
 	}
 
 	releaseSource := update.MultiReleaseSourceProvider(kilnfile, false)
@@ -76,10 +81,10 @@ func (update UpdateStemcell) Execute(args []string) error {
 			StemcellVersion: trimmedInputVersion,
 		})
 		if err != nil {
-			return fmt.Errorf("while finding release %q, encountered error: %w", rel.Name, err)
+			return cargo.KilnfileLock{}, fmt.Errorf("while finding release %q, encountered error: %w", rel.Name, err)
 		}
 		if !found {
-			return fmt.Errorf("couldn't find release %q", rel.Name)
+			return cargo.KilnfileLock{}, fmt.Errorf("couldn't find release %q", rel.Name)
 		}
 
 		if remote.RemotePath == rel.RemotePath && remote.RemoteSource == rel.RemoteSource {
@@ -89,7 +94,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 
 		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
 		if err != nil {
-			return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
+			return cargo.KilnfileLock{}, fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
 		}
 
 		lock := &kilnfileLock.Releases[i]
@@ -100,13 +105,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 
 	kilnfileLock.Stemcell.Version = trimmedInputVersion
 
-	err = update.Options.Standard.SaveKilnfileLock(update.FS, kilnfileLock)
-	if err != nil {
-		return err
-	}
-
-	update.Logger.Println("Finished updating Kilnfile.lock")
-	return nil
+	return kilnfileLock, nil
 }
 
 func (update UpdateStemcell) Usage() jhanda.Usage {

@@ -3,18 +3,18 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-git/go-billy/v5"
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
+
 	"log"
 	"regexp"
 	"strings"
 
 	"github.com/Masterminds/semver"
+	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pivotal-cf/jhanda"
 
+	"github.com/pivotal-cf/kiln/internal/commands/options"
 	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 const (
@@ -28,7 +28,7 @@ type FindStemcellVersion struct {
 	pivnetService *component.Pivnet
 
 	Options struct {
-		flags.Standard
+		options.Standard
 	}
 
 	FS billy.Filesystem
@@ -49,7 +49,20 @@ func NewFindStemcellVersion(outLogger *log.Logger, pivnetService *component.Pivn
 }
 
 func (cmd FindStemcellVersion) Execute(args []string) error {
-	kilnfile, err := cmd.setup(args)
+	return Kiln{
+		Wrapped: cmd,
+		KilnfileStore: KilnfileStore{
+			FS: cmd.FS,
+		},
+		StatFn: cmd.FS.Stat,
+	}.Execute(args)
+}
+
+func (cmd FindStemcellVersion) KilnExecute(args []string, parseOpts OptionsParseFunc) error {
+	kilnfile, _, _, err := parseOpts(args, &cmd.Options)
+	if err != nil {
+		return err
+	}
 
 	if err != nil {
 		return err
@@ -124,25 +137,6 @@ func ExtractMajorVersion(version string) (string, error) {
 
 	return majorVersion, nil
 
-}
-
-func (cmd *FindStemcellVersion) setup(args []string) (cargo.Kilnfile, error) {
-	_, err := jhanda.Parse(&cmd.Options, args)
-	if err != nil {
-		return cargo.Kilnfile{}, err
-	}
-
-	_, err = flags.LoadFlagsWithDefaults(&cmd.Options, args, cmd.FS.Stat)
-	if err != nil {
-		return cargo.Kilnfile{}, err
-	}
-
-	kilnfile, _, err := cmd.Options.Standard.LoadKilnfiles(cmd.FS, nil, nil)
-	if err != nil {
-		return cargo.Kilnfile{}, fmt.Errorf("error loading Kilnfiles: %w", err)
-	}
-
-	return kilnfile, nil
 }
 
 func (cmd FindStemcellVersion) Usage() jhanda.Usage {

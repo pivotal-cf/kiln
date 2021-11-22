@@ -139,26 +139,20 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
 		Releases: []cargo.ComponentLock{
 			{
-
-				Name:    "orange",
-				Version: "1.0.0",
-
+				Name:         "orange",
+				Version:      "1.0.0",
 				RemoteSource: "new-releases",
 				RemotePath:   "orange-1.0.0",
 			},
 			{
-
-				Name:    "banana",
-				Version: "2.0.0",
-
+				Name:         "banana",
+				Version:      "2.0.0",
 				RemoteSource: "cached-compiled-releases",
 				RemotePath:   "banana-2.0.0-alpine-9.0.0",
 			},
 			{
-
-				Name:    "lemon",
-				Version: "3.0.0",
-
+				Name:         "lemon",
+				Version:      "3.0.0",
 				RemoteSource: "new-releases",
 				RemotePath:   "lemon-3.0.0",
 			},
@@ -250,10 +244,8 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	var updatedKilnfile cargo.KilnfileLock
 	please.Expect(fsReadYAML(fs, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
 	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(component.Lock{
-
-		Name:    "lemon",
-		Version: "3.0.0",
-
+		Name:         "lemon",
+		Version:      "3.0.0",
 		RemoteSource: "cached-compiled-releases",
 		RemotePath:   "lemon-3.0.0-alpine-9.0.0",
 	}))
@@ -285,26 +277,20 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	initialLock := cargo.KilnfileLock{
 		Releases: []component.Lock{
 			{
-
-				Name:    "orange",
-				Version: "1.0.0",
-
+				Name:         "orange",
+				Version:      "1.0.0",
 				RemoteSource: "new-releases",
 				RemotePath:   "orange-1.0.0",
 			},
 			{
-
-				Name:    "banana",
-				Version: "2.0.0",
-
+				Name:         "banana",
+				Version:      "2.0.0",
 				RemoteSource: "cached-compiled-releases",
 				RemotePath:   "banana-2.0.0-alpine-9.0.0",
 			},
 			{
-
-				Name:    "lemon",
-				Version: "3.0.0",
-
+				Name:         "lemon",
+				Version:      "3.0.0",
 				RemoteSource: "new-releases",
 				RemotePath:   "lemon-3.0.0",
 			},
