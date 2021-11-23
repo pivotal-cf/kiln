@@ -131,16 +131,16 @@ func (r ReleaseNotes) Execute(args []string) error {
 		return err
 	}
 
-	klInitial, klFinal, v, err := r.fetchHistoricFiles(nonFlagArgs[0], nonFlagArgs[1])
+	initialKilnfileLock, finalKilnfileLock, finalVersion, err := r.fetchHistoricFiles(nonFlagArgs[0], nonFlagArgs[1])
 	if err != nil {
 		return err
 	}
 
 	info := ReleaseNotesInformation{
-		Version:           v,
+		Version:           finalVersion,
 		ReleaseDateFormat: releaseDateFormat,
-		Components:        klFinal.Releases,
-		Bumps:             calculateComponentBumps(klFinal.Releases, klInitial.Releases),
+		Components:        finalKilnfileLock.Releases,
+		Bumps:             calculateComponentBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
 	}
 
 	info.ReleaseDate, _ = r.parseReleaseDate()
