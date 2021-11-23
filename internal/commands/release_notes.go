@@ -90,7 +90,8 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 		gitHubAPIServices: func(ctx context.Context, token string) githubAPIIssuesService {
 			tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 			tokenClient := oauth2.NewClient(ctx, tokenSource)
-			return github.NewClient(tokenClient).Issues
+			client := github.NewClient(tokenClient)
+			return client.Issues
 		},
 	}, nil
 }
