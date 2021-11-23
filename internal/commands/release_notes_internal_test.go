@@ -193,14 +193,14 @@ func TestInternal_calculateComponentBumps(t *testing.T) {
 		}, []component.Lock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
-		})).To(Ω.Equal([]component.Lock{
-			{Name: "b", Version: "2"},
+		})).To(Ω.Equal([]BoshReleaseBump{
+			{Name: "b", FromVersion: "1", ToVersion: "2"},
 		}),
 			"it returns the changed lock",
 		)
 	})
 
-	t.Run("when many components are bumped", func(t *testing.T) {
+	t.Run("when many but not all components are bumped", func(t *testing.T) {
 		please.Expect(calculateComponentBumps([]component.Lock{
 			{Name: "a", Version: "2"},
 			{Name: "b", Version: "1"},
@@ -209,9 +209,9 @@ func TestInternal_calculateComponentBumps(t *testing.T) {
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
 			{Name: "c", Version: "1"},
-		})).To(Ω.Equal([]component.Lock{
-			{Name: "a", Version: "2"},
-			{Name: "c", Version: "2"},
+		})).To(Ω.Equal([]BoshReleaseBump{
+			{Name: "a", FromVersion: "1", ToVersion: "2"},
+			{Name: "c", FromVersion: "1", ToVersion: "2"},
 		}),
 			"it returns all the bumps",
 		)
@@ -237,8 +237,8 @@ func TestInternal_calculateComponentBumps(t *testing.T) {
 			{Name: "b", Version: "1"},
 		}, []component.Lock{
 			{Name: "a", Version: "1"},
-		})).To(Ω.Equal([]component.Lock{
-			{Name: "b", Version: "1"},
+		})).To(Ω.Equal([]BoshReleaseBump{
+			{Name: "b", FromVersion: "", ToVersion: "1"},
 		}),
 			"it returns the component as a bump",
 		)

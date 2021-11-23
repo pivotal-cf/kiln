@@ -8,7 +8,7 @@
   * {{.GetTitle}}
 {{ end -}}
 {{range .Bumps -}}
-  * Bump {{ .Name }} to version `{{ .Version }}`
+  * Bump {{ .Name }} to version `{{ .ToVersion }}`
 {{ end }}
 <table border="1" class="nice">
   <thead>
@@ -19,7 +19,7 @@
   </thead>
   <tbody>
   {{- range .Components }}
-    <tr><td>{{ .Name }}</td><td>{{ .Version }}</td></tr>
+    <tr><td>{{ .Name }}</td><td>{{ .ToVersion }}</td></tr>
   {{- end }}
   </tbody>
 </table>
