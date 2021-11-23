@@ -4,15 +4,15 @@ package fakes_internal
 import (
 	"sync"
 
-	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/storer"
 )
 
 type HistoricVersion struct {
-	Stub        func(*git.Repository, plumbing.Hash, string) (string, error)
+	Stub        func(storer.EncodedObjectStorer, plumbing.Hash, string) (string, error)
 	mutex       sync.RWMutex
 	argsForCall []struct {
-		arg1 *git.Repository
+		arg1 storer.EncodedObjectStorer
 		arg2 plumbing.Hash
 		arg3 string
 	}
@@ -28,11 +28,11 @@ type HistoricVersion struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *HistoricVersion) Spy(arg1 *git.Repository, arg2 plumbing.Hash, arg3 string) (string, error) {
+func (fake *HistoricVersion) Spy(arg1 storer.EncodedObjectStorer, arg2 plumbing.Hash, arg3 string) (string, error) {
 	fake.mutex.Lock()
 	ret, specificReturn := fake.returnsOnCall[len(fake.argsForCall)]
 	fake.argsForCall = append(fake.argsForCall, struct {
-		arg1 *git.Repository
+		arg1 storer.EncodedObjectStorer
 		arg2 plumbing.Hash
 		arg3 string
 	}{arg1, arg2, arg3})
@@ -55,13 +55,13 @@ func (fake *HistoricVersion) CallCount() int {
 	return len(fake.argsForCall)
 }
 
-func (fake *HistoricVersion) Calls(stub func(*git.Repository, plumbing.Hash, string) (string, error)) {
+func (fake *HistoricVersion) Calls(stub func(storer.EncodedObjectStorer, plumbing.Hash, string) (string, error)) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = stub
 }
 
-func (fake *HistoricVersion) ArgsForCall(i int) (*git.Repository, plumbing.Hash, string) {
+func (fake *HistoricVersion) ArgsForCall(i int) (storer.EncodedObjectStorer, plumbing.Hash, string) {
 	fake.mutex.RLock()
 	defer fake.mutex.RUnlock()
 	return fake.argsForCall[i].arg1, fake.argsForCall[i].arg2, fake.argsForCall[i].arg3

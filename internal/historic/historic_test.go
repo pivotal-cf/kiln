@@ -11,6 +11,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
+	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -48,72 +49,92 @@ func TestVersion(t *testing.T) {
 	// END setup
 
 	t.Run("alpha", func(t *testing.T) {
-		version, err := Version(repo, initialHash, "tile")
+		version, err := Version(repo.Storer, initialHash, "tile")
 
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 		please.Expect(version).To(Ω.Equal("1.0.0-alpha.1"))
 	})
 
 	t.Run("ga release", func(t *testing.T) {
-		version, err := Version(repo, finalHash, "tile")
+		version, err := Version(repo.Storer, finalHash, "tile")
 
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 		please.Expect(version).To(Ω.Equal("1.0.0"))
 	})
 }
 
-func TestKilnfileLock(t *testing.T) {
-	please := Ω.NewWithT(t)
-
+func TestKilnfile(t *testing.T) {
 	// START setup
 	tileDir := "tile"
 	repo, _ := git.Init(memory.NewStorage(), memfs.New())
 	initialHash := commit(t, repo, "initial", func(wt *git.Worktree) error {
 		p := wt.Filesystem.Join(tileDir, "assets.lock")
-		kf, _ := wt.Filesystem.Create(p)
-		_, _ = kf.Write([]byte(initialKilnfileLock))
-		_ = kf.Close()
+		f, _ := wt.Filesystem.Create(p)
+		_, _ = f.Write([]byte(initialKilnfileLock))
+		_ = f.Close()
 		_, _ = wt.Add(p)
 		return nil
 	})
 	middleHash := commit(t, repo, "some other change", func(wt *git.Worktree) error {
 		p := wt.Filesystem.Join(tileDir, "base.yml")
-		kf, _ := wt.Filesystem.Create(p)
-		_, _ = kf.Write([]byte("---\nname: something\n"))
-		_ = kf.Close()
+		f, _ := wt.Filesystem.Create(p)
+		_, _ = f.Write([]byte("---\nname: something\n"))
+		_ = f.Close()
 		_, _ = wt.Add(p)
 		return nil
 	}, initialHash)
-	badYAML := commit(t, repo, "add some non-yaml", func(wt *git.Worktree) error {
-		p := wt.Filesystem.Join(tileDir, "Kilnfile.lock")
-		kf, _ := wt.Filesystem.Create(p)
-		_, _ = kf.Write([]byte(`{{ if eq tile "ert"}}# this is ERT{{}}\n` + finalKilnfileLock))
-		_ = kf.Close()
+	addKilnfile := commit(t, repo, "some other change", func(wt *git.Worktree) error {
+		p := wt.Filesystem.Join(tileDir, "Kilnfile")
+		f, _ := wt.Filesystem.Create(p)
+		buf, _ := yaml.Marshal(cargo.Kilnfile{
+			Releases: []cargo.ComponentSpec{
+				{Name: "banana"},
+				{Name: "lemon"},
+			},
+		})
+		_, _ = f.Write(buf)
+		_ = f.Close()
 		_, _ = wt.Add(p)
 		return nil
 	}, middleHash)
+	badYAML := commit(t, repo, "add some non-yaml", func(wt *git.Worktree) error {
+		p := wt.Filesystem.Join(tileDir, "Kilnfile.lock")
+		f, _ := wt.Filesystem.Create(p)
+		_, _ = f.Write([]byte(`{{ if eq tile "ert"}}# this is ERT{{}}\n` + finalKilnfileLock))
+		_ = f.Close()
+		_, _ = wt.Add(p)
+
+		l := wt.Filesystem.Join(tileDir, "assets.lock")
+		_, _ = wt.Remove(l)
+		_, _ = wt.Add(l)
+		return nil
+	}, addKilnfile)
 	finalHash := commit(t, repo, "fix bad yaml", func(wt *git.Worktree) error {
 		p := wt.Filesystem.Join(tileDir, "Kilnfile.lock")
-		kf, _ := wt.Filesystem.Create(p)
-		_, _ = kf.Write([]byte(finalKilnfileLock))
-		_ = kf.Close()
+		f, _ := wt.Filesystem.Create(p)
+		_, _ = f.Write([]byte(finalKilnfileLock))
+		_ = f.Close()
 		_, _ = wt.Add(p)
 		return nil
 	}, badYAML)
 	// END setup
 
 	t.Run("legacy bill of materials", func(t *testing.T) {
-		kf, err := KilnfileLock(repo, initialHash, "tile")
+		please := Ω.NewWithT(t)
+
+		_, kl, err := Kilnfile(repo.Storer, initialHash, "tile")
 
 		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(kf.Releases).To(Ω.Equal([]cargo.ComponentLock{
+		please.Expect(kl.Releases).To(Ω.Equal([]cargo.ComponentLock{
 			{Name: "banana", Version: "0.1.0"},
 			{Name: "lemon", Version: "1.1.0"},
 		}))
 	})
 
-	t.Run("kilnfile.lock", func(t *testing.T) {
-		finalKF, err := KilnfileLock(repo, finalHash, "tile/Kilnfile")
+	t.Run("Kilnfile.lock", func(t *testing.T) {
+		please := Ω.NewWithT(t)
+
+		_, finalKF, err := Kilnfile(repo.Storer, finalHash, "tile/Kilnfile")
 
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 		please.Expect(finalKF.Releases).To(Ω.Equal([]cargo.ComponentLock{
@@ -123,8 +144,22 @@ func TestKilnfileLock(t *testing.T) {
 		}))
 	})
 
+	t.Run("Kilnfile", func(t *testing.T) {
+		please := Ω.NewWithT(t)
+
+		kf, _, err := Kilnfile(repo.Storer, finalHash, "tile")
+
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(kf.Releases).To(Ω.Equal([]cargo.ComponentSpec{
+			{Name: "banana"},
+			{Name: "lemon"},
+		}))
+	})
+
 	t.Run("bad yaml", func(t *testing.T) {
-		_, err := KilnfileLock(repo, badYAML, "tile")
+		please := Ω.NewWithT(t)
+
+		_, _, err := Kilnfile(repo.Storer, badYAML, "tile")
 
 		please.Expect(err).To(Ω.MatchError(Ω.ContainSubstring("cannot unmarshal")))
 	})
@@ -185,7 +220,7 @@ func TestWalk(t *testing.T) {
 		please := Ω.NewWithT(t)
 
 		callCount := 0
-		err := Walk(repo, hf, func(*object.Commit) {
+		err := Walk(repo.Storer, hf, func(*object.Commit) {
 			callCount++
 		})
 		please.Expect(err).NotTo(Ω.HaveOccurred())
@@ -244,7 +279,7 @@ func TestWalk(t *testing.T) {
 		please := Ω.NewWithT(t)
 
 		callCount := 0
-		err := Walk(repo, hf, func(*object.Commit) {
+		err := Walk(repo.Storer, hf, func(*object.Commit) {
 			callCount++
 		})
 		please.Expect(err).NotTo(Ω.HaveOccurred())
@@ -275,3 +310,10 @@ func commit(t *testing.T, repo *git.Repository, msg string, fn func(wt *git.Work
 	}
 	return h
 }
+
+/*
+---
+releases:
+- name: banana
+- name: lemon
+*/

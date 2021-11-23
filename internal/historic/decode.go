@@ -5,18 +5,18 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/storer"
 	"gopkg.in/yaml.v2"
 )
 
-func decodeHistoricFile(repository *git.Repository, commitHash plumbing.Hash, data interface{}, names []string) error {
-	buf, fileName, err := fileAtCommit(repository, commitHash, names)
+func unmarshalFile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, data interface{}, filePath string) error {
+	buf, err := fileAtCommit(storage, commitHash, filePath)
 	if err != nil {
 		return err
 	}
-	return decodeFile(buf, fileName, data)
+	return decodeFile(buf, filePath, data)
 }
 
 //func readDataFromTree(tree *object.Tree, data interface{}, names []string) error {
@@ -28,6 +28,9 @@ func decodeHistoricFile(repository *git.Repository, commitHash plumbing.Hash, da
 //}
 
 func decodeFile(buf []byte, fileName string, data interface{}) error {
+	if filepath.Base(fileName) == "Kilnfile" {
+		return yaml.Unmarshal(buf, data)
+	}
 	switch filepath.Ext(fileName) {
 	case ".yaml", ".yml", ".lock":
 		return yaml.Unmarshal(buf, data)
@@ -37,51 +40,45 @@ func decodeFile(buf []byte, fileName string, data interface{}) error {
 	return nil
 }
 
-func fileAtCommit(repository *git.Repository, commitHash plumbing.Hash, names []string) ([]byte, string, error) {
-	obj, err := repository.Object(plumbing.CommitObject, commitHash)
+func fileAtCommit(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, filePath string) ([]byte, error) {
+	commit, err := object.GetCommit(storage, commitHash)
 	if err != nil {
-		return nil, "", err
-	}
-	commit, ok := obj.(*object.Commit)
-	if !ok {
-		return nil, "", err
+		return nil, err
 	}
 	tree, err := commit.Tree()
-	if !ok {
-		return nil, "", err
+	if err != nil {
+		return nil, err
 	}
-	return readBytesFromTree(tree, names)
+	return readBytesFromTree(storage, tree, filePath)
 }
 
-func readBytesFromTree(tree *object.Tree, names []string) ([]byte, string, error) {
-	var (
-		lock     *object.File
-		fileName string
-		err      error
-	)
-	for _, name := range names {
-		fileName = name
-		lock, err = tree.File(name)
-		if err == nil {
-			break
+func readBytesFromTree(storage storer.EncodedObjectStorer, tree *object.Tree, filePath string) ([]byte, error) {
+	entree, err := tree.FindEntry(filePath)
+	if err == object.ErrEntryNotFound {
+		return nil, object.ErrFileNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	blob, err := storage.EncodedObject(plumbing.BlobObject, entree.Hash)
+	if err != nil {
+		if err == object.ErrEntryNotFound {
+			return nil, object.ErrFileNotFound
 		}
+		return nil, err
 	}
+	f, err := blob.Reader()
 	if err != nil {
-		return nil, "", err
-	}
-	lockFile, err := lock.Reader()
-	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	defer func() {
-		_ = lockFile.Close()
+		_ = f.Close()
 	}()
-
-	buf, err := ioutil.ReadAll(lockFile)
+	buf, err := ioutil.ReadAll(f)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	return buf, fileName, nil
+	return buf, nil
 }
 
 //func findTileRootsInTree(repo *git.Repository, tree *object.Tree) []string {
@@ -134,11 +131,3 @@ func readBytesFromTree(tree *object.Tree, names []string) ([]byte, string, error
 //
 //	return "", matches[len(matches)-1], true
 //}
-
-func prefixEach(prefix string, names []string) []string {
-	result := make([]string, 0, len(names))
-	for _, name := range names {
-		result = append(result, filepath.Join(prefix, name))
-	}
-	return result
-}

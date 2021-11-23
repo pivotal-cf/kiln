@@ -4,97 +4,102 @@ package fakes_internal
 import (
 	"sync"
 
-	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type HistoricKilnfileLock struct {
-	Stub        func(*git.Repository, plumbing.Hash, string) (cargo.KilnfileLock, error)
+type HistoricKilnfile struct {
+	Stub        func(storer.EncodedObjectStorer, plumbing.Hash, string) (cargo.Kilnfile, cargo.KilnfileLock, error)
 	mutex       sync.RWMutex
 	argsForCall []struct {
-		arg1 *git.Repository
+		arg1 storer.EncodedObjectStorer
 		arg2 plumbing.Hash
 		arg3 string
 	}
 	returns struct {
-		result1 cargo.KilnfileLock
-		result2 error
+		result1 cargo.Kilnfile
+		result2 cargo.KilnfileLock
+		result3 error
 	}
 	returnsOnCall map[int]struct {
-		result1 cargo.KilnfileLock
-		result2 error
+		result1 cargo.Kilnfile
+		result2 cargo.KilnfileLock
+		result3 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *HistoricKilnfileLock) Spy(arg1 *git.Repository, arg2 plumbing.Hash, arg3 string) (cargo.KilnfileLock, error) {
+func (fake *HistoricKilnfile) Spy(arg1 storer.EncodedObjectStorer, arg2 plumbing.Hash, arg3 string) (cargo.Kilnfile, cargo.KilnfileLock, error) {
 	fake.mutex.Lock()
 	ret, specificReturn := fake.returnsOnCall[len(fake.argsForCall)]
 	fake.argsForCall = append(fake.argsForCall, struct {
-		arg1 *git.Repository
+		arg1 storer.EncodedObjectStorer
 		arg2 plumbing.Hash
 		arg3 string
 	}{arg1, arg2, arg3})
 	stub := fake.Stub
 	returns := fake.returns
-	fake.recordInvocation("historicKilnfileLock", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("historicKilnfile", []interface{}{arg1, arg2, arg3})
 	fake.mutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1, ret.result2, ret.result3
 	}
-	return returns.result1, returns.result2
+	return returns.result1, returns.result2, returns.result3
 }
 
-func (fake *HistoricKilnfileLock) CallCount() int {
+func (fake *HistoricKilnfile) CallCount() int {
 	fake.mutex.RLock()
 	defer fake.mutex.RUnlock()
 	return len(fake.argsForCall)
 }
 
-func (fake *HistoricKilnfileLock) Calls(stub func(*git.Repository, plumbing.Hash, string) (cargo.KilnfileLock, error)) {
+func (fake *HistoricKilnfile) Calls(stub func(storer.EncodedObjectStorer, plumbing.Hash, string) (cargo.Kilnfile, cargo.KilnfileLock, error)) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = stub
 }
 
-func (fake *HistoricKilnfileLock) ArgsForCall(i int) (*git.Repository, plumbing.Hash, string) {
+func (fake *HistoricKilnfile) ArgsForCall(i int) (storer.EncodedObjectStorer, plumbing.Hash, string) {
 	fake.mutex.RLock()
 	defer fake.mutex.RUnlock()
 	return fake.argsForCall[i].arg1, fake.argsForCall[i].arg2, fake.argsForCall[i].arg3
 }
 
-func (fake *HistoricKilnfileLock) Returns(result1 cargo.KilnfileLock, result2 error) {
+func (fake *HistoricKilnfile) Returns(result1 cargo.Kilnfile, result2 cargo.KilnfileLock, result3 error) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = nil
 	fake.returns = struct {
-		result1 cargo.KilnfileLock
-		result2 error
-	}{result1, result2}
+		result1 cargo.Kilnfile
+		result2 cargo.KilnfileLock
+		result3 error
+	}{result1, result2, result3}
 }
 
-func (fake *HistoricKilnfileLock) ReturnsOnCall(i int, result1 cargo.KilnfileLock, result2 error) {
+func (fake *HistoricKilnfile) ReturnsOnCall(i int, result1 cargo.Kilnfile, result2 cargo.KilnfileLock, result3 error) {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 	fake.Stub = nil
 	if fake.returnsOnCall == nil {
 		fake.returnsOnCall = make(map[int]struct {
-			result1 cargo.KilnfileLock
-			result2 error
+			result1 cargo.Kilnfile
+			result2 cargo.KilnfileLock
+			result3 error
 		})
 	}
 	fake.returnsOnCall[i] = struct {
-		result1 cargo.KilnfileLock
-		result2 error
-	}{result1, result2}
+		result1 cargo.Kilnfile
+		result2 cargo.KilnfileLock
+		result3 error
+	}{result1, result2, result3}
 }
 
-func (fake *HistoricKilnfileLock) Invocations() map[string][][]interface{} {
+func (fake *HistoricKilnfile) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.mutex.RLock()
@@ -106,7 +111,7 @@ func (fake *HistoricKilnfileLock) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *HistoricKilnfileLock) recordInvocation(key string, args []interface{}) {
+func (fake *HistoricKilnfile) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
