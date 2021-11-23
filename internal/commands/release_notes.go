@@ -39,17 +39,17 @@ type ReleaseNotes struct {
 	}
 
 	pathRelativeToDotGit string
-	Repository           *git.Repository
-	ReadFile             func(fp string) ([]byte, error)
-	HistoricKilnfileLock
-	HistoricVersion
-	RevisionResolver
-	Stat func(string) (os.FileInfo, error)
+	repository           *git.Repository
+	readFile             func(fp string) ([]byte, error)
+	historicKilnfileLock
+	historicVersion
+	revisionResolver
+	stat func(string) (os.FileInfo, error)
 	io.Writer
 
-	GitHubAPI func(ctx context.Context, token string) releaseNotesGithubAPIClient
+	gitHubAPIServices func(ctx context.Context, token string) githubAPIIssuesService
 
-	RepoOwner, RepoName string
+	repoOwner, repoName string
 }
 
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
@@ -76,18 +76,18 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	}
 
 	return ReleaseNotes{
-		Repository:           repo,
-		ReadFile:             ioutil.ReadFile,
-		HistoricKilnfileLock: historic.KilnfileLock,
-		HistoricVersion:      historic.Version,
-		RevisionResolver:     repo,
-		Stat:                 os.Stat,
+		repository:           repo,
+		readFile:             ioutil.ReadFile,
+		historicKilnfileLock: historic.KilnfileLock,
+		historicVersion:      historic.Version,
+		revisionResolver:     repo,
+		stat:                 os.Stat,
 		Writer:               os.Stdout,
 		pathRelativeToDotGit: rp,
-		RepoName:             repoName,
-		RepoOwner:            repoOwner,
+		repoName:             repoName,
+		repoOwner:            repoOwner,
 
-		GitHubAPI: func(ctx context.Context, token string) releaseNotesGithubAPIClient {
+		gitHubAPIServices: func(ctx context.Context, token string) githubAPIIssuesService {
 			tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 			tokenClient := oauth2.NewClient(ctx, tokenSource)
 			return github.NewClient(tokenClient).Issues
@@ -103,17 +103,17 @@ func (r ReleaseNotes) Usage() jhanda.Usage {
 	}
 }
 
-//counterfeiter:generate -o ./fakes/historic_version.go --fake-name HistoricVersion . HistoricVersion
+//counterfeiter:generate -o ./fakes_internal/historic_version.go --fake-name HistoricVersion . historicVersion
 
-type HistoricVersion func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (string, error)
+type historicVersion func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (string, error)
 
-//counterfeiter:generate -o ./fakes/historic_kilnfile_lock.go --fake-name HistoricKilnfileLock . HistoricKilnfileLock
+//counterfeiter:generate -o ./fakes_internal/historic_kilnfile_lock.go --fake-name HistoricKilnfileLock . historicKilnfileLock
 
-type HistoricKilnfileLock func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (cargo.KilnfileLock, error)
+type historicKilnfileLock func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (cargo.KilnfileLock, error)
 
-//counterfeiter:generate -o ./fakes/revision_resolver.go --fake-name RevisionResolver . RevisionResolver
+//counterfeiter:generate -o ./fakes_internal/revision_resolver.go --fake-name RevisionResolver . revisionResolver
 
-type RevisionResolver interface {
+type revisionResolver interface {
 	ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, error)
 }
 
@@ -144,15 +144,15 @@ func (r ReleaseNotes) Execute(args []string) error {
 		panic(err)
 	}
 
-	klInitial, err := r.HistoricKilnfileLock(r.Repository, *initialCommitSHA, r.pathRelativeToDotGit) // TODO handle error
+	klInitial, err := r.historicKilnfileLock(r.repository, *initialCommitSHA, r.pathRelativeToDotGit) // TODO handle error
 	if err != nil {
 		panic(err)
 	}
-	klFinal, err := r.HistoricKilnfileLock(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
+	klFinal, err := r.historicKilnfileLock(r.repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
 	if err != nil {
 		panic(err)
 	}
-	version, err := r.HistoricVersion(r.Repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
+	version, err := r.historicVersion(r.repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
 	if err != nil {
 		panic(err)
 	}
@@ -177,7 +177,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	releaseNotesTemplate := defaultReleaseNotesTemplate
 	if r.Options.TemplateName != "" {
-		templateBuf, _ := r.ReadFile(r.Options.TemplateName) // TODO handle error
+		templateBuf, _ := r.readFile(r.Options.TemplateName) // TODO handle error
 		releaseNotesTemplate = string(templateBuf)
 	}
 
@@ -246,7 +246,9 @@ type ReleaseNotesInformation struct {
 	Components []component.Lock
 }
 
-type releaseNotesGithubAPIClient interface {
+//counterfeiter:generate -o ./fakes_internal/release_notes_github_api_issues_service.go --fake-name GithubAPIIssuesService . githubAPIIssuesService
+
+type githubAPIIssuesService interface {
 	issueGetter
 	milestoneLister
 	issuesByRepoLister
@@ -264,17 +266,17 @@ func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, er
 		return nil, nil
 	}
 
-	issuesService := r.GitHubAPI(ctx, r.Options.GithubToken)
+	issuesService := r.gitHubAPIServices(ctx, r.Options.GithubToken)
 
-	milestoneNumber, err := resolveMilestoneNumber(ctx, issuesService, r.RepoOwner, r.RepoName, r.Options.IssueMilestone)
+	milestoneNumber, err := resolveMilestoneNumber(ctx, issuesService, r.repoOwner, r.repoName, r.Options.IssueMilestone)
 	if err != nil {
 		return nil, err
 	}
-	issues, err := fetchIssuesWithLabelAndMilestone(ctx, issuesService, r.RepoOwner, r.RepoName, milestoneNumber, r.Options.IssueLabels)
+	issues, err := fetchIssuesWithLabelAndMilestone(ctx, issuesService, r.repoOwner, r.repoName, milestoneNumber, r.Options.IssueLabels)
 	if err != nil {
 		return nil, err
 	}
-	additionalIssues, err := issuesFromIssueIDs(ctx, issuesService, r.RepoOwner, r.RepoName, r.Options.IssueIDs)
+	additionalIssues, err := issuesFromIssueIDs(ctx, issuesService, r.repoOwner, r.repoName, r.Options.IssueIDs)
 	if err != nil {
 		return nil, err
 	}

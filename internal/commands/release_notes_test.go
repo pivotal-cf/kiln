@@ -1,7 +1,8 @@
-package commands_test
+package commands
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"testing"
 
@@ -13,17 +14,16 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
 
-	"github.com/pivotal-cf/kiln/internal/commands"
-	"github.com/pivotal-cf/kiln/internal/commands/fakes"
+	fakes "github.com/pivotal-cf/kiln/internal/commands/fakes_internal"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-var _ jhanda.Command = commands.ReleaseNotes{}
+var _ jhanda.Command = ReleaseNotes{}
 
 func TestReleaseNotes_Usage(t *testing.T) {
 	please := Ω.NewWithT(t)
 
-	rn := commands.ReleaseNotes{}
+	rn := ReleaseNotes{}
 
 	please.Expect(rn.Usage().Description).NotTo(Ω.BeEmpty())
 	please.Expect(rn.Usage().ShortDescription).NotTo(Ω.BeEmpty())
@@ -70,13 +70,16 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	}
 
 	var output bytes.Buffer
-	rn := commands.ReleaseNotes{
-		Repository:           repo,
-		RevisionResolver:     revisionResolver,
-		HistoricKilnfileLock: historicKilnfileLock.Spy,
-		HistoricVersion:      historicVersion.Spy,
+	rn := ReleaseNotes{
+		repository:           repo,
+		revisionResolver:     revisionResolver,
+		historicKilnfileLock: historicKilnfileLock.Spy,
+		historicVersion:      historicVersion.Spy,
 		Writer:               &output,
-		ReadFile:             readFileFunc,
+		readFile:             readFileFunc,
+		gitHubAPIServices: func(ctx context.Context, token string) githubAPIIssuesService {
+			return nil
+		},
 	}
 
 	err := rn.Execute([]string{
