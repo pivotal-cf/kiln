@@ -15,11 +15,22 @@
   <tr>
     <th>Component</th>
     <th>Version</th>
+    <th>Release Notes</th>
   </tr>
   </thead>
   <tbody>
-  {{- range .Components }}
-    <tr><td>{{ .Name }}</td><td>{{ .ToVersion }}</td></tr>
+  {{- range $lock := .Components }}
+    <tr>
+      <td>{{ $lock.Name }}</td>
+      <td>{{ $lock.Version }}</td>
+      <td>{{ with $notes := ( $.Bumps.ForLock $lock ).ReleaseNotes }}{{ if ne $notes "" }}
+        <details open="">
+          <pre>
+{{( $.Bumps.ForLock $lock ).ReleaseNotes}}
+          </pre>
+        </details>
+      {{ end }}{{ end }}</td>
+    </tr>
   {{- end }}
   </tbody>
 </table>

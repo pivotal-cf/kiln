@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"path/filepath"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -15,52 +15,68 @@ var (
 	// tileRootSentinelFiles   = []string{"Kilnfile", "base.yml"}
 )
 
-func KilnfileLock(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (cargo.KilnfileLock, error) {
+func Kilnfile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (cargo.Kilnfile, cargo.KilnfileLock, error) {
 	tilePath := kilnfilePath
 	if filepath.Base(tilePath) == "Kilnfile" {
 		tilePath = filepath.Dir(tilePath)
 	}
 
-	var data cargo.KilnfileLock
+	var lock cargo.KilnfileLock
 
-	err := decodeHistoricFile(repo, commitHash, &data, prefixEach(tilePath, billOfMaterialFileNames))
+	var err error
+	for _, name := range billOfMaterialFileNames {
+		err = unmarshalFile(storage, commitHash, &lock, filepath.Join(tilePath, name))
+		if err == object.ErrFileNotFound {
+			continue
+		}
+		if err != nil {
+			return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
+		}
+		break
+	}
 	if err != nil {
-		return cargo.KilnfileLock{}, err
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
 
-	return data, nil
+	var spec cargo.Kilnfile
+	err = unmarshalFile(storage, commitHash, &spec, filepath.Join(tilePath, "Kilnfile"))
+	if err != nil && err != object.ErrFileNotFound {
+		return cargo.Kilnfile{}, lock, err
+	}
+
+	return spec, lock, nil
 }
 
-func Version(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (string, error) {
+func Version(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (string, error) {
 	tilePath := kilnfilePath
 	if filepath.Base(tilePath) == "Kilnfile" {
 		tilePath = filepath.Dir(tilePath)
 	}
-	buf, _, err := fileAtCommit(repo, commitHash, []string{filepath.Join(tilePath, "version")})
+	buf, err := fileAtCommit(storage, commitHash, filepath.Join(tilePath, "version"))
 	if err != nil {
 		return "", err
 	}
 	return string(bytes.TrimSpace(buf)), nil
 }
 
-func Walk(repo *git.Repository, commitHash plumbing.Hash, fn func(commit *object.Commit)) error {
+func Walk(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, fn func(commit *object.Commit)) error {
 	c := make(map[plumbing.Hash]struct{})
-	return walk(repo, commitHash, fn, c)
+	return walk(storage, commitHash, fn, c)
 }
 
-func walk(repo *git.Repository, commitHash plumbing.Hash, fn func(commit *object.Commit), c map[plumbing.Hash]struct{}) error {
+func walk(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, fn func(commit *object.Commit), c map[plumbing.Hash]struct{}) error {
 	if _, visited := c[commitHash]; visited {
 		return nil
 	}
 	c[commitHash] = struct{}{}
 
-	commit, err := repo.CommitObject(commitHash)
+	commit, err := object.GetCommit(storage, commitHash)
 	if err != nil {
 		return err
 	}
 	fn(commit)
 	for _, p := range commit.ParentHashes {
-		if err := walk(repo, p, fn, c); err != nil {
+		if err := walk(storage, p, fn, c); err != nil {
 			return err
 		}
 	}

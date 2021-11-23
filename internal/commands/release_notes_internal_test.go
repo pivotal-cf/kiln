@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"sort"
 	"testing"
 
 	Ω "github.com/onsi/gomega"
@@ -16,6 +17,7 @@ import (
 
 	fakes "github.com/pivotal-cf/kiln/internal/commands/fakes_internal"
 	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 func TestInternal_ReleaseNotes_checkInputs(t *testing.T) {
@@ -412,6 +414,129 @@ func TestInternal_fetchIssuesWithLabelAndMilestone(t *testing.T) {
 	})
 }
 
+func TestInternal_addReleaseNotes(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	releaseLister := new(fakes.ReleaseLister)
+	releaseLister.ListReleasesReturnsOnCall(0, []*github.RepositoryRelease{
+		{
+			Body:    strPtr("apple"),
+			TagName: strPtr("1.90.0"),
+		},
+		{
+			Body:    strPtr("orange"),
+			TagName: strPtr("1.84.20"),
+		},
+		{
+			Body:    strPtr(""),
+			TagName: strPtr("1.84.6"),
+		},
+		{
+			Body:    strPtr("banana"),
+			TagName: strPtr("1.84.5"),
+		},
+		{
+			Body:    strPtr("pineapple"),
+			TagName: strPtr("1.84.0"),
+		},
+		{
+			Body:    strPtr("grape"),
+			TagName: strPtr("1.83.0"),
+		},
+	}, githubResponse(t, 200), nil)
+
+	result, err := fetchReleaseNotes(
+		context.Background(),
+		releaseLister,
+		cargo.Kilnfile{
+			Releases: []cargo.ComponentSpec{
+				{
+					Name: "capi",
+					GitRepositories: []string{
+						"https://github.com/cloudfoundry/capi-release",
+					},
+				},
+			},
+		},
+		BumpList{
+			{
+				Name:        "capi",
+				ToVersion:   "1.84.20",
+				FromVersion: "1.84.0",
+			},
+		})
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(result).To(Ω.HaveLen(1))
+
+	please.Expect(result[0].ReleaseNotes()).To(Ω.Equal("orange\nbanana"))
+}
+
+func TestInternal_issuesBySemanticTitlePrefix(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	issues := []*github.Issue{
+		{Title: strPtr("**[NONE]** lorem ipsum")},
+		{Title: strPtr("**[security fix]** 222 lorem ipsum")},
+		{Title: strPtr("**[Feature]** lorem ipsum")},
+		{Title: strPtr("**[Feature Improvement]** lorem ipsum")},
+		{Title: strPtr("**[security Fix]** 111 lorem ipsum")},
+		{Title: strPtr("**[Bug Fix]** lorem ipsum")},
+	}
+	sort.Sort(issuesBySemanticTitlePrefix(issues))
+
+	var titles []string
+	for _, issue := range issues {
+		titles = append(titles, issue.GetTitle())
+	}
+
+	please.Expect(titles).To(Ω.Equal([]string{
+		"**[security Fix]** 111 lorem ipsum",
+		"**[security fix]** 222 lorem ipsum",
+		"**[Feature]** lorem ipsum",
+		"**[Feature Improvement]** lorem ipsum",
+		"**[Bug Fix]** lorem ipsum",
+		"**[NONE]** lorem ipsum",
+	}))
+}
+
+func TestInternal_appendFilterAndSortIssues(t *testing.T) {
+	please := Ω.NewWithT(t)
+	getID := func() func() int64 {
+		var n int64
+		return func() int64 {
+			n++
+			return n
+		}
+	}()
+
+	issues := []*github.Issue{
+		{Title: strPtr("**[security fix]** 222 lorem ipsum"), ID: int64Ptr(getID())},
+		{Title: strPtr("**[Feature]** lorem ipsum"), ID: int64Ptr(getID())},
+		{Title: strPtr("**[Feature Improvement]** lorem ipsum"), ID: int64Ptr(getID())},
+		{Title: strPtr("**[security Fix]** 111 lorem ipsum"), ID: int64Ptr(getID())},
+	}
+
+	additionalIssues := []*github.Issue{
+		{Title: strPtr("**[NONE]** lorem ipsum"), ID: int64Ptr(getID())},
+		{Title: strPtr("**[Bug Fix]** lorem ipsum"), ID: int64Ptr(getID())},
+	}
+	exp := getIssueTitleExp(t)
+	result := appendFilterAndSortIssues(issues, additionalIssues, exp)
+
+	var titles []string
+	for _, issue := range result {
+		titles = append(titles, issue.GetTitle())
+	}
+
+	please.Expect(titles).To(Ω.Equal([]string{
+		"**[security Fix]** 111 lorem ipsum",
+		"**[security fix]** 222 lorem ipsum",
+		"**[Feature]** lorem ipsum",
+		"**[Feature Improvement]** lorem ipsum",
+		"**[Bug Fix]** lorem ipsum",
+	}))
+}
+
 func githubResponse(t *testing.T, status int) *github.Response {
 	t.Helper()
 
@@ -424,4 +549,5 @@ func githubResponse(t *testing.T, status int) *github.Response {
 }
 
 func intPtr(n int) *int       { return &n }
+func int64Ptr(n int64) *int64 { return &n }
 func strPtr(n string) *string { return &n }

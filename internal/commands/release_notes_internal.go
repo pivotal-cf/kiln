@@ -3,16 +3,18 @@ package commands
 import (
 	"context"
 	"fmt"
-	"github.com/go-git/go-git/v5"
 	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/Masterminds/semver"
+	"github.com/go-git/go-git/v5"
 	"github.com/google/go-github/v40/github"
 
 	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, error) {
@@ -44,6 +46,22 @@ func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, erro
 type BoshReleaseBump struct {
 	Name                   string
 	FromVersion, ToVersion string
+	Releases               []*github.RepositoryRelease
+}
+
+func (bump BoshReleaseBump) ReleaseNotes() string {
+	var s strings.Builder
+
+	for _, r := range bump.Releases {
+		body := r.GetBody()
+		if body == "" {
+			continue
+		}
+		s.WriteString(body)
+		s.WriteByte('\n')
+	}
+
+	return strings.TrimSuffix(s.String(), "\n")
 }
 
 func calculateComponentBumps(current, previous []component.Lock) []BoshReleaseBump {
@@ -66,6 +84,74 @@ func calculateComponentBumps(current, previous []component.Lock) []BoshReleaseBu
 		})
 	}
 	return bumps
+}
+
+func (bump BoshReleaseBump) toFrom() (to, from *semver.Version, _ error) {
+	var err error
+	from, err = semver.NewVersion(bump.FromVersion)
+	if err != nil {
+		return nil, nil, err
+	}
+	to, err = semver.NewVersion(bump.ToVersion)
+	if err != nil {
+		return nil, nil, err
+	}
+	return to, from, err
+}
+
+type BumpList []BoshReleaseBump
+
+func (list BumpList) ForLock(lock component.Lock) BoshReleaseBump {
+	for _, b := range list {
+		if b.Name == lock.Name {
+			return b
+		}
+	}
+	return BoshReleaseBump{
+		Name:        lock.Name,
+		FromVersion: lock.Version,
+		ToVersion:   lock.Version,
+	}
+}
+
+//counterfeiter:generate -o ./fakes_internal/release_lister.go --fake-name ReleaseLister . releaseLister
+
+type releaseLister interface {
+	ListReleases(ctx context.Context, owner, repo string, opts *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error)
+}
+
+func fetchReleaseNotes(ctx context.Context, repoService releaseLister, kf cargo.Kilnfile, list BumpList) (BumpList, error) {
+	for i, bump := range list {
+		spec := kf.Spec(bump.Name)
+
+		to, from, err := bump.toFrom()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, repository := range spec.GitRepositories {
+			owner, repo, err := component.OwnerAndRepoFromGitHubURI(repository)
+			if err != nil {
+				continue
+			}
+			ops := github.ListOptions{}
+			for {
+				releases, _, _ := repoService.ListReleases(ctx, owner, repo, &ops)
+				if len(releases) == 0 {
+					break
+				}
+				for _, rel := range releases {
+					rv, err := semver.NewVersion(strings.TrimPrefix(rel.GetTagName(), "v"))
+					if err != nil || rv.LessThan(from) || rv.Equal(from) || rv.GreaterThan(to) {
+						continue
+					}
+					list[i].Releases = append(list[i].Releases, rel)
+				}
+				ops.Page++
+			}
+		}
+	}
+	return list, nil
 }
 
 //counterfeiter:generate -o ./fakes_internal/issue_getter.go --fake-name IssueGetter . issueGetter
@@ -164,7 +250,7 @@ func appendFilterAndSortIssues(issuesA, issuesB []*github.Issue, filterExp strin
 
 	filtered := filterIssuesByTitle(filterExp, fullList)
 
-	sort.Sort(IssuesBySemanticTitlePrefix(filtered))
+	sort.Sort(issuesBySemanticTitlePrefix(filtered))
 
 	return filtered
 }
@@ -197,16 +283,16 @@ func filterIssuesByTitle(exp string, issues []*github.Issue) []*github.Issue {
 	return filtered
 }
 
-// IssuesBySemanticTitlePrefix sorts issues by title lexicographically. It handles issues with a prefix like
+// issuesBySemanticTitlePrefix sorts issues by title lexicographically. It handles issues with a prefix like
 // \*\*\[(security fix)|(feature)|(feature improvement)|(bug fix)|(none)\]\*\*, differently and sorts them
 // in order of importance.
-type IssuesBySemanticTitlePrefix []*github.Issue
+type issuesBySemanticTitlePrefix []*github.Issue
 
-func (list IssuesBySemanticTitlePrefix) Len() int { return len(list) }
+func (list issuesBySemanticTitlePrefix) Len() int { return len(list) }
 
-func (list IssuesBySemanticTitlePrefix) Swap(i, j int) { list[i], list[j] = list[j], list[i] }
+func (list issuesBySemanticTitlePrefix) Swap(i, j int) { list[i], list[j] = list[j], list[i] }
 
-func (list IssuesBySemanticTitlePrefix) Less(i, j int) bool {
+func (list issuesBySemanticTitlePrefix) Less(i, j int) bool {
 	it := list[i].GetTitle()
 	jt := list[j].GetTitle()
 	iv := issuesTitlePrefixSemanticValue(it)
