@@ -256,7 +256,7 @@ type ReleaseNotesInformation struct {
 
 	Issues []*github.Issue
 
-	Bumps      []component.Lock
+	Bumps      []BoshReleaseBump
 	Components []component.Lock
 }
 

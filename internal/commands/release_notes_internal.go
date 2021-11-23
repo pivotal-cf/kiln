@@ -41,22 +41,29 @@ func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, erro
 	return repoOwner, repoName, nil
 }
 
-type BoshReleaseBump = component.Lock
+type BoshReleaseBump struct {
+	Name                   string
+	FromVersion, ToVersion string
+}
 
 func calculateComponentBumps(current, previous []component.Lock) []BoshReleaseBump {
 	var (
 		bumps         []BoshReleaseBump
-		previousSpecs = make(map[component.Lock]struct{}, len(previous))
+		previousSpecs = make(map[string]component.Lock, len(previous))
 	)
-	for _, cs := range previous {
-		previousSpecs[cs] = struct{}{}
+	for _, p := range previous {
+		previousSpecs[p.Name] = p
 	}
-	for _, cs := range current {
-		_, isSame := previousSpecs[cs]
-		if isSame {
+	for _, c := range current {
+		p := previousSpecs[c.Name]
+		if c.Version == p.Version {
 			continue
 		}
-		bumps = append(bumps, cs)
+		bumps = append(bumps, BoshReleaseBump{
+			Name:        c.Name,
+			FromVersion: p.Version,
+			ToVersion:   c.Version,
+		})
 	}
 	return bumps
 }
