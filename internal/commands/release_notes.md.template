@@ -19,7 +19,7 @@
   </thead>
   <tbody>
   {{- range .Components }}
-    <tr><td>{{ .Name }}</td><td>{{ .ToVersion }}</td></tr>
+    <tr><td>{{ .Name }}</td><td>{{ .Version }}</td></tr>
   {{- end }}
   </tbody>
 </table>
