@@ -130,51 +130,65 @@ func (r ReleaseNotes) Execute(args []string) error {
 		return err
 	}
 
-	releaseDate, err := r.parseReleaseDate()
+	klInitial, klFinal, v, err := r.fetchHistoricFiles(nonFlagArgs[0], nonFlagArgs[1])
 	if err != nil {
 		return err
 	}
 
-	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(nonFlagArgs[0])) // TODO handle error
-	if err != nil {
-		panic(err)
-	}
-	finalCommitSHA, err := r.ResolveRevision(plumbing.Revision(nonFlagArgs[1])) // TODO handle error
-	if err != nil {
-		panic(err)
-	}
-
-	klInitial, err := r.historicKilnfileLock(r.repository, *initialCommitSHA, r.pathRelativeToDotGit) // TODO handle error
-	if err != nil {
-		panic(err)
-	}
-	klFinal, err := r.historicKilnfileLock(r.repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
-	if err != nil {
-		panic(err)
-	}
-	version, err := r.historicVersion(r.repository, *finalCommitSHA, r.pathRelativeToDotGit) // TODO handle error
-	if err != nil {
-		panic(err)
-	}
-
-	v, err := semver.NewVersion(version)
-	if err != nil {
-		return fmt.Errorf("failed to parse version: %w", err)
-	}
-
 	info := ReleaseNotesInformation{
 		Version:           v,
-		ReleaseDate:       releaseDate,
 		ReleaseDateFormat: releaseDateFormat,
 		Components:        klFinal.Releases,
 		Bumps:             calculateComponentBumps(klFinal.Releases, klInitial.Releases),
 	}
+
+	info.ReleaseDate, _ = r.parseReleaseDate()
 
 	info.Issues, err = r.listGithubIssues(context.TODO())
 	if err != nil {
 		return err
 	}
 
+	err = r.encodeReleaseNotes(info)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r ReleaseNotes) fetchHistoricFiles(start, end string) (cargo.KilnfileLock, cargo.KilnfileLock, *semver.Version, error) {
+	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(start))
+	if err != nil {
+		return cargo.KilnfileLock{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to resolve inital revision %q: %w", start, err)
+	}
+	finalCommitSHA, err := r.ResolveRevision(plumbing.Revision(end))
+	if err != nil {
+		return cargo.KilnfileLock{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to resolve final revision %q: %w", end, err)
+	}
+
+	klInitial, err := r.historicKilnfileLock(r.repository, *initialCommitSHA, r.pathRelativeToDotGit)
+	if err != nil {
+		return cargo.KilnfileLock{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to get kilnfile from initial commit: %w", err)
+	}
+	klFinal, err := r.historicKilnfileLock(r.repository, *finalCommitSHA, r.pathRelativeToDotGit)
+	if err != nil {
+		return cargo.KilnfileLock{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to get kilnfile from final commit: %w", err)
+	}
+	version, err := r.historicVersion(r.repository, *finalCommitSHA, r.pathRelativeToDotGit)
+	if err != nil {
+		return cargo.KilnfileLock{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to get version file from final commit: %w", err)
+	}
+
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return cargo.KilnfileLock{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to parse version: %w", err)
+	}
+
+	return klInitial, klFinal, v, nil
+}
+
+func (r ReleaseNotes) encodeReleaseNotes(info ReleaseNotesInformation) error {
 	releaseNotesTemplate := defaultReleaseNotesTemplate
 	if r.Options.TemplateName != "" {
 		templateBuf, _ := r.readFile(r.Options.TemplateName) // TODO handle error
