@@ -121,7 +121,7 @@ type revisionResolver interface {
 var defaultReleaseNotesTemplate string
 
 func (r ReleaseNotes) Execute(args []string) error {
-	nonFlagArgs, err := jhanda.Parse(&r.Options, args) // TODO handle error
+	nonFlagArgs, err := jhanda.Parse(&r.Options, args)
 	if err != nil {
 		return err
 	}
@@ -191,13 +191,16 @@ func (r ReleaseNotes) fetchHistoricFiles(start, end string) (cargo.KilnfileLock,
 func (r ReleaseNotes) encodeReleaseNotes(info ReleaseNotesInformation) error {
 	releaseNotesTemplate := defaultReleaseNotesTemplate
 	if r.Options.TemplateName != "" {
-		templateBuf, _ := r.readFile(r.Options.TemplateName) // TODO handle error
+		templateBuf, err := r.readFile(r.Options.TemplateName)
+		if err != nil {
+			return fmt.Errorf("failed to read provided template file: %w", err)
+		}
 		releaseNotesTemplate = string(templateBuf)
 	}
 
-	t, err := template.New(r.Options.TemplateName).Parse(releaseNotesTemplate) // TODO handle error
+	t, err := template.New(r.Options.TemplateName).Parse(releaseNotesTemplate)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to parse template: %w", err)
 	}
 
 	err = t.Execute(r.Writer, info)
