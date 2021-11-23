@@ -16,6 +16,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/jhanda"
 	"golang.org/x/oauth2"
@@ -41,13 +42,13 @@ type ReleaseNotes struct {
 	pathRelativeToDotGit string
 	repository           *git.Repository
 	readFile             func(fp string) ([]byte, error)
-	historicKilnfileLock
+	historicKilnfile
 	historicVersion
 	revisionResolver
 	stat func(string) (os.FileInfo, error)
 	io.Writer
 
-	gitHubAPIServices func(ctx context.Context, token string) githubAPIIssuesService
+	gitHubAPIServices func(ctx context.Context, token string) (githubAPIIssuesService, releaseLister)
 
 	repoOwner, repoName string
 }
@@ -55,15 +56,16 @@ type ReleaseNotes struct {
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	return ReleaseNotes{
 		readFile:             ioutil.ReadFile,
-		historicKilnfileLock: historic.KilnfileLock,
+		historicKilnfile:     historic.Kilnfile,
 		historicVersion:      historic.Version,
 		stat:                 os.Stat,
 		Writer:               os.Stdout,
-		gitHubAPIServices: func(ctx context.Context, token string) githubAPIIssuesService {
+
+		gitHubAPIServices: func(ctx context.Context, token string) (githubAPIIssuesService, releaseLister) {
 			tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 			tokenClient := oauth2.NewClient(ctx, tokenSource)
 			client := github.NewClient(tokenClient)
-			return client.Issues
+			return client.Issues, client.Repositories
 		},
 	}, nil
 }
@@ -114,11 +116,11 @@ func (r ReleaseNotes) Usage() jhanda.Usage {
 
 //counterfeiter:generate -o ./fakes_internal/historic_version.go --fake-name HistoricVersion . historicVersion
 
-type historicVersion func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (string, error)
+type historicVersion func(repo storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (string, error)
 
-//counterfeiter:generate -o ./fakes_internal/historic_kilnfile_lock.go --fake-name HistoricKilnfileLock . historicKilnfileLock
+//counterfeiter:generate -o ./fakes_internal/historic_kilnfile.go --fake-name HistoricKilnfile . historicKilnfile
 
-type historicKilnfileLock func(repo *git.Repository, commitHash plumbing.Hash, kilnfilePath string) (cargo.KilnfileLock, error)
+type historicKilnfile func(repo storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (cargo.Kilnfile, cargo.KilnfileLock, error)
 
 //counterfeiter:generate -o ./fakes_internal/revision_resolver.go --fake-name RevisionResolver . revisionResolver
 
@@ -143,7 +145,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 		return err
 	}
 
-	initialKilnfileLock, finalKilnfileLock, finalVersion, err := r.fetchHistoricFiles(nonFlagArgs[0], nonFlagArgs[1])
+	initialKilnfileLock, finalKilnfileLock, finalKilnfile, finalVersion, err := r.fetchHistoricFiles(nonFlagArgs[0], nonFlagArgs[1])
 	if err != nil {
 		return err
 	}
@@ -156,7 +158,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	info.ReleaseDate, _ = r.parseReleaseDate()
 
-	info.Issues, err = r.listGithubIssues(context.TODO())
+	info.Issues, info.Bumps, err = r.fetchIssuesAndReleaseNotes(context.TODO(), finalKilnfile, info.Bumps)
 	if err != nil {
 		return err
 	}
@@ -169,35 +171,35 @@ func (r ReleaseNotes) Execute(args []string) error {
 	return nil
 }
 
-func (r ReleaseNotes) fetchHistoricFiles(start, end string) (cargo.KilnfileLock, cargo.KilnfileLock, *semver.Version, error) {
+func (r ReleaseNotes) fetchHistoricFiles(start, end string) (klInitial, klFinal cargo.KilnfileLock, kfFinal cargo.Kilnfile, _ *semver.Version, _ error) {
 	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(start))
 	if err != nil {
-		return cargo.KilnfileLock{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to resolve inital revision %q: %w", start, err)
+		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to resolve inital revision %q: %w", start, err)
 	}
 	finalCommitSHA, err := r.ResolveRevision(plumbing.Revision(end))
 	if err != nil {
-		return cargo.KilnfileLock{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to resolve final revision %q: %w", end, err)
+		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to resolve final revision %q: %w", end, err)
 	}
 
-	klInitial, err := r.historicKilnfileLock(r.repository, *initialCommitSHA, r.pathRelativeToDotGit)
+	_, klInitial, err = r.historicKilnfile(r.repository.Storer, *initialCommitSHA, r.pathRelativeToDotGit)
 	if err != nil {
-		return cargo.KilnfileLock{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to get kilnfile from initial commit: %w", err)
+		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to get kilnfile from initial commit: %w", err)
 	}
-	klFinal, err := r.historicKilnfileLock(r.repository, *finalCommitSHA, r.pathRelativeToDotGit)
+	kfFinal, klFinal, err = r.historicKilnfile(r.repository.Storer, *finalCommitSHA, r.pathRelativeToDotGit)
 	if err != nil {
-		return cargo.KilnfileLock{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to get kilnfile from final commit: %w", err)
+		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to get kilnfile from final commit: %w", err)
 	}
-	version, err := r.historicVersion(r.repository, *finalCommitSHA, r.pathRelativeToDotGit)
+	version, err := r.historicVersion(r.repository.Storer, *finalCommitSHA, r.pathRelativeToDotGit)
 	if err != nil {
-		return cargo.KilnfileLock{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to get version file from final commit: %w", err)
+		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to get version file from final commit: %w", err)
 	}
 
 	v, err := semver.NewVersion(version)
 	if err != nil {
-		return cargo.KilnfileLock{}, cargo.KilnfileLock{}, nil, fmt.Errorf("failed to parse version: %w", err)
+		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to parse version: %w", err)
 	}
 
-	return klInitial, klFinal, v, nil
+	return klInitial, klFinal, kfFinal, v, nil
 }
 
 func (r ReleaseNotes) encodeReleaseNotes(info ReleaseNotesInformation) error {
@@ -268,10 +270,9 @@ type ReleaseNotesInformation struct {
 	Version     *semver.Version
 	ReleaseDate time.Time
 
-	Issues []*github.Issue
-
-	Bumps      []BoshReleaseBump
+	Issues     []*github.Issue
 	Components []component.Lock
+	Bumps      BumpList
 }
 
 //counterfeiter:generate -o ./fakes_internal/release_notes_github_api_issues_service.go --fake-name GithubAPIIssuesService . githubAPIIssuesService
@@ -282,32 +283,37 @@ type githubAPIIssuesService interface {
 	issuesByRepoLister
 }
 
-// listGithubIssues is not tested. By not testing we are getting reduced abstraction and improved readability at the
+// fetchIssuesAndReleaseNotes is not tested. By not testing we are getting reduced abstraction and improved readability at the
 // cost of high level testing. This function therefore must stay as small as possible and rely on type checking and a
 // manual test to ensure it continues to behave as expected during refactors.
 //
 // The function can be tested by generating release notes for a tile with issue ids and a milestone set. The happy path
 // test for Execute does not set GithubToken intentionally so this code is not triggered and Execute does not actually
 // reach out to GitHub.
-func (r ReleaseNotes) listGithubIssues(ctx context.Context) ([]*github.Issue, error) {
+func (r ReleaseNotes) fetchIssuesAndReleaseNotes(ctx context.Context, kf cargo.Kilnfile, bumpList BumpList) ([]*github.Issue, BumpList, error) {
 	if r.Options.GithubToken == "" {
-		return nil, nil
+		return nil, bumpList, nil
 	}
 
-	issuesService := r.gitHubAPIServices(ctx, r.Options.GithubToken)
+	issuesService, repositoriesService := r.gitHubAPIServices(ctx, r.Options.GithubToken)
 
 	milestoneNumber, err := resolveMilestoneNumber(ctx, issuesService, r.repoOwner, r.repoName, r.Options.IssueMilestone)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	issues, err := fetchIssuesWithLabelAndMilestone(ctx, issuesService, r.repoOwner, r.repoName, milestoneNumber, r.Options.IssueLabels)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	additionalIssues, err := issuesFromIssueIDs(ctx, issuesService, r.repoOwner, r.repoName, r.Options.IssueIDs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return appendFilterAndSortIssues(issues, additionalIssues, r.Options.IssueTitleExp), nil
+	bumpList, err = fetchReleaseNotes(ctx, repositoriesService, kf, bumpList)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return appendFilterAndSortIssues(issues, additionalIssues, r.Options.IssueTitleExp), bumpList, nil
 }
