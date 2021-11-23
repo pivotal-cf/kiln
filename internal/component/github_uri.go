@@ -1,6 +1,7 @@
 package component
 
 import (
+	"fmt"
 	"net/url"
 	"path"
 	"path/filepath"
@@ -9,7 +10,7 @@ import (
 
 // OwnerAndRepoFromGitHubURI is from the github-release-source branch
 // once that one is merged we should that one instead of this one
-func OwnerAndRepoFromGitHubURI(urlStr string) (owner, repo string) {
+func OwnerAndRepoFromGitHubURI(urlStr string) (owner, repo string, _ error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		if !strings.HasPrefix(urlStr, "git@github.com:") {
@@ -29,5 +30,8 @@ func OwnerAndRepoFromGitHubURI(urlStr string) (owner, repo string) {
 	}
 	u.Path, repo = path.Split(u.Path)
 	_, owner = path.Split(strings.TrimSuffix(u.Path, "/"))
-	return owner, repo
+	if owner == "" || repo == "" {
+		return owner, repo, fmt.Errorf("failed to parse owner and repo name from URI")
+	}
+	return owner, repo, nil
 }
