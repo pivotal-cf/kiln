@@ -78,6 +78,15 @@ func (k Kilnfile) FindReleaseWithName(name string) (ComponentSpec, error) {
 	return ComponentSpec{}, errors.New("not found")
 }
 
+func (kf Kilnfile) Spec(name string) ComponentSpec {
+	for _, s := range kf.Releases {
+		if s.Name == name {
+			return s
+		}
+	}
+	return ComponentSpec{}
+}
+
 type ReleaseSourceConfig struct {
 	Type            string `yaml:"type"`
 	ID              string `yaml:"id"`

@@ -2,17 +2,35 @@
 
 **Release Date:** 11/04/2021
 
-* Bump lemon to version `1.2.0`
+* **[Feature Improvement]** Reduce default log-cache max per source
+* **[Bug Fix]** banana metadata migration does not fail on upgrade from previous LTS
+* Bump banana to version `1.2.0`
 
 <table border="1" class="nice">
   <thead>
   <tr>
     <th>Component</th>
     <th>Version</th>
+    <th>Release Notes</th>
   </tr>
   </thead>
   <tbody>
-    <tr><td>banana</td><td>0.1.0</td></tr>
-    <tr><td>lemon</td><td>1.2.0</td></tr>
+    <tr>
+      <td>banana</td>
+      <td>1.2.0</td>
+      <td>
+        <details open="">
+          <pre>
+remove from bunch
+peal is yellow
+          </pre>
+        </details>
+      </td>
+    </tr>
+    <tr>
+      <td>lemon</td>
+      <td>1.1.0</td>
+      <td></td>
+    </tr>
   </tbody>
 </table>

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
+	"reflect"
+	"regexp"
 	"testing"
 
 	Ω "github.com/onsi/gomega"
@@ -13,6 +15,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/google/go-github/v40/github"
 
 	fakes "github.com/pivotal-cf/kiln/internal/commands/fakes_internal"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -46,19 +49,24 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	revisionResolver.ResolveRevisionReturnsOnCall(0, &initialHash, nil)
 	revisionResolver.ResolveRevisionReturnsOnCall(1, &finalHash, nil)
 
-		historicKilnfileLock := new(fakes.HistoricKilnfileLock)
-		historicKilnfileLock.ReturnsOnCall(0, cargo.KilnfileLock{
-			Releases: []cargo.ComponentLock{
-				{Name: "banana", Version: "0.1.0"},
-				{Name: "lemon", Version: "1.1.0"},
-			},
-		}, nil)
-		historicKilnfileLock.ReturnsOnCall(1, cargo.KilnfileLock{
-			Releases: []cargo.ComponentLock{
-				{Name: "banana", Version: "0.1.0"},
-				{Name: "lemon", Version: "1.2.0"},
-			},
-		}, nil)
+	historicKilnfile := new(fakes.HistoricKilnfile)
+	historicKilnfile.ReturnsOnCall(0, cargo.Kilnfile{}, cargo.KilnfileLock{
+		Releases: []cargo.ComponentLock{
+			{Name: "banana", Version: "1.1.0"},
+			{Name: "lemon", Version: "1.1.0"},
+		},
+	}, nil)
+	historicKilnfile.ReturnsOnCall(1, cargo.Kilnfile{
+		Releases: []cargo.ComponentSpec{
+			{Name: "banana", GitRepositories: []string{"https://github.com/pivotal-cf/banana-release"}},
+			{Name: "lemon"},
+		},
+	}, cargo.KilnfileLock{
+		Releases: []cargo.ComponentLock{
+			{Name: "banana", Version: "1.2.0"},
+			{Name: "lemon", Version: "1.1.0"},
+		},
+	}, nil)
 
 	historicVersion := new(fakes.HistoricVersion)
 	historicVersion.Returns("0.1.0-build.50000", nil)
@@ -69,21 +77,53 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		return nil, nil
 	}
 
+	githubAPIIssuesServiceFake := new(fakes.GithubAPIIssuesService)
+	githubAPIIssuesServiceFake.GetReturnsOnCall(0, &github.Issue{
+		Title: strPtr("**[Feature Improvement]** Reduce default log-cache max per source"),
+	}, githubResponse(t, 200), nil)
+	githubAPIIssuesServiceFake.ListByRepoReturnsOnCall(1, []*github.Issue{}, githubResponse(t, 404), nil)
+	githubAPIIssuesServiceFake.GetReturnsOnCall(0, &github.Issue{
+		ID:    int64Ptr(1),
+		Title: strPtr("**[Bug Fix]** banana metadata migration does not fail on upgrade from previous LTS"),
+	}, githubResponse(t, 200), nil)
+	githubAPIIssuesServiceFake.GetReturnsOnCall(1, &github.Issue{
+		ID:    int64Ptr(2),
+		Title: strPtr("**[Feature Improvement]** Reduce default log-cache max per source"),
+	}, githubResponse(t, 200), nil)
+
+	releaseListerFake := new(fakes.ReleaseLister)
+	releaseListerFake.ListReleasesReturnsOnCall(0, []*github.RepositoryRelease{
+		{TagName: strPtr("1.1.0"), Body: strPtr("peal is green")},
+		{TagName: strPtr("1.1.1"), Body: strPtr("remove from bunch")},
+		{TagName: strPtr("1.2.0"), Body: strPtr("peal is yellow")},
+	}, githubResponse(t, 200), nil)
+	releaseListerFake.ListReleasesReturnsOnCall(1, []*github.RepositoryRelease{}, githubResponse(t, 404), nil)
+	releaseListerFake.ListReleasesReturnsOnCall(2, []*github.RepositoryRelease{}, githubResponse(t, 404), nil)
+	releaseListerFake.ListReleasesReturnsOnCall(3, []*github.RepositoryRelease{}, githubResponse(t, 404), nil)
+
+	var gotToken []string
 	var output bytes.Buffer
 	rn := ReleaseNotes{
-		repository:           repo,
-		revisionResolver:     revisionResolver,
-		historicKilnfileLock: historicKilnfileLock.Spy,
-		historicVersion:      historicVersion.Spy,
-		Writer:               &output,
-		readFile:             readFileFunc,
-		gitHubAPIServices: func(ctx context.Context, token string) githubAPIIssuesService {
-			return nil
+		Writer:    &output,
+		repoOwner: "pivotal-cf",
+		repoName:  "fake-tile-repo",
+
+		repository:       repo,
+		revisionResolver: revisionResolver,
+		historicKilnfile: historicKilnfile.Spy,
+		historicVersion:  historicVersion.Spy,
+		readFile:         readFileFunc,
+		gitHubAPIServices: func(ctx context.Context, token string) (githubAPIIssuesService, releaseLister) {
+			gotToken = append(gotToken, token)
+			return githubAPIIssuesServiceFake, releaseListerFake
 		},
 	}
 
 	err := rn.Execute([]string{
 		"--release-date=2021-11-04",
+		"--github-token=secret",
+		"--github-issue=54000",
+		"--github-issue=54321",
 		"tile/1.1.0",
 		"tile/1.2.0",
 	})
@@ -100,7 +140,39 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	please.Expect(readFileCount).To(Ω.Equal(0))
 	expected, err := ioutil.ReadFile("testdata/release_notes_output.md")
 	please.Expect(err).NotTo(Ω.HaveOccurred())
+	//t.Logf("got: %s", output.String())
+	//t.Logf("exp: %s", expected)
 	please.Expect(output.String()).To(Ω.Equal(string(expected)))
+}
+
+func TestReleaseNotes_Options_IssueTitleExp(t *testing.T) {
+	please := Ω.NewWithT(t)
+	expStr := getIssueTitleExp(t)
+	please.Expect(expStr).NotTo(Ω.BeEmpty())
+	exp, err := regexp.Compile(expStr)
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+
+	please.Expect(exp.MatchString("**[Bug Fix]** Lorem Ipsum")).To(Ω.BeTrue())
+	please.Expect(exp.MatchString("**[bug fix]** Lorem Ipsum")).To(Ω.BeTrue())
+	please.Expect(exp.MatchString("**[Feature]** Lorem Ipsum")).To(Ω.BeTrue())
+	please.Expect(exp.MatchString("**[feature improvement]** Lorem Ipsum")).To(Ω.BeTrue())
+	please.Expect(exp.MatchString("**[security fix]** Lorem Ipsum")).To(Ω.BeTrue())
+
+	please.Expect(exp.MatchString("**[none]** Lorem Ipsum")).To(Ω.BeFalse())
+	please.Expect(exp.MatchString("Lorem Ipsum")).To(Ω.BeFalse())
+	please.Expect(exp.MatchString("")).To(Ω.BeFalse())
+	please.Expect(exp.MatchString("**[]**")).To(Ω.BeFalse())
+	please.Expect(exp.MatchString("**[bugFix]**")).To(Ω.BeFalse())
+	please.Expect(exp.MatchString("**[security]**")).To(Ω.BeFalse())
+}
+
+func getIssueTitleExp(t *testing.T) string {
+	t.Helper()
+	issueTitleExpField, ok := reflect.TypeOf(ReleaseNotes{}.Options).FieldByName("IssueTitleExp")
+	if !ok {
+		t.Fatal("failed to get field")
+	}
+	return issueTitleExpField.Tag.Get("default")
 }
 
 func fill(buf []byte, value byte) {
