@@ -137,10 +137,9 @@ func (r ReleaseNotes) Execute(args []string) error {
 	}
 
 	info := ReleaseNotesInformation{
-		Version:           finalVersion,
-		ReleaseDateFormat: releaseDateFormat,
-		Components:        finalKilnfileLock.Releases,
-		Bumps:             calculateComponentBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
+		Version:    finalVersion,
+		Components: finalKilnfileLock.Releases,
+		Bumps:      calculateComponentBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
 	}
 
 	info.ReleaseDate, _ = r.parseReleaseDate()
@@ -254,9 +253,8 @@ func (r ReleaseNotes) parseReleaseDate() (time.Time, error) {
 }
 
 type ReleaseNotesInformation struct {
-	Version           *semver.Version
-	ReleaseDate       time.Time
-	ReleaseDateFormat string
+	Version     *semver.Version
+	ReleaseDate time.Time
 
 	Issues []*github.Issue
 
