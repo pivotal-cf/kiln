@@ -53,7 +53,7 @@ func (bump BoshReleaseBump) ReleaseNotes() string {
 	var s strings.Builder
 
 	for _, r := range bump.Releases {
-		body := r.GetBody()
+		body := strings.TrimSpace(r.GetBody())
 		if body == "" {
 			continue
 		}
@@ -61,7 +61,23 @@ func (bump BoshReleaseBump) ReleaseNotes() string {
 		s.WriteByte('\n')
 	}
 
-	return strings.TrimSuffix(s.String(), "\n")
+	return strings.TrimSpace(s.String())
+}
+
+func (bump *BoshReleaseBump) deduplicateReleasesWithTheSameTagName() {
+	for i, r := range bump.Releases {
+		if i+1 >= len(bump.Releases) {
+			break
+		}
+		for j := i + 1; j < len(bump.Releases); {
+			after := bump.Releases[j]
+			if r.GetTagName() != after.GetTagName() {
+				j++
+				continue
+			}
+			bump.Releases = append(bump.Releases[:j], bump.Releases[j+1:]...)
+		}
+	}
 }
 
 func calculateComponentBumps(current, previous []component.Lock) []BoshReleaseBump {
@@ -121,35 +137,53 @@ type releaseLister interface {
 }
 
 func fetchReleaseNotes(ctx context.Context, repoService releaseLister, kf cargo.Kilnfile, list BumpList) (BumpList, error) {
-	for i, bump := range list {
+	fetchReleasesFromRepo := func(from, to *semver.Version, repository string) []*github.RepositoryRelease {
+		owner, repo, err := component.OwnerAndRepoFromGitHubURI(repository)
+		if err != nil {
+			return nil
+		}
+
+		var result []*github.RepositoryRelease
+
+		ops := github.ListOptions{}
+		for {
+			releases, _, _ := repoService.ListReleases(ctx, owner, repo, &ops)
+			if len(releases) == 0 {
+				break
+			}
+			for _, rel := range releases {
+				rv, err := semver.NewVersion(strings.TrimPrefix(rel.GetTagName(), "v"))
+				if err != nil || rv.LessThan(from) || rv.Equal(from) || rv.GreaterThan(to) {
+					continue
+				}
+				result = append(result, rel)
+			}
+			ops.Page++
+		}
+
+		return result
+	}
+
+	fetchReleasesForBump := func(bump BoshReleaseBump) BoshReleaseBump {
 		spec := kf.Spec(bump.Name)
 
 		to, from, err := bump.toFrom()
 		if err != nil {
-			return nil, err
+			return bump
 		}
 
 		for _, repository := range spec.GitRepositories {
-			owner, repo, err := component.OwnerAndRepoFromGitHubURI(repository)
-			if err != nil {
-				continue
-			}
-			ops := github.ListOptions{}
-			for {
-				releases, _, _ := repoService.ListReleases(ctx, owner, repo, &ops)
-				if len(releases) == 0 {
-					break
-				}
-				for _, rel := range releases {
-					rv, err := semver.NewVersion(strings.TrimPrefix(rel.GetTagName(), "v"))
-					if err != nil || rv.LessThan(from) || rv.Equal(from) || rv.GreaterThan(to) {
-						continue
-					}
-					list[i].Releases = append(list[i].Releases, rel)
-				}
-				ops.Page++
-			}
+			releases := fetchReleasesFromRepo(to, from, repository)
+			bump.Releases = append(bump.Releases, releases...)
 		}
+		sort.Sort(sort.Reverse(releasesByIncreasingSemanticVersion(bump.Releases)))
+		bump.deduplicateReleasesWithTheSameTagName()
+
+		return bump
+	}
+
+	for i, bump := range list {
+		list[i] = fetchReleasesForBump(bump)
 	}
 	return list, nil
 }
@@ -318,4 +352,24 @@ func issuesTitlePrefixSemanticValue(title string) int {
 		}
 	}
 	return 0
+}
+
+// releasesByIncreasingSemanticVersion sorts issues by increasing semantic version tags. If either release at
+// i or j has a non semver tag, the existing ordering remains. So releases with improperly formatted semantic
+// version tags continue to show up in a reasonable order.
+type releasesByIncreasingSemanticVersion []*github.RepositoryRelease
+
+func (list releasesByIncreasingSemanticVersion) Len() int { return len(list) }
+
+func (list releasesByIncreasingSemanticVersion) Swap(i, j int) { list[i], list[j] = list[j], list[i] }
+
+func (list releasesByIncreasingSemanticVersion) Less(i, j int) bool {
+	it := list[i].GetTagName()
+	iv, errIV := semver.NewVersion(strings.TrimPrefix(it, "v"))
+	jt := list[j].GetTagName()
+	jv, errJV := semver.NewVersion(strings.TrimPrefix(jt, "v"))
+	if errIV != nil || errJV != nil {
+		return i < j
+	}
+	return iv.LessThan(jv)
 }

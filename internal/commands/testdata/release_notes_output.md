@@ -20,9 +20,13 @@
       <td>1.2.0</td>
       <td>
         <details open="">
+          <h5>1.2.0</h5>
+          <pre>
+peal is yellow
+          </pre>
+          <h5>1.1.1</h5>
           <pre>
 remove from bunch
-peal is yellow
           </pre>
         </details>
       </td>
