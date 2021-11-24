@@ -58,7 +58,10 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	}, nil)
 	historicKilnfile.ReturnsOnCall(1, cargo.Kilnfile{
 		Releases: []cargo.ComponentSpec{
-			{Name: "banana", GitRepositories: []string{"https://github.com/pivotal-cf/banana-release"}},
+			{Name: "banana", GitRepositories: []string{
+				"https://github.com/cloudfoundry/banana-release",
+				"https://github.com/pivotal-cf/lts-banana-release",
+			}},
 			{Name: "lemon"},
 		},
 	}, cargo.KilnfileLock{
@@ -93,13 +96,16 @@ func TestReleaseNotes_Execute(t *testing.T) {
 
 	releaseListerFake := new(fakes.ReleaseLister)
 	releaseListerFake.ListReleasesReturnsOnCall(0, []*github.RepositoryRelease{
-		{TagName: strPtr("1.1.0"), Body: strPtr("peal is green")},
-		{TagName: strPtr("1.1.1"), Body: strPtr("remove from bunch")},
+		{TagName: strPtr("1.1.0"), Body: strPtr("   peal is green\n")},
 		{TagName: strPtr("1.2.0"), Body: strPtr("peal is yellow")},
 	}, githubResponse(t, 200), nil)
-	releaseListerFake.ListReleasesReturnsOnCall(1, []*github.RepositoryRelease{}, githubResponse(t, 404), nil)
-	releaseListerFake.ListReleasesReturnsOnCall(2, []*github.RepositoryRelease{}, githubResponse(t, 404), nil)
-	releaseListerFake.ListReleasesReturnsOnCall(3, []*github.RepositoryRelease{}, githubResponse(t, 404), nil)
+	releaseListerFake.ListReleasesReturnsOnCall(1, []*github.RepositoryRelease{}, githubResponse(t, 400), nil)
+	releaseListerFake.ListReleasesReturnsOnCall(2, []*github.RepositoryRelease{
+		{TagName: strPtr("1.1.0"), Body: strPtr("   peal is green\n")},
+		{TagName: strPtr("1.1.1"), Body: strPtr("remove from bunch\n\n")},
+		{TagName: strPtr("1.2.0"), Body: strPtr("peal is yellow")},
+	}, githubResponse(t, 200), nil)
+	releaseListerFake.ListReleasesReturnsOnCall(3, []*github.RepositoryRelease{}, githubResponse(t, 400), nil)
 
 	var gotToken []string
 	var output bytes.Buffer
@@ -136,6 +142,18 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	please.Expect(historicVersion.CallCount()).To(Ω.Equal(1))
 	_, historicVersionHashArg, _ := historicVersion.ArgsForCall(0)
 	please.Expect(historicVersionHashArg).To(Ω.Equal(finalHash))
+	please.Expect(gotToken).To(Ω.Equal([]string{"secret"}))
+	please.Expect(releaseListerFake.ListReleasesCallCount()).To(Ω.Equal(4))
+
+	please.Expect(githubAPIIssuesServiceFake.GetCallCount()).To(Ω.Equal(2))
+	_, orgName, repoName, n := githubAPIIssuesServiceFake.GetArgsForCall(0)
+	please.Expect(orgName).To(Ω.Equal("pivotal-cf"))
+	please.Expect(repoName).To(Ω.Equal("fake-tile-repo"))
+	please.Expect(n).To(Ω.Equal(54000))
+	_, orgName, repoName, n = githubAPIIssuesServiceFake.GetArgsForCall(1)
+	please.Expect(orgName).To(Ω.Equal("pivotal-cf"))
+	please.Expect(repoName).To(Ω.Equal("fake-tile-repo"))
+	please.Expect(n).To(Ω.Equal(54321))
 
 	please.Expect(readFileCount).To(Ω.Equal(0))
 	expected, err := ioutil.ReadFile("testdata/release_notes_output.md")

@@ -25,9 +25,11 @@
       <td>{{ $lock.Version }}</td>
       <td>{{ with $notes := ( $.Bumps.ForLock $lock ).ReleaseNotes }}{{ if ne $notes "" }}
         <details open="">
+        {{- range $release := ($.Bumps.ForLock $lock).Releases}}{{if ne $release.GetBody ""}}
+          <h5>{{$release.GetTagName}}</h5>
           <pre>
-{{( $.Bumps.ForLock $lock ).ReleaseNotes}}
-          </pre>
+{{ TrimSpace $release.GetBody }}
+          </pre>{{end}}{{end}}
         </details>
       {{ end }}{{ end }}</td>
     </tr>
