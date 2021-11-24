@@ -424,7 +424,7 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 			TagName: strPtr("1.90.0"),
 		},
 		{
-			Body:    strPtr("orange"),
+			Body:    strPtr("orange\n\n\n"),
 			TagName: strPtr("1.84.20"),
 		},
 		{
@@ -432,7 +432,7 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 			TagName: strPtr("1.84.6"),
 		},
 		{
-			Body:    strPtr("banana"),
+			Body:    strPtr("           banana"),
 			TagName: strPtr("1.84.5"),
 		},
 		{
@@ -534,6 +534,37 @@ func TestInternal_appendFilterAndSortIssues(t *testing.T) {
 		"**[Feature]** lorem ipsum",
 		"**[Feature Improvement]** lorem ipsum",
 		"**[Bug Fix]** lorem ipsum",
+	}))
+}
+
+func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {
+	please := Ω.NewWithT(t)
+	b := BoshReleaseBump{
+		Releases: []*github.RepositoryRelease{
+			{TagName: strPtr("Y")},
+			{TagName: strPtr("1")},
+			{TagName: strPtr("2")},
+			{TagName: strPtr("3")},
+			{TagName: strPtr("3")},
+			{TagName: strPtr("3")},
+			{TagName: strPtr("X")},
+			{TagName: strPtr("2")},
+			{TagName: strPtr("4")},
+			{TagName: strPtr("4")},
+		},
+	}
+	b.deduplicateReleasesWithTheSameTagName()
+	tags := make([]string, 0, len(b.Releases))
+	for _, r := range b.Releases {
+		tags = append(tags, r.GetTagName())
+	}
+	please.Expect(tags).To(Ω.Equal([]string{
+		"Y",
+		"1",
+		"2",
+		"3",
+		"X",
+		"4",
 	}))
 }
 

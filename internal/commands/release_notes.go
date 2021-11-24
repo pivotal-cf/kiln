@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"text/template"
 	"time"
 
@@ -212,7 +213,11 @@ func (r ReleaseNotes) encodeReleaseNotes(info ReleaseNotesInformation) error {
 		releaseNotesTemplate = string(templateBuf)
 	}
 
-	t, err := template.New(r.Options.TemplateName).Parse(releaseNotesTemplate)
+	t, err := template.New(r.Options.TemplateName).Funcs(
+		template.FuncMap{
+			"TrimSpace": strings.TrimSpace,
+		},
+	).Parse(releaseNotesTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %w", err)
 	}
