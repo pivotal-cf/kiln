@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
@@ -137,55 +138,100 @@ type releaseLister interface {
 }
 
 func fetchReleaseNotes(ctx context.Context, repoService releaseLister, kf cargo.Kilnfile, list BumpList) (BumpList, error) {
-	fetchReleasesFromRepo := func(from, to *semver.Version, repository string) []*github.RepositoryRelease {
-		owner, repo, err := component.OwnerAndRepoFromGitHubURI(repository)
-		if err != nil {
-			return nil
-		}
+	const workerCount = 10
 
-		var result []*github.RepositoryRelease
-
-		ops := github.ListOptions{}
-		for {
-			releases, _, _ := repoService.ListReleases(ctx, owner, repo, &ops)
-			if len(releases) == 0 {
-				break
-			}
-			for _, rel := range releases {
-				rv, err := semver.NewVersion(strings.TrimPrefix(rel.GetTagName(), "v"))
-				if err != nil || rv.LessThan(from) || rv.Equal(from) || rv.GreaterThan(to) {
-					continue
-				}
-				result = append(result, rel)
-			}
-			ops.Page++
-		}
-
-		return result
+	type fetchReleaseNotesForBump struct {
+		bump  BoshReleaseBump
+		index int
 	}
 
-	fetchReleasesForBump := func(bump BoshReleaseBump) BoshReleaseBump {
-		spec := kf.Spec(bump.Name)
+	bumpFetcher := func(in <-chan fetchReleaseNotesForBump) <-chan fetchReleaseNotesForBump {
+		results := make(chan fetchReleaseNotesForBump)
 
-		to, from, err := bump.toFrom()
-		if err != nil {
-			return bump
+		go func() {
+			defer close(results)
+			wg := sync.WaitGroup{}
+			defer wg.Wait()
+			wg.Add(workerCount)
+			for w := 0; w < workerCount; w++ {
+				go func() {
+					defer wg.Done()
+					for j := range in {
+						j.bump = fetchReleasesForBump(ctx, repoService, kf, j.bump)
+						results <- j
+					}
+				}()
+			}
+		}()
+
+		return results
+	}
+
+	c := make(chan fetchReleaseNotesForBump)
+
+	results := bumpFetcher(c)
+
+	go func() {
+		for i, bump := range list {
+			c <- fetchReleaseNotesForBump{
+				index: i,
+				bump:  bump,
+			}
+		}
+		close(c)
+	}()
+
+	for r := range results {
+		list[r.index].Releases = r.bump.Releases
+	}
+
+	return list, nil
+}
+
+func fetchReleasesFromRepo(ctx context.Context, repoService releaseLister, repository string, from, to *semver.Version) []*github.RepositoryRelease {
+	owner, repo, err := component.OwnerAndRepoFromGitHubURI(repository)
+	if err != nil {
+		return nil
+	}
+
+	var result []*github.RepositoryRelease
+
+	ops := github.ListOptions{}
+	for {
+		releases, _, _ := repoService.ListReleases(ctx, owner, repo, &ops)
+		if len(releases) == 0 {
+			break
 		}
 
-		for _, repository := range spec.GitRepositories {
-			releases := fetchReleasesFromRepo(to, from, repository)
-			bump.Releases = append(bump.Releases, releases...)
+		for _, rel := range releases {
+			rv, err := semver.NewVersion(strings.TrimPrefix(rel.GetTagName(), "v"))
+			if err != nil || rv.LessThan(from) || rv.Equal(from) || rv.GreaterThan(to) {
+				continue
+			}
+			result = append(result, rel)
 		}
-		sort.Sort(sort.Reverse(releasesByIncreasingSemanticVersion(bump.Releases)))
-		bump.deduplicateReleasesWithTheSameTagName()
+		ops.Page++
+	}
 
+	return result
+}
+
+func fetchReleasesForBump(ctx context.Context, repoService releaseLister, kf cargo.Kilnfile, bump BoshReleaseBump) BoshReleaseBump {
+	spec := kf.Spec(bump.Name)
+
+	to, from, err := bump.toFrom()
+	if err != nil {
 		return bump
 	}
 
-	for i, bump := range list {
-		list[i] = fetchReleasesForBump(bump)
+	for _, repository := range spec.GitRepositories {
+		releases := fetchReleasesFromRepo(ctx, repoService, repository, from, to)
+		bump.Releases = append(bump.Releases, releases...)
 	}
-	return list, nil
+	sort.Sort(sort.Reverse(releasesByIncreasingSemanticVersion(bump.Releases)))
+	bump.deduplicateReleasesWithTheSameTagName()
+
+	return bump
 }
 
 //counterfeiter:generate -o ./fakes_internal/issue_getter.go --fake-name IssueGetter . issueGetter
