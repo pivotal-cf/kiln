@@ -417,33 +417,55 @@ func TestInternal_fetchIssuesWithLabelAndMilestone(t *testing.T) {
 func TestInternal_addReleaseNotes(t *testing.T) {
 	please := Ω.NewWithT(t)
 
+	var ltsCallCount, osCallCount int
+
 	releaseLister := new(fakes.ReleaseLister)
-	releaseLister.ListReleasesReturnsOnCall(0, []*github.RepositoryRelease{
-		{
-			Body:    strPtr("apple"),
-			TagName: strPtr("1.90.0"),
-		},
-		{
-			Body:    strPtr("orange\n\n\n"),
-			TagName: strPtr("1.84.20"),
-		},
-		{
-			Body:    strPtr(""),
-			TagName: strPtr("1.84.6"),
-		},
-		{
-			Body:    strPtr("           banana"),
-			TagName: strPtr("1.84.5"),
-		},
-		{
-			Body:    strPtr("pineapple"),
-			TagName: strPtr("1.84.0"),
-		},
-		{
-			Body:    strPtr("grape"),
-			TagName: strPtr("1.83.0"),
-		},
-	}, githubResponse(t, 200), nil)
+	releaseLister.ListReleasesStub = func(ctx context.Context, org string, repo string, options *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error) {
+		switch repo {
+		case "lts-peach-release":
+			switch ltsCallCount {
+			case 0:
+				ltsCallCount++
+				return []*github.RepositoryRelease{
+					{Body: strPtr("stored"), TagName: strPtr("1.1.0")},
+					{Body: strPtr("served"), TagName: strPtr("2.0.1")},
+					{Body: strPtr("plated"), TagName: strPtr("2.0.0")},
+					{Body: strPtr("labeled"), TagName: strPtr("1.0.1")},
+					{Body: strPtr("chopped"), TagName: strPtr("0.2.2")},
+					{Body: strPtr("preserved"), TagName: strPtr("1.0.0")},
+				}, githubResponse(t, 200), nil
+			case 1:
+				ltsCallCount++
+				return []*github.RepositoryRelease{
+					{Body: strPtr("cleaned"), TagName: strPtr("0.2.1")},
+					// {Body: strPtr("picked"), TagName: strPtr("0.2.0")}, // this release is only on the open source repo
+					{Body: strPtr("ripe"), TagName: strPtr("0.1.3")},
+					{Body: strPtr("unripe"), TagName: strPtr("0.1.2")},
+					{Body: strPtr("flower"), TagName: strPtr("0.1.1")},
+					{Body: strPtr("growing"), TagName: strPtr("0.1.0")},
+				}, githubResponse(t, 200), nil
+			default:
+				ltsCallCount++
+				return nil, nil, nil
+			}
+		case "peach-release":
+			if osCallCount > 1 {
+				return nil, nil, nil
+			}
+			osCallCount++
+			return []*github.RepositoryRelease{
+				{Body: strPtr("eaten"), TagName: strPtr("3.0.0")},
+				{Body: strPtr("plated"), TagName: strPtr("2.0.0")},
+				{Body: strPtr("stored"), TagName: strPtr("1.1.0")},
+				{Body: strPtr("preserved"), TagName: strPtr("1.0.0")},
+				{Body: strPtr("picked"), TagName: strPtr("0.2.0")},
+				{Body: strPtr("growing"), TagName: strPtr("0.1.0")},
+				{Body: strPtr("planted"), TagName: strPtr("0.0.1")},
+			}, githubResponse(t, 200), nil
+		}
+		t.Errorf("unexpected repo: %q", repo)
+		return nil, nil, nil
+	}
 
 	result, err := fetchReleaseNotes(
 		context.Background(),
@@ -451,24 +473,36 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 		cargo.Kilnfile{
 			Releases: []cargo.ComponentSpec{
 				{
-					Name: "capi",
+					Name: "mango",
+				},
+				{
+					Name: "peach",
 					GitRepositories: []string{
-						"https://github.com/cloudfoundry/capi-release",
+						"https://github.com/cloudfoundry/peach-release",
+						"https://github.com/pivotal-cf/lts-peach-release",
 					},
 				},
 			},
 		},
 		BumpList{
 			{
-				Name:        "capi",
-				ToVersion:   "1.84.20",
-				FromVersion: "1.84.0",
+				Name:        "peach",
+				ToVersion:   "2.0.1", // served
+				FromVersion: "0.1.3", // ripe
+			},
+			{
+				Name:        "mango",
+				ToVersion:   "10",
+				FromVersion: "9",
 			},
 		})
 	please.Expect(err).NotTo(Ω.HaveOccurred())
-	please.Expect(result).To(Ω.HaveLen(1))
+	please.Expect(result).To(Ω.HaveLen(2))
 
-	please.Expect(result[0].ReleaseNotes()).To(Ω.Equal("orange\nbanana"))
+	please.Expect(ltsCallCount).To(Ω.Equal(3))
+	please.Expect(osCallCount).To(Ω.Equal(2))
+
+	please.Expect(result[0].ReleaseNotes()).To(Ω.Equal("served\nplated\nstored\nlabeled\npreserved\nchopped\ncleaned\npicked"))
 }
 
 func TestInternal_issuesBySemanticTitlePrefix(t *testing.T) {

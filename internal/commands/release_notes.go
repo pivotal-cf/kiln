@@ -65,6 +65,13 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 		gitHubAPIServices: func(ctx context.Context, token string) (githubAPIIssuesService, releaseLister) {
 			tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 			tokenClient := oauth2.NewClient(ctx, tokenSource)
+			//rt := &rtLogger{
+			//	RoundTripper: tokenClient.Transport,
+			//}
+			//if rt.RoundTripper == nil {
+			//	rt.RoundTripper = http.DefaultTransport
+			//}
+			//tokenClient.Transport = rt
 			client := github.NewClient(tokenClient)
 			return client.Issues, client.Repositories
 		},
