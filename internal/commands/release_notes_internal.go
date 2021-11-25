@@ -108,7 +108,9 @@ func resolveMilestoneNumber(ctx context.Context, issuesService milestoneLister, 
 		return milestone, nil
 	}
 
-	queryOptions := &github.MilestoneListOptions{}
+	queryOptions := &github.MilestoneListOptions{
+		State: "all",
+	}
 	for {
 		ms, res, err := issuesService.ListMilestones(ctx, repoOwner, repoName, queryOptions)
 		if err != nil {
@@ -116,6 +118,9 @@ func resolveMilestoneNumber(ctx context.Context, issuesService milestoneLister, 
 		}
 		if res.Response.StatusCode != http.StatusOK {
 			return "", fmt.Errorf("unexpedted status code %d", res.Response.StatusCode)
+		}
+		if len(ms) == 0 {
+			return "", fmt.Errorf("failed to find milestone with title %q", milestone)
 		}
 		for _, m := range ms {
 			if m.GetTitle() == milestone {
@@ -138,6 +143,7 @@ func fetchIssuesWithLabelAndMilestone(ctx context.Context, issuesService issuesB
 	}
 	// TODO: handle pagination
 	issueList, response, err := issuesService.ListByRepo(ctx, repoOwner, repoName, &github.IssueListByRepoOptions{
+		State:     "all",
 		Milestone: milestoneNumber,
 		Labels:    labels,
 	})
