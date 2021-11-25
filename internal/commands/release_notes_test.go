@@ -3,6 +3,7 @@ package commands
 import (
 	"bytes"
 	"context"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"io/ioutil"
 	"reflect"
 	"regexp"
@@ -18,6 +19,7 @@ import (
 	"github.com/google/go-github/v40/github"
 
 	fakes "github.com/pivotal-cf/kiln/internal/commands/fakes_internal"
+	componentFakes "github.com/pivotal-cf/kiln/internal/component/fakes_internal"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -94,7 +96,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		Title: strPtr("**[Feature Improvement]** Reduce default log-cache max per source"),
 	}, githubResponse(t, 200), nil)
 
-	releaseListerFake := new(fakes.ReleaseLister)
+	releaseListerFake := new(componentFakes.RepositoryReleaseLister)
 	releaseListerFake.ListReleasesReturnsOnCall(0, []*github.RepositoryRelease{
 		{TagName: strPtr("1.1.0"), Body: strPtr("   peal is green\n")},
 		{TagName: strPtr("1.2.0"), Body: strPtr("peal\nis\nyellow")},
@@ -120,7 +122,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		historicKilnfile: historicKilnfile.Spy,
 		historicVersion:  historicVersion.Spy,
 		readFile:         readFileFunc,
-		gitHubAPIServices: func(ctx context.Context, token string) (githubAPIIssuesService, releaseLister) {
+		gitHubAPIServices: func(ctx context.Context, token string) (githubAPIIssuesService, component.RepositoryReleaseLister) {
 			gotToken = append(gotToken, token)
 			return githubAPIIssuesServiceFake, releaseListerFake
 		},

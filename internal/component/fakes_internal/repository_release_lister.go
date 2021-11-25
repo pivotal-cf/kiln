@@ -8,7 +8,7 @@ import (
 	"github.com/google/go-github/v40/github"
 )
 
-type ReleaseLister struct {
+type RepositoryReleaseLister struct {
 	ListReleasesStub        func(context.Context, string, string, *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error)
 	listReleasesMutex       sync.RWMutex
 	listReleasesArgsForCall []struct {
@@ -31,7 +31,7 @@ type ReleaseLister struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseLister) ListReleases(arg1 context.Context, arg2 string, arg3 string, arg4 *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error) {
+func (fake *RepositoryReleaseLister) ListReleases(arg1 context.Context, arg2 string, arg3 string, arg4 *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error) {
 	fake.listReleasesMutex.Lock()
 	ret, specificReturn := fake.listReleasesReturnsOnCall[len(fake.listReleasesArgsForCall)]
 	fake.listReleasesArgsForCall = append(fake.listReleasesArgsForCall, struct {
@@ -53,26 +53,26 @@ func (fake *ReleaseLister) ListReleases(arg1 context.Context, arg2 string, arg3 
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
-func (fake *ReleaseLister) ListReleasesCallCount() int {
+func (fake *RepositoryReleaseLister) ListReleasesCallCount() int {
 	fake.listReleasesMutex.RLock()
 	defer fake.listReleasesMutex.RUnlock()
 	return len(fake.listReleasesArgsForCall)
 }
 
-func (fake *ReleaseLister) ListReleasesCalls(stub func(context.Context, string, string, *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error)) {
+func (fake *RepositoryReleaseLister) ListReleasesCalls(stub func(context.Context, string, string, *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error)) {
 	fake.listReleasesMutex.Lock()
 	defer fake.listReleasesMutex.Unlock()
 	fake.ListReleasesStub = stub
 }
 
-func (fake *ReleaseLister) ListReleasesArgsForCall(i int) (context.Context, string, string, *github.ListOptions) {
+func (fake *RepositoryReleaseLister) ListReleasesArgsForCall(i int) (context.Context, string, string, *github.ListOptions) {
 	fake.listReleasesMutex.RLock()
 	defer fake.listReleasesMutex.RUnlock()
 	argsForCall := fake.listReleasesArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
-func (fake *ReleaseLister) ListReleasesReturns(result1 []*github.RepositoryRelease, result2 *github.Response, result3 error) {
+func (fake *RepositoryReleaseLister) ListReleasesReturns(result1 []*github.RepositoryRelease, result2 *github.Response, result3 error) {
 	fake.listReleasesMutex.Lock()
 	defer fake.listReleasesMutex.Unlock()
 	fake.ListReleasesStub = nil
@@ -83,7 +83,7 @@ func (fake *ReleaseLister) ListReleasesReturns(result1 []*github.RepositoryRelea
 	}{result1, result2, result3}
 }
 
-func (fake *ReleaseLister) ListReleasesReturnsOnCall(i int, result1 []*github.RepositoryRelease, result2 *github.Response, result3 error) {
+func (fake *RepositoryReleaseLister) ListReleasesReturnsOnCall(i int, result1 []*github.RepositoryRelease, result2 *github.Response, result3 error) {
 	fake.listReleasesMutex.Lock()
 	defer fake.listReleasesMutex.Unlock()
 	fake.ListReleasesStub = nil
@@ -101,7 +101,7 @@ func (fake *ReleaseLister) ListReleasesReturnsOnCall(i int, result1 []*github.Re
 	}{result1, result2, result3}
 }
 
-func (fake *ReleaseLister) Invocations() map[string][][]interface{} {
+func (fake *RepositoryReleaseLister) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.listReleasesMutex.RLock()
@@ -113,7 +113,7 @@ func (fake *ReleaseLister) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *ReleaseLister) recordInvocation(key string, args []interface{}) {
+func (fake *RepositoryReleaseLister) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
