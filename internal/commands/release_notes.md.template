@@ -23,15 +23,22 @@
     <tr>
       <td>{{ $lock.Name }}</td>
       <td>{{ $lock.Version }}</td>
-      <td>{{ with $notes := ( $.Bumps.ForLock $lock ).ReleaseNotes }}{{ if ne $notes "" }}
-        <details open="">
-        {{- range $release := ($.Bumps.ForLock $lock).Releases}}{{if ne $release.GetBody ""}}
-          <h5>{{$release.GetTagName}}</h5>
+      {{- if gt (len ($.Bumps.ForLock $lock).Releases) 0 }}
+      <td>
+      {{- range $release := ($.Bumps.ForLock $lock).Releases}}
+        {{- if ne (trim $release.GetBody) "" }}
+        <details>
+          <summary>{{ $release.GetTagName }}</summary>
           <pre>
-{{ TrimSpace $release.GetBody }}
-          </pre>{{end}}{{end}}
+{{ trim $release.GetBody }}
+          </pre>
         </details>
-      {{ end }}{{ end }}</td>
+        {{- end }}
+      {{- end}}
+      </td>
+      {{- else }}
+      <td></td>
+      {{- end }}
     </tr>
   {{- end }}
   </tbody>
