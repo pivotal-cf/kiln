@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/masterminds/sprig"
 	"io"
 	"io/ioutil"
 	"os"
@@ -19,6 +18,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/google/go-github/v40/github"
+	"github.com/masterminds/sprig"
 	"github.com/pivotal-cf/jhanda"
 	"golang.org/x/oauth2"
 
@@ -49,7 +49,7 @@ type ReleaseNotes struct {
 	stat func(string) (os.FileInfo, error)
 	io.Writer
 
-	gitHubAPIServices func(ctx context.Context, token string) (githubAPIIssuesService, releaseLister)
+	gitHubAPIServices func(ctx context.Context, token string) (githubAPIIssuesService, component.RepositoryReleaseLister)
 
 	repoOwner, repoName string
 }
@@ -62,7 +62,7 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 		stat:                 os.Stat,
 		Writer:               os.Stdout,
 
-		gitHubAPIServices: func(ctx context.Context, token string) (githubAPIIssuesService, releaseLister) {
+		gitHubAPIServices: func(ctx context.Context, token string) (githubAPIIssuesService, component.RepositoryReleaseLister) {
 			tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 			tokenClient := oauth2.NewClient(ctx, tokenSource)
 			//rt := &rtLogger{
@@ -161,7 +161,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 	info := ReleaseNotesInformation{
 		Version:    finalVersion,
 		Components: finalKilnfileLock.Releases,
-		Bumps:      calculateComponentBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
+		Bumps:      component.CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
 	}
 
 	info.ReleaseDate, _ = r.parseReleaseDate()
@@ -280,7 +280,7 @@ type ReleaseNotesInformation struct {
 
 	Issues     []*github.Issue
 	Components []component.Lock
-	Bumps      BumpList
+	Bumps      component.BumpList
 }
 
 //counterfeiter:generate -o ./fakes_internal/release_notes_github_api_issues_service.go --fake-name GithubAPIIssuesService . githubAPIIssuesService
@@ -298,7 +298,7 @@ type githubAPIIssuesService interface {
 // The function can be tested by generating release notes for a tile with issue ids and a milestone set. The happy path
 // test for Execute does not set GithubToken intentionally so this code is not triggered and Execute does not actually
 // reach out to GitHub.
-func (r ReleaseNotes) fetchIssuesAndReleaseNotes(ctx context.Context, kf cargo.Kilnfile, bumpList BumpList) ([]*github.Issue, BumpList, error) {
+func (r ReleaseNotes) fetchIssuesAndReleaseNotes(ctx context.Context, kf cargo.Kilnfile, bumpList component.BumpList) ([]*github.Issue, component.BumpList, error) {
 	if r.Options.GithubToken == "" {
 		return nil, bumpList, nil
 	}
@@ -318,7 +318,7 @@ func (r ReleaseNotes) fetchIssuesAndReleaseNotes(ctx context.Context, kf cargo.K
 		return nil, nil, err
 	}
 
-	bumpList, err = fetchReleaseNotes(ctx, repositoriesService, kf, bumpList)
+	bumpList, err = component.ReleaseNotes(ctx, repositoriesService, kf, bumpList)
 	if err != nil {
 		return nil, nil, err
 	}

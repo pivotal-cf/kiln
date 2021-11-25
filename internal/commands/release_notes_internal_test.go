@@ -16,8 +16,6 @@ import (
 	"github.com/google/go-github/v40/github"
 
 	fakes "github.com/pivotal-cf/kiln/internal/commands/fakes_internal"
-	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 func TestInternal_ReleaseNotes_checkInputs(t *testing.T) {
@@ -173,77 +171,6 @@ func TestInternal_getGithubRemoteRepoOwnerAndName(t *testing.T) {
 		o, _, err := getGithubRemoteRepoOwnerAndName(repo)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 		please.Expect(o).To(Ω.Equal("pivotal-cf"), "it uses the remote with name 'origin'")
-	})
-}
-
-func TestInternal_calculateComponentBumps(t *testing.T) {
-	t.Parallel()
-	please := Ω.NewWithT(t)
-
-	t.Run("when the components stay the same", func(t *testing.T) {
-		please.Expect(calculateComponentBumps([]component.Lock{
-			{Name: "a", Version: "1"},
-		}, []component.Lock{
-			{Name: "a", Version: "1"},
-		})).To(Ω.HaveLen(0))
-	})
-
-	t.Run("when a component is bumped", func(t *testing.T) {
-		please.Expect(calculateComponentBumps([]component.Lock{
-			{Name: "a", Version: "1"},
-			{Name: "b", Version: "2"},
-		}, []component.Lock{
-			{Name: "a", Version: "1"},
-			{Name: "b", Version: "1"},
-		})).To(Ω.Equal([]BoshReleaseBump{
-			{Name: "b", FromVersion: "1", ToVersion: "2"},
-		}),
-			"it returns the changed lock",
-		)
-	})
-
-	t.Run("when many but not all components are bumped", func(t *testing.T) {
-		please.Expect(calculateComponentBumps([]component.Lock{
-			{Name: "a", Version: "2"},
-			{Name: "b", Version: "1"},
-			{Name: "c", Version: "2"},
-		}, []component.Lock{
-			{Name: "a", Version: "1"},
-			{Name: "b", Version: "1"},
-			{Name: "c", Version: "1"},
-		})).To(Ω.Equal([]BoshReleaseBump{
-			{Name: "a", FromVersion: "1", ToVersion: "2"},
-			{Name: "c", FromVersion: "1", ToVersion: "2"},
-		}),
-			"it returns all the bumps",
-		)
-	})
-
-	t.Run("when a component is removed", func(t *testing.T) {
-		please.Expect(calculateComponentBumps([]component.Lock{
-			{Name: "a", Version: "1"},
-		}, []component.Lock{
-			{Name: "a", Version: "1"},
-			{Name: "b", Version: "1"},
-		})).To(Ω.HaveLen(0),
-			"it does not return a bump",
-		)
-	})
-
-	t.Run("when a component is added", func(t *testing.T) {
-		// I'm not sure what we actually want to do here?
-		// Is this actually a bump? Not really...
-
-		please.Expect(calculateComponentBumps([]component.Lock{
-			{Name: "a", Version: "1"},
-			{Name: "b", Version: "1"},
-		}, []component.Lock{
-			{Name: "a", Version: "1"},
-		})).To(Ω.Equal([]BoshReleaseBump{
-			{Name: "b", FromVersion: "", ToVersion: "1"},
-		}),
-			"it returns the component as a bump",
-		)
 	})
 }
 
@@ -414,97 +341,6 @@ func TestInternal_fetchIssuesWithLabelAndMilestone(t *testing.T) {
 	})
 }
 
-func TestInternal_addReleaseNotes(t *testing.T) {
-	please := Ω.NewWithT(t)
-
-	var ltsCallCount, osCallCount int
-
-	releaseLister := new(fakes.ReleaseLister)
-	releaseLister.ListReleasesStub = func(ctx context.Context, org string, repo string, options *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error) {
-		switch repo {
-		case "lts-peach-release":
-			switch ltsCallCount {
-			case 0:
-				ltsCallCount++
-				return []*github.RepositoryRelease{
-					{Body: strPtr("stored"), TagName: strPtr("1.1.0")},
-					{Body: strPtr("served"), TagName: strPtr("2.0.1")},
-					{Body: strPtr("plated"), TagName: strPtr("2.0.0")},
-					{Body: strPtr("labeled"), TagName: strPtr("1.0.1")},
-					{Body: strPtr("chopped"), TagName: strPtr("0.2.2")},
-					{Body: strPtr("preserved"), TagName: strPtr("1.0.0")},
-				}, githubResponse(t, 200), nil
-			case 1:
-				ltsCallCount++
-				return []*github.RepositoryRelease{
-					{Body: strPtr("cleaned"), TagName: strPtr("0.2.1")},
-					// {Body: strPtr("picked"), TagName: strPtr("0.2.0")}, // this release is only on the open source repo
-					{Body: strPtr("ripe"), TagName: strPtr("0.1.3")},
-					{Body: strPtr("unripe"), TagName: strPtr("0.1.2")},
-					{Body: strPtr("flower"), TagName: strPtr("0.1.1")},
-					{Body: strPtr("growing"), TagName: strPtr("0.1.0")},
-				}, githubResponse(t, 200), nil
-			default:
-				ltsCallCount++
-				return nil, nil, nil
-			}
-		case "peach-release":
-			if osCallCount > 1 {
-				return nil, nil, nil
-			}
-			osCallCount++
-			return []*github.RepositoryRelease{
-				{Body: strPtr("eaten"), TagName: strPtr("3.0.0")},
-				{Body: strPtr("plated"), TagName: strPtr("2.0.0")},
-				{Body: strPtr("stored"), TagName: strPtr("1.1.0")},
-				{Body: strPtr("preserved"), TagName: strPtr("1.0.0")},
-				{Body: strPtr("picked"), TagName: strPtr("0.2.0")},
-				{Body: strPtr("growing"), TagName: strPtr("0.1.0")},
-				{Body: strPtr("planted"), TagName: strPtr("0.0.1")},
-			}, githubResponse(t, 200), nil
-		}
-		t.Errorf("unexpected repo: %q", repo)
-		return nil, nil, nil
-	}
-
-	result, err := fetchReleaseNotes(
-		context.Background(),
-		releaseLister,
-		cargo.Kilnfile{
-			Releases: []cargo.ComponentSpec{
-				{
-					Name: "mango",
-				},
-				{
-					Name: "peach",
-					GitRepositories: []string{
-						"https://github.com/cloudfoundry/peach-release",
-						"https://github.com/pivotal-cf/lts-peach-release",
-					},
-				},
-			},
-		},
-		BumpList{
-			{
-				Name:        "peach",
-				ToVersion:   "2.0.1", // served
-				FromVersion: "0.1.3", // ripe
-			},
-			{
-				Name:        "mango",
-				ToVersion:   "10",
-				FromVersion: "9",
-			},
-		})
-	please.Expect(err).NotTo(Ω.HaveOccurred())
-	please.Expect(result).To(Ω.HaveLen(2))
-
-	please.Expect(ltsCallCount).To(Ω.Equal(3))
-	please.Expect(osCallCount).To(Ω.Equal(2))
-
-	please.Expect(result[0].ReleaseNotes()).To(Ω.Equal("served\nplated\nstored\nlabeled\npreserved\nchopped\ncleaned\npicked"))
-}
-
 func TestInternal_issuesBySemanticTitlePrefix(t *testing.T) {
 	please := Ω.NewWithT(t)
 
@@ -568,37 +404,6 @@ func TestInternal_appendFilterAndSortIssues(t *testing.T) {
 		"**[Feature]** lorem ipsum",
 		"**[Feature Improvement]** lorem ipsum",
 		"**[Bug Fix]** lorem ipsum",
-	}))
-}
-
-func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {
-	please := Ω.NewWithT(t)
-	b := BoshReleaseBump{
-		Releases: []*github.RepositoryRelease{
-			{TagName: strPtr("Y")},
-			{TagName: strPtr("1")},
-			{TagName: strPtr("2")},
-			{TagName: strPtr("3")},
-			{TagName: strPtr("3")},
-			{TagName: strPtr("3")},
-			{TagName: strPtr("X")},
-			{TagName: strPtr("2")},
-			{TagName: strPtr("4")},
-			{TagName: strPtr("4")},
-		},
-	}
-	b.deduplicateReleasesWithTheSameTagName()
-	tags := make([]string, 0, len(b.Releases))
-	for _, r := range b.Releases {
-		tags = append(tags, r.GetTagName())
-	}
-	please.Expect(tags).To(Ω.Equal([]string{
-		"Y",
-		"1",
-		"2",
-		"3",
-		"X",
-		"4",
 	}))
 }
 
