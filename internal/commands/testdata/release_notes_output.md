@@ -19,12 +19,16 @@
       <td>banana</td>
       <td>1.2.0</td>
       <td>
-        <details open="">
-          <h5>1.2.0</h5>
+        <details>
+          <summary>1.2.0</summary>
           <pre>
-peal is yellow
+peal
+is
+yellow
           </pre>
-          <h5>1.1.1</h5>
+        </details>
+        <details>
+          <summary>1.1.1</summary>
           <pre>
 remove from bunch
           </pre>

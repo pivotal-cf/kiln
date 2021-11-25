@@ -97,12 +97,13 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	releaseListerFake := new(fakes.ReleaseLister)
 	releaseListerFake.ListReleasesReturnsOnCall(0, []*github.RepositoryRelease{
 		{TagName: strPtr("1.1.0"), Body: strPtr("   peal is green\n")},
-		{TagName: strPtr("1.2.0"), Body: strPtr("peal is yellow")},
+		{TagName: strPtr("1.2.0"), Body: strPtr("peal\nis\nyellow")},
 	}, githubResponse(t, 200), nil)
 	releaseListerFake.ListReleasesReturnsOnCall(1, []*github.RepositoryRelease{}, githubResponse(t, 400), nil)
 	releaseListerFake.ListReleasesReturnsOnCall(2, []*github.RepositoryRelease{
 		{TagName: strPtr("1.1.0"), Body: strPtr("   peal is green\n")},
 		{TagName: strPtr("1.1.1"), Body: strPtr("remove from bunch\n\n")},
+		{TagName: strPtr("1.1.2"), Body: strPtr("")},
 		{TagName: strPtr("1.2.0"), Body: strPtr("peal is yellow")},
 	}, githubResponse(t, 200), nil)
 	releaseListerFake.ListReleasesReturnsOnCall(3, []*github.RepositoryRelease{}, githubResponse(t, 400), nil)
