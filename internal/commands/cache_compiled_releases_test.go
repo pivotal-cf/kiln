@@ -199,6 +199,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 
 			RemoteSource: "cached-compiled-releases",
 			RemotePath:   "lemon-3.0.0-alpine-9.0.0",
+			SHA1:         "012ed191f1d07c14bbcbbc0423d0de1c56757348",
 		}, nil
 	})
 
@@ -250,10 +251,9 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	var updatedKilnfile cargo.KilnfileLock
 	please.Expect(fsReadYAML(fs, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
 	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(component.Lock{
-
-		Name:    "lemon",
-		Version: "3.0.0",
-
+		Name:         "lemon",
+		Version:      "3.0.0",
+		SHA1:         "012ed191f1d07c14bbcbbc0423d0de1c56757348",
 		RemoteSource: "cached-compiled-releases",
 		RemotePath:   "lemon-3.0.0-alpine-9.0.0",
 	}))

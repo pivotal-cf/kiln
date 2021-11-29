@@ -548,7 +548,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					Name:         "banana",
 					Version:      "1.2.3",
 					RemotePath:   "banana/banana-1.2.3.tgz",
-					RemoteSource: sourceID,
+					RemoteSource: "orange-bucket",
 				}))
 			})
 		})

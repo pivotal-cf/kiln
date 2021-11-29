@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"crypto/sha1"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -66,6 +67,7 @@ func NewCacheCompiledReleases() *CacheCompiledReleases {
 		for i := range kilnfile.ReleaseSources {
 			if kilnfile.ReleaseSources[i].Bucket == targetID {
 				releaseSourceConfig = append(releaseSourceConfig, kilnfile.ReleaseSources[i])
+				break
 			}
 		}
 		kilnfile.ReleaseSources = releaseSourceConfig
@@ -129,7 +131,9 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			nonCompiledReleases = append(nonCompiledReleases, rel)
 			continue
 		}
-		err = updateLock(lock, remote)
+
+		cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
+		err = updateLock(lock, remote, cmd.Options.UploadTargetID)
 		if err != nil {
 			return fmt.Errorf("failed to update lock file: %w", err)
 		}
@@ -138,7 +142,6 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	switch len(nonCompiledReleases) {
 	case 0:
 		cmd.Logger.Print("cache already contains releases matching constraint\n")
-		return nil
 	case 1:
 		cmd.Logger.Printf("1 release is not publishable\n")
 	default:
@@ -158,6 +161,13 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		cmd.Logger.Printf("Cleaning exported BOSH releases:")
+		_, err = bosh.CleanUp(false, false, false)
+		if err != nil {
+			cmd.Logger.Printf("%s", err)
+		}
+	}()
 
 	osVersionSlug := boshdir.NewOSVersionSlug(stagedStemcellOS, stagedStemcellVersion)
 
@@ -183,10 +193,11 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 
 		newRemote, err := cmd.cacheRelease(bosh, bucket, deployment, requirement, osVersionSlug)
 		if err != nil {
-			return fmt.Errorf("failed to cache release %s: %w", rel.Name, err)
+			cmd.Logger.Printf("\tfailed to cache release %s/%s for %s: %s\n", rel.Name, rel.Version, osVersionSlug, err)
+			continue
 		}
 
-		err = updateLock(lock, newRemote)
+		err = updateLock(lock, newRemote, cmd.Options.UploadTargetID)
 		if err != nil {
 			return fmt.Errorf("failed to lock release %s: %w", rel.Name, err)
 		}
@@ -246,7 +257,7 @@ func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket Rele
 	}
 
 	cmd.Logger.Printf("\tdownloading %s %s\n", req.Name, req.Version)
-	releaseFilePath, err := cmd.saveReleaseLocally(bosh, cmd.Options.ReleasesDir, req, result)
+	releaseFilePath, _, sha1sum, err := cmd.saveReleaseLocally(bosh, cmd.Options.ReleasesDir, req, result)
 	if err != nil {
 		return component.Lock{}, err
 	}
@@ -256,6 +267,8 @@ func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket Rele
 	if err != nil {
 		return component.Lock{}, err
 	}
+
+	remoteRelease.SHA1 = sha1sum
 
 	return remoteRelease, nil
 }
@@ -270,17 +283,23 @@ func (cmd *CacheCompiledReleases) s3Bucket(kilnfile cargo.Kilnfile) (component.S
 	return component.S3ReleaseSource{}, errors.New("release source not found")
 }
 
-func updateLock(lock cargo.KilnfileLock, release component.Lock) error {
+func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string) error {
 	for index, releaseLock := range lock.Releases {
 		if release.Name != releaseLock.Name {
 			continue
 		}
+
+		sha1 := release.SHA1
+		if releaseLock.RemoteSource == targetID {
+			sha1 = releaseLock.SHA1
+		}
+
 		lock.Releases[index] = cargo.ComponentLock{
 			Name:         release.Name,
 			Version:      release.Version,
 			RemoteSource: release.RemoteSource,
 			RemotePath:   release.RemotePath,
-			SHA1:         release.SHA1,
+			SHA1:         sha1,
 		}
 		return nil
 	}
@@ -298,33 +317,37 @@ func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Spec, fp str
 	return uploader.UploadRelease(spec, f)
 }
 
-func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, relDir string, req component.Spec, res boshdir.ExportReleaseResult) (string, error) {
+func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, relDir string, req component.Spec, res boshdir.ExportReleaseResult) (string, string, string, error) {
 	fileName := fmt.Sprintf("%s-%s-%s-%s.tgz", req.Name, req.Version, req.StemcellOS, req.StemcellVersion)
 	filePath := filepath.Join(relDir, fileName)
 
 	f, err := cmd.FS.Create(filePath)
 	if err != nil {
-		return "", err
+		return "", "", "", err
 	}
 	defer func() {
 		_ = f.Close()
 	}()
 
-	checkSum := sha256.New()
+	sha256sum := sha256.New()
+	sha1sum := sha1.New()
 
-	w := io.MultiWriter(f, checkSum)
+	w := io.MultiWriter(f, sha256sum, sha1sum)
 
 	err = director.DownloadResourceUnchecked(res.BlobstoreID, w)
 	if err != nil {
 		_ = os.Remove(filePath)
-		return "", err
+		return "", "", "", err
 	}
 
-	if sum := fmt.Sprintf("sha256:%x", checkSum.Sum(nil)); sum != res.SHA1 {
-		return "", fmt.Errorf("checksums do not match got %q but expected %q", sum, res.SHA1)
+	sha256sumString := fmt.Sprintf("%x", sha256sum.Sum(nil))
+	sha1sumString := fmt.Sprintf("%x", sha1sum.Sum(nil))
+
+	if sum := fmt.Sprintf("sha256:%s", sha256sumString); sum != res.SHA1 {
+		return "", "", "", fmt.Errorf("checksums do not match got %q but expected %q", sum, res.SHA1)
 	}
 
-	return filePath, nil
+	return filePath, sha256sumString, sha1sumString, nil
 }
 
 func (cmd CacheCompiledReleases) Usage() jhanda.Usage {

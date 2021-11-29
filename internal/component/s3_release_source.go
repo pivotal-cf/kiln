@@ -256,7 +256,7 @@ func (src S3ReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error
 		return Lock{}, err
 	}
 
-	src.logger.Printf("uploading release %q to %s at %q...\n", spec.Name, src.ID(), remotePath)
+	src.logger.Printf("uploading release %q to %s at %q...\n", spec.Name, src.ReleaseSourceConfig.Bucket, remotePath)
 
 	_, err = src.s3Uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(src.ReleaseSourceConfig.Bucket),
@@ -271,7 +271,7 @@ func (src S3ReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error
 		Name:         spec.Name,
 		Version:      spec.Version,
 		RemotePath:   remotePath,
-		RemoteSource: src.ID(),
+		RemoteSource: src.ReleaseSourceConfig.Bucket,
 	}, nil
 }
 

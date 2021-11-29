@@ -6,6 +6,7 @@ release:
   github:
     owner: pivotal-cf
     name: kiln
+  prerelease: auto
 builds:
 - env:
   - CGO_ENABLED=0
