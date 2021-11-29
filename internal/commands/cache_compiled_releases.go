@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -135,6 +136,17 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		}
 
 		cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
+		if rel.RemoteSource == cmd.Options.UploadTargetID && rel.SHA1 != "" {
+			remote.SHA1 = rel.SHA1
+		} else {
+			sha1, err := cmd.downloadAndComputeSHA(cache, remote)
+			if err != nil {
+				cmd.Logger.Printf("unable to compute sha1 for %s/%s", remote.Name, remote.Version)
+				continue
+			}
+			remote.SHA1 = sha1
+		}
+
 		err = updateLock(lock, remote, cmd.Options.UploadTargetID)
 		if err != nil {
 			return fmt.Errorf("failed to update lock file: %w", err)
@@ -164,7 +176,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		return err
 	}
 	defer func() {
-		cmd.Logger.Printf("Cleaning exported BOSH releases")
+		cmd.Logger.Printf("Cleaning exported BOSH releases\n")
 		_, err = bosh.CleanUp(false, false, false)
 		if err != nil {
 			cmd.Logger.Printf("%s", err)
@@ -350,6 +362,26 @@ func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, 
 	}
 
 	return filePath, sha256sumString, sha1sumString, nil
+}
+
+func (cmd CacheCompiledReleases) downloadAndComputeSHA(cache component.MultiReleaseSource, remote cargo.ComponentLock) (string, error) {
+	tmpdir, err := ioutil.TempDir("/tmp", "kiln")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary directory: %w", err)
+	}
+	defer func() {
+		err = os.RemoveAll(tmpdir)
+		if err != nil {
+			cmd.Logger.Printf("unable to delete '%s': %s", tmpdir, err)
+		}
+	}()
+
+	comp, err := cache.DownloadRelease(tmpdir, remote)
+	if err != nil {
+		return "", fmt.Errorf("failed to download release: %s", err)
+	}
+
+	return comp.SHA1, nil
 }
 
 func (cmd CacheCompiledReleases) Usage() jhanda.Usage {
