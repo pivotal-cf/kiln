@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"text/template"
 	"time"
 
@@ -210,6 +211,22 @@ func (r ReleaseNotes) fetchHistoricFiles(start, end string) (klInitial, klFinal 
 	return klInitial, klFinal, kfFinal, v, nil
 }
 
+func removeEmptyLines(input string) string {
+	lines := strings.Split(input, "\n")
+	var b strings.Builder
+
+	for _, l := range lines {
+		l = strings.TrimSpace(l)
+		if l == "" {
+			continue
+		}
+
+		b.WriteString(l)
+		b.WriteRune('\n')
+	}
+	return b.String()
+}
+
 func (r ReleaseNotes) encodeReleaseNotes(info ReleaseNotesInformation) error {
 	releaseNotesTemplate := defaultReleaseNotesTemplate
 	if r.Options.TemplateName != "" {
@@ -220,7 +237,9 @@ func (r ReleaseNotes) encodeReleaseNotes(info ReleaseNotesInformation) error {
 		releaseNotesTemplate = string(templateBuf)
 	}
 
-	t, err := template.New(r.Options.TemplateName).Funcs(sprig.TxtFuncMap()).Parse(releaseNotesTemplate)
+	t, err := template.New(r.Options.TemplateName).Funcs(sprig.TxtFuncMap()).Funcs(template.FuncMap{
+		"removeEmptyLines": removeEmptyLines,
+	}).Parse(releaseNotesTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %w", err)
 	}

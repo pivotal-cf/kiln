@@ -99,7 +99,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	releaseListerFake := new(componentFakes.RepositoryReleaseLister)
 	releaseListerFake.ListReleasesReturnsOnCall(0, []*github.RepositoryRelease{
 		{TagName: strPtr("1.1.0"), Body: strPtr("   peal is green\n")},
-		{TagName: strPtr("1.2.0"), Body: strPtr("peal\nis\nyellow")},
+		{TagName: strPtr("1.2.0"), Body: strPtr("peal\nis\n\nyellow")},
 	}, githubResponse(t, 200), nil)
 	releaseListerFake.ListReleasesReturnsOnCall(1, []*github.RepositoryRelease{}, githubResponse(t, 400), nil)
 	releaseListerFake.ListReleasesReturnsOnCall(2, []*github.RepositoryRelease{
@@ -161,8 +161,8 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	please.Expect(readFileCount).To(Ω.Equal(0))
 	expected, err := ioutil.ReadFile("testdata/release_notes_output.md")
 	please.Expect(err).NotTo(Ω.HaveOccurred())
-	//t.Logf("got: %s", output.String())
-	//t.Logf("exp: %s", expected)
+	t.Logf("got: %s", output.String())
+	t.Logf("exp: %s", expected)
 	please.Expect(output.String()).To(Ω.Equal(string(expected)))
 }
 

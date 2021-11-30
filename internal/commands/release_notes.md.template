@@ -30,7 +30,7 @@
         <details>
           <summary>{{ $release.GetTagName }}</summary>
           <pre>
-{{ trim $release.GetBody }}
+  {{ trim $release.GetBody | removeEmptyLines | indent 2 | trim}}
           </pre>
         </details>
         {{- end }}
