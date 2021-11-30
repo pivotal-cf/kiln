@@ -22,15 +22,15 @@
         <details>
           <summary>1.2.0</summary>
           <pre>
-peal
-is
-yellow
+  peal
+  is
+  yellow
           </pre>
         </details>
         <details>
           <summary>1.1.1</summary>
           <pre>
-remove from bunch
+  remove from bunch
           </pre>
         </details>
       </td>
