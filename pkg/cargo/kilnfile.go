@@ -91,8 +91,8 @@ type ReleaseSourceConfig struct {
 // used as a key type in a map. Don't add array or map fields.
 type ComponentLock struct {
 	Name    string `yaml:"name"`
-	Version string `yaml:"version,omitempty"`
 	SHA1    string `yaml:"sha1"`
+	Version string `yaml:"version,omitempty"`
 
 	StemcellOS      string `yaml:"os,omitempty"`
 	StemcellVersion string `yaml:"stemcell_version,omitempty"`
