@@ -118,6 +118,15 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 
 	var nonCompiledReleases []cargo.ComponentLock
 	cache := cmd.ReleaseCache(kilnfile, cmd.Options.UploadTargetID)
+
+	var cacheRemotePath string
+	for i := range kilnfile.ReleaseSources {
+		if kilnfile.ReleaseSources[i].Bucket == cmd.Options.UploadTargetID {
+			cacheRemotePath = kilnfile.ReleaseSources[i].PathTemplate
+			break
+		}
+	}
+
 	for _, rel := range lock.Releases {
 		remote, found, err := cache.GetMatchedRelease(component.Spec{
 			Name:            rel.Name,
@@ -136,7 +145,8 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		}
 
 		cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
-		if rel.RemoteSource == cmd.Options.UploadTargetID && rel.SHA1 != "" {
+		if rel.RemoteSource == cmd.Options.UploadTargetID &&
+			rel.RemotePath == cacheRemotePath && rel.SHA1 != "" {
 			remote.SHA1 = rel.SHA1
 		} else {
 			sha1, err := cmd.downloadAndComputeSHA(cache, remote)
