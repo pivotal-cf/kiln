@@ -140,8 +140,6 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		if !found {
 			nonCompiledReleases = append(nonCompiledReleases, rel)
 			continue
-		} else {
-			cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
 		}
 
 		cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
