@@ -53,40 +53,12 @@ type ReleaseNotes struct {
 }
 
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
-	repo, err := git.PlainOpenWithOptions(".", &git.PlainOpenOptions{DetectDotGit: true})
-	if err != nil {
-		return ReleaseNotes{}, err
-	}
-	wt, err := repo.Worktree()
-	if err != nil {
-		return ReleaseNotes{}, err
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return ReleaseNotes{}, err
-	}
-	rp, err := filepath.Rel(wt.Filesystem.Root(), wd)
-	if err != nil {
-		return ReleaseNotes{}, err
-	}
-
-	repoOwner, repoName, err := getGithubRemoteRepoOwnerAndName(repo)
-	if err != nil {
-		return ReleaseNotes{}, err
-	}
-
 	return ReleaseNotes{
-		repository:           repo,
 		readFile:             ioutil.ReadFile,
 		historicKilnfileLock: historic.KilnfileLock,
 		historicVersion:      historic.Version,
-		revisionResolver:     repo,
 		stat:                 os.Stat,
 		Writer:               os.Stdout,
-		pathRelativeToDotGit: rp,
-		repoName:             repoName,
-		repoOwner:            repoOwner,
-
 		gitHubAPIServices: func(ctx context.Context, token string) githubAPIIssuesService {
 			tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 			tokenClient := oauth2.NewClient(ctx, tokenSource)
@@ -94,6 +66,42 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 			return client.Issues
 		},
 	}, nil
+}
+
+func (r *ReleaseNotes) initRepo() error {
+	if r.repository != nil {
+		return nil
+	}
+
+	repo, err := git.PlainOpenWithOptions(".", &git.PlainOpenOptions{DetectDotGit: true})
+	if err != nil {
+		return err
+	}
+	wt, err := repo.Worktree()
+	if err != nil {
+		return err
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	rp, err := filepath.Rel(wt.Filesystem.Root(), wd)
+	if err != nil {
+		return err
+	}
+
+	repoOwner, repoName, err := getGithubRemoteRepoOwnerAndName(repo)
+	if err != nil {
+		return err
+	}
+
+	r.repository = repo
+	r.revisionResolver = repo
+	r.repoName = repoName
+	r.repoOwner = repoOwner
+	r.pathRelativeToDotGit = rp
+
+	return nil
 }
 
 func (r ReleaseNotes) Usage() jhanda.Usage {
@@ -122,6 +130,10 @@ type revisionResolver interface {
 var defaultReleaseNotesTemplate string
 
 func (r ReleaseNotes) Execute(args []string) error {
+	if err := r.initRepo(); err != nil {
+		return err
+	}
+
 	nonFlagArgs, err := jhanda.Parse(&r.Options, args)
 	if err != nil {
 		return err
