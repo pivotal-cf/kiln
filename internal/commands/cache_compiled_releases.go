@@ -155,7 +155,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			remote.SHA1 = sha1
 		}
 
-		err = updateLock(lock, remote, cmd.Options.UploadTargetID)
+		err = updateLock(lock, remote)
 		if err != nil {
 			return fmt.Errorf("failed to update lock file: %w", err)
 		}
@@ -219,7 +219,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			continue
 		}
 
-		err = updateLock(lock, newRemote, cmd.Options.UploadTargetID)
+		err = updateLock(lock, newRemote)
 		if err != nil {
 			return fmt.Errorf("failed to lock release %s: %w", rel.Name, err)
 		}
@@ -305,15 +305,10 @@ func (cmd *CacheCompiledReleases) s3Bucket(kilnfile cargo.Kilnfile) (component.S
 	return component.S3ReleaseSource{}, errors.New("release source not found")
 }
 
-func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string) error {
+func updateLock(lock cargo.KilnfileLock, release component.Lock) error {
 	for index, releaseLock := range lock.Releases {
 		if release.Name != releaseLock.Name {
 			continue
-		}
-
-		sha1 := release.SHA1
-		if releaseLock.RemoteSource == targetID {
-			sha1 = releaseLock.SHA1
 		}
 
 		lock.Releases[index] = cargo.ComponentLock{
@@ -321,7 +316,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 			Version:      release.Version,
 			RemoteSource: release.RemoteSource,
 			RemotePath:   release.RemotePath,
-			SHA1:         sha1,
+			SHA1:         release.SHA1,
 		}
 		return nil
 	}
