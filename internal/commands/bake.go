@@ -215,7 +215,10 @@ func (b *Bake) loadFlags(args []string, stat flags.StatFunc, readFile func(strin
 	}
 
 	if shouldGenerateTileFileName(b, args) {
-		b.Options.OutputFile = "tile-" + b.Options.Version + ".pivotal"
+		b.Options.OutputFile = "tile.pivotal"
+		if b.Options.Version != "" {
+			b.Options.OutputFile = "tile-" + b.Options.Version + ".pivotal"
+		}
 	}
 
 	if shouldNotUseDefaultKilnfileFlag(args) {

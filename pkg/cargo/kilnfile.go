@@ -32,7 +32,6 @@ type ComponentSpec struct {
 	//Repositories []string `yaml:"repositories,omitempty"`
 }
 
-
 // VersionConstraints must be passed a spec with a parsable
 // semver. The Kiln Validate command ensures that the versions
 // in this field continue to stay valid.
@@ -94,8 +93,8 @@ type ComponentLock struct {
 	SHA1    string `yaml:"sha1"`
 	Version string `yaml:"version,omitempty"`
 
-	StemcellOS      string `yaml:"os,omitempty"`
-	StemcellVersion string `yaml:"stemcell_version,omitempty"`
+	StemcellOS      string `yaml:"-"`
+	StemcellVersion string `yaml:"-"`
 
 	RemoteSource string `yaml:"remote_source"`
 	RemotePath   string `yaml:"remote_path"`

@@ -24,8 +24,8 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-//go:generate counterfeiter -o ./fakes/ops_manager_release_cache_source.go --fake-name OpsManagerReleaseCacheSource . OpsManagerReleaseCacheSource
-//go:generate counterfeiter -o ./fakes/release_cache_bucket.go --fake-name ReleaseCacheBucket . ReleaseCacheBucket
+//counterfeiter:generate -o ./fakes/ops_manager_release_cache_source.go --fake-name OpsManagerReleaseCacheSource . OpsManagerReleaseCacheSource
+//counterfeiter:generate -o ./fakes/release_cache_bucket.go --fake-name ReleaseCacheBucket . ReleaseCacheBucket
 
 type (
 	OpsManagerReleaseCacheSource interface {
@@ -140,6 +140,8 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		if !found {
 			nonCompiledReleases = append(nonCompiledReleases, rel)
 			continue
+		} else {
+			cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
 		}
 
 		cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
