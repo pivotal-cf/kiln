@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"os"
@@ -39,6 +40,7 @@ type ReleaseNotes struct {
 		IssueMilestone string   `long:"github-issue-milestone" short:"m" description:"issue milestone to use, it may be the milestone number or the milestone name"`
 		IssueLabels    []string `long:"github-issue-label"     short:"l" description:"issue labels to add to issues query"`
 		IssueTitleExp  string   `long:"issues-title-exp"       short:"x" description:"issues with title matching regular expression will be added. Issues must first be fetched with github-issue* flags. The default expression can be disabled by setting an empty string" default:"(?i)^\\*\\*\\[(security fix)|(feature)|(feature improvement)|(bug fix)\\]\\*\\*.*$"`
+		Kilnfile       string   `long:"kilnfile"               short:"k" description:"path to Kilnfile"`
 	}
 
 	pathRelativeToDotGit string
@@ -167,7 +169,11 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	info.ReleaseDate, _ = r.parseReleaseDate()
 
-	info.Issues, info.Bumps, err = r.fetchIssuesAndReleaseNotes(context.TODO(), finalKilnfile, info.Bumps)
+	kf, err := r.getKilnfile(finalKilnfile)
+	if err != nil {
+		return err
+	}
+	info.Issues, info.Bumps, err = r.fetchIssuesAndReleaseNotes(context.TODO(), kf, info.Bumps)
 	if err != nil {
 		return err
 	}
@@ -178,6 +184,21 @@ func (r ReleaseNotes) Execute(args []string) error {
 	}
 
 	return nil
+}
+
+func (r ReleaseNotes) getKilnfile(finalKilnfile cargo.Kilnfile) (cargo.Kilnfile, error) {
+	kf := finalKilnfile
+	if r.Options.Kilnfile != "" {
+		b, err := os.ReadFile(r.Options.Kilnfile)
+		if err != nil {
+			return cargo.Kilnfile{}, err
+		}
+		err = yaml.Unmarshal(b, &kf)
+		if err != nil {
+			return cargo.Kilnfile{}, err
+		}
+	}
+	return kf, nil
 }
 
 func (r ReleaseNotes) fetchHistoricFiles(start, end string) (klInitial, klFinal cargo.KilnfileLock, kfFinal cargo.Kilnfile, _ *semver.Version, _ error) {
