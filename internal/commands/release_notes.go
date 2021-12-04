@@ -59,11 +59,11 @@ type ReleaseNotes struct {
 
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	return ReleaseNotes{
-		readFile:             ioutil.ReadFile,
-		historicKilnfile:     historic.Kilnfile,
-		historicVersion:      historic.Version,
-		stat:                 os.Stat,
-		Writer:               os.Stdout,
+		readFile:         ioutil.ReadFile,
+		historicKilnfile: historic.Kilnfile,
+		historicVersion:  historic.Version,
+		stat:             os.Stat,
+		Writer:           os.Stdout,
 
 		gitHubAPIServices: func(ctx context.Context, token string) (githubAPIIssuesService, component.RepositoryReleaseLister) {
 			tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
@@ -162,9 +162,8 @@ func (r ReleaseNotes) Execute(args []string) error {
 	}
 
 	info := ReleaseNotesInformation{
-		Version:    finalVersion,
-		Components: finalKilnfileLock.Releases,
-		Bumps:      component.CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
+		Version: finalVersion,
+		Bumps:   component.CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
 	}
 
 	info.ReleaseDate, _ = r.parseReleaseDate()
@@ -176,6 +175,13 @@ func (r ReleaseNotes) Execute(args []string) error {
 	info.Issues, info.Bumps, err = r.fetchIssuesAndReleaseNotes(context.TODO(), kf, info.Bumps)
 	if err != nil {
 		return err
+	}
+
+	for _, c := range finalKilnfileLock.Releases {
+		info.Components = append(info.Components, ComponentInformation{
+			Lock:     c,
+			Releases: info.Bumps.ForLock(c).Releases,
+		})
 	}
 
 	err = r.encodeReleaseNotes(info)
@@ -314,12 +320,17 @@ func (r ReleaseNotes) parseReleaseDate() (time.Time, error) {
 	return releaseDate, nil
 }
 
+type ComponentInformation struct {
+	component.Lock
+	Releases []*github.RepositoryRelease
+}
+
 type ReleaseNotesInformation struct {
 	Version     *semver.Version
 	ReleaseDate time.Time
 
 	Issues     []*github.Issue
-	Components []component.Lock
+	Components []ComponentInformation
 	Bumps      component.BumpList
 }
 

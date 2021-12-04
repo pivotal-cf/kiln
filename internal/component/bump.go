@@ -12,9 +12,9 @@ import (
 )
 
 type Bump struct {
-	Name                   string
-	FromVersion, ToVersion string
-	Releases               []*github.RepositoryRelease
+	Name, FromVersion, ToVersion string
+
+	Releases []*github.RepositoryRelease
 }
 
 func (bump Bump) ReleaseNotes() string {
