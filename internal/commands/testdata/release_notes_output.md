@@ -15,6 +15,7 @@
   </tr>
   </thead>
   <tbody>
+    <tr><td>fruit-tree</td><td>40000.2</td><td></td></tr>
     <tr><td>banana</td><td>1.2.0</td>
       <td>
         <details>

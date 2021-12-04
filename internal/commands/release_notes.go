@@ -162,8 +162,9 @@ func (r ReleaseNotes) Execute(args []string) error {
 	}
 
 	info := ReleaseNotesInformation{
-		Version: finalVersion,
-		Bumps:   component.CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
+		Version:  finalVersion,
+		Bumps:    component.CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
+		Stemcell: finalKilnfile.Stemcell,
 	}
 
 	info.ReleaseDate, _ = r.parseReleaseDate()
@@ -332,6 +333,8 @@ type ReleaseNotesInformation struct {
 	Issues     []*github.Issue
 	Components []ComponentInformation
 	Bumps      component.BumpList
+
+	Stemcell cargo.Stemcell
 }
 
 //counterfeiter:generate -o ./fakes_internal/release_notes_github_api_issues_service.go --fake-name GithubAPIIssuesService . githubAPIIssuesService
