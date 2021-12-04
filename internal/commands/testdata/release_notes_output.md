@@ -15,9 +15,7 @@
   </tr>
   </thead>
   <tbody>
-    <tr>
-      <td>banana</td>
-      <td>1.2.0</td>
+    <tr><td>banana</td><td>1.2.0</td>
       <td>
         <details>
           <summary>1.2.0</summary>
@@ -35,10 +33,6 @@
         </details>
       </td>
     </tr>
-    <tr>
-      <td>lemon</td>
-      <td>1.1.0</td>
-      <td></td>
-    </tr>
+    <tr><td>lemon</td><td>1.1.0</td><td></td></tr>
   </tbody>
 </table>

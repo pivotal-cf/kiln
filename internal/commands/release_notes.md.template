@@ -4,6 +4,26 @@
 
 {{ if not .ReleaseDate.IsZero }}**Release Date:** {{ .ReleaseDate.Format "01/02/2006" }}{{ end }}
 
+{{ define "component" }}
+    <tr><td>{{ .Name }}</td><td>{{ .Version }}</td><td></td></tr>
+{{- end -}}
+
+{{ define "component-with-notes" }}
+    <tr><td>{{ .Name }}</td><td>{{ .Version }}</td>
+      <td>{{- range .Releases}}
+        {{- if ne (trim .GetBody) "" }}
+        <details>
+          <summary>{{ .GetTagName }}</summary>
+          <pre>
+  {{ trim .GetBody | removeEmptyLines | indent 2 | trim}}
+          </pre>
+        </details>
+        {{- end }}
+      {{- end}}
+      </td>
+    </tr>
+{{- end -}}
+
 {{range .Issues -}}
   * {{.GetTitle}}
 {{ end -}}
@@ -18,28 +38,12 @@
     <th>Release Notes</th>
   </tr>
   </thead>
-  <tbody>
-  {{- range $lock := .Components }}
-    <tr>
-      <td>{{ $lock.Name }}</td>
-      <td>{{ $lock.Version }}</td>
-      {{- if gt (len ($.Bumps.ForLock $lock).Releases) 0 }}
-      <td>
-      {{- range $release := ($.Bumps.ForLock $lock).Releases}}
-        {{- if ne (trim $release.GetBody) "" }}
-        <details>
-          <summary>{{ $release.GetTagName }}</summary>
-          <pre>
-  {{ trim $release.GetBody | removeEmptyLines | indent 2 | trim}}
-          </pre>
-        </details>
-        {{- end }}
-      {{- end}}
-      </td>
-      {{- else }}
-      <td></td>
-      {{- end }}
-    </tr>
+  <tbody>{{ range .Components }}
+    {{- if gt (len .Releases) 0 -}}
+      {{template "component-with-notes" .}}
+    {{- else -}}
+      {{template "component" .}}
+    {{- end -}}
   {{- end }}
   </tbody>
 </table>
