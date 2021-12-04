@@ -53,12 +53,20 @@ func TestReleaseNotes_Execute(t *testing.T) {
 
 	historicKilnfile := new(fakes.HistoricKilnfile)
 	historicKilnfile.ReturnsOnCall(0, cargo.Kilnfile{}, cargo.KilnfileLock{
+		Stemcell: cargo.Stemcell{
+			OS:      "fruit-tree",
+			Version: "40000.1",
+		},
 		Releases: []cargo.ComponentLock{
 			{Name: "banana", Version: "1.1.0"},
 			{Name: "lemon", Version: "1.1.0"},
 		},
 	}, nil)
 	historicKilnfile.ReturnsOnCall(1, cargo.Kilnfile{
+		Stemcell: cargo.Stemcell{
+			OS:      "fruit-tree",
+			Version: "40000.2",
+		},
 		Releases: []cargo.ComponentSpec{
 			{Name: "banana", GitRepositories: []string{
 				"https://github.com/cloudfoundry/banana-release",

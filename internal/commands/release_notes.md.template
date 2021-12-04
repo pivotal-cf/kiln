@@ -38,7 +38,11 @@
     <th>Release Notes</th>
   </tr>
   </thead>
-  <tbody>{{ range .Components }}
+  <tbody>
+  {{- if .Stemcell.OS }}
+    <tr><td>{{ .Stemcell.OS }}</td><td>{{ .Stemcell.Version }}</td><td></td></tr>
+  {{- end -}}
+  {{- range .Components }}
     {{- if gt (len .Releases) 0 -}}
       {{template "component-with-notes" .}}
     {{- else -}}
