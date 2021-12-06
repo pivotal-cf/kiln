@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"net/http"
 	"sort"
