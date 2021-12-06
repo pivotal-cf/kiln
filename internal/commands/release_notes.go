@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/release"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
@@ -139,9 +140,6 @@ type revisionResolver interface {
 	ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, error)
 }
 
-//go:embed release_notes.md.template
-var defaultReleaseNotesTemplate string
-
 func (r ReleaseNotes) Execute(args []string) error {
 	if err := r.initRepo(); err != nil {
 		return err
@@ -256,7 +254,7 @@ func removeEmptyLines(input string) string {
 }
 
 func (r ReleaseNotes) encodeReleaseNotes(info ReleaseNotesInformation) error {
-	releaseNotesTemplate := defaultReleaseNotesTemplate
+	releaseNotesTemplate := release.DefaultNotesTemplate()
 	if r.Options.TemplateName != "" {
 		templateBuf, err := r.readFile(r.Options.TemplateName)
 		if err != nil {
