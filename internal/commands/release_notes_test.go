@@ -169,8 +169,8 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	please.Expect(readFileCount).To(Ω.Equal(0))
 	expected, err := ioutil.ReadFile("testdata/release_notes_output.md")
 	please.Expect(err).NotTo(Ω.HaveOccurred())
-	t.Logf("got: %s", output.String())
-	t.Logf("exp: %s", expected)
+	//t.Logf("got: %s", output.String())
+	//t.Logf("exp: %s", expected)
 	please.Expect(output.String()).To(Ω.Equal(string(expected)))
 }
 
