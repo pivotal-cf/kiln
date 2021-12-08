@@ -8,14 +8,14 @@
 
 <table border="1" class="nice">
   <thead>
-  <tr>
-    <th>Component</th>
-    <th>Version</th>
-    <th>Release Notes</th>
-  </tr>
+    <tr>
+      <th>Component</th>
+      <th>Version</th>
+      <th>Release Notes</th>
+    </tr>
   </thead>
   <tbody>
-    <tr><td>fruit-tree</td><td>40000.2</td><td></td></tr>
+    <tr><td>fruit-tree stemcell</td><td>40000.2</td><td></td></tr>
     <tr><td>banana</td><td>1.2.0</td>
       <td>
         <details>
@@ -37,3 +37,6 @@
     <tr><td>lemon</td><td>1.1.0</td><td></td></tr>
   </tbody>
 </table>
+
+
+

@@ -1,6 +1,7 @@
 package release
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
@@ -51,6 +52,36 @@ type NotesData struct {
 	Bumps      component.BumpList
 
 	Stemcell cargo.Stemcell
+}
+
+func (notes NotesData) String() string {
+	note, _ := notes.WriteVersionNotes()
+	return note.Notes
+}
+
+func (notes NotesData) WriteVersionNotes() (VersionNote, error) {
+	noteTemplate, err := DefaultTemplateFuncs(template.New("")).Parse(DefaultNotesTemplate())
+	if err != nil {
+		return VersionNote{}, err
+	}
+	var buf bytes.Buffer
+	err = noteTemplate.Execute(&buf, notes)
+	if err != nil {
+		return VersionNote{}, err
+	}
+	return VersionNote{
+		Version: notes.Version.String(),
+		Notes:   buf.String(),
+	}, nil
+}
+
+func (notes NotesData) HasComponentReleases() bool {
+	for _, r := range notes.Components {
+		if len(r.Releases) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 type IssuesQuery struct {
