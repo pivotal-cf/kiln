@@ -1,104 +1,157 @@
 package release
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/Masterminds/semver"
 	"io"
 	"regexp"
 	"strings"
-
-	"github.com/Masterminds/semver"
 )
 
-var releaseNoteExp = regexp.MustCompile(`(?U)(?m)### <a id='(?P<version>\d+\.\d+\.\d+(-.+)?)'></a> (\d+\.\d+\.\d+(-.+)?)\w*(?P<header_suffix>.*)\n((\n.*)*)</tbody>\w*\n\w*</table>`)
+const DefaultReleasesSentinel = "\n## <a id='releases'></a> Releases\n\n"
+
+var releaseNoteExp = regexp.MustCompile(`(?m)(?P<notes>### <a id='(?P<version>\d+\.\d+\.\d+(-.+)?)'></a> (\d+\.\d+\.\d+(-.+)?)\w*(?P<header_suffix>.*)\n*((\*.*\n)|\n|(\</?.*)|(  .*)|(####+.*)|(\t.*)|(\w.*))*)`)
 
 type NotesPage struct {
+	Exp *regexp.Regexp
+
 	Prefix, Suffix string
-	Tiles          []TileReleaseNotes
+	Releases       []VersionNote
 }
 
 func ParseNotesPage(input string) (NotesPage, error) {
+	return ParseNotesPageWithExpressionAndReleasesSentinel(input, releaseNoteExp.String(), DefaultReleasesSentinel)
+}
+
+func ParseNotesPageWithExpressionAndReleasesSentinel(input, releaseRegularExpression, releasesSentinel string) (NotesPage, error) {
 	const (
-		endSentinel   = "## <a id='upgrade'></a>"
-		startSentinel = "\n## <a id='releases'></a> Releases"
+		versionCaptureGroup = "version"
+		notesCaptureGroup   = "notes"
 	)
-	end := strings.Index(input, endSentinel)
-	start := strings.Index(input, startSentinel) + len(startSentinel)
-	if end < 0 || start < 0 {
-		panic("start or end sentinel values not found")
+
+	if !strings.Contains(input, releasesSentinel) {
+		return NotesPage{}, fmt.Errorf("releases sentinal not found in input: expected input to contain %q", releasesSentinel)
+	}
+
+	exp, err := regexp.Compile(releaseRegularExpression)
+	if err != nil {
+		return NotesPage{}, fmt.Errorf(`release regular expression parse failure: %w`, err)
+	}
+	if !stringsSliceContains(exp.SubexpNames(), versionCaptureGroup) {
+		return NotesPage{}, fmt.Errorf(`release regular expression must contain named capture group %q`, versionCaptureGroup)
+	}
+	if !stringsSliceContains(exp.SubexpNames(), notesCaptureGroup) {
+		return NotesPage{}, fmt.Errorf(`release regular expression must contain named capture group %q`, notesCaptureGroup)
 	}
 
 	page := NotesPage{
-		Prefix: input[:start],
-		Suffix: input[end:],
+		Exp: exp,
 	}
 
-	matchStrings := releaseNoteExp.FindAllStringSubmatch(input, -1)
-	versionSubExpIndex := releaseNoteExp.SubexpIndex("version")
+	matchIndices := page.Exp.FindAllStringSubmatchIndex(input, -1)
 
-	for _, match := range matchStrings {
-		page.Tiles = append(page.Tiles, TileReleaseNotes{
-			Version: match[versionSubExpIndex],
-			Notes:   match[0],
-		})
+	switch len(matchIndices) {
+	case 0:
+		index := strings.Index(input, releasesSentinel)
+		page.Prefix = input[:index+len(releasesSentinel)]
+		page.Suffix = input[index+len(releasesSentinel):]
+	default:
+		versionSubExpIndex := page.Exp.SubexpIndex(versionCaptureGroup)
+		notesSubExpIndex := page.Exp.SubexpIndex(notesCaptureGroup)
+		matchStrings := page.Exp.FindAllStringSubmatch(input, -1)
+
+		for _, match := range matchStrings {
+			page.Releases = append(page.Releases, VersionNote{
+				Version: match[versionSubExpIndex],
+				Notes:   match[notesSubExpIndex],
+			})
+		}
+
+		page.Prefix = input[:matchIndices[0][notesSubExpIndex+1]]
+		page.Suffix = input[matchIndices[len(matchIndices)-1][notesSubExpIndex+2]:]
 	}
 
 	return page, nil
 }
 
-func (page *NotesPage) Add(nt TileReleaseNotes) error {
-	err := nt.Validate()
-	if err != nil {
-		return err
-	}
-
-	if len(page.Tiles) == 0 {
-		page.Tiles = []TileReleaseNotes{nt}
-		return nil
-	}
-
-	nv, _ := nt.version()
-	for i, t := range page.Tiles {
-		tv, err := t.version()
-		if err != nil {
-			continue
-		}
-		if nv.Equal(tv) {
-			page.Tiles[i] = nt
-			return nil
-		}
-		if !nv.GreaterThan(tv) {
-			continue
-		}
-		page.Tiles = append(page.Tiles[:i], append([]TileReleaseNotes{nt}, page.Tiles[i:]...)...)
-		return nil
-	}
-
-	page.Tiles = append(page.Tiles, nt)
-
-	return nil
-}
-
-func (page *NotesPage) WriteTo(w io.Writer) (n int64, err error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-type TileReleaseNotes struct {
-	Version string
-	Notes   string
-}
-
-func (tile TileReleaseNotes) Validate() error {
+func (page NotesPage) validateRelease(tile VersionNote) error {
 	_, err := tile.version()
 	if err != nil {
 		return fmt.Errorf("invalid version: %w", err)
 	}
-	if !releaseNoteExp.MatchString(tile.Notes) {
+	if !page.Exp.MatchString(tile.Notes) {
 		return fmt.Errorf("notes do not match expression")
 	}
 	return nil
 }
 
-func (tile TileReleaseNotes) version() (*semver.Version, error) {
-	return semver.NewVersion(tile.Version)
+func (page *NotesPage) Add(versionNote VersionNote) error {
+	err := page.validateRelease(versionNote)
+	if err != nil {
+		return err
+	}
+
+	if len(page.Releases) == 0 {
+		page.Releases = []VersionNote{versionNote}
+		return nil
+	}
+
+	nv, _ := versionNote.version()
+	for i, t := range page.Releases {
+		tv, err := t.version()
+		if err != nil {
+			continue
+		}
+		if nv.Equal(tv) {
+			page.Releases[i] = versionNote
+			return nil
+		}
+		if !nv.GreaterThan(tv) {
+			continue
+		}
+		page.Releases = append(page.Releases[:i], append([]VersionNote{versionNote}, page.Releases[i:]...)...)
+		return nil
+	}
+
+	page.Releases = append(page.Releases, versionNote)
+
+	return nil
+}
+
+func (page *NotesPage) WriteTo(w io.Writer) (int64, error) {
+	buf := new(bytes.Buffer)
+	n, err := buf.WriteString(page.Prefix)
+	if err != nil {
+		return int64(n), err
+	}
+	for _, r := range page.Releases {
+		n, err = buf.WriteString(r.Notes)
+		if err != nil {
+			return int64(n), err
+		}
+	}
+	n, err = buf.WriteString(page.Suffix)
+	if err != nil {
+		return int64(n), err
+	}
+	return buf.WriteTo(w)
+}
+
+type VersionNote struct {
+	Version string
+	Notes   string
+}
+
+func (notes VersionNote) version() (*semver.Version, error) {
+	return semver.NewVersion(notes.Version)
+}
+
+func stringsSliceContains(slice []string, value string) bool {
+	for _, s := range slice {
+		if s == value {
+			return true
+		}
+	}
+	return false
 }

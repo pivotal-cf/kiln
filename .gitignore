@@ -4,3 +4,5 @@
 *debug.test
 dist
 *.test
+internal/release/exp.txt
+internal/release/got.txt

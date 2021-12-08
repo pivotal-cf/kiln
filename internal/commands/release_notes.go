@@ -1,11 +1,13 @@
 package commands
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -31,11 +33,13 @@ type ReleaseNotes struct {
 		TemplateName string `long:"template"     short:"t" description:"path to template"`
 		GithubToken  string `long:"github-token" short:"g" description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
 		Kilnfile     string `long:"kilnfile"     short:"k" description:"path to Kilnfile"`
+		DocsFile     string `long:"update-docs"  short:"u" description:"path to docs file to update"`
 		release.IssuesQuery
 	}
 
 	repository *git.Repository
 	readFile   func(fp string) ([]byte, error)
+	stat       func(name string) (fs.FileInfo, error)
 	io.Writer
 
 	fetchNotesData FetchNotesData
@@ -50,6 +54,7 @@ func NewReleaseNotesCommand() (ReleaseNotes, error) {
 		fetchNotesData: release.FetchNotesData,
 		readFile:       ioutil.ReadFile,
 		Writer:         os.Stdout,
+		stat:           os.Stat,
 	}, nil
 }
 
@@ -82,13 +87,6 @@ func (r ReleaseNotes) Execute(args []string) error {
 	if r.Options.GithubToken != "" {
 		tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: r.Options.GithubToken})
 		tokenClient := oauth2.NewClient(ctx, tokenSource)
-		//rt := &rtLogger{
-		//	RoundTripper: tokenClient.Transport,
-		//}
-		//if rt.RoundTripper == nil {
-		//	rt.RoundTripper = http.DefaultTransport
-		//}
-		//tokenClient.Transport = rt
 		client = github.NewClient(tokenClient)
 	}
 
@@ -103,11 +101,43 @@ func (r ReleaseNotes) Execute(args []string) error {
 	}
 	data.ReleaseDate, _ = r.parseReleaseDate()
 
-	err = r.writeNotes(r.Writer, data)
+	if r.Options.DocsFile == "" {
+		return r.writeNotes(r.Writer, data)
+	}
+	return r.updateDocsFile(data)
+}
+
+func (r *ReleaseNotes) updateDocsFile(data release.NotesData) error {
+	// TODO: add helpful logging
+	docsFileContent, err := r.readFile(r.Options.DocsFile)
 	if err != nil {
 		return err
 	}
-
+	page, err := release.ParseNotesPage(string(docsFileContent))
+	if err != nil {
+		return err
+	}
+	notes, err := data.WriteVersionNotes()
+	if err != nil {
+		return err
+	}
+	err = page.Add(notes)
+	if err != nil {
+		return err
+	}
+	var output bytes.Buffer
+	_, err = page.WriteTo(&output)
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(r.Options.DocsFile)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(f, &output)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -187,6 +217,13 @@ func (r ReleaseNotes) checkInputs(nonFlagArgs []string) error {
 			len(r.Options.IssueIDs) > 0 ||
 			len(r.Options.IssueLabels) > 0) {
 		return errors.New("github-token (env: GITHUB_TOKEN) must be set to interact with the github api")
+	}
+
+	if r.Options.DocsFile != "" {
+		_, err := r.stat(r.Options.DocsFile)
+		if err != nil {
+			return err
+		}
 	}
 
 	_, err := r.parseReleaseDate()
