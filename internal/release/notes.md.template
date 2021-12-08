@@ -1,4 +1,5 @@
 {{with $releaseVersion := (printf "%d.%d.%d" .Version.Major .Version.Minor .Version.Patch) -}}
+
 ### <a id='{{ $releaseVersion }}'></a> {{ $releaseVersion }}
 {{- end }}
 
@@ -6,6 +7,10 @@
 
 {{ define "component" }}
     <tr><td>{{ .Name }}</td><td>{{ .Version }}</td><td></td></tr>
+{{- end -}}
+
+{{ define "component-legacy" }}
+    <tr><td>{{ .Name }}</td><td>{{ .Version }}</td></tr>
 {{- end -}}
 
 {{ define "component-with-notes" }}
@@ -32,18 +37,20 @@
 {{ end }}
 <table border="1" class="nice">
   <thead>
-  <tr>
-    <th>Component</th>
-    <th>Version</th>
-    <th>Release Notes</th>
-  </tr>
+    <tr>
+      <th>Component</th>
+      <th>Version</th>{{if .HasComponentReleases}}
+      <th>Release Notes</th>{{end}}
+    </tr>
   </thead>
   <tbody>
   {{- if .Stemcell.OS }}
-    <tr><td>{{ .Stemcell.OS }}</td><td>{{ .Stemcell.Version }}</td><td></td></tr>
+    <tr><td>{{ .Stemcell.OS }} stemcell</td><td>{{ .Stemcell.Version }}</td>{{- if $.HasComponentReleases -}}<td></td>{{ end }}</tr>
   {{- end -}}
   {{- range .Components }}
-    {{- if gt (len .Releases) 0 -}}
+    {{- if not $.HasComponentReleases -}}
+       {{template "component-legacy" .}}
+    {{- else if gt (len .Releases) 0 -}}
       {{template "component-with-notes" .}}
     {{- else -}}
       {{template "component" .}}
@@ -51,3 +58,7 @@
   {{- end }}
   </tbody>
 </table>
+
+
+
+{{/* most releaes notes have 4 new lines between them */}}

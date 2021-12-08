@@ -38,7 +38,7 @@ func TestReleaseNotes_Usage(t *testing.T) {
 var releaseNotesExpectedOutput string
 
 func TestReleaseNotes_Execute(t *testing.T) {
-	t.Run("default template", func(t *testing.T) {
+	t.Run("when writing to standard out", func(t *testing.T) {
 		mustParseTime := func(tm time.Time, err error) time.Time {
 			if err != nil {
 				t.Fatal(err)
@@ -133,6 +133,10 @@ func TestReleaseNotes_Execute(t *testing.T) {
 
 		t.Log(out.String())
 		please.Expect(out.String()).To(Ω.Equal(releaseNotesExpectedOutput))
+	})
+
+	t.Run("when updating a docs file", func(t *testing.T) {
+
 	})
 }
 
