@@ -5,8 +5,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/release"
-	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"os"
@@ -16,70 +14,101 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/google/go-github/v40/github"
-	"github.com/masterminds/sprig"
 	"github.com/pivotal-cf/jhanda"
 	"golang.org/x/oauth2"
 
 	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/internal/historic"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/internal/release"
 )
 
 const releaseDateFormat = "2006-01-02"
 
 type ReleaseNotes struct {
 	Options struct {
-		ReleaseDate    string   `long:"release-date"           short:"d" description:"release date of the tile"`
-		TemplateName   string   `long:"template"               short:"t" description:"path to template"`
-		GithubToken    string   `long:"github-token"           short:"g" description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
-		IssueIDs       []string `long:"github-issue"           short:"i" description:"a list of issues to include in the release notes; these are deduplicated with the issue results"`
-		IssueMilestone string   `long:"github-issue-milestone" short:"m" description:"issue milestone to use, it may be the milestone number or the milestone name"`
-		IssueLabels    []string `long:"github-issue-label"     short:"l" description:"issue labels to add to issues query"`
-		IssueTitleExp  string   `long:"issues-title-exp"       short:"x" description:"issues with title matching regular expression will be added. Issues must first be fetched with github-issue* flags. The default expression can be disabled by setting an empty string" default:"(?i)^\\*\\*\\[(security fix)|(feature)|(feature improvement)|(bug fix)\\]\\*\\*.*$"`
-		Kilnfile       string   `long:"kilnfile"               short:"k" description:"path to Kilnfile"`
+		ReleaseDate  string `long:"release-date" short:"d" description:"release date of the tile"`
+		TemplateName string `long:"template"     short:"t" description:"path to template"`
+		GithubToken  string `long:"github-token" short:"g" description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
+		Kilnfile     string `long:"kilnfile"     short:"k" description:"path to Kilnfile"`
+		release.IssuesQuery
 	}
 
-	pathRelativeToDotGit string
-	repository           *git.Repository
-	readFile             func(fp string) ([]byte, error)
-	historicKilnfile
-	historicVersion
-	revisionResolver
-	stat func(string) (os.FileInfo, error)
+	repository *git.Repository
+	readFile   func(fp string) ([]byte, error)
 	io.Writer
 
-	gitHubAPIServices func(ctx context.Context, token string) (githubAPIIssuesService, component.RepositoryReleaseLister)
+	fetchNotesData FetchNotesData
 
 	repoOwner, repoName string
 }
 
+type FetchNotesData func(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery release.IssuesQuery) (release.NotesData, error)
+
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	return ReleaseNotes{
-		readFile:         ioutil.ReadFile,
-		historicKilnfile: historic.Kilnfile,
-		historicVersion:  historic.Version,
-		stat:             os.Stat,
-		Writer:           os.Stdout,
-
-		gitHubAPIServices: func(ctx context.Context, token string) (githubAPIIssuesService, component.RepositoryReleaseLister) {
-			tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-			tokenClient := oauth2.NewClient(ctx, tokenSource)
-			//rt := &rtLogger{
-			//	RoundTripper: tokenClient.Transport,
-			//}
-			//if rt.RoundTripper == nil {
-			//	rt.RoundTripper = http.DefaultTransport
-			//}
-			//tokenClient.Transport = rt
-			client := github.NewClient(tokenClient)
-			return client.Issues, client.Repositories
-		},
+		fetchNotesData: release.FetchNotesData,
+		readFile:       ioutil.ReadFile,
+		Writer:         os.Stdout,
 	}, nil
+}
+
+func (r ReleaseNotes) Usage() jhanda.Usage {
+	return jhanda.Usage{
+		Description:      "generates release notes from bosh-release release notes on GitHub between two tile repo git references",
+		ShortDescription: "generates release notes from bosh-release release notes",
+		Flags:            r.Options,
+	}
+}
+
+func (r ReleaseNotes) Execute(args []string) error {
+	ctx := context.Background()
+
+	if err := r.initRepo(); err != nil {
+		return err
+	}
+
+	nonFlagArgs, err := jhanda.Parse(&r.Options, args)
+	if err != nil {
+		return err
+	}
+
+	err = r.checkInputs(nonFlagArgs)
+	if err != nil {
+		return err
+	}
+
+	var client *github.Client
+	if r.Options.GithubToken != "" {
+		tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: r.Options.GithubToken})
+		tokenClient := oauth2.NewClient(ctx, tokenSource)
+		//rt := &rtLogger{
+		//	RoundTripper: tokenClient.Transport,
+		//}
+		//if rt.RoundTripper == nil {
+		//	rt.RoundTripper = http.DefaultTransport
+		//}
+		//tokenClient.Transport = rt
+		client = github.NewClient(tokenClient)
+	}
+
+	data, err := r.fetchNotesData(ctx,
+		r.repository, client, r.repoOwner, r.repoName,
+		r.Options.Kilnfile,
+		nonFlagArgs[0], nonFlagArgs[1],
+		r.Options.IssuesQuery,
+	)
+	if err != nil {
+		return err
+	}
+	data.ReleaseDate, _ = r.parseReleaseDate()
+
+	err = r.writeNotes(r.Writer, data)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *ReleaseNotes) initRepo() error {
@@ -99,7 +128,8 @@ func (r *ReleaseNotes) initRepo() error {
 	if err != nil {
 		return err
 	}
-	rp, err := filepath.Rel(wt.Filesystem.Root(), wd)
+	// _, err := filepath.Rel(wt.Filesystem.Root(), wd)
+	_, err = filepath.Rel(wt.Filesystem.Root(), wd)
 	if err != nil {
 		return err
 	}
@@ -110,150 +140,14 @@ func (r *ReleaseNotes) initRepo() error {
 	}
 
 	r.repository = repo
-	r.revisionResolver = repo
 	r.repoName = repoName
 	r.repoOwner = repoOwner
-	r.pathRelativeToDotGit = rp
+	//r.pathRelativeToDotGit = rp
 
 	return nil
 }
 
-func (r ReleaseNotes) Usage() jhanda.Usage {
-	return jhanda.Usage{
-		Description:      "generates release notes from bosh-release release notes on GitHub between two tile repo git references",
-		ShortDescription: "generates release notes from bosh-release release notes",
-		Flags:            r.Options,
-	}
-}
-
-//counterfeiter:generate -o ./fakes_internal/historic_version.go --fake-name HistoricVersion . historicVersion
-
-type historicVersion func(repo storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (string, error)
-
-//counterfeiter:generate -o ./fakes_internal/historic_kilnfile.go --fake-name HistoricKilnfile . historicKilnfile
-
-type historicKilnfile func(repo storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (cargo.Kilnfile, cargo.KilnfileLock, error)
-
-//counterfeiter:generate -o ./fakes_internal/revision_resolver.go --fake-name RevisionResolver . revisionResolver
-
-type revisionResolver interface {
-	ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, error)
-}
-
-func (r ReleaseNotes) Execute(args []string) error {
-	if err := r.initRepo(); err != nil {
-		return err
-	}
-
-	nonFlagArgs, err := jhanda.Parse(&r.Options, args)
-	if err != nil {
-		return err
-	}
-	err = r.checkInputs(nonFlagArgs)
-	if err != nil {
-		return err
-	}
-
-	initialKilnfileLock, finalKilnfileLock, finalKilnfile, finalVersion, err := r.fetchHistoricFiles(nonFlagArgs[0], nonFlagArgs[1])
-	if err != nil {
-		return err
-	}
-
-	info := ReleaseNotesInformation{
-		Version:  finalVersion,
-		Bumps:    component.CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
-		Stemcell: finalKilnfile.Stemcell,
-	}
-
-	info.ReleaseDate, _ = r.parseReleaseDate()
-
-	kf, err := r.getKilnfile(finalKilnfile)
-	if err != nil {
-		return err
-	}
-	info.Issues, info.Bumps, err = r.fetchIssuesAndReleaseNotes(context.TODO(), kf, info.Bumps)
-	if err != nil {
-		return err
-	}
-
-	for _, c := range finalKilnfileLock.Releases {
-		info.Components = append(info.Components, ComponentInformation{
-			Lock:     c,
-			Releases: info.Bumps.ForLock(c).Releases,
-		})
-	}
-
-	err = r.encodeReleaseNotes(info)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r ReleaseNotes) getKilnfile(finalKilnfile cargo.Kilnfile) (cargo.Kilnfile, error) {
-	kf := finalKilnfile
-	if r.Options.Kilnfile != "" {
-		b, err := os.ReadFile(r.Options.Kilnfile)
-		if err != nil {
-			return cargo.Kilnfile{}, err
-		}
-		err = yaml.Unmarshal(b, &kf)
-		if err != nil {
-			return cargo.Kilnfile{}, err
-		}
-	}
-	return kf, nil
-}
-
-func (r ReleaseNotes) fetchHistoricFiles(start, end string) (klInitial, klFinal cargo.KilnfileLock, kfFinal cargo.Kilnfile, _ *semver.Version, _ error) {
-	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(start))
-	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to resolve inital revision %q: %w", start, err)
-	}
-	finalCommitSHA, err := r.ResolveRevision(plumbing.Revision(end))
-	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to resolve final revision %q: %w", end, err)
-	}
-
-	_, klInitial, err = r.historicKilnfile(r.repository.Storer, *initialCommitSHA, r.pathRelativeToDotGit)
-	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to get kilnfile from initial commit: %w", err)
-	}
-	kfFinal, klFinal, err = r.historicKilnfile(r.repository.Storer, *finalCommitSHA, r.pathRelativeToDotGit)
-	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to get kilnfile from final commit: %w", err)
-	}
-	version, err := r.historicVersion(r.repository.Storer, *finalCommitSHA, r.pathRelativeToDotGit)
-	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to get version file from final commit: %w", err)
-	}
-
-	v, err := semver.NewVersion(version)
-	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to parse version: %w", err)
-	}
-
-	return klInitial, klFinal, kfFinal, v, nil
-}
-
-func removeEmptyLines(input string) string {
-	lines := strings.Split(input, "\n")
-	var b strings.Builder
-
-	for _, l := range lines {
-		l = strings.TrimSpace(l)
-		if l == "" {
-			continue
-		}
-
-		b.WriteString(l)
-		b.WriteRune('\n')
-	}
-	return b.String()
-}
-
-func (r ReleaseNotes) encodeReleaseNotes(info ReleaseNotesInformation) error {
+func (r ReleaseNotes) writeNotes(w io.Writer, info release.NotesData) error {
 	releaseNotesTemplate := release.DefaultNotesTemplate()
 	if r.Options.TemplateName != "" {
 		templateBuf, err := r.readFile(r.Options.TemplateName)
@@ -263,14 +157,12 @@ func (r ReleaseNotes) encodeReleaseNotes(info ReleaseNotesInformation) error {
 		releaseNotesTemplate = string(templateBuf)
 	}
 
-	t, err := template.New(r.Options.TemplateName).Funcs(sprig.TxtFuncMap()).Funcs(template.FuncMap{
-		"removeEmptyLines": removeEmptyLines,
-	}).Parse(releaseNotesTemplate)
+	t, err := release.DefaultTemplateFuncs(template.New(r.Options.TemplateName)).Parse(releaseNotesTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	err = t.Execute(r.Writer, info)
+	err = t.Execute(w, info)
 	if err != nil {
 		return err
 	}
@@ -319,61 +211,28 @@ func (r ReleaseNotes) parseReleaseDate() (time.Time, error) {
 	return releaseDate, nil
 }
 
-type ComponentInformation struct {
-	component.Lock
-	Releases []*github.RepositoryRelease
-}
-
-type ReleaseNotesInformation struct {
-	Version     *semver.Version
-	ReleaseDate time.Time
-
-	Issues     []*github.Issue
-	Components []ComponentInformation
-	Bumps      component.BumpList
-
-	Stemcell cargo.Stemcell
-}
-
-//counterfeiter:generate -o ./fakes_internal/release_notes_github_api_issues_service.go --fake-name GithubAPIIssuesService . githubAPIIssuesService
-
-type githubAPIIssuesService interface {
-	issueGetter
-	milestoneLister
-	issuesByRepoLister
-}
-
-// fetchIssuesAndReleaseNotes is not tested. By not testing we are getting reduced abstraction and improved readability at the
-// cost of high level testing. This function therefore must stay as small as possible and rely on type checking and a
-// manual test to ensure it continues to behave as expected during refactors.
-//
-// The function can be tested by generating release notes for a tile with issue ids and a milestone set. The happy path
-// test for Execute does not set GithubToken intentionally so this code is not triggered and Execute does not actually
-// reach out to GitHub.
-func (r ReleaseNotes) fetchIssuesAndReleaseNotes(ctx context.Context, kf cargo.Kilnfile, bumpList component.BumpList) ([]*github.Issue, component.BumpList, error) {
-	if r.Options.GithubToken == "" {
-		return nil, bumpList, nil
-	}
-
-	issuesService, repositoriesService := r.gitHubAPIServices(ctx, r.Options.GithubToken)
-
-	milestoneNumber, err := resolveMilestoneNumber(ctx, issuesService, r.repoOwner, r.repoName, r.Options.IssueMilestone)
+func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, error) {
+	var remoteURL string
+	remote, err := repo.Remote("origin")
 	if err != nil {
-		return nil, nil, err
+		return "", "", err
 	}
-	issues, err := fetchIssuesWithLabelAndMilestone(ctx, issuesService, r.repoOwner, r.repoName, milestoneNumber, r.Options.IssueLabels)
-	if err != nil {
-		return nil, nil, err
+	config := remote.Config()
+	for _, u := range config.URLs {
+		if !strings.Contains(u, "github.com") {
+			continue
+		}
+		remoteURL = u
+		break
 	}
-	additionalIssues, err := issuesFromIssueIDs(ctx, issuesService, r.repoOwner, r.repoName, r.Options.IssueIDs)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	bumpList, err = component.ReleaseNotes(ctx, repositoriesService, kf, bumpList)
-	if err != nil {
-		return nil, nil, err
+	if remoteURL == "" {
+		return "", "", fmt.Errorf("remote github URL not found for repo")
 	}
 
-	return appendFilterAndSortIssues(issues, additionalIssues, r.Options.IssueTitleExp), bumpList, nil
+	repoOwner, repoName, err := component.OwnerAndRepoFromGitHubURI(remoteURL)
+	if err != nil {
+		return "", "", err
+	}
+
+	return repoOwner, repoName, nil
 }
