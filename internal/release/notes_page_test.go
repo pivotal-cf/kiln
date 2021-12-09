@@ -3,21 +3,24 @@ package release
 import (
 	"bytes"
 	_ "embed"
-	"github.com/Masterminds/semver"
-	"github.com/go-git/go-billy/v5/memfs"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/go-git/go-git/v5/storage/memory"
-	"github.com/google/go-github/v40/github"
-	Ω "github.com/onsi/gomega"
-	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"io/fs"
 	"os"
 	"regexp"
 	"testing"
 	"time"
+
+	Ω "github.com/onsi/gomega"
+
+	"github.com/Masterminds/semver"
+	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/google/go-github/v40/github"
+
+	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 //go:embed testdata/runtime-rn.html.md.erb

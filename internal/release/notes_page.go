@@ -3,10 +3,11 @@ package release
 import (
 	"bytes"
 	"fmt"
-	"github.com/Masterminds/semver"
 	"io"
 	"regexp"
 	"strings"
+
+	"github.com/Masterminds/semver"
 )
 
 const DefaultReleasesSentinel = "\n## <a id='releases'></a> Releases\n\n"
@@ -97,7 +98,12 @@ func (page *NotesPage) Add(versionNote VersionNote) error {
 		return nil
 	}
 
-	nv, _ := versionNote.version()
+	nvm, _ := versionNote.version()
+	nv := *nvm
+	nvm.Prerelease()
+	if strings.Contains(nvm.Prerelease(), "build") {
+		nv, _ = nvm.SetPrerelease("")
+	}
 	for i, t := range page.Releases {
 		tv, err := t.version()
 		if err != nil {
