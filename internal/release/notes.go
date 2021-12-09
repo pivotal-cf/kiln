@@ -54,10 +54,10 @@ type NotesData struct {
 	Stemcell cargo.Stemcell
 }
 
-func (notes NotesData) String() string {
-	note, _ := notes.WriteVersionNotes()
-	return note.Notes
-}
+//func (notes NotesData) String() string {
+//	note, _ := notes.WriteVersionNotes()
+//	return note.Notes
+//}
 
 func (notes NotesData) WriteVersionNotes() (VersionNote, error) {
 	noteTemplate, err := DefaultTemplateFuncs(template.New("")).Parse(DefaultNotesTemplate())
@@ -104,8 +104,16 @@ func (q IssuesQuery) Exp() (*regexp.Regexp, error) {
 }
 
 func FetchNotesData(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery IssuesQuery) (NotesData, error) {
+	f, err := newFetchNotesData(repo, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision, client, issuesQuery)
+	if err != nil {
+		return NotesData{}, err
+	}
+	return f.fetch(ctx)
+}
+
+func newFetchNotesData(repo *git.Repository, tileRepoOwner string, tileRepoName string, kilnfilePath string, initialRevision string, finalRevision string, client *github.Client, issuesQuery IssuesQuery) (fetchNotesData, error) {
 	if repo == nil {
-		return NotesData{}, errors.New("git repository required to generate release notes")
+		return fetchNotesData{}, errors.New("git repository required to generate release notes")
 	}
 
 	f := fetchNotesData{
@@ -120,14 +128,15 @@ func FetchNotesData(ctx context.Context, repo *git.Repository, client *github.Cl
 		revisionResolver: repo,
 		Storer:           repo.Storer,
 		repository:       repo,
+
+		issuesQuery: issuesQuery,
 	}
 
 	if client != nil {
 		f.issuesService = client.Issues
 		f.releasesService = client.Repositories
 	}
-
-	return f.fetch(ctx)
+	return f, nil
 }
 
 type fetchNotesData struct {

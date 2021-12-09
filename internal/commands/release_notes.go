@@ -90,6 +90,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 		client = github.NewClient(tokenClient)
 	}
 
+	_ = release.FetchNotesData // fetchNotesData is FetchNotesData
 	data, err := r.fetchNotesData(ctx,
 		r.repository, client, r.repoOwner, r.repoName,
 		r.Options.Kilnfile,
