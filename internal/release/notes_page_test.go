@@ -199,9 +199,8 @@ func TestParseNotesPageWithExpressionAndReleasesSentinel(t *testing.T) {
 }
 
 func Test_newFetchNotesData(t *testing.T) {
-	please := Ω.NewWithT(t)
-
 	t.Run("when called", func(t *testing.T) {
+		please := Ω.NewWithT(t)
 		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{
 			IssueMilestone: "BLA",
 		})
@@ -218,10 +217,12 @@ func Test_newFetchNotesData(t *testing.T) {
 		}))
 	})
 	t.Run("when repo is nil", func(t *testing.T) {
+		please := Ω.NewWithT(t)
 		_, err := newFetchNotesData(nil, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{})
 		please.Expect(err).To(Ω.HaveOccurred())
 	})
 	t.Run("when repo is not nil", func(t *testing.T) {
+		please := Ω.NewWithT(t)
 		f, err := newFetchNotesData(&git.Repository{
 			Storer: &memory.Storage{},
 		}, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{})
@@ -231,6 +232,7 @@ func Test_newFetchNotesData(t *testing.T) {
 		please.Expect(f.Storer).NotTo(Ω.BeNil())
 	})
 	t.Run("when github client is not nil", func(t *testing.T) {
+		please := Ω.NewWithT(t)
 		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", &github.Client{
 			Issues:       &github.IssuesService{},
 			Repositories: &github.RepositoriesService{},
@@ -240,6 +242,7 @@ func Test_newFetchNotesData(t *testing.T) {
 		please.Expect(f.releasesService).NotTo(Ω.BeNil())
 	})
 	t.Run("when github client is nil", func(t *testing.T) {
+		please := Ω.NewWithT(t)
 		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{})
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 		please.Expect(f.issuesService).To(Ω.BeNil())
