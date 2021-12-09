@@ -40,7 +40,7 @@ func TestParseNotesPage(t *testing.T) {
 	wt, err := repo.Worktree()
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 	{
-		notesMD, err := wt.Filesystem.Create("notes.md")
+		notesMD, _ := wt.Filesystem.Create("notes.md")
 		_, _ = notesMD.Write([]byte(releaseNotesPageTAS27))
 		_ = notesMD.Close()
 		_, _ = wt.Add(notesMD.Name())
@@ -143,7 +143,7 @@ func TestParseNotesPage(t *testing.T) {
 	err = page.Add(alreadyPublishedVersionNote)
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 
-	notesMD, err := wt.Filesystem.Create("notes.md")
+	notesMD, _ := wt.Filesystem.Create("notes.md")
 	pageContent := new(bytes.Buffer)
 	_, err = page.WriteTo(io.MultiWriter(notesMD, pageContent))
 	please.Expect(err).NotTo(Ω.HaveOccurred())
@@ -153,7 +153,7 @@ func TestParseNotesPage(t *testing.T) {
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 	if !status.IsClean() {
 		_ = os.WriteFile("exp.txt", []byte(releaseNotesPageTAS27), fs.ModePerm)
-		_ = os.WriteFile("got.txt", []byte(pageContent.String()), fs.ModePerm)
+		_ = os.WriteFile("got.txt", pageContent.Bytes(), fs.ModePerm)
 		t.Logf("run: %q", "diff --unified internal/release/{exp,got}.txt | colordiff")
 	}
 	please.Expect(status.IsClean()).To(Ω.BeTrue())
