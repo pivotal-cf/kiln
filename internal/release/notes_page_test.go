@@ -255,7 +255,6 @@ func TestReleaseNotesPage_Add(t *testing.T) {
 	// For example, the release-notes could log something like:
 	//   The release notes for tile 2.7.43 were inserted at the top of the document (index 0)
 
-	t.Fail()
 	t.Run("initial release", func(t *testing.T) {
 		please := Ω.NewWithT(t)
 		page := NotesPage{
@@ -267,36 +266,98 @@ func TestReleaseNotesPage_Add(t *testing.T) {
 		please.Expect(page.Releases).To(Ω.ConsistOf(note))
 	})
 	t.Run("new latest release", func(t *testing.T) {
-		t.Skip()
-		// TODO: New release is newer than all in .Releases
+		please := Ω.NewWithT(t)
+		page := NotesPage{
+			Exp: regexp.MustCompile(`r\d+`),
+			Releases: []VersionNote{
+				{Version: "2", Notes: "r2"},
+			},
+		}
+		newNote := VersionNote{Version: "3", Notes: "r3"}
+		err := page.Add(newNote)
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+			{Version: "3", Notes: "r3"},
+			{Version: "2", Notes: "r2"},
+		}))
 	})
 	t.Run("update existing release notes", func(t *testing.T) {
-		t.Skip()
-		// TODO: matches existing version
-	})
-	t.Run("update existing release notes", func(t *testing.T) {
-		t.Skip()
-		// TODO: matches existing version
+		please := Ω.NewWithT(t)
+		page := NotesPage{
+			Exp: regexp.MustCompile(`r\d+`),
+			Releases: []VersionNote{
+				{Version: "1", Notes: "r1"},
+			},
+		}
+		newNote := VersionNote{Version: "1", Notes: "r2"}
+		err := page.Add(newNote)
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+			{Version: "1", Notes: "r2"},
+		}))
 	})
 	t.Run("insert between", func(t *testing.T) {
-		t.Skip()
-		// TODO: less than first but greater than last
+		please := Ω.NewWithT(t)
+		page := NotesPage{
+			Exp: regexp.MustCompile(`r\d+`),
+			Releases: []VersionNote{
+				{Version: "3", Notes: "r3"},
+				{Version: "1", Notes: "r1"},
+			},
+		}
+		newNote := VersionNote{Version: "2", Notes: "r2"}
+		err := page.Add(newNote)
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+			{Version: "3", Notes: "r3"},
+			{Version: "2", Notes: "r2"},
+			{Version: "1", Notes: "r1"},
+		}))
 	})
 	t.Run("notes version field is invalid", func(t *testing.T) {
-		t.Skip()
-		// TODO: less than first but greater than last
+		please := Ω.NewWithT(t)
+		page := NotesPage{
+			Exp: regexp.MustCompile(`r\d+`),
+			Releases: []VersionNote{
+				{Version: "1", Notes: "r1"},
+			},
+		}
+		newNote := VersionNote{Version: "s", Notes: "r2"}
+		err := page.Add(newNote)
+		please.Expect(err).To(Ω.HaveOccurred())
 	})
 	t.Run("add notes to end", func(t *testing.T) {
-		t.Skip()
-		// TODO: version is less than last
+		please := Ω.NewWithT(t)
+		page := NotesPage{
+			Exp: regexp.MustCompile(`r\d+`),
+			Releases: []VersionNote{
+				{Version: "3", Notes: "r3"},
+				{Version: "2", Notes: "r2"},
+			},
+		}
+		newNote := VersionNote{Version: "1", Notes: "r1"}
+		err := page.Add(newNote)
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+			{Version: "3", Notes: "r3"},
+			{Version: "2", Notes: "r2"},
+			{Version: "1", Notes: "r1"},
+		}))
 	})
 	t.Run("notes content does not match page regex", func(t *testing.T) {
-		t.Skip()
-		// TODO: version is less than last
+		please := Ω.NewWithT(t)
+		page := NotesPage{
+			Exp: regexp.MustCompile(`r\d+`),
+			Releases: []VersionNote{
+				{Version: "1", Notes: "r1"},
+			},
+		}
+		newNote := VersionNote{Version: "2", Notes: "s2"}
+		err := page.Add(newNote)
+		please.Expect(err).To(Ω.HaveOccurred())
 	})
 }
 
 func TestReleaseNotesPage_WriteTo(t *testing.T) {
 	var _ io.WriterTo = (*NotesPage)(nil)
-	// TODO ensure expected output
 }

@@ -98,12 +98,7 @@ func (page *NotesPage) Add(versionNote VersionNote) error {
 		return nil
 	}
 
-	nvm, _ := versionNote.version()
-	nv := *nvm
-	nvm.Prerelease()
-	if strings.Contains(nvm.Prerelease(), "build") {
-		nv, _ = nvm.SetPrerelease("")
-	}
+	nv, _ := versionNote.version()
 	for i, t := range page.Releases {
 		tv, err := t.version()
 		if err != nil {
