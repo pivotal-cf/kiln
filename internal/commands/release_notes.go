@@ -158,10 +158,13 @@ func (r *ReleaseNotes) initRepo() error {
 	if err != nil {
 		return err
 	}
-	// _, err := filepath.Rel(wt.Filesystem.Root(), wd)
-	_, err = filepath.Rel(wt.Filesystem.Root(), wd)
+	rp, err := filepath.Rel(wt.Filesystem.Root(), wd)
 	if err != nil {
 		return err
+	}
+
+	if rp != "." {
+		return fmt.Errorf("release-notes must be run from the root of the repository (use --kilnfile flag to specify which tile to build)")
 	}
 
 	repoOwner, repoName, err := getGithubRemoteRepoOwnerAndName(repo)
@@ -172,7 +175,6 @@ func (r *ReleaseNotes) initRepo() error {
 	r.repository = repo
 	r.repoName = repoName
 	r.repoOwner = repoOwner
-	//r.pathRelativeToDotGit = rp
 
 	return nil
 }
