@@ -198,6 +198,55 @@ func TestParseNotesPageWithExpressionAndReleasesSentinel(t *testing.T) {
 	})
 }
 
+func Test_newFetchNotesData(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	t.Run("when called", func(t *testing.T) {
+		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{
+			IssueMilestone: "BLA",
+		})
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(f.repoOwner).To(Ω.Equal("o"))
+		please.Expect(f.repoName).To(Ω.Equal("r"))
+		please.Expect(f.kilnfilePath).To(Ω.Equal("k"))
+		please.Expect(f.initialRevision).To(Ω.Equal("ri"))
+		please.Expect(f.finalRevision).To(Ω.Equal("rf"))
+		please.Expect(f.historicKilnfile).NotTo(Ω.BeNil())
+		please.Expect(f.historicVersion).NotTo(Ω.BeNil())
+		please.Expect(f.issuesQuery).To(Ω.Equal(IssuesQuery{
+			IssueMilestone: "BLA",
+		}))
+	})
+	t.Run("when repo is nil", func(t *testing.T) {
+		_, err := newFetchNotesData(nil, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{})
+		please.Expect(err).To(Ω.HaveOccurred())
+	})
+	t.Run("when repo is not nil", func(t *testing.T) {
+		f, err := newFetchNotesData(&git.Repository{
+			Storer: &memory.Storage{},
+		}, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{})
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(f.repository).NotTo(Ω.BeNil())
+		please.Expect(f.revisionResolver).NotTo(Ω.BeNil())
+		please.Expect(f.Storer).NotTo(Ω.BeNil())
+	})
+	t.Run("when github client is not nil", func(t *testing.T) {
+		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", &github.Client{
+			Issues:       &github.IssuesService{},
+			Repositories: &github.RepositoriesService{},
+		}, IssuesQuery{})
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(f.issuesService).NotTo(Ω.BeNil())
+		please.Expect(f.releasesService).NotTo(Ω.BeNil())
+	})
+	t.Run("when github client is nil", func(t *testing.T) {
+		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{})
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(f.issuesService).To(Ω.BeNil())
+		please.Expect(f.releasesService).To(Ω.BeNil())
+	})
+}
+
 func TestReleaseNotesPage_Add(t *testing.T) {
 	// I imagine if the function signature for Add also returned an integer
 	//   func (page NotesPage) Add(note VersionNote) (int, error)
