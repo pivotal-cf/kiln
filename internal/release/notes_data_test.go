@@ -1,12 +1,16 @@
 package release
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"github.com/Masterminds/semver"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"net/http"
 	"reflect"
 	"sort"
 	"testing"
+	"text/template"
 
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
@@ -391,6 +395,29 @@ func TestReleaseNotes_Options_IssueTitleExp(t *testing.T) {
 	please.Expect(exp.MatchString("**[]**")).To(Ω.BeFalse())
 	please.Expect(exp.MatchString("**[bugFix]**")).To(Ω.BeFalse())
 	please.Expect(exp.MatchString("**[security]**")).To(Ω.BeFalse())
+}
+
+func Test_defaultReleaseNotesTemplate(t *testing.T) {
+	t.Run("empty github release body", func(t *testing.T) {
+		please := Ω.NewWithT(t)
+		tmp, err := DefaultTemplateFuncs(template.New("")).Parse(DefaultNotesTemplate())
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		var b bytes.Buffer
+		err = tmp.Execute(&b, NotesData{
+			Version: semver.MustParse("0.0"),
+			Components: []ComponentData{
+				{
+					Lock: component.Lock{Name: "banana", Version: "1.2"},
+					Releases: []*github.RepositoryRelease{
+						{TagName: strPtr("1.1"), Body: strPtr("\n   ")},
+						{TagName: strPtr("1.2"), Body: strPtr("")},
+					},
+				},
+			},
+		})
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(b.String()).To(Ω.ContainSubstring("<tr><td>banana</td><td>1.2</td><td></td></tr>"))
+	})
 }
 
 func getIssueTitleExp(t *testing.T) string {
