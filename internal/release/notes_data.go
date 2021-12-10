@@ -43,6 +43,15 @@ type ComponentData struct {
 	Releases []*github.RepositoryRelease
 }
 
+func (cd ComponentData) HasReleaseNotes() bool {
+	for _, r := range cd.Releases {
+		if len(strings.TrimSpace(r.GetBody())) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 type NotesData struct {
 	Version     *semver.Version
 	ReleaseDate time.Time

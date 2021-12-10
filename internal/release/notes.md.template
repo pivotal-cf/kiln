@@ -50,7 +50,7 @@
   {{- range .Components }}
     {{- if not $.HasComponentReleases -}}
        {{template "component-legacy" .}}
-    {{- else if gt (len .Releases) 0 -}}
+    {{- else if .HasReleaseNotes -}}
       {{template "component-with-notes" .}}
     {{- else -}}
       {{template "component" .}}
