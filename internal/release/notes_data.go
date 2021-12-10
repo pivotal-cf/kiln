@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/masterminds/sprig"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -28,15 +27,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/historic"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
-
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
-
-//go:embed notes.md.template
-var defaultReleaseNotesTemplate string
-
-func DefaultNotesTemplate() string {
-	return defaultReleaseNotesTemplate
-}
 
 type ComponentData struct {
 	component.Lock
@@ -474,28 +464,6 @@ func issuesTitlePrefixSemanticValue(title string) int {
 		}
 	}
 	return 0
-}
-
-func DefaultTemplateFuncs(t *template.Template) *template.Template {
-	return t.Funcs(sprig.TxtFuncMap()).Funcs(template.FuncMap{
-		"removeEmptyLines": removeEmptyLines,
-	})
-}
-
-func removeEmptyLines(input string) string {
-	lines := strings.Split(input, "\n")
-	var b strings.Builder
-
-	for _, l := range lines {
-		l = strings.TrimSpace(l)
-		if l == "" {
-			continue
-		}
-
-		b.WriteString(l)
-		b.WriteRune('\n')
-	}
-	return b.String()
 }
 
 func mergeGitRepos(k1, k2 cargo.Kilnfile) cargo.Kilnfile {
