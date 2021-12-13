@@ -2,8 +2,9 @@ package proofing_test
 
 import (
 	"errors"
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"os"
+
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

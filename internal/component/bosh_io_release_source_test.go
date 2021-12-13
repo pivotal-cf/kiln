@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,6 +12,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	. "github.com/onsi/ginkgo/extensions/table"
 

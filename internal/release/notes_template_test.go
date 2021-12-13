@@ -8,6 +8,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
 	Ω "github.com/onsi/gomega"
+
 	"github.com/pivotal-cf/kiln/internal/component"
 )
 
