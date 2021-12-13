@@ -2,6 +2,7 @@ package cargo
 
 import (
 	"errors"
+
 	"github.com/Masterminds/semver"
 )
 

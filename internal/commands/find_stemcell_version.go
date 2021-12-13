@@ -3,16 +3,16 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-git/go-billy/v5"
-	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"log"
 	"regexp"
 	"strings"
 
 	"github.com/Masterminds/semver"
+	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pivotal-cf/jhanda"
 
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )

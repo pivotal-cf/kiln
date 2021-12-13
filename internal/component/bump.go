@@ -8,6 +8,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
+
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 

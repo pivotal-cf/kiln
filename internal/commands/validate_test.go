@@ -1,8 +1,9 @@
 package commands
 
 import (
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"testing"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	"github.com/go-git/go-billy/v5/osfs"
 	Ω "github.com/onsi/gomega"

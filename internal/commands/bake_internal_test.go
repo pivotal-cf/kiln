@@ -1,9 +1,10 @@
 package commands
 
 import (
-	"github.com/pivotal-cf/kiln/internal/builder"
 	"os"
 	"testing"
+
+	"github.com/pivotal-cf/kiln/internal/builder"
 
 	Ω "github.com/onsi/gomega"
 )
