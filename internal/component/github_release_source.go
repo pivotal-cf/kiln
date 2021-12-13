@@ -216,7 +216,7 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 		if err != nil {
 			return Lock{}, false, err
 		}
-		expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, spec.Version)
+		expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, release.GetTagName())
 		for _, asset := range release.Assets {
 			if asset.GetName() != expectedAssetName {
 				continue
