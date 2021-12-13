@@ -164,7 +164,7 @@ func (r fetchNotesData) fetch(ctx context.Context) (NotesData, error) {
 	data := NotesData{
 		Version:  finalVersion,
 		Bumps:    component.CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
-		Stemcell: finalKilnfile.Stemcell,
+		Stemcell: finalKilnfileLock.Stemcell,
 	}
 
 	wtKilnfile, err := r.kilnfileFromWorktree(r.kilnfilePath)
