@@ -90,7 +90,7 @@ var _ = Describe("UpdateStemcell", func() {
 			}
 
 			releaseSource = new(fetcherFakes.MultiReleaseSource)
-			releaseSource.GetMatchedReleaseCalls(func(requirement component.Spec) (component.Lock, bool, error) {
+			releaseSource.GetMatchedReleaseCalls(func(requirement component.Spec) (component.Lock, error) {
 				switch requirement.Name {
 				case release1Name:
 					remote := component.Lock{
@@ -98,14 +98,14 @@ var _ = Describe("UpdateStemcell", func() {
 						RemotePath:   newRelease1RemotePath,
 						RemoteSource: publishableReleaseSourceID,
 					}
-					return remote, true, nil
+					return remote, nil
 				case release2Name:
 					remote := component.Lock{
 						Name: release2Name, Version: release2Version,
 						RemotePath:   newRelease2RemotePath,
 						RemoteSource: unpublishableReleaseSourceID,
 					}
-					return remote, true, nil
+					return remote, nil
 				default:
 					panic("unexpected release name")
 				}
@@ -382,20 +382,22 @@ var _ = Describe("UpdateStemcell", func() {
 
 		When("the release can't be found", func() {
 			BeforeEach(func() {
-				releaseSource.GetMatchedReleaseReturns(component.Lock{}, false, nil)
+				releaseSource.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
 			})
 
 			It("errors", func() {
 				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
 
-				Expect(err).To(MatchError(ContainSubstring("couldn't find release")))
-				Expect(err).To(MatchError(ContainSubstring(release1Name)))
+				Expect(err).To(MatchError(And(
+					ContainSubstring(component.ErrNotFound.Error()),
+					ContainSubstring(release1Name),
+				)))
 			})
 		})
 
 		When("finding the release errors", func() {
 			BeforeEach(func() {
-				releaseSource.GetMatchedReleaseReturns(component.Lock{}, false, errors.New("big badda boom"))
+				releaseSource.GetMatchedReleaseReturns(component.Lock{}, errors.New("big badda boom"))
 			})
 
 			It("errors", func() {

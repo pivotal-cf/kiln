@@ -104,10 +104,10 @@ func (src S3ReleaseSource) Publishable() bool                        { return sr
 func (src S3ReleaseSource) Configuration() cargo.ReleaseSourceConfig { return src.ReleaseSourceConfig }
 
 //counterfeiter:generate -o ./fakes/s3_request_failure.go --fake-name S3RequestFailure github.com/aws/aws-sdk-go/service/s3.RequestFailure
-func (src S3ReleaseSource) GetMatchedRelease(spec Spec) (Lock, bool, error) {
+func (src S3ReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 	remotePath, err := src.RemotePath(spec)
 	if err != nil {
-		return Lock{}, false, err
+		return Lock{}, err
 	}
 
 	headRequest := new(s3.HeadObjectInput)
@@ -118,9 +118,9 @@ func (src S3ReleaseSource) GetMatchedRelease(spec Spec) (Lock, bool, error) {
 	if err != nil {
 		requestFailure, ok := err.(s3.RequestFailure)
 		if ok && requestFailure.StatusCode() == 404 {
-			return Lock{}, false, nil
+			return Lock{}, ErrNotFound
 		}
-		return Lock{}, false, err
+		return Lock{}, err
 	}
 
 	return Lock{
@@ -128,10 +128,10 @@ func (src S3ReleaseSource) GetMatchedRelease(spec Spec) (Lock, bool, error) {
 		Version:      spec.Version,
 		RemotePath:   remotePath,
 		RemoteSource: src.ID(),
-	}, true, nil
+	}, nil
 }
 
-func (src S3ReleaseSource) FindReleaseVersion(spec Spec) (Lock, bool, error) {
+func (src S3ReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 	pathTemplatePattern, _ := regexp.Compile(`^\d+\.\d+`)
 	tasVersion := pathTemplatePattern.FindString(src.ReleaseSourceConfig.PathTemplate)
 	var prefix string
@@ -145,18 +145,18 @@ func (src S3ReleaseSource) FindReleaseVersion(spec Spec) (Lock, bool, error) {
 		Prefix: &prefix,
 	})
 	if err != nil {
-		return Lock{}, false, err
+		return Lock{}, err
 	}
 
 	semverPattern, err := regexp.Compile(`([-v])\d+(.\d+)*`)
 	if err != nil {
-		return Lock{}, false, err
+		return Lock{}, err
 	}
 
 	foundRelease := Lock{}
 	constraint, err := spec.VersionConstraints()
 	if err != nil {
-		return Lock{}, false, err
+		return Lock{}, err
 	}
 
 	for _, result := range releaseResults.Contents {
@@ -196,15 +196,15 @@ func (src S3ReleaseSource) FindReleaseVersion(spec Spec) (Lock, bool, error) {
 		}
 	}
 	if (foundRelease == Lock{}) {
-		return Lock{}, false, nil
+		return Lock{}, ErrNotFound
 	}
 	var releaseLocal Local
 	releaseLocal, err = src.DownloadRelease("/tmp", foundRelease)
 	if err != nil {
-		return Lock{}, false, err
+		return Lock{}, err
 	}
 	foundRelease.SHA1 = releaseLocal.SHA1
-	return foundRelease, true, nil
+	return foundRelease, nil
 }
 
 func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock Lock) (Local, error) {

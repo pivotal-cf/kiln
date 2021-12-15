@@ -5,6 +5,16 @@ import (
 	"net/http"
 )
 
+const ErrNotFound stringError = "not found"
+
+func IsErrNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	e, ok := err.(stringError)
+	return ok && e == ErrNotFound
+}
+
 type stringError string
 
 func (str stringError) Error() string { return string(str) }

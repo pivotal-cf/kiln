@@ -71,12 +71,13 @@ func (command UploadRelease) Execute(args []string) error {
 	}
 
 	requirement := component.Spec{Name: manifest.Name, Version: manifest.Version}
-	_, found, err := releaseUploader.GetMatchedRelease(requirement)
-	if err != nil {
-		return fmt.Errorf("couldn't query release source: %w", err)
-	}
+	_, err = releaseUploader.GetMatchedRelease(requirement)
 
-	if found {
+	if err != nil {
+		if !component.IsErrNotFound(err) {
+			return fmt.Errorf("couldn't query release source: %w", err)
+		}
+	} else {
 		return fmt.Errorf("a release with name %q and version %q already exists on %s",
 			manifest.Name, manifest.Version, command.Options.UploadTargetID)
 	}

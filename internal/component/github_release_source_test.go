@@ -91,7 +91,7 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 
 		ctx := context.TODO()
 
-		lock, found, err := component.LockFromGithubRelease(ctx, downloader, owner, component.Spec{
+		lock, err := component.LockFromGithubRelease(ctx, downloader, owner, component.Spec{
 			Name:    "routing",
 			Version: "0.226.0",
 			GitRepositories: []string{
@@ -103,7 +103,6 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 			damnIt := Ω.NewWithT(t)
 
 			damnIt.Expect(err).NotTo(Ω.HaveOccurred())
-			damnIt.Expect(found).To(Ω.BeTrue())
 		})
 
 		t.Run("it sets the lock fields properly", func(t *testing.T) {
@@ -151,7 +150,7 @@ func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 			Version: "garbage",
 		}
 		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
-		_, _, err := grs.FindReleaseVersion(s)
+		_, err := grs.FindReleaseVersion(s)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
 			damnIt := Ω.NewWithT(t)
@@ -167,7 +166,7 @@ func TestGithubReleaseSource_GetMatchedRelease(t *testing.T) {
 			Version: ">1.0.0",
 		}
 		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
-		_, _, err := grs.GetMatchedRelease(s)
+		_, err := grs.GetMatchedRelease(s)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
 			damnIt := Ω.NewWithT(t)
@@ -287,7 +286,7 @@ func TestDownloadReleaseAsset(t *testing.T) {
 		GithubToken: os.Getenv("GITHUB_TOKEN"),
 		Org:         "cloudfoundry",
 	})
-	testLock, _, err := grs.GetMatchedRelease(component.Spec{Name: "routing", Version: "0.226.0", GitRepositories: []string{
+	testLock, err := grs.GetMatchedRelease(component.Spec{Name: "routing", Version: "0.226.0", GitRepositories: []string{
 		"https://github.com/cloudfoundry/routing-release",
 	}})
 	if err != nil {

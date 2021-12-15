@@ -121,8 +121,8 @@ var _ = Describe("UpdateRelease", func() {
 				SHA1:         notDownloadedReleaseSha1,
 			}
 
-			releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, true, nil)
-			releaseSource.FindReleaseVersionReturns(exepectedNotDownloadedRelease, true, nil)
+			releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, nil)
+			releaseSource.FindReleaseVersionReturns(exepectedNotDownloadedRelease, nil)
 			releaseSource.DownloadReleaseReturns(expectedDownloadedRelease, nil)
 		})
 
@@ -237,7 +237,7 @@ var _ = Describe("UpdateRelease", func() {
 					RemoteSource: oldReleaseSourceName,
 				}
 
-				releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, true, nil)
+				releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, nil)
 				releaseSource.DownloadReleaseReturns(expectedDownloadedRelease, nil)
 
 				logBuf = gbytes.NewBuffer()
@@ -315,7 +315,7 @@ var _ = Describe("UpdateRelease", func() {
 
 		When("the release can't be found", func() {
 			BeforeEach(func() {
-				releaseSource.GetMatchedReleaseReturns(component.Lock{}, false, errors.New("bad stuff"))
+				releaseSource.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
 			})
 
 			It("errors", func() {
@@ -325,7 +325,7 @@ var _ = Describe("UpdateRelease", func() {
 					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
-				Expect(err).To(MatchError(ContainSubstring("bad stuff")))
+				Expect(err).To(MatchError(ContainSubstring(component.ErrNotFound.Error())))
 			})
 
 			It("does not update the Kilnfile.lock", func() {

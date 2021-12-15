@@ -362,7 +362,7 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	please.Expect(updatedLock).To(Ω.Equal(initialLock))
 }
 
-func fakeCacheData(spec component.Spec) (component.Lock, bool, error) {
+func fakeCacheData(spec component.Spec) (component.Lock, error) {
 	switch spec.Lock() {
 	case component.Lock{Name: "orange", Version: "1.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
 		return component.Lock{
@@ -371,7 +371,7 @@ func fakeCacheData(spec component.Spec) (component.Lock, bool, error) {
 
 			RemoteSource: "cached-compiled-releases",
 			RemotePath:   "orange-1.0.0-alpine-9.0.0",
-		}, true, nil
+		}, nil
 	case component.Lock{Name: "banana", Version: "2.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
 		return component.Lock{
 
@@ -379,9 +379,9 @@ func fakeCacheData(spec component.Spec) (component.Lock, bool, error) {
 
 			RemoteSource: "cached-compiled-releases",
 			RemotePath:   "banana-2.0.0-alpine-9.0.0",
-		}, true, nil
+		}, nil
 	case component.Lock{Name: "lemon", Version: "3.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
-		return component.Lock{}, false, nil
+		return component.Lock{}, component.ErrNotFound
 	}
 
 	panic(fmt.Sprintf("unexpected spec %#v", spec))

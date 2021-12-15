@@ -10,20 +10,18 @@ import (
 )
 
 type ReleaseUploader struct {
-	GetMatchedReleaseStub        func(cargo.ComponentSpec) (cargo.ComponentLock, bool, error)
+	GetMatchedReleaseStub        func(cargo.ComponentSpec) (cargo.ComponentLock, error)
 	getMatchedReleaseMutex       sync.RWMutex
 	getMatchedReleaseArgsForCall []struct {
 		arg1 cargo.ComponentSpec
 	}
 	getMatchedReleaseReturns struct {
 		result1 cargo.ComponentLock
-		result2 bool
-		result3 error
+		result2 error
 	}
 	getMatchedReleaseReturnsOnCall map[int]struct {
 		result1 cargo.ComponentLock
-		result2 bool
-		result3 error
+		result2 error
 	}
 	UploadReleaseStub        func(cargo.ComponentSpec, io.Reader) (cargo.ComponentLock, error)
 	uploadReleaseMutex       sync.RWMutex
@@ -43,7 +41,7 @@ type ReleaseUploader struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseUploader) GetMatchedRelease(arg1 cargo.ComponentSpec) (cargo.ComponentLock, bool, error) {
+func (fake *ReleaseUploader) GetMatchedRelease(arg1 cargo.ComponentSpec) (cargo.ComponentLock, error) {
 	fake.getMatchedReleaseMutex.Lock()
 	ret, specificReturn := fake.getMatchedReleaseReturnsOnCall[len(fake.getMatchedReleaseArgsForCall)]
 	fake.getMatchedReleaseArgsForCall = append(fake.getMatchedReleaseArgsForCall, struct {
@@ -57,9 +55,9 @@ func (fake *ReleaseUploader) GetMatchedRelease(arg1 cargo.ComponentSpec) (cargo.
 		return stub(arg1)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
+		return ret.result1, ret.result2
 	}
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *ReleaseUploader) GetMatchedReleaseCallCount() int {
@@ -68,7 +66,7 @@ func (fake *ReleaseUploader) GetMatchedReleaseCallCount() int {
 	return len(fake.getMatchedReleaseArgsForCall)
 }
 
-func (fake *ReleaseUploader) GetMatchedReleaseCalls(stub func(cargo.ComponentSpec) (cargo.ComponentLock, bool, error)) {
+func (fake *ReleaseUploader) GetMatchedReleaseCalls(stub func(cargo.ComponentSpec) (cargo.ComponentLock, error)) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = stub
@@ -81,33 +79,30 @@ func (fake *ReleaseUploader) GetMatchedReleaseArgsForCall(i int) cargo.Component
 	return argsForCall.arg1
 }
 
-func (fake *ReleaseUploader) GetMatchedReleaseReturns(result1 cargo.ComponentLock, result2 bool, result3 error) {
+func (fake *ReleaseUploader) GetMatchedReleaseReturns(result1 cargo.ComponentLock, result2 error) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = nil
 	fake.getMatchedReleaseReturns = struct {
 		result1 cargo.ComponentLock
-		result2 bool
-		result3 error
-	}{result1, result2, result3}
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *ReleaseUploader) GetMatchedReleaseReturnsOnCall(i int, result1 cargo.ComponentLock, result2 bool, result3 error) {
+func (fake *ReleaseUploader) GetMatchedReleaseReturnsOnCall(i int, result1 cargo.ComponentLock, result2 error) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = nil
 	if fake.getMatchedReleaseReturnsOnCall == nil {
 		fake.getMatchedReleaseReturnsOnCall = make(map[int]struct {
 			result1 cargo.ComponentLock
-			result2 bool
-			result3 error
+			result2 error
 		})
 	}
 	fake.getMatchedReleaseReturnsOnCall[i] = struct {
 		result1 cargo.ComponentLock
-		result2 bool
-		result3 error
-	}{result1, result2, result3}
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *ReleaseUploader) UploadRelease(arg1 cargo.ComponentSpec, arg2 io.Reader) (cargo.ComponentLock, error) {

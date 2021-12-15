@@ -203,11 +203,11 @@ func (f CompileBuiltReleases) downloadPreCompiledReleases(publishableReleaseSour
 			StemcellOS:      stemcell.OS,
 			StemcellVersion: stemcell.Version,
 		}
-		remote, found, err := publishableReleaseSources.GetMatchedRelease(spec)
+		remote, err := publishableReleaseSources.GetMatchedRelease(spec)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error searching for pre-compiled release for %q: %w", builtRelease.Name, err)
-		}
-		if !found {
+			if !component.IsErrNotFound(err) {
+				return nil, nil, fmt.Errorf("error searching for pre-compiled release for %q: %w", builtRelease.Name, err)
+			}
 			remainingBuiltReleases = append(remainingBuiltReleases, builtRelease)
 			continue
 		}

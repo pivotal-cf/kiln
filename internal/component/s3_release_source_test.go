@@ -228,9 +228,8 @@ var _ = Describe("S3ReleaseSource", func() {
 		})
 
 		It("searches for the requested release", func() {
-			remoteRelease, found, err := releaseSource.GetMatchedRelease(desiredRelease)
+			remoteRelease, err := releaseSource.GetMatchedRelease(desiredRelease)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(found).To(BeTrue())
 
 			Expect(fakeS3Client.HeadObjectCallCount()).To(Equal(1))
 			input := fakeS3Client.HeadObjectArgsForCall(0)
@@ -253,9 +252,9 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns not found", func() {
-				_, found, err := releaseSource.GetMatchedRelease(desiredRelease)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(found).To(BeFalse())
+				_, err := releaseSource.GetMatchedRelease(desiredRelease)
+				Expect(err).To(HaveOccurred())
+				Expect(component.IsErrNotFound(err)).To(BeTrue())
 			})
 		})
 
@@ -276,10 +275,9 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns a descriptive error", func() {
-				_, found, err := releaseSource.GetMatchedRelease(desiredRelease)
+				_, err := releaseSource.GetMatchedRelease(desiredRelease)
 
 				Expect(err).To(MatchError(ContainSubstring(`unable to evaluate path_template`)))
-				Expect(found).To(BeFalse())
 			})
 		})
 	})
@@ -342,9 +340,8 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("gets the version that satisfies the constraint", func() {
-				remoteRelease, found, err := releaseSource.FindReleaseVersion(desiredRelease)
+				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(found).To(BeTrue())
 
 				Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
@@ -405,9 +402,8 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("gets the latest version of a release", func() {
-				remoteRelease, found, err := releaseSource.FindReleaseVersion(desiredRelease)
+				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(found).To(BeTrue())
 
 				Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
@@ -481,9 +477,8 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("gets the latest version of a release", func() {
-				remoteRelease, found, err := releaseSource.FindReleaseVersion(desiredRelease)
+				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(found).To(BeTrue())
 
 				Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)

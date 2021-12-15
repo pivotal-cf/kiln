@@ -128,22 +128,19 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	}
 
 	for _, rel := range lock.Releases {
-		remote, found, err := cache.GetMatchedRelease(component.Spec{
+		remote, err := cache.GetMatchedRelease(component.Spec{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      lock.Stemcell.OS,
 			StemcellVersion: lock.Stemcell.Version,
 		})
 		if err != nil {
-			return fmt.Errorf("failed check for matched release: %w", err)
-		}
-		if !found {
+			if !component.IsErrNotFound(err) {
+				return fmt.Errorf("failed check for matched release: %w", err)
+			}
 			nonCompiledReleases = append(nonCompiledReleases, rel)
 			continue
-		} else {
-			cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
 		}
-
 		cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
 		if rel.RemoteSource == cmd.Options.UploadTargetID &&
 			rel.RemotePath == cacheRemotePath && rel.SHA1 != "" {

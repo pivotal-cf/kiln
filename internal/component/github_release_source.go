@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
@@ -59,10 +58,10 @@ func (grs GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
-func (grs GithubReleaseSource) GetMatchedRelease(s Spec) (Lock, bool, error) {
+func (grs GithubReleaseSource) GetMatchedRelease(s Spec) (Lock, error) {
 	_, err := semver.NewVersion(s.Version)
 	if err != nil {
-		return Lock{}, false, fmt.Errorf("expected version to be an exact version")
+		return Lock{}, fmt.Errorf("expected version to be an exact version")
 	}
 	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s,
 		GetGithubReleaseWithTag(grs.Client.Repositories, s.Version))
@@ -86,10 +85,10 @@ func GetGithubReleaseWithTag(ghAPI ReleaseByTagGetter, tag string) GetGithubRele
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
-func (grs GithubReleaseSource) FindReleaseVersion(s Spec) (Lock, bool, error) {
+func (grs GithubReleaseSource) FindReleaseVersion(s Spec) (Lock, error) {
 	c, err := s.VersionConstraints()
 	if err != nil {
-		return Lock{}, false, fmt.Errorf("expected version to be a constraint")
+		return Lock{}, fmt.Errorf("expected version to be a constraint")
 	}
 	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s,
 		GetReleaseMatchingConstraint(grs.Client.Repositories, c))
@@ -149,7 +148,7 @@ func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Cons
 			return matchingReleases, nil
 		}
 
-		return nil, errors.New("release not found")
+		return nil, ErrNotFound
 	}
 }
 
@@ -206,7 +205,7 @@ type ReleaseAssetDownloader interface {
 
 type GetGithubReleaseFunc func(ctx context.Context, org, repo string) (*github.RepositoryRelease, error)
 
-func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloader, owner string, spec Spec, getRelease GetGithubReleaseFunc) (Lock, bool, error) {
+func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloader, owner string, spec Spec, getRelease GetGithubReleaseFunc) (Lock, error) {
 	for _, repoURL := range spec.GitRepositories {
 		repoOwner, repoName, err := OwnerAndRepoFromGitHubURI(repoURL)
 		if err != nil {
@@ -214,7 +213,7 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 		}
 		release, err := getRelease(ctx, repoOwner, repoName)
 		if err != nil {
-			return Lock{}, false, err
+			return Lock{}, err
 		}
 		expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, release.GetTagName())
 		for _, asset := range release.Assets {
@@ -223,11 +222,11 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 			}
 			rc, _, err := downloader.DownloadReleaseAsset(ctx, repoOwner, repoName, *asset.ID, http.DefaultClient)
 			if err != nil {
-				return Lock{}, false, err
+				return Lock{}, err
 			}
 			sum, err := calculateSHA1(rc)
 			if err != nil {
-				return Lock{}, false, err
+				return Lock{}, err
 			}
 			return Lock{
 				Name:         spec.Name,
@@ -235,10 +234,10 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 				RemoteSource: owner,
 				RemotePath:   asset.GetBrowserDownloadURL(),
 				SHA1:         sum,
-			}, true, nil
+			}, nil
 		}
 	}
-	return Lock{}, false, nil
+	return Lock{}, ErrNotFound
 }
 
 func calculateSHA1(rc io.ReadCloser) (string, error) {
