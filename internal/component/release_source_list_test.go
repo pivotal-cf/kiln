@@ -54,22 +54,28 @@ var _ = Describe("multiReleaseSource", func() {
 					RemotePath:   "/some/path",
 					RemoteSource: src2.Configuration().ID,
 				}
-				src2.GetMatchedReleaseReturns(matchedRelease, true, nil)
+				src1.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
+				src3.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
+				src2.GetMatchedReleaseReturns(matchedRelease, nil)
 			})
 
 			It("returns that match", func() {
-				rel, found, err := multiSrc.GetMatchedRelease(requirement)
+				rel, err := multiSrc.GetMatchedRelease(requirement)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(found).To(BeTrue())
 				Expect(rel).To(Equal(matchedRelease))
 			})
 		})
 
 		When("none of the release sources has a match", func() {
+			BeforeEach(func() {
+				src1.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
+				src3.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
+				src2.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
+			})
 			It("returns no match", func() {
-				_, found, err := multiSrc.GetMatchedRelease(requirement)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(found).To(BeFalse())
+				_, err := multiSrc.GetMatchedRelease(requirement)
+				Expect(err).To(HaveOccurred())
+				Expect(component.IsErrNotFound(err)).To(BeTrue())
 			})
 		})
 
@@ -78,14 +84,13 @@ var _ = Describe("multiReleaseSource", func() {
 
 			BeforeEach(func() {
 				expectedErr = errors.New("bad stuff happened")
-				src2.GetMatchedReleaseReturns(component.Lock{}, false, expectedErr)
+				src1.GetMatchedReleaseReturns(component.Lock{}, expectedErr)
 			})
 
 			It("returns that error", func() {
-				_, found, err := multiSrc.GetMatchedRelease(requirement)
-				Expect(err).To(MatchError(ContainSubstring(src2.Configuration().ID)))
+				_, err := multiSrc.GetMatchedRelease(requirement)
+				Expect(err).To(MatchError(ContainSubstring(src1.Configuration().ID)))
 				Expect(err).To(MatchError(ContainSubstring(expectedErr.Error())))
-				Expect(found).To(BeFalse())
 			})
 		})
 	})
@@ -196,13 +201,14 @@ var _ = Describe("multiReleaseSource", func() {
 					RemotePath:   "/some/path",
 					RemoteSource: src2.Configuration().ID,
 				}
-				src2.FindReleaseVersionReturns(matchedRelease, true, nil)
+				src1.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
+				src2.FindReleaseVersionReturns(matchedRelease, nil)
+				src3.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
 			})
 
 			It("returns that match", func() {
-				rel, found, err := multiSrc.FindReleaseVersion(requirement)
+				rel, err := multiSrc.FindReleaseVersion(requirement)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(found).To(BeTrue())
 				Expect(rel).To(Equal(matchedRelease))
 			})
 		})
@@ -224,14 +230,14 @@ var _ = Describe("multiReleaseSource", func() {
 					RemotePath:   "/some/path",
 					RemoteSource: src2.Configuration().ID,
 				}
-				src1.FindReleaseVersionReturns(unmatchedRelease, true, nil)
-				src2.FindReleaseVersionReturns(matchedRelease, true, nil)
+				src1.FindReleaseVersionReturns(unmatchedRelease, nil)
+				src2.FindReleaseVersionReturns(matchedRelease, nil)
+				src3.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
 			})
 
 			It("returns that match", func() {
-				rel, found, err := multiSrc.FindReleaseVersion(requirement)
+				rel, err := multiSrc.FindReleaseVersion(requirement)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(found).To(BeTrue())
 				Expect(rel).To(Equal(matchedRelease))
 			})
 		})
@@ -253,14 +259,14 @@ var _ = Describe("multiReleaseSource", func() {
 					RemotePath:   "/some/path",
 					RemoteSource: src2.Configuration().ID,
 				}
-				src1.FindReleaseVersionReturns(matchedRelease, true, nil)
-				src2.FindReleaseVersionReturns(unmatchedRelease, true, nil)
+				src1.FindReleaseVersionReturns(matchedRelease, nil)
+				src2.FindReleaseVersionReturns(unmatchedRelease, nil)
+				src3.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
 			})
 
 			It("returns the match from the first source", func() {
-				rel, found, err := multiSrc.FindReleaseVersion(requirement)
+				rel, err := multiSrc.FindReleaseVersion(requirement)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(found).To(BeTrue())
 				Expect(rel).To(Equal(matchedRelease))
 			})
 		})

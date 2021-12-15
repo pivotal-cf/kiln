@@ -71,11 +71,13 @@ var _ = Describe("CompileBuiltReleases", func() {
 			ID:          builtSourceID,
 			Publishable: false,
 		})
+		builtReleaseSource.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
 		compiledReleaseSource = new(fetcherFakes.ReleaseSource)
 		compiledReleaseSource.ConfigurationReturns(cargo.ReleaseSourceConfig{
 			ID:          compiledSourceID,
 			Publishable: true,
 		})
+		compiledReleaseSource.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
 		kilnfile = cargo.Kilnfile{
 			ReleaseSources: []cargo.ReleaseSourceConfig{
 				{Type: "s3", ID: compiledSourceID, Bucket: "not-used", Publishable: true},
@@ -675,15 +677,15 @@ var _ = Describe("CompileBuiltReleases", func() {
 		)
 
 		BeforeEach(func() {
-			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement component.Spec) (component.Lock, bool, error) {
+			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement component.Spec) (component.Lock, error) {
 				if requirement.Name == "uaa" {
 					return component.Lock{
 						Name: "uaa", Version: "1.2.3",
 						RemotePath:   expectedUAARemotePath,
 						RemoteSource: compiledSourceID,
-					}, true, nil
+					}, nil
 				}
-				return component.Lock{}, false, nil
+				return component.Lock{}, component.ErrNotFound
 			})
 			compiledReleaseSource.DownloadReleaseReturns(component.Local{
 				Lock: component.Lock{
@@ -813,22 +815,22 @@ var _ = Describe("CompileBuiltReleases", func() {
 		)
 
 		BeforeEach(func() {
-			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement component.Spec) (component.Lock, bool, error) {
+			compiledReleaseSource.GetMatchedReleaseCalls(func(requirement component.Spec) (component.Lock, error) {
 				switch requirement.Name {
 				case "uaa":
 					return component.Lock{
 						Name: "uaa", Version: "1.2.3",
 						RemotePath:   expectedUAARemotePath,
 						RemoteSource: compiledSourceID,
-					}, true, nil
+					}, nil
 				case "capi":
 					return component.Lock{
 						Name: "capi", Version: "2.3.4",
 						RemotePath:   expectedCAPIRemotePath,
 						RemoteSource: compiledSourceID,
-					}, true, nil
+					}, nil
 				default:
-					return component.Lock{}, false, nil
+					return component.Lock{}, component.ErrNotFound
 				}
 			})
 
@@ -845,7 +847,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 						LocalPath: "not-used",
 					}, nil
 				default:
-					return component.Local{}, nil
+					return component.Local{}, component.ErrNotFound
 				}
 			})
 		})
@@ -1085,7 +1087,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 	When("searching for pre-compiled releases fails", func() {
 		BeforeEach(func() {
-			compiledReleaseSource.GetMatchedReleaseReturns(component.Lock{}, false, errors.New("boom today"))
+			compiledReleaseSource.GetMatchedReleaseReturns(component.Lock{}, errors.New("boom today"))
 		})
 
 		It("errors", func() {
@@ -1114,7 +1116,7 @@ var _ = Describe("CompileBuiltReleases", func() {
 
 	When("downloading a pre-compiled releases fails", func() {
 		BeforeEach(func() {
-			compiledReleaseSource.GetMatchedReleaseReturns(component.Lock{RemoteSource: compiledSourceID}, true, nil)
+			compiledReleaseSource.GetMatchedReleaseReturns(component.Lock{RemoteSource: compiledSourceID}, nil)
 			compiledReleaseSource.DownloadReleaseReturns(component.Local{}, errors.New("banana"))
 		})
 

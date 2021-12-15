@@ -11,8 +11,8 @@ import (
 // MultiReleaseSource wraps a set of release sources. It is mostly used to generate fakes
 // for testing commands. See ReleaseSourceList for the concrete implementation.
 type MultiReleaseSource interface {
-	GetMatchedRelease(Spec) (Lock, bool, error)
-	FindReleaseVersion(Spec) (Lock, bool, error)
+	GetMatchedRelease(Spec) (Lock, error)
+	FindReleaseVersion(Spec) (Lock, error)
 	DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error)
 
 	FindByID(string) (ReleaseSource, error)
@@ -27,7 +27,7 @@ type MultiReleaseSource interface {
 // should implement this interface. Credentials for this should come from an interpolated
 // cargo.ReleaseSourceConfig.
 type ReleaseUploader interface {
-	GetMatchedRelease(Spec) (Lock, bool, error)
+	GetMatchedRelease(Spec) (Lock, error)
 	UploadRelease(spec Spec, file io.Reader) (Lock, error)
 }
 
@@ -52,11 +52,11 @@ type ReleaseSource interface {
 
 	// GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 	// fields on Requirement to download a specific release.
-	GetMatchedRelease(Spec) (Lock, bool, error)
+	GetMatchedRelease(Spec) (Lock, error)
 
 	// FindReleaseVersion may use any of the fields on Requirement to return the best matching
 	// release.
-	FindReleaseVersion(Spec) (Lock, bool, error)
+	FindReleaseVersion(Spec) (Lock, error)
 
 	// DownloadRelease downloads the release and writes the resulting file to the releasesDir.
 	// It should also calculate and set the SHA1 field on the Local result; it does not need

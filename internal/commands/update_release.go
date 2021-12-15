@@ -67,10 +67,9 @@ func (u UpdateRelease) Execute(args []string) error {
 
 	var localRelease component.Local
 	var remoteRelease component.Lock
-	var found bool
 	var newVersion, newSHA1, newSourceID, newRemotePath string
 	if u.Options.WithoutDownload {
-		remoteRelease, found, err = releaseSource.FindReleaseVersion(component.Spec{
+		remoteRelease, err = releaseSource.FindReleaseVersion(component.Spec{
 			Name:            u.Options.Name,
 			Version:         releaseVersionConstraint,
 			StemcellVersion: kilnfileLock.Stemcell.Version,
@@ -79,9 +78,9 @@ func (u UpdateRelease) Execute(args []string) error {
 		})
 
 		if err != nil {
-			return fmt.Errorf("error finding the release: %w", err)
-		}
-		if !found {
+			if component.IsErrNotFound(err) {
+				return fmt.Errorf("error finding the release: %w", err)
+			}
 			return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
 		}
 
@@ -91,7 +90,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		newRemotePath = remoteRelease.RemotePath
 
 	} else {
-		remoteRelease, found, err = releaseSource.GetMatchedRelease(component.Spec{
+		remoteRelease, err = releaseSource.GetMatchedRelease(component.Spec{
 			Name:            u.Options.Name,
 			Version:         u.Options.Version,
 			StemcellOS:      kilnfileLock.Stemcell.OS,
@@ -100,9 +99,9 @@ func (u UpdateRelease) Execute(args []string) error {
 		})
 
 		if err != nil {
-			return fmt.Errorf("error finding the release: %w", err)
-		}
-		if !found {
+			if component.IsErrNotFound(err) {
+				return fmt.Errorf("error finding the release: %w", err)
+			}
 			return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
 		}
 

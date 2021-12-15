@@ -96,7 +96,7 @@ releases:
 						RemotePath:   "remote_url",
 						RemoteSource: "bosh.io",
 						SHA1:         "some-sha",
-					}, true, nil)
+					}, nil)
 				})
 
 				When("uaac has releases on bosh.io", func() {
@@ -123,7 +123,7 @@ releases:
 						Name: releaseName, Version: "74.16.5",
 						RemotePath:   "remote_url",
 						RemoteSource: "sourceId",
-					}, true, nil)
+					}, nil)
 				})
 
 				When("uaa has releases on bosh.io", func() {

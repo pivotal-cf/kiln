@@ -3,9 +3,8 @@ package component
 import (
 	"errors"
 	"fmt"
-	"log"
-
 	"github.com/Masterminds/semver"
+	"log"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -115,17 +114,18 @@ func NewMultiReleaseSource(sources ...ReleaseSource) ReleaseSourceList {
 	return sources
 }
 
-func (list ReleaseSourceList) GetMatchedRelease(requirement Spec) (Lock, bool, error) {
+func (list ReleaseSourceList) GetMatchedRelease(requirement Spec) (Lock, error) {
 	for _, src := range list {
-		rel, found, err := src.GetMatchedRelease(requirement)
+		rel, err := src.GetMatchedRelease(requirement)
 		if err != nil {
-			return Lock{}, false, scopedError(src.Configuration().ID, err)
+			if IsErrNotFound(err) {
+				continue
+			}
+			return Lock{}, scopedError(src.Configuration().ID, err)
 		}
-		if found {
-			return rel, true, nil
-		}
+		return rel, nil
 	}
-	return Lock{}, false, nil
+	return Lock{}, ErrNotFound
 }
 
 func (list ReleaseSourceList) SetDownloadThreads(n int) {
@@ -152,28 +152,37 @@ func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease L
 	return localRelease, nil
 }
 
-func (list ReleaseSourceList) FindReleaseVersion(requirement Spec) (Lock, bool, error) {
-	foundRelease := Lock{}
-	releaseWasFound := false
+func (list ReleaseSourceList) FindReleaseVersion(requirement Spec) (Lock, error) {
+	var foundReleaseLock []Lock
 	for _, src := range list {
-		rel, found, err := src.FindReleaseVersion(requirement)
+		rel, err := src.FindReleaseVersion(requirement)
 		if err != nil {
-			return Lock{}, false, scopedError(src.Configuration().ID, err)
-		}
-		if found {
-			releaseWasFound = true
-			if (foundRelease == Lock{}) {
-				foundRelease = rel
-			} else {
-				newVersion, _ := semver.NewVersion(rel.Version)
-				currentVersion, _ := semver.NewVersion(foundRelease.Version)
-				if currentVersion.LessThan(newVersion) {
-					foundRelease = rel
-				}
+			if !IsErrNotFound(err) {
+				return Lock{}, scopedError(src.Configuration().ID, err)
 			}
+			continue
+		}
+		foundReleaseLock = append(foundReleaseLock, rel)
+	}
+	if len(foundReleaseLock) == 0 {
+		return Lock{}, ErrNotFound
+	}
+	highestLock := foundReleaseLock[0]
+	highestVersion, err := highestLock.ParseVersion()
+	if err != nil {
+		return Lock{}, fmt.Errorf("failed to parse version from release source: %w", err)
+	}
+	for _, rel := range foundReleaseLock[1:] {
+		newVersion, err := semver.NewVersion(rel.Version)
+		if err != nil {
+			return Lock{}, fmt.Errorf("failed to parse version from release source: %w", err)
+		}
+		if highestVersion.LessThan(newVersion) {
+			highestVersion = newVersion
+			highestLock = rel
 		}
 	}
-	return foundRelease, releaseWasFound, nil
+	return highestLock, nil
 }
 
 func (list ReleaseSourceList) FindByID(id string) (ReleaseSource, error) {

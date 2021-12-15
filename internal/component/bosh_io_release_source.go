@@ -79,7 +79,7 @@ func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 	return src.ReleaseSourceConfig
 }
 
-func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, bool, error) {
+func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, error) {
 	requirement = requirement.UnsetStemcell()
 
 	for _, repo := range repos {
@@ -87,24 +87,24 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, bool, 
 			fullName := repo + "/" + requirement.Name + suf
 			exists, err := src.releaseExistOnBoshio(fullName, requirement.Version)
 			if err != nil {
-				return Lock{}, false, err
+				return Lock{}, err
 			}
 
 			if exists {
 				builtRelease := src.createReleaseRemote(requirement, fullName)
-				return builtRelease, true, nil
+				return builtRelease, nil
 			}
 		}
 	}
-	return Lock{}, false, nil
+	return Lock{}, ErrNotFound
 }
 
-func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, bool, error) {
+func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 	spec = spec.UnsetStemcell()
 
 	constraint, err := spec.VersionConstraints()
 	if err != nil {
-		return Lock{}, false, err
+		return Lock{}, err
 	}
 
 	var validReleases []releaseResponse
@@ -114,7 +114,7 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, bool, error)
 			fullName := repo + "/" + spec.Name + suf
 			releaseResponses, err := src.getReleases(fullName)
 			if err != nil {
-				return Lock{}, false, err
+				return Lock{}, err
 			}
 
 			for _, release := range releaseResponses {
@@ -129,10 +129,10 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, bool, error)
 			spec.Version = validReleases[0].Version
 			lock := src.createReleaseRemote(spec, fullName)
 			lock.SHA1 = validReleases[0].SHA
-			return lock, true, nil
+			return lock, nil
 		}
 	}
-	return Lock{}, false, nil
+	return Lock{}, ErrNotFound
 }
 
 func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {

@@ -51,7 +51,7 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 	spec.StemcellOS = kilnfileLock.Stemcell.OS
 	spec.StemcellVersion = kilnfileLock.Stemcell.Version
 
-	releaseRemote, _, err := releaseSource.FindReleaseVersion(spec)
+	releaseRemote, err := releaseSource.FindReleaseVersion(spec)
 	if err != nil {
 		return err
 	}

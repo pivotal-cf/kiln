@@ -37,6 +37,7 @@ var _ = Describe("UploadRelease", func() {
 			fs = memfs.New()
 
 			releaseUploader = new(fakes.ReleaseUploader)
+			releaseUploader.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
 			releaseUploaderFinder = new(commandsFakes.ReleaseUploaderFinder)
 			releaseUploaderFinder.Returns(releaseUploader, nil)
 
@@ -83,7 +84,7 @@ var _ = Describe("UploadRelease", func() {
 						Name: "banana", Version: "1.2.3",
 						RemotePath:   "banana/banana-1.2.3.tgz",
 						RemoteSource: "orange-bucket",
-					}, true, nil)
+					}, nil)
 				})
 
 				It("errors and does not upload", func() {
@@ -209,7 +210,7 @@ compiled_packages:
 
 		When("querying the release source fails", func() {
 			BeforeEach(func() {
-				releaseUploader.GetMatchedReleaseReturns(component.Lock{}, false, errors.New("boom"))
+				releaseUploader.GetMatchedReleaseReturns(component.Lock{}, errors.New("boom"))
 			})
 
 			It("returns an error", func() {

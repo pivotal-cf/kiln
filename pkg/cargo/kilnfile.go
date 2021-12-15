@@ -136,6 +136,10 @@ func (lock ComponentLock) UnsetStemcell() ComponentLock {
 	return lock
 }
 
+func (lock ComponentLock) ParseVersion() (*semver.Version, error) {
+	return semver.NewVersion(lock.Version)
+}
+
 func (k KilnfileLock) FindReleaseWithName(name string) (ComponentLock, error) {
 	for _, r := range k.Releases {
 		if r.Name == name {
