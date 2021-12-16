@@ -92,11 +92,9 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 		ctx := context.TODO()
 
 		lock, err := component.LockFromGithubRelease(ctx, downloader, owner, component.Spec{
-			Name:    "routing",
-			Version: "0.226.0",
-			GitRepositories: []string{
-				"https://github.com/cloudfoundry/routing-release",
-			},
+			Name:             "routing",
+			Version:          "0.226.0",
+			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
 		}, component.GetGithubReleaseWithTag(releaseGetter, "0.226.0"))
 
 		t.Run("it returns success stuff", func(t *testing.T) {
@@ -286,9 +284,7 @@ func TestDownloadReleaseAsset(t *testing.T) {
 		GithubToken: os.Getenv("GITHUB_TOKEN"),
 		Org:         "cloudfoundry",
 	})
-	testLock, err := grs.GetMatchedRelease(component.Spec{Name: "routing", Version: "0.226.0", GitRepositories: []string{
-		"https://github.com/cloudfoundry/routing-release",
-	}})
+	testLock, err := grs.GetMatchedRelease(component.Spec{Name: "routing", Version: "0.226.0", GitHubRepository: "https://github.com/cloudfoundry/routing-release"})
 	if err != nil {
 		fmt.Println(testLock.Spec())
 	}

@@ -53,10 +53,7 @@ func Test_fetch(t *testing.T) {
 			Version: "40000.2",
 		},
 		Releases: []cargo.ComponentSpec{
-			{Name: "banana", GitRepositories: []string{
-				"https://github.com/cloudfoundry/banana-release",
-				"https://github.com/pivotal-cf/lts-banana-release",
-			}},
+			{Name: "banana", GitHubRepository: "https://github.com/pivotal-cf/lts-banana-release"},
 			{Name: "lemon"},
 		},
 	}, cargo.KilnfileLock{
@@ -86,12 +83,9 @@ func Test_fetch(t *testing.T) {
 	fakeReleaseService := new(fakes.ReleaseService)
 	fakeReleaseService.ListReleasesReturnsOnCall(0, []*github.RepositoryRelease{
 		{TagName: strPtr("1.1.0"), Body: strPtr("   peal is green\n")},
-		{TagName: strPtr("1.2.0"), Body: strPtr("peal\nis\n\nyellow")},
-	}, githubResponse(t, 200), nil)
-	fakeReleaseService.ListReleasesReturnsOnCall(1, []*github.RepositoryRelease{}, githubResponse(t, 400), nil)
-	fakeReleaseService.ListReleasesReturnsOnCall(2, []*github.RepositoryRelease{
-		{TagName: strPtr("1.1.0"), Body: strPtr("   peal is green\n")},
 		{TagName: strPtr("1.1.1"), Body: strPtr("remove from bunch\n\n")},
+	}, githubResponse(t, 200), nil)
+	fakeReleaseService.ListReleasesReturnsOnCall(2, []*github.RepositoryRelease{
 		{TagName: strPtr("1.1.2"), Body: strPtr("")},
 		{TagName: strPtr("1.2.0"), Body: strPtr("peal is yellow")},
 	}, githubResponse(t, 200), nil)
@@ -127,7 +121,7 @@ func Test_fetch(t *testing.T) {
 	please.Expect(historicVersion.CallCount()).To(Ω.Equal(1))
 	_, historicVersionHashArg, _ := historicVersion.ArgsForCall(0)
 	please.Expect(historicVersionHashArg).To(Ω.Equal(finalHash))
-	please.Expect(fakeReleaseService.ListReleasesCallCount()).To(Ω.Equal(4))
+	please.Expect(fakeReleaseService.ListReleasesCallCount()).To(Ω.Equal(2))
 	please.Expect(fakeIssuesService.GetCallCount()).To(Ω.Equal(2))
 
 	_, orgName, repoName, n := fakeIssuesService.GetArgsForCall(0)

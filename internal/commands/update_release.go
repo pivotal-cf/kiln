@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"log"
 
 	"github.com/go-git/go-billy/v5"
@@ -52,10 +53,11 @@ func (u UpdateRelease) Execute(args []string) error {
 			u.Options.Name,
 		)
 	}
-	releaseSpec, err := kilnfile.FindReleaseWithName(u.Options.Name)
-	if err != nil {
-		return err
+	releaseSpec, ok := kilnfile.ComponentSpec(u.Options.Name)
+	if !ok {
+		return cargo.ErrorSpecNotFound(u.Options.Name)
 	}
+
 	releaseVersionConstraint := releaseSpec.Version
 	if u.Options.Version != "" {
 		releaseVersionConstraint = u.Options.Version
@@ -70,11 +72,11 @@ func (u UpdateRelease) Execute(args []string) error {
 	var newVersion, newSHA1, newSourceID, newRemotePath string
 	if u.Options.WithoutDownload {
 		remoteRelease, err = releaseSource.FindReleaseVersion(component.Spec{
-			Name:            u.Options.Name,
-			Version:         releaseVersionConstraint,
-			StemcellVersion: kilnfileLock.Stemcell.Version,
-			StemcellOS:      kilnfileLock.Stemcell.OS,
-			GitRepositories: releaseSpec.GitRepositories,
+			Name:             u.Options.Name,
+			Version:          releaseVersionConstraint,
+			StemcellVersion:  kilnfileLock.Stemcell.Version,
+			StemcellOS:       kilnfileLock.Stemcell.OS,
+			GitHubRepository: releaseSpec.GitHubRepository,
 		})
 
 		if err != nil {
@@ -91,11 +93,11 @@ func (u UpdateRelease) Execute(args []string) error {
 
 	} else {
 		remoteRelease, err = releaseSource.GetMatchedRelease(component.Spec{
-			Name:            u.Options.Name,
-			Version:         u.Options.Version,
-			StemcellOS:      kilnfileLock.Stemcell.OS,
-			StemcellVersion: kilnfileLock.Stemcell.Version,
-			GitRepositories: releaseSpec.GitRepositories,
+			Name:             u.Options.Name,
+			Version:          u.Options.Version,
+			StemcellOS:       kilnfileLock.Stemcell.OS,
+			StemcellVersion:  kilnfileLock.Stemcell.Version,
+			GitHubRepository: releaseSpec.GitHubRepository,
 		})
 
 		if err != nil {

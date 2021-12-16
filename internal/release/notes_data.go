@@ -279,7 +279,7 @@ func (r fetchNotesData) fetchIssuesAndReleaseNotes(ctx context.Context, finalKF,
 	if r.releasesService == nil || r.issuesService == nil {
 		return nil, bumpList, nil
 	}
-	bumpList, err := component.ReleaseNotes(ctx, r.releasesService, mergeGitRepos(finalKF, wtKF), bumpList)
+	bumpList, err := component.ReleaseNotes(ctx, r.releasesService, setEmptyComponentGitHubRepositoryFromOtherKilnfile(finalKF, wtKF), bumpList)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -466,9 +466,16 @@ func issuesTitlePrefixSemanticValue(title string) int {
 	return 0
 }
 
-func mergeGitRepos(k1, k2 cargo.Kilnfile) cargo.Kilnfile {
+func setEmptyComponentGitHubRepositoryFromOtherKilnfile(k1, k2 cargo.Kilnfile) cargo.Kilnfile {
 	for i, r := range k1.Releases {
-		k1.Releases[i].GitRepositories = appendToSet(r.GitRepositories, k2.Spec(r.Name).GitRepositories...)
+		if r.GitHubRepository != "" {
+			continue
+		}
+		spec, ok := k2.ComponentSpec(r.Name)
+		if !ok {
+			continue
+		}
+		k1.Releases[i].GitHubRepository = spec.GitHubRepository
 	}
 	return k1
 }

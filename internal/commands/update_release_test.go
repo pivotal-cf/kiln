@@ -68,8 +68,8 @@ var _ = Describe("UpdateRelease", func() {
 				Releases: []cargo.ComponentSpec{
 					{Name: "minecraft"},
 					{
-						Name:            releaseName,
-						GitRepositories: []string{githubRepo},
+						Name:             releaseName,
+						GitHubRepository: githubRepo,
 					},
 				},
 			}
@@ -144,11 +144,11 @@ var _ = Describe("UpdateRelease", func() {
 
 				receivedReleaseRequirement := releaseSource.GetMatchedReleaseArgsForCall(0)
 				releaseRequirement := component.Spec{
-					Name:            releaseName,
-					Version:         newReleaseVersion,
-					StemcellOS:      "some-os",
-					StemcellVersion: "4.5.6",
-					GitRepositories: []string{githubRepo},
+					Name:             releaseName,
+					Version:          newReleaseVersion,
+					StemcellOS:       "some-os",
+					StemcellVersion:  "4.5.6",
+					GitHubRepository: githubRepo,
 				}
 				Expect(receivedReleaseRequirement).To(Equal(releaseRequirement))
 
@@ -393,11 +393,11 @@ var _ = Describe("UpdateRelease", func() {
 
 				receivedReleaseRequirement := releaseSource.FindReleaseVersionArgsForCall(0)
 				releaseRequirement := component.Spec{
-					Name:            releaseName,
-					Version:         newReleaseVersion,
-					StemcellOS:      "some-os",
-					StemcellVersion: "4.5.6",
-					GitRepositories: []string{githubRepo},
+					Name:             releaseName,
+					Version:          newReleaseVersion,
+					StemcellOS:       "some-os",
+					StemcellVersion:  "4.5.6",
+					GitHubRepository: githubRepo,
 				}
 				Expect(receivedReleaseRequirement).To(Equal(releaseRequirement))
 
