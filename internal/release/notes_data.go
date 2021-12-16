@@ -479,21 +479,3 @@ func setEmptyComponentGitHubRepositoryFromOtherKilnfile(k1, k2 cargo.Kilnfile) c
 	}
 	return k1
 }
-
-func appendToSet(set []string, values ...string) []string {
-	if len(values) == 0 {
-		return set
-	}
-	m := make(map[string]struct{}, len(set))
-	for _, s := range set {
-		m[s] = struct{}{}
-	}
-	for _, v := range values {
-		_, ok := m[v]
-		if ok {
-			continue
-		}
-		set = append(set, v)
-	}
-	return set
-}
