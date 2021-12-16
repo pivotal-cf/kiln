@@ -2,6 +2,7 @@ package component
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -119,7 +120,7 @@ func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {
 func TestInternal_addReleaseNotes(t *testing.T) {
 	please := Ω.NewWithT(t)
 
-	var ltsCallCount, osCallCount int
+	var ltsCallCount int
 
 	releaseLister := new(fakes.RepositoryReleaseLister)
 	releaseLister.ListReleasesStub = func(ctx context.Context, org string, repo string, options *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error) {
@@ -140,7 +141,6 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 				ltsCallCount++
 				return []*github.RepositoryRelease{
 					{Body: strPtr("cleaned"), TagName: strPtr("0.2.1")},
-					// {Body: strPtr("picked"), TagName: strPtr("0.2.0")}, // this release is only on the open source repo
 					{Body: strPtr("ripe"), TagName: strPtr("0.1.3")},
 					{Body: strPtr("unripe"), TagName: strPtr("0.1.2")},
 					{Body: strPtr("flower"), TagName: strPtr("0.1.1")},
@@ -148,22 +148,8 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 				}, githubResponse(t, 200), nil
 			default:
 				ltsCallCount++
-				return nil, nil, nil
+				return nil, nil, errors.New("ERROR")
 			}
-		case "peach-release":
-			if osCallCount > 1 {
-				return nil, nil, nil
-			}
-			osCallCount++
-			return []*github.RepositoryRelease{
-				{Body: strPtr("eaten"), TagName: strPtr("3.0.0")},
-				{Body: strPtr("plated"), TagName: strPtr("2.0.0")},
-				{Body: strPtr("stored"), TagName: strPtr("1.1.0")},
-				{Body: strPtr("preserved"), TagName: strPtr("1.0.0")},
-				{Body: strPtr("picked"), TagName: strPtr("0.2.0")},
-				{Body: strPtr("growing"), TagName: strPtr("0.1.0")},
-				{Body: strPtr("planted"), TagName: strPtr("0.0.1")},
-			}, githubResponse(t, 200), nil
 		}
 		t.Errorf("unexpected repo: %q", repo)
 		return nil, nil, nil
@@ -178,11 +164,8 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 					Name: "mango",
 				},
 				{
-					Name: "peach",
-					GitRepositories: []string{
-						"https://github.com/cloudfoundry/peach-release",
-						"https://github.com/pivotal-cf/lts-peach-release",
-					},
+					Name:             "peach",
+					GitHubRepository: "https://github.com/pivotal-cf/lts-peach-release",
 				},
 			},
 		},
@@ -202,9 +185,8 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 	please.Expect(result).To(Ω.HaveLen(2))
 
 	please.Expect(ltsCallCount).To(Ω.Equal(3))
-	please.Expect(osCallCount).To(Ω.Equal(2))
 
-	please.Expect(result[0].ReleaseNotes()).To(Ω.Equal("served\nplated\nstored\nlabeled\npreserved\nchopped\ncleaned\npicked"))
+	please.Expect(result[0].ReleaseNotes()).To(Ω.Equal("served\nplated\nstored\nlabeled\npreserved\nchopped\ncleaned"))
 }
 
 func githubResponse(t *testing.T, status int) *github.Response {

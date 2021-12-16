@@ -206,37 +206,40 @@ type ReleaseAssetDownloader interface {
 type GetGithubReleaseFunc func(ctx context.Context, org, repo string) (*github.RepositoryRelease, error)
 
 func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloader, owner string, spec Spec, getRelease GetGithubReleaseFunc) (Lock, error) {
-	for _, repoURL := range spec.GitRepositories {
-		repoOwner, repoName, err := OwnerAndRepoFromGitHubURI(repoURL)
-		if err != nil {
+	if spec.GitHubRepository == "" {
+		return Lock{}, ErrNotFound
+	}
+
+	repoOwner, repoName, err := OwnerAndRepoFromGitHubURI(spec.GitHubRepository)
+	if err != nil {
+		return Lock{}, ErrNotFound
+	}
+	release, err := getRelease(ctx, repoOwner, repoName)
+	if err != nil {
+		return Lock{}, err
+	}
+	expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, release.GetTagName())
+	for _, asset := range release.Assets {
+		if asset.GetName() != expectedAssetName {
 			continue
 		}
-		release, err := getRelease(ctx, repoOwner, repoName)
+		rc, _, err := downloader.DownloadReleaseAsset(ctx, repoOwner, repoName, *asset.ID, http.DefaultClient)
 		if err != nil {
 			return Lock{}, err
 		}
-		expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, release.GetTagName())
-		for _, asset := range release.Assets {
-			if asset.GetName() != expectedAssetName {
-				continue
-			}
-			rc, _, err := downloader.DownloadReleaseAsset(ctx, repoOwner, repoName, *asset.ID, http.DefaultClient)
-			if err != nil {
-				return Lock{}, err
-			}
-			sum, err := calculateSHA1(rc)
-			if err != nil {
-				return Lock{}, err
-			}
-			return Lock{
-				Name:         spec.Name,
-				Version:      release.GetTagName(),
-				RemoteSource: owner,
-				RemotePath:   asset.GetBrowserDownloadURL(),
-				SHA1:         sum,
-			}, nil
+		sum, err := calculateSHA1(rc)
+		if err != nil {
+			return Lock{}, err
 		}
+		return Lock{
+			Name:         spec.Name,
+			Version:      release.GetTagName(),
+			RemoteSource: owner,
+			RemotePath:   asset.GetBrowserDownloadURL(),
+			SHA1:         sum,
+		}, nil
 	}
+
 	return Lock{}, ErrNotFound
 }
 

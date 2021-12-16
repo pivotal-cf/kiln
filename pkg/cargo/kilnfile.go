@@ -30,8 +30,8 @@ type ComponentSpec struct {
 	// also set StemcellOS when setting this field.
 	StemcellVersion string `yaml:"stemcell_version,omitempty"`
 
-	// GitRepositories are where the BOSH release source code is
-	GitRepositories []string `yaml:"git_repositories,omitempty"`
+	// GitHubRepository are where the BOSH release source code is
+	GitHubRepository string `yaml:"github_repository,omitempty"`
 }
 
 func (spec ComponentSpec) VersionConstraints() (*semver.Constraints, error) {
@@ -69,13 +69,17 @@ type Kilnfile struct {
 	Stemcell        Stemcell              `yaml:"stemcell_criteria"`
 }
 
-func (kf Kilnfile) Spec(name string) ComponentSpec {
+func (kf Kilnfile) ComponentSpec(name string) (ComponentSpec, bool) {
 	for _, s := range kf.Releases {
 		if s.Name == name {
-			return s
+			return s, true
 		}
 	}
-	return ComponentSpec{}
+	return ComponentSpec{}, false
+}
+
+func ErrorSpecNotFound(name string) error {
+	return fmt.Errorf("failed to find repository with name %q in Kilnfile", name)
 }
 
 type ReleaseSourceConfig struct {

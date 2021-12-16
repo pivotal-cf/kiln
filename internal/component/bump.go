@@ -189,17 +189,21 @@ func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLis
 }
 
 func fetchReleasesForBump(ctx context.Context, repoService RepositoryReleaseLister, kf cargo.Kilnfile, bump Bump) Bump {
-	spec := kf.Spec(bump.Name)
+	spec, ok := kf.ComponentSpec(bump.Name)
+	if !ok {
+		return bump
+	}
 
 	to, from, err := bump.toFrom()
 	if err != nil {
 		return bump
 	}
 
-	for _, repository := range spec.GitRepositories {
-		releases := fetchReleasesFromRepo(ctx, repoService, repository, from, to)
+	if spec.GitHubRepository != "" {
+		releases := fetchReleasesFromRepo(ctx, repoService, spec.GitHubRepository, from, to)
 		bump.Releases = append(bump.Releases, releases...)
 	}
+
 	sort.Sort(sort.Reverse(releasesByIncreasingSemanticVersion(bump.Releases)))
 	bump.deduplicateReleasesWithTheSameTagName()
 
