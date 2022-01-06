@@ -131,6 +131,9 @@ func (s Stemcell) Execute(args []string) error {
 		return fmt.Errorf("failed to load kilnfiles: %w", err)
 	}
 
+	//download_stemcell_test.go/TestDownloadStemcell_Execute fails here, because
+	// s.hasUnsetPivnetService() isn't detecting the stemcell has an unset Pivnet Service even though it is null.
+
 	if s.hasUnsetPivnetService() {
 		s.SetupPivnet(s.Options.PivnetToken)
 	}
