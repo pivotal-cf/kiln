@@ -2,8 +2,6 @@ package commands_test
 
 import (
 	"io/ioutil"
-	"os"
-
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -27,38 +25,6 @@ type command interface {
 }
 
 var _ command
-
-func writeYAML(path string, data interface{}) error {
-	buf, err := yaml.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = f.Close()
-	}()
-
-	_, err = f.Write(buf)
-	return err
-}
-
-func readYAML(path string, data interface{}) error {
-	buf, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil
-	}
-
-	err = yaml.Unmarshal(buf, data)
-	if err != nil {
-		return err
-	}
-
-	return err
-}
 
 func fsWriteYAML(fs billy.Basic, path string, data interface{}) error {
 	buf, err := yaml.Marshal(data)
