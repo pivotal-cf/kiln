@@ -95,13 +95,6 @@ func main() {
 
 	commandSet["find-stemcell-version"] = commands.NewFindStemcellVersion(outLogger, pivnetService)
 
-	commandSet["compile-built-releases"] = commands.CompileBuiltReleases{
-		BoshDirectorFactory:        commands.BoshDirectorFactory,
-		Logger:                     outLogger,
-		MultiReleaseSourceProvider: mrsProvider,
-		ReleaseUploaderFinder:      ruFinder,
-	}
-
 	commandSet["cache-compiled-releases"] = commands.NewCacheCompiledReleases().WithLogger(outLogger)
 
 	commandSet["validate"] = commands.NewValidate(osfs.New(""))
