@@ -21,14 +21,6 @@ version: ` + version + `
 	return WriteTarballWithFile(path, "release.MF", releaseManifest, fs)
 }
 
-func WriteStemcellTarball(path, operatingSystem, version string, fs billy.Filesystem) (string, error) {
-	releaseManifest := `
-operating_system: ` + operatingSystem + `
-version: ` + version + `
-`
-	return WriteTarballWithFile(path, "stemcell.MF", releaseManifest, fs)
-}
-
 func WriteTarballWithFile(tarballPath, internalFilePath, fileContents string, fs billy.Filesystem) (string, error) {
 	f, err := fs.Create(tarballPath)
 	if err != nil {
