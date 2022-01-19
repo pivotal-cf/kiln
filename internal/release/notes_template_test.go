@@ -2,14 +2,13 @@ package release
 
 import (
 	"bytes"
+	"github.com/pivotal-cf/kiln/pkg/component"
 	"testing"
 	"text/template"
 
 	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
 	Ω "github.com/onsi/gomega"
-
-	"github.com/pivotal-cf/kiln/internal/component"
 )
 
 func Test_defaultReleaseNotesTemplate(t *testing.T) {

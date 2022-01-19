@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"github.com/pivotal-cf/kiln/pkg/component"
 	"testing"
 	"time"
 
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	Ω "github.com/onsi/gomega"

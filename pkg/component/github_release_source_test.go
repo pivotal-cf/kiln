@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/component"
+	fakes2 "github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"io"
 	"net/http"
 	"os"
@@ -15,8 +17,6 @@ import (
 	Ω "github.com/onsi/gomega"
 
 	"github.com/google/go-github/v40/github"
-	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -62,8 +62,8 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 	intPtr := func(n int64) *int64 { return &n }
 
 	t.Run("when release is found in first repo", func(t *testing.T) {
-		releaseGetter := new(fakes.ReleaseByTagGetter)
-		downloader := new(fakes.ReleaseAssetDownloader)
+		releaseGetter := new(fakes2.ReleaseByTagGetter)
+		downloader := new(fakes2.ReleaseAssetDownloader)
 
 		const owner = "cloudfoundry"
 
@@ -178,7 +178,7 @@ func TestGetGithubReleaseWithTag(t *testing.T) {
 	t.Run("when get release with tag api request fails", func(t *testing.T) {
 		damnIt := Ω.NewWithT(t)
 
-		releaseGetter := new(fakes.ReleaseByTagGetter)
+		releaseGetter := new(fakes2.ReleaseByTagGetter)
 
 		releaseGetter.GetReleaseByTagReturns(
 			&github.RepositoryRelease{},
@@ -204,7 +204,7 @@ func TestGetGithubReleaseWithTag(t *testing.T) {
 			}
 		}()
 
-		releaseGetter := new(fakes.ReleaseByTagGetter)
+		releaseGetter := new(fakes2.ReleaseByTagGetter)
 
 		releaseGetter.GetReleaseByTagReturns(nil, &github.Response{
 			Response: &http.Response{
@@ -226,7 +226,7 @@ func TestGetReleaseMatchingConstraint(t *testing.T) {
 	t.Run("when get release with tag api request fails", func(t *testing.T) {
 		damnIt := Ω.NewWithT(t)
 
-		releaseGetter := new(fakes.ReleasesLister)
+		releaseGetter := new(fakes2.ReleasesLister)
 
 		releaseGetter.ListReleasesReturnsOnCall(0,
 			[]*github.RepositoryRelease{

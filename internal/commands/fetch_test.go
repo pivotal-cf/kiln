@@ -3,6 +3,8 @@ package commands_test
 import (
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/component"
+	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,8 +18,6 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
-	"github.com/pivotal-cf/kiln/internal/component"
-	componentFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -30,10 +30,10 @@ var _ = Describe("Fetch", func() {
 		someKilnfileLockPath        string
 		lockContents                string
 		someReleasesDirectory       string
-		fakeS3CompiledReleaseSource *componentFakes.ReleaseSource
-		fakeBoshIOReleaseSource     *componentFakes.ReleaseSource
-		fakeS3BuiltReleaseSource    *componentFakes.ReleaseSource
-		fakeReleaseSources          *componentFakes.MultiReleaseSource
+		fakeS3CompiledReleaseSource *fakes.ReleaseSource
+		fakeBoshIOReleaseSource     *fakes.ReleaseSource
+		fakeS3BuiltReleaseSource    *fakes.ReleaseSource
+		fakeReleaseSources          *fakes.MultiReleaseSource
 		releaseSourceList           component.ReleaseSourceList
 		fakeLocalReleaseDirectory   *commandsFakes.LocalReleaseDirectory
 		multiReleaseSourceProvider  commands.MultiReleaseSourceProvider
@@ -50,7 +50,7 @@ var _ = Describe("Fetch", func() {
 
 	Describe("Execute", func() {
 		BeforeEach(func() {
-			fakeReleaseSources = new(componentFakes.MultiReleaseSource)
+			fakeReleaseSources = new(fakes.MultiReleaseSource)
 			logger = log.New(GinkgoWriter, "", 0)
 
 			var err error
@@ -79,13 +79,13 @@ stemcell_criteria:
 
 			fakeLocalReleaseDirectory = new(commandsFakes.LocalReleaseDirectory)
 
-			fakeS3CompiledReleaseSource = new(componentFakes.ReleaseSource)
+			fakeS3CompiledReleaseSource = new(fakes.ReleaseSource)
 			fakeS3CompiledReleaseSource.ConfigurationReturns(cargo.ReleaseSourceConfig{
 				ID: s3CompiledReleaseSourceID,
 			})
-			fakeBoshIOReleaseSource = new(componentFakes.ReleaseSource)
+			fakeBoshIOReleaseSource = new(fakes.ReleaseSource)
 			fakeBoshIOReleaseSource.ConfigurationReturns(cargo.ReleaseSourceConfig{ID: boshIOReleaseSourceID})
-			fakeS3BuiltReleaseSource = new(componentFakes.ReleaseSource)
+			fakeS3BuiltReleaseSource = new(fakes.ReleaseSource)
 			fakeS3BuiltReleaseSource.ConfigurationReturns(cargo.ReleaseSourceConfig{ID: s3BuiltReleaseSourceID})
 
 			fetchExecuteArgs = []string{

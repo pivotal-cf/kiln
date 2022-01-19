@@ -3,6 +3,8 @@ package component_test
 import (
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/component"
+	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"io"
 	"io/ioutil"
 	"log"
@@ -19,8 +21,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/go-git/go-billy/v5/osfs"
 
-	"github.com/pivotal-cf/kiln/internal/component"
-	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -95,7 +95,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			remoteRelease         component.Lock
 			expectedLocalFilename string
 			releaseID             component.Spec
-			fakeS3Downloader      *fetcherFakes.S3Downloader
+			fakeS3Downloader      *fakes.S3Downloader
 		)
 
 		BeforeEach(func() {
@@ -109,7 +109,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			expectedLocalFilename = filepath.Base(remoteRelease.RemotePath)
 
 			logger = log.New(GinkgoWriter, "", 0)
-			fakeS3Downloader = new(fetcherFakes.S3Downloader)
+			fakeS3Downloader = new(fakes.S3Downloader)
 			// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
 			fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
 				n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
@@ -192,7 +192,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		var (
 			releaseSource  component.S3ReleaseSource
-			fakeS3Client   *fetcherFakes.S3Client
+			fakeS3Client   *fakes.S3Client
 			desiredRelease component.Spec
 			bpmReleaseID   component.Spec
 			bpmKey         string
@@ -208,7 +208,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				StemcellVersion: "190.0.0",
 			}
 
-			fakeS3Client = new(fetcherFakes.S3Client)
+			fakeS3Client = new(fakes.S3Client)
 			fakeS3Client.HeadObjectReturns(new(s3.HeadObjectOutput), nil)
 
 			logger = log.New(nil, "", 0)
@@ -246,7 +246,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		When("the requested releases doesn't exist in the bucket", func() {
 			BeforeEach(func() {
-				notFoundError := new(fetcherFakes.S3RequestFailure)
+				notFoundError := new(fakes.S3RequestFailure)
 				notFoundError.StatusCodeReturns(404)
 				fakeS3Client.HeadObjectReturns(nil, notFoundError)
 			})
@@ -287,7 +287,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		var (
 			releaseSource  component.S3ReleaseSource
-			fakeS3Client   *fetcherFakes.S3Client
+			fakeS3Client   *fakes.S3Client
 			desiredRelease component.Spec
 			releaseID      component.Spec
 			uaaKey         string
@@ -303,7 +303,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					StemcellVersion: "621.71",
 				}
 
-				fakeS3Client = new(fetcherFakes.S3Client)
+				fakeS3Client = new(fakes.S3Client)
 				object1Key := "uaa/uaa-1.2.2.tgz"
 				object2Key := "uaa/uaa-1.2.3.tgz"
 				object3Key := "uaa/uaa-1.1.1.tgz"
@@ -315,7 +315,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					},
 				}, nil)
 
-				fakeS3Downloader := new(fetcherFakes.S3Downloader)
+				fakeS3Downloader := new(fakes.S3Downloader)
 				// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
 				fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
 					n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
@@ -364,7 +364,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					StemcellVersion: "621.71",
 				}
 
-				fakeS3Client = new(fetcherFakes.S3Client)
+				fakeS3Client = new(fakes.S3Client)
 				object1Key := "uaa/uaa-122.tgz"
 				object2Key := "uaa/uaa-123.tgz"
 				object3Key := "uaa/uaa-123.tgz"
@@ -379,7 +379,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				}, nil)
 
 				logger = log.New(GinkgoWriter, "", 0)
-				fakeS3Downloader := new(fetcherFakes.S3Downloader)
+				fakeS3Downloader := new(fakes.S3Downloader)
 				// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
 				fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
 					n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
@@ -425,7 +425,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		var (
 			releaseSource  component.S3ReleaseSource
-			fakeS3Client   *fetcherFakes.S3Client
+			fakeS3Client   *fakes.S3Client
 			desiredRelease component.Spec
 			releaseID      component.Spec
 			uaaKey         string
@@ -439,7 +439,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					StemcellVersion: "621.71",
 				}
 
-				fakeS3Client = new(fetcherFakes.S3Client)
+				fakeS3Client = new(fakes.S3Client)
 				object1Key := "2.11/uaa/uaa-1.2.2-ubuntu-xenial-621.71.tgz"
 				object2Key := "2.11/uaa/uaa-1.2.3-ubuntu-xenial-621.71.tgz"
 				object3Key := "2.11/uaa/uaa-1.2.1-ubuntu-xenial-621.71.tgz"
@@ -454,7 +454,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				}, nil)
 
 				logger = log.New(GinkgoWriter, "", 0)
-				fakeS3Downloader := new(fetcherFakes.S3Downloader)
+				fakeS3Downloader := new(fakes.S3Downloader)
 				// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
 				fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
 					n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
@@ -491,13 +491,13 @@ var _ = Describe("S3ReleaseSource", func() {
 
 	Describe("UploadRelease", func() {
 		var (
-			s3Uploader    *fetcherFakes.S3Uploader
+			s3Uploader    *fakes.S3Uploader
 			releaseSource component.S3ReleaseSource
 			file          io.Reader
 		)
 
 		BeforeEach(func() {
-			s3Uploader = new(fetcherFakes.S3Uploader)
+			s3Uploader = new(fakes.S3Uploader)
 			releaseSource = component.NewS3ReleaseSource(
 				cargo.ReleaseSourceConfig{
 					ID:           sourceID,

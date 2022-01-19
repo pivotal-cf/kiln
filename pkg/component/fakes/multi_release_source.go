@@ -4,8 +4,8 @@ package fakes
 import (
 	"sync"
 
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
 )
 
 type MultiReleaseSource struct {

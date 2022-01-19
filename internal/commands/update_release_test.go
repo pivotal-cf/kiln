@@ -3,6 +3,8 @@ package commands_test
 import (
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/component"
+	fetcherFakes "github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,8 +18,6 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
-	"github.com/pivotal-cf/kiln/internal/component"
-	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 

@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/component"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -21,7 +22,6 @@ import (
 	"github.com/pivotal-cf/jhanda"
 	"golang.org/x/oauth2"
 
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/release"
 )
 

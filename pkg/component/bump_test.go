@@ -3,14 +3,13 @@ package component
 import (
 	"context"
 	"errors"
+	fakes "github.com/pivotal-cf/kiln/pkg/component/fakes_internal"
 	"net/http"
 	"testing"
 
 	"github.com/google/go-github/v40/github"
 
 	Ω "github.com/onsi/gomega"
-
-	fakes "github.com/pivotal-cf/kiln/internal/component/fakes_internal"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/component"
 	"log"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
@@ -9,7 +10,6 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
 
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 

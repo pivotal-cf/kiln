@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/google/go-github/v40/github"
-	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/pkg/component"
 )
 
 type ReleaseService struct {

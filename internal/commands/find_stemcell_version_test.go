@@ -1,6 +1,8 @@
 package commands_test
 
 import (
+	"github.com/pivotal-cf/kiln/pkg/component"
+	fakes2 "github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,8 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
-	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/internal/component/fakes"
 )
 
 var _ = Describe("Find the stemcell version", func() {
@@ -29,7 +29,7 @@ var _ = Describe("Find the stemcell version", func() {
 		kilnfileContents     string
 		lockContents         string
 		pivnet               component.Pivnet
-		serverMock           *fakes.RoundTripper
+		serverMock           *fakes2.RoundTripper
 		simpleRequest        *http.Request
 		requestErr           error
 	)
@@ -41,7 +41,7 @@ var _ = Describe("Find the stemcell version", func() {
 			pivnet = component.Pivnet{}
 			simpleRequest, _ = http.NewRequest(http.MethodGet, "/", nil)
 
-			serverMock = &fakes.RoundTripper{}
+			serverMock = &fakes2.RoundTripper{}
 			serverMock.Results.Res = &http.Response{}
 			pivnet.Client = &http.Client{
 				Transport: serverMock,
@@ -142,7 +142,7 @@ stemcell_criteria:
 		When("stemcell OS and major version is specified", func() {
 			When("a new stemcell exists", func() {
 				BeforeEach(func() {
-					serverMock.Results.Res.Body = fakes.NewReadCloser(`{"version": "456.118"}`)
+					serverMock.Results.Res.Body = fakes2.NewReadCloser(`{"version": "456.118"}`)
 					serverMock.Results.Res.StatusCode = http.StatusOK
 					serverMock.Results.Err = nil
 				})

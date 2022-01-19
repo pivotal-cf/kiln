@@ -16,10 +16,10 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
-	"github.com/pivotal-cf/kiln/internal/component"
-	componentFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/internal/om"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
+	componentFakes "github.com/pivotal-cf/kiln/pkg/component/fakes"
 )
 
 var _ jhanda.Command = (*commands.CacheCompiledReleases)(nil)

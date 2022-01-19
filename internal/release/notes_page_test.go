@@ -3,6 +3,7 @@ package release
 import (
 	"bytes"
 	_ "embed"
+	"github.com/pivotal-cf/kiln/pkg/component"
 	"io"
 	"io/fs"
 	"os"
@@ -19,7 +20,6 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/google/go-github/v40/github"
 
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 

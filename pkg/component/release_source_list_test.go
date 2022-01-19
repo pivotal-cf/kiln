@@ -2,12 +2,12 @@ package component_test
 
 import (
 	"errors"
+	"github.com/pivotal-cf/kiln/pkg/component"
+	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
