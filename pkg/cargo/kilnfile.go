@@ -83,17 +83,22 @@ func ErrorSpecNotFound(name string) error {
 }
 
 type ReleaseSourceConfig struct {
-	Type            string `yaml:"type"`
-	ID              string `yaml:"id"`
-	Publishable     bool   `yaml:"publishable"`
+	Type        string `yaml:"type"`
+	ID          string `yaml:"id"`
+	Publishable bool   `yaml:"publishable"`
+
+	// These fields are S3ReleaseSource
+
 	Bucket          string `yaml:"bucket"`
 	Region          string `yaml:"region"`
 	AccessKeyId     string `yaml:"access_key_id"`
 	SecretAccessKey string `yaml:"secret_access_key"`
 	PathTemplate    string `yaml:"path_template"`
 	Endpoint        string `yaml:"endpoint"`
-	Org             string `yaml:"org"`
-	GithubToken     string `yaml:"github_token"`
+
+	// These fields are used in component.GitHubReleaseSource
+	Org         string `yaml:"org"`
+	GithubToken string `yaml:"github_token"`
 }
 
 // ComponentLock represents an exact build of a bosh release
