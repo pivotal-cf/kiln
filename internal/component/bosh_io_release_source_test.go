@@ -13,16 +13,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/pivotal-cf/kiln/pkg/cargo"
-
-	. "github.com/onsi/ginkgo/extensions/table"
-
 	"github.com/onsi/gomega/ghttp"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 var _ = Describe("BOSHIOReleaseSource", func() {
@@ -154,69 +151,6 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				Expect(component.IsErrNotFound(err)).To(BeTrue())
 			})
 		})
-
-		Describe("releases can exist in many orgs with various suffixes", func() {
-			var (
-				testServer     *ghttp.Server
-				releaseName    = "my-release"
-				releaseVersion = "1.2.3"
-				releaseSource  *component.BOSHIOReleaseSource
-			)
-
-			BeforeEach(func() {
-				testServer = ghttp.NewServer()
-
-				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), log.New(GinkgoWriter, "", 0))
-			})
-
-			AfterEach(func() {
-				defer func() { testServer.Close() }()
-			})
-
-			DescribeTable("searching multiple paths for each release",
-				func(organization, suffix string) {
-					path := fmt.Sprintf("/api/v1/releases/github.com/%s/%s%s", organization, releaseName, suffix)
-					testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, fmt.Sprintf(`[{"version": %q}]`, releaseVersion)))
-
-					pathRegex, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/.*`)
-					testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `null`))
-
-					releaseID := component.Spec{Name: releaseName, Version: releaseVersion}
-					releaseRequirement := component.Spec{
-						Name:            releaseName,
-						Version:         releaseVersion,
-						StemcellOS:      "generic-os",
-						StemcellVersion: "4.5.6",
-					}
-
-					foundRelease, err := releaseSource.GetMatchedRelease(releaseRequirement)
-
-					Expect(err).NotTo(HaveOccurred())
-
-					expectedPath := fmt.Sprintf("%s/d/github.com/%s/%s%s?v=%s",
-						testServer.URL(),
-						organization,
-						releaseName,
-						suffix,
-						releaseVersion)
-
-					Expect(foundRelease).To(Equal(releaseID.Lock().WithRemote(component.ReleaseSourceTypeBOSHIO, expectedPath)))
-				},
-
-				Entry("cloudfoundry org, no suffix", "cloudfoundry", ""),
-				Entry("cloudfoundry org, -release suffix", "cloudfoundry", "-release"),
-				Entry("cloudfoundry org, -bosh-release suffix", "cloudfoundry", "-bosh-release"),
-				Entry("cloudfoundry org, -boshrelease suffix", "cloudfoundry", "-boshrelease"),
-				Entry("pivotal-cf org, no suffix", "pivotal-cf", ""),
-				Entry("pivotal-cf org, -release suffix", "pivotal-cf", "-release"),
-				Entry("pivotal-cf org, -bosh-release suffix", "pivotal-cf", "-bosh-release"),
-				Entry("pivotal-cf org, -boshrelease suffix", "pivotal-cf", "-boshrelease"),
-				Entry("frodenas org, no suffix", "frodenas", ""),
-				Entry("frodenas org, -release suffix", "frodenas", "-release"),
-				Entry("frodenas org, -bosh-release suffix", "frodenas", "-bosh-release"),
-				Entry("frodenas org, -boshrelease suffix", "frodenas", "-boshrelease"),
-			)
-		})
 	})
 
 	Describe("DownloadRelease", func() {
@@ -303,7 +237,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				testServer = ghttp.NewServer()
 
 				path, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
-				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"309.0.5","url":"https://bosh.io/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.0","sha1":"5df538657c2cc830bda679420a9b162682018ded"},{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"308.0.0","url":"https://bosh.io/d/github.com/cloudfoundry/cf-rabbitmq-release?v=308.0.0","sha1":"56202c9a466a8394683ae432ee2dea21ef6ef865"}]`))
+				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"name":"github.com/pivotal-cf/cf-rabbitmq-release","version":"309.0.5","url":"https://bosh.io/d/github.com/pivotal-cf/cf-rabbitmq-release?v=309.0.0","sha1":"5df538657c2cc830bda679420a9b162682018ded"},{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"308.0.0","url":"https://bosh.io/d/github.com/pivotal-cf/cf-rabbitmq-release?v=308.0.0","sha1":"56202c9a466a8394683ae432ee2dea21ef6ef865"}]`))
 
 				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
 			})
@@ -317,7 +251,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 					foundRelease, err := releaseSource.FindReleaseVersion(rabbitmqRequirement)
 					Expect(err).NotTo(HaveOccurred())
-					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.5", testServer.URL())
+					cfRabbitURL := fmt.Sprintf("%s/d/github.com/pivotal-cf/cf-rabbitmq-release?v=309.0.5", testServer.URL())
 					Expect(foundRelease).To(Equal(component.Lock{
 						Name:         "cf-rabbitmq",
 						Version:      "309.0.5",
@@ -334,7 +268,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 					foundRelease, err := releaseSource.FindReleaseVersion(rabbitmqRequirement)
 					Expect(err).NotTo(HaveOccurred())
-					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.5", testServer.URL())
+					cfRabbitURL := fmt.Sprintf("%s/d/github.com/pivotal-cf/cf-rabbitmq-release?v=309.0.5", testServer.URL())
 					Expect(foundRelease).To(Equal(component.Lock{
 						Name:         "cf-rabbitmq",
 						Version:      "309.0.5",

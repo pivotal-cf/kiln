@@ -1,57 +1,72 @@
 package component
 
 import (
+	"context"
 	"crypto/sha1"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Masterminds/semver"
-
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-var repos = []string{
-	"cloudfoundry",
-	"pivotal-cf",
-	"cloudfoundry-incubator",
-	"pivotal-cf-experimental",
-	"bosh-packages",
-	"cppforlife",
-	"vito",
-	"flavorjones",
-	"xoebus",
-	"dpb587",
-	"jamlo",
-	"concourse",
-	"cf-platform-eng",
-	"starkandwayne",
-	"cloudfoundry-community",
-	"vmware",
-	"DataDog",
-	"Dynatrace",
-	"SAP",
-	"hybris",
-	"minio",
-	"rakutentech",
-	"frodenas",
+type BoshReleaseRepositoryRecord struct {
+	Name string `yaml:"name"`
+	URL  string `yaml:"url"`
 }
 
-var suffixes = []string{
-	"-release",
-	"-boshrelease",
-	"-bosh-release",
-	"",
+//go:embed bosh_io_index.yml
+var boshIOIndex string
+
+type BoshReleaseRepositoryIndex []BoshReleaseRepositoryRecord
+
+func GetBoshReleaseRepositoryIndex(ctx context.Context) (BoshReleaseRepositoryIndex, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://raw.githubusercontent.com/bosh-io/releases/HEAD/index.yml", nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request for BOSH.io index failed: %w", err)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GET BOSH.io index  failed: %w", err)
+	}
+	if res.StatusCode != http.StatusOK {
+		_ = res.Body.Close()
+		return nil, fmt.Errorf("GET BOSH.io index failed: expected status OK (200) got %s (%d)", http.StatusText(res.StatusCode), res.StatusCode)
+	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
+	var index BoshReleaseRepositoryIndex
+	err = yaml.NewDecoder(res.Body).Decode(index)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse BOSH.io index response: %w", err)
+	}
+	return index, nil
+}
+
+func (index BoshReleaseRepositoryIndex) FindReleaseRepos(name string) []BoshReleaseRepositoryRecord {
+	var matches []BoshReleaseRepositoryRecord
+	for _, r := range index {
+		if r.Name == name {
+			matches = append(matches, r)
+		}
+	}
+	return matches
 }
 
 type BOSHIOReleaseSource struct {
 	cargo.ReleaseSourceConfig
+	Index     BoshReleaseRepositoryIndex
 	serverURI string
 	logger    *log.Logger
 }
@@ -66,8 +81,14 @@ func NewBOSHIOReleaseSource(c cargo.ReleaseSourceConfig, customServerURI string,
 	if logger == nil {
 		logger = log.New(os.Stdout, "[bosh.io release source] ", log.Default().Flags())
 	}
+	var index BoshReleaseRepositoryIndex
+	err := yaml.Unmarshal([]byte(boshIOIndex), &index)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse embedded bosh_io_index.yml: %w", err))
+	}
 	return &BOSHIOReleaseSource{
 		ReleaseSourceConfig: c,
+		Index:               index,
 		logger:              logger,
 		serverURI:           customServerURI,
 	}
@@ -82,19 +103,16 @@ func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, error) {
 	requirement = requirement.UnsetStemcell()
 
-	for _, repo := range repos {
-		for _, suf := range suffixes {
-			fullName := repo + "/" + requirement.Name + suf
-			exists, err := src.releaseExistOnBoshio(fullName, requirement.Version)
-			if err != nil {
-				return Lock{}, err
-			}
+	for _, rr := range src.Index.FindReleaseRepos(requirement.Name) {
+		fullName := rr.URL
+		fullName = strings.TrimPrefix(fullName, "https://")
 
-			if exists {
-				builtRelease := src.createReleaseRemote(requirement, fullName)
-				return builtRelease, nil
-			}
+		exists, err := src.releaseExistOnBoshio(fullName, requirement.Version)
+		if err != nil || !exists {
+			continue
 		}
+		builtRelease := src.createReleaseRemote(requirement, fullName)
+		return builtRelease, nil
 	}
 	return Lock{}, ErrNotFound
 }
@@ -107,30 +125,29 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 		return Lock{}, err
 	}
 
-	var validReleases []releaseResponse
+	for _, rr := range src.Index.FindReleaseRepos(spec.Name) {
+		fullName := rr.URL
+		fullName = strings.TrimPrefix(fullName, "https://")
 
-	for _, repo := range repos {
-		for _, suf := range suffixes {
-			fullName := repo + "/" + spec.Name + suf
-			releaseResponses, err := src.getReleases(fullName)
-			if err != nil {
-				return Lock{}, err
-			}
-
-			for _, release := range releaseResponses {
-				version, _ := semver.NewVersion(release.Version)
-				if constraint.Check(version) {
-					validReleases = append(validReleases, release)
-				}
-			}
-			if len(validReleases) == 0 {
-				continue
-			}
-			spec.Version = validReleases[0].Version
-			lock := src.createReleaseRemote(spec, fullName)
-			lock.SHA1 = validReleases[0].SHA
-			return lock, nil
+		releaseResponses, err := src.getReleases(fullName)
+		if err != nil {
+			return Lock{}, err
 		}
+
+		var validReleases []releaseResponse
+		for _, release := range releaseResponses {
+			version, _ := semver.NewVersion(release.Version)
+			if constraint.Check(version) {
+				validReleases = append(validReleases, release)
+			}
+		}
+		if len(validReleases) == 0 {
+			continue
+		}
+		spec.Version = validReleases[0].Version
+		lock := src.createReleaseRemote(spec, fullName)
+		lock.SHA1 = validReleases[0].SHA
+		return lock, nil
 	}
 	return Lock{}, ErrNotFound
 }
@@ -182,7 +199,7 @@ func (err ResponseStatusCodeError) Error() string {
 }
 
 func (src BOSHIOReleaseSource) createReleaseRemote(spec Spec, fullName string) Lock {
-	downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, spec.Version)
+	downloadURL := fmt.Sprintf("%s/d/%s?v=%s", src.serverURI, fullName, spec.Version)
 	releaseRemote := spec.Lock()
 	releaseRemote.RemoteSource = src.ID()
 	releaseRemote.RemotePath = downloadURL
@@ -190,7 +207,7 @@ func (src BOSHIOReleaseSource) createReleaseRemote(spec Spec, fullName string) L
 }
 
 func (src BOSHIOReleaseSource) getReleases(name string) ([]releaseResponse, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/github.com/%s", src.serverURI, name))
+	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/%s", src.serverURI, name))
 	if err != nil {
 		return nil, fmt.Errorf("bosh.io API is down with error: %w", err)
 	}
