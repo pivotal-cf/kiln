@@ -25,6 +25,7 @@ type BoshReleaseRepositoryRecord struct {
 	URL  string `yaml:"url"`
 }
 
+//go:generate go run github.com/pivotal-cf/kiln/internal/component/update-boshio-index bosh_io_index.yml
 //go:embed bosh_io_index.yml
 var boshIOIndex string
 
