@@ -39,8 +39,8 @@ func (a ArtifactoryReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 }
 
 func (a ArtifactoryReleaseSource) DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error) {
-	//TODO implement me
 	panic("implement me")
+	//TODO implement me
 }
 
 func (a ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error) {
