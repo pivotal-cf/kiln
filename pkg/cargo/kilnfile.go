@@ -3,6 +3,7 @@ package cargo
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver"
 )
@@ -112,6 +113,39 @@ type ComponentLock struct {
 
 	RemoteSource string `yaml:"remote_source"`
 	RemotePath   string `yaml:"remote_path"`
+}
+
+func (lock ComponentLock) String() string {
+	var b strings.Builder
+	b.WriteString(lock.Name)
+	b.WriteByte(' ')
+	b.WriteString(lock.Version)
+	b.WriteByte(' ')
+
+	if lock.SHA1 != "" {
+		b.WriteString(lock.SHA1[:len(lock.SHA1)%8])
+		b.WriteByte(' ')
+	}
+
+	if lock.StemcellOS != "" {
+		b.WriteString(lock.StemcellOS)
+		b.WriteByte(' ')
+	}
+	if lock.StemcellVersion != "" {
+		b.WriteString(lock.StemcellVersion)
+		b.WriteByte(' ')
+	}
+
+	if lock.RemoteSource != "" {
+		b.WriteString(lock.RemoteSource)
+		b.WriteByte(' ')
+	}
+	if lock.RemotePath != "" {
+		b.WriteString(lock.RemotePath)
+		b.WriteByte(' ')
+	}
+
+	return b.String()
 }
 
 func (lock ComponentLock) Spec() ComponentSpec {
