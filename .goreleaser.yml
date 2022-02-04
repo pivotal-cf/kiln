@@ -10,22 +10,21 @@ release:
 builds:
 - env:
   - CGO_ENABLED=0
-  goos:
-  - darwin
-  - linux
-  - windows
-  goarch:
-  - amd64
+  targets:
+  - linux_amd64
+  - windows_amd64
+  - darwin_amd64
+  - darwin_arm64
   ldflags:
   - -X "main.version={{.Version}}"
   main: ./
 archives:
   - id: github
     format: binary
-    name_template: "kiln-{{ .Os }}-{{ .Version }}"
+    name_template: "kiln-{{ .Os }}-{{ .Arch }}-{{ .Version }}"
   - id: homebrew
     format: "tar.gz"
-    name_template: "kiln-{{ .Os }}-{{ .Version }}"
+    name_template: "kiln-{{ .Os }}-{{ .Arch }}-{{ .Version }}"
     format_overrides:
       - goos: windows
         format: zip
