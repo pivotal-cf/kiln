@@ -19,7 +19,7 @@
         {{- if ne (trim .GetBody) "" }}
         <details>
           <summary>{{ .GetTagName }}</summary>
-          <pre>
+          <pre style="max-width: 30em">
   {{ trim .GetBody | removeEmptyLines | indent 2 | trim}}
           </pre>
         </details>

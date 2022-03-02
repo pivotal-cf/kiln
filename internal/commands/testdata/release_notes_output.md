@@ -20,7 +20,7 @@
       <td>
         <details>
           <summary>1.2.0</summary>
-          <pre>
+          <pre style="max-width: 30em">
   peal
   is
   yellow
@@ -28,7 +28,7 @@
         </details>
         <details>
           <summary>1.1.1</summary>
-          <pre>
+          <pre style="max-width: 30em">
   remove from bunch
           </pre>
         </details>
