@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/component"
 	"io"
 	"io/ioutil"
 	"log"
@@ -14,14 +13,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/pivotal-cf/kiln/pkg/cargo"
-
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
-
+	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
 )
 
 var _ = Describe("BOSHIOReleaseSource", func() {

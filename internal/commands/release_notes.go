@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/component"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -23,6 +22,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/pivotal-cf/kiln/internal/release"
+	"github.com/pivotal-cf/kiln/pkg/component"
 )
 
 const releaseDateFormat = "2006-01-02"

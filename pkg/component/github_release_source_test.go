@@ -5,19 +5,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/component"
-	fakes2 "github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"io"
 	"net/http"
 	"os"
 	"testing"
 
 	"github.com/Masterminds/semver"
+	"github.com/google/go-github/v40/github"
 
 	Ω "github.com/onsi/gomega"
 
-	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
+	fakes2 "github.com/pivotal-cf/kiln/pkg/component/fakes"
 )
 
 func TestListAllOfTheCrap(t *testing.T) {

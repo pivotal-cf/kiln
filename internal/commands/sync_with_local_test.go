@@ -2,8 +2,6 @@ package commands_test
 
 import (
 	"errors"
-	"github.com/pivotal-cf/kiln/pkg/component"
-	fetcherFakes "github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"log"
 
 	"github.com/go-git/go-billy/v5"
@@ -15,6 +13,8 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
+	fetcherFakes "github.com/pivotal-cf/kiln/pkg/component/fakes"
 )
 
 var _ = Describe("sync-with-local", func() {

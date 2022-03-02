@@ -1,12 +1,13 @@
 package commands_test
 
 import (
-	"github.com/pivotal-cf/kiln/pkg/component"
-	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"io/ioutil"
 	"log"
 	"path/filepath"
 	"strings"
+
+	"github.com/pivotal-cf/kiln/pkg/component"
+	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

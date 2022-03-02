@@ -3,8 +3,6 @@ package component_test
 import (
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/component"
-	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"io"
 	"io/ioutil"
 	"log"
@@ -22,6 +20,8 @@ import (
 	"github.com/go-git/go-billy/v5/osfs"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
+	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 )
 
 func verifySetsConcurrency(opts []func(*s3manager.Downloader), concurrency int) {

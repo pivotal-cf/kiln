@@ -2,19 +2,20 @@ package component_test
 
 import (
 	"errors"
-	"github.com/pivotal-cf/kiln/pkg/component"
-	fakes2 "github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"net/http"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/pivotal-cf/kiln/pkg/component"
+	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 )
 
 var _ = Describe("PivNet (network.pivotal.io)", func() {
 	When("making an http request to pivotal network", func() {
 		var (
 			pivnet        component.Pivnet
-			serverMock    *fakes2.RoundTripper
+			serverMock    *fakes.RoundTripper
 			simpleRequest *http.Request
 			requestErr    error
 		)
@@ -23,7 +24,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 			pivnet = component.Pivnet{}
 			simpleRequest, _ = http.NewRequest(http.MethodGet, "/", nil)
 
-			serverMock = &fakes2.RoundTripper{}
+			serverMock = &fakes.RoundTripper{}
 			serverMock.Results.Res = &http.Response{}
 			pivnet.Client = &http.Client{
 				Transport: serverMock,
@@ -59,7 +60,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 	When("fetching versions", func() {
 		var (
 			pivnet     component.Pivnet
-			serverMock *fakes2.RoundTripper
+			serverMock *fakes.RoundTripper
 
 			stemcellSlug string
 
@@ -69,7 +70,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 		)
 
 		BeforeEach(func() {
-			serverMock = &fakes2.RoundTripper{}
+			serverMock = &fakes.RoundTripper{}
 			serverMock.Results.Res = &http.Response{}
 			pivnet.Client = &http.Client{Transport: serverMock}
 			stemcellSlug = ""
@@ -113,7 +114,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 			})
 			When("the json parsing fails", func() {
 				BeforeEach(func() {
-					serverMock.Results.Res.Body = fakes2.NewReadCloser("{")
+					serverMock.Results.Res.Body = fakes.NewReadCloser("{")
 					serverMock.Results.Res.StatusCode = http.StatusOK
 					serverMock.Results.Err = nil
 				})
@@ -123,7 +124,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 			})
 			When("the response body could not be read", func() {
 				BeforeEach(func() {
-					rc := &fakes2.ReadCloser{}
+					rc := &fakes.ReadCloser{}
 					rc.ReadCall.Returns.Err = errors.New("some-error")
 					serverMock.Results.Res.Body = rc
 					serverMock.Results.Res.StatusCode = http.StatusOK
@@ -135,7 +136,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 			})
 			When("the request is not a success", func() {
 				BeforeEach(func() {
-					serverMock.Results.Res.Body = fakes2.NewReadCloser(`foo`)
+					serverMock.Results.Res.Body = fakes.NewReadCloser(`foo`)
 					serverMock.Results.Res.StatusCode = http.StatusTeapot
 					serverMock.Results.Res.Status = http.StatusText(http.StatusTeapot)
 					serverMock.Results.Err = nil
@@ -146,7 +147,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 			})
 			When("the json parsing succeeds", func() {
 				BeforeEach(func() {
-					serverMock.Results.Res.Body = fakes2.NewReadCloser(`{"version": "2.1"}`)
+					serverMock.Results.Res.Body = fakes.NewReadCloser(`{"version": "2.1"}`)
 					serverMock.Results.Res.StatusCode = http.StatusOK
 					serverMock.Results.Err = nil
 				})

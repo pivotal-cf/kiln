@@ -3,7 +3,6 @@ package release
 import (
 	"bytes"
 	_ "embed"
-	"github.com/pivotal-cf/kiln/pkg/component"
 	"io"
 	"io/fs"
 	"os"
@@ -21,6 +20,7 @@ import (
 	"github.com/google/go-github/v40/github"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
 )
 
 //go:embed testdata/runtime-rn.html.md.erb

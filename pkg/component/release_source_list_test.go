@@ -2,13 +2,13 @@ package component_test
 
 import (
 	"errors"
-	"github.com/pivotal-cf/kiln/pkg/component"
-	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
+	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 )
 
 var _ = Describe("multiReleaseSource", func() {

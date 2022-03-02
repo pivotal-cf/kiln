@@ -3,7 +3,6 @@ package component
 import (
 	"context"
 	"errors"
-	fakes "github.com/pivotal-cf/kiln/pkg/component/fakes_internal"
 	"net/http"
 	"testing"
 
@@ -12,6 +11,7 @@ import (
 	Ω "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	fakes "github.com/pivotal-cf/kiln/pkg/component/fakes_internal"
 )
 
 func TestInternal_calculateComponentBumps(t *testing.T) {

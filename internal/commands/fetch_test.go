@@ -3,8 +3,6 @@ package commands_test
 import (
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/component"
-	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"io/ioutil"
 	"log"
 	"os"
@@ -19,6 +17,8 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
+	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 )
 
 var _ = Describe("Fetch", func() {

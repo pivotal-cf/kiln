@@ -2,11 +2,12 @@ package commands_test
 
 import (
 	"errors"
-	"github.com/pivotal-cf/kiln/pkg/component"
-	fetcherFakes "github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/pivotal-cf/kiln/pkg/component"
+	fetcherFakes "github.com/pivotal-cf/kiln/pkg/component/fakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

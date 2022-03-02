@@ -4,11 +4,8 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
-	"github.com/pivotal-cf/kiln/pkg/component"
 	"testing"
 	"time"
-
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	Ω "github.com/onsi/gomega"
 
@@ -21,6 +18,8 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/release"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
 )
 
 var _ jhanda.Command = ReleaseNotes{}

@@ -2,14 +2,14 @@ package commands
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/component"
 	"log"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
 )
 
 type UpdateRelease struct {

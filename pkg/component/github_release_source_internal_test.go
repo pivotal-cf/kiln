@@ -2,14 +2,16 @@ package component
 
 import (
 	"context"
-	"github.com/google/go-github/v40/github"
-	Ω "github.com/onsi/gomega"
-	fakes "github.com/pivotal-cf/kiln/pkg/component/fakes_internal"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"testing"
+
+	"github.com/google/go-github/v40/github"
+	Ω "github.com/onsi/gomega"
+
+	fakes "github.com/pivotal-cf/kiln/pkg/component/fakes_internal"
 )
 
 func TestGithubReleaseSource_downloadRelease(t *testing.T) {

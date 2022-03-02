@@ -2,7 +2,6 @@ package component_test
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/component"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/pkg/component"
 )
 
 var _ = Describe("LocalReleaseDirectory", func() {

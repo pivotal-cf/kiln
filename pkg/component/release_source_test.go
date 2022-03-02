@@ -1,13 +1,13 @@
 package component_test
 
 import (
-	"github.com/pivotal-cf/kiln/pkg/component"
 	"log"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
 )
 
 var _ = Describe("ReleaseSourceList", func() {

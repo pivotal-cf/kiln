@@ -4,8 +4,6 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/component"
-	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 	"io"
 	"log"
 
@@ -19,6 +17,8 @@ import (
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
 	testHelpers "github.com/pivotal-cf/kiln/internal/test-helpers"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/component"
+	"github.com/pivotal-cf/kiln/pkg/component/fakes"
 )
 
 var _ = Describe("UploadRelease", func() {
