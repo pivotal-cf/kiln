@@ -24,7 +24,7 @@ var _ = Describe("ErrandTemplate", func() {
 	})
 
 	It("parses their structure", func() {
-		Expect(errandTemplate.Colocated).To(BeTrue())
+		Expect(errandTemplate.CoLocated).To(BeTrue())
 		Expect(errandTemplate.Description).To(Equal("some-description"))
 		Expect(errandTemplate.Instances).To(HaveLen(1))
 		Expect(errandTemplate.Label).To(Equal("some-label"))
