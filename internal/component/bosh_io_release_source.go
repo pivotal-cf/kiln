@@ -5,18 +5,19 @@ import (
 	"crypto/sha1"
 	_ "embed"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/Masterminds/semver"
+	"gopkg.in/yaml.v2"
+
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -31,28 +32,37 @@ var boshIOIndex string
 
 type BoshReleaseRepositoryIndex []BoshReleaseRepositoryRecord
 
-func GetBoshReleaseRepositoryIndex(ctx context.Context) (BoshReleaseRepositoryIndex, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://raw.githubusercontent.com/bosh-io/releases/HEAD/index.yml", nil)
-	if err != nil {
-		return nil, fmt.Errorf("create request for BOSH.io index failed: %w", err)
-	}
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("GET BOSH.io index  failed: %w", err)
-	}
-	if res.StatusCode != http.StatusOK {
-		_ = res.Body.Close()
-		return nil, fmt.Errorf("GET BOSH.io index failed: expected status OK (200) got %s (%d)", http.StatusText(res.StatusCode), res.StatusCode)
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
+func parseCachedBOSHReleaseIndex() BoshReleaseRepositoryIndex {
 	var index BoshReleaseRepositoryIndex
-	err = yaml.NewDecoder(res.Body).Decode(index)
+	err := yaml.Unmarshal([]byte(boshIOIndex), &index)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse BOSH.io index response: %w", err)
+		panic(fmt.Errorf("failed to parse embedded bosh_io_index.yml: %w", err))
 	}
-	return index, nil
+	return index
+}
+
+func GetBoshReleaseRepositoryIndex(ctx context.Context) (BoshReleaseRepositoryIndex, []error) {
+	var index BoshReleaseRepositoryIndex
+	err := getAndParse(ctx, "https://raw.githubusercontent.com/bosh-io/releases/HEAD/index.yml", &index)
+	if err != nil {
+		return index, []error{err}
+	}
+	cached := parseCachedBOSHReleaseIndex()
+	hydrateCache(cached, index)
+
+	var errList []error
+	for i, record := range index {
+		if record.URL == "" || record.Name == "" {
+			continue
+		}
+		index[i].Name, err = record.getReleaseName(ctx)
+		if err != nil {
+			errList = append(errList, err)
+			continue
+		}
+	}
+
+	return index, errList
 }
 
 func (index BoshReleaseRepositoryIndex) FindReleaseRepos(name string) []BoshReleaseRepositoryRecord {
@@ -72,7 +82,7 @@ type BOSHIOReleaseSource struct {
 	logger    *log.Logger
 }
 
-func NewBOSHIOReleaseSource(c cargo.ReleaseSourceConfig, customServerURI string, logger *log.Logger) *BOSHIOReleaseSource {
+func NewBOSHIOReleaseSource(ctx context.Context, c cargo.ReleaseSourceConfig, customServerURI string, logger *log.Logger) *BOSHIOReleaseSource {
 	if c.Type != "" && c.Type != ReleaseSourceTypeBOSHIO {
 		panic(panicMessageWrongReleaseSourceType)
 	}
@@ -82,11 +92,12 @@ func NewBOSHIOReleaseSource(c cargo.ReleaseSourceConfig, customServerURI string,
 	if logger == nil {
 		logger = log.New(os.Stdout, "[bosh.io release source] ", log.Default().Flags())
 	}
-	var index BoshReleaseRepositoryIndex
-	err := yaml.Unmarshal([]byte(boshIOIndex), &index)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse embedded bosh_io_index.yml: %w", err))
+
+	index, errList := GetBoshReleaseRepositoryIndex(ctx)
+	for _, err := range errList {
+		logger.Println(err)
 	}
+
 	return &BOSHIOReleaseSource{
 		ReleaseSourceConfig: c,
 		Index:               index,
@@ -101,18 +112,18 @@ func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 	return src.ReleaseSourceConfig
 }
 
-func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, error) {
-	requirement = requirement.UnsetStemcell()
+func (src BOSHIOReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
+	spec = spec.UnsetStemcell()
 
-	for _, rr := range src.Index.FindReleaseRepos(requirement.Name) {
+	for _, rr := range src.Index.FindReleaseRepos(spec.Name) {
 		fullName := rr.URL
 		fullName = strings.TrimPrefix(fullName, "https://")
 
-		exists, err := src.releaseExistOnBoshio(fullName, requirement.Version)
+		exists, err := src.releaseExistOnBoshIO(context.TODO(), fullName, spec.Version)
 		if err != nil || !exists {
 			continue
 		}
-		builtRelease := src.createReleaseRemote(requirement, fullName)
+		builtRelease := src.createReleaseRemote(spec, fullName)
 		return builtRelease, nil
 	}
 	return Lock{}, ErrNotFound
@@ -130,7 +141,7 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 		fullName := rr.URL
 		fullName = strings.TrimPrefix(fullName, "https://")
 
-		releaseResponses, err := src.getReleases(fullName)
+		releaseResponses, err := src.getReleases(context.TODO(), fullName)
 		if err != nil {
 			return Lock{}, err
 		}
@@ -207,38 +218,10 @@ func (src BOSHIOReleaseSource) createReleaseRemote(spec Spec, fullName string) L
 	return releaseRemote
 }
 
-func (src BOSHIOReleaseSource) getReleases(name string) ([]releaseResponse, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/%s", src.serverURI, name))
-	if err != nil {
-		return nil, fmt.Errorf("bosh.io API is down with error: %w", err)
-	}
-	if resp.StatusCode >= 500 {
-		return nil, (*ResponseStatusCodeError)(resp)
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
-	if resp.StatusCode >= 300 {
-		// we don't handle redirects yet
-		// also this will catch other client request errors (>= 400)
-		return nil, (*ResponseStatusCodeError)(resp)
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if string(body) == "null" {
-		return nil, nil
-	}
+func (src BOSHIOReleaseSource) getReleases(ctx context.Context, name string) ([]releaseResponse, error) {
 	var releases []releaseResponse
-	if err := json.Unmarshal(body, &releases); err != nil {
-		return nil, err
-	}
-
-	return releases, nil
+	err := getAndParse(ctx, fmt.Sprintf("%s/api/v1/releases/%s", src.serverURI, name), &releases)
+	return releases, err
 }
 
 type releaseResponse struct {
@@ -246,9 +229,8 @@ type releaseResponse struct {
 	SHA     string `json:"sha1"`
 }
 
-func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {
-
-	releaseResponses, err := src.getReleases(name)
+func (src BOSHIOReleaseSource) releaseExistOnBoshIO(ctx context.Context, name, version string) (bool, error) {
+	releaseResponses, err := src.getReleases(ctx, name)
 	if err != nil {
 		return false, err
 	}
@@ -258,4 +240,63 @@ func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool,
 		}
 	}
 	return false, nil
+}
+
+func (record BoshReleaseRepositoryRecord) getReleaseName(ctx context.Context) (string, error) {
+	u, err := url.Parse(record.URL)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse bosh release record url: %w", err)
+	}
+	var configFinal struct {
+		FinalName string `yaml:"final_name"`
+		Name      string `yaml:"name"`
+	}
+	err = getAndParse(ctx, "https://"+path.Join("raw.githubusercontent.com", u.Path, "HEAD/config/final.yml"), &configFinal)
+	if err != nil {
+		return "", err
+	}
+	if configFinal.FinalName != "" {
+		record.Name = configFinal.FinalName
+	} else {
+		record.Name = configFinal.Name
+	}
+	return record.Name, nil
+}
+
+func getAndParse(ctx context.Context, uri string, data interface{}) error {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
+	if err != nil {
+		return fmt.Errorf("%s %s request creation failed: %w", request.Method, uri, err)
+	}
+	res, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return fmt.Errorf("%s %s failed: %w", request.Method, uri, err)
+	}
+	if res.StatusCode != http.StatusOK {
+		_ = res.Body.Close()
+		return (*ResponseStatusCodeError)(res)
+	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
+	buf, err := io.ReadAll(res.Body)
+	if err != nil {
+		return fmt.Errorf("%s %s failed to read rsponse: %w", request.Method, uri, err)
+	}
+	err = yaml.Unmarshal(buf, data)
+	if err != nil {
+		return fmt.Errorf("failed to parse %s response: %w", uri, err)
+	}
+	return nil
+}
+
+func hydrateCache(previous, updated BoshReleaseRepositoryIndex) {
+	for i, ur := range updated {
+		for _, pr := range previous {
+			if ur.URL == pr.URL {
+				updated[i].Name = pr.Name
+				break
+			}
+		}
+	}
 }

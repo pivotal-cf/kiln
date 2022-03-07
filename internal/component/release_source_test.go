@@ -1,6 +1,7 @@
 package component_test
 
 import (
+	"context"
 	"log"
 
 	. "github.com/onsi/ginkgo"
@@ -33,31 +34,31 @@ var _ = Describe("ReleaseSourceList", func() {
 			})
 
 			It("constructs all the release sources", func() {
-				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
+				releaseSources := component.NewReleaseSourceRepo(context.Background(), kilnfile, logger)
 				Expect(len(releaseSources)).To(Equal(4)) // not using HaveLen because S3 struct is so huge
 			})
 
 			It("constructs the compiled release source properly", func() {
-				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
+				releaseSources := component.NewReleaseSourceRepo(context.Background(), kilnfile, logger)
 				Expect(releaseSources[0]).To(BeAssignableToTypeOf(component.S3ReleaseSource{}))
 			})
 
 			It("sets the release source id to bucket id for s3", func() {
-				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
+				releaseSources := component.NewReleaseSourceRepo(context.Background(), kilnfile, logger)
 
 				Expect(releaseSources[0].Configuration().ID).To(Equal(kilnfile.ReleaseSources[0].Bucket))
 				Expect(releaseSources[1].Configuration().ID).To(Equal(kilnfile.ReleaseSources[1].Bucket))
 			})
 
 			It("constructs the built release source properly", func() {
-				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
+				releaseSources := component.NewReleaseSourceRepo(context.Background(), kilnfile, logger)
 
 				Expect(releaseSources[1]).To(BeAssignableToTypeOf(component.S3ReleaseSource{}))
 				Expect(releaseSources[1].Configuration().ID).To(Equal(kilnfile.ReleaseSources[1].Bucket))
 			})
 
 			It("constructs the github release source properly", func() {
-				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
+				releaseSources := component.NewReleaseSourceRepo(context.Background(), kilnfile, logger)
 
 				Expect(releaseSources[3]).To(BeAssignableToTypeOf(&component.GithubReleaseSource{}))
 				Expect(releaseSources[3].Configuration().ID).To(Equal(kilnfile.ReleaseSources[3].Org))
@@ -74,7 +75,7 @@ var _ = Describe("ReleaseSourceList", func() {
 			})
 
 			It("marks it correctly", func() {
-				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
+				releaseSources := component.NewReleaseSourceRepo(context.Background(), kilnfile, logger)
 
 				Expect(releaseSources).To(HaveLen(1))
 				var (
@@ -98,7 +99,7 @@ var _ = Describe("ReleaseSourceList", func() {
 			})
 
 			It("gives the correct IDs to the release sources", func() {
-				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
+				releaseSources := component.NewReleaseSourceRepo(context.Background(), kilnfile, logger)
 
 				Expect(releaseSources).To(HaveLen(3))
 				Expect(releaseSources[0].Configuration().ID).To(Equal("comp"))
@@ -123,7 +124,7 @@ var _ = Describe("ReleaseSourceList", func() {
 					defer func() {
 						r = recover()
 					}()
-					component.NewReleaseSourceRepo(kilnfile, logger)
+					component.NewReleaseSourceRepo(context.Background(), kilnfile, logger)
 				}()
 				Expect(r).To(ContainSubstring("unique"))
 				Expect(r).To(ContainSubstring(`"some-bucket"`))
@@ -138,7 +139,7 @@ var _ = Describe("ReleaseSourceList", func() {
 		)
 
 		JustBeforeEach(func() {
-			list = component.NewReleaseSourceRepo(kilnfile, logger)
+			list = component.NewReleaseSourceRepo(context.Background(), kilnfile, logger)
 		})
 
 		Context("when allow-only-publishable-releases is false", func() {
@@ -212,7 +213,7 @@ var _ = Describe("ReleaseSourceList", func() {
 		)
 
 		JustBeforeEach(func() {
-			repo = component.NewReleaseSourceRepo(kilnfile, logger)
+			repo = component.NewReleaseSourceRepo(context.Background(), kilnfile, logger)
 		})
 
 		BeforeEach(func() {
@@ -280,7 +281,7 @@ var _ = Describe("ReleaseSourceList", func() {
 		)
 
 		JustBeforeEach(func() {
-			list = component.NewReleaseSourceRepo(kilnfile, logger)
+			list = component.NewReleaseSourceRepo(context.Background(), kilnfile, logger)
 		})
 
 		BeforeEach(func() {

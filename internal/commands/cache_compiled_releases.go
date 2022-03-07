@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"crypto/sha1"
 	"crypto/sha256"
 	"errors"
@@ -63,8 +64,9 @@ func NewCacheCompiledReleases() *CacheCompiledReleases {
 		FS:     osfs.New(""),
 		Logger: log.Default(),
 	}
+	ctx := context.Background()
 	cmd.ReleaseCache = func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource {
-		releaseSourceConfig := []cargo.ReleaseSourceConfig{}
+		var releaseSourceConfig []cargo.ReleaseSourceConfig
 		for i := range kilnfile.ReleaseSources {
 			if kilnfile.ReleaseSources[i].Bucket == targetID {
 				releaseSourceConfig = append(releaseSourceConfig, kilnfile.ReleaseSources[i])
@@ -72,7 +74,7 @@ func NewCacheCompiledReleases() *CacheCompiledReleases {
 			}
 		}
 		kilnfile.ReleaseSources = releaseSourceConfig
-		return component.NewReleaseSourceRepo(kilnfile, cmd.Logger)
+		return component.NewReleaseSourceRepo(ctx, kilnfile, cmd.Logger)
 	}
 	cmd.Bucket = func(kilnfile cargo.Kilnfile) (ReleaseCacheBucket, error) {
 		return cmd.s3Bucket(kilnfile)

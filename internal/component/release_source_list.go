@@ -1,21 +1,23 @@
 package component
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/Masterminds/semver"
 	"log"
+
+	"github.com/Masterminds/semver"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type ReleaseSourceList []ReleaseSource
 
-func NewReleaseSourceRepo(kilnfile cargo.Kilnfile, logger *log.Logger) ReleaseSourceList {
+func NewReleaseSourceRepo(ctx context.Context, kilnfile cargo.Kilnfile, logger *log.Logger) ReleaseSourceList {
 	var list ReleaseSourceList
 
 	for _, releaseConfig := range kilnfile.ReleaseSources {
-		list = append(list, ReleaseSourceFactory(releaseConfig, logger))
+		list = append(list, ReleaseSourceFactory(ctx, releaseConfig, logger))
 	}
 
 	panicIfDuplicateIDs(list)

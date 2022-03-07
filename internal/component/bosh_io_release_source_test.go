@@ -1,6 +1,7 @@
 package component_test
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
@@ -50,7 +51,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				path, _ = regexp.Compile(`/api/v1/releases/github.com/\S+/metrics.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "2.3.0"}]`))
 
-				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
+				releaseSource = component.NewBOSHIOReleaseSource(context.Background(), cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
 			})
 
 			AfterEach(func() {
@@ -102,7 +103,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				path, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/zzz.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
 
-				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
+				releaseSource = component.NewBOSHIOReleaseSource(context.Background(), cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
 			})
 
 			AfterEach(func() {
@@ -131,7 +132,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				pathRegex, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/.*`)
 				testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `[{"version": "4.0.4"}]`))
 
-				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), log.New(GinkgoWriter, "", 0))
+				releaseSource = component.NewBOSHIOReleaseSource(context.Background(), cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), log.New(GinkgoWriter, "", 0))
 
 			})
 
@@ -177,7 +178,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 			testServer = ghttp.NewServer()
 
-			releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), log.New(GinkgoWriter, "", 0))
+			releaseSource = component.NewBOSHIOReleaseSource(context.Background(), cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), log.New(GinkgoWriter, "", 0))
 
 			release1ID = component.Spec{Name: "some", Version: "1.2.3"}
 			release1 = release1ID.Lock().WithRemote(component.ReleaseSourceTypeBOSHIO, testServer.URL()+release1ServerPath)
@@ -239,7 +240,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				path, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"name":"github.com/pivotal-cf/cf-rabbitmq-release","version":"309.0.5","url":"https://bosh.io/d/github.com/pivotal-cf/cf-rabbitmq-release?v=309.0.0","sha1":"5df538657c2cc830bda679420a9b162682018ded"},{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"308.0.0","url":"https://bosh.io/d/github.com/pivotal-cf/cf-rabbitmq-release?v=308.0.0","sha1":"56202c9a466a8394683ae432ee2dea21ef6ef865"}]`))
 
-				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
+				releaseSource = component.NewBOSHIOReleaseSource(context.Background(), cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
 			})
 
 			AfterEach(func() {
@@ -287,7 +288,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				path, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
 
-				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
+				releaseSource = component.NewBOSHIOReleaseSource(context.Background(), cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
 			})
 
 			AfterEach(func() {

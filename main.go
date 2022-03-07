@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -19,6 +20,7 @@ var version = "unknown"
 func main() {
 	errLogger := log.New(os.Stderr, "", 0)
 	outLogger := log.New(os.Stdout, "", 0)
+	ctx := context.Background()
 
 	var global struct {
 		Help    bool `short:"h" long:"help"    description:"prints this usage information"   default:"false"`
@@ -59,15 +61,15 @@ func main() {
 	pivnetService := component.CreateNewPivnetService()
 	localReleaseDirectory := component.NewLocalReleaseDirectory(outLogger, releasesService)
 	mrsProvider := commands.MultiReleaseSourceProvider(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
-		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
+		repo := component.NewReleaseSourceRepo(ctx, kilnfile, outLogger)
 		return repo.Filter(allowOnlyPublishable)
 	})
 	ruFinder := commands.ReleaseUploaderFinder(func(kilnfile cargo.Kilnfile, sourceID string) (component.ReleaseUploader, error) {
-		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
+		repo := component.NewReleaseSourceRepo(ctx, kilnfile, outLogger)
 		return repo.FindReleaseUploader(sourceID)
 	})
 	rpFinder := commands.RemotePatherFinder(func(kilnfile cargo.Kilnfile, sourceID string) (component.RemotePather, error) {
-		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
+		repo := component.NewReleaseSourceRepo(ctx, kilnfile, outLogger)
 		return repo.FindRemotePather(sourceID)
 	})
 
