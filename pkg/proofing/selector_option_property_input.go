@@ -6,5 +6,5 @@ type SelectorOptionPropertyInput struct {
 
 	PropertyInputs []SimplePropertyInput `yaml:"property_inputs,omitempty"`
 
-	// TODO: validations: https://github.com/pivotal-cf/installation/blob/039a2ef3f751ef5915c425da8150a29af4b764dd/web/app/models/persistence/metadata/selector_option_property_input.rb#L8-L12
+	// TODO: validations: https://github.com/pivotal-cf/ops-manager/blob/039a2ef3f751ef5915c425da8150a29af4b764dd/web/app/models/persistence/metadata/selector_option_property_input.rb#L8-L12
 }
