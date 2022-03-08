@@ -86,13 +86,13 @@ const (
 
 // ReleaseSourceFactory returns a configured ReleaseSource based on the Type field on the
 // cargo.ReleaseSourceConfig structure.
-func ReleaseSourceFactory(ctx context.Context, releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
+func ReleaseSourceFactory(ctx context.Context, releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger, refreshCache bool) ReleaseSource {
 	switch releaseConfig.Type {
 	case ReleaseSourceTypeBOSHIO:
 		if releaseConfig.ID == "" {
 			releaseConfig.ID = ReleaseSourceTypeBOSHIO
 		}
-		return NewBOSHIOReleaseSource(ctx, releaseConfig, "", outLogger)
+		return NewBOSHIOReleaseSource(ctx, releaseConfig, "", outLogger, refreshCache)
 	case ReleaseSourceTypeS3:
 		if releaseConfig.ID == "" {
 			releaseConfig.ID = releaseConfig.Bucket

@@ -77,32 +77,36 @@ func (index BoshReleaseRepositoryIndex) FindReleaseRepos(name string) BoshReleas
 
 type BOSHIOReleaseSource struct {
 	cargo.ReleaseSourceConfig
-	Index     BoshReleaseRepositoryIndex
-	serverURI string
-	logger    *log.Logger
+	Index      BoshReleaseRepositoryIndex
+	boshIOHost string
+	logger     *log.Logger
 }
 
-func NewBOSHIOReleaseSource(ctx context.Context, c cargo.ReleaseSourceConfig, customServerURI string, logger *log.Logger) *BOSHIOReleaseSource {
+func NewBOSHIOReleaseSource(ctx context.Context, c cargo.ReleaseSourceConfig, boshIOHost string, logger *log.Logger, refreshCache bool) *BOSHIOReleaseSource {
 	if c.Type != "" && c.Type != ReleaseSourceTypeBOSHIO {
 		panic(panicMessageWrongReleaseSourceType)
 	}
-	if customServerURI == "" {
-		customServerURI = "https://bosh.io"
+	if boshIOHost == "" {
+		boshIOHost = "https://bosh.io"
 	}
 	if logger == nil {
 		logger = log.New(os.Stdout, "[bosh.io release source] ", log.Default().Flags())
 	}
 
-	index, errList := GetBoshReleaseRepositoryIndex(ctx)
-	for _, err := range errList {
-		logger.Println(err)
+	index := parseCachedBOSHReleaseIndex()
+	if refreshCache {
+		idx, errList := GetBoshReleaseRepositoryIndex(ctx)
+		for _, err := range errList {
+			logger.Println(err)
+		}
+		index = idx
 	}
 
 	return &BOSHIOReleaseSource{
 		ReleaseSourceConfig: c,
 		Index:               index,
 		logger:              logger,
-		serverURI:           customServerURI,
+		boshIOHost:          boshIOHost,
 	}
 }
 
@@ -211,7 +215,7 @@ func (err ResponseStatusCodeError) Error() string {
 }
 
 func (src BOSHIOReleaseSource) createReleaseRemote(spec Spec, fullName string) Lock {
-	downloadURL := fmt.Sprintf("%s/d/%s?v=%s", src.serverURI, fullName, spec.Version)
+	downloadURL := fmt.Sprintf("%s/d/%s?v=%s", src.boshIOHost, fullName, spec.Version)
 	releaseRemote := spec.Lock()
 	releaseRemote.RemoteSource = src.ID()
 	releaseRemote.RemotePath = downloadURL
@@ -219,8 +223,16 @@ func (src BOSHIOReleaseSource) createReleaseRemote(spec Spec, fullName string) L
 }
 
 func (src BOSHIOReleaseSource) getReleases(ctx context.Context, name string) ([]releaseResponse, error) {
-	var releases []releaseResponse
-	err := getAndParse(ctx, fmt.Sprintf("%s/api/v1/releases/%s", src.serverURI, name), &releases)
+	var data []map[string]string
+	err := getAndParse(ctx, fmt.Sprintf("%s/api/v1/releases/%s", src.boshIOHost, name), &data)
+
+	releases := make([]releaseResponse, 0, len(data))
+	for _, m := range data {
+		releases = append(releases, releaseResponse{
+			Version: m["version"],
+			SHA:     m["sha1"],
+		})
+	}
 	return releases, err
 }
 

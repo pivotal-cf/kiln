@@ -13,11 +13,11 @@ import (
 
 type ReleaseSourceList []ReleaseSource
 
-func NewReleaseSourceRepo(ctx context.Context, kilnfile cargo.Kilnfile, logger *log.Logger) ReleaseSourceList {
+func NewReleaseSourceRepo(ctx context.Context, kilnfile cargo.Kilnfile, logger *log.Logger, refreshCache bool) ReleaseSourceList {
 	var list ReleaseSourceList
 
 	for _, releaseConfig := range kilnfile.ReleaseSources {
-		list = append(list, ReleaseSourceFactory(ctx, releaseConfig, logger))
+		list = append(list, ReleaseSourceFactory(ctx, releaseConfig, logger, refreshCache))
 	}
 
 	panicIfDuplicateIDs(list)

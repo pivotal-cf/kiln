@@ -74,7 +74,7 @@ func NewCacheCompiledReleases() *CacheCompiledReleases {
 			}
 		}
 		kilnfile.ReleaseSources = releaseSourceConfig
-		return component.NewReleaseSourceRepo(ctx, kilnfile, cmd.Logger)
+		return component.NewReleaseSourceRepo(ctx, kilnfile, cmd.Logger, true)
 	}
 	cmd.Bucket = func(kilnfile cargo.Kilnfile) (ReleaseCacheBucket, error) {
 		return cmd.s3Bucket(kilnfile)
