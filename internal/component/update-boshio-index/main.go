@@ -21,24 +21,6 @@ func main() {
 		}
 	}()
 
-	var cachedIndex []component.BoshReleaseRepositoryRecord
-
-	var out io.Writer = os.Stdout
-	if len(os.Args) > 1 {
-		if contents, err := os.ReadFile(os.Args[1]); err == nil {
-			_ = yaml.Unmarshal(contents, &cachedIndex)
-		}
-
-		f, err := os.Create(os.Args[1])
-		if err != nil {
-			panic(err)
-		}
-		defer func() {
-			_ = f.Close()
-		}()
-		out = f
-	}
-
 	indexRecords, errList := component.GetBoshReleaseRepositoryIndex(context.Background())
 	for _, err := range errList {
 		log.Println(err)
@@ -48,6 +30,18 @@ func main() {
 	result, err := yaml.Marshal(indexRecords)
 	if err != nil {
 		panic(err)
+	}
+
+	var out io.Writer = os.Stdout
+	if len(os.Args) > 1 {
+		f, err := os.Create(os.Args[1])
+		if err != nil {
+			panic(err)
+		}
+		defer func() {
+			_ = f.Close()
+		}()
+		out = f
 	}
 
 	_, err = out.Write(result)
