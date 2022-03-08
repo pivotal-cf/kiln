@@ -65,8 +65,8 @@ func GetBoshReleaseRepositoryIndex(ctx context.Context) (BoshReleaseRepositoryIn
 	return index, errList
 }
 
-func (index BoshReleaseRepositoryIndex) FindReleaseRepos(name string) []BoshReleaseRepositoryRecord {
-	var matches []BoshReleaseRepositoryRecord
+func (index BoshReleaseRepositoryIndex) FindReleaseRepos(name string) BoshReleaseRepositoryIndex {
+	var matches BoshReleaseRepositoryIndex
 	for _, r := range index {
 		if r.Name == name {
 			matches = append(matches, r)
