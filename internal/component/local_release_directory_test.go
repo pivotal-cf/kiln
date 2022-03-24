@@ -65,9 +65,11 @@ var _ = Describe("LocalReleaseDirectory", func() {
 				Expect(releases).To(ConsistOf(
 					component.Local{
 						Lock: component.Lock{
-							Name:    "some-release",
-							Version: "1.2.3",
-							SHA1:    "6d96f7c98610fa6d8e7f45271111221b5b8497a2",
+							Name:            "some-release",
+							Version:         "1.2.3",
+							SHA1:            "6d96f7c98610fa6d8e7f45271111221b5b8497a2",
+							StemcellOS:      "some-os",
+							StemcellVersion: "4.5.6",
 						},
 						LocalPath: releaseFile,
 					},

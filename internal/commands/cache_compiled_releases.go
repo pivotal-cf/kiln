@@ -25,7 +25,7 @@ import (
 )
 
 //counterfeiter:generate -o ./fakes/ops_manager_release_cache_source.go --fake-name OpsManagerReleaseCacheSource . OpsManagerReleaseCacheSource
-//counterfeiter:generate -o ./fakes/release_cache_bucket.go --fake-name ReleaseCacheBucket . ReleaseCacheBucket
+//counterfeiter:generate -o ./fakes/release_cache.go --fake-name ReleaseCache . ReleaseCache
 
 type (
 	OpsManagerReleaseCacheSource interface {
@@ -34,7 +34,7 @@ type (
 		GetStagedProductByName(productName string) (api.StagedProductsFindOutput, error)
 	}
 
-	ReleaseCacheBucket interface {
+	ReleaseCache interface {
 		UploadRelease(spec component.Spec, file io.Reader) (component.Lock, error)
 	}
 )
@@ -52,10 +52,9 @@ type CacheCompiledReleases struct {
 	Logger *log.Logger
 	FS     billy.Filesystem
 
-	ReleaseCache func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource
-	Bucket       func(kilnfile cargo.Kilnfile) (ReleaseCacheBucket, error)
-	OpsManager   func(om.ClientConfiguration) (OpsManagerReleaseCacheSource, error)
-	Director     func(om.ClientConfiguration, om.GetBoshEnvironmentAndSecurityRootCACertificateProvider) (boshdir.Director, error)
+	ReleaseSourceAndCache func(kilnfile cargo.Kilnfile, targetID string) (component.MultiReleaseSource, ReleaseCache)
+	OpsManager            func(om.ClientConfiguration) (OpsManagerReleaseCacheSource, error)
+	Director              func(om.ClientConfiguration, om.GetBoshEnvironmentAndSecurityRootCACertificateProvider) (boshdir.Director, error)
 }
 
 func NewCacheCompiledReleases() *CacheCompiledReleases {
@@ -63,19 +62,23 @@ func NewCacheCompiledReleases() *CacheCompiledReleases {
 		FS:     osfs.New(""),
 		Logger: log.Default(),
 	}
-	cmd.ReleaseCache = func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource {
-		releaseSourceConfig := []cargo.ReleaseSourceConfig{}
-		for i := range kilnfile.ReleaseSources {
-			if kilnfile.ReleaseSources[i].Bucket == targetID {
-				releaseSourceConfig = append(releaseSourceConfig, kilnfile.ReleaseSources[i])
-				break
-			}
+	cmd.ReleaseSourceAndCache = func(kilnfile cargo.Kilnfile, targetID string) (component.MultiReleaseSource, ReleaseCache) {
+		var releaseCache ReleaseCache
+		multiReleaseSource := component.NewReleaseSourceRepo(kilnfile, cmd.Logger)
+		releaseSource, err := multiReleaseSource.FindByID(targetID)
+		if err != nil {
+			panic(err)
 		}
-		kilnfile.ReleaseSources = releaseSourceConfig
-		return component.NewReleaseSourceRepo(kilnfile, cmd.Logger)
-	}
-	cmd.Bucket = func(kilnfile cargo.Kilnfile) (ReleaseCacheBucket, error) {
-		return cmd.s3Bucket(kilnfile)
+
+		switch releaseSource.Configuration().Type {
+		case component.ReleaseSourceTypeArtifactory:
+			releaseCache = component.NewArtifactoryReleaseSource(releaseSource.Configuration())
+		case component.ReleaseSourceTypeS3:
+			releaseCache = component.NewS3ReleaseSourceFromConfig(releaseSource.Configuration(), cmd.Logger)
+		default:
+			panic(fmt.Errorf("Unsupported type: " + releaseSource.Configuration().Type))
+		}
+		return component.NewMultiReleaseSource(releaseSource), releaseCache
 	}
 	cmd.OpsManager = func(conf om.ClientConfiguration) (OpsManagerReleaseCacheSource, error) {
 		return conf.API()
@@ -116,19 +119,19 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		)
 	}
 
-	var nonCompiledReleases []cargo.ComponentLock
-	cache := cmd.ReleaseCache(kilnfile, cmd.Options.UploadTargetID)
+	var releasesToUpload []cargo.ComponentLock
+	releaseCacheList, releaseCache := cmd.ReleaseSourceAndCache(kilnfile, cmd.Options.UploadTargetID)
 
 	var cacheRemotePath string
 	for i := range kilnfile.ReleaseSources {
-		if kilnfile.ReleaseSources[i].Bucket == cmd.Options.UploadTargetID {
+		if kilnfile.ReleaseSources[i].ID == cmd.Options.UploadTargetID {
 			cacheRemotePath = kilnfile.ReleaseSources[i].PathTemplate
 			break
 		}
 	}
 
 	for _, rel := range lock.Releases {
-		remote, err := cache.GetMatchedRelease(component.Spec{
+		remote, err := releaseCacheList.GetMatchedRelease(component.Spec{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      lock.Stemcell.OS,
@@ -138,7 +141,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			if !component.IsErrNotFound(err) {
 				return fmt.Errorf("failed check for matched release: %w", err)
 			}
-			nonCompiledReleases = append(nonCompiledReleases, rel)
+			releasesToUpload = append(releasesToUpload, rel)
 			continue
 		}
 		cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
@@ -146,7 +149,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			rel.RemotePath == cacheRemotePath && rel.SHA1 != "" {
 			remote.SHA1 = rel.SHA1
 		} else {
-			sha1, err := cmd.downloadAndComputeSHA(cache, remote)
+			sha1, err := cmd.downloadAndComputeSHA(releaseCacheList, remote)
 			if err != nil {
 				cmd.Logger.Printf("unable to compute sha1 for %s/%s", remote.Name, remote.Version)
 				continue
@@ -160,22 +163,17 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		}
 	}
 
-	switch len(nonCompiledReleases) {
+	switch len(releasesToUpload) {
 	case 0:
 		cmd.Logger.Print("cache already contains releases matching constraint\n")
 	case 1:
-		cmd.Logger.Printf("1 release is not publishable\n")
+		cmd.Logger.Printf("1 release needs to be uploaded\n")
 	default:
-		cmd.Logger.Printf("%d releases are not publishable\n", len(nonCompiledReleases))
+		cmd.Logger.Printf("%d releases needs to be uploaded\n", len(releasesToUpload))
 	}
 
-	for _, rel := range nonCompiledReleases {
+	for _, rel := range releasesToUpload {
 		cmd.Logger.Printf("\t%s %s compiled with %s %s not found in cache\n", rel.Name, rel.Version, lock.Stemcell.OS, lock.Stemcell.Version)
-	}
-
-	bucket, err := cmd.Bucket(kilnfile)
-	if err != nil {
-		return fmt.Errorf("failed to configure release cache: %w", err)
 	}
 
 	bosh, err := cmd.Director(cmd.Options.ClientConfiguration, omAPI)
@@ -204,7 +202,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		return fmt.Errorf("failed to create release directory: %w", err)
 	}
 
-	for _, rel := range nonCompiledReleases {
+	for _, rel := range releasesToUpload {
 		requirement := component.Spec{
 			Name:            rel.Name,
 			Version:         rel.Version,
@@ -212,7 +210,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			StemcellVersion: stagedStemcellVersion,
 		}
 
-		newRemote, err := cmd.cacheRelease(bosh, bucket, deployment, requirement, osVersionSlug)
+		newRemote, err := cmd.cacheRelease(bosh, releaseCache, deployment, requirement, osVersionSlug)
 		if err != nil {
 			cmd.Logger.Printf("\tfailed to cache release %s/%s for %s: %s\n", rel.Name, rel.Version, osVersionSlug, err)
 			continue
@@ -270,7 +268,7 @@ func (cmd CacheCompiledReleases) fetchProductDeploymentData() (_ OpsManagerRelea
 	return omAPI, manifest.Name, stagedStemcell.OS, stagedStemcell.Version, nil
 }
 
-func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket ReleaseCacheBucket, deployment boshdir.Deployment, req component.Spec, osVersionSlug boshdir.OSVersionSlug) (component.Lock, error) {
+func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc ReleaseCache, deployment boshdir.Deployment, req component.Spec, osVersionSlug boshdir.OSVersionSlug) (component.Lock, error) {
 	cmd.Logger.Printf("\texporting %s %s\n", req.Name, req.Version)
 	result, err := deployment.ExportRelease(boshdir.NewReleaseSlug(req.Name, req.Version), osVersionSlug, nil)
 	if err != nil {
@@ -284,7 +282,7 @@ func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket Rele
 	}
 
 	cmd.Logger.Printf("\tuploading %s %s\n", req.Name, req.Version)
-	remoteRelease, err := cmd.uploadLocalRelease(req, releaseFilePath, bucket)
+	remoteRelease, err := cmd.uploadLocalRelease(req, releaseFilePath, rc)
 	if err != nil {
 		return component.Lock{}, err
 	}
@@ -292,16 +290,6 @@ func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket Rele
 	remoteRelease.SHA1 = sha1sum
 
 	return remoteRelease, nil
-}
-
-func (cmd *CacheCompiledReleases) s3Bucket(kilnfile cargo.Kilnfile) (component.S3ReleaseSource, error) {
-	for _, source := range kilnfile.ReleaseSources {
-		if source.ID != cmd.Options.UploadTargetID {
-			continue
-		}
-		return component.NewS3ReleaseSourceFromConfig(source, cmd.Logger), nil
-	}
-	return component.S3ReleaseSource{}, errors.New("release source not found")
 }
 
 func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string) error {
@@ -327,7 +315,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 	return fmt.Errorf("existing release not found in Kilnfile.lock")
 }
 
-func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Spec, fp string, uploader ReleaseCacheBucket) (component.Lock, error) {
+func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Spec, fp string, uploader ReleaseCache) (component.Lock, error) {
 	f, err := cmd.FS.Open(fp)
 	if err != nil {
 		return component.Lock{}, err

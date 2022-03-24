@@ -2,10 +2,9 @@ package component
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"log"
-
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 // MultiReleaseSource wraps a set of release sources. It is mostly used to generate fakes
@@ -81,6 +80,10 @@ const (
 	// ReleaseSourceTypeGithub is the value for the Type field on cargo.ReleaseSourceConfig
 	// for releases stored on Github.
 	ReleaseSourceTypeGithub = "github"
+
+	// ReleaseSourceTypeArtifactory is the value for the Type field on cargo.ReleaseSourceConfig
+	// for releases stored on Artifactory.
+	ReleaseSourceTypeArtifactory = "artifactory"
 )
 
 // ReleaseSourceFactory returns a configured ReleaseSource based on the Type field on the
@@ -100,6 +103,12 @@ func ReleaseSourceFactory(releaseConfig cargo.ReleaseSourceConfig, outLogger *lo
 	case ReleaseSourceTypeGithub:
 		releaseConfig.ID = releaseConfig.Org
 		return NewGithubReleaseSource(releaseConfig)
+	case ReleaseSourceTypeArtifactory:
+		if releaseConfig.ID == "" {
+			releaseConfig.ID = ReleaseSourceTypeArtifactory
+		}
+
+		return NewArtifactoryReleaseSource(releaseConfig)
 	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
 	}

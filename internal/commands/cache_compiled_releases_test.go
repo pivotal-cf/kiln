@@ -30,8 +30,7 @@ func TestNewCacheCompiledReleases(t *testing.T) {
 	please.Expect(cmd).NotTo(Ω.BeNil())
 	please.Expect(cmd.Logger).NotTo(Ω.BeNil())
 	please.Expect(cmd.FS).NotTo(Ω.BeNil())
-	please.Expect(cmd.ReleaseCache).NotTo(Ω.BeNil())
-	please.Expect(cmd.Bucket).NotTo(Ω.BeNil())
+	please.Expect(cmd.ReleaseSourceAndCache).NotTo(Ω.BeNil())
 	please.Expect(cmd.OpsManager).NotTo(Ω.BeNil())
 	please.Expect(cmd.Director).NotTo(Ω.BeNil())
 }
@@ -75,7 +74,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	bosh := new(boshdirFakes.FakeDirector)
 	bosh.FindDeploymentReturns(deployment, nil)
 
-	bucket := new(fakes.ReleaseCacheBucket)
+	releaseCache := new(fakes.ReleaseCache)
 
 	var output bytes.Buffer
 	logger := log.New(&output, "", 0)
@@ -83,11 +82,8 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	cmd := commands.CacheCompiledReleases{
 		FS:     fs,
 		Logger: logger,
-		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
-			return bucket, nil
-		},
-		ReleaseCache: func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource {
-			return cache
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (component.MultiReleaseSource, commands.ReleaseCache) {
+			return cache, releaseCache
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
 			return opsManager, nil
@@ -189,9 +185,9 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 		return nil
 	})
 
-	bucket := new(fakes.ReleaseCacheBucket)
+	releaseCache := new(fakes.ReleaseCache)
 	var uploadedRelease bytes.Buffer
-	bucket.UploadReleaseCalls(func(_ component.Spec, reader io.Reader) (component.Lock, error) {
+	releaseCache.UploadReleaseCalls(func(_ component.Spec, reader io.Reader) (component.Lock, error) {
 		_, _ = io.Copy(&uploadedRelease, reader)
 		return component.Lock{
 
@@ -209,11 +205,8 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	cmd := commands.CacheCompiledReleases{
 		FS:     fs,
 		Logger: logger,
-		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
-			return bucket, nil
-		},
-		ReleaseCache: func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource {
-			return cache
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (component.MultiReleaseSource, commands.ReleaseCache) {
+			return cache, releaseCache
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
 			return opsManager, nil
@@ -238,7 +231,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	requestedID, _ := bosh.DownloadResourceUncheckedArgsForCall(0)
 	please.Expect(requestedID).To(Ω.Equal("some-blob-id"))
 
-	please.Expect(output.String()).To(Ω.ContainSubstring("not publishable"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("needs to be uploaded"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("lemon 3.0.0 compiled with alpine 9.0.0 not found in cache"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("exporting lemon"))
@@ -323,19 +316,12 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	cache.GetMatchedReleaseCalls(fakeCacheData)
 
 	bosh := new(boshdirFakes.FakeDirector)
-	bucket := new(fakes.ReleaseCacheBucket)
-
-	var output bytes.Buffer
-	logger := log.New(&output, "", 0)
+	releaseCache := new(fakes.ReleaseCache)
 
 	cmd := commands.CacheCompiledReleases{
-		FS:     fs,
-		Logger: logger,
-		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
-			return bucket, nil
-		},
-		ReleaseCache: func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource {
-			return cache
+		FS: fs,
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (component.MultiReleaseSource, commands.ReleaseCache) {
+			return cache, releaseCache
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
 			return opsManager, nil

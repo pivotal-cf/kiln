@@ -95,6 +95,10 @@ type ReleaseSourceConfig struct {
 	Endpoint        string `yaml:"endpoint"`
 	Org             string `yaml:"org"`
 	GithubToken     string `yaml:"github_token"`
+	Repo            string `yaml:"repo"`
+	ArtifactoryHost string `yaml:"artifactory_host"`
+	Username        string `yaml:"username"`
+	Password        string `yaml:"password"`
 }
 
 // ComponentLock represents an exact build of a bosh release

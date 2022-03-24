@@ -9,7 +9,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type ReleaseCacheBucket struct {
+type ReleaseCache struct {
 	UploadReleaseStub        func(cargo.ComponentSpec, io.Reader) (cargo.ComponentLock, error)
 	uploadReleaseMutex       sync.RWMutex
 	uploadReleaseArgsForCall []struct {
@@ -28,7 +28,7 @@ type ReleaseCacheBucket struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseCacheBucket) UploadRelease(arg1 cargo.ComponentSpec, arg2 io.Reader) (cargo.ComponentLock, error) {
+func (fake *ReleaseCache) UploadRelease(arg1 cargo.ComponentSpec, arg2 io.Reader) (cargo.ComponentLock, error) {
 	fake.uploadReleaseMutex.Lock()
 	ret, specificReturn := fake.uploadReleaseReturnsOnCall[len(fake.uploadReleaseArgsForCall)]
 	fake.uploadReleaseArgsForCall = append(fake.uploadReleaseArgsForCall, struct {
@@ -48,26 +48,26 @@ func (fake *ReleaseCacheBucket) UploadRelease(arg1 cargo.ComponentSpec, arg2 io.
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *ReleaseCacheBucket) UploadReleaseCallCount() int {
+func (fake *ReleaseCache) UploadReleaseCallCount() int {
 	fake.uploadReleaseMutex.RLock()
 	defer fake.uploadReleaseMutex.RUnlock()
 	return len(fake.uploadReleaseArgsForCall)
 }
 
-func (fake *ReleaseCacheBucket) UploadReleaseCalls(stub func(cargo.ComponentSpec, io.Reader) (cargo.ComponentLock, error)) {
+func (fake *ReleaseCache) UploadReleaseCalls(stub func(cargo.ComponentSpec, io.Reader) (cargo.ComponentLock, error)) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = stub
 }
 
-func (fake *ReleaseCacheBucket) UploadReleaseArgsForCall(i int) (cargo.ComponentSpec, io.Reader) {
+func (fake *ReleaseCache) UploadReleaseArgsForCall(i int) (cargo.ComponentSpec, io.Reader) {
 	fake.uploadReleaseMutex.RLock()
 	defer fake.uploadReleaseMutex.RUnlock()
 	argsForCall := fake.uploadReleaseArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *ReleaseCacheBucket) UploadReleaseReturns(result1 cargo.ComponentLock, result2 error) {
+func (fake *ReleaseCache) UploadReleaseReturns(result1 cargo.ComponentLock, result2 error) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = nil
@@ -77,7 +77,7 @@ func (fake *ReleaseCacheBucket) UploadReleaseReturns(result1 cargo.ComponentLock
 	}{result1, result2}
 }
 
-func (fake *ReleaseCacheBucket) UploadReleaseReturnsOnCall(i int, result1 cargo.ComponentLock, result2 error) {
+func (fake *ReleaseCache) UploadReleaseReturnsOnCall(i int, result1 cargo.ComponentLock, result2 error) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = nil
@@ -93,7 +93,7 @@ func (fake *ReleaseCacheBucket) UploadReleaseReturnsOnCall(i int, result1 cargo.
 	}{result1, result2}
 }
 
-func (fake *ReleaseCacheBucket) Invocations() map[string][][]interface{} {
+func (fake *ReleaseCache) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.uploadReleaseMutex.RLock()
@@ -105,7 +105,7 @@ func (fake *ReleaseCacheBucket) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *ReleaseCacheBucket) recordInvocation(key string, args []interface{}) {
+func (fake *ReleaseCache) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -117,4 +117,4 @@ func (fake *ReleaseCacheBucket) recordInvocation(key string, args []interface{})
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ commands.ReleaseCacheBucket = new(ReleaseCacheBucket)
+var _ commands.ReleaseCache = new(ReleaseCache)
