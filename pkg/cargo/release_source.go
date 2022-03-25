@@ -86,3 +86,34 @@ func (list ReleaseSourceList) FindWithID(id string) ReleaseSource {
 	}
 	return nil
 }
+
+func (list ReleaseSourceList) Validate() error {
+	if err := errorIfDuplicateIDs(list); err != nil {
+		return err
+	}
+	return nil
+}
+
+func errorIfDuplicateIDs(releaseSources []ReleaseSource) error {
+	indexOfID := make(map[string]int)
+	for index, rs := range releaseSources {
+		id := rs.ID()
+		previousIndex, seen := indexOfID[id]
+		if seen {
+			return fmt.Errorf(`release_sources must have unique IDs; items at index %d and %d both have ID %q`, previousIndex, index, id)
+		}
+		indexOfID[id] = index
+	}
+	return nil
+}
+
+func (list ReleaseSourceList) Filter(allowOnlyPublishable bool) ReleaseSourceList {
+	var sources ReleaseSourceList
+	for _, source := range list {
+		if allowOnlyPublishable && !source.IsPublishable() {
+			continue
+		}
+		sources = append(sources, source)
+	}
+	return sources
+}

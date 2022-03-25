@@ -67,6 +67,11 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
 
+	err = kilnfile.ReleaseSources.Validate()
+	if err != nil {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
+	}
+
 	lockFP, err := fs.Open(options.KilnfileLockPath())
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to open Kilnfile.lock: %w", err)

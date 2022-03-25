@@ -209,7 +209,7 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock Lock) (Local,
 		}
 	}
 
-	src.logger.Printf(logLineDownload, lock.Name, ReleaseSourceTypeS3, src.ID())
+	src.logger.Printf(logLineDownload, lock.Name, cargo.ReleaseSourceTypeS3, src.ID())
 
 	outputFile := filepath.Join(releaseDir, filepath.Base(lock.RemotePath))
 

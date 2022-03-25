@@ -45,7 +45,6 @@ var _ = Describe("Fetch", func() {
 	const (
 		s3CompiledReleaseSourceID = "s3-compiled"
 		s3BuiltReleaseSourceID    = "s3-built"
-		boshIOReleaseSourceID     = component.ReleaseSourceTypeBOSHIO
 	)
 
 	Describe("Execute", func() {
@@ -82,7 +81,7 @@ stemcell_criteria:
 			fakeS3CompiledReleaseSource = new(componentFakes.ReleaseSource)
 			fakeS3CompiledReleaseSource.IDReturns(s3CompiledReleaseSourceID)
 			fakeBoshIOReleaseSource = new(componentFakes.ReleaseSource)
-			fakeBoshIOReleaseSource.IDReturns(boshIOReleaseSourceID)
+			fakeBoshIOReleaseSource.IDReturns(cargo.ReleaseSourceTypeBOSHIO)
 			fakeS3BuiltReleaseSource = new(componentFakes.ReleaseSource)
 			fakeS3BuiltReleaseSource.IDReturns(s3BuiltReleaseSourceID)
 
@@ -97,7 +96,7 @@ stemcell_criteria:
 		})
 
 		JustBeforeEach(func() {
-			releaseSourceList = component.NewMultiReleaseSource(fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource)
+			releaseSourceList = component.ReleaseSourceList{fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource}
 			fakeReleaseSources.FindByIDStub = func(s string) (component.ReleaseSource, error) {
 				return releaseSourceList.FindByID(s)
 			}
@@ -215,7 +214,7 @@ releases:
   sha1: correct-sha
 - name: boshio-release
   version: "1.4.16"
-  remote_source: ` + boshIOReleaseSourceID + `
+  remote_source: ` + cargo.ReleaseSourceTypeBOSHIO + `
   remote_path: some-bosh-io-url
   sha1: correct-sha
 stemcell_criteria:
@@ -265,7 +264,7 @@ stemcell_criteria:
 				releasesDir, object := fakeBoshIOReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(object).To(Equal(
-					boshIOReleaseID.Lock().WithRemote(boshIOReleaseSourceID, "some-bosh-io-url"),
+					boshIOReleaseID.Lock().WithRemote(cargo.ReleaseSourceTypeBOSHIO, "some-bosh-io-url"),
 				))
 			})
 		})
@@ -325,7 +324,7 @@ releases:
   sha1: correct-sha
 - name: some-tiny-release
   version: "1.2.3"
-  remote_source: ` + boshIOReleaseSourceID + `
+  remote_source: ` + cargo.ReleaseSourceTypeBOSHIO + `
   remote_path: not-used2
   sha1: correct-sha
 - name: some-missing-release-on-s3-compiled
@@ -335,7 +334,7 @@ releases:
   sha1: correct-sha
 - name: some-missing-release-on-boshio
   version: "5.6.7"
-  remote_source: ` + boshIOReleaseSourceID + `
+  remote_source: ` + cargo.ReleaseSourceTypeBOSHIO + `
   remote_path: ` + missingReleaseBoshIOPath + `
   sha1: correct-sha
 - name: some-missing-release-on-s3-built
@@ -375,7 +374,7 @@ stemcell_criteria:
 				}, nil)
 
 				missingReleaseS3Compiled = missingReleaseS3CompiledID.Lock().WithRemote(s3CompiledReleaseSourceID, missingReleaseS3CompiledPath)
-				missingReleaseBoshIO = missingReleaseBoshIOID.Lock().WithRemote(boshIOReleaseSourceID, missingReleaseBoshIOPath)
+				missingReleaseBoshIO = missingReleaseBoshIOID.Lock().WithRemote(cargo.ReleaseSourceTypeBOSHIO, missingReleaseBoshIOPath)
 				missingReleaseS3Built = missingReleaseS3BuiltID.Lock().WithRemote(s3BuiltReleaseSourceID, missingReleaseS3BuiltPath)
 			})
 

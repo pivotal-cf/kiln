@@ -19,20 +19,22 @@ func NewReleaseSourceRepo(kilnfile cargo.Kilnfile, logger *log.Logger) ReleaseSo
 		list = append(list, ReleaseSourceFactory(releaseConfig, logger))
 	}
 
-	panicIfDuplicateIDs(list)
-
 	return list
 }
 
-func (list ReleaseSourceList) Filter(allowOnlyPublishable bool) ReleaseSourceList {
-	var sources ReleaseSourceList
-	for _, source := range list {
-		if allowOnlyPublishable && !source.IsPublishable() {
-			continue
-		}
-		sources = append(sources, source)
+// ReleaseSourceFactory returns a configured ReleaseSource based on the Type field on the
+// cargo.ReleaseSourceConfig structure.
+func ReleaseSourceFactory(rc cargo.ReleaseSource, outLogger *log.Logger) ReleaseSource {
+	switch releaseConfig := rc.(type) {
+	case cargo.BOSHIOReleaseSource:
+		return NewBOSHIOReleaseSource(releaseConfig, "", outLogger)
+	case cargo.S3ReleaseSource:
+		return NewS3ReleaseSourceFromConfig(releaseConfig, outLogger)
+	case cargo.GitHubReleaseSource:
+		return NewGithubReleaseSource(releaseConfig)
+	default:
+		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
 	}
-	return sources
 }
 
 func (list ReleaseSourceList) FindReleaseUploader(sourceID string) (ReleaseUploader, error) {
@@ -97,22 +99,6 @@ func (list ReleaseSourceList) FindRemotePather(sourceID string) (RemotePather, e
 	}
 
 	return pather, nil
-}
-
-func panicIfDuplicateIDs(releaseSources []ReleaseSource) {
-	indexOfID := make(map[string]int)
-	for index, rs := range releaseSources {
-		id := rs.ID()
-		previousIndex, seen := indexOfID[id]
-		if seen {
-			panic(fmt.Sprintf(`release_sources must have unique IDs; items at index %d and %d both have ID %q`, previousIndex, index, id))
-		}
-		indexOfID[id] = index
-	}
-}
-
-func NewMultiReleaseSource(sources ...ReleaseSource) ReleaseSourceList {
-	return sources
 }
 
 func (list ReleaseSourceList) GetMatchedRelease(requirement Spec) (Lock, error) {

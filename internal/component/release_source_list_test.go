@@ -30,7 +30,7 @@ var _ = Describe("multiReleaseSource", func() {
 		src2.IDReturns("src-2")
 		src3 = new(fakes.ReleaseSource)
 		src3.IDReturns("src-3")
-		multiSrc = component.NewMultiReleaseSource(src1, src2, src3)
+		multiSrc = component.ReleaseSourceList{src1, src2, src3}
 
 		requirement = component.Spec{
 			Name:            releaseName,

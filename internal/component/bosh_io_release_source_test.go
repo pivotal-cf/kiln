@@ -27,7 +27,7 @@ import (
 
 var _ = Describe("BOSHIOReleaseSource", func() {
 	const (
-		ID = component.ReleaseSourceTypeBOSHIO
+		ID = cargo.ReleaseSourceTypeBOSHIO
 	)
 
 	Describe("GetMatchedReleases from bosh.io", func() {
@@ -74,7 +74,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 					Name:         "uaa",
 					Version:      "73.3.0",
 					RemotePath:   uaaURL,
-					RemoteSource: component.ReleaseSourceTypeBOSHIO,
+					RemoteSource: cargo.ReleaseSourceTypeBOSHIO,
 				}))
 
 				foundRelease, err = releaseSource.GetMatchedRelease(rabbitmqRequirement)
@@ -85,7 +85,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 					Name:         "cf-rabbitmq",
 					Version:      "268.0.0",
 					RemotePath:   cfRabbitURL,
-					RemoteSource: component.ReleaseSourceTypeBOSHIO,
+					RemoteSource: cargo.ReleaseSourceTypeBOSHIO,
 				}))
 
 			})
@@ -200,7 +200,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 						suffix,
 						releaseVersion)
 
-					Expect(foundRelease).To(Equal(releaseID.Lock().WithRemote(component.ReleaseSourceTypeBOSHIO, expectedPath)))
+					Expect(foundRelease).To(Equal(releaseID.Lock().WithRemote(cargo.ReleaseSourceTypeBOSHIO, expectedPath)))
 				},
 
 				Entry("cloudfoundry org, no suffix", "cloudfoundry", ""),
@@ -246,7 +246,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			releaseSource = component.NewBOSHIOReleaseSource(cargo.BOSHIOReleaseSource{Identifier: ID, Publishable: false}, testServer.URL(), log.New(GinkgoWriter, "", 0))
 
 			release1ID = component.Spec{Name: "some", Version: "1.2.3"}
-			release1 = release1ID.Lock().WithRemote(component.ReleaseSourceTypeBOSHIO, testServer.URL()+release1ServerPath)
+			release1 = release1ID.Lock().WithRemote(cargo.ReleaseSourceTypeBOSHIO, testServer.URL()+release1ServerPath)
 
 			hash := sha1.New()
 			_, err = io.Copy(hash, strings.NewReader(release1ServerFileContents))
@@ -283,7 +283,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			Expect(localRelease).To(Equal(
 				component.Local{
 					Lock: lock.WithRemote(
-						component.ReleaseSourceTypeBOSHIO,
+						cargo.ReleaseSourceTypeBOSHIO,
 						testServer.URL()+"/some-release",
 					),
 					LocalPath: fullRelease1Path,
@@ -323,7 +323,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 						Version:      "309.0.5",
 						SHA1:         "5df538657c2cc830bda679420a9b162682018ded",
 						RemotePath:   cfRabbitURL,
-						RemoteSource: component.ReleaseSourceTypeBOSHIO,
+						RemoteSource: cargo.ReleaseSourceTypeBOSHIO,
 					}))
 
 				})
@@ -340,7 +340,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 						Version:      "309.0.5",
 						SHA1:         "5df538657c2cc830bda679420a9b162682018ded",
 						RemotePath:   cfRabbitURL,
-						RemoteSource: component.ReleaseSourceTypeBOSHIO,
+						RemoteSource: cargo.ReleaseSourceTypeBOSHIO,
 					}))
 				})
 			})

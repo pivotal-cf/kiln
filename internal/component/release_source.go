@@ -1,9 +1,7 @@
 package component
 
 import (
-	"fmt"
 	"io"
-	"log"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -63,35 +61,3 @@ type ReleaseSource interface {
 }
 
 //counterfeiter:generate -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource
-
-const (
-	panicMessageWrongReleaseSourceType = "wrong constructor for release source configuration"
-	logLineDownload                    = "downloading %s from %s release source %s"
-
-	// ReleaseSourceTypeBOSHIO is the value of the Type field on cargo.ReleaseSourceConfig
-	// for fetching https://bosh.io releases.
-	ReleaseSourceTypeBOSHIO = cargo.ReleaseSourceTypeBOSHIO
-
-	// ReleaseSourceTypeS3 is the value for the Type field on cargo.ReleaseSourceConfig
-	// for releases stored on
-	ReleaseSourceTypeS3 = cargo.ReleaseSourceTypeS3
-
-	// ReleaseSourceTypeGithub is the value for the Type field on cargo.ReleaseSourceConfig
-	// for releases stored on Github.
-	ReleaseSourceTypeGithub = cargo.ReleaseSourceTypeGithub
-)
-
-// ReleaseSourceFactory returns a configured ReleaseSource based on the Type field on the
-// cargo.ReleaseSourceConfig structure.
-func ReleaseSourceFactory(rc cargo.ReleaseSource, outLogger *log.Logger) ReleaseSource {
-	switch releaseConfig := rc.(type) {
-	case cargo.BOSHIOReleaseSource:
-		return NewBOSHIOReleaseSource(releaseConfig, "", outLogger)
-	case cargo.S3ReleaseSource:
-		return NewS3ReleaseSourceFromConfig(releaseConfig, outLogger)
-	case cargo.GitHubReleaseSource:
-		return NewGithubReleaseSource(releaseConfig)
-	default:
-		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
-	}
-}
