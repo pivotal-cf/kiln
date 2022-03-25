@@ -46,11 +46,7 @@ type RemotePather interface {
 // ReleaseSource represents a source where a tile component BOSH releases may come from.
 // The releases may be compiled or just built bosh releases.
 type ReleaseSource interface {
-	// ID returns the unique identifier for this release source.
-	ID() string
-
-	// IsPublishable returns true if this release source is publishable.
-	IsPublishable() bool
+	cargo.ReleaseSource
 
 	// GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 	// fields on Requirement to download a specific release.
