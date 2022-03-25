@@ -33,7 +33,7 @@ func ReleaseSourceFactory(rc cargo.ReleaseSource, outLogger *log.Logger) Release
 	case cargo.GitHubReleaseSource:
 		return NewGithubReleaseSource(releaseConfig)
 	default:
-		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
+		panic(fmt.Sprintf("unknown release config: %[1]v %[1]T", releaseConfig))
 	}
 }
 

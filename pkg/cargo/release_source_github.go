@@ -6,7 +6,10 @@ type GitHubReleaseSource struct {
 	Publishable bool   `yaml:"publishable"`
 	Identifier  string `yaml:"id"`
 
-	Org         string `yaml:"org"`
+	Org string `yaml:"org"`
+
+	// secrets
+
 	GithubToken string `yaml:"github_token"`
 }
 
@@ -21,4 +24,10 @@ func (rs GitHubReleaseSource) ID() string {
 
 func (rs GitHubReleaseSource) IsPublishable() bool {
 	return rs.Publishable
+}
+
+func (rs GitHubReleaseSource) ConfigureSecrets(tv TemplateVariables) (ReleaseSource, error) {
+	var err error
+	rs.GithubToken, err = configureSecret(rs.GithubToken, "github_token", "GITHUB_TOKEN", tv)
+	return rs, err
 }

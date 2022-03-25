@@ -2,8 +2,9 @@ package commands
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"log"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
@@ -41,7 +42,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		return err
 	}
 
-	kilnfile, kilnfileLock, err := u.Options.Standard.LoadKilnfiles(u.filesystem, nil)
+	kilnfile, kilnfileLock, err := u.Options.Standard.LoadKilnfiles(nil, u.filesystem, nil)
 	if err != nil {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}

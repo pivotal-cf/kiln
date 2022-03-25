@@ -31,7 +31,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 		return err
 	}
 
-	kilnfile, kilnfileLock, err := update.Options.Standard.LoadKilnfiles(update.FS, nil)
+	kilnfile, kilnfileLock, err := update.Options.Standard.LoadKilnfiles(nil, update.FS, nil)
 	if err != nil {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}

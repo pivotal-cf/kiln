@@ -90,7 +90,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []comp
 		}
 	}
 
-	kilnfile, kilnfileLock, err := f.Options.LoadKilnfiles(nil, nil)
+	kilnfile, kilnfileLock, err := f.Options.LoadKilnfiles(nil, nil, nil)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 	}

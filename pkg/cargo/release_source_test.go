@@ -88,3 +88,89 @@ func TestReleaseSourceList_Validate(t *testing.T) {
 	please.Expect(err).To(Ω.MatchError(Ω.ContainSubstring("unique")))
 	please.Expect(err).To(Ω.MatchError(Ω.ContainSubstring(`"some-bucket"`)))
 }
+
+func TestReleaseSourceList_ConfigureSecrets(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	t.Setenv("GITHUB_TOKEN", "env-gh-tok")
+	t.Setenv("AWS_ACCESS_KEY_ID", "env-aws-id")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "env-aws-key")
+
+	kilnfile := cargo.Kilnfile{
+		ReleaseSources: cargo.ReleaseSourceList{
+			cargo.BOSHIOReleaseSource{},
+			cargo.S3ReleaseSource{
+				// already set
+				SecretAccessKey: "shhhh!",
+				AccessKeyId:     "hello",
+			},
+			cargo.S3ReleaseSource{
+				// load from env
+				SecretAccessKey: "",
+				AccessKeyId:     "",
+			},
+			cargo.S3ReleaseSource{
+				// interpolate template
+				SecretAccessKey: ` $( variable "aws_sak" )`,
+				AccessKeyId:     `$( variable  "aws_aki" )`,
+			},
+			cargo.S3ReleaseSource{
+				// interpolate template
+				SecretAccessKey: `$( variable "not_set" )`,
+				AccessKeyId:     `$( variable "not_set" )`,
+			},
+
+			cargo.GitHubReleaseSource{},
+			cargo.GitHubReleaseSource{
+				// not set
+				GithubToken: `           $(variable "gh_tok")`,
+			},
+			cargo.GitHubReleaseSource{
+				// not set
+				GithubToken: `$( variable "not_set" )`,
+			},
+			cargo.GitHubReleaseSource{
+				// not set
+				GithubToken: `$( `,
+			},
+		},
+	}
+
+	tv := map[string]interface{}{
+		"gh_tok":  "tem-gh-token",
+		"aws_aki": "tem-aws-id",
+		"aws_sak": "tem-aws-key",
+	}
+
+	succeeded, failed, errList := kilnfile.ReleaseSources.ConfigureSecrets(tv)
+
+	please.Expect(succeeded).To(Ω.Equal(cargo.ReleaseSourceList{
+		cargo.BOSHIOReleaseSource{},
+		cargo.S3ReleaseSource{
+			// already set
+			SecretAccessKey: "shhhh!",
+			AccessKeyId:     "hello",
+		},
+		cargo.S3ReleaseSource{
+			// load from env
+			AccessKeyId:     "env-aws-id",
+			SecretAccessKey: "env-aws-key",
+		},
+		cargo.S3ReleaseSource{
+			// interpolate template
+			AccessKeyId:     `tem-aws-id`,
+			SecretAccessKey: `tem-aws-key`,
+		},
+		cargo.GitHubReleaseSource{
+			// not set
+			GithubToken: `env-gh-tok`,
+		},
+		cargo.GitHubReleaseSource{
+			// not set
+			GithubToken: `tem-gh-token`,
+		},
+	}))
+
+	please.Expect(failed).To(Ω.HaveLen(3))
+	please.Expect(errList).To(Ω.HaveLen(len(failed)))
+}

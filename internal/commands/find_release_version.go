@@ -80,7 +80,7 @@ func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, cargo.Kilnf
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("unexpected arguments: %v", argsAfterFlags)
 	}
 
-	kilnfile, kilnfileLock, err := cmd.Options.LoadKilnfiles(nil, nil)
+	kilnfile, kilnfileLock, err := cmd.Options.LoadKilnfiles(nil, nil, nil)
 	if err != nil {
 		fmt.Println(err)
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err

@@ -97,7 +97,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		return err
 	}
 
-	kilnfile, lock, err := cmd.Options.LoadKilnfiles(cmd.FS, nil)
+	kilnfile, lock, err := cmd.Options.LoadKilnfiles(nil, cmd.FS, nil)
 	if err != nil {
 		return fmt.Errorf("failed to load kilnfiles: %w", err)
 	}

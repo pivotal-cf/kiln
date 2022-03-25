@@ -244,10 +244,12 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 	}
 }
 
+const InterpolatorLeadingDelimiter = "$("
+
 func (i Interpolator) interpolate(input InterpolateInput, name string, templateYAML []byte) ([]byte, error) {
 	t, err := template.New(name).
 		Funcs(i.functions(input)).
-		Delims("$(", ")").
+		Delims(InterpolatorLeadingDelimiter, ")").
 		Option("missingkey=error").
 		Parse(string(templateYAML))
 	if err != nil {

@@ -137,7 +137,7 @@ func (cmd *FindStemcellVersion) setup(args []string) (cargo.Kilnfile, error) {
 		return cargo.Kilnfile{}, err
 	}
 
-	kilnfile, _, err := cmd.Options.Standard.LoadKilnfiles(cmd.FS, nil)
+	kilnfile, _, err := cmd.Options.Standard.LoadKilnfiles(nil, cmd.FS, nil)
 	if err != nil {
 		return cargo.Kilnfile{}, fmt.Errorf("error loading Kilnfiles: %w", err)
 	}

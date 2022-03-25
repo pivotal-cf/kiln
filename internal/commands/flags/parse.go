@@ -3,7 +3,9 @@ package flags
 import (
 	"fmt"
 	"go/ast"
+	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -39,7 +41,9 @@ type Standard struct {
 // LoadKilnfiles parses and interpolates the Kilnfile and parsed the Kilnfile.lock.
 // The function parameters are for overriding default services. These parameters are
 // helpful for testing, in most cases nil can be passed for both.
-func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceOverride VariablesService) (_ cargo.Kilnfile, _ cargo.KilnfileLock, err error) {
+func (options *Standard) LoadKilnfiles(loggerOverride *log.Logger, fsOverride billy.Basic, variablesServiceOverride VariablesService) (_ cargo.Kilnfile, _ cargo.KilnfileLock, err error) {
+	// TODO: make argument list a struct with a logger, fs, ... and variablesService
+
 	fs := fsOverride
 	if fs == nil {
 		fs = osfs.New("")
@@ -47,6 +51,10 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 	variablesService := variablesServiceOverride
 	if variablesService == nil {
 		variablesService = baking.NewTemplateVariablesService(fs)
+	}
+	logger := loggerOverride
+	if logger == nil {
+		logger = log.New(os.Stderr, "", 0)
 	}
 
 	templateVariables, err := variablesService.FromPathsAndPairs(options.VariableFiles, options.Variables)
@@ -62,10 +70,38 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 		_ = kilnfileFP.Close()
 	}()
 
-	kilnfile, err := cargo.InterpolateAndParseKilnfile(kilnfileFP, templateVariables)
+	kfBuf, err := io.ReadAll(kilnfileFP)
+	if err != nil {
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to read Kilnfile: %w", err)
+	}
+
+	var kilnfile cargo.Kilnfile
+	err = yaml.Unmarshal(kfBuf, &kilnfile)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
+
+	successfulRS, failedRS, errs := kilnfile.ReleaseSources.ConfigureSecrets(templateVariables)
+	if len(errs) > 0 {
+		logger.Printf("errors were encountered while configuring release source secrets:")
+	}
+	for i, err := range errs {
+		if err == nil {
+			continue
+		}
+		source := failedRS[i]
+		logger.Printf("  - %s %T\n\tgot error: %s", source.ID(), source, err)
+	}
+	//if len(kilnfile.ReleaseSources) > 0 && len(successfulRS) == 0 {
+	//	return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("no release sources were successfully configured with secrets")
+	//}
+	if len(failedRS) > 0 {
+		logger.Printf("continuing with the successfully configured release sources:")
+		for _, source := range successfulRS {
+			logger.Printf("  - %s %T", source.ID(), source)
+		}
+	}
+	kilnfile.ReleaseSources = successfulRS
 
 	err = kilnfile.ReleaseSources.Validate()
 	if err != nil {

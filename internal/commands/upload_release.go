@@ -36,7 +36,7 @@ func (command UploadRelease) Execute(args []string) error {
 		return err
 	}
 
-	kilnfile, _, err := command.Options.Standard.LoadKilnfiles(command.FS, nil)
+	kilnfile, _, err := command.Options.Standard.LoadKilnfiles(nil, command.FS, nil)
 	if err != nil {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}

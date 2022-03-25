@@ -2,8 +2,12 @@ package cargo
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"gopkg.in/yaml.v2"
+
+	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
 const (
@@ -42,34 +46,31 @@ func (list *ReleaseSourceList) UnmarshalYAML(unmarshal func(interface{}) error) 
 	for index, element := range sources {
 		buf, err := yaml.Marshal(element.Values)
 		if err != nil {
-			return fmt.Errorf("failed to marshal release source values: %w", err)
+			return fmt.Errorf("failed to marshal release source values for release source at index %d: %w", index, err)
 		}
 
-		var rs ReleaseSource
+		var (
+			rs       ReleaseSource
+			parseErr error
+		)
 		switch element.Type {
 		case ReleaseSourceTypeBOSHIO:
 			s := new(BOSHIOReleaseSource)
-			err := yaml.Unmarshal(buf, s)
-			if err != nil {
-				return fmt.Errorf("failed to unmarshal release source at index %d: %w", index, err)
-			}
+			parseErr = yaml.Unmarshal(buf, s)
 			rs = *s
 		case ReleaseSourceTypeS3, "":
 			s := new(S3ReleaseSource)
-			err := yaml.Unmarshal(buf, s)
-			if err != nil {
-				return fmt.Errorf("failed to unmarshal release source at index %d: %w", index, err)
-			}
+			parseErr = yaml.Unmarshal(buf, s)
 			rs = *s
 		case ReleaseSourceTypeGithub:
 			s := new(GitHubReleaseSource)
-			err := yaml.Unmarshal(buf, s)
-			if err != nil {
-				return fmt.Errorf("failed to unmarshal release source at index %d: %w", index, err)
-			}
+			parseErr = yaml.Unmarshal(buf, s)
 			rs = *s
 		default:
-			return fmt.Errorf("unknown release source type: %q", element.Type)
+			return fmt.Errorf("unknown release source type at index %d got type name %s", index, element.Type)
+		}
+		if parseErr != nil {
+			return fmt.Errorf("failed to parse release source type at index %d: %w", index, parseErr)
 		}
 
 		*list = append(*list, rs)
@@ -116,4 +117,69 @@ func (list ReleaseSourceList) Filter(allowOnlyPublishable bool) ReleaseSourceLis
 		sources = append(sources, source)
 	}
 	return sources
+}
+
+type TemplateVariables = map[string]interface{}
+
+func (list ReleaseSourceList) ConfigureSecrets(tv TemplateVariables) (ReleaseSourceList, ReleaseSourceList, []error) {
+	var (
+		successful, failed ReleaseSourceList
+		failedErrs         []error
+	)
+	for _, source := range list {
+		sourceUsingSecrets, ok := source.(interface {
+			ConfigureSecrets(secrets TemplateVariables) (ReleaseSource, error)
+		})
+		if !ok {
+			successful = append(successful, source)
+			continue
+		}
+		src, err := sourceUsingSecrets.ConfigureSecrets(tv)
+		if err != nil {
+			failed = append(failed, source)
+			failedErrs = append(failedErrs, err)
+			continue
+		}
+		successful = append(successful, src)
+	}
+	successful = successful[:len(successful):len(successful)]
+	failed = failed[:len(failed):len(failed)]
+	failedErrs = failedErrs[:len(failedErrs):len(failedErrs)]
+	return successful, failed, failedErrs
+}
+
+func configureSecret(value, name, envVarName string, tv TemplateVariables) (string, error) {
+	errPrefix := fmt.Sprintf("configuring secret %s failed: ", name)
+
+	if value == "" {
+		value = os.Getenv(envVarName)
+		if value == "" {
+			return "", fmt.Errorf(errPrefix+"%s is not set", envVarName)
+		}
+		value = strings.TrimSpace(value)
+		return value, nil
+	}
+
+	if !strings.Contains(value, builder.InterpolatorLeadingDelimiter) {
+		return value, nil
+	}
+
+	interpolated, intErr := interpolateSecretes([]byte(value), name, tv)
+	if intErr != nil {
+		return "", fmt.Errorf(errPrefix+"interpolation failed: %w", intErr)
+	}
+	value = string(interpolated)
+	value = strings.TrimSpace(value)
+	return value, nil
+}
+
+func interpolateSecretes(in []byte, name string, templateVariables map[string]interface{}) ([]byte, error) {
+	interpolator := builder.NewInterpolator()
+	interpolated, err := interpolator.Interpolate(builder.InterpolateInput{
+		Variables: templateVariables,
+	}, name, in)
+	if err != nil {
+		return nil, err
+	}
+	return interpolated, nil
 }

@@ -34,7 +34,7 @@ func (v Validate) Execute(args []string) error {
 		return err
 	}
 
-	kilnfile, lock, err := v.Options.Standard.LoadKilnfiles(v.FS, nil)
+	kilnfile, lock, err := v.Options.Standard.LoadKilnfiles(nil, v.FS, nil)
 	if err != nil {
 		return fmt.Errorf("failed to load kilnfiles: %w", err)
 	}
