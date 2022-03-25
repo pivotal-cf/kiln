@@ -41,7 +41,7 @@ type S3Client interface {
 }
 
 type S3ReleaseSource struct {
-	cargo.ReleaseSourceConfig
+	cargo.S3ReleaseSource
 
 	s3Client     S3Client
 	s3Downloader S3Downloader
@@ -52,20 +52,17 @@ type S3ReleaseSource struct {
 	logger *log.Logger
 }
 
-func NewS3ReleaseSource(c cargo.ReleaseSourceConfig, client S3Client, downloader S3Downloader, uploader S3Uploader, logger *log.Logger) S3ReleaseSource {
-	if c.Type != "" && c.Type != ReleaseSourceTypeS3 {
-		panic(panicMessageWrongReleaseSourceType)
-	}
+func NewS3ReleaseSource(c cargo.S3ReleaseSource, client S3Client, downloader S3Downloader, uploader S3Uploader, logger *log.Logger) S3ReleaseSource {
 	return S3ReleaseSource{
-		ReleaseSourceConfig: c,
-		s3Client:            client,
-		s3Downloader:        downloader,
-		s3Uploader:          uploader,
-		logger:              logger,
+		S3ReleaseSource: c,
+		s3Client:        client,
+		s3Downloader:    downloader,
+		s3Uploader:      uploader,
+		logger:          logger,
 	}
 }
 
-func NewS3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.Logger) S3ReleaseSource {
+func NewS3ReleaseSourceFromConfig(config cargo.S3ReleaseSource, logger *log.Logger) S3ReleaseSource {
 	validateConfig(config)
 
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
@@ -90,7 +87,7 @@ func NewS3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.
 	)
 }
 
-func validateConfig(config cargo.ReleaseSourceConfig) {
+func validateConfig(config cargo.S3ReleaseSource) {
 	if config.PathTemplate == "" {
 		panic(`Missing required field "path_template" in release source config. Is your Kilnfile out of date?`)
 	}
@@ -98,10 +95,6 @@ func validateConfig(config cargo.ReleaseSourceConfig) {
 		panic(`Missing required field "bucket" in release source config. Is your Kilnfile out of date?`)
 	}
 }
-
-func (src S3ReleaseSource) ID() string                               { return src.ReleaseSourceConfig.ID }
-func (src S3ReleaseSource) Publishable() bool                        { return src.ReleaseSourceConfig.Publishable }
-func (src S3ReleaseSource) Configuration() cargo.ReleaseSourceConfig { return src.ReleaseSourceConfig }
 
 //counterfeiter:generate -o ./fakes/s3_request_failure.go --fake-name S3RequestFailure github.com/aws/aws-sdk-go/service/s3.RequestFailure
 func (src S3ReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
@@ -111,7 +104,7 @@ func (src S3ReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 	}
 
 	headRequest := new(s3.HeadObjectInput)
-	headRequest.SetBucket(src.ReleaseSourceConfig.Bucket)
+	headRequest.SetBucket(src.Bucket)
 	headRequest.SetKey(remotePath)
 
 	_, err = src.s3Client.HeadObject(headRequest)
@@ -133,7 +126,7 @@ func (src S3ReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 
 func (src S3ReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 	pathTemplatePattern, _ := regexp.Compile(`^\d+\.\d+`)
-	tasVersion := pathTemplatePattern.FindString(src.ReleaseSourceConfig.PathTemplate)
+	tasVersion := pathTemplatePattern.FindString(src.PathTemplate)
 	var prefix string
 	if tasVersion != "" {
 		prefix = tasVersion + "/"
@@ -141,7 +134,7 @@ func (src S3ReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 	prefix += spec.Name + "/"
 
 	releaseResults, err := src.s3Client.ListObjectsV2(&s3.ListObjectsV2Input{
-		Bucket: &src.ReleaseSourceConfig.Bucket,
+		Bucket: &src.Bucket,
 		Prefix: &prefix,
 	})
 	if err != nil {
@@ -180,7 +173,7 @@ func (src S3ReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 					Name:         spec.Name,
 					Version:      version,
 					RemotePath:   *result.Key,
-					RemoteSource: src.ReleaseSourceConfig.ID,
+					RemoteSource: src.ID(),
 				}
 			} else {
 				foundVersion, _ := semver.NewVersion(foundRelease.Version)
@@ -189,7 +182,7 @@ func (src S3ReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 						Name:         spec.Name,
 						Version:      version,
 						RemotePath:   *result.Key,
-						RemoteSource: src.ReleaseSourceConfig.ID,
+						RemoteSource: src.ID(),
 					}
 				}
 			}
@@ -227,7 +220,7 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock Lock) (Local,
 	defer func() { _ = file.Close() }()
 
 	_, err = src.s3Downloader.Download(file, &s3.GetObjectInput{
-		Bucket: aws.String(src.ReleaseSourceConfig.Bucket),
+		Bucket: aws.String(src.Bucket),
 		Key:    aws.String(lock.RemotePath),
 	}, setConcurrency)
 	if err != nil {
@@ -256,10 +249,10 @@ func (src S3ReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error
 		return Lock{}, err
 	}
 
-	src.logger.Printf("uploading release %q to %s at %q...\n", spec.Name, src.ReleaseSourceConfig.Bucket, remotePath)
+	src.logger.Printf("uploading release %q to %s at %q...\n", spec.Name, src.Bucket, remotePath)
 
 	_, err = src.s3Uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(src.ReleaseSourceConfig.Bucket),
+		Bucket: aws.String(src.Bucket),
 		Key:    aws.String(remotePath),
 		Body:   file,
 	})
@@ -271,7 +264,7 @@ func (src S3ReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error
 		Name:         spec.Name,
 		Version:      spec.Version,
 		RemotePath:   remotePath,
-		RemoteSource: src.ReleaseSourceConfig.Bucket,
+		RemoteSource: src.Bucket,
 	}, nil
 }
 
@@ -290,5 +283,5 @@ func (src S3ReleaseSource) pathTemplate() *template.Template {
 	return template.Must(
 		template.New("remote-path").
 			Funcs(template.FuncMap{"trimSuffix": strings.TrimSuffix}).
-			Parse(src.ReleaseSourceConfig.PathTemplate))
+			Parse(src.PathTemplate))
 }

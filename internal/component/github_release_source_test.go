@@ -11,10 +11,9 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver"
-
+	"github.com/google/go-github/v40/github"
 	Ω "github.com/onsi/gomega"
 
-	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -23,8 +22,7 @@ import (
 func TestListAllOfTheCrap(t *testing.T) {
 	t.SkipNow()
 
-	grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{
-		Type:        component.ReleaseSourceTypeGithub,
+	grs := component.NewGithubReleaseSource(cargo.GitHubReleaseSource{
 		GithubToken: os.Getenv("GITHUB_TOKEN"),
 		Org:         "cloudfoundry",
 	})
@@ -147,7 +145,9 @@ func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 		s := component.Spec{
 			Version: "garbage",
 		}
-		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
+		grs := component.NewGithubReleaseSource(cargo.GitHubReleaseSource{
+			GithubToken: "fake_token", Org: "cloudfoundry"},
+		)
 		_, err := grs.FindReleaseVersion(s)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
@@ -163,7 +163,9 @@ func TestGithubReleaseSource_GetMatchedRelease(t *testing.T) {
 		s := component.Spec{
 			Version: ">1.0.0",
 		}
-		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
+		grs := component.NewGithubReleaseSource(cargo.GitHubReleaseSource{
+			GithubToken: "fake_token", Org: "cloudfoundry"},
+		)
 		_, err := grs.GetMatchedRelease(s)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
@@ -279,8 +281,7 @@ func TestGetReleaseMatchingConstraint(t *testing.T) {
 func TestDownloadReleaseAsset(t *testing.T) {
 	t.SkipNow()
 
-	grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{
-		Type:        component.ReleaseSourceTypeGithub,
+	grs := component.NewGithubReleaseSource(cargo.GitHubReleaseSource{
 		GithubToken: os.Getenv("GITHUB_TOKEN"),
 		Org:         "cloudfoundry",
 	})

@@ -8,7 +8,6 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 var _ = Describe("multiReleaseSource", func() {
@@ -26,11 +25,11 @@ var _ = Describe("multiReleaseSource", func() {
 
 	BeforeEach(func() {
 		src1 = new(fakes.ReleaseSource)
-		src1.ConfigurationReturns(cargo.ReleaseSourceConfig{ID: "src-1"})
+		src1.IDReturns("src-1")
 		src2 = new(fakes.ReleaseSource)
-		src2.ConfigurationReturns(cargo.ReleaseSourceConfig{ID: "src-2"})
+		src2.IDReturns("src-2")
 		src3 = new(fakes.ReleaseSource)
-		src3.ConfigurationReturns(cargo.ReleaseSourceConfig{ID: "src-3"})
+		src3.IDReturns("src-3")
 		multiSrc = component.NewMultiReleaseSource(src1, src2, src3)
 
 		requirement = component.Spec{
@@ -52,7 +51,7 @@ var _ = Describe("multiReleaseSource", func() {
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
-					RemoteSource: src2.Configuration().ID,
+					RemoteSource: src2.ID(),
 				}
 				src1.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
 				src3.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
@@ -89,7 +88,7 @@ var _ = Describe("multiReleaseSource", func() {
 
 			It("returns that error", func() {
 				_, err := multiSrc.GetMatchedRelease(requirement)
-				Expect(err).To(MatchError(ContainSubstring(src1.Configuration().ID)))
+				Expect(err).To(MatchError(ContainSubstring(src1.ID())))
 				Expect(err).To(MatchError(ContainSubstring(expectedErr.Error())))
 			})
 		})
@@ -103,7 +102,7 @@ var _ = Describe("multiReleaseSource", func() {
 
 		BeforeEach(func() {
 			releaseID = component.Spec{Name: releaseName, Version: releaseVersion}
-			remote = releaseID.Lock().WithRemote(src2.Configuration().ID, "/some/remote/path")
+			remote = releaseID.Lock().WithRemote(src2.ID(), "/some/remote/path")
 		})
 
 		When("the source exists and downloads without error", func() {
@@ -137,7 +136,7 @@ var _ = Describe("multiReleaseSource", func() {
 
 			It("returns the error", func() {
 				_, err := multiSrc.DownloadRelease("somewhere", remote)
-				Expect(err).To(MatchError(ContainSubstring(src2.Configuration().ID)))
+				Expect(err).To(MatchError(ContainSubstring(src2.ID())))
 				Expect(err).To(MatchError(ContainSubstring(expectedErr.Error())))
 			})
 		})
@@ -151,9 +150,9 @@ var _ = Describe("multiReleaseSource", func() {
 				_, err := multiSrc.DownloadRelease("somewhere", remote)
 				Expect(err).To(MatchError(ContainSubstring("couldn't find a release source")))
 				Expect(err).To(MatchError(ContainSubstring("no-such-source")))
-				Expect(err).To(MatchError(ContainSubstring(src1.Configuration().ID)))
-				Expect(err).To(MatchError(ContainSubstring(src2.Configuration().ID)))
-				Expect(err).To(MatchError(ContainSubstring(src3.Configuration().ID)))
+				Expect(err).To(MatchError(ContainSubstring(src1.ID())))
+				Expect(err).To(MatchError(ContainSubstring(src2.ID())))
+				Expect(err).To(MatchError(ContainSubstring(src3.ID())))
 			})
 		})
 	})
@@ -199,7 +198,7 @@ var _ = Describe("multiReleaseSource", func() {
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
-					RemoteSource: src2.Configuration().ID,
+					RemoteSource: src2.ID(),
 				}
 				src1.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
 				src2.FindReleaseVersionReturns(matchedRelease, nil)
@@ -222,13 +221,13 @@ var _ = Describe("multiReleaseSource", func() {
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
-					RemoteSource: src1.Configuration().ID,
+					RemoteSource: src1.ID(),
 				}
 				matchedRelease = component.Lock{
 					Name:         releaseName,
 					Version:      releaseVersionNewer,
 					RemotePath:   "/some/path",
-					RemoteSource: src2.Configuration().ID,
+					RemoteSource: src2.ID(),
 				}
 				src1.FindReleaseVersionReturns(unmatchedRelease, nil)
 				src2.FindReleaseVersionReturns(matchedRelease, nil)
@@ -251,13 +250,13 @@ var _ = Describe("multiReleaseSource", func() {
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
-					RemoteSource: src1.Configuration().ID,
+					RemoteSource: src1.ID(),
 				}
 				unmatchedRelease := component.Lock{
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
-					RemoteSource: src2.Configuration().ID,
+					RemoteSource: src2.ID(),
 				}
 				src1.FindReleaseVersionReturns(matchedRelease, nil)
 				src2.FindReleaseVersionReturns(unmatchedRelease, nil)

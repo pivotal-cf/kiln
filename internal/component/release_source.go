@@ -46,9 +46,11 @@ type RemotePather interface {
 // ReleaseSource represents a source where a tile component BOSH releases may come from.
 // The releases may be compiled or just built bosh releases.
 type ReleaseSource interface {
-	// Configuration returns the configuration of the ReleaseSource that came from the kilnfile.
-	// It should not be modified.
-	Configuration() cargo.ReleaseSourceConfig
+	// ID returns the unique identifier for this release source.
+	ID() string
+
+	// IsPublishable returns true if this release source is publishable.
+	IsPublishable() bool
 
 	// GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 	// fields on Requirement to download a specific release.
@@ -72,33 +74,26 @@ const (
 
 	// ReleaseSourceTypeBOSHIO is the value of the Type field on cargo.ReleaseSourceConfig
 	// for fetching https://bosh.io releases.
-	ReleaseSourceTypeBOSHIO = "bosh.io"
+	ReleaseSourceTypeBOSHIO = cargo.ReleaseSourceTypeBOSHIO
 
 	// ReleaseSourceTypeS3 is the value for the Type field on cargo.ReleaseSourceConfig
 	// for releases stored on
-	ReleaseSourceTypeS3 = "s3"
+	ReleaseSourceTypeS3 = cargo.ReleaseSourceTypeS3
 
 	// ReleaseSourceTypeGithub is the value for the Type field on cargo.ReleaseSourceConfig
 	// for releases stored on Github.
-	ReleaseSourceTypeGithub = "github"
+	ReleaseSourceTypeGithub = cargo.ReleaseSourceTypeGithub
 )
 
 // ReleaseSourceFactory returns a configured ReleaseSource based on the Type field on the
 // cargo.ReleaseSourceConfig structure.
-func ReleaseSourceFactory(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
-	switch releaseConfig.Type {
-	case ReleaseSourceTypeBOSHIO:
-		if releaseConfig.ID == "" {
-			releaseConfig.ID = ReleaseSourceTypeBOSHIO
-		}
+func ReleaseSourceFactory(rc cargo.ReleaseSource, outLogger *log.Logger) ReleaseSource {
+	switch releaseConfig := rc.(type) {
+	case cargo.BOSHIOReleaseSource:
 		return NewBOSHIOReleaseSource(releaseConfig, "", outLogger)
-	case ReleaseSourceTypeS3:
-		if releaseConfig.ID == "" {
-			releaseConfig.ID = releaseConfig.Bucket
-		}
+	case cargo.S3ReleaseSource:
 		return NewS3ReleaseSourceFromConfig(releaseConfig, outLogger)
-	case ReleaseSourceTypeGithub:
-		releaseConfig.ID = releaseConfig.Org
+	case cargo.GitHubReleaseSource:
 		return NewGithubReleaseSource(releaseConfig)
 	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))

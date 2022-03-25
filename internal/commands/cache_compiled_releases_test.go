@@ -44,9 +44,9 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSourceConfig{
-			{
-				ID: "cached-compiled-releases",
+		ReleaseSources: cargo.ReleaseSourceList{
+			cargo.S3ReleaseSource{
+				Identifier: "cached-compiled-releases",
 			},
 		},
 	})).NotTo(Ω.HaveOccurred())
@@ -123,14 +123,14 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSourceConfig{
-			{
-				ID:           "cached-compiled-releases",
+		ReleaseSources: cargo.ReleaseSourceList{
+			cargo.S3ReleaseSource{
+				Identifier:   "cached-compiled-releases",
 				Publishable:  true,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
-			{
-				ID:           "new-releases",
+			cargo.S3ReleaseSource{
+				Identifier:   "new-releases",
 				Publishable:  false,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
@@ -194,7 +194,6 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	bucket.UploadReleaseCalls(func(_ component.Spec, reader io.Reader) (component.Lock, error) {
 		_, _ = io.Copy(&uploadedRelease, reader)
 		return component.Lock{
-
 			Name: "lemon", Version: "3.0.0",
 
 			RemoteSource: "cached-compiled-releases",
@@ -269,14 +268,14 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSourceConfig{
-			{
-				ID:           "cached-compiled-releases",
+		ReleaseSources: cargo.ReleaseSourceList{
+			cargo.S3ReleaseSource{
+				Identifier:   "cached-compiled-releases",
 				Publishable:  true,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
-			{
-				ID:           "new-releases",
+			cargo.S3ReleaseSource{
+				Identifier:   "new-releases",
 				Publishable:  false,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},

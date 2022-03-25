@@ -80,13 +80,11 @@ stemcell_criteria:
 			fakeLocalReleaseDirectory = new(commandsFakes.LocalReleaseDirectory)
 
 			fakeS3CompiledReleaseSource = new(componentFakes.ReleaseSource)
-			fakeS3CompiledReleaseSource.ConfigurationReturns(cargo.ReleaseSourceConfig{
-				ID: s3CompiledReleaseSourceID,
-			})
+			fakeS3CompiledReleaseSource.IDReturns(s3CompiledReleaseSourceID)
 			fakeBoshIOReleaseSource = new(componentFakes.ReleaseSource)
-			fakeBoshIOReleaseSource.ConfigurationReturns(cargo.ReleaseSourceConfig{ID: boshIOReleaseSourceID})
+			fakeBoshIOReleaseSource.IDReturns(boshIOReleaseSourceID)
 			fakeS3BuiltReleaseSource = new(componentFakes.ReleaseSource)
-			fakeS3BuiltReleaseSource.ConfigurationReturns(cargo.ReleaseSourceConfig{ID: s3BuiltReleaseSourceID})
+			fakeS3BuiltReleaseSource.IDReturns(s3BuiltReleaseSourceID)
 
 			fetchExecuteArgs = []string{
 				"--releases-directory", someReleasesDirectory,

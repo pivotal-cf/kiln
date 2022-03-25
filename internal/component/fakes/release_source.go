@@ -9,16 +9,6 @@ import (
 )
 
 type ReleaseSource struct {
-	ConfigurationStub        func() cargo.ReleaseSourceConfig
-	configurationMutex       sync.RWMutex
-	configurationArgsForCall []struct {
-	}
-	configurationReturns struct {
-		result1 cargo.ReleaseSourceConfig
-	}
-	configurationReturnsOnCall map[int]struct {
-		result1 cargo.ReleaseSourceConfig
-	}
 	DownloadReleaseStub        func(string, cargo.ComponentLock) (component.Local, error)
 	downloadReleaseMutex       sync.RWMutex
 	downloadReleaseArgsForCall []struct {
@@ -59,61 +49,38 @@ type ReleaseSource struct {
 		result1 cargo.ComponentLock
 		result2 error
 	}
+	IDStub        func() string
+	iDMutex       sync.RWMutex
+	iDArgsForCall []struct {
+	}
+	iDReturns struct {
+		result1 string
+	}
+	iDReturnsOnCall map[int]struct {
+		result1 string
+	}
+	IsPublishableStub        func() bool
+	isPublishableMutex       sync.RWMutex
+	isPublishableArgsForCall []struct {
+	}
+	isPublishableReturns struct {
+		result1 bool
+	}
+	isPublishableReturnsOnCall map[int]struct {
+		result1 bool
+	}
+	TypeStub        func() string
+	typeMutex       sync.RWMutex
+	typeArgsForCall []struct {
+	}
+	typeReturns struct {
+		result1 string
+	}
+	typeReturnsOnCall map[int]struct {
+		result1 string
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *ReleaseSource) Configuration() cargo.ReleaseSourceConfig {
-	fake.configurationMutex.Lock()
-	ret, specificReturn := fake.configurationReturnsOnCall[len(fake.configurationArgsForCall)]
-	fake.configurationArgsForCall = append(fake.configurationArgsForCall, struct {
-	}{})
-	stub := fake.ConfigurationStub
-	fakeReturns := fake.configurationReturns
-	fake.recordInvocation("Configuration", []interface{}{})
-	fake.configurationMutex.Unlock()
-	if stub != nil {
-		return stub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *ReleaseSource) ConfigurationCallCount() int {
-	fake.configurationMutex.RLock()
-	defer fake.configurationMutex.RUnlock()
-	return len(fake.configurationArgsForCall)
-}
-
-func (fake *ReleaseSource) ConfigurationCalls(stub func() cargo.ReleaseSourceConfig) {
-	fake.configurationMutex.Lock()
-	defer fake.configurationMutex.Unlock()
-	fake.ConfigurationStub = stub
-}
-
-func (fake *ReleaseSource) ConfigurationReturns(result1 cargo.ReleaseSourceConfig) {
-	fake.configurationMutex.Lock()
-	defer fake.configurationMutex.Unlock()
-	fake.ConfigurationStub = nil
-	fake.configurationReturns = struct {
-		result1 cargo.ReleaseSourceConfig
-	}{result1}
-}
-
-func (fake *ReleaseSource) ConfigurationReturnsOnCall(i int, result1 cargo.ReleaseSourceConfig) {
-	fake.configurationMutex.Lock()
-	defer fake.configurationMutex.Unlock()
-	fake.ConfigurationStub = nil
-	if fake.configurationReturnsOnCall == nil {
-		fake.configurationReturnsOnCall = make(map[int]struct {
-			result1 cargo.ReleaseSourceConfig
-		})
-	}
-	fake.configurationReturnsOnCall[i] = struct {
-		result1 cargo.ReleaseSourceConfig
-	}{result1}
 }
 
 func (fake *ReleaseSource) DownloadRelease(arg1 string, arg2 cargo.ComponentLock) (component.Local, error) {
@@ -309,17 +276,180 @@ func (fake *ReleaseSource) GetMatchedReleaseReturnsOnCall(i int, result1 cargo.C
 	}{result1, result2}
 }
 
+func (fake *ReleaseSource) ID() string {
+	fake.iDMutex.Lock()
+	ret, specificReturn := fake.iDReturnsOnCall[len(fake.iDArgsForCall)]
+	fake.iDArgsForCall = append(fake.iDArgsForCall, struct {
+	}{})
+	stub := fake.IDStub
+	fakeReturns := fake.iDReturns
+	fake.recordInvocation("ID", []interface{}{})
+	fake.iDMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ReleaseSource) IDCallCount() int {
+	fake.iDMutex.RLock()
+	defer fake.iDMutex.RUnlock()
+	return len(fake.iDArgsForCall)
+}
+
+func (fake *ReleaseSource) IDCalls(stub func() string) {
+	fake.iDMutex.Lock()
+	defer fake.iDMutex.Unlock()
+	fake.IDStub = stub
+}
+
+func (fake *ReleaseSource) IDReturns(result1 string) {
+	fake.iDMutex.Lock()
+	defer fake.iDMutex.Unlock()
+	fake.IDStub = nil
+	fake.iDReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *ReleaseSource) IDReturnsOnCall(i int, result1 string) {
+	fake.iDMutex.Lock()
+	defer fake.iDMutex.Unlock()
+	fake.IDStub = nil
+	if fake.iDReturnsOnCall == nil {
+		fake.iDReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.iDReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *ReleaseSource) IsPublishable() bool {
+	fake.isPublishableMutex.Lock()
+	ret, specificReturn := fake.isPublishableReturnsOnCall[len(fake.isPublishableArgsForCall)]
+	fake.isPublishableArgsForCall = append(fake.isPublishableArgsForCall, struct {
+	}{})
+	stub := fake.IsPublishableStub
+	fakeReturns := fake.isPublishableReturns
+	fake.recordInvocation("IsPublishable", []interface{}{})
+	fake.isPublishableMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ReleaseSource) IsPublishableCallCount() int {
+	fake.isPublishableMutex.RLock()
+	defer fake.isPublishableMutex.RUnlock()
+	return len(fake.isPublishableArgsForCall)
+}
+
+func (fake *ReleaseSource) IsPublishableCalls(stub func() bool) {
+	fake.isPublishableMutex.Lock()
+	defer fake.isPublishableMutex.Unlock()
+	fake.IsPublishableStub = stub
+}
+
+func (fake *ReleaseSource) IsPublishableReturns(result1 bool) {
+	fake.isPublishableMutex.Lock()
+	defer fake.isPublishableMutex.Unlock()
+	fake.IsPublishableStub = nil
+	fake.isPublishableReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *ReleaseSource) IsPublishableReturnsOnCall(i int, result1 bool) {
+	fake.isPublishableMutex.Lock()
+	defer fake.isPublishableMutex.Unlock()
+	fake.IsPublishableStub = nil
+	if fake.isPublishableReturnsOnCall == nil {
+		fake.isPublishableReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.isPublishableReturnsOnCall[i] = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *ReleaseSource) Type() string {
+	fake.typeMutex.Lock()
+	ret, specificReturn := fake.typeReturnsOnCall[len(fake.typeArgsForCall)]
+	fake.typeArgsForCall = append(fake.typeArgsForCall, struct {
+	}{})
+	stub := fake.TypeStub
+	fakeReturns := fake.typeReturns
+	fake.recordInvocation("Type", []interface{}{})
+	fake.typeMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ReleaseSource) TypeCallCount() int {
+	fake.typeMutex.RLock()
+	defer fake.typeMutex.RUnlock()
+	return len(fake.typeArgsForCall)
+}
+
+func (fake *ReleaseSource) TypeCalls(stub func() string) {
+	fake.typeMutex.Lock()
+	defer fake.typeMutex.Unlock()
+	fake.TypeStub = stub
+}
+
+func (fake *ReleaseSource) TypeReturns(result1 string) {
+	fake.typeMutex.Lock()
+	defer fake.typeMutex.Unlock()
+	fake.TypeStub = nil
+	fake.typeReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *ReleaseSource) TypeReturnsOnCall(i int, result1 string) {
+	fake.typeMutex.Lock()
+	defer fake.typeMutex.Unlock()
+	fake.TypeStub = nil
+	if fake.typeReturnsOnCall == nil {
+		fake.typeReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.typeReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
+}
+
 func (fake *ReleaseSource) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.configurationMutex.RLock()
-	defer fake.configurationMutex.RUnlock()
 	fake.downloadReleaseMutex.RLock()
 	defer fake.downloadReleaseMutex.RUnlock()
 	fake.findReleaseVersionMutex.RLock()
 	defer fake.findReleaseVersionMutex.RUnlock()
 	fake.getMatchedReleaseMutex.RLock()
 	defer fake.getMatchedReleaseMutex.RUnlock()
+	fake.iDMutex.RLock()
+	defer fake.iDMutex.RUnlock()
+	fake.isPublishableMutex.RLock()
+	defer fake.isPublishableMutex.RUnlock()
+	fake.typeMutex.RLock()
+	defer fake.typeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

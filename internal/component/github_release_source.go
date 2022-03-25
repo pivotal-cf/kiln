@@ -5,20 +5,21 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"github.com/Masterminds/semver"
-	"github.com/google/go-github/v40/github"
-	"golang.org/x/oauth2"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 
+	"github.com/Masterminds/semver"
+	"github.com/google/go-github/v40/github"
+	"golang.org/x/oauth2"
+
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type GithubReleaseSource struct {
-	cargo.ReleaseSourceConfig
+	cargo.GitHubReleaseSource
 	Token  string
 	Logger *log.Logger
 	Client *github.Client
@@ -26,11 +27,7 @@ type GithubReleaseSource struct {
 
 // NewGithubReleaseSource will provision a new GithubReleaseSource Project
 // from the Kilnfile (ReleaseSourceConfig). If type is incorrect it will PANIC
-func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
-
-	if c.Type != "" && c.Type != ReleaseSourceTypeGithub {
-		panic(panicMessageWrongReleaseSourceType)
-	}
+func NewGithubReleaseSource(c cargo.GitHubReleaseSource) *GithubReleaseSource {
 	if c.GithubToken == "" {
 		panic("no token passed for github release source")
 	}
@@ -44,16 +41,10 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 	githubClient := github.NewClient(tokenClient)
 
 	return &GithubReleaseSource{
-		ReleaseSourceConfig: c,
+		GitHubReleaseSource: c,
 		Logger:              log.New(os.Stdout, "[Github release source] ", log.Default().Flags()),
 		Client:              githubClient,
 	}
-}
-
-// Configuration returns the configuration of the ReleaseSource that came from the kilnfile.
-// It should not be modified.
-func (grs GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
-	return grs.ReleaseSourceConfig
 }
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
@@ -156,7 +147,7 @@ func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Cons
 // It should also calculate and set the SHA1 field on the Local result; it does not need
 // to ensure the sums match, the caller must verify this.
 func (grs GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
-	grs.Logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeGithub, grs.ID)
+	grs.Logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeGithub, grs.ID())
 	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs.Client, grs.Logger)
 }
 

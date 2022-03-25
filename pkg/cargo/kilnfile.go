@@ -62,12 +62,13 @@ func (spec ComponentSpec) UnsetStemcell() ComponentSpec {
 }
 
 type Kilnfile struct {
-	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources"`
-	Slug            string                `yaml:"slug"`
-	PreGaUserGroups []string              `yaml:"pre_ga_user_groups"`
-	Releases        []ComponentSpec       `yaml:"releases"`
-	TileNames       []string              `yaml:"tile_names"`
-	Stemcell        Stemcell              `yaml:"stemcell_criteria"`
+	Slug            string          `yaml:"slug"`
+	PreGaUserGroups []string        `yaml:"pre_ga_user_groups"`
+	Releases        []ComponentSpec `yaml:"releases"`
+	TileNames       []string        `yaml:"tile_names"`
+	Stemcell        Stemcell        `yaml:"stemcell_criteria"`
+
+	ReleaseSources ReleaseSourceList `yaml:"release_sources"`
 }
 
 func (kf Kilnfile) ComponentSpec(name string) (ComponentSpec, bool) {
@@ -81,20 +82,6 @@ func (kf Kilnfile) ComponentSpec(name string) (ComponentSpec, bool) {
 
 func ErrorSpecNotFound(name string) error {
 	return fmt.Errorf("failed to find repository with name %q in Kilnfile", name)
-}
-
-type ReleaseSourceConfig struct {
-	Type            string `yaml:"type"`
-	ID              string `yaml:"id"`
-	Publishable     bool   `yaml:"publishable"`
-	Bucket          string `yaml:"bucket"`
-	Region          string `yaml:"region"`
-	AccessKeyId     string `yaml:"access_key_id"`
-	SecretAccessKey string `yaml:"secret_access_key"`
-	PathTemplate    string `yaml:"path_template"`
-	Endpoint        string `yaml:"endpoint"`
-	Org             string `yaml:"org"`
-	GithubToken     string `yaml:"github_token"`
 }
 
 // ComponentLock represents an exact build of a bosh release

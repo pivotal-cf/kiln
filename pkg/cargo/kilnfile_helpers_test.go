@@ -28,9 +28,8 @@ func TestInterpolateAndParseKilnfile(t *testing.T) {
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 
 	please.Expect(kilnfile).To(Ω.Equal(cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSourceConfig{
-			{
-				Type:            "s3",
+		ReleaseSources: cargo.ReleaseSourceList{
+			cargo.S3ReleaseSource{
 				Bucket:          "my-bucket",
 				Region:          "middle-earth",
 				AccessKeyId:     "id",

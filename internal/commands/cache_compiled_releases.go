@@ -64,14 +64,9 @@ func NewCacheCompiledReleases() *CacheCompiledReleases {
 		Logger: log.Default(),
 	}
 	cmd.ReleaseCache = func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource {
-		releaseSourceConfig := []cargo.ReleaseSourceConfig{}
-		for i := range kilnfile.ReleaseSources {
-			if kilnfile.ReleaseSources[i].Bucket == targetID {
-				releaseSourceConfig = append(releaseSourceConfig, kilnfile.ReleaseSources[i])
-				break
-			}
+		kilnfile.ReleaseSources = cargo.ReleaseSourceList{
+			kilnfile.ReleaseSources.FindWithID(targetID),
 		}
-		kilnfile.ReleaseSources = releaseSourceConfig
 		return component.NewReleaseSourceRepo(kilnfile, cmd.Logger)
 	}
 	cmd.Bucket = func(kilnfile cargo.Kilnfile) (ReleaseCacheBucket, error) {
@@ -90,6 +85,10 @@ func (cmd *CacheCompiledReleases) WithLogger(logger *log.Logger) *CacheCompiledR
 	}
 	cmd.Logger = logger
 	return cmd
+}
+
+func errorWrongReleaseSourceType(id string, source cargo.ReleaseSource) error {
+	return fmt.Errorf("release source with id %q is not an %T but is %T", id, cargo.S3ReleaseSource{}, source)
 }
 
 func (cmd CacheCompiledReleases) Execute(args []string) error {
@@ -120,11 +119,15 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	cache := cmd.ReleaseCache(kilnfile, cmd.Options.UploadTargetID)
 
 	var cacheRemotePath string
-	for i := range kilnfile.ReleaseSources {
-		if kilnfile.ReleaseSources[i].Bucket == cmd.Options.UploadTargetID {
-			cacheRemotePath = kilnfile.ReleaseSources[i].PathTemplate
-			break
+	for _, source := range kilnfile.ReleaseSources {
+		if source.ID() != cmd.Options.UploadTargetID {
+			continue
 		}
+		rc, ok := source.(cargo.S3ReleaseSource)
+		if !ok {
+			return errorWrongReleaseSourceType(cmd.Options.UploadTargetID, source)
+		}
+		cacheRemotePath = rc.PathTemplate
 	}
 
 	for _, rel := range lock.Releases {
@@ -296,10 +299,14 @@ func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, bucket Rele
 
 func (cmd *CacheCompiledReleases) s3Bucket(kilnfile cargo.Kilnfile) (component.S3ReleaseSource, error) {
 	for _, source := range kilnfile.ReleaseSources {
-		if source.ID != cmd.Options.UploadTargetID {
+		if source.ID() != cmd.Options.UploadTargetID {
 			continue
 		}
-		return component.NewS3ReleaseSourceFromConfig(source, cmd.Logger), nil
+		rs, ok := source.(cargo.S3ReleaseSource)
+		if !ok {
+			return component.S3ReleaseSource{}, errorWrongReleaseSourceType(cmd.Options.UploadTargetID, source)
+		}
+		return component.NewS3ReleaseSourceFromConfig(rs, cmd.Logger), nil
 	}
 	return component.S3ReleaseSource{}, errors.New("release source not found")
 }

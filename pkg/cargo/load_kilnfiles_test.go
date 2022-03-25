@@ -92,9 +92,8 @@ path_template: "not-used"
 			kilnfile, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kilnfile).To(Equal(cargo.Kilnfile{
-				ReleaseSources: []cargo.ReleaseSourceConfig{
-					{
-						Type:            "s3",
+				ReleaseSources: cargo.ReleaseSourceList{
+					cargo.S3ReleaseSource{
 						Bucket:          "my-bucket",
 						Region:          "middle-earth",
 						AccessKeyId:     "id",
