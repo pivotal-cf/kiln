@@ -37,9 +37,8 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]Local, er
 	}
 
 	for _, rel := range rawReleases {
-		releaseManifest := rel.Metadata.(builder.ReleaseManifest)
-
-		lock := Lock{Name: releaseManifest.Name, Version: releaseManifest.Version}
+		rm := rel.Metadata.(builder.ReleaseManifest)
+		lock := Lock{Name: rm.Name, Version: rm.Version, StemcellOS: rm.StemcellOS, StemcellVersion: rm.StemcellVersion }
 
 		lock.SHA1, err = CalculateSum(rel.File, osfs.New(""))
 		if err != nil {
