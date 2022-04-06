@@ -66,7 +66,6 @@ Usage: kiln [options] <command> [<args>]
 Commands:
   bake                     bakes a tile
   cache-compiled-releases  Cache compiled releases
-  compile-built-releases   compiles built releases and uploads them
   fetch                    fetches releases
   find-release-version     prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints
   find-stemcell-version    prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile
