@@ -188,8 +188,6 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		}
 	}()
 
-	osVersionSlug := boshdir.NewOSVersionSlug(stagedStemcellOS, stagedStemcellVersion)
-
 	deployment, err := bosh.FindDeployment(deploymentName)
 	if err != nil {
 		return err
@@ -210,9 +208,9 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			StemcellVersion: stagedStemcellVersion,
 		}
 
-		newRemote, err := cmd.cacheRelease(bosh, releaseCache, deployment, requirement, osVersionSlug)
+		newRemote, err := cmd.cacheRelease(bosh, releaseCache, deployment, requirement)
 		if err != nil {
-			cmd.Logger.Printf("\tfailed to cache release %s/%s for %s: %s\n", rel.Name, rel.Version, osVersionSlug, err)
+			cmd.Logger.Printf("\tfailed to cache release %s for %s: %s\n", requirement.ReleaseSlug(), requirement.OSVersionSlug(), err)
 			continue
 		}
 
@@ -268,14 +266,14 @@ func (cmd CacheCompiledReleases) fetchProductDeploymentData() (_ OpsManagerRelea
 	return omAPI, manifest.Name, stagedStemcell.OS, stagedStemcell.Version, nil
 }
 
-func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc ReleaseCache, deployment boshdir.Deployment, req component.Spec, osVersionSlug boshdir.OSVersionSlug) (component.Lock, error) {
-	cmd.Logger.Printf("\texporting %s %s\n", req.Name, req.Version)
-	result, err := deployment.ExportRelease(boshdir.NewReleaseSlug(req.Name, req.Version), osVersionSlug, nil)
+func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc ReleaseCache, deployment boshdir.Deployment, req component.Spec) (component.Lock, error) {
+	cmd.Logger.Printf("\texporting %s\n", req.ReleaseSlug())
+	result, err := deployment.ExportRelease(req.ReleaseSlug(), req.OSVersionSlug(), nil)
 	if err != nil {
 		return component.Lock{}, err
 	}
 
-	cmd.Logger.Printf("\tdownloading %s %s\n", req.Name, req.Version)
+	cmd.Logger.Printf("\tdownloading %s\n", req.ReleaseSlug())
 	releaseFilePath, _, sha1sum, err := cmd.saveReleaseLocally(bosh, cmd.Options.ReleasesDir, req, result)
 	if err != nil {
 		return component.Lock{}, err
@@ -298,9 +296,9 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 			continue
 		}
 
-		sha1 := release.SHA1
+		digest := release.SHA1
 		if releaseLock.RemoteSource == targetID {
-			sha1 = releaseLock.SHA1
+			digest = releaseLock.SHA1
 		}
 
 		lock.Releases[index] = cargo.ComponentLock{
@@ -308,7 +306,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 			Version:      release.Version,
 			RemoteSource: release.RemoteSource,
 			RemotePath:   release.RemotePath,
-			SHA1:         sha1,
+			SHA1:         digest,
 		}
 		return nil
 	}

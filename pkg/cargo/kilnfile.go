@@ -3,6 +3,7 @@ package cargo
 import (
 	"errors"
 	"fmt"
+	boshdir "github.com/cloudfoundry/bosh-cli/director"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -53,6 +54,14 @@ func (spec ComponentSpec) Lock() ComponentLock {
 		StemcellOS:      spec.StemcellOS,
 		StemcellVersion: spec.StemcellVersion,
 	}
+}
+
+func (spec ComponentSpec) OSVersionSlug() boshdir.OSVersionSlug {
+	return boshdir.NewOSVersionSlug(spec.StemcellOS, spec.StemcellVersion)
+}
+
+func (spec ComponentSpec) ReleaseSlug() boshdir.ReleaseSlug {
+	return boshdir.NewReleaseSlug(spec.Name, spec.Version)
 }
 
 func (spec ComponentSpec) UnsetStemcell() ComponentSpec {
