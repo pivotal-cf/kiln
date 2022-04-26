@@ -42,8 +42,7 @@ var _ = Describe("Parse", func() {
 	})
 })
 
-type erroringReader struct {
-}
+type erroringReader struct{}
 
 func (r erroringReader) Read(p []byte) (n int, err error) {
 	return 0, errors.New("failed to read")

@@ -74,7 +74,6 @@ stemcell_criteria:
 		})
 
 		JustBeforeEach(func() {
-
 			_, requestErr = pivnet.Do(simpleRequest)
 			Expect(requestErr).NotTo(HaveOccurred())
 
@@ -83,11 +82,11 @@ stemcell_criteria:
 
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
 
-			err = ioutil.WriteFile(someKilnfilePath, []byte(kilnfileContents), 0644)
+			err = ioutil.WriteFile(someKilnfilePath, []byte(kilnfileContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			someKilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
-			err = ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0644)
+			err = ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			findStemcellVersion = commands.NewFindStemcellVersion(logger, &pivnet)

@@ -112,7 +112,7 @@ var _ = Describe("Zipper", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(contents).To(Equal([]byte("file contents")))
-			Expect(reader.File[0].FileHeader.Mode()).To(Equal(os.FileMode(0666)))
+			Expect(reader.File[0].FileHeader.Mode()).To(Equal(os.FileMode(0o666)))
 			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", time.Now(), time.Minute))
 		})
 
@@ -146,7 +146,7 @@ var _ = Describe("Zipper", func() {
 			zipper := builder.NewZipper()
 			zipper.SetWriter(tileFile)
 
-			err := zipper.AddWithMode("some/path/to/file.txt", strings.NewReader("file contents"), 0644)
+			err := zipper.AddWithMode("some/path/to/file.txt", strings.NewReader("file contents"), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			err = zipper.Close()
@@ -165,7 +165,7 @@ var _ = Describe("Zipper", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(contents).To(Equal([]byte("file contents")))
-			Expect(reader.File[0].FileHeader.Mode()).To(Equal(os.FileMode(0644)))
+			Expect(reader.File[0].FileHeader.Mode()).To(Equal(os.FileMode(0o644)))
 			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", time.Now(), time.Minute))
 		})
 

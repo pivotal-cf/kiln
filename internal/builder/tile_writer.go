@@ -192,7 +192,7 @@ func (w TileWriter) addEmbeddedPath(pathToEmbed, outputFile string) error {
 
 		relativePath, err := filepath.Rel(pathToEmbed, filePath)
 		if err != nil {
-			return err //not tested
+			return err // not tested
 		}
 
 		entryPath := filepath.Join("embed", filepath.Join(filepath.Base(pathToEmbed), relativePath))
@@ -231,7 +231,6 @@ func (w TileWriter) addMigrations(migrationsDir []string, outputFile string) err
 
 			return w.addToZipper(filepath.Join("migrations", "v1", filepath.Base(filePath)), file, outputFile)
 		})
-
 		if err != nil {
 			return err
 		}

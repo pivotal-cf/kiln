@@ -36,14 +36,14 @@ var _ = Describe("MetadataPartsDirectoryReader", func() {
 - name: variable-2
   alias: variable-2-alias
   type: user
-`), 0755)
+`), 0o755)
 			Expect(err).ToNot(HaveOccurred())
 			err = ioutil.WriteFile(filepath.Join(tempDir, "vars-file-2.yml"), []byte(`---
 name: variable-3
 type: password
-`), 0755)
+`), 0o755)
 			Expect(err).ToNot(HaveOccurred())
-			err = ioutil.WriteFile(filepath.Join(tempDir, "ignores.any-other-extension"), []byte("not-yaml"), 0755)
+			err = ioutil.WriteFile(filepath.Join(tempDir, "ignores.any-other-extension"), []byte("not-yaml"), 0o755)
 			Expect(err).ToNot(HaveOccurred())
 
 			reader = builder.NewMetadataPartsDirectoryReader()
@@ -90,7 +90,7 @@ type: password
 
 		Context("when there is an error reading from a file", func() {
 			It("errors", func() {
-				err := ioutil.WriteFile(filepath.Join(tempDir, "unreadable-file.yml"), []byte(`unused`), 0000)
+				err := ioutil.WriteFile(filepath.Join(tempDir, "unreadable-file.yml"), []byte(`unused`), 0o000)
 				Expect(err).ToNot(HaveOccurred())
 				_, err = reader.Read(tempDir)
 				Expect(err).To(HaveOccurred())
@@ -100,7 +100,7 @@ type: password
 
 		Context("when a yaml file is malformed", func() {
 			It("errors", func() {
-				err := ioutil.WriteFile(filepath.Join(tempDir, "not-valid-yaml.yml"), []byte(`{{`), 0755)
+				err := ioutil.WriteFile(filepath.Join(tempDir, "not-valid-yaml.yml"), []byte(`{{`), 0o755)
 				Expect(err).ToNot(HaveOccurred())
 
 				_, err = reader.Read(tempDir)
@@ -110,7 +110,7 @@ type: password
 
 		Context("when file contains an array item without a name", func() {
 			BeforeEach(func() {
-				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`[{foo: bar}]`), 0755)
+				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`[{foo: bar}]`), 0o755)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -123,7 +123,7 @@ type: password
 
 		Context("when variable file contains a map item without a name", func() {
 			BeforeEach(func() {
-				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`{foo: bar}`), 0755)
+				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`{foo: bar}`), 0o755)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -142,7 +142,7 @@ variable_order:
 - variable-3
 - variable-2
 - variable-1
-`), 0755)
+`), 0o755)
 			Expect(err).ToNot(HaveOccurred())
 			err = ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`---
 variables:
@@ -150,15 +150,15 @@ variables:
   type: certificate
 - name: variable-2
   type: user
-`), 0755)
+`), 0o755)
 			Expect(err).ToNot(HaveOccurred())
 			err = ioutil.WriteFile(filepath.Join(tempDir, "vars-file-2.yml"), []byte(`---
 variables:
 - name: variable-3
   type: password
-`), 0755)
+`), 0o755)
 			Expect(err).ToNot(HaveOccurred())
-			err = ioutil.WriteFile(filepath.Join(tempDir, "ignores.any-other-extension"), []byte("not-yaml"), 0755)
+			err = ioutil.WriteFile(filepath.Join(tempDir, "ignores.any-other-extension"), []byte("not-yaml"), 0o755)
 			Expect(err).ToNot(HaveOccurred())
 
 			reader = builder.NewMetadataPartsDirectoryReaderWithTopLevelKey("variables")
@@ -200,7 +200,7 @@ variables:
 		Context("failure cases", func() {
 			Context("when a yaml file does not contain the top-level key", func() {
 				It("errors", func() {
-					err := ioutil.WriteFile(filepath.Join(tempDir, "not-a-vars-file.yml"), []byte(`constants: []`), 0755)
+					err := ioutil.WriteFile(filepath.Join(tempDir, "not-a-vars-file.yml"), []byte(`constants: []`), 0o755)
 					Expect(err).ToNot(HaveOccurred())
 
 					_, err = reader.Read(tempDir)
@@ -212,7 +212,7 @@ variables:
 
 		Context("when variable file is neither a slice or a map", func() {
 			BeforeEach(func() {
-				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`variables: foo`), 0755)
+				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`variables: foo`), 0o755)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -225,7 +225,7 @@ variables:
 
 		Context("when variable file contains an invalid item", func() {
 			BeforeEach(func() {
-				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`variables: [foo]`), 0755)
+				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`variables: [foo]`), 0o755)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -238,7 +238,7 @@ variables:
 
 		Context("when variable file contains an array item without a name", func() {
 			BeforeEach(func() {
-				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`variables: [{foo: bar}]`), 0755)
+				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`variables: [{foo: bar}]`), 0o755)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -251,7 +251,7 @@ variables:
 
 		Context("when variable file contains a map item without a name", func() {
 			BeforeEach(func() {
-				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`variables: {foo: bar}`), 0755)
+				err := ioutil.WriteFile(filepath.Join(tempDir, "vars-file-1.yml"), []byte(`variables: {foo: bar}`), 0o755)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -314,7 +314,7 @@ variables:
 
 				Context("when _order.yml file is not in valid format", func() {
 					BeforeEach(func() {
-						err := ioutil.WriteFile(filepath.Join(tempDir, "_order.yml"), []byte(`variable_order: foo`), 0755)
+						err := ioutil.WriteFile(filepath.Join(tempDir, "_order.yml"), []byte(`variable_order: foo`), 0o755)
 						Expect(err).ToNot(HaveOccurred())
 					})
 
@@ -337,7 +337,7 @@ variables:
 
 				Context("when _order.yml file contains a name that does not exist", func() {
 					BeforeEach(func() {
-						err := ioutil.WriteFile(filepath.Join(tempDir, "_order.yml"), []byte(`variable_order: [some-file]`), 0755)
+						err := ioutil.WriteFile(filepath.Join(tempDir, "_order.yml"), []byte(`variable_order: [some-file]`), 0o755)
 						Expect(err).ToNot(HaveOccurred())
 					})
 

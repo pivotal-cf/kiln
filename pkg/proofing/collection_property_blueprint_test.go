@@ -61,5 +61,4 @@ var _ = Describe("CollectionPropertyBlueprint", func() {
 			})
 		})
 	})
-
 })

@@ -36,7 +36,7 @@ var _ = Describe("fetch", func() {
 
 		varsFilePath = filepath.Join(tmpDir, "variables.yml")
 		Expect(
-			ioutil.WriteFile(varsFilePath, []byte(varsFileContents), 0600),
+			ioutil.WriteFile(varsFilePath, []byte(varsFileContents), 0o600),
 		).To(Succeed())
 	})
 

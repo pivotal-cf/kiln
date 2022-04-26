@@ -42,7 +42,6 @@ func (ss StemcellService) FromDirectories(directories []string) (stemcell map[st
 
 			return nil
 		}))
-
 		if err != nil {
 			return nil, err
 		}

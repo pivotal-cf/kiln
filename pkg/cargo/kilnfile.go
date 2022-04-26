@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	boshdir "github.com/cloudfoundry/bosh-cli/director"
+
 	"github.com/Masterminds/semver"
 )
 

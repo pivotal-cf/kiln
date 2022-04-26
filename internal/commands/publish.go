@@ -375,7 +375,6 @@ func endOfSupportFor(publishDate time.Time) string {
 }
 
 func (p Publish) attachLicenseFile(slug string, releaseID int, version *releaseVersion) (string, error) {
-
 	if version.IsGA() {
 		productFiles, err := p.PivnetProductFilesService.List(slug)
 		if err != nil {

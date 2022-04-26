@@ -199,7 +199,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 
 	cmd.Logger.Printf("exporting from bosh deployment %s\n", deploymentName)
 
-	err = cmd.FS.MkdirAll(cmd.Options.ReleasesDir, 0777)
+	err = cmd.FS.MkdirAll(cmd.Options.ReleasesDir, 0o777)
 	if err != nil {
 		return fmt.Errorf("failed to create release directory: %w", err)
 	}

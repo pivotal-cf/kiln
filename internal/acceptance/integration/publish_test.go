@@ -88,8 +88,8 @@ pre_ga_user_groups:
 		initialDir, _ = os.Getwd()
 		err = os.Chdir(tmpDir)
 		Expect(err).NotTo(HaveOccurred())
-		_ = ioutil.WriteFile("version", []byte(releaseVersion), 0777)
-		_ = ioutil.WriteFile("Kilnfile", []byte(kilnfileBody), 0777)
+		_ = ioutil.WriteFile("version", []byte(releaseVersion), 0o777)
+		_ = ioutil.WriteFile("Kilnfile", []byte(kilnfileBody), 0o777)
 	})
 
 	AfterEach(func() {

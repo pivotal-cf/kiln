@@ -24,8 +24,7 @@ func (err ConfigFileError) Error() string {
 	return fmt.Sprintf("encountered a configuration file error with %s: %s", err.HumanReadableConfigFileName, err.err.Error())
 }
 
-type KilnfileLoader struct {
-}
+type KilnfileLoader struct{}
 
 func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (Kilnfile, KilnfileLock, error) {
 	templateVariablesService := baking.NewTemplateVariablesService(fs)

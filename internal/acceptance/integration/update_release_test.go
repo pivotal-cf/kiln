@@ -40,7 +40,7 @@ var _ = Context("Updating a release to a specific version", func() {
 		releasesPath = filepath.Join(tmpDir, "releases")
 
 		Expect(
-			os.Mkdir(releasesPath, 0700),
+			os.Mkdir(releasesPath, 0o700),
 		).To(Succeed())
 	})
 
@@ -52,11 +52,11 @@ var _ = Context("Updating a release to a specific version", func() {
 
 	JustBeforeEach(func() {
 		Expect(
-			ioutil.WriteFile(kilnfilePath, []byte(kilnfileContents), 0600),
+			ioutil.WriteFile(kilnfilePath, []byte(kilnfileContents), 0o600),
 		).To(Succeed())
 
 		Expect(
-			ioutil.WriteFile(kilnfileLockPath, []byte(previousKilnfileLock), 0600),
+			ioutil.WriteFile(kilnfileLockPath, []byte(previousKilnfileLock), 0o600),
 		).To(Succeed())
 	})
 
@@ -184,7 +184,7 @@ stemcell_criteria:
 			varsFilePath = filepath.Join(tmpDir, "variables.yml")
 
 			Expect(
-				ioutil.WriteFile(varsFilePath, []byte(varsFileContents), 0600),
+				ioutil.WriteFile(varsFilePath, []byte(varsFileContents), 0o600),
 			).To(Succeed())
 		})
 

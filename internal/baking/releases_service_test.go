@@ -117,7 +117,7 @@ var _ = Describe("ReleasesService", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			nestedDir = filepath.Join(tempDir, "nested")
-			Expect(os.Mkdir(nestedDir, 0700)).To(Succeed())
+			Expect(os.Mkdir(nestedDir, 0o700)).To(Succeed())
 
 			file, err := ioutil.TempFile("", "")
 			Expect(err).NotTo(HaveOccurred())

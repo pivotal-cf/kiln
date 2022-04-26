@@ -77,9 +77,7 @@ var _ = Describe("ReleaseSourceList", func() {
 				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
 
 				Expect(releaseSources).To(HaveLen(1))
-				var (
-					boshIOReleaseSource *component.BOSHIOReleaseSource
-				)
+				var boshIOReleaseSource *component.BOSHIOReleaseSource
 
 				Expect(releaseSources[0]).To(BeAssignableToTypeOf(boshIOReleaseSource))
 				Expect(releaseSources[0].(*component.BOSHIOReleaseSource).Publishable()).To(BeTrue())
@@ -145,13 +143,19 @@ var _ = Describe("ReleaseSourceList", func() {
 			BeforeEach(func() {
 				kilnfile = cargo.Kilnfile{
 					ReleaseSources: []cargo.ReleaseSourceConfig{
-						{Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
-							PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`},
-						{Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
-							PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}.tgz`},
+						{
+							Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
+							PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+						},
+						{
+							Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+							PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}.tgz`,
+						},
 						{Type: "bosh.io"},
-						{Type: "s3", Bucket: "bucket-3", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
-							PathTemplate: `{{.Name}}-{{.Version}}.tgz`},
+						{
+							Type: "s3", Bucket: "bucket-3", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+							PathTemplate: `{{.Name}}-{{.Version}}.tgz`,
+						},
 					},
 				}
 			})
@@ -182,13 +186,19 @@ var _ = Describe("ReleaseSourceList", func() {
 			BeforeEach(func() {
 				kilnfile = cargo.Kilnfile{
 					ReleaseSources: []cargo.ReleaseSourceConfig{
-						{Publishable: true, Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
-							PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`},
-						{Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
-							PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}.tgz`},
+						{
+							Publishable: true, Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
+							PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+						},
+						{
+							Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+							PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}.tgz`,
+						},
 						{Type: "bosh.io"},
-						{Type: "s3", Bucket: "bucket-3", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
-							PathTemplate: `{{.Name}}-{{.Version}}.tgz`},
+						{
+							Type: "s3", Bucket: "bucket-3", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+							PathTemplate: `{{.Name}}-{{.Version}}.tgz`,
+						},
 					},
 				}
 			})
@@ -218,13 +228,19 @@ var _ = Describe("ReleaseSourceList", func() {
 		BeforeEach(func() {
 			kilnfile = cargo.Kilnfile{
 				ReleaseSources: []cargo.ReleaseSourceConfig{
-					{Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
-						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`},
-					{Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
-						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}.tgz`},
+					{
+						Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
+						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+					},
+					{
+						Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}.tgz`,
+					},
 					{Type: "bosh.io"},
-					{Type: "s3", Bucket: "bucket-3", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
-						PathTemplate: `{{.Name}}-{{.Version}}.tgz`},
+					{
+						Type: "s3", Bucket: "bucket-3", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+						PathTemplate: `{{.Name}}-{{.Version}}.tgz`,
+					},
 				},
 			}
 		})
@@ -286,13 +302,19 @@ var _ = Describe("ReleaseSourceList", func() {
 		BeforeEach(func() {
 			kilnfile = cargo.Kilnfile{
 				ReleaseSources: []cargo.ReleaseSourceConfig{
-					{Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
-						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`},
-					{Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
-						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}.tgz`},
+					{
+						Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
+						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+					},
+					{
+						Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}.tgz`,
+					},
 					{Type: "bosh.io"},
-					{Type: "s3", Bucket: "bucket-3", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
-						PathTemplate: `{{.Name}}-{{.Version}}.tgz`},
+					{
+						Type: "s3", Bucket: "bucket-3", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
+						PathTemplate: `{{.Name}}-{{.Version}}.tgz`,
+					},
 				},
 			}
 		})

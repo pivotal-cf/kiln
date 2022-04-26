@@ -28,9 +28,7 @@ func Test_fetch(t *testing.T) {
 	repo, _ := git.Init(memory.NewStorage(), memfs.New())
 
 	revisionResolver := new(fakes.RevisionResolver)
-	var (
-		initialHash, finalHash plumbing.Hash
-	)
+	var initialHash, finalHash plumbing.Hash
 	fill(initialHash[:], '1')
 	fill(finalHash[:], '9')
 	revisionResolver.ResolveRevisionReturnsOnCall(0, &initialHash, nil)

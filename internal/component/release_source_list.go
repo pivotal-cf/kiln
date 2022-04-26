@@ -3,8 +3,9 @@ package component
 import (
 	"errors"
 	"fmt"
-	"github.com/Masterminds/semver"
 	"log"
+
+	"github.com/Masterminds/semver"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )

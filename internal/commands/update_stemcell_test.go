@@ -250,7 +250,6 @@ var _ = Describe("UpdateStemcell", func() {
 				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", "34$5235.32235"})
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("Please enter a valid stemcell version to update"))
-
 			})
 		})
 

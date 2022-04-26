@@ -169,7 +169,6 @@ pre_ga_user_groups:
 					Expect(outLoggerBuffer.String()).To(ContainSubstring(userGroup2Name))
 
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Successfully published tile."))
-
 				})
 
 				Context("when previous alphas have been published", func() {
@@ -622,7 +621,6 @@ pre_ga_user_groups:
 					})
 				})
 			})
-
 		})
 
 		When("the sad/unhappy case", func() {
@@ -971,7 +969,6 @@ pre_ga_user_groups:
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring(userGroup1Name)))
 				})
-
 			})
 
 			When("upgrade path is empty", func() {

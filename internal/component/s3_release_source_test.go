@@ -295,7 +295,6 @@ var _ = Describe("S3ReleaseSource", func() {
 		)
 		When("version is semantic and release has version constraint", func() {
 			BeforeEach(func() {
-
 				releaseID = component.Spec{Name: "uaa", Version: "1.1.1"}
 				desiredRelease = component.Spec{
 					Name:            "uaa",

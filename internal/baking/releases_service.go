@@ -55,7 +55,6 @@ func (s ReleasesService) ReleasesInDirectory(directoryPath string) ([]builder.Pa
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

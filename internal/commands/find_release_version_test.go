@@ -58,10 +58,10 @@ releases:
   source: bosh.io`
 
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-			err = ioutil.WriteFile(someKilnfilePath, []byte(kilnContents), 0644)
+			err = ioutil.WriteFile(someKilnfilePath, []byte(kilnContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 			someKilnfileLockPath := filepath.Join(tmpDir, "Kilnfile.lock")
-			err = ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0644)
+			err = ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

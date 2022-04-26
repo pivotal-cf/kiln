@@ -19,7 +19,6 @@ const (
 
 // Pivnet handles kiln specific request to network.pivotal.io
 type Pivnet struct {
-
 	// UAAAPIToken should be set with the token for the "UAA API Token Workflow"
 	// See: https://network.pivotal.io/docs/api#authentication
 	UAAAPIToken string
@@ -54,7 +53,6 @@ func (pivnet *Pivnet) StemcellVersion(slug string, majorStemcellVersion string) 
 	}
 
 	getURL, err := url.PathUnescape(locator.String())
-
 	if err != nil {
 		return "", ErrDecodingURLRequest
 	}
@@ -65,7 +63,6 @@ func (pivnet *Pivnet) StemcellVersion(slug string, majorStemcellVersion string) 
 	}
 
 	response, err := pivnet.Do(req)
-
 	if err != nil {
 		return "", err
 	}

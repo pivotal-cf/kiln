@@ -137,7 +137,6 @@ func TestReleaseNotes_Execute(t *testing.T) {
 	})
 
 	t.Run("when updating a docs file", func(t *testing.T) {
-
 	})
 }
 

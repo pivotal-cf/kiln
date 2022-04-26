@@ -88,7 +88,6 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []Local, noCo
 func (l LocalReleaseDirectory) deleteReleases(releasesToDelete []Local) error {
 	for _, release := range releasesToDelete {
 		err := os.Remove(release.LocalPath)
-
 		if err != nil {
 			l.logger.Printf("error removing release %s: %v\n", release.Name, err)
 			return fmt.Errorf("failed to delete release %s", release.Name)

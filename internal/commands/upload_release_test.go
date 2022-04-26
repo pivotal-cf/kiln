@@ -126,7 +126,7 @@ compiled_packages:
 
 			When("the release version is not a finalized release", func() {
 				var err error
-				var devReleases = []struct {
+				devReleases := []struct {
 					tarballName string
 					version     string
 				}{

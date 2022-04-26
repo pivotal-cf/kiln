@@ -139,7 +139,6 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
 		Releases: []cargo.ComponentLock{
 			{
-
 				Name:    "orange",
 				Version: "1.0.0",
 
@@ -147,7 +146,6 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 				RemotePath:   "orange-1.0.0",
 			},
 			{
-
 				Name:    "banana",
 				Version: "2.0.0",
 
@@ -155,7 +153,6 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 				RemotePath:   "banana-2.0.0-alpine-9.0.0",
 			},
 			{
-
 				Name:    "lemon",
 				Version: "3.0.0",
 
@@ -194,7 +191,6 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	bucket.UploadReleaseCalls(func(_ component.Spec, reader io.Reader) (component.Lock, error) {
 		_, _ = io.Copy(&uploadedRelease, reader)
 		return component.Lock{
-
 			Name: "lemon", Version: "3.0.0",
 
 			RemoteSource: "cached-compiled-releases",
@@ -285,7 +281,6 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	initialLock := cargo.KilnfileLock{
 		Releases: []component.Lock{
 			{
-
 				Name:    "orange",
 				Version: "1.0.0",
 
@@ -293,7 +288,6 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 				RemotePath:   "orange-1.0.0",
 			},
 			{
-
 				Name:    "banana",
 				Version: "2.0.0",
 
@@ -301,7 +295,6 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 				RemotePath:   "banana-2.0.0-alpine-9.0.0",
 			},
 			{
-
 				Name:    "lemon",
 				Version: "3.0.0",
 
@@ -366,7 +359,6 @@ func fakeCacheData(spec component.Spec) (component.Lock, error) {
 	switch spec.Lock() {
 	case component.Lock{Name: "orange", Version: "1.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
 		return component.Lock{
-
 			Name: "orange", Version: "1.0.0",
 
 			RemoteSource: "cached-compiled-releases",
@@ -374,7 +366,6 @@ func fakeCacheData(spec component.Spec) (component.Lock, error) {
 		}, nil
 	case component.Lock{Name: "banana", Version: "2.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
 		return component.Lock{
-
 			Name: "banana", Version: "2.0.0",
 
 			RemoteSource: "cached-compiled-releases",

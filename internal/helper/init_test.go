@@ -2,11 +2,10 @@ package helper_test
 
 import (
 	"bytes"
+	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestHelper(t *testing.T) {
