@@ -184,6 +184,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 		_, _ = writer.Write(releaseInBlobstore)
 		return nil
 	})
+	bosh.HasReleaseReturns(true, nil)
 
 	releaseCache := new(fakes.ReleaseCache)
 	var uploadedRelease bytes.Buffer
@@ -250,6 +251,128 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 		RemoteSource: "cached-compiled-releases",
 		RemotePath:   "lemon-3.0.0-alpine-9.0.0",
 	}))
+}
+
+// this test covers
+// - when a release is compiled with a stemcell that is not the one in the Kilnfile.lock (aka the compilation target)
+// - the deployment succeeds because the stemcell major lines are the same/compatible
+// - export release returns a broken bosh release because we requested the wrong compilation target and the director didn't have the source code necessarily to re-compile against the requested stemcell
+// - (ideally bosh export-rlease should return an error but in this case it doesn't so we are just checking for a release with the correct stemcell before downloading a bad one)
+func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_correct_stemcell(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	// setup
+
+	fs := memfs.New()
+
+	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
+		ReleaseSources: []cargo.ReleaseSourceConfig{
+			{
+				ID:           "cached-compiled-releases",
+				Publishable:  true,
+				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
+			},
+			{
+				ID:           "new-releases",
+				Publishable:  false,
+				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
+			},
+		},
+	})).NotTo(Ω.HaveOccurred())
+	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
+		Releases: []cargo.ComponentLock{
+			{
+				Name:    "banana",
+				Version: "2.0.0",
+
+				RemoteSource: "cached-compiled-releases",
+				RemotePath:   "banana-2.0.0-alpine-5.5.5",
+			},
+		},
+		Stemcell: cargo.Stemcell{
+			OS:      "alpine",
+			Version: "8.0.0",
+		},
+	})).NotTo(Ω.HaveOccurred())
+
+	opsManager := new(fakes.OpsManagerReleaseCacheSource)
+	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "8.0.0"}]}`, nil)
+
+	cache := new(componentFakes.MultiReleaseSource)
+	cache.GetMatchedReleaseCalls(fakeCacheData)
+
+	releaseInBlobstore := []byte(`lemon-release-buffer`)
+
+	deployment := new(boshdirFakes.FakeDeployment)
+	bosh := new(boshdirFakes.FakeDirector)
+	bosh.FindDeploymentReturns(deployment, nil)
+	bosh.HasReleaseReturns(false, nil)
+	deployment.ExportReleaseReturns(director.ExportReleaseResult{}, nil)
+	bosh.DownloadResourceUncheckedCalls(func(_ string, writer io.Writer) error {
+		_, _ = writer.Write(releaseInBlobstore)
+		return nil
+	})
+
+	bucket := new(fakes.ReleaseCacheBucket)
+	bucket.UploadReleaseCalls(func(_ component.Spec, reader io.Reader) (component.Lock, error) {
+		return component.Lock{}, nil
+	})
+
+	var output bytes.Buffer
+	logger := log.New(&output, "", 0)
+
+	cmd := commands.CacheCompiledReleases{
+		FS:     fs,
+		Logger: logger,
+		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
+			return bucket, nil
+		},
+		ReleaseCache: func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource {
+			return cache
+		},
+		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
+			return opsManager, nil
+		},
+		Director: func(configuration om.ClientConfiguration, provider om.GetBoshEnvironmentAndSecurityRootCACertificateProvider) (director.Director, error) {
+			return bosh, nil
+		},
+	}
+
+	// run
+
+	err := cmd.Execute([]string{
+		"--upload-target-id", "cached-compiled-releases",
+	})
+
+	// check
+
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+
+	{
+		requestedReleaseName, requestedReleaseVersion, requestedStemcellSlug := bosh.HasReleaseArgsForCall(0)
+		please.Expect(requestedReleaseName).To(Ω.Equal("banana"))
+		please.Expect(requestedReleaseVersion).To(Ω.Equal("2.0.0"))
+		please.Expect(requestedStemcellSlug.Version()).To(Ω.Equal("8.0.0"))
+		please.Expect(requestedStemcellSlug.OS()).To(Ω.Equal("alpine"))
+	}
+
+	please.Expect(output.String()).To(Ω.ContainSubstring("not publishable"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("not found in cache"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
+	please.Expect(output.String()).NotTo(Ω.ContainSubstring("exporting lemon"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("not found on bosh director"))
+	please.Expect(output.String()).NotTo(Ω.ContainSubstring("uploading lemon"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
+
+	var updatedKilnfile cargo.KilnfileLock
+	please.Expect(fsReadYAML(fs, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
+	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(component.Lock{
+		Name:    "banana",
+		Version: "2.0.0",
+
+		RemoteSource: "cached-compiled-releases",
+		RemotePath:   "banana-2.0.0-alpine-5.5.5",
+	}), "it should not override the in-correct element in the Kilnfile.lock")
 }
 
 // this test ensures make it so the we don't have to iterate over all the releases
@@ -366,7 +489,8 @@ func fakeCacheData(spec component.Spec) (component.Lock, error) {
 			RemoteSource: "cached-compiled-releases",
 			RemotePath:   "banana-2.0.0-alpine-9.0.0",
 		}, nil
-	case component.Lock{Name: "lemon", Version: "3.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
+	case component.Lock{Name: "lemon", Version: "3.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"},
+		component.Lock{Name: "banana", Version: "2.0.0", StemcellOS: "alpine", StemcellVersion: "8.0.0"}:
 		return component.Lock{}, component.ErrNotFound
 	}
 

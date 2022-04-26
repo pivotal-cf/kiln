@@ -208,6 +208,13 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			StemcellVersion: stagedStemcellVersion,
 		}
 
+		if hasRelease, err := bosh.HasRelease(rel.Name, rel.Version, requirement.OSVersionSlug()); err != nil {
+			return fmt.Errorf("failed to find release %s: %w", requirement.ReleaseSlug(), err)
+		} else if !hasRelease {
+			cmd.Logger.Printf("\tWARNING: %[1]s compiled with %[2]s is not found on bosh director (it might have been uploaded as a compiled release and the director can't recompile it for the compilation target %[2]s)\n", requirement.ReleaseSlug(), requirement.OSVersionSlug())
+			continue
+		}
+
 		newRemote, err := cmd.cacheRelease(bosh, releaseCache, deployment, requirement)
 		if err != nil {
 			cmd.Logger.Printf("\tfailed to cache release %s for %s: %s\n", requirement.ReleaseSlug(), requirement.OSVersionSlug(), err)
