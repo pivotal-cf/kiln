@@ -393,7 +393,7 @@ var _ = Describe("Bake", func() {
 				var err error
 				otherVariableFile, err = ioutil.TempFile(tmpDir, "variables-file")
 				Expect(err).NotTo(HaveOccurred())
-				defer func() { _ = otherVariableFile.Close() }()
+				defer closeAndIgnoreError(otherVariableFile)
 
 				variables := map[string]string{
 					"some-variable-from-file":       "override-variable-from-other-file",

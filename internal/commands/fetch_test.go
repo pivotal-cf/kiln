@@ -424,9 +424,7 @@ stemcell_criteria:
 					fakeS3BuiltReleaseSource.DownloadReleaseCalls(func(string, component.Lock) (component.Local, error) {
 						f, err := os.Create(badReleasePath)
 						Expect(err).NotTo(HaveOccurred())
-						defer func() {
-							_ = f.Close()
-						}()
+						defer closeAndIgnoreError(f)
 
 						return component.Local{
 							Lock: missingReleaseS3BuiltID.Lock().WithSHA1("wrong-sha"), LocalPath: badReleasePath,
@@ -525,7 +523,7 @@ release_sources:
 
 					someVariableFile, err = ioutil.TempFile(tmpDir, "variables-file1")
 					Expect(err).NotTo(HaveOccurred())
-					defer func() { _ = someVariableFile.Close() }()
+					defer closeAndIgnoreError(someVariableFile)
 
 					variables := map[string]string{
 						"bucket": "my-releases",
@@ -538,7 +536,7 @@ release_sources:
 
 					otherVariableFile, err = ioutil.TempFile(tmpDir, "variables-file2")
 					Expect(err).NotTo(HaveOccurred())
-					defer func() { _ = otherVariableFile.Close() }()
+					defer closeAndIgnoreError(otherVariableFile)
 
 					variables = map[string]string{
 						"access_key":    "newkey",

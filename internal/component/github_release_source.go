@@ -174,7 +174,7 @@ func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock,
 	if err != nil {
 		return Local{}, err
 	}
-	defer func() { _ = file.Close() }()
+	defer closeAndIgnoreError(file)
 
 	request, err := client.NewRequest(http.MethodGet, remoteRelease.RemotePath, nil)
 	if err != nil {
@@ -244,9 +244,7 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 }
 
 func calculateSHA1(rc io.ReadCloser) (string, error) {
-	defer func() {
-		_ = rc.Close()
-	}()
+	defer closeAndIgnoreError(rc)
 	w := sha1.New()
 	_, err := io.Copy(w, rc)
 	if err != nil {

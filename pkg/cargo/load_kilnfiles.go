@@ -2,6 +2,7 @@ package cargo
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 
 	"github.com/go-git/go-billy/v5"
@@ -37,7 +38,7 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("unable to open file %q: %w", kilnfilePath, err)
 	}
-	defer func() { _ = kf.Close() }()
+	defer closeAndIgnoreError(kf)
 	kilnfileYAML, err := ioutil.ReadAll(kf)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("unable to read file %q: %w", kilnfilePath, err)
@@ -62,7 +63,7 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, err
 	}
-	defer func() { _ = lockFile.Close() }()
+	defer closeAndIgnoreError(lockFile)
 
 	var kilnfileLock KilnfileLock
 	err = yaml.NewDecoder(lockFile).Decode(&kilnfileLock)
@@ -95,3 +96,5 @@ func (KilnfileLoader) SaveKilnfileLock(fs billy.Filesystem, kilnfilePath string,
 func kilnfileLockPath(kilnfilePath string) string {
 	return fmt.Sprintf("%s.lock", kilnfilePath)
 }
+
+func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

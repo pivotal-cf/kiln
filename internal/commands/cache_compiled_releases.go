@@ -304,9 +304,7 @@ func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Spec, fp str
 	if err != nil {
 		return component.Lock{}, err
 	}
-	defer func() {
-		_ = f.Close()
-	}()
+	defer closeAndIgnoreError(f)
 	return uploader.UploadRelease(spec, f)
 }
 
@@ -318,9 +316,7 @@ func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, 
 	if err != nil {
 		return "", "", "", err
 	}
-	defer func() {
-		_ = f.Close()
-	}()
+	defer closeAndIgnoreError(f)
 
 	sha256sum := sha256.New()
 	sha1sum := sha1.New()

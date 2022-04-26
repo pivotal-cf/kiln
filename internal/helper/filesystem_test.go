@@ -36,7 +36,7 @@ var _ = Describe("Filesystem", func() {
 
 			file, err := filesystem.Create(fileToCreate)
 			Expect(err).NotTo(HaveOccurred())
-			defer func() { _ = file.Close() }()
+			defer closeAndIgnoreError(file)
 
 			fi, err := os.Stat(fileToCreate)
 			Expect(err).NotTo(HaveOccurred())

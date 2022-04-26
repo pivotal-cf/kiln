@@ -151,7 +151,7 @@ func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease 
 	if err != nil {
 		return Local{}, err
 	}
-	defer func() { _ = out.Close() }()
+	defer closeAndIgnoreError(out)
 
 	_, err = io.Copy(out, resp.Body)
 	_ = resp.Body.Close()

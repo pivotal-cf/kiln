@@ -13,7 +13,7 @@ import (
 var _ = Describe("Parse", func() {
 	It("can parse a metadata file", func() {
 		f, err := os.Open("fixtures/metadata.yml")
-		defer func() { _ = f.Close() }()
+		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		productTemplate, err := proofing.Parse(f)
@@ -32,7 +32,7 @@ var _ = Describe("Parse", func() {
 		Context("when the metadata contents cannot be unmarshalled", func() {
 			It("returns an error", func() {
 				f, err := os.Open("fixtures/malformed.yml")
-				defer func() { _ = f.Close() }()
+				defer closeAndIgnoreError(f)
 				Expect(err).NotTo(HaveOccurred())
 
 				_, err = proofing.Parse(f)

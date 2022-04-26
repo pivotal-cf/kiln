@@ -47,9 +47,7 @@ func parseVariablesFromFile(fs billy.Basic, path string, variables map[string]in
 	}
 
 	err = yaml.NewDecoder(file).Decode(&variables)
-	defer func() {
-		_ = file.Close()
-	}()
+	defer closeAndIgnoreError(file)
 	if err != nil {
 		return fmt.Errorf("unable to YAML parse %q: %w", path, err)
 	}

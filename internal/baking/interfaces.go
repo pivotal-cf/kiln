@@ -1,6 +1,10 @@
 package baking
 
-import "github.com/pivotal-cf/kiln/internal/builder"
+import (
+	"io"
+
+	"github.com/pivotal-cf/kiln/internal/builder"
+)
 
 //counterfeiter:generate -o ./fakes/logger.go --fake-name Logger . logger
 type logger interface {
@@ -11,3 +15,5 @@ type logger interface {
 type partReader interface {
 	Read(path string) (builder.Part, error)
 }
+
+func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

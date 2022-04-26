@@ -52,13 +52,13 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 	if err != nil {
 		return Part{}, err
 	}
-	defer func() { _ = file.Close() }()
+	defer closeAndIgnoreError(file)
 
 	gr, err := gzip.NewReader(file)
 	if err != nil {
 		return Part{}, err
 	}
-	defer func() { _ = gr.Close() }()
+	defer closeAndIgnoreError(gr)
 
 	tr := tar.NewReader(gr)
 

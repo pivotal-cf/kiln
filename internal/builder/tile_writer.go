@@ -69,7 +69,7 @@ func (w TileWriter) Write(generatedMetadataContents []byte, input WriteInput) er
 	if err != nil {
 		return err
 	}
-	defer func() { _ = f.Close() }()
+	defer closeAndIgnoreError(f)
 
 	w.zipper.SetWriter(f)
 
@@ -157,7 +157,7 @@ func (w TileWriter) addReleaseTarballs(releasesDir string, outputFile string) er
 		if err != nil {
 			return err
 		}
-		defer func() { _ = file.Close() }()
+		defer closeAndIgnoreError(file)
 
 		return w.addToZipper(filepath.Join("releases", filepath.Base(filePath)), file, outputFile)
 	})
@@ -188,7 +188,7 @@ func (w TileWriter) addEmbeddedPath(pathToEmbed, outputFile string) error {
 		if err != nil {
 			return err
 		}
-		defer func() { _ = file.Close() }()
+		defer closeAndIgnoreError(file)
 
 		relativePath, err := filepath.Rel(pathToEmbed, filePath)
 		if err != nil {
@@ -227,7 +227,7 @@ func (w TileWriter) addMigrations(migrationsDir []string, outputFile string) err
 			if err != nil {
 				return err
 			}
-			defer func() { _ = file.Close() }()
+			defer closeAndIgnoreError(file)
 
 			return w.addToZipper(filepath.Join("migrations", "v1", filepath.Base(filePath)), file, outputFile)
 		})

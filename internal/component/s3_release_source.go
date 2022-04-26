@@ -224,7 +224,7 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock Lock) (Local,
 	if err != nil {
 		return Local{}, fmt.Errorf("failed to create file %q: %w", outputFile, err)
 	}
-	defer func() { _ = file.Close() }()
+	defer closeAndIgnoreError(file)
 
 	_, err = src.s3Downloader.Download(file, &s3.GetObjectInput{
 		Bucket: aws.String(src.ReleaseSourceConfig.Bucket),

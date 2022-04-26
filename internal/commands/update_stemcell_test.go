@@ -429,8 +429,6 @@ func createYAMLFile(fs billy.Filesystem, fp string, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = f.Close()
-	}()
+	defer closeAndIgnoreError(f)
 	return yaml.NewEncoder(f).Encode(data)
 }

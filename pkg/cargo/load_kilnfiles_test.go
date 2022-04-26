@@ -18,7 +18,7 @@ func writeFile(fs billy.Filesystem, path string, contents string) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = file.Close() }()
+	defer closeAndIgnoreError(file)
 
 	_, err = file.Write([]byte(contents))
 	return err

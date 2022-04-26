@@ -14,7 +14,7 @@ var _ = Describe("JobType", func() {
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/job_types.yml")
-		defer func() { _ = f.Close() }()
+		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		productTemplate, err := proofing.Parse(f)

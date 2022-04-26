@@ -14,7 +14,7 @@ var _ = Describe("FormType", func() {
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/form_types.yml")
-		defer func() { _ = f.Close() }()
+		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		productTemplate, err := proofing.Parse(f)

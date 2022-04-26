@@ -67,7 +67,7 @@ func WriteTarballWithFile(tarballPath, internalFilePath, fileContents string, fs
 	if err != nil {
 		return "", err
 	}
-	defer func() { _ = tarball.Close() }()
+	defer closeAndIgnoreError(tarball)
 
 	hash := sha1.New()
 	_, err = io.Copy(hash, tarball)
@@ -77,3 +77,5 @@ func WriteTarballWithFile(tarballPath, internalFilePath, fileContents string, fs
 
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }
+
+func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

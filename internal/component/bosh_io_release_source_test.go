@@ -57,7 +57,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				defer func() { testServer.Close() }()
+				testServer.Close()
 			})
 
 			It("finds built releases which exist on bosh.io", func() {
@@ -107,7 +107,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				defer func() { testServer.Close() }()
+				testServer.Close()
 			})
 
 			It("doesn't find releases which don't exist on bosh.io", func() {
@@ -136,7 +136,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				defer func() { testServer.Close() }()
+				testServer.Close()
 			})
 
 			It("does not match that release", func() {
@@ -167,7 +167,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				defer func() { testServer.Close() }()
+				testServer.Close()
 			})
 
 			DescribeTable("searching multiple paths for each release",
@@ -259,7 +259,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 		})
 
 		AfterEach(func() {
-			defer func() { testServer.Close() }()
+			testServer.Close()
 			_ = os.RemoveAll(releaseDir)
 		})
 
@@ -306,7 +306,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				defer func() { testServer.Close() }()
+				testServer.Close()
 			})
 			When("there is no version requirement", func() {
 				It("gets the latest version from bosh.io", func() {
@@ -353,7 +353,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				defer func() { testServer.Close() }()
+				testServer.Close()
 			})
 
 			It("returns not found", func() {

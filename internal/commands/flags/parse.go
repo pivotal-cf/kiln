@@ -3,6 +3,7 @@ package flags
 import (
 	"fmt"
 	"go/ast"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -58,9 +59,7 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to open Kilnfile: %w", err)
 	}
-	defer func() {
-		_ = kilnfileFP.Close()
-	}()
+	defer closeAndIgnoreError(kilnfileFP)
 
 	kilnfile, err := cargo.InterpolateAndParseKilnfile(kilnfileFP, templateVariables)
 	if err != nil {
@@ -71,9 +70,7 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to open Kilnfile.lock: %w", err)
 	}
-	defer func() {
-		_ = lockFP.Close()
-	}()
+	defer closeAndIgnoreError(lockFP)
 	lockBuf, err := ioutil.ReadAll(lockFP)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
@@ -277,3 +274,5 @@ func IsSet(short, long string, args []string) bool {
 
 	return false
 }
+
+func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

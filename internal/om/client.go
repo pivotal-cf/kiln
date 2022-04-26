@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -207,9 +208,7 @@ func insecureGetHostKey(signer ssh.Signer, serverURL string) (ssh.PublicKey, err
 			dialErrorChannel <- err
 			return
 		}
-		defer func() {
-			_ = conn.Close()
-		}()
+		defer closeAndIgnoreError(conn)
 		dialErrorChannel <- nil
 	}()
 
@@ -227,3 +226,5 @@ func getAuthURLFromInfo(info boshdir.InfoResp) (string, error) {
 	}
 	return s, nil
 }
+
+func closeAndIgnoreError(c io.Closer) { _ = c.Close() }
