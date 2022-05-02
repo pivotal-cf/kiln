@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
+
+	"github.com/pivotal-cf/kiln/internal/filesys"
 )
 
 type StemcellManifest struct {
@@ -29,10 +31,10 @@ func (s StemcellManifest) MarshalYAML() (interface{}, error) {
 }
 
 type StemcellManifestReader struct {
-	filesystem filesystem
+	filesystem filesys.Interface
 }
 
-func NewStemcellManifestReader(filesystem filesystem) StemcellManifestReader {
+func NewStemcellManifestReader(filesystem filesys.Interface) StemcellManifestReader {
 	return StemcellManifestReader{
 		filesystem: filesystem,
 	}

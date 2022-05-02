@@ -2,36 +2,38 @@
 package fakes
 
 import (
-	"io"
+	"io/fs"
 	"path/filepath"
 	"sync"
+
+	"github.com/pivotal-cf/kiln/internal/filesys"
 )
 
-type Filesystem struct {
-	CreateStub        func(string) (io.WriteCloser, error)
+type Interface struct {
+	CreateStub        func(string) (filesys.WFile, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		arg1 string
 	}
 	createReturns struct {
-		result1 io.WriteCloser
+		result1 filesys.WFile
 		result2 error
 	}
 	createReturnsOnCall map[int]struct {
-		result1 io.WriteCloser
+		result1 filesys.WFile
 		result2 error
 	}
-	OpenStub        func(string) (io.ReadCloser, error)
+	OpenStub        func(string) (fs.File, error)
 	openMutex       sync.RWMutex
 	openArgsForCall []struct {
 		arg1 string
 	}
 	openReturns struct {
-		result1 io.ReadCloser
+		result1 fs.File
 		result2 error
 	}
 	openReturnsOnCall map[int]struct {
-		result1 io.ReadCloser
+		result1 fs.File
 		result2 error
 	}
 	RemoveStub        func(string) error
@@ -61,7 +63,7 @@ type Filesystem struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Filesystem) Create(arg1 string) (io.WriteCloser, error) {
+func (fake *Interface) Create(arg1 string) (filesys.WFile, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
@@ -80,52 +82,52 @@ func (fake *Filesystem) Create(arg1 string) (io.WriteCloser, error) {
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *Filesystem) CreateCallCount() int {
+func (fake *Interface) CreateCallCount() int {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return len(fake.createArgsForCall)
 }
 
-func (fake *Filesystem) CreateCalls(stub func(string) (io.WriteCloser, error)) {
+func (fake *Interface) CreateCalls(stub func(string) (filesys.WFile, error)) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = stub
 }
 
-func (fake *Filesystem) CreateArgsForCall(i int) string {
+func (fake *Interface) CreateArgsForCall(i int) string {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	argsForCall := fake.createArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *Filesystem) CreateReturns(result1 io.WriteCloser, result2 error) {
+func (fake *Interface) CreateReturns(result1 filesys.WFile, result2 error) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	fake.createReturns = struct {
-		result1 io.WriteCloser
+		result1 filesys.WFile
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *Filesystem) CreateReturnsOnCall(i int, result1 io.WriteCloser, result2 error) {
+func (fake *Interface) CreateReturnsOnCall(i int, result1 filesys.WFile, result2 error) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
-			result1 io.WriteCloser
+			result1 filesys.WFile
 			result2 error
 		})
 	}
 	fake.createReturnsOnCall[i] = struct {
-		result1 io.WriteCloser
+		result1 filesys.WFile
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *Filesystem) Open(arg1 string) (io.ReadCloser, error) {
+func (fake *Interface) Open(arg1 string) (fs.File, error) {
 	fake.openMutex.Lock()
 	ret, specificReturn := fake.openReturnsOnCall[len(fake.openArgsForCall)]
 	fake.openArgsForCall = append(fake.openArgsForCall, struct {
@@ -144,52 +146,52 @@ func (fake *Filesystem) Open(arg1 string) (io.ReadCloser, error) {
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *Filesystem) OpenCallCount() int {
+func (fake *Interface) OpenCallCount() int {
 	fake.openMutex.RLock()
 	defer fake.openMutex.RUnlock()
 	return len(fake.openArgsForCall)
 }
 
-func (fake *Filesystem) OpenCalls(stub func(string) (io.ReadCloser, error)) {
+func (fake *Interface) OpenCalls(stub func(string) (fs.File, error)) {
 	fake.openMutex.Lock()
 	defer fake.openMutex.Unlock()
 	fake.OpenStub = stub
 }
 
-func (fake *Filesystem) OpenArgsForCall(i int) string {
+func (fake *Interface) OpenArgsForCall(i int) string {
 	fake.openMutex.RLock()
 	defer fake.openMutex.RUnlock()
 	argsForCall := fake.openArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *Filesystem) OpenReturns(result1 io.ReadCloser, result2 error) {
+func (fake *Interface) OpenReturns(result1 fs.File, result2 error) {
 	fake.openMutex.Lock()
 	defer fake.openMutex.Unlock()
 	fake.OpenStub = nil
 	fake.openReturns = struct {
-		result1 io.ReadCloser
+		result1 fs.File
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *Filesystem) OpenReturnsOnCall(i int, result1 io.ReadCloser, result2 error) {
+func (fake *Interface) OpenReturnsOnCall(i int, result1 fs.File, result2 error) {
 	fake.openMutex.Lock()
 	defer fake.openMutex.Unlock()
 	fake.OpenStub = nil
 	if fake.openReturnsOnCall == nil {
 		fake.openReturnsOnCall = make(map[int]struct {
-			result1 io.ReadCloser
+			result1 fs.File
 			result2 error
 		})
 	}
 	fake.openReturnsOnCall[i] = struct {
-		result1 io.ReadCloser
+		result1 fs.File
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *Filesystem) Remove(arg1 string) error {
+func (fake *Interface) Remove(arg1 string) error {
 	fake.removeMutex.Lock()
 	ret, specificReturn := fake.removeReturnsOnCall[len(fake.removeArgsForCall)]
 	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
@@ -208,26 +210,26 @@ func (fake *Filesystem) Remove(arg1 string) error {
 	return fakeReturns.result1
 }
 
-func (fake *Filesystem) RemoveCallCount() int {
+func (fake *Interface) RemoveCallCount() int {
 	fake.removeMutex.RLock()
 	defer fake.removeMutex.RUnlock()
 	return len(fake.removeArgsForCall)
 }
 
-func (fake *Filesystem) RemoveCalls(stub func(string) error) {
+func (fake *Interface) RemoveCalls(stub func(string) error) {
 	fake.removeMutex.Lock()
 	defer fake.removeMutex.Unlock()
 	fake.RemoveStub = stub
 }
 
-func (fake *Filesystem) RemoveArgsForCall(i int) string {
+func (fake *Interface) RemoveArgsForCall(i int) string {
 	fake.removeMutex.RLock()
 	defer fake.removeMutex.RUnlock()
 	argsForCall := fake.removeArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *Filesystem) RemoveReturns(result1 error) {
+func (fake *Interface) RemoveReturns(result1 error) {
 	fake.removeMutex.Lock()
 	defer fake.removeMutex.Unlock()
 	fake.RemoveStub = nil
@@ -236,7 +238,7 @@ func (fake *Filesystem) RemoveReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *Filesystem) RemoveReturnsOnCall(i int, result1 error) {
+func (fake *Interface) RemoveReturnsOnCall(i int, result1 error) {
 	fake.removeMutex.Lock()
 	defer fake.removeMutex.Unlock()
 	fake.RemoveStub = nil
@@ -250,7 +252,7 @@ func (fake *Filesystem) RemoveReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *Filesystem) Walk(arg1 string, arg2 filepath.WalkFunc) error {
+func (fake *Interface) Walk(arg1 string, arg2 filepath.WalkFunc) error {
 	fake.walkMutex.Lock()
 	ret, specificReturn := fake.walkReturnsOnCall[len(fake.walkArgsForCall)]
 	fake.walkArgsForCall = append(fake.walkArgsForCall, struct {
@@ -270,26 +272,26 @@ func (fake *Filesystem) Walk(arg1 string, arg2 filepath.WalkFunc) error {
 	return fakeReturns.result1
 }
 
-func (fake *Filesystem) WalkCallCount() int {
+func (fake *Interface) WalkCallCount() int {
 	fake.walkMutex.RLock()
 	defer fake.walkMutex.RUnlock()
 	return len(fake.walkArgsForCall)
 }
 
-func (fake *Filesystem) WalkCalls(stub func(string, filepath.WalkFunc) error) {
+func (fake *Interface) WalkCalls(stub func(string, filepath.WalkFunc) error) {
 	fake.walkMutex.Lock()
 	defer fake.walkMutex.Unlock()
 	fake.WalkStub = stub
 }
 
-func (fake *Filesystem) WalkArgsForCall(i int) (string, filepath.WalkFunc) {
+func (fake *Interface) WalkArgsForCall(i int) (string, filepath.WalkFunc) {
 	fake.walkMutex.RLock()
 	defer fake.walkMutex.RUnlock()
 	argsForCall := fake.walkArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *Filesystem) WalkReturns(result1 error) {
+func (fake *Interface) WalkReturns(result1 error) {
 	fake.walkMutex.Lock()
 	defer fake.walkMutex.Unlock()
 	fake.WalkStub = nil
@@ -298,7 +300,7 @@ func (fake *Filesystem) WalkReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *Filesystem) WalkReturnsOnCall(i int, result1 error) {
+func (fake *Interface) WalkReturnsOnCall(i int, result1 error) {
 	fake.walkMutex.Lock()
 	defer fake.walkMutex.Unlock()
 	fake.WalkStub = nil
@@ -312,7 +314,7 @@ func (fake *Filesystem) WalkReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *Filesystem) Invocations() map[string][][]interface{} {
+func (fake *Interface) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.createMutex.RLock()
@@ -330,7 +332,7 @@ func (fake *Filesystem) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *Filesystem) recordInvocation(key string, args []interface{}) {
+func (fake *Interface) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -341,3 +343,5 @@ func (fake *Filesystem) recordInvocation(key string, args []interface{}) {
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
+
+var _ filesys.Interface = new(Interface)

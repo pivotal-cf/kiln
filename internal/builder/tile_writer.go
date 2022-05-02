@@ -10,20 +10,14 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v2"
+
+	"github.com/pivotal-cf/kiln/internal/filesys"
 )
 
 type TileWriter struct {
-	filesystem filesystem
+	filesystem filesys.Interface
 	zipper     zipper
 	logger     logger
-}
-
-//counterfeiter:generate -o ./fakes/filesystem.go --fake-name Filesystem . filesystem
-type filesystem interface {
-	Create(path string) (io.WriteCloser, error)
-	Open(path string) (io.ReadCloser, error)
-	Walk(root string, walkFn filepath.WalkFunc) error
-	Remove(path string) error
 }
 
 //counterfeiter:generate -o ./fakes/zipper.go --fake-name Zipper . zipper
@@ -36,9 +30,7 @@ type zipper interface {
 	Close() error
 }
 
-//counterfeiter:generate -o ./fakes/file_info.go --fake-name FileInfo os.FileInfo
-
-func NewTileWriter(filesystem filesystem, zipper zipper, logger logger) TileWriter {
+func NewTileWriter(filesystem filesys.Interface, zipper zipper, logger logger) TileWriter {
 	return TileWriter{
 		filesystem: filesystem,
 		zipper:     zipper,

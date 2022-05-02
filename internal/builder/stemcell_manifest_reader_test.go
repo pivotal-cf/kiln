@@ -14,20 +14,21 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/builder"
 	builderFakes "github.com/pivotal-cf/kiln/internal/builder/fakes"
+	fsFakes "github.com/pivotal-cf/kiln/internal/filesys/fakes"
 )
 
 var _ = Describe("StemcellManifestReader", func() {
 	var (
-		filesystem *builderFakes.Filesystem
+		filesystem *fsFakes.Interface
 		reader     builder.StemcellManifestReader
 	)
 
 	BeforeEach(func() {
-		filesystem = &builderFakes.Filesystem{}
+		filesystem = new(fsFakes.Interface)
 		reader = builder.NewStemcellManifestReader(filesystem)
 
-		tarball := NewBuffer(bytes.NewBuffer([]byte{}))
-		gw := gzip.NewWriter(tarball)
+		b := new(bytes.Buffer)
+		gw := gzip.NewWriter(b)
 		tw := tar.NewWriter(gw)
 
 		stemcellManifest := bytes.NewBuffer([]byte(`---
@@ -53,6 +54,11 @@ operating_system: centOS
 
 		err = gw.Close()
 		Expect(err).NotTo(HaveOccurred())
+
+		tarball := new(fsFakes.WFile)
+		tarball.ReadStub = func(p []byte) (int, error) {
+			return b.Read(p)
+		}
 
 		filesystem.OpenReturns(tarball, nil)
 	})

@@ -1,21 +1,20 @@
-package helper_test
+package filesys_test
 
 import (
+	"github.com/pivotal-cf/kiln/internal/filesys"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/pivotal-cf/kiln/internal/helper"
 )
 
 var _ = Describe("Filesystem", func() {
-	var filesystem helper.Filesystem
+	var filesystem filesys.Interface
 
 	BeforeEach(func() {
-		filesystem = helper.NewFilesystem()
+		filesystem = filesys.WrappingOS()
 	})
 
 	Describe("Create", func() {
@@ -93,7 +92,7 @@ var _ = Describe("Filesystem", func() {
 			err = tempfile.Close()
 			Expect(err).NotTo(HaveOccurred())
 
-			files := []string{}
+			var files []string
 			_ = filesystem.Walk(tempDir, func(filePath string, info os.FileInfo, err error) error {
 				files = append(files, filePath)
 				return nil

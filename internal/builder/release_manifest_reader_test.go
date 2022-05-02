@@ -8,6 +8,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -21,9 +22,11 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
-func createReleaseTarball(releaseMetadata string) (*os.File, string) {
+func createReleaseTarball(releaseMetadata string) (fs.File, string, error) {
 	tarball, err := ioutil.TempFile("", "kiln")
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, "", err
+	}
 
 	gw := gzip.NewWriter(tarball)
 	tw := tar.NewWriter(gw)
@@ -38,72 +41,94 @@ func createReleaseTarball(releaseMetadata string) (*os.File, string) {
 	}
 
 	err = tw.WriteHeader(header)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, "", err
+	}
 
 	_, err = io.Copy(tw, releaseManifest)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, "", err
+	}
 
 	err = tw.Close()
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, "", err
+	}
 
 	err = gw.Close()
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, "", err
+	}
 
 	err = tarball.Close()
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, "", err
+	}
 
 	var file *os.File
 	file, err = os.Open(tarball.Name())
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, "", err
+	}
 
 	hash := sha1.New()
 	_, err = io.Copy(hash, file)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, "", err
+	}
 
 	releaseSHA1 := fmt.Sprintf("%x", hash.Sum(nil))
 
 	err = file.Close()
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, "", err
+	}
 
-	return tarball, releaseSHA1
+	return tarball, releaseSHA1, nil
 }
 
 var _ = Describe("ReleaseManifestReader", func() {
 	var (
 		reader      builder.ReleaseManifestReader
 		releaseSHA1 string
-		tarball     *os.File
+		tarball     fs.File
 		err         error
+		tarballName string
 	)
 
 	BeforeEach(func() {
 		reader = builder.NewReleaseManifestReader(osfs.New(""))
-		tarball, releaseSHA1 = createReleaseTarball(`
+		tarball, releaseSHA1, err = createReleaseTarball(`
 name: release
 version: 1.2.3
 compiled_packages:
 - name: some-package
   stemcell: ubuntu-xenial/170.25
 `)
+		Expect(err).NotTo(HaveOccurred())
+
+		fi, err := tarball.Stat()
+		Expect(err).NotTo(HaveOccurred())
+		tarballName = fi.Name()
 	})
 
 	AfterEach(func() {
-		err = os.Remove(tarball.Name())
+		err = os.Remove(tarballName)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Describe("Read", func() {
 		It("extracts the release manifest information from the tarball", func() {
 			var releaseManifest builder.Part
-			releaseManifest, err = reader.Read(tarball.Name())
+			releaseManifest, err = reader.Read(tarballName)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(releaseManifest).To(Equal(builder.Part{
-				File: tarball.Name(),
+				File: tarballName,
 				Name: "release",
 				Metadata: builder.ReleaseManifest{
 					Name:            "release",
 					Version:         "1.2.3",
-					File:            filepath.Base(tarball.Name()),
+					File:            filepath.Base(tarballName),
 					SHA1:            releaseSHA1,
 					StemcellOS:      "ubuntu-xenial",
 					StemcellVersion: "170.25",
@@ -113,23 +138,24 @@ compiled_packages:
 
 		Context("when the release is not pre-compiled", func() {
 			BeforeEach(func() {
-				tarball, releaseSHA1 = createReleaseTarball(`
+				tarball, releaseSHA1, err = createReleaseTarball(`
 name: release
 version: 1.2.3
 `)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("extracts the release manifest information from the tarball", func() {
 				var releaseManifest builder.Part
-				releaseManifest, err = reader.Read(tarball.Name())
+				releaseManifest, err = reader.Read(tarballName)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(releaseManifest).To(Equal(builder.Part{
-					File: tarball.Name(),
+					File: tarballName,
 					Name: "release",
 					Metadata: builder.ReleaseManifest{
 						Name:            "release",
 						Version:         "1.2.3",
-						File:            filepath.Base(tarball.Name()),
+						File:            filepath.Base(tarballName),
 						SHA1:            releaseSHA1,
 						StemcellOS:      "",
 						StemcellVersion: "",
@@ -148,33 +174,33 @@ version: 1.2.3
 
 			Context("when the input is not a valid gzip", func() {
 				It("returns an error", func() {
-					tarball, err = os.OpenFile(tarball.Name(), os.O_RDWR, 0666)
+					tarballFile, err := os.OpenFile(tarballName, os.O_RDWR, 0666)
 					Expect(err).NotTo(HaveOccurred())
 
-					_, err = tarball.WriteAt([]byte{}, 10)
+					_, err = tarballFile.WriteAt([]byte{}, 10)
 					Expect(err).NotTo(HaveOccurred())
 
-					err = tarball.Close()
+					err = tarballFile.Close()
 					Expect(err).NotTo(HaveOccurred())
 
 					var contents []byte
-					contents, err = ioutil.ReadFile(tarball.Name())
+					contents, err = ioutil.ReadFile(tarballName)
 					Expect(err).NotTo(HaveOccurred())
 
 					By("corrupting the gzip header contents", func() {
 						contents[0] = 0
-						err = ioutil.WriteFile(tarball.Name(), contents, 0666)
+						err = ioutil.WriteFile(tarballName, contents, 0666)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
-					_, err = reader.Read(tarball.Name())
+					_, err = reader.Read(tarballName)
 					Expect(err).To(MatchError("gzip: invalid header"))
 				})
 			})
 
 			Context("when the header file is corrupt", func() {
 				It("returns an error", func() {
-					tarball, err = os.Create(tarball.Name())
+					tarball, err = os.Create(tarballName)
 					Expect(err).NotTo(HaveOccurred())
 
 					gw := gzip.NewWriter(tarball)
@@ -183,14 +209,14 @@ version: 1.2.3
 					Expect(tw.Close()).NotTo(HaveOccurred())
 					Expect(gw.Close()).NotTo(HaveOccurred())
 
-					_, err = reader.Read(tarball.Name())
-					Expect(err).To(MatchError(fmt.Sprintf("could not find release.MF in %q", tarball.Name())))
+					_, err = reader.Read(tarballName)
+					Expect(err).To(MatchError(fmt.Sprintf("could not find release.MF in %q", tarballName)))
 				})
 			})
 
 			Context("when there is no release.MF", func() {
 				It("returns an error", func() {
-					tarball, err = os.Create(tarball.Name())
+					tarball, err = os.Create(tarballName)
 					Expect(err).NotTo(HaveOccurred())
 
 					gw := gzip.NewWriter(tarball)
@@ -220,14 +246,14 @@ version: 1.2.3
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					_, err = reader.Read(tarball.Name())
-					Expect(err).To(MatchError(fmt.Sprintf("could not find release.MF in %q", tarball.Name())))
+					_, err = reader.Read(tarballName)
+					Expect(err).To(MatchError(fmt.Sprintf("could not find release.MF in %q", tarballName)))
 				})
 			})
 
 			Context("when the tarball is corrupt", func() {
 				It("returns an error", func() {
-					tarball, err = os.Create(tarball.Name())
+					tarball, err = os.Create(tarballName)
 					Expect(err).NotTo(HaveOccurred())
 
 					gw := gzip.NewWriter(tarball)
@@ -242,14 +268,14 @@ version: 1.2.3
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					_, err = reader.Read(tarball.Name())
-					Expect(err).To(MatchError(fmt.Sprintf("error while reading %q: unexpected EOF", tarball.Name())))
+					_, err = reader.Read(tarballName)
+					Expect(err).To(MatchError(fmt.Sprintf("error while reading %q: unexpected EOF", tarballName)))
 				})
 			})
 
 			Context("when the release manifest is not YAML", func() {
 				It("returns an error", func() {
-					tarball, err = os.Create(tarball.Name())
+					tarball, err = os.Create(tarballName)
 					Expect(err).NotTo(HaveOccurred())
 
 					gw := gzip.NewWriter(tarball)
@@ -276,7 +302,7 @@ version: 1.2.3
 					err = gw.Close()
 					Expect(err).NotTo(HaveOccurred())
 
-					_, err = reader.Read(tarball.Name())
+					_, err = reader.Read(tarballName)
 					Expect(err).To(MatchError("yaml: could not find expected directive name"))
 				})
 			})
@@ -294,7 +320,7 @@ compiled_packages:
 			})
 
 			It("extracts the release manifest information from the tarball", func() {
-				_, err := reader.Read(tarball.Name())
+				_, err := reader.Read(tarballName)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid"))
 			})

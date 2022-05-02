@@ -15,7 +15,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/helper"
+	"github.com/pivotal-cf/kiln/internal/filesys"
 )
 
 //counterfeiter:generate -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
@@ -66,7 +66,7 @@ type checksummer interface {
 }
 
 func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLogger *log.Logger, errLogger *log.Logger) Bake {
-	filesystem := helper.NewFilesystem()
+	filesystem := filesys.WrappingOS()
 	zipper := builder.NewZipper()
 	interpolator := builder.NewInterpolator()
 	tileWriter := builder.NewTileWriter(filesystem, &zipper, errLogger)
