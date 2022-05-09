@@ -120,6 +120,9 @@ func (ars ArtifactoryReleaseSource) getFileSHA1(release Lock) (string, error) {
 	}
 
 	responseBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
 
 	var artifactoryFileInfo ArtifactoryFileInfo
 
@@ -212,6 +215,9 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) 
 	var _ *semver.Constraints
 
 	responseBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return Lock{}, err
+	}
 
 	if err := json.Unmarshal(responseBody, &artifactoryFolderInfo); err != nil {
 		return Lock{}, fmt.Errorf("json from %s is malformed: %s", request.URL.Host, err)
