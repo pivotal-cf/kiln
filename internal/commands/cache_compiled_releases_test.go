@@ -17,7 +17,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/internal/component"
-	componentFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/internal/om"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -45,7 +44,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
 		ReleaseSources: []cargo.ReleaseSourceConfig{
 			{
-				ID: "cached-compiled-releases",
+				ID: "compiled-releases",
 			},
 		},
 	})).NotTo(Ω.HaveOccurred())
@@ -54,8 +53,9 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 			{
 				Name:         "banana",
 				Version:      "2.0.0",
-				RemoteSource: "cached-compiled-releases",
+				RemoteSource: "compiled-releases",
 				RemotePath:   "banana-2.0.0-alpine-9.0.0",
+				SHA1:         "fake-checksum",
 			},
 		},
 		Stemcell: cargo.Stemcell{
@@ -67,14 +67,12 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	opsManager := new(fakes.OpsManagerReleaseCacheSource)
 	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "9.0.0"}]}`, nil)
 
-	cache := new(componentFakes.MultiReleaseSource)
-	cache.GetMatchedReleaseCalls(fakeCacheData)
-
 	deployment := new(boshdirFakes.FakeDeployment)
 	bosh := new(boshdirFakes.FakeDirector)
 	bosh.FindDeploymentReturns(deployment, nil)
 
-	releaseCache := new(fakes.ReleaseCache)
+	releaseStorage := new(fakes.ReleaseStorage)
+	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
 
 	var output bytes.Buffer
 	logger := log.New(&output, "", 0)
@@ -82,8 +80,8 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	cmd := commands.CacheCompiledReleases{
 		FS:     fs,
 		Logger: logger,
-		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (component.MultiReleaseSource, commands.ReleaseCache) {
-			return cache, releaseCache
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
+			return releaseStorage, nil
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
 			return opsManager, nil
@@ -101,8 +99,8 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 
 	// check
 
-	please.Expect(err).NotTo(Ω.HaveOccurred())
 	please.Expect(output.String()).To(Ω.ContainSubstring("cache already contains releases"))
+	please.Expect(err).NotTo(Ω.HaveOccurred())
 }
 
 // this test covers
@@ -140,6 +138,8 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 
 				RemoteSource: "new-releases",
 				RemotePath:   "orange-1.0.0",
+
+				SHA1: "fake-checksum",
 			},
 			{
 				Name:    "banana",
@@ -147,6 +147,8 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 
 				RemoteSource: "cached-compiled-releases",
 				RemotePath:   "banana-2.0.0-alpine-9.0.0",
+
+				SHA1: "fake-checksum",
 			},
 			{
 				Name:    "lemon",
@@ -154,6 +156,8 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 
 				RemoteSource: "new-releases",
 				RemotePath:   "lemon-3.0.0",
+
+				SHA1: "fake-checksum",
 			},
 		},
 		Stemcell: cargo.Stemcell{
@@ -164,9 +168,6 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 
 	opsManager := new(fakes.OpsManagerReleaseCacheSource)
 	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "9.0.0"}]}`, nil)
-
-	cache := new(componentFakes.MultiReleaseSource)
-	cache.GetMatchedReleaseCalls(fakeCacheData)
 
 	releaseInBlobstore := []byte(`lemon-release-buffer`)
 
@@ -183,9 +184,11 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	})
 	bosh.HasReleaseReturns(true, nil)
 
-	releaseCache := new(fakes.ReleaseCache)
+	releaseStorage := new(fakes.ReleaseStorage)
+	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
+
 	var uploadedRelease bytes.Buffer
-	releaseCache.UploadReleaseCalls(func(_ component.Spec, reader io.Reader) (component.Lock, error) {
+	releaseStorage.UploadReleaseCalls(func(_ component.Spec, reader io.Reader) (component.Lock, error) {
 		_, _ = io.Copy(&uploadedRelease, reader)
 		return component.Lock{
 			Name: "lemon", Version: "3.0.0",
@@ -202,8 +205,8 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	cmd := commands.CacheCompiledReleases{
 		FS:     fs,
 		Logger: logger,
-		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (component.MultiReleaseSource, commands.ReleaseCache) {
-			return cache, releaseCache
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
+			return releaseStorage, nil
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
 			return opsManager, nil
@@ -222,13 +225,13 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	// check
 
 	please.Expect(err).NotTo(Ω.HaveOccurred())
-	please.Expect(cache.GetMatchedReleaseCallCount()).To(Ω.Equal(3))
+	please.Expect(releaseStorage.GetMatchedReleaseCallCount()).To(Ω.Equal(3))
 	please.Expect(bosh.DownloadResourceUncheckedCallCount()).To(Ω.Equal(1))
 
 	requestedID, _ := bosh.DownloadResourceUncheckedArgsForCall(0)
 	please.Expect(requestedID).To(Ω.Equal("some-blob-id"))
 
-	please.Expect(output.String()).To(Ω.ContainSubstring("needs to be uploaded"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("1 release needs to be exported and cached"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("lemon 3.0.0 compiled with alpine 9.0.0 not found in cache"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("exporting lemon"))
@@ -283,6 +286,8 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 
 				RemoteSource: "cached-compiled-releases",
 				RemotePath:   "banana-2.0.0-alpine-5.5.5",
+
+				SHA1: "fake-checksum",
 			},
 		},
 		Stemcell: cargo.Stemcell{
@@ -293,9 +298,6 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 
 	opsManager := new(fakes.OpsManagerReleaseCacheSource)
 	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "8.0.0"}]}`, nil)
-
-	cache := new(componentFakes.MultiReleaseSource)
-	cache.GetMatchedReleaseCalls(fakeCacheData)
 
 	releaseInBlobstore := []byte(`lemon-release-buffer`)
 
@@ -309,8 +311,9 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 		return nil
 	})
 
-	bucket := new(fakes.ReleaseCacheBucket)
-	bucket.UploadReleaseCalls(func(_ component.Spec, reader io.Reader) (component.Lock, error) {
+	releaseStorage := new(fakes.ReleaseStorage)
+	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
+	releaseStorage.UploadReleaseCalls(func(_ component.Spec, reader io.Reader) (component.Lock, error) {
 		return component.Lock{}, nil
 	})
 
@@ -320,11 +323,8 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	cmd := commands.CacheCompiledReleases{
 		FS:     fs,
 		Logger: logger,
-		Bucket: func(kilnfile cargo.Kilnfile) (commands.ReleaseCacheBucket, error) {
-			return bucket, nil
-		},
-		ReleaseCache: func(kilnfile cargo.Kilnfile, targetID string) component.MultiReleaseSource {
-			return cache
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
+			return releaseStorage, nil
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
 			return opsManager, nil
@@ -352,8 +352,8 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 		please.Expect(requestedStemcellSlug.OS()).To(Ω.Equal("alpine"))
 	}
 
-	please.Expect(output.String()).To(Ω.ContainSubstring("not publishable"))
-	please.Expect(output.String()).To(Ω.ContainSubstring("not found in cache"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("1 release needs to be exported and cached"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("banana 2.0.0 compiled with alpine 8.0.0 not found in cache"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
 	please.Expect(output.String()).NotTo(Ω.ContainSubstring("exporting lemon"))
 	please.Expect(output.String()).NotTo(Ω.ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
@@ -366,6 +366,8 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 
 		RemoteSource: "cached-compiled-releases",
 		RemotePath:   "banana-2.0.0-alpine-5.5.5",
+
+		SHA1: "fake-checksum",
 	}), "it should not override the in-correct element in the Kilnfile.lock")
 }
 
@@ -400,6 +402,8 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 
 				RemoteSource: "new-releases",
 				RemotePath:   "orange-1.0.0",
+
+				SHA1: "fake-checksum",
 			},
 			{
 				Name:    "banana",
@@ -407,11 +411,13 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 
 				RemoteSource: "cached-compiled-releases",
 				RemotePath:   "banana-2.0.0-alpine-9.0.0",
+
+				SHA1: "fake-checksum",
 			},
 			{
-				Name:    "lemon",
-				Version: "3.0.0",
-
+				Name:         "lemon",
+				Version:      "3.0.0",
+				SHA1:         "fake-checksum",
 				RemoteSource: "new-releases",
 				RemotePath:   "lemon-3.0.0",
 			},
@@ -426,16 +432,15 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	opsManager := new(fakes.OpsManagerReleaseCacheSource)
 	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "9.0.1"}]}`, nil)
 
-	cache := new(componentFakes.MultiReleaseSource)
-	cache.GetMatchedReleaseCalls(fakeCacheData)
+	releaseCache := new(fakes.ReleaseStorage)
+	releaseCache.GetMatchedReleaseCalls(fakeCacheData)
 
 	bosh := new(boshdirFakes.FakeDirector)
-	releaseCache := new(fakes.ReleaseCache)
 
 	cmd := commands.CacheCompiledReleases{
 		FS: fs,
-		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (component.MultiReleaseSource, commands.ReleaseCache) {
-			return cache, releaseCache
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
+			return releaseCache, nil
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
 			return opsManager, nil
@@ -453,7 +458,7 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 
 	// check
 
-	please.Expect(cache.GetMatchedReleaseCallCount()).To(Ω.Equal(0))
+	please.Expect(releaseCache.GetMatchedReleaseCallCount()).To(Ω.Equal(0))
 	please.Expect(bosh.DownloadResourceUncheckedCallCount()).To(Ω.Equal(0))
 	please.Expect(err).To(Ω.MatchError(Ω.Equal("staged stemcell (alpine 9.0.1) and lock stemcell (alpine 9.0.0) do not match")))
 
@@ -467,14 +472,14 @@ func fakeCacheData(spec component.Spec) (component.Lock, error) {
 	case component.Lock{Name: "orange", Version: "1.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
 		return component.Lock{
 			Name: "orange", Version: "1.0.0",
-
+			SHA1:         "fake-checksum",
 			RemoteSource: "cached-compiled-releases",
 			RemotePath:   "orange-1.0.0-alpine-9.0.0",
 		}, nil
 	case component.Lock{Name: "banana", Version: "2.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
 		return component.Lock{
 			Name: "banana", Version: "2.0.0",
-
+			SHA1:         "fake-checksum",
 			RemoteSource: "cached-compiled-releases",
 			RemotePath:   "banana-2.0.0-alpine-9.0.0",
 		}, nil
