@@ -180,13 +180,6 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		cmd.Logger.Printf("Cleaning exported BOSH releases\n")
-		_, err = bosh.CleanUp(false, false, false)
-		if err != nil {
-			cmd.Logger.Printf("%s", err)
-		}
-	}()
 
 	deployment, err := bosh.FindDeployment(deploymentName)
 	if err != nil {
@@ -211,8 +204,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		if hasRelease, err := bosh.HasRelease(rel.Name, rel.Version, requirement.OSVersionSlug()); err != nil {
 			return fmt.Errorf("failed to find release %s: %w", requirement.ReleaseSlug(), err)
 		} else if !hasRelease {
-			cmd.Logger.Printf("\tWARNING: %[1]s compiled with %[2]s is not found on bosh director (it might have been uploaded as a compiled release and the director can't recompile it for the compilation target %[2]s)\n", requirement.ReleaseSlug(), requirement.OSVersionSlug())
-			continue
+			return fmt.Errorf("%[1]s compiled with %[2]s is not found on bosh director (it might have been uploaded as a compiled release and the director can't recompile it for the compilation target %[2]s)", requirement.ReleaseSlug(), requirement.OSVersionSlug())
 		}
 
 		newRemote, err := cmd.cacheRelease(bosh, releaseCache, deployment, requirement)

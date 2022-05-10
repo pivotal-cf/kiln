@@ -342,7 +342,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 
 	// check
 
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).To(Ω.MatchError(Ω.ContainSubstring("not found on bosh director")))
 
 	{
 		requestedReleaseName, requestedReleaseVersion, requestedStemcellSlug := bosh.HasReleaseArgsForCall(0)
@@ -356,9 +356,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	please.Expect(output.String()).To(Ω.ContainSubstring("not found in cache"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
 	please.Expect(output.String()).NotTo(Ω.ContainSubstring("exporting lemon"))
-	please.Expect(output.String()).To(Ω.ContainSubstring("not found on bosh director"))
-	please.Expect(output.String()).NotTo(Ω.ContainSubstring("uploading lemon"))
-	please.Expect(output.String()).To(Ω.ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
+	please.Expect(output.String()).NotTo(Ω.ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
 
 	var updatedKilnfile cargo.KilnfileLock
 	please.Expect(fsReadYAML(fs, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
