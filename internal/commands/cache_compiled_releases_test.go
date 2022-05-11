@@ -256,7 +256,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 // - when a release is compiled with a stemcell that is not the one in the Kilnfile.lock (aka the compilation target)
 // - the deployment succeeds because the stemcell major lines are the same/compatible
 // - export release returns a broken bosh release because we requested the wrong compilation target and the director didn't have the source code necessarily to re-compile against the requested stemcell
-// - (ideally bosh export-rlease should return an error but in this case it doesn't so we are just checking for a release with the correct stemcell before downloading a bad one)
+// - (ideally bosh export-release should return an error but in this case it doesn't so we are just checking for a release with the correct stemcell before downloading a bad one)
 func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_correct_stemcell(t *testing.T) {
 	please := Ω.NewWithT(t)
 
@@ -304,7 +304,9 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	deployment := new(boshdirFakes.FakeDeployment)
 	bosh := new(boshdirFakes.FakeDirector)
 	bosh.FindDeploymentReturns(deployment, nil)
-	bosh.HasReleaseReturns(false, nil)
+
+	bosh.HasReleaseReturns(false, nil) // <- this is the important thing
+
 	deployment.ExportReleaseReturns(director.ExportReleaseResult{}, nil)
 	bosh.DownloadResourceUncheckedCalls(func(_ string, writer io.Writer) error {
 		_, _ = writer.Write(releaseInBlobstore)

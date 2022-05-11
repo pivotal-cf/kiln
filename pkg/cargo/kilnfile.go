@@ -3,10 +3,10 @@ package cargo
 import (
 	"errors"
 	"fmt"
-	boshdir "github.com/cloudfoundry/bosh-cli/director"
 	"strings"
 
 	"github.com/Masterminds/semver"
+	boshdir "github.com/cloudfoundry/bosh-cli/director"
 )
 
 type KilnfileLock struct {
