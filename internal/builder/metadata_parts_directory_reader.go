@@ -187,7 +187,7 @@ func (r MetadataPartsDirectoryReader) orderWithOrderFromFile(path string, parts 
 	if err != nil {
 		return []Part{}, err
 	}
-	defer func() { _ = f.Close() }()
+	defer closeAndIgnoreError(f)
 
 	data, err := ioutil.ReadAll(f)
 	if err != nil {

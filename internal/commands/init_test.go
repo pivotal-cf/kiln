@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"io"
 	"io/ioutil"
 	"testing"
 
@@ -36,9 +37,7 @@ func fsWriteYAML(fs billy.Basic, path string, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = f.Close()
-	}()
+	defer closeAndIgnoreError(f)
 
 	_, err = f.Write(buf)
 	return err
@@ -49,9 +48,7 @@ func fsReadYAML(fs billy.Basic, path string, data interface{}) error {
 	if err != nil {
 		return nil
 	}
-	defer func() {
-		_ = f.Close()
-	}()
+	defer closeAndIgnoreError(f)
 
 	buf, err := ioutil.ReadAll(f)
 	if err != nil {
@@ -65,3 +62,5 @@ func fsReadYAML(fs billy.Basic, path string, data interface{}) error {
 
 	return err
 }
+
+func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

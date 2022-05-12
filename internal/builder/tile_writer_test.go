@@ -118,7 +118,7 @@ var _ = Describe("TileWriter", func() {
 				}
 			}
 
-			var metadata = `---
+			metadata := `---
 releases:
 - file: release-1.tgz
 - file: release-2.tgz
@@ -180,7 +180,6 @@ releases:
 				fmt.Sprintf("Adding releases/release-3.tgz to %s...", outputFile),
 				fmt.Sprintf("Adding releases/release-4.tgz to %s...", outputFile),
 			}))
-
 		},
 			Entry("without stubbing releases", false, nil),
 			Entry("with stubbed releases", true, errors.New("don't open release")),
@@ -719,7 +718,6 @@ releases:
 						Expect(logger.PrintfCall.Receives.LogLines).To(
 							ContainElement(expectedLogLine),
 						)
-
 					})
 				})
 			})

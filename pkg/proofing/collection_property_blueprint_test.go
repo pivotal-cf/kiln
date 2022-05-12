@@ -14,7 +14,7 @@ var _ = Describe("CollectionPropertyBlueprint", func() {
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/property_blueprints.yml")
-		defer func() { _ = f.Close() }()
+		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		productTemplate, err := proofing.Parse(f)
@@ -61,5 +61,4 @@ var _ = Describe("CollectionPropertyBlueprint", func() {
 			})
 		})
 	})
-
 })

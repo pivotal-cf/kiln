@@ -161,7 +161,7 @@ func TestParseNotesPage(t *testing.T) {
 
 func TestParseNotesPageWithExpressionAndReleasesSentinel(t *testing.T) {
 	const testReleasesSentinel = "releases:"
-	var exp = regexp.MustCompile(`(?m)(?P<notes>r(?P<version>\d+)\.*)`).String()
+	exp := regexp.MustCompile(`(?m)(?P<notes>r(?P<version>\d+)\.*)`).String()
 
 	t.Run("multiple releases", func(t *testing.T) {
 		please := Ω.NewWithT(t)

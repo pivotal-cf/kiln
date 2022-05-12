@@ -1,15 +1,15 @@
 # Contributing to the docs
 
-The Kiln project team welcomes contributions from the community. If you wish to contribute code 
+The Kiln project team welcomes contributions from the community. If you wish to contribute code
 and you have not signed our [contributor license agreement](https://cla.vmware.com/cla/1/preview), our bot will update the issue when 
 you open a Pull Request. For any questions about the CLA process, please refer to our [FAQ](https://cla.vmware.com/faq).
 
-## Start with a github issue
+## Start with a GitHub issue
 
 In all cases, following this workflow will help all contributors to docs to
 participate more equitably:
 
-1. Search existing github issues that may already describe the idea you have.
+1. Search existing GitHub issues that may already describe the idea you have.
    If you find one, consider adding a comment that adds additional context 
    about your use case, 
    the exact problem you need solved and why, 

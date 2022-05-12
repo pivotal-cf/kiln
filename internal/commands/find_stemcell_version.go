@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	ErrStemcellOSInfoMustBeValid       = "Stemcell OS information is missing or invalid"
-	ErrStemcellMajorVersionMustBeValid = "Stemcell Major Version is missing or invalid"
-	TanzunetRemotePath                 = "network.pivotal.io"
+	ErrStemcellOSInfoMustBeValid       = "stemcell os information is missing or invalid"
+	ErrStemcellMajorVersionMustBeValid = "stemcell major Version is missing or invalid"
+	TanzuNetRemotePath                 = "network.pivotal.io"
 )
 
 type FindStemcellVersion struct {
@@ -50,14 +50,13 @@ func NewFindStemcellVersion(outLogger *log.Logger, pivnetService *component.Pivn
 
 func (cmd FindStemcellVersion) Execute(args []string) error {
 	kilnfile, err := cmd.setup(args)
-
 	if err != nil {
 		return err
 	}
 
-	var productSlug = ""
+	productSlug := ""
 
-	//Get Stemcell OS and major from Kilnfile
+	// Get Stemcell OS and major from Kilnfile
 	if kilnfile.Stemcell.OS == "ubuntu-xenial" {
 		productSlug = "stemcells-ubuntu-xenial"
 	} else if kilnfile.Stemcell.OS == "windows2019" {
@@ -73,14 +72,12 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 	}
 
 	majorVersion, err := ExtractMajorVersion(kilnfile.Stemcell.Version)
-
 	if err != nil {
 		return err
 	}
 
-	//Get stemcell version from pivnet
+	// Get stemcell version from pivnet
 	stemcellVersion, err := cmd.pivnetService.StemcellVersion(productSlug, majorVersion)
-
 	if err != nil {
 		return err
 	}
@@ -88,9 +85,8 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 	stemcellVersionJson, err := json.Marshal(stemcellVersionOutput{
 		Version:    stemcellVersion,
 		Source:     "Tanzunet",
-		RemotePath: TanzunetRemotePath,
+		RemotePath: TanzuNetRemotePath,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -101,17 +97,14 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 }
 
 func ExtractMajorVersion(version string) (string, error) {
-
 	_, err := semver.NewConstraint(version)
-
 	if err != nil {
-		return "", fmt.Errorf("Invalid stemcell constraint in kilnfile: %w", err)
+		return "", fmt.Errorf("invalid stemcell constraint in kilnfile: %w", err)
 	}
 
 	semVer := strings.Split(version, ".")
 
 	reg, err := regexp.Compile(`[^0-9]+`)
-
 	if err != nil {
 		return "", err
 	}
@@ -123,7 +116,6 @@ func ExtractMajorVersion(version string) (string, error) {
 	}
 
 	return majorVersion, nil
-
 }
 
 func (cmd *FindStemcellVersion) setup(args []string) (cargo.Kilnfile, error) {

@@ -25,10 +25,10 @@ var _ = Describe("MatchSHASumOfMatcher", func() {
 				file1 := filepath.Join(tempDir, "file-1")
 				file2 := filepath.Join(tempDir, "file-2")
 
-				err = ioutil.WriteFile(file1, []byte("file contents"), 0644)
+				err = ioutil.WriteFile(file1, []byte("file contents"), 0o644)
 				Expect(err).NotTo(HaveOccurred())
 
-				err = ioutil.WriteFile(file2, []byte("file contents"), 0644)
+				err = ioutil.WriteFile(file2, []byte("file contents"), 0o644)
 				Expect(err).NotTo(HaveOccurred())
 
 				matcher := MatchSHASumOf(file1)
@@ -46,10 +46,10 @@ var _ = Describe("MatchSHASumOfMatcher", func() {
 				file1 := filepath.Join(tempDir, "file-1")
 				file2 := filepath.Join(tempDir, "file-2")
 
-				err = ioutil.WriteFile(file1, []byte("some contents"), 0644)
+				err = ioutil.WriteFile(file1, []byte("some contents"), 0o644)
 				Expect(err).NotTo(HaveOccurred())
 
-				err = ioutil.WriteFile(file2, []byte("other contents"), 0644)
+				err = ioutil.WriteFile(file2, []byte("other contents"), 0o644)
 				Expect(err).NotTo(HaveOccurred())
 
 				matcher := MatchSHASumOf(file1)

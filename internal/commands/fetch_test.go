@@ -61,7 +61,7 @@ var _ = Describe("Fetch", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-			err = ioutil.WriteFile(someKilnfilePath, []byte(""), 0644)
+			err = ioutil.WriteFile(someKilnfilePath, []byte(""), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			someKilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
@@ -116,7 +116,7 @@ stemcell_criteria:
 				return fakeReleaseSources
 			}
 
-			err := ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0644)
+			err := ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 			fetch = commands.NewFetch(logger, multiReleaseSourceProvider, fakeLocalReleaseDirectory)
 
@@ -398,9 +398,7 @@ stemcell_criteria:
 			})
 
 			Context("when download fails", func() {
-				var (
-					wrappedErr error
-				)
+				var wrappedErr error
 
 				BeforeEach(func() {
 					wrappedErr = errors.New("kaboom")
@@ -426,9 +424,7 @@ stemcell_criteria:
 					fakeS3BuiltReleaseSource.DownloadReleaseCalls(func(string, component.Lock) (component.Local, error) {
 						f, err := os.Create(badReleasePath)
 						Expect(err).NotTo(HaveOccurred())
-						defer func() {
-							_ = f.Close()
-						}()
+						defer closeAndIgnoreError(f)
 
 						return component.Local{
 							Lock: missingReleaseS3BuiltID.Lock().WithSHA1("wrong-sha"), LocalPath: badReleasePath,
@@ -456,7 +452,6 @@ stemcell_criteria:
 				localReleaseID  = component.Spec{Name: "some-extra-release", Version: "1.2.3"}
 			)
 			BeforeEach(func() {
-
 				lockContents = `---
 releases:
 - name: some-release
@@ -474,7 +469,6 @@ stemcell_criteria:
 				fakeBoshIOReleaseSource.DownloadReleaseReturns(
 					component.Local{Lock: boshIOReleaseID.Lock().WithSHA1("correct-sha"), LocalPath: "local-path"},
 					nil)
-
 			})
 
 			Context("in non-interactive mode", func() {
@@ -518,20 +512,18 @@ release_sources:
     path_template: $( variable "path_template" )
 `
 
-				var (
-					someVariableFile, otherVariableFile *os.File
-				)
+				var someVariableFile, otherVariableFile *os.File
 
 				BeforeEach(func() {
 					var err error
 
 					someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-					err = ioutil.WriteFile(someKilnfilePath, []byte(TemplatizedKilnfileYMLContents), 0644)
+					err = ioutil.WriteFile(someKilnfilePath, []byte(TemplatizedKilnfileYMLContents), 0o644)
 					Expect(err).NotTo(HaveOccurred())
 
 					someVariableFile, err = ioutil.TempFile(tmpDir, "variables-file1")
 					Expect(err).NotTo(HaveOccurred())
-					defer func() { _ = someVariableFile.Close() }()
+					defer closeAndIgnoreError(someVariableFile)
 
 					variables := map[string]string{
 						"bucket": "my-releases",
@@ -544,7 +536,7 @@ release_sources:
 
 					otherVariableFile, err = ioutil.TempFile(tmpDir, "variables-file2")
 					Expect(err).NotTo(HaveOccurred())
-					defer func() { _ = otherVariableFile.Close() }()
+					defer closeAndIgnoreError(otherVariableFile)
 
 					variables = map[string]string{
 						"access_key":    "newkey",
@@ -583,8 +575,8 @@ release_sources:
 
 				It("passes concurrency parameter to DownloadReleases", func() {
 					Expect(fetchExecuteErr).NotTo(HaveOccurred())
-					//Expect(fakeReleaseSources.SetDownloadThreadsCallCount()).To(Equal(1))
-					//Expect(fakeReleaseSources.SetDownloadThreadsArgsForCall(0)).To(Equal(50))
+					// Expect(fakeReleaseSources.SetDownloadThreadsCallCount()).To(Equal(1))
+					// Expect(fakeReleaseSources.SetDownloadThreadsArgsForCall(0)).To(Equal(50))
 					// TODO: add test back in
 				})
 			})
@@ -626,7 +618,6 @@ release_sources:
 				})
 			})
 		})
-
 	})
 
 	Describe("Usage", func() {

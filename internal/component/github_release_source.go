@@ -5,14 +5,15 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"github.com/Masterminds/semver"
-	"github.com/google/go-github/v40/github"
-	"golang.org/x/oauth2"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/Masterminds/semver"
+	"github.com/google/go-github/v40/github"
+	"golang.org/x/oauth2"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -27,7 +28,6 @@ type GithubReleaseSource struct {
 // NewGithubReleaseSource will provision a new GithubReleaseSource Project
 // from the Kilnfile (ReleaseSourceConfig). If type is incorrect it will PANIC
 func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
-
 	if c.Type != "" && c.Type != ReleaseSourceTypeGithub {
 		panic(panicMessageWrongReleaseSourceType)
 	}
@@ -167,14 +167,14 @@ type githubNewRequestDoer interface {
 	Do(ctx context.Context, req *http.Request, v interface{}) (*github.Response, error)
 }
 
-func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client githubNewRequestDoer, logger *log.Logger) (Local, error) {
+func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client githubNewRequestDoer, _ *log.Logger) (Local, error) {
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
 
 	file, err := os.Create(filePath)
 	if err != nil {
 		return Local{}, err
 	}
-	defer func() { _ = file.Close() }()
+	defer closeAndIgnoreError(file)
 
 	request, err := client.NewRequest(http.MethodGet, remoteRelease.RemotePath, nil)
 	if err != nil {
@@ -244,9 +244,7 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 }
 
 func calculateSHA1(rc io.ReadCloser) (string, error) {
-	defer func() {
-		_ = rc.Close()
-	}()
+	defer closeAndIgnoreError(rc)
 	w := sha1.New()
 	_, err := io.Copy(w, rc)
 	if err != nil {

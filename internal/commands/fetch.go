@@ -81,7 +81,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []comp
 	}
 	if _, err := os.Stat(f.Options.ReleasesDir); err != nil {
 		if os.IsNotExist(err) {
-			err = os.MkdirAll(f.Options.ReleasesDir, 0777)
+			err = os.MkdirAll(f.Options.ReleasesDir, 0o777)
 			if err != nil {
 				return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 			}

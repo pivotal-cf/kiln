@@ -38,7 +38,7 @@ operating_system: centOS
 		header := &tar.Header{
 			Name:    "./stemcell.MF",
 			Size:    int64(stemcellManifest.Len()),
-			Mode:    int64(0644),
+			Mode:    int64(0o644),
 			ModTime: time.Now(),
 		}
 
@@ -136,7 +136,7 @@ operating_system: centOS
 					header := &tar.Header{
 						Name:    "./someotherfile.MF",
 						Size:    int64(stemcellManifest.Len()),
-						Mode:    int64(0644),
+						Mode:    int64(0o644),
 						ModTime: time.Now(),
 					}
 
@@ -190,7 +190,7 @@ operating_system: centOS
 					header := &tar.Header{
 						Name:    "./stemcell.MF",
 						Size:    int64(stemcellManifest.Len()),
-						Mode:    int64(0644),
+						Mode:    int64(0o644),
 						ModTime: time.Now(),
 					}
 

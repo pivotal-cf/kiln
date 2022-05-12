@@ -1,9 +1,9 @@
 package cargo
 
 import (
-	Ω "github.com/onsi/gomega"
 	"testing"
 
+	Ω "github.com/onsi/gomega"
 	"gopkg.in/yaml.v2"
 )
 

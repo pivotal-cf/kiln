@@ -151,7 +151,7 @@ func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease 
 	if err != nil {
 		return Local{}, err
 	}
-	defer func() { _ = out.Close() }()
+	defer closeAndIgnoreError(out)
 
 	_, err = io.Copy(out, resp.Body)
 	_ = resp.Body.Close()
@@ -229,7 +229,6 @@ type releaseResponse struct {
 }
 
 func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {
-
 	releaseResponses, err := src.getReleases(name)
 	if err != nil {
 		return false, err

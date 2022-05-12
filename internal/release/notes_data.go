@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -196,9 +197,7 @@ func (r fetchNotesData) kilnfileFromWorktree(kilnfilePath string) (cargo.Kilnfil
 	if err != nil {
 		return cargo.Kilnfile{}, nil
 	}
-	defer func() {
-		_ = worktreeKilnfile.Close()
-	}()
+	defer closeAndIgnoreError(worktreeKilnfile)
 
 	buf, err := ioutil.ReadAll(worktreeKilnfile)
 	if err != nil {
@@ -479,3 +478,5 @@ func setEmptyComponentGitHubRepositoryFromOtherKilnfile(k1, k2 cargo.Kilnfile) c
 	}
 	return k1
 }
+
+func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

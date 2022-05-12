@@ -54,7 +54,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			BeforeEach(func() {
 				fixtureContent, err := ioutil.ReadFile(filepath.Join("fixtures", "some-release.tgz"))
 				Expect(err).NotTo(HaveOccurred())
-				err = ioutil.WriteFile(releaseFile, fixtureContent, 0755)
+				err = ioutil.WriteFile(releaseFile, fixtureContent, 0o755)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -98,11 +98,11 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		var extraFilePath, zFilePath string
 		BeforeEach(func() {
 			extraFilePath = filepath.Join(releasesDir, "extra-release-0.0-os-0-0.0.0.tgz")
-			err := ioutil.WriteFile(extraFilePath, []byte("abc"), 0644)
+			err := ioutil.WriteFile(extraFilePath, []byte("abc"), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			zFilePath = filepath.Join(releasesDir, "z-release-0.0-os-0-0.0.0.tgz")
-			err = ioutil.WriteFile(zFilePath, []byte("xyz"), 0644)
+			err = ioutil.WriteFile(zFilePath, []byte("xyz"), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -129,7 +129,6 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			err := localReleaseDirectory.DeleteExtraReleases([]component.Local{zRelease, extraRelease}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(logBuf.Contents())).To(ContainSubstring(result))
-
 		})
 
 		Context("when a file cannot be removed", func() {

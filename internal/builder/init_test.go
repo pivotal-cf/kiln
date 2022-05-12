@@ -44,6 +44,6 @@ func (b Buffer) Close() error {
 	return nil
 }
 
-func (b Buffer) Seek(offset int64, whence int) (int64, error) {
+func (b Buffer) Seek(_ int64, _ int) (int64, error) {
 	return 0, nil
 }

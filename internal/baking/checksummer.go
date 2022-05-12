@@ -26,7 +26,7 @@ func (c Checksummer) Sum(path string) error {
 		return err
 	}
 
-	defer func() { _ = file.Close() }()
+	defer closeAndIgnoreError(file)
 
 	_, err = io.Copy(hash, file)
 	if err != nil {
@@ -35,7 +35,7 @@ func (c Checksummer) Sum(path string) error {
 
 	hexsum := fmt.Sprintf("%x", hash.Sum(nil))
 
-	err = ioutil.WriteFile(fmt.Sprintf("%s.sha256", path), []byte(hexsum), 0644)
+	err = ioutil.WriteFile(fmt.Sprintf("%s.sha256", path), []byte(hexsum), 0o644)
 	if err != nil {
 		return err
 	}

@@ -11,10 +11,9 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver"
-
+	"github.com/google/go-github/v40/github"
 	Ω "github.com/onsi/gomega"
 
-	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -28,9 +27,9 @@ func TestListAllOfTheCrap(t *testing.T) {
 		GithubToken: os.Getenv("GITHUB_TOKEN"),
 		Org:         "cloudfoundry",
 	})
-	//grs.ListAllOfTheCrap(context.TODO(), "cloudfoundry")
+	// grs.ListAllOfTheCrap(context.TODO(), "cloudfoundry")
 
-	//grs.Client.Repositories.GetReleaseByTag()
+	// grs.Client.Repositories.GetReleaseByTag()
 	release, response, err := grs.Client.Repositories.GetReleaseByTag(context.TODO(), "cloudfoundry", "routing-release", "0.226.0")
 	if err != nil {
 		t.Error(err)

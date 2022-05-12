@@ -1,6 +1,10 @@
 package component
 
-import "github.com/pivotal-cf/kiln/pkg/cargo"
+import (
+	"io"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+)
 
 type Spec = cargo.ComponentSpec
 
@@ -16,3 +20,5 @@ type Local struct {
 }
 
 type Lock = cargo.ComponentLock
+
+func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

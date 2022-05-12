@@ -9,11 +9,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -312,7 +311,6 @@ var _ = Describe("bake command", func() {
 	})
 
 	Context("when the --kilnfile flag is provided", func() {
-
 		It("generates a tile with the correct metadata including the stemcell criteria from the Kilnfile.lock", func() {
 			commandWithArgs = []string{
 				"bake",
@@ -584,10 +582,10 @@ var _ = Describe("bake command", func() {
 				someFileToEmbed := filepath.Join(tmpDir, "some-file-to-embed")
 				otherFileToEmbed := filepath.Join(tmpDir, "other-file-to-embed")
 
-				err := ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0600)
+				err := ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0o600)
 				Expect(err).NotTo(HaveOccurred())
 
-				err = ioutil.WriteFile(otherFileToEmbed, []byte("content-of-other-file"), 0755)
+				err = ioutil.WriteFile(otherFileToEmbed, []byte("content-of-other-file"), 0o755)
 				Expect(err).NotTo(HaveOccurred())
 
 				commandWithArgs = append(commandWithArgs,
@@ -636,7 +634,7 @@ var _ = Describe("bake command", func() {
 						Expect(err).NotTo(HaveOccurred())
 
 						mode := f.FileHeader.Mode()
-						Expect(mode).To(Equal(os.FileMode(0755)))
+						Expect(mode).To(Equal(os.FileMode(0o755)))
 
 						Expect(content).To(Equal([]byte("content-of-other-file")))
 					}
@@ -655,10 +653,10 @@ var _ = Describe("bake command", func() {
 				nestedDir := filepath.Join(dirToAdd, "some-nested-dir")
 				someFileToEmbed := filepath.Join(nestedDir, "some-file-to-embed")
 
-				err := os.MkdirAll(nestedDir, 0700)
+				err := os.MkdirAll(nestedDir, 0o700)
 				Expect(err).NotTo(HaveOccurred())
 
-				err = ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0600)
+				err = ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0o600)
 				Expect(err).NotTo(HaveOccurred())
 
 				commandWithArgs = append(commandWithArgs,
@@ -771,7 +769,8 @@ var _ = Describe("bake command", func() {
 
 		Context("when a Kilnfile.lock does not exist", func() {
 			It("prints an error and exits 1", func() {
-				commandWithArgs := []string{"bake",
+				commandWithArgs := []string{
+					"bake",
 					"--bosh-variables-directory", someBOSHVariablesDirectory,
 					"--forms-directory", someFormsDirectory,
 					"--forms-directory", someOtherFormsDirectory,
@@ -829,7 +828,7 @@ var _ = Describe("bake command", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(string(session.Err.Contents()))).To(ContainSubstring("no such file or directory"))
+				Expect(session.Err.Contents()).To(ContainSubstring("no such file or directory"))
 			})
 		})
 	})

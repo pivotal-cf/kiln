@@ -43,9 +43,7 @@ var _ = Describe("multiReleaseSource", func() {
 
 	Describe("GetMatchedRelease", func() {
 		When("one of the release sources has a match", func() {
-			var (
-				matchedRelease component.Lock
-			)
+			var matchedRelease component.Lock
 
 			BeforeEach(func() {
 				matchedRelease = component.Lock{
@@ -190,9 +188,7 @@ var _ = Describe("multiReleaseSource", func() {
 
 	Describe("FindReleaseVersion", func() {
 		When("one of the release sources has a match", func() {
-			var (
-				matchedRelease component.Lock
-			)
+			var matchedRelease component.Lock
 
 			BeforeEach(func() {
 				matchedRelease = component.Lock{
@@ -213,9 +209,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 		})
 		When("two of the release sources have a match", func() {
-			var (
-				matchedRelease component.Lock
-			)
+			var matchedRelease component.Lock
 
 			BeforeEach(func() {
 				unmatchedRelease := component.Lock{
@@ -242,9 +236,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 		})
 		When("two of the release sources match the same version", func() {
-			var (
-				matchedRelease component.Lock
-			)
+			var matchedRelease component.Lock
 
 			BeforeEach(func() {
 				matchedRelease = component.Lock{

@@ -13,7 +13,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-billy/v5"
-	pivnet "github.com/pivotal-cf/go-pivnet/v2"
+	"github.com/pivotal-cf/go-pivnet/v2"
 	"github.com/pivotal-cf/go-pivnet/v2/logshim"
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/yaml.v2"
@@ -94,7 +94,7 @@ func (p Publish) Execute(args []string) error {
 
 	err = p.updateReleaseOnPivnet(kilnfile, buildVersion)
 	if err != nil {
-		return fmt.Errorf("Failed to publish tile: %s", err)
+		return fmt.Errorf("failed to publish tile: %s", err)
 	} else {
 		p.OutLogger.Println("Successfully published tile.")
 	}
@@ -157,7 +157,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 	if err != nil {
 		return cargo.Kilnfile{}, nil, err
 	}
-	defer func() { _ = versionFile.Close() }()
+	defer closeAndIgnoreError(versionFile)
 
 	versionBuf, err := ioutil.ReadAll(versionFile)
 	if err != nil {
@@ -173,7 +173,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 	if err != nil {
 		return cargo.Kilnfile{}, nil, err
 	}
-	defer func() { _ = file.Close() }()
+	defer closeAndIgnoreError(file)
 
 	var kilnfile cargo.Kilnfile
 	if err := yaml.NewDecoder(file).Decode(&kilnfile); err != nil {
@@ -375,7 +375,6 @@ func endOfSupportFor(publishDate time.Time) string {
 }
 
 func (p Publish) attachLicenseFile(slug string, releaseID int, version *releaseVersion) (string, error) {
-
 	if version.IsGA() {
 		productFiles, err := p.PivnetProductFilesService.List(slug)
 		if err != nil {

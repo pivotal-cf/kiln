@@ -83,7 +83,7 @@ key-3: value-3
 
 			Context("when the variable file contents cannot be unmarshalled", func() {
 				It("returns an error", func() {
-					err := ioutil.WriteFile(path, []byte("\t\t\t"), 0644)
+					err := ioutil.WriteFile(path, []byte("\t\t\t"), 0o644)
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = service.FromPathsAndPairs([]string{path}, nil)

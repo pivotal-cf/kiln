@@ -15,7 +15,7 @@ func (pi *PropertyInputs) UnmarshalYAML(unmarshal func(v interface{}) error) err
 		return err
 	}
 
-	var contains = func(m map[string]interface{}, key string) bool {
+	contains := func(m map[string]interface{}, key string) bool {
 		_, ok := m[key]
 		return ok
 	}

@@ -43,7 +43,7 @@ var _ = Describe("Checksummer", func() {
 	})
 
 	AfterEach(func() {
-		err := os.Chmod(tmpdir, 0777)
+		err := os.Chmod(tmpdir, 0o777)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.RemoveAll(tmpdir)).To(Succeed())
 	})
@@ -74,7 +74,7 @@ var _ = Describe("Checksummer", func() {
 
 	Context("when the directory does not have write permissions", func() {
 		It("returns an error", func() {
-			err := os.Chmod(tmpdir, 0544)
+			err := os.Chmod(tmpdir, 0o544)
 			Expect(err).NotTo(HaveOccurred())
 
 			path := filepath.Join(tmpdir, "fixture")

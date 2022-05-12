@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/Masterminds/semver"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"io/ioutil"
 	"log"
@@ -18,6 +16,9 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
+
+	"github.com/Masterminds/semver"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type ArtifactoryReleaseSource struct {
@@ -54,7 +55,7 @@ func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig) *ArtifactoryReleas
 		panic(panicMessageWrongReleaseSourceType)
 	}
 
-	//ctx := context.TODO()
+	// ctx := context.TODO()
 
 	return &ArtifactoryReleaseSource{
 		ReleaseSourceConfig: c,
@@ -141,7 +142,6 @@ func (ars ArtifactoryReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 // fields on Requirement to download a specific release.
 func (ars ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 	remotePath, err := ars.RemotePath(spec)
-
 	if err != nil {
 		return Lock{}, err
 	}
@@ -175,14 +175,12 @@ func (ars ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 		RemotePath:   remotePath,
 		RemoteSource: ars.ID,
 	}, nil
-
 }
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
 func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 	remotePath, err := ars.RemotePath(spec)
-
 	if err != nil {
 		return Lock{}, err
 	}
@@ -304,8 +302,8 @@ func (ars ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lo
 		return Lock{}, err
 	}
 	request.SetBasicAuth(ars.Username, ars.Password)
-	//TODO: check Sha1/2
-	//request.Header.Set("X-Checksum-Sha1", spec.??? )
+	// TODO: check Sha1/2
+	// request.Header.Set("X-Checksum-Sha1", spec.??? )
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {

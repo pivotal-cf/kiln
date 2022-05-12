@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -181,7 +182,7 @@ func BoshDirector(omConfig ClientConfiguration, omAPI GetBoshEnvironmentAndSecur
 }
 
 // insecureGetHostKey just returns the key returned by the host and does not
-// attempt to ensure the key is from who it says it is from. This is what the
+// attempt to ensure the key is from whom it says it is from. This is what the
 // bosh CLI does, so it seems to be secure enough.
 func insecureGetHostKey(signer ssh.Signer, serverURL string) (ssh.PublicKey, error) {
 	publicKeyChannel := make(chan ssh.PublicKey, 1)
@@ -207,9 +208,7 @@ func insecureGetHostKey(signer ssh.Signer, serverURL string) (ssh.PublicKey, err
 			dialErrorChannel <- err
 			return
 		}
-		defer func() {
-			_ = conn.Close()
-		}()
+		defer closeAndIgnoreError(conn)
 		dialErrorChannel <- nil
 	}()
 
@@ -227,3 +226,5 @@ func getAuthURLFromInfo(info boshdir.InfoResp) (string, error) {
 	}
 	return s, nil
 }
+
+func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

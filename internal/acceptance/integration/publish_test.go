@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/onsi/gomega/gstruct"
-	pivnet "github.com/pivotal-cf/go-pivnet/v2"
+	"github.com/pivotal-cf/go-pivnet/v2"
 	"github.com/pivotal-cf/go-pivnet/v2/logshim"
 )
 
@@ -88,8 +88,8 @@ pre_ga_user_groups:
 		initialDir, _ = os.Getwd()
 		err = os.Chdir(tmpDir)
 		Expect(err).NotTo(HaveOccurred())
-		_ = ioutil.WriteFile("version", []byte(releaseVersion), 0777)
-		_ = ioutil.WriteFile("Kilnfile", []byte(kilnfileBody), 0777)
+		_ = ioutil.WriteFile("version", []byte(releaseVersion), 0o777)
+		_ = ioutil.WriteFile("Kilnfile", []byte(kilnfileBody), 0o777)
 	})
 
 	AfterEach(func() {

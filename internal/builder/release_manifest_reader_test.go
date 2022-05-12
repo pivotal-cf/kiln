@@ -33,7 +33,7 @@ func createReleaseTarball(releaseMetadata string) (*os.File, string) {
 	header := &tar.Header{
 		Name:    "./release.MF",
 		Size:    int64(releaseManifest.Len()),
-		Mode:    int64(0644),
+		Mode:    int64(0o644),
 		ModTime: time.Now(),
 	}
 
@@ -148,7 +148,7 @@ version: 1.2.3
 
 			Context("when the input is not a valid gzip", func() {
 				It("returns an error", func() {
-					tarball, err = os.OpenFile(tarball.Name(), os.O_RDWR, 0666)
+					tarball, err = os.OpenFile(tarball.Name(), os.O_RDWR, 0o666)
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = tarball.WriteAt([]byte{}, 10)
@@ -163,7 +163,7 @@ version: 1.2.3
 
 					By("corrupting the gzip header contents", func() {
 						contents[0] = 0
-						err = ioutil.WriteFile(tarball.Name(), contents, 0666)
+						err = ioutil.WriteFile(tarball.Name(), contents, 0o666)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -204,7 +204,7 @@ version: 1.2.3
 					header := &tar.Header{
 						Name:    "./someotherfile.MF",
 						Size:    int64(releaseManifest.Len()),
-						Mode:    int64(0644),
+						Mode:    int64(0o644),
 						ModTime: time.Now(),
 					}
 
@@ -260,7 +260,7 @@ version: 1.2.3
 					header := &tar.Header{
 						Name:    "./release.MF",
 						Size:    int64(releaseManifest.Len()),
-						Mode:    int64(0644),
+						Mode:    int64(0o644),
 						ModTime: time.Now(),
 					}
 

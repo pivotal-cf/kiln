@@ -57,7 +57,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				defer func() { testServer.Close() }()
+				testServer.Close()
 			})
 
 			It("finds built releases which exist on bosh.io", func() {
@@ -87,9 +87,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 					RemotePath:   cfRabbitURL,
 					RemoteSource: component.ReleaseSourceTypeBOSHIO,
 				}))
-
 			})
-
 		})
 
 		When("a bosh release doesn't exist on bosh.io in any version", func() {
@@ -109,7 +107,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				defer func() { testServer.Close() }()
+				testServer.Close()
 			})
 
 			It("doesn't find releases which don't exist on bosh.io", func() {
@@ -135,11 +133,10 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `[{"version": "4.0.4"}]`))
 
 				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), log.New(GinkgoWriter, "", 0))
-
 			})
 
 			AfterEach(func() {
-				defer func() { testServer.Close() }()
+				testServer.Close()
 			})
 
 			It("does not match that release", func() {
@@ -170,7 +167,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				defer func() { testServer.Close() }()
+				testServer.Close()
 			})
 
 			DescribeTable("searching multiple paths for each release",
@@ -262,7 +259,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 		})
 
 		AfterEach(func() {
-			defer func() { testServer.Close() }()
+			testServer.Close()
 			_ = os.RemoveAll(releaseDir)
 		})
 
@@ -309,7 +306,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				defer func() { testServer.Close() }()
+				testServer.Close()
 			})
 			When("there is no version requirement", func() {
 				It("gets the latest version from bosh.io", func() {
@@ -325,7 +322,6 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 						RemotePath:   cfRabbitURL,
 						RemoteSource: component.ReleaseSourceTypeBOSHIO,
 					}))
-
 				})
 			})
 			When("there is a version requirement", func() {
@@ -357,7 +353,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			AfterEach(func() {
-				defer func() { testServer.Close() }()
+				testServer.Close()
 			})
 
 			It("returns not found", func() {

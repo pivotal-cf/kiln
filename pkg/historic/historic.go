@@ -11,10 +11,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-var (
-	billOfMaterialFileNames = []string{"Kilnfile.lock", "assets.lock"}
-	// tileRootSentinelFiles   = []string{"Kilnfile", "base.yml"}
-)
+var billOfMaterialFileNames = []string{"Kilnfile.lock", "assets.lock"} // tileRootSentinelFiles   = []string{"Kilnfile", "base.yml"}
 
 func Kilnfile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (cargo.Kilnfile, cargo.KilnfileLock, error) {
 	tilePath := kilnfilePath

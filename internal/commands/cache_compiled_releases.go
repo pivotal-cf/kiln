@@ -282,9 +282,9 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 			continue
 		}
 
-		digest := release.SHA1
+		checksum := release.SHA1
 		if releaseLock.RemoteSource == targetID {
-			digest = releaseLock.SHA1
+			checksum = releaseLock.SHA1
 		}
 
 		lock.Releases[index] = cargo.ComponentLock{
@@ -292,7 +292,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 			Version:      release.Version,
 			RemoteSource: release.RemoteSource,
 			RemotePath:   release.RemotePath,
-			SHA1:         digest,
+			SHA1:         checksum,
 		}
 		return nil
 	}
@@ -304,9 +304,7 @@ func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Spec, fp str
 	if err != nil {
 		return component.Lock{}, err
 	}
-	defer func() {
-		_ = f.Close()
-	}()
+	defer closeAndIgnoreError(f)
 	return uploader.UploadRelease(spec, f)
 }
 
@@ -318,9 +316,7 @@ func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, 
 	if err != nil {
 		return "", "", "", err
 	}
-	defer func() {
-		_ = f.Close()
-	}()
+	defer closeAndIgnoreError(f)
 
 	sha256sum := sha256.New()
 	sha1sum := sha1.New()

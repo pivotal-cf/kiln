@@ -74,7 +74,6 @@ stemcell_criteria:
 		})
 
 		JustBeforeEach(func() {
-
 			_, requestErr = pivnet.Do(simpleRequest)
 			Expect(requestErr).NotTo(HaveOccurred())
 
@@ -83,11 +82,11 @@ stemcell_criteria:
 
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
 
-			err = ioutil.WriteFile(someKilnfilePath, []byte(kilnfileContents), 0644)
+			err = ioutil.WriteFile(someKilnfilePath, []byte(kilnfileContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			someKilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
-			err = ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0644)
+			err = ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			findStemcellVersion = commands.NewFindStemcellVersion(logger, &pivnet)
@@ -161,7 +160,7 @@ stemcell_criteria:
 		var (
 			stemcellVersionSpecifier string
 			majorVersion             string
-			error                    error
+			returnedErr              error
 		)
 
 		BeforeEach(func() {
@@ -169,7 +168,7 @@ stemcell_criteria:
 		})
 
 		JustBeforeEach(func() {
-			majorVersion, error = commands.ExtractMajorVersion(stemcellVersionSpecifier)
+			majorVersion, returnedErr = commands.ExtractMajorVersion(stemcellVersionSpecifier)
 		})
 
 		When("Invalid Stemcell Version Specifier is provided", func() {
@@ -179,8 +178,8 @@ stemcell_criteria:
 				})
 
 				It("returns the latest stemcell version", func() {
-					Expect(error).To(HaveOccurred())
-					Expect(error.Error()).To(Equal(commands.ErrStemcellMajorVersionMustBeValid))
+					Expect(returnedErr).To(HaveOccurred())
+					Expect(returnedErr.Error()).To(Equal(commands.ErrStemcellMajorVersionMustBeValid))
 				})
 			})
 		})
@@ -192,7 +191,7 @@ stemcell_criteria:
 				})
 
 				It("returns the latest stemcell version", func() {
-					Expect(error).NotTo(HaveOccurred())
+					Expect(returnedErr).NotTo(HaveOccurred())
 					Expect(majorVersion).To(Equal("456"))
 				})
 			})
@@ -202,7 +201,7 @@ stemcell_criteria:
 				})
 
 				It("returns the latest stemcell version", func() {
-					Expect(error).NotTo(HaveOccurred())
+					Expect(returnedErr).NotTo(HaveOccurred())
 					Expect(majorVersion).To(Equal("777"))
 				})
 			})
@@ -213,7 +212,7 @@ stemcell_criteria:
 				})
 
 				It("returns the latest stemcell version", func() {
-					Expect(error).NotTo(HaveOccurred())
+					Expect(returnedErr).NotTo(HaveOccurred())
 					Expect(majorVersion).To(Equal("1234"))
 				})
 			})
@@ -224,7 +223,7 @@ stemcell_criteria:
 				})
 
 				It("returns the latest stemcell version", func() {
-					Expect(error).NotTo(HaveOccurred())
+					Expect(returnedErr).NotTo(HaveOccurred())
 					Expect(majorVersion).To(Equal("456"))
 				})
 			})
@@ -235,7 +234,7 @@ stemcell_criteria:
 				})
 
 				It("returns the latest stemcell version", func() {
-					Expect(error).NotTo(HaveOccurred())
+					Expect(returnedErr).NotTo(HaveOccurred())
 					Expect(majorVersion).To(Equal("333"))
 				})
 			})

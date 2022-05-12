@@ -13,3 +13,5 @@ func TestFetcher(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Component Suite")
 }
+
+// func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

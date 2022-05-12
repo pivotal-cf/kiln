@@ -2,6 +2,7 @@ package historic
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"path/filepath"
 
@@ -71,9 +72,7 @@ func readBytesFromTree(storage storer.EncodedObjectStorer, tree *object.Tree, fi
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = f.Close()
-	}()
+	defer closeAndIgnoreError(f)
 	buf, err := ioutil.ReadAll(f)
 	if err != nil {
 		return nil, err
@@ -113,7 +112,7 @@ func readBytesFromTree(storage storer.EncodedObjectStorer, tree *object.Tree, fi
 //	return result
 //}
 
-//var releasedVersionTag = regexp.MustCompile(`^((\w+/)*)(\d+\.\d+\.\d+)$`)
+// var releasedVersionTag = regexp.MustCompile(`^((\w+/)*)(\d+\.\d+\.\d+)$`)
 
 //func isReleaseTag(reference *plumbing.Reference) (string, string, bool) {
 //	if !reference.Name().IsTag() {
@@ -131,3 +130,5 @@ func readBytesFromTree(storage storer.EncodedObjectStorer, tree *object.Tree, fi
 //
 //	return "", matches[len(matches)-1], true
 //}
+
+func closeAndIgnoreError(c io.Closer) { _ = c.Close() }
