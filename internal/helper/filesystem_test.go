@@ -93,7 +93,7 @@ var _ = Describe("Filesystem", func() {
 			err = tempfile.Close()
 			Expect(err).NotTo(HaveOccurred())
 
-			files := []string{}
+			var files []string
 			_ = filesystem.Walk(tempDir, func(filePath string, info os.FileInfo, err error) error {
 				files = append(files, filePath)
 				return nil

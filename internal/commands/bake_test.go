@@ -60,7 +60,7 @@ var _ = Describe("Bake", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		nonTarballRelease := filepath.Join(someReleasesDirectory, "some-broken-release")
-		err = ioutil.WriteFile(nonTarballRelease, []byte(""), 0644)
+		err = ioutil.WriteFile(nonTarballRelease, []byte(""), 0o644)
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeTileWriter = &fakes.TileWriter{}
@@ -729,7 +729,7 @@ var _ = Describe("Bake", func() {
 				})
 			})
 
-			//todo: When --stemcell-tarball is removed, delete this test
+			// todo: When --stemcell-tarball is removed, delete this test
 			Context("when both the --stemcell-tarball and --kilnfile are provided", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
@@ -742,7 +742,7 @@ var _ = Describe("Bake", func() {
 				})
 			})
 
-			//todo: When --stemcell-tarball is remove, delete this test
+			// todo: When --stemcell-tarball is remove, delete this test
 			Context("when both the --stemcell-tarball and --stemcells-directory are provided", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{

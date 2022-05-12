@@ -249,8 +249,7 @@ var _ = Describe("UpdateStemcell", func() {
 			It("no-ops", func() {
 				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", "34$5235.32235"})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Please enter a valid stemcell version to update"))
-
+				Expect(err.Error()).To(ContainSubstring("invalid stemcell version"))
 			})
 		})
 
@@ -265,7 +264,7 @@ var _ = Describe("UpdateStemcell", func() {
 			It("no-ops", func() {
 				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", "2.100"})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Invalid stemcell constraint in kilnfile:"))
+				Expect(err.Error()).To(ContainSubstring("invalid stemcell constraint in kilnfile:"))
 			})
 		})
 

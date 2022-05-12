@@ -13,7 +13,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-billy/v5"
-	pivnet "github.com/pivotal-cf/go-pivnet/v2"
+	"github.com/pivotal-cf/go-pivnet/v2"
 	"github.com/pivotal-cf/go-pivnet/v2/logshim"
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/yaml.v2"
@@ -94,7 +94,7 @@ func (p Publish) Execute(args []string) error {
 
 	err = p.updateReleaseOnPivnet(kilnfile, buildVersion)
 	if err != nil {
-		return fmt.Errorf("Failed to publish tile: %s", err)
+		return fmt.Errorf("failed to publish tile: %s", err)
 	} else {
 		p.OutLogger.Println("Successfully published tile.")
 	}
@@ -375,7 +375,6 @@ func endOfSupportFor(publishDate time.Time) string {
 }
 
 func (p Publish) attachLicenseFile(slug string, releaseID int, version *releaseVersion) (string, error) {
-
 	if version.IsGA() {
 		productFiles, err := p.PivnetProductFilesService.List(slug)
 		if err != nil {

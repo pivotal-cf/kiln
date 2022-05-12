@@ -18,7 +18,7 @@ func NewVersion(logger *log.Logger, version string) Version {
 	}
 }
 
-func (v Version) Execute(args []string) error {
+func (v Version) Execute([]string) error {
 	v.logger.Printf("kiln version %s\n", v.version)
 
 	return nil

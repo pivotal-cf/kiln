@@ -2,9 +2,10 @@ package component
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"log"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 // MultiReleaseSource wraps a set of release sources. It is mostly used to generate fakes
@@ -78,7 +79,7 @@ const (
 	ReleaseSourceTypeS3 = "s3"
 
 	// ReleaseSourceTypeGithub is the value for the Type field on cargo.ReleaseSourceConfig
-	// for releases stored on Github.
+	// for releases stored on GitHub.
 	ReleaseSourceTypeGithub = "github"
 
 	// ReleaseSourceTypeArtifactory is the value for the Type field on cargo.ReleaseSourceConfig

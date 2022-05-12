@@ -373,7 +373,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	}), "it should not override the in-correct element in the Kilnfile.lock")
 }
 
-// this test ensures make it so the we don't have to iterate over all the releases
+// this test ensures make it so that we don't have to iterate over all the releases
 // before failing due to a stemcell mismatch
 func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_same(t *testing.T) {
 	please := Ω.NewWithT(t)

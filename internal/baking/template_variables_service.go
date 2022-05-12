@@ -21,15 +21,9 @@ func (s TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []stri
 	variables := map[string]interface{}{}
 
 	for _, path := range paths {
-		file, err := s.filesystem.Open(path)
+		err := parseVariablesFromFile(s.filesystem, path, variables)
 		if err != nil {
-			return nil, fmt.Errorf("unable to open file %q: %w", path, err)
-		}
-
-		err = yaml.NewDecoder(file).Decode(&variables)
-		defer func() { file.Close() }()
-		if err != nil {
-			return nil, fmt.Errorf("unable to YAML parse %q: %w", path, err)
+			return nil, err
 		}
 	}
 
@@ -44,4 +38,20 @@ func (s TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []stri
 	}
 
 	return variables, nil
+}
+
+func parseVariablesFromFile(fs billy.Basic, path string, variables map[string]interface{}) error {
+	file, err := fs.Open(path)
+	if err != nil {
+		return fmt.Errorf("unable to open file %q: %w", path, err)
+	}
+
+	err = yaml.NewDecoder(file).Decode(&variables)
+	defer func() {
+		_ = file.Close()
+	}()
+	if err != nil {
+		return fmt.Errorf("unable to YAML parse %q: %w", path, err)
+	}
+	return nil
 }

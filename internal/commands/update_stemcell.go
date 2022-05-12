@@ -42,14 +42,14 @@ func (update UpdateStemcell) Execute(args []string) error {
 
 	latestStemcellVersion, err := semver.NewVersion(trimmedInputVersion)
 	if err != nil {
-		return fmt.Errorf("Please enter a valid stemcell version to update: %w", err)
+		return fmt.Errorf("invalid stemcell version (please enter a valid version): %w", err)
 	}
 
 	kilnStemcellVersion := kilnfile.Stemcell.Version
 	releaseVersionConstraint, err = semver.NewConstraint(kilnStemcellVersion)
 
 	if err != nil {
-		return fmt.Errorf("Invalid stemcell constraint in kilnfile: %w", err)
+		return fmt.Errorf("invalid stemcell constraint in kilnfile: %w", err)
 	}
 
 	if !releaseVersionConstraint.Check(latestStemcellVersion) {

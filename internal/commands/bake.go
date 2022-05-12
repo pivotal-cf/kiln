@@ -166,7 +166,6 @@ func NewBakeWithInterfaces(
 	metadataService metadataService,
 	checksummer checksummer,
 ) Bake {
-
 	return Bake{
 		interpolator:      interpolator,
 		tileWriter:        tileWriter,
@@ -333,7 +332,7 @@ func (b Bake) Execute(args []string) error {
 		BOSHVariables:      boshVariables,
 		ReleaseManifests:   releaseManifests,
 		StemcellManifests:  stemcellManifests,
-		StemcellManifest:   stemcellManifest, //TODO Remove when --stemcell-tarball is deprecated
+		StemcellManifest:   stemcellManifest, // TODO Remove when --stemcell-tarball is deprecated
 		FormTypes:          forms,
 		IconImage:          icon,
 		InstanceGroups:     instanceGroups,

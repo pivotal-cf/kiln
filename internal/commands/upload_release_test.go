@@ -126,7 +126,7 @@ compiled_packages:
 
 			When("the release version is not a finalized release", func() {
 				var err error
-				var devReleases = []struct {
+				devReleases := []struct {
 					tarballName string
 					version     string
 				}{
@@ -177,7 +177,9 @@ compiled_packages:
 			BeforeEach(func() {
 				f, err := fs.Create("invalid-release.tgz")
 				_, _ = f.Write([]byte("invalid"))
-				defer func() { f.Close() }()
+				defer func() {
+					_ = f.Close()
+				}()
 
 				Expect(err).NotTo(HaveOccurred())
 			})

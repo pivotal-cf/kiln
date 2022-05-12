@@ -229,7 +229,6 @@ type releaseResponse struct {
 }
 
 func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {
-
 	releaseResponses, err := src.getReleases(name)
 	if err != nil {
 		return false, err

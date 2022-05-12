@@ -38,7 +38,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]Local, er
 
 	for _, rel := range rawReleases {
 		rm := rel.Metadata.(builder.ReleaseManifest)
-		lock := Lock{Name: rm.Name, Version: rm.Version, StemcellOS: rm.StemcellOS, StemcellVersion: rm.StemcellVersion }
+		lock := Lock{Name: rm.Name, Version: rm.Version, StemcellOS: rm.StemcellOS, StemcellVersion: rm.StemcellVersion}
 
 		lock.SHA1, err = CalculateSum(rel.File, osfs.New(""))
 		if err != nil {
@@ -87,7 +87,6 @@ func (l LocalReleaseDirectory) DeleteExtraReleases(extraReleaseSet []Local, noCo
 func (l LocalReleaseDirectory) deleteReleases(releasesToDelete []Local) error {
 	for _, release := range releasesToDelete {
 		err := os.Remove(release.LocalPath)
-
 		if err != nil {
 			l.logger.Printf("error removing release %s: %v\n", release.Name, err)
 			return fmt.Errorf("failed to delete release %s", release.Name)

@@ -282,9 +282,9 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 			continue
 		}
 
-		digest := release.SHA1
+		checksum := release.SHA1
 		if releaseLock.RemoteSource == targetID {
-			digest = releaseLock.SHA1
+			checksum = releaseLock.SHA1
 		}
 
 		lock.Releases[index] = cargo.ComponentLock{
@@ -292,7 +292,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 			Version:      release.Version,
 			RemoteSource: release.RemoteSource,
 			RemotePath:   release.RemotePath,
-			SHA1:         digest,
+			SHA1:         checksum,
 		}
 		return nil
 	}

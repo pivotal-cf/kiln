@@ -113,7 +113,7 @@ func readBytesFromTree(storage storer.EncodedObjectStorer, tree *object.Tree, fi
 //	return result
 //}
 
-//var releasedVersionTag = regexp.MustCompile(`^((\w+/)*)(\d+\.\d+\.\d+)$`)
+// var releasedVersionTag = regexp.MustCompile(`^((\w+/)*)(\d+\.\d+\.\d+)$`)
 
 //func isReleaseTag(reference *plumbing.Reference) (string, string, bool) {
 //	if !reference.Name().IsTag() {

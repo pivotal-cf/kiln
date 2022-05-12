@@ -31,7 +31,7 @@ func (ss StemcellService) FromDirectories(directories []string) (stemcell map[st
 
 	var tarballs []string
 	for _, directory := range directories {
-		err := filepath.Walk(directory, filepath.WalkFunc(func(path string, _ os.FileInfo, err error) error {
+		err := filepath.Walk(directory, func(path string, _ os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -41,8 +41,7 @@ func (ss StemcellService) FromDirectories(directories []string) (stemcell map[st
 			}
 
 			return nil
-		}))
-
+		})
 		if err != nil {
 			return nil, err
 		}

@@ -181,7 +181,7 @@ func BoshDirector(omConfig ClientConfiguration, omAPI GetBoshEnvironmentAndSecur
 }
 
 // insecureGetHostKey just returns the key returned by the host and does not
-// attempt to ensure the key is from who it says it is from. This is what the
+// attempt to ensure the key is from whom it says it is from. This is what the
 // bosh CLI does, so it seems to be secure enough.
 func insecureGetHostKey(signer ssh.Signer, serverURL string) (ssh.PublicKey, error) {
 	publicKeyChannel := make(chan ssh.PublicKey, 1)

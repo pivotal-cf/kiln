@@ -13,7 +13,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
-	pivnet "github.com/pivotal-cf/go-pivnet/v2"
+	"github.com/pivotal-cf/go-pivnet/v2"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
@@ -91,7 +91,7 @@ pre_ga_user_groups:
 
 				kf, _ := fs.Create("Kilnfile")
 				_, _ = kf.Write([]byte(defaultKilnFileBody))
-				defer func() { kf.Close() }()
+				defer func() { _ = kf.Close() }()
 
 				publish = commands.Publish{
 					FS:                               fs,
@@ -169,7 +169,6 @@ pre_ga_user_groups:
 					Expect(outLoggerBuffer.String()).To(ContainSubstring(userGroup2Name))
 
 					Expect(outLoggerBuffer.String()).To(ContainSubstring("Successfully published tile."))
-
 				})
 
 				Context("when previous alphas have been published", func() {
@@ -622,7 +621,6 @@ pre_ga_user_groups:
 					})
 				})
 			})
-
 		})
 
 		When("the sad/unhappy case", func() {
@@ -672,13 +670,13 @@ pre_ga_user_groups:
 				if !noVersionFile {
 					version, _ := fs.Create("version")
 					_, _ = version.Write([]byte(versionFileBody))
-					defer func() { version.Close() }()
+					defer func() { _ = version.Close() }()
 				}
 
 				if !noKilnFile {
 					kilnFile, _ := fs.Create("Kilnfile")
 					_, _ = kilnFile.Write([]byte(kilnFileBody))
-					defer func() { kilnFile.Close() }()
+					defer func() { _ = kilnFile.Close() }()
 				}
 
 				publish.FS = fs
@@ -855,7 +853,7 @@ pre_ga_user_groups:
 					Expect(rs.UpdateCallCount()).To(Equal(0))
 					Expect(pfs.ListCallCount()).To(Equal(1))
 					Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
-					Expect(err).To(MatchError(ContainSubstring("Failed to publish tile: more bad stuff happened")))
+					Expect(err).To(MatchError(ContainSubstring("failed to publish tile: more bad stuff happened")))
 				})
 			})
 
@@ -971,7 +969,6 @@ pre_ga_user_groups:
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring(userGroup1Name)))
 				})
-
 			})
 
 			When("upgrade path is empty", func() {

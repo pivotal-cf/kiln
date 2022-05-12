@@ -87,9 +87,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 					RemotePath:   cfRabbitURL,
 					RemoteSource: component.ReleaseSourceTypeBOSHIO,
 				}))
-
 			})
-
 		})
 
 		When("a bosh release doesn't exist on bosh.io in any version", func() {
@@ -135,7 +133,6 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `[{"version": "4.0.4"}]`))
 
 				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), log.New(GinkgoWriter, "", 0))
-
 			})
 
 			AfterEach(func() {
@@ -325,7 +322,6 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 						RemotePath:   cfRabbitURL,
 						RemoteSource: component.ReleaseSourceTypeBOSHIO,
 					}))
-
 				})
 			})
 			When("there is a version requirement", func() {

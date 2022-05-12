@@ -1,10 +1,10 @@
 package baking_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate

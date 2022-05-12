@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 )
 
-var OpenFile = os.OpenFile
-
 type Filesystem struct{}
 
 func NewFilesystem() Filesystem {

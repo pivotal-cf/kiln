@@ -30,8 +30,8 @@ var _ = Context("Syncing the Kilnfile.lock to releases on disk", func() {
 	)
 
 	const (
-		_readOnly      = 0600
-		_readExecWrite = 0700
+		_readOnly      = 0o600
+		_readExecWrite = 0o700
 	)
 
 	BeforeEach(func() {

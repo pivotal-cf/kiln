@@ -115,7 +115,6 @@ selected_value: $( release "some-release" | select "version" )
 	})
 
 	It("interpolates yaml correctly", func() {
-
 		type namedThing struct {
 			Name string `yaml:"name"`
 		}
@@ -317,7 +316,6 @@ stemcell_criteria:
 `,
 			))
 		})
-
 	})
 
 	Context("when the runtime config is provided", func() {
@@ -392,7 +390,6 @@ some_runtime_configs:
 
 	Context("when release tgz file does not exist and stub releases is true", func() {
 		It("creates stub values for file, sha1, and version", func() {
-
 			interpolator := builder.NewInterpolator()
 			input.StubReleases = true
 			interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(`releases: [$(release "stub-release")]`))
@@ -457,7 +454,6 @@ some_runtime_configs:
 
 		Context("when template parsing fails", func() {
 			It("returns an error", func() {
-
 				interpolator := builder.NewInterpolator()
 				_, err := interpolator.Interpolate(input, "", []byte("$(variable"))
 				Expect(err).To(HaveOccurred())
@@ -467,7 +463,6 @@ some_runtime_configs:
 
 		Context("when template execution fails", func() {
 			It("returns an error", func() {
-
 				interpolator := builder.NewInterpolator()
 				_, err := interpolator.Interpolate(input, "", []byte(`name: $( variable "some-missing-variable" )`))
 
@@ -479,7 +474,6 @@ some_runtime_configs:
 
 		Context("when release tgz file does not exist but is provided", func() {
 			It("returns an error", func() {
-
 				interpolator := builder.NewInterpolator()
 				_, err := interpolator.Interpolate(input, "", []byte(`releases: [$(release "some-release-does-not-exist")]`))
 

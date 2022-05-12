@@ -19,7 +19,7 @@ type Service struct {
 	UAAAPIToken string
 
 	// Client allows you to inject an alternate client
-	// (for testing per say). When not set, http.DefaultClient is used.
+	// (for testing per se). When not set, http.DefaultClient is used.
 	Client *http.Client
 }
 
@@ -75,7 +75,9 @@ func (service Service) Releases(productSlug string) ([]Release, error) {
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	responseBody, err := ioutil.ReadAll(res.Body)
 	if err != nil {
