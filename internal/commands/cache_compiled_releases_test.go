@@ -311,9 +311,9 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "8.0.0"}]}`, nil)
 
 	deployment := new(boshdirFakes.FakeDeployment)
+	deployment.ExportReleaseReturns(director.ExportReleaseResult{}, nil)
 	bosh := new(boshdirFakes.FakeDirector)
 	bosh.FindDeploymentReturns(deployment, nil)
-
 	bosh.FindReleaseStub = func(slug director.ReleaseSlug) (director.Release, error) {
 		switch slug.Name() {
 		default:
@@ -327,13 +327,8 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 		}
 	}
 
-	deployment.ExportReleaseReturns(director.ExportReleaseResult{}, nil)
-
 	releaseStorage := new(fakes.ReleaseStorage)
 	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
-	releaseStorage.UploadReleaseCalls(func(_ component.Spec, reader io.Reader) (component.Lock, error) {
-		return component.Lock{}, nil
-	})
 
 	var output bytes.Buffer
 	logger := log.New(&output, "", 0)
@@ -375,7 +370,6 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	please.Expect(output.String()).To(Ω.ContainSubstring("1 release needs to be exported and cached"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("banana/2.0.0 compiled with alpine/8.0.0 not found in cache"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
-	please.Expect(output.String()).To(Ω.ContainSubstring("banana/2.0.0 does not have any packages"))
 	please.Expect(output.String()).NotTo(Ω.ContainSubstring("exporting lemon"))
 	please.Expect(output.String()).NotTo(Ω.ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
 
@@ -392,8 +386,143 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	}), "it should not override the in-correct element in the Kilnfile.lock")
 }
 
-// this test ensures make it so that we don't have to iterate over all the releases
-// before failing due to a stemcell mismatch
+// this test covers
+// - when a release does not contain packages
+func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	// setup
+
+	fs := memfs.New()
+
+	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
+		ReleaseSources: []cargo.ReleaseSourceConfig{
+			{
+				ID:           "cached-compiled-releases",
+				Publishable:  true,
+				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
+			},
+			{
+				ID:           "new-releases",
+				Publishable:  false,
+				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
+			},
+		},
+		Releases: []cargo.ComponentSpec{
+			{
+				Name: "banana",
+			},
+		},
+	})).NotTo(Ω.HaveOccurred())
+	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
+		Releases: []cargo.ComponentLock{
+			{
+				Name:    "banana",
+				Version: "2.0.0",
+
+				RemoteSource: "cached-compiled-releases",
+				RemotePath:   "banana-2.0.0-alpine-5.5.5",
+
+				SHA1: "fake-checksum",
+			},
+		},
+		Stemcell: cargo.Stemcell{
+			OS:      "alpine",
+			Version: "8.0.0",
+		},
+	})).NotTo(Ω.HaveOccurred())
+
+	opsManager := new(fakes.OpsManagerReleaseCacheSource)
+	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "8.0.0"}]}`, nil)
+
+	deployment := new(boshdirFakes.FakeDeployment)
+	deployment.ExportReleaseReturns(director.ExportReleaseResult{SHA1: "sha256:7dd4f2f077e449b47215359e8020c0b6c81e184d2c614486246cb8f70cac7a70"}, nil)
+	bosh := new(boshdirFakes.FakeDirector)
+	bosh.DownloadResourceUncheckedCalls(func(_ string, writer io.Writer) error {
+		_, _ = writer.Write([]byte("greetings"))
+		return nil
+	})
+	bosh.FindDeploymentReturns(deployment, nil)
+	bosh.FindReleaseStub = func(slug director.ReleaseSlug) (director.Release, error) {
+		switch slug.Name() {
+		default:
+			panic(fmt.Errorf("FindReleaseStub input not handled: %#v", slug))
+		case "banana":
+			return &boshdirFakes.FakeRelease{
+				PackagesStub: func() ([]director.Package, error) {
+					return make([]director.Package, 0), nil
+				},
+			}, nil
+		}
+	}
+
+	releaseStorage := new(fakes.ReleaseStorage)
+	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
+	releaseStorage.UploadReleaseStub = func(spec cargo.ComponentSpec, reader io.Reader) (cargo.ComponentLock, error) {
+		l := spec.Lock()
+		l.RemotePath = "BANANA.tgz"
+		l.RemoteSource = "BASKET"
+		return l, nil
+	}
+
+	var output bytes.Buffer
+	logger := log.New(&output, "", 0)
+
+	cmd := commands.CacheCompiledReleases{
+		FS:     fs,
+		Logger: logger,
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
+			return releaseStorage, nil
+		},
+		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
+			return opsManager, nil
+		},
+		Director: func(configuration om.ClientConfiguration, provider om.GetBoshEnvironmentAndSecurityRootCACertificateProvider) (director.Director, error) {
+			return bosh, nil
+		},
+	}
+
+	// run
+
+	err := cmd.Execute([]string{
+		"--upload-target-id", "cached-compiled-releases",
+	})
+
+	// check
+
+	please.Expect(bosh.DownloadResourceUncheckedCallCount()).To(Ω.Equal(1))
+	please.Expect(bosh.HasReleaseCallCount()).To(Ω.Equal(0))
+	please.Expect(bosh.FindReleaseCallCount()).To(Ω.Equal(1))
+
+	{
+		requestedReleaseSlug := bosh.FindReleaseArgsForCall(0)
+		please.Expect(requestedReleaseSlug.Name()).To(Ω.Equal("banana"))
+		please.Expect(requestedReleaseSlug.Version()).To(Ω.Equal("2.0.0"))
+	}
+
+	please.Expect(output.String()).To(Ω.ContainSubstring("1 release needs to be exported and cached"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("banana/2.0.0 compiled with alpine/8.0.0 not found in cache"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("oes not have any packages"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("exporting banana"))
+
+	var updatedKilnfile cargo.KilnfileLock
+	please.Expect(fsReadYAML(fs, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
+	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(component.Lock{
+		Name:    "banana",
+		Version: "2.0.0",
+
+		RemoteSource: "BASKET",
+		RemotePath:   "BANANA.tgz",
+
+		SHA1: "fake-checksum",
+	}), "it should not override the in-correct element in the Kilnfile.lock")
+
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+
+	please.Expect(output.String()).To(Ω.ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
+}
+
 func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_same(t *testing.T) {
 	please := Ω.NewWithT(t)
 
