@@ -220,6 +220,9 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 
 var errNoPackages = errors.New("release has no packages")
 
+// hasRequiredCompiledPackages implementation is copied from the boshdir.DirectorImpl HasRelease method. It adds the check
+// for the length of the packages slice to allow for BOSH releases that do not have any packages. One example of a BOSH
+// release without packages is https://github.com/cloudfoundry/bosh-dns-aliases-release.
 func hasRequiredCompiledPackages(d boshdir.Director, releaseSlug boshdir.ReleaseSlug, stemcell boshdir.OSVersionSlug) (bool, error) {
 	release, err := d.FindRelease(releaseSlug)
 	if err != nil {
