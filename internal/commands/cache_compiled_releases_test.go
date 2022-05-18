@@ -182,7 +182,18 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 		_, _ = writer.Write(releaseInBlobstore)
 		return nil
 	})
-	bosh.HasReleaseReturns(true, nil)
+	bosh.FindReleaseStub = func(slug director.ReleaseSlug) (director.Release, error) {
+		switch slug.Name() {
+		default:
+			panic(fmt.Errorf("FindReleaseStub input not handled: %#v", slug))
+		case "lemon":
+			return &boshdirFakes.FakeRelease{
+				PackagesStub: func() ([]director.Package, error) {
+					return []director.Package{{CompiledPackages: []director.CompiledPackage{{Stemcell: director.NewOSVersionSlug("alpine", "9.0.0")}}}}, nil
+				},
+			}, nil
+		}
+	}
 
 	releaseStorage := new(fakes.ReleaseStorage)
 	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
@@ -305,7 +316,18 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	bosh := new(boshdirFakes.FakeDirector)
 	bosh.FindDeploymentReturns(deployment, nil)
 
-	bosh.HasReleaseReturns(false, nil) // <- this is the important thing
+	bosh.FindReleaseStub = func(slug director.ReleaseSlug) (director.Release, error) {
+		switch slug.Name() {
+		default:
+			panic(fmt.Errorf("FindReleaseStub input not handled: %#v", slug))
+		case "banana":
+			return &boshdirFakes.FakeRelease{
+				PackagesStub: func() ([]director.Package, error) {
+					return make([]director.Package, 1), nil
+				},
+			}, nil
+		}
+	}
 
 	deployment.ExportReleaseReturns(director.ExportReleaseResult{}, nil)
 	bosh.DownloadResourceUncheckedCalls(func(_ string, writer io.Writer) error {
@@ -347,11 +369,9 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	please.Expect(err).To(Ω.MatchError(Ω.ContainSubstring("not found on bosh director")))
 
 	{
-		requestedReleaseName, requestedReleaseVersion, requestedStemcellSlug := bosh.HasReleaseArgsForCall(0)
-		please.Expect(requestedReleaseName).To(Ω.Equal("banana"))
-		please.Expect(requestedReleaseVersion).To(Ω.Equal("2.0.0"))
-		please.Expect(requestedStemcellSlug.Version()).To(Ω.Equal("8.0.0"))
-		please.Expect(requestedStemcellSlug.OS()).To(Ω.Equal("alpine"))
+		requestedReleaseSlug := bosh.FindReleaseArgsForCall(0)
+		please.Expect(requestedReleaseSlug.Name()).To(Ω.Equal("banana"))
+		please.Expect(requestedReleaseSlug.Version()).To(Ω.Equal("2.0.0"))
 	}
 
 	please.Expect(output.String()).To(Ω.ContainSubstring("1 release needs to be exported and cached"))

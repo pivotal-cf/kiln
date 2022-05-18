@@ -188,8 +188,10 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			StemcellVersion: stagedStemcellVersion,
 		}
 
-		if hasRelease, err := bosh.HasRelease(rel.Name, rel.Version, requirement.OSVersionSlug()); err != nil {
-			return fmt.Errorf("failed to find release %s: %w", requirement.ReleaseSlug(), err)
+		if hasRelease, err := hasRequiredCompiledPackages(bosh, rel.ReleaseSlug(), requirement.OSVersionSlug()); err != nil {
+			if !errors.Is(err, errNoPackages) {
+				return fmt.Errorf("failed to find release %s: %w", requirement.ReleaseSlug(), err)
+			}
 		} else if !hasRelease {
 			return fmt.Errorf("%[1]s compiled with %[2]s is not found on bosh director (it might have been uploaded as a compiled release and the director can't recompile it for the compilation target %[2]s)", requirement.ReleaseSlug(), requirement.OSVersionSlug())
 		}
@@ -214,6 +216,34 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	cmd.Logger.Printf("DON'T FORGET TO MAKE A COMMIT AND PR\n")
 
 	return nil
+}
+
+var errNoPackages = errors.New("release has no packages")
+
+func hasRequiredCompiledPackages(d boshdir.Director, releaseSlug boshdir.ReleaseSlug, stemcell boshdir.OSVersionSlug) (bool, error) {
+	release, err := d.FindRelease(releaseSlug)
+	if err != nil {
+		return false, err
+	}
+
+	pkgs, err := release.Packages()
+	if err != nil {
+		return false, err
+	}
+
+	if len(pkgs) == 0 {
+		return true, errNoPackages
+	}
+
+	for _, pkg := range pkgs {
+		for _, compiledPkg := range pkg.CompiledPackages {
+			if compiledPkg.Stemcell == stemcell {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }
 
 func (cmd CacheCompiledReleases) fetchProductDeploymentData() (_ OpsManagerReleaseCacheSource, deploymentName, stemcellOS, stemcellVersion string, _ error) {

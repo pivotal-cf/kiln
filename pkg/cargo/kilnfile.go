@@ -128,6 +128,10 @@ type ComponentLock struct {
 	RemotePath   string `yaml:"remote_path"`
 }
 
+func (lock ComponentLock) ReleaseSlug() boshdir.ReleaseSlug {
+	return boshdir.NewReleaseSlug(lock.Name, lock.Version)
+}
+
 func (lock ComponentLock) String() string {
 	var b strings.Builder
 	b.WriteString(lock.Name)
