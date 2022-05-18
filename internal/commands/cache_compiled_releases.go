@@ -192,6 +192,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			if !errors.Is(err, errNoPackages) {
 				return fmt.Errorf("failed to find release %s: %w", requirement.ReleaseSlug(), err)
 			}
+			cmd.Logger.Printf("%s does not have any packages\n", rel)
 		} else if !hasRelease {
 			return fmt.Errorf("%[1]s compiled with %[2]s is not found on bosh director (it might have been uploaded as a compiled release and the director can't recompile it for the compilation target %[2]s)", requirement.ReleaseSlug(), requirement.OSVersionSlug())
 		}

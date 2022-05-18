@@ -377,6 +377,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	please.Expect(output.String()).To(Ω.ContainSubstring("1 release needs to be exported and cached"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("banana 2.0.0 compiled with alpine 8.0.0 not found in cache"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("banana 2.0.0 does not have any packages"))
 	please.Expect(output.String()).NotTo(Ω.ContainSubstring("exporting lemon"))
 	please.Expect(output.String()).NotTo(Ω.ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
 
