@@ -132,6 +132,10 @@ func (lock ComponentLock) ReleaseSlug() boshdir.ReleaseSlug {
 	return boshdir.NewReleaseSlug(lock.Name, lock.Version)
 }
 
+func (lock ComponentLock) StemcellSlug() boshdir.OSVersionSlug {
+	return boshdir.NewOSVersionSlug(lock.StemcellOS, lock.StemcellVersion)
+}
+
 func (lock ComponentLock) String() string {
 	var b strings.Builder
 	b.WriteString(lock.Name)

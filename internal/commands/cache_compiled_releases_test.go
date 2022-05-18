@@ -243,7 +243,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	please.Expect(requestedID).To(Ω.Equal("some-blob-id"))
 
 	please.Expect(output.String()).To(Ω.ContainSubstring("1 release needs to be exported and cached"))
-	please.Expect(output.String()).To(Ω.ContainSubstring("lemon 3.0.0 compiled with alpine 9.0.0 not found in cache"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("lemon/3.0.0 compiled with alpine/9.0.0 not found in cache"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("exporting lemon"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("downloading lemon"))
@@ -310,8 +310,6 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	opsManager := new(fakes.OpsManagerReleaseCacheSource)
 	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "8.0.0"}]}`, nil)
 
-	releaseInBlobstore := []byte(`lemon-release-buffer`)
-
 	deployment := new(boshdirFakes.FakeDeployment)
 	bosh := new(boshdirFakes.FakeDirector)
 	bosh.FindDeploymentReturns(deployment, nil)
@@ -330,10 +328,6 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	}
 
 	deployment.ExportReleaseReturns(director.ExportReleaseResult{}, nil)
-	bosh.DownloadResourceUncheckedCalls(func(_ string, writer io.Writer) error {
-		_, _ = writer.Write(releaseInBlobstore)
-		return nil
-	})
 
 	releaseStorage := new(fakes.ReleaseStorage)
 	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
@@ -368,6 +362,10 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 
 	please.Expect(err).To(Ω.MatchError(Ω.ContainSubstring("not found on bosh director")))
 
+	please.Expect(bosh.DownloadResourceUncheckedCallCount()).To(Ω.Equal(0))
+	please.Expect(bosh.HasReleaseCallCount()).To(Ω.Equal(0))
+	please.Expect(bosh.FindReleaseCallCount()).To(Ω.Equal(1))
+
 	{
 		requestedReleaseSlug := bosh.FindReleaseArgsForCall(0)
 		please.Expect(requestedReleaseSlug.Name()).To(Ω.Equal("banana"))
@@ -375,9 +373,9 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	}
 
 	please.Expect(output.String()).To(Ω.ContainSubstring("1 release needs to be exported and cached"))
-	please.Expect(output.String()).To(Ω.ContainSubstring("banana 2.0.0 compiled with alpine 8.0.0 not found in cache"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("banana/2.0.0 compiled with alpine/8.0.0 not found in cache"))
 	please.Expect(output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
-	please.Expect(output.String()).To(Ω.ContainSubstring("banana 2.0.0 does not have any packages"))
+	please.Expect(output.String()).To(Ω.ContainSubstring("banana/2.0.0 does not have any packages"))
 	please.Expect(output.String()).NotTo(Ω.ContainSubstring("exporting lemon"))
 	please.Expect(output.String()).NotTo(Ω.ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
 
