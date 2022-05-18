@@ -130,7 +130,12 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 			if !component.IsErrNotFound(err) {
 				return fmt.Errorf("failed check for matched release: %w", err)
 			}
-			releasesToExport = append(releasesToExport, rel)
+			releasesToExport = append(releasesToExport, component.Lock{
+				Name:            rel.Name,
+				Version:         rel.Version,
+				StemcellOS:      lock.Stemcell.OS,
+				StemcellVersion: lock.Stemcell.Version,
+			})
 			continue
 		}
 
@@ -138,7 +143,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 
 		sum, err := cmd.downloadAndComputeSHA(releaseStore, remote)
 		if err != nil {
-			cmd.Logger.Printf("unable to get hash sum for %s/%s", remote.Name, remote.Version)
+			cmd.Logger.Printf("unable to get hash sum for %s", remote.ReleaseSlug())
 			continue
 		}
 		remote.SHA1 = sum
@@ -160,7 +165,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	}
 
 	for _, rel := range releasesToExport {
-		cmd.Logger.Printf("\t%s %s compiled with %s %s not found in cache\n", rel.Name, rel.Version, lock.Stemcell.OS, lock.Stemcell.Version)
+		cmd.Logger.Printf("\t%s compiled with %s not found in cache\n", rel.ReleaseSlug(), rel.StemcellSlug())
 	}
 
 	bosh, err := cmd.Director(cmd.Options.ClientConfiguration, omAPI)
@@ -181,22 +186,23 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	}
 
 	for _, rel := range releasesToExport {
-		requirement := component.Spec{
-			Name:            rel.Name,
-			Version:         rel.Version,
-			StemcellOS:      stagedStemcellOS,
-			StemcellVersion: stagedStemcellVersion,
-		}
+		releaseSlug := rel.ReleaseSlug()
+		stemcellSlug := boshdir.NewOSVersionSlug(stagedStemcellOS, stagedStemcellVersion)
 
-		if hasRelease, err := bosh.HasRelease(rel.Name, rel.Version, requirement.OSVersionSlug()); err != nil {
-			return fmt.Errorf("failed to find release %s: %w", requirement.ReleaseSlug(), err)
-		} else if !hasRelease {
-			return fmt.Errorf("%[1]s compiled with %[2]s is not found on bosh director (it might have been uploaded as a compiled release and the director can't recompile it for the compilation target %[2]s)", requirement.ReleaseSlug(), requirement.OSVersionSlug())
-		}
-
-		newRemote, err := cmd.cacheRelease(bosh, releaseStore, deployment, requirement)
+		hasRelease, err := hasRequiredCompiledPackages(bosh, rel.ReleaseSlug(), stemcellSlug)
 		if err != nil {
-			cmd.Logger.Printf("\tfailed to cache release %s for %s: %s\n", requirement.ReleaseSlug(), requirement.OSVersionSlug(), err)
+			if !errors.Is(err, errNoPackages) {
+				return fmt.Errorf("failed to find release %s: %w", rel.ReleaseSlug(), err)
+			}
+			cmd.Logger.Printf("%s does not have any packages\n", rel)
+		}
+		if !hasRelease {
+			return fmt.Errorf("%[1]s compiled with %[2]s is not found on bosh director (it might have been uploaded as a compiled release and the director can't recompile it for the compilation target %[2]s)", releaseSlug, stemcellSlug)
+		}
+
+		newRemote, err := cmd.cacheRelease(bosh, releaseStore, deployment, releaseSlug, stemcellSlug)
+		if err != nil {
+			cmd.Logger.Printf("\tfailed to cache release %s for %s: %s\n", releaseSlug, stemcellSlug, err)
 			continue
 		}
 
@@ -214,6 +220,37 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	cmd.Logger.Printf("DON'T FORGET TO MAKE A COMMIT AND PR\n")
 
 	return nil
+}
+
+var errNoPackages = errors.New("release has no packages")
+
+// hasRequiredCompiledPackages implementation is copied from the boshdir.DirectorImpl HasRelease method. It adds the check
+// for the length of the packages slice to allow for BOSH releases that do not have any packages. One example of a BOSH
+// release without packages is https://github.com/cloudfoundry/bosh-dns-aliases-release.
+func hasRequiredCompiledPackages(d boshdir.Director, releaseSlug boshdir.ReleaseSlug, stemcell boshdir.OSVersionSlug) (bool, error) {
+	release, err := d.FindRelease(releaseSlug)
+	if err != nil {
+		return false, err
+	}
+
+	pkgs, err := release.Packages()
+	if err != nil {
+		return false, err
+	}
+
+	if len(pkgs) == 0 {
+		return true, errNoPackages
+	}
+
+	for _, pkg := range pkgs {
+		for _, compiledPkg := range pkg.CompiledPackages {
+			if compiledPkg.Stemcell == stemcell {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }
 
 func (cmd CacheCompiledReleases) fetchProductDeploymentData() (_ OpsManagerReleaseCacheSource, deploymentName, stemcellOS, stemcellVersion string, _ error) {
@@ -252,21 +289,26 @@ func (cmd CacheCompiledReleases) fetchProductDeploymentData() (_ OpsManagerRelea
 	return omAPI, manifest.Name, stagedStemcell.OS, stagedStemcell.Version, nil
 }
 
-func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc ReleaseStorage, deployment boshdir.Deployment, req component.Spec) (component.Lock, error) {
-	cmd.Logger.Printf("\texporting %s\n", req.ReleaseSlug())
-	result, err := deployment.ExportRelease(req.ReleaseSlug(), req.OSVersionSlug(), nil)
+func (cmd CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc ReleaseStorage, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (component.Lock, error) {
+	cmd.Logger.Printf("\texporting %s\n", releaseSlug)
+	result, err := deployment.ExportRelease(releaseSlug, stemcellSlug, nil)
 	if err != nil {
 		return component.Lock{}, err
 	}
 
-	cmd.Logger.Printf("\tdownloading %s\n", req.ReleaseSlug())
-	releaseFilePath, _, sha1sum, err := cmd.saveReleaseLocally(bosh, cmd.Options.ReleasesDir, req, result)
+	cmd.Logger.Printf("\tdownloading %s\n", releaseSlug)
+	releaseFilePath, _, sha1sum, err := cmd.saveReleaseLocally(bosh, cmd.Options.ReleasesDir, releaseSlug, stemcellSlug, result)
 	if err != nil {
 		return component.Lock{}, err
 	}
 
-	cmd.Logger.Printf("\tuploading %s %s\n", req.Name, req.Version)
-	remoteRelease, err := cmd.uploadLocalRelease(req, releaseFilePath, rc)
+	cmd.Logger.Printf("\tuploading %s\n", releaseSlug)
+	remoteRelease, err := cmd.uploadLocalRelease(cargo.ComponentSpec{
+		Name:            releaseSlug.Name(),
+		Version:         releaseSlug.Version(),
+		StemcellOS:      stemcellSlug.OS(),
+		StemcellVersion: stemcellSlug.Version(),
+	}, releaseFilePath, rc)
 	if err != nil {
 		return component.Lock{}, err
 	}
@@ -308,8 +350,8 @@ func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Spec, fp str
 	return uploader.UploadRelease(spec, f)
 }
 
-func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, relDir string, req component.Spec, res boshdir.ExportReleaseResult) (string, string, string, error) {
-	fileName := fmt.Sprintf("%s-%s-%s-%s.tgz", req.Name, req.Version, req.StemcellOS, req.StemcellVersion)
+func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, relDir string, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug, res boshdir.ExportReleaseResult) (string, string, string, error) {
+	fileName := fmt.Sprintf("%s-%s-%s-%s.tgz", releaseSlug.Name(), releaseSlug.Version(), stemcellSlug.OS(), stemcellSlug.Version())
 	filePath := filepath.Join(relDir, fileName)
 
 	f, err := cmd.FS.Create(filePath)
