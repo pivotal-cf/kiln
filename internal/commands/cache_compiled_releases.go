@@ -157,7 +157,6 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	switch len(releasesToExport) {
 	case 0:
 		cmd.Logger.Print("cache already contains releases matching constraint\n")
-		return nil
 	case 1:
 		cmd.Logger.Printf("1 release needs to be exported and cached\n")
 	default:
