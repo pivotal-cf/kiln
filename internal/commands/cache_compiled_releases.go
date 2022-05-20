@@ -118,7 +118,10 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		return fmt.Errorf("failed to configure release source: %w", err)
 	}
 
-	var releasesToExport []cargo.ComponentLock
+	var (
+		releasesToExport         []cargo.ComponentLock
+		releasesUpdatedFromCache = false
+	)
 	for _, rel := range lock.Releases {
 		remote, err := releaseStore.GetMatchedRelease(component.Spec{
 			Name:            rel.Name,
@@ -148,6 +151,7 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 		}
 		remote.SHA1 = sum
 
+		releasesUpdatedFromCache = true
 		err = updateLock(lock, remote, cmd.Options.UploadTargetID)
 		if err != nil {
 			return fmt.Errorf("failed to update lock file: %w", err)
@@ -157,6 +161,16 @@ func (cmd CacheCompiledReleases) Execute(args []string) error {
 	switch len(releasesToExport) {
 	case 0:
 		cmd.Logger.Print("cache already contains releases matching constraint\n")
+		if releasesUpdatedFromCache {
+			err = cmd.Options.Standard.SaveKilnfileLock(cmd.FS, lock)
+			if err != nil {
+				return err
+			}
+
+			cmd.Logger.Printf("DON'T FORGET TO MAKE A COMMIT AND PR\n")
+
+			return nil
+		}
 	case 1:
 		cmd.Logger.Printf("1 release needs to be exported and cached\n")
 	default:

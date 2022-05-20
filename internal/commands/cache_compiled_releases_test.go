@@ -103,6 +103,86 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 }
 
+func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testing.T) {
+	please := Ω.NewWithT(t)
+
+	// setup
+
+	fs := memfs.New()
+
+	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
+		ReleaseSources: []cargo.ReleaseSourceConfig{
+			{
+				ID: "compiled-releases",
+			},
+		},
+	})).NotTo(Ω.HaveOccurred())
+	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
+		Releases: []cargo.ComponentLock{
+			{
+				Name:    "orange",
+				Version: "1.0.0",
+
+				RemoteSource: "new-releases",
+				RemotePath:   "orange-1.0.0",
+
+				SHA1: "fake-checksum",
+			},
+		},
+		Stemcell: cargo.Stemcell{
+			OS:      "alpine",
+			Version: "9.0.0",
+		},
+	})).NotTo(Ω.HaveOccurred())
+
+	opsManager := new(fakes.OpsManagerReleaseCacheSource)
+	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "9.0.0"}]}`, nil)
+
+	deployment := new(boshdirFakes.FakeDeployment)
+	bosh := new(boshdirFakes.FakeDirector)
+	bosh.FindDeploymentReturns(deployment, nil)
+
+	releaseStorage := new(fakes.ReleaseStorage)
+	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
+
+	var output bytes.Buffer
+	logger := log.New(&output, "", 0)
+
+	cmd := commands.CacheCompiledReleases{
+		FS:     fs,
+		Logger: logger,
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
+			return releaseStorage, nil
+		},
+		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
+			return opsManager, nil
+		},
+		Director: func(configuration om.ClientConfiguration, provider om.GetBoshEnvironmentAndSecurityRootCACertificateProvider) (director.Director, error) {
+			return bosh, nil
+		},
+	}
+
+	// run
+
+	err := cmd.Execute([]string{
+		"--upload-target-id", "compiled-releases",
+	})
+
+	// check
+
+	please.Expect(output.String()).To(Ω.ContainSubstring("cache already contains releases"))
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+
+	var updatedKilnfile cargo.KilnfileLock
+	please.Expect(fsReadYAML(fs, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
+	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(component.Lock{
+		Name: "orange", Version: "1.0.0",
+		SHA1:         "fake-checksum",
+		RemoteSource: "cached-compiled-releases",
+		RemotePath:   "orange-1.0.0-alpine-9.0.0",
+	}))
+}
+
 // this test covers
 // - an export, download, upload, and lock of a non-cached release
 // - an update the kilnfile with a non-locked release cached in the database
