@@ -5,20 +5,20 @@
 class Kiln < Formula
   desc ""
   homepage ""
-  version "0.68.2"
+  version "0.68.3"
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/pivotal-cf/kiln/releases/download/v0.68.2/kiln-darwin-arm64-0.68.2.tar.gz"
-      sha256 "cadf470614aab334f6f99f2c8f813063c55458b436462e7e92b7dc0f7d65ad2a"
+      url "https://github.com/pivotal-cf/kiln/releases/download/0.68.3/kiln-darwin-arm64-0.68.3.tar.gz"
+      sha256 "cbc3638f1ad002159a6ea28fe1f87a12604594fe65c199e498adf305f31858d3"
 
       def install
         bin.install "kiln"
       end
     end
     if Hardware::CPU.intel?
-      url "https://github.com/pivotal-cf/kiln/releases/download/v0.68.2/kiln-darwin-amd64-0.68.2.tar.gz"
-      sha256 "9562ab7c241a424a444b5e12553a847a7b3cfe5caf9d3b86941ea52d86c2f3ef"
+      url "https://github.com/pivotal-cf/kiln/releases/download/0.68.3/kiln-darwin-amd64-0.68.3.tar.gz"
+      sha256 "ea00238439c9069b4b01779758b5a76b3e5a3c02f7128392dc9fa23f247aa43c"
 
       def install
         bin.install "kiln"
@@ -28,8 +28,8 @@ class Kiln < Formula
 
   on_linux do
     if Hardware::CPU.intel?
-      url "https://github.com/pivotal-cf/kiln/releases/download/v0.68.2/kiln-linux-amd64-0.68.2.tar.gz"
-      sha256 "e50abed58eee73735cd3a413c741756fc423f3a5c8168a66a0928b95b7bb337d"
+      url "https://github.com/pivotal-cf/kiln/releases/download/0.68.3/kiln-linux-amd64-0.68.3.tar.gz"
+      sha256 "eaae6d1196a5c59d0a6656f79ef0fc095896c6d50a1d256e9e0c52348af61320"
 
       def install
         bin.install "kiln"
