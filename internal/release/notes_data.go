@@ -26,7 +26,7 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/historic"
+	"github.com/pivotal-cf/kiln/pkg/history"
 )
 
 type ComponentData struct {
@@ -123,8 +123,8 @@ func newFetchNotesData(repo *git.Repository, tileRepoOwner string, tileRepoName 
 		initialRevision: initialRevision,
 		finalRevision:   finalRevision,
 
-		historicKilnfile: historic.Kilnfile,
-		historicVersion:  historic.Version,
+		historicKilnfile: history.Kilnfile,
+		historicVersion:  history.Version,
 		revisionResolver: repo,
 		Storer:           repo.Storer,
 		repository:       repo,
