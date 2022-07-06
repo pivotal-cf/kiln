@@ -1,4 +1,4 @@
-package historic
+package history
 
 import (
 	"encoding/json"
