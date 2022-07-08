@@ -12,17 +12,6 @@ import (
 )
 
 var _ = Describe("version command", func() {
-	var version string
-
-	BeforeEach(func() {
-		version = fmt.Sprintf("v0.0.0-dev.%d", time.Now().Unix())
-
-		var err error
-		pathToMain, err = gexec.Build("github.com/pivotal-cf/kiln",
-			"--ldflags", fmt.Sprintf("-X main.version=%s", version))
-		Expect(err).NotTo(HaveOccurred())
-	})
-
 	Context("when given the version command", func() {
 		It("prints the version number", func() {
 			command := exec.Command(pathToMain, "version")
@@ -30,7 +19,7 @@ var _ = Describe("version command", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(session).Should(gexec.Exit(0))
-			Expect(string(session.Out.Contents())).To(ContainSubstring(fmt.Sprintf("kiln version %s", version)))
+			Expect(string(session.Out.Contents())).To(ContainSubstring(fmt.Sprintf("kiln version %s", buildVersion)))
 		})
 	})
 
@@ -41,7 +30,7 @@ var _ = Describe("version command", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(session, time.Second*10).Should(gexec.Exit(0))
-			Expect(string(session.Out.Contents())).To(ContainSubstring(fmt.Sprintf("kiln version %s", version)))
+			Expect(string(session.Out.Contents())).To(ContainSubstring(fmt.Sprintf("kiln version %s", buildVersion)))
 		})
 	})
 
@@ -52,7 +41,7 @@ var _ = Describe("version command", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(session, time.Second*10).Should(gexec.Exit(0))
-			Expect(string(session.Out.Contents())).To(ContainSubstring(fmt.Sprintf("kiln version %s", version)))
+			Expect(string(session.Out.Contents())).To(ContainSubstring(fmt.Sprintf("kiln version %s", buildVersion)))
 		})
 	})
 })
