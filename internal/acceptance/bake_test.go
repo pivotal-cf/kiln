@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -111,56 +112,24 @@ var _ = Describe("bake command", func() {
 		archiveInfo, err := archive.Stat()
 		Expect(err).NotTo(HaveOccurred())
 
-		zr, err := zip.NewReader(archive, archiveInfo.Size())
+		bakedTile, err := zip.NewReader(archive, archiveInfo.Size())
 		Expect(err).NotTo(HaveOccurred())
 
-		var file io.ReadCloser
-		for _, f := range zr.File {
-			if f.Name == "metadata/metadata.yml" {
-				file, err = f.Open()
-				Expect(err).NotTo(HaveOccurred())
-				break
-			}
-		}
+		file, err := bakedTile.Open("metadata/metadata.yml")
+		Expect(err).NotTo(HaveOccurred())
 
-		Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
 		metadataContents, err := ioutil.ReadAll(file)
 		Expect(err).NotTo(HaveOccurred())
 
 		renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
 		Expect(metadataContents).To(HelpfullyMatchYAML(renderedYAML))
 
-		// Bosh Variables
-		Expect(string(metadataContents)).To(ContainSubstring("name: variable-1"))
-		Expect(string(metadataContents)).To(ContainSubstring("name: variable-2"))
-		Expect(string(metadataContents)).To(ContainSubstring("type: certificate"))
-		Expect(string(metadataContents)).To(ContainSubstring("some_option: Option value"))
-
-		// Template Variables
-		Expect(string(metadataContents)).To(ContainSubstring("custom_variable: some-variable-value"))
-
-		var (
-			archivedMigration1 io.ReadCloser
-			archivedMigration2 io.ReadCloser
-			archivedMigration3 io.ReadCloser
-		)
-
-		for _, f := range zr.File {
-			if f.Name == "migrations/v1/201603041539_custom_buildpacks.js" {
-				archivedMigration1, err = f.Open()
-				Expect(err).NotTo(HaveOccurred())
-			}
-
-			if f.Name == "migrations/v1/201603071158_auth_enterprise_sso.js" {
-				archivedMigration2, err = f.Open()
-				Expect(err).NotTo(HaveOccurred())
-			}
-
-			if f.Name == "migrations/v1/some_migration.js" {
-				archivedMigration3, err = f.Open()
-				Expect(err).NotTo(HaveOccurred())
-			}
-		}
+		archivedMigration1, err := bakedTile.Open("migrations/v1/201603041539_custom_buildpacks.js")
+		Expect(err).NotTo(HaveOccurred())
+		archivedMigration2, err := bakedTile.Open("migrations/v1/201603071158_auth_enterprise_sso.js")
+		Expect(err).NotTo(HaveOccurred())
+		archivedMigration3, err := bakedTile.Open("migrations/v1/some_migration.js")
+		Expect(err).NotTo(HaveOccurred())
 
 		contents, err := ioutil.ReadAll(archivedMigration1)
 		Expect(err).NotTo(HaveOccurred())
@@ -215,14 +184,8 @@ var _ = Describe("bake command", func() {
 			zr, err := zip.NewReader(archive, archiveInfo.Size())
 			Expect(err).NotTo(HaveOccurred())
 
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/metadata.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
+			file, err := zr.Open("metadata/metadata.yml")
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
 			metadataContents, err := ioutil.ReadAll(file)
@@ -263,14 +226,8 @@ var _ = Describe("bake command", func() {
 			zr, err := zip.NewReader(archive, archiveInfo.Size())
 			Expect(err).NotTo(HaveOccurred())
 
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/metadata.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
+			file, err := zr.Open("metadata/metadata.yml")
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
 			metadataContents, err := ioutil.ReadAll(file)
@@ -346,23 +303,17 @@ var _ = Describe("bake command", func() {
 
 			Eventually(session).Should(gexec.Exit(0))
 
-			archive, err := os.Open(outputFile)
+			bakedFilePtr, err := os.Open(outputFile)
 			Expect(err).NotTo(HaveOccurred())
 
-			archiveInfo, err := archive.Stat()
+			archiveInfo, err := bakedFilePtr.Stat()
 			Expect(err).NotTo(HaveOccurred())
 
-			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			bakedTile, err := zip.NewReader(bakedFilePtr, archiveInfo.Size())
 			Expect(err).NotTo(HaveOccurred())
 
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/metadata.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
+			file, err := bakedTile.Open("metadata/metadata.yml")
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
 			metadataContents, err := ioutil.ReadAll(file)
@@ -371,37 +322,12 @@ var _ = Describe("bake command", func() {
 			renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
 			Expect(metadataContents).To(HelpfullyMatchYAML(renderedYAML))
 
-			// Bosh Variables
-			Expect(string(metadataContents)).To(ContainSubstring("name: variable-1"))
-			Expect(string(metadataContents)).To(ContainSubstring("name: variable-2"))
-			Expect(string(metadataContents)).To(ContainSubstring("type: certificate"))
-			Expect(string(metadataContents)).To(ContainSubstring("some_option: Option value"))
-
-			// Template Variables
-			Expect(string(metadataContents)).To(ContainSubstring("custom_variable: some-variable-value"))
-
-			var (
-				archivedMigration1 io.ReadCloser
-				archivedMigration2 io.ReadCloser
-				archivedMigration3 io.ReadCloser
-			)
-
-			for _, f := range zr.File {
-				if f.Name == "migrations/v1/201603041539_custom_buildpacks.js" {
-					archivedMigration1, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-				}
-
-				if f.Name == "migrations/v1/201603071158_auth_enterprise_sso.js" {
-					archivedMigration2, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-				}
-
-				if f.Name == "migrations/v1/some_migration.js" {
-					archivedMigration3, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-				}
-			}
+			archivedMigration1, err := bakedTile.Open("migrations/v1/201603041539_custom_buildpacks.js")
+			Expect(err).NotTo(HaveOccurred())
+			archivedMigration2, err := bakedTile.Open("migrations/v1/201603071158_auth_enterprise_sso.js")
+			Expect(err).NotTo(HaveOccurred())
+			archivedMigration3, err := bakedTile.Open("migrations/v1/some_migration.js")
+			Expect(err).NotTo(HaveOccurred())
 
 			contents, err := ioutil.ReadAll(archivedMigration1)
 			Expect(err).NotTo(HaveOccurred())
@@ -526,13 +452,10 @@ var _ = Describe("bake command", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			for _, f := range zr.File {
-				if f.Name == "releases/cf-release-235.0.0-3215.4.0.tgz" {
-					Expect(f.UncompressedSize64).To(Equal(uint64(0)))
+				if path.Dir(f.Name) != "releases" {
+					continue
 				}
-
-				if f.Name == "releases/diego-release-0.1467.1-3215.4.0.tgz" {
-					Expect(f.UncompressedSize64).To(Equal(uint64(0)))
-				}
+				Expect(f.UncompressedSize64).To(Equal(uint64(0)))
 			}
 		})
 	})
