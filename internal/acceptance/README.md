@@ -1,35 +1,31 @@
 # Acceptance Tests
+There is not much about the structure of these tests to document.  They're
+vanilla Gomega test suites, with a normal amount of quirk (like files named
+"test" that don't test anything).
 
 ## Current Tests
-
-### init_test.go [not tests]
-This does suite setup.
-
 ### bake_test.go
-
 Considers log output as part of the API but otherwise is cromulent.
 
-### fixtures_test.go [not tests]
-
-not a test.
-
 ### help_test.go
-
-These tests over-promise and under deliver.
-They only test two commands and badly.
-
-### match_sha_sum_of_matcher_test.go [not tests]
-
-this is a gomega matcher implementation
-
-### stub.go [not tests]
-
-effectively empty
+Named `help_test`, but only tests two commands and badly (i.e. exact string
+matches).
 
 ### sync_with_local_test.go
-
-This command is no longer used by our CI.
+This command is no longer used by our CI. We plan to remove it without warning.
 
 ### version_test.go
-
 This tests all three ways you can get the kiln version.
+
+## Not Tests
+### init_test.go
+This does suite setup.
+
+### fixtures_test.go
+Declares global variables only used in `bake_test`
+
+### match_sha_sum_of_matcher_test.go
+Gomega matcher implementation
+
+### stub.go
+Empty Go file
