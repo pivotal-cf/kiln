@@ -1,0 +1,3 @@
+[submodule "internal/acceptance/workflows/hello-tile"]
+	path = internal/acceptance/workflows/hello-tile
+	url = git@github.com:crhntr/hello-tile
