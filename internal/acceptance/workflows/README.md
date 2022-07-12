@@ -32,3 +32,21 @@
   - Update the stemcell for a Tile
 
   - Update release notes for a Tile
+
+# Acceptance Testing Philosophy
+
+We believe a good acceptance test suite has the following properties:
+1. The tests are comphrehendable to new team members
+1. The tests are extendable by non-team members
+1. The tests describe the intended functioning of the source under test
+1. The test coverage is discoverable
+1. Test errors facilitate fixing the error
+
+## Open Philosophy Questions
+1. Do we unit test the acceptance tests?
+
+## Can we test Tiles Cucumber-style?
+`kiln test <directory>`
+`godog run <directory>`
+
+
