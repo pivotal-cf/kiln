@@ -4,22 +4,23 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
-	"github.com/cucumber/godog"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/cucumber/godog"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 )
 
 var success error = nil
 
 func TestBake(t *testing.T) {
 	suite := godog.TestSuite{
-		ScenarioInitializer: initializeScenario,
+		ScenarioInitializer: InitializeScenario,
 		Options: &godog.Options{
 			Format:   "pretty",
 			Paths:    []string{"features"},
@@ -32,7 +33,7 @@ func TestBake(t *testing.T) {
 	}
 }
 
-func initializeScenario(ctx *godog.ScenarioContext) {
+func InitializeScenario(ctx *godog.ScenarioContext) {
 	var td kilnBakeScenario
 
 	td.loadGithubToken()
