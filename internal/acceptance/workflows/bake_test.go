@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,7 +24,7 @@ func TestBake(t *testing.T) {
 		ScenarioInitializer: initializeBakeScenario,
 		Options: &godog.Options{
 			Format:   "pretty",
-			Paths:    []string{"features"},
+			Paths:    []string{"bake_test.feature"},
 			TestingT: t, // Testing instance that will run subtests.
 		},
 	}
@@ -61,10 +62,7 @@ func (scenario *kilnBakeScenario) aTileIsCreated() error {
 func (scenario *kilnBakeScenario) iFetchReleases() error {
 	cmd := exec.Command("go", "run", "github.com/pivotal-cf/kiln", "fetch", "--variable", "github_token="+scenario.githubToken)
 	cmd.Dir = scenario.tilePath
-	// TODO: only log output if run fails
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return runAndLogOnError(cmd)
 }
 
 // iHaveARepositoryCheckedOutAtRevision checks out a repository at the filepath to a given revision
@@ -103,10 +101,7 @@ func (scenario *kilnBakeScenario) iHaveARepositoryCheckedOutAtRevision(filePath,
 func (scenario *kilnBakeScenario) iInvokeKilnBake() error {
 	cmd := exec.Command("go", "run", "github.com/pivotal-cf/kiln", "bake", "--version", scenario.tileVersion)
 	cmd.Dir = scenario.tilePath
-	// TODO: only log output if run fails
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return runAndLogOnError(cmd)
 }
 
 // theTileContains checks that the filePaths exist in the tile
@@ -148,4 +143,15 @@ func (scenario *kilnBakeScenario) loadGithubToken() {
 		githubToken = matches[1]
 	}
 	scenario.githubToken = githubToken
+}
+
+func runAndLogOnError(cmd *exec.Cmd) error {
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+	err := cmd.Run()
+	if err != nil {
+		io.Copy(os.Stdout, &buf)
+	}
+	return err
 }
