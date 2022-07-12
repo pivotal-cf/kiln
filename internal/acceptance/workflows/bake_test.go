@@ -20,7 +20,7 @@ var success error = nil
 
 func TestBake(t *testing.T) {
 	suite := godog.TestSuite{
-		ScenarioInitializer: InitializeScenario,
+		ScenarioInitializer: initializeBakeScenario,
 		Options: &godog.Options{
 			Format:   "pretty",
 			Paths:    []string{"features"},
@@ -33,7 +33,7 @@ func TestBake(t *testing.T) {
 	}
 }
 
-func InitializeScenario(ctx *godog.ScenarioContext) {
+func initializeBakeScenario(ctx *godog.ScenarioContext) {
 	var td kilnBakeScenario
 
 	td.loadGithubToken()
