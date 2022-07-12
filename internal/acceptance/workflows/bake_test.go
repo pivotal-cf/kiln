@@ -35,15 +35,18 @@ func TestBake(t *testing.T) {
 }
 
 func initializeBakeScenario(ctx *godog.ScenarioContext) {
-	var td kilnBakeScenario
+	var scenario kilnBakeScenario
+	scenario.registerSteps(ctx)
+}
 
-	td.loadGithubToken()
+func (scenario *kilnBakeScenario) registerSteps(ctx *godog.ScenarioContext) {
+	scenario.loadGithubToken()
 
-	ctx.Step(regexp.MustCompile(`^a Tile is created$`), td.aTileIsCreated)
-	ctx.Step(regexp.MustCompile(`^I have a "([^"]*)" repository checked out at (.*)$`), td.iHaveARepositoryCheckedOutAtRevision)
-	ctx.Step(regexp.MustCompile(`^I invoke kiln bake$`), td.iInvokeKilnBake)
-	ctx.Step(regexp.MustCompile(`^the Tile contains "([^"]*)"$`), td.theTileContains)
-	ctx.Step(regexp.MustCompile(`^I fetch releases$`), td.iFetchReleases)
+	ctx.Step(regexp.MustCompile(`^a Tile is created$`), scenario.aTileIsCreated)
+	ctx.Step(regexp.MustCompile(`^I have a "([^"]*)" repository checked out at (.*)$`), scenario.iHaveARepositoryCheckedOutAtRevision)
+	ctx.Step(regexp.MustCompile(`^I invoke kiln bake$`), scenario.iInvokeKilnBake)
+	ctx.Step(regexp.MustCompile(`^the Tile contains "([^"]*)"$`), scenario.theTileContains)
+	ctx.Step(regexp.MustCompile(`^I fetch releases$`), scenario.iFetchReleases)
 }
 
 // kilnBakeScenario
