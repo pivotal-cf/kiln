@@ -45,8 +45,9 @@ func (scenario *kilnBakeScenario) registerSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(regexp.MustCompile(`^a Tile is created$`), scenario.aTileIsCreated)
 	ctx.Step(regexp.MustCompile(`^I have a "([^"]*)" repository checked out at (.*)$`), scenario.iHaveARepositoryCheckedOutAtRevision)
 	ctx.Step(regexp.MustCompile(`^I invoke kiln bake$`), scenario.iInvokeKilnBake)
+	ctx.Step(regexp.MustCompile(`^I invoke kiln fetch$`), scenario.iInvokeKilnFetch)
+	ctx.Step(regexp.MustCompile(`^the repository has no fetched releases$`), scenario.theRepositoryHasNoFetchedReleases)
 	ctx.Step(regexp.MustCompile(`^the Tile contains "([^"]*)"$`), scenario.theTileContains)
-	ctx.Step(regexp.MustCompile(`^I fetch releases$`), scenario.iFetchReleases)
 }
 
 // kilnBakeScenario
@@ -59,13 +60,6 @@ type kilnBakeScenario struct {
 func (scenario *kilnBakeScenario) aTileIsCreated() error {
 	_, err := os.Stat(scenario.defaultFilePathForTile())
 	return err
-}
-
-// iFetchReleases fetches releases. It provides the command with the GitHub token (used for hello-release).
-func (scenario *kilnBakeScenario) iFetchReleases() error {
-	cmd := exec.Command("go", "run", "github.com/pivotal-cf/kiln", "fetch", "--variable", "github_token="+scenario.githubToken)
-	cmd.Dir = scenario.tilePath
-	return runAndLogOnError(cmd)
 }
 
 // iHaveARepositoryCheckedOutAtRevision checks out a repository at the filepath to a given revision
@@ -104,7 +98,51 @@ func (scenario *kilnBakeScenario) iHaveARepositoryCheckedOutAtRevision(filePath,
 func (scenario *kilnBakeScenario) iInvokeKilnBake() error {
 	cmd := exec.Command("go", "run", "github.com/pivotal-cf/kiln", "bake", "--version", scenario.tileVersion)
 	cmd.Dir = scenario.tilePath
+
 	return runAndLogOnError(cmd)
+}
+
+// iInvokeKilnFetch fetches releases. It provides the command with the GitHub token (used for hello-release).
+func (scenario *kilnBakeScenario) iInvokeKilnFetch() error {
+	cmd := exec.Command("go", "run", "github.com/pivotal-cf/kiln", "fetch", "--variable", "github_token="+scenario.githubToken)
+	cmd.Dir = scenario.tilePath
+
+	return runAndLogOnError(cmd)
+}
+
+// itHasNoFetchedReleases deletes fetched releases, if any.
+func (scenario *kilnBakeScenario) theRepositoryHasNoFetchedReleases() error {
+	releaseDirectoryName := scenario.tilePath + "/releases"
+	releaseDirectory, err := os.Open(releaseDirectoryName)
+	if err != nil {
+		return fmt.Errorf("unable to open release directory [ %s ]: %w", releaseDirectoryName, err)
+	}
+
+	defer releaseDirectory.Close()
+
+	releaseFiles, err := releaseDirectory.Readdir(0)
+	if err != nil {
+		return fmt.Errorf("unable to read files from [ %s ]: %w", releaseDirectory.Name(), err)
+	}
+
+	for f := range releaseFiles {
+		file := releaseFiles[f]
+
+		fileName := file.Name()
+		filePath := releaseDirectory.Name() + "/" + fileName
+
+		// Preserve dot files, namely `.gitignore`
+		if strings.HasPrefix(fileName, ".") {
+			continue
+		}
+
+		err = os.Remove(filePath)
+		if err != nil {
+			return fmt.Errorf("unable to remove file [ %s ]: %w", filePath, err)
+		}
+	}
+
+	return success
 }
 
 // theTileContains checks that the filePaths exist in the tile

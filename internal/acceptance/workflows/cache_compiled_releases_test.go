@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/cucumber/godog"
 	"os"
 	"os/exec"
 	"regexp"
 	"testing"
+
+	"github.com/cucumber/godog"
 )
 
 func TestCacheCompiledRelease(t *testing.T) {
@@ -36,8 +37,8 @@ type cacheCompiledReleaseScenario struct {
 	kilnBakeScenario
 
 	Environment struct {
-		PrivateKey string `json:"ops_manager_private_key"`
-		OpsManager struct {
+		OpsManagerPrivateKey string `json:"ops_manager_private_key"`
+		OpsManager           struct {
 			Password string `json:"password"`
 			URL      string `json:"url"`
 			Username string `json:"username"`
@@ -88,7 +89,7 @@ func (scenario *cacheCompiledReleaseScenario) iInvokeKilnCachecompiledreleases()
 
 func (scenario *cacheCompiledReleaseScenario) iUploadConfigureAndApplyTheTileWithStemcell(stemcellOS, stemcellVersion string) error {
 	if len(scenario.Environment.AvailabilityZones) == 0 {
-		return fmt.Errorf("expected availability zones")
+		return fmt.Errorf("[TODO: context about why 'we' expect this]expected availability zones")
 	}
 
 	err := runAndLogOnError(exec.Command("smith", "om", "--", "upload-product", "-p", scenario.defaultFilePathForTile()))
@@ -111,6 +112,7 @@ func (scenario *cacheCompiledReleaseScenario) iUploadConfigureAndApplyTheTileWit
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
