@@ -104,7 +104,7 @@ func (scenario *kilnBakeScenario) iInvokeKilnBake() error {
 
 // iInvokeKilnFetch fetches releases. It provides the command with the GitHub token (used for hello-release).
 func (scenario *kilnBakeScenario) iInvokeKilnFetch() error {
-	cmd := exec.Command("go", "run", "github.com/pivotal-cf/kiln", "fetch", "--variable", "github_token="+scenario.githubToken)
+	cmd := exec.Command("go", "run", "github.com/pivotal-cf/kiln", "fetch", "--no-confirm", "--variable", "github_token="+scenario.githubToken)
 	cmd.Dir = scenario.tilePath
 
 	return runAndLogOnError(cmd)
@@ -118,7 +118,7 @@ func (scenario *kilnBakeScenario) theRepositoryHasNoFetchedReleases() error {
 		return fmt.Errorf("unable to open release directory [ %s ]: %w", releaseDirectoryName, err)
 	}
 
-	defer releaseDirectory.Close()
+	defer closeAndIgnoreErr(releaseDirectory)
 
 	releaseFiles, err := releaseDirectory.Readdir(0)
 	if err != nil {
@@ -192,7 +192,7 @@ func runAndLogOnError(cmd *exec.Cmd) error {
 	cmd.Stderr = &buf
 	err := cmd.Run()
 	if err != nil {
-		io.Copy(os.Stdout, &buf)
+		_, _ = io.Copy(os.Stdout, &buf)
 	}
 	return err
 }

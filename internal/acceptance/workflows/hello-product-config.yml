@@ -6,3 +6,6 @@ network-properties:
     - name: "((az))"
   singleton_availability_zone:
     name: "((az))"
+resource-config:
+  hello-server:
+    instances: 0

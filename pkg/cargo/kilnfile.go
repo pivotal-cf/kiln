@@ -71,12 +71,12 @@ func (spec ComponentSpec) UnsetStemcell() ComponentSpec {
 }
 
 type Kilnfile struct {
-	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources"`
-	Slug            string                `yaml:"slug"`
-	PreGaUserGroups []string              `yaml:"pre_ga_user_groups"`
-	Releases        []ComponentSpec       `yaml:"releases"`
-	TileNames       []string              `yaml:"tile_names"`
-	Stemcell        Stemcell              `yaml:"stemcell_criteria"`
+	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources,omitempty"`
+	Slug            string                `yaml:"slug,omitempty"`
+	PreGaUserGroups []string              `yaml:"pre_ga_user_groups,omitempty"`
+	Releases        []ComponentSpec       `yaml:"releases,omitempty"`
+	TileNames       []string              `yaml:"tile_names,omitempty"`
+	Stemcell        Stemcell              `yaml:"stemcell_criteria,omitempty"`
 }
 
 func (kf Kilnfile) ComponentSpec(name string) (ComponentSpec, bool) {
@@ -93,21 +93,21 @@ func ErrorSpecNotFound(name string) error {
 }
 
 type ReleaseSourceConfig struct {
-	Type            string `yaml:"type"`
-	ID              string `yaml:"id"`
-	Publishable     bool   `yaml:"publishable"`
-	Bucket          string `yaml:"bucket"`
-	Region          string `yaml:"region"`
-	AccessKeyId     string `yaml:"access_key_id"`
-	SecretAccessKey string `yaml:"secret_access_key"`
-	PathTemplate    string `yaml:"path_template"`
-	Endpoint        string `yaml:"endpoint"`
-	Org             string `yaml:"org"`
-	GithubToken     string `yaml:"github_token"`
-	Repo            string `yaml:"repo"`
-	ArtifactoryHost string `yaml:"artifactory_host"`
-	Username        string `yaml:"username"`
-	Password        string `yaml:"password"`
+	Type            string `yaml:"type,omitempty"`
+	ID              string `yaml:"id,omitempty"`
+	Publishable     bool   `yaml:"publishable,omitempty"`
+	Bucket          string `yaml:"bucket,omitempty"`
+	Region          string `yaml:"region,omitempty"`
+	AccessKeyId     string `yaml:"access_key_id,omitempty"`
+	SecretAccessKey string `yaml:"secret_access_key,omitempty"`
+	PathTemplate    string `yaml:"path_template,omitempty"`
+	Endpoint        string `yaml:"endpoint,omitempty"`
+	Org             string `yaml:"org,omitempty"`
+	GithubToken     string `yaml:"github_token,omitempty"`
+	Repo            string `yaml:"repo,omitempty"`
+	ArtifactoryHost string `yaml:"artifactory_host,omitempty"`
+	Username        string `yaml:"username,omitempty"`
+	Password        string `yaml:"password,omitempty"`
 }
 
 // ComponentLock represents an exact build of a bosh release
