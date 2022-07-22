@@ -5,15 +5,15 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"github.com/Masterminds/semver"
+	"github.com/google/go-github/v40/github"
+	"golang.org/x/oauth2"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-
-	"github.com/Masterminds/semver"
-	"github.com/google/go-github/v40/github"
-	"golang.org/x/oauth2"
+	"strings"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -76,10 +76,19 @@ type ReleaseByTagGetter interface {
 func GetGithubReleaseWithTag(ghAPI ReleaseByTagGetter, tag string) GetGithubReleaseFunc {
 	return func(ctx context.Context, repoOwner, repoName string) (*github.RepositoryRelease, error) {
 		release, response, err := ghAPI.GetReleaseByTag(ctx, repoOwner, repoName, tag)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			err = checkStatus(http.StatusOK, response.StatusCode)
 		}
-		return release, checkStatus(http.StatusOK, response.StatusCode)
+		if err != nil {
+			release, response, err = ghAPI.GetReleaseByTag(ctx, repoOwner, repoName, "v"+tag)
+			if err == nil {
+				err = checkStatus(http.StatusOK, response.StatusCode)
+			}
+			if err != nil {
+				return nil, err
+			}
+		}
+		return release, nil
 	}
 }
 
@@ -218,11 +227,16 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 	if err != nil {
 		return Lock{}, err
 	}
-	expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, release.GetTagName())
+	lockVersion := strings.TrimPrefix(release.GetTagName(), "v")
+	expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, lockVersion)
+	malformedAssetName := fmt.Sprintf("%s-v%s.tgz", spec.Name, lockVersion)
 	for _, asset := range release.Assets {
-		if asset.GetName() != expectedAssetName {
+		switch asset.GetName() {
+		case expectedAssetName, malformedAssetName:
+		default:
 			continue
 		}
+
 		rc, _, err := downloader.DownloadReleaseAsset(ctx, repoOwner, repoName, *asset.ID, http.DefaultClient)
 		if err != nil {
 			return Lock{}, err
@@ -233,7 +247,7 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 		}
 		return Lock{
 			Name:         spec.Name,
-			Version:      release.GetTagName(),
+			Version:      lockVersion,
 			RemoteSource: owner,
 			RemotePath:   asset.GetBrowserDownloadURL(),
 			SHA1:         sum,

@@ -105,7 +105,6 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 		t.Run("it sets the lock fields properly", func(t *testing.T) {
 			damnIt := Ω.NewWithT(t)
 
-			damnIt.Expect(lock.Version).To(Ω.Equal("0.226.0"))
 			damnIt.Expect(lock.Name).To(Ω.Equal("routing"))
 			damnIt.Expect(lock.Version).To(Ω.Equal("0.226.0"))
 			damnIt.Expect(lock.RemoteSource).To(Ω.Equal(owner))
@@ -137,6 +136,74 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 			damnIt.Expect(org).To(Ω.Equal("cloudfoundry"))
 			damnIt.Expect(repo).To(Ω.Equal("routing-release"))
 			damnIt.Expect(tag).To(Ω.Equal("0.226.0"))
+		})
+	})
+
+	t.Run("when the github release tag name has a v prefix", func(t *testing.T) {
+		// Given...
+		releaseGetter := new(fakes.ReleaseByTagGetter)
+		downloader := new(fakes.ReleaseAssetDownloader)
+
+		const owner = "cloudfoundry"
+
+		releaseGetter.GetReleaseByTagReturnsOnCall(0,
+			nil,
+			&github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}},
+			nil,
+		)
+		releaseGetter.GetReleaseByTagReturns(
+			&github.RepositoryRelease{
+				TagName: strPtr("v0.226.0"),
+				Assets: []*github.ReleaseAsset{
+					{
+						Name:               strPtr("routing-0.226.0.tgz"),
+						BrowserDownloadURL: strPtr("https://github.com/cloudfoundry/routing-release/releases/download/v0.226.0/routing-0.226.0.tgz"),
+						ID:                 intPtr(420),
+					},
+				},
+			},
+			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+			nil,
+		)
+
+		file := &SetTrueOnClose{Reader: bytes.NewBufferString("hello")}
+		downloader.DownloadReleaseAssetReturns(file, "", nil)
+
+		ctx := context.TODO()
+
+		// When...
+		lock, err := component.LockFromGithubRelease(ctx, downloader, owner, component.Spec{
+			Name:             "routing",
+			Version:          ">0",
+			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
+		}, component.GetGithubReleaseWithTag(releaseGetter, "0.226.0"))
+
+		// Then...
+		t.Run("it returns success stuff", func(t *testing.T) {
+			damnIt := Ω.NewWithT(t)
+
+			damnIt.Expect(err).NotTo(Ω.HaveOccurred())
+		})
+
+		t.Run("it sets the lock fields properly", func(t *testing.T) {
+			damnIt := Ω.NewWithT(t)
+
+			damnIt.Expect(lock.Name).To(Ω.Equal("routing"))
+			damnIt.Expect(lock.Version).To(Ω.Equal("0.226.0"))
+			damnIt.Expect(lock.RemoteSource).To(Ω.Equal(owner))
+			damnIt.Expect(lock.RemotePath).To(Ω.Equal("https://github.com/cloudfoundry/routing-release/releases/download/v0.226.0/routing-0.226.0.tgz"))
+		})
+
+		t.Run("it makes the right request", func(t *testing.T) {
+			damnIt := Ω.NewWithT(t)
+
+			damnIt.Expect(releaseGetter.GetReleaseByTagCallCount()).To(Ω.Equal(2))
+
+			_, _, _, tag := releaseGetter.GetReleaseByTagArgsForCall(0)
+			damnIt.Expect(tag).To(Ω.Equal("0.226.0"))
+
+			_, _, _, tag = releaseGetter.GetReleaseByTagArgsForCall(1)
+			damnIt.Expect(tag).To(Ω.Equal("v0.226.0"))
 		})
 	})
 }
@@ -271,6 +338,46 @@ func TestGetReleaseMatchingConstraint(t *testing.T) {
 		rel, err := fn(ctx, "org", "repo")
 		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
 		damnIt.Expect(rel.GetTagName()).To(Ω.Equal("2.0.4"))
+		damnIt.Expect(releaseGetter.ListReleasesCallCount()).To(Ω.Equal(3))
+	})
+
+	t.Run("when some of the github releases tags have a v prefix", func(t *testing.T) {
+		damnIt := Ω.NewWithT(t)
+
+		releaseGetter := new(fakes.ReleasesLister)
+
+		releaseGetter.ListReleasesReturnsOnCall(0,
+			[]*github.RepositoryRelease{
+				{TagName: strPtr("v2.1.0")},
+				{TagName: strPtr("v2.0.4")},
+				{TagName: strPtr("2.0.3")},
+			},
+			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+			nil,
+		)
+		releaseGetter.ListReleasesReturnsOnCall(1,
+			[]*github.RepositoryRelease{
+				{TagName: strPtr("1.8.0")},
+			},
+			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+			nil,
+		)
+		releaseGetter.ListReleasesReturnsOnCall(2,
+			[]*github.RepositoryRelease{
+				{TagName: strPtr("1.7.5")},
+			},
+			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
+			nil,
+		)
+
+		ctx := context.TODO()
+
+		c, err := semver.NewConstraint("~2.0")
+		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
+		fn := component.GetReleaseMatchingConstraint(releaseGetter, c)
+		rel, err := fn(ctx, "org", "repo")
+		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
+		damnIt.Expect(rel.GetTagName()).To(Ω.Equal("v2.0.4"))
 		damnIt.Expect(releaseGetter.ListReleasesCallCount()).To(Ω.Equal(3))
 	})
 }
