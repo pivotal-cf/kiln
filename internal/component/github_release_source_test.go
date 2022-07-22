@@ -68,7 +68,7 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 
 		releaseGetter.GetReleaseByTagReturns(
 			&github.RepositoryRelease{
-				TagName: strPtr("0.226.0"),
+				TagName: strPtr("v0.226.0"),
 				Assets: []*github.ReleaseAsset{
 					{
 						Name:               strPtr("routing-0.226.0.tgz.sha256"),
@@ -135,7 +135,7 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 			_, org, repo, tag := releaseGetter.GetReleaseByTagArgsForCall(0)
 			damnIt.Expect(org).To(Ω.Equal("cloudfoundry"))
 			damnIt.Expect(repo).To(Ω.Equal("routing-release"))
-			damnIt.Expect(tag).To(Ω.Equal("0.226.0"))
+			damnIt.Expect(tag).To(Ω.Equal("v0.226.0"))
 		})
 	})
 
