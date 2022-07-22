@@ -200,10 +200,10 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 			damnIt.Expect(releaseGetter.GetReleaseByTagCallCount()).To(Ω.Equal(2))
 
 			_, _, _, tag := releaseGetter.GetReleaseByTagArgsForCall(0)
-			damnIt.Expect(tag).To(Ω.Equal("0.226.0"))
+			damnIt.Expect(tag).To(Ω.Equal("v0.226.0"))
 
 			_, _, _, tag = releaseGetter.GetReleaseByTagArgsForCall(1)
-			damnIt.Expect(tag).To(Ω.Equal("v0.226.0"))
+			damnIt.Expect(tag).To(Ω.Equal("0.226.0"))
 		})
 	})
 }

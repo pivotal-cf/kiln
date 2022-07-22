@@ -75,12 +75,12 @@ type ReleaseByTagGetter interface {
 
 func GetGithubReleaseWithTag(ghAPI ReleaseByTagGetter, tag string) GetGithubReleaseFunc {
 	return func(ctx context.Context, repoOwner, repoName string) (*github.RepositoryRelease, error) {
-		release, response, err := ghAPI.GetReleaseByTag(ctx, repoOwner, repoName, tag)
+		release, response, err := ghAPI.GetReleaseByTag(ctx, repoOwner, repoName, "v"+tag)
 		if err == nil {
 			err = checkStatus(http.StatusOK, response.StatusCode)
 		}
 		if err != nil {
-			release, response, err = ghAPI.GetReleaseByTag(ctx, repoOwner, repoName, "v"+tag)
+			release, response, err = ghAPI.GetReleaseByTag(ctx, repoOwner, repoName, tag)
 			if err == nil {
 				err = checkStatus(http.StatusOK, response.StatusCode)
 			}
