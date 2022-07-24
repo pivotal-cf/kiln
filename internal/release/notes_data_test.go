@@ -379,6 +379,7 @@ func TestReleaseNotes_Options_IssueTitleExp(t *testing.T) {
 	please.Expect(exp.MatchString("**[security fix]** Lorem Ipsum")).To(Ω.BeTrue())
 
 	please.Expect(exp.MatchString("**[none]** Lorem Ipsum")).To(Ω.BeFalse())
+	please.Expect(exp.MatchString("**[none]** feature bug fix security")).To(Ω.BeFalse())
 	please.Expect(exp.MatchString("Lorem Ipsum")).To(Ω.BeFalse())
 	please.Expect(exp.MatchString("")).To(Ω.BeFalse())
 	please.Expect(exp.MatchString("**[]**")).To(Ω.BeFalse())
