@@ -17,6 +17,7 @@ var (
 )
 
 func TestAcceptance(t *testing.T) {
+	SetDefaultEventuallyTimeout(time.Minute)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "acceptance")
 }

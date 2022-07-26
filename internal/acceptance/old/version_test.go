@@ -2,10 +2,8 @@ package acceptance_test
 
 import (
 	"fmt"
-	"os/exec"
-	"time"
-
 	"github.com/onsi/gomega/gexec"
+	"os/exec"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,7 +27,7 @@ var _ = Describe("version command", func() {
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(session, time.Second*10).Should(gexec.Exit(0))
+			Eventually(session).Should(gexec.Exit(0))
 			Expect(string(session.Out.Contents())).To(ContainSubstring(fmt.Sprintf("kiln version %s", buildVersion)))
 		})
 	})
@@ -40,7 +38,7 @@ var _ = Describe("version command", func() {
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(session, time.Second*10).Should(gexec.Exit(0))
+			Eventually(session).Should(gexec.Exit(0))
 			Expect(string(session.Out.Contents())).To(ContainSubstring(fmt.Sprintf("kiln version %s", buildVersion)))
 		})
 	})
