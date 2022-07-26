@@ -8,3 +8,7 @@ dist
 
 internal/release/exp.txt
 internal/release/got.txt
+
+env.yml
+*.key
+*.pem
