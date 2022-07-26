@@ -1,9 +1,7 @@
 package workflows
 
 import (
-	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"errors"
 	"fmt"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
@@ -11,7 +9,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -291,7 +288,7 @@ func (scenario *cacheCompiledReleaseScenario) theTileOnlyContainsCompiledRelease
 		if err != nil {
 			return err
 		}
-		manifestBuf, err := readReleaseManifest(helloReleaseTarball)
+		manifestBuf, err := component.ReadReleaseManifest(helloReleaseTarball)
 		if err != nil {
 			return err
 		}
@@ -328,31 +325,6 @@ func validateAllPackagesAreCompiled(manifestBuf []byte, release proofing.Release
 		return errors.New(sb.String())
 	}
 	return nil
-}
-
-func readReleaseManifest(r io.Reader) ([]byte, error) {
-	const releaseManifestFileName = "release.MF"
-	zipReader, err := gzip.NewReader(r)
-	if err != nil {
-		return nil, err
-	}
-	tarReader := tar.NewReader(zipReader)
-
-	for {
-		h, err := tarReader.Next()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-		if path.Base(h.Name) != releaseManifestFileName {
-			continue
-		}
-		return io.ReadAll(tarReader)
-	}
-
-	return nil, fmt.Errorf("%q not found", releaseManifestFileName)
 }
 
 func loadEnv(n string) (string, error) {

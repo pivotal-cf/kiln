@@ -25,6 +25,7 @@ type ReleaseManifest struct {
 	StemcellVersion string `yaml:"-"`
 }
 
+// inputReleaseManifest is a subset of release.MF
 type inputReleaseManifest struct {
 	Name             string            `yaml:"name"`
 	Version          string            `yaml:"version"`
@@ -53,6 +54,9 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 		return Part{}, err
 	}
 	defer closeAndIgnoreError(file)
+
+	// TODO: use component.ReadReleaseManifest
+	// we could not do it yet due to a circular package reference where we import builder in the local release source
 
 	gr, err := gzip.NewReader(file)
 	if err != nil {
