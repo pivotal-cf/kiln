@@ -3,6 +3,7 @@ package release
 import (
 	"context"
 	"errors"
+	"github.com/go-git/go-git/v5/plumbing/storer"
 	"net/http"
 	"reflect"
 	"sort"
@@ -19,6 +20,40 @@ import (
 	"github.com/pivotal-cf/kiln/internal/release/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
+
+func TestFetchNotesData_fetchLatestVersion(t *testing.T) {
+	t.Run("from file", func(t *testing.T) {
+		please := Ω.NewWithT(t)
+
+		f := fetchNotesData{
+			Storer:        memory.NewStorage(),
+			finalRevision: "some-dir/v1.1.1",
+			historicVersion: func(_ storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (string, error) {
+				return "5.5.5", nil
+			},
+		}
+
+		v, err := f.fetchLatestVersion(new(plumbing.Hash), "")
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(v.String()).To(Ω.Equal("5.5.5"))
+	})
+
+	t.Run("from revision", func(t *testing.T) {
+		please := Ω.NewWithT(t)
+
+		f := fetchNotesData{
+			Storer:        memory.NewStorage(),
+			finalRevision: "some-dir/v1.1.1",
+			historicVersion: func(_ storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (string, error) {
+				return "", errors.New("something went wrong")
+			},
+		}
+
+		v, err := f.fetchLatestVersion(new(plumbing.Hash), "")
+		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(v.String()).To(Ω.Equal("1.1.1"))
+	})
+}
 
 func Test_fetch(t *testing.T) {
 	please := Ω.NewWithT(t)

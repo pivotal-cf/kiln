@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"path"
 	"reflect"
 	"regexp"
 	"sort"
@@ -245,17 +246,25 @@ func (r fetchNotesData) fetchHistoricFiles(kilnfilePath, start, end string) (klI
 	if err != nil {
 		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to get kilnfile from final commit: %w", err)
 	}
-	version, err := r.historicVersion(r.Storer, *finalCommitSHA, kilnfilePath)
-	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to get version file from final commit: %w", err)
-	}
 
-	v, err := semver.NewVersion(version)
+	version, err := r.fetchLatestVersion(finalCommitSHA, kilnfilePath)
 	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to parse version: %w", err)
+		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to get version: %w", err)
 	}
+	return klInitial, klFinal, kfFinal, version, err
+}
 
-	return klInitial, klFinal, kfFinal, v, nil
+func (r fetchNotesData) fetchLatestVersion(finalCommitSHA *plumbing.Hash, kilnfilePath string) (*semver.Version, error) {
+	versionFile, historicVersionErr := r.historicVersion(r.Storer, *finalCommitSHA, kilnfilePath)
+	if historicVersionErr != nil {
+		version, err := semver.NewVersion(path.Base(r.finalRevision))
+		if err != nil {
+			// returning the outer error since that is default behavior
+			return nil, historicVersionErr
+		}
+		return version, nil
+	}
+	return semver.NewVersion(versionFile)
 }
 
 //counterfeiter:generate -o ./fakes/releases_service.go --fake-name ReleaseService github.com/pivotal-cf/kiln/internal/component.RepositoryReleaseLister
