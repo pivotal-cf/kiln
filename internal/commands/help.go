@@ -10,7 +10,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 )
 
-const tmpl = `{{.Title}}
+var usageTemplate = template.Must(template.New("usage").Parse( /* language=gotemplate */ `{{.Title}}
 {{.Description}}
 
 Usage: {{.Usage}}
@@ -19,7 +19,7 @@ Usage: {{.Usage}}
 {{if .Arguments}}{{.ArgumentsName}}:
 {{range .Arguments}}  {{.}}
 {{end}}{{end}}
-`
+`))
 
 type TemplateContext struct {
 	Title         string
@@ -60,9 +60,7 @@ func (h Help) Execute(args []string) error {
 
 	context.GlobalFlags = globalFlags
 
-	t := template.Must(template.New("usage").Parse(tmpl))
-
-	err := t.Execute(h.output, context)
+	err := usageTemplate.Execute(h.output, context)
 	if err != nil {
 		return err
 	}
