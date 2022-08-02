@@ -1,5 +1,5 @@
-Feature: Bake a Tile
-  Scenario: kiln fetches components and bakes a Tile
+Feature: Baking
+  Scenario: it fetches components and bakes a tile
     Given I have a "hello-tile" repository checked out at v0.1.1
     And the repository has no fetched releases
     When I invoke kiln fetch

@@ -1,5 +1,5 @@
-Feature: Cache Compiled Releases
-  Scenario: kiln cache-compiled-release stores compiled releases in an S3 bucket
+Feature: Compiled Releases
+  Scenario: it stores compiled releases in an S3 bucket
     Given I have a "hello-tile" repository checked out at v0.1.2
     And I invoke kiln fetch
     And I invoke kiln bake

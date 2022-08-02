@@ -8,54 +8,76 @@
 //
 // To run a particular test execute (notice the run tag value is a case-sensitive regular expression):
 //
-//    go test --run bake -v --tags acceptance github.com/pivotal-cf/kiln/internal/acceptance/workflows
+//    go test --run baking -v --tags acceptance github.com/pivotal-cf/kiln/internal/acceptance/workflows
 //
 package workflows
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/cucumber/godog"
 
-	"github.com/pivotal-cf/kiln/internal/acceptance/workflows/steps"
+	"github.com/pivotal-cf/kiln/internal/acceptance/workflows/scenario"
 )
 
-func TestBake(t *testing.T) {
-	suite := godog.TestSuite{
-		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
-			steps.InitializeTile(ctx)
-			steps.InitializeFetch(ctx)
-			steps.InitializeBake(ctx)
-		},
-		Options: &godog.Options{
-			Format:   "pretty",
-			Paths:    []string{"bake_test.feature"},
-			TestingT: t, // Testing instance that will run subtests.
-		},
-	}
-
-	if code := suite.Run(); code != 0 {
-		t.Fatalf("status %d returned, failed to run feature tests", code)
-	}
+func Test_baking(t *testing.T) {
+	testFeature(t,
+		scenario.InitializeFetch,
+		scenario.InitializeBake,
+	)
+}
+func Test_command(t *testing.T) {
+	testFeature(t)
+}
+func Test_updating_releases(t *testing.T) {
+	testFeature(t,
+		scenario.InitializeGitHub,
+		scenario.InitializeValidate,
+		scenario.InitializeFindReleaseVersion,
+		scenario.InitializeUpdateRelease,
+	)
+}
+func Test_compiled_releases(t *testing.T) {
+	testFeature(t,
+		scenario.InitializeFetch,
+		scenario.InitializeBake,
+		scenario.InitializeEnvironment,
+		scenario.InitializeCacheCompiledReleases,
+	)
 }
 
-func TestCacheCompiledReleases(t *testing.T) {
+func Test_updating_stemcell(t *testing.T) {
+	t.SkipNow()
+	testFeature(t,
+		scenario.InitializeFetch,
+		scenario.InitializeBake,
+		scenario.InitializeEnvironment,
+	)
+}
+
+func testFeature(t *testing.T, initializers ...func(ctx scenario.InitializeContext)) {
+	trimmedTestFuncName := strings.TrimPrefix(t.Name(), "Test_")
+	featurePath := trimmedTestFuncName + ".feature"
+
 	suite := godog.TestSuite{
 		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
-			steps.InitializeTile(ctx)
-			steps.InitializeFetch(ctx)
-			steps.InitializeBake(ctx)
-			steps.InitializeEnvironment(ctx)
-			steps.InitializeCacheCompiledReleases(ctx)
+			// default initializers
+			scenario.InitializeExec(ctx)
+			scenario.InitializeTile(ctx)
+
+			// additional initializers
+			for _, initializer := range initializers {
+				initializer(ctx)
+			}
 		},
 		Options: &godog.Options{
 			Format:   "pretty",
-			Paths:    []string{"cache_compiled_releases_test.feature"},
+			Paths:    []string{featurePath},
 			TestingT: t, // Testing instance that will run subtests.
 		},
 	}
-
 	if code := suite.Run(); code != 0 {
-		t.Fatalf("status %d returned, failed to run feature tests", code)
+		t.Fatalf("status %d returned, failed to run %s", code, featurePath)
 	}
 }

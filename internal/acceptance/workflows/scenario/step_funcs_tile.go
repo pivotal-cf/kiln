@@ -1,4 +1,4 @@
-package steps
+package scenario
 
 import (
 	"archive/zip"
@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"golang.org/x/exp/slices"
 	"os"
 	"strings"
 
@@ -17,6 +19,10 @@ import (
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"github.com/pivotal-cf/kiln/pkg/tile"
+)
+
+const (
+	indexNotFound = -1
 )
 
 // checkoutMainOnTileRepo is to be run after the Scenario if the tile repo has been changed
@@ -64,7 +70,6 @@ func iHaveARepositoryCheckedOutAtRevision(ctx context.Context, filePath, revisio
 		return nil, fmt.Errorf("checking out the revision %q at %q failed: %w", revision, revisionHash, err)
 	}
 
-	ctx = setTileRepoPath(ctx, filePath)
 	ctx = setTileVersion(ctx, strings.TrimPrefix(revision, "v"))
 
 	return ctx, success
@@ -191,4 +196,50 @@ func validateAllPackagesAreCompiled(manifestBuf []byte, release proofing.Release
 		return errors.New(sb.String())
 	}
 	return success
+}
+
+func theLockSpecifiesVersionForRelease(ctx context.Context, releaseVersion, releaseName string) error {
+	lockPath, err := kilnfileLockPath(ctx)
+	if err != nil {
+		return err
+	}
+	var lock cargo.KilnfileLock
+	err = loadFileAsYAML(lockPath, &lock)
+	if err != nil {
+		return err
+	}
+	releaseLock, err := lock.FindReleaseWithName(releaseName)
+	if err != nil {
+		return err
+	}
+	if releaseLock.Version != releaseVersion {
+		return fmt.Errorf("expected %q to equal %q", releaseLock.Version, releaseVersion)
+	}
+	return nil
+}
+
+// cleanUpFetchedReleases should be run after the Scenario
+func cleanUpFetchedReleases(ctx context.Context, _ *godog.Scenario, _ error) (context.Context, error) {
+	err := theRepositoryHasNoFetchedReleases(ctx)
+	if err != nil {
+		return ctx, err
+	}
+	return ctx, nil
+}
+
+func iSetAVersionConstraintForRelease(ctx context.Context, versionConstraint, releaseName string) error {
+	spcePath, err := kilnfileLockPath(ctx)
+	if err != nil {
+		return err
+	}
+	var spec cargo.Kilnfile
+	err = loadFileAsYAML(spcePath, &spec)
+	specIndex := slices.IndexFunc(spec.Releases, func(release cargo.ComponentSpec) bool {
+		return release.Name == releaseName
+	})
+	if specIndex == indexNotFound {
+		return cargo.ErrorSpecNotFound(releaseName)
+	}
+	spec.Releases[specIndex].Version = versionConstraint
+	return saveAsYAML(spcePath, spec)
 }

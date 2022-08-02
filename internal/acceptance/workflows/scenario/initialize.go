@@ -1,4 +1,4 @@
-package steps
+package scenario
 
 import (
 	"context"
@@ -7,7 +7,16 @@ import (
 	"github.com/cucumber/godog"
 )
 
-func InitializeBake(ctx *godog.ScenarioContext) {
+// InitializeContext is based on *godog.ScenarioContext
+type InitializeContext interface {
+	Step(expr, stepFunc interface{})
+	Before(h godog.BeforeScenarioHook)
+	After(h godog.AfterScenarioHook)
+}
+
+var _ InitializeContext = (*godog.ScenarioContext)(nil)
+
+func InitializeBake(ctx InitializeContext) {
 	ctx.Step(regexp.MustCompile(`^I invoke kiln bake$`), iInvokeKilnBake)
 }
 
@@ -46,7 +55,7 @@ func InitializeBake(ctx *godog.ScenarioContext) {
 //   chmod 0400 /tmp/om.key
 //   ssh -i /tmp/om.key "ubuntu@pcf.example.com"
 //
-func InitializeCacheCompiledReleases(ctx *godog.ScenarioContext) {
+func InitializeCacheCompiledReleases(ctx InitializeContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		_, _, err := loadS3Credentials()
 		if err != nil {
@@ -66,7 +75,7 @@ func InitializeCacheCompiledReleases(ctx *godog.ScenarioContext) {
 //
 //   om staged-products
 //
-func InitializeEnvironment(ctx *godog.ScenarioContext) {
+func InitializeEnvironment(ctx InitializeContext) {
 	ctx.Step(regexp.MustCompile(`^I upload, configure, and apply the tile$`), iUploadConfigureAndApplyTheTile)
 }
 
@@ -78,7 +87,7 @@ func InitializeEnvironment(ctx *godog.ScenarioContext) {
 //
 // It should output a valid github token.
 // If you have not set this, loadGithubToken will try to execute `gh auth status --show-token` and will parse and set the token from the output.
-func InitializeFetch(ctx *godog.ScenarioContext) {
+func InitializeFetch(ctx InitializeContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		return loadGithubToken(ctx)
 	})
@@ -89,11 +98,44 @@ func InitializeFetch(ctx *godog.ScenarioContext) {
 // InitializeTile provides some basic tile and tile repo interacation steps.
 //
 // Most other steps require iHaveARepositoryCheckedOutAtRevision to have been run because it sets the tile repo path on the context.
-func InitializeTile(ctx *godog.ScenarioContext) {
+func InitializeTile(ctx InitializeContext) {
+	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
+		return setTileRepoPath(ctx, "hello-tile"), nil
+	})
 	ctx.After(checkoutMainOnTileRepo)
 	ctx.Step(regexp.MustCompile(`^a Tile is created$`), aTileIsCreated)
 	ctx.Step(regexp.MustCompile(`^I have a "([^"]*)" repository checked out at (.*)$`), iHaveARepositoryCheckedOutAtRevision)
 	ctx.Step(regexp.MustCompile(`^the repository has no fetched releases$`), theRepositoryHasNoFetchedReleases)
 	ctx.Step(regexp.MustCompile(`^the Tile contains "([^"]*)"$`), theTileContains)
 	ctx.Step(regexp.MustCompile(`^the Tile only contains compiled releases$`), theTileOnlyContainsCompiledReleases)
+	ctx.Step(regexp.MustCompile(`^I set the version constraint to "([^"]*)" for release "([^"]*)"$`), iSetAVersionConstraintForRelease)
+
+	ctx.Step(regexp.MustCompile(`^the Kilnfile\.lock specifies version "([^"]*)" for release "([^"]*)"$`), theLockSpecifiesVersionForRelease)
+}
+
+func InitializeValidate(ctx InitializeContext) {
+	ctx.Step(regexp.MustCompile(`^kiln validate succeeds$`), kilnValidateSucceeds)
+}
+
+func InitializeFindReleaseVersion(ctx InitializeContext) {
+	ctx.Step(`^I invoke kiln find-release-version for "([^"]*)"$`, iInvokeKilnFindReleaseVersion)
+}
+
+func InitializeUpdateRelease(ctx InitializeContext) {
+	ctx.Step(`^I invoke kiln update-release for releas "([^"]*)" with version "([^"]*)"$`, iInvokeKilnUpdateRelease)
+}
+
+func InitializeGitHub(ctx InitializeContext) {
+	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
+		return loadGithubToken(ctx)
+	})
+	ctx.Step(regexp.MustCompile(`^GitHub repository "([^/]*)/([^"]*)" has release with tag "([^"]*)"$`), githubRepoHasReleaseWithTag)
+}
+
+func InitializeExec(ctx InitializeContext) {
+	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
+		return configureStandardFileDescriptors(ctx), nil
+	})
+	ctx.Step(regexp.MustCompile("^(stdout|stderr) contains substring: (.*)"), outputContainsSubstring)
+	ctx.Step(regexp.MustCompile(`^I invoke kiln version$`), iInvokeKilnVersion)
 }

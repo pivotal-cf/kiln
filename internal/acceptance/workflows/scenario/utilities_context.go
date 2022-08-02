@@ -1,9 +1,11 @@
-package steps
+package scenario
 
 import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/component"
+	"io"
 	"net/url"
 	"os"
 	"os/exec"
@@ -22,6 +24,8 @@ const (
 	githubTokenKey
 	environmentKey
 	publishableReleaseSourceKey
+	foundComponentVersionKey
+	standardFileDescriptorsKey
 )
 
 func contextValue[T any](ctx context.Context, k key, name string) (T, error) {
@@ -178,7 +182,7 @@ func loadEnvironment(ctx context.Context) (context.Context, error) {
 			} `yaml:"networks"`
 		} `yaml:"networks-configuration"`
 	}
-	err = runAndParseStdoutAsYAML(
+	err = runAndParseStdoutAsYAML(ctx,
 		exec.Command("om", "--skip-ssl-validation", "staged-director-config", "--no-redact"),
 		&directorConfig,
 	)
@@ -205,4 +209,38 @@ func publishableReleaseSource(ctx context.Context) (string, error) {
 
 func setPublishableReleaseSource(ctx context.Context, e string) context.Context {
 	return context.WithValue(ctx, publishableReleaseSourceKey, e)
+}
+
+func foundComponentLocks(ctx context.Context) ([]component.Lock, error) {
+	return contextValue[[]component.Lock](ctx, foundComponentVersionKey, "publishable release source")
+}
+
+func setFoundComponentLocks(ctx context.Context, e []component.Lock) context.Context {
+	return context.WithValue(ctx, foundComponentVersionKey, e)
+}
+
+type standardFileDescriptors [3]*bytes.Buffer
+
+func output(ctx context.Context, name string) (io.Reader, error) {
+	v, err := contextValue[standardFileDescriptors](ctx, standardFileDescriptorsKey, name)
+	if err != nil {
+		return nil, err
+	}
+	switch name {
+	case "stdout":
+		return v[1], nil
+	case "stderr":
+		return v[2], nil
+	default:
+		return nil, fmt.Errorf("unknown output name %q", name)
+	}
+}
+
+func configureStandardFileDescriptors(ctx context.Context) context.Context {
+	outputs := standardFileDescriptors{
+		nil, // stdin is not yet implemented
+		bytes.NewBuffer(nil),
+		bytes.NewBuffer(nil),
+	}
+	return context.WithValue(ctx, standardFileDescriptorsKey, outputs)
 }

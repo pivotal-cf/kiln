@@ -1,7 +1,8 @@
-package steps
+package scenario
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +14,12 @@ import (
 )
 
 var success error = nil
+
+const devVersion = "1.0.0-dev"
+
+func kilnCommand(ctx context.Context, args ...string) *exec.Cmd {
+	return exec.CommandContext(ctx, "go", append([]string{"run", "-ldflags", "-X main.version=" + devVersion, "github.com/pivotal-cf/kiln"}, args...)...)
+}
 
 func checkoutMain(repoPath string) error {
 	repo, err := git.PlainOpen(repoPath)
@@ -37,10 +44,11 @@ func closeAndIgnoreErr(c io.Closer) {
 	_ = c.Close()
 }
 
-func runAndParseStdoutAsYAML(cmd *exec.Cmd, d interface{}) error {
+func runAndParseStdoutAsYAML(ctx context.Context, cmd *exec.Cmd, d interface{}) error {
 	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	fds := ctx.Value(standardFileDescriptorsKey).(standardFileDescriptors)
+	cmd.Stdout = io.MultiWriter(&stdout, fds[1])
+	cmd.Stderr = io.MultiWriter(&stderr, fds[2])
 	err := cmd.Run()
 	if err != nil {
 		_, _ = io.Copy(os.Stdout, &stderr)
@@ -49,10 +57,11 @@ func runAndParseStdoutAsYAML(cmd *exec.Cmd, d interface{}) error {
 	return yaml.Unmarshal(stdout.Bytes(), d)
 }
 
-func runAndLogOnError(cmd *exec.Cmd) error {
+func runAndLogOnError(ctx context.Context, cmd *exec.Cmd) error {
 	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
+	fds := ctx.Value(standardFileDescriptorsKey).(standardFileDescriptors)
+	cmd.Stdout = io.MultiWriter(&buf, fds[1])
+	cmd.Stderr = io.MultiWriter(&buf, fds[2])
 	err := cmd.Run()
 	if err != nil {
 		_, _ = io.Copy(os.Stdout, &buf)
@@ -102,4 +111,16 @@ func loadEnvVar(name, message string) (string, error) {
 		return "", fmt.Errorf("%s is not set (%s)", name, message)
 	}
 	return value, nil
+}
+
+func loadS3Credentials() (keyID, accessKey string, err error) {
+	keyID, err = loadEnvVar("AWS_ACCESS_KEY_ID", "required for s3 release source to cache releases")
+	if err != nil {
+		return
+	}
+	accessKey, err = loadEnvVar("AWS_SECRET_ACCESS_KEY", "required for s3 release source to cache releases")
+	if err != nil {
+		return
+	}
+	return
 }
