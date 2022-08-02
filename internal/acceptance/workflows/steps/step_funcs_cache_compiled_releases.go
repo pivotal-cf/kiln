@@ -3,22 +3,26 @@ package steps
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
+func loadS3Credentials() (keyID, accessKey string, err error) {
+	keyID, err = loadEnvVar("AWS_ACCESS_KEY_ID", "required for s3 release source to cache releases")
+	if err != nil {
+		return
+	}
+	accessKey, err = loadEnvVar("AWS_SECRET_ACCESS_KEY", "required for s3 release source to cache releases")
+	if err != nil {
+		return
+	}
+	return
+}
+
 func iAddACompiledSReleaseSourceToTheKilnfile(ctx context.Context, bucketName string) error {
-	_, err := loadEnvVar("AWS_ACCESS_KEY_ID", "required for s3 release source to cache releases")
-	if err != nil {
-		return err
-	}
-	_, err = loadEnvVar("AWS_SECRET_ACCESS_KEY", "required for s3 release source to cache releases")
-	if err != nil {
-		return err
-	}
+	keyID, accessKey, err := loadS3Credentials()
 	kfPath, err := kilnfilePath(ctx)
 	if err != nil {
 		return err
@@ -42,8 +46,8 @@ func iAddACompiledSReleaseSourceToTheKilnfile(ctx context.Context, bucketName st
 		PathTemplate:    "{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz",
 		Region:          "us-west-1",
 		Publishable:     true,
-		AccessKeyId:     os.Getenv("AWS_ACCESS_KEY_ID"),
-		SecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		AccessKeyId:     keyID,
+		SecretAccessKey: accessKey,
 	})
 
 	setPublishableReleaseSource(ctx, bucketName)

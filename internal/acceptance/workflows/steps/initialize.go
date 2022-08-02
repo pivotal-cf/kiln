@@ -48,6 +48,10 @@ func InitializeBake(ctx *godog.ScenarioContext) {
 //
 func InitializeCacheCompiledReleases(ctx *godog.ScenarioContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
+		_, _, err := loadS3Credentials()
+		if err != nil {
+			return ctx, err
+		}
 		return loadEnvironment(ctx)
 	})
 	ctx.Step(regexp.MustCompile(`^I add a compiled s3 release-source "([^"]*)" to the Kilnfile$`), iAddACompiledSReleaseSourceToTheKilnfile)
