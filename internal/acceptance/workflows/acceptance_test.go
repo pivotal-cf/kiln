@@ -21,13 +21,13 @@ import (
 	"github.com/pivotal-cf/kiln/internal/acceptance/workflows/scenario"
 )
 
-func Test_baking(t *testing.T) {
+func Test_baking_a_tile(t *testing.T) {
 	testFeature(t,
 		scenario.InitializeFetch,
 		scenario.InitializeBake,
 	)
 }
-func Test_command(t *testing.T) {
+func Test_using_kiln(t *testing.T) {
 	testFeature(t,
 		scenario.InitializeHelp,
 	)
@@ -39,7 +39,7 @@ func Test_updating_releases(t *testing.T) {
 		scenario.InitializeUpdateRelease,
 	)
 }
-func Test_compiled_releases(t *testing.T) {
+func Test_caching_compiled_releases(t *testing.T) {
 	testFeature(t,
 		scenario.InitializeFetch,
 		scenario.InitializeBake,
