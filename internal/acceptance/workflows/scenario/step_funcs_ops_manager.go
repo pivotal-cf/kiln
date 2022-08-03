@@ -30,7 +30,7 @@ func iUploadConfigureAndApplyTheTile(ctx context.Context) (context.Context, erro
 		return ctx, err
 	}
 	ctx, err = runAndLogOnError(ctx, exec.Command("om", "--skip-ssl-validation", "configure-product",
-		"--config", "hello-product-config.yml",
+		"--config", "scenario/fixtures/hello-product-config.yml",
 		"--var", "subnet="+env.ServiceSubnetName,
 		"--var", "az="+env.AvailabilityZones[0],
 	), true)

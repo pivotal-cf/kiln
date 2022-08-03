@@ -167,7 +167,7 @@ func iInvokeKilnReleaseNotes(ctx context.Context, try, initialRevision, finalRev
 	cmd := kilnCommand(ctx, "release-notes",
 		"--release-date", "2022-07-27",
 		"--github-issue-milestone", "Release-2022-001",
-		"--update-docs", "../release_notes.md.erb",
+		"--update-docs", "../scenario/fixtures/release_notes.md.erb",
 		"--kilnfile", "Kilnfile",
 		initialRevision, finalRevision,
 	)
