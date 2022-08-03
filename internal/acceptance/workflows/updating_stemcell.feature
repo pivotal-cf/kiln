@@ -1,4 +1,4 @@
-Feature: Update a stemcell
+Feature: Updating a stemcell
 
   Scenario: Find the new stemcell
     Given I have a "hello-tile" repository checked out at v0.1.1

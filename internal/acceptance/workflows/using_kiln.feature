@@ -1,4 +1,4 @@
-Feature: Kiln CLI is self documenting
+Feature: Using the Kiln CLI
   Scenario: I ask for the version
     When I invoke kiln version
     Then stdout contains substring: 1.0.0-dev
