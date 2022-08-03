@@ -343,6 +343,7 @@ func Test_appendFilterAndSortIssues(t *testing.T) {
 		{Title: strPtr("**[Feature]** lorem ipsum"), ID: int64Ptr(getID())},
 		{Title: strPtr("**[Feature Improvement]** lorem ipsum"), ID: int64Ptr(getID())},
 		{Title: strPtr("**[security Fix]** 111 lorem ipsum"), ID: int64Ptr(getID())},
+		{Title: strPtr("**[Breaking Change]** 333 lorem ipsum"), ID: int64Ptr(getID())},
 	}
 
 	additionalIssues := []*github.Issue{
@@ -363,6 +364,7 @@ func Test_appendFilterAndSortIssues(t *testing.T) {
 		"**[Feature]** lorem ipsum",
 		"**[Feature Improvement]** lorem ipsum",
 		"**[Bug Fix]** lorem ipsum",
+		"**[Breaking Change]** 333 lorem ipsum",
 	}))
 }
 
