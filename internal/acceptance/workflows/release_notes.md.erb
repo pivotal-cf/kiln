@@ -1,0 +1,79 @@
+---
+title: Hello Tile Example v0.1 Release Notes
+owner: Christopher Hunter
+---
+
+This topic contains release notes [Hello Tile](https://github.com/crhntr/hello-tile).
+
+## <a id='releases'></a> Releases
+
+### <a id='0.1.4'></a> 0.1.4
+
+**Release Date:** 07/27/2022
+
+* **[Bug Fix]** Index page has inconsistent whitespace 
+* Bump hello-release to version `0.1.5`
+
+<table border="1" class="nice">
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Version</th>
+      <th>Release Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>ubuntu-xenial stemcell</td><td>621.0</td><td></td></tr>
+    <tr><td>bpm</td><td>1.1.18</td><td></td></tr>
+    <tr><td>hello-release</td><td>0.1.5</td>
+      <td>
+        <details>
+          <summary>v0.1.5</summary>
+          <pre style="max-width: 30em">
+  **[Fix]**
+  The HTML had  inconsistent	 spacing
+          </pre>
+        </details>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+### <a id='0.1.3'></a> 0.1.3
+
+**Release Date:** 06/26/2022
+
+* Bump hello-release to version `v0.1.4`
+
+<table border="1" class="nice">
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Version</th>
+      <th>Release Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>ubuntu-xenial stemcell</td><td>621.0</td><td></td></tr>
+    <tr><td>bpm</td><td>1.1.18</td><td></td></tr>
+    <tr><td>hello-release</td><td>v0.1.4</td><td></td></tr>
+  </tbody>
+</table>
+
+## <a id='upgrade'></a> How to Upgrade
+
+Upload the tile and hit review apply changes.
+
+## <a id='new-features'></a> New Features in TAS for VMs v2.13
+
+The tile includes the following major features:
+
+### <a id='a-hello-world-page'></a> A hello world page
+
+The tile deploys a VM with a server that responds to HTTP requests with a "Hello world!" HTML page.
+
+### <a id='configurable-port'></a> Configurable Port
+
+The HTTP port is configurable. It defaults to 8080.

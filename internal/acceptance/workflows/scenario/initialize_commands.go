@@ -97,3 +97,7 @@ func InitializeHelp(ctx InitializeContext) {
 	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln boo-boo$`), iInvokeKilnBooBoo)
 	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln (\S*) --boo-boo$`), iInvokeKilnCommandWithFlagBooBoo)
 }
+
+func InitializeReleaseNotes(ctx InitializeContext) {
+	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln release-notes "([^"]*)" "([^"]*)"$`), iInvokeKilnReleaseNotes)
+}

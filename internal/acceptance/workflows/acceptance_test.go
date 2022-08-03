@@ -55,6 +55,13 @@ func Test_updating_stemcell(t *testing.T) {
 	)
 }
 
+func Test_generating_release_notes(t *testing.T) {
+	testFeature(t,
+		scenario.InitializeGitHub,
+		scenario.InitializeReleaseNotes,
+	)
+}
+
 func testFeature(t *testing.T, initializers ...func(ctx scenario.InitializeContext)) {
 	trimmedTestFuncName := strings.TrimPrefix(t.Name(), "Test_")
 	featurePath := trimmedTestFuncName + ".feature"

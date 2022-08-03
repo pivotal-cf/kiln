@@ -158,3 +158,19 @@ func iInvokeKilnCommandWithFlagBooBoo(ctx context.Context, try, command string) 
 	cmd.Dir = repoPath
 	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
 }
+
+func iInvokeKilnReleaseNotes(ctx context.Context, try, initialRevision, finalRevision string) (context.Context, error) {
+	repoPath, err := tileRepoPath(ctx)
+	if err != nil {
+		return ctx, err
+	}
+	cmd := kilnCommand(ctx, "release-notes",
+		"--release-date", "2022-07-27",
+		"--github-issue-milestone", "Release-2022-001",
+		"--update-docs", "../release_notes.md.erb",
+		"--kilnfile", "Kilnfile",
+		initialRevision, finalRevision,
+	)
+	cmd.Dir = repoPath
+	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
+}

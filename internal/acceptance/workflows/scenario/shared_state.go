@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -232,7 +233,15 @@ func output(ctx context.Context, name string) (*bytes.Buffer, error) {
 	case "stderr":
 		return v[2], nil
 	default:
-		return nil, fmt.Errorf("unknown output name %q", name)
+		name, err = strconv.Unquote(name)
+		if err != nil {
+			return nil, err
+		}
+		buf, err := os.ReadFile(name)
+		if err != nil {
+			return nil, err
+		}
+		return bytes.NewBuffer(buf), nil
 	}
 }
 

@@ -18,7 +18,7 @@ func InitializeExec(ctx InitializeContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		return configureStandardFileDescriptors(ctx), nil
 	})
-	ctx.Step(regexp.MustCompile("^(stdout|stderr) contains substring: (.*)"), outputContainsSubstring)
+	ctx.Step(regexp.MustCompile(`^(stdout|stderr|"[^"]*") contains substring: (.*)`), outputContainsSubstring)
 	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln version$`), iInvokeKilnVersion)
 	ctx.Step(regexp.MustCompile(`^the exit code is (\d+)$`), theExitCodeIs)
 }
