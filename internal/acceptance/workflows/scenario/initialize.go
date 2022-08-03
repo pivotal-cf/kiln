@@ -17,7 +17,7 @@ type InitializeContext interface {
 var _ InitializeContext = (*godog.ScenarioContext)(nil)
 
 func InitializeBake(ctx InitializeContext) {
-	ctx.Step(regexp.MustCompile(`^I invoke kiln bake$`), iInvokeKilnBake)
+	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln bake$`), iInvokeKilnBake)
 }
 
 // InitializeCacheCompiledReleases requires environment configuration to interact with a Tanzu Ops Manager.
@@ -64,7 +64,7 @@ func InitializeCacheCompiledReleases(ctx InitializeContext) {
 		return loadEnvironment(ctx)
 	})
 	ctx.Step(regexp.MustCompile(`^I add a compiled s3 release-source "([^"]*)" to the Kilnfile$`), iAddACompiledSReleaseSourceToTheKilnfile)
-	ctx.Step(regexp.MustCompile(`^I invoke kiln cache-compiled-releases$`), iInvokeKilnCacheCompiledReleases)
+	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln cache-compiled-releases$`), iInvokeKilnCacheCompiledReleases)
 	ctx.Step(regexp.MustCompile(`^the stemcell version in the lock matches the used for the tile$`), theStemcellVersionInTheLockMatchesTheUsedForTheTile)
 }
 
@@ -92,7 +92,7 @@ func InitializeFetch(ctx InitializeContext) {
 		return loadGithubToken(ctx)
 	})
 	ctx.After(cleanUpFetchedReleases)
-	ctx.Step(regexp.MustCompile(`^I invoke kiln fetch$`), iInvokeKilnFetch)
+	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln fetch$`), iInvokeKilnFetch)
 }
 
 // InitializeTile provides some basic tile and tile repo interacation steps.
@@ -118,11 +118,11 @@ func InitializeValidate(ctx InitializeContext) {
 }
 
 func InitializeFindReleaseVersion(ctx InitializeContext) {
-	ctx.Step(`^I invoke kiln find-release-version for "([^"]*)"$`, iInvokeKilnFindReleaseVersion)
+	ctx.Step(`^I (try to )?invoke kiln find-release-version for "([^"]*)"$`, iInvokeKilnFindReleaseVersion)
 }
 
 func InitializeUpdateRelease(ctx InitializeContext) {
-	ctx.Step(`^I invoke kiln update-release for releas "([^"]*)" with version "([^"]*)"$`, iInvokeKilnUpdateRelease)
+	ctx.Step(`^I (try to )?invoke kiln update-release for releas "([^"]*)" with version "([^"]*)"$`, iInvokeKilnUpdateRelease)
 }
 
 func InitializeGitHub(ctx InitializeContext) {
@@ -132,10 +132,17 @@ func InitializeGitHub(ctx InitializeContext) {
 	ctx.Step(regexp.MustCompile(`^GitHub repository "([^/]*)/([^"]*)" has release with tag "([^"]*)"$`), githubRepoHasReleaseWithTag)
 }
 
+func InitializeHelp(ctx InitializeContext) {
+	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln help$`), iInvokeKilnHelp)
+	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln boo-boo$`), iInvokeKilnBooBoo)
+	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln (\S*) --boo-boo$`), iInvokeKilnCommandWithFlagBooBoo)
+}
+
 func InitializeExec(ctx InitializeContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		return configureStandardFileDescriptors(ctx), nil
 	})
 	ctx.Step(regexp.MustCompile("^(stdout|stderr) contains substring: (.*)"), outputContainsSubstring)
-	ctx.Step(regexp.MustCompile(`^I invoke kiln version$`), iInvokeKilnVersion)
+	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln version$`), iInvokeKilnVersion)
+	ctx.Step(regexp.MustCompile(`^the exit code is (\d+)$`), theExitCodeIs)
 }

@@ -12,7 +12,7 @@ func Test_outputContainsSubstring(t *testing.T) {
 		please := Ω.NewWithT(t)
 		ctx := context.Background()
 		ctx = configureStandardFileDescriptors(ctx)
-		err := runAndLogOnError(ctx, exec.Command("echo", "Hello, world!"))
+		_, err := runAndLogOnError(ctx, exec.Command("echo", "Hello, world!"), true)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 
 		err = outputContainsSubstring(ctx, "stdout", "world")
@@ -23,7 +23,7 @@ func Test_outputContainsSubstring(t *testing.T) {
 		please := Ω.NewWithT(t)
 		ctx := context.Background()
 		ctx = configureStandardFileDescriptors(ctx)
-		err := runAndLogOnError(ctx, exec.Command("bash", "-c", `echo "Hello, world!" > /dev/stderr`))
+		_, err := runAndLogOnError(ctx, exec.Command("bash", "-c", `echo "Hello, world!" > /dev/stderr`), true)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 
 		err = outputContainsSubstring(ctx, "stderr", "world")
@@ -34,10 +34,10 @@ func Test_outputContainsSubstring(t *testing.T) {
 		please := Ω.NewWithT(t)
 		ctx := context.Background()
 		ctx = configureStandardFileDescriptors(ctx)
-		err := runAndLogOnError(ctx, exec.Command("echo", "Hello, world!"))
+		_, err := runAndLogOnError(ctx, exec.Command("echo", "Hello, world!"), true)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 
 		err = outputContainsSubstring(ctx, "stdout", "banana")
-		please.Expect(err).To(Ω.MatchError(Ω.Equal("expected substring not found in:\n\nHello, world!\n\n\n")))
+		please.Expect(err).To(Ω.MatchError(Ω.Equal("expected substring \"banana\" not found in: \"Hello, world!\"")))
 	})
 }

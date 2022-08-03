@@ -28,7 +28,9 @@ func Test_baking(t *testing.T) {
 	)
 }
 func Test_command(t *testing.T) {
-	testFeature(t)
+	testFeature(t,
+		scenario.InitializeHelp,
+	)
 }
 func Test_updating_releases(t *testing.T) {
 	testFeature(t,

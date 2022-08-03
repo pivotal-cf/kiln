@@ -4,19 +4,28 @@ Feature: Kiln CLI is self documenting
     Then stdout contains substring: 1.0.0-dev
   Scenario: I ask for help
     When I invoke kiln help
-    Then I get help output on stdout
+    Then stdout contains substring: kiln helps you
+    And stdout contains substring: Usage:
+    And stdout contains substring: Commands:
+
   Scenario: I mess up my command name
-    When I invoke kiln boo-boo
+    When I try to invoke kiln boo-boo
     # TODO: in this case we should expect output on stderr not stdout
-    Then I get help output on stdout
-  Scenario: I mess up my command flags
-    When I invoke kiln <command> --boo-boo
+    Then stderr contains substring: unknown command
+    And the exit code is 1
+
+  Scenario Outline: I mess up my command flags
+    When I try to invoke kiln <command> --boo-boo
+    Then the exit code is 1
+    And stderr contains substring: flag provided but not defined
+
+    Examples:
+      | command                 |
       | bake                    |
       | cache-compiled-releases |
       | fetch                   |
       | find-release-version    |
       | find-stemcell-version   |
-      | help                    |
       | publish                 |
       | release-notes           |
       | sync-with-local         |
@@ -24,6 +33,3 @@ Feature: Kiln CLI is self documenting
       | update-stemcell         |
       | upload-release          |
       | validate                |
-      | version                 |
-    Then I get help output on stdout
-    # TODO: in this case we should expect output on stderr not stdout

@@ -36,6 +36,10 @@ func TestInitialize(t *testing.T) {
 		sCtx := fakeScenarioContext{t}
 		InitializeGitHub(sCtx)
 	})
+	t.Run("Help", func(t *testing.T) {
+		sCtx := fakeScenarioContext{t}
+		InitializeHelp(sCtx)
+	})
 	t.Run("Exec", func(t *testing.T) {
 		sCtx := fakeScenarioContext{t}
 		InitializeExec(sCtx)

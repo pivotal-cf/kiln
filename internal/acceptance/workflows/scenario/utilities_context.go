@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/pivotal-cf/kiln/internal/component"
-	"io"
 	"net/url"
 	"os"
 	"os/exec"
@@ -26,6 +25,7 @@ const (
 	publishableReleaseSourceKey
 	foundComponentVersionKey
 	standardFileDescriptorsKey
+	lastCommandProcessStateKey
 )
 
 func contextValue[T any](ctx context.Context, k key, name string) (T, error) {
@@ -221,7 +221,7 @@ func setFoundComponentLocks(ctx context.Context, e []component.Lock) context.Con
 
 type standardFileDescriptors [3]*bytes.Buffer
 
-func output(ctx context.Context, name string) (io.Reader, error) {
+func output(ctx context.Context, name string) (*bytes.Buffer, error) {
 	v, err := contextValue[standardFileDescriptors](ctx, standardFileDescriptorsKey, name)
 	if err != nil {
 		return nil, err
@@ -243,4 +243,12 @@ func configureStandardFileDescriptors(ctx context.Context) context.Context {
 		bytes.NewBuffer(nil),
 	}
 	return context.WithValue(ctx, standardFileDescriptorsKey, outputs)
+}
+
+func lastCommandProcessState(ctx context.Context) (*os.ProcessState, error) {
+	return contextValue[*os.ProcessState](ctx, lastCommandProcessStateKey, "last command process state")
+}
+
+func setLastCommandStatus(ctx context.Context, state *os.ProcessState) context.Context {
+	return context.WithValue(ctx, lastCommandProcessStateKey, state)
 }

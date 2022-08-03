@@ -1,10 +1,9 @@
 package scenario
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
+	"strings"
 )
 
 func outputContainsSubstring(ctx context.Context, outputName, substring string) error {
@@ -12,12 +11,26 @@ func outputContainsSubstring(ctx context.Context, outputName, substring string) 
 	if err != nil {
 		return err
 	}
-	buf, err := io.ReadAll(out)
+	outStr := strings.TrimSpace(out.String())
+	if !strings.Contains(outStr, substring) {
+		if len(outStr) == 0 {
+			return fmt.Errorf("expected substring %q not found: %s was empty", substring, outputName)
+		}
+		if len(outStr) < 500 {
+			return fmt.Errorf("expected substring %q not found in: %q", substring, outStr)
+		}
+		return fmt.Errorf("expected substring \n\n%s\n\n not found in:\n\n%s\n\n", substring, outStr)
+	}
+	return nil
+}
+
+func theExitCodeIs(ctx context.Context, expectedCode int) error {
+	state, err := lastCommandProcessState(ctx)
 	if err != nil {
 		return err
 	}
-	if !bytes.Contains(buf, []byte(substring)) {
-		return fmt.Errorf("expected substring not found in:\n\n%s\n\n", string(buf))
+	if state.ExitCode() != expectedCode {
+		return fmt.Errorf("expected status code %d but got %d", expectedCode, state.ExitCode())
 	}
-	return err
+	return nil
 }
