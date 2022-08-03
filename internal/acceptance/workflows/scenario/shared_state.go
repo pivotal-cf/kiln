@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/component"
 	"net/url"
 	"os"
 	"os/exec"
@@ -24,7 +23,6 @@ const (
 	githubTokenKey
 	environmentKey
 	publishableReleaseSourceKey
-	foundComponentVersionKey
 	standardFileDescriptorsKey
 	lastCommandProcessStateKey
 )
@@ -210,14 +208,6 @@ func publishableReleaseSource(ctx context.Context) (string, error) {
 
 func setPublishableReleaseSource(ctx context.Context, e string) context.Context {
 	return context.WithValue(ctx, publishableReleaseSourceKey, e)
-}
-
-func foundComponentLocks(ctx context.Context) ([]component.Lock, error) {
-	return contextValue[[]component.Lock](ctx, foundComponentVersionKey, "publishable release source")
-}
-
-func setFoundComponentLocks(ctx context.Context, e []component.Lock) context.Context {
-	return context.WithValue(ctx, foundComponentVersionKey, e)
 }
 
 type standardFileDescriptors [3]*bytes.Buffer
