@@ -35,7 +35,6 @@ func Test_command(t *testing.T) {
 func Test_updating_releases(t *testing.T) {
 	testFeature(t,
 		scenario.InitializeGitHub,
-		scenario.InitializeValidate,
 		scenario.InitializeFindReleaseVersion,
 		scenario.InitializeUpdateRelease,
 	)
@@ -44,7 +43,6 @@ func Test_compiled_releases(t *testing.T) {
 	testFeature(t,
 		scenario.InitializeFetch,
 		scenario.InitializeBake,
-		scenario.InitializeEnvironment,
 		scenario.InitializeCacheCompiledReleases,
 	)
 }
@@ -54,7 +52,6 @@ func Test_updating_stemcell(t *testing.T) {
 	testFeature(t,
 		scenario.InitializeFetch,
 		scenario.InitializeBake,
-		scenario.InitializeEnvironment,
 	)
 }
 
@@ -66,6 +63,7 @@ func testFeature(t *testing.T, initializers ...func(ctx scenario.InitializeConte
 		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
 			// default initializers
 			scenario.InitializeExec(ctx)
+			scenario.InitializeTileSourceCode(ctx)
 			scenario.InitializeTile(ctx)
 
 			// additional initializers

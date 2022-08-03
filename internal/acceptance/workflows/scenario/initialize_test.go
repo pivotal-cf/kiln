@@ -12,41 +12,42 @@ import (
 const testTilePath = "../hello-tile"
 
 func TestInitialize(t *testing.T) {
-	t.Run("Bake", func(t *testing.T) {
-		sCtx := fakeScenarioContext{t}
-		InitializeBake(sCtx)
+	t.Run("shared", func(t *testing.T) {
+		t.Run("Tile", func(t *testing.T) {
+			sCtx := fakeScenarioContext{t}
+			InitializeTile(sCtx)
+		})
+		t.Run("TileSourceCode", func(t *testing.T) {
+			sCtx := fakeScenarioContext{t}
+			InitializeTileSourceCode(sCtx)
+		})
+		t.Run("Exec", func(t *testing.T) {
+			sCtx := fakeScenarioContext{t}
+			InitializeExec(sCtx)
+		})
+		t.Run("GitHub", func(t *testing.T) {
+			sCtx := fakeScenarioContext{t}
+			InitializeGitHub(sCtx)
+		})
 	})
-	t.Run("CacheCompiledReleases", func(t *testing.T) {
-		sCtx := fakeScenarioContext{t}
-		InitializeCacheCompiledReleases(sCtx)
-	})
-	t.Run("Environment", func(t *testing.T) {
-		sCtx := fakeScenarioContext{t}
-		InitializeEnvironment(sCtx)
-	})
-	t.Run("Fetch", func(t *testing.T) {
-		sCtx := fakeScenarioContext{t}
-		InitializeFetch(sCtx)
-	})
-	t.Run("Tile", func(t *testing.T) {
-		sCtx := fakeScenarioContext{t}
-		InitializeTile(sCtx)
-	})
-	t.Run("GitHub", func(t *testing.T) {
-		sCtx := fakeScenarioContext{t}
-		InitializeGitHub(sCtx)
-	})
-	t.Run("Help", func(t *testing.T) {
-		sCtx := fakeScenarioContext{t}
-		InitializeHelp(sCtx)
-	})
-	t.Run("Exec", func(t *testing.T) {
-		sCtx := fakeScenarioContext{t}
-		InitializeExec(sCtx)
-	})
-	t.Run("Validate", func(t *testing.T) {
-		sCtx := fakeScenarioContext{t}
-		InitializeValidate(sCtx)
+
+	t.Run("commands", func(t *testing.T) {
+		t.Run("Bake", func(t *testing.T) {
+			sCtx := fakeScenarioContext{t}
+			InitializeBake(sCtx)
+		})
+		t.Run("CacheCompiledReleases", func(t *testing.T) {
+			sCtx := fakeScenarioContext{t}
+			InitializeCacheCompiledReleases(sCtx)
+		})
+		t.Run("Fetch", func(t *testing.T) {
+			sCtx := fakeScenarioContext{t}
+			InitializeFetch(sCtx)
+		})
+		t.Run("Help", func(t *testing.T) {
+			sCtx := fakeScenarioContext{t}
+			InitializeHelp(sCtx)
+		})
 	})
 }
 

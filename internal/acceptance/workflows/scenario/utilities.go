@@ -1,7 +1,6 @@
 package scenario
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -15,10 +14,14 @@ import (
 
 var success error = nil
 
-const devVersion = "1.0.0-dev"
+const (
+	kilnDevVersion = "1.0.0-dev"
+
+	indexNotFound = -1
+)
 
 func kilnCommand(ctx context.Context, args ...string) *exec.Cmd {
-	return exec.CommandContext(ctx, "go", append([]string{"run", "-ldflags", "-X main.version=" + devVersion, "github.com/pivotal-cf/kiln", "--"}, args...)...)
+	return exec.CommandContext(ctx, "go", append([]string{"run", "-ldflags", "-X main.version=" + kilnDevVersion, "github.com/pivotal-cf/kiln", "--"}, args...)...)
 }
 
 func checkoutMain(repoPath string) error {
@@ -42,35 +45,6 @@ func checkoutMain(repoPath string) error {
 
 func closeAndIgnoreErr(c io.Closer) {
 	_ = c.Close()
-}
-
-func runAndParseStdoutAsYAML(ctx context.Context, cmd *exec.Cmd, d interface{}) error {
-	var stdout, stderr bytes.Buffer
-	fds := ctx.Value(standardFileDescriptorsKey).(standardFileDescriptors)
-	cmd.Stdout = io.MultiWriter(&stdout, fds[1])
-	cmd.Stderr = io.MultiWriter(&stderr, fds[2])
-	err := cmd.Run()
-	if err != nil {
-		_, _ = io.Copy(os.Stdout, &stderr)
-		return err
-	}
-	return yaml.Unmarshal(stdout.Bytes(), d)
-}
-
-func runAndLogOnError(ctx context.Context, cmd *exec.Cmd, requireSuccess bool) (context.Context, error) {
-	var buf bytes.Buffer
-	fds := ctx.Value(standardFileDescriptorsKey).(standardFileDescriptors)
-	cmd.Stdout = io.MultiWriter(&buf, fds[1])
-	cmd.Stderr = io.MultiWriter(&buf, fds[2])
-	runErr := cmd.Run()
-	ctx = setLastCommandStatus(ctx, cmd.ProcessState)
-	if requireSuccess {
-		if runErr != nil {
-			_, _ = io.Copy(os.Stdout, &buf)
-		}
-		return ctx, runErr
-	}
-	return ctx, nil
 }
 
 func loadEnv(n string) (string, error) {

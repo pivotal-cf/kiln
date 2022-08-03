@@ -6,14 +6,18 @@ import (
 
 const successfullyFlagValue = "try to "
 
-type requireSuccessFlag string
+type tryFlag string
 
-func (f requireSuccessFlag) isSet() bool {
-	return f == ""
+func (f tryFlag) isSet() bool {
+	return f == successfullyFlagValue
+}
+
+func (f tryFlag) requireSuccess() bool {
+	return !f.isSet()
 }
 
 // iInvokeKilnBake invokes kiln bake with tileVersion provided by iHaveARepositoryCheckedOutAtRevision
-func iInvokeKilnBake(ctx context.Context, requireSuccess string) (context.Context, error) {
+func iInvokeKilnBake(ctx context.Context, try string) (context.Context, error) {
 	repoPath, err := tileRepoPath(ctx)
 	if err != nil {
 		return ctx, err
@@ -24,10 +28,10 @@ func iInvokeKilnBake(ctx context.Context, requireSuccess string) (context.Contex
 	}
 	cmd := kilnCommand(ctx, "bake", "--version", version)
 	cmd.Dir = repoPath
-	return runAndLogOnError(ctx, cmd, requireSuccessFlag(requireSuccess).isSet())
+	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
 }
 
-func iInvokeKilnCacheCompiledReleases(ctx context.Context, requireSuccess requireSuccessFlag) (context.Context, error) {
+func iInvokeKilnCacheCompiledReleases(ctx context.Context, try tryFlag) (context.Context, error) {
 	repoPath, err := tileRepoPath(ctx)
 	if err != nil {
 		return ctx, err
@@ -55,11 +59,11 @@ func iInvokeKilnCacheCompiledReleases(ctx context.Context, requireSuccess requir
 		"--om-private-key", env.OpsManagerPrivateKey,
 	)
 	cmd.Dir = repoPath
-	return runAndLogOnError(ctx, cmd, requireSuccess.isSet())
+	return runAndLogOnError(ctx, cmd, try.isSet())
 }
 
 // iInvokeKilnFetch fetches releases. It provides the command with the GitHub token (used for hello-release).
-func iInvokeKilnFetch(ctx context.Context, requireSuccess string) (context.Context, error) {
+func iInvokeKilnFetch(ctx context.Context, try string) (context.Context, error) {
 	repoPath, err := tileRepoPath(ctx)
 	if err != nil {
 		return ctx, err
@@ -70,10 +74,10 @@ func iInvokeKilnFetch(ctx context.Context, requireSuccess string) (context.Conte
 	}
 	cmd := kilnCommand(ctx, "fetch", "--no-confirm", "--variable", "github_token="+token)
 	cmd.Dir = repoPath
-	return runAndLogOnError(ctx, cmd, requireSuccessFlag(requireSuccess).isSet())
+	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
 }
 
-func iInvokeKilnFindReleaseVersion(ctx context.Context, requireSuccess, releaseName string) (context.Context, error) {
+func iInvokeKilnFindReleaseVersion(ctx context.Context, try, releaseName string) (context.Context, error) {
 	repoPath, err := tileRepoPath(ctx)
 	if err != nil {
 		return ctx, err
@@ -85,20 +89,20 @@ func iInvokeKilnFindReleaseVersion(ctx context.Context, requireSuccess, releaseN
 	cmd := kilnCommand(ctx, "find-release-version", "--release", releaseName,
 		"--variable", "github_token="+token)
 	cmd.Dir = repoPath
-	return runAndLogOnError(ctx, cmd, requireSuccessFlag(requireSuccess).isSet())
+	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
 }
 
-func iInvokeKilnHelp(ctx context.Context, requireSuccess string) (context.Context, error) {
+func iInvokeKilnHelp(ctx context.Context, try string) (context.Context, error) {
 	repoPath, err := tileRepoPath(ctx)
 	if err != nil {
 		return ctx, err
 	}
 	cmd := kilnCommand(ctx, "help")
 	cmd.Dir = repoPath
-	return runAndLogOnError(ctx, cmd, requireSuccessFlag(requireSuccess).isSet())
+	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
 }
 
-func iInvokeKilnUpdateRelease(ctx context.Context, requireSuccess, releaseName, releaseVersion string) (context.Context, error) {
+func iInvokeKilnUpdateRelease(ctx context.Context, try, releaseName, releaseVersion string) (context.Context, error) {
 	repoPath, err := tileRepoPath(ctx)
 	if err != nil {
 		return ctx, err
@@ -112,17 +116,17 @@ func iInvokeKilnUpdateRelease(ctx context.Context, requireSuccess, releaseName, 
 		"--variable", "github_token="+token,
 	)
 	cmd.Dir = repoPath
-	return runAndLogOnError(ctx, cmd, requireSuccessFlag(requireSuccess).isSet())
+	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
 }
 
-func iInvokeKilnVersion(ctx context.Context, requireSuccess string) (context.Context, error) {
+func iInvokeKilnVersion(ctx context.Context, try string) (context.Context, error) {
 	repoPath, err := tileRepoPath(ctx)
 	if err != nil {
 		return ctx, err
 	}
 	cmd := kilnCommand(ctx, "version")
 	cmd.Dir = repoPath
-	return runAndLogOnError(ctx, cmd, requireSuccessFlag(requireSuccess).isSet())
+	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
 }
 
 func kilnValidateSucceeds(ctx context.Context) (context.Context, error) {
@@ -135,22 +139,22 @@ func kilnValidateSucceeds(ctx context.Context) (context.Context, error) {
 	return runAndLogOnError(ctx, cmd, true)
 }
 
-func iInvokeKilnBooBoo(ctx context.Context, requireSuccess string) (context.Context, error) {
+func iInvokeKilnBooBoo(ctx context.Context, try string) (context.Context, error) {
 	repoPath, err := tileRepoPath(ctx)
 	if err != nil {
 		return ctx, err
 	}
 	cmd := kilnCommand(ctx, "boo-boo")
 	cmd.Dir = repoPath
-	return runAndLogOnError(ctx, cmd, requireSuccessFlag(requireSuccess).isSet())
+	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
 }
 
-func iInvokeKilnCommandWithFlagBooBoo(ctx context.Context, requireSuccess, command string) (context.Context, error) {
+func iInvokeKilnCommandWithFlagBooBoo(ctx context.Context, try, command string) (context.Context, error) {
 	repoPath, err := tileRepoPath(ctx)
 	if err != nil {
 		return ctx, err
 	}
 	cmd := kilnCommand(ctx, command, "--boo-boo")
 	cmd.Dir = repoPath
-	return runAndLogOnError(ctx, cmd, requireSuccessFlag(requireSuccess).isSet())
+	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
 }
