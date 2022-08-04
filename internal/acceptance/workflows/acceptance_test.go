@@ -22,17 +22,20 @@ import (
 )
 
 func Test_baking_a_tile(t *testing.T) {
+	// t.SkipNow()
 	setupAndRunFeatureTest(t,
 		scenario.InitializeFetch,
 		scenario.InitializeBake,
 	)
 }
 func Test_using_kiln(t *testing.T) {
+	// t.SkipNow()
 	setupAndRunFeatureTest(t,
 		scenario.InitializeHelp,
 	)
 }
 func Test_updating_releases(t *testing.T) {
+	// t.SkipNow()
 	setupAndRunFeatureTest(t,
 		scenario.InitializeGitHub,
 		scenario.InitializeFindReleaseVersion,
@@ -40,6 +43,7 @@ func Test_updating_releases(t *testing.T) {
 	)
 }
 func Test_caching_compiled_releases(t *testing.T) {
+	// t.SkipNow()
 	setupAndRunFeatureTest(t,
 		scenario.InitializeFetch,
 		scenario.InitializeBake,
@@ -56,6 +60,7 @@ func Test_updating_stemcell(t *testing.T) {
 }
 
 func Test_generating_release_notes(t *testing.T) {
+	// t.SkipNow()
 	setupAndRunFeatureTest(t,
 		scenario.InitializeGitHub,
 		scenario.InitializeReleaseNotes,
