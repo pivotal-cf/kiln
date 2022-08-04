@@ -15,7 +15,7 @@ import (
 // what they operate on: tiles, tile source code...
 
 func InitializeExec(ctx *godog.ScenarioContext) { initializeExec(ctx) }
-func initializeExec(ctx initializeContext) {
+func initializeExec(ctx scenarioContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		return configureStandardFileDescriptors(ctx), nil
 	})
@@ -24,18 +24,26 @@ func initializeExec(ctx initializeContext) {
 	ctx.Step(regexp.MustCompile(`^the exit code is (\d+)$`), theExitCodeIs)
 }
 
+func InitializeGitHub(ctx *godog.ScenarioContext) { initializeGitHub(ctx) }
+func initializeGitHub(ctx scenarioContext) {
+	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
+		return loadGithubToken(ctx)
+	})
+	ctx.Step(regexp.MustCompile(`^GitHub repository "([^/]*)/([^"]*)" has release with tag "([^"]*)"$`), githubRepoHasReleaseWithTag)
+}
+
 // InitializeTile provides some basic tile and tile repo interaction steps.
 //
 // Most other steps require iHaveARepositoryCheckedOutAtRevision to have been run because it sets the tile repo path on the context.
 func InitializeTile(ctx *godog.ScenarioContext) { initializeTile(ctx) }
-func initializeTile(ctx initializeContext) {
+func initializeTile(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^a Tile is created$`), aTileIsCreated)
 	ctx.Step(regexp.MustCompile(`^the Tile contains "([^"]*)"$`), theTileContains)
 	ctx.Step(regexp.MustCompile(`^the Tile only contains compiled releases$`), theTileOnlyContainsCompiledReleases)
 }
 
 func InitializeTileSourceCode(ctx *godog.ScenarioContext) { initializeTileSourceCode(ctx) }
-func initializeTileSourceCode(ctx initializeContext) {
+func initializeTileSourceCode(ctx scenarioContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		return setTileRepoPath(ctx, "hello-tile"), nil
 	})
@@ -48,12 +56,4 @@ func initializeTileSourceCode(ctx initializeContext) {
 	ctx.Step(regexp.MustCompile(`^I set the version constraint to "([^"]*)" for release "([^"]*)"$`), iSetAVersionConstraintForRelease)
 
 	ctx.Step(regexp.MustCompile(`^the Kilnfile\.lock specifies version "([^"]*)" for release "([^"]*)"$`), theLockSpecifiesVersionForRelease)
-}
-
-func InitializeGitHub(ctx *godog.ScenarioContext) { initializeGitHub(ctx) }
-func initializeGitHub(ctx initializeContext) {
-	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
-		return loadGithubToken(ctx)
-	})
-	ctx.Step(regexp.MustCompile(`^GitHub repository "([^/]*)/([^"]*)" has release with tag "([^"]*)"$`), githubRepoHasReleaseWithTag)
 }
