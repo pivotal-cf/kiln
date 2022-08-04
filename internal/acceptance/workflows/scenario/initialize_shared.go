@@ -39,7 +39,7 @@ func initializeTileSourceCode(ctx initializeContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		return setTileRepoPath(ctx, "hello-tile"), nil
 	})
-	ctx.After(checkoutMainOnTileRepo)
+	ctx.After(resetTileRepository)
 
 	ctx.Step(regexp.MustCompile(`^kiln validate succeeds$`), kilnValidateSucceeds)
 
