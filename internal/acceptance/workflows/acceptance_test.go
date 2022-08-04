@@ -22,25 +22,25 @@ import (
 )
 
 func Test_baking_a_tile(t *testing.T) {
-	testFeature(t,
+	setupAndRunFeatureTest(t,
 		scenario.InitializeFetch,
 		scenario.InitializeBake,
 	)
 }
 func Test_using_kiln(t *testing.T) {
-	testFeature(t,
+	setupAndRunFeatureTest(t,
 		scenario.InitializeHelp,
 	)
 }
 func Test_updating_releases(t *testing.T) {
-	testFeature(t,
+	setupAndRunFeatureTest(t,
 		scenario.InitializeGitHub,
 		scenario.InitializeFindReleaseVersion,
 		scenario.InitializeUpdateRelease,
 	)
 }
 func Test_caching_compiled_releases(t *testing.T) {
-	testFeature(t,
+	setupAndRunFeatureTest(t,
 		scenario.InitializeFetch,
 		scenario.InitializeBake,
 		scenario.InitializeCacheCompiledReleases,
@@ -49,20 +49,20 @@ func Test_caching_compiled_releases(t *testing.T) {
 
 func Test_updating_stemcell(t *testing.T) {
 	t.SkipNow()
-	testFeature(t,
+	setupAndRunFeatureTest(t,
 		scenario.InitializeFetch,
 		scenario.InitializeBake,
 	)
 }
 
 func Test_generating_release_notes(t *testing.T) {
-	testFeature(t,
+	setupAndRunFeatureTest(t,
 		scenario.InitializeGitHub,
 		scenario.InitializeReleaseNotes,
 	)
 }
 
-func testFeature(t *testing.T, initializers ...func(ctx scenario.InitializeContext)) {
+func setupAndRunFeatureTest(t *testing.T, initializers ...func(ctx *godog.ScenarioContext)) {
 	trimmedTestFuncName := strings.TrimPrefix(t.Name(), "Test_")
 	featurePath := trimmedTestFuncName + ".feature"
 
@@ -84,6 +84,7 @@ func testFeature(t *testing.T, initializers ...func(ctx scenario.InitializeConte
 			TestingT: t, // Testing instance that will run subtests.
 		},
 	}
+
 	if code := suite.Run(); code != 0 {
 		t.Fatalf("status %d returned, failed to run %s", code, featurePath)
 	}

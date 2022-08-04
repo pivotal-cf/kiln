@@ -45,7 +45,7 @@ func theTileContains(ctx context.Context, _ string, table *godog.Table) error {
 			}
 		}
 	}
-	return success
+	return nil
 }
 
 func theTileOnlyContainsCompiledReleases(ctx context.Context) error {
@@ -82,7 +82,7 @@ func theTileOnlyContainsCompiledReleases(ctx context.Context) error {
 		}
 	}
 
-	return success
+	return nil
 }
 
 // validateAllPackagesAreCompiled asserts that if any package is listed under "packages", it is not complied.
@@ -108,5 +108,5 @@ func validateAllPackagesAreCompiled(manifestBuf []byte, release proofing.Release
 		}
 		return errors.New(sb.String())
 	}
-	return success
+	return nil
 }

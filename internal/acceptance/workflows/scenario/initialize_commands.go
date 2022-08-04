@@ -15,7 +15,8 @@ import (
 // steps that are only used to test one aspect of kiln. This is so
 // they do not
 
-func InitializeBake(ctx InitializeContext) {
+func InitializeBake(ctx *godog.ScenarioContext) { initializeBake(ctx) }
+func initializeBake(ctx initializeContext) {
 	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln bake$`), iInvokeKilnBake)
 }
 
@@ -54,7 +55,10 @@ func InitializeBake(ctx InitializeContext) {
 //   chmod 0400 /tmp/om.key
 //   ssh -i /tmp/om.key "ubuntu@pcf.example.com"
 //
-func InitializeCacheCompiledReleases(ctx InitializeContext) {
+func InitializeCacheCompiledReleases(ctx *godog.ScenarioContext) {
+	initializeCacheCompiledReleases(ctx)
+}
+func initializeCacheCompiledReleases(ctx initializeContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		_, _, err := loadS3Credentials()
 		if err != nil {
@@ -76,7 +80,8 @@ func InitializeCacheCompiledReleases(ctx InitializeContext) {
 //
 // It should output a valid github token.
 // If you have not set this, loadGithubToken will try to execute `gh auth status --show-token` and will parse and set the token from the output.
-func InitializeFetch(ctx InitializeContext) {
+func InitializeFetch(ctx *godog.ScenarioContext) { initializeFetch(ctx) }
+func initializeFetch(ctx initializeContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		return loadGithubToken(ctx)
 	})
@@ -84,20 +89,24 @@ func InitializeFetch(ctx InitializeContext) {
 	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln fetch$`), iInvokeKilnFetch)
 }
 
-func InitializeFindReleaseVersion(ctx InitializeContext) {
+func InitializeFindReleaseVersion(ctx *godog.ScenarioContext) { initializeFindReleaseVersion(ctx) }
+func initializeFindReleaseVersion(ctx initializeContext) {
 	ctx.Step(`^I (try to )?invoke kiln find-release-version for "([^"]*)"$`, iInvokeKilnFindReleaseVersion)
 }
 
-func InitializeUpdateRelease(ctx InitializeContext) {
+func InitializeUpdateRelease(ctx *godog.ScenarioContext) { initializeUpdateRelease(ctx) }
+func initializeUpdateRelease(ctx initializeContext) {
 	ctx.Step(`^I (try to )?invoke kiln update-release for releas "([^"]*)" with version "([^"]*)"$`, iInvokeKilnUpdateRelease)
 }
 
-func InitializeHelp(ctx InitializeContext) {
+func InitializeHelp(ctx *godog.ScenarioContext) { initializeHelp(ctx) }
+func initializeHelp(ctx initializeContext) {
 	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln help$`), iInvokeKilnHelp)
 	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln boo-boo$`), iInvokeKilnBooBoo)
 	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln (\S*) --boo-boo$`), iInvokeKilnCommandWithFlagBooBoo)
 }
 
-func InitializeReleaseNotes(ctx InitializeContext) {
+func InitializeReleaseNotes(ctx *godog.ScenarioContext) { initializeReleaseNotes(ctx) }
+func initializeReleaseNotes(ctx initializeContext) {
 	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln release-notes "([^"]*)" "([^"]*)"$`), iInvokeKilnReleaseNotes)
 }

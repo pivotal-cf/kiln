@@ -98,7 +98,7 @@ func iHaveARepositoryCheckedOutAtRevision(ctx context.Context, filePath, revisio
 
 	ctx = setTileVersion(ctx, strings.TrimPrefix(revision, "v"))
 
-	return ctx, success
+	return ctx, nil
 }
 
 // theRepositoryHasNoFetchedReleases deletes fetched releases, if any.
@@ -137,7 +137,7 @@ func theRepositoryHasNoFetchedReleases(ctx context.Context) error {
 		}
 	}
 
-	return success
+	return nil
 }
 
 func iAddACompiledSReleaseSourceToTheKilnfile(ctx context.Context, bucketName string) error {

@@ -15,38 +15,38 @@ func TestInitialize(t *testing.T) {
 	t.Run("shared", func(t *testing.T) {
 		t.Run("Tile", func(t *testing.T) {
 			sCtx := fakeScenarioContext{t}
-			InitializeTile(sCtx)
+			initializeTile(sCtx)
 		})
 		t.Run("TileSourceCode", func(t *testing.T) {
 			sCtx := fakeScenarioContext{t}
-			InitializeTileSourceCode(sCtx)
+			initializeTileSourceCode(sCtx)
 		})
 		t.Run("Exec", func(t *testing.T) {
 			sCtx := fakeScenarioContext{t}
-			InitializeExec(sCtx)
+			initializeExec(sCtx)
 		})
 		t.Run("GitHub", func(t *testing.T) {
 			sCtx := fakeScenarioContext{t}
-			InitializeGitHub(sCtx)
+			initializeGitHub(sCtx)
 		})
 	})
 
 	t.Run("commands", func(t *testing.T) {
 		t.Run("Bake", func(t *testing.T) {
 			sCtx := fakeScenarioContext{t}
-			InitializeBake(sCtx)
+			initializeBake(sCtx)
 		})
 		t.Run("CacheCompiledReleases", func(t *testing.T) {
 			sCtx := fakeScenarioContext{t}
-			InitializeCacheCompiledReleases(sCtx)
+			initializeCacheCompiledReleases(sCtx)
 		})
 		t.Run("Fetch", func(t *testing.T) {
 			sCtx := fakeScenarioContext{t}
-			InitializeFetch(sCtx)
+			initializeFetch(sCtx)
 		})
 		t.Run("Help", func(t *testing.T) {
 			sCtx := fakeScenarioContext{t}
-			InitializeHelp(sCtx)
+			initializeHelp(sCtx)
 		})
 	})
 }

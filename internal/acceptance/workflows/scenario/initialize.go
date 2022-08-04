@@ -4,11 +4,13 @@ import (
 	"github.com/cucumber/godog"
 )
 
-// InitializeContext is based on *godog.ScenarioContext
-type InitializeContext interface {
+// initializeContext is based on *godog.ScenarioContext
+type initializeContext interface {
 	Step(expr, stepFunc interface{})
 	Before(h godog.BeforeScenarioHook)
 	After(h godog.AfterScenarioHook)
 }
 
-var _ InitializeContext = (*godog.ScenarioContext)(nil)
+// initializeContext exposes the subset of methods on *godog.ScenarioContext that we use.
+// It is here because we want to have a bit of testing for the initialize functions.
+var _ initializeContext = (*godog.ScenarioContext)(nil)

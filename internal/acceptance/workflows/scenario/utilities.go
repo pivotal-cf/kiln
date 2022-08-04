@@ -1,18 +1,18 @@
 package scenario
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"gopkg.in/yaml.v2"
 )
-
-var success error = nil
 
 const (
 	kilnDevVersion = "1.0.0-dev"
@@ -47,12 +47,15 @@ func closeAndIgnoreErr(c io.Closer) {
 	_ = c.Close()
 }
 
-func loadEnv(n string) (string, error) {
-	v := os.Getenv(n)
+func loadEnvironmentVariable(variableName, errorHelpMessage string) (string, error) {
+	v := os.Getenv(variableName)
 	if v == "" {
-		return "", fmt.Errorf("required env variable %s not set", n)
+		if errorHelpMessage == "" {
+			return "", fmt.Errorf("%s is not set", variableName)
+		}
+		return "", fmt.Errorf("%s is not set (%s)", variableName, errorHelpMessage)
 	}
-	return v, success
+	return v, nil
 }
 
 func loadFileAsYAML(filePath string, v any) error {
@@ -83,22 +86,29 @@ func saveAsYAML(filePath string, v any) error {
 	return err
 }
 
-func loadEnvVar(name, message string) (string, error) {
-	value := os.Getenv(name)
-	if value == "" {
-		return "", fmt.Errorf("%s is not set (%s)", name, message)
-	}
-	return value, nil
-}
-
 func loadS3Credentials() (keyID, accessKey string, err error) {
-	keyID, err = loadEnvVar("AWS_ACCESS_KEY_ID", "required for s3 release source to cache releases")
+	keyID, err = loadEnvironmentVariable("AWS_ACCESS_KEY_ID", "required for s3 release source to cache releases")
 	if err != nil {
 		return
 	}
-	accessKey, err = loadEnvVar("AWS_SECRET_ACCESS_KEY", "required for s3 release source to cache releases")
+	accessKey, err = loadEnvironmentVariable("AWS_SECRET_ACCESS_KEY", "required for s3 release source to cache releases")
 	if err != nil {
 		return
 	}
 	return
+}
+
+func getGithubTokenFromCLI() (string, error) {
+	cmd := exec.Command("gh", "auth", "status", "--show-token")
+	var out bytes.Buffer
+	cmd.Stderr = &out
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("login to github using the CLI or set GITHUB_TOKEN")
+	}
+	matches := regexp.MustCompile("(?m)^.*Token: (gho_.*)$").FindStringSubmatch(out.String())
+	if len(matches) == 0 {
+		return "", fmt.Errorf("login to github using the CLI or set GITHUB_TOKEN")
+	}
+	return matches[1], nil
 }
