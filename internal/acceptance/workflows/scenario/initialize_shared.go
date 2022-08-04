@@ -52,8 +52,12 @@ func initializeTileSourceCode(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^kiln validate succeeds$`), kilnValidateSucceeds)
 
 	ctx.Step(regexp.MustCompile(`^I have a "([^"]*)" repository checked out at (.*)$`), iHaveARepositoryCheckedOutAtRevision)
+
 	ctx.Step(regexp.MustCompile(`^the repository has no fetched releases$`), theRepositoryHasNoFetchedReleases)
+
 	ctx.Step(regexp.MustCompile(`^I set the version constraint to "([^"]*)" for release "([^"]*)"$`), iSetAVersionConstraintForRelease)
+	ctx.Step(regexp.MustCompile(`^I set the Kilnfile stemcell version constraint to "([^"]*)"$`), iSetTheKilnfileStemcellVersionConstraint)
 
 	ctx.Step(regexp.MustCompile(`^the Kilnfile\.lock specifies version "([^"]*)" for release "([^"]*)"$`), theLockSpecifiesVersionForRelease)
+	ctx.Step(regexp.MustCompile(`^the Kilnfile\.lock specifies version "([^"]*)" for the stemcell$`), theLockStemcellVersionIs)
 }

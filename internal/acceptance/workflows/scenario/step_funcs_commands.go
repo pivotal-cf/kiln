@@ -174,3 +174,32 @@ func iInvokeKilnReleaseNotes(ctx context.Context, try, initialRevision, finalRev
 	cmd.Dir = repoPath
 	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
 }
+
+func iInvokeKilnFindStemcellVersion(ctx context.Context, try string) (context.Context, error) {
+	repoPath, err := tileRepoPath(ctx)
+	if err != nil {
+		return ctx, err
+	}
+	cmd := kilnCommand(ctx, "find-stemcell-version",
+		"--variable", "github_token=banana",
+	)
+	cmd.Dir = repoPath
+	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
+}
+
+func iInvokeKilnUpdateStemcellWithVersion(ctx context.Context, try, version string) (context.Context, error) {
+	repoPath, err := tileRepoPath(ctx)
+	if err != nil {
+		return ctx, err
+	}
+	token, err := githubToken(ctx)
+	if err != nil {
+		return ctx, err
+	}
+	cmd := kilnCommand(ctx, "update-stemcell",
+		"--version", version,
+		"--variable", "github_token="+token,
+	)
+	cmd.Dir = repoPath
+	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
+}

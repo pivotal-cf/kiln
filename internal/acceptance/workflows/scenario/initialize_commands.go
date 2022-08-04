@@ -110,3 +110,17 @@ func InitializeUpdateRelease(ctx *godog.ScenarioContext) { initializeUpdateRelea
 func initializeUpdateRelease(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln update-release for releas "([^"]*)" with version "([^"]*)"$`), iInvokeKilnUpdateRelease)
 }
+
+func InitializeUpdatingStemcell(ctx *godog.ScenarioContext) { initializeUpdatingStemcell(ctx) }
+func initializeUpdatingStemcell(ctx scenarioContext) {
+	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
+		return loadGithubToken(ctx)
+	})
+
+	// from shared
+	ctx.Step(regexp.MustCompile(`^TanzuNetwork has product "([^"]*)" with version "([^"]*)"$`), tanzuNetworkHasProductWithVersion)
+
+	// from commands
+	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln find-stemcell-version$`), iInvokeKilnFindStemcellVersion)
+	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln update-stemcell with version "([^"]*)"$`), iInvokeKilnUpdateStemcellWithVersion)
+}

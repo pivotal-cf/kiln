@@ -171,3 +171,27 @@ func iAddACompiledSReleaseSourceToTheKilnfile(ctx context.Context, bucketName st
 
 	return saveAsYAML(kfPath, kf)
 }
+
+func iSetTheKilnfileStemcellVersionConstraint(ctx context.Context, versionConstraint string) error {
+	spcePath, err := kilnfilePath(ctx)
+	if err != nil {
+		return err
+	}
+	var spec cargo.Kilnfile
+	err = loadFileAsYAML(spcePath, &spec)
+	spec.Stemcell.Version = versionConstraint
+	return saveAsYAML(spcePath, spec)
+}
+
+func theLockStemcellVersionIs(ctx context.Context, version string) error {
+	lockPath, err := kilnfileLockPath(ctx)
+	if err != nil {
+		return err
+	}
+	var lock cargo.KilnfileLock
+	err = loadFileAsYAML(lockPath, &lock)
+	if lock.Stemcell.Version != version {
+		return fmt.Errorf("expected stemcell version to be %q but got %q", version, lock.Stemcell.Version)
+	}
+	return nil
+}

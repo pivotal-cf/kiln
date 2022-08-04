@@ -57,6 +57,10 @@ func TestInitialize(t *testing.T) {
 			sCtx := fakeScenarioContext{t}
 			initializeUpdateRelease(sCtx)
 		})
+		t.Run("UpdateStemcell", func(t *testing.T) {
+			sCtx := fakeScenarioContext{t}
+			initializeUpdatingStemcell(sCtx)
+		})
 		t.Run("ReleaseNotes", func(t *testing.T) {
 			sCtx := fakeScenarioContext{t}
 			initializeReleaseNotes(sCtx)

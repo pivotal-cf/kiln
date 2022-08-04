@@ -52,10 +52,8 @@ func Test_caching_compiled_releases(t *testing.T) {
 }
 
 func Test_updating_stemcell(t *testing.T) {
-	t.SkipNow()
 	setupAndRunFeatureTest(t,
-		scenario.InitializeFetch,
-		scenario.InitializeBake,
+		scenario.InitializeUpdatingStemcell,
 	)
 }
 
