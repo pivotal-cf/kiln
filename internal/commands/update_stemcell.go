@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"log"
 	"strings"
 
@@ -69,12 +70,15 @@ func (update UpdateStemcell) Execute(args []string) error {
 	for i, rel := range kilnfileLock.Releases {
 		update.Logger.Printf("Updating release %q with stemcell %s %s...", rel.Name, kilnfileLock.Stemcell.OS, trimmedInputVersion)
 
-		remote, err := releaseSource.GetMatchedRelease(component.Spec{
-			Name:            rel.Name,
-			Version:         rel.Version,
-			StemcellOS:      kilnfileLock.Stemcell.OS,
-			StemcellVersion: trimmedInputVersion,
-		})
+		spec, found := kilnfile.ComponentSpec(rel.Name)
+		if !found {
+			return cargo.ErrorSpecNotFound(rel.Name)
+		}
+		spec.StemcellOS = kilnfileLock.Stemcell.OS
+		spec.StemcellVersion = trimmedInputVersion
+		spec.Version = rel.Version
+
+		remote, err := releaseSource.GetMatchedRelease(spec)
 		if err != nil {
 			return fmt.Errorf("while finding release %q, encountered error: %w", rel.Name, err)
 		}
