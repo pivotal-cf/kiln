@@ -28,7 +28,7 @@ func aTileIsCreated(ctx context.Context) error {
 }
 
 // theTileContains checks that the filePaths exist in the tile
-func theTileContains(ctx context.Context, _ string, table *godog.Table) error {
+func theTileContains(ctx context.Context, table *godog.Table) error {
 	tilePath, err := defaultFilePathForTile(ctx)
 	if err != nil {
 		return err

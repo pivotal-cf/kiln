@@ -38,7 +38,7 @@ func initializeGitHub(ctx scenarioContext) {
 func InitializeTile(ctx *godog.ScenarioContext) { initializeTile(ctx) }
 func initializeTile(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^a Tile is created$`), aTileIsCreated)
-	ctx.Step(regexp.MustCompile(`^the Tile contains "([^"]*)"$`), theTileContains)
+	ctx.Step(regexp.MustCompile(`^the Tile contains$`), theTileContains)
 	ctx.Step(regexp.MustCompile(`^the Tile only contains compiled releases$`), theTileOnlyContainsCompiledReleases)
 }
 
