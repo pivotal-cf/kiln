@@ -26,7 +26,7 @@ func runAndLogOnError(ctx context.Context, cmd *exec.Cmd, requireSuccess bool) (
 	return ctx, nil
 }
 
-func runAndParseStdoutAsYAML(ctx context.Context, cmd *exec.Cmd, d interface{}) error {
+func runAndParseStdoutAsYAML(ctx context.Context, cmd *exec.Cmd, d interface{}) (context.Context, error) {
 	var stdout, stderr bytes.Buffer
 	fds := ctx.Value(standardFileDescriptorsKey).(standardFileDescriptors)
 	cmd.Stdout = io.MultiWriter(&stdout, fds[1])
@@ -35,7 +35,11 @@ func runAndParseStdoutAsYAML(ctx context.Context, cmd *exec.Cmd, d interface{}) 
 	ctx = setLastCommandStatus(ctx, cmd.ProcessState)
 	if runErr != nil {
 		_, _ = io.Copy(os.Stdout, &stdout)
-		return runErr
+		return ctx, runErr
 	}
-	return yaml.Unmarshal(stdout.Bytes(), d)
+	err := yaml.Unmarshal(stdout.Bytes(), d)
+	if err != nil {
+		return ctx, err
+	}
+	return ctx, nil
 }

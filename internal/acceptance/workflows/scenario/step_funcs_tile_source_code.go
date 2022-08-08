@@ -58,6 +58,9 @@ func iSetAVersionConstraintForRelease(ctx context.Context, versionConstraint, re
 	}
 	var spec cargo.Kilnfile
 	err = loadFileAsYAML(spcePath, &spec)
+	if err != nil {
+		return err
+	}
 	specIndex := slices.IndexFunc(spec.Releases, func(release cargo.ComponentSpec) bool {
 		return release.Name == releaseName
 	})
@@ -140,6 +143,9 @@ func theRepositoryHasNoFetchedReleases(ctx context.Context) error {
 
 func iAddACompiledSReleaseSourceToTheKilnfile(ctx context.Context, bucketName string) error {
 	keyID, accessKey, err := loadS3Credentials()
+	if err != nil {
+		return err
+	}
 	kfPath, err := kilnfilePath(ctx)
 	if err != nil {
 		return err
@@ -179,6 +185,9 @@ func iSetTheKilnfileStemcellVersionConstraint(ctx context.Context, versionConstr
 	}
 	var spec cargo.Kilnfile
 	err = loadFileAsYAML(spcePath, &spec)
+	if err != nil {
+		return err
+	}
 	spec.Stemcell.Version = versionConstraint
 	return saveAsYAML(spcePath, spec)
 }
@@ -190,6 +199,9 @@ func theLockStemcellVersionIs(ctx context.Context, version string) error {
 	}
 	var lock cargo.KilnfileLock
 	err = loadFileAsYAML(lockPath, &lock)
+	if err != nil {
+		return err
+	}
 	if lock.Stemcell.Version != version {
 		return fmt.Errorf("expected stemcell version to be %q but got %q", version, lock.Stemcell.Version)
 	}

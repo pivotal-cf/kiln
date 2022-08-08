@@ -52,7 +52,7 @@ func (env *opsManagerEnvironment) loadFromEnvironmentVariables() error {
 	return nil
 }
 
-func (env *opsManagerEnvironment) fetchNetworksAndAvailabilityZones(ctx context.Context) error {
+func (env *opsManagerEnvironment) fetchNetworksAndAvailabilityZones(ctx context.Context) (context.Context, error) {
 	var directorConfig struct {
 		AvailabilityZoneConfiguration []struct {
 			Name string `yaml:"name"`
@@ -63,12 +63,12 @@ func (env *opsManagerEnvironment) fetchNetworksAndAvailabilityZones(ctx context.
 			} `yaml:"networks"`
 		} `yaml:"networks-configuration"`
 	}
-	err := runAndParseStdoutAsYAML(ctx,
+	ctx, err := runAndParseStdoutAsYAML(ctx,
 		exec.Command("om", "--skip-ssl-validation", "staged-director-config", "--no-redact"),
 		&directorConfig,
 	)
 	if err != nil {
-		return err
+		return ctx, err
 	}
 	for _, az := range directorConfig.AvailabilityZoneConfiguration {
 		env.AvailabilityZones = append(env.AvailabilityZones, az.Name)
@@ -80,7 +80,7 @@ func (env *opsManagerEnvironment) fetchNetworksAndAvailabilityZones(ctx context.
 		env.ServiceSubnetName = network.Name
 		break
 	}
-	return nil
+	return ctx, err
 }
 
 func readPrivateKeyFromBOSHAllProxyURL(boshAllProxy string) (string, error) {

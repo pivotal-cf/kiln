@@ -115,7 +115,7 @@ func loadEnvironment(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return ctx, err
 	}
-	err = omEnv.fetchNetworksAndAvailabilityZones(ctx)
+	ctx, err = omEnv.fetchNetworksAndAvailabilityZones(ctx)
 	if err != nil {
 		return ctx, err
 	}
