@@ -20,55 +20,43 @@ const testTilePath = "../hello-tile"
 func TestInitialize(t *testing.T) {
 	t.Run("shared", func(t *testing.T) {
 		t.Run("Tile", func(t *testing.T) {
-			sCtx := fakeScenarioContext{t}
-			initializeTile(sCtx)
+			initializeTile(newFakeScenarioContext(t))
 		})
 		t.Run("TileSourceCode", func(t *testing.T) {
-			sCtx := fakeScenarioContext{t}
-			initializeTileSourceCode(sCtx)
+			initializeTileSourceCode(newFakeScenarioContext(t))
 		})
 		t.Run("Exec", func(t *testing.T) {
-			sCtx := fakeScenarioContext{t}
-			initializeExec(sCtx)
+			initializeExec(newFakeScenarioContext(t))
 		})
 		t.Run("GitHub", func(t *testing.T) {
-			sCtx := fakeScenarioContext{t}
-			initializeGitHub(sCtx)
+			initializeGitHub(newFakeScenarioContext(t))
 		})
 	})
 
 	t.Run("commands", func(t *testing.T) {
 		t.Run("Bake", func(t *testing.T) {
-			sCtx := fakeScenarioContext{t}
-			initializeBake(sCtx)
+			initializeBake(newFakeScenarioContext(t))
 		})
 		t.Run("CacheCompiledReleases", func(t *testing.T) {
-			sCtx := fakeScenarioContext{t}
-			initializeCacheCompiledReleases(sCtx)
+			initializeCacheCompiledReleases(newFakeScenarioContext(t))
 		})
 		t.Run("Fetch", func(t *testing.T) {
-			sCtx := fakeScenarioContext{t}
-			initializeFetch(sCtx)
+			initializeFetch(newFakeScenarioContext(t))
 		})
 		t.Run("FindRelease", func(t *testing.T) {
-			sCtx := fakeScenarioContext{t}
-			initializeFindReleaseVersion(sCtx)
+			initializeFindReleaseVersion(newFakeScenarioContext(t))
 		})
 		t.Run("UpdateRelease", func(t *testing.T) {
-			sCtx := fakeScenarioContext{t}
-			initializeUpdateRelease(sCtx)
+			initializeUpdateRelease(newFakeScenarioContext(t))
 		})
 		t.Run("UpdateStemcell", func(t *testing.T) {
-			sCtx := fakeScenarioContext{t}
-			initializeUpdatingStemcell(sCtx)
+			initializeUpdatingStemcell(newFakeScenarioContext(t))
 		})
 		t.Run("ReleaseNotes", func(t *testing.T) {
-			sCtx := fakeScenarioContext{t}
-			initializeReleaseNotes(sCtx)
+			initializeReleaseNotes(newFakeScenarioContext(t))
 		})
 		t.Run("Help", func(t *testing.T) {
-			sCtx := fakeScenarioContext{t}
-			initializeHelp(sCtx)
+			initializeHelp(newFakeScenarioContext(t))
 		})
 	})
 
@@ -129,7 +117,7 @@ func loadInvocationTestCalls(t *testing.T) []string {
 	if err != nil {
 		t.Errorf("failed to find the initialize test file: %s", err)
 	}
-	testCallExp := regexp.MustCompile(`(?m)^\s*(initialize\S+)\(sCtx\)$`)
+	testCallExp := regexp.MustCompile(`(?m)^\s*(initialize\S+)\(newFakeScenarioContext\(t\)\)$`)
 	testCallMatches := testCallExp.FindAllStringSubmatch(string(initializeTest), -1)
 	return nthSubMatch(1, testCallMatches)
 }
@@ -141,18 +129,6 @@ func nthSubMatch(n int, matches [][]string) []string {
 	}
 	return result
 }
-
-// fakeScenarioContext constrains our use of Step on *godog.ScenarioContext.
-// it does not fully check the expression arguments match the types for the func
-// this is done by godog during execution this is just a quick check
-type fakeScenarioContext struct {
-	t *testing.T
-}
-
-var (
-	contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
-	tableType   = reflect.TypeOf((*godog.Table)(nil))
-)
 
 // countRelevantParams counts params that are neither contextType as a first parameter
 // nor tableType as an nth parameter
@@ -169,6 +145,26 @@ func countRelevantParams(ft reflect.Type) int {
 	}
 	return paramCount
 }
+
+func isRunningInCI() bool {
+	return os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTION") != ""
+}
+
+// fakeScenarioContext constrains our use of Step on *godog.ScenarioContext.
+// it does not fully check the expression arguments match the types for the func
+// this is done by godog during execution this is just a quick check
+type fakeScenarioContext struct {
+	t *testing.T
+}
+
+func newFakeScenarioContext(t *testing.T) fakeScenarioContext {
+	return fakeScenarioContext{t: t}
+}
+
+var (
+	contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
+	tableType   = reflect.TypeOf((*godog.Table)(nil))
+)
 
 func (fake fakeScenarioContext) Step(expr, stepFunc interface{}) {
 	fn := reflect.ValueOf(stepFunc)
@@ -190,7 +186,3 @@ func (fake fakeScenarioContext) Step(expr, stepFunc interface{}) {
 func (fake fakeScenarioContext) Before(godog.BeforeScenarioHook) {}
 
 func (fake fakeScenarioContext) After(godog.AfterScenarioHook) {}
-
-func isRunningInCI() bool {
-	return os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTION") != ""
-}
