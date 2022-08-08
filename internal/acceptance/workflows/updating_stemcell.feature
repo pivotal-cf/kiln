@@ -1,4 +1,4 @@
-Feature: Updating a stemcell
+Feature: As a dependabot, I want to update a stemcell
 
   Scenario: Find the new stemcell
     Given I have a "hello-tile" repository checked out at v0.1.5

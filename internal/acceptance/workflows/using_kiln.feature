@@ -1,4 +1,4 @@
-Feature: Using the Kiln CLI
+Feature: As a developer, I want the Kiln CLI to be usable
   Scenario: I ask for the version
     When I invoke kiln version
     Then stdout contains substring: 1.0.0-dev

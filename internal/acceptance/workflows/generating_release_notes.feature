@@ -1,4 +1,4 @@
-Feature: Generating Release Notes
+Feature: As a robot, I want to generate release notes
   Scenario: A milestone is provided
     Given I have a "hello-tile" repository checked out at v0.1.4
     And GitHub repository "crhntr/hello-release" has release with tag "v0.1.5"

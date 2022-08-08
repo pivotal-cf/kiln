@@ -1,4 +1,4 @@
-Feature: Updating a BOSH Release
+Feature: As a dependabot, I want to update a BOSH Release
   Scenario: Find a version on GitHub
     Given I have a "hello-tile" repository checked out at v0.1.1
     And GitHub repository "crhntr/hello-release" has release with tag "v0.1.4"

@@ -1,4 +1,4 @@
-Feature: Compiled Releases
+Feature: As a robot, I want to cache compiled releases
   Scenario: it stores compiled releases in an S3 bucket
     Given I have a "hello-tile" repository checked out at v0.1.2
     And I invoke kiln fetch
