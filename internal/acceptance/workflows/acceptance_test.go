@@ -4,12 +4,11 @@
 //
 // To run the tests execute:
 //
-//    go test -v --tags acceptance github.com/pivotal-cf/kiln/internal/acceptance/workflows
+//	go test -v --tags acceptance --timeout=1h github.com/pivotal-cf/kiln/internal/acceptance/workflows
 //
 // To run a particular test execute (notice the run tag value is a case-sensitive regular expression):
 //
-//    go test --run baking -v --tags acceptance github.com/pivotal-cf/kiln/internal/acceptance/workflows
-//
+//	go test --run baking -v --tags acceptance --timeout=1h github.com/pivotal-cf/kiln/internal/acceptance/workflows
 package workflows
 
 import (
