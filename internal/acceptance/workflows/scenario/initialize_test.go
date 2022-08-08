@@ -5,6 +5,7 @@ import (
 	"embed"
 	"golang.org/x/exp/slices"
 	"io/fs"
+	"os"
 	"reflect"
 	"regexp"
 	"sort"
@@ -189,3 +190,7 @@ func (fake fakeScenarioContext) Step(expr, stepFunc interface{}) {
 func (fake fakeScenarioContext) Before(godog.BeforeScenarioHook) {}
 
 func (fake fakeScenarioContext) After(godog.AfterScenarioHook) {}
+
+func isRunningInCI() bool {
+	return os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTION") != ""
+}

@@ -8,6 +8,9 @@ import (
 )
 
 func Test_githubRepoHasReleaseWithTag(t *testing.T) {
+	if isRunningInCI() {
+		t.Skip("skip this step in CI. GitHub action credentials do not have access to crhntr/hello-release")
+	}
 	setup := func(t *testing.T) (context.Context, Ω.Gomega) {
 		please := Ω.NewWithT(t)
 		ctx := context.Background()
