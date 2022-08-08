@@ -31,7 +31,7 @@ func iInvokeKilnBake(ctx context.Context, try string) (context.Context, error) {
 	return runAndLogOnError(ctx, cmd, tryFlag(try).requireSuccess())
 }
 
-func iInvokeKilnCacheCompiledReleases(ctx context.Context, try tryFlag) (context.Context, error) {
+func iInvokeKilnCacheCompiledReleases(ctx context.Context, try string) (context.Context, error) {
 	repoPath, err := tileRepoPath(ctx)
 	if err != nil {
 		return ctx, err
@@ -59,7 +59,7 @@ func iInvokeKilnCacheCompiledReleases(ctx context.Context, try tryFlag) (context
 		"--om-private-key", env.OpsManagerPrivateKey,
 	)
 	cmd.Dir = repoPath
-	return runAndLogOnError(ctx, cmd, try.isSet())
+	return runAndLogOnError(ctx, cmd, tryFlag(try).isSet())
 }
 
 // iInvokeKilnFetch fetches releases. It provides the command with the GitHub token (used for hello-release).
