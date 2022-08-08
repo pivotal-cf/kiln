@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
-	"strings"
 	"testing"
 
 	"github.com/cucumber/godog"
@@ -61,41 +60,58 @@ func TestInitialize(t *testing.T) {
 	})
 
 	t.Run("ensure all initialize functions are tested", func(t *testing.T) {
-		goFiles, err := fs.Glob(thisPackage, "*.go")
-		if err != nil {
-			t.Errorf("failed to match initialize files: %s", err)
-		}
-		exportedDefs := regexp.MustCompile(`(?m)func (Initialize[^(\[]+).*godog\.ScenarioContext.*`)
-		privateDefs := regexp.MustCompile(`(?m)func (initialize[^(\[]+).*scenarioContext.*`)
+		exportedInitializerFunctionPattern := regexp.MustCompile(`(?m)^func (Initialize[^(\[]+).*godog\.ScenarioContext.*`)
+		privateInitializerFunctionPattern := regexp.MustCompile(`(?m)^func (initialize[^(\[]+).*scenarioContext.*`)
 
-		calls := loadInvocationTestCalls(t)
-		for _, goFile := range goFiles {
-			goCode, err := thisPackage.ReadFile(goFile)
+		testInvocations := loadInvocationTestCalls(t)
+		walkErr := fs.WalkDir(thisPackage, ".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			goCode, err := thisPackage.ReadFile(path)
 			if err != nil {
 				t.Errorf("failed to match initialize files: %s", err)
 			}
-			exportedMatches := nthSubMatch(1, exportedDefs.FindAllStringSubmatch(string(goCode), -1))
-			privateMatches := nthSubMatch(1, privateDefs.FindAllStringSubmatch(string(goCode), -1))
-			if len(exportedMatches) == 0 {
-				continue
-			}
 
-			for _, m := range exportedMatches {
-				t.Run(m, func(t *testing.T) {
-					privateName := strings.Replace(m, "I", "i", 1)
-					if slices.Index(calls, privateName) == indexNotFound {
-						t.Errorf("%s does not seem to be tested (please add a private function recieving scenarioContext and add a test to the initialize_test.go file)", m)
-					}
-					if slices.Index(privateMatches, privateName) == indexNotFound {
-						t.Errorf("%s does not seem wrap a private testable function (please add it to initialize_test.go)", m)
-					}
+			exportedInitializerDefinitionFunctionNames := nthSubMatch(1, exportedInitializerFunctionPattern.FindAllStringSubmatch(string(goCode), -1))
+			privateInitializerDefinitionFunctionNames := nthSubMatch(1, privateInitializerFunctionPattern.FindAllStringSubmatch(string(goCode), -1))
+
+			for _, exportedInitializerName := range exportedInitializerDefinitionFunctionNames {
+				t.Run(exportedInitializerName, func(t *testing.T) {
+					ensurePublicInitializerIsTested(t, exportedInitializerName, testInvocations)
+					ensurePublicInitializerHasPrivateImplementation(t, exportedInitializerName, privateInitializerDefinitionFunctionNames)
 				})
 			}
 
-			testSortedAlphaNumerically(t, "the exported functions", exportedMatches)
-			testSortedAlphaNumerically(t, "the private functions", privateMatches)
+			testSortedAlphaNumerically(t, "the exported functions", exportedInitializerDefinitionFunctionNames)
+			testSortedAlphaNumerically(t, "the private functions", privateInitializerDefinitionFunctionNames)
+
+			return nil
+		})
+		if walkErr != nil {
+			t.Errorf("error while walking go files: %s", walkErr)
 		}
 	})
+}
+
+func ensurePublicInitializerIsTested(t *testing.T, publicName string, calls []string) {
+	t.Helper()
+	privateName := privateInitializerName(publicName)
+	if slices.Index(calls, privateName) == indexNotFound {
+		t.Errorf("%s does not seem to be tested (please add a private function recieving scenarioContext and add a test to the initialize_test.go file)", publicName)
+	}
+}
+
+func ensurePublicInitializerHasPrivateImplementation(t *testing.T, publicName string, privateMatches []string) {
+	t.Helper()
+	privateName := privateInitializerName(publicName)
+	if slices.Index(privateMatches, privateName) == indexNotFound {
+		t.Errorf("%s does not seem wrap a private testable function (please add it to initialize_test.go)", publicName)
+	}
+}
+
+func privateInitializerName(public string) string {
+	return "i" + public[1:]
 }
 
 func testSortedAlphaNumerically(t *testing.T, name string, list []string) {
