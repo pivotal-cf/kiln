@@ -3,8 +3,9 @@ package scenario
 import (
 	"context"
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"os/exec"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 func iUploadConfigureAndApplyTheTile(ctx context.Context) (context.Context, error) {

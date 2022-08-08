@@ -27,12 +27,14 @@ func Test_baking_a_tile(t *testing.T) {
 		scenario.InitializeBake,
 	)
 }
+
 func Test_using_kiln(t *testing.T) {
 	// t.SkipNow()
 	setupAndRunFeatureTest(t,
 		scenario.InitializeHelp,
 	)
 }
+
 func Test_updating_releases(t *testing.T) {
 	// t.SkipNow()
 	setupAndRunFeatureTest(t,
@@ -41,6 +43,7 @@ func Test_updating_releases(t *testing.T) {
 		scenario.InitializeUpdateRelease,
 	)
 }
+
 func Test_caching_compiled_releases(t *testing.T) {
 	// t.SkipNow()
 	setupAndRunFeatureTest(t,

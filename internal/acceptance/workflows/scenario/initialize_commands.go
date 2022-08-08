@@ -16,6 +16,7 @@ import (
 // they do not
 
 func InitializeBake(ctx *godog.ScenarioContext) { initializeBake(ctx) }
+
 func initializeBake(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^I (try to )?invoke kiln bake$`), iInvokeKilnBake)
 }
@@ -58,6 +59,7 @@ func initializeBake(ctx scenarioContext) {
 func InitializeCacheCompiledReleases(ctx *godog.ScenarioContext) {
 	initializeCacheCompiledReleases(ctx)
 }
+
 func initializeCacheCompiledReleases(ctx scenarioContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		_, _, err := loadS3Credentials()
@@ -81,6 +83,7 @@ func initializeCacheCompiledReleases(ctx scenarioContext) {
 // It should output a valid github token.
 // If you have not set this, loadGithubToken will try to execute `gh auth status --show-token` and will parse and set the token from the output.
 func InitializeFetch(ctx *godog.ScenarioContext) { initializeFetch(ctx) }
+
 func initializeFetch(ctx scenarioContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		return loadGithubToken(ctx)

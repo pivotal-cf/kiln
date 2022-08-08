@@ -3,8 +3,9 @@ package scenario
 import (
 	"context"
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/gh"
 	"net/http"
+
+	"github.com/pivotal-cf/kiln/internal/gh"
 )
 
 func githubRepoHasReleaseWithTag(ctx context.Context, repoOrg, repoName, tag string) error {

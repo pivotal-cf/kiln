@@ -15,6 +15,7 @@ import (
 // what they operate on: tiles, tile source code...
 
 func InitializeExec(ctx *godog.ScenarioContext) { initializeExec(ctx) }
+
 func initializeExec(ctx scenarioContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		return configureStandardFileDescriptors(ctx), nil
@@ -36,6 +37,7 @@ func initializeGitHub(ctx scenarioContext) {
 //
 // Most other steps require iHaveARepositoryCheckedOutAtRevision to have been run because it sets the tile repo path on the context.
 func InitializeTile(ctx *godog.ScenarioContext) { initializeTile(ctx) }
+
 func initializeTile(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^a Tile is created$`), aTileIsCreated)
 	ctx.Step(regexp.MustCompile(`^the Tile contains$`), theTileContains)

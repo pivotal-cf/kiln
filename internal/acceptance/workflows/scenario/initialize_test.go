@@ -3,7 +3,6 @@ package scenario
 import (
 	"context"
 	"embed"
-	"golang.org/x/exp/slices"
 	"io/fs"
 	"os"
 	"reflect"
@@ -13,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
+	"golang.org/x/exp/slices"
 )
 
 const testTilePath = "../hello-tile"

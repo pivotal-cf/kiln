@@ -2,9 +2,10 @@ package scenario
 
 import (
 	"context"
-	Ω "github.com/onsi/gomega"
 	"os/exec"
 	"testing"
+
+	Ω "github.com/onsi/gomega"
 )
 
 func Test_outputContainsSubstring(t *testing.T) {
