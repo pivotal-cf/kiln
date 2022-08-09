@@ -3,10 +3,11 @@ package scenario
 import (
 	"context"
 	"fmt"
-	"github.com/cucumber/godog"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/cucumber/godog"
 )
 
 func iInvokeKiln(ctx context.Context, table *godog.Table) (context.Context, error) {

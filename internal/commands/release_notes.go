@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/gh"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -16,6 +15,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/pivotal-cf/kiln/internal/gh"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/google/go-github/v40/github"

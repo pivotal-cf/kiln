@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+
+	"gopkg.in/yaml.v2"
 )
 
 // key represents the type of the context key for shared values between steps

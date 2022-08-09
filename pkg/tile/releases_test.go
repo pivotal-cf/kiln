@@ -2,9 +2,10 @@ package tile_test
 
 import (
 	"bytes"
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"io"
 	"testing"
+
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 
 	Ω "github.com/onsi/gomega"
 

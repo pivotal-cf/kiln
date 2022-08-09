@@ -5,15 +5,16 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"github.com/Masterminds/semver"
-	"github.com/google/go-github/v40/github"
-	"golang.org/x/oauth2"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Masterminds/semver"
+	"github.com/google/go-github/v40/github"
+	"golang.org/x/oauth2"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )

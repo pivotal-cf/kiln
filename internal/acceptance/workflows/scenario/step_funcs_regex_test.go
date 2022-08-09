@@ -22,7 +22,6 @@ func Test_hasRegexMatches(t *testing.T) {
 			})
 
 			err := hasRegexMatches(ctx, "stdout", expression, expected)
-
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}

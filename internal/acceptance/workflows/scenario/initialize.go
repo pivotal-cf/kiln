@@ -55,6 +55,7 @@ var _ scenarioContext = (*godog.ScenarioContext)(nil)
 func InitializeCacheCompiledReleases(ctx *godog.ScenarioContext) {
 	initializeCacheCompiledReleases(ctx)
 }
+
 func initializeCacheCompiledReleases(ctx scenarioContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		_, _, err := loadS3Credentials()
@@ -96,6 +97,11 @@ func initializeKiln(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^I try to invoke kiln$`), iTryToInvokeKiln)
 }
 
+func InitializeAWS(ctx *godog.ScenarioContext) { initializeAWS(ctx) }
+func initializeAWS(ctx scenarioContext) {
+	ctx.Step(regexp.MustCompile(`^I remove all the objects in the bucket "([^"]+)"$`), iRemoveAllTheObjectsInBucket)
+}
+
 func InitializeTanzuNetwork(ctx *godog.ScenarioContext) { initializeTanzuNetwork(ctx) }
 func initializeTanzuNetwork(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^TanzuNetwork has product "([^"]*)" with version "([^"]*)"$`), tanzuNetworkHasProductWithVersion)
@@ -105,6 +111,7 @@ func initializeTanzuNetwork(ctx scenarioContext) {
 //
 // Most other steps require iHaveARepositoryCheckedOutAtRevision to have been run because it sets the tile repo path on the context.
 func InitializeTile(ctx *godog.ScenarioContext) { initializeTile(ctx) }
+
 func initializeTile(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^a Tile is created$`), aTileIsCreated)
 	ctx.Step(regexp.MustCompile(`^the Tile contains$`), theTileContains)

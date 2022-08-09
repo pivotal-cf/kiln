@@ -2,9 +2,10 @@ package commands
 
 import (
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"log"
 	"strings"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-billy/v5"
