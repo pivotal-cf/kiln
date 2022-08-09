@@ -3,7 +3,7 @@ package pivnet
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -97,7 +97,7 @@ func (service Service) Releases(productSlug string) ([]Release, error) {
 		_ = res.Body.Close()
 	}()
 
-	responseBody, err := ioutil.ReadAll(res.Body)
+	responseBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("reading the network.pivotal.io response body failed: %s", err)
 	}
@@ -146,7 +146,7 @@ func (service *Service) StemcellVersion(slug string, majorStemcellVersion string
 		return "", fmt.Errorf("request was not successful, response had status %s (%d)", response.Status, response.StatusCode)
 	}
 
-	responesBody, err := ioutil.ReadAll(response.Body)
+	responesBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		return "", err
 	}

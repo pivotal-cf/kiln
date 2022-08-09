@@ -3,7 +3,6 @@ package history
 import (
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"path/filepath"
 
 	"github.com/go-git/go-git/v5/plumbing"
@@ -73,7 +72,7 @@ func readBytesFromTree(storage storer.EncodedObjectStorer, tree *object.Tree, fi
 		return nil, err
 	}
 	defer closeAndIgnoreError(f)
-	buf, err := ioutil.ReadAll(f)
+	buf, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}

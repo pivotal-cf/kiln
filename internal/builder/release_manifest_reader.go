@@ -6,7 +6,6 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"path/filepath"
 	"strings"
 
@@ -83,7 +82,7 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 	}
 
 	var inputReleaseManifest inputReleaseManifest
-	inputReleaseManifestContents, err := ioutil.ReadAll(tr)
+	inputReleaseManifestContents, err := io.ReadAll(tr)
 	if err != nil {
 		return Part{}, err // NOTE: cannot replicate this error scenario in a test
 	}

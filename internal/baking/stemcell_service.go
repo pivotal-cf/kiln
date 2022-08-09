@@ -3,7 +3,7 @@ package baking
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -99,7 +99,7 @@ func (ss StemcellService) FromKilnfile(kilnfilePath string) (map[string]interfac
 		Metadata stemcellMetadata `yaml:"stemcell_criteria"`
 	}{}
 
-	lockFileContent, err := ioutil.ReadAll(kilnfileLock)
+	lockFileContent, err := io.ReadAll(kilnfileLock)
 	if err != nil {
 		return nil, err
 	}

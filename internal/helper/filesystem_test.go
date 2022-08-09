@@ -1,7 +1,7 @@
 package helper_test
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -23,7 +23,7 @@ var _ = Describe("Filesystem", func() {
 
 		BeforeEach(func() {
 			var err error
-			tmpDir, err = ioutil.TempDir("", "filesystem-test")
+			tmpDir, err = os.MkdirTemp("", "filesystem-test")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -55,7 +55,7 @@ var _ = Describe("Filesystem", func() {
 
 	Describe("Open", func() {
 		It("opens the specified file", func() {
-			tempFile, err := ioutil.TempFile("", "")
+			tempFile, err := os.CreateTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = tempFile.WriteString("file contents")
@@ -66,7 +66,7 @@ var _ = Describe("Filesystem", func() {
 			file, err := filesystem.Open(tempFile.Name())
 			Expect(err).NotTo(HaveOccurred())
 
-			contents, err := ioutil.ReadAll(file)
+			contents, err := io.ReadAll(file)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(contents).To(Equal([]byte("file contents")))
 		})
@@ -83,7 +83,7 @@ var _ = Describe("Filesystem", func() {
 
 	Describe("Walk", func() {
 		It("traverses the specified path", func() {
-			tempDir, err := ioutil.TempDir("", "")
+			tempDir, err := os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			f := filepath.Join(tempDir, "some-file")
@@ -108,7 +108,7 @@ var _ = Describe("Filesystem", func() {
 
 		BeforeEach(func() {
 			var err error
-			file, err = ioutil.TempFile("", "")
+			file, err = os.CreateTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 

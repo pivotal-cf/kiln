@@ -1,7 +1,6 @@
 package baking_test
 
 import (
-	"io/ioutil"
 	"os"
 
 	"github.com/go-git/go-billy/v5/osfs"
@@ -30,7 +29,7 @@ key-1:
 key-3: value-3
 `
 
-			file, err := ioutil.TempFile("", "variables")
+			file, err := os.CreateTemp("", "variables")
 			Expect(err).NotTo(HaveOccurred())
 
 			path = file.Name()
@@ -83,7 +82,7 @@ key-3: value-3
 
 			Context("when the variable file contents cannot be unmarshalled", func() {
 				It("returns an error", func() {
-					err := ioutil.WriteFile(path, []byte("\t\t\t"), 0o644)
+					err := os.WriteFile(path, []byte("\t\t\t"), 0o644)
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = service.FromPathsAndPairs([]string{path}, nil)

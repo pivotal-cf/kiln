@@ -1,6 +1,6 @@
 package baking
 
-import "io/ioutil"
+import "os"
 
 type MetadataService struct{}
 
@@ -9,7 +9,7 @@ func NewMetadataService() MetadataService {
 }
 
 func (ms MetadataService) Read(path string) ([]byte, error) {
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

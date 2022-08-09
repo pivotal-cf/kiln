@@ -1,9 +1,9 @@
 package commands_test
 
 import (
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -77,16 +77,16 @@ stemcell_criteria:
 			_, requestErr = pivnetService.Do(simpleRequest)
 			Expect(requestErr).NotTo(HaveOccurred())
 
-			tmpDir, err := ioutil.TempDir("", "fetch-stemcell-test")
+			tmpDir, err := os.MkdirTemp("", "fetch-stemcell-test")
 			Expect(err).NotTo(HaveOccurred())
 
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
 
-			err = ioutil.WriteFile(someKilnfilePath, []byte(kilnfileContents), 0o644)
+			err = os.WriteFile(someKilnfilePath, []byte(kilnfileContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			someKilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
-			err = ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
+			err = os.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			findStemcellVersion = commands.NewFindStemcellVersion(logger, pivnetService)

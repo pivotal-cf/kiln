@@ -3,7 +3,6 @@ package fakes
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 )
 
 type ReadCloser struct {
@@ -25,7 +24,7 @@ type ReadCloser struct {
 
 func NewReadCloser(buf string) *ReadCloser {
 	return &ReadCloser{
-		RC: ioutil.NopCloser(bytes.NewBufferString(buf)),
+		RC: io.NopCloser(bytes.NewBufferString(buf)),
 	}
 }
 

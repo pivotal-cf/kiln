@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -235,7 +234,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 		BeforeEach(func() {
 			var err error
-			releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
+			releaseDir, err = os.MkdirTemp("", "kiln-releaseSource-test")
 			Expect(err).NotTo(HaveOccurred())
 
 			testServer = ghttp.NewServer()
@@ -271,7 +270,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			fullRelease1Path := filepath.Join(releaseDir, release1Filename)
 			Expect(fullRelease1Path).To(BeAnExistingFile())
 
-			release1DiskContents, err := ioutil.ReadFile(fullRelease1Path)
+			release1DiskContents, err := os.ReadFile(fullRelease1Path)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(release1DiskContents).To(BeEquivalentTo(release1ServerFileContents))
 

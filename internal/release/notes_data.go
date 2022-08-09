@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -199,7 +198,7 @@ func (r fetchNotesData) kilnfileFromWorktree(kilnfilePath string) (cargo.Kilnfil
 	}
 	defer closeAndIgnoreError(worktreeKilnfile)
 
-	buf, err := ioutil.ReadAll(worktreeKilnfile)
+	buf, err := io.ReadAll(worktreeKilnfile)
 	if err != nil {
 		return cargo.Kilnfile{}, err
 	}

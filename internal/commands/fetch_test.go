@@ -3,7 +3,6 @@ package commands_test
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -54,14 +53,14 @@ var _ = Describe("Fetch", func() {
 			logger = log.New(GinkgoWriter, "", 0)
 
 			var err error
-			tmpDir, err = ioutil.TempDir("", "fetch-test")
+			tmpDir, err = os.MkdirTemp("", "fetch-test")
 			Expect(err).NotTo(HaveOccurred())
 
-			someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
+			someReleasesDirectory, err = os.MkdirTemp(tmpDir, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-			err = ioutil.WriteFile(someKilnfilePath, []byte(""), 0o644)
+			err = os.WriteFile(someKilnfilePath, []byte(""), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			someKilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
@@ -116,7 +115,7 @@ stemcell_criteria:
 				return fakeReleaseSources
 			}
 
-			err := ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
+			err := os.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 			fetch = commands.NewFetch(logger, multiReleaseSourceProvider, fakeLocalReleaseDirectory)
 
@@ -518,10 +517,10 @@ release_sources:
 					var err error
 
 					someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-					err = ioutil.WriteFile(someKilnfilePath, []byte(TemplatizedKilnfileYMLContents), 0o644)
+					err = os.WriteFile(someKilnfilePath, []byte(TemplatizedKilnfileYMLContents), 0o644)
 					Expect(err).NotTo(HaveOccurred())
 
-					someVariableFile, err = ioutil.TempFile(tmpDir, "variables-file1")
+					someVariableFile, err = os.CreateTemp(tmpDir, "variables-file1")
 					Expect(err).NotTo(HaveOccurred())
 					defer closeAndIgnoreError(someVariableFile)
 
@@ -534,7 +533,7 @@ release_sources:
 					Expect(err).NotTo(HaveOccurred())
 					Expect(data).To(HaveLen(n))
 
-					otherVariableFile, err = ioutil.TempFile(tmpDir, "variables-file2")
+					otherVariableFile, err = os.CreateTemp(tmpDir, "variables-file2")
 					Expect(err).NotTo(HaveOccurred())
 					defer closeAndIgnoreError(otherVariableFile)
 

@@ -3,7 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sort"
@@ -159,7 +159,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 	}
 	defer closeAndIgnoreError(versionFile)
 
-	versionBuf, err := ioutil.ReadAll(versionFile)
+	versionBuf, err := io.ReadAll(versionFile)
 	if err != nil {
 		return cargo.Kilnfile{}, nil, err
 	}

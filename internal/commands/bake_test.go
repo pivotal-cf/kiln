@@ -2,7 +2,6 @@ package commands_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -50,17 +49,17 @@ var _ = Describe("Bake", func() {
 
 	BeforeEach(func() {
 		var err error
-		tmpDir, err = ioutil.TempDir("", "command-test")
+		tmpDir, err = os.MkdirTemp("", "command-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		someReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
+		someReleasesDirectory, err = os.MkdirTemp(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		otherReleasesDirectory, err = ioutil.TempDir(tmpDir, "")
+		otherReleasesDirectory, err = os.MkdirTemp(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		nonTarballRelease := filepath.Join(someReleasesDirectory, "some-broken-release")
-		err = ioutil.WriteFile(nonTarballRelease, []byte(""), 0o644)
+		err = os.WriteFile(nonTarballRelease, []byte(""), 0o644)
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeTileWriter = &fakes.TileWriter{}
@@ -391,7 +390,7 @@ var _ = Describe("Bake", func() {
 
 			BeforeEach(func() {
 				var err error
-				otherVariableFile, err = ioutil.TempFile(tmpDir, "variables-file")
+				otherVariableFile, err = os.CreateTemp(tmpDir, "variables-file")
 				Expect(err).NotTo(HaveOccurred())
 				defer closeAndIgnoreError(otherVariableFile)
 

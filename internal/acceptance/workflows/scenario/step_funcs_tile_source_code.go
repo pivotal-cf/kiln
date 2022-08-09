@@ -42,15 +42,6 @@ func theLockSpecifiesVersionForRelease(ctx context.Context, releaseVersion, rele
 	return nil
 }
 
-// cleanUpFetchedReleases should be run after the Scenario
-func cleanUpFetchedReleases(ctx context.Context, _ *godog.Scenario, _ error) (context.Context, error) {
-	err := theRepositoryHasNoFetchedReleases(ctx)
-	if err != nil {
-		return ctx, err
-	}
-	return ctx, nil
-}
-
 func iSetAVersionConstraintForRelease(ctx context.Context, versionConstraint, releaseName string) error {
 	spcePath, err := kilnfileLockPath(ctx)
 	if err != nil {

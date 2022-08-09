@@ -8,7 +8,6 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -22,7 +21,7 @@ import (
 )
 
 func createReleaseTarball(releaseMetadata string) (*os.File, string) {
-	tarball, err := ioutil.TempFile("", "kiln")
+	tarball, err := os.CreateTemp("", "kiln")
 	Expect(err).NotTo(HaveOccurred())
 
 	gw := gzip.NewWriter(tarball)
@@ -158,12 +157,12 @@ version: 1.2.3
 					Expect(err).NotTo(HaveOccurred())
 
 					var contents []byte
-					contents, err = ioutil.ReadFile(tarball.Name())
+					contents, err = os.ReadFile(tarball.Name())
 					Expect(err).NotTo(HaveOccurred())
 
 					By("corrupting the gzip header contents", func() {
 						contents[0] = 0
-						err = ioutil.WriteFile(tarball.Name(), contents, 0o666)
+						err = os.WriteFile(tarball.Name(), contents, 0o666)
 						Expect(err).NotTo(HaveOccurred())
 					})
 

@@ -2,7 +2,7 @@ package commands_test
 
 import (
 	"errors"
-	"io/ioutil"
+	"io"
 	"log"
 	"strings"
 	"time"
@@ -104,7 +104,7 @@ pre_ga_user_groups:
 						return now
 					},
 					OutLogger: log.New(&outLoggerBuffer, "", 0),
-					ErrLogger: log.New(ioutil.Discard, "", 0),
+					ErrLogger: log.New(io.Discard, "", 0),
 				}
 			})
 
@@ -646,7 +646,7 @@ pre_ga_user_groups:
 				publish.Options.Kilnfile = "Kilnfile"
 				outLoggerBuffer = strings.Builder{}
 				publish.OutLogger = log.New(&outLoggerBuffer, "", 0)
-				publish.ErrLogger = log.New(ioutil.Discard, "", 0)
+				publish.ErrLogger = log.New(io.Discard, "", 0)
 
 				rs = new(commandsFakes.PivnetReleasesService)
 				pfs = new(commandsFakes.PivnetProductFilesService)

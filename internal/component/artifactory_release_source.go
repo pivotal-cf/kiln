@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -120,7 +119,7 @@ func (ars ArtifactoryReleaseSource) getFileSHA1(release Lock) (string, error) {
 		return "", fmt.Errorf("failed to get %s release info from artifactory with error code %d", release.Name, resp.StatusCode)
 	}
 
-	responseBody, err := ioutil.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
@@ -212,7 +211,7 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) 
 	var artifactoryFolderInfo ArtifactoryFolderInfo
 	var _ *semver.Constraints
 
-	responseBody, err := ioutil.ReadAll(response.Body)
+	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		return Lock{}, err
 	}

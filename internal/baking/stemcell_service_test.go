@@ -2,7 +2,6 @@ package baking_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -29,22 +28,22 @@ var _ = Describe("StemcellService", func() {
 			service = NewStemcellService(logger, reader)
 
 			var err error
-			tempDir, err = ioutil.TempDir("", "")
+			tempDir, err = os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
-			file, err := ioutil.TempFile("", "")
+			file, err := os.CreateTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(os.Rename(file.Name(), filepath.Join(tempDir, "some-stemcell.tar.gz"))).To(Succeed())
 			Expect(file.Close()).To(Succeed())
 
-			file, err = ioutil.TempFile("", "")
+			file, err = os.CreateTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(os.Rename(file.Name(), filepath.Join(tempDir, "other-stemcell.tgz"))).To(Succeed())
 			Expect(file.Close()).To(Succeed())
 
-			file, err = ioutil.TempFile("", "not-stemcell")
+			file, err = os.CreateTemp("", "not-stemcell")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(os.Rename(file.Name(), filepath.Join(tempDir, "not-stemcell.banana"))).To(Succeed())

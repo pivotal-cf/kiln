@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -82,10 +81,10 @@ var _ = Describe("bake command", func() {
 	BeforeEach(func() {
 		var err error
 
-		tmpDir, err = ioutil.TempDir("", "kiln-main-test")
+		tmpDir, err = os.MkdirTemp("", "kiln-main-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		tileDir, err := ioutil.TempDir(tmpDir, "")
+		tileDir, err := os.MkdirTemp(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		outputFile = filepath.Join(tileDir, "cool-product-1.2.3-build.4.pivotal")
@@ -143,7 +142,7 @@ var _ = Describe("bake command", func() {
 		file, err := bakedTile.Open("metadata/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
-		metadataContents, err := ioutil.ReadAll(file)
+		metadataContents, err := io.ReadAll(file)
 		Expect(err).NotTo(HaveOccurred())
 
 		renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
@@ -156,15 +155,15 @@ var _ = Describe("bake command", func() {
 		archivedMigration3, err := bakedTile.Open("migrations/v1/some_migration.js")
 		Expect(err).NotTo(HaveOccurred())
 
-		contents, err := ioutil.ReadAll(archivedMigration1)
+		contents, err := io.ReadAll(archivedMigration1)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("custom-buildpack-migration\n"))
 
-		contents, err = ioutil.ReadAll(archivedMigration2)
+		contents, err = io.ReadAll(archivedMigration2)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("auth-enterprise-sso-migration\n"))
 
-		contents, err = ioutil.ReadAll(archivedMigration3)
+		contents, err = io.ReadAll(archivedMigration3)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("some_migration\n"))
 
@@ -213,7 +212,7 @@ var _ = Describe("bake command", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := ioutil.ReadAll(file)
+			metadataContents, err := io.ReadAll(file)
 			Expect(err).NotTo(HaveOccurred())
 
 			renderedYAML := fmt.Sprintf(expectedMetadataWithMultipleStemcells, cfSHA1)
@@ -255,7 +254,7 @@ var _ = Describe("bake command", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := ioutil.ReadAll(file)
+			metadataContents, err := io.ReadAll(file)
 			Expect(err).NotTo(HaveOccurred())
 
 			renderedYAML := fmt.Sprintf(expectedMetadataWithStemcellTarball, cfSHA1)
@@ -282,7 +281,7 @@ var _ = Describe("bake command", func() {
 			Expect(session.Err).To(gbytes.Say(fmt.Sprintf("Calculating SHA256 checksum of %s...", outputFile)))
 			Expect(session.Err).To(gbytes.Say("SHA256 checksum: [0-9a-f]{64}"))
 
-			contents, err := ioutil.ReadFile(fmt.Sprintf("%s.sha256", outputFile))
+			contents, err := os.ReadFile(fmt.Sprintf("%s.sha256", outputFile))
 			Expect(err).NotTo(HaveOccurred())
 
 			re := regexp.MustCompile(`SHA256 checksum: ([0-9a-f]{64})`)
@@ -341,7 +340,7 @@ var _ = Describe("bake command", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := ioutil.ReadAll(file)
+			metadataContents, err := io.ReadAll(file)
 			Expect(err).NotTo(HaveOccurred())
 
 			renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
@@ -354,15 +353,15 @@ var _ = Describe("bake command", func() {
 			archivedMigration3, err := bakedTile.Open("migrations/v1/some_migration.js")
 			Expect(err).NotTo(HaveOccurred())
 
-			contents, err := ioutil.ReadAll(archivedMigration1)
+			contents, err := io.ReadAll(archivedMigration1)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("custom-buildpack-migration\n"))
 
-			contents, err = ioutil.ReadAll(archivedMigration2)
+			contents, err = io.ReadAll(archivedMigration2)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("auth-enterprise-sso-migration\n"))
 
-			contents, err = ioutil.ReadAll(archivedMigration3)
+			contents, err = io.ReadAll(archivedMigration3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("some_migration\n"))
 
@@ -530,10 +529,10 @@ var _ = Describe("bake command", func() {
 				someFileToEmbed := filepath.Join(tmpDir, "some-file-to-embed")
 				otherFileToEmbed := filepath.Join(tmpDir, "other-file-to-embed")
 
-				err := ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0o600)
+				err := os.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0o600)
 				Expect(err).NotTo(HaveOccurred())
 
-				err = ioutil.WriteFile(otherFileToEmbed, []byte("content-of-other-file"), 0o755)
+				err = os.WriteFile(otherFileToEmbed, []byte("content-of-other-file"), 0o755)
 				Expect(err).NotTo(HaveOccurred())
 
 				commandWithArgs = append(commandWithArgs,
@@ -567,7 +566,7 @@ var _ = Describe("bake command", func() {
 						r, err := f.Open()
 						Expect(err).NotTo(HaveOccurred())
 
-						content, err := ioutil.ReadAll(r)
+						content, err := io.ReadAll(r)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(content).To(Equal([]byte("content-of-some-file")))
@@ -578,7 +577,7 @@ var _ = Describe("bake command", func() {
 						r, err := f.Open()
 						Expect(err).NotTo(HaveOccurred())
 
-						content, err := ioutil.ReadAll(r)
+						content, err := io.ReadAll(r)
 						Expect(err).NotTo(HaveOccurred())
 
 						mode := f.FileHeader.Mode()
@@ -604,7 +603,7 @@ var _ = Describe("bake command", func() {
 				err := os.MkdirAll(nestedDir, 0o700)
 				Expect(err).NotTo(HaveOccurred())
 
-				err = ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0o600)
+				err = os.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0o600)
 				Expect(err).NotTo(HaveOccurred())
 
 				commandWithArgs = append(commandWithArgs,
@@ -635,7 +634,7 @@ var _ = Describe("bake command", func() {
 						r, err := f.Open()
 						Expect(err).NotTo(HaveOccurred())
 
-						content, err := ioutil.ReadAll(r)
+						content, err := io.ReadAll(r)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(content).To(Equal([]byte("content-of-some-file")))
@@ -685,7 +684,7 @@ var _ = Describe("bake command", func() {
 			}
 
 			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := ioutil.ReadAll(file)
+			metadataContents, err := io.ReadAll(file)
 			Expect(err).NotTo(HaveOccurred())
 
 			renderedYAML := fmt.Sprintf(expectedMetadataWithStemcellCriteria, diegoSHA1, cfSHA1)

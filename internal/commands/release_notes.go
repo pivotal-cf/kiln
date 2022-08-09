@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -52,7 +51,7 @@ type FetchNotesData func(ctx context.Context, repo *git.Repository, client *gith
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	return ReleaseNotes{
 		fetchNotesData: release.FetchNotesData,
-		readFile:       ioutil.ReadFile,
+		readFile:       os.ReadFile,
 		Writer:         os.Stdout,
 		stat:           os.Stat,
 	}, nil
