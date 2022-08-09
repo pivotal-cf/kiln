@@ -173,8 +173,6 @@ func iAddACompiledSReleaseSourceToTheKilnfile(ctx context.Context, bucketName st
 		SecretAccessKey: accessKey,
 	})
 
-	setPublishableReleaseSource(ctx, bucketName)
-
 	return saveAsYAML(kfPath, kf)
 }
 

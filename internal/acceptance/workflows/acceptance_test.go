@@ -22,49 +22,33 @@ import (
 
 func Test_baking_a_tile(t *testing.T) {
 	// t.SkipNow()
-	setupAndRunFeatureTest(t,
-		scenario.InitializeFetch,
-		scenario.InitializeBake,
-	)
+	setupAndRunFeatureTest(t)
 }
 
 func Test_using_kiln(t *testing.T) {
-	// t.SkipNow()
-	setupAndRunFeatureTest(t,
-		scenario.InitializeHelp,
-	)
+	setupAndRunFeatureTest(t)
 }
 
 func Test_updating_releases(t *testing.T) {
-	// t.SkipNow()
 	setupAndRunFeatureTest(t,
 		scenario.InitializeGitHub,
-		scenario.InitializeFindReleaseVersion,
-		scenario.InitializeUpdateRelease,
 	)
 }
 
 func Test_caching_compiled_releases(t *testing.T) {
-	// t.SkipNow()
 	setupAndRunFeatureTest(t,
-		scenario.InitializeFetch,
-		scenario.InitializeBake,
 		scenario.InitializeCacheCompiledReleases,
 	)
 }
 
 func Test_updating_stemcell(t *testing.T) {
 	setupAndRunFeatureTest(t,
-		scenario.InitializeUpdatingStemcell,
+		scenario.InitializeTanzuNetwork,
 	)
 }
 
 func Test_generating_release_notes(t *testing.T) {
-	// t.SkipNow()
-	setupAndRunFeatureTest(t,
-		scenario.InitializeGitHub,
-		scenario.InitializeReleaseNotes,
-	)
+	setupAndRunFeatureTest(t, scenario.InitializeGitHub)
 }
 
 func setupAndRunFeatureTest(t *testing.T, initializers ...func(ctx *godog.ScenarioContext)) {
@@ -75,6 +59,7 @@ func setupAndRunFeatureTest(t *testing.T, initializers ...func(ctx *godog.Scenar
 		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
 			// default initializers
 			scenario.InitializeEnv(ctx)
+			scenario.InitializeKiln(ctx)
 			scenario.InitializeExec(ctx)
 			scenario.InitializeTileSourceCode(ctx)
 			scenario.InitializeTile(ctx)

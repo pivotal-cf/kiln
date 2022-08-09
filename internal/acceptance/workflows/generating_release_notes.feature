@@ -4,7 +4,14 @@ Feature: As a robot, I want to generate release notes
     And GitHub repository "crhntr/hello-release" has release with tag "v0.1.5"
     And the environment variable "GITHUB_TOKEN" is set
 
-    When I invoke kiln release-notes "v0.1.3" "v0.1.4"
+    When I invoke kiln
+      | release-notes                                             |
+      | --release-date="2022-07-27"                               |
+      | --github-issue-milestone="Release-2022-001"               |
+      | --update-docs="./scenario/fixtures/release_notes.md.erb" |
+      | --kilnfile="Kilnfile"                                     |
+      | v0.1.3                                                    |
+      | v0.1.4                                                    |
 
     Then "./scenario/fixtures/release_notes.md.erb" contains substring: ### <a id='0.1.4'></a> 0.1.4
     And "./scenario/fixtures/release_notes.md.erb" contains substring: **Release Date:** 07/27/2022

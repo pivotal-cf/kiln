@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"gopkg.in/yaml.v2"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 )
@@ -18,7 +21,6 @@ const (
 	tileVersionKey
 	githubTokenKey
 	environmentKey
-	publishableReleaseSourceKey
 	standardFileDescriptorsKey
 	lastCommandProcessStateKey
 )
@@ -123,14 +125,6 @@ func loadEnvironment(ctx context.Context) (context.Context, error) {
 	return context.WithValue(ctx, environmentKey, omEnv), nil
 }
 
-func publishableReleaseSource(ctx context.Context) (string, error) {
-	return contextValue[string](ctx, publishableReleaseSourceKey, "publishable release source")
-}
-
-func setPublishableReleaseSource(ctx context.Context, e string) context.Context {
-	return context.WithValue(ctx, publishableReleaseSourceKey, e)
-}
-
 type standardFileDescriptors [3]*bytes.Buffer
 
 func output(ctx context.Context, name string) (*bytes.Buffer, error) {
@@ -171,4 +165,38 @@ func lastCommandProcessState(ctx context.Context) (*os.ProcessState, error) {
 
 func setLastCommandStatus(ctx context.Context, state *os.ProcessState) context.Context {
 	return context.WithValue(ctx, lastCommandProcessStateKey, state)
+}
+
+func runAndLogOnError(ctx context.Context, cmd *exec.Cmd, requireSuccess bool) (context.Context, error) {
+	var buf bytes.Buffer
+	fds := ctx.Value(standardFileDescriptorsKey).(standardFileDescriptors)
+	cmd.Stdout = io.MultiWriter(&buf, fds[1])
+	cmd.Stderr = io.MultiWriter(&buf, fds[2])
+	runErr := cmd.Run()
+	ctx = setLastCommandStatus(ctx, cmd.ProcessState)
+	if requireSuccess {
+		if runErr != nil {
+			_, _ = io.Copy(os.Stdout, &buf)
+		}
+		return ctx, runErr
+	}
+	return ctx, nil
+}
+
+func runAndParseStdoutAsYAML(ctx context.Context, cmd *exec.Cmd, d interface{}) (context.Context, error) {
+	var stdout, stderr bytes.Buffer
+	fds := ctx.Value(standardFileDescriptorsKey).(standardFileDescriptors)
+	cmd.Stdout = io.MultiWriter(&stdout, fds[1])
+	cmd.Stderr = io.MultiWriter(&stderr, fds[2])
+	runErr := cmd.Run()
+	ctx = setLastCommandStatus(ctx, cmd.ProcessState)
+	if runErr != nil {
+		_, _ = io.Copy(os.Stdout, &stdout)
+		return ctx, runErr
+	}
+	err := yaml.Unmarshal(stdout.Bytes(), d)
+	if err != nil {
+		return ctx, err
+	}
+	return ctx, nil
 }

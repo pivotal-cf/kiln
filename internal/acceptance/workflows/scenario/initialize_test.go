@@ -17,53 +17,37 @@ import (
 const testTilePath = "../hello-tile"
 
 func TestInitialize(t *testing.T) {
-	t.Run("shared", func(t *testing.T) {
-		t.Run("Tile", func(t *testing.T) {
-			initializeTile(newFakeScenarioContext(t))
-		})
-		t.Run("TileSourceCode", func(t *testing.T) {
-			initializeTileSourceCode(newFakeScenarioContext(t))
-		})
-		t.Run("Exec", func(t *testing.T) {
-			initializeExec(newFakeScenarioContext(t))
-		})
-		t.Run("GitHub", func(t *testing.T) {
-			initializeGitHub(newFakeScenarioContext(t))
-		})
+	t.Run("CacheCompiledReleases", func(t *testing.T) {
+		initializeCacheCompiledReleases(newFakeScenarioContext(t))
 	})
-
-	t.Run("commands", func(t *testing.T) {
-		t.Run("Bake", func(t *testing.T) {
-			initializeBake(newFakeScenarioContext(t))
-		})
-		t.Run("CacheCompiledReleases", func(t *testing.T) {
-			initializeCacheCompiledReleases(newFakeScenarioContext(t))
-		})
-		t.Run("Fetch", func(t *testing.T) {
-			initializeFetch(newFakeScenarioContext(t))
-		})
-		t.Run("FindRelease", func(t *testing.T) {
-			initializeFindReleaseVersion(newFakeScenarioContext(t))
-		})
-		t.Run("UpdateRelease", func(t *testing.T) {
-			initializeUpdateRelease(newFakeScenarioContext(t))
-		})
-		t.Run("UpdateStemcell", func(t *testing.T) {
-			initializeUpdatingStemcell(newFakeScenarioContext(t))
-		})
-		t.Run("ReleaseNotes", func(t *testing.T) {
-			initializeReleaseNotes(newFakeScenarioContext(t))
-		})
-		t.Run("Help", func(t *testing.T) {
-			initializeHelp(newFakeScenarioContext(t))
-		})
+	t.Run("Env", func(t *testing.T) {
+		initializeEnv(newFakeScenarioContext(t))
+	})
+	t.Run("Exec", func(t *testing.T) {
+		initializeExec(newFakeScenarioContext(t))
+	})
+	t.Run("GitHub", func(t *testing.T) {
+		initializeGitHub(newFakeScenarioContext(t))
+	})
+	t.Run("Kiln", func(t *testing.T) {
+		initializeKiln(newFakeScenarioContext(t))
+	})
+	t.Run("TanzuNetwork", func(t *testing.T) {
+		initializeTanzuNetwork(newFakeScenarioContext(t))
+	})
+	t.Run("Tile", func(t *testing.T) {
+		initializeTile(newFakeScenarioContext(t))
+	})
+	t.Run("TileSourceCode", func(t *testing.T) {
+		initializeTileSourceCode(newFakeScenarioContext(t))
 	})
 
 	t.Run("ensure all initialize functions are tested", func(t *testing.T) {
 		exportedInitializerFunctionPattern := regexp.MustCompile(`(?m)^func (Initialize[^(\[]+).*godog\.ScenarioContext.*`)
 		privateInitializerFunctionPattern := regexp.MustCompile(`(?m)^func (initialize[^(\[]+).*scenarioContext.*`)
 
-		testInvocations := loadInvocationTestCalls(t)
+		testCalls := loadInvocationTestCalls(t)
+		testSortedAlphaNumerically(t, "the test initialize function calls", testCalls)
 		walkErr := fs.WalkDir(thisPackage, ".", func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
 				return err
@@ -78,13 +62,13 @@ func TestInitialize(t *testing.T) {
 
 			for _, exportedInitializerName := range exportedInitializerDefinitionFunctionNames {
 				t.Run(exportedInitializerName, func(t *testing.T) {
-					ensurePublicInitializerIsTested(t, exportedInitializerName, testInvocations)
+					ensurePublicInitializerIsTested(t, exportedInitializerName, testCalls)
 					ensurePublicInitializerHasPrivateImplementation(t, exportedInitializerName, privateInitializerDefinitionFunctionNames)
 				})
 			}
 
-			testSortedAlphaNumerically(t, "the exported functions", exportedInitializerDefinitionFunctionNames)
-			testSortedAlphaNumerically(t, "the private functions", privateInitializerDefinitionFunctionNames)
+			testSortedAlphaNumerically(t, "the exported initialize functions", exportedInitializerDefinitionFunctionNames)
+			testSortedAlphaNumerically(t, "the private initialize functions", privateInitializerDefinitionFunctionNames)
 
 			return nil
 		})
