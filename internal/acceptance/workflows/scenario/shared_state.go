@@ -127,6 +127,11 @@ func loadEnvironment(ctx context.Context) (context.Context, error) {
 
 type standardFileDescriptors [3]*bytes.Buffer
 
+const (
+	stdoutFD = 1
+	stderrFD = 2
+)
+
 func output(ctx context.Context, name string) (*bytes.Buffer, error) {
 	v, err := contextValue[standardFileDescriptors](ctx, standardFileDescriptorsKey, name)
 	if err != nil {
@@ -134,9 +139,9 @@ func output(ctx context.Context, name string) (*bytes.Buffer, error) {
 	}
 	switch name {
 	case "stdout":
-		return v[1], nil
+		return v[stdoutFD], nil
 	case "stderr":
-		return v[2], nil
+		return v[stderrFD], nil
 	default:
 		name, err = strconv.Unquote(name)
 		if err != nil {

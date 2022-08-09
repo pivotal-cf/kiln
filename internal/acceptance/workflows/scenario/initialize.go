@@ -130,3 +130,8 @@ func initializeTileSourceCode(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^the Kilnfile\.lock specifies version "([^"]*)" for release "([^"]*)"$`), theLockSpecifiesVersionForRelease)
 	ctx.Step(regexp.MustCompile(`^the Kilnfile\.lock specifies version "([^"]*)" for the stemcell$`), theLockStemcellVersionIs)
 }
+
+func InitializeRegex(ctx *godog.ScenarioContext) { initializeRegex(ctx) }
+func initializeRegex(ctx scenarioContext) {
+	ctx.Step(regexp.MustCompile(`^(stdout|stderr|"[^"]*") has regexp? matches: (.*)$`), hasRegexMatches)
+}

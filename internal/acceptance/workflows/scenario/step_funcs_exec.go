@@ -3,6 +3,7 @@ package scenario
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -12,6 +13,9 @@ func outputContainsSubstring(ctx context.Context, outputName, substring string) 
 		return err
 	}
 	outStr := strings.TrimSpace(out.String())
+	if s, err := strconv.Unquote(substring); err == nil {
+		substring = s
+	}
 	if !strings.Contains(outStr, substring) {
 		if len(outStr) == 0 {
 			return fmt.Errorf("expected substring %q not found: %s was empty", substring, outputName)

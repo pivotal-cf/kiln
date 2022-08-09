@@ -61,6 +61,7 @@ func setupAndRunFeatureTest(t *testing.T, initializers ...func(ctx *godog.Scenar
 			scenario.InitializeEnv(ctx)
 			scenario.InitializeKiln(ctx)
 			scenario.InitializeExec(ctx)
+			scenario.InitializeRegex(ctx)
 			scenario.InitializeTileSourceCode(ctx)
 			scenario.InitializeTile(ctx)
 
