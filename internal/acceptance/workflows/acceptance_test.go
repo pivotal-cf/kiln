@@ -74,6 +74,7 @@ func setupAndRunFeatureTest(t *testing.T, initializers ...func(ctx *godog.Scenar
 	suite := godog.TestSuite{
 		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
 			// default initializers
+			scenario.InitializeEnv(ctx)
 			scenario.InitializeExec(ctx)
 			scenario.InitializeTileSourceCode(ctx)
 			scenario.InitializeTile(ctx)

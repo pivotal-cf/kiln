@@ -14,6 +14,11 @@ import (
 // These are usable for a range of scenarios. They are organized by
 // what they operate on: tiles, tile source code...
 
+func InitializeEnv(ctx *godog.ScenarioContext) { initializeEnv(ctx) }
+func initializeEnv(ctx scenarioContext) {
+	ctx.Step(regexp.MustCompile(`^the environment variable "([^"]+)" is set$`), theEnvironmentVariableIsSet)
+}
+
 func InitializeExec(ctx *godog.ScenarioContext) { initializeExec(ctx) }
 
 func initializeExec(ctx scenarioContext) {
