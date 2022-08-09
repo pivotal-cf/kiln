@@ -2,10 +2,8 @@ package scenario
 
 import (
 	"context"
-	"fmt"
-	"os/exec"
-
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"os/exec"
 )
 
 func iUploadConfigureAndApplyTheTile(ctx context.Context) (context.Context, error) {
@@ -46,36 +44,24 @@ func iUploadConfigureAndApplyTheTile(ctx context.Context) (context.Context, erro
 	return ctx, nil
 }
 
-func theStemcellVersionInTheLockMatchesTheUsedForTheTile(ctx context.Context) (context.Context, error) {
+func iSetTheStemcellVersionInTheLockToMatchTheOneUsedForTheTile(ctx context.Context) (context.Context, error) {
 	lockPath, err := kilnfileLockPath(ctx)
 	if err != nil {
 		return ctx, err
 	}
 
-	var stemcellAssociations struct {
-		StemcellLibrary []struct {
-			Version string `yaml:"version"`
-		} `yaml:"stemcell_library"`
-	}
-	ctx, err = runAndParseStdoutAsYAML(ctx,
-		exec.Command("om", "--skip-ssl-validation",
-			"curl", "--path", "/api/v0/stemcell_associations",
-		),
-		&stemcellAssociations,
-	)
+	var lock cargo.KilnfileLock
+	err = loadFileAsYAML(lockPath, &lock)
 	if err != nil {
 		return ctx, err
 	}
-	if len(stemcellAssociations.StemcellLibrary) == 0 {
-		return ctx, fmt.Errorf("no stemcells found on ops manager")
-	}
-	var kl cargo.KilnfileLock
-	err = loadFileAsYAML(lockPath, &kl)
+
+	lock.Stemcell.Version, err = fetchAssociatedStemcellVersion(ctx, "hello")
 	if err != nil {
 		return ctx, err
 	}
-	kl.Stemcell.Version = stemcellAssociations.StemcellLibrary[0].Version
-	err = saveAsYAML(lockPath, kl)
+
+	err = saveAsYAML(lockPath, lock)
 	if err != nil {
 		return ctx, err
 	}

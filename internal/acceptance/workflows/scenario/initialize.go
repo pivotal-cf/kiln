@@ -64,7 +64,7 @@ func initializeCacheCompiledReleases(ctx scenarioContext) {
 		return loadEnvironment(ctx)
 	})
 	ctx.Step(regexp.MustCompile(`^I add a compiled s3 release-source "([^"]*)" to the Kilnfile$`), iAddACompiledSReleaseSourceToTheKilnfile)
-	ctx.Step(regexp.MustCompile(`^the stemcell version in the lock matches the used for the tile$`), theStemcellVersionInTheLockMatchesTheUsedForTheTile)
+	ctx.Step(regexp.MustCompile(`^I set the stemcell version in the lock to match the one used for the tile$`), iSetTheStemcellVersionInTheLockToMatchTheOneUsedForTheTile)
 	ctx.Step(regexp.MustCompile(`^I upload, configure, and apply the tile$`), iUploadConfigureAndApplyTheTile)
 }
 

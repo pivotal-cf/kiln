@@ -192,6 +192,7 @@ func runAndParseStdoutAsYAML(ctx context.Context, cmd *exec.Cmd, d interface{}) 
 	ctx = setLastCommandStatus(ctx, cmd.ProcessState)
 	if runErr != nil {
 		_, _ = io.Copy(os.Stdout, &stdout)
+		_, _ = io.Copy(os.Stdout, &stderr)
 		return ctx, runErr
 	}
 	err := yaml.Unmarshal(stdout.Bytes(), d)

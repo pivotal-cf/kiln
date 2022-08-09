@@ -83,6 +83,34 @@ func (env *opsManagerEnvironment) fetchNetworksAndAvailabilityZones(ctx context.
 	return ctx, err
 }
 
+func fetchAssociatedStemcellVersion(ctx context.Context, productID string) (string, error) {
+	var stemcellAssociations struct {
+		Products []struct {
+			ID                string `yaml:"identifier"`
+			DeployedStemcells []struct {
+				Version string `yaml:"version"`
+			} `yaml:"deployed_stemcells"`
+		} `yaml:"products"`
+	}
+	var err error
+	_, err = runAndParseStdoutAsYAML(ctx,
+		exec.Command("om", "curl", "--silent", "--path", "/api/v0/stemcell_associations"),
+		&stemcellAssociations,
+	)
+	if err != nil {
+		return "", err
+	}
+	for _, p := range stemcellAssociations.Products {
+		if p.ID != productID {
+			continue
+		}
+		for _, s := range p.DeployedStemcells {
+			return s.Version, nil
+		}
+	}
+	return "", fmt.Errorf("no stemcells found on ops manager")
+}
+
 func readPrivateKeyFromBOSHAllProxyURL(boshAllProxy string) (string, error) {
 	const failedToSetOMPrivateKey = "failed to set OM_PRIVATE_KEY from BOSH_ALL_PROXY: %w"
 	u, err := url.Parse(boshAllProxy)

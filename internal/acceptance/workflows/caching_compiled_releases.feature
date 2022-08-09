@@ -5,7 +5,8 @@ Feature: As a robot, I want to cache compiled releases
     And the environment variable "OM_USERNAME" is set
     And the environment variable "OM_PASSWORD" is set
     And the environment variable "OM_TARGET" is set
-    And the environment variable "OM_TARGET" is set
+    And the environment variable "OM_PRIVATE_KEY" is set
+    And the environment variable "BOSH_ALL_PROXY" is set
     And I invoke kiln
       | fetch                                     |
       | --variable=github_token="${GITHUB_TOKEN}" |
@@ -14,15 +15,11 @@ Feature: As a robot, I want to cache compiled releases
       | --version=0.1.2 |
     And I upload, configure, and apply the tile
     And I add a compiled s3 release-source "hello-tile-releases" to the Kilnfile
-    And I set the lock stemcell to the version used by Ops Manager to deploy the tile
+    And I set the stemcell version in the lock to match the one used for the tile
     When I invoke kiln
       | cache-compiled-releases                   |
       | --upload-target-id=hello-tile-releases    |
       | --name=hello                              |
-      | --om-username="${OM_USERNAME}"            |
-      | --om-password="${OM_PASSWORD}"            |
-      | --om-target="${OM_TARGET}"                |
-      | --om-private-key="${OM_TARGET}"           |
       | --variable=github_token="${GITHUB_TOKEN}" |
     And the repository has no fetched releases
     And I invoke kiln
