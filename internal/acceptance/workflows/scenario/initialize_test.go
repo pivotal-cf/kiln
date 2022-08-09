@@ -17,6 +17,9 @@ import (
 const testTilePath = "../hello-tile"
 
 func TestInitialize(t *testing.T) {
+	t.Run("AWS", func(t *testing.T) {
+		initializeAWS(newFakeScenarioContext(t))
+	})
 	t.Run("CacheCompiledReleases", func(t *testing.T) {
 		initializeCacheCompiledReleases(newFakeScenarioContext(t))
 	})
@@ -31,6 +34,9 @@ func TestInitialize(t *testing.T) {
 	})
 	t.Run("Kiln", func(t *testing.T) {
 		initializeKiln(newFakeScenarioContext(t))
+	})
+	t.Run("RegEx", func(t *testing.T) {
+		initializeRegex(newFakeScenarioContext(t))
 	})
 	t.Run("TanzuNetwork", func(t *testing.T) {
 		initializeTanzuNetwork(newFakeScenarioContext(t))

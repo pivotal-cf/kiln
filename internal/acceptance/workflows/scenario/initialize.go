@@ -18,6 +18,13 @@ type scenarioContext interface {
 // It is here because we want to have a bit of testing for the initialize functions.
 var _ scenarioContext = (*godog.ScenarioContext)(nil)
 
+// InitializeAWS used default AWS environment variables so AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set.
+// The credentials provided in those environment variables should be able to put, list, and delete objects on the bucket.
+func InitializeAWS(ctx *godog.ScenarioContext) { initializeAWS(ctx) }
+func initializeAWS(ctx scenarioContext) {
+	ctx.Step(regexp.MustCompile(`^I remove all the objects in the bucket "([^"]+)"$`), iRemoveAllTheObjectsInBucket)
+}
+
 // InitializeCacheCompiledReleases requires environment configuration to interact with a Tanzu Ops Manager.
 //
 // # Environment
@@ -97,9 +104,9 @@ func initializeKiln(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^I try to invoke kiln$`), iTryToInvokeKiln)
 }
 
-func InitializeAWS(ctx *godog.ScenarioContext) { initializeAWS(ctx) }
-func initializeAWS(ctx scenarioContext) {
-	ctx.Step(regexp.MustCompile(`^I remove all the objects in the bucket "([^"]+)"$`), iRemoveAllTheObjectsInBucket)
+func InitializeRegex(ctx *godog.ScenarioContext) { initializeRegex(ctx) }
+func initializeRegex(ctx scenarioContext) {
+	ctx.Step(regexp.MustCompile(`^(stdout|stderr|"[^"]*") has regexp? matches: (.*)$`), hasRegexMatches)
 }
 
 func InitializeTanzuNetwork(ctx *godog.ScenarioContext) { initializeTanzuNetwork(ctx) }
@@ -136,9 +143,4 @@ func initializeTileSourceCode(ctx scenarioContext) {
 
 	ctx.Step(regexp.MustCompile(`^the Kilnfile\.lock specifies version "([^"]*)" for release "([^"]*)"$`), theLockSpecifiesVersionForRelease)
 	ctx.Step(regexp.MustCompile(`^the Kilnfile\.lock specifies version "([^"]*)" for the stemcell$`), theLockStemcellVersionIs)
-}
-
-func InitializeRegex(ctx *godog.ScenarioContext) { initializeRegex(ctx) }
-func initializeRegex(ctx scenarioContext) {
-	ctx.Step(regexp.MustCompile(`^(stdout|stderr|"[^"]*") has regexp? matches: (.*)$`), hasRegexMatches)
 }
