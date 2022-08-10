@@ -30,6 +30,16 @@ These are written in Go and use [godog](https://github.com/cucumber/godog) (a Cu
 go test -v --tags acceptance --timeout=1h github.com/pivotal-cf/kiln/internal/acceptance/workflows
 ```
 
+#### ⚠️ The `generating_release_notes` Requires Access to A Private Repository ⚠️
+
+If you'd like to switch to using a public repository, you can run the following and the test should pass so long as
+the public repo is kept up to date with the private repo (no promises here). Please do not commit the following change.
+
+```bash
+rm -rf internal/acceptance/workflows/hello-tile
+git submodule add --force git@github.com:crhntr/hello-tile internal/acceptance/workflows/hello-tile
+```
+
 #### ⚠️ The `caching_compiled_releases` Test Does Not Run in CI ⚠️
 This test requires SSH access to an Ops Manager.
 Deploying an Ops Manager for an open source repo is not secure.
