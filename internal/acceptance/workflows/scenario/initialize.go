@@ -2,6 +2,7 @@ package scenario
 
 import (
 	"context"
+	"os/exec"
 	"regexp"
 
 	"github.com/cucumber/godog"
@@ -21,6 +22,7 @@ var _ scenarioContext = (*godog.ScenarioContext)(nil)
 // InitializeAWS used default AWS environment variables so AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set.
 // The credentials provided in those environment variables should be able to put, list, and delete objects on the bucket.
 func InitializeAWS(ctx *godog.ScenarioContext) { initializeAWS(ctx) }
+
 func initializeAWS(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^I remove all the objects in the bucket "([^"]+)"$`), iRemoveAllTheObjectsInBucket)
 }
@@ -128,7 +130,8 @@ func initializeTile(ctx scenarioContext) {
 func InitializeTileSourceCode(ctx *godog.ScenarioContext) { initializeTileSourceCode(ctx) }
 func initializeTileSourceCode(ctx scenarioContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
-		return setTileRepoPath(ctx, "hello-tile"), nil
+		err := exec.CommandContext(ctx, "git", "submodule", "update", "--init", "--recursive").Run()
+		return setTileRepoPath(ctx, "hello-tile"), err
 	})
 	ctx.After(resetTileRepository)
 
