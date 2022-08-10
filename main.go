@@ -84,7 +84,6 @@ func main() {
 		ReleaseUploaderFinder: ruFinder,
 	}
 	commandSet["sync-with-local"] = commands.NewSyncWithLocal(fs, localReleaseDirectory, rpFinder, outLogger)
-	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
 
 	commandSet["update-stemcell"] = commands.UpdateStemcell{
 		Logger:                     outLogger,
