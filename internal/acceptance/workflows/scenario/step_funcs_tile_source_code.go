@@ -18,8 +18,26 @@ import (
 
 // resetTileRepository is to be run after the Scenario if the tile repo has been changed
 func resetTileRepository(ctx context.Context, _ *godog.Scenario, _ error) (context.Context, error) {
-	cmd := exec.CommandContext(ctx, "git", "submodule", "update", "--init ", "--recursive")
-	return runAndLogOnError(ctx, cmd, false)
+	tileRepo, err := tileRepoPath(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	clean := exec.CommandContext(ctx, "git", "clean", "-ffd")
+	clean.Dir = tileRepo
+	_, err = runAndLogOnError(ctx, clean, false)
+	if err != nil {
+		return ctx, err
+	}
+
+	reset := exec.CommandContext(ctx, "git", "reset", "--hard", "HEAD")
+	reset.Dir = tileRepo
+	_, err = runAndLogOnError(ctx, reset, false)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, nil
 }
 
 func theLockSpecifiesVersionForRelease(ctx context.Context, releaseVersion, releaseName string) error {

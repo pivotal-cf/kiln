@@ -46,11 +46,6 @@ jobs:
           go test --run '(using_kiln|baking_a_tile|generating_release_notes|updating_)' \
             -v --timeout 24h --tags acceptance \
             github.com/pivotal-cf/kiln/internal/acceptance/workflows
-          
-          # This is needed because acceptance tests do not leave the repo in a clean state
-          # TODO: make then clean up after themselves
-          git reset --hard HEAD
-          git submodule update --recursive --init
 
       - name: Login to Docker Hub
         uses: docker/login-action@v1
