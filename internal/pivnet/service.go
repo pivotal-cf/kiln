@@ -3,9 +3,22 @@ package pivnet
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"net/url"
+	"path"
 	"strings"
+)
+
+type stringError string
+
+func (str stringError) Error() string { return string(str) }
+
+const (
+	ErrDecodingURLRequest                 = stringError("error while decoding the url")
+	ErrCouldNotCreateRequest              = stringError("could not create valid http request")
+	ErrProductSlugMustNotBeEmpty          = stringError("product slug must not be empty")
+	ErrStemcellMajorVersionMustNotBeEmpty = stringError("stemcell major version must not be empty")
 )
 
 // Service wraps requests to network.pivotal.io.
@@ -14,6 +27,7 @@ type Service struct {
 	// It can be set to another host, for example the
 	// network.pivotal.io's staging host.
 	Target string
+
 	// UAAAPIToken should be set with the token for the "UAA API Token Workflow"
 	// See: https://network.pivotal.io/docs/api#authentication
 	UAAAPIToken string
@@ -21,6 +35,10 @@ type Service struct {
 	// Client allows you to inject an alternate client
 	// (for testing per se). When not set, http.DefaultClient is used.
 	Client *http.Client
+}
+
+func (service *Service) SetToken(token string) {
+	service.UAAAPIToken = token
 }
 
 // Do sets required headers for requests to network.pivotal.io.
@@ -79,7 +97,7 @@ func (service Service) Releases(productSlug string) ([]Release, error) {
 		_ = res.Body.Close()
 	}()
 
-	responseBody, err := ioutil.ReadAll(res.Body)
+	responseBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("reading the network.pivotal.io response body failed: %s", err)
 	}
@@ -89,4 +107,59 @@ func (service Service) Releases(productSlug string) ([]Release, error) {
 	}
 
 	return body.Releases, nil
+}
+
+func (service *Service) StemcellVersion(slug string, majorStemcellVersion string) (string, error) {
+	if slug == "" {
+		return "", ErrProductSlugMustNotBeEmpty
+	}
+
+	if majorStemcellVersion == "" {
+		return "", ErrStemcellMajorVersionMustNotBeEmpty
+	}
+
+	locator := url.URL{
+		Scheme:   "https",
+		Host:     "network.pivotal.io",
+		Path:     path.Join("/api/v2/products", slug, "releases/latest"),
+		RawQuery: fmt.Sprintf("major=%s", majorStemcellVersion),
+	}
+
+	getURL, err := url.PathUnescape(locator.String())
+	if err != nil {
+		return "", ErrDecodingURLRequest
+	}
+
+	req, err := http.NewRequest(http.MethodGet, getURL, nil)
+	if err != nil {
+		return "", ErrCouldNotCreateRequest
+	}
+
+	response, err := service.Do(req)
+	if err != nil {
+		return "", err
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		if response.StatusCode == http.StatusUnauthorized {
+			return "", fmt.Errorf("could not make pivnet request: endpoint requires authorization (set --pivotal-network-token with UAA token)")
+		}
+		return "", fmt.Errorf("request was not successful, response had status %s (%d)", response.Status, response.StatusCode)
+	}
+
+	responesBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var body struct {
+		Version string `json:"version"`
+	}
+
+	if err := json.Unmarshal(responesBody, &body); err != nil {
+		return "", err
+	}
+
+	version := body.Version
+
+	return version, nil
 }

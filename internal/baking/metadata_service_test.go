@@ -1,7 +1,6 @@
 package baking_test
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/pivotal-cf/kiln/internal/baking"
@@ -18,7 +17,7 @@ var _ = Describe("MetadataService", func() {
 		)
 
 		BeforeEach(func() {
-			file, err := ioutil.TempFile("", "metadata")
+			file, err := os.CreateTemp("", "metadata")
 			Expect(err).NotTo(HaveOccurred())
 
 			path = file.Name()

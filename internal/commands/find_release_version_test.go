@@ -1,8 +1,8 @@
 package commands_test
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -34,7 +34,7 @@ var _ = Describe("Find the release version", func() {
 			logger = log.New(&writer, "", 0)
 			fakeReleasesSource = new(fakes.MultiReleaseSource)
 
-			tmpDir, err := ioutil.TempDir("", "fetch-test")
+			tmpDir, err := os.MkdirTemp("", "fetch-test")
 			Expect(err).NotTo(HaveOccurred())
 			lockContents := `
 ---
@@ -58,10 +58,10 @@ releases:
   source: bosh.io`
 
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
-			err = ioutil.WriteFile(someKilnfilePath, []byte(kilnContents), 0o644)
+			err = os.WriteFile(someKilnfilePath, []byte(kilnContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 			someKilnfileLockPath := filepath.Join(tmpDir, "Kilnfile.lock")
-			err = ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
+			err = os.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

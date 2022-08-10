@@ -3,7 +3,7 @@ package builder
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -95,7 +95,7 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(p string, v
 		}
 		defer buf.Reset()
 
-		data, err := ioutil.ReadFile(filePath)
+		data, err := os.ReadFile(filePath)
 		if err != nil {
 			return err
 		}
@@ -189,7 +189,7 @@ func (r MetadataPartsDirectoryReader) orderWithOrderFromFile(path string, parts 
 	}
 	defer closeAndIgnoreError(f)
 
-	data, err := ioutil.ReadAll(f)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return []Part{}, err
 	}

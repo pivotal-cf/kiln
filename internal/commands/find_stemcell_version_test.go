@@ -1,9 +1,9 @@
 package commands_test
 
 import (
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -11,8 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
+	"github.com/pivotal-cf/kiln/internal/pivnet"
 )
 
 var _ = Describe("Find the stemcell version", func() {
@@ -28,7 +28,7 @@ var _ = Describe("Find the stemcell version", func() {
 		someKilnfileLockPath string
 		kilnfileContents     string
 		lockContents         string
-		pivnet               component.Pivnet
+		pivnetService        *pivnet.Service
 		serverMock           *fakes.RoundTripper
 		simpleRequest        *http.Request
 		requestErr           error
@@ -38,12 +38,12 @@ var _ = Describe("Find the stemcell version", func() {
 		BeforeEach(func() {
 			logger = log.New(&writer, "", 0)
 
-			pivnet = component.Pivnet{}
+			pivnetService = new(pivnet.Service)
 			simpleRequest, _ = http.NewRequest(http.MethodGet, "/", nil)
 
 			serverMock = &fakes.RoundTripper{}
 			serverMock.Results.Res = &http.Response{}
-			pivnet.Client = &http.Client{
+			pivnetService.Client = &http.Client{
 				Transport: serverMock,
 			}
 
@@ -74,22 +74,22 @@ stemcell_criteria:
 		})
 
 		JustBeforeEach(func() {
-			_, requestErr = pivnet.Do(simpleRequest)
+			_, requestErr = pivnetService.Do(simpleRequest)
 			Expect(requestErr).NotTo(HaveOccurred())
 
-			tmpDir, err := ioutil.TempDir("", "fetch-stemcell-test")
+			tmpDir, err := os.MkdirTemp("", "fetch-stemcell-test")
 			Expect(err).NotTo(HaveOccurred())
 
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
 
-			err = ioutil.WriteFile(someKilnfilePath, []byte(kilnfileContents), 0o644)
+			err = os.WriteFile(someKilnfilePath, []byte(kilnfileContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			someKilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
-			err = ioutil.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
+			err = os.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
-			findStemcellVersion = commands.NewFindStemcellVersion(logger, &pivnet)
+			findStemcellVersion = commands.NewFindStemcellVersion(logger, pivnetService)
 
 			fetchExecuteArgs = []string{
 				"--kilnfile", someKilnfilePath,

@@ -2,7 +2,6 @@ package component_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -30,7 +29,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 
 	BeforeEach(func() {
 		var err error
-		releasesDir, err = ioutil.TempDir("", "releases")
+		releasesDir, err = os.MkdirTemp("", "releases")
 		noConfirm = true
 		Expect(err).NotTo(HaveOccurred())
 
@@ -52,9 +51,9 @@ var _ = Describe("LocalReleaseDirectory", func() {
 	Describe("GetLocalReleases", func() {
 		Context("when releases exist in the releases dir", func() {
 			BeforeEach(func() {
-				fixtureContent, err := ioutil.ReadFile(filepath.Join("fixtures", "some-release.tgz"))
+				fixtureContent, err := os.ReadFile(filepath.Join("fixtures", "some-release.tgz"))
 				Expect(err).NotTo(HaveOccurred())
-				err = ioutil.WriteFile(releaseFile, fixtureContent, 0o755)
+				err = os.WriteFile(releaseFile, fixtureContent, 0o755)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -98,11 +97,11 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		var extraFilePath, zFilePath string
 		BeforeEach(func() {
 			extraFilePath = filepath.Join(releasesDir, "extra-release-0.0-os-0-0.0.0.tgz")
-			err := ioutil.WriteFile(extraFilePath, []byte("abc"), 0o644)
+			err := os.WriteFile(extraFilePath, []byte("abc"), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			zFilePath = filepath.Join(releasesDir, "z-release-0.0-os-0-0.0.0.tgz")
-			err = ioutil.WriteFile(zFilePath, []byte("xyz"), 0o644)
+			err = os.WriteFile(zFilePath, []byte("xyz"), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

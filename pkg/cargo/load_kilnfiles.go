@@ -3,7 +3,6 @@ package cargo
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"github.com/go-git/go-billy/v5"
 	"gopkg.in/yaml.v2"
@@ -39,7 +38,7 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("unable to open file %q: %w", kilnfilePath, err)
 	}
 	defer closeAndIgnoreError(kf)
-	kilnfileYAML, err := ioutil.ReadAll(kf)
+	kilnfileYAML, err := io.ReadAll(kf)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("unable to read file %q: %w", kilnfilePath, err)
 	}

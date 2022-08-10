@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,11 +15,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/pivotal-cf/kiln/internal/gh"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/jhanda"
-	"golang.org/x/oauth2"
-
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/release"
 )
@@ -52,7 +51,7 @@ type FetchNotesData func(ctx context.Context, repo *git.Repository, client *gith
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	return ReleaseNotes{
 		fetchNotesData: release.FetchNotesData,
-		readFile:       ioutil.ReadFile,
+		readFile:       os.ReadFile,
 		Writer:         os.Stdout,
 		stat:           os.Stat,
 	}, nil
@@ -85,9 +84,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	var client *github.Client
 	if r.Options.GithubToken != "" {
-		tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: r.Options.GithubToken})
-		tokenClient := oauth2.NewClient(ctx, tokenSource)
-		client = github.NewClient(tokenClient)
+		client = gh.Client(ctx, r.Options.GithubToken)
 	}
 
 	_ = release.FetchNotesData // fetchNotesData is FetchNotesData

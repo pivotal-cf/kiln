@@ -3,7 +3,6 @@ package baking_test
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -26,7 +25,7 @@ var _ = Describe("Checksummer", func() {
 		checksummer = NewChecksummer(logger)
 
 		var err error
-		tmpdir, err = ioutil.TempDir("", "")
+		tmpdir, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		file, err := os.Create(filepath.Join(tmpdir, "fixture"))
@@ -67,7 +66,7 @@ var _ = Describe("Checksummer", func() {
 		err := checksummer.Sum(path)
 		Expect(err).NotTo(HaveOccurred())
 
-		contents, err := ioutil.ReadFile(fmt.Sprintf("%s.sha256", path))
+		contents, err := os.ReadFile(fmt.Sprintf("%s.sha256", path))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("2a89f69f18679fef3a1f833d1c5e561cc24ea02ce85b3fb7fae21dd971c9c9cd"))
 	})

@@ -3,7 +3,7 @@ package builder
 import (
 	"errors"
 	"io/fs"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -62,7 +62,7 @@ func getExcludePatterns(p string) ([]gitignore.Pattern, error) {
 	var ignored []gitignore.Pattern
 
 	parsePatterns := func(pth string) error {
-		buf, err := ioutil.ReadFile(pth)
+		buf, err := os.ReadFile(pth)
 		if err != nil {
 			return err
 		}

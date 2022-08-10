@@ -1,7 +1,6 @@
 package baking_test
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/pivotal-cf/kiln/internal/baking"
@@ -20,7 +19,7 @@ var _ = Describe("IconService", func() {
 		)
 
 		BeforeEach(func() {
-			file, err := ioutil.TempFile("", "icon")
+			file, err := os.CreateTemp("", "icon")
 			Expect(err).NotTo(HaveOccurred())
 
 			path = file.Name()

@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
@@ -70,7 +69,7 @@ func (r StemcellManifestReader) Read(stemcellTarball string) (Part, error) {
 	}
 
 	var stemcellManifest StemcellManifest
-	stemcellContent, err := ioutil.ReadAll(tr)
+	stemcellContent, err := io.ReadAll(tr)
 	if err != nil {
 		return Part{}, err
 	}

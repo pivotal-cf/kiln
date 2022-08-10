@@ -4,11 +4,12 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
+	"testing"
 	"time"
 
 	"github.com/onsi/gomega/gbytes"
@@ -18,6 +19,30 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
 )
+
+var (
+	pathToMain   string
+	buildVersion string
+)
+
+func TestAcceptance(t *testing.T) {
+	SetDefaultEventuallyTimeout(time.Minute)
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "acceptance")
+}
+
+var _ = BeforeSuite(func() {
+	buildVersion = fmt.Sprintf("v0.0.0-dev.%d", time.Now().Unix())
+
+	var err error
+	pathToMain, err = gexec.Build("github.com/pivotal-cf/kiln",
+		"--ldflags", fmt.Sprintf("-X main.version=%s", buildVersion))
+	Expect(err).NotTo(HaveOccurred())
+})
+
+var _ = AfterSuite(func() {
+	gexec.CleanupBuildArtifacts()
+})
 
 var _ = Describe("bake command", func() {
 	var (
@@ -56,10 +81,10 @@ var _ = Describe("bake command", func() {
 	BeforeEach(func() {
 		var err error
 
-		tmpDir, err = ioutil.TempDir("", "kiln-main-test")
+		tmpDir, err = os.MkdirTemp("", "kiln-main-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		tileDir, err := ioutil.TempDir(tmpDir, "")
+		tileDir, err := os.MkdirTemp(tmpDir, "")
 		Expect(err).NotTo(HaveOccurred())
 
 		outputFile = filepath.Join(tileDir, "cool-product-1.2.3-build.4.pivotal")
@@ -111,66 +136,34 @@ var _ = Describe("bake command", func() {
 		archiveInfo, err := archive.Stat()
 		Expect(err).NotTo(HaveOccurred())
 
-		zr, err := zip.NewReader(archive, archiveInfo.Size())
+		bakedTile, err := zip.NewReader(archive, archiveInfo.Size())
 		Expect(err).NotTo(HaveOccurred())
 
-		var file io.ReadCloser
-		for _, f := range zr.File {
-			if f.Name == "metadata/metadata.yml" {
-				file, err = f.Open()
-				Expect(err).NotTo(HaveOccurred())
-				break
-			}
-		}
+		file, err := bakedTile.Open("metadata/metadata.yml")
+		Expect(err).NotTo(HaveOccurred())
 
-		Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-		metadataContents, err := ioutil.ReadAll(file)
+		metadataContents, err := io.ReadAll(file)
 		Expect(err).NotTo(HaveOccurred())
 
 		renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
 		Expect(metadataContents).To(HelpfullyMatchYAML(renderedYAML))
 
-		// Bosh Variables
-		Expect(string(metadataContents)).To(ContainSubstring("name: variable-1"))
-		Expect(string(metadataContents)).To(ContainSubstring("name: variable-2"))
-		Expect(string(metadataContents)).To(ContainSubstring("type: certificate"))
-		Expect(string(metadataContents)).To(ContainSubstring("some_option: Option value"))
+		archivedMigration1, err := bakedTile.Open("migrations/v1/201603041539_custom_buildpacks.js")
+		Expect(err).NotTo(HaveOccurred())
+		archivedMigration2, err := bakedTile.Open("migrations/v1/201603071158_auth_enterprise_sso.js")
+		Expect(err).NotTo(HaveOccurred())
+		archivedMigration3, err := bakedTile.Open("migrations/v1/some_migration.js")
+		Expect(err).NotTo(HaveOccurred())
 
-		// Template Variables
-		Expect(string(metadataContents)).To(ContainSubstring("custom_variable: some-variable-value"))
-
-		var (
-			archivedMigration1 io.ReadCloser
-			archivedMigration2 io.ReadCloser
-			archivedMigration3 io.ReadCloser
-		)
-
-		for _, f := range zr.File {
-			if f.Name == "migrations/v1/201603041539_custom_buildpacks.js" {
-				archivedMigration1, err = f.Open()
-				Expect(err).NotTo(HaveOccurred())
-			}
-
-			if f.Name == "migrations/v1/201603071158_auth_enterprise_sso.js" {
-				archivedMigration2, err = f.Open()
-				Expect(err).NotTo(HaveOccurred())
-			}
-
-			if f.Name == "migrations/v1/some_migration.js" {
-				archivedMigration3, err = f.Open()
-				Expect(err).NotTo(HaveOccurred())
-			}
-		}
-
-		contents, err := ioutil.ReadAll(archivedMigration1)
+		contents, err := io.ReadAll(archivedMigration1)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("custom-buildpack-migration\n"))
 
-		contents, err = ioutil.ReadAll(archivedMigration2)
+		contents, err = io.ReadAll(archivedMigration2)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("auth-enterprise-sso-migration\n"))
 
-		contents, err = ioutil.ReadAll(archivedMigration3)
+		contents, err = io.ReadAll(archivedMigration3)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("some_migration\n"))
 
@@ -215,17 +208,11 @@ var _ = Describe("bake command", func() {
 			zr, err := zip.NewReader(archive, archiveInfo.Size())
 			Expect(err).NotTo(HaveOccurred())
 
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/metadata.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
+			file, err := zr.Open("metadata/metadata.yml")
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := ioutil.ReadAll(file)
+			metadataContents, err := io.ReadAll(file)
 			Expect(err).NotTo(HaveOccurred())
 
 			renderedYAML := fmt.Sprintf(expectedMetadataWithMultipleStemcells, cfSHA1)
@@ -263,17 +250,11 @@ var _ = Describe("bake command", func() {
 			zr, err := zip.NewReader(archive, archiveInfo.Size())
 			Expect(err).NotTo(HaveOccurred())
 
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/metadata.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
+			file, err := zr.Open("metadata/metadata.yml")
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := ioutil.ReadAll(file)
+			metadataContents, err := io.ReadAll(file)
 			Expect(err).NotTo(HaveOccurred())
 
 			renderedYAML := fmt.Sprintf(expectedMetadataWithStemcellTarball, cfSHA1)
@@ -300,7 +281,7 @@ var _ = Describe("bake command", func() {
 			Expect(session.Err).To(gbytes.Say(fmt.Sprintf("Calculating SHA256 checksum of %s...", outputFile)))
 			Expect(session.Err).To(gbytes.Say("SHA256 checksum: [0-9a-f]{64}"))
 
-			contents, err := ioutil.ReadFile(fmt.Sprintf("%s.sha256", outputFile))
+			contents, err := os.ReadFile(fmt.Sprintf("%s.sha256", outputFile))
 			Expect(err).NotTo(HaveOccurred())
 
 			re := regexp.MustCompile(`SHA256 checksum: ([0-9a-f]{64})`)
@@ -346,72 +327,41 @@ var _ = Describe("bake command", func() {
 
 			Eventually(session).Should(gexec.Exit(0))
 
-			archive, err := os.Open(outputFile)
+			bakedFilePtr, err := os.Open(outputFile)
 			Expect(err).NotTo(HaveOccurred())
 
-			archiveInfo, err := archive.Stat()
+			archiveInfo, err := bakedFilePtr.Stat()
 			Expect(err).NotTo(HaveOccurred())
 
-			zr, err := zip.NewReader(archive, archiveInfo.Size())
+			bakedTile, err := zip.NewReader(bakedFilePtr, archiveInfo.Size())
 			Expect(err).NotTo(HaveOccurred())
 
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/metadata.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
+			file, err := bakedTile.Open("metadata/metadata.yml")
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := ioutil.ReadAll(file)
+			metadataContents, err := io.ReadAll(file)
 			Expect(err).NotTo(HaveOccurred())
 
 			renderedYAML := fmt.Sprintf(expectedMetadata, diegoSHA1, cfSHA1)
 			Expect(metadataContents).To(HelpfullyMatchYAML(renderedYAML))
 
-			// Bosh Variables
-			Expect(string(metadataContents)).To(ContainSubstring("name: variable-1"))
-			Expect(string(metadataContents)).To(ContainSubstring("name: variable-2"))
-			Expect(string(metadataContents)).To(ContainSubstring("type: certificate"))
-			Expect(string(metadataContents)).To(ContainSubstring("some_option: Option value"))
+			archivedMigration1, err := bakedTile.Open("migrations/v1/201603041539_custom_buildpacks.js")
+			Expect(err).NotTo(HaveOccurred())
+			archivedMigration2, err := bakedTile.Open("migrations/v1/201603071158_auth_enterprise_sso.js")
+			Expect(err).NotTo(HaveOccurred())
+			archivedMigration3, err := bakedTile.Open("migrations/v1/some_migration.js")
+			Expect(err).NotTo(HaveOccurred())
 
-			// Template Variables
-			Expect(string(metadataContents)).To(ContainSubstring("custom_variable: some-variable-value"))
-
-			var (
-				archivedMigration1 io.ReadCloser
-				archivedMigration2 io.ReadCloser
-				archivedMigration3 io.ReadCloser
-			)
-
-			for _, f := range zr.File {
-				if f.Name == "migrations/v1/201603041539_custom_buildpacks.js" {
-					archivedMigration1, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-				}
-
-				if f.Name == "migrations/v1/201603071158_auth_enterprise_sso.js" {
-					archivedMigration2, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-				}
-
-				if f.Name == "migrations/v1/some_migration.js" {
-					archivedMigration3, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-				}
-			}
-
-			contents, err := ioutil.ReadAll(archivedMigration1)
+			contents, err := io.ReadAll(archivedMigration1)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("custom-buildpack-migration\n"))
 
-			contents, err = ioutil.ReadAll(archivedMigration2)
+			contents, err = io.ReadAll(archivedMigration2)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("auth-enterprise-sso-migration\n"))
 
-			contents, err = ioutil.ReadAll(archivedMigration3)
+			contents, err = io.ReadAll(archivedMigration3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("some_migration\n"))
 
@@ -526,13 +476,10 @@ var _ = Describe("bake command", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			for _, f := range zr.File {
-				if f.Name == "releases/cf-release-235.0.0-3215.4.0.tgz" {
-					Expect(f.UncompressedSize64).To(Equal(uint64(0)))
+				if path.Dir(f.Name) != "releases" {
+					continue
 				}
-
-				if f.Name == "releases/diego-release-0.1467.1-3215.4.0.tgz" {
-					Expect(f.UncompressedSize64).To(Equal(uint64(0)))
-				}
+				Expect(f.UncompressedSize64).To(Equal(uint64(0)))
 			}
 		})
 	})
@@ -582,10 +529,10 @@ var _ = Describe("bake command", func() {
 				someFileToEmbed := filepath.Join(tmpDir, "some-file-to-embed")
 				otherFileToEmbed := filepath.Join(tmpDir, "other-file-to-embed")
 
-				err := ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0o600)
+				err := os.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0o600)
 				Expect(err).NotTo(HaveOccurred())
 
-				err = ioutil.WriteFile(otherFileToEmbed, []byte("content-of-other-file"), 0o755)
+				err = os.WriteFile(otherFileToEmbed, []byte("content-of-other-file"), 0o755)
 				Expect(err).NotTo(HaveOccurred())
 
 				commandWithArgs = append(commandWithArgs,
@@ -619,7 +566,7 @@ var _ = Describe("bake command", func() {
 						r, err := f.Open()
 						Expect(err).NotTo(HaveOccurred())
 
-						content, err := ioutil.ReadAll(r)
+						content, err := io.ReadAll(r)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(content).To(Equal([]byte("content-of-some-file")))
@@ -630,7 +577,7 @@ var _ = Describe("bake command", func() {
 						r, err := f.Open()
 						Expect(err).NotTo(HaveOccurred())
 
-						content, err := ioutil.ReadAll(r)
+						content, err := io.ReadAll(r)
 						Expect(err).NotTo(HaveOccurred())
 
 						mode := f.FileHeader.Mode()
@@ -656,7 +603,7 @@ var _ = Describe("bake command", func() {
 				err := os.MkdirAll(nestedDir, 0o700)
 				Expect(err).NotTo(HaveOccurred())
 
-				err = ioutil.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0o600)
+				err = os.WriteFile(someFileToEmbed, []byte("content-of-some-file"), 0o600)
 				Expect(err).NotTo(HaveOccurred())
 
 				commandWithArgs = append(commandWithArgs,
@@ -687,7 +634,7 @@ var _ = Describe("bake command", func() {
 						r, err := f.Open()
 						Expect(err).NotTo(HaveOccurred())
 
-						content, err := ioutil.ReadAll(r)
+						content, err := io.ReadAll(r)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(content).To(Equal([]byte("content-of-some-file")))
@@ -737,7 +684,7 @@ var _ = Describe("bake command", func() {
 			}
 
 			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := ioutil.ReadAll(file)
+			metadataContents, err := io.ReadAll(file)
 			Expect(err).NotTo(HaveOccurred())
 
 			renderedYAML := fmt.Sprintf(expectedMetadataWithStemcellCriteria, diegoSHA1, cfSHA1)
@@ -833,3 +780,137 @@ var _ = Describe("bake command", func() {
 		})
 	})
 })
+
+var expectedMetadata = `---
+description: this is the description
+some_forms:
+- description: some-other-form-description
+  label: some-other-form-label
+  name: some-other-config
+- description: some-form-description
+  label: some-form-label
+  name: some-config
+- description: some-form-description
+  label: some-form-label
+  name: some-more-config
+icon_img: aS1hbS1zb21lLWltYWdl
+install_time_verifiers:
+- name: Verifiers::SsoUrlVerifier
+  properties:
+    url: .properties.uaa.saml.sso_url
+some_job_types:
+- label: Some Instance Group
+  name: some-instance-group
+  templates:
+  - name: some-job
+    release: some-release
+- label: Some Other Instance Group
+  name: some-other-instance-group
+  templates:
+  - name: some-other-job
+    release: some-other-release
+label: Pivotal Elastic Runtime
+metadata_version: "1.7"
+minimum_version_for_upgrade: 1.6.9-build.0
+custom_variable: some-variable-value
+literal_variable: |
+  { "some": "value" }
+boolean_variable: true
+some_bosh_variables:
+- name: variable-1
+  type: certificate
+  options:
+    some_option: Option value
+- name: variable-2
+  type: password
+name: cool-product-name
+post_deploy_errands:
+- name: smoke-tests
+product_version: 1.2.3
+some_property_blueprints:
+- name: some_templated_property_blueprint
+  type: boolean
+  configurable: false
+  default: true
+provides_product_versions:
+- name: cf
+  version: 1.7.0.0
+rank: 90
+some_releases:
+- file: diego-release-0.1467.1-3215.4.0.tgz
+  name: diego
+  version: 0.1467.1
+  sha1: %s
+- file: cf-release-235.0.0-3215.4.0.tgz
+  name: cf
+  version: "235"
+  sha1: %s
+some_stemcell_criteria:
+  os: ubuntu-trusty
+  version: "3215.4"
+some_runtime_configs:
+- name: some-runtime-config
+  runtime_config: |
+    releases:
+    - name: some-addon
+      version: some-addon-version
+serial: false
+selected_value: "235"
+`
+
+var expectedMetadataWithStemcellCriteria = `---
+icon_img: aS1hbS1zb21lLWltYWdl
+label: Pivotal Elastic Runtime
+metadata_version: "1.7"
+name: cool-product-name
+product_version: 1.2.3
+some_releases:
+- file: diego-release-0.1467.1-3215.4.0.tgz
+  name: diego
+  version: 0.1467.1
+  sha1: %s
+- file: cf-release-235.0.0-3215.4.0.tgz
+  name: cf
+  version: "235"
+  sha1: %s
+stemcell_criteria:
+  os: ubuntu-xenial
+  version: 250.21
+  requires_cpi: false
+  enable_patch_security_updates: true
+`
+
+var expectedMetadataWithMultipleStemcells = `---
+icon_img: aS1hbS1zb21lLWltYWdl
+label: Pivotal Elastic Runtime
+metadata_version: "1.7"
+name: cool-product-name
+product_version: 1.2.3
+some_releases:
+- file: cf-release-235.0.0-3215.4.0.tgz
+  name: cf
+  version: "235"
+  sha1: %s
+stemcell_criteria:
+  os: ubuntu-trusty
+  version: "3215.4"
+additional_stemcells_criteria:
+- os: windows
+  version: "2019.4"
+`
+
+var expectedMetadataWithStemcellTarball = `---
+icon_img: aS1hbS1zb21lLWltYWdl
+label: Pivotal Elastic Runtime
+metadata_version: "1.7"
+name: cool-product-name
+product_version: 1.2.3
+some_releases:
+- file: cf-release-235.0.0-3215.4.0.tgz
+  name: cf
+  version: "235"
+  sha1: %s
+stemcell_criteria:
+  os: ubuntu-trusty
+  version: "3215.4"
+`

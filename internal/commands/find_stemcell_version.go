@@ -13,7 +13,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/internal/pivnet"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -25,7 +25,7 @@ const (
 
 type FindStemcellVersion struct {
 	outLogger     *log.Logger
-	pivnetService *component.Pivnet
+	pivnetService *pivnet.Service
 
 	Options struct {
 		flags.Standard
@@ -40,7 +40,7 @@ type stemcellVersionOutput struct {
 	RemotePath string `json:"remote_path"`
 }
 
-func NewFindStemcellVersion(outLogger *log.Logger, pivnetService *component.Pivnet) FindStemcellVersion {
+func NewFindStemcellVersion(outLogger *log.Logger, pivnetService *pivnet.Service) FindStemcellVersion {
 	return FindStemcellVersion{
 		outLogger:     outLogger,
 		pivnetService: pivnetService,

@@ -2,7 +2,6 @@ package baking_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -25,22 +24,22 @@ var _ = Describe("ReleasesService", func() {
 
 		BeforeEach(func() {
 			var err error
-			tempDir, err = ioutil.TempDir("", "")
+			tempDir, err = os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
-			file, err := ioutil.TempFile("", "")
+			file, err := os.CreateTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(os.Rename(file.Name(), filepath.Join(tempDir, "some-release.tar.gz"))).To(Succeed())
 			Expect(file.Close()).To(Succeed())
 
-			file, err = ioutil.TempFile("", "")
+			file, err = os.CreateTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(os.Rename(file.Name(), filepath.Join(tempDir, "other-release.tgz"))).To(Succeed())
 			Expect(file.Close()).To(Succeed())
 
-			file, err = ioutil.TempFile("", "not-release")
+			file, err = os.CreateTemp("", "not-release")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(os.Rename(file.Name(), filepath.Join(tempDir, "not-release.banana"))).To(Succeed())
@@ -113,25 +112,25 @@ var _ = Describe("ReleasesService", func() {
 
 		BeforeEach(func() {
 			var err error
-			tempDir, err = ioutil.TempDir("", "")
+			tempDir, err = os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			nestedDir = filepath.Join(tempDir, "nested")
 			Expect(os.Mkdir(nestedDir, 0o700)).To(Succeed())
 
-			file, err := ioutil.TempFile("", "")
+			file, err := os.CreateTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(os.Rename(file.Name(), filepath.Join(nestedDir, "some-release.tar.gz"))).To(Succeed())
 			Expect(file.Close()).To(Succeed())
 
-			file, err = ioutil.TempFile("", "")
+			file, err = os.CreateTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(os.Rename(file.Name(), filepath.Join(nestedDir, "other-release.tgz"))).To(Succeed())
 			Expect(file.Close()).To(Succeed())
 
-			file, err = ioutil.TempFile("", "not-release")
+			file, err = os.CreateTemp("", "not-release")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(os.Rename(file.Name(), filepath.Join(nestedDir, "not-release.banana"))).To(Succeed())

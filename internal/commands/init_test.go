@@ -2,7 +2,6 @@ package commands_test
 
 import (
 	"io"
-	"io/ioutil"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -50,7 +49,7 @@ func fsReadYAML(fs billy.Basic, path string, data interface{}) error {
 	}
 	defer closeAndIgnoreError(f)
 
-	buf, err := ioutil.ReadAll(f)
+	buf, err := io.ReadAll(f)
 	if err != nil {
 		return err
 	}

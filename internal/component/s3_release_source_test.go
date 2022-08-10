@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -101,7 +100,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		BeforeEach(func() {
 			var err error
 
-			releaseDir, err = ioutil.TempDir("", "kiln-releaseSource-test")
+			releaseDir, err = os.MkdirTemp("", "kiln-releaseSource-test")
 			Expect(err).NotTo(HaveOccurred())
 
 			releaseID = component.Spec{Name: "uaa", Version: "1.2.3"}
@@ -134,7 +133,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(1))
 
 			releasePath := filepath.Join(releaseDir, expectedLocalFilename)
-			releaseContents, err := ioutil.ReadFile(releasePath)
+			releaseContents, err := os.ReadFile(releasePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(releaseContents).To(Equal([]byte("some-bucket/" + remoteRelease.RemotePath)))
 

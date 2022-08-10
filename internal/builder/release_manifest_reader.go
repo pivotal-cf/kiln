@@ -6,7 +6,6 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"path/filepath"
 	"strings"
 
@@ -25,6 +24,7 @@ type ReleaseManifest struct {
 	StemcellVersion string `yaml:"-"`
 }
 
+// inputReleaseManifest is a subset of release.MF
 type inputReleaseManifest struct {
 	Name             string            `yaml:"name"`
 	Version          string            `yaml:"version"`
@@ -54,6 +54,9 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 	}
 	defer closeAndIgnoreError(file)
 
+	// TODO: use component.ReadReleaseManifest
+	// we could not do it yet due to a circular package reference where we import builder in the local release source
+
 	gr, err := gzip.NewReader(file)
 	if err != nil {
 		return Part{}, err
@@ -79,7 +82,7 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 	}
 
 	var inputReleaseManifest inputReleaseManifest
-	inputReleaseManifestContents, err := ioutil.ReadAll(tr)
+	inputReleaseManifestContents, err := io.ReadAll(tr)
 	if err != nil {
 		return Part{}, err // NOTE: cannot replicate this error scenario in a test
 	}

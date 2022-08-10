@@ -3,7 +3,6 @@ package cargo
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"gopkg.in/yaml.v2"
 
@@ -11,7 +10,7 @@ import (
 )
 
 func InterpolateAndParseKilnfile(in io.Reader, templateVariables map[string]interface{}) (Kilnfile, error) {
-	kilnfileYAML, err := ioutil.ReadAll(in)
+	kilnfileYAML, err := io.ReadAll(in)
 	if err != nil {
 		return Kilnfile{}, fmt.Errorf("unable to read Kilnfile: %w", err)
 	}

@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -228,7 +227,7 @@ func (b *Bake) loadFlags(args []string, stat flags.StatFunc, readFile func(strin
 }
 
 func (b Bake) Execute(args []string) error {
-	err := b.loadFlags(args, os.Stat, ioutil.ReadFile)
+	err := b.loadFlags(args, os.Stat, os.ReadFile)
 	if err != nil {
 		return err
 	}

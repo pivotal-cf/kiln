@@ -1,7 +1,6 @@
 package cargo_test
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -64,7 +63,7 @@ var _ = Describe("Generator", func() {
 			actualManifest, err := yaml.Marshal(manifest)
 			Expect(err).NotTo(HaveOccurred())
 
-			expectedManifest, err := ioutil.ReadFile("fixtures/manifest.yml")
+			expectedManifest, err := os.ReadFile("fixtures/manifest.yml")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(actualManifest).To(HelpfullyMatchYAML(string(expectedManifest)))

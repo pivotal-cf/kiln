@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 )
 
@@ -35,7 +34,7 @@ func (c Checksummer) Sum(path string) error {
 
 	hexsum := fmt.Sprintf("%x", hash.Sum(nil))
 
-	err = ioutil.WriteFile(fmt.Sprintf("%s.sha256", path), []byte(hexsum), 0o644)
+	err = os.WriteFile(fmt.Sprintf("%s.sha256", path), []byte(hexsum), 0o644)
 	if err != nil {
 		return err
 	}

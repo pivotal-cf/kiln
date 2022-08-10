@@ -65,6 +65,10 @@ var _ = Describe("UpdateStemcell", func() {
 					OS:      "old-os",
 					Version: "^1",
 				},
+				Releases: []cargo.ComponentSpec{
+					{Name: release1Name, GitHubRepository: "https://example.com/lemon"},
+					{Name: release2Name, GitHubRepository: "https://example.com/orange"},
+				},
 			}
 			kilnfileLock = cargo.KilnfileLock{
 				Releases: []cargo.ComponentLock{
@@ -200,12 +204,14 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(req1).To(Equal(component.Spec{
 				Name: release1Name, Version: release1Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
+				GitHubRepository: "https://example.com/lemon",
 			}))
 
 			req2 := releaseSource.GetMatchedReleaseArgsForCall(1)
 			Expect(req2).To(Equal(component.Spec{
 				Name: release2Name, Version: release2Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
+				GitHubRepository: "https://example.com/orange",
 			}))
 		})
 

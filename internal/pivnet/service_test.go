@@ -1,4 +1,4 @@
-package component_test
+package pivnet_test
 
 import (
 	"errors"
@@ -7,32 +7,32 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
+	"github.com/pivotal-cf/kiln/internal/pivnet"
 )
 
 var _ = Describe("PivNet (network.pivotal.io)", func() {
 	When("making an http request to pivotal network", func() {
 		var (
-			pivnet        component.Pivnet
+			pivnetService pivnet.Service
 			serverMock    *fakes.RoundTripper
 			simpleRequest *http.Request
 			requestErr    error
 		)
 
 		BeforeEach(func() {
-			pivnet = component.Pivnet{}
+			pivnetService = pivnet.Service{}
 			simpleRequest, _ = http.NewRequest(http.MethodGet, "/", nil)
 
 			serverMock = &fakes.RoundTripper{}
 			serverMock.Results.Res = &http.Response{}
-			pivnet.Client = &http.Client{
+			pivnetService.Client = &http.Client{
 				Transport: serverMock,
 			}
 		})
 
 		JustBeforeEach(func() {
-			_, requestErr = pivnet.Do(simpleRequest)
+			_, requestErr = pivnetService.Do(simpleRequest)
 			Expect(requestErr).NotTo(HaveOccurred())
 		})
 
@@ -48,7 +48,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 
 		When("a UAA token is set", func() {
 			BeforeEach(func() {
-				pivnet.UAAAPIToken = "some-token"
+				pivnetService.UAAAPIToken = "some-token"
 			})
 
 			It("makes a request with correct auth headers", func() {
@@ -59,8 +59,8 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 
 	When("fetching versions", func() {
 		var (
-			pivnet     component.Pivnet
-			serverMock *fakes.RoundTripper
+			pivnetService pivnet.Service
+			serverMock    *fakes.RoundTripper
 
 			stemcellSlug string
 
@@ -72,18 +72,18 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 		BeforeEach(func() {
 			serverMock = &fakes.RoundTripper{}
 			serverMock.Results.Res = &http.Response{}
-			pivnet.Client = &http.Client{Transport: serverMock}
+			pivnetService.Client = &http.Client{Transport: serverMock}
 			stemcellSlug = ""
 			majorStemcellVersion = "456"
 		})
 
 		JustBeforeEach(func() {
-			stemcellVersion, gotErr = pivnet.StemcellVersion(stemcellSlug, majorStemcellVersion)
+			stemcellVersion, gotErr = pivnetService.StemcellVersion(stemcellSlug, majorStemcellVersion)
 		})
 
 		When("fetching with an empty product Slug", func() {
 			It("returns an error", func() {
-				Expect(gotErr).To(Equal(component.ErrProductSlugMustNotBeEmpty))
+				Expect(gotErr).To(Equal(pivnet.ErrProductSlugMustNotBeEmpty))
 				Expect(stemcellVersion).To(Equal(""))
 			})
 		})
@@ -94,7 +94,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 				majorStemcellVersion = ""
 			})
 			It("returns an error", func() {
-				Expect(gotErr).To(Equal(component.ErrStemcellMajorVersionMustNotBeEmpty))
+				Expect(gotErr).To(Equal(pivnet.ErrStemcellMajorVersionMustNotBeEmpty))
 				Expect(stemcellVersion).To(Equal(""))
 			})
 		})

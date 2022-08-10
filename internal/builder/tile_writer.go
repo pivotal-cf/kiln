@@ -3,7 +3,6 @@ package builder
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -129,7 +128,7 @@ func (w TileWriter) addStubReleases(generatedMetadataContents []byte, outputFile
 	}
 	for _, release := range metadata.Releases {
 		path := filepath.Join("releases", release.File)
-		contents := ioutil.NopCloser(strings.NewReader(""))
+		contents := io.NopCloser(strings.NewReader(""))
 		err = w.addToZipper(path, contents, outputFile)
 		if err != nil {
 			return err

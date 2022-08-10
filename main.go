@@ -11,6 +11,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/internal/pivnet"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -56,7 +57,7 @@ func main() {
 
 	releaseManifestReader := builder.NewReleaseManifestReader(fs)
 	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
-	pivnetService := component.CreateNewPivnetService()
+	pivnetService := new(pivnet.Service)
 	localReleaseDirectory := component.NewLocalReleaseDirectory(outLogger, releasesService)
 	mrsProvider := commands.MultiReleaseSourceProvider(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
 		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)

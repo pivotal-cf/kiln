@@ -9,26 +9,24 @@ jobs:
     name: test
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+          submodules: 'recursive'
+          token: ${{ secrets.RELEEN_GITHUB_TOKEN }}
 
-      - 
-        name: golangci-lint
+      - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
 
-      -
-        name: Set up Go
-        uses: actions/setup-go@v2
+      - name: Set up Go
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.19
 
-      - 
-        name: Build
+      - name: Build
         run: go build -v ./...
 
-      - 
-        name: Test
-        run: go test -v ./...
+      - name: Unit Tests
+        run: |
+          go test ./...

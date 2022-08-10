@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/ast"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -71,7 +70,7 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to open Kilnfile.lock: %w", err)
 	}
 	defer closeAndIgnoreError(lockFP)
-	lockBuf, err := ioutil.ReadAll(lockFP)
+	lockBuf, err := io.ReadAll(lockFP)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}

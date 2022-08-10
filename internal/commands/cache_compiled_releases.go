@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -399,7 +398,7 @@ func (cmd CacheCompiledReleases) downloadAndComputeSHA(cache component.ReleaseSo
 		return remote.SHA1, nil
 	}
 
-	tmpdir, err := ioutil.TempDir("/tmp", "kiln")
+	tmpdir, err := os.MkdirTemp("/tmp", "kiln")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary directory: %w", err)
 	}

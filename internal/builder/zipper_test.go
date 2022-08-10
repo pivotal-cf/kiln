@@ -4,7 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,7 +25,7 @@ var _ = Describe("Zipper", func() {
 
 	BeforeEach(func() {
 		var err error
-		tmpDir, err = ioutil.TempDir("", "")
+		tmpDir, err = os.MkdirTemp("", "")
 		Expect(err).ToNot(HaveOccurred())
 
 		pathToTile = filepath.Join(tmpDir, "tile.zip")
@@ -108,7 +108,7 @@ var _ = Describe("Zipper", func() {
 			file, err := reader.File[0].Open()
 			Expect(err).NotTo(HaveOccurred())
 
-			contents, err := ioutil.ReadAll(file)
+			contents, err := io.ReadAll(file)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(contents).To(Equal([]byte("file contents")))
@@ -161,7 +161,7 @@ var _ = Describe("Zipper", func() {
 			file, err := reader.File[0].Open()
 			Expect(err).NotTo(HaveOccurred())
 
-			contents, err := ioutil.ReadAll(file)
+			contents, err := io.ReadAll(file)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(contents).To(Equal([]byte("file contents")))

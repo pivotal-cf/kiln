@@ -1,0 +1,11 @@
+product-name: hello
+network-properties:
+  network:
+    name: "((subnet))"
+  other_availability_zones:
+    - name: "((az))"
+  singleton_availability_zone:
+    name: "((az))"
+resource-config:
+  hello-server:
+    instances: 0

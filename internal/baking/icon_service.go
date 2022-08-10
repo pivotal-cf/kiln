@@ -2,7 +2,7 @@ package baking
 
 import (
 	"encoding/base64"
-	"io/ioutil"
+	"os"
 )
 
 type IconService struct {
@@ -22,7 +22,7 @@ func (is IconService) Encode(path string) (string, error) {
 
 	is.logger.Println("Encoding icon...")
 
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}

@@ -30,6 +30,14 @@ participate more equitably:
    to indicate your interest in working on it to reduce the likelihood that
    more than one person starts to work on it independently.
 
+## Testing your changes
+
+1. Where applicable, write unit tests for your change
+2. Manually test your changes with the appropriate services (s3, Artifactory, Ops Manager, GitHub repo, bosh.io...)
+3. [Run (and maybe add additional) the acceptance tests locally](internal/acceptance/README.md).
+   For Non-VMware employees, let us know and we may run the acceptance tests for you.
+   *Note, the caching-compiled-releases step does not run in CI because it needs access to a deployed Ops Manager.*
+
 ## Contributing your changes
 
 1. When you have a set of changes to contribute back to docs, 
