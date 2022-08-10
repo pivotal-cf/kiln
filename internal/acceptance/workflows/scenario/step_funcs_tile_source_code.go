@@ -85,17 +85,17 @@ func iSetAVersionConstraintForRelease(ctx context.Context, versionConstraint, re
 func iHaveARepositoryCheckedOutAtRevision(ctx context.Context, filePath, revision string) (context.Context, error) {
 	repo, err := git.PlainOpen(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("opening the repository failed: %w", err)
+		return ctx, fmt.Errorf("opening the repository failed: %w", err)
 	}
 
 	wt, err := repo.Worktree()
 	if err != nil {
-		return nil, fmt.Errorf("loading the worktree failed: %w", err)
+		return ctx, fmt.Errorf("loading the worktree failed: %w", err)
 	}
 
 	revisionHash, err := repo.ResolveRevision(plumbing.Revision(revision))
 	if err != nil {
-		return nil, fmt.Errorf("resolving the given revision %q failed: %w", revision, err)
+		return ctx, fmt.Errorf("resolving the given revision %q failed: %w", revision, err)
 	}
 
 	err = wt.Checkout(&git.CheckoutOptions{
@@ -103,7 +103,7 @@ func iHaveARepositoryCheckedOutAtRevision(ctx context.Context, filePath, revisio
 		Force: true,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("checking out the revision %q at %q failed: %w", revision, revisionHash, err)
+		return ctx, fmt.Errorf("checking out the revision %q at %q failed: %w", revision, revisionHash, err)
 	}
 
 	ctx = setTileVersion(ctx, strings.TrimPrefix(revision, "v"))
