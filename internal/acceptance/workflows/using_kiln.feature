@@ -33,7 +33,6 @@ Feature: As a developer, I want the Kiln CLI to be usable
       | fetch                   |
       | find-release-version    |
       | find-stemcell-version   |
-      | publish                 |
       | release-notes           |
       | sync-with-local         |
       | update-release          |
