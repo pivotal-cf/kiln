@@ -214,3 +214,9 @@ func theLockStemcellVersionIs(ctx context.Context, version string) error {
 	}
 	return nil
 }
+
+func iCleanUpReleaseNotes(ctx context.Context) (context.Context, error) {
+	checkout := exec.CommandContext(ctx, "git", "checkout", "scenario/fixtures/release_notes.md.erb")
+	_, err := runAndLogOnError(ctx, checkout, false)
+	return ctx, err
+}
