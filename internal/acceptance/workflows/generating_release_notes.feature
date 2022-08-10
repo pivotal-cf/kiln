@@ -4,6 +4,11 @@ Feature: As a robot, I want to generate release notes
     And GitHub repository "crhntr/hello-release" has release with tag "v0.1.5"
     And the environment variable "GITHUB_TOKEN" is set
 
+    # it does not contain 0.1.4 release header only 0.1.3
+    And "./scenario/fixtures/release_notes.md.erb" has regex matches: id='(?P<version>[\d\.]+)'
+      | version |
+      | 0.1.3   |
+
     When I invoke kiln
       | release-notes                                           |
       | --release-date=2022-07-27                               |
