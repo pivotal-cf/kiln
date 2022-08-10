@@ -8,7 +8,8 @@ permissions:
   contents: write
 
 jobs:
-  goreleaser:
+  release_kiln:
+    name: "Release Kiln"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
