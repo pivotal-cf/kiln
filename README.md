@@ -70,8 +70,6 @@ Commands:
   find-release-version     prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints
   find-stemcell-version    prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile
   help                     prints this usage information
-  pre-process              preprocess yaml files
-  publish                  publish tile on Pivnet
   release-notes            generates release notes from bosh-release release notes
   sync-with-local          update the Kilnfile.lock based on local releases
   update-release           bumps a release to a new version
