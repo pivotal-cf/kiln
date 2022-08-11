@@ -336,7 +336,7 @@ func (fake *ReleaseStorage) UploadRelease(arg1 cargo.ComponentSpec, arg2 io.Read
 	}{arg1, arg2})
 	stub := fake.UploadReleaseStub
 	fakeReturns := fake.uploadReleaseReturns
-	fake.recordInvocation("UploadRelease", []interface{}{arg1, arg2})
+	fake.recordInvocation("PublishRelease", []interface{}{arg1, arg2})
 	fake.uploadReleaseMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)

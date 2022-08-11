@@ -29,13 +29,12 @@ Feature: As a developer, I want the Kiln CLI to be usable
     Examples:
       | command                 |
       | bake                    |
-      | cache-compiled-releases |
-      | fetch                   |
+      | validate                |
+      | cache-releases          |
+      | fetch-releases          |
       | find-release-version    |
       | find-stemcell-version   |
-      | release-notes           |
-      | sync-with-local         |
+      | create-release-notes    |
       | update-release          |
       | update-stemcell         |
-      | upload-release          |
-      | validate                |
+      | publish-release         |
