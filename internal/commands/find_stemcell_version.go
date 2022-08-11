@@ -67,11 +67,7 @@ func (cmd *FindStemcellVersion) Execute(args []string) error {
 		return fmt.Errorf(ErrStemcellOSInfoMustBeValid)
 	}
 
-	if kilnfile.Stemcell.Version == "" {
-		return fmt.Errorf(ErrStemcellMajorVersionMustBeValid)
-	}
-
-	majorVersion, err := ExtractMajorVersion(kilnfile.Stemcell.Version)
+	majorVersion, err := extractMajorVersion(kilnfile.Stemcell.Version)
 	if err != nil {
 		return err
 	}
@@ -94,28 +90,6 @@ func (cmd *FindStemcellVersion) Execute(args []string) error {
 	cmd.outLogger.Println(string(stemcellVersionJson))
 
 	return nil
-}
-
-func ExtractMajorVersion(version string) (string, error) {
-	_, err := semver.NewConstraint(version)
-	if err != nil {
-		return "", fmt.Errorf("invalid stemcell constraint in kilnfile: %w", err)
-	}
-
-	semVer := strings.Split(version, ".")
-
-	reg, err := regexp.Compile(`[^0-9]+`)
-	if err != nil {
-		return "", err
-	}
-
-	majorVersion := reg.ReplaceAllString(semVer[0], "")
-
-	if majorVersion == "" {
-		return "", fmt.Errorf(ErrStemcellMajorVersionMustBeValid)
-	}
-
-	return majorVersion, nil
 }
 
 func (cmd *FindStemcellVersion) setup(args []string) (cargo.Kilnfile, error) {
@@ -143,4 +117,30 @@ func (cmd *FindStemcellVersion) Usage() jhanda.Usage {
 		ShortDescription: "prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile",
 		Flags:            cmd.Options,
 	}
+}
+
+func extractMajorVersion(version string) (string, error) {
+	if version == "" {
+		return "", fmt.Errorf(ErrStemcellMajorVersionMustBeValid)
+	}
+
+	_, err := semver.NewConstraint(version)
+	if err != nil {
+		return "", fmt.Errorf("invalid stemcell constraint in kilnfile: %w", err)
+	}
+
+	semVer := strings.Split(version, ".")
+
+	reg, err := regexp.Compile(`[^0-9]+`)
+	if err != nil {
+		return "", err
+	}
+
+	majorVersion := reg.ReplaceAllString(semVer[0], "")
+
+	if majorVersion == "" {
+		return "", fmt.Errorf(ErrStemcellMajorVersionMustBeValid)
+	}
+
+	return majorVersion, nil
 }
