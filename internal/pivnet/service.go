@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+const (
+	ProductionHost = "network.pivotal.io"
+)
+
 type stringError string
 
 func (str stringError) Error() string { return string(str) }
@@ -43,9 +47,9 @@ func (service *Service) SetToken(token string) {
 
 // Do sets required headers for requests to network.pivotal.io.
 // If service.Client is nil, it uses http.DefaultClient.
-func (service Service) Do(req *http.Request) (*http.Response, error) {
+func (service *Service) Do(req *http.Request) (*http.Response, error) {
 	if service.Target == "" {
-		service.Target = "network.pivotal.io"
+		service.Target = ProductionHost
 	}
 	if service.Client == nil {
 		service.Client = http.DefaultClient
@@ -81,7 +85,7 @@ type Release struct {
 	ID      int    `json:"id"`
 }
 
-func (service Service) Releases(productSlug string) ([]Release, error) {
+func (service *Service) Releases(productSlug string) ([]Release, error) {
 	req, _ := http.NewRequest(http.MethodGet, "/api/v2/products/"+productSlug+"/releases", nil)
 
 	var body struct {
@@ -120,7 +124,6 @@ func (service *Service) StemcellVersion(slug string, majorStemcellVersion string
 
 	locator := url.URL{
 		Scheme:   "https",
-		Host:     "network.pivotal.io",
 		Path:     path.Join("/api/v2/products", slug, "releases/latest"),
 		RawQuery: fmt.Sprintf("major=%s", majorStemcellVersion),
 	}
