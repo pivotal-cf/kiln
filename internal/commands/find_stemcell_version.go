@@ -20,7 +20,6 @@ import (
 const (
 	ErrStemcellOSInfoMustBeValid       = "stemcell os information is missing or invalid"
 	ErrStemcellMajorVersionMustBeValid = "stemcell major Version is missing or invalid"
-	TanzuNetRemotePath                 = "network.pivotal.io"
 )
 
 type FindStemcellVersion struct {
@@ -81,7 +80,7 @@ func (cmd *FindStemcellVersion) Execute(args []string) error {
 	stemcellVersionJson, err := json.Marshal(stemcellVersionOutput{
 		Version:    stemcellVersion,
 		Source:     "Tanzunet",
-		RemotePath: TanzuNetRemotePath,
+		RemotePath: pivnet.ProductionHost,
 	})
 	if err != nil {
 		return err
