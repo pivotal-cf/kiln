@@ -20,9 +20,9 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-var _ = Describe("Fetch", func() {
+var _ = Describe("FetchReleases", func() {
 	var (
-		fetch                       commands.Fetch
+		fetchReleasesCommand        *commands.FetchReleases
 		logger                      *log.Logger
 		tmpDir                      string
 		someKilnfilePath            string
@@ -53,7 +53,7 @@ var _ = Describe("Fetch", func() {
 			logger = log.New(GinkgoWriter, "", 0)
 
 			var err error
-			tmpDir, err = os.MkdirTemp("", "fetch-test")
+			tmpDir, err = os.MkdirTemp("", "fetchReleasesCommand-test")
 			Expect(err).NotTo(HaveOccurred())
 
 			someReleasesDirectory, err = os.MkdirTemp(tmpDir, "")
@@ -117,9 +117,9 @@ stemcell_criteria:
 
 			err := os.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
-			fetch = commands.NewFetch(logger, multiReleaseSourceProvider, fakeLocalReleaseDirectory)
+			fetchReleasesCommand = commands.NewFetchReleases(logger, multiReleaseSourceProvider, fakeLocalReleaseDirectory)
 
-			fetchExecuteErr = fetch.Execute(fetchExecuteArgs)
+			fetchExecuteErr = fetchReleasesCommand.Execute(fetchExecuteArgs)
 		})
 
 		When("a local compiled release exists", func() {
@@ -584,7 +584,7 @@ release_sources:
 				Context("kilnfile is missing", func() {
 					It("returns an error", func() {
 						badKilnfilePath := filepath.Join(tmpDir, "non-existent-Kilnfile")
-						err := fetch.Execute([]string{
+						err := fetchReleasesCommand.Execute([]string{
 							"--releases-directory", someReleasesDirectory,
 							"--kilnfile", badKilnfilePath,
 						})
@@ -593,7 +593,7 @@ release_sources:
 				})
 				Context("# of download threads is not a number", func() {
 					It("returns an error", func() {
-						err := fetch.Execute([]string{
+						err := fetchReleasesCommand.Execute([]string{
 							"--releases-directory", someReleasesDirectory,
 							"--kilnfile", someKilnfilePath,
 							"--download-threads", "not-a-number",
@@ -607,7 +607,7 @@ release_sources:
 						fakeLocalReleaseDirectory.GetLocalReleasesReturns(nil, errors.New("some-error"))
 					})
 					It("returns an error", func() {
-						err := fetch.Execute([]string{
+						err := fetchReleasesCommand.Execute([]string{
 							"--releases-directory", someReleasesDirectory,
 							"--kilnfile", someKilnfilePath,
 						})
@@ -621,10 +621,10 @@ release_sources:
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			Expect(fetch.Usage()).To(Equal(jhanda.Usage{
+			Expect(fetchReleasesCommand.Usage()).To(Equal(jhanda.Usage{
 				Description:      "Fetches releases listed in Kilnfile.lock from S3 and downloads it locally",
 				ShortDescription: "fetches releases",
-				Flags:            fetch.Options,
+				Flags:            fetchReleasesCommand.Options,
 			}))
 		})
 	})

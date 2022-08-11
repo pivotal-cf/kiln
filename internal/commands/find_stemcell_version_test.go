@@ -17,7 +17,7 @@ import (
 
 var _ = Describe("Find the stemcell version", func() {
 	var (
-		findStemcellVersion commands.FindStemcellVersion
+		findStemcellVersion *commands.FindStemcellVersion
 		logger              *log.Logger
 
 		writer strings.Builder

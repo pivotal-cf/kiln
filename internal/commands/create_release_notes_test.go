@@ -23,7 +23,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/release"
 )
 
-var _ jhanda.Command = ReleaseNotes{}
+var _ jhanda.Command = (*ReleaseNotes)(nil)
 
 func TestReleaseNotes_Usage(t *testing.T) {
 	please := Ω.NewWithT(t)

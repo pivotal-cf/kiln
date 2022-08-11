@@ -29,14 +29,14 @@ type releaseVersionOutput struct {
 	SHA        string `json:"sha"`
 }
 
-func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider) FindReleaseVersion {
-	return FindReleaseVersion{
+func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider) *FindReleaseVersion {
+	return &FindReleaseVersion{
 		outLogger:   outLogger,
 		mrsProvider: multiReleaseSourceProvider,
 	}
 }
 
-func (cmd FindReleaseVersion) Execute(args []string) error {
+func (cmd *FindReleaseVersion) Execute(args []string) error {
 	kilnfile, kilnfileLock, err := cmd.setup(args)
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, cargo.Kilnf
 	return kilnfile, kilnfileLock, nil
 }
 
-func (cmd FindReleaseVersion) Usage() jhanda.Usage {
+func (cmd *FindReleaseVersion) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints.",
 		ShortDescription: "prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints",
