@@ -21,11 +21,11 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-var _ jhanda.Command = (*commands.CacheCompiledReleases)(nil)
+var _ jhanda.Command = (*commands.CacheReleases)(nil)
 
 func TestNewCacheCompiledReleases(t *testing.T) {
 	please := Ω.NewWithT(t)
-	cmd := commands.NewCacheCompiledReleases()
+	cmd := commands.NewCacheReleases()
 	please.Expect(cmd).NotTo(Ω.BeNil())
 	please.Expect(cmd.Logger).NotTo(Ω.BeNil())
 	please.Expect(cmd.FS).NotTo(Ω.BeNil())
@@ -77,7 +77,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	var output bytes.Buffer
 	logger := log.New(&output, "", 0)
 
-	cmd := commands.CacheCompiledReleases{
+	cmd := commands.CacheReleases{
 		FS:     fs,
 		Logger: logger,
 		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
@@ -148,7 +148,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 	var output bytes.Buffer
 	logger := log.New(&output, "", 0)
 
-	cmd := commands.CacheCompiledReleases{
+	cmd := commands.CacheReleases{
 		FS:     fs,
 		Logger: logger,
 		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
@@ -184,11 +184,11 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 }
 
 // this test covers
-// - an export, download, upload, and lock of a non-cached release
-// - an update the kilnfile with a non-locked release cached in the database
-//   (the release is cached on s3 but not set in the lock file)
-// - ignoring a locked and cached release
-//   (the release is cached on the s3 bucket and the lock already has that value in it)
+//   - an export, download, upload, and lock of a non-cached release
+//   - an update the kilnfile with a non-locked release cached in the database
+//     (the release is cached on s3 but not set in the lock file)
+//   - ignoring a locked and cached release
+//     (the release is cached on the s3 bucket and the lock already has that value in it)
 func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_already_compiled_and_another_is_already_locked(t *testing.T) {
 	please := Ω.NewWithT(t)
 
@@ -293,7 +293,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	var output bytes.Buffer
 	logger := log.New(&output, "", 0)
 
-	cmd := commands.CacheCompiledReleases{
+	cmd := commands.CacheReleases{
 		FS:     fs,
 		Logger: logger,
 		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
@@ -413,7 +413,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	var output bytes.Buffer
 	logger := log.New(&output, "", 0)
 
-	cmd := commands.CacheCompiledReleases{
+	cmd := commands.CacheReleases{
 		FS:     fs,
 		Logger: logger,
 		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
@@ -548,7 +548,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 	var output bytes.Buffer
 	logger := log.New(&output, "", 0)
 
-	cmd := commands.CacheCompiledReleases{
+	cmd := commands.CacheReleases{
 		FS:     fs,
 		Logger: logger,
 		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
@@ -667,7 +667,7 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 
 	bosh := new(boshdirFakes.FakeDirector)
 
-	cmd := commands.CacheCompiledReleases{
+	cmd := commands.CacheReleases{
 		FS: fs,
 		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
 			return releaseCache, nil

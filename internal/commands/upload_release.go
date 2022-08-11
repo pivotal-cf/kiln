@@ -14,7 +14,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type UploadRelease struct {
+type PublishRelease struct {
 	FS                    billy.Filesystem
 	ReleaseUploaderFinder ReleaseUploaderFinder
 	Logger                *log.Logger
@@ -30,7 +30,7 @@ type UploadRelease struct {
 //counterfeiter:generate -o ./fakes/release_uploader_finder.go --fake-name ReleaseUploaderFinder . ReleaseUploaderFinder
 type ReleaseUploaderFinder func(cargo.Kilnfile, string) (component.ReleaseUploader, error)
 
-func (command UploadRelease) Execute(args []string) error {
+func (command *PublishRelease) Execute(args []string) error {
 	_, err := flags.LoadFlagsWithDefaults(&command.Options, args, command.FS.Stat)
 	if err != nil {
 		return err
@@ -95,7 +95,7 @@ func (command UploadRelease) Execute(args []string) error {
 	return nil
 }
 
-func (command UploadRelease) Usage() jhanda.Usage {
+func (command *PublishRelease) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Uploads a BOSH Release to an S3 release source for use in kiln fetch",
 		ShortDescription: "uploads a BOSH release to an s3 release_source",

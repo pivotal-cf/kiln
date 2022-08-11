@@ -11,7 +11,7 @@ Feature: As a robot, I want to cache compiled releases
     And the environment variable "AWS_SECRET_ACCESS_KEY" is set
     And I remove all the objects in the bucket "hello-tile-releases"
     And I invoke kiln
-      | fetch                                     |
+      | fetch-releases                            |
       | --variable=github_token="${GITHUB_TOKEN}" |
     And I invoke kiln
       | bake            |
@@ -20,13 +20,13 @@ Feature: As a robot, I want to cache compiled releases
     And I add a compiled s3 release-source "hello-tile-releases" to the Kilnfile
     And I set the stemcell version in the lock to match the one used for the tile
     When I invoke kiln
-      | cache-compiled-releases                   |
+      | cache-releases                            |
       | --upload-target-id=hello-tile-releases    |
       | --name=hello                              |
       | --variable=github_token="${GITHUB_TOKEN}" |
     And the repository has no fetched releases
     And I invoke kiln
-      | fetch                                     |
+      | fetch-releases                            |
       | --variable=github_token="${GITHUB_TOKEN}" |
     And I invoke kiln
       | bake            |

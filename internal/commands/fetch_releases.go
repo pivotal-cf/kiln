@@ -12,7 +12,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type Fetch struct {
+type FetchReleases struct {
 	logger *log.Logger
 
 	multiReleaseSourceProvider MultiReleaseSourceProvider
@@ -32,8 +32,8 @@ type Fetch struct {
 //counterfeiter:generate -o ./fakes/multi_release_source_provider.go --fake-name MultiReleaseSourceProvider . MultiReleaseSourceProvider
 type MultiReleaseSourceProvider func(cargo.Kilnfile, bool) component.MultiReleaseSource
 
-func NewFetch(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider, localReleaseDirectory LocalReleaseDirectory) Fetch {
-	return Fetch{
+func NewFetchReleases(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider, localReleaseDirectory LocalReleaseDirectory) *FetchReleases {
+	return &FetchReleases{
 		logger:                     logger,
 		localReleaseDirectory:      localReleaseDirectory,
 		multiReleaseSourceProvider: multiReleaseSourceProvider,
@@ -46,7 +46,7 @@ type LocalReleaseDirectory interface {
 	DeleteExtraReleases(extraReleases []component.Local, noConfirm bool) error
 }
 
-func (f Fetch) Execute(args []string) error {
+func (f *FetchReleases) Execute(args []string) error {
 	kilnfile, kilnfileLock, availableLocalReleaseSet, err := f.setup(args)
 	if err != nil {
 		return err
@@ -71,7 +71,7 @@ func (f Fetch) Execute(args []string) error {
 	return nil
 }
 
-func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []component.Local, error) {
+func (f *FetchReleases) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []component.Local, error) {
 	_, err := flags.LoadFlagsWithDefaults(&f.Options, args, nil)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
@@ -103,7 +103,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []comp
 	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
 }
 
-func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ComponentLock) ([]component.Local, error) {
+func (f *FetchReleases) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ComponentLock) ([]component.Local, error) {
 	releaseSource := f.multiReleaseSourceProvider(kilnfile, f.Options.AllowOnlyPublishableReleases)
 
 	// f.Options.DownloadThreads
@@ -138,7 +138,7 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []c
 	return downloaded, nil
 }
 
-func (f Fetch) Usage() jhanda.Usage {
+func (f *FetchReleases) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Fetches releases listed in Kilnfile.lock from S3 and downloads it locally",
 		ShortDescription: "fetches releases",

@@ -40,15 +40,15 @@ type stemcellVersionOutput struct {
 	RemotePath string `json:"remote_path"`
 }
 
-func NewFindStemcellVersion(outLogger *log.Logger, pivnetService *pivnet.Service) FindStemcellVersion {
-	return FindStemcellVersion{
+func NewFindStemcellVersion(outLogger *log.Logger, pivnetService *pivnet.Service) *FindStemcellVersion {
+	return &FindStemcellVersion{
 		outLogger:     outLogger,
 		pivnetService: pivnetService,
 		FS:            osfs.New(""),
 	}
 }
 
-func (cmd FindStemcellVersion) Execute(args []string) error {
+func (cmd *FindStemcellVersion) Execute(args []string) error {
 	kilnfile, err := cmd.setup(args)
 	if err != nil {
 		return err
@@ -137,7 +137,7 @@ func (cmd *FindStemcellVersion) setup(args []string) (cargo.Kilnfile, error) {
 	return kilnfile, nil
 }
 
-func (cmd FindStemcellVersion) Usage() jhanda.Usage {
+func (cmd *FindStemcellVersion) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile",
 		ShortDescription: "prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile",

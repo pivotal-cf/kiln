@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("UpdateStemcell", func() {
-	var _ jhanda.Command = commands.UpdateStemcell{}
+	var _ jhanda.Command = &commands.UpdateStemcell{}
 
 	const (
 		newStemcellOS      = "old-os"

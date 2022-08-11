@@ -21,14 +21,14 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-var _ = Describe("UploadRelease", func() {
+var _ = Describe("PublishRelease", func() {
 	Context("Execute", func() {
 		var (
 			fs                    billy.Filesystem
 			releaseUploaderFinder *commandsFakes.ReleaseUploaderFinder
 			releaseUploader       *fakes.ReleaseUploader
 
-			uploadRelease commands.UploadRelease
+			uploadRelease commands.PublishRelease
 
 			expectedReleaseSHA string
 		)
@@ -41,7 +41,7 @@ var _ = Describe("UploadRelease", func() {
 			releaseUploaderFinder = new(commandsFakes.ReleaseUploaderFinder)
 			releaseUploaderFinder.Returns(releaseUploader, nil)
 
-			uploadRelease = commands.UploadRelease{
+			uploadRelease = commands.PublishRelease{
 				FS:                    fs,
 				Logger:                log.New(GinkgoWriter, "", 0),
 				ReleaseUploaderFinder: releaseUploaderFinder.Spy,
