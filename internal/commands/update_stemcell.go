@@ -27,7 +27,7 @@ type UpdateStemcell struct {
 	Logger                     *log.Logger
 }
 
-func (update UpdateStemcell) Execute(args []string) error {
+func (update *UpdateStemcell) Execute(args []string) error {
 	_, err := flags.LoadFlagsWithDefaults(&update.Options, args, update.FS.Stat)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 	return nil
 }
 
-func (update UpdateStemcell) Usage() jhanda.Usage {
+func (update *UpdateStemcell) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Updates stemcell and release information in Kilnfile.lock",
 		ShortDescription: "updates stemcell and release information in Kilnfile.lock",

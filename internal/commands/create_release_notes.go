@@ -48,16 +48,16 @@ type ReleaseNotes struct {
 
 type FetchNotesData func(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery release.IssuesQuery) (release.NotesData, error)
 
-func NewReleaseNotesCommand() (ReleaseNotes, error) {
-	return ReleaseNotes{
+func NewReleaseNotesCommand() *ReleaseNotes {
+	return &ReleaseNotes{
 		fetchNotesData: release.FetchNotesData,
 		readFile:       os.ReadFile,
 		Writer:         os.Stdout,
 		stat:           os.Stat,
-	}, nil
+	}
 }
 
-func (r ReleaseNotes) Usage() jhanda.Usage {
+func (r *ReleaseNotes) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "generates release notes from bosh-release release notes on GitHub between two tile repo git references",
 		ShortDescription: "generates release notes from bosh-release release notes",
@@ -65,7 +65,7 @@ func (r ReleaseNotes) Usage() jhanda.Usage {
 	}
 }
 
-func (r ReleaseNotes) Execute(args []string) error {
+func (r *ReleaseNotes) Execute(args []string) error {
 	ctx := context.Background()
 
 	if err := r.initRepo(); err != nil {
@@ -184,7 +184,7 @@ func (r *ReleaseNotes) initRepo() error {
 	return nil
 }
 
-func (r ReleaseNotes) writeNotes(w io.Writer, info release.NotesData) error {
+func (r *ReleaseNotes) writeNotes(w io.Writer, info release.NotesData) error {
 	releaseNotesTemplate := release.DefaultNotesTemplate()
 	if r.Options.TemplateName != "" {
 		templateBuf, err := r.readFile(r.Options.TemplateName)
@@ -207,7 +207,7 @@ func (r ReleaseNotes) writeNotes(w io.Writer, info release.NotesData) error {
 	return nil
 }
 
-func (r ReleaseNotes) checkInputs(nonFlagArgs []string) error {
+func (r *ReleaseNotes) checkInputs(nonFlagArgs []string) error {
 	if len(nonFlagArgs) != 2 {
 		return errors.New("expected two arguments: <Git-Revision> <Git-Revision>")
 	}
@@ -241,7 +241,7 @@ func (r ReleaseNotes) checkInputs(nonFlagArgs []string) error {
 	return nil
 }
 
-func (r ReleaseNotes) parseReleaseDate() (time.Time, error) {
+func (r *ReleaseNotes) parseReleaseDate() (time.Time, error) {
 	var releaseDate time.Time
 
 	if r.Options.ReleaseDate != "" {

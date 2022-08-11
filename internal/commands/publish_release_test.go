@@ -1,11 +1,16 @@
 package commands_test
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -17,18 +22,17 @@ import (
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
-	testHelpers "github.com/pivotal-cf/kiln/internal/test-helpers"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-var _ = Describe("UploadRelease", func() {
+var _ = Describe("PublishRelease", func() {
 	Context("Execute", func() {
 		var (
 			fs                    billy.Filesystem
 			releaseUploaderFinder *commandsFakes.ReleaseUploaderFinder
 			releaseUploader       *fakes.ReleaseUploader
 
-			uploadRelease commands.UploadRelease
+			uploadRelease commands.PublishRelease
 
 			expectedReleaseSHA string
 		)
@@ -41,7 +45,7 @@ var _ = Describe("UploadRelease", func() {
 			releaseUploaderFinder = new(commandsFakes.ReleaseUploaderFinder)
 			releaseUploaderFinder.Returns(releaseUploader, nil)
 
-			uploadRelease = commands.UploadRelease{
+			uploadRelease = commands.PublishRelease{
 				FS:                    fs,
 				Logger:                log.New(GinkgoWriter, "", 0),
 				ReleaseUploaderFinder: releaseUploaderFinder.Spy,
@@ -51,7 +55,7 @@ var _ = Describe("UploadRelease", func() {
 			Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{})).NotTo(HaveOccurred())
 
 			var err error
-			expectedReleaseSHA, err = testHelpers.WriteReleaseTarball("banana-release.tgz", "banana", "1.2.3", fs)
+			expectedReleaseSHA, err = writeReleaseTarball("banana-release.tgz", "banana", "1.2.3", fs)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -105,7 +109,7 @@ var _ = Describe("UploadRelease", func() {
 
 			When("the release tarball is compiled", func() {
 				BeforeEach(func() {
-					_, err := testHelpers.WriteTarballWithFile("banana-release.tgz", "release.MF", `
+					_, err := writeTarballWithFile("banana-release.tgz", "release.MF", `
 name: banana
 version: 1.2.3
 compiled_packages:
@@ -138,7 +142,7 @@ compiled_packages:
 
 				BeforeEach(func() {
 					for _, rel := range devReleases {
-						_, err = testHelpers.WriteReleaseTarball(rel.tarballName, "banana", rel.version, fs)
+						_, err = writeReleaseTarball(rel.tarballName, "banana", rel.version, fs)
 						Expect(err).NotTo(HaveOccurred())
 					}
 				})
@@ -158,7 +162,7 @@ compiled_packages:
 
 			When("the release version is malformed", func() {
 				BeforeEach(func() {
-					_, err := testHelpers.WriteReleaseTarball("banana-malformed.tgz", "banana", "v1_2_garbage", fs)
+					_, err := writeReleaseTarball("banana-malformed.tgz", "banana", "v1_2_garbage", fs)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -248,3 +252,68 @@ compiled_packages:
 		})
 	})
 })
+
+func writeReleaseTarball(path, name, version string, fs billy.Filesystem) (string, error) {
+	releaseManifest := `
+name: ` + name + `
+version: ` + version + `
+`
+	return writeTarballWithFile(path, "release.MF", releaseManifest, fs)
+}
+
+func writeTarballWithFile(tarballPath, internalFilePath, fileContents string, fs billy.Filesystem) (string, error) {
+	f, err := fs.Create(tarballPath)
+	if err != nil {
+		return "", err
+	}
+
+	gw := gzip.NewWriter(f)
+	tw := tar.NewWriter(gw)
+
+	contentsReader := strings.NewReader(fileContents)
+
+	header := &tar.Header{
+		Name:    internalFilePath,
+		Size:    contentsReader.Size(),
+		Mode:    int64(os.O_RDONLY),
+		ModTime: time.Now(),
+	}
+	err = tw.WriteHeader(header)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = io.Copy(tw, contentsReader)
+	if err != nil {
+		return "", err
+	}
+
+	err = tw.Close()
+	if err != nil {
+		return "", err
+	}
+
+	err = gw.Close()
+	if err != nil {
+		return "", err
+	}
+
+	err = f.Close()
+	if err != nil {
+		return "", err
+	}
+
+	tarball, err := fs.Open(tarballPath)
+	if err != nil {
+		return "", err
+	}
+	defer closeAndIgnoreError(tarball)
+
+	hash := sha1.New()
+	_, err = io.Copy(hash, tarball)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+}
