@@ -1,11 +1,12 @@
 package manifest
 
 import (
-	"gopkg.in/yaml.v2"
 	"os"
 	"testing"
 
-	Ω "github.com/onsi/gomega"
+	"gopkg.in/yaml.v2"
+
+	. "github.com/onsi/gomega"
 	gomegaMatchers "github.com/pivotal-cf-experimental/gomegamatchers"
 
 	"github.com/pivotal-cf/kiln/pkg/manifest/opsman"
@@ -14,14 +15,14 @@ import (
 
 func TestGenerate(t *testing.T) {
 	t.Run("generates a well-formed manifest", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 
 		f, err := os.Open("fixtures/metadata.yml")
 		defer closeAndIgnoreError(f)
-		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(err).NotTo(HaveOccurred())
 
 		template, err := proofing.Parse(f)
-		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(err).NotTo(HaveOccurred())
 
 		manifest := Generate(template, OpsManagerConfig{
 			DeploymentName: "some-product-name",
@@ -54,10 +55,10 @@ func TestGenerate(t *testing.T) {
 		})
 
 		actualManifest, err := yaml.Marshal(manifest)
-		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(err).NotTo(HaveOccurred())
 
 		expectedManifest, err := os.ReadFile("fixtures/manifest.yml")
-		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(err).NotTo(HaveOccurred())
 
 		please.Expect(actualManifest).To(gomegaMatchers.HelpfullyMatchYAML(string(expectedManifest)))
 	})
