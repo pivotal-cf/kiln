@@ -18,7 +18,7 @@ type Bump struct {
 	Releases []*github.RepositoryRelease
 }
 
-func (bump Bump) ReleaseNotes() string {
+func (bump *Bump) ReleaseNotes() string {
 	var s strings.Builder
 
 	for _, r := range bump.Releases {
@@ -49,7 +49,22 @@ func (bump *Bump) deduplicateReleasesWithTheSameTagName() {
 	}
 }
 
-func CalculateBumps(current, previous []Lock) []Bump {
+func (bump *Bump) toFrom() (to, from *semver.Version, _ error) {
+	var err error
+	from, err = semver.NewVersion(bump.FromVersion)
+	if err != nil {
+		return nil, nil, err
+	}
+	to, err = semver.NewVersion(bump.ToVersion)
+	if err != nil {
+		return nil, nil, err
+	}
+	return to, from, err
+}
+
+type BumpList []Bump
+
+func CalculateBumps(current, previous []Lock) BumpList {
 	var (
 		bumps         []Bump
 		previousSpecs = make(map[string]Lock, len(previous))
@@ -70,21 +85,6 @@ func CalculateBumps(current, previous []Lock) []Bump {
 	}
 	return bumps
 }
-
-func (bump Bump) toFrom() (to, from *semver.Version, _ error) {
-	var err error
-	from, err = semver.NewVersion(bump.FromVersion)
-	if err != nil {
-		return nil, nil, err
-	}
-	to, err = semver.NewVersion(bump.ToVersion)
-	if err != nil {
-		return nil, nil, err
-	}
-	return to, from, err
-}
-
-type BumpList []Bump
 
 func (list BumpList) ForLock(lock Lock) Bump {
 	for _, b := range list {
