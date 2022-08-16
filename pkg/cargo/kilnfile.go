@@ -7,6 +7,8 @@ import (
 
 	"github.com/Masterminds/semver"
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
+
+	"github.com/pivotal-cf/kiln/pkg/manifest"
 )
 
 type KilnfileLock struct {
@@ -217,3 +219,5 @@ func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock ComponentLock)
 	}
 	return errors.New("not found")
 }
+
+type Stemcell = manifest.Stemcell
