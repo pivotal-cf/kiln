@@ -8,6 +8,7 @@ require (
 	github.com/cloudfoundry/bosh-cli v6.4.1+incompatible
 	github.com/cloudfoundry/bosh-utils v0.0.0-20210130100352-ab14c90ad9f2
 	github.com/cucumber/godog v0.12.5
+	github.com/cucumber/messages-go/v16 v16.0.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.3.1
 	github.com/go-git/go-git/v5 v5.4.2
@@ -17,7 +18,6 @@ require (
 	github.com/onsi/ginkgo v1.15.2
 	github.com/onsi/gomega v1.11.0
 	github.com/pivotal-cf-experimental/gomegamatchers v0.0.0-20180326192815-e36bfcc98c3a
-	github.com/pivotal-cf/go-pivnet/v2 v2.0.11
 	github.com/pivotal-cf/jhanda v0.0.0-20200619200912-8de8eb943a43
 	github.com/pivotal-cf/om v0.0.0-20211027143906-30b10602e528
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
@@ -31,7 +31,6 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20210707164159-52430bf6b52c // indirect
-	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/VividCortex/ewma v1.1.1 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
@@ -42,12 +41,10 @@ require (
 	github.com/cloudfoundry/socks5-proxy v0.2.0 // indirect
 	github.com/cppforlife/go-semi-semantic v0.0.0-20160921010311-576b6af77ae4 // indirect
 	github.com/cucumber/gherkin-go/v19 v19.0.3 // indirect
-	github.com/cucumber/messages-go/v16 v16.0.1 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
-	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
@@ -67,7 +64,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
@@ -75,19 +71,16 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
-	github.com/shirou/gopsutil v3.21.1+incompatible // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.10 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
-	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )

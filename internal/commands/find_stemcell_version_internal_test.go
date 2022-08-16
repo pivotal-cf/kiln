@@ -13,33 +13,39 @@ func Test_extractMajorVersion(t *testing.T) {
 		expectedResult string
 		expectErrTo    Ω.OmegaMatcher
 	}{
-		{name: "with tilde ~",
+		{
+			name:           "with tilde ~",
 			input:          "~456",
 			expectedResult: "456",
 			expectErrTo:    Ω.Not(Ω.HaveOccurred()),
 		},
-		{name: "with hypens -",
+		{
+			name:           "with hypens -",
 			input:          "777.1-621",
 			expectedResult: "777",
 			expectErrTo:    Ω.Not(Ω.HaveOccurred()),
 		},
-		{name: "with wildcards *",
+		{
+			name:           "with wildcards *",
 			input:          "1234.*",
 			expectedResult: "1234",
 			expectErrTo:    Ω.Not(Ω.HaveOccurred()),
 		},
-		{name: "with caret ^",
+		{
+			name:           "with caret ^",
 			input:          "^456",
 			expectedResult: "456",
 			expectErrTo:    Ω.Not(Ω.HaveOccurred()),
 		},
 
-		{name: "with absolute value",
+		{
+			name:           "with absolute value",
 			input:          "333.334",
 			expectedResult: "333",
 			expectErrTo:    Ω.Not(Ω.HaveOccurred()),
 		},
-		{name: "specifier does not have major version",
+		{
+			name:           "specifier does not have major version",
 			input:          "*",
 			expectedResult: "",
 			expectErrTo: Ω.And(
@@ -47,7 +53,8 @@ func Test_extractMajorVersion(t *testing.T) {
 				Ω.MatchError(Ω.ContainSubstring(ErrStemcellMajorVersionMustBeValid)),
 			),
 		},
-		{name: "specifier is an empty string",
+		{
+			name:           "specifier is an empty string",
 			input:          "",
 			expectedResult: "",
 			expectErrTo: Ω.And(

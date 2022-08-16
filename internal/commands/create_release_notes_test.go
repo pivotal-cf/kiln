@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"github.com/pivotal-cf/kiln/pkg/notes"
 	"testing"
 	"time"
 
@@ -19,8 +20,6 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/jhanda"
-
-	"github.com/pivotal-cf/kiln/internal/release"
 )
 
 var _ jhanda.Command = (*ReleaseNotes)(nil)
@@ -61,7 +60,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		var (
 			tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string
 
-			issuesQuery release.IssuesQuery
+			issuesQuery notes.IssuesQuery
 			repository  *git.Repository
 			client      *github.Client
 			ctx         context.Context
@@ -74,11 +73,11 @@ func TestReleaseNotes_Execute(t *testing.T) {
 			repoOwner:  "bunch",
 			repoName:   "banana",
 			readFile:   readFileFunc,
-			fetchNotesData: func(c context.Context, repo *git.Repository, ghc *github.Client, tro, trn, kfp, ir, fr string, iq release.IssuesQuery) (release.NotesData, error) {
+			fetchNotesData: func(c context.Context, repo *git.Repository, ghc *github.Client, tro, trn, kfp, ir, fr string, iq notes.IssuesQuery) (notes.Data, error) {
 				ctx, repository, client = c, repo, ghc
 				tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision = tro, trn, kfp, ir, fr
 				issuesQuery = iq
-				return release.NotesData{
+				return notes.Data{
 					ReleaseDate: mustParseTime(time.Parse(releaseDateFormat, "2021-11-04")),
 					Version:     semver.MustParse("0.1.0-build.50000"),
 					Issues: []*github.Issue{
@@ -88,7 +87,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 					Stemcell: cargo.Stemcell{
 						OS: "fruit-tree", Version: "40000.2",
 					},
-					Components: []release.ComponentData{
+					Components: []notes.ComponentData{
 						{Lock: cargo.ComponentLock{Name: "banana", Version: "1.2.0"}, Releases: []*github.RepositoryRelease{
 							{TagName: strPtr("1.2.0"), Body: strPtr("peal\nis\nyellow")},
 							{TagName: strPtr("1.1.1"), Body: strPtr("remove from bunch")},

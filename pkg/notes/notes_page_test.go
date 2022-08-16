@@ -1,4 +1,4 @@
-package release
+package notes
 
 import (
 	"bytes"
@@ -57,7 +57,7 @@ func TestParseNotesPage(t *testing.T) {
 	please.Expect(page.Releases).To(Ω.HaveLen(42))
 
 	// assign new release notes data
-	alreadyPublishedReleaseNotesData := NotesData{
+	alreadyPublishedReleaseNotesData := Data{
 		ReleaseDate: t0,
 		Version:     semver.MustParse("2.7.41"),
 		Issues: []*github.Issue{
@@ -168,11 +168,11 @@ func TestParseNotesPageWithExpressionAndReleasesSentinel(t *testing.T) {
 
 		input := "prefix.releases:r1.r2..r3r4...r5...suffix"
 
-		page, err := ParseNotesPageWithExpressionAndReleasesSentinel(input, exp, testReleasesSentinel)
+		page, err := parseNotesPageWithExpressionAndReleasesSentinel(input, exp, testReleasesSentinel)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 
 		please.Expect(page.Releases).To(Ω.HaveLen(5))
-		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+		please.Expect(page.Releases).To(Ω.Equal([]TileVersionNote{
 			{Version: "1", Notes: "r1."},
 			{Version: "2", Notes: "r2.."},
 			{Version: "3", Notes: "r3"},
@@ -189,7 +189,7 @@ func TestParseNotesPageWithExpressionAndReleasesSentinel(t *testing.T) {
 
 		input := "prefix.releases:suffix"
 
-		page, err := ParseNotesPageWithExpressionAndReleasesSentinel(input, exp, testReleasesSentinel)
+		page, err := parseNotesPageWithExpressionAndReleasesSentinel(input, exp, testReleasesSentinel)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 
 		please.Expect(page.Releases).To(Ω.HaveLen(0))
@@ -252,7 +252,7 @@ func Test_newFetchNotesData(t *testing.T) {
 
 func TestReleaseNotesPage_Add(t *testing.T) {
 	// I imagine if the function signature for Add also returned an integer
-	//   func (page NotesPage) Add(note VersionNote) (int, error)
+	//   func (page Page) Add(note TileVersionNote) (int, error)
 	// it would be easier to test. It also would make logging where in the document
 	// release was added easier.
 	// For example, the release-notes could log something like:
@@ -260,58 +260,58 @@ func TestReleaseNotesPage_Add(t *testing.T) {
 
 	t.Run("initial release", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		page := NotesPage{
+		page := Page{
 			Exp: regexp.MustCompile(`r\d+`), // a simpler release expression
 		}
-		note := VersionNote{Version: "1", Notes: "r1"}
+		note := TileVersionNote{Version: "1", Notes: "r1"}
 		err := page.Add(note)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 		please.Expect(page.Releases).To(Ω.ConsistOf(note))
 	})
 	t.Run("new latest release", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		page := NotesPage{
+		page := Page{
 			Exp: regexp.MustCompile(`r\d+`),
-			Releases: []VersionNote{
+			Releases: []TileVersionNote{
 				{Version: "2", Notes: "r2"},
 			},
 		}
-		newNote := VersionNote{Version: "3", Notes: "r3"}
+		newNote := TileVersionNote{Version: "3", Notes: "r3"}
 		err := page.Add(newNote)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+		please.Expect(page.Releases).To(Ω.Equal([]TileVersionNote{
 			{Version: "3", Notes: "r3"},
 			{Version: "2", Notes: "r2"},
 		}))
 	})
 	t.Run("update existing release notes", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		page := NotesPage{
+		page := Page{
 			Exp: regexp.MustCompile(`r\d+`),
-			Releases: []VersionNote{
+			Releases: []TileVersionNote{
 				{Version: "1", Notes: "r1"},
 			},
 		}
-		newNote := VersionNote{Version: "1", Notes: "r2"}
+		newNote := TileVersionNote{Version: "1", Notes: "r2"}
 		err := page.Add(newNote)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+		please.Expect(page.Releases).To(Ω.Equal([]TileVersionNote{
 			{Version: "1", Notes: "r2"},
 		}))
 	})
 	t.Run("insert between", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		page := NotesPage{
+		page := Page{
 			Exp: regexp.MustCompile(`r\d+`),
-			Releases: []VersionNote{
+			Releases: []TileVersionNote{
 				{Version: "3", Notes: "r3"},
 				{Version: "1", Notes: "r1"},
 			},
 		}
-		newNote := VersionNote{Version: "2", Notes: "r2"}
+		newNote := TileVersionNote{Version: "2", Notes: "r2"}
 		err := page.Add(newNote)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+		please.Expect(page.Releases).To(Ω.Equal([]TileVersionNote{
 			{Version: "3", Notes: "r3"},
 			{Version: "2", Notes: "r2"},
 			{Version: "1", Notes: "r1"},
@@ -319,29 +319,29 @@ func TestReleaseNotesPage_Add(t *testing.T) {
 	})
 	t.Run("notes version field is invalid", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		page := NotesPage{
+		page := Page{
 			Exp: regexp.MustCompile(`r\d+`),
-			Releases: []VersionNote{
+			Releases: []TileVersionNote{
 				{Version: "1", Notes: "r1"},
 			},
 		}
-		newNote := VersionNote{Version: "s", Notes: "r2"}
+		newNote := TileVersionNote{Version: "s", Notes: "r2"}
 		err := page.Add(newNote)
 		please.Expect(err).To(Ω.HaveOccurred())
 	})
 	t.Run("add notes to end", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		page := NotesPage{
+		page := Page{
 			Exp: regexp.MustCompile(`r\d+`),
-			Releases: []VersionNote{
+			Releases: []TileVersionNote{
 				{Version: "3", Notes: "r3"},
 				{Version: "2", Notes: "r2"},
 			},
 		}
-		newNote := VersionNote{Version: "1", Notes: "r1"}
+		newNote := TileVersionNote{Version: "1", Notes: "r1"}
 		err := page.Add(newNote)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+		please.Expect(page.Releases).To(Ω.Equal([]TileVersionNote{
 			{Version: "3", Notes: "r3"},
 			{Version: "2", Notes: "r2"},
 			{Version: "1", Notes: "r1"},
@@ -349,18 +349,18 @@ func TestReleaseNotesPage_Add(t *testing.T) {
 	})
 	t.Run("notes content does not match page regex", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		page := NotesPage{
+		page := Page{
 			Exp: regexp.MustCompile(`r\d+`),
-			Releases: []VersionNote{
+			Releases: []TileVersionNote{
 				{Version: "1", Notes: "r1"},
 			},
 		}
-		newNote := VersionNote{Version: "2", Notes: "s2"}
+		newNote := TileVersionNote{Version: "2", Notes: "s2"}
 		err := page.Add(newNote)
 		please.Expect(err).To(Ω.HaveOccurred())
 	})
 }
 
 func TestReleaseNotesPage_WriteTo(t *testing.T) {
-	var _ io.WriterTo = (*NotesPage)(nil)
+	var _ io.WriterTo = (*Page)(nil)
 }
