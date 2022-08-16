@@ -1,4 +1,4 @@
-package cargo
+package manifest
 
 type Manifest struct {
 	Name           string          `yaml:"name"`

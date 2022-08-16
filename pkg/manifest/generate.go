@@ -1,9 +1,10 @@
-package cargo
+package manifest
 
 import (
 	"gopkg.in/yaml.v2"
+	"io"
 
-	"github.com/pivotal-cf/kiln/pkg/cargo/opsman"
+	"github.com/pivotal-cf/kiln/pkg/manifest/opsman"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
@@ -14,13 +15,7 @@ type OpsManagerConfig struct {
 	ResourceConfigs   []opsman.ResourceConfig
 }
 
-type Generator struct{}
-
-func NewGenerator() Generator {
-	return Generator{}
-}
-
-func (g Generator) Execute(template proofing.ProductTemplate, config OpsManagerConfig) Manifest {
+func Generate(template proofing.ProductTemplate, config OpsManagerConfig) Manifest {
 	releases := generateReleases(template.Releases)
 	stemcell := findStemcell(template.StemcellCriteria, config.Stemcells)
 	update := generateUpdate(template.Serial)
@@ -162,4 +157,8 @@ func generateVariables(templateVariables []proofing.Variable) []Variable {
 	}
 
 	return variables
+}
+
+func closeAndIgnoreError(c io.Closer) {
+	_ = c.Close()
 }
