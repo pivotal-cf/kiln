@@ -8,8 +8,7 @@ import (
 
 	"github.com/google/go-github/v40/github"
 
-	Ω "github.com/onsi/gomega"
-
+	. "github.com/onsi/gomega"
 	fakes "github.com/pivotal-cf/kiln/internal/component/fakes_internal"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -17,14 +16,14 @@ import (
 
 func TestInternal_calculateComponentBumps(t *testing.T) {
 	t.Parallel()
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	t.Run("when the components stay the same", func(t *testing.T) {
 		please.Expect(CalculateBumps([]Lock{
 			{Name: "a", Version: "1"},
 		}, []Lock{
 			{Name: "a", Version: "1"},
-		})).To(Ω.HaveLen(0))
+		})).To(HaveLen(0))
 	})
 
 	t.Run("when a component is bumped", func(t *testing.T) {
@@ -34,7 +33,7 @@ func TestInternal_calculateComponentBumps(t *testing.T) {
 		}, []Lock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
-		})).To(Ω.Equal([]Bump{
+		})).To(Equal(BumpList{
 			{Name: "b", FromVersion: "1", ToVersion: "2"},
 		}),
 			"it returns the changed lock",
@@ -50,7 +49,7 @@ func TestInternal_calculateComponentBumps(t *testing.T) {
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
 			{Name: "c", Version: "1"},
-		})).To(Ω.Equal([]Bump{
+		})).To(Equal(BumpList{
 			{Name: "a", FromVersion: "1", ToVersion: "2"},
 			{Name: "c", FromVersion: "1", ToVersion: "2"},
 		}),
@@ -64,7 +63,7 @@ func TestInternal_calculateComponentBumps(t *testing.T) {
 		}, []Lock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
-		})).To(Ω.HaveLen(0),
+		})).To(HaveLen(0),
 			"it does not return a bump",
 		)
 	})
@@ -78,7 +77,7 @@ func TestInternal_calculateComponentBumps(t *testing.T) {
 			{Name: "b", Version: "1"},
 		}, []Lock{
 			{Name: "a", Version: "1"},
-		})).To(Ω.Equal([]Bump{
+		})).To(Equal(BumpList{
 			{Name: "b", FromVersion: "", ToVersion: "1"},
 		}),
 			"it returns the component as a bump",
@@ -87,7 +86,7 @@ func TestInternal_calculateComponentBumps(t *testing.T) {
 }
 
 func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 	b := Bump{
 		Releases: []*github.RepositoryRelease{
 			{TagName: strPtr("Y")},
@@ -107,7 +106,7 @@ func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {
 	for _, r := range b.Releases {
 		tags = append(tags, r.GetTagName())
 	}
-	please.Expect(tags).To(Ω.Equal([]string{
+	please.Expect(tags).To(Equal([]string{
 		"Y",
 		"1",
 		"2",
@@ -118,7 +117,7 @@ func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {
 }
 
 func TestInternal_addReleaseNotes(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	var ltsCallCount int
 
@@ -181,12 +180,12 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 				FromVersion: "9",
 			},
 		})
-	please.Expect(err).NotTo(Ω.HaveOccurred())
-	please.Expect(result).To(Ω.HaveLen(2))
+	please.Expect(err).NotTo(HaveOccurred())
+	please.Expect(result).To(HaveLen(2))
 
-	please.Expect(ltsCallCount).To(Ω.Equal(3))
+	please.Expect(ltsCallCount).To(Equal(3))
 
-	please.Expect(result[0].ReleaseNotes()).To(Ω.Equal("served\nplated\nstored\nlabeled\npreserved\nchopped\ncleaned"))
+	please.Expect(result[0].ReleaseNotes()).To(Equal("served\nplated\nstored\nlabeled\npreserved\nchopped\ncleaned"))
 }
 
 func githubResponse(t *testing.T, status int) *github.Response {

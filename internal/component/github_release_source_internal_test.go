@@ -9,15 +9,15 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v40/github"
-	Ω "github.com/onsi/gomega"
 
+	. "github.com/onsi/gomega"
 	fakes "github.com/pivotal-cf/kiln/internal/component/fakes_internal"
 )
 
 func TestGithubReleaseSource_downloadRelease(t *testing.T) {
 	lock := Lock{Name: "routing", Version: "0.226.0"}
 
-	damnIt := Ω.NewWithT(t)
+	damnIt := NewWithT(t)
 	tempDir := t.TempDir()
 	t.Cleanup(func() {
 		_ = os.RemoveAll(tempDir)
@@ -37,8 +37,8 @@ func TestGithubReleaseSource_downloadRelease(t *testing.T) {
 
 	logger := log.New(io.Discard, "", 0)
 	local, err := downloadRelease(context.Background(), tempDir, lock, ghClient, logger)
-	damnIt.Expect(err).NotTo(Ω.HaveOccurred())
+	damnIt.Expect(err).NotTo(HaveOccurred())
 
-	damnIt.Expect(local.LocalPath).To(Ω.BeAnExistingFile(), "it finds the created asset file")
-	damnIt.Expect(local.SHA1).To(Ω.Equal("aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"))
+	damnIt.Expect(local.LocalPath).To(BeAnExistingFile(), "it finds the created asset file")
+	damnIt.Expect(local.SHA1).To(Equal("aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"))
 }
