@@ -1,4 +1,4 @@
-package release
+package notes
 
 import (
 	"bytes"
@@ -42,7 +42,7 @@ func (cd ComponentData) HasReleaseNotes() bool {
 	return false
 }
 
-type NotesData struct {
+type Data struct {
 	Version     *semver.Version
 	ReleaseDate time.Time
 
@@ -53,28 +53,28 @@ type NotesData struct {
 	Stemcell cargo.Stemcell
 }
 
-//func (notes NotesData) String() string {
+//func (notes Data) String() string {
 //	note, _ := notes.WriteVersionNotes()
 //	return note.Notes
 //}
 
-func (notes NotesData) WriteVersionNotes() (VersionNote, error) {
-	noteTemplate, err := DefaultTemplateFuncs(template.New("")).Parse(DefaultNotesTemplate())
+func (notes Data) WriteVersionNotes() (TileVersionNote, error) {
+	noteTemplate, err := DefaultTemplateFunctions(template.New("")).Parse(DefaultNotesTemplate())
 	if err != nil {
-		return VersionNote{}, err
+		return TileVersionNote{}, err
 	}
 	var buf bytes.Buffer
 	err = noteTemplate.Execute(&buf, notes)
 	if err != nil {
-		return VersionNote{}, err
+		return TileVersionNote{}, err
 	}
-	return VersionNote{
+	return TileVersionNote{
 		Version: notes.Version.String(),
 		Notes:   buf.String(),
 	}, nil
 }
 
-func (notes NotesData) HasComponentReleases() bool {
+func (notes Data) HasComponentReleases() bool {
 	for _, r := range notes.Components {
 		if len(r.Releases) > 0 {
 			return true
@@ -102,10 +102,10 @@ func (q IssuesQuery) Exp() (*regexp.Regexp, error) {
 	return regexp.Compile(str)
 }
 
-func FetchNotesData(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery IssuesQuery) (NotesData, error) {
+func FetchNotesData(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery IssuesQuery) (Data, error) {
 	f, err := newFetchNotesData(repo, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision, client, issuesQuery)
 	if err != nil {
-		return NotesData{}, err
+		return Data{}, err
 	}
 	return f.fetch(ctx)
 }
@@ -155,13 +155,13 @@ type fetchNotesData struct {
 	issuesQuery IssuesQuery
 }
 
-func (r fetchNotesData) fetch(ctx context.Context) (NotesData, error) {
+func (r fetchNotesData) fetch(ctx context.Context) (Data, error) {
 	initialKilnfileLock, finalKilnfileLock, finalKilnfile, finalVersion, err := r.fetchHistoricFiles(r.kilnfilePath, r.initialRevision, r.finalRevision)
 	if err != nil {
-		return NotesData{}, err
+		return Data{}, err
 	}
 
-	data := NotesData{
+	data := Data{
 		Version:  finalVersion,
 		Bumps:    component.CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
 		Stemcell: finalKilnfileLock.Stemcell,
@@ -169,12 +169,12 @@ func (r fetchNotesData) fetch(ctx context.Context) (NotesData, error) {
 
 	wtKilnfile, err := r.kilnfileFromWorktree(r.kilnfilePath)
 	if err != nil {
-		return NotesData{}, err
+		return Data{}, err
 	}
 
 	data.Issues, data.Bumps, err = r.fetchIssuesAndReleaseNotes(ctx, finalKilnfile, wtKilnfile, data.Bumps, r.issuesQuery)
 	if err != nil {
-		return NotesData{}, err
+		return Data{}, err
 	}
 
 	for _, c := range finalKilnfileLock.Releases {
