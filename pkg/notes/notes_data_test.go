@@ -1,8 +1,9 @@
-package release
+package notes
 
 import (
 	"context"
 	"errors"
+	fakes2 "github.com/pivotal-cf/kiln/pkg/notes/fakes"
 	"net/http"
 	"reflect"
 	"sort"
@@ -16,7 +17,6 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/google/go-github/v40/github"
 
-	"github.com/pivotal-cf/kiln/internal/release/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -27,14 +27,14 @@ func Test_fetch(t *testing.T) {
 
 	repo, _ := git.Init(memory.NewStorage(), memfs.New())
 
-	revisionResolver := new(fakes.RevisionResolver)
+	revisionResolver := new(fakes2.RevisionResolver)
 	var initialHash, finalHash plumbing.Hash
 	fill(initialHash[:], '1')
 	fill(finalHash[:], '9')
 	revisionResolver.ResolveRevisionReturnsOnCall(0, &initialHash, nil)
 	revisionResolver.ResolveRevisionReturnsOnCall(1, &finalHash, nil)
 
-	historicKilnfile := new(fakes.HistoricKilnfile)
+	historicKilnfile := new(fakes2.HistoricKilnfile)
 	historicKilnfile.ReturnsOnCall(0, cargo.Kilnfile{}, cargo.KilnfileLock{
 		Stemcell: cargo.Stemcell{
 			OS:      "fruit-tree",
@@ -61,10 +61,10 @@ func Test_fetch(t *testing.T) {
 		},
 	}, nil)
 
-	historicVersion := new(fakes.HistoricVersion)
+	historicVersion := new(fakes2.HistoricVersion)
 	historicVersion.Returns("0.1.0-build.50000", nil)
 
-	fakeIssuesService := new(fakes.IssuesService)
+	fakeIssuesService := new(fakes2.IssuesService)
 	fakeIssuesService.GetReturnsOnCall(0, &github.Issue{
 		Title: strPtr("**[Feature Improvement]** Reduce default log-cache max per source"),
 	}, githubResponse(t, 200), nil)
@@ -78,7 +78,7 @@ func Test_fetch(t *testing.T) {
 		Title: strPtr("**[Feature Improvement]** Reduce default log-cache max per source"),
 	}, githubResponse(t, 200), nil)
 
-	fakeReleaseService := new(fakes.ReleaseService)
+	fakeReleaseService := new(fakes2.ReleaseService)
 	fakeReleaseService.ListReleasesReturnsOnCall(0, []*github.RepositoryRelease{
 		{TagName: strPtr("1.1.0"), Body: strPtr("   peal is green\n")},
 		{TagName: strPtr("1.1.1"), Body: strPtr("remove from bunch\n\n")},
@@ -138,7 +138,7 @@ func Test_issuesFromIssueIDs(t *testing.T) {
 
 	t.Run("no ids", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		issuesService := new(fakes.IssueGetter)
+		issuesService := new(fakes2.IssueGetter)
 
 		result, err := issuesFromIssueIDs(context.Background(), issuesService, "o", "n", nil)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
@@ -148,7 +148,7 @@ func Test_issuesFromIssueIDs(t *testing.T) {
 
 	t.Run("some ids", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		issuesService := new(fakes.IssueGetter)
+		issuesService := new(fakes2.IssueGetter)
 
 		issuesService.GetReturnsOnCall(0, &github.Issue{Number: intPtr(1)}, githubResponse(t, 200), nil)
 		issuesService.GetReturnsOnCall(1, &github.Issue{Number: intPtr(2)}, githubResponse(t, 200), nil)
@@ -173,7 +173,7 @@ func Test_issuesFromIssueIDs(t *testing.T) {
 
 	t.Run("the issues service returns an error", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		issuesService := new(fakes.IssueGetter)
+		issuesService := new(fakes2.IssueGetter)
 
 		issuesService.GetReturnsOnCall(0, &github.Issue{Number: intPtr(1)}, nil, errors.New("banana"))
 
@@ -183,7 +183,7 @@ func Test_issuesFromIssueIDs(t *testing.T) {
 
 	t.Run("the issues service returns a not okay status", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		issuesService := new(fakes.IssueGetter)
+		issuesService := new(fakes2.IssueGetter)
 
 		issuesService.GetReturnsOnCall(0, &github.Issue{Number: intPtr(1)}, githubResponse(t, http.StatusUnauthorized), nil)
 
@@ -197,7 +197,7 @@ func Test_resolveMilestoneNumber(t *testing.T) {
 
 	t.Run("empty milestone option", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		issuesService := new(fakes.MilestoneLister)
+		issuesService := new(fakes2.MilestoneLister)
 
 		result, err := resolveMilestoneNumber(context.Background(), issuesService, "o", "n", "")
 		please.Expect(err).NotTo(Ω.HaveOccurred())
@@ -206,7 +206,7 @@ func Test_resolveMilestoneNumber(t *testing.T) {
 
 	t.Run("when passed a number", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		issuesService := new(fakes.MilestoneLister)
+		issuesService := new(fakes2.MilestoneLister)
 
 		result, err := resolveMilestoneNumber(context.Background(), issuesService, "o", "n", "42")
 		please.Expect(err).NotTo(Ω.HaveOccurred())
@@ -216,7 +216,7 @@ func Test_resolveMilestoneNumber(t *testing.T) {
 
 	t.Run("when the milestone is found on the second page", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		issuesService := new(fakes.MilestoneLister)
+		issuesService := new(fakes2.MilestoneLister)
 
 		issuesService.ListMilestonesReturnsOnCall(0,
 			[]*github.Milestone{
@@ -246,7 +246,7 @@ func Test_resolveMilestoneNumber(t *testing.T) {
 
 	t.Run("the issues service returns an error", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		issuesService := new(fakes.MilestoneLister)
+		issuesService := new(fakes2.MilestoneLister)
 
 		issuesService.ListMilestonesReturns(nil, nil, errors.New("banana"))
 
@@ -256,7 +256,7 @@ func Test_resolveMilestoneNumber(t *testing.T) {
 
 	t.Run("the issues service returns a not okay status", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		issuesService := new(fakes.MilestoneLister)
+		issuesService := new(fakes2.MilestoneLister)
 
 		issuesService.ListMilestonesReturns(nil, githubResponse(t, http.StatusUnauthorized), nil)
 
@@ -270,7 +270,7 @@ func Test_fetchIssuesWithLabelAndMilestone(t *testing.T) {
 
 	t.Run("empty milestone and labels", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		issuesService := new(fakes.IssuesByRepoLister)
+		issuesService := new(fakes2.IssuesByRepoLister)
 
 		result, err := fetchIssuesWithLabelAndMilestone(context.Background(), issuesService, "o", "n", "", nil)
 		please.Expect(err).NotTo(Ω.HaveOccurred())
@@ -281,7 +281,7 @@ func Test_fetchIssuesWithLabelAndMilestone(t *testing.T) {
 
 	t.Run("the issues service returns an error", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		issuesService := new(fakes.IssuesByRepoLister)
+		issuesService := new(fakes2.IssuesByRepoLister)
 
 		issuesService.ListByRepoReturns(nil, nil, errors.New("banana"))
 
@@ -291,7 +291,7 @@ func Test_fetchIssuesWithLabelAndMilestone(t *testing.T) {
 
 	t.Run("the issues service returns a not okay status", func(t *testing.T) {
 		please := Ω.NewWithT(t)
-		issuesService := new(fakes.IssuesByRepoLister)
+		issuesService := new(fakes2.IssuesByRepoLister)
 
 		issuesService.ListByRepoReturns(nil, githubResponse(t, http.StatusUnauthorized), nil)
 

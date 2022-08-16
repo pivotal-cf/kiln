@@ -1,4 +1,4 @@
-package release
+package notes
 
 import (
 	_ "embed"
@@ -17,7 +17,7 @@ func DefaultNotesTemplate() string {
 	return defaultReleaseNotesTemplate
 }
 
-func DefaultTemplateFuncs(t *template.Template) *template.Template {
+func DefaultTemplateFunctions(t *template.Template) *template.Template {
 	return t.Funcs(sprig.TxtFuncMap()).Funcs(template.FuncMap{
 		"removeEmptyLines": removeEmptyLines,
 	})
