@@ -37,4 +37,4 @@ Feature: As a developer, I want the Kiln CLI to be usable
       | create-release-notes    |
       | update-release          |
       | update-stemcell         |
-      | upload-release          |
+      | publish-release         |
