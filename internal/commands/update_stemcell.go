@@ -19,8 +19,8 @@ type UpdateStemcell struct {
 	Options struct {
 		flags.Standard
 
-		Version     string `short:"v"  long:"version"            required:"true"    description:"desired version of stemcell"`
-		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+		Version     string `short:"v"  long:"version"                                    required:"true" description:"desired version of stemcell"`
+		ReleasesDir string `short:"rd" long:"releases-directory" default-path:"releases"                 description:"path to a directory to download releases into"`
 	}
 	FS                         billy.Filesystem
 	MultiReleaseSourceProvider MultiReleaseSourceProvider
