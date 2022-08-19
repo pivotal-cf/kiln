@@ -21,11 +21,11 @@ type FetchReleases struct {
 	Options struct {
 		flags.Standard
 
-		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+		ReleasesDir string `short:"rd" long:"releases-directory" default-path:"releases" description:"path to a directory to download releases into"`
 
-		DownloadThreads              int  `short:"dt" long:"download-threads" description:"number of parallel threads to download parts from S3"`
-		NoConfirm                    bool `short:"n" long:"no-confirm" description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
-		AllowOnlyPublishableReleases bool `long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
+		DownloadThreads              int  `short:"dt" long:"download-threads"                description:"number of parallel threads to download parts from S3"`
+		NoConfirm                    bool `short:"n"  long:"no-confirm"                      description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
+		AllowOnlyPublishableReleases bool `           long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
 	}
 }
 
