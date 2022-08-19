@@ -44,9 +44,9 @@ type CacheReleases struct {
 		flags.Standard
 		om.ClientConfiguration
 
-		UploadTargetID string `           long:"upload-target-id"   required:"true"    description:"the ID of the release source where the built release will be uploaded"`
-		ReleasesDir    string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
-		Name           string `short:"n"  long:"name"               default:"cf"       description:"name of the tile"` // TODO: parse from base.yml
+		UploadTargetID string `           long:"upload-target-id"                           required:"true" description:"the ID of the release source where the built release will be uploaded"`
+		ReleasesDir    string `short:"rd" long:"releases-directory" default-path:"releases"                 description:"path to a directory to download releases into"`
+		Name           string `short:"n"  long:"name"               default:"cf"                            description:"name of the tile"` // TODO: parse from base.yml
 	}
 
 	Logger *log.Logger

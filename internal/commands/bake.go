@@ -126,24 +126,24 @@ type Bake struct {
 	Options struct {
 		flags.Standard
 
-		Metadata                 string   `short:"m"   long:"metadata"                   default:"base.yml"         description:"path to the metadata file"`
-		ReleaseDirectories       []string `short:"rd"  long:"releases-directory"         default:"releases"         description:"path to a directory containing release tarballs"`
-		FormDirectories          []string `short:"f"   long:"forms-directory"            default:"forms"            description:"path to a directory containing forms"`
-		IconPath                 string   `short:"i"   long:"icon"                       default:"icon.png"         description:"path to icon file"`
-		InstanceGroupDirectories []string `short:"ig"  long:"instance-groups-directory"  default:"instance_groups"  description:"path to a directory containing instance groups"`
-		JobDirectories           []string `short:"j"   long:"jobs-directory"             default:"jobs"             description:"path to a directory containing jobs"`
-		MigrationDirectories     []string `short:"md"  long:"migrations-directory"       default:"migrations"       description:"path to a directory containing migrations"`
-		PropertyDirectories      []string `short:"pd"  long:"properties-directory"       default:"properties"       description:"path to a directory containing property blueprints"`
-		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory"  default:"runtime_configs"  description:"path to a directory containing runtime configs"`
-		BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"   default:"bosh_variables"   description:"path to a directory containing BOSH variables"`
-		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"                                      description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)"`
-		StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"                                   description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)"`
-		EmbedPaths               []string `short:"e"   long:"embed"                                                 description:"path to files to include in the tile /embed directory"`
-		OutputFile               string   `short:"o"   long:"output-file"                                           description:"path to where the tile will be output"`
-		MetadataOnly             bool     `short:"mo"  long:"metadata-only"                                         description:"don't build a tile, output the metadata to stdout"`
-		Sha256                   bool     `            long:"sha256"                                                description:"calculates a SHA256 checksum of the output file"`
-		StubReleases             bool     `short:"sr"  long:"stub-releases"                                         description:"skips importing release tarballs into the tile"`
-		Version                  string   `short:"v"   long:"version"                                               description:"version of the tile"`
+		Metadata                 string   `short:"m"   long:"metadata"                  default-path:"base.yml"        description:"path to the metadata file"`
+		ReleaseDirectories       []string `short:"rd"  long:"releases-directory"        default-path:"releases"        description:"path to a directory containing release tarballs"`
+		FormDirectories          []string `short:"f"   long:"forms-directory"           default-path:"forms"           description:"path to a directory containing forms"`
+		IconPath                 string   `short:"i"   long:"icon"                      default-path:"icon.png"        description:"path to icon file"`
+		InstanceGroupDirectories []string `short:"ig"  long:"instance-groups-directory" default-path:"instance_groups" description:"path to a directory containing instance groups"`
+		JobDirectories           []string `short:"j"   long:"jobs-directory"            default-path:"jobs"            description:"path to a directory containing jobs"`
+		MigrationDirectories     []string `short:"md"  long:"migrations-directory"      default-path:"migrations"      description:"path to a directory containing migrations"`
+		PropertyDirectories      []string `short:"pd"  long:"properties-directory"      default-path:"properties"      description:"path to a directory containing property blueprints"`
+		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory" default-path:"runtime_configs" description:"path to a directory containing runtime configs"`
+		BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"  default-path:"bosh_variables"  description:"path to a directory containing BOSH variables"`
+		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"                                         description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)"`
+		StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"                                      description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)"`
+		EmbedPaths               []string `short:"e"   long:"embed"                                                    description:"path to files to include in the tile /embed directory"`
+		OutputFile               string   `short:"o"   long:"output-file"                                              description:"path to where the tile will be output"`
+		MetadataOnly             bool     `short:"mo"  long:"metadata-only"                                            description:"don't build a tile, output the metadata to stdout"`
+		Sha256                   bool     `            long:"sha256"                                                   description:"calculates a SHA256 checksum of the output file"`
+		StubReleases             bool     `short:"sr"  long:"stub-releases"                                            description:"skips importing release tarballs into the tile"`
+		Version                  string   `short:"v"   long:"version"                                                  description:"version of the tile"`
 	}
 }
 

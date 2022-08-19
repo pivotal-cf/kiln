@@ -16,11 +16,11 @@ type UpdateRelease struct {
 	Options struct {
 		flags.Standard
 
-		Name                         string `short:"n" long:"name" required:"true" description:"name of release to update"`
-		Version                      string `short:"v" long:"version" required:"true" description:"desired version of release"`
-		ReleasesDir                  string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
-		AllowOnlyPublishableReleases bool   `long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
-		WithoutDownload              bool   `long:"without-download" description:"updates releases without downloading them"`
+		Name                         string `short:"n"  long:"name"                            required:"true"                         description:"name of release to update"`
+		Version                      string `short:"v"  long:"version"                         required:"true"                         description:"desired version of release"`
+		ReleasesDir                  string `short:"rd" long:"releases-directory"                              default-path:"releases" description:"path to a directory to download releases into"`
+		AllowOnlyPublishableReleases bool   `           long:"allow-only-publishable-releases"                                         description:"include releases that would not be shipped with the tile (development builds)"`
+		WithoutDownload              bool   `           long:"without-download"                                                        description:"updates releases without downloading them"`
 	}
 	multiReleaseSourceProvider MultiReleaseSourceProvider
 	filesystem                 billy.Filesystem
