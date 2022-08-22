@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"golang.org/x/exp/maps"
 	"io"
 	"reflect"
 	"sort"
@@ -62,18 +63,25 @@ func (tc helpData) String() string {
 }
 
 type Help struct {
-	output   io.Writer
-	flags    string
-	commands jhanda.CommandSet
-	groups   map[string][]string
+	output     io.Writer
+	flags      string
+	commands   jhanda.CommandSet
+	groupOrder []string
+	groups     map[string][]string
 }
 
-func NewHelp(output io.Writer, flags string, commands jhanda.CommandSet, groups map[string][]string) Help {
+func NewHelp(output io.Writer, flags string, commands jhanda.CommandSet, groupOrder []string, groups map[string][]string) Help {
+	if len(groupOrder) == 0 {
+		groupNames := maps.Keys(groups)
+		sort.Strings(groupNames)
+		groupOrder = groupNames
+	}
 	return Help{
-		output:   output,
-		flags:    flags,
-		commands: commands,
-		groups:   groups,
+		output:     output,
+		flags:      flags,
+		commands:   commands,
+		groupOrder: groupOrder,
+		groups:     groups,
 	}
 }
 
@@ -106,7 +114,8 @@ func (h Help) Usage() jhanda.Usage {
 func (h Help) buildGlobalContext() helpData {
 	var commands []string
 
-	for groupName, groupCommandNames := range h.groups {
+	for _, groupName := range h.groupOrder {
+		groupCommandNames := h.groups[groupName]
 		if len(groupCommandNames) == 0 {
 			continue
 		}

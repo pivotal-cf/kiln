@@ -84,11 +84,14 @@ func main() {
 	commandSet := jhanda.CommandSet{}
 
 	// Global Commands
-	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet, map[string][]string{
-		"Component Team Commands": {publishReleaseCommandName, updateReleaseCommandName},
-		"Tile Commands":           {bakeCommandName, validateCommandName, createReleaseNotesCommandName},
-		"Component Commands":      {fetchReleasesCommandName, cacheReleasesCommandName, findReleaseVersionCommandName, findStemcellVersionCommandName, updateStemcellCommandName},
-	})
+	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet,
+		[]string{"Tile Commands", "Component Commands", "Component Team Commands"},
+		map[string][]string{
+			"Component Team Commands": {publishReleaseCommandName, updateReleaseCommandName},
+			"Tile Commands":           {bakeCommandName, validateCommandName, createReleaseNotesCommandName},
+			"Component Commands":      {fetchReleasesCommandName, cacheReleasesCommandName, findReleaseVersionCommandName, findStemcellVersionCommandName, updateStemcellCommandName},
+		},
+	)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 
 	// Component Team Commands

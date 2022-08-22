@@ -77,7 +77,7 @@ var _ = Describe("Help", func() {
 				help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{
 					"cook":  cook,
 					"clean": clean,
-				}, map[string][]string{
+				}, nil, map[string][]string{
 					"House": {"cook", "clean"},
 				})
 				err := help.Execute([]string{})
@@ -100,7 +100,7 @@ var _ = Describe("Help", func() {
 					}{},
 				})
 
-				help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook}, map[string][]string{
+				help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook}, nil, map[string][]string{
 					"House": {"cook", "clean"},
 				})
 				err := help.Execute([]string{"cook"})
@@ -111,7 +111,7 @@ var _ = Describe("Help", func() {
 
 			Context("when the command does not exist", func() {
 				It("returns an error", func() {
-					help := commands.NewHelp(output, flags, jhanda.CommandSet{}, map[string][]string{
+					help := commands.NewHelp(output, flags, jhanda.CommandSet{}, nil, map[string][]string{
 						"House": {"cook", "clean"},
 					})
 					err := help.Execute([]string{"missing-command"})
@@ -128,7 +128,7 @@ var _ = Describe("Help", func() {
 						Flags:            func() {},
 					})
 
-					help := commands.NewHelp(output, flags, jhanda.CommandSet{"cook": cook}, map[string][]string{
+					help := commands.NewHelp(output, flags, jhanda.CommandSet{"cook": cook}, nil, map[string][]string{
 						"House": {"cook", "clean"},
 					})
 					err := help.Execute([]string{"cook"})
@@ -144,7 +144,7 @@ var _ = Describe("Help", func() {
 						ShortDescription: "cooks you a stew",
 					})
 
-					help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook}, map[string][]string{
+					help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook}, nil, map[string][]string{
 						"House": {"cook", "clean"},
 					})
 					err := help.Execute([]string{"cook"})
@@ -164,7 +164,7 @@ var _ = Describe("Help", func() {
 						Flags:            struct{}{},
 					})
 
-					help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook}, map[string][]string{
+					help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook}, nil, map[string][]string{
 						"House": {"cook", "clean"},
 					})
 					err := help.Execute([]string{"cook"})
@@ -179,7 +179,7 @@ var _ = Describe("Help", func() {
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			help := commands.NewHelp(nil, "", jhanda.CommandSet{}, map[string][]string{
+			help := commands.NewHelp(nil, "", jhanda.CommandSet{}, nil, map[string][]string{
 				"House": {"cook", "clean"},
 			})
 			Expect(help.Usage()).To(Equal(jhanda.Usage{
