@@ -568,7 +568,7 @@ release_sources:
 					fetchExecuteArgs = []string{
 						"--releases-directory", someReleasesDirectory,
 						"--kilnfile", someKilnfilePath,
-						"--download-threads", "10",
+						"--threads", "10",
 					}
 				})
 
@@ -596,9 +596,9 @@ release_sources:
 						err := fetchReleasesCommand.Execute([]string{
 							"--releases-directory", someReleasesDirectory,
 							"--kilnfile", someKilnfilePath,
-							"--download-threads", "not-a-number",
+							"--threads", "not-a-number",
 						})
-						Expect(err).To(MatchError(`invalid value "not-a-number" for flag -download-threads: parse error`))
+						Expect(err).To(MatchError(`invalid value "not-a-number" for flag -threads: parse error`))
 					})
 				})
 
@@ -623,7 +623,7 @@ release_sources:
 		It("returns usage information for the command", func() {
 			Expect(fetchReleasesCommand.Usage()).To(Equal(jhanda.Usage{
 				Description:      "Fetches releases listed in Kilnfile.lock from S3 and downloads it locally",
-				ShortDescription: "fetches releases",
+				ShortDescription: "Downloads Bosh Releases listed in Lockfile",
 				Flags:            fetchReleasesCommand.Options,
 			}))
 		})

@@ -126,24 +126,23 @@ type Bake struct {
 	Options struct {
 		flags.Standard
 
-		Metadata                 string   `short:"m"   long:"metadata"                  default-path:"base.yml"        description:"path to the metadata file"`
-		ReleaseDirectories       []string `short:"rd"  long:"releases-directory"        default-path:"releases"        description:"path to a directory containing release tarballs"`
-		FormDirectories          []string `short:"f"   long:"forms-directory"           default-path:"forms"           description:"path to a directory containing forms"`
-		IconPath                 string   `short:"i"   long:"icon"                      default-path:"icon.png"        description:"path to icon file"`
-		InstanceGroupDirectories []string `short:"ig"  long:"instance-groups-directory" default-path:"instance_groups" description:"path to a directory containing instance groups"`
-		JobDirectories           []string `short:"j"   long:"jobs-directory"            default-path:"jobs"            description:"path to a directory containing jobs"`
-		MigrationDirectories     []string `short:"md"  long:"migrations-directory"      default-path:"migrations"      description:"path to a directory containing migrations"`
-		PropertyDirectories      []string `short:"pd"  long:"properties-directory"      default-path:"properties"      description:"path to a directory containing property blueprints"`
-		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory" default-path:"runtime_configs" description:"path to a directory containing runtime configs"`
-		BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"  default-path:"bosh_variables"  description:"path to a directory containing BOSH variables"`
-		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"                                         description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)"`
-		StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"                                      description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)"`
-		EmbedPaths               []string `short:"e"   long:"embed"                                                    description:"path to files to include in the tile /embed directory"`
-		OutputFile               string   `short:"o"   long:"output-file"                                              description:"path to where the tile will be output"`
-		MetadataOnly             bool     `short:"mo"  long:"metadata-only"                                            description:"don't build a tile, output the metadata to stdout"`
-		Sha256                   bool     `            long:"sha256"                                                   description:"calculates a SHA256 checksum of the output file"`
-		StubReleases             bool     `short:"sr"  long:"stub-releases"                                            description:"skips importing release tarballs into the tile"`
-		Version                  string   `short:"v"   long:"version"                                                  description:"version of the tile"`
+		Metadata                 string   `long:"metadata"                              default-path:"base.yml"        description:"Path to the metadata file"`
+		ReleaseDirectories       []string `long:"releases-directory"                    default-path:"releases"        description:"Path to a directory containing release tarballs"`
+		FormDirectories          []string `long:"forms-directory"           short:"f"   default-path:"forms"           description:"Path to a directory containing forms"`
+		IconPath                 string   `long:"icon"                                  default-path:"icon.png"        description:"Path to icon file"`
+		InstanceGroupDirectories []string `long:"instance-groups-directory" short:"i"   default-path:"instance_groups" description:"Path to a directory containing Instance Groups"`
+		JobDirectories           []string `long:"jobs-directory"            short:"j"   default-path:"jobs"            description:"Path to a directory containing Jobs"`
+		MigrationDirectories     []string `long:"migrations-directory"      short:"m"   default-path:"migrations"      description:"Path to a directory containing Migrations"`
+		PropertyDirectories      []string `long:"properties-directory"      short:"p"   default-path:"properties"      description:"Path to a directory containing Property Blueprints"`
+		RuntimeConfigDirectories []string `long:"runtime-configs-directory" short:"r"   default-path:"runtime_configs" description:"Path to a directory containing Runtime Configs"`
+		BOSHVariableDirectories  []string `long:"bosh-variables-directory"  short:"b"   default-path:"bosh_variables"  description:"Path to a directory containing BOSH Variables"`
+		StemcellsDirectories     []string `long:"stemcells-directory"       short:"s"                                  description:"Path to a directory containing Stemcells  (NOTE: mutually exclusive with --kilnfile)"`
+		EmbedPaths               []string `long:"embed"                                                                description:"Path to files to include in the Tile's /embed directory"`
+		OutputFile               string   `long:"output-file"               short:"o"                                  description:"Path to where the Tile will be output"`
+		MetadataOnly             bool     `long:"metadata-only"                                                        description:"Don't build a Tile, output the Metadata to stdout instead"`
+		Sha256                   bool     `long:"sha256"                                                               description:"Calculate a SHA256 checksum of the output file"`
+		StubReleases             bool     `long:"stub-releases"                                                        description:"Skip importing Release tarballs into the tile"`
+		Version                  string   `long:"version"                                                              description:"Version of the Tile"`
 	}
 }
 
@@ -192,13 +191,13 @@ func shouldGenerateTileFileName(b *Bake, args []string) bool {
 		!flags.IsSet("o", "output-file", args)
 }
 
+// TODO: jhanda flags.IsSet requires a short flag to function.  So we may need it if we have to make this check work.
 func shouldReadVersionFile(b *Bake, args []string) bool {
-	return b.Options.Version == "" && !flags.IsSet("v", "version", args)
+	return b.Options.Version == "" && !flags.IsSet("version", args)
 }
 
 func shouldNotUseDefaultKilnfileFlag(args []string) bool {
-	return (flags.IsSet("st", "stemcell-tarball", args) || flags.IsSet("sd", "stemcells-directory", args)) &&
-		!flags.IsSet("kf", "kilnfile", args)
+	return (flags.IsSet("s", "stemcells-directory", args)) && !flags.IsSet("k", "kilnfile", args)
 }
 
 func (b *Bake) loadFlags(args []string, stat flags.StatFunc, readFile func(string) ([]byte, error)) error {
@@ -240,25 +239,12 @@ func (b Bake) Execute(args []string) error {
 		return errors.New("--jobs-directory flag requires --instance-groups-directory to also be specified")
 	}
 
-	if b.Options.Kilnfile != "" && b.Options.StemcellTarball != "" {
-		return errors.New("--kilnfile cannot be provided when using --stemcell-tarball")
-	}
-
 	if b.Options.Kilnfile != "" && len(b.Options.StemcellsDirectories) > 0 {
 		return errors.New("--kilnfile cannot be provided when using --stemcells-directory")
 	}
 
-	if b.Options.StemcellTarball != "" && len(b.Options.StemcellsDirectories) > 0 {
-		return errors.New("--stemcell-tarball cannot be provided when using --stemcells-directory")
-	}
-
 	if b.Options.OutputFile != "" && b.Options.MetadataOnly {
 		return errors.New("--output-file cannot be provided when using --metadata-only")
-	}
-
-	// TODO: Remove check after deprecation of --stemcell-tarball
-	if b.Options.StemcellTarball != "" {
-		b.errLogger.Println("warning: --stemcell-tarball is being deprecated in favor of --stemcells-directory")
 	}
 
 	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
@@ -272,11 +258,7 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	var stemcellManifests map[string]interface{}
-	var stemcellManifest interface{}
-	if b.Options.StemcellTarball != "" {
-		// TODO remove when stemcell tarball is deprecated
-		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
-	} else if b.Options.Kilnfile != "" {
+	if b.Options.Kilnfile != "" {
 		stemcellManifests, err = b.stemcell.FromKilnfile(b.Options.Kilnfile)
 	} else if len(b.Options.StemcellsDirectories) > 0 {
 		stemcellManifests, err = b.stemcell.FromDirectories(b.Options.StemcellsDirectories)
@@ -331,7 +313,6 @@ func (b Bake) Execute(args []string) error {
 		BOSHVariables:      boshVariables,
 		ReleaseManifests:   releaseManifests,
 		StemcellManifests:  stemcellManifests,
-		StemcellManifest:   stemcellManifest, // TODO Remove when --stemcell-tarball is deprecated
 		FormTypes:          forms,
 		IconImage:          icon,
 		InstanceGroups:     instanceGroups,
@@ -374,7 +355,7 @@ func (b Bake) Execute(args []string) error {
 func (b Bake) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
-		ShortDescription: "bakes a tile",
+		ShortDescription: "Assembles a Tile suitable for OpsManager consumption",
 		Flags:            b.Options,
 	}
 }

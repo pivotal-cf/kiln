@@ -419,8 +419,8 @@ func (cmd CacheReleases) downloadAndComputeSHA(cache component.ReleaseSource, re
 
 func (cmd CacheReleases) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Downloads compiled bosh releases from an Tanzu Ops Manager bosh director and then uploads them to a bucket",
-		ShortDescription: "Cache compiled releases",
+		Description:      "Causes a Tanzu Ops Manager Bosh Director to compile Bosh Releases marked as 'uncompiled' in Kilnfile.lock, uploads them to the PPE team's S3 Bucket, and then updates the lock file to reflect the location of the compiled Release in S3.",
+		ShortDescription: "Compiles uncompiled Bosh Releases, makes them available to PPE team for inclusion in Published Tiles",
 		Flags:            cmd.Options,
 	}
 }

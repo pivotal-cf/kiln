@@ -28,11 +28,11 @@ const releaseDateFormat = "2006-01-02"
 
 type ReleaseNotes struct {
 	Options struct {
-		ReleaseDate  string `long:"release-date" short:"d" description:"release date of the tile"`
-		TemplateName string `long:"template"     short:"t" description:"path to template"`
-		GithubToken  string `long:"github-token" short:"g" description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
-		Kilnfile     string `long:"kilnfile"     short:"k" description:"path to Kilnfile"`
-		DocsFile     string `long:"update-docs"  short:"u" description:"path to docs file to update"`
+		ReleaseDate  string `long:"release-date" short:"r" description:"Release date of the Tile"`
+		TemplateName string `long:"template"     short:"t" description:"Path to your custom Markdown template"`
+		GithubToken  string `long:"github-token" short:"g" description:"Token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
+		Kilnfile     string `long:"kilnfile"     short:"k" description:"Path to Kilnfile"`
+		DocsFile     string `long:"update-docs"  short:"u" description:"Path to Tile release notes file to update"`
 		notes.IssuesQuery
 	}
 
@@ -59,8 +59,8 @@ func NewReleaseNotesCommand() *ReleaseNotes {
 
 func (r *ReleaseNotes) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "generates release notes from bosh-release release notes on GitHub between two tile repo git references",
-		ShortDescription: "generates release notes from bosh-release release notes",
+		Description:      "Collects GitHub Release notes for Tile Components that have been updated and adds them to Tile release notes",
+		ShortDescription: "Adds Tile Component release notes to Tile release notes",
 		Flags:            r.Options,
 	}
 }

@@ -21,11 +21,11 @@ type FetchReleases struct {
 	Options struct {
 		flags.Standard
 
-		ReleasesDir string `short:"rd" long:"releases-directory" default-path:"releases" description:"path to a directory to download releases into"`
+		ReleasesDir     string `long:"releases-directory" short:"r" default-path:"releases" description:"Path to a directory to download releases into"`
+		DownloadThreads int    `long:"threads"            short:"t" description:"Number of parallel threads to download parts from S3"`
+		NoConfirm       bool   `long:"no-confirm"         short:"n" description:"Non-interactive mode. Will delete extra releases in releases directory without prompt"`
 
-		DownloadThreads              int  `short:"dt" long:"download-threads"                description:"number of parallel threads to download parts from S3"`
-		NoConfirm                    bool `short:"n"  long:"no-confirm"                      description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
-		AllowOnlyPublishableReleases bool `           long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
+		AllowOnlyPublishableReleases bool `long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
 	}
 }
 
@@ -141,7 +141,7 @@ func (f *FetchReleases) downloadMissingReleases(kilnfile cargo.Kilnfile, release
 func (f *FetchReleases) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Fetches releases listed in Kilnfile.lock from S3 and downloads it locally",
-		ShortDescription: "fetches releases",
+		ShortDescription: "Downloads Bosh Releases listed in Lockfile",
 		Flags:            f.Options,
 	}
 }

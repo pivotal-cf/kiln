@@ -99,11 +99,6 @@ var _ = Describe("Bake", func() {
 			},
 		}, nil)
 
-		fakeStemcellService.FromTarballReturns(builder.StemcellManifest{
-			Version:         "2.3.4",
-			OperatingSystem: "an-operating-system",
-		}, nil)
-
 		fakeFormsService.ParseMetadataTemplatesReturns(map[string]interface{}{
 			"some-form": builder.Metadata{
 				"name":  "some-form",
@@ -196,7 +191,6 @@ var _ = Describe("Bake", func() {
 				"--releases-directory", someReleasesDirectory,
 				"--runtime-configs-directory", "some-other-runtime-configs-directory",
 				"--runtime-configs-directory", "some-runtime-configs-directory",
-				"--stemcell-tarball", "some-stemcell-tarball",
 				"--bosh-variables-directory", "some-other-variables-directory",
 				"--bosh-variables-directory", "some-variables-directory",
 				"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
@@ -221,9 +215,6 @@ var _ = Describe("Bake", func() {
 
 			Expect(fakeReleasesService.FromDirectoriesCallCount()).To(Equal(1))
 			Expect(fakeReleasesService.FromDirectoriesArgsForCall(0)).To(Equal([]string{otherReleasesDirectory, someReleasesDirectory}))
-
-			Expect(fakeStemcellService.FromTarballCallCount()).To(Equal(1))
-			Expect(fakeStemcellService.FromTarballArgsForCall(0)).To(Equal("some-stemcell-tarball"))
 
 			Expect(fakeFormsService.ParseMetadataTemplatesCallCount()).To(Equal(1))
 			paths, _ = fakeFormsService.ParseMetadataTemplatesArgsForCall(0)
@@ -282,10 +273,6 @@ var _ = Describe("Bake", func() {
 						Version: "2.3.4",
 						File:    "release2.tar.gz",
 					},
-				},
-				StemcellManifest: builder.StemcellManifest{
-					Version:         "2.3.4",
-					OperatingSystem: "an-operating-system",
 				},
 				FormTypes: map[string]interface{}{
 					"some-form": builder.Metadata{
@@ -358,7 +345,6 @@ var _ = Describe("Bake", func() {
 					"--releases-directory", someReleasesDirectory,
 					"--runtime-configs-directory", "some-other-runtime-configs-directory",
 					"--runtime-configs-directory", "some-runtime-configs-directory",
-					"--stemcell-tarball", "some-stemcell-tarball",
 					"--bosh-variables-directory", "some-other-variables-directory",
 					"--bosh-variables-directory", "some-variables-directory",
 					"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
@@ -420,7 +406,6 @@ var _ = Describe("Bake", func() {
 					"--releases-directory", otherReleasesDirectory,
 					"--releases-directory", someReleasesDirectory,
 					"--runtime-configs-directory", "some-runtime-configs-directory",
-					"--stemcell-tarball", "some-stemcell-tarball",
 					"--bosh-variables-directory", "some-variables-directory",
 					"--variable", "some-variable=some-variable-value",
 					"--variables-file", "some-variable-file-1",
@@ -474,19 +459,6 @@ var _ = Describe("Bake", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeStemcellService.FromKilnfileCallCount()).To(Equal(1))
 				Expect(fakeStemcellService.FromKilnfileArgsForCall(0)).To(Equal("Kilnfile"))
-			})
-		})
-
-		Context("when neither the --kilnfile nor --stemcell-tarball flags are provided", func() {
-			It("does not error", func() {
-				err := bake.Execute([]string{
-					"--metadata", "some-metadata",
-					"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-					"--releases-directory", otherReleasesDirectory,
-					"--releases-directory", someReleasesDirectory,
-					"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
-				})
-				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -550,24 +522,6 @@ var _ = Describe("Bake", func() {
 				})
 			})
 
-			Context("when the stemcell service fails", func() {
-				It("returns an error", func() {
-					fakeStemcellService.FromTarballReturns(nil, errors.New("parsing stemcell failed"))
-
-					err := bake.Execute([]string{
-						"--icon", "some-icon-path",
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--properties-directory", "some-properties-directory",
-						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--version", "1.2.3",
-					})
-
-					Expect(err).To(MatchError("failed to parse stemcell: parsing stemcell failed"))
-				})
-			})
-
 			Context("when the forms service fails", func() {
 				It("returns an error", func() {
 					fakeFormsService.ParseMetadataTemplatesReturns(nil, errors.New("parsing forms failed"))
@@ -578,7 +532,6 @@ var _ = Describe("Bake", func() {
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--properties-directory", "some-properties-directory",
 						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--forms-directory", "some-form-directory",
 						"--version", "1.2.3",
 					})
@@ -597,7 +550,6 @@ var _ = Describe("Bake", func() {
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--properties-directory", "some-properties-directory",
 						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--forms-directory", "some-form-directory",
 						"--instance-groups-directory", "some-instance-group-directory",
 						"--version", "1.2.3",
@@ -617,7 +569,6 @@ var _ = Describe("Bake", func() {
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--properties-directory", "some-properties-directory",
 						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--forms-directory", "some-form-directory",
 						"--instance-groups-directory", "some-instance-group-directory",
 						"--version", "1.2.3",
@@ -637,7 +588,6 @@ var _ = Describe("Bake", func() {
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--properties-directory", "some-properties-directory",
 						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--forms-directory", "some-form-directory",
 						"--instance-groups-directory", "some-instance-group-directory",
 						"--version", "1.2.3",
@@ -657,7 +607,6 @@ var _ = Describe("Bake", func() {
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--runtime-configs-directory", "some-runtime-configs-directory",
 						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--forms-directory", "some-form-directory",
 						"--instance-groups-directory", "some-instance-group-directory",
 						"--version", "1.2.3",
@@ -677,7 +626,6 @@ var _ = Describe("Bake", func() {
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--properties-directory", "some-properties-directory",
 						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--forms-directory", "some-form-directory",
 						"--version", "1.2.3",
 					})
@@ -692,7 +640,6 @@ var _ = Describe("Bake", func() {
 						"--icon", "some-icon-path",
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
 						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--version", "1.2.3",
 					})
 
@@ -707,7 +654,6 @@ var _ = Describe("Bake", func() {
 						"--icon", "some-icon-path",
 						"--metadata", "some-metadata",
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4.pivotal",
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--stub-releases",
 						"--version", "1.2.3",
 					})
@@ -728,32 +674,6 @@ var _ = Describe("Bake", func() {
 				})
 			})
 
-			// todo: When --stemcell-tarball is removed, delete this test
-			Context("when both the --stemcell-tarball and --kilnfile are provided", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--kilnfile", "Kilnfile",
-					})
-					Expect(err).To(MatchError("--kilnfile cannot be provided when using --stemcell-tarball"))
-				})
-			})
-
-			// todo: When --stemcell-tarball is remove, delete this test
-			Context("when both the --stemcell-tarball and --stemcells-directory are provided", func() {
-				It("returns an error", func() {
-					err := bake.Execute([]string{
-						"--metadata", "some-metadata",
-						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
-						"--stemcell-tarball", "some-stemcell-tarball",
-						"--stemcells-directory", "some-stemcell-directory",
-					})
-					Expect(err).To(MatchError("--stemcell-tarball cannot be provided when using --stemcells-directory"))
-				})
-			})
-
 			Context("when both the output-file and metadata-only flags are provided", func() {
 				It("returns an error", func() {
 					err := bake.Execute([]string{
@@ -762,7 +682,6 @@ var _ = Describe("Bake", func() {
 						"--metadata-only",
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--version", "1.2.3",
 					})
 
@@ -778,7 +697,6 @@ var _ = Describe("Bake", func() {
 						"--metadata", "some-metadata",
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--version", "1.2.3",
 					})
 
@@ -794,7 +712,6 @@ var _ = Describe("Bake", func() {
 						"--metadata", "some-metadata",
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--releases-directory", someReleasesDirectory,
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--version", "1.2.3",
 						"--non-existant-flag",
 					})
@@ -820,7 +737,6 @@ var _ = Describe("Bake", func() {
 						"--releases-directory", someReleasesDirectory,
 						"--runtime-configs-directory", "some-other-runtime-configs-directory",
 						"--runtime-configs-directory", "some-runtime-configs-directory",
-						"--stemcell-tarball", "some-stemcell-tarball",
 						"--bosh-variables-directory", "some-other-variables-directory",
 						"--bosh-variables-directory", "some-variables-directory",
 						"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
@@ -840,7 +756,7 @@ var _ = Describe("Bake", func() {
 		It("returns usage information for the command", func() {
 			Expect(bake.Usage()).To(Equal(jhanda.Usage{
 				Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
-				ShortDescription: "bakes a tile",
+				ShortDescription: "Assembles a Tile suitable for OpsManager consumption",
 				Flags:            bake.Options,
 			}))
 		})

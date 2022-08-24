@@ -28,9 +28,10 @@ type (
 )
 
 type Standard struct {
-	Kilnfile      string   `short:"kf"  long:"kilnfile"       default-path:"Kilnfile" description:"path to Kilnfile"`
-	VariableFiles []string `short:"vf"  long:"variables-file"                         description:"path to a file containing variables to interpolate"`
-	Variables     []string `short:"vr"  long:"variable"                               description:"key value pairs of variables to interpolate"`
+	Kilnfile string `long:"kilnfile" short:"k" default-path:"Kilnfile" description:"Path to Kilnfile"`
+
+	VariableFiles []string `long:"variables-file"           description:"Path to a file containing variables to interpolate"`
+	Variables     []string `long:"variable"       short:"v" description:"Key/value pairs of variables to interpolate"`
 }
 
 // LoadKilnfiles parses and interpolates the Kilnfile and parsed the Kilnfile.lock.

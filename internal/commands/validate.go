@@ -101,8 +101,8 @@ func validateRelease(release cargo.ComponentSpec, lock cargo.ComponentLock, inde
 
 func (v Validate) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Validate checks for common Kilnfile and Kilnfile.lock mistakes",
-		ShortDescription: "validate Kilnfile and Kilnfile.lock",
+		Description:      "Checks for common Kilnfile and Kilnfile.lock mistakes, such as [...]",
+		ShortDescription: "Checks for common Kilnfile and Kilnfile.lock mistakes",
 		Flags:            v.Options,
 	}
 }

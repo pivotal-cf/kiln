@@ -21,8 +21,8 @@ func main() {
 	// -------------------
 	// parse global flags
 	var global struct {
-		Help    bool `short:"h" long:"help"    description:"prints this usage information"   default:"false"`
-		Version bool `short:"v" long:"version" description:"prints the kiln release version" default:"false"`
+		Help    bool `long:"help"    short:"h" description:"Prints this usage information"   default:"false"`
+		Version bool `long:"version"           description:"Prints the kiln release version" default:"false"`
 	}
 	args, err := jhanda.Parse(&global, os.Args[1:])
 	if err != nil {
