@@ -1,23 +1,22 @@
 package proofing_test
 
 import (
+	proofing2 "github.com/pivotal-cf/kiln/internal/proofing"
 	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 var _ = Describe("StemcellCriteria", func() {
-	var stemcellCriteria proofing.StemcellCriteria
+	var stemcellCriteria proofing2.StemcellCriteria
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/metadata.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := proofing2.Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		stemcellCriteria = productTemplate.StemcellCriteria

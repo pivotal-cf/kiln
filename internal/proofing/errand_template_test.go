@@ -1,23 +1,22 @@
 package proofing_test
 
 import (
+	proofing2 "github.com/pivotal-cf/kiln/internal/proofing"
 	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 var _ = Describe("ErrandTemplate", func() {
-	var errandTemplate proofing.ErrandTemplate
+	var errandTemplate proofing2.ErrandTemplate
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/errands.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := proofing2.Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		errandTemplate = productTemplate.PostDeployErrands[0]

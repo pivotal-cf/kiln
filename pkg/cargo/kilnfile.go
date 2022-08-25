@@ -3,12 +3,11 @@ package cargo
 import (
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/manifest"
 	"strings"
 
 	"github.com/Masterminds/semver"
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
-
-	"github.com/pivotal-cf/kiln/pkg/manifest"
 )
 
 type KilnfileLock struct {
