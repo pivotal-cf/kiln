@@ -3,6 +3,7 @@ package tile
 import (
 	"archive/zip"
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/proofing"
 	"io"
 	"io/fs"
 	"os"
@@ -10,8 +11,6 @@ import (
 
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
-
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 func ReadReleaseFromFile(tilePath, releaseName, releaseVersion string, releaseTarball io.Writer) (proofing.Release, error) {

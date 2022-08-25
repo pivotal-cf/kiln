@@ -1,6 +1,8 @@
 package manifest
 
 import (
+	opsman2 "github.com/pivotal-cf/kiln/internal/manifest/opsman"
+	"github.com/pivotal-cf/kiln/internal/proofing"
 	"os"
 	"testing"
 
@@ -8,9 +10,6 @@ import (
 
 	. "github.com/onsi/gomega"
 	gomegaMatchers "github.com/pivotal-cf-experimental/gomegamatchers"
-
-	"github.com/pivotal-cf/kiln/pkg/manifest/opsman"
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 func TestGenerate(t *testing.T) {
@@ -30,7 +29,7 @@ func TestGenerate(t *testing.T) {
 				"some-az-1",
 				"some-az-2",
 			},
-			Stemcells: []opsman.Stemcell{
+			Stemcells: []opsman2.Stemcell{
 				{
 					Name:    "some-stemcell-name",
 					Version: "some-stemcell-version",
@@ -42,14 +41,14 @@ func TestGenerate(t *testing.T) {
 					OS:      "other-stemcell-os",
 				},
 			},
-			ResourceConfigs: []opsman.ResourceConfig{
+			ResourceConfigs: []opsman2.ResourceConfig{
 				{
 					Name:      "some-job-type-name",
-					Instances: opsman.ResourceConfigInstances{Value: 1},
+					Instances: opsman2.ResourceConfigInstances{Value: 1},
 				},
 				{
 					Name:      "other-job-type-name",
-					Instances: opsman.ResourceConfigInstances{Value: -1}, // NOTE: negative value indicates "automatic"
+					Instances: opsman2.ResourceConfigInstances{Value: -1}, // NOTE: negative value indicates "automatic"
 				},
 			},
 		})

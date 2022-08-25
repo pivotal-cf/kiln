@@ -1,27 +1,26 @@
 package proofing_test
 
 import (
+	proofing2 "github.com/pivotal-cf/kiln/internal/proofing"
 	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 var _ = Describe("SimplePropertyInput", func() {
-	var simplePropertyInput proofing.SimplePropertyInput
+	var simplePropertyInput proofing2.SimplePropertyInput
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/form_types.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := proofing2.Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		var ok bool
-		simplePropertyInput, ok = productTemplate.FormTypes[0].PropertyInputs[0].(proofing.SimplePropertyInput)
+		simplePropertyInput, ok = productTemplate.FormTypes[0].PropertyInputs[0].(proofing2.SimplePropertyInput)
 		Expect(ok).To(BeTrue())
 	})
 

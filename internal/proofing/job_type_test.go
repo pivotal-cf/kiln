@@ -1,23 +1,22 @@
 package proofing_test
 
 import (
+	proofing2 "github.com/pivotal-cf/kiln/internal/proofing"
 	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 var _ = Describe("JobType", func() {
-	var jobType proofing.JobType
+	var jobType proofing2.JobType
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/job_types.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := proofing2.Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		jobType = productTemplate.JobTypes[0]
@@ -36,7 +35,7 @@ var _ = Describe("JobType", func() {
 		Expect(jobType.Serial).To(BeTrue())
 		Expect(jobType.SingleAZOnly).To(BeTrue())
 
-		Expect(jobType.InstanceDefinition).To(BeAssignableToTypeOf(proofing.InstanceDefinition{}))
+		Expect(jobType.InstanceDefinition).To(BeAssignableToTypeOf(proofing2.InstanceDefinition{}))
 		Expect(jobType.PropertyBlueprints).To(HaveLen(1))
 		Expect(jobType.ResourceDefinitions).To(HaveLen(1))
 		Expect(jobType.Templates).To(HaveLen(1))
@@ -45,7 +44,7 @@ var _ = Describe("JobType", func() {
 
 	Context("property_blueprints", func() {
 		It("parses their structure", func() {
-			propertyBlueprint, ok := jobType.PropertyBlueprints[0].(proofing.SimplePropertyBlueprint)
+			propertyBlueprint, ok := jobType.PropertyBlueprints[0].(proofing2.SimplePropertyBlueprint)
 			Expect(ok).To(BeTrue())
 
 			Expect(propertyBlueprint.Configurable).To(BeTrue())

@@ -1,23 +1,22 @@
 package proofing_test
 
 import (
+	proofing2 "github.com/pivotal-cf/kiln/internal/proofing"
 	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 var _ = Describe("InstallTimeVerifier", func() {
-	var installTimeVerifier proofing.InstallTimeVerifier
+	var installTimeVerifier proofing2.InstallTimeVerifier
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/metadata.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := proofing2.Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		installTimeVerifier = productTemplate.InstallTimeVerifiers[0]

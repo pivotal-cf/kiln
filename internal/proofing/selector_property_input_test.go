@@ -1,27 +1,26 @@
 package proofing_test
 
 import (
+	proofing2 "github.com/pivotal-cf/kiln/internal/proofing"
 	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 var _ = Describe("SelectorPropertyInput", func() {
-	var selectorPropertyInput proofing.SelectorPropertyInput
+	var selectorPropertyInput proofing2.SelectorPropertyInput
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/form_types.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 
-		productTemplate, err := proofing.Parse(f)
+		productTemplate, err := proofing2.Parse(f)
 		Expect(err).NotTo(HaveOccurred())
 
 		var ok bool
-		selectorPropertyInput, ok = productTemplate.FormTypes[0].PropertyInputs[2].(proofing.SelectorPropertyInput)
+		selectorPropertyInput, ok = productTemplate.FormTypes[0].PropertyInputs[2].(proofing2.SelectorPropertyInput)
 		Expect(ok).To(BeTrue())
 	})
 
@@ -35,7 +34,7 @@ var _ = Describe("SelectorPropertyInput", func() {
 	})
 
 	Context("selector_property_inputs", func() {
-		var selectorOptionPropertyInput proofing.SelectorOptionPropertyInput
+		var selectorOptionPropertyInput proofing2.SelectorOptionPropertyInput
 
 		BeforeEach(func() {
 			selectorOptionPropertyInput = selectorPropertyInput.SelectorPropertyInputs[0]

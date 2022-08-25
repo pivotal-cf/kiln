@@ -1,22 +1,21 @@
 package manifest
 
 import (
+	opsman2 "github.com/pivotal-cf/kiln/internal/manifest/opsman"
+	proofing2 "github.com/pivotal-cf/kiln/internal/proofing"
 	"io"
 
 	"gopkg.in/yaml.v2"
-
-	"github.com/pivotal-cf/kiln/pkg/manifest/opsman"
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 type OpsManagerConfig struct {
 	DeploymentName    string
 	AvailabilityZones []string
-	Stemcells         []opsman.Stemcell
-	ResourceConfigs   []opsman.ResourceConfig
+	Stemcells         []opsman2.Stemcell
+	ResourceConfigs   []opsman2.ResourceConfig
 }
 
-func Generate(template proofing.ProductTemplate, config OpsManagerConfig) Manifest {
+func Generate(template proofing2.ProductTemplate, config OpsManagerConfig) Manifest {
 	releases := generateReleases(template.Releases)
 	stemcell := findStemcell(template.StemcellCriteria, config.Stemcells)
 	update := generateUpdate(template.Serial)
@@ -33,7 +32,7 @@ func Generate(template proofing.ProductTemplate, config OpsManagerConfig) Manife
 	}
 }
 
-func generateReleases(templateReleases []proofing.Release) []Release {
+func generateReleases(templateReleases []proofing2.Release) []Release {
 	var releases []Release
 
 	for _, release := range templateReleases {
@@ -47,7 +46,7 @@ func generateReleases(templateReleases []proofing.Release) []Release {
 	return releases
 }
 
-func findStemcell(criteria proofing.StemcellCriteria, stemcells []opsman.Stemcell) Stemcell {
+func findStemcell(criteria proofing2.StemcellCriteria, stemcells []opsman2.Stemcell) Stemcell {
 	var stemcell Stemcell
 
 	for _, s := range stemcells {
@@ -76,7 +75,7 @@ func generateUpdate(serial bool) Update {
 	}
 }
 
-func generateInstanceGroups(jobTypes []proofing.JobType, resourceConfigs []opsman.ResourceConfig, availabilityZones []string, stemcellAlias string) []InstanceGroup {
+func generateInstanceGroups(jobTypes []proofing2.JobType, resourceConfigs []opsman2.ResourceConfig, availabilityZones []string, stemcellAlias string) []InstanceGroup {
 	var instanceGroups []InstanceGroup
 
 	for _, jobType := range jobTypes {
@@ -111,7 +110,7 @@ func generateInstanceGroups(jobTypes []proofing.JobType, resourceConfigs []opsma
 	return instanceGroups
 }
 
-func generateInstanceGroupJobs(templates []proofing.Template) []InstanceGroupJob {
+func generateInstanceGroupJobs(templates []proofing2.Template) []InstanceGroupJob {
 	var jobs []InstanceGroupJob
 
 	for _, template := range templates {
@@ -146,7 +145,7 @@ func evaluateManifestSnippet(snippet string) interface{} {
 	return result
 }
 
-func generateVariables(templateVariables []proofing.Variable) []Variable {
+func generateVariables(templateVariables []proofing2.Variable) []Variable {
 	var variables []Variable
 
 	for _, variable := range templateVariables {
