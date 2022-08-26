@@ -95,8 +95,8 @@ func main() {
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 
 	// Component Team Commands
-	commandSet[publishReleaseCommandName] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)
-	commandSet[updateReleaseCommandName] = &commands.PublishRelease{
+	commandSet[updateReleaseCommandName] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)
+	commandSet[publishReleaseCommandName] = &commands.PublishRelease{
 		FS:                    fs,
 		Logger:                outLogger,
 		ReleaseUploaderFinder: ruFinder,
