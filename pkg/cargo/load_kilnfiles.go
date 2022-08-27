@@ -30,7 +30,7 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 	templateVariablesService := baking.NewTemplateVariablesService(fs)
 	templateVariables, err := templateVariablesService.FromPathsAndPairs(variablesFiles, variables)
 	if err != nil {
-		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("loading variables failed: %w", err)
+		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("error processing variables: %w", err)
 	}
 
 	kf, err := fs.Open(kilnfilePath)
@@ -55,6 +55,10 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 	err = yaml.Unmarshal(interpolatedMetadata, &kilnfile)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile specification " + kilnfilePath}
+	}
+
+	if int64(kilnfile.MajorVersion) != Version().Major() {
+		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("kiln_major_version %d in Kilnfile does not match the kiln major version %d", kilnfile.MajorVersion, Version().Major())
 	}
 
 	lockFileName := kilnfileLockPath(kilnfilePath)

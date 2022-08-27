@@ -13,7 +13,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-func writeFile(fs billy.Filesystem, path string, contents string) error {
+func writeFile(fs billy.Filesystem, path, contents string) error {
 	file, err := fs.Create(path)
 	if err != nil {
 		return err
@@ -210,7 +210,7 @@ path_template: "not-used"
 
 		It("returns an error", func() {
 			_, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
-			Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
+			Expect(err).To(MatchError(ContainSubstring("error processing variables")))
 		})
 	})
 
@@ -222,13 +222,48 @@ path_template: "not-used"
 			err = writeFile(filesystem, kilnfileLockPath, validKilnfileLockContents)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = writeFile(filesystem, variableFilePath, "{}")
+			err = writeFile(filesystem, variableFilePath, "cannot unmarshal")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns an error", func() {
 			_, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
-			Expect(err).To(MatchError(ContainSubstring("could not find variable")))
+			Expect(err).To(MatchError(ContainSubstring("error processing variables")))
+		})
+	})
+
+	When("version mismatch", func() {
+		BeforeEach(func() {
+			err := writeFile(filesystem, kilnfilePath, `
+kiln_major_version: 99999
+`)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = writeFile(filesystem, kilnfileLockPath, validKilnfileLockContents)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns an error", func() {
+			_, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{}, variableStrings)
+			Expect(err).To(MatchError(ContainSubstring("does not match the kiln major version")))
+		})
+	})
+
+	When("interpolation fails", func() {
+		BeforeEach(func() {
+			err := writeFile(filesystem, kilnfilePath, validKilnfileContents)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = writeFile(filesystem, kilnfileLockPath, validKilnfileLockContents)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = writeFile(filesystem, variableFilePath, "){}")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns an error", func() {
+			_, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
+			Expect(err).To(MatchError(ContainSubstring("error processing variables")))
 		})
 	})
 })

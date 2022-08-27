@@ -6,7 +6,7 @@ function main() {
 
   pushd "${cwd}" > /dev/null
     go install \
-      -ldflags "-X main.version=$(git rev-parse HEAD)" \
+      -ldflags "-X github.com/pivotal-cf/kiln/pkg/cargo.version=0.0.0-dev.$(git rev-parse HEAD | cut -c1-8).$(date +%s)" \
       -gcflags=-trimpath="${cwd}" \
       -asmflags=-trimpath="${cwd}" \
       ./

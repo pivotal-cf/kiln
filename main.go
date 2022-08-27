@@ -15,8 +15,6 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-var version = "unknown"
-
 func main() {
 	// -------------------
 	// parse global flags
@@ -92,7 +90,7 @@ func main() {
 			"Component Commands":      {fetchReleasesCommandName, cacheReleasesCommandName, findReleaseVersionCommandName, findStemcellVersionCommandName, updateStemcellCommandName},
 		},
 	)
-	commandSet["version"] = commands.NewVersion(outLogger, version)
+	commandSet["version"] = commands.NewVersion(outLogger, cargo.Version().String())
 
 	// Component Team Commands
 	commandSet[updateReleaseCommandName] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)

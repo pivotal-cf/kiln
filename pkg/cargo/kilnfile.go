@@ -72,6 +72,7 @@ func (spec ComponentSpec) UnsetStemcell() ComponentSpec {
 }
 
 type Kilnfile struct {
+	MajorVersion    int                   `yaml:"kiln_major_version,omitempty"`
 	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources,omitempty"`
 	Slug            string                `yaml:"slug,omitempty"`
 	PreGaUserGroups []string              `yaml:"pre_ga_user_groups,omitempty"`
