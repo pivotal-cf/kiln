@@ -224,6 +224,11 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 	if err != nil {
 		return Lock{}, ErrNotFound
 	}
+
+	if repoOwner != owner {
+		return Lock{}, ErrNotFound
+	}
+
 	release, err := getRelease(ctx, repoOwner, repoName)
 	if err != nil {
 		return Lock{}, err
@@ -256,7 +261,7 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 		}, nil
 	}
 
-	return Lock{}, fmt.Errorf("no matching asset found for %s", expectedAssetName)
+	return Lock{}, fmt.Errorf("no matching GitHub release asset file name equal to %q", expectedAssetName)
 }
 
 func calculateSHA1(rc io.ReadCloser) (string, error) {

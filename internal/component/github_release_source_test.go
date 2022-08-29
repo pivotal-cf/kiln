@@ -408,3 +408,27 @@ func TestDownloadReleaseAsset(t *testing.T) {
 		damnIt.Expect(local.LocalPath).NotTo(Ω.BeAnExistingFile(), "it creates the expected asset")
 	})
 }
+
+func TestLockFromGithubRelease_componet_repo_does_not_match_release_source_org(t *testing.T) {
+	// given
+	var (
+		githubOrg      = "banana"
+		otherGitHubOrg = "orange"
+
+		ctx        = context.Background()
+		downloader = new(fakes.ReleaseAssetDownloader)
+		spec       = cargo.ComponentSpec{
+			GitHubRepository: "https://github.com/" + otherGitHubOrg + "/muffin",
+		}
+		getRelease = func(ctx context.Context, org, repo string) (*github.RepositoryRelease, error) {
+			return nil, fmt.Errorf("get release does not need to be called for this test")
+		}
+	)
+
+	// when
+	_, err := component.LockFromGithubRelease(ctx, downloader, githubOrg, spec, getRelease)
+
+	// then
+	please := Ω.NewWithT(t)
+	please.Expect(component.IsErrNotFound(err)).To(Ω.BeTrue())
+}
