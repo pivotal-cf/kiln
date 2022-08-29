@@ -228,6 +228,7 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 	if err != nil {
 		return Lock{}, err
 	}
+
 	lockVersion := strings.TrimPrefix(release.GetTagName(), "v")
 	expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, lockVersion)
 	malformedAssetName := fmt.Sprintf("%s-v%s.tgz", spec.Name, lockVersion)
@@ -255,7 +256,7 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 		}, nil
 	}
 
-	return Lock{}, ErrNotFound
+	return Lock{}, fmt.Errorf("no matching asset found for %s", expectedAssetName)
 }
 
 func calculateSHA1(rc io.ReadCloser) (string, error) {
