@@ -3,14 +3,13 @@ package scenario
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
-	"strings"
-
 	"github.com/cucumber/godog"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"golang.org/x/exp/slices"
+	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -61,12 +60,12 @@ func theLockSpecifiesVersionForRelease(ctx context.Context, releaseVersion, rele
 }
 
 func iSetAVersionConstraintForRelease(ctx context.Context, versionConstraint, releaseName string) error {
-	spcePath, err := kilnfileLockPath(ctx)
+	kfPath, err := kilnfilePath(ctx)
 	if err != nil {
 		return err
 	}
 	var spec cargo.Kilnfile
-	err = loadFileAsYAML(spcePath, &spec)
+	err = loadFileAsYAML(kfPath, &spec)
 	if err != nil {
 		return err
 	}
@@ -77,7 +76,7 @@ func iSetAVersionConstraintForRelease(ctx context.Context, versionConstraint, re
 		return cargo.ErrorSpecNotFound(releaseName)
 	}
 	spec.Releases[specIndex].Version = versionConstraint
-	return saveAsYAML(spcePath, spec)
+	return saveAsYAML(kfPath, spec)
 }
 
 // iHaveARepositoryCheckedOutAtRevision checks out a repository at the filepath to a given revision
