@@ -90,6 +90,7 @@ func initializeExec(ctx scenarioContext) {
 	})
 	ctx.Step(regexp.MustCompile(`^(stdout|stderr|"[^"]*") contains substring: (.*)`), outputContainsSubstring)
 	ctx.Step(regexp.MustCompile(`^the exit code is (\d+)$`), theExitCodeIs)
+	ctx.Step(regexp.MustCompile(`^(stdout|stderr|"[^"]*") is valid (json|yaml)$`), outputIsValidEncoding)
 }
 
 func InitializeGitHub(ctx *godog.ScenarioContext) { initializeGitHub(ctx) }
