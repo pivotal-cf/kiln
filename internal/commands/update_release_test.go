@@ -75,7 +75,7 @@ var _ = Describe("UpdateRelease", func() {
 			}
 
 			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.ComponentLock{
+				Releases: []cargo.ReleaseLock{
 					{
 						Name:    "minecraft",
 						Version: "2.0.1",
@@ -173,7 +173,7 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
-					cargo.ComponentLock{
+					cargo.ReleaseLock{
 						Name:    releaseName,
 						Version: newReleaseVersion,
 
@@ -408,7 +408,7 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
-					cargo.ComponentLock{
+					cargo.ReleaseLock{
 						Name:         releaseName,
 						Version:      notDownloadedReleaseVersion,
 						SHA1:         notDownloadedReleaseSha1,

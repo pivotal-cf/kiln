@@ -17,7 +17,7 @@ remote_path: fake/path/to/fake-component-name
 `
 	damnit := NewWithT(t)
 
-	cl, err := yaml.Marshal(ComponentLock{
+	cl, err := yaml.Marshal(ReleaseLock{
 		Name:         "fake-component-name",
 		Version:      "fake-version",
 		SHA1:         "fake-component-sha1",

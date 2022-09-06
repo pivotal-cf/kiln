@@ -50,7 +50,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 		},
 	})).NotTo(HaveOccurred())
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.ReleaseLock{
 			{
 				Name:         "banana",
 				Version:      "2.0.0",
@@ -119,7 +119,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 		},
 	})).NotTo(HaveOccurred())
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.ReleaseLock{
 			{
 				Name:    "orange",
 				Version: "1.0.0",
@@ -212,7 +212,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 		},
 	})).NotTo(HaveOccurred())
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.ReleaseLock{
 			{
 				Name:    "orange",
 				Version: "1.0.0",
@@ -371,7 +371,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 		},
 	})).NotTo(HaveOccurred())
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.ReleaseLock{
 			{
 				Name:    "banana",
 				Version: "2.0.0",
@@ -496,7 +496,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 		},
 	})).NotTo(HaveOccurred())
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.ReleaseLock{
 			{
 				Name:    "banana",
 				Version: "2.0.0",
@@ -539,7 +539,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 
 	releaseStorage := new(fakes.ReleaseStorage)
 	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
-	releaseStorage.UploadReleaseStub = func(spec cargo.ReleaseSpec, reader io.Reader) (cargo.ComponentLock, error) {
+	releaseStorage.UploadReleaseStub = func(spec cargo.ReleaseSpec, reader io.Reader) (cargo.ReleaseLock, error) {
 		l := spec.Lock()
 		l.RemotePath = "BANANA.tgz"
 		l.RemoteSource = "BASKET"

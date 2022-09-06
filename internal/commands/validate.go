@@ -71,7 +71,7 @@ func (list errorList) Error() string {
 	return strings.Join(messages, "\n")
 }
 
-func validateRelease(release cargo.ReleaseSpec, lock cargo.ComponentLock, index int) error {
+func validateRelease(release cargo.ReleaseSpec, lock cargo.ReleaseLock, index int) error {
 	if release.Name == "" {
 		return fmt.Errorf("release at index %d missing name", index)
 	}

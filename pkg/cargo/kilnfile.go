@@ -34,20 +34,20 @@ func (kf Kilnfile) UpdateReleaseWithName(name string, spec ReleaseSpec) error {
 }
 
 type KilnfileLock struct {
-	Releases []ComponentLock `yaml:"releases"`
-	Stemcell Stemcell        `yaml:"stemcell_criteria"`
+	Releases []ReleaseLock `yaml:"releases"`
+	Stemcell Stemcell      `yaml:"stemcell_criteria"`
 }
 
-func (k KilnfileLock) FindReleaseWithName(name string) (ComponentLock, error) {
+func (k KilnfileLock) FindReleaseWithName(name string) (ReleaseLock, error) {
 	for _, r := range k.Releases {
 		if r.Name == name {
 			return r, nil
 		}
 	}
-	return ComponentLock{}, errorSpecNotFound(name)
+	return ReleaseLock{}, errorSpecNotFound(name)
 }
 
-func (k KilnfileLock) UpdateReleaseWithName(name string, lock ComponentLock) error {
+func (k KilnfileLock) UpdateReleaseWithName(name string, lock ReleaseLock) error {
 	for i, r := range k.Releases {
 		if r.Name == name {
 			k.Releases[i] = lock

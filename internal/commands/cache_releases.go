@@ -118,7 +118,7 @@ func (cmd CacheReleases) Execute(args []string) error {
 	}
 
 	var (
-		releasesToExport         []cargo.ComponentLock
+		releasesToExport         []cargo.ReleaseLock
 		releasesUpdatedFromCache = false
 	)
 	for _, rel := range lock.Releases {
@@ -341,7 +341,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 			checksum = releaseLock.SHA1
 		}
 
-		lock.Releases[index] = cargo.ComponentLock{
+		lock.Releases[index] = cargo.ReleaseLock{
 			Name:         release.Name,
 			Version:      release.Version,
 			RemoteSource: release.RemoteSource,
@@ -393,7 +393,7 @@ func (cmd *CacheReleases) saveReleaseLocally(director boshdir.Director, relDir s
 	return filePath, sha256sumString, sha1sumString, nil
 }
 
-func (cmd CacheReleases) downloadAndComputeSHA(cache component.ReleaseSource, remote cargo.ComponentLock) (string, error) {
+func (cmd CacheReleases) downloadAndComputeSHA(cache component.ReleaseSource, remote cargo.ReleaseLock) (string, error) {
 	if remote.SHA1 != "" {
 		return remote.SHA1, nil
 	}

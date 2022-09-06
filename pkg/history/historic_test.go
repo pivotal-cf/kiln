@@ -125,7 +125,7 @@ func TestKilnfile(t *testing.T) {
 		_, kl, err := Kilnfile(repo.Storer, initialHash, "tile")
 
 		please.Expect(err).NotTo(HaveOccurred())
-		please.Expect(kl.Releases).To(Equal([]cargo.ComponentLock{
+		please.Expect(kl.Releases).To(Equal([]cargo.ReleaseLock{
 			{Name: "banana", Version: "0.1.0"},
 			{Name: "lemon", Version: "1.1.0"},
 		}))
@@ -137,7 +137,7 @@ func TestKilnfile(t *testing.T) {
 		_, finalKF, err := Kilnfile(repo.Storer, finalHash, "tile/Kilnfile")
 
 		please.Expect(err).NotTo(HaveOccurred())
-		please.Expect(finalKF.Releases).To(Equal([]cargo.ComponentLock{
+		please.Expect(finalKF.Releases).To(Equal([]cargo.ReleaseLock{
 			{Name: "banana", Version: "0.9.0"},
 			{Name: "lemon", Version: "1.9.0"},
 			{Name: "apple", Version: "0.0.1"},

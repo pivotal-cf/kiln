@@ -13,6 +13,6 @@ type Local struct {
 	LocalPath string
 }
 
-type Lock = cargo.ComponentLock
+type Lock = cargo.ReleaseLock
 
 func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

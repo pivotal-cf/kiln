@@ -64,7 +64,7 @@ func TestValidate_validateRelease(t *testing.T) {
 	t.Run("missing name", func(t *testing.T) {
 		please := NewWithT(t)
 		r := cargo.ReleaseSpec{}
-		l := cargo.ComponentLock{}
+		l := cargo.ReleaseLock{}
 		err := validateRelease(r, l, 0)
 		please.Expect(err).To(And(
 			HaveOccurred(),
@@ -77,7 +77,7 @@ func TestValidate_validateRelease(t *testing.T) {
 		r := cargo.ReleaseSpec{
 			Name: "capi",
 		}
-		l := cargo.ComponentLock{
+		l := cargo.ReleaseLock{
 			Name:    "capi",
 			Version: "2.3.4",
 		}
@@ -91,7 +91,7 @@ func TestValidate_validateRelease(t *testing.T) {
 			Name:    "capi",
 			Version: "meh",
 		}
-		l := cargo.ComponentLock{
+		l := cargo.ReleaseLock{
 			Name:    "capi",
 			Version: "2.3.4",
 		}
@@ -108,7 +108,7 @@ func TestValidate_validateRelease(t *testing.T) {
 			Name:    "capi",
 			Version: "~2",
 		}
-		l := cargo.ComponentLock{
+		l := cargo.ReleaseLock{
 			Name:    "capi",
 			Version: "3.0.5",
 		}
@@ -125,7 +125,7 @@ func TestValidate_validateRelease(t *testing.T) {
 			Name:    "capi",
 			Version: "~2",
 		}
-		l := cargo.ComponentLock{
+		l := cargo.ReleaseLock{
 			Name:    "capi",
 			Version: "BAD",
 		}

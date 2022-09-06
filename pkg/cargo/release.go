@@ -41,8 +41,8 @@ func (spec ReleaseSpec) VersionConstraints() (*semver.Constraints, error) {
 	return c, nil
 }
 
-func (spec ReleaseSpec) Lock() ComponentLock {
-	return ComponentLock{
+func (spec ReleaseSpec) Lock() ReleaseLock {
+	return ReleaseLock{
 		Name:            spec.Name,
 		Version:         spec.Version,
 		StemcellOS:      spec.StemcellOS,
@@ -82,13 +82,13 @@ type ReleaseSource struct {
 	Password        string `yaml:"password,omitempty"`
 }
 
-// ComponentLock represents an exact build of a bosh release
+// ReleaseLock represents an exact build of a bosh release
 // It may identify the where the release is cached;
 // it may identify the stemcell used to compile the release.
 //
 // All fields must be comparable because this struct may be
 // used as a key type in a map. Don't add array or map fields.
-type ComponentLock struct {
+type ReleaseLock struct {
 	Name    string `yaml:"name"`
 	SHA1    string `yaml:"sha1"`
 	Version string `yaml:"version,omitempty"`
@@ -100,15 +100,15 @@ type ComponentLock struct {
 	RemotePath   string `yaml:"remote_path"`
 }
 
-func (lock ComponentLock) ReleaseSlug() boshdir.ReleaseSlug {
+func (lock ReleaseLock) ReleaseSlug() boshdir.ReleaseSlug {
 	return boshdir.NewReleaseSlug(lock.Name, lock.Version)
 }
 
-func (lock ComponentLock) StemcellSlug() boshdir.OSVersionSlug {
+func (lock ReleaseLock) StemcellSlug() boshdir.OSVersionSlug {
 	return boshdir.NewOSVersionSlug(lock.StemcellOS, lock.StemcellVersion)
 }
 
-func (lock ComponentLock) String() string {
+func (lock ReleaseLock) String() string {
 	var b strings.Builder
 	b.WriteString(lock.Name)
 	b.WriteByte(' ')
@@ -141,7 +141,7 @@ func (lock ComponentLock) String() string {
 	return b.String()
 }
 
-func (lock ComponentLock) Spec() ReleaseSpec {
+func (lock ReleaseLock) Spec() ReleaseSpec {
 	return ReleaseSpec{
 		Name:            lock.Name,
 		Version:         lock.Version,
@@ -150,23 +150,23 @@ func (lock ComponentLock) Spec() ReleaseSpec {
 	}
 }
 
-func (lock ComponentLock) WithSHA1(sum string) ComponentLock {
+func (lock ReleaseLock) WithSHA1(sum string) ReleaseLock {
 	lock.SHA1 = sum
 	return lock
 }
 
-func (lock ComponentLock) WithRemote(source, path string) ComponentLock {
+func (lock ReleaseLock) WithRemote(source, path string) ReleaseLock {
 	lock.RemoteSource = source
 	lock.RemotePath = path
 	return lock
 }
 
-func (lock ComponentLock) UnsetStemcell() ComponentLock {
+func (lock ReleaseLock) UnsetStemcell() ReleaseLock {
 	lock.StemcellOS = ""
 	lock.StemcellVersion = ""
 	return lock
 }
 
-func (lock ComponentLock) ParseVersion() (*semver.Version, error) {
+func (lock ReleaseLock) ParseVersion() (*semver.Version, error) {
 	return semver.NewVersion(lock.Version)
 }

@@ -40,7 +40,7 @@ func Test_fetch(t *testing.T) {
 			OS:      "fruit-tree",
 			Version: "40000.1",
 		},
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.ReleaseLock{
 			{Name: "banana", Version: "1.1.0"},
 			{Name: "lemon", Version: "1.1.0"},
 		},
@@ -55,7 +55,7 @@ func Test_fetch(t *testing.T) {
 			{Name: "lemon"},
 		},
 	}, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.ReleaseLock{
 			{Name: "banana", Version: "1.2.0"},
 			{Name: "lemon", Version: "1.1.0"},
 		},
