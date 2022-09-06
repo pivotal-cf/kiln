@@ -174,7 +174,7 @@ func iAddACompiledSReleaseSourceToTheKilnfile(ctx context.Context, bucketName st
 		}
 	}
 
-	kf.ReleaseSources = append(kf.ReleaseSources, cargo.ReleaseSourceConfig{
+	kf.ReleaseSources = append(kf.ReleaseSources, cargo.ReleaseSource{
 		Type:            component.ReleaseSourceTypeS3,
 		Bucket:          bucketName,
 		PathTemplate:    "{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz",

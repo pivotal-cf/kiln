@@ -28,7 +28,7 @@ func TestInterpolateAndParseKilnfile(t *testing.T) {
 	please.Expect(err).NotTo(HaveOccurred())
 
 	please.Expect(kilnfile).To(Equal(cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSourceConfig{
+		ReleaseSources: []cargo.ReleaseSource{
 			{
 				Type:            "s3",
 				Bucket:          "my-bucket",

@@ -127,7 +127,7 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 		context.Background(),
 		releaseLister,
 		cargo.Kilnfile{
-			Releases: []cargo.ComponentSpec{
+			Releases: []cargo.ReleaseSpec{
 				{
 					Name: "mango",
 				},

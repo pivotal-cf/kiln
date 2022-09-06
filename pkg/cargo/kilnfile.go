@@ -5,25 +5,25 @@ import (
 )
 
 type Kilnfile struct {
-	MajorVersion    int                   `yaml:"kiln_major_version,omitempty"`
-	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources,omitempty"`
-	Slug            string                `yaml:"slug,omitempty"`
-	PreGaUserGroups []string              `yaml:"pre_ga_user_groups,omitempty"`
-	Releases        []ComponentSpec       `yaml:"releases,omitempty"`
-	TileNames       []string              `yaml:"tile_names,omitempty"`
-	Stemcell        Stemcell              `yaml:"stemcell_criteria,omitempty"`
+	MajorVersion    int             `yaml:"kiln_major_version,omitempty"`
+	ReleaseSources  []ReleaseSource `yaml:"release_sources,omitempty"`
+	Slug            string          `yaml:"slug,omitempty"`
+	PreGaUserGroups []string        `yaml:"pre_ga_user_groups,omitempty"`
+	Releases        []ReleaseSpec   `yaml:"releases,omitempty"`
+	TileNames       []string        `yaml:"tile_names,omitempty"`
+	Stemcell        Stemcell        `yaml:"stemcell_criteria,omitempty"`
 }
 
-func (kf Kilnfile) FindReleaseWithName(name string) (ComponentSpec, error) {
+func (kf Kilnfile) FindReleaseWithName(name string) (ReleaseSpec, error) {
 	for _, s := range kf.Releases {
 		if s.Name == name {
 			return s, nil
 		}
 	}
-	return ComponentSpec{}, errorSpecNotFound(name)
+	return ReleaseSpec{}, errorSpecNotFound(name)
 }
 
-func (kf Kilnfile) UpdateReleaseWithName(name string, spec ComponentSpec) error {
+func (kf Kilnfile) UpdateReleaseWithName(name string, spec ReleaseSpec) error {
 	for i, r := range kf.Releases {
 		if r.Name == name {
 			kf.Releases[i] = spec

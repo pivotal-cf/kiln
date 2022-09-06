@@ -6,7 +6,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type Spec = cargo.ComponentSpec
+type Spec = cargo.ReleaseSpec
 
 type Local struct {
 	Lock

@@ -63,7 +63,7 @@ func TestValidate_PinnedRelease(t *testing.T) {
 func TestValidate_validateRelease(t *testing.T) {
 	t.Run("missing name", func(t *testing.T) {
 		please := NewWithT(t)
-		r := cargo.ComponentSpec{}
+		r := cargo.ReleaseSpec{}
 		l := cargo.ComponentLock{}
 		err := validateRelease(r, l, 0)
 		please.Expect(err).To(And(
@@ -74,7 +74,7 @@ func TestValidate_validateRelease(t *testing.T) {
 
 	t.Run("no version", func(t *testing.T) {
 		please := NewWithT(t)
-		r := cargo.ComponentSpec{
+		r := cargo.ReleaseSpec{
 			Name: "capi",
 		}
 		l := cargo.ComponentLock{
@@ -87,7 +87,7 @@ func TestValidate_validateRelease(t *testing.T) {
 
 	t.Run("invalid version constraint", func(t *testing.T) {
 		please := NewWithT(t)
-		r := cargo.ComponentSpec{
+		r := cargo.ReleaseSpec{
 			Name:    "capi",
 			Version: "meh",
 		}
@@ -104,7 +104,7 @@ func TestValidate_validateRelease(t *testing.T) {
 
 	t.Run("version does not match constraint", func(t *testing.T) {
 		please := NewWithT(t)
-		r := cargo.ComponentSpec{
+		r := cargo.ReleaseSpec{
 			Name:    "capi",
 			Version: "~2",
 		}
@@ -121,7 +121,7 @@ func TestValidate_validateRelease(t *testing.T) {
 
 	t.Run("invalid lock version", func(t *testing.T) {
 		please := NewWithT(t)
-		r := cargo.ComponentSpec{
+		r := cargo.ReleaseSpec{
 			Name:    "capi",
 			Version: "~2",
 		}

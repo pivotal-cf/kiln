@@ -25,7 +25,7 @@ type MultiReleaseSource interface {
 
 // ReleaseUploader represents a place to put releases. Some implementations of ReleaseSource
 // should implement this interface. Credentials for this should come from an interpolated
-// cargo.ReleaseSourceConfig.
+// cargo.ReleaseSource.
 type ReleaseUploader interface {
 	GetMatchedRelease(Spec) (Lock, error)
 	UploadRelease(spec Spec, file io.Reader) (Lock, error)
@@ -48,7 +48,7 @@ type RemotePather interface {
 type ReleaseSource interface {
 	// Configuration returns the configuration of the ReleaseSource that came from the kilnfile.
 	// It should not be modified.
-	Configuration() cargo.ReleaseSourceConfig
+	Configuration() cargo.ReleaseSource
 
 	// GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 	// fields on Requirement to download a specific release.
@@ -70,26 +70,26 @@ const (
 	panicMessageWrongReleaseSourceType = "wrong constructor for release source configuration"
 	logLineDownload                    = "downloading %s from %s release source %s"
 
-	// ReleaseSourceTypeBOSHIO is the value of the Type field on cargo.ReleaseSourceConfig
+	// ReleaseSourceTypeBOSHIO is the value of the Type field on cargo.ReleaseSource
 	// for fetching https://bosh.io releases.
 	ReleaseSourceTypeBOSHIO = "bosh.io"
 
-	// ReleaseSourceTypeS3 is the value for the Type field on cargo.ReleaseSourceConfig
+	// ReleaseSourceTypeS3 is the value for the Type field on cargo.ReleaseSource
 	// for releases stored on
 	ReleaseSourceTypeS3 = "s3"
 
-	// ReleaseSourceTypeGithub is the value for the Type field on cargo.ReleaseSourceConfig
+	// ReleaseSourceTypeGithub is the value for the Type field on cargo.ReleaseSource
 	// for releases stored on GitHub.
 	ReleaseSourceTypeGithub = "github"
 
-	// ReleaseSourceTypeArtifactory is the value for the Type field on cargo.ReleaseSourceConfig
+	// ReleaseSourceTypeArtifactory is the value for the Type field on cargo.ReleaseSource
 	// for releases stored on Artifactory.
 	ReleaseSourceTypeArtifactory = "artifactory"
 )
 
 // ReleaseSourceFactory returns a configured ReleaseSource based on the Type field on the
-// cargo.ReleaseSourceConfig structure.
-func ReleaseSourceFactory(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
+// cargo.ReleaseSource structure.
+func ReleaseSourceFactory(releaseConfig cargo.ReleaseSource, outLogger *log.Logger) ReleaseSource {
 	switch releaseConfig.Type {
 	case ReleaseSourceTypeBOSHIO:
 		if releaseConfig.ID == "" {

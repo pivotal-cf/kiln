@@ -26,11 +26,11 @@ var _ = Describe("multiReleaseSource", func() {
 
 	BeforeEach(func() {
 		src1 = new(fakes.ReleaseSource)
-		src1.ConfigurationReturns(cargo.ReleaseSourceConfig{ID: "src-1"})
+		src1.ConfigurationReturns(cargo.ReleaseSource{ID: "src-1"})
 		src2 = new(fakes.ReleaseSource)
-		src2.ConfigurationReturns(cargo.ReleaseSourceConfig{ID: "src-2"})
+		src2.ConfigurationReturns(cargo.ReleaseSource{ID: "src-2"})
 		src3 = new(fakes.ReleaseSource)
-		src3.ConfigurationReturns(cargo.ReleaseSourceConfig{ID: "src-3"})
+		src3.ConfigurationReturns(cargo.ReleaseSource{ID: "src-3"})
 		multiSrc = component.NewMultiReleaseSource(src1, src2, src3)
 
 		requirement = component.Spec{

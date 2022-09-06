@@ -21,7 +21,7 @@ import (
 )
 
 type ArtifactoryReleaseSource struct {
-	cargo.ReleaseSourceConfig
+	cargo.ReleaseSource
 	logger *log.Logger
 	ID     string
 }
@@ -48,8 +48,8 @@ type ArtifactoryFileInfo struct {
 }
 
 // NewArtifactoryReleaseSource will provision a new ArtifactoryReleaseSource Project
-// from the Kilnfile (ReleaseSourceConfig). If type is incorrect it will PANIC
-func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig) *ArtifactoryReleaseSource {
+// from the Kilnfile (ReleaseSource). If type is incorrect it will PANIC
+func NewArtifactoryReleaseSource(c cargo.ReleaseSource) *ArtifactoryReleaseSource {
 	if c.Type != "" && c.Type != ReleaseSourceTypeArtifactory {
 		panic(panicMessageWrongReleaseSourceType)
 	}
@@ -57,9 +57,9 @@ func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig) *ArtifactoryReleas
 	// ctx := context.TODO()
 
 	return &ArtifactoryReleaseSource{
-		ReleaseSourceConfig: c,
-		ID:                  c.ID,
-		logger:              log.New(os.Stdout, "[Artifactory release source] ", log.Default().Flags()),
+		ReleaseSource: c,
+		ID:            c.ID,
+		logger:        log.New(os.Stdout, "[Artifactory release source] ", log.Default().Flags()),
 	}
 }
 
@@ -133,8 +133,8 @@ func (ars ArtifactoryReleaseSource) getFileSHA1(release Lock) (string, error) {
 	return artifactoryFileInfo.Checksums.SHA1, nil
 }
 
-func (ars ArtifactoryReleaseSource) Configuration() cargo.ReleaseSourceConfig {
-	return ars.ReleaseSourceConfig
+func (ars ArtifactoryReleaseSource) Configuration() cargo.ReleaseSource {
+	return ars.ReleaseSource
 }
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
@@ -257,7 +257,7 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) 
 					Name:         spec.Name,
 					Version:      version,
 					RemotePath:   remotePathToUpdate,
-					RemoteSource: ars.ReleaseSourceConfig.ID,
+					RemoteSource: ars.ReleaseSource.ID,
 				}
 			} else {
 				foundVersion, _ := semver.NewVersion(foundRelease.Version)
@@ -266,7 +266,7 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) 
 						Name:         spec.Name,
 						Version:      version,
 						RemotePath:   remotePathToUpdate,
-						RemoteSource: ars.ReleaseSourceConfig.ID,
+						RemoteSource: ars.ReleaseSource.ID,
 					}
 				}
 			}
@@ -320,7 +320,7 @@ func (ars ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lo
 		Name:         spec.Name,
 		Version:      spec.Version,
 		RemotePath:   remotePath,
-		RemoteSource: ars.ReleaseSourceConfig.ID,
+		RemoteSource: ars.ReleaseSource.ID,
 	}, nil
 }
 
@@ -339,5 +339,5 @@ func (ars ArtifactoryReleaseSource) pathTemplate() *template.Template {
 	return template.Must(
 		template.New("remote-path").
 			Funcs(template.FuncMap{"trimSuffix": strings.TrimSuffix}).
-			Parse(ars.ReleaseSourceConfig.PathTemplate))
+			Parse(ars.ReleaseSource.PathTemplate))
 }

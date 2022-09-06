@@ -43,7 +43,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSourceConfig{
+		ReleaseSources: []cargo.ReleaseSource{
 			{
 				ID: "compiled-releases",
 			},
@@ -112,7 +112,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSourceConfig{
+		ReleaseSources: []cargo.ReleaseSource{
 			{
 				ID: "compiled-releases",
 			},
@@ -198,7 +198,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSourceConfig{
+		ReleaseSources: []cargo.ReleaseSource{
 			{
 				ID:           "cached-compiled-releases",
 				Publishable:  true,
@@ -357,7 +357,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSourceConfig{
+		ReleaseSources: []cargo.ReleaseSource{
 			{
 				ID:           "cached-compiled-releases",
 				Publishable:  true,
@@ -477,7 +477,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSourceConfig{
+		ReleaseSources: []cargo.ReleaseSource{
 			{
 				ID:           "cached-compiled-releases",
 				Publishable:  true,
@@ -489,7 +489,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
 		},
-		Releases: []cargo.ComponentSpec{
+		Releases: []cargo.ReleaseSpec{
 			{
 				Name: "banana",
 			},
@@ -539,7 +539,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 
 	releaseStorage := new(fakes.ReleaseStorage)
 	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
-	releaseStorage.UploadReleaseStub = func(spec cargo.ComponentSpec, reader io.Reader) (cargo.ComponentLock, error) {
+	releaseStorage.UploadReleaseStub = func(spec cargo.ReleaseSpec, reader io.Reader) (cargo.ComponentLock, error) {
 		l := spec.Lock()
 		l.RemotePath = "BANANA.tgz"
 		l.RemoteSource = "BASKET"
@@ -612,7 +612,7 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSourceConfig{
+		ReleaseSources: []cargo.ReleaseSource{
 			{
 				ID:           "cached-compiled-releases",
 				Publishable:  true,

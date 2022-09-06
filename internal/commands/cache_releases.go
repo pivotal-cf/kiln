@@ -315,7 +315,7 @@ func (cmd CacheReleases) cacheRelease(bosh boshdir.Director, rc ReleaseStorage, 
 	}
 
 	cmd.Logger.Printf("\tuploading %s\n", releaseSlug)
-	remoteRelease, err := cmd.uploadLocalRelease(cargo.ComponentSpec{
+	remoteRelease, err := cmd.uploadLocalRelease(cargo.ReleaseSpec{
 		Name:            releaseSlug.Name(),
 		Version:         releaseSlug.Version(),
 		StemcellOS:      stemcellSlug.OS(),

@@ -87,7 +87,7 @@ func TestKilnfile(t *testing.T) {
 		p := wt.Filesystem.Join(tileDir, "Kilnfile")
 		f, _ := wt.Filesystem.Create(p)
 		buf, _ := yaml.Marshal(cargo.Kilnfile{
-			Releases: []cargo.ComponentSpec{
+			Releases: []cargo.ReleaseSpec{
 				{Name: "banana"},
 				{Name: "lemon"},
 			},
@@ -150,7 +150,7 @@ func TestKilnfile(t *testing.T) {
 		kf, _, err := Kilnfile(repo.Storer, finalHash, "tile")
 
 		please.Expect(err).NotTo(HaveOccurred())
-		please.Expect(kf.Releases).To(Equal([]cargo.ComponentSpec{
+		please.Expect(kf.Releases).To(Equal([]cargo.ReleaseSpec{
 			{Name: "banana"},
 			{Name: "lemon"},
 		}))

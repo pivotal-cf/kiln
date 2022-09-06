@@ -9,10 +9,10 @@ import (
 )
 
 type RemotePather struct {
-	RemotePathStub        func(cargo.ComponentSpec) (string, error)
+	RemotePathStub        func(cargo.ReleaseSpec) (string, error)
 	remotePathMutex       sync.RWMutex
 	remotePathArgsForCall []struct {
-		arg1 cargo.ComponentSpec
+		arg1 cargo.ReleaseSpec
 	}
 	remotePathReturns struct {
 		result1 string
@@ -26,11 +26,11 @@ type RemotePather struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *RemotePather) RemotePath(arg1 cargo.ComponentSpec) (string, error) {
+func (fake *RemotePather) RemotePath(arg1 cargo.ReleaseSpec) (string, error) {
 	fake.remotePathMutex.Lock()
 	ret, specificReturn := fake.remotePathReturnsOnCall[len(fake.remotePathArgsForCall)]
 	fake.remotePathArgsForCall = append(fake.remotePathArgsForCall, struct {
-		arg1 cargo.ComponentSpec
+		arg1 cargo.ReleaseSpec
 	}{arg1})
 	stub := fake.RemotePathStub
 	fakeReturns := fake.remotePathReturns
@@ -51,13 +51,13 @@ func (fake *RemotePather) RemotePathCallCount() int {
 	return len(fake.remotePathArgsForCall)
 }
 
-func (fake *RemotePather) RemotePathCalls(stub func(cargo.ComponentSpec) (string, error)) {
+func (fake *RemotePather) RemotePathCalls(stub func(cargo.ReleaseSpec) (string, error)) {
 	fake.remotePathMutex.Lock()
 	defer fake.remotePathMutex.Unlock()
 	fake.RemotePathStub = stub
 }
 
-func (fake *RemotePather) RemotePathArgsForCall(i int) cargo.ComponentSpec {
+func (fake *RemotePather) RemotePathArgsForCall(i int) cargo.ReleaseSpec {
 	fake.remotePathMutex.RLock()
 	defer fake.remotePathMutex.RUnlock()
 	argsForCall := fake.remotePathArgsForCall[i]

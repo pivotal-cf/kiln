@@ -50,12 +50,12 @@ var suffixes = []string{
 }
 
 type BOSHIOReleaseSource struct {
-	cargo.ReleaseSourceConfig
+	cargo.ReleaseSource
 	serverURI string
 	logger    *log.Logger
 }
 
-func NewBOSHIOReleaseSource(c cargo.ReleaseSourceConfig, customServerURI string, logger *log.Logger) *BOSHIOReleaseSource {
+func NewBOSHIOReleaseSource(c cargo.ReleaseSource, customServerURI string, logger *log.Logger) *BOSHIOReleaseSource {
 	if c.Type != "" && c.Type != ReleaseSourceTypeBOSHIO {
 		panic(panicMessageWrongReleaseSourceType)
 	}
@@ -66,16 +66,16 @@ func NewBOSHIOReleaseSource(c cargo.ReleaseSourceConfig, customServerURI string,
 		logger = log.New(os.Stdout, "[bosh.io release source] ", log.Default().Flags())
 	}
 	return &BOSHIOReleaseSource{
-		ReleaseSourceConfig: c,
-		logger:              logger,
-		serverURI:           customServerURI,
+		ReleaseSource: c,
+		logger:        logger,
+		serverURI:     customServerURI,
 	}
 }
 
-func (src BOSHIOReleaseSource) ID() string        { return src.ReleaseSourceConfig.ID }
-func (src BOSHIOReleaseSource) Publishable() bool { return src.ReleaseSourceConfig.Publishable }
-func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSourceConfig {
-	return src.ReleaseSourceConfig
+func (src BOSHIOReleaseSource) ID() string        { return src.ReleaseSource.ID }
+func (src BOSHIOReleaseSource) Publishable() bool { return src.ReleaseSource.Publishable }
+func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSource {
+	return src.ReleaseSource
 }
 
 func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, error) {

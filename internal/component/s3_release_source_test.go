@@ -42,12 +42,12 @@ var _ = Describe("S3ReleaseSource", func() {
 
 	Describe("NewS3ReleaseSourceFromConfig", func() {
 		var (
-			config *cargo.ReleaseSourceConfig
+			config *cargo.ReleaseSource
 			logger *log.Logger
 		)
 
 		BeforeEach(func() {
-			config = &cargo.ReleaseSourceConfig{
+			config = &cargo.ReleaseSource{
 				Bucket:          "my-bucket",
 				PathTemplate:    "my-path-template",
 				Region:          "my-region",
@@ -57,7 +57,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			logger = log.New(GinkgoWriter, "", 0)
 		})
 
-		DescribeTable("bad config", func(before func(sourceConfig *cargo.ReleaseSourceConfig), expectedSubstring string) {
+		DescribeTable("bad config", func(before func(sourceConfig *cargo.ReleaseSource), expectedSubstring string) {
 			before(config)
 
 			var r interface{}
@@ -71,12 +71,12 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(r).To(ContainSubstring(expectedSubstring))
 		},
 			Entry("path_template is missing",
-				func(c *cargo.ReleaseSourceConfig) { c.PathTemplate = "" },
+				func(c *cargo.ReleaseSource) { c.PathTemplate = "" },
 				"path_template",
 			),
 
 			Entry("bucket is missing",
-				func(c *cargo.ReleaseSourceConfig) { c.Bucket = "" },
+				func(c *cargo.ReleaseSource) { c.Bucket = "" },
 				"bucket",
 			),
 		)
@@ -114,7 +114,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
 				return int64(n), err
 			}
-			releaseSource = component.NewS3ReleaseSource(cargo.ReleaseSourceConfig{
+			releaseSource = component.NewS3ReleaseSource(cargo.ReleaseSource{
 				ID:           sourceID,
 				Bucket:       bucket,
 				PathTemplate: "",
@@ -213,7 +213,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			logger = log.New(nil, "", 0)
 
 			releaseSource = component.NewS3ReleaseSource(
-				cargo.ReleaseSourceConfig{
+				cargo.ReleaseSource{
 					ID:           sourceID,
 					Bucket:       bucket,
 					PathTemplate: `2.5/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
@@ -260,7 +260,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
 				releaseSource = component.NewS3ReleaseSource(
-					cargo.ReleaseSourceConfig{
+					cargo.ReleaseSource{
 						ID:           sourceID,
 						Bucket:       bucket,
 						PathTemplate: `{{.NoSuchField}}`,
@@ -323,7 +323,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				logger = log.New(GinkgoWriter, "", 0)
 
 				releaseSource = component.NewS3ReleaseSource(
-					cargo.ReleaseSourceConfig{
+					cargo.ReleaseSource{
 						ID:           sourceID,
 						Bucket:       bucket,
 						PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
@@ -385,7 +385,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				}
 
 				releaseSource = component.NewS3ReleaseSource(
-					cargo.ReleaseSourceConfig{
+					cargo.ReleaseSource{
 						ID:           sourceID,
 						Bucket:       bucket,
 						PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
@@ -460,7 +460,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				}
 
 				releaseSource = component.NewS3ReleaseSource(
-					cargo.ReleaseSourceConfig{
+					cargo.ReleaseSource{
 						ID:           sourceID,
 						Bucket:       bucket,
 						PathTemplate: `2.11/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
@@ -497,7 +497,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		BeforeEach(func() {
 			s3Uploader = new(fetcherFakes.S3Uploader)
 			releaseSource = component.NewS3ReleaseSource(
-				cargo.ReleaseSourceConfig{
+				cargo.ReleaseSource{
 					ID:           sourceID,
 					Bucket:       "orange-bucket",
 					PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
@@ -549,7 +549,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
 				releaseSource = component.NewS3ReleaseSource(
-					cargo.ReleaseSourceConfig{
+					cargo.ReleaseSource{
 						ID:           sourceID,
 						Bucket:       "orange-bucket",
 						PathTemplate: `{{.NoSuchField}}`,
@@ -581,7 +581,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		BeforeEach(func() {
 			releaseSource = component.NewS3ReleaseSource(
-				cargo.ReleaseSourceConfig{
+				cargo.ReleaseSource{
 					ID:           sourceID,
 					Bucket:       "orange-bucket",
 					PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
@@ -609,7 +609,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		When("there is an error evaluating the path template", func() {
 			BeforeEach(func() {
 				releaseSource = component.NewS3ReleaseSource(
-					cargo.ReleaseSourceConfig{
+					cargo.ReleaseSource{
 						ID:           sourceID,
 						Bucket:       "orange-bucket",
 						PathTemplate: `{{.NoSuchField}}`,

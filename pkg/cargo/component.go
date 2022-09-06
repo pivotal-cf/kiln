@@ -8,7 +8,7 @@ import (
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
 )
 
-type ComponentSpec struct {
+type ReleaseSpec struct {
 	// Name is a required field and must be set with the bosh release name
 	Name string `yaml:"name"`
 
@@ -30,7 +30,7 @@ type ComponentSpec struct {
 	GitHubRepository string `yaml:"github_repository,omitempty"`
 }
 
-func (spec ComponentSpec) VersionConstraints() (*semver.Constraints, error) {
+func (spec ReleaseSpec) VersionConstraints() (*semver.Constraints, error) {
 	if spec.Version == "" {
 		spec.Version = ">0"
 	}
@@ -41,7 +41,7 @@ func (spec ComponentSpec) VersionConstraints() (*semver.Constraints, error) {
 	return c, nil
 }
 
-func (spec ComponentSpec) Lock() ComponentLock {
+func (spec ReleaseSpec) Lock() ComponentLock {
 	return ComponentLock{
 		Name:            spec.Name,
 		Version:         spec.Version,
@@ -50,21 +50,21 @@ func (spec ComponentSpec) Lock() ComponentLock {
 	}
 }
 
-func (spec ComponentSpec) OSVersionSlug() boshdir.OSVersionSlug {
+func (spec ReleaseSpec) OSVersionSlug() boshdir.OSVersionSlug {
 	return boshdir.NewOSVersionSlug(spec.StemcellOS, spec.StemcellVersion)
 }
 
-func (spec ComponentSpec) ReleaseSlug() boshdir.ReleaseSlug {
+func (spec ReleaseSpec) ReleaseSlug() boshdir.ReleaseSlug {
 	return boshdir.NewReleaseSlug(spec.Name, spec.Version)
 }
 
-func (spec ComponentSpec) UnsetStemcell() ComponentSpec {
+func (spec ReleaseSpec) UnsetStemcell() ReleaseSpec {
 	spec.StemcellOS = ""
 	spec.StemcellVersion = ""
 	return spec
 }
 
-type ReleaseSourceConfig struct {
+type ReleaseSource struct {
 	Type            string `yaml:"type,omitempty"`
 	ID              string `yaml:"id,omitempty"`
 	Publishable     bool   `yaml:"publishable,omitempty"`
@@ -141,8 +141,8 @@ func (lock ComponentLock) String() string {
 	return b.String()
 }
 
-func (lock ComponentLock) Spec() ComponentSpec {
-	return ComponentSpec{
+func (lock ComponentLock) Spec() ReleaseSpec {
+	return ReleaseSpec{
 		Name:            lock.Name,
 		Version:         lock.Version,
 		StemcellOS:      lock.StemcellOS,

@@ -50,7 +50,7 @@ func Test_fetch(t *testing.T) {
 			OS:      "fruit-tree",
 			Version: "40000.2",
 		},
-		Releases: []cargo.ComponentSpec{
+		Releases: []cargo.ReleaseSpec{
 			{Name: "banana", GitHubRepository: "https://github.com/pivotal-cf/lts-banana-release"},
 			{Name: "lemon"},
 		},

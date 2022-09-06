@@ -65,7 +65,7 @@ var _ = Describe("UpdateStemcell", func() {
 					OS:      "old-os",
 					Version: "^1",
 				},
-				Releases: []cargo.ComponentSpec{
+				Releases: []cargo.ReleaseSpec{
 					{Name: release1Name, GitHubRepository: "https://example.com/lemon"},
 					{Name: release2Name, GitHubRepository: "https://example.com/orange"},
 				},

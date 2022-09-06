@@ -22,15 +22,15 @@ import (
 )
 
 type GithubReleaseSource struct {
-	cargo.ReleaseSourceConfig
+	cargo.ReleaseSource
 	Token  string
 	Logger *log.Logger
 	Client *github.Client
 }
 
 // NewGithubReleaseSource will provision a new GithubReleaseSource Project
-// from the Kilnfile (ReleaseSourceConfig). If type is incorrect it will PANIC
-func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
+// from the Kilnfile (ReleaseSource). If type is incorrect it will PANIC
+func NewGithubReleaseSource(c cargo.ReleaseSource) *GithubReleaseSource {
 	if c.Type != "" && c.Type != ReleaseSourceTypeGithub {
 		panic(panicMessageWrongReleaseSourceType)
 	}
@@ -47,17 +47,17 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 	githubClient := github.NewClient(tokenClient)
 
 	return &GithubReleaseSource{
-		ReleaseSourceConfig: c,
-		Token:               c.GithubToken,
-		Logger:              log.New(os.Stdout, "[Github release source] ", log.Default().Flags()),
-		Client:              githubClient,
+		ReleaseSource: c,
+		Token:         c.GithubToken,
+		Logger:        log.New(os.Stdout, "[Github release source] ", log.Default().Flags()),
+		Client:        githubClient,
 	}
 }
 
 // Configuration returns the configuration of the ReleaseSource that came from the kilnfile.
 // It should not be modified.
-func (grs GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
-	return grs.ReleaseSourceConfig
+func (grs GithubReleaseSource) Configuration() cargo.ReleaseSource {
+	return grs.ReleaseSource
 }
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion

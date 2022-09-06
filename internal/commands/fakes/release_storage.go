@@ -11,15 +11,15 @@ import (
 )
 
 type ReleaseStorage struct {
-	ConfigurationStub        func() cargo.ReleaseSourceConfig
+	ConfigurationStub        func() cargo.ReleaseSource
 	configurationMutex       sync.RWMutex
 	configurationArgsForCall []struct {
 	}
 	configurationReturns struct {
-		result1 cargo.ReleaseSourceConfig
+		result1 cargo.ReleaseSource
 	}
 	configurationReturnsOnCall map[int]struct {
-		result1 cargo.ReleaseSourceConfig
+		result1 cargo.ReleaseSource
 	}
 	DownloadReleaseStub        func(string, cargo.ComponentLock) (component.Local, error)
 	downloadReleaseMutex       sync.RWMutex
@@ -35,10 +35,10 @@ type ReleaseStorage struct {
 		result1 component.Local
 		result2 error
 	}
-	FindReleaseVersionStub        func(cargo.ComponentSpec) (cargo.ComponentLock, error)
+	FindReleaseVersionStub        func(cargo.ReleaseSpec) (cargo.ComponentLock, error)
 	findReleaseVersionMutex       sync.RWMutex
 	findReleaseVersionArgsForCall []struct {
-		arg1 cargo.ComponentSpec
+		arg1 cargo.ReleaseSpec
 	}
 	findReleaseVersionReturns struct {
 		result1 cargo.ComponentLock
@@ -48,10 +48,10 @@ type ReleaseStorage struct {
 		result1 cargo.ComponentLock
 		result2 error
 	}
-	GetMatchedReleaseStub        func(cargo.ComponentSpec) (cargo.ComponentLock, error)
+	GetMatchedReleaseStub        func(cargo.ReleaseSpec) (cargo.ComponentLock, error)
 	getMatchedReleaseMutex       sync.RWMutex
 	getMatchedReleaseArgsForCall []struct {
-		arg1 cargo.ComponentSpec
+		arg1 cargo.ReleaseSpec
 	}
 	getMatchedReleaseReturns struct {
 		result1 cargo.ComponentLock
@@ -61,10 +61,10 @@ type ReleaseStorage struct {
 		result1 cargo.ComponentLock
 		result2 error
 	}
-	UploadReleaseStub        func(cargo.ComponentSpec, io.Reader) (cargo.ComponentLock, error)
+	UploadReleaseStub        func(cargo.ReleaseSpec, io.Reader) (cargo.ComponentLock, error)
 	uploadReleaseMutex       sync.RWMutex
 	uploadReleaseArgsForCall []struct {
-		arg1 cargo.ComponentSpec
+		arg1 cargo.ReleaseSpec
 		arg2 io.Reader
 	}
 	uploadReleaseReturns struct {
@@ -79,7 +79,7 @@ type ReleaseStorage struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseStorage) Configuration() cargo.ReleaseSourceConfig {
+func (fake *ReleaseStorage) Configuration() cargo.ReleaseSource {
 	fake.configurationMutex.Lock()
 	ret, specificReturn := fake.configurationReturnsOnCall[len(fake.configurationArgsForCall)]
 	fake.configurationArgsForCall = append(fake.configurationArgsForCall, struct {
@@ -103,32 +103,32 @@ func (fake *ReleaseStorage) ConfigurationCallCount() int {
 	return len(fake.configurationArgsForCall)
 }
 
-func (fake *ReleaseStorage) ConfigurationCalls(stub func() cargo.ReleaseSourceConfig) {
+func (fake *ReleaseStorage) ConfigurationCalls(stub func() cargo.ReleaseSource) {
 	fake.configurationMutex.Lock()
 	defer fake.configurationMutex.Unlock()
 	fake.ConfigurationStub = stub
 }
 
-func (fake *ReleaseStorage) ConfigurationReturns(result1 cargo.ReleaseSourceConfig) {
+func (fake *ReleaseStorage) ConfigurationReturns(result1 cargo.ReleaseSource) {
 	fake.configurationMutex.Lock()
 	defer fake.configurationMutex.Unlock()
 	fake.ConfigurationStub = nil
 	fake.configurationReturns = struct {
-		result1 cargo.ReleaseSourceConfig
+		result1 cargo.ReleaseSource
 	}{result1}
 }
 
-func (fake *ReleaseStorage) ConfigurationReturnsOnCall(i int, result1 cargo.ReleaseSourceConfig) {
+func (fake *ReleaseStorage) ConfigurationReturnsOnCall(i int, result1 cargo.ReleaseSource) {
 	fake.configurationMutex.Lock()
 	defer fake.configurationMutex.Unlock()
 	fake.ConfigurationStub = nil
 	if fake.configurationReturnsOnCall == nil {
 		fake.configurationReturnsOnCall = make(map[int]struct {
-			result1 cargo.ReleaseSourceConfig
+			result1 cargo.ReleaseSource
 		})
 	}
 	fake.configurationReturnsOnCall[i] = struct {
-		result1 cargo.ReleaseSourceConfig
+		result1 cargo.ReleaseSource
 	}{result1}
 }
 
@@ -197,11 +197,11 @@ func (fake *ReleaseStorage) DownloadReleaseReturnsOnCall(i int, result1 componen
 	}{result1, result2}
 }
 
-func (fake *ReleaseStorage) FindReleaseVersion(arg1 cargo.ComponentSpec) (cargo.ComponentLock, error) {
+func (fake *ReleaseStorage) FindReleaseVersion(arg1 cargo.ReleaseSpec) (cargo.ComponentLock, error) {
 	fake.findReleaseVersionMutex.Lock()
 	ret, specificReturn := fake.findReleaseVersionReturnsOnCall[len(fake.findReleaseVersionArgsForCall)]
 	fake.findReleaseVersionArgsForCall = append(fake.findReleaseVersionArgsForCall, struct {
-		arg1 cargo.ComponentSpec
+		arg1 cargo.ReleaseSpec
 	}{arg1})
 	stub := fake.FindReleaseVersionStub
 	fakeReturns := fake.findReleaseVersionReturns
@@ -222,13 +222,13 @@ func (fake *ReleaseStorage) FindReleaseVersionCallCount() int {
 	return len(fake.findReleaseVersionArgsForCall)
 }
 
-func (fake *ReleaseStorage) FindReleaseVersionCalls(stub func(cargo.ComponentSpec) (cargo.ComponentLock, error)) {
+func (fake *ReleaseStorage) FindReleaseVersionCalls(stub func(cargo.ReleaseSpec) (cargo.ComponentLock, error)) {
 	fake.findReleaseVersionMutex.Lock()
 	defer fake.findReleaseVersionMutex.Unlock()
 	fake.FindReleaseVersionStub = stub
 }
 
-func (fake *ReleaseStorage) FindReleaseVersionArgsForCall(i int) cargo.ComponentSpec {
+func (fake *ReleaseStorage) FindReleaseVersionArgsForCall(i int) cargo.ReleaseSpec {
 	fake.findReleaseVersionMutex.RLock()
 	defer fake.findReleaseVersionMutex.RUnlock()
 	argsForCall := fake.findReleaseVersionArgsForCall[i]
@@ -261,11 +261,11 @@ func (fake *ReleaseStorage) FindReleaseVersionReturnsOnCall(i int, result1 cargo
 	}{result1, result2}
 }
 
-func (fake *ReleaseStorage) GetMatchedRelease(arg1 cargo.ComponentSpec) (cargo.ComponentLock, error) {
+func (fake *ReleaseStorage) GetMatchedRelease(arg1 cargo.ReleaseSpec) (cargo.ComponentLock, error) {
 	fake.getMatchedReleaseMutex.Lock()
 	ret, specificReturn := fake.getMatchedReleaseReturnsOnCall[len(fake.getMatchedReleaseArgsForCall)]
 	fake.getMatchedReleaseArgsForCall = append(fake.getMatchedReleaseArgsForCall, struct {
-		arg1 cargo.ComponentSpec
+		arg1 cargo.ReleaseSpec
 	}{arg1})
 	stub := fake.GetMatchedReleaseStub
 	fakeReturns := fake.getMatchedReleaseReturns
@@ -286,13 +286,13 @@ func (fake *ReleaseStorage) GetMatchedReleaseCallCount() int {
 	return len(fake.getMatchedReleaseArgsForCall)
 }
 
-func (fake *ReleaseStorage) GetMatchedReleaseCalls(stub func(cargo.ComponentSpec) (cargo.ComponentLock, error)) {
+func (fake *ReleaseStorage) GetMatchedReleaseCalls(stub func(cargo.ReleaseSpec) (cargo.ComponentLock, error)) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = stub
 }
 
-func (fake *ReleaseStorage) GetMatchedReleaseArgsForCall(i int) cargo.ComponentSpec {
+func (fake *ReleaseStorage) GetMatchedReleaseArgsForCall(i int) cargo.ReleaseSpec {
 	fake.getMatchedReleaseMutex.RLock()
 	defer fake.getMatchedReleaseMutex.RUnlock()
 	argsForCall := fake.getMatchedReleaseArgsForCall[i]
@@ -325,11 +325,11 @@ func (fake *ReleaseStorage) GetMatchedReleaseReturnsOnCall(i int, result1 cargo.
 	}{result1, result2}
 }
 
-func (fake *ReleaseStorage) UploadRelease(arg1 cargo.ComponentSpec, arg2 io.Reader) (cargo.ComponentLock, error) {
+func (fake *ReleaseStorage) UploadRelease(arg1 cargo.ReleaseSpec, arg2 io.Reader) (cargo.ComponentLock, error) {
 	fake.uploadReleaseMutex.Lock()
 	ret, specificReturn := fake.uploadReleaseReturnsOnCall[len(fake.uploadReleaseArgsForCall)]
 	fake.uploadReleaseArgsForCall = append(fake.uploadReleaseArgsForCall, struct {
-		arg1 cargo.ComponentSpec
+		arg1 cargo.ReleaseSpec
 		arg2 io.Reader
 	}{arg1, arg2})
 	stub := fake.UploadReleaseStub
@@ -351,13 +351,13 @@ func (fake *ReleaseStorage) UploadReleaseCallCount() int {
 	return len(fake.uploadReleaseArgsForCall)
 }
 
-func (fake *ReleaseStorage) UploadReleaseCalls(stub func(cargo.ComponentSpec, io.Reader) (cargo.ComponentLock, error)) {
+func (fake *ReleaseStorage) UploadReleaseCalls(stub func(cargo.ReleaseSpec, io.Reader) (cargo.ComponentLock, error)) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = stub
 }
 
-func (fake *ReleaseStorage) UploadReleaseArgsForCall(i int) (cargo.ComponentSpec, io.Reader) {
+func (fake *ReleaseStorage) UploadReleaseArgsForCall(i int) (cargo.ReleaseSpec, io.Reader) {
 	fake.uploadReleaseMutex.RLock()
 	defer fake.uploadReleaseMutex.RUnlock()
 	argsForCall := fake.uploadReleaseArgsForCall[i]
