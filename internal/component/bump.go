@@ -189,8 +189,8 @@ func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLis
 }
 
 func fetchReleasesForBump(ctx context.Context, repoService RepositoryReleaseLister, kf cargo.Kilnfile, bump Bump) Bump {
-	spec, ok := kf.ComponentSpec(bump.Name)
-	if !ok {
+	spec, err := kf.FindReleaseWithName(bump.Name)
+	if err != nil {
 		return bump
 	}
 

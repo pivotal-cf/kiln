@@ -3,13 +3,14 @@ package scenario
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+
 	"github.com/cucumber/godog"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"golang.org/x/exp/slices"
-	"os"
-	"os/exec"
-	"strings"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -69,13 +70,15 @@ func iSetAVersionConstraintForRelease(ctx context.Context, versionConstraint, re
 	if err != nil {
 		return err
 	}
-	specIndex := slices.IndexFunc(spec.Releases, func(release cargo.ComponentSpec) bool {
-		return release.Name == releaseName
-	})
-	if specIndex == indexNotFound {
-		return cargo.ErrorSpecNotFound(releaseName)
+	componentSpec, err := spec.FindReleaseWithName(releaseName)
+	if err != nil {
+		return err
 	}
-	spec.Releases[specIndex].Version = versionConstraint
+	componentSpec.Version = versionConstraint
+	err = spec.UpdateReleaseWithName(releaseName, componentSpec)
+	if err != nil {
+		return err
+	}
 	return saveAsYAML(kfPath, spec)
 }
 

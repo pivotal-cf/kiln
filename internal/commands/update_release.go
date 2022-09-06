@@ -9,7 +9,6 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type UpdateRelease struct {
@@ -53,9 +52,9 @@ func (u UpdateRelease) Execute(args []string) error {
 			u.Options.Name,
 		)
 	}
-	releaseSpec, ok := kilnfile.ComponentSpec(u.Options.Name)
-	if !ok {
-		return cargo.ErrorSpecNotFound(u.Options.Name)
+	releaseSpec, err := kilnfile.FindReleaseWithName(u.Options.Name)
+	if err != nil {
+		return err
 	}
 
 	releaseVersionConstraint := releaseSpec.Version
@@ -127,7 +126,7 @@ func (u UpdateRelease) Execute(args []string) error {
 	releaseLock.RemoteSource = newSourceID
 	releaseLock.RemotePath = newRemotePath
 
-	_ = kilnfileLock.UpdateReleaseLockWithName(u.Options.Name, releaseLock)
+	_ = kilnfileLock.UpdateReleaseWithName(u.Options.Name, releaseLock)
 
 	err = u.Options.Standard.SaveKilnfileLock(u.filesystem, kilnfileLock)
 	if err != nil {
