@@ -8,12 +8,6 @@ import (
 
 type Spec = cargo.ComponentSpec
 
-type Exported struct {
-	Lock
-	TarballPath string
-	BlobstoreID string
-}
-
 type Local struct {
 	Lock
 	LocalPath string
