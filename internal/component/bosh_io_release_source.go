@@ -16,7 +16,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-var repos = []string{
+var organizations = []string{
 	"cloudfoundry",
 	"pivotal-cf",
 	"cloudfoundry-incubator",
@@ -81,7 +81,7 @@ func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, error) {
 	requirement = requirement.UnsetStemcell()
 
-	for _, repo := range repos {
+	for _, repo := range organizations {
 		for _, suf := range suffixes {
 			fullName := repo + "/" + requirement.Name + suf
 			exists, err := src.releaseExistOnBoshio(fullName, requirement.Version)
@@ -108,7 +108,7 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 
 	var validReleases []releaseResponse
 
-	for _, repo := range repos {
+	for _, repo := range organizations {
 		for _, suf := range suffixes {
 			fullName := repo + "/" + spec.Name + suf
 			releaseResponses, err := src.getReleases(fullName)
