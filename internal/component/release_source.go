@@ -147,9 +147,6 @@ type MultiReleaseSource interface {
 	DownloadRelease(ctx context.Context, logger *log.Logger, releasesDir string, remoteRelease Lock) (Local, error)
 
 	FindByID(string) (ReleaseSource, error)
-
-	// SetDownloadThreads allows configuring the concurrency for the s3 release source.
-	SetDownloadThreads(n int)
 }
 
 //counterfeiter:generate -o ./fakes/multi_release_source.go --fake-name MultiReleaseSource . MultiReleaseSource

@@ -106,39 +106,6 @@ func (sources *ReleaseSources) FindReleaseUploader(sourceID string) (ReleaseUplo
 	return uploader, nil
 }
 
-func (sources *ReleaseSources) FindRemotePather(sourceID string) (RemotePather, error) {
-	var (
-		pather       RemotePather
-		availableIDs []string
-	)
-
-	for _, src := range sources.List {
-		u, ok := src.(RemotePather)
-		if !ok {
-			continue
-		}
-		id := src.ID()
-		availableIDs = append(availableIDs, id)
-		if id == sourceID {
-			pather = u
-			break
-		}
-	}
-
-	if len(availableIDs) == 0 {
-		return nil, errors.New("no path-generating release sources were found in the Kilnfile")
-	}
-
-	if pather == nil {
-		return nil, fmt.Errorf(
-			"could not find a valid matching release source in the Kilnfile, available path-generating sources are: %q",
-			availableIDs,
-		)
-	}
-
-	return pather, nil
-}
-
 func wrapLogger(src ReleaseSource, logger *log.Logger) *log.Logger {
 	sourceLogger := NewReleaseSourceLogger(src, logger.Writer())
 	sourceLogger.SetPrefix(logger.Prefix() + sourceLogger.Prefix())
@@ -160,9 +127,12 @@ func (sources *ReleaseSources) GetMatchedRelease(ctx context.Context, logger *lo
 }
 
 func (sources *ReleaseSources) SetDownloadThreads(n int) {
+	if n == 0 || sources == nil {
+		return
+	}
 	for i, rs := range sources.List {
 		s3rs, ok := rs.(*S3ReleaseSource)
-		if ok {
+		if ok && s3rs != nil {
 			s3rs.DownloadThreads = n
 			sources.List[i] = s3rs
 		}

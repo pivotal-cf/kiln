@@ -102,6 +102,8 @@ func (f *FetchReleases) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 	}
 
+	kilnfile.ReleaseSources.SetDownloadThreads(f.Options.DownloadThreads)
+
 	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
 }
 
