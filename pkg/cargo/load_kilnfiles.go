@@ -11,19 +11,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
-type ConfigFileError struct {
-	HumanReadableConfigFileName string
-	err                         error
-}
-
-func (err ConfigFileError) Unwrap() error {
-	return err.err
-}
-
-func (err ConfigFileError) Error() string {
-	return fmt.Sprintf("encountered a configuration file error with %s: %s", err.HumanReadableConfigFileName, err.err.Error())
-}
-
 type KilnfileLoader struct{}
 
 func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, variablesFiles, variables []string) (Kilnfile, KilnfileLock, error) {
@@ -99,5 +86,3 @@ func (KilnfileLoader) SaveKilnfileLock(fs billy.Filesystem, kilnfilePath string,
 func kilnfileLockPath(kilnfilePath string) string {
 	return fmt.Sprintf("%s.lock", kilnfilePath)
 }
-
-func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

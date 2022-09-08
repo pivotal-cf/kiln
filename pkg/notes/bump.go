@@ -1,4 +1,4 @@
-package component
+package notes
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
 
+	"github.com/pivotal-cf/kiln/internal/gh"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -64,10 +65,10 @@ func (bump *Bump) toFrom() (to, from *semver.Version, _ error) {
 
 type BumpList []Bump
 
-func CalculateBumps(current, previous []Lock) BumpList {
+func CalculateBumps(current, previous []cargo.ReleaseLock) BumpList {
 	var (
 		bumps         []Bump
-		previousSpecs = make(map[string]Lock, len(previous))
+		previousSpecs = make(map[string]cargo.ReleaseLock, len(previous))
 	)
 	for _, p := range previous {
 		previousSpecs[p.Name] = p
@@ -86,7 +87,7 @@ func CalculateBumps(current, previous []Lock) BumpList {
 	return bumps
 }
 
-func (list BumpList) ForLock(lock Lock) Bump {
+func (list BumpList) ForLock(lock cargo.ReleaseLock) Bump {
 	for _, b := range list {
 		if b.Name == lock.Name {
 			return b
@@ -99,7 +100,7 @@ func (list BumpList) ForLock(lock Lock) Bump {
 	}
 }
 
-//counterfeiter:generate -o ./fakes_internal/repository_release_lister.go --fake-name RepositoryReleaseLister . repositoryReleaseLister
+//counterfeiter:generate -o ./fakes/repository_release_lister.go --fake-name RepositoryReleaseLister . repositoryReleaseLister
 
 // repositoryReleaseLister is defined as not exported as a hack so counterfeiter does not add the
 // type assignment at the end
@@ -107,7 +108,7 @@ type repositoryReleaseLister interface {
 	ListReleases(ctx context.Context, owner, repo string, opts *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error)
 }
 
-type RepositoryReleaseLister = repositoryReleaseLister
+type RepositoryReleaseLister repositoryReleaseLister
 
 func ReleaseNotes(ctx context.Context, repoService RepositoryReleaseLister, kf cargo.Kilnfile, list BumpList) (BumpList, error) {
 	const workerCount = 10
@@ -161,7 +162,7 @@ func ReleaseNotes(ctx context.Context, repoService RepositoryReleaseLister, kf c
 }
 
 func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLister, repository string, from, to *semver.Version) []*github.RepositoryRelease {
-	owner, repo, err := OwnerAndRepoFromGitHubURI(repository)
+	owner, repo, err := gh.OwnerAndRepoFromURI(repository)
 	if err != nil {
 		return nil
 	}

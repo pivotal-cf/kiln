@@ -23,13 +23,12 @@ import (
 	"github.com/google/go-github/v40/github"
 	"gopkg.in/yaml.v2"
 
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/history"
 )
 
 type ComponentData struct {
-	component.Lock
+	cargo.ReleaseLock
 	Releases []*github.RepositoryRelease
 }
 
@@ -48,7 +47,7 @@ type Data struct {
 
 	Issues     []*github.Issue
 	Components []ComponentData
-	Bumps      component.BumpList
+	Bumps      BumpList
 
 	Stemcell cargo.Stemcell
 }
@@ -146,7 +145,7 @@ type fetchNotesData struct {
 	repository *git.Repository
 
 	issuesService
-	releasesService component.RepositoryReleaseLister
+	releasesService RepositoryReleaseLister
 
 	repoOwner, repoName,
 	kilnfilePath,
@@ -163,7 +162,7 @@ func (r fetchNotesData) fetch(ctx context.Context) (Data, error) {
 
 	data := Data{
 		Version:  finalVersion,
-		Bumps:    component.CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
+		Bumps:    CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
 		Stemcell: finalKilnfileLock.Stemcell,
 	}
 
@@ -179,8 +178,8 @@ func (r fetchNotesData) fetch(ctx context.Context) (Data, error) {
 
 	for _, c := range finalKilnfileLock.Releases {
 		data.Components = append(data.Components, ComponentData{
-			Lock:     c,
-			Releases: data.Bumps.ForLock(c).Releases,
+			ReleaseLock: c,
+			Releases:    data.Bumps.ForLock(c).Releases,
 		})
 	}
 
@@ -257,7 +256,6 @@ func (r fetchNotesData) fetchHistoricFiles(kilnfilePath, start, end string) (klI
 	return klInitial, klFinal, kfFinal, v, nil
 }
 
-//counterfeiter:generate -o ./fakes/releases_service.go --fake-name ReleaseService github.com/pivotal-cf/kiln/internal/component.RepositoryReleaseLister
 //counterfeiter:generate -o ./fakes/issues_service.go --fake-name IssuesService . issuesService
 
 type issuesService interface {
@@ -273,11 +271,11 @@ type issuesService interface {
 // The function can be tested by generating release notes for a tile with issue ids and a milestone set. The happy path
 // test for Execute does not set GithubToken intentionally so this code is not triggered and Execute does not actually
 // reach out to GitHub.
-func (r fetchNotesData) fetchIssuesAndReleaseNotes(ctx context.Context, finalKF, wtKF cargo.Kilnfile, bumpList component.BumpList, issuesQuery IssuesQuery) ([]*github.Issue, component.BumpList, error) {
+func (r fetchNotesData) fetchIssuesAndReleaseNotes(ctx context.Context, finalKF, wtKF cargo.Kilnfile, bumpList BumpList, issuesQuery IssuesQuery) ([]*github.Issue, BumpList, error) {
 	if r.releasesService == nil || r.issuesService == nil {
 		return nil, bumpList, nil
 	}
-	bumpList, err := component.ReleaseNotes(ctx, r.releasesService, setEmptyComponentGitHubRepositoryFromOtherKilnfile(finalKF, wtKF), bumpList)
+	bumpList, err := ReleaseNotes(ctx, r.releasesService, setEmptyComponentGitHubRepositoryFromOtherKilnfile(finalKF, wtKF), bumpList)
 	if err != nil {
 		return nil, nil, err
 	}

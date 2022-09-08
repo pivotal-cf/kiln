@@ -19,7 +19,6 @@ import (
 	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/jhanda"
 
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/gh"
 	"github.com/pivotal-cf/kiln/pkg/notes"
 )
@@ -122,11 +121,11 @@ func (r *ReleaseNotes) updateDocsFile(data notes.Data) error {
 	if err != nil {
 		return err
 	}
-	notes, err := data.WriteVersionNotes()
+	releaseNotes, err := data.WriteVersionNotes()
 	if err != nil {
 		return err
 	}
-	err = page.Add(notes)
+	err = page.Add(releaseNotes)
 	if err != nil {
 		return err
 	}
@@ -273,7 +272,7 @@ func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, erro
 		return "", "", fmt.Errorf("remote github URL not found for repo")
 	}
 
-	repoOwner, repoName, err := component.OwnerAndRepoFromGitHubURI(remoteURL)
+	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(remoteURL)
 	if err != nil {
 		return "", "", err
 	}

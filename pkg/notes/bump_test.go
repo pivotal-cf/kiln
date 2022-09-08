@@ -1,9 +1,8 @@
-package component
+package notes
 
 import (
 	"context"
 	"errors"
-	"net/http"
 	"testing"
 
 	"github.com/google/go-github/v40/github"
@@ -19,18 +18,18 @@ func TestCalculateBumps(t *testing.T) {
 	please := NewWithT(t)
 
 	t.Run("when the components stay the same", func(t *testing.T) {
-		please.Expect(CalculateBumps([]Lock{
+		please.Expect(CalculateBumps([]cargo.ReleaseLock{
 			{Name: "a", Version: "1"},
-		}, []Lock{
+		}, []cargo.ReleaseLock{
 			{Name: "a", Version: "1"},
 		})).To(HaveLen(0))
 	})
 
 	t.Run("when a component is bumped", func(t *testing.T) {
-		please.Expect(CalculateBumps([]Lock{
+		please.Expect(CalculateBumps([]cargo.ReleaseLock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "2"},
-		}, []Lock{
+		}, []cargo.ReleaseLock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
 		})).To(Equal(BumpList{
@@ -41,11 +40,11 @@ func TestCalculateBumps(t *testing.T) {
 	})
 
 	t.Run("when many but not all components are bumped", func(t *testing.T) {
-		please.Expect(CalculateBumps([]Lock{
+		please.Expect(CalculateBumps([]cargo.ReleaseLock{
 			{Name: "a", Version: "2"},
 			{Name: "b", Version: "1"},
 			{Name: "c", Version: "2"},
-		}, []Lock{
+		}, []cargo.ReleaseLock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
 			{Name: "c", Version: "1"},
@@ -58,9 +57,9 @@ func TestCalculateBumps(t *testing.T) {
 	})
 
 	t.Run("when a component is removed", func(t *testing.T) {
-		please.Expect(CalculateBumps([]Lock{
+		please.Expect(CalculateBumps([]cargo.ReleaseLock{
 			{Name: "a", Version: "1"},
-		}, []Lock{
+		}, []cargo.ReleaseLock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
 		})).To(HaveLen(0),
@@ -72,10 +71,10 @@ func TestCalculateBumps(t *testing.T) {
 		// I'm not sure what we actually want to do here?
 		// Is this actually a bump? Not really...
 
-		please.Expect(CalculateBumps([]Lock{
+		please.Expect(CalculateBumps([]cargo.ReleaseLock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
-		}, []Lock{
+		}, []cargo.ReleaseLock{
 			{Name: "a", Version: "1"},
 		})).To(Equal(BumpList{
 			{Name: "b", FromVersion: "", ToVersion: "1"},
@@ -156,16 +155,3 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 
 	please.Expect(result[0].ReleaseNotes()).To(Equal("served\nplated\nstored\nlabeled\npreserved\nchopped\ncleaned"))
 }
-
-func githubResponse(t *testing.T, status int) *github.Response {
-	t.Helper()
-
-	return &github.Response{
-		Response: &http.Response{
-			StatusCode: status,
-			Status:     http.StatusText(status),
-		},
-	}
-}
-
-func strPtr(n string) *string { return &n }

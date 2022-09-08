@@ -2,6 +2,7 @@ package component
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
@@ -17,14 +18,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/semver"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
-
-type ArtifactoryReleaseSource struct {
-	cargo.ReleaseSource
-	logger *log.Logger
-	ID     string
-}
 
 type ArtifactoryFileMetadata struct {
 	Checksums struct {
@@ -47,25 +41,50 @@ type ArtifactoryFileInfo struct {
 	} `json:"checksums"`
 }
 
-// NewArtifactoryReleaseSource will provision a new ArtifactoryReleaseSource Project
-// from the Kilnfile (ReleaseSource). If type is incorrect it will PANIC
-func NewArtifactoryReleaseSource(c cargo.ReleaseSource) *ArtifactoryReleaseSource {
-	if c.Type != "" && c.Type != ReleaseSourceTypeArtifactory {
-		panic(panicMessageWrongReleaseSourceType)
-	}
+type ArtifactoryReleaseSource struct {
+	Identifier  string `yaml:"id,omitempty"`
+	Publishable bool   `yaml:"publishable,omitempty"`
 
-	// ctx := context.TODO()
-
-	return &ArtifactoryReleaseSource{
-		ReleaseSource: c,
-		ID:            c.ID,
-		logger:        log.New(os.Stdout, "[Artifactory release source] ", log.Default().Flags()),
-	}
+	ArtifactoryHost string `yaml:"artifactory_host,omitempty"`
+	Username        string `yaml:"username,omitempty"`
+	Password        string `yaml:"password,omitempty"`
+	Repo            string `yaml:"repo,omitempty"`
+	PathTemplate    string `yaml:"path_template,omitempty"`
 }
 
-func (ars ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
-	downloadURL := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + remoteRelease.RemotePath
-	ars.logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeArtifactory, ars.ID)
+func (src *ArtifactoryReleaseSource) ConfigurationErrors() []error {
+	var result []error
+	if src.PathTemplate == "" {
+		result = append(result, fmt.Errorf(`missing required field "path_template" in release source config`))
+	}
+	return result
+}
+
+func (src *ArtifactoryReleaseSource) ID() string {
+	if src.Identifier != "" {
+		return src.Identifier
+	}
+	return ReleaseSourceTypeArtifactory
+}
+
+func (src *ArtifactoryReleaseSource) IsPublishable() bool { return src.Publishable }
+func (src *ArtifactoryReleaseSource) Type() string        { return ReleaseSourceTypeArtifactory }
+
+func (src *ArtifactoryReleaseSource) GetMatchedRelease(_ context.Context, _ *log.Logger, spec Spec) (Lock, error) {
+	return src.getMatchedRelease(spec)
+}
+
+func (src *ArtifactoryReleaseSource) FindReleaseVersion(_ context.Context, logger *log.Logger, spec Spec) (Lock, error) {
+	return src.findReleaseVersion(logger, spec)
+}
+
+func (src *ArtifactoryReleaseSource) DownloadRelease(_ context.Context, logger *log.Logger, releasesDir string, remoteRelease Lock) (Local, error) {
+	return src.downloadRelease(logger, releasesDir, remoteRelease)
+}
+
+func (src *ArtifactoryReleaseSource) downloadRelease(logger *log.Logger, releaseDir string, remoteRelease Lock) (Local, error) {
+	downloadURL := src.ArtifactoryHost + "/artifactory/" + src.Repo + "/" + remoteRelease.RemotePath
+	logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeArtifactory, src.ID())
 	resp, err := http.Get(downloadURL)
 	if err != nil {
 		return Local{}, err
@@ -108,9 +127,9 @@ func (ars ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRel
 	return Local{Lock: remoteRelease, LocalPath: filePath}, nil
 }
 
-func (ars ArtifactoryReleaseSource) getFileSHA1(release Lock) (string, error) {
-	fullURL := ars.ArtifactoryHost + "/api/storage/" + ars.Repo + "/" + release.RemotePath
-	ars.logger.Printf("Getting %s file info from artifactory", release.Name)
+func (src *ArtifactoryReleaseSource) getFileSHA1(logger *log.Logger, release Lock) (string, error) {
+	fullURL := src.ArtifactoryHost + "/api/storage/" + src.Repo + "/" + release.RemotePath
+	logger.Printf("Getting %s file info from artifactory", release.Name)
 	resp, err := http.Get(fullURL)
 	if err != nil {
 		return "", err
@@ -133,24 +152,20 @@ func (ars ArtifactoryReleaseSource) getFileSHA1(release Lock) (string, error) {
 	return artifactoryFileInfo.Checksums.SHA1, nil
 }
 
-func (ars ArtifactoryReleaseSource) Configuration() cargo.ReleaseSource {
-	return ars.ReleaseSource
-}
-
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
-func (ars ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
-	remotePath, err := ars.RemotePath(spec)
+func (src *ArtifactoryReleaseSource) getMatchedRelease(spec Spec) (Lock, error) {
+	remotePath, err := src.RemotePath(spec)
 	if err != nil {
 		return Lock{}, err
 	}
 
-	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, remotePath)
+	fullUrl := fmt.Sprintf("%s/%s/%s/%s", src.ArtifactoryHost, "api/storage", src.Repo, remotePath)
 	request, err := http.NewRequest(http.MethodGet, fullUrl, nil)
 	if err != nil {
 		return Lock{}, err
 	}
-	request.SetBasicAuth(ars.Username, ars.Password)
+	request.SetBasicAuth(src.Username, src.Password)
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
@@ -172,25 +187,25 @@ func (ars ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 		Name:         spec.Name,
 		Version:      spec.Version,
 		RemotePath:   remotePath,
-		RemoteSource: ars.ID,
+		RemoteSource: src.ID(),
 	}, nil
 }
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
-func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
-	remotePath, err := ars.RemotePath(spec)
+func (src *ArtifactoryReleaseSource) findReleaseVersion(logger *log.Logger, spec Spec) (Lock, error) {
+	remotePath, err := src.RemotePath(spec)
 	if err != nil {
 		return Lock{}, err
 	}
 
-	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, path.Dir(remotePath))
+	fullUrl := fmt.Sprintf("%s/%s/%s/%s", src.ArtifactoryHost, "api/storage", src.Repo, path.Dir(remotePath))
 
 	request, err := http.NewRequest(http.MethodGet, fullUrl, nil)
 	if err != nil {
 		return Lock{}, err
 	}
-	request.SetBasicAuth(ars.Username, ars.Password)
+	request.SetBasicAuth(src.Username, src.Password)
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
@@ -257,7 +272,7 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) 
 					Name:         spec.Name,
 					Version:      version,
 					RemotePath:   remotePathToUpdate,
-					RemoteSource: ars.ReleaseSource.ID,
+					RemoteSource: src.ID(),
 				}
 			} else {
 				foundVersion, _ := semver.NewVersion(foundRelease.Version)
@@ -266,7 +281,7 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) 
 						Name:         spec.Name,
 						Version:      version,
 						RemotePath:   remotePathToUpdate,
-						RemoteSource: ars.ReleaseSource.ID,
+						RemoteSource: src.ID(),
 					}
 				}
 			}
@@ -276,31 +291,31 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) 
 	if (foundRelease == Lock{}) {
 		return Lock{}, ErrNotFound
 	}
-	var sha1 string
-	sha1, err = ars.getFileSHA1(foundRelease)
+	var sum string
+	sum, err = src.getFileSHA1(logger, foundRelease)
 	if err != nil {
 		return Lock{}, err
 	}
-	foundRelease.SHA1 = sha1
+	foundRelease.SHA1 = sum
 	return foundRelease, nil
 }
 
-func (ars ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error) {
-	remotePath, err := ars.RemotePath(spec)
+func (src *ArtifactoryReleaseSource) UploadRelease(ctx context.Context, logger *log.Logger, spec Spec, file io.Reader) (Lock, error) {
+	remotePath, err := src.RemotePath(spec)
 	if err != nil {
 		return Lock{}, err
 	}
 
-	ars.logger.Printf("uploading release %q to %s at %q...\n", spec.Name, ars.ID, remotePath)
+	logger.Printf("uploading release %q to %s at %q...\n", spec.Name, src.ID(), remotePath)
 
-	fullUrl := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + remotePath
+	fullUrl := src.ArtifactoryHost + "/artifactory/" + src.Repo + "/" + remotePath
 
-	request, err := http.NewRequest(http.MethodPut, fullUrl, file)
+	request, err := http.NewRequestWithContext(ctx, http.MethodPut, fullUrl, file)
 	if err != nil {
 		fmt.Println(err)
 		return Lock{}, err
 	}
-	request.SetBasicAuth(ars.Username, ars.Password)
+	request.SetBasicAuth(src.Username, src.Password)
 	// TODO: check Sha1/2
 	// request.Header.Set("X-Checksum-Sha1", spec.??? )
 
@@ -320,14 +335,14 @@ func (ars ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lo
 		Name:         spec.Name,
 		Version:      spec.Version,
 		RemotePath:   remotePath,
-		RemoteSource: ars.ReleaseSource.ID,
+		RemoteSource: src.ID(),
 	}, nil
 }
 
-func (ars ArtifactoryReleaseSource) RemotePath(spec Spec) (string, error) {
+func (src *ArtifactoryReleaseSource) RemotePath(spec Spec) (string, error) {
 	pathBuf := new(bytes.Buffer)
 
-	err := ars.pathTemplate().Execute(pathBuf, spec)
+	err := src.pathTemplate().Execute(pathBuf, spec)
 	if err != nil {
 		return "", fmt.Errorf("unable to evaluate path_template: %w", err)
 	}
@@ -335,9 +350,9 @@ func (ars ArtifactoryReleaseSource) RemotePath(spec Spec) (string, error) {
 	return pathBuf.String(), nil
 }
 
-func (ars ArtifactoryReleaseSource) pathTemplate() *template.Template {
+func (src *ArtifactoryReleaseSource) pathTemplate() *template.Template {
 	return template.Must(
 		template.New("remote-path").
 			Funcs(template.FuncMap{"trimSuffix": strings.TrimSuffix}).
-			Parse(ars.ReleaseSource.PathTemplate))
+			Parse(src.PathTemplate))
 }

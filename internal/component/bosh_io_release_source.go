@@ -1,6 +1,7 @@
 package component
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
@@ -12,79 +13,35 @@ import (
 	"path/filepath"
 
 	"github.com/Masterminds/semver"
-
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-var organizations = []string{
-	"cloudfoundry",
-	"pivotal-cf",
-	"cloudfoundry-incubator",
-	"pivotal-cf-experimental",
-	"bosh-packages",
-	"cppforlife",
-	"vito",
-	"flavorjones",
-	"xoebus",
-	"dpb587",
-	"jamlo",
-	"concourse",
-	"cf-platform-eng",
-	"starkandwayne",
-	"cloudfoundry-community",
-	"vmware",
-	"DataDog",
-	"Dynatrace",
-	"SAP",
-	"hybris",
-	"minio",
-	"rakutentech",
-	"frodenas",
-}
-
-var suffixes = []string{
-	"-release",
-	"-boshrelease",
-	"-bosh-release",
-	"",
-}
-
 type BOSHIOReleaseSource struct {
-	cargo.ReleaseSource
-	serverURI string
-	logger    *log.Logger
+	Identifier  string `yaml:"id,omitempty"`
+	Publishable bool   `yaml:"publishable,omitempty"`
+
+	CustomURI string `yaml:"customURI,omitempty"`
 }
 
-func NewBOSHIOReleaseSource(c cargo.ReleaseSource, customServerURI string, logger *log.Logger) *BOSHIOReleaseSource {
-	if c.Type != "" && c.Type != ReleaseSourceTypeBOSHIO {
-		panic(panicMessageWrongReleaseSourceType)
-	}
-	if customServerURI == "" {
-		customServerURI = "https://bosh.io"
-	}
-	if logger == nil {
-		logger = log.New(os.Stdout, "[bosh.io release source] ", log.Default().Flags())
-	}
-	return &BOSHIOReleaseSource{
-		ReleaseSource: c,
-		logger:        logger,
-		serverURI:     customServerURI,
-	}
+func (src *BOSHIOReleaseSource) ConfigurationErrors() []error {
+	return nil
 }
 
-func (src BOSHIOReleaseSource) ID() string        { return src.ReleaseSource.ID }
-func (src BOSHIOReleaseSource) Publishable() bool { return src.ReleaseSource.Publishable }
-func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSource {
-	return src.ReleaseSource
+func (src *BOSHIOReleaseSource) ID() string {
+	if src.Identifier != "" {
+		return src.Identifier
+	}
+	return ReleaseSourceTypeBOSHIO
 }
+func (src *BOSHIOReleaseSource) IsPublishable() bool { return src.Publishable }
+func (src *BOSHIOReleaseSource) Type() string        { return ReleaseSourceTypeBOSHIO }
 
-func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, error) {
+func (src *BOSHIOReleaseSource) GetMatchedRelease(ctx context.Context, logger *log.Logger, requirement Spec) (Lock, error) {
 	requirement = requirement.UnsetStemcell()
 
 	for _, repo := range organizations {
 		for _, suf := range suffixes {
 			fullName := repo + "/" + requirement.Name + suf
-			exists, err := src.releaseExistOnBoshio(fullName, requirement.Version)
+			exists, err := src.releaseExistOnBoshIO(ctx, fullName, requirement.Version)
 			if err != nil {
 				return Lock{}, err
 			}
@@ -98,7 +55,7 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, error)
 	return Lock{}, ErrNotFound
 }
 
-func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
+func (src *BOSHIOReleaseSource) FindReleaseVersion(ctx context.Context, logger *log.Logger, spec Spec) (Lock, error) {
 	spec = spec.UnsetStemcell()
 
 	constraint, err := spec.VersionConstraints()
@@ -111,7 +68,7 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 	for _, repo := range organizations {
 		for _, suf := range suffixes {
 			fullName := repo + "/" + spec.Name + suf
-			releaseResponses, err := src.getReleases(fullName)
+			releaseResponses, err := src.getReleases(ctx, fullName)
 			if err != nil {
 				return Lock{}, err
 			}
@@ -134,12 +91,16 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 	return Lock{}, ErrNotFound
 }
 
-func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
-	src.logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeBOSHIO, src.ID())
+func (src *BOSHIOReleaseSource) DownloadRelease(ctx context.Context, logger *log.Logger, releaseDir string, remoteRelease Lock) (Local, error) {
+	logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeBOSHIO, src.ID())
 
 	downloadURL := remoteRelease.RemotePath
 
-	resp, err := http.Get(downloadURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+	if err != nil {
+		return Local{}, err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return Local{}, err
 	}
@@ -174,22 +135,20 @@ func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease 
 	return Local{Lock: remoteRelease, LocalPath: filePath}, nil
 }
 
-type ResponseStatusCodeError http.Response
-
-func (err ResponseStatusCodeError) Error() string {
-	return fmt.Sprintf("response to %s %s got status %d when a success was expected", err.Request.Method, err.Request.URL, err.StatusCode)
-}
-
-func (src BOSHIOReleaseSource) createReleaseRemote(spec Spec, fullName string) Lock {
-	downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, spec.Version)
+func (src *BOSHIOReleaseSource) createReleaseRemote(spec Spec, fullName string) Lock {
+	downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI(), fullName, spec.Version)
 	releaseRemote := spec.Lock()
 	releaseRemote.RemoteSource = src.ID()
 	releaseRemote.RemotePath = downloadURL
 	return releaseRemote
 }
 
-func (src BOSHIOReleaseSource) getReleases(name string) ([]releaseResponse, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/github.com/%s", src.serverURI, name))
+func (src *BOSHIOReleaseSource) getReleases(ctx context.Context, name string) ([]releaseResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/api/v1/releases/github.com/%s", src.serverURI(), name), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("bosh.io API is down with error: %w", err)
 	}
@@ -227,8 +186,8 @@ type releaseResponse struct {
 	SHA     string `json:"sha1"`
 }
 
-func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {
-	releaseResponses, err := src.getReleases(name)
+func (src *BOSHIOReleaseSource) releaseExistOnBoshIO(ctx context.Context, name, version string) (bool, error) {
+	releaseResponses, err := src.getReleases(ctx, name)
 	if err != nil {
 		return false, err
 	}
@@ -238,4 +197,44 @@ func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool,
 		}
 	}
 	return false, nil
+}
+
+func (src *BOSHIOReleaseSource) serverURI() string {
+	if src.CustomURI != "" {
+		return src.CustomURI
+	}
+	return "https://bosh.io"
+}
+
+var organizations = []string{
+	"cloudfoundry",
+	"pivotal-cf",
+	"cloudfoundry-incubator",
+	"pivotal-cf-experimental",
+	"bosh-packages",
+	"cppforlife",
+	"vito",
+	"flavorjones",
+	"xoebus",
+	"dpb587",
+	"jamlo",
+	"concourse",
+	"cf-platform-eng",
+	"starkandwayne",
+	"cloudfoundry-community",
+	"vmware",
+	"DataDog",
+	"Dynatrace",
+	"SAP",
+	"hybris",
+	"minio",
+	"rakutentech",
+	"frodenas",
+}
+
+var suffixes = []string{
+	"-release",
+	"-boshrelease",
+	"-bosh-release",
+	"",
 }

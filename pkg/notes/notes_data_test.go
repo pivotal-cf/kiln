@@ -78,7 +78,7 @@ func Test_fetch(t *testing.T) {
 		Title: strPtr("**[Feature Improvement]** Reduce default log-cache max per source"),
 	}, githubResponse(t, 200), nil)
 
-	fakeReleaseService := new(fakes.ReleaseService)
+	fakeReleaseService := new(fakes.RepositoryReleaseLister)
 	fakeReleaseService.ListReleasesReturnsOnCall(0, []*github.RepositoryRelease{
 		{TagName: strPtr("1.1.0"), Body: strPtr("   peal is green\n")},
 		{TagName: strPtr("1.1.1"), Body: strPtr("remove from bunch\n\n")},

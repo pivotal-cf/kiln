@@ -2,6 +2,7 @@ package cargo_test
 
 import (
 	"errors"
+	"github.com/pivotal-cf/kiln/internal/component"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -71,6 +72,7 @@ stemcell_criteria:
 
 	const validVariableFileContents = `
 ---
+type: s3
 bucket: my-bucket
 region: middle-earth
 path_template: "not-used"
@@ -92,16 +94,15 @@ path_template: "not-used"
 			kilnfile, _, err := kilnfileLoader.LoadKilnfiles(filesystem, kilnfilePath, []string{variableFilePath}, variableStrings)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kilnfile).To(Equal(cargo.Kilnfile{
-				ReleaseSources: []cargo.ReleaseSource{
-					{
-						Type:            "s3",
+				ReleaseSources: component.NewReleaseSources(
+					&component.S3ReleaseSource{
 						Bucket:          "my-bucket",
 						Region:          "middle-earth",
 						AccessKeyId:     "id",
 						SecretAccessKey: "key",
 						PathTemplate:    "not-used",
 					},
-				},
+				),
 			}))
 		})
 

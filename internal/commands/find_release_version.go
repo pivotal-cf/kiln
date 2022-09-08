@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,6 +38,7 @@ func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider Mul
 }
 
 func (cmd *FindReleaseVersion) Execute(args []string) error {
+	ctx := context.Background()
 	kilnfile, kilnfileLock, err := cmd.setup(args)
 	if err != nil {
 		return err
@@ -51,7 +53,7 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 	spec.StemcellOS = kilnfileLock.Stemcell.OS
 	spec.StemcellVersion = kilnfileLock.Stemcell.Version
 
-	releaseRemote, err := releaseSource.FindReleaseVersion(spec)
+	releaseRemote, err := releaseSource.FindReleaseVersion(ctx, cmd.outLogger, spec)
 	if err != nil {
 		return err
 	}

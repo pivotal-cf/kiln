@@ -102,10 +102,10 @@ releases:
 				When("uaac has releases on bosh.io", func() {
 					It("returns the latest release version", func() {
 						Expect(executeErr).NotTo(HaveOccurred())
-						args := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
-						Expect(args.StemcellVersion).To(Equal("4.5.6"))
-						Expect(args.StemcellOS).To(Equal("some-os"))
-						Expect(args.Version).To(Equal(""))
+						_, _, spec := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+						Expect(spec.StemcellVersion).To(Equal("4.5.6"))
+						Expect(spec.StemcellOS).To(Equal("some-os"))
+						Expect(spec.Version).To(Equal(""))
 						Expect((&writer).String()).To(ContainSubstring("\"74.12.5\""))
 						Expect((&writer).String()).To(ContainSubstring("\"remote_path\":\"remote_url\""))
 						Expect((&writer).String()).To(ContainSubstring("\"source\":\"bosh.io\""))
@@ -129,10 +129,10 @@ releases:
 				When("uaa has releases on bosh.io", func() {
 					It("returns the latest release version", func() {
 						Expect(executeErr).NotTo(HaveOccurred())
-						args := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
-						Expect(args.Version).To(Equal("~74.16.0"))
-						Expect(args.StemcellVersion).To(Equal("4.5.6"))
-						Expect(args.StemcellOS).To(Equal("some-os"))
+						_, _, spec := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+						Expect(spec.Version).To(Equal("~74.16.0"))
+						Expect(spec.StemcellVersion).To(Equal("4.5.6"))
+						Expect(spec.StemcellOS).To(Equal("some-os"))
 						Expect((&writer).String()).To(ContainSubstring("\"74.16.5\""))
 						Expect((&writer).String()).To(ContainSubstring("\"remote_path\":\"remote_url\""))
 					})

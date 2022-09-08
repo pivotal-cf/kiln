@@ -6,6 +6,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -28,16 +29,13 @@ func TestInterpolateAndParseKilnfile(t *testing.T) {
 	please.Expect(err).NotTo(HaveOccurred())
 
 	please.Expect(kilnfile).To(Equal(cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSource{
-			{
-				Type:            "s3",
-				Bucket:          "my-bucket",
-				Region:          "middle-earth",
-				AccessKeyId:     "id",
-				SecretAccessKey: "key",
-				PathTemplate:    "not-used",
-			},
-		},
+		ReleaseSources: component.NewReleaseSources(&component.S3ReleaseSource{
+			Bucket:          "my-bucket",
+			Region:          "middle-earth",
+			AccessKeyId:     "id",
+			SecretAccessKey: "key",
+			PathTemplate:    "not-used",
+		}),
 	}))
 }
 

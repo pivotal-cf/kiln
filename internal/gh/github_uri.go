@@ -1,4 +1,4 @@
-package component
+package gh
 
 import (
 	"errors"
@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-// OwnerAndRepoFromGitHubURI is from the github-release-source branch
+// OwnerAndRepoFromURI is from the github-release-source branch
 // once that one is merged we should that one instead of this one
-func OwnerAndRepoFromGitHubURI(urlStr string) (owner, repo string, err error) {
+func OwnerAndRepoFromURI(urlStr string) (owner, repo string, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("failed to parse owner and repo name from URI %q: %w", urlStr, err)

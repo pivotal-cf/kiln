@@ -17,7 +17,6 @@ import (
 	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/jhanda"
 
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/notes"
 )
@@ -88,13 +87,13 @@ func TestReleaseNotes_Execute(t *testing.T) {
 						OS: "fruit-tree", Version: "40000.2",
 					},
 					Components: []notes.ComponentData{
-						{Lock: cargo.ReleaseLock{Name: "banana", Version: "1.2.0"}, Releases: []*github.RepositoryRelease{
+						{ReleaseLock: cargo.ReleaseLock{Name: "banana", Version: "1.2.0"}, Releases: []*github.RepositoryRelease{
 							{TagName: strPtr("1.2.0"), Body: strPtr("peal\nis\nyellow")},
 							{TagName: strPtr("1.1.1"), Body: strPtr("remove from bunch")},
 						}},
-						{Lock: cargo.ReleaseLock{Name: "lemon", Version: "1.1.0"}},
+						{ReleaseLock: cargo.ReleaseLock{Name: "lemon", Version: "1.1.0"}},
 					},
-					Bumps: component.BumpList{
+					Bumps: notes.BumpList{
 						{Name: "banana", FromVersion: "1.1.0", ToVersion: "1.2.0"},
 					},
 				}, nil

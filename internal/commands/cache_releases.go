@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"crypto/sha1"
 	"crypto/sha256"
 	"errors"
@@ -24,18 +25,12 @@ import (
 )
 
 //counterfeiter:generate -o ./fakes/ops_manager_release_cache_source.go --fake-name OpsManagerReleaseCacheSource . OpsManagerReleaseCacheSource
-//counterfeiter:generate -o ./fakes/release_storage.go --fake-name ReleaseStorage . ReleaseStorage
 
 type (
 	OpsManagerReleaseCacheSource interface {
 		om.GetBoshEnvironmentAndSecurityRootCACertificateProvider
 		GetStagedProductManifest(guid string) (string, error)
 		GetStagedProductByName(productName string) (api.StagedProductsFindOutput, error)
-	}
-
-	ReleaseStorage interface {
-		component.ReleaseSource
-		UploadRelease(spec component.Spec, file io.Reader) (component.Lock, error)
 	}
 )
 
@@ -52,7 +47,7 @@ type CacheReleases struct {
 	Logger *log.Logger
 	FS     billy.Filesystem
 
-	ReleaseSourceAndCache func(kilnfile cargo.Kilnfile, targetID string) (ReleaseStorage, error)
+	ReleaseSourceAndCache func(kilnfile cargo.Kilnfile, targetID string) (component.ReleaseUploader, error)
 	OpsManager            func(om.ClientConfiguration) (OpsManagerReleaseCacheSource, error)
 	Director              func(om.ClientConfiguration, om.GetBoshEnvironmentAndSecurityRootCACertificateProvider) (boshdir.Director, error)
 }
@@ -62,12 +57,12 @@ func NewCacheReleases() *CacheReleases {
 		FS:     osfs.New(""),
 		Logger: log.Default(),
 	}
-	cmd.ReleaseSourceAndCache = func(kilnfile cargo.Kilnfile, targetID string) (ReleaseStorage, error) {
-		releaseSource, err := component.NewReleaseSourceRepo(kilnfile, cmd.Logger).FindByID(targetID)
+	cmd.ReleaseSourceAndCache = func(kilnfile cargo.Kilnfile, targetID string) (component.ReleaseUploader, error) {
+		releaseSource, err := kilnfile.ReleaseSources.FindByID(targetID)
 		if err != nil {
 			return nil, err
 		}
-		releaseCache, ok := releaseSource.(ReleaseStorage)
+		releaseCache, ok := releaseSource.(component.ReleaseUploader)
 		if !ok {
 			return nil, fmt.Errorf("unsupported release source type %T: it does not implement the required methods", releaseSource)
 		}
@@ -89,6 +84,7 @@ func (cmd *CacheReleases) WithLogger(logger *log.Logger) *CacheReleases {
 }
 
 func (cmd CacheReleases) Execute(args []string) error {
+	ctx := context.Background()
 	_, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, cmd.FS.Stat)
 	if err != nil {
 		return err
@@ -122,7 +118,7 @@ func (cmd CacheReleases) Execute(args []string) error {
 		releasesUpdatedFromCache = false
 	)
 	for _, rel := range lock.Releases {
-		remote, err := releaseStore.GetMatchedRelease(component.Spec{
+		remote, err := releaseStore.GetMatchedRelease(ctx, cmd.Logger, component.Spec{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      lock.Stemcell.OS,
@@ -143,7 +139,7 @@ func (cmd CacheReleases) Execute(args []string) error {
 
 		cmd.Logger.Printf("found %s/%s in %s\n", rel.Name, rel.Version, remote.RemoteSource)
 
-		sum, err := cmd.downloadAndComputeSHA(releaseStore, remote)
+		sum, err := cmd.downloadAndComputeSHA(ctx, releaseStore, remote)
 		if err != nil {
 			cmd.Logger.Printf("unable to get hash sum for %s", remote.ReleaseSlug())
 			continue
@@ -301,7 +297,7 @@ func (cmd CacheReleases) fetchProductDeploymentData() (_ OpsManagerReleaseCacheS
 	return omAPI, manifest.Name, stagedStemcell.OS, stagedStemcell.Version, nil
 }
 
-func (cmd CacheReleases) cacheRelease(bosh boshdir.Director, rc ReleaseStorage, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (component.Lock, error) {
+func (cmd CacheReleases) cacheRelease(bosh boshdir.Director, rc component.ReleaseUploader, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (component.Lock, error) {
 	cmd.Logger.Printf("\texporting %s\n", releaseSlug)
 	result, err := deployment.ExportRelease(releaseSlug, stemcellSlug, nil)
 	if err != nil {
@@ -353,13 +349,13 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 	return fmt.Errorf("existing release not found in Kilnfile.lock")
 }
 
-func (cmd *CacheReleases) uploadLocalRelease(spec component.Spec, fp string, uploader ReleaseStorage) (component.Lock, error) {
+func (cmd *CacheReleases) uploadLocalRelease(spec component.Spec, fp string, uploader component.ReleaseUploader) (component.Lock, error) {
 	f, err := cmd.FS.Open(fp)
 	if err != nil {
 		return component.Lock{}, err
 	}
 	defer closeAndIgnoreError(f)
-	return uploader.UploadRelease(spec, f)
+	return uploader.UploadRelease(context.TODO(), cmd.Logger, spec, f)
 }
 
 func (cmd *CacheReleases) saveReleaseLocally(director boshdir.Director, relDir string, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug, res boshdir.ExportReleaseResult) (string, string, string, error) {
@@ -393,7 +389,7 @@ func (cmd *CacheReleases) saveReleaseLocally(director boshdir.Director, relDir s
 	return filePath, sha256sumString, sha1sumString, nil
 }
 
-func (cmd CacheReleases) downloadAndComputeSHA(cache component.ReleaseSource, remote cargo.ReleaseLock) (string, error) {
+func (cmd CacheReleases) downloadAndComputeSHA(ctx context.Context, cache component.ReleaseSource, remote cargo.ReleaseLock) (string, error) {
 	if remote.SHA1 != "" {
 		return remote.SHA1, nil
 	}
@@ -409,7 +405,7 @@ func (cmd CacheReleases) downloadAndComputeSHA(cache component.ReleaseSource, re
 		}
 	}()
 
-	comp, err := cache.DownloadRelease(tmpdir, remote)
+	comp, err := cache.DownloadRelease(ctx, cmd.Logger, tmpdir, remote)
 	if err != nil {
 		return "", fmt.Errorf("failed to download release: %s", err)
 	}

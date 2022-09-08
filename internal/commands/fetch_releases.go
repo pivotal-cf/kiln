@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -47,6 +48,7 @@ type LocalReleaseDirectory interface {
 }
 
 func (f *FetchReleases) Execute(args []string) error {
+	ctx := context.Background()
 	kilnfile, kilnfileLock, availableLocalReleaseSet, err := f.setup(args)
 	if err != nil {
 		return err
@@ -62,7 +64,7 @@ func (f *FetchReleases) Execute(args []string) error {
 	if len(missingReleases) > 0 {
 		f.logger.Printf("Found %d missing releases to download", len(missingReleases))
 
-		_, err := f.downloadMissingReleases(kilnfile, missingReleases)
+		_, err := f.downloadMissingReleases(ctx, kilnfile, missingReleases)
 		if err != nil {
 			return err
 		}
@@ -103,7 +105,7 @@ func (f *FetchReleases) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock
 	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
 }
 
-func (f *FetchReleases) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ReleaseLock) ([]component.Local, error) {
+func (f *FetchReleases) downloadMissingReleases(ctx context.Context, kilnfile cargo.Kilnfile, releaseLocks []cargo.ReleaseLock) ([]component.Local, error) {
 	releaseSource := f.multiReleaseSourceProvider(kilnfile, f.Options.AllowOnlyPublishableReleases)
 
 	// f.Options.DownloadThreads
@@ -118,7 +120,7 @@ func (f *FetchReleases) downloadMissingReleases(kilnfile cargo.Kilnfile, release
 			RemoteSource: rl.RemoteSource,
 		}
 
-		local, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease)
+		local, err := releaseSource.DownloadRelease(ctx, f.logger, f.Options.ReleasesDir, remoteRelease)
 		if err != nil {
 			return nil, fmt.Errorf("download failed: %w", err)
 		}

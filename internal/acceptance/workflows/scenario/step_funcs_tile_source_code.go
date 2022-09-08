@@ -166,18 +166,15 @@ func iAddACompiledSReleaseSourceToTheKilnfile(ctx context.Context, bucketName st
 		return err
 	}
 
-	for _, rs := range kf.ReleaseSources {
-		if rs.Bucket == bucketName {
-			return nil
-		}
+	if _, err = kf.ReleaseSources.FindByID(bucketName); err == nil {
+		return nil
 	}
 
-	kf.ReleaseSources = append(kf.ReleaseSources, cargo.ReleaseSource{
-		Type:            component.ReleaseSourceTypeS3,
+	kf.ReleaseSources.Add(&component.S3ReleaseSource{
+		Publishable:     true,
 		Bucket:          bucketName,
 		PathTemplate:    "{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz",
 		Region:          "us-west-1",
-		Publishable:     true,
 		AccessKeyId:     keyID,
 		SecretAccessKey: accessKey,
 	})

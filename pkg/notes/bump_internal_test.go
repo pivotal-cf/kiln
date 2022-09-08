@@ -1,9 +1,11 @@
-package component
+package notes
 
 import (
-	"github.com/google/go-github/v40/github"
-	Ω "github.com/onsi/gomega"
 	"testing"
+
+	Ω "github.com/onsi/gomega"
+
+	"github.com/google/go-github/v40/github"
 )
 
 func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {

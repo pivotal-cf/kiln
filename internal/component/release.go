@@ -1,4 +1,6 @@
-package cargo
+package component
+
+// TODO: move to cargo
 
 import (
 	"fmt"
@@ -8,7 +10,7 @@ import (
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
 )
 
-type ReleaseSpec struct {
+type Spec struct {
 	// Name is a required field and must be set with the bosh release name
 	Name string `yaml:"name"`
 
@@ -30,7 +32,7 @@ type ReleaseSpec struct {
 	GitHubRepository string `yaml:"github_repository,omitempty"`
 }
 
-func (spec ReleaseSpec) VersionConstraints() (*semver.Constraints, error) {
+func (spec Spec) VersionConstraints() (*semver.Constraints, error) {
 	if spec.Version == "" {
 		spec.Version = ">0"
 	}
@@ -41,8 +43,8 @@ func (spec ReleaseSpec) VersionConstraints() (*semver.Constraints, error) {
 	return c, nil
 }
 
-func (spec ReleaseSpec) Lock() ReleaseLock {
-	return ReleaseLock{
+func (spec Spec) Lock() Lock {
+	return Lock{
 		Name:            spec.Name,
 		Version:         spec.Version,
 		StemcellOS:      spec.StemcellOS,
@@ -50,45 +52,27 @@ func (spec ReleaseSpec) Lock() ReleaseLock {
 	}
 }
 
-func (spec ReleaseSpec) OSVersionSlug() boshdir.OSVersionSlug {
+func (spec Spec) OSVersionSlug() boshdir.OSVersionSlug {
 	return boshdir.NewOSVersionSlug(spec.StemcellOS, spec.StemcellVersion)
 }
 
-func (spec ReleaseSpec) ReleaseSlug() boshdir.ReleaseSlug {
+func (spec Spec) ReleaseSlug() boshdir.ReleaseSlug {
 	return boshdir.NewReleaseSlug(spec.Name, spec.Version)
 }
 
-func (spec ReleaseSpec) UnsetStemcell() ReleaseSpec {
+func (spec Spec) UnsetStemcell() Spec {
 	spec.StemcellOS = ""
 	spec.StemcellVersion = ""
 	return spec
 }
 
-type ReleaseSource struct {
-	Type            string `yaml:"type,omitempty"`
-	ID              string `yaml:"id,omitempty"`
-	Publishable     bool   `yaml:"publishable,omitempty"`
-	Bucket          string `yaml:"bucket,omitempty"`
-	Region          string `yaml:"region,omitempty"`
-	AccessKeyId     string `yaml:"access_key_id,omitempty"`
-	SecretAccessKey string `yaml:"secret_access_key,omitempty"`
-	PathTemplate    string `yaml:"path_template,omitempty"`
-	Endpoint        string `yaml:"endpoint,omitempty"`
-	Org             string `yaml:"org,omitempty"`
-	GithubToken     string `yaml:"github_token,omitempty"`
-	Repo            string `yaml:"repo,omitempty"`
-	ArtifactoryHost string `yaml:"artifactory_host,omitempty"`
-	Username        string `yaml:"username,omitempty"`
-	Password        string `yaml:"password,omitempty"`
-}
-
-// ReleaseLock represents an exact build of a bosh release
+// Lock represents an exact build of a bosh release
 // It may identify the where the release is cached;
 // it may identify the stemcell used to compile the release.
 //
 // All fields must be comparable because this struct may be
 // used as a key type in a map. Don't add array or map fields.
-type ReleaseLock struct {
+type Lock struct {
 	Name    string `yaml:"name"`
 	SHA1    string `yaml:"sha1"`
 	Version string `yaml:"version,omitempty"`
@@ -100,15 +84,15 @@ type ReleaseLock struct {
 	RemotePath   string `yaml:"remote_path"`
 }
 
-func (lock ReleaseLock) ReleaseSlug() boshdir.ReleaseSlug {
+func (lock Lock) ReleaseSlug() boshdir.ReleaseSlug {
 	return boshdir.NewReleaseSlug(lock.Name, lock.Version)
 }
 
-func (lock ReleaseLock) StemcellSlug() boshdir.OSVersionSlug {
+func (lock Lock) StemcellSlug() boshdir.OSVersionSlug {
 	return boshdir.NewOSVersionSlug(lock.StemcellOS, lock.StemcellVersion)
 }
 
-func (lock ReleaseLock) String() string {
+func (lock Lock) String() string {
 	var b strings.Builder
 	b.WriteString(lock.Name)
 	b.WriteByte(' ')
@@ -141,8 +125,8 @@ func (lock ReleaseLock) String() string {
 	return b.String()
 }
 
-func (lock ReleaseLock) Spec() ReleaseSpec {
-	return ReleaseSpec{
+func (lock Lock) Spec() Spec {
+	return Spec{
 		Name:            lock.Name,
 		Version:         lock.Version,
 		StemcellOS:      lock.StemcellOS,
@@ -150,23 +134,28 @@ func (lock ReleaseLock) Spec() ReleaseSpec {
 	}
 }
 
-func (lock ReleaseLock) WithSHA1(sum string) ReleaseLock {
+func (lock Lock) WithSHA1(sum string) Lock {
 	lock.SHA1 = sum
 	return lock
 }
 
-func (lock ReleaseLock) WithRemote(source, path string) ReleaseLock {
+func (lock Lock) WithRemote(source, path string) Lock {
 	lock.RemoteSource = source
 	lock.RemotePath = path
 	return lock
 }
 
-func (lock ReleaseLock) UnsetStemcell() ReleaseLock {
+func (lock Lock) UnsetStemcell() Lock {
 	lock.StemcellOS = ""
 	lock.StemcellVersion = ""
 	return lock
 }
 
-func (lock ReleaseLock) ParseVersion() (*semver.Version, error) {
+func (lock Lock) ParseVersion() (*semver.Version, error) {
 	return semver.NewVersion(lock.Version)
+}
+
+type Local struct {
+	Lock
+	LocalPath string
 }

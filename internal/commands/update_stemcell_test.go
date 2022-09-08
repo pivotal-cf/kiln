@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"context"
 	"errors"
 	"log"
 	"os"
@@ -94,7 +95,7 @@ var _ = Describe("UpdateStemcell", func() {
 			}
 
 			releaseSource = new(fetcherFakes.MultiReleaseSource)
-			releaseSource.GetMatchedReleaseCalls(func(requirement component.Spec) (component.Lock, error) {
+			releaseSource.GetMatchedReleaseCalls(func(_ context.Context, _ *log.Logger, requirement component.Spec) (component.Lock, error) {
 				switch requirement.Name {
 				case release1Name:
 					remote := component.Lock{
@@ -115,7 +116,7 @@ var _ = Describe("UpdateStemcell", func() {
 				}
 			})
 
-			releaseSource.DownloadReleaseCalls(func(_ string, remote component.Lock) (component.Local, error) {
+			releaseSource.DownloadReleaseCalls(func(_ context.Context, _ *log.Logger, _ string, remote component.Lock) (component.Local, error) {
 				switch remote.Name {
 				case release1Name:
 					local := component.Local{
@@ -200,14 +201,14 @@ var _ = Describe("UpdateStemcell", func() {
 
 			Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(2))
 
-			req1 := releaseSource.GetMatchedReleaseArgsForCall(0)
+			_, _, req1 := releaseSource.GetMatchedReleaseArgsForCall(0)
 			Expect(req1).To(Equal(component.Spec{
 				Name: release1Name, Version: release1Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
 				GitHubRepository: "https://example.com/lemon",
 			}))
 
-			req2 := releaseSource.GetMatchedReleaseArgsForCall(1)
+			_, _, req2 := releaseSource.GetMatchedReleaseArgsForCall(1)
 			Expect(req2).To(Equal(component.Spec{
 				Name: release2Name, Version: release2Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
@@ -223,7 +224,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 			Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(2))
 
-			actualDir, remote1 := releaseSource.DownloadReleaseArgsForCall(0)
+			_, _, actualDir, remote1 := releaseSource.DownloadReleaseArgsForCall(0)
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote1).To(Equal(
 				component.Lock{
@@ -233,7 +234,7 @@ var _ = Describe("UpdateStemcell", func() {
 				},
 			))
 
-			actualDir, remote2 := releaseSource.DownloadReleaseArgsForCall(1)
+			_, _, actualDir, remote2 := releaseSource.DownloadReleaseArgsForCall(1)
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote2).To(Equal(
 				component.Lock{
@@ -377,7 +378,7 @@ var _ = Describe("UpdateStemcell", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				_, remote := releaseSource.DownloadReleaseArgsForCall(0)
+				_, _, _, remote := releaseSource.DownloadReleaseArgsForCall(0)
 				Expect(remote.Name).To(Equal(release1Name))
 
 				Expect(string(outputBuffer.Contents())).To(ContainSubstring("No change"))

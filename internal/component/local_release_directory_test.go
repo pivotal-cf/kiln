@@ -116,7 +116,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 			Expect(os.IsNotExist(err)).To(BeTrue())
 		})
 
-		It("sorts the list of releases to be deleted", func() {
+		It("sorts the List of releases to be deleted", func() {
 			extraReleaseID := component.Spec{Name: "extra-release", Version: "0.0"}
 			extraRelease := component.Local{Lock: extraReleaseID.Lock(), LocalPath: extraFilePath}
 

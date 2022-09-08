@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ import (
 
 	boshdirFakes "github.com/cloudfoundry/bosh-cli/director/directorfakes"
 	. "github.com/onsi/gomega"
+	component_fakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 )
 
 var _ jhanda.Command = (*commands.CacheReleases)(nil)
@@ -43,11 +45,9 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSource{
-			{
-				ID: "compiled-releases",
-			},
-		},
+		ReleaseSources: component.NewReleaseSources(&component.S3ReleaseSource{
+			Bucket: "compiled-releases",
+		}),
 	})).NotTo(HaveOccurred())
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
 		Releases: []cargo.ReleaseLock{
@@ -72,7 +72,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	bosh := new(boshdirFakes.FakeDirector)
 	bosh.FindDeploymentReturns(deployment, nil)
 
-	releaseStorage := new(fakes.ReleaseStorage)
+	releaseStorage := new(component_fakes.ReleaseUploader)
 	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
 
 	var output bytes.Buffer
@@ -81,7 +81,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	cmd := commands.CacheReleases{
 		FS:     fs,
 		Logger: logger,
-		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (component.ReleaseUploader, error) {
 			return releaseStorage, nil
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
@@ -112,11 +112,9 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSource{
-			{
-				ID: "compiled-releases",
-			},
-		},
+		ReleaseSources: component.NewReleaseSources(&component.S3ReleaseSource{
+			Bucket: "compiled-releases",
+		}),
 	})).NotTo(HaveOccurred())
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
 		Releases: []cargo.ReleaseLock{
@@ -143,7 +141,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 	bosh := new(boshdirFakes.FakeDirector)
 	bosh.FindDeploymentReturns(deployment, nil)
 
-	releaseStorage := new(fakes.ReleaseStorage)
+	releaseStorage := new(component_fakes.ReleaseUploader)
 	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
 
 	var output bytes.Buffer
@@ -152,7 +150,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 	cmd := commands.CacheReleases{
 		FS:     fs,
 		Logger: logger,
-		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (component.ReleaseUploader, error) {
 			return releaseStorage, nil
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
@@ -198,18 +196,17 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSource{
-			{
-				ID:           "cached-compiled-releases",
+		ReleaseSources: component.NewReleaseSources(
+			&component.S3ReleaseSource{
+				Identifier:   "cached-compiled-releases",
 				Publishable:  true,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
-			{
-				ID:           "new-releases",
+			&component.S3ReleaseSource{
+				Identifier:   "new-releases",
 				Publishable:  false,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
-			},
-		},
+			}),
 	})).NotTo(HaveOccurred())
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
 		Releases: []cargo.ReleaseLock{
@@ -276,11 +273,11 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 		}
 	}
 
-	releaseStorage := new(fakes.ReleaseStorage)
+	releaseStorage := new(component_fakes.ReleaseUploader)
 	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
 
 	var uploadedRelease bytes.Buffer
-	releaseStorage.UploadReleaseCalls(func(_ component.Spec, reader io.Reader) (component.Lock, error) {
+	releaseStorage.UploadReleaseCalls(func(_ context.Context, _ *log.Logger, _ component.Spec, reader io.Reader) (component.Lock, error) {
 		_, _ = io.Copy(&uploadedRelease, reader)
 		return component.Lock{
 			Name: "lemon", Version: "3.0.0",
@@ -297,7 +294,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	cmd := commands.CacheReleases{
 		FS:     fs,
 		Logger: logger,
-		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (component.ReleaseUploader, error) {
 			return releaseStorage, nil
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
@@ -348,7 +345,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 // - when a release is compiled with a stemcell that is not the one in the Kilnfile.lock (aka the compilation target)
 // - the deployment succeeds because the stemcell major lines are the same/compatible
 // - export release returns a broken bosh release because we requested the wrong compilation target and the director didn't have the source code necessarily to re-compile against the requested stemcell
-// - (ideally bosh export-release should return an error but in this case it doesn't so we are just checking for a release with the correct stemcell before downloading a bad one)
+// - (ideally bosh export-release should return an error but in this case it doesn't, so we are just checking for a release with the correct stemcell before downloading a bad one)
 func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_correct_stemcell(t *testing.T) {
 	please := NewWithT(t)
 
@@ -357,18 +354,18 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSource{
-			{
-				ID:           "cached-compiled-releases",
+		ReleaseSources: component.NewReleaseSources(
+			&component.S3ReleaseSource{
+				Identifier:   "cached-compiled-releases",
 				Publishable:  true,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
-			{
-				ID:           "new-releases",
+			&component.S3ReleaseSource{
+				Identifier:   "new-releases",
 				Publishable:  false,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
-		},
+		),
 	})).NotTo(HaveOccurred())
 	please.Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{
 		Releases: []cargo.ReleaseLock{
@@ -408,7 +405,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 		}
 	}
 
-	releaseStorage := new(fakes.ReleaseStorage)
+	releaseStorage := new(component_fakes.ReleaseUploader)
 	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
 
 	var output bytes.Buffer
@@ -417,7 +414,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 	cmd := commands.CacheReleases{
 		FS:     fs,
 		Logger: logger,
-		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (component.ReleaseUploader, error) {
 			return releaseStorage, nil
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
@@ -477,18 +474,18 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSource{
-			{
-				ID:           "cached-compiled-releases",
+		ReleaseSources: component.NewReleaseSources(
+			&component.S3ReleaseSource{
+				Identifier:   "cached-compiled-releases",
 				Publishable:  true,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
-			{
-				ID:           "new-releases",
+			&component.S3ReleaseSource{
+				Identifier:   "new-releases",
 				Publishable:  false,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
-		},
+		),
 		Releases: []cargo.ReleaseSpec{
 			{
 				Name: "banana",
@@ -537,9 +534,9 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 		}
 	}
 
-	releaseStorage := new(fakes.ReleaseStorage)
+	releaseStorage := new(component_fakes.ReleaseUploader)
 	releaseStorage.GetMatchedReleaseCalls(fakeCacheData)
-	releaseStorage.UploadReleaseStub = func(spec cargo.ReleaseSpec, reader io.Reader) (cargo.ReleaseLock, error) {
+	releaseStorage.UploadReleaseStub = func(_ context.Context, _ *log.Logger, spec cargo.ReleaseSpec, reader io.Reader) (cargo.ReleaseLock, error) {
 		l := spec.Lock()
 		l.RemotePath = "BANANA.tgz"
 		l.RemoteSource = "BASKET"
@@ -552,7 +549,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 	cmd := commands.CacheReleases{
 		FS:     fs,
 		Logger: logger,
-		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (component.ReleaseUploader, error) {
 			return releaseStorage, nil
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
@@ -612,18 +609,18 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	fs := memfs.New()
 
 	please.Expect(fsWriteYAML(fs, "Kilnfile", cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSource{
-			{
-				ID:           "cached-compiled-releases",
+		ReleaseSources: component.NewReleaseSources(
+			&component.S3ReleaseSource{
+				Identifier:   "cached-compiled-releases",
 				Publishable:  true,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
-			{
-				ID:           "new-releases",
+			&component.S3ReleaseSource{
+				Identifier:   "new-releases",
 				Publishable:  false,
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
-		},
+		),
 	})).NotTo(HaveOccurred())
 	initialLock := cargo.KilnfileLock{
 		Releases: []component.Lock{
@@ -663,14 +660,14 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	opsManager := new(fakes.OpsManagerReleaseCacheSource)
 	opsManager.GetStagedProductManifestReturns(`{"name": "cf-some-id", "stemcells": [{"os": "alpine", "version": "9.0.1"}]}`, nil)
 
-	releaseCache := new(fakes.ReleaseStorage)
+	releaseCache := new(component_fakes.ReleaseUploader)
 	releaseCache.GetMatchedReleaseCalls(fakeCacheData)
 
 	bosh := new(boshdirFakes.FakeDirector)
 
 	cmd := commands.CacheReleases{
 		FS: fs,
-		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (commands.ReleaseStorage, error) {
+		ReleaseSourceAndCache: func(kilnfile cargo.Kilnfile, targetID string) (component.ReleaseUploader, error) {
 			return releaseCache, nil
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
@@ -698,7 +695,7 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	please.Expect(updatedLock).To(Equal(initialLock))
 }
 
-func fakeCacheData(spec component.Spec) (component.Lock, error) {
+func fakeCacheData(_ context.Context, _ *log.Logger, spec component.Spec) (component.Lock, error) {
 	switch spec.Lock() {
 	case component.Lock{Name: "orange", Version: "1.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
 		return component.Lock{

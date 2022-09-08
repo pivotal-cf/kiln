@@ -6,32 +6,26 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"testing"
+
+	. "github.com/onsi/gomega"
 
 	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
-
-	. "github.com/onsi/gomega"
+	"github.com/pivotal-cf/kiln/internal/gh"
 )
 
-func TestListAllOfTheCrap(t *testing.T) {
+func TestListAllOfTheReleases(t *testing.T) {
 	t.SkipNow()
 
-	grs := component.NewGithubReleaseSource(cargo.ReleaseSource{
-		Type:        component.ReleaseSourceTypeGithub,
-		GithubToken: os.Getenv("GITHUB_TOKEN"),
-		Org:         "cloudfoundry",
-	})
-	// grs.ListAllOfTheCrap(context.TODO(), "cloudfoundry")
-
 	// grs.Client.Repositories.GetReleaseByTag()
-	release, response, err := grs.Client.Repositories.GetReleaseByTag(context.TODO(), "cloudfoundry", "routing-release", "0.226.0")
+	release, response, err := gh.Client(context.Background(), os.Getenv("GITHUB_TOKEN")).Repositories.GetReleaseByTag(context.TODO(), "cloudfoundry", "routing-release", "0.226.0")
 	if err != nil {
 		t.Error(err)
 	}
@@ -214,8 +208,14 @@ func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 		s := component.Spec{
 			Version: "garbage",
 		}
-		grs := component.NewGithubReleaseSource(cargo.ReleaseSource{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
-		_, err := grs.FindReleaseVersion(s)
+		grs := component.GitHubReleaseSource{
+			GithubToken: "fake_token",
+			Org:         "cloudfoundry",
+		}
+
+		ctx, logger := context.Background(), log.New(io.Discard, "", 0)
+
+		_, err := grs.FindReleaseVersion(ctx, logger, s)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
 			damnIt := NewWithT(t)
@@ -230,8 +230,13 @@ func TestGithubReleaseSource_GetMatchedRelease(t *testing.T) {
 		s := component.Spec{
 			Version: ">1.0.0",
 		}
-		grs := component.NewGithubReleaseSource(cargo.ReleaseSource{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
-		_, err := grs.GetMatchedRelease(s)
+		grs := component.GitHubReleaseSource{
+			GithubToken: "fake_token",
+			Org:         "cloudfoundry",
+		}
+		ctx, logger := context.Background(), log.New(io.Discard, "", 0)
+
+		_, err := grs.GetMatchedRelease(ctx, logger, s)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
 			damnIt := NewWithT(t)
@@ -386,12 +391,14 @@ func TestGetReleaseMatchingConstraint(t *testing.T) {
 func TestDownloadReleaseAsset(t *testing.T) {
 	t.SkipNow()
 
-	grs := component.NewGithubReleaseSource(cargo.ReleaseSource{
-		Type:        component.ReleaseSourceTypeGithub,
+	grs := component.GitHubReleaseSource{
 		GithubToken: os.Getenv("GITHUB_TOKEN"),
 		Org:         "cloudfoundry",
-	})
-	testLock, err := grs.GetMatchedRelease(component.Spec{Name: "routing", Version: "0.226.0", GitHubRepository: "https://github.com/cloudfoundry/routing-release"})
+	}
+
+	output := bytes.NewBuffer(nil)
+	ctx, logger := context.Background(), log.New(output, "", log.Default().Flags())
+	testLock, err := grs.GetMatchedRelease(ctx, logger, component.Spec{Name: "routing", Version: "0.226.0", GitHubRepository: "https://github.com/cloudfoundry/routing-release"})
 	if err != nil {
 		fmt.Println(testLock.Spec())
 	}
@@ -403,7 +410,7 @@ func TestDownloadReleaseAsset(t *testing.T) {
 			_ = os.RemoveAll(tempDir)
 		})
 
-		local, err := grs.DownloadRelease(tempDir, testLock)
+		local, err := grs.DownloadRelease(ctx, logger, tempDir, testLock)
 		damnIt.Expect(err).NotTo(HaveOccurred())
 
 		damnIt.Expect(local.LocalPath).NotTo(BeAnExistingFile(), "it creates the expected asset")
@@ -418,7 +425,7 @@ func TestLockFromGithubRelease_componet_repo_does_not_match_release_source_org(t
 
 		ctx        = context.Background()
 		downloader = new(fakes.ReleaseAssetDownloader)
-		spec       = cargo.ReleaseSpec{
+		spec       = component.Spec{
 			GitHubRepository: "https://github.com/" + otherGitHubOrg + "/muffin",
 		}
 		getRelease = func(ctx context.Context, org, repo string) (*github.RepositoryRelease, error) {

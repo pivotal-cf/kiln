@@ -1,52 +1,92 @@
 package component
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 
 	"github.com/Masterminds/semver"
-
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type ReleaseSourceList []ReleaseSource
-
-func NewReleaseSourceRepo(kilnfile cargo.Kilnfile, logger *log.Logger) ReleaseSourceList {
-	var list ReleaseSourceList
-
-	for _, releaseConfig := range kilnfile.ReleaseSources {
-		list = append(list, ReleaseSourceFactory(releaseConfig, logger))
-	}
-
-	panicIfDuplicateIDs(list)
-
-	return list
+type ReleaseSources struct {
+	List []ReleaseSource
 }
 
-func (list ReleaseSourceList) Filter(allowOnlyPublishable bool) ReleaseSourceList {
-	var sources ReleaseSourceList
-	for _, source := range list {
-		if allowOnlyPublishable && !source.Configuration().Publishable {
+func NewReleaseSources(sources ...ReleaseSource) *ReleaseSources {
+	return &ReleaseSources{List: sources}
+}
+
+var _ MultiReleaseSource = &ReleaseSources{}
+
+func (sources *ReleaseSources) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw []*EncodedReleaseSource
+	err := unmarshal(&raw)
+	if err != nil {
+		return err
+	}
+	for _, r := range raw {
+		sources.List = append(sources.List, r.ReleaseSource)
+	}
+	return nil
+}
+
+func (sources *ReleaseSources) MarshalYAML() (interface{}, error) {
+	enc := make([]*EncodedReleaseSource, 0, len(sources.List))
+	for _, source := range sources.List {
+		enc = append(enc, &EncodedReleaseSource{ReleaseSource: source})
+	}
+	return enc, nil
+}
+
+func (sources *ReleaseSources) ConfigurationErrors() []error {
+	var result []error
+	err := sources.checkIfDuplicateIDs()
+	if err != nil {
+		result = append(result, err)
+	}
+	for _, source := range sources.List {
+		result = append(result, source.ConfigurationErrors()...)
+	}
+	return result
+}
+
+func (sources *ReleaseSources) checkIfDuplicateIDs() error {
+	indexOfID := make(map[string]int)
+	for index, rs := range sources.List {
+		id := rs.ID()
+		previousIndex, seen := indexOfID[id]
+		if seen {
+			return fmt.Errorf(fmt.Sprintf(`release_sources must have unique IDs; items at index %d and %d both have ID %q`, previousIndex, index, id))
+		}
+		indexOfID[id] = index
+	}
+	return nil
+}
+
+func (sources *ReleaseSources) Filter(allowOnlyPublishable bool) *ReleaseSources {
+	var filtered ReleaseSources
+	for _, source := range sources.List {
+		if allowOnlyPublishable && !source.IsPublishable() {
 			continue
 		}
-		sources = append(sources, source)
+		filtered.List = append(filtered.List, source)
 	}
-	return sources
+	return &filtered
 }
 
-func (list ReleaseSourceList) FindReleaseUploader(sourceID string) (ReleaseUploader, error) {
+func (sources *ReleaseSources) FindReleaseUploader(sourceID string) (ReleaseUploader, error) {
 	var (
 		uploader     ReleaseUploader
 		availableIDs []string
 	)
-	for _, src := range list {
+	for _, src := range sources.List {
 		u, ok := src.(ReleaseUploader)
 		if !ok {
 			continue
 		}
-		availableIDs = append(availableIDs, src.Configuration().ID)
-		if src.Configuration().ID == sourceID {
+		availableIDs = append(availableIDs, src.ID())
+		if src.ID() == sourceID {
 			uploader = u
 			break
 		}
@@ -66,18 +106,18 @@ func (list ReleaseSourceList) FindReleaseUploader(sourceID string) (ReleaseUploa
 	return uploader, nil
 }
 
-func (list ReleaseSourceList) FindRemotePather(sourceID string) (RemotePather, error) {
+func (sources *ReleaseSources) FindRemotePather(sourceID string) (RemotePather, error) {
 	var (
 		pather       RemotePather
 		availableIDs []string
 	)
 
-	for _, src := range list {
+	for _, src := range sources.List {
 		u, ok := src.(RemotePather)
 		if !ok {
 			continue
 		}
-		id := src.Configuration().ID
+		id := src.ID()
 		availableIDs = append(availableIDs, id)
 		if id == sourceID {
 			pather = u
@@ -99,67 +139,61 @@ func (list ReleaseSourceList) FindRemotePather(sourceID string) (RemotePather, e
 	return pather, nil
 }
 
-func panicIfDuplicateIDs(releaseSources []ReleaseSource) {
-	indexOfID := make(map[string]int)
-	for index, rs := range releaseSources {
-		id := rs.Configuration().ID
-		previousIndex, seen := indexOfID[id]
-		if seen {
-			panic(fmt.Sprintf(`release_sources must have unique IDs; items at index %d and %d both have ID %q`, previousIndex, index, id))
-		}
-		indexOfID[id] = index
-	}
+func wrapLogger(src ReleaseSource, logger *log.Logger) *log.Logger {
+	sourceLogger := NewReleaseSourceLogger(src, logger.Writer())
+	sourceLogger.SetPrefix(logger.Prefix() + sourceLogger.Prefix())
+	return sourceLogger
 }
 
-func NewMultiReleaseSource(sources ...ReleaseSource) ReleaseSourceList {
-	return sources
-}
-
-func (list ReleaseSourceList) GetMatchedRelease(requirement Spec) (Lock, error) {
-	for _, src := range list {
-		rel, err := src.GetMatchedRelease(requirement)
+func (sources *ReleaseSources) GetMatchedRelease(ctx context.Context, logger *log.Logger, requirement Spec) (Lock, error) {
+	for _, src := range sources.List {
+		rel, err := src.GetMatchedRelease(ctx, wrapLogger(src, logger), requirement)
 		if err != nil {
 			if IsErrNotFound(err) {
 				continue
 			}
-			return Lock{}, scopedError(src.Configuration().ID, err)
+			return Lock{}, scopedError(src.ID(), err)
 		}
 		return rel, nil
 	}
 	return Lock{}, ErrNotFound
 }
 
-func (list ReleaseSourceList) SetDownloadThreads(n int) {
-	for i, rs := range list {
-		s3rs, ok := rs.(S3ReleaseSource)
+func (sources *ReleaseSources) SetDownloadThreads(n int) {
+	for i, rs := range sources.List {
+		s3rs, ok := rs.(*S3ReleaseSource)
 		if ok {
 			s3rs.DownloadThreads = n
-			list[i] = s3rs
+			sources.List[i] = s3rs
 		}
 	}
 }
 
-func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
-	src, err := list.FindByID(remoteRelease.RemoteSource)
+const (
+	logLineDownload = "downloading %s from %s release source %s"
+)
+
+func (sources *ReleaseSources) DownloadRelease(ctx context.Context, logger *log.Logger, releaseDir string, remoteRelease Lock) (Local, error) {
+	src, err := sources.FindByID(remoteRelease.RemoteSource)
 	if err != nil {
 		return Local{}, err
 	}
 
-	localRelease, err := src.DownloadRelease(releaseDir, remoteRelease)
+	localRelease, err := src.DownloadRelease(ctx, wrapLogger(src, logger), releaseDir, remoteRelease)
 	if err != nil {
-		return Local{}, scopedError(src.Configuration().ID, err)
+		return Local{}, scopedError(src.ID(), err)
 	}
 
 	return localRelease, nil
 }
 
-func (list ReleaseSourceList) FindReleaseVersion(requirement Spec) (Lock, error) {
+func (sources *ReleaseSources) FindReleaseVersion(ctx context.Context, logger *log.Logger, requirement Spec) (Lock, error) {
 	var foundReleaseLock []Lock
-	for _, src := range list {
-		rel, err := src.FindReleaseVersion(requirement)
+	for _, src := range sources.List {
+		rel, err := src.FindReleaseVersion(ctx, wrapLogger(src, logger), requirement)
 		if err != nil {
 			if !IsErrNotFound(err) {
-				return Lock{}, scopedError(src.Configuration().ID, err)
+				return Lock{}, scopedError(src.ID(), err)
 			}
 			continue
 		}
@@ -186,26 +220,30 @@ func (list ReleaseSourceList) FindReleaseVersion(requirement Spec) (Lock, error)
 	return highestLock, nil
 }
 
-func (list ReleaseSourceList) FindByID(id string) (ReleaseSource, error) {
+func (sources *ReleaseSources) FindByID(id string) (ReleaseSource, error) {
 	var correctSrc ReleaseSource
-	for _, src := range list {
-		if src.Configuration().ID == id {
+	for _, src := range sources.List {
+		if src.ID() == id {
 			correctSrc = src
 			break
 		}
 	}
 
 	if correctSrc == nil {
-		ids := make([]string, 0, len(list))
-		for _, src := range list {
-			ids = append(ids, src.Configuration().ID)
-		}
-		return nil, fmt.Errorf("couldn't find a release source with ID %q. Available choices: %q", id, ids)
+		return nil, fmt.Errorf("couldn't find a release source with ID %q. Available choices: %q", id, sources.IDs())
 	}
 
 	return correctSrc, nil
 }
 
-func scopedError(sourceID string, err error) error {
-	return fmt.Errorf("error from release source %q: %w", sourceID, err)
+func (sources *ReleaseSources) Add(rs ReleaseSource) {
+	sources.List = append(sources.List, rs)
+}
+
+func (sources *ReleaseSources) IDs() []string {
+	ids := make([]string, 0, len(sources.List))
+	for _, src := range sources.List {
+		ids = append(ids, src.ID())
+	}
+	return ids
 }

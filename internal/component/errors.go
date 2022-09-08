@@ -37,3 +37,13 @@ func (err ErrorUnexpectedStatus) Error() string {
 		http.StatusText(err.Got), err.Got,
 	)
 }
+
+type ResponseStatusCodeError http.Response
+
+func (err ResponseStatusCodeError) Error() string {
+	return fmt.Sprintf("response to %s %s got status %d when a success was expected", err.Request.Method, err.Request.URL, err.StatusCode)
+}
+
+func scopedError(sourceID string, err error) error {
+	return fmt.Errorf("error from release source %q: %w", sourceID, err)
+}

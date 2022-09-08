@@ -1,21 +1,27 @@
 package component_test
 
 import (
+	"context"
 	"errors"
+	"gopkg.in/yaml.v2"
+	"log"
+	"reflect"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-var _ = Describe("multiReleaseSource", func() {
+var _ = Describe(reflect.TypeOf(component.ReleaseSources{}).Name(), func() {
 	var (
-		multiSrc         component.MultiReleaseSource
+		multiSrc         *component.ReleaseSources
 		src1, src2, src3 *fakes.ReleaseSource
 		requirement      component.Spec
+
+		ctx    context.Context
+		logger *log.Logger
 	)
 
 	const (
@@ -25,13 +31,16 @@ var _ = Describe("multiReleaseSource", func() {
 	)
 
 	BeforeEach(func() {
+		ctx = context.Background()
+		logger = log.New(GinkgoWriter, "", 0)
+
 		src1 = new(fakes.ReleaseSource)
-		src1.ConfigurationReturns(cargo.ReleaseSource{ID: "src-1"})
+		src1.IDReturns("src-1")
 		src2 = new(fakes.ReleaseSource)
-		src2.ConfigurationReturns(cargo.ReleaseSource{ID: "src-2"})
+		src2.IDReturns("src-2")
 		src3 = new(fakes.ReleaseSource)
-		src3.ConfigurationReturns(cargo.ReleaseSource{ID: "src-3"})
-		multiSrc = component.NewMultiReleaseSource(src1, src2, src3)
+		src3.IDReturns("src-3")
+		multiSrc = component.NewReleaseSources(src1, src2, src3)
 
 		requirement = component.Spec{
 			Name:            releaseName,
@@ -50,7 +59,7 @@ var _ = Describe("multiReleaseSource", func() {
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
-					RemoteSource: src2.Configuration().ID,
+					RemoteSource: src2.ID(),
 				}
 				src1.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
 				src3.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
@@ -58,7 +67,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns that match", func() {
-				rel, err := multiSrc.GetMatchedRelease(requirement)
+				rel, err := multiSrc.GetMatchedRelease(ctx, logger, requirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).To(Equal(matchedRelease))
 			})
@@ -71,7 +80,7 @@ var _ = Describe("multiReleaseSource", func() {
 				src2.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
 			})
 			It("returns no match", func() {
-				_, err := multiSrc.GetMatchedRelease(requirement)
+				_, err := multiSrc.GetMatchedRelease(ctx, logger, requirement)
 				Expect(err).To(HaveOccurred())
 				Expect(component.IsErrNotFound(err)).To(BeTrue())
 			})
@@ -86,8 +95,8 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns that error", func() {
-				_, err := multiSrc.GetMatchedRelease(requirement)
-				Expect(err).To(MatchError(ContainSubstring(src1.Configuration().ID)))
+				_, err := multiSrc.GetMatchedRelease(ctx, logger, requirement)
+				Expect(err).To(MatchError(ContainSubstring(src1.ID())))
 				Expect(err).To(MatchError(ContainSubstring(expectedErr.Error())))
 			})
 		})
@@ -101,7 +110,7 @@ var _ = Describe("multiReleaseSource", func() {
 
 		BeforeEach(func() {
 			releaseID = component.Spec{Name: releaseName, Version: releaseVersion}
-			remote = releaseID.Lock().WithRemote(src2.Configuration().ID, "/some/remote/path")
+			remote = releaseID.Lock().WithRemote(src2.ID(), "/some/remote/path")
 		})
 
 		When("the source exists and downloads without error", func() {
@@ -115,12 +124,12 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns the local release", func() {
-				l, err := multiSrc.DownloadRelease("somewhere", remote)
+				l, err := multiSrc.DownloadRelease(ctx, logger, "somewhere", remote)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(l).To(Equal(local))
 
 				Expect(src2.DownloadReleaseCallCount()).To(Equal(1))
-				dir, r := src2.DownloadReleaseArgsForCall(0)
+				_, _, dir, r := src2.DownloadReleaseArgsForCall(0)
 				Expect(dir).To(Equal("somewhere"))
 				Expect(r).To(Equal(remote))
 			})
@@ -134,8 +143,8 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns the error", func() {
-				_, err := multiSrc.DownloadRelease("somewhere", remote)
-				Expect(err).To(MatchError(ContainSubstring(src2.Configuration().ID)))
+				_, err := multiSrc.DownloadRelease(ctx, logger, "somewhere", remote)
+				Expect(err).To(MatchError(ContainSubstring(src2.ID())))
 				Expect(err).To(MatchError(ContainSubstring(expectedErr.Error())))
 			})
 		})
@@ -146,12 +155,12 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("errors", func() {
-				_, err := multiSrc.DownloadRelease("somewhere", remote)
+				_, err := multiSrc.DownloadRelease(ctx, logger, "somewhere", remote)
 				Expect(err).To(MatchError(ContainSubstring("couldn't find a release source")))
 				Expect(err).To(MatchError(ContainSubstring("no-such-source")))
-				Expect(err).To(MatchError(ContainSubstring(src1.Configuration().ID)))
-				Expect(err).To(MatchError(ContainSubstring(src2.Configuration().ID)))
-				Expect(err).To(MatchError(ContainSubstring(src3.Configuration().ID)))
+				Expect(err).To(MatchError(ContainSubstring(src1.ID())))
+				Expect(err).To(MatchError(ContainSubstring(src2.ID())))
+				Expect(err).To(MatchError(ContainSubstring(src3.ID())))
 			})
 		})
 	})
@@ -195,7 +204,7 @@ var _ = Describe("multiReleaseSource", func() {
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
-					RemoteSource: src2.Configuration().ID,
+					RemoteSource: src2.ID(),
 				}
 				src1.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
 				src2.FindReleaseVersionReturns(matchedRelease, nil)
@@ -203,7 +212,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns that match", func() {
-				rel, err := multiSrc.FindReleaseVersion(requirement)
+				rel, err := multiSrc.FindReleaseVersion(ctx, logger, requirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).To(Equal(matchedRelease))
 			})
@@ -216,13 +225,13 @@ var _ = Describe("multiReleaseSource", func() {
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
-					RemoteSource: src1.Configuration().ID,
+					RemoteSource: src1.ID(),
 				}
 				matchedRelease = component.Lock{
 					Name:         releaseName,
 					Version:      releaseVersionNewer,
 					RemotePath:   "/some/path",
-					RemoteSource: src2.Configuration().ID,
+					RemoteSource: src2.ID(),
 				}
 				src1.FindReleaseVersionReturns(unmatchedRelease, nil)
 				src2.FindReleaseVersionReturns(matchedRelease, nil)
@@ -230,7 +239,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns that match", func() {
-				rel, err := multiSrc.FindReleaseVersion(requirement)
+				rel, err := multiSrc.FindReleaseVersion(ctx, logger, requirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).To(Equal(matchedRelease))
 			})
@@ -243,13 +252,13 @@ var _ = Describe("multiReleaseSource", func() {
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
-					RemoteSource: src1.Configuration().ID,
+					RemoteSource: src1.ID(),
 				}
 				unmatchedRelease := component.Lock{
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
-					RemoteSource: src2.Configuration().ID,
+					RemoteSource: src2.ID(),
 				}
 				src1.FindReleaseVersionReturns(matchedRelease, nil)
 				src2.FindReleaseVersionReturns(unmatchedRelease, nil)
@@ -257,9 +266,86 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns the match from the first source", func() {
-				rel, err := multiSrc.FindReleaseVersion(requirement)
+				rel, err := multiSrc.FindReleaseVersion(ctx, logger, requirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).To(Equal(matchedRelease))
+			})
+		})
+	})
+
+	Describe("YAML", func() {
+		When("there are no release sources", func() {
+			It("returns an empty List", func() {
+				buf := []byte(`banana: []`)
+				var reciever struct {
+					Sources component.ReleaseSources `yaml:"banana"`
+				}
+				err := yaml.Unmarshal(buf, &reciever)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(reciever.Sources.List).To(HaveLen(0))
+			})
+
+			It("returns an empty List", func() {
+				buf := []byte(`banana:
+- type: artifactory
+  id: compiled-releases
+  artifactory_host: https://artifactory.example.com
+  repo: tas
+  publishable: true
+  username: artifactory_username
+  password: artifactory_password
+  path_template: path_template
+- type: s3
+  id: peach
+  bucket: some-release-bucket
+  path_template: path_template
+  region: us-west-1
+  access_key_id: $(variable "aws_access_key_id")
+  secret_access_key: $(variable "aws_secret_access_key")
+  endpoint: s3.example.com
+- type: github
+  org: cloudfoundry
+  id: os-cf
+  github_token: $(variable "github_access_token")
+- type: bosh.io
+  id: public-tarballs
+`)
+				var receiver struct {
+					List component.ReleaseSources `yaml:"banana"`
+				}
+				err := yaml.Unmarshal(buf, &receiver)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(receiver.List.List).To(Equal([]component.ReleaseSource{
+					&component.ArtifactoryReleaseSource{
+						Identifier:      "compiled-releases",
+						Publishable:     true,
+						ArtifactoryHost: "https://artifactory.example.com",
+						Username:        "artifactory_username",
+						Password:        "artifactory_password",
+						Repo:            "tas",
+						PathTemplate:    "path_template",
+					},
+					&component.S3ReleaseSource{
+						Publishable:     false,
+						Endpoint:        "s3.example.com",
+						Identifier:      "peach",
+						Bucket:          "some-release-bucket",
+						Region:          "us-west-1",
+						AccessKeyId:     "$(variable \"aws_access_key_id\")",
+						SecretAccessKey: "$(variable \"aws_secret_access_key\")",
+						PathTemplate:    "path_template",
+					},
+					&component.GitHubReleaseSource{
+						Identifier:  "os-cf",
+						Publishable: false,
+						Org:         "cloudfoundry",
+						GithubToken: "$(variable \"github_access_token\")",
+					},
+					&component.BOSHIOReleaseSource{
+						Identifier: "public-tarballs",
+						CustomURI:  "",
+					},
+				}))
 			})
 		})
 	})

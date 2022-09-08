@@ -59,15 +59,15 @@ type FileInfo struct {
 	sizeReturnsOnCall map[int]struct {
 		result1 int64
 	}
-	SysStub        func() interface{}
+	SysStub        func() any
 	sysMutex       sync.RWMutex
 	sysArgsForCall []struct {
 	}
 	sysReturns struct {
-		result1 interface{}
+		result1 any
 	}
 	sysReturnsOnCall map[int]struct {
-		result1 interface{}
+		result1 any
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -338,7 +338,7 @@ func (fake *FileInfo) SizeReturnsOnCall(i int, result1 int64) {
 	}{result1}
 }
 
-func (fake *FileInfo) Sys() interface{} {
+func (fake *FileInfo) Sys() any {
 	fake.sysMutex.Lock()
 	ret, specificReturn := fake.sysReturnsOnCall[len(fake.sysArgsForCall)]
 	fake.sysArgsForCall = append(fake.sysArgsForCall, struct {
@@ -362,32 +362,32 @@ func (fake *FileInfo) SysCallCount() int {
 	return len(fake.sysArgsForCall)
 }
 
-func (fake *FileInfo) SysCalls(stub func() interface{}) {
+func (fake *FileInfo) SysCalls(stub func() any) {
 	fake.sysMutex.Lock()
 	defer fake.sysMutex.Unlock()
 	fake.SysStub = stub
 }
 
-func (fake *FileInfo) SysReturns(result1 interface{}) {
+func (fake *FileInfo) SysReturns(result1 any) {
 	fake.sysMutex.Lock()
 	defer fake.sysMutex.Unlock()
 	fake.SysStub = nil
 	fake.sysReturns = struct {
-		result1 interface{}
+		result1 any
 	}{result1}
 }
 
-func (fake *FileInfo) SysReturnsOnCall(i int, result1 interface{}) {
+func (fake *FileInfo) SysReturnsOnCall(i int, result1 any) {
 	fake.sysMutex.Lock()
 	defer fake.sysMutex.Unlock()
 	fake.SysStub = nil
 	if fake.sysReturnsOnCall == nil {
 		fake.sysReturnsOnCall = make(map[int]struct {
-			result1 interface{}
+			result1 any
 		})
 	}
 	fake.sysReturnsOnCall[i] = struct {
-		result1 interface{}
+		result1 any
 	}{result1}
 }
 

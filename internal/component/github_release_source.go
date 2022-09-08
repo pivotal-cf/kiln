@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/gh"
 	"io"
 	"log"
 	"net/http"
@@ -13,62 +14,65 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
-	"golang.org/x/oauth2"
-
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type GithubReleaseSource struct {
-	cargo.ReleaseSource
-	Token  string
-	Logger *log.Logger
-	Client *github.Client
-}
+type GitHubReleaseSource struct {
+	Identifier  string `yaml:"id,omitempty"`
+	Publishable bool   `yaml:"publishable,omitempty"`
 
-// NewGithubReleaseSource will provision a new GithubReleaseSource Project
-// from the Kilnfile (ReleaseSource). If type is incorrect it will PANIC
-func NewGithubReleaseSource(c cargo.ReleaseSource) *GithubReleaseSource {
-	if c.Type != "" && c.Type != ReleaseSourceTypeGithub {
-		panic(panicMessageWrongReleaseSourceType)
-	}
-	if c.GithubToken == "" {
-		panic("no token passed for github release source")
-	}
-	if c.Org == "" {
-		panic("no github org passed for github release source")
-	}
+	Org         string `yaml:"org,omitempty"`
+	GithubToken string `yaml:"github_token,omitempty"`
 
-	ctx := context.TODO()
-	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: c.GithubToken})
-	tokenClient := oauth2.NewClient(ctx, tokenSource)
-	githubClient := github.NewClient(tokenClient)
-
-	return &GithubReleaseSource{
-		ReleaseSource: c,
-		Token:         c.GithubToken,
-		Logger:        log.New(os.Stdout, "[Github release source] ", log.Default().Flags()),
-		Client:        githubClient,
+	collaborators struct {
+		initOnce sync.Once
+		client   *github.Client
 	}
 }
 
-// Configuration returns the configuration of the ReleaseSource that came from the kilnfile.
-// It should not be modified.
-func (grs GithubReleaseSource) Configuration() cargo.ReleaseSource {
-	return grs.ReleaseSource
+func (src *GitHubReleaseSource) ConfigurationErrors() []error {
+	var result []error
+	if src.GithubToken == "" {
+		result = append(result, fmt.Errorf("no token passed for github release source"))
+	}
+	if src.Org == "" {
+		result = append(result, fmt.Errorf("no github org passed for github release source"))
+	}
+	return result
+}
+
+func (src *GitHubReleaseSource) ID() string {
+	if src.Identifier != "" {
+		return src.Identifier
+	}
+	return src.Org
+}
+
+func (src *GitHubReleaseSource) IsPublishable() bool { return src.Publishable }
+func (src *GitHubReleaseSource) Type() string        { return ReleaseSourceTypeGithub }
+
+func (src *GitHubReleaseSource) init(ctx context.Context) error {
+	src.collaborators.initOnce.Do(func() {
+		src.collaborators.client = gh.Client(ctx, src.GithubToken)
+	})
+	return nil
 }
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
-func (grs GithubReleaseSource) GetMatchedRelease(s Spec) (Lock, error) {
-	_, err := semver.NewVersion(s.Version)
+func (src *GitHubReleaseSource) GetMatchedRelease(ctx context.Context, logger *log.Logger, spec Spec) (Lock, error) {
+	if err := src.init(ctx); err != nil {
+		return Lock{}, err
+	}
+	_, err := semver.NewVersion(spec.Version)
 	if err != nil {
 		return Lock{}, fmt.Errorf("expected version to be an exact version")
 	}
-	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s,
-		GetGithubReleaseWithTag(grs.Client.Repositories, s.Version))
+	return LockFromGithubRelease(ctx, src.collaborators.client.Repositories, src.Org, spec,
+		GetGithubReleaseWithTag(src.collaborators.client.Repositories, spec.Version))
 }
 
 //counterfeiter:generate -o ./fakes/release_by_tag_getter.go --fake-name ReleaseByTagGetter . ReleaseByTagGetter
@@ -98,13 +102,16 @@ func GetGithubReleaseWithTag(ghAPI ReleaseByTagGetter, tag string) GetGithubRele
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
-func (grs GithubReleaseSource) FindReleaseVersion(s Spec) (Lock, error) {
-	c, err := s.VersionConstraints()
+func (src *GitHubReleaseSource) FindReleaseVersion(ctx context.Context, logger *log.Logger, spec Spec) (Lock, error) {
+	if err := src.init(ctx); err != nil {
+		return Lock{}, err
+	}
+	c, err := spec.VersionConstraints()
 	if err != nil {
 		return Lock{}, fmt.Errorf("expected version to be a constraint")
 	}
-	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s,
-		GetReleaseMatchingConstraint(grs.Client.Repositories, c))
+	return LockFromGithubRelease(ctx, src.collaborators.client.Repositories, src.Org, spec,
+		GetReleaseMatchingConstraint(src.collaborators.client.Repositories, c))
 }
 
 //counterfeiter:generate -o ./fakes/releases_lister.go --fake-name ReleasesLister . ReleasesLister
@@ -168,9 +175,12 @@ func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Cons
 // DownloadRelease downloads the release and writes the resulting file to the releasesDir.
 // It should also calculate and set the SHA1 field on the Local result; it does not need
 // to ensure the sums match, the caller must verify this.
-func (grs GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
-	grs.Logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeGithub, grs.ID)
-	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs.Client.Repositories, grs.Logger)
+func (src *GitHubReleaseSource) DownloadRelease(ctx context.Context, logger *log.Logger, releasesDir string, remoteRelease Lock) (Local, error) {
+	if err := src.init(ctx); err != nil {
+		return Local{}, err
+	}
+	logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeGithub, src.ID())
+	return downloadRelease(ctx, releasesDir, remoteRelease, src.collaborators.client.Repositories, logger)
 }
 
 //counterfeiter:generate -o ./fakes/release_by_tag_getter_asset_downloader.go --fake-name ReleaseByTagGetterAssetDownloader . releaseByTagGetterAssetDownloader
@@ -243,7 +253,7 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 		return Lock{}, ErrNotFound
 	}
 
-	repoOwner, repoName, err := OwnerAndRepoFromGitHubURI(spec.GitHubRepository)
+	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(spec.GitHubRepository)
 	if err != nil {
 		return Lock{}, ErrNotFound
 	}
