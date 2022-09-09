@@ -37,7 +37,6 @@ func initializeAWS(ctx scenarioContext) {
 //   - OM_TARGET: should be set to a url like https://pcf.example.com
 //   - OM_USERNAME: should be set to the Ops Manager username
 //   - OM_PASSWORD: should be set to the Ops Manager password
-//   - OM_PRIVATE_KEY: should be set with a private key in PEM format that can be used to ssh to the ops manager
 //
 // ## Debugging
 //
@@ -54,13 +53,6 @@ func initializeAWS(ctx scenarioContext) {
 //
 // Note, where the scenario uses the om CLI, the command inherits the parent's environment.
 // So if needed you can set OM_SKIP_SSL_VALIDATION and other om environment variables.
-//
-// OM_PRIVATE_KEY is not a standard om environment variable; it is used by kiln not OM.
-// To ensure it works you can execute:
-//
-//	echo "${OM_PRIVATE_KEY}" > /tmp/om.key
-//	chmod 0400 /tmp/om.key
-//	ssh -i /tmp/om.key "ubuntu@pcf.example.com"
 func InitializeCacheCompiledReleases(ctx *godog.ScenarioContext) {
 	initializeCacheCompiledReleases(ctx)
 }

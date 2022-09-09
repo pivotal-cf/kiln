@@ -37,6 +37,14 @@ func TestNewCacheCompiledReleases(t *testing.T) {
 	please.Expect(cmd.Director).NotTo(BeNil())
 }
 
+func setSomeOMVars(t *testing.T) {
+	t.Helper()
+	t.Setenv("OM_TARGET", "https://pcf.example.com")
+	t.Setenv("OM_USERNAME", "banana")
+	t.Setenv("OM_PASSWORD", "orange")
+	t.Setenv("BOSH_ALL_PROXY", "ssh+socks5://ubuntu@pcf.example.com:22?private-key=private-key.key")
+}
+
 func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *testing.T) {
 	please := NewWithT(t)
 
@@ -92,6 +100,8 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 		},
 	}
 
+	setSomeOMVars(t)
+
 	// run
 
 	err := cmd.Execute([]string{
@@ -100,8 +110,8 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 
 	// check
 
-	please.Expect(output.String()).To(ContainSubstring("cache already contains releases"))
 	please.Expect(err).NotTo(HaveOccurred())
+	please.Expect(output.String()).To(ContainSubstring("cache already contains releases"))
 }
 
 func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testing.T) {
@@ -161,6 +171,8 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 		},
 	}
 
+	setSomeOMVars(t)
+
 	// run
 
 	err := cmd.Execute([]string{
@@ -169,8 +181,8 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 
 	// check
 
-	please.Expect(output.String()).To(ContainSubstring("cache already contains releases"))
 	please.Expect(err).NotTo(HaveOccurred())
+	please.Expect(output.String()).To(ContainSubstring("cache already contains releases"))
 
 	var updatedKilnfile cargo.KilnfileLock
 	please.Expect(fsReadYAML(fs, "Kilnfile.lock", &updatedKilnfile)).NotTo(HaveOccurred())
@@ -305,6 +317,8 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 		},
 	}
 
+	setSomeOMVars(t)
+
 	// run
 
 	err := cmd.Execute([]string{
@@ -424,6 +438,8 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 			return bosh, nil
 		},
 	}
+
+	setSomeOMVars(t)
 
 	// run
 
@@ -560,6 +576,8 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 		},
 	}
 
+	setSomeOMVars(t)
+
 	// run
 
 	err := cmd.Execute([]string{
@@ -677,6 +695,8 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 			return bosh, nil
 		},
 	}
+
+	setSomeOMVars(t)
 
 	// run
 

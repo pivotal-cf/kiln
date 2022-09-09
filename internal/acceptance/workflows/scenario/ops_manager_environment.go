@@ -10,8 +10,7 @@ import (
 )
 
 type opsManagerEnvironment struct {
-	OpsManagerPrivateKey string
-	OpsManager           struct {
+	OpsManager struct {
 		URL      string
 		Password string
 		Username string
@@ -34,20 +33,9 @@ func (env *opsManagerEnvironment) loadFromEnvironmentVariables() error {
 	if err != nil {
 		return err
 	}
-	boshAllProxy, err := loadEnvironmentVariable("BOSH_ALL_PROXY", "")
+	_, err = loadEnvironmentVariable("BOSH_ALL_PROXY", "")
 	if err != nil {
 		return err
-	}
-	_, loadOmPrivateKeyErr := loadEnvironmentVariable("OM_PRIVATE_KEY", "")
-	if loadOmPrivateKeyErr != nil {
-		privateKey, err := readPrivateKeyFromBOSHAllProxyURL(boshAllProxy)
-		if err != nil {
-			return err
-		}
-		err = os.Setenv("OM_PRIVATE_KEY", privateKey)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }

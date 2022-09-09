@@ -50,7 +50,6 @@ Note the credential created on 2022-08-08 (id ending in "QOV") should not be del
 eval "$(smith claim -p us_2_12)"
 eval "$(smith bosh)"
 eval "$(smith om)"
-export OM_PRIVATE_KEY="$(cat $(echo "${BOSH_ALL_PROXY}" | awk -F= '{print $2}'))"
 
 # AWS environment setup
 export AWS_ACCESS_KEY_ID="$(vault read --field=aws_access_key_id runway_concourse/ppe-ci/kiln-acceptance-tests-s3)"

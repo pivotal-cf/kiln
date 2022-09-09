@@ -24,11 +24,11 @@ import (
 )
 
 type ClientConfiguration struct {
-	Target     string `long:"om-target"      env:"OM_TARGET"`
-	Username   string `long:"om-username"    env:"OM_USERNAME"`
-	Password   string `long:"om-password"    env:"OM_PASSWORD"`
-	CACert     string `long:"om-ca-cert"     env:"OM_CA_CERT"`
-	PrivateKey string `long:"om-private-key" env:"OM_PRIVATE_KEY"`
+	Target       string `long:"om-target"      env:"OM_TARGET"      required:"true"`
+	Username     string `long:"om-username"    env:"OM_USERNAME"    required:"true"`
+	Password     string `long:"om-password"    env:"OM_PASSWORD"    required:"true"`
+	CACert       string `long:"om-ca-cert"     env:"OM_CA_CERT"`
+	BOSHAllProxy string `long:"bosh-all-proxy" env:"BOSH_ALL_PROXY" required:"true"`
 
 	SkipSSLValidation bool `long:"om-skip-ssl-validation" env:"OM_SKIP_SSL_VALIDATION" default:"false"`
 }
@@ -75,7 +75,15 @@ type GetBoshEnvironmentAndSecurityRootCACertificateProvider interface {
 }
 
 func BoshDirector(omConfig ClientConfiguration, omAPI GetBoshEnvironmentAndSecurityRootCACertificateProvider) (boshdir.Director, error) {
-	omPrivateKey, err := ssh.ParsePrivateKey([]byte(omConfig.PrivateKey))
+	proxyURL, err := url.Parse(omConfig.BOSHAllProxy)
+	if err != nil {
+		return nil, err
+	}
+	privateKey, err := os.ReadFile(proxyURL.Query().Get("private-key"))
+	if err != nil {
+		return nil, err
+	}
+	omPrivateKey, err := ssh.ParsePrivateKey(privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse private key from OM_PRIVATE_KEY: %s", err)
 	}

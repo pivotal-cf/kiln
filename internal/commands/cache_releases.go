@@ -83,7 +83,7 @@ func (cmd *CacheReleases) WithLogger(logger *log.Logger) *CacheReleases {
 	return cmd
 }
 
-func (cmd CacheReleases) Execute(args []string) error {
+func (cmd *CacheReleases) Execute(args []string) error {
 	ctx := context.Background()
 	_, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, cmd.FS.Stat)
 	if err != nil {
@@ -261,7 +261,7 @@ func hasRequiredCompiledPackages(d boshdir.Director, releaseSlug boshdir.Release
 	return false, nil
 }
 
-func (cmd CacheReleases) fetchProductDeploymentData() (_ OpsManagerReleaseCacheSource, deploymentName, stemcellOS, stemcellVersion string, _ error) {
+func (cmd *CacheReleases) fetchProductDeploymentData() (_ OpsManagerReleaseCacheSource, deploymentName, stemcellOS, stemcellVersion string, _ error) {
 	omAPI, err := cmd.OpsManager(cmd.Options.ClientConfiguration)
 	if err != nil {
 		return nil, "", "", "", err
@@ -297,7 +297,7 @@ func (cmd CacheReleases) fetchProductDeploymentData() (_ OpsManagerReleaseCacheS
 	return omAPI, manifest.Name, stagedStemcell.OS, stagedStemcell.Version, nil
 }
 
-func (cmd CacheReleases) cacheRelease(ctx context.Context, logger *log.Logger, bosh boshdir.Director, rc component.ReleaseUploader, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (component.Lock, error) {
+func (cmd *CacheReleases) cacheRelease(ctx context.Context, logger *log.Logger, bosh boshdir.Director, rc component.ReleaseUploader, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (component.Lock, error) {
 	cmd.Logger.Printf("\texporting %s\n", releaseSlug)
 	result, err := deployment.ExportRelease(releaseSlug, stemcellSlug, nil)
 	if err != nil {
@@ -349,7 +349,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 	return fmt.Errorf("existing release not found in Kilnfile.lock")
 }
 
-func (cmd *CacheReleases) uploadLocalRelease(ctx context.Context, logger *log.Logger, spec component.Spec, fp string, uploader component.ReleaseUploader) (component.Lock, error) {
+func (cmd *CacheReleases) uploadLocalRelease(_ context.Context, _ *log.Logger, spec component.Spec, fp string, uploader component.ReleaseUploader) (component.Lock, error) {
 	f, err := cmd.FS.Open(fp)
 	if err != nil {
 		return component.Lock{}, err
@@ -389,7 +389,7 @@ func (cmd *CacheReleases) saveReleaseLocally(director boshdir.Director, relDir s
 	return filePath, sha256sumString, sha1sumString, nil
 }
 
-func (cmd CacheReleases) downloadAndComputeSHA(ctx context.Context, cache component.ReleaseSource, remote cargo.ReleaseLock) (string, error) {
+func (cmd *CacheReleases) downloadAndComputeSHA(ctx context.Context, cache component.ReleaseSource, remote cargo.ReleaseLock) (string, error) {
 	if remote.SHA1 != "" {
 		return remote.SHA1, nil
 	}
@@ -413,7 +413,7 @@ func (cmd CacheReleases) downloadAndComputeSHA(ctx context.Context, cache compon
 	return comp.SHA1, nil
 }
 
-func (cmd CacheReleases) Usage() jhanda.Usage {
+func (cmd *CacheReleases) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Downloads compiled bosh releases from an Tanzu Ops Manager bosh director and then uploads them to a bucket",
 		ShortDescription: "Cache compiled releases",
