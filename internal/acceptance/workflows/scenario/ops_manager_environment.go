@@ -3,8 +3,6 @@ package scenario
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"os"
 	"os/exec"
 	"strings"
 )
@@ -97,21 +95,4 @@ func fetchAssociatedStemcellVersion(ctx context.Context, productID string) (stri
 		}
 	}
 	return "", fmt.Errorf("no stemcells found on ops manager")
-}
-
-func readPrivateKeyFromBOSHAllProxyURL(boshAllProxy string) (string, error) {
-	const failedToSetOMPrivateKey = "failed to set OM_PRIVATE_KEY from BOSH_ALL_PROXY: %w"
-	u, err := url.Parse(boshAllProxy)
-	if err != nil {
-		return "", fmt.Errorf(failedToSetOMPrivateKey, err)
-	}
-	keyPath := u.Query().Get("private-key")
-	if keyPath == "" {
-		return "", fmt.Errorf(failedToSetOMPrivateKey, fmt.Errorf(`url did not have "private-key"`))
-	}
-	keyBytes, err := os.ReadFile(keyPath)
-	if err != nil {
-		return "", fmt.Errorf(failedToSetOMPrivateKey, err)
-	}
-	return string(keyBytes), nil
 }

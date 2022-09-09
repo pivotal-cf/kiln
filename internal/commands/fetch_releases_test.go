@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/pivotal-cf/jhanda"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

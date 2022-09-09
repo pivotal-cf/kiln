@@ -5,7 +5,7 @@ import (
 	proofing2 "github.com/pivotal-cf/kiln/internal/proofing"
 	"io"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type OpsManagerConfig struct {

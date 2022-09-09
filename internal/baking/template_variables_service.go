@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type TemplateVariablesService struct {

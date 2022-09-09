@@ -40,10 +40,10 @@ func (b *Buffer) Write(p []byte) (int, error) {
 	return b.buffer.Write(p)
 }
 
-func (b Buffer) Close() error {
+func (b *Buffer) Close() error {
 	return nil
 }
 
-func (b Buffer) Seek(_ int64, _ int) (int64, error) {
+func (b *Buffer) Seek(_ int64, _ int) (int64, error) {
 	return 0, nil
 }

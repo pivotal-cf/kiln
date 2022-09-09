@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // key represents the type of the context key for shared values between steps

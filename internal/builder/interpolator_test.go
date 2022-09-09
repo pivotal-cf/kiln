@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
 )
@@ -357,7 +357,7 @@ some_runtime_configs:
 			Expect(output).To(HaveKey("some_runtime_configs"))
 			configs, ok := output["some_runtime_configs"].([]interface{})
 			Expect(ok).To(BeTrue())
-			config, ok := configs[0].(map[interface{}]interface{})
+			config, ok := configs[0].(map[string]interface{})
 			Expect(ok).To(BeTrue())
 
 			Expect(config).To(HaveKeyWithValue("name", "some-runtime-config"))

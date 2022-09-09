@@ -92,16 +92,17 @@ func (src *S3ReleaseSource) init() error {
 		}
 		var sess *session.Session
 
+		if src.Endpoint != "" { // for acceptance testing
+			awsConfig = awsConfig.WithEndpoint(src.Endpoint)
+			awsConfig = awsConfig.WithS3ForcePathStyle(true)
+		}
+
 		sess, initErr = session.NewSession(awsConfig)
 		if initErr != nil {
 			return
 		}
 
 		client := s3.New(sess)
-		if src.Endpoint != "" { // for acceptance testing
-			awsConfig = awsConfig.WithEndpoint(src.Endpoint)
-			awsConfig = awsConfig.WithS3ForcePathStyle(true)
-		}
 
 		src.Collaborators.S3Client = client
 		src.Collaborators.S3Downloader = s3manager.NewDownloaderWithClient(client)

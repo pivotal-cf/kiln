@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	. "github.com/onsi/gomega"
 	gomegaMatchers "github.com/pivotal-cf-experimental/gomegamatchers"

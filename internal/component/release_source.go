@@ -101,21 +101,21 @@ type EncodedReleaseSource struct {
 
 // MarshalYAML will panic if the ReleaseSource concrete type is not registered in the switch statement
 func (e *EncodedReleaseSource) MarshalYAML() (interface{}, error) {
-	type enc[RS any] struct {
+	type enc[RS ReleaseSource] struct {
 		Type   string `yaml:"type"`
 		Source RS     `yaml:",inline"`
 	}
 	switch src := e.ReleaseSource.(type) {
 	case *BOSHIOReleaseSource:
-		return enc[BOSHIOReleaseSource]{Source: *src, Type: src.Type()}, nil
+		return enc[*BOSHIOReleaseSource]{Source: src, Type: src.Type()}, nil
 	case *GitHubReleaseSource:
 		//goland:noinspection GoVetCopyLock
-		return enc[GitHubReleaseSource]{Source: *src, Type: src.Type()}, nil
+		return enc[*GitHubReleaseSource]{Source: src, Type: src.Type()}, nil
 	case *ArtifactoryReleaseSource:
-		return enc[ArtifactoryReleaseSource]{Source: *src, Type: src.Type()}, nil
+		return enc[*ArtifactoryReleaseSource]{Source: src, Type: src.Type()}, nil
 	case *S3ReleaseSource:
 		//goland:noinspection GoVetCopyLock
-		return enc[S3ReleaseSource]{Source: *src, Type: src.Type()}, nil
+		return enc[*S3ReleaseSource]{Source: src, Type: src.Type()}, nil
 	default:
 		panic(fmt.Sprintf("marshal as YAML for release source %q not implmenented", e.ReleaseSource.Type()))
 	}

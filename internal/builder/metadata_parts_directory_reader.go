@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type MetadataPartsDirectoryReader struct {
@@ -143,9 +143,9 @@ func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, var
 	switch v := vars.(type) {
 	case []interface{}:
 		for _, item := range v {
-			i, ok := item.(map[interface{}]interface{})
+			i, ok := item.(map[string]interface{})
 			if !ok {
-				return []Part{}, fmt.Errorf("metadata item '%v' must be a map", item)
+				return []Part{}, fmt.Errorf("metadata item '%#v' must be a map", item)
 			}
 
 			part, err := r.buildPartFromMetadata(i, fileName)
@@ -155,7 +155,7 @@ func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, var
 
 			parts = append(parts, part)
 		}
-	case map[interface{}]interface{}:
+	case map[string]interface{}:
 		part, err := r.buildPartFromMetadata(v, fileName)
 		if err != nil {
 			return []Part{}, err
@@ -168,7 +168,7 @@ func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, var
 	return parts, nil
 }
 
-func (r MetadataPartsDirectoryReader) buildPartFromMetadata(metadata map[interface{}]interface{}, legacyFilename string) (Part, error) {
+func (r MetadataPartsDirectoryReader) buildPartFromMetadata(metadata map[string]interface{}, legacyFilename string) (Part, error) {
 	name, ok := metadata["alias"].(string)
 	if !ok {
 		name, ok = metadata["name"].(string)

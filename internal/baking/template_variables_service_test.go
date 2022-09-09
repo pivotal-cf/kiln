@@ -50,7 +50,7 @@ key-3: value-3
 			variables, err := service.FromPathsAndPairs([]string{path}, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(variables).To(Equal(map[string]interface{}{
-				"key-1": map[interface{}]interface{}{
+				"key-1": map[string]interface{}{
 					"key-2": []interface{}{
 						"value-1",
 						"value-2",

@@ -5,7 +5,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func TestComponentLock_yaml_marshal_order(t *testing.T) {
