@@ -221,9 +221,7 @@ func printUsage(receiver interface{}) (string, error) {
 
 		envs, ok := field.Tag.Lookup("env")
 		if ok {
-			for _, env := range strings.Split(envs, ",") {
-				arguments = append(arguments, fmt.Sprintf("%s", env))
-			}
+			arguments = append(arguments, strings.Split(envs, ",")...)
 		}
 
 		field := strings.Join(arguments, ", ")
