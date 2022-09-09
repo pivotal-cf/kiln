@@ -18,9 +18,8 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
-	"github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/internal/component"
-	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
+	componentFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -47,6 +46,11 @@ var _ = Describe("UpdateStemcell", func() {
 		releasesDirPath = "releases-dir"
 	)
 
+	type releaseSourceFake struct {
+		componentFakes.ReleaseDownloader
+		componentFakes.MatchedReleaseGetter
+	}
+
 	Describe("Execute", func() {
 		var (
 			update                                 *commands.UpdateStemcell
@@ -54,7 +58,7 @@ var _ = Describe("UpdateStemcell", func() {
 			fs                                     billy.Filesystem
 			kilnfile                               cargo.Kilnfile
 			kilnfileLock                           cargo.KilnfileLock
-			releaseSource                          *fetcherFakes.MultiReleaseSource
+			releaseSource                          *releaseSourceFake
 			outputBuffer                           *gbytes.Buffer
 		)
 
@@ -94,7 +98,7 @@ var _ = Describe("UpdateStemcell", func() {
 				},
 			}
 
-			releaseSource = new(fetcherFakes.MultiReleaseSource)
+			releaseSource = new(releaseSourceFake)
 			releaseSource.GetMatchedReleaseCalls(func(_ context.Context, _ *log.Logger, requirement component.Spec) (component.Lock, error) {
 				switch requirement.Name {
 				case release1Name:
@@ -135,9 +139,6 @@ var _ = Describe("UpdateStemcell", func() {
 				}
 			})
 
-			multiReleaseSourceProvider := new(fakes.MultiReleaseSourceProvider)
-			multiReleaseSourceProvider.Returns(releaseSource)
-
 			kilnfilePath = filepath.Join("Kilnfile")
 			kilnfileLockPath = kilnfilePath + ".lock"
 
@@ -145,9 +146,9 @@ var _ = Describe("UpdateStemcell", func() {
 			logger := log.New(outputBuffer, "", 0)
 
 			update = &commands.UpdateStemcell{
-				FS:                         fs,
-				MultiReleaseSourceProvider: multiReleaseSourceProvider.Spy,
-				Logger:                     logger,
+				FS:            fs,
+				ReleaseSource: releaseSource,
+				Logger:        logger,
 			}
 		})
 

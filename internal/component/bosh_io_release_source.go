@@ -35,7 +35,7 @@ func (src *BOSHIOReleaseSource) ID() string {
 func (src *BOSHIOReleaseSource) IsPublishable() bool { return src.Publishable }
 func (src *BOSHIOReleaseSource) Type() string        { return ReleaseSourceTypeBOSHIO }
 
-func (src *BOSHIOReleaseSource) GetMatchedRelease(ctx context.Context, logger *log.Logger, requirement Spec) (Lock, error) {
+func (src *BOSHIOReleaseSource) GetMatchedRelease(ctx context.Context, _ *log.Logger, requirement Spec) (Lock, error) {
 	requirement = requirement.UnsetStemcell()
 
 	for _, repo := range organizations {
@@ -55,7 +55,7 @@ func (src *BOSHIOReleaseSource) GetMatchedRelease(ctx context.Context, logger *l
 	return Lock{}, ErrNotFound
 }
 
-func (src *BOSHIOReleaseSource) FindReleaseVersion(ctx context.Context, logger *log.Logger, spec Spec) (Lock, error) {
+func (src *BOSHIOReleaseSource) FindReleaseVersion(ctx context.Context, _ *log.Logger, spec Spec) (Lock, error) {
 	spec = spec.UnsetStemcell()
 
 	constraint, err := spec.VersionConstraints()

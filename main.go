@@ -55,9 +55,6 @@ func main() {
 	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
 	pivnetService := new(pivnet.Service)
 	localReleaseDirectory := component.NewLocalReleaseDirectory(outLogger, releasesService)
-	mrsProvider := commands.MultiReleaseSourceProvider(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
-		return kilnfile.ReleaseSources.Filter(allowOnlyPublishable)
-	})
 	ruFinder := commands.ReleaseUploaderFinder(func(kilnfile cargo.Kilnfile, sourceID string) (component.ReleaseUploader, error) {
 		return kilnfile.ReleaseSources.FindReleaseUploader(sourceID)
 	})
@@ -91,7 +88,7 @@ func main() {
 	commandSet["version"] = commands.NewVersion(outLogger, cargo.Version().String())
 
 	// Component Team Commands
-	commandSet[updateReleaseCommandName] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)
+	commandSet[updateReleaseCommandName] = commands.NewUpdateRelease(outLogger, fs)
 	commandSet[publishReleaseCommandName] = &commands.PublishRelease{
 		FS:                    fs,
 		Logger:                outLogger,
@@ -104,14 +101,13 @@ func main() {
 	commandSet[createReleaseNotesCommandName] = commands.NewReleaseNotesCommand()
 
 	// Component Commands
-	commandSet[fetchReleasesCommandName] = commands.NewFetchReleases(outLogger, mrsProvider, localReleaseDirectory)
+	commandSet[fetchReleasesCommandName] = commands.NewFetchReleases(outLogger, localReleaseDirectory)
 	commandSet[cacheReleasesCommandName] = commands.NewCacheReleases().WithLogger(outLogger)
-	commandSet[findReleaseVersionCommandName] = commands.NewFindReleaseVersion(outLogger, mrsProvider)
+	commandSet[findReleaseVersionCommandName] = commands.NewFindReleaseVersion(outLogger)
 	commandSet[findStemcellVersionCommandName] = commands.NewFindStemcellVersion(outLogger, pivnetService)
 	commandSet[updateStemcellCommandName] = &commands.UpdateStemcell{
-		Logger:                     outLogger,
-		MultiReleaseSourceProvider: mrsProvider,
-		FS:                         osfs.New(""),
+		Logger: outLogger,
+		FS:     osfs.New(""),
 	}
 
 	// ------------

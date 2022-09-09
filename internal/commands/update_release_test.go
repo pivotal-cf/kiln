@@ -15,9 +15,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
-	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/internal/component"
-	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
+	componentFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -44,23 +43,26 @@ var _ = Describe("UpdateRelease", func() {
 		kilnfileLockPath = kilnfilePath + ".lock"
 	)
 
+	type releaseSourceFake struct {
+		componentFakes.ReleaseDownloader
+		componentFakes.ReleaseVersionFinder
+		componentFakes.MatchedReleaseGetter
+	}
+
 	var (
-		updateReleaseCommand       commands.UpdateRelease
-		filesystem                 billy.Filesystem
-		multiReleaseSourceProvider *commandsFakes.MultiReleaseSourceProvider
-		releaseSource              *fetcherFakes.MultiReleaseSource
-		logger                     *log.Logger
-		downloadedReleasePath      string
-		expectedDownloadedRelease  component.Local
-		expectedRemoteRelease      component.Lock
-		kilnfileLock               cargo.KilnfileLock
+		updateReleaseCommand      commands.UpdateRelease
+		filesystem                billy.Filesystem
+		releaseSource             *releaseSourceFake
+		logger                    *log.Logger
+		downloadedReleasePath     string
+		expectedDownloadedRelease component.Local
+		expectedRemoteRelease     component.Lock
+		kilnfileLock              cargo.KilnfileLock
 	)
 
 	Context("Execute", func() {
 		BeforeEach(func() {
-			releaseSource = new(fetcherFakes.MultiReleaseSource)
-			multiReleaseSourceProvider = new(commandsFakes.MultiReleaseSourceProvider)
-			multiReleaseSourceProvider.Returns(releaseSource)
+			releaseSource = new(releaseSourceFake)
 
 			filesystem = osfs.New("/tmp/")
 
@@ -127,7 +129,8 @@ var _ = Describe("UpdateRelease", func() {
 		})
 
 		JustBeforeEach(func() {
-			updateReleaseCommand = commands.NewUpdateRelease(logger, filesystem, multiReleaseSourceProvider.Spy)
+			updateReleaseCommand = commands.NewUpdateRelease(logger, filesystem)
+			updateReleaseCommand.Source = releaseSource
 		})
 
 		When("updating to a version that exists in the remote", func() {
@@ -192,10 +195,6 @@ var _ = Describe("UpdateRelease", func() {
 					"--releases-directory", releasesDir,
 				})
 				Expect(err).NotTo(HaveOccurred())
-
-				Expect(multiReleaseSourceProvider.CallCount()).To(Equal(1))
-				_, allowOnlyPublishable := multiReleaseSourceProvider.ArgsForCall(0)
-				Expect(allowOnlyPublishable).To(BeFalse())
 			})
 		})
 
@@ -216,10 +215,6 @@ var _ = Describe("UpdateRelease", func() {
 					"--releases-directory", releasesDir,
 				})
 				Expect(err).To(MatchError(downloadErr))
-
-				Expect(multiReleaseSourceProvider.CallCount()).To(Equal(1))
-				_, allowOnlyPublishable := multiReleaseSourceProvider.ArgsForCall(0)
-				Expect(allowOnlyPublishable).To(BeTrue())
 			})
 		})
 

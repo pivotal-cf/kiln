@@ -21,9 +21,12 @@ type UpdateStemcell struct {
 		Version     string `short:"v"  long:"version"                                    required:"true" description:"desired version of stemcell"`
 		ReleasesDir string `short:"rd" long:"releases-directory" default-path:"releases"                 description:"path to a directory to download releases into"`
 	}
-	FS                         billy.Filesystem
-	MultiReleaseSourceProvider MultiReleaseSourceProvider
-	Logger                     *log.Logger
+	ReleaseSource interface {
+		component.ReleaseDownloader
+		component.MatchedReleaseGetter
+	}
+	FS     billy.Filesystem
+	Logger *log.Logger
 }
 
 func (update *UpdateStemcell) Execute(args []string) error {
@@ -36,6 +39,10 @@ func (update *UpdateStemcell) Execute(args []string) error {
 	kilnfile, kilnfileLock, err := update.Options.Standard.LoadKilnfiles(update.FS, nil)
 	if err != nil {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
+	}
+
+	if update.ReleaseSource == nil {
+		update.ReleaseSource = kilnfile.ReleaseSources
 	}
 
 	var releaseVersionConstraint *semver.Constraints
@@ -66,8 +73,6 @@ func (update *UpdateStemcell) Execute(args []string) error {
 		return nil
 	}
 
-	releaseSource := update.MultiReleaseSourceProvider(kilnfile, false)
-
 	for i, rel := range kilnfileLock.Releases {
 		update.Logger.Printf("Updating release %q with stemcell %s %s...", rel.Name, kilnfileLock.Stemcell.OS, trimmedInputVersion)
 
@@ -79,7 +84,7 @@ func (update *UpdateStemcell) Execute(args []string) error {
 		spec.StemcellVersion = trimmedInputVersion
 		spec.Version = rel.Version
 
-		remote, err := releaseSource.GetMatchedRelease(ctx, update.Logger, spec)
+		remote, err := update.ReleaseSource.GetMatchedRelease(ctx, update.Logger, spec)
 		if err != nil {
 			return fmt.Errorf("while finding release %q, encountered error: %w", rel.Name, err)
 		}
@@ -92,7 +97,7 @@ func (update *UpdateStemcell) Execute(args []string) error {
 			continue
 		}
 
-		local, err := releaseSource.DownloadRelease(ctx, update.Logger, update.Options.ReleasesDir, remote)
+		local, err := update.ReleaseSource.DownloadRelease(ctx, update.Logger, update.Options.ReleasesDir, remote)
 		if err != nil {
 			return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
 		}

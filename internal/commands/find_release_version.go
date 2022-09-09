@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
@@ -14,8 +15,8 @@ import (
 )
 
 type FindReleaseVersion struct {
-	outLogger   *log.Logger
-	mrsProvider MultiReleaseSourceProvider
+	outLogger *log.Logger
+	Finder    component.ReleaseVersionFinder
 
 	Options struct {
 		flags.Standard
@@ -30,10 +31,9 @@ type releaseVersionOutput struct {
 	SHA        string `json:"sha"`
 }
 
-func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider) *FindReleaseVersion {
+func NewFindReleaseVersion(outLogger *log.Logger) *FindReleaseVersion {
 	return &FindReleaseVersion{
-		outLogger:   outLogger,
-		mrsProvider: multiReleaseSourceProvider,
+		outLogger: outLogger,
 	}
 }
 
@@ -43,7 +43,10 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	releaseSource := cmd.mrsProvider(kilnfile, false)
+
+	if cmd.Finder == nil {
+		cmd.Finder = kilnfile.ReleaseSources
+	}
 
 	spec, err := kilnfile.FindReleaseWithName(cmd.Options.Release)
 	if err != nil {
@@ -53,7 +56,7 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 	spec.StemcellOS = kilnfileLock.Stemcell.OS
 	spec.StemcellVersion = kilnfileLock.Stemcell.Version
 
-	releaseRemote, err := releaseSource.FindReleaseVersion(ctx, cmd.outLogger, spec)
+	releaseRemote, err := cmd.Finder.FindReleaseVersion(ctx, cmd.outLogger, spec)
 	if err != nil {
 		return err
 	}

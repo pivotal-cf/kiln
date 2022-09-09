@@ -20,27 +20,6 @@ import (
 	"github.com/Masterminds/semver"
 )
 
-type ArtifactoryFileMetadata struct {
-	Checksums struct {
-		Sha1   string `json:"sha1"`
-		Sha256 string `json:"sha256"`
-		MD5    string `json:"md5"`
-	} `json:"checksums"`
-}
-
-type ArtifactoryFolderInfo struct {
-	Children []struct {
-		URI    string `json:"uri"`
-		Folder bool   `json:"folder"`
-	} `json:"children"`
-}
-
-type ArtifactoryFileInfo struct {
-	Checksums struct {
-		SHA1 string `json:"sha1"`
-	} `json:"checksums"`
-}
-
 type ArtifactoryReleaseSource struct {
 	Identifier  string `yaml:"id,omitempty"`
 	Publishable bool   `yaml:"publishable,omitempty"`
@@ -127,6 +106,12 @@ func (src *ArtifactoryReleaseSource) downloadRelease(logger *log.Logger, release
 	return Local{Lock: remoteRelease, LocalPath: filePath}, nil
 }
 
+type artifactoryFileInfo struct {
+	Checksums struct {
+		SHA1 string `json:"sha1"`
+	} `json:"checksums"`
+}
+
 func (src *ArtifactoryReleaseSource) getFileSHA1(logger *log.Logger, release Lock) (string, error) {
 	fullURL := src.ArtifactoryHost + "/api/storage/" + src.Repo + "/" + release.RemotePath
 	logger.Printf("Getting %s file info from artifactory", release.Name)
@@ -143,13 +128,13 @@ func (src *ArtifactoryReleaseSource) getFileSHA1(logger *log.Logger, release Loc
 		return "", err
 	}
 
-	var artifactoryFileInfo ArtifactoryFileInfo
+	var fileInfo artifactoryFileInfo
 
-	if err := json.Unmarshal(responseBody, &artifactoryFileInfo); err != nil {
+	if err := json.Unmarshal(responseBody, &fileInfo); err != nil {
 		return "", fmt.Errorf("json is malformed: %s", err)
 	}
 
-	return artifactoryFileInfo.Checksums.SHA1, nil
+	return fileInfo.Checksums.SHA1, nil
 }
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
@@ -191,6 +176,13 @@ func (src *ArtifactoryReleaseSource) getMatchedRelease(spec Spec) (Lock, error) 
 	}, nil
 }
 
+type artifactoryFolderInfo struct {
+	Children []struct {
+		URI    string `json:"uri"`
+		Folder bool   `json:"folder"`
+	} `json:"children"`
+}
+
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
 func (src *ArtifactoryReleaseSource) findReleaseVersion(logger *log.Logger, spec Spec) (Lock, error) {
@@ -223,15 +215,14 @@ func (src *ArtifactoryReleaseSource) findReleaseVersion(logger *log.Logger, spec
 		return Lock{}, fmt.Errorf("unexpected http status: %s", http.StatusText(response.StatusCode))
 	}
 
-	var artifactoryFolderInfo ArtifactoryFolderInfo
-	var _ *semver.Constraints
+	var folderInfo artifactoryFolderInfo
 
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		return Lock{}, err
 	}
 
-	if err := json.Unmarshal(responseBody, &artifactoryFolderInfo); err != nil {
+	if err := json.Unmarshal(responseBody, &folderInfo); err != nil {
 		return Lock{}, fmt.Errorf("json from %s is malformed: %s", request.URL.Host, err)
 	}
 
@@ -246,7 +237,7 @@ func (src *ArtifactoryReleaseSource) findReleaseVersion(logger *log.Logger, spec
 		return Lock{}, err
 	}
 
-	for _, releases := range artifactoryFolderInfo.Children {
+	for _, releases := range folderInfo.Children {
 		if releases.Folder {
 			continue
 		}

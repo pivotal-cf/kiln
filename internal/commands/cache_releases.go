@@ -208,7 +208,7 @@ func (cmd CacheReleases) Execute(args []string) error {
 			return fmt.Errorf("%[1]s compiled with %[2]s is not found on bosh director (it might have been uploaded as a compiled release and the director can't recompile it for the compilation target %[2]s)", releaseSlug, stemcellSlug)
 		}
 
-		newRemote, err := cmd.cacheRelease(bosh, releaseStore, deployment, releaseSlug, stemcellSlug)
+		newRemote, err := cmd.cacheRelease(ctx, cmd.Logger, bosh, releaseStore, deployment, releaseSlug, stemcellSlug)
 		if err != nil {
 			cmd.Logger.Printf("\tfailed to cache release %s for %s: %s\n", releaseSlug, stemcellSlug, err)
 			continue
@@ -297,7 +297,7 @@ func (cmd CacheReleases) fetchProductDeploymentData() (_ OpsManagerReleaseCacheS
 	return omAPI, manifest.Name, stagedStemcell.OS, stagedStemcell.Version, nil
 }
 
-func (cmd CacheReleases) cacheRelease(bosh boshdir.Director, rc component.ReleaseUploader, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (component.Lock, error) {
+func (cmd CacheReleases) cacheRelease(ctx context.Context, logger *log.Logger, bosh boshdir.Director, rc component.ReleaseUploader, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (component.Lock, error) {
 	cmd.Logger.Printf("\texporting %s\n", releaseSlug)
 	result, err := deployment.ExportRelease(releaseSlug, stemcellSlug, nil)
 	if err != nil {
@@ -311,7 +311,7 @@ func (cmd CacheReleases) cacheRelease(bosh boshdir.Director, rc component.Releas
 	}
 
 	cmd.Logger.Printf("\tuploading %s\n", releaseSlug)
-	remoteRelease, err := cmd.uploadLocalRelease(cargo.ReleaseSpec{
+	remoteRelease, err := cmd.uploadLocalRelease(ctx, logger, cargo.ReleaseSpec{
 		Name:            releaseSlug.Name(),
 		Version:         releaseSlug.Version(),
 		StemcellOS:      stemcellSlug.OS(),
@@ -349,7 +349,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 	return fmt.Errorf("existing release not found in Kilnfile.lock")
 }
 
-func (cmd *CacheReleases) uploadLocalRelease(spec component.Spec, fp string, uploader component.ReleaseUploader) (component.Lock, error) {
+func (cmd *CacheReleases) uploadLocalRelease(ctx context.Context, logger *log.Logger, spec component.Spec, fp string, uploader component.ReleaseUploader) (component.Lock, error) {
 	f, err := cmd.FS.Open(fp)
 	if err != nil {
 		return component.Lock{}, err

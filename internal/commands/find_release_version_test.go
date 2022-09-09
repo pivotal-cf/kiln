@@ -12,14 +12,13 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 var _ = Describe("Find the release version", func() {
 	var (
 		findReleaseVersion *commands.FindReleaseVersion
 		logger             *log.Logger
-		fakeReleasesSource *fakes.MultiReleaseSource
+		fakeReleasesSource *fakes.ReleaseVersionFinder
 
 		writer strings.Builder
 
@@ -32,7 +31,7 @@ var _ = Describe("Find the release version", func() {
 	Describe("Execute", func() {
 		BeforeEach(func() {
 			logger = log.New(&writer, "", 0)
-			fakeReleasesSource = new(fakes.MultiReleaseSource)
+			fakeReleasesSource = new(fakes.ReleaseVersionFinder)
 
 			tmpDir, err := os.MkdirTemp("", "fetch-test")
 			Expect(err).NotTo(HaveOccurred())
@@ -66,10 +65,8 @@ releases:
 		})
 
 		JustBeforeEach(func() {
-			multiReleaseSourceProvider := func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
-				return fakeReleasesSource
-			}
-			findReleaseVersion = commands.NewFindReleaseVersion(logger, multiReleaseSourceProvider)
+			findReleaseVersion = commands.NewFindReleaseVersion(logger)
+			findReleaseVersion.Finder = fakeReleasesSource
 
 			fetchExecuteArgs = []string{
 				"--kilnfile", someKilnfilePath,

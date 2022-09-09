@@ -17,8 +17,6 @@ func NewReleaseSources(sources ...ReleaseSource) *ReleaseSources {
 	return &ReleaseSources{List: sources}
 }
 
-var _ MultiReleaseSource = &ReleaseSources{}
-
 func (sources *ReleaseSources) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw []*EncodedReleaseSource
 	err := unmarshal(&raw)

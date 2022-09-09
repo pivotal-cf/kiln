@@ -22,16 +22,19 @@ type UpdateRelease struct {
 		AllowOnlyPublishableReleases bool   `           long:"allow-only-publishable-releases"                                         description:"include releases that would not be shipped with the tile (development builds)"`
 		WithoutDownload              bool   `           long:"without-download"                                                        description:"updates releases without downloading them"`
 	}
-	multiReleaseSourceProvider MultiReleaseSourceProvider
-	filesystem                 billy.Filesystem
-	logger                     *log.Logger
+	Source interface {
+		component.MatchedReleaseGetter
+		component.ReleaseVersionFinder
+		component.ReleaseDownloader
+	}
+	filesystem billy.Filesystem
+	logger     *log.Logger
 }
 
-func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, multiReleaseSourceProvider MultiReleaseSourceProvider) UpdateRelease {
+func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem) UpdateRelease {
 	return UpdateRelease{
-		logger:                     logger,
-		multiReleaseSourceProvider: multiReleaseSourceProvider,
-		filesystem:                 filesystem,
+		logger:     logger,
+		filesystem: filesystem,
 	}
 }
 
@@ -45,6 +48,10 @@ func (u UpdateRelease) Execute(args []string) error {
 	kilnfile, kilnfileLock, err := u.Options.Standard.LoadKilnfiles(u.filesystem, nil)
 	if err != nil {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
+	}
+
+	if u.Source == nil {
+		u.Source = kilnfile.ReleaseSources.Filter(u.Options.AllowOnlyPublishableReleases)
 	}
 
 	releaseLock, err := kilnfileLock.FindReleaseWithName(u.Options.Name)
@@ -64,8 +71,6 @@ func (u UpdateRelease) Execute(args []string) error {
 		releaseVersionConstraint = u.Options.Version
 	}
 
-	releaseSource := u.multiReleaseSourceProvider(kilnfile, u.Options.AllowOnlyPublishableReleases)
-
 	u.logger.Println("Searching for the release...")
 
 	var (
@@ -75,7 +80,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		newVersion, newSHA1, newSourceID, newRemotePath string
 	)
 	if u.Options.WithoutDownload {
-		remoteRelease, err = releaseSource.FindReleaseVersion(ctx, u.logger, component.Spec{
+		remoteRelease, err = u.Source.FindReleaseVersion(ctx, u.logger, component.Spec{
 			Name:             u.Options.Name,
 			Version:          releaseVersionConstraint,
 			StemcellVersion:  kilnfileLock.Stemcell.Version,
@@ -96,7 +101,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		newRemotePath = remoteRelease.RemotePath
 
 	} else {
-		remoteRelease, err = releaseSource.GetMatchedRelease(ctx, u.logger, component.Spec{
+		remoteRelease, err = u.Source.GetMatchedRelease(ctx, u.logger, component.Spec{
 			Name:             u.Options.Name,
 			Version:          u.Options.Version,
 			StemcellOS:       kilnfileLock.Stemcell.OS,
@@ -111,7 +116,7 @@ func (u UpdateRelease) Execute(args []string) error {
 			return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
 		}
 
-		localRelease, err = releaseSource.DownloadRelease(ctx, u.logger, u.Options.ReleasesDir, remoteRelease)
+		localRelease, err = u.Source.DownloadRelease(ctx, u.logger, u.Options.ReleasesDir, remoteRelease)
 		if err != nil {
 			return fmt.Errorf("error downloading the release: %w", err)
 		}
