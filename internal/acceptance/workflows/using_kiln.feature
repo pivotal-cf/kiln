@@ -3,7 +3,7 @@ Feature: As a developer, I want the Kiln CLI to be usable
     When I invoke kiln
       | version |
     Then the exit code is 0
-    And stdout contains substring: 1.0.0-dev
+    And stdout contains substring: 0.0.0-dev
   Scenario: I ask for help
     When I invoke kiln
       | help |
