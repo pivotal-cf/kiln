@@ -24,6 +24,18 @@ import (
 	component_fakes "github.com/pivotal-cf/kiln/internal/component/fakes"
 )
 
+const (
+	somePrivateKeyPath = "some-key-path"
+)
+
+func setExampleOMCredentials(t *testing.T) {
+	t.Helper()
+	t.Setenv("OM_TARGET", "https://example.local")
+	t.Setenv("OM_PASSWORD", "banana")
+	t.Setenv("OM_USERNAME", "banana")
+	t.Setenv("BOSH_ALL_PROXY", "socks5+ssh://pcf.example.local?private-key="+somePrivateKeyPath)
+}
+
 var _ jhanda.Command = (*commands.CacheReleases)(nil)
 
 func TestNewCacheCompiledReleases(t *testing.T) {
@@ -35,14 +47,6 @@ func TestNewCacheCompiledReleases(t *testing.T) {
 	please.Expect(cmd.ReleaseSourceAndCache).NotTo(BeNil())
 	please.Expect(cmd.OpsManager).NotTo(BeNil())
 	please.Expect(cmd.Director).NotTo(BeNil())
-}
-
-func setSomeOMVars(t *testing.T) {
-	t.Helper()
-	t.Setenv("OM_TARGET", "https://pcf.example.com")
-	t.Setenv("OM_USERNAME", "banana")
-	t.Setenv("OM_PASSWORD", "orange")
-	t.Setenv("BOSH_ALL_PROXY", "ssh+socks5://ubuntu@pcf.example.com:22?private-key=private-key.key")
 }
 
 func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *testing.T) {
@@ -86,6 +90,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 	var output bytes.Buffer
 	logger := log.New(&output, "", 0)
 
+	var omConf om.ClientConfiguration
 	cmd := commands.CacheReleases{
 		FS:     fs,
 		Logger: logger,
@@ -93,6 +98,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 			return releaseStorage, nil
 		},
 		OpsManager: func(configuration om.ClientConfiguration) (commands.OpsManagerReleaseCacheSource, error) {
+			omConf = configuration
 			return opsManager, nil
 		},
 		Director: func(configuration om.ClientConfiguration, provider om.GetBoshEnvironmentAndSecurityRootCACertificateProvider) (director.Director, error) {
@@ -100,7 +106,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 		},
 	}
 
-	setSomeOMVars(t)
+	setExampleOMCredentials(t)
 
 	// run
 
@@ -112,6 +118,11 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 
 	please.Expect(err).NotTo(HaveOccurred())
 	please.Expect(output.String()).To(ContainSubstring("cache already contains releases"))
+
+	please.Expect(omConf.BOSHAllProxy).To(Equal("socks5+ssh://pcf.example.local?private-key=" + somePrivateKeyPath))
+	please.Expect(omConf.Username).To(Equal("banana"))
+	please.Expect(omConf.Password).To(Equal("banana"))
+	please.Expect(omConf.Target).To(Equal("https://example.local"))
 }
 
 func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testing.T) {
@@ -171,7 +182,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 		},
 	}
 
-	setSomeOMVars(t)
+	setExampleOMCredentials(t)
 
 	// run
 
@@ -317,7 +328,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 		},
 	}
 
-	setSomeOMVars(t)
+	setExampleOMCredentials(t)
 
 	// run
 
@@ -439,7 +450,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 		},
 	}
 
-	setSomeOMVars(t)
+	setExampleOMCredentials(t)
 
 	// run
 
@@ -576,7 +587,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 		},
 	}
 
-	setSomeOMVars(t)
+	setExampleOMCredentials(t)
 
 	// run
 
@@ -696,7 +707,7 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 		},
 	}
 
-	setSomeOMVars(t)
+	setExampleOMCredentials(t)
 
 	// run
 
