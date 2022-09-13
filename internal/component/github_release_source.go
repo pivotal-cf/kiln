@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -46,6 +47,7 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 
 	return &GithubReleaseSource{
 		ReleaseSourceConfig: c,
+		Token:               c.GithubToken,
 		Logger:              log.New(os.Stdout, "[Github release source] ", log.Default().Flags()),
 		Client:              githubClient,
 	}
@@ -167,47 +169,63 @@ func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Cons
 // to ensure the sums match, the caller must verify this.
 func (grs GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
 	grs.Logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeGithub, grs.ID)
-	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs.Client, grs.Logger)
+	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs.Client.Repositories, grs.Logger)
 }
 
-//counterfeiter:generate -o ./fakes_internal/github_new_request_doer.go --fake-name GithubNewRequestDoer . githubNewRequestDoer
+//counterfeiter:generate -o ./fakes/release_by_tag_getter_asset_downloader.go --fake-name ReleaseByTagGetterAssetDownloader . releaseByTagGetterAssetDownloader
 
-type githubNewRequestDoer interface {
-	NewRequest(method, urlStr string, body interface{}) (*http.Request, error)
-	Do(ctx context.Context, req *http.Request, v interface{}) (*github.Response, error)
+type releaseByTagGetterAssetDownloader interface {
+	GetReleaseByTag(ctx context.Context, owner, repo, tag string) (*github.RepositoryRelease, *github.Response, error)
+	DownloadReleaseAsset(ctx context.Context, owner, repo string, id int64, followRedirectsClient *http.Client) (rc io.ReadCloser, redirectURL string, err error)
 }
 
-func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client githubNewRequestDoer, _ *log.Logger) (Local, error) {
+func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client releaseByTagGetterAssetDownloader, _ *log.Logger) (Local, error) {
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
+	org, repo, err := OwnerAndRepoFromGitHubURI(remoteRelease.RemotePath)
+	if err != nil {
+		fmt.Printf("failed to parse repository name and owner: %s: ", err)
+	}
+
+	rTag, _, err0 := client.GetReleaseByTag(ctx, org, repo, remoteRelease.Version)
+	if err0 != nil {
+		log.Println("warning: failed to find release tag of ", remoteRelease.Version)
+		rTag, _, err0 = client.GetReleaseByTag(ctx, org, repo, "v"+remoteRelease.Version)
+		if err0 != nil {
+			return Local{}, fmt.Errorf("cant find release tag: %+v\n", err0.Error())
+		}
+	}
+
+	assetFile, found := findAssetFile(rTag.Assets, remoteRelease)
+	if !found {
+		return Local{}, errors.New("failed to download file for release: expected release asset not found")
+	}
+
+	rc, _, err := client.DownloadReleaseAsset(ctx, org, repo, assetFile.GetID(), http.DefaultClient)
+	if err != nil {
+		fmt.Printf("failed to download file for release: %+v: ", err)
+		return Local{}, err
+	}
+	defer closeAndIgnoreError(rc)
 
 	file, err := os.Create(filePath)
 	if err != nil {
+		fmt.Printf("failed to create file for release: %+v: ", err)
 		return Local{}, err
 	}
 	defer closeAndIgnoreError(file)
 
-	request, err := client.NewRequest(http.MethodGet, remoteRelease.RemotePath, nil)
-	if err != nil {
-		return Local{}, err
-	}
-
 	hash := sha1.New()
-	response, err := client.Do(ctx, request, io.MultiWriter(file, hash))
-	if err != nil {
-		return Local{}, err
-	}
 
-	err = checkStatus(http.StatusOK, response.StatusCode)
+	mw := io.MultiWriter(file, hash)
+	_, err = io.Copy(mw, rc)
 	if err != nil {
-		return Local{}, err
+		return Local{}, fmt.Errorf("failed to calculate checksum for downloaded file: %+v: ", err)
 	}
 
 	remoteRelease.SHA1 = hex.EncodeToString(hash.Sum(nil))
 
 	return Local{Lock: remoteRelease, LocalPath: filePath}, nil
 }
-
-//counterfeiter:generate -o ./fakes/release_asset_downloader.go --fake-name ReleaseAssetDownloader . ReleaseAssetDownloader
 
 type ReleaseAssetDownloader interface {
 	DownloadReleaseAsset(ctx context.Context, owner, repo string, id int64, followRedirectsClient *http.Client) (rc io.ReadCloser, redirectURL string, err error)
@@ -262,6 +280,19 @@ func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloade
 	}
 
 	return Lock{}, fmt.Errorf("no matching GitHub release asset file name equal to %q", expectedAssetName)
+}
+
+func findAssetFile(list []*github.ReleaseAsset, lock Lock) (*github.ReleaseAsset, bool) {
+	lockVersion := strings.TrimPrefix(lock.Version, "v")
+	expectedAssetName := fmt.Sprintf("%s-%s.tgz", lock.Name, lockVersion)
+	malformedAssetName := fmt.Sprintf("%s-v%s.tgz", lock.Name, lockVersion)
+	for _, val := range list {
+		switch val.GetName() {
+		case expectedAssetName, malformedAssetName:
+			return val, true
+		}
+	}
+	return nil, false
 }
 
 func calculateSHA1(rc io.ReadCloser) (string, error) {
