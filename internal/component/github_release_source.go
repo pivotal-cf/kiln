@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -181,10 +182,11 @@ type releaseByTagGetterAssetDownloader interface {
 
 func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client releaseByTagGetterAssetDownloader, _ *log.Logger) (Local, error) {
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
-	org, repo, err := OwnerAndRepoFromGitHubURI(remoteRelease.RemotePath)
-	if err != nil {
-		fmt.Printf("failed to parse repository name and owner: %s: ", err)
-	}
+
+	remoteUrl, err := url.Parse(remoteRelease.RemotePath)
+	remotePathParts := strings.Split(remoteUrl.Path, "/")
+	// TODO: add test coverage for length
+	org, repo := remotePathParts[1], remotePathParts[2]
 
 	rTag, _, err0 := client.GetReleaseByTag(ctx, org, repo, remoteRelease.Version)
 	if err0 != nil {

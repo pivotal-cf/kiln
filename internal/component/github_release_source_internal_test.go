@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/pivotal-cf/kiln/internal/component/fakes_internal"
 	"io"
 	"log"
 	"os"
@@ -13,10 +12,16 @@ import (
 	"github.com/google/go-github/v40/github"
 
 	Ω "github.com/onsi/gomega"
+
+	"github.com/pivotal-cf/kiln/internal/component/fakes_internal"
 )
 
 func TestGithubReleaseSource_downloadRelease(t *testing.T) {
-	lock := Lock{Name: "routing", Version: "0.226.0", RemotePath: "https://github.com/cloudfoundry/routing-release/"}
+	lock := Lock{
+		Name:       "routing",
+		Version:    "0.239.0",
+		RemotePath: "https://github.com/cloudfoundry/routing-release/releases/download/v0.239.0/routing-0.239.0.tgz",
+	}
 
 	please := Ω.NewWithT(t)
 	tempDir := t.TempDir()
@@ -31,7 +36,7 @@ func TestGithubReleaseSource_downloadRelease(t *testing.T) {
 	downloader.GetReleaseByTagReturnsOnCall(1, &github.RepositoryRelease{
 		Assets: []*github.ReleaseAsset{
 			{
-				Name: ptr("routing-0.226.0.tgz"),
+				Name: ptr("routing-0.239.0.tgz"),
 			},
 		},
 	}, nil, nil)
@@ -40,6 +45,19 @@ func TestGithubReleaseSource_downloadRelease(t *testing.T) {
 	logger := log.New(io.Discard, "", 0)
 	local, err := downloadRelease(context.Background(), tempDir, lock, downloader, logger)
 	please.Expect(err).NotTo(Ω.HaveOccurred())
+
+	{
+		_, org, repo, tag := downloader.GetReleaseByTagArgsForCall(0)
+		please.Expect(org).To(Ω.Equal("cloudfoundry"))
+		please.Expect(repo).To(Ω.Equal("routing-release"))
+		please.Expect(tag).To(Ω.Equal("0.239.0"))
+	}
+	{
+		_, org, repo, tag := downloader.GetReleaseByTagArgsForCall(1)
+		please.Expect(org).To(Ω.Equal("cloudfoundry"))
+		please.Expect(repo).To(Ω.Equal("routing-release"))
+		please.Expect(tag).To(Ω.Equal("v0.239.0"))
+	}
 
 	please.Expect(local.LocalPath).To(Ω.BeAnExistingFile(), "it finds the created asset file")
 	please.Expect(local.SHA1).To(Ω.Equal("3a2be7b07a1a19072bf54c95a8c4a3fe0cdb35d4"))
