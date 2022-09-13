@@ -184,16 +184,19 @@ func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock,
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
 
 	remoteUrl, err := url.Parse(remoteRelease.RemotePath)
+	if err != nil {
+		return Local{}, fmt.Errorf("failed to parse remote_path as url: %w", err)
+	}
 	remotePathParts := strings.Split(remoteUrl.Path, "/")
 	// TODO: add test coverage for length
 	org, repo := remotePathParts[1], remotePathParts[2]
 
-	rTag, _, err0 := client.GetReleaseByTag(ctx, org, repo, remoteRelease.Version)
-	if err0 != nil {
+	rTag, _, err := client.GetReleaseByTag(ctx, org, repo, remoteRelease.Version)
+	if err != nil {
 		log.Println("warning: failed to find release tag of ", remoteRelease.Version)
-		rTag, _, err0 = client.GetReleaseByTag(ctx, org, repo, "v"+remoteRelease.Version)
-		if err0 != nil {
-			return Local{}, fmt.Errorf("cant find release tag: %+v\n", err0.Error())
+		rTag, _, err = client.GetReleaseByTag(ctx, org, repo, "v"+remoteRelease.Version)
+		if err != nil {
+			return Local{}, fmt.Errorf("cant find release tag: %+v\n", err.Error())
 		}
 	}
 
