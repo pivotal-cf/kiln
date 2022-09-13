@@ -1,4 +1,4 @@
-name: release
+name: create debugging artifact
 
 on:
   workflow_dispatch:
