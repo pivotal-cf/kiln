@@ -203,7 +203,7 @@ func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock,
 		log.Println("warning: failed to find release tag of ", remoteVersion)
 		rTag, _, err0 = client2.Repositories.GetReleaseByTag(ctx, org, repo, "v"+remoteVersion)
 		if err0 != nil {
-			return Local{}, errors.New(fmt.Sprintf("cant find release tag: %+v\n", err0.Error()))
+			return Local{}, fmt.Errorf("cant find release tag: %+v\n", err0.Error())
 		}
 	}
 	for _, val := range rTag.Assets {
