@@ -213,6 +213,7 @@ func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock,
 		rc, _, _ := client2.Repositories.DownloadReleaseAsset(ctx, org, repo, (*val).GetID(), http.DefaultClient)
 		file, err := os.Create(filePath)
 		if err != nil {
+			fmt.Printf("failed to download file for release: %+v: ", err)
 			return Local{}, err
 		}
 		defer closeAndIgnoreError(file)
@@ -222,7 +223,7 @@ func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock,
 		mw := io.MultiWriter(file, hash)
 		_, err = io.Copy(mw, rc)
 		if err != nil {
-			fmt.Printf("FAILED TO MULTIWRITE: %+v: ", err)
+			fmt.Printf("failed to download file for release: %+v: ", err)
 			return Local{}, err
 		}
 
