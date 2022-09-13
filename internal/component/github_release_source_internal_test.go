@@ -36,7 +36,7 @@ func TestGithubReleaseSource_downloadRelease(t *testing.T) {
 	}
 
 	logger := log.New(io.Discard, "", 0)
-	local, err := downloadRelease(context.Background(), tempDir, lock, ghClient, logger)
+	local, err := downloadRelease(context.Background(), tempDir, lock, ghClient, logger, "token", "org")
 	damnIt.Expect(err).NotTo(Ω.HaveOccurred())
 
 	damnIt.Expect(local.LocalPath).To(Ω.BeAnExistingFile(), "it finds the created asset file")
