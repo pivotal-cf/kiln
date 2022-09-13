@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -46,6 +47,7 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 
 	return &GithubReleaseSource{
 		ReleaseSourceConfig: c,
+		Token:               c.GithubToken,
 		Logger:              log.New(os.Stdout, "[Github release source] ", log.Default().Flags()),
 		Client:              githubClient,
 	}
@@ -167,7 +169,7 @@ func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Cons
 // to ensure the sums match, the caller must verify this.
 func (grs GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
 	grs.Logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeGithub, grs.ID)
-	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs.Client, grs.Logger)
+	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs.Client, grs.Logger, grs.Token, grs.Org)
 }
 
 //counterfeiter:generate -o ./fakes_internal/github_new_request_doer.go --fake-name GithubNewRequestDoer . githubNewRequestDoer
@@ -177,34 +179,58 @@ type githubNewRequestDoer interface {
 	Do(ctx context.Context, req *http.Request, v interface{}) (*github.Response, error)
 }
 
-func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client githubNewRequestDoer, _ *log.Logger) (Local, error) {
+func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client githubNewRequestDoer, _ *log.Logger, accessToken string, org string) (Local, error) {
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
+	ts := oauth2.StaticTokenSource(&oauth2.Token{
+		AccessToken: accessToken,
+	})
 
-	file, err := os.Create(filePath)
-	if err != nil {
-		return Local{}, err
+	oauthClient := oauth2.NewClient(ctx, ts)
+
+	githubHTTPClient := &http.Client{
+		Transport: oauthClient.Transport,
 	}
-	defer closeAndIgnoreError(file)
+	client2 := github.NewClient(githubHTTPClient)
 
-	request, err := client.NewRequest(http.MethodGet, remoteRelease.RemotePath, nil)
-	if err != nil {
-		return Local{}, err
+	assetName := fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version)
+
+	remoteVersion := remoteRelease.Version
+	_, repo, _ := strings.Cut(remoteRelease.RemotePath, org+"/")
+	repo, _, _ = strings.Cut(repo, "/")
+
+	rTag, _, err0 := client2.Repositories.GetReleaseByTag(ctx, org, repo, remoteVersion)
+	if err0 != nil {
+		log.Println("warning: failed to find release tag of ", remoteVersion)
+		rTag, _, err0 = client2.Repositories.GetReleaseByTag(ctx, org, repo, "v"+remoteVersion)
+		if err0 != nil {
+			return Local{}, errors.New(fmt.Sprintf("cant find release tag: %+v\n", err0.Error()))
+		}
+	}
+	for _, val := range rTag.Assets {
+		if *val.Name != assetName {
+			continue
+		}
+		rc, _, _ := client2.Repositories.DownloadReleaseAsset(ctx, org, repo, (*val).GetID(), http.DefaultClient)
+		file, err := os.Create(filePath)
+		if err != nil {
+			return Local{}, err
+		}
+		defer closeAndIgnoreError(file)
+
+		hash := sha1.New()
+
+		mw := io.MultiWriter(file, hash)
+		_, err = io.Copy(mw, rc)
+		if err != nil {
+			fmt.Printf("FAILED TO MULTIWRITE: %+v: ", err)
+			return Local{}, err
+		}
+
+		remoteRelease.SHA1 = hex.EncodeToString(hash.Sum(nil))
+		return Local{Lock: remoteRelease, LocalPath: filePath}, nil
 	}
 
-	hash := sha1.New()
-	response, err := client.Do(ctx, request, io.MultiWriter(file, hash))
-	if err != nil {
-		return Local{}, err
-	}
-
-	err = checkStatus(http.StatusOK, response.StatusCode)
-	if err != nil {
-		return Local{}, err
-	}
-
-	remoteRelease.SHA1 = hex.EncodeToString(hash.Sum(nil))
-
-	return Local{Lock: remoteRelease, LocalPath: filePath}, nil
+	return Local{}, errors.New("failed to download file for release")
 }
 
 //counterfeiter:generate -o ./fakes/release_asset_downloader.go --fake-name ReleaseAssetDownloader . ReleaseAssetDownloader
