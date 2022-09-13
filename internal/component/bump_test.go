@@ -15,7 +15,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-func TestInternal_calculateComponentBumps(t *testing.T) {
+func TestCalculateBumps(t *testing.T) {
 	t.Parallel()
 	please := Ω.NewWithT(t)
 
@@ -84,37 +84,6 @@ func TestInternal_calculateComponentBumps(t *testing.T) {
 			"it returns the component as a bump",
 		)
 	})
-}
-
-func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {
-	please := Ω.NewWithT(t)
-	b := Bump{
-		Releases: []*github.RepositoryRelease{
-			{TagName: strPtr("Y")},
-			{TagName: strPtr("1")},
-			{TagName: strPtr("2")},
-			{TagName: strPtr("3")},
-			{TagName: strPtr("3")},
-			{TagName: strPtr("3")},
-			{TagName: strPtr("X")},
-			{TagName: strPtr("2")},
-			{TagName: strPtr("4")},
-			{TagName: strPtr("4")},
-		},
-	}
-	b.deduplicateReleasesWithTheSameTagName()
-	tags := make([]string, 0, len(b.Releases))
-	for _, r := range b.Releases {
-		tags = append(tags, r.GetTagName())
-	}
-	please.Expect(tags).To(Ω.Equal([]string{
-		"Y",
-		"1",
-		"2",
-		"3",
-		"X",
-		"4",
-	}))
 }
 
 func TestInternal_addReleaseNotes(t *testing.T) {
