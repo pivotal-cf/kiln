@@ -69,46 +69,28 @@ type ReleaseSource interface {
 const (
 	panicMessageWrongReleaseSourceType = "wrong constructor for release source configuration"
 	logLineDownload                    = "downloading %s from %s release source %s"
+)
 
-	// ReleaseSourceTypeBOSHIO is the value of the Type field on cargo.ReleaseSourceConfig
-	// for fetching https://bosh.io releases.
-	ReleaseSourceTypeBOSHIO = "bosh.io"
-
-	// ReleaseSourceTypeS3 is the value for the Type field on cargo.ReleaseSourceConfig
-	// for releases stored on
-	ReleaseSourceTypeS3 = "s3"
-
-	// ReleaseSourceTypeGithub is the value for the Type field on cargo.ReleaseSourceConfig
-	// for releases stored on GitHub.
-	ReleaseSourceTypeGithub = "github"
-
-	// ReleaseSourceTypeArtifactory is the value for the Type field on cargo.ReleaseSourceConfig
-	// for releases stored on Artifactory.
-	ReleaseSourceTypeArtifactory = "artifactory"
+// TODO: use the constants from "cargo" everywhere
+const (
+	ReleaseSourceTypeBOSHIO      = cargo.ReleaseSourceTypeBOSHIO
+	ReleaseSourceTypeS3          = cargo.ReleaseSourceTypeS3
+	ReleaseSourceTypeGithub      = cargo.ReleaseSourceTypeGithub
+	ReleaseSourceTypeArtifactory = cargo.ReleaseSourceTypeArtifactory
 )
 
 // ReleaseSourceFactory returns a configured ReleaseSource based on the Type field on the
 // cargo.ReleaseSourceConfig structure.
 func ReleaseSourceFactory(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
+	releaseConfig.ID = cargo.ReleaseSourceID(releaseConfig)
 	switch releaseConfig.Type {
 	case ReleaseSourceTypeBOSHIO:
-		if releaseConfig.ID == "" {
-			releaseConfig.ID = ReleaseSourceTypeBOSHIO
-		}
 		return NewBOSHIOReleaseSource(releaseConfig, "", outLogger)
 	case ReleaseSourceTypeS3:
-		if releaseConfig.ID == "" {
-			releaseConfig.ID = releaseConfig.Bucket
-		}
 		return NewS3ReleaseSourceFromConfig(releaseConfig, outLogger)
 	case ReleaseSourceTypeGithub:
-		releaseConfig.ID = releaseConfig.Org
 		return NewGithubReleaseSource(releaseConfig)
 	case ReleaseSourceTypeArtifactory:
-		if releaseConfig.ID == "" {
-			releaseConfig.ID = ReleaseSourceTypeArtifactory
-		}
-
 		return NewArtifactoryReleaseSource(releaseConfig)
 	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
