@@ -17,7 +17,7 @@ import (
 
 var _ = Describe("Find the release version", func() {
 	var (
-		findReleaseVersion commands.FindReleaseVersion
+		findReleaseVersion *commands.FindReleaseVersion
 		logger             *log.Logger
 		fakeReleasesSource *fakes.MultiReleaseSource
 
