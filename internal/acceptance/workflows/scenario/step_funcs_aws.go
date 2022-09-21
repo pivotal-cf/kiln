@@ -25,6 +25,9 @@ func iRemoveAllTheObjectsInBucket(ctx context.Context, bucket string) error {
 	listErr := s3Session.ListObjectsV2PagesWithContext(ctx, &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucket),
 	}, func(page *s3.ListObjectsV2Output, b bool) bool {
+		if len(page.Contents) == 0 {
+			return false
+		}
 		var del s3.Delete
 		for _, o := range page.Contents {
 			fmt.Printf("      deleting %s\n", aws.StringValue(o.Key))
