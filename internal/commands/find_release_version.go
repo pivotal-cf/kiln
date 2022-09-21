@@ -70,10 +70,6 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 	return err
 }
 
-func errReleaseSourceNotSpecified(releaseName string) error {
-	return fmt.Errorf("release source not specified in Kilnfile for %q", releaseName)
-}
-
 func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, error) {
 	argsAfterFlags, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, nil)
 	if err != nil {
