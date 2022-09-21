@@ -55,6 +55,7 @@ var _ = Describe("UpdateRelease", func() {
 		expectedDownloadedRelease  component.Local
 		expectedRemoteRelease      component.Lock
 		kilnfileLock               cargo.KilnfileLock
+		kilnfile                   cargo.Kilnfile
 	)
 
 	Context("Execute", func() {
@@ -66,12 +67,13 @@ var _ = Describe("UpdateRelease", func() {
 
 			filesystem = osfs.New("/tmp/")
 
-			kilnfile := cargo.Kilnfile{
+			kilnfile = cargo.Kilnfile{
 				Releases: []cargo.ComponentSpec{
 					{Name: "minecraft"},
 					{
 						Name:             releaseName,
 						GitHubRepository: githubRepo,
+						ReleaseSource:    "Silverlake",
 					},
 				},
 			}
@@ -101,9 +103,6 @@ var _ = Describe("UpdateRelease", func() {
 				},
 			}
 
-			Expect(fsWriteYAML(filesystem, kilnfilePath, kilnfile)).NotTo(HaveOccurred())
-			Expect(fsWriteYAML(filesystem, kilnfileLockPath, kilnfileLock)).NotTo(HaveOccurred())
-
 			logger = log.New(GinkgoWriter, "", 0)
 
 			err := filesystem.MkdirAll(releasesDir, os.ModePerm)
@@ -130,6 +129,9 @@ var _ = Describe("UpdateRelease", func() {
 		})
 
 		JustBeforeEach(func() {
+			Expect(fsWriteYAML(filesystem, kilnfilePath, kilnfile)).NotTo(HaveOccurred())
+			Expect(fsWriteYAML(filesystem, kilnfileLockPath, kilnfileLock)).NotTo(HaveOccurred())
+
 			updateReleaseCommand = commands.NewUpdateRelease(logger, filesystem, multiReleaseSourceProvider.Spy)
 		})
 
@@ -202,6 +204,7 @@ var _ = Describe("UpdateRelease", func() {
 			})
 		})
 
+		// TODO: add error for when release source is not found
 		When("passing the --allow-only-publishable-releases flag", func() {
 			BeforeEach(func() {
 				downloadErr := errors.New("asplode!!")
@@ -418,6 +421,54 @@ var _ = Describe("UpdateRelease", func() {
 						RemotePath:   notDownloadedRemotePath,
 					},
 				))
+			})
+		})
+
+		When("release_source is set in the Kilnfile for a release", func() {
+			BeforeEach(func() {
+				kilnfile.Releases = []cargo.ComponentSpec{
+					{
+						Name:             releaseName,
+						GitHubRepository: githubRepo,
+						ReleaseSource:    "",
+					},
+				}
+			})
+
+			When("with download", func() {
+				It("calls falls back to using the multi release source implementation", func() {
+					err := updateReleaseCommand.Execute([]string{
+						"--kilnfile", "Kilnfile",
+						"--name", releaseName,
+						"--version", newReleaseVersion,
+						"--releases-directory", releasesDir,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
+					Expect(multiReleaseSource.FindByIDCallCount()).To(Equal(0))
+
+					Expect(multiReleaseSource.GetMatchedReleaseCallCount()).To(Equal(1))
+					Expect(multiReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+				})
+			})
+
+			When("without download", func() {
+				It("calls falls back to using the multi release source implementation", func() {
+					err := updateReleaseCommand.Execute([]string{
+						"--kilnfile", "Kilnfile",
+						"--name", releaseName,
+						"--version", newReleaseVersion,
+						"--releases-directory", releasesDir,
+						"--without-download",
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
+					Expect(multiReleaseSource.FindByIDCallCount()).To(Equal(0))
+
+					Expect(multiReleaseSource.FindReleaseVersionCallCount()).To(Equal(1))
+				})
 			})
 		})
 	})

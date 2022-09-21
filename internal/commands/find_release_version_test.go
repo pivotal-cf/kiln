@@ -28,6 +28,9 @@ var _ = Describe("Find the release version", func() {
 		executeErr       error
 		releaseName      string
 		someKilnfilePath string
+
+		kilnContents,
+		lockContents string
 	)
 
 	Describe("Execute", func() {
@@ -36,9 +39,7 @@ var _ = Describe("Find the release version", func() {
 			fakeMultiReleasesSource = new(fakes.MultiReleaseSource)
 			fakeReleasesSource = new(fakes.ReleaseSource)
 
-			tmpDir, err := os.MkdirTemp("", "fetch-test")
-			Expect(err).NotTo(HaveOccurred())
-			lockContents := `
+			lockContents = `
 ---
 releases:
 - name: some-release
@@ -50,7 +51,7 @@ stemcell_criteria:
   version: "4.5.6"
 `
 
-			kilnContents := `
+			kilnContents = `
 ---
 releases:
 - name: has-constraint
@@ -60,6 +61,12 @@ releases:
   release_source: bosh.io
 `
 
+			fakeMultiReleasesSource.FindByIDReturns(fakeReleasesSource, nil)
+		})
+
+		JustBeforeEach(func() {
+			tmpDir, err := os.MkdirTemp("", "fetch-test")
+			Expect(err).NotTo(HaveOccurred())
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
 			err = os.WriteFile(someKilnfilePath, []byte(kilnContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
@@ -67,16 +74,13 @@ releases:
 			err = os.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
-			fakeMultiReleasesSource.FindByIDReturns(fakeReleasesSource, nil)
-		})
-
-		JustBeforeEach(func() {
 			multiReleaseSourceProvider := func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
 				return fakeMultiReleasesSource
 			}
 			findReleaseVersion = commands.NewFindReleaseVersion(logger, multiReleaseSourceProvider)
 
 			logger.Printf("releaseName is: %s", releaseName)
+			writer.Reset()
 			executeErr = findReleaseVersion.Execute(fetchExecuteArgs)
 		})
 
@@ -185,6 +189,38 @@ releases:
 				Expect(executeErr).NotTo(HaveOccurred())
 				_, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
 				Expect(noDownload).To(BeFalse())
+			})
+		})
+
+		When("release_source is not specified in the Kilnfile", func() {
+			BeforeEach(func() {
+				kilnContents = `
+---
+releases:
+- name: uaa
+  version: ~74.16.0
+`
+				fakeReleasesSource.FindReleaseVersionReturns(component.Lock{
+					Name:         "uaa",
+					Version:      "74.16.8888888",
+					RemotePath:   "lemon",
+					RemoteSource: "pear",
+				}, nil)
+			})
+
+			It("falls back to searching all release sources", func() {
+				Expect(fakeMultiReleasesSource.FindByIDCallCount()).To(Equal(1))
+				Expect(fakeMultiReleasesSource.FindReleaseVersionCallCount()).To(Equal(0))
+
+				Expect(fakeReleasesSource.FindReleaseVersionCallCount()).To(Equal(1))
+				spec, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+				Expect(noDownload).To(BeFalse())
+				Expect(spec.Name).To(Equal("has-no-constraint"))
+				Expect(spec.Version).To(Equal(""))
+
+				Expect((&writer).String()).To(ContainSubstring(`"version":"74.16.8888888"`))
+				Expect((&writer).String()).To(ContainSubstring(`"remote_path":"lemon"`))
+				Expect((&writer).String()).To(ContainSubstring(`"source":"pear"`))
 			})
 		})
 	})

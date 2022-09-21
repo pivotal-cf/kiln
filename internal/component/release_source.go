@@ -11,9 +11,9 @@ import (
 // MultiReleaseSource wraps a set of release sources. It is mostly used to generate fakes
 // for testing commands. See ReleaseSourceList for the concrete implementation.
 type MultiReleaseSource interface {
-	GetMatchedRelease(Spec) (Lock, error)
-	FindReleaseVersion(spec Spec, noDownload bool) (Lock, error)
-	DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error)
+	ReleaseDownloader
+	ReleaseVersionFinder
+	MatchedReleaseGetter
 
 	FindByID(string) (ReleaseSource, error)
 
@@ -50,18 +50,34 @@ type ReleaseSource interface {
 	// It should not be modified.
 	Configuration() cargo.ReleaseSourceConfig
 
-	// GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
-	// fields on Requirement to download a specific release.
-	GetMatchedRelease(Spec) (Lock, error)
+	ReleaseDownloader
+	ReleaseVersionFinder
+	MatchedReleaseGetter
+}
 
-	// FindReleaseVersion may use any of the fields on Requirement to return the best matching
-	// release.
-	FindReleaseVersion(spec Spec, noDownload bool) (Lock, error)
-
-	// DownloadRelease downloads the release and writes the resulting file to the releasesDir.
-	// It should also calculate and set the SHA1 field on the Local result; it does not need
-	// to ensure the sums match, the caller must verify this.
+// A ReleaseDownloader downloads the release and writes the resulting file to the releasesDir.
+// It should also calculate and set the SHA1 field on the Local result; it does not need
+// to ensure the sums match, the caller must verify this.
+//
+//counterfeiter:generate -o ./fakes/release_downloader.go --fake-name ReleaseDownloader . ReleaseDownloader
+type ReleaseDownloader interface {
 	DownloadRelease(releasesDir string, remoteRelease Lock) (Local, error)
+}
+
+// A ReleaseVersionFinder may use any of the fields on Spec to return the best matching
+// release.
+//
+//counterfeiter:generate -o ./fakes/release_version_finder.go --fake-name ReleaseVersionFinder . ReleaseVersionFinder
+type ReleaseVersionFinder interface {
+	FindReleaseVersion(spec Spec, skipDownload bool) (Lock, error)
+}
+
+// A MatchedReleaseGetter uses the Name and Version and if supported StemcellOS and StemcellVersion
+// fields on Requirement to download a specific release.
+//
+//counterfeiter:generate -o ./fakes/matched_release_getter.go --fake-name MatchedReleaseGetter . MatchedReleaseGetter
+type MatchedReleaseGetter interface {
+	GetMatchedRelease(spec Spec) (Lock, error)
 }
 
 //counterfeiter:generate -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource

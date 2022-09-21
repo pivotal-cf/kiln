@@ -63,7 +63,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		releaseVersionConstraint = u.Options.Version
 	}
 
-	releaseSource, err := u.multiReleaseSourceProvider(kilnfile, u.Options.AllowOnlyPublishableReleases).FindByID(releaseSpec.ReleaseSource)
+	releaseSource, err := getReleaseSource(releaseSpec, u.multiReleaseSourceProvider(kilnfile, u.Options.AllowOnlyPublishableReleases), u.logger)
 	if err != nil {
 		return err
 	}
