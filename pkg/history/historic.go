@@ -57,12 +57,12 @@ func Version(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnf
 	return string(bytes.TrimSpace(buf)), nil
 }
 
-func Walk(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, fn func(commit *object.Commit)) error {
+func Walk(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, fn func(commit *object.Commit) error) error {
 	c := make(map[plumbing.Hash]struct{})
 	return walk(storage, commitHash, fn, c)
 }
 
-func walk(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, fn func(commit *object.Commit), c map[plumbing.Hash]struct{}) error {
+func walk(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, fn func(commit *object.Commit) error, c map[plumbing.Hash]struct{}) error {
 	if _, visited := c[commitHash]; visited {
 		return nil
 	}
@@ -72,7 +72,9 @@ func walk(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, fn func(
 	if err != nil {
 		return err
 	}
-	fn(commit)
+	if err := fn(commit); err != nil {
+		return err
+	}
 	for _, p := range commit.ParentHashes {
 		if err := walk(storage, p, fn, c); err != nil {
 			return err

@@ -220,8 +220,9 @@ func TestWalk(t *testing.T) {
 		please := Ω.NewWithT(t)
 
 		callCount := 0
-		err := Walk(repo.Storer, hf, func(*object.Commit) {
+		err := Walk(repo.Storer, hf, func(*object.Commit) error {
 			callCount++
+			return nil
 		})
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 		please.Expect(callCount).To(Ω.Equal(3))
@@ -279,8 +280,9 @@ func TestWalk(t *testing.T) {
 		please := Ω.NewWithT(t)
 
 		callCount := 0
-		err := Walk(repo.Storer, hf, func(*object.Commit) {
+		err := Walk(repo.Storer, hf, func(*object.Commit) error {
 			callCount++
+			return nil
 		})
 		please.Expect(err).NotTo(Ω.HaveOccurred())
 		please.Expect(callCount).To(Ω.Equal(5))
