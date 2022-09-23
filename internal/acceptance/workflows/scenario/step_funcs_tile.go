@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/proofing"
 	"os"
 	"strings"
 
@@ -14,6 +13,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/internal/proofing"
 	"github.com/pivotal-cf/kiln/pkg/tile"
 )
 

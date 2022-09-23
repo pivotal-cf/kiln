@@ -3,11 +3,12 @@ package tile
 import (
 	"archive/zip"
 	"fmt"
-	"github.com/pivotal-cf/kiln/internal/proofing"
 	"io"
 	"io/fs"
 	"os"
 	"path"
+
+	"github.com/pivotal-cf/kiln/internal/proofing"
 
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"

@@ -1,9 +1,10 @@
 package manifest
 
 import (
+	"io"
+
 	opsman2 "github.com/pivotal-cf/kiln/internal/manifest/opsman"
 	proofing2 "github.com/pivotal-cf/kiln/internal/proofing"
-	"io"
 
 	"gopkg.in/yaml.v2"
 )

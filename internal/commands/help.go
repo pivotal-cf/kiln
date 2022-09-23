@@ -2,11 +2,12 @@ package commands
 
 import (
 	"fmt"
-	"golang.org/x/exp/maps"
 	"io"
 	"reflect"
 	"sort"
 	"strings"
+
+	"golang.org/x/exp/maps"
 
 	"github.com/pivotal-cf/jhanda"
 )

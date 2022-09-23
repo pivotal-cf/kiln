@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"strconv"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 func outputContainsSubstring(ctx context.Context, outputName, substring string) error {
