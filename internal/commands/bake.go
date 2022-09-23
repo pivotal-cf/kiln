@@ -226,7 +226,7 @@ func (b *Bake) loadFlags(args []string, stat flags.StatFunc, readFile func(strin
 	return nil
 }
 
-func (b Bake) Execute(args []string) error {
+func (b *Bake) Execute(args []string) error {
 	err := b.loadFlags(args, os.Stat, os.ReadFile)
 	if err != nil {
 		return err
@@ -371,7 +371,7 @@ func (b Bake) Execute(args []string) error {
 	return nil
 }
 
-func (b Bake) Usage() jhanda.Usage {
+func (b *Bake) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
 		ShortDescription: "bakes a tile",

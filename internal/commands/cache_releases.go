@@ -88,7 +88,7 @@ func (cmd *CacheReleases) WithLogger(logger *log.Logger) *CacheReleases {
 	return cmd
 }
 
-func (cmd CacheReleases) Execute(args []string) error {
+func (cmd *CacheReleases) Execute(args []string) error {
 	_, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, cmd.FS.Stat)
 	if err != nil {
 		return err
@@ -265,7 +265,7 @@ func hasRequiredCompiledPackages(d boshdir.Director, releaseSlug boshdir.Release
 	return false, nil
 }
 
-func (cmd CacheReleases) fetchProductDeploymentData() (_ OpsManagerReleaseCacheSource, deploymentName, stemcellOS, stemcellVersion string, _ error) {
+func (cmd *CacheReleases) fetchProductDeploymentData() (_ OpsManagerReleaseCacheSource, deploymentName, stemcellOS, stemcellVersion string, _ error) {
 	omAPI, err := cmd.OpsManager(cmd.Options.ClientConfiguration)
 	if err != nil {
 		return nil, "", "", "", err
@@ -301,7 +301,7 @@ func (cmd CacheReleases) fetchProductDeploymentData() (_ OpsManagerReleaseCacheS
 	return omAPI, manifest.Name, stagedStemcell.OS, stagedStemcell.Version, nil
 }
 
-func (cmd CacheReleases) cacheRelease(bosh boshdir.Director, rc ReleaseStorage, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (component.Lock, error) {
+func (cmd *CacheReleases) cacheRelease(bosh boshdir.Director, rc ReleaseStorage, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (component.Lock, error) {
 	cmd.Logger.Printf("\texporting %s\n", releaseSlug)
 	result, err := deployment.ExportRelease(releaseSlug, stemcellSlug, nil)
 	if err != nil {
@@ -393,7 +393,7 @@ func (cmd *CacheReleases) saveReleaseLocally(director boshdir.Director, relDir s
 	return filePath, sha256sumString, sha1sumString, nil
 }
 
-func (cmd CacheReleases) downloadAndComputeSHA(cache component.ReleaseSource, remote cargo.ComponentLock) (string, error) {
+func (cmd *CacheReleases) downloadAndComputeSHA(cache component.ReleaseSource, remote cargo.ComponentLock) (string, error) {
 	if remote.SHA1 != "" {
 		return remote.SHA1, nil
 	}
@@ -417,7 +417,7 @@ func (cmd CacheReleases) downloadAndComputeSHA(cache component.ReleaseSource, re
 	return comp.SHA1, nil
 }
 
-func (cmd CacheReleases) Usage() jhanda.Usage {
+func (cmd *CacheReleases) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Downloads compiled bosh releases from an Tanzu Ops Manager bosh director and then uploads them to a bucket",
 		ShortDescription: "Cache compiled releases",
