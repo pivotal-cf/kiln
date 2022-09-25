@@ -64,7 +64,7 @@ type checksummer interface {
 	Sum(path string) error
 }
 
-func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLogger *log.Logger, errLogger *log.Logger) Bake {
+func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLogger *log.Logger, errLogger *log.Logger) *Bake {
 	filesystem := helper.NewFilesystem()
 	zipper := builder.NewZipper()
 	interpolator := builder.NewInterpolator()
@@ -80,7 +80,7 @@ func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLog
 	metadataService := baking.NewMetadataService()
 	checksummer := baking.NewChecksummer(errLogger)
 
-	return Bake{
+	return &Bake{
 		interpolator: interpolator,
 		tileWriter:   tileWriter,
 		checksummer:  checksummer,
