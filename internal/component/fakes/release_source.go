@@ -33,10 +33,11 @@ type ReleaseSource struct {
 		result1 component.Local
 		result2 error
 	}
-	FindReleaseVersionStub        func(cargo.ComponentSpec) (cargo.ComponentLock, error)
+	FindReleaseVersionStub        func(cargo.ComponentSpec, bool) (cargo.ComponentLock, error)
 	findReleaseVersionMutex       sync.RWMutex
 	findReleaseVersionArgsForCall []struct {
 		arg1 cargo.ComponentSpec
+		arg2 bool
 	}
 	findReleaseVersionReturns struct {
 		result1 cargo.ComponentLock
@@ -181,18 +182,19 @@ func (fake *ReleaseSource) DownloadReleaseReturnsOnCall(i int, result1 component
 	}{result1, result2}
 }
 
-func (fake *ReleaseSource) FindReleaseVersion(arg1 cargo.ComponentSpec) (cargo.ComponentLock, error) {
+func (fake *ReleaseSource) FindReleaseVersion(arg1 cargo.ComponentSpec, arg2 bool) (cargo.ComponentLock, error) {
 	fake.findReleaseVersionMutex.Lock()
 	ret, specificReturn := fake.findReleaseVersionReturnsOnCall[len(fake.findReleaseVersionArgsForCall)]
 	fake.findReleaseVersionArgsForCall = append(fake.findReleaseVersionArgsForCall, struct {
 		arg1 cargo.ComponentSpec
-	}{arg1})
+		arg2 bool
+	}{arg1, arg2})
 	stub := fake.FindReleaseVersionStub
 	fakeReturns := fake.findReleaseVersionReturns
-	fake.recordInvocation("FindReleaseVersion", []interface{}{arg1})
+	fake.recordInvocation("FindReleaseVersion", []interface{}{arg1, arg2})
 	fake.findReleaseVersionMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -206,17 +208,17 @@ func (fake *ReleaseSource) FindReleaseVersionCallCount() int {
 	return len(fake.findReleaseVersionArgsForCall)
 }
 
-func (fake *ReleaseSource) FindReleaseVersionCalls(stub func(cargo.ComponentSpec) (cargo.ComponentLock, error)) {
+func (fake *ReleaseSource) FindReleaseVersionCalls(stub func(cargo.ComponentSpec, bool) (cargo.ComponentLock, error)) {
 	fake.findReleaseVersionMutex.Lock()
 	defer fake.findReleaseVersionMutex.Unlock()
 	fake.FindReleaseVersionStub = stub
 }
 
-func (fake *ReleaseSource) FindReleaseVersionArgsForCall(i int) cargo.ComponentSpec {
+func (fake *ReleaseSource) FindReleaseVersionArgsForCall(i int) (cargo.ComponentSpec, bool) {
 	fake.findReleaseVersionMutex.RLock()
 	defer fake.findReleaseVersionMutex.RUnlock()
 	argsForCall := fake.findReleaseVersionArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *ReleaseSource) FindReleaseVersionReturns(result1 cargo.ComponentLock, result2 error) {

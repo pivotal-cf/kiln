@@ -391,7 +391,7 @@ var _ = Describe("UpdateRelease", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				receivedReleaseRequirement := releaseSource.FindReleaseVersionArgsForCall(0)
+				receivedReleaseRequirement, _ := releaseSource.FindReleaseVersionArgsForCall(0)
 				releaseRequirement := component.Spec{
 					Name:             releaseName,
 					Version:          newReleaseVersion,

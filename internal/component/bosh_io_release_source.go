@@ -98,7 +98,7 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, error)
 	return Lock{}, ErrNotFound
 }
 
-func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
+func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock, error) {
 	spec = spec.UnsetStemcell()
 
 	constraint, err := spec.VersionConstraints()

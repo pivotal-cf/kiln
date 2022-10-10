@@ -203,7 +203,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns that match", func() {
-				rel, err := multiSrc.FindReleaseVersion(requirement)
+				rel, err := multiSrc.FindReleaseVersion(requirement, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).To(Equal(matchedRelease))
 			})
@@ -230,7 +230,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns that match", func() {
-				rel, err := multiSrc.FindReleaseVersion(requirement)
+				rel, err := multiSrc.FindReleaseVersion(requirement, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).To(Equal(matchedRelease))
 			})
@@ -257,7 +257,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns the match from the first source", func() {
-				rel, err := multiSrc.FindReleaseVersion(requirement)
+				rel, err := multiSrc.FindReleaseVersion(requirement, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).To(Equal(matchedRelease))
 			})

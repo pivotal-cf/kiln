@@ -18,7 +18,8 @@ type FindReleaseVersion struct {
 
 	Options struct {
 		flags.Standard
-		Release string `short:"r" long:"release" description:"release name"`
+		Release    string `short:"r" long:"release" description:"release name"`
+		NoDownload bool   `long:"no-download" description:"do not download any files"`
 	}
 }
 
@@ -51,7 +52,7 @@ func (cmd FindReleaseVersion) Execute(args []string) error {
 	spec.StemcellOS = kilnfileLock.Stemcell.OS
 	spec.StemcellVersion = kilnfileLock.Stemcell.Version
 
-	releaseRemote, err := releaseSource.FindReleaseVersion(spec)
+	releaseRemote, err := releaseSource.FindReleaseVersion(spec, cmd.Options.NoDownload)
 	if err != nil {
 		return err
 	}

@@ -285,12 +285,13 @@ var _ = Describe("S3ReleaseSource", func() {
 		const bucket = "pcf-final-bosh-releases"
 
 		var (
-			releaseSource  component.S3ReleaseSource
-			fakeS3Client   *fetcherFakes.S3Client
-			desiredRelease component.Spec
-			releaseID      component.Spec
-			uaaKey         string
-			logger         *log.Logger
+			releaseSource    component.S3ReleaseSource
+			fakeS3Client     *fetcherFakes.S3Client
+			fakeS3Downloader *fetcherFakes.S3Downloader
+			desiredRelease   component.Spec
+			releaseID        component.Spec
+			uaaKey           string
+			logger           *log.Logger
 		)
 		When("version is semantic and release has version constraint", func() {
 			BeforeEach(func() {
@@ -313,7 +314,7 @@ var _ = Describe("S3ReleaseSource", func() {
 					},
 				}, nil)
 
-				fakeS3Downloader := new(fetcherFakes.S3Downloader)
+				fakeS3Downloader = new(fetcherFakes.S3Downloader)
 				// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
 				fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
 					n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
@@ -338,7 +339,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("gets the version that satisfies the constraint", func() {
-				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease)
+				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease, false)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
@@ -377,7 +378,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				}, nil)
 
 				logger = log.New(GinkgoWriter, "", 0)
-				fakeS3Downloader := new(fetcherFakes.S3Downloader)
+				fakeS3Downloader = new(fetcherFakes.S3Downloader)
 				// fakeS3Downloader writes the given S3 bucket and key into the output file for easy verification
 				fakeS3Downloader.DownloadStub = func(writer io.WriterAt, objectInput *s3.GetObjectInput, setConcurrency ...func(dl *s3manager.Downloader)) (int64, error) {
 					n, err := writer.WriteAt([]byte(fmt.Sprintf("%s/%s", *objectInput.Bucket, *objectInput.Key)), 0)
@@ -400,7 +401,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("gets the latest version of a release", func() {
-				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease)
+				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease, false)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
@@ -413,6 +414,68 @@ var _ = Describe("S3ReleaseSource", func() {
 					RemotePath:   uaaKey,
 					RemoteSource: sourceID,
 					SHA1:         "bc7cb372ee4b9a9d6f4e8a993d46405d2c114e9c",
+				}))
+			})
+		})
+
+		When("noDownload is specified", func() {
+			BeforeEach(func() {
+				releaseID = component.Spec{Name: "uaa", Version: "123"}
+				desiredRelease = component.Spec{
+					Name:            "uaa",
+					StemcellVersion: "621.71",
+				}
+
+				fakeS3Client = new(fetcherFakes.S3Client)
+				object1Key := "uaa/uaa-122.tgz"
+				object2Key := "uaa/uaa-123.tgz"
+				object3Key := "uaa/uaa-123.tgz"
+				object4Key := "uaa/uaa-121.tgz"
+				fakeS3Client.ListObjectsV2Returns(&s3.ListObjectsV2Output{
+					Contents: []*s3.Object{
+						{Key: &object1Key},
+						{Key: &object3Key},
+						{Key: &object2Key},
+						{Key: &object4Key},
+					},
+				}, nil)
+
+				logger = log.New(GinkgoWriter, "", 0)
+				fakeS3Downloader = new(fetcherFakes.S3Downloader)
+				fakeS3Downloader.DownloadStub = func(wa io.WriterAt, goi *s3.GetObjectInput, f ...func(*s3manager.Downloader)) (int64, error) {
+					Fail("Download called when noDownload=true")
+					return -1, nil
+				}
+
+				releaseSource = component.NewS3ReleaseSource(
+					cargo.ReleaseSourceConfig{
+						ID:           sourceID,
+						Bucket:       bucket,
+						PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
+						Publishable:  false,
+					},
+					fakeS3Client,
+					fakeS3Downloader,
+					nil,
+					logger,
+				)
+				uaaKey = "uaa/uaa-123.tgz"
+			})
+
+			It("gets the latest version of a release", func() {
+				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease, true)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
+				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
+				Expect(*input.Prefix).To(Equal("uaa/"))
+
+				Expect(remoteRelease).To(Equal(component.Lock{
+					Name:         releaseID.Name,
+					Version:      releaseID.Version,
+					RemotePath:   uaaKey,
+					RemoteSource: sourceID,
+					SHA1:         "not-calculated",
 				}))
 			})
 		})
@@ -475,7 +538,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("gets the latest version of a release", func() {
-				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease)
+				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease, false)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
