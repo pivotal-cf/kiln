@@ -51,10 +51,10 @@ stemcell_criteria:
 			kilnContents := `
 ---
 releases:
-- name: uaa
+- name: has-constraint
   version: ~74.16.0
   source: bosh.io
-- name: uaac
+- name: has-no-constraint
   source: bosh.io`
 
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
@@ -71,10 +71,6 @@ releases:
 			}
 			findReleaseVersion = commands.NewFindReleaseVersion(logger, multiReleaseSourceProvider)
 
-			fetchExecuteArgs = []string{
-				"--kilnfile", someKilnfilePath,
-				"--release", releaseName,
-			}
 			logger.Printf("releaseName is: %s", releaseName)
 			executeErr = findReleaseVersion.Execute(fetchExecuteArgs)
 		})
@@ -88,9 +84,15 @@ releases:
 		})
 
 		When("there is no version constraint", func() {
+			BeforeEach(func() {
+				releaseName = "has-no-constraint"
+				fetchExecuteArgs = []string{
+					"--kilnfile", someKilnfilePath,
+					"--release", releaseName,
+				}
+			})
 			When("a latest release exists", func() {
 				BeforeEach(func() {
-					releaseName = "uaac"
 					fakeReleasesSource.FindReleaseVersionReturns(component.Lock{
 						Name: releaseName, Version: "74.12.5",
 						RemotePath:   "remote_url",
@@ -102,7 +104,7 @@ releases:
 				When("uaac has releases on bosh.io", func() {
 					It("returns the latest release version", func() {
 						Expect(executeErr).NotTo(HaveOccurred())
-						args := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+						args, _ := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
 						Expect(args.StemcellVersion).To(Equal("4.5.6"))
 						Expect(args.StemcellOS).To(Equal("some-os"))
 						Expect(args.Version).To(Equal(""))
@@ -116,9 +118,15 @@ releases:
 		})
 
 		When("there is a version constraint", func() {
+			BeforeEach(func() {
+				releaseName = "has-constraint"
+				fetchExecuteArgs = []string{
+					"--kilnfile", someKilnfilePath,
+					"--release", releaseName,
+				}
+			})
 			When("a release exists", func() {
 				BeforeEach(func() {
-					releaseName = "uaa"
 					fakeReleasesSource.FindReleaseVersionReturns(component.Lock{
 						Name: releaseName, Version: "74.16.5",
 						RemotePath:   "remote_url",
@@ -129,7 +137,8 @@ releases:
 				When("uaa has releases on bosh.io", func() {
 					It("returns the latest release version", func() {
 						Expect(executeErr).NotTo(HaveOccurred())
-						args := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+						args, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+						Expect(noDownload).To(BeFalse())
 						Expect(args.Version).To(Equal("~74.16.0"))
 						Expect(args.StemcellVersion).To(Equal("4.5.6"))
 						Expect(args.StemcellOS).To(Equal("some-os"))
@@ -137,6 +146,39 @@ releases:
 						Expect((&writer).String()).To(ContainSubstring("\"remote_path\":\"remote_url\""))
 					})
 				})
+			})
+		})
+
+		When("--no-download is specified", func() {
+			BeforeEach(func() {
+				releaseName = "has-no-constraint"
+				fetchExecuteArgs = []string{
+					"--kilnfile", someKilnfilePath,
+					"--release", releaseName,
+					"--no-download",
+				}
+			})
+
+			It("calls source with correct args", func() {
+				Expect(executeErr).NotTo(HaveOccurred())
+				_, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+				Expect(noDownload).To(BeTrue())
+			})
+		})
+
+		When("--no-download is not specified", func() {
+			BeforeEach(func() {
+				releaseName = "has-no-constraint"
+				fetchExecuteArgs = []string{
+					"--kilnfile", someKilnfilePath,
+					"--release", releaseName,
+				}
+			})
+
+			It("calls source with correct args", func() {
+				Expect(executeErr).NotTo(HaveOccurred())
+				_, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+				Expect(noDownload).To(BeFalse())
 			})
 		})
 	})

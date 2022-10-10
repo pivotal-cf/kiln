@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"testing"
 
-	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
 	Ω "github.com/onsi/gomega"
 
@@ -30,7 +30,7 @@ func TestListAllOfTheCrap(t *testing.T) {
 	// grs.ListAllOfTheCrap(context.TODO(), "cloudfoundry")
 
 	// grs.Client.Repositories.GetReleaseByTag()
-	release, response, err := grs.Client.Repositories.GetReleaseByTag(context.TODO(), "cloudfoundry", "routing-release", "0.226.0")
+	release, response, err := grs.GetReleaseByTag(context.TODO(), "cloudfoundry", "routing-release", "0.226.0")
 	if err != nil {
 		t.Error(err)
 	}
@@ -88,13 +88,21 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 		file := &SetTrueOnClose{Reader: bytes.NewBufferString("hello")}
 		downloader.DownloadReleaseAssetReturns(file, "", nil)
 
-		ctx := context.TODO()
+		output := bytes.NewBuffer(nil)
+		grsMock := &component.GithubReleaseSource{
+			Logger:                 log.New(output, "[Github release source] ", log.Default().Flags()),
+			ReleaseAssetDownloader: downloader,
+			ReleaseByTagGetter:     releaseGetter,
+			ReleaseSourceConfig: cargo.ReleaseSourceConfig{
+				Org: owner,
+			},
+		}
 
-		lock, err := component.LockFromGithubRelease(ctx, downloader, owner, component.Spec{
+		lock, err := grsMock.GetMatchedRelease(component.Spec{
 			Name:             "routing",
 			Version:          "0.226.0",
 			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
-		}, component.GetGithubReleaseWithTag(releaseGetter, "0.226.0"))
+		})
 
 		t.Run("it returns success stuff", func(t *testing.T) {
 			damnIt := Ω.NewWithT(t)
@@ -169,14 +177,22 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 		file := &SetTrueOnClose{Reader: bytes.NewBufferString("hello")}
 		downloader.DownloadReleaseAssetReturns(file, "", nil)
 
-		ctx := context.TODO()
+		output := bytes.NewBuffer(nil)
+		grsMock := &component.GithubReleaseSource{
+			Logger:                 log.New(output, "[Github release source] ", log.Default().Flags()),
+			ReleaseAssetDownloader: downloader,
+			ReleaseByTagGetter:     releaseGetter,
+			ReleaseSourceConfig: cargo.ReleaseSourceConfig{
+				Org: owner,
+			},
+		}
 
 		// When...
-		lock, err := component.LockFromGithubRelease(ctx, downloader, owner, component.Spec{
+		lock, err := grsMock.GetMatchedRelease(component.Spec{
 			Name:             "routing",
-			Version:          ">0",
+			Version:          "0.226.0",
 			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
-		}, component.GetGithubReleaseWithTag(releaseGetter, "0.226.0"))
+		})
 
 		// Then...
 		t.Run("it returns success stuff", func(t *testing.T) {
@@ -214,13 +230,67 @@ func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 			Version: "garbage",
 		}
 		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
-		_, err := grs.FindReleaseVersion(s)
+		_, err := grs.FindReleaseVersion(s, false)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
 			damnIt := Ω.NewWithT(t)
 			damnIt.Expect(err).To(Ω.HaveOccurred())
 			damnIt.Expect(err.Error()).To(Ω.ContainSubstring("expected version to be a constraint"))
 		})
+	})
+
+	t.Run("noDownload is true", func(t *testing.T) {
+		please := Ω.NewWithT(t)
+
+		downloader := new(fakes.ReleaseAssetDownloader)
+		downloader.DownloadReleaseAssetReturns(nil, "", fmt.Errorf("this is a mistake! I'm not supposed to be here!"))
+
+		releaseName := "bpm"
+		version := "v1.1.19"
+		assetName := "bpm-1.1.19.tgz"
+		assetID := int64(123)
+		lister := new(fakes.ReleasesLister)
+		listResponse := []*github.RepositoryRelease{{
+			Name:    &releaseName,
+			TagName: &version,
+			Assets: []*github.ReleaseAsset{{
+				Name: &assetName,
+				ID:   &assetID,
+			}},
+		}}
+		httpResponse := &github.Response{Response: &http.Response{StatusCode: http.StatusOK}}
+		returnCount := 0
+		lister.ListReleasesStub = func(ctx context.Context, s1, s2 string, lo *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error) {
+			if returnCount != 0 {
+				return nil, httpResponse, nil
+			}
+			returnCount++
+			return listResponse, httpResponse, nil
+		}
+
+		s := component.Spec{
+			Name:             releaseName,
+			GitHubRepository: "https://github.com/cloudfoundry/bpm-release",
+		}
+
+		output := bytes.NewBuffer(nil)
+		defer t.Log(output.String())
+		grsMock := &component.GithubReleaseSource{
+			Logger:                 log.New(output, "[test] ", log.Default().Flags()),
+			ReleaseAssetDownloader: downloader,
+			ReleasesLister:         lister,
+			ReleaseSourceConfig: cargo.ReleaseSourceConfig{
+				Type:        component.ReleaseSourceTypeGithub,
+				Org:         "cloudfoundry",
+				GithubToken: "fake-token",
+			},
+		}
+
+		lock, err := grsMock.FindReleaseVersion(s, true)
+		please.Expect(err).ToNot(Ω.HaveOccurred())
+
+		please.Expect(lock.SHA1).To(Ω.Equal("not-calculated"))
+		please.Expect(downloader.Invocations()).To(Ω.BeEmpty())
 	})
 }
 
@@ -254,8 +324,23 @@ func TestGetGithubReleaseWithTag(t *testing.T) {
 
 		ctx := context.TODO()
 
-		fn := component.GetGithubReleaseWithTag(releaseGetter, "0.226.0")
-		_, err := fn(ctx, "org", "repo")
+		output := bytes.NewBuffer(nil)
+		grsMock := &component.GithubReleaseSource{
+			Logger:             log.New(output, "[test] ", log.Default().Flags()),
+			ReleaseByTagGetter: releaseGetter,
+			ReleaseSourceConfig: cargo.ReleaseSourceConfig{
+				Type:        component.ReleaseSourceTypeGithub,
+				Org:         "cloudfoundry",
+				GithubToken: "fake-token",
+			},
+		}
+		s := component.Spec{
+			Name:             "routing",
+			Version:          "0.226.0",
+			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
+		}
+
+		_, err := grsMock.GetGithubReleaseWithTag(ctx, s)
 		damnIt.Expect(err).To(Ω.HaveOccurred())
 	})
 
@@ -280,13 +365,28 @@ func TestGetGithubReleaseWithTag(t *testing.T) {
 
 		ctx := context.TODO()
 
-		fn := component.GetGithubReleaseWithTag(releaseGetter, "0.226.0")
-		_, err := fn(ctx, "org", "repo")
+		output := bytes.NewBuffer(nil)
+		grsMock := &component.GithubReleaseSource{
+			Logger:             log.New(output, "[test] ", log.Default().Flags()),
+			ReleaseByTagGetter: releaseGetter,
+			ReleaseSourceConfig: cargo.ReleaseSourceConfig{
+				Type:        component.ReleaseSourceTypeGithub,
+				Org:         "cloudfoundry",
+				GithubToken: "fake-token",
+			},
+		}
+		s := component.Spec{
+			Name:             "routing",
+			Version:          "0.226.0",
+			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
+		}
+
+		_, err := grsMock.GetGithubReleaseWithTag(ctx, s)
 		damnIt.Expect(err).To(Ω.HaveOccurred())
 	})
 }
 
-func TestGetReleaseMatchingConstraint(t *testing.T) {
+func TestGetLatestMatchingRelease(t *testing.T) {
 	strPtr := func(s string) *string { return &s }
 
 	t.Run("when get release with tag api request fails", func(t *testing.T) {
@@ -330,12 +430,22 @@ func TestGetReleaseMatchingConstraint(t *testing.T) {
 			nil,
 		)
 
-		ctx := context.TODO()
+		output := bytes.NewBuffer(nil)
+		grsMock := &component.GithubReleaseSource{
+			Logger:         log.New(output, "[test] ", log.Default().Flags()),
+			ReleasesLister: releaseGetter,
+			ReleaseSourceConfig: cargo.ReleaseSourceConfig{
+				Org: "test-org",
+			},
+		}
 
-		c, err := semver.NewConstraint("~2.0")
-		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
-		fn := component.GetReleaseMatchingConstraint(releaseGetter, c)
-		rel, err := fn(ctx, "org", "repo")
+		s := component.Spec{
+			Name:             "test",
+			Version:          "~2.0",
+			GitHubRepository: "git@github.com:test-org/test.git",
+		}
+
+		rel, err := grsMock.GetLatestMatchingRelease(context.TODO(), s)
 		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
 		damnIt.Expect(rel.GetTagName()).To(Ω.Equal("2.0.4"))
 		damnIt.Expect(releaseGetter.ListReleasesCallCount()).To(Ω.Equal(3))
@@ -370,15 +480,53 @@ func TestGetReleaseMatchingConstraint(t *testing.T) {
 			nil,
 		)
 
-		ctx := context.TODO()
+		output := bytes.NewBuffer(nil)
+		grsMock := &component.GithubReleaseSource{
+			Logger:         log.New(output, "[test] ", log.Default().Flags()),
+			ReleasesLister: releaseGetter,
+			ReleaseSourceConfig: cargo.ReleaseSourceConfig{
+				Org: "test-org",
+			},
+		}
 
-		c, err := semver.NewConstraint("~2.0")
-		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
-		fn := component.GetReleaseMatchingConstraint(releaseGetter, c)
-		rel, err := fn(ctx, "org", "repo")
+		s := component.Spec{
+			Name:             "test",
+			Version:          "~2.0",
+			GitHubRepository: "git@github.com:test-org/test.git",
+		}
+
+		rel, err := grsMock.GetLatestMatchingRelease(context.TODO(), s)
 		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
 		damnIt.Expect(rel.GetTagName()).To(Ω.Equal("v2.0.4"))
 		damnIt.Expect(releaseGetter.ListReleasesCallCount()).To(Ω.Equal(3))
+	})
+
+	t.Run("component repo does not match release source org", func(t *testing.T) {
+		// given
+		var (
+			githubOrg      = "banana"
+			otherGitHubOrg = "orange"
+
+			ctx  = context.Background()
+			spec = cargo.ComponentSpec{
+				GitHubRepository: "https://github.com/" + otherGitHubOrg + "/muffin",
+			}
+		)
+
+		output := bytes.NewBuffer(nil)
+		grsMock := &component.GithubReleaseSource{
+			Logger: log.New(output, "[test] ", log.Default().Flags()),
+			ReleaseSourceConfig: cargo.ReleaseSourceConfig{
+				Org: githubOrg,
+			},
+		}
+
+		// when
+		_, err := grsMock.GetLatestMatchingRelease(ctx, spec)
+
+		// then
+		please := Ω.NewWithT(t)
+		please.Expect(component.IsErrNotFound(err)).To(Ω.BeTrue())
 	})
 }
 
@@ -407,28 +555,4 @@ func TestDownloadReleaseAsset(t *testing.T) {
 
 		damnIt.Expect(local.LocalPath).NotTo(Ω.BeAnExistingFile(), "it creates the expected asset")
 	})
-}
-
-func TestLockFromGithubRelease_componet_repo_does_not_match_release_source_org(t *testing.T) {
-	// given
-	var (
-		githubOrg      = "banana"
-		otherGitHubOrg = "orange"
-
-		ctx        = context.Background()
-		downloader = new(fakes.ReleaseAssetDownloader)
-		spec       = cargo.ComponentSpec{
-			GitHubRepository: "https://github.com/" + otherGitHubOrg + "/muffin",
-		}
-		getRelease = func(ctx context.Context, org, repo string) (*github.RepositoryRelease, error) {
-			return nil, fmt.Errorf("get release does not need to be called for this test")
-		}
-	)
-
-	// when
-	_, err := component.LockFromGithubRelease(ctx, downloader, githubOrg, spec, getRelease)
-
-	// then
-	please := Ω.NewWithT(t)
-	please.Expect(component.IsErrNotFound(err)).To(Ω.BeTrue())
 }

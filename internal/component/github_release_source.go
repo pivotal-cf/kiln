@@ -25,7 +25,10 @@ type GithubReleaseSource struct {
 	cargo.ReleaseSourceConfig
 	Token  string
 	Logger *log.Logger
-	Client *github.Client
+
+	ReleaseAssetDownloader
+	ReleasesLister
+	ReleaseByTagGetter
 }
 
 // NewGithubReleaseSource will provision a new GithubReleaseSource Project
@@ -50,7 +53,10 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 		ReleaseSourceConfig: c,
 		Token:               c.GithubToken,
 		Logger:              log.New(os.Stdout, "[Github release source] ", log.Default().Flags()),
-		Client:              githubClient,
+
+		ReleaseAssetDownloader: githubClient.Repositories,
+		ReleaseByTagGetter:     githubClient.Repositories,
+		ReleasesLister:         githubClient.Repositories,
 	}
 }
 
@@ -67,8 +73,14 @@ func (grs GithubReleaseSource) GetMatchedRelease(s Spec) (Lock, error) {
 	if err != nil {
 		return Lock{}, fmt.Errorf("expected version to be an exact version")
 	}
-	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s,
-		GetGithubReleaseWithTag(grs.Client.Repositories, s.Version))
+
+	ctx := context.TODO()
+	release, err := grs.GetGithubReleaseWithTag(ctx, s)
+	if err != nil {
+		return Lock{}, err
+	}
+
+	return grs.getLockFromRelease(ctx, release, s, false)
 }
 
 //counterfeiter:generate -o ./fakes/release_by_tag_getter.go --fake-name ReleaseByTagGetter . ReleaseByTagGetter
@@ -77,34 +89,148 @@ type ReleaseByTagGetter interface {
 	GetReleaseByTag(ctx context.Context, owner, repo, tag string) (*github.RepositoryRelease, *github.Response, error)
 }
 
-func GetGithubReleaseWithTag(ghAPI ReleaseByTagGetter, tag string) GetGithubReleaseFunc {
-	return func(ctx context.Context, repoOwner, repoName string) (*github.RepositoryRelease, error) {
-		release, response, err := ghAPI.GetReleaseByTag(ctx, repoOwner, repoName, "v"+tag)
+func (grs GithubReleaseSource) GetGithubReleaseWithTag(ctx context.Context, s Spec) (*github.RepositoryRelease, error) {
+	repoOwner, repoName, err := OwnerAndRepoFromGitHubURI(s.GitHubRepository)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+
+	release, response, err := grs.GetReleaseByTag(ctx, repoOwner, repoName, "v"+s.Version)
+	if err == nil {
+		err = checkStatus(http.StatusOK, response.StatusCode)
+	}
+	if err != nil {
+		release, response, err = grs.GetReleaseByTag(ctx, repoOwner, repoName, s.Version)
 		if err == nil {
 			err = checkStatus(http.StatusOK, response.StatusCode)
 		}
 		if err != nil {
-			release, response, err = ghAPI.GetReleaseByTag(ctx, repoOwner, repoName, tag)
-			if err == nil {
-				err = checkStatus(http.StatusOK, response.StatusCode)
-			}
-			if err != nil {
-				return nil, err
-			}
+			return nil, err
 		}
-		return release, nil
 	}
+	return release, nil
+}
+
+func (grs GithubReleaseSource) GetLatestMatchingRelease(ctx context.Context, s Spec) (*github.RepositoryRelease, error) {
+	c, err := s.VersionConstraints()
+	if err != nil {
+		return nil, fmt.Errorf("expected version to be a constraint")
+	}
+
+	repoOwner, repoName, err := OwnerAndRepoFromGitHubURI(s.GitHubRepository)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+
+	if repoOwner != grs.Org {
+		return nil, ErrNotFound
+	}
+
+	ops := &github.ListOptions{}
+
+	var (
+		highestMatchingVersion               *semver.Version
+		matchingReleases                     *github.RepositoryRelease
+		numberOfPagesWithoutMatchingVersions = 0
+	)
+	for numberOfPagesWithoutMatchingVersions < 2 {
+		releases, response, err := grs.ListReleases(ctx, repoOwner, repoName, ops)
+		if err != nil {
+			return nil, err
+		}
+		err = checkStatus(http.StatusOK, response.StatusCode)
+		if err != nil {
+			break
+		}
+
+		foundHigherVersion := false
+		for _, release := range releases {
+			v, err := semver.NewVersion(release.GetTagName())
+			if err != nil {
+				continue
+			}
+			if !c.Check(v) {
+				continue
+			}
+			if highestMatchingVersion != nil && v.LessThan(highestMatchingVersion) {
+				continue
+			}
+			matchingReleases = release
+			highestMatchingVersion = v
+			foundHigherVersion = true
+		}
+		if foundHigherVersion {
+			numberOfPagesWithoutMatchingVersions = 0
+		} else {
+			numberOfPagesWithoutMatchingVersions++
+		}
+
+		ops.Page++
+	}
+
+	if matchingReleases != nil {
+		return matchingReleases, nil
+	}
+
+	return nil, ErrNotFound
 }
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
-func (grs GithubReleaseSource) FindReleaseVersion(s Spec) (Lock, error) {
-	c, err := s.VersionConstraints()
+func (grs GithubReleaseSource) FindReleaseVersion(s Spec, noDownload bool) (Lock, error) {
+	ctx := context.TODO()
+	release, err := grs.GetLatestMatchingRelease(ctx, s)
 	if err != nil {
-		return Lock{}, fmt.Errorf("expected version to be a constraint")
+		return Lock{}, err
 	}
-	return LockFromGithubRelease(context.TODO(), grs.Client.Repositories, grs.Org, s,
-		GetReleaseMatchingConstraint(grs.Client.Repositories, c))
+
+	return grs.getLockFromRelease(ctx, release, s, noDownload)
+}
+
+func (grs GithubReleaseSource) getLockFromRelease(ctx context.Context, r *github.RepositoryRelease, s Spec, noDownload bool) (Lock, error) {
+	lockVersion := strings.TrimPrefix(r.GetTagName(), "v")
+	expectedAssetName := fmt.Sprintf("%s-%s.tgz", s.Name, lockVersion)
+	malformedAssetName := fmt.Sprintf("%s-v%s.tgz", s.Name, lockVersion)
+
+	for _, asset := range r.Assets {
+		switch asset.GetName() {
+		case expectedAssetName, malformedAssetName:
+		default:
+			continue
+		}
+
+		sum := "not-calculated"
+		if !noDownload {
+			var err error
+			sum, err = grs.getReleaseSHA1(ctx, s, *asset.ID)
+			if err != nil {
+				return Lock{}, err
+			}
+		}
+
+		return Lock{
+			Name:         s.Name,
+			Version:      lockVersion,
+			RemoteSource: grs.Org,
+			RemotePath:   asset.GetBrowserDownloadURL(),
+			SHA1:         sum,
+		}, nil
+	}
+
+	return Lock{}, fmt.Errorf("no matching GitHub release asset file name equal to %q", expectedAssetName)
+}
+
+func (grs GithubReleaseSource) getReleaseSHA1(ctx context.Context, s Spec, id int64) (string, error) {
+	repoOwner, repoName, err := OwnerAndRepoFromGitHubURI(s.GitHubRepository)
+	if err != nil {
+		return "", fmt.Errorf("could not parse repository name: %v", err)
+	}
+
+	rc, _, err := grs.DownloadReleaseAsset(ctx, repoOwner, repoName, id, http.DefaultClient)
+	if err != nil {
+		return "", err
+	}
+	return calculateSHA1(rc)
 }
 
 //counterfeiter:generate -o ./fakes/releases_lister.go --fake-name ReleasesLister . ReleasesLister
@@ -113,74 +239,22 @@ type ReleasesLister interface {
 	ListReleases(ctx context.Context, owner, repo string, opts *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error)
 }
 
-func GetReleaseMatchingConstraint(ghAPI ReleasesLister, constraints *semver.Constraints) GetGithubReleaseFunc {
-	return func(ctx context.Context, repoOwner, repoName string) (*github.RepositoryRelease, error) {
-		ops := &github.ListOptions{}
-
-		var (
-			highestMatchingVersion               *semver.Version
-			matchingReleases                     *github.RepositoryRelease
-			numberOfPagesWithoutMatchingVersions = 0
-		)
-		for numberOfPagesWithoutMatchingVersions < 2 {
-			releases, response, err := ghAPI.ListReleases(ctx, repoOwner, repoName, ops)
-			if err != nil {
-				return nil, err
-			}
-			err = checkStatus(http.StatusOK, response.StatusCode)
-			if err != nil {
-				break
-			}
-
-			foundHigherVersion := false
-			for _, release := range releases {
-				v, err := semver.NewVersion(release.GetTagName())
-				if err != nil {
-					continue
-				}
-				if !constraints.Check(v) {
-					continue
-				}
-				if highestMatchingVersion != nil && v.LessThan(highestMatchingVersion) {
-					continue
-				}
-				matchingReleases = release
-				highestMatchingVersion = v
-				foundHigherVersion = true
-			}
-			if foundHigherVersion {
-				numberOfPagesWithoutMatchingVersions = 0
-			} else {
-				numberOfPagesWithoutMatchingVersions++
-			}
-
-			ops.Page++
-		}
-
-		if matchingReleases != nil {
-			return matchingReleases, nil
-		}
-
-		return nil, ErrNotFound
-	}
-}
-
 // DownloadRelease downloads the release and writes the resulting file to the releasesDir.
 // It should also calculate and set the SHA1 field on the Local result; it does not need
 // to ensure the sums match, the caller must verify this.
 func (grs GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
 	grs.Logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeGithub, grs.ID)
-	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs.Client.Repositories, grs.Logger)
+	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs, grs.Logger)
 }
 
-//counterfeiter:generate -o ./fakes/release_by_tag_getter_asset_downloader.go --fake-name ReleaseByTagGetterAssetDownloader . releaseByTagGetterAssetDownloader
+//counterfeiter:generate -o ./fakes/release_by_tag_getter_asset_downloader.go --fake-name ReleaseByTagGetterAssetDownloader . ReleaseByTagGetterAssetDownloader
 
-type releaseByTagGetterAssetDownloader interface {
-	GetReleaseByTag(ctx context.Context, owner, repo, tag string) (*github.RepositoryRelease, *github.Response, error)
-	DownloadReleaseAsset(ctx context.Context, owner, repo string, id int64, followRedirectsClient *http.Client) (rc io.ReadCloser, redirectURL string, err error)
+type ReleaseByTagGetterAssetDownloader interface {
+	ReleaseByTagGetter
+	ReleaseAssetDownloader
 }
 
-func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client releaseByTagGetterAssetDownloader, _ *log.Logger) (Local, error) {
+func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client ReleaseByTagGetterAssetDownloader, _ *log.Logger) (Local, error) {
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
 
 	remoteUrl, err := url.Parse(remoteRelease.RemotePath)
@@ -196,7 +270,7 @@ func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock,
 		log.Println("warning: failed to find release tag of ", remoteRelease.Version)
 		rTag, _, err = client.GetReleaseByTag(ctx, org, repo, "v"+remoteRelease.Version)
 		if err != nil {
-			return Local{}, fmt.Errorf("cant find release tag: %+v\n", err.Error())
+			return Local{}, fmt.Errorf("cant find release tag: %+v", err.Error())
 		}
 	}
 
@@ -234,57 +308,6 @@ func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock,
 
 type ReleaseAssetDownloader interface {
 	DownloadReleaseAsset(ctx context.Context, owner, repo string, id int64, followRedirectsClient *http.Client) (rc io.ReadCloser, redirectURL string, err error)
-}
-
-type GetGithubReleaseFunc func(ctx context.Context, org, repo string) (*github.RepositoryRelease, error)
-
-func LockFromGithubRelease(ctx context.Context, downloader ReleaseAssetDownloader, owner string, spec Spec, getRelease GetGithubReleaseFunc) (Lock, error) {
-	if spec.GitHubRepository == "" {
-		return Lock{}, ErrNotFound
-	}
-
-	repoOwner, repoName, err := OwnerAndRepoFromGitHubURI(spec.GitHubRepository)
-	if err != nil {
-		return Lock{}, ErrNotFound
-	}
-
-	if repoOwner != owner {
-		return Lock{}, ErrNotFound
-	}
-
-	release, err := getRelease(ctx, repoOwner, repoName)
-	if err != nil {
-		return Lock{}, err
-	}
-
-	lockVersion := strings.TrimPrefix(release.GetTagName(), "v")
-	expectedAssetName := fmt.Sprintf("%s-%s.tgz", spec.Name, lockVersion)
-	malformedAssetName := fmt.Sprintf("%s-v%s.tgz", spec.Name, lockVersion)
-	for _, asset := range release.Assets {
-		switch asset.GetName() {
-		case expectedAssetName, malformedAssetName:
-		default:
-			continue
-		}
-
-		rc, _, err := downloader.DownloadReleaseAsset(ctx, repoOwner, repoName, *asset.ID, http.DefaultClient)
-		if err != nil {
-			return Lock{}, err
-		}
-		sum, err := calculateSHA1(rc)
-		if err != nil {
-			return Lock{}, err
-		}
-		return Lock{
-			Name:         spec.Name,
-			Version:      lockVersion,
-			RemoteSource: owner,
-			RemotePath:   asset.GetBrowserDownloadURL(),
-			SHA1:         sum,
-		}, nil
-	}
-
-	return Lock{}, fmt.Errorf("no matching GitHub release asset file name equal to %q", expectedAssetName)
 }
 
 func findAssetFile(list []*github.ReleaseAsset, lock Lock) (*github.ReleaseAsset, bool) {

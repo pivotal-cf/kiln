@@ -131,7 +131,7 @@ func (src S3ReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 	}, nil
 }
 
-func (src S3ReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
+func (src S3ReleaseSource) FindReleaseVersion(spec Spec, noDownload bool) (Lock, error) {
 	pathTemplatePattern, _ := regexp.Compile(`^\d+\.\d+`)
 	tasVersion := pathTemplatePattern.FindString(src.ReleaseSourceConfig.PathTemplate)
 	var prefix string
@@ -198,12 +198,17 @@ func (src S3ReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
 	if (foundRelease == Lock{}) {
 		return Lock{}, ErrNotFound
 	}
-	var releaseLocal Local
-	releaseLocal, err = src.DownloadRelease("/tmp", foundRelease)
-	if err != nil {
-		return Lock{}, err
+
+	if noDownload {
+		foundRelease.SHA1 = "not-calculated"
+	} else {
+		var releaseLocal Local
+		releaseLocal, err = src.DownloadRelease("/tmp", foundRelease)
+		if err != nil {
+			return Lock{}, err
+		}
+		foundRelease.SHA1 = releaseLocal.SHA1
 	}
-	foundRelease.SHA1 = releaseLocal.SHA1
 	return foundRelease, nil
 }
 

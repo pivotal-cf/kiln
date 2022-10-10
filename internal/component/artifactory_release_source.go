@@ -178,7 +178,7 @@ func (ars ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
-func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec) (Lock, error) {
+func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock, error) {
 	remotePath, err := ars.RemotePath(spec)
 	if err != nil {
 		return Lock{}, err

@@ -105,8 +105,8 @@ stemcell_criteria:
 			fakeReleaseSources.DownloadReleaseStub = func(s string, lock cargo.ComponentLock) (component.Local, error) {
 				return releaseSourceList.DownloadRelease(s, lock)
 			}
-			fakeReleaseSources.FindReleaseVersionStub = func(requirement component.Spec) (cargo.ComponentLock, error) {
-				return releaseSourceList.FindReleaseVersion(requirement)
+			fakeReleaseSources.FindReleaseVersionStub = func(requirement component.Spec, withSHA bool) (cargo.ComponentLock, error) {
+				return releaseSourceList.FindReleaseVersion(requirement, false)
 			}
 			fakeReleaseSources.GetMatchedReleaseStub = func(requirement component.Spec) (cargo.ComponentLock, error) {
 				return releaseSourceList.GetMatchedRelease(requirement)

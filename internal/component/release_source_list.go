@@ -153,10 +153,10 @@ func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease L
 	return localRelease, nil
 }
 
-func (list ReleaseSourceList) FindReleaseVersion(requirement Spec) (Lock, error) {
+func (list ReleaseSourceList) FindReleaseVersion(requirement Spec, noDownload bool) (Lock, error) {
 	var foundReleaseLock []Lock
 	for _, src := range list {
-		rel, err := src.FindReleaseVersion(requirement)
+		rel, err := src.FindReleaseVersion(requirement, noDownload)
 		if err != nil {
 			if !IsErrNotFound(err) {
 				return Lock{}, scopedError(src.Configuration().ID, err)

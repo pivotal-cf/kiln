@@ -77,7 +77,7 @@ func (u UpdateRelease) Execute(args []string) error {
 			StemcellVersion:  kilnfileLock.Stemcell.Version,
 			StemcellOS:       kilnfileLock.Stemcell.OS,
 			GitHubRepository: releaseSpec.GitHubRepository,
-		})
+		}, false)
 
 		if err != nil {
 			if component.IsErrNotFound(err) {
