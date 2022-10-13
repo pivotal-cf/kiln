@@ -8,10 +8,10 @@ import (
 	"os"
 	"path"
 
+	"github.com/pivotal-cf/kiln/internal/proofing"
+
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
-
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 func ReadReleaseFromFile(tilePath, releaseName, releaseVersion string, releaseTarball io.Writer) (proofing.Release, error) {

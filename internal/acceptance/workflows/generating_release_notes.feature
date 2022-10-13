@@ -10,7 +10,7 @@ Feature: As a robot, I want to generate release notes
       | 0.1.3   |
 
     When I invoke kiln
-      | release-notes                                           |
+      | create-release-notes                                    |
       | --release-date=2022-07-27                               |
       | --github-issue-milestone=Release-2022-001               |
       | --update-docs=../scenario/fixtures/release_notes.md.erb |

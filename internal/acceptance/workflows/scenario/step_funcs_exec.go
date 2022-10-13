@@ -2,9 +2,12 @@ package scenario
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 func outputContainsSubstring(ctx context.Context, outputName, substring string) error {
@@ -37,4 +40,21 @@ func theExitCodeIs(ctx context.Context, expectedCode int) error {
 		return fmt.Errorf("expected status code %d but got %d", expectedCode, state.ExitCode())
 	}
 	return nil
+}
+
+func outputIsValidEncoding(ctx context.Context, outputName, encoding string) error {
+	out, err := output(ctx, outputName)
+	if err != nil {
+		return err
+	}
+	switch encoding {
+	case "json":
+		var raw json.RawMessage
+		return json.Unmarshal(out.Bytes(), &raw)
+	case "yaml":
+		var node interface{}
+		return yaml.Unmarshal(out.Bytes(), &node)
+	default:
+		return fmt.Errorf("unknown encoding: %s", encoding)
+	}
 }

@@ -18,43 +18,41 @@ import (
 var version = "unknown"
 
 func main() {
-	errLogger := log.New(os.Stderr, "", 0)
-	outLogger := log.New(os.Stdout, "", 0)
-
+	// -------------------
+	// parse global flags
 	var global struct {
 		Help    bool `short:"h" long:"help"    description:"prints this usage information"   default:"false"`
 		Version bool `short:"v" long:"version" description:"prints the kiln release version" default:"false"`
 	}
-
 	args, err := jhanda.Parse(&global, os.Args[1:])
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	globalFlagsUsage, err := jhanda.PrintUsage(global)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// -------------------------------------
+	// Set root command and shift arguments
 	var command string
 	if len(args) > 0 {
 		command, args = args[0], args[1:]
 	}
-
-	if global.Version {
+	switch {
+	case global.Version:
 		command = "version"
-	}
-
-	if global.Help {
+	case global.Help:
+		command = "help"
+	case command == "":
 		command = "help"
 	}
 
-	if command == "" {
-		command = "help"
-	}
-
+	// --------------------
+	// Setup collaborators
 	fs := osfs.New("")
-
+	errLogger := log.New(os.Stderr, "", 0)
+	outLogger := log.New(os.Stdout, "", 0)
 	releaseManifestReader := builder.NewReleaseManifestReader(fs)
 	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
 	pivnetService := new(pivnet.Service)
@@ -67,43 +65,61 @@ func main() {
 		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
 		return repo.FindReleaseUploader(sourceID)
 	})
-	rpFinder := commands.RemotePatherFinder(func(kilnfile cargo.Kilnfile, sourceID string) (component.RemotePather, error) {
-		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
-		return repo.FindRemotePather(sourceID)
-	})
+
+	// ------------------
+	// Register commands
+	const (
+		bakeCommandName                = "bake"
+		cacheReleasesCommandName       = "cache-releases"
+		createReleaseNotesCommandName  = "create-release-notes"
+		fetchReleasesCommandName       = "fetch-releases"
+		findReleaseVersionCommandName  = "find-release-version"
+		findStemcellVersionCommandName = "find-stemcell-version"
+		publishReleaseCommandName      = "publish-release"
+		updateReleaseCommandName       = "update-release"
+		updateStemcellCommandName      = "update-stemcell"
+		validateCommandName            = "validate"
+	)
 
 	commandSet := jhanda.CommandSet{}
-	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
+
+	// Global Commands
+	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet,
+		[]string{"Tile Commands", "Component Commands", "Component Team Commands"},
+		map[string][]string{
+			"Component Team Commands": {publishReleaseCommandName, updateReleaseCommandName},
+			"Tile Commands":           {bakeCommandName, validateCommandName, createReleaseNotesCommandName},
+			"Component Commands":      {fetchReleasesCommandName, cacheReleasesCommandName, findReleaseVersionCommandName, findStemcellVersionCommandName, updateStemcellCommandName},
+		},
+	)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
-	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger)
-	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)
-	commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
-	commandSet["upload-release"] = commands.UploadRelease{
+
+	// Component Team Commands
+	commandSet[updateReleaseCommandName] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)
+	commandSet[publishReleaseCommandName] = &commands.PublishRelease{
 		FS:                    fs,
 		Logger:                outLogger,
 		ReleaseUploaderFinder: ruFinder,
 	}
-	commandSet["sync-with-local"] = commands.NewSyncWithLocal(fs, localReleaseDirectory, rpFinder, outLogger)
-	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
 
-	commandSet["update-stemcell"] = commands.UpdateStemcell{
+	// Tile Commands
+	commandSet[bakeCommandName] = commands.NewBake(fs, releasesService, outLogger, errLogger)
+	commandSet[validateCommandName] = commands.NewValidate(osfs.New(""))
+	commandSet[createReleaseNotesCommandName] = commands.NewReleaseNotesCommand()
+
+	// Component Commands
+	commandSet[fetchReleasesCommandName] = commands.NewFetchReleases(outLogger, mrsProvider, localReleaseDirectory)
+	commandSet[cacheReleasesCommandName] = commands.NewCacheReleases().WithLogger(outLogger)
+	commandSet[findReleaseVersionCommandName] = commands.NewFindReleaseVersion(outLogger, mrsProvider)
+	commandSet[findStemcellVersionCommandName] = commands.NewFindStemcellVersion(outLogger, pivnetService)
+	commandSet[updateStemcellCommandName] = &commands.UpdateStemcell{
 		Logger:                     outLogger,
 		MultiReleaseSourceProvider: mrsProvider,
 		FS:                         osfs.New(""),
 	}
 
-	commandSet["find-release-version"] = commands.NewFindReleaseVersion(outLogger, mrsProvider)
-
-	commandSet["find-stemcell-version"] = commands.NewFindStemcellVersion(outLogger, pivnetService)
-
-	commandSet["cache-compiled-releases"] = commands.NewCacheCompiledReleases().WithLogger(outLogger)
-
-	commandSet["validate"] = commands.NewValidate(osfs.New(""))
-	commandSet["release-notes"], err = commands.NewReleaseNotesCommand()
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	// ------------
+	// Run command
 	err = commandSet.Execute(command, args)
 	if err != nil {
 		log.Fatal(err)

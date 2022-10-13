@@ -3,7 +3,7 @@ Feature: As a developer, I want to bake a tile
     Given I have a "hello-tile" repository checked out at v0.1.1
     And the repository has no fetched releases
     When I invoke kiln
-      | fetch                                     |
+      | fetch-releases                            |
       | --no-confirm                              |
       | --variable=github_token="${GITHUB_TOKEN}" |
     And I invoke kiln

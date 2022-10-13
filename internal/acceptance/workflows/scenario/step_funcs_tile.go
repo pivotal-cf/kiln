@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/pkg/proofing"
+	"github.com/pivotal-cf/kiln/internal/proofing"
 	"github.com/pivotal-cf/kiln/pkg/tile"
 )
 

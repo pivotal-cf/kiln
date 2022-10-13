@@ -14,37 +14,40 @@ import (
 )
 
 const (
-	GLOBAL_USAGE = `kiln
-kiln helps you build ops manager compatible tiles
+	GLOBAL_USAGE = `kiln helps you build ops manager compatible tiles
 
 Usage: kiln [options] <command> [<args>]
   --query, -?     asks a question
   --surprise, -!  gives you a present
 
-Commands:
+House:
   clean  cleans the pot you used
   cook   cooks you a stew
 `
 
 	COMMAND_USAGE = `kiln cook
+
 This command will help you cook a stew.
 
 Usage: kiln [options] cook [<args>]
   --query, -?     asks a question
   --surprise, -!  gives you a present
 
-Command Arguments:
+Flags
   --lemon, -l  int  teaspoons of lemon juice
   --stock, -s  int  teaspoons of vegan stock
   --water, -w  int  cups of water
 `
 
 	FLAGLESS_USAGE = `kiln cook
+
 This command will help you cook a stew.
 
 Usage: kiln [options] cook
   --query, -?     asks a question
   --surprise, -!  gives you a present
+
+Flags
 `
 )
 
@@ -74,6 +77,8 @@ var _ = Describe("Help", func() {
 				help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{
 					"cook":  cook,
 					"clean": clean,
+				}, nil, map[string][]string{
+					"House": {"cook", "clean"},
 				})
 				err := help.Execute([]string{})
 				Expect(err).NotTo(HaveOccurred())
@@ -95,7 +100,9 @@ var _ = Describe("Help", func() {
 					}{},
 				})
 
-				help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook})
+				help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook}, nil, map[string][]string{
+					"House": {"cook", "clean"},
+				})
 				err := help.Execute([]string{"cook"})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -104,7 +111,9 @@ var _ = Describe("Help", func() {
 
 			Context("when the command does not exist", func() {
 				It("returns an error", func() {
-					help := commands.NewHelp(output, flags, jhanda.CommandSet{})
+					help := commands.NewHelp(output, flags, jhanda.CommandSet{}, nil, map[string][]string{
+						"House": {"cook", "clean"},
+					})
 					err := help.Execute([]string{"missing-command"})
 					Expect(err).To(MatchError("unknown command: missing-command"))
 				})
@@ -119,7 +128,9 @@ var _ = Describe("Help", func() {
 						Flags:            func() {},
 					})
 
-					help := commands.NewHelp(output, flags, jhanda.CommandSet{"cook": cook})
+					help := commands.NewHelp(output, flags, jhanda.CommandSet{"cook": cook}, nil, map[string][]string{
+						"House": {"cook", "clean"},
+					})
 					err := help.Execute([]string{"cook"})
 					Expect(err).To(MatchError("unexpected pointer to non-struct type func"))
 				})
@@ -133,7 +144,9 @@ var _ = Describe("Help", func() {
 						ShortDescription: "cooks you a stew",
 					})
 
-					help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook})
+					help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook}, nil, map[string][]string{
+						"House": {"cook", "clean"},
+					})
 					err := help.Execute([]string{"cook"})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -151,7 +164,9 @@ var _ = Describe("Help", func() {
 						Flags:            struct{}{},
 					})
 
-					help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook})
+					help := commands.NewHelp(output, strings.TrimSpace(flags), jhanda.CommandSet{"cook": cook}, nil, map[string][]string{
+						"House": {"cook", "clean"},
+					})
 					err := help.Execute([]string{"cook"})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -164,7 +179,9 @@ var _ = Describe("Help", func() {
 
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
-			help := commands.NewHelp(nil, "", jhanda.CommandSet{})
+			help := commands.NewHelp(nil, "", jhanda.CommandSet{}, nil, map[string][]string{
+				"House": {"cook", "clean"},
+			})
 			Expect(help.Usage()).To(Equal(jhanda.Usage{
 				Description:      "This command prints helpful usage information.",
 				ShortDescription: "prints this usage information",

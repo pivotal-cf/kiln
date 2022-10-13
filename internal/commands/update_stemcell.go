@@ -19,15 +19,15 @@ type UpdateStemcell struct {
 	Options struct {
 		flags.Standard
 
-		Version     string `short:"v"  long:"version"            required:"true"    description:"desired version of stemcell"`
-		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+		Version     string `short:"v"  long:"version"                                    required:"true" description:"desired version of stemcell"`
+		ReleasesDir string `short:"rd" long:"releases-directory" default-path:"releases"                 description:"path to a directory to download releases into"`
 	}
 	FS                         billy.Filesystem
 	MultiReleaseSourceProvider MultiReleaseSourceProvider
 	Logger                     *log.Logger
 }
 
-func (update UpdateStemcell) Execute(args []string) error {
+func (update *UpdateStemcell) Execute(args []string) error {
 	_, err := flags.LoadFlagsWithDefaults(&update.Options, args, update.FS.Stat)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 	return nil
 }
 
-func (update UpdateStemcell) Usage() jhanda.Usage {
+func (update *UpdateStemcell) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Updates stemcell and release information in Kilnfile.lock",
 		ShortDescription: "updates stemcell and release information in Kilnfile.lock",

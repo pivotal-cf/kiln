@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pivotal-cf/kiln/internal/manifest"
+
 	"github.com/Masterminds/semver"
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
 )
@@ -217,3 +219,5 @@ func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock ComponentLock)
 	}
 	return errors.New("not found")
 }
+
+type Stemcell = manifest.Stemcell

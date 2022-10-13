@@ -17,7 +17,7 @@ import (
 
 var _ = Describe("Find the stemcell version", func() {
 	var (
-		findStemcellVersion commands.FindStemcellVersion
+		findStemcellVersion *commands.FindStemcellVersion
 		logger              *log.Logger
 
 		writer strings.Builder
@@ -151,91 +151,6 @@ stemcell_criteria:
 					Expect((&writer).String()).To(ContainSubstring("\"456.118\""))
 					Expect((&writer).String()).To(ContainSubstring("\"remote_path\":\"network.pivotal.io\""))
 					Expect((&writer).String()).To(ContainSubstring("\"source\":\"Tanzunet\""))
-				})
-			})
-		})
-	})
-
-	Describe("ExtractMajorVersion", func() {
-		var (
-			stemcellVersionSpecifier string
-			majorVersion             string
-			returnedErr              error
-		)
-
-		BeforeEach(func() {
-			stemcellVersionSpecifier = "~456"
-		})
-
-		JustBeforeEach(func() {
-			majorVersion, returnedErr = commands.ExtractMajorVersion(stemcellVersionSpecifier)
-		})
-
-		When("Invalid Stemcell Version Specifier is provided", func() {
-			When("with just *", func() {
-				BeforeEach(func() {
-					stemcellVersionSpecifier = "*"
-				})
-
-				It("returns the latest stemcell version", func() {
-					Expect(returnedErr).To(HaveOccurred())
-					Expect(returnedErr.Error()).To(Equal(commands.ErrStemcellMajorVersionMustBeValid))
-				})
-			})
-		})
-
-		When("Valid Stemcell Version Specifier is provided", func() {
-			When("with tilde ~ ", func() {
-				BeforeEach(func() {
-					stemcellVersionSpecifier = "~456"
-				})
-
-				It("returns the latest stemcell version", func() {
-					Expect(returnedErr).NotTo(HaveOccurred())
-					Expect(majorVersion).To(Equal("456"))
-				})
-			})
-			When("with hypens -", func() {
-				BeforeEach(func() {
-					stemcellVersionSpecifier = "777.1-621"
-				})
-
-				It("returns the latest stemcell version", func() {
-					Expect(returnedErr).NotTo(HaveOccurred())
-					Expect(majorVersion).To(Equal("777"))
-				})
-			})
-
-			When("with wildcards *", func() {
-				BeforeEach(func() {
-					stemcellVersionSpecifier = "1234.*"
-				})
-
-				It("returns the latest stemcell version", func() {
-					Expect(returnedErr).NotTo(HaveOccurred())
-					Expect(majorVersion).To(Equal("1234"))
-				})
-			})
-
-			When("with caret ^", func() {
-				BeforeEach(func() {
-					stemcellVersionSpecifier = "^456"
-				})
-
-				It("returns the latest stemcell version", func() {
-					Expect(returnedErr).NotTo(HaveOccurred())
-					Expect(majorVersion).To(Equal("456"))
-				})
-			})
-
-			When("with absolute value", func() {
-				BeforeEach(func() {
-					stemcellVersionSpecifier = "333.334"
-				})
-
-				It("returns the latest stemcell version", func() {
-					Expect(returnedErr).NotTo(HaveOccurred())
-					Expect(majorVersion).To(Equal("333"))
 				})
 			})
 		})
