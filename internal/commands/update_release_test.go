@@ -45,17 +45,17 @@ var _ = Describe("UpdateRelease", func() {
 	)
 
 	var (
-		updateReleaseCommand       commands.UpdateRelease
-		filesystem                 billy.Filesystem
-		multiReleaseSourceProvider *commandsFakes.MultiReleaseSourceProvider
-		multiReleaseSource         *fakes.MultiReleaseSource
-		releaseSource              *fakes.ReleaseSource
-		logger                     *log.Logger
-		downloadedReleasePath      string
-		expectedDownloadedRelease  component.Local
-		expectedRemoteRelease      component.Lock
-		kilnfileLock               cargo.KilnfileLock
-		kilnfile                   cargo.Kilnfile
+		updateReleaseCommand        commands.UpdateRelease
+		filesystem                  billy.Filesystem
+		multiReleaseSourceProvider  *commandsFakes.MultiReleaseSourceProvider
+		multiReleaseSource          *fakes.MultiReleaseSource
+		releaseSource, releaseCache *fakes.ReleaseSource
+		logger                      *log.Logger
+		downloadedReleasePath       string
+		expectedDownloadedRelease   component.Local
+		expectedRemoteRelease       component.Lock
+		kilnfileLock                cargo.KilnfileLock
+		kilnfile                    cargo.Kilnfile
 	)
 
 	Context("Execute", func() {
@@ -63,6 +63,7 @@ var _ = Describe("UpdateRelease", func() {
 			multiReleaseSource = new(fakes.MultiReleaseSource)
 			multiReleaseSourceProvider = new(commandsFakes.MultiReleaseSourceProvider)
 			releaseSource = new(fakes.ReleaseSource)
+			releaseCache = new(fakes.ReleaseSource)
 			multiReleaseSourceProvider.Returns(multiReleaseSource)
 
 			filesystem = osfs.New("/tmp/")
@@ -122,10 +123,15 @@ var _ = Describe("UpdateRelease", func() {
 				SHA1:         notDownloadedReleaseSha1,
 			}
 
+			releaseCache.FindReleaseVersionReturns(cargo.ComponentLock{}, fmt.Errorf("release cache is methods always fail in this test"))
+			releaseCache.GetMatchedReleaseReturns(cargo.ComponentLock{}, fmt.Errorf("release cache is methods always fail in this test"))
+			releaseCache.DownloadReleaseReturns(component.Local{}, fmt.Errorf("release cache is methods always fail in this test"))
+
 			releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, nil)
 			releaseSource.FindReleaseVersionReturns(exepectedNotDownloadedRelease, nil)
 			releaseSource.DownloadReleaseReturns(expectedDownloadedRelease, nil)
 			multiReleaseSource.FindByIDReturns(releaseSource, nil)
+			multiReleaseSource.GetReleaseCacheReturns(releaseCache, nil)
 		})
 
 		JustBeforeEach(func() {
@@ -145,9 +151,6 @@ var _ = Describe("UpdateRelease", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(1))
-
-				receivedReleaseRequirement := releaseSource.GetMatchedReleaseArgsForCall(0)
 				releaseRequirement := component.Spec{
 					Name:             releaseName,
 					Version:          newReleaseVersion,
@@ -155,6 +158,12 @@ var _ = Describe("UpdateRelease", func() {
 					StemcellVersion:  "4.5.6",
 					GitHubRepository: githubRepo,
 				}
+
+				Expect(releaseCache.GetMatchedReleaseCallCount()).To(Equal(0))
+				Expect(releaseCache.DownloadReleaseCallCount()).To(Equal(0))
+
+				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(1))
+				receivedReleaseRequirement := releaseSource.GetMatchedReleaseArgsForCall(0)
 				Expect(receivedReleaseRequirement).To(Equal(releaseRequirement))
 
 				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(1))
@@ -430,13 +439,13 @@ var _ = Describe("UpdateRelease", func() {
 					{
 						Name:             releaseName,
 						GitHubRepository: githubRepo,
-						ReleaseSource:    "",
+						ReleaseSource:    "org",
 					},
 				}
 			})
 
 			When("with download", func() {
-				It("calls falls back to using the multi release source implementation", func() {
+				It("calls the release source specified", func() {
 					err := updateReleaseCommand.Execute([]string{
 						"--kilnfile", "Kilnfile",
 						"--name", releaseName,
@@ -445,16 +454,14 @@ var _ = Describe("UpdateRelease", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
-					Expect(multiReleaseSource.FindByIDCallCount()).To(Equal(0))
-
-					Expect(multiReleaseSource.GetMatchedReleaseCallCount()).To(Equal(1))
-					Expect(multiReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
+					Expect(multiReleaseSource.FindByIDCallCount()).To(Equal(1))
+					Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(1))
+					Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(1))
 				})
 			})
 
 			When("without download", func() {
-				It("calls falls back to using the multi release source implementation", func() {
+				It("calls the release source specified", func() {
 					err := updateReleaseCommand.Execute([]string{
 						"--kilnfile", "Kilnfile",
 						"--name", releaseName,
@@ -464,10 +471,9 @@ var _ = Describe("UpdateRelease", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
-					Expect(multiReleaseSource.FindByIDCallCount()).To(Equal(0))
-
-					Expect(multiReleaseSource.FindReleaseVersionCallCount()).To(Equal(1))
+					Expect(releaseSource.FindReleaseVersionCallCount()).To(Equal(1))
+					Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(0))
+					Expect(multiReleaseSource.FindByIDCallCount()).To(Equal(1))
 				})
 			})
 		})

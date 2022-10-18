@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -59,18 +60,22 @@ releases:
   release_source: some-cool-name
 - name: has-no-constraint
   release_source: bosh.io
+- name: no-release-source
 `
-
-			fakeMultiReleasesSource.FindByIDReturns(fakeReleasesSource, nil)
+			fakeMultiReleasesSource.FindByIDStub = func(s string) (component.ReleaseSource, error) {
+				return fakeReleasesSource, nil
+			}
 		})
 
 		JustBeforeEach(func() {
 			tmpDir, err := os.MkdirTemp("", "fetch-test")
 			Expect(err).NotTo(HaveOccurred())
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
+			_ = os.Remove(someKilnfilePath)
 			err = os.WriteFile(someKilnfilePath, []byte(kilnContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 			someKilnfileLockPath := filepath.Join(tmpDir, "Kilnfile.lock")
+			_ = os.Remove(someKilnfileLockPath)
 			err = os.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -84,7 +89,7 @@ releases:
 			executeErr = findReleaseVersion.Execute(fetchExecuteArgs)
 		})
 
-		Context("when the release flag is missing", func() {
+		When("the release flag is missing", func() {
 			It("returns an error", func() {
 				err := findReleaseVersion.Execute([]string{})
 
@@ -194,33 +199,20 @@ releases:
 
 		When("release_source is not specified in the Kilnfile", func() {
 			BeforeEach(func() {
-				kilnContents = `
----
-releases:
-- name: uaa
-  version: ~74.16.0
-`
-				fakeReleasesSource.FindReleaseVersionReturns(component.Lock{
-					Name:         "uaa",
-					Version:      "74.16.8888888",
-					RemotePath:   "lemon",
-					RemoteSource: "pear",
-				}, nil)
+				fetchExecuteArgs = []string{
+					"--kilnfile", someKilnfilePath,
+					"--release", "no-release-source",
+				}
+				fakeMultiReleasesSource.FindByIDCalls(func(string) (component.ReleaseSource, error) {
+					return nil, fmt.Errorf("some error")
+				})
 			})
 
 			It("falls back to searching all release sources", func() {
+				Expect(executeErr).To(MatchError(ContainSubstring("release source not specified")))
 				Expect(fakeMultiReleasesSource.FindByIDCallCount()).To(Equal(1))
-				Expect(fakeMultiReleasesSource.FindReleaseVersionCallCount()).To(Equal(0))
-
-				Expect(fakeReleasesSource.FindReleaseVersionCallCount()).To(Equal(1))
-				spec, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
-				Expect(noDownload).To(BeFalse())
-				Expect(spec.Name).To(Equal("has-no-constraint"))
-				Expect(spec.Version).To(Equal(""))
-
-				Expect((&writer).String()).To(ContainSubstring(`"version":"74.16.8888888"`))
-				Expect((&writer).String()).To(ContainSubstring(`"remote_path":"lemon"`))
-				Expect((&writer).String()).To(ContainSubstring(`"source":"pear"`))
+				id := fakeMultiReleasesSource.FindByIDArgsForCall(0)
+				Expect(id).To(Equal(""))
 			})
 		})
 	})

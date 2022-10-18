@@ -11,11 +11,8 @@ import (
 // MultiReleaseSource wraps a set of release sources. It is mostly used to generate fakes
 // for testing commands. See ReleaseSourceList for the concrete implementation.
 type MultiReleaseSource interface {
-	ReleaseDownloader
-	ReleaseVersionFinder
-	MatchedReleaseGetter
-
 	FindByID(string) (ReleaseSource, error)
+	GetReleaseCache() (ReleaseSource, error)
 
 	// SetDownloadThreads allows configuring the concurrency for the s3 release source.
 	SetDownloadThreads(n int)

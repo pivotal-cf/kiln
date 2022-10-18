@@ -12,7 +12,6 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"github.com/pivotal-cf/kiln/internal/component"
 )
 
 type UpdateStemcell struct {
@@ -66,41 +65,49 @@ func (update UpdateStemcell) Execute(args []string) error {
 		return nil
 	}
 
-	releaseSource := update.MultiReleaseSourceProvider(kilnfile, false)
+	releaseSources := update.MultiReleaseSourceProvider(kilnfile, false)
 
-	for i, rel := range kilnfileLock.Releases {
-		update.Logger.Printf("Updating release %q with stemcell %s %s...", rel.Name, kilnfileLock.Stemcell.OS, trimmedInputVersion)
+	for i, existingLock := range kilnfileLock.Releases {
+		update.Logger.Printf("Updating release %q with stemcell %s %s...", existingLock.Name, kilnfileLock.Stemcell.OS, trimmedInputVersion)
 
-		spec, found := kilnfile.ComponentSpec(rel.Name)
+		spec, found := kilnfile.ComponentSpec(existingLock.Name)
 		if !found {
-			return cargo.ErrorSpecNotFound(rel.Name)
+			return cargo.ErrorSpecNotFound(existingLock.Name)
 		}
 		spec.StemcellOS = kilnfileLock.Stemcell.OS
 		spec.StemcellVersion = trimmedInputVersion
-		spec.Version = rel.Version
+		spec.Version = existingLock.Version
 
-		remote, err := releaseSource.GetMatchedRelease(spec)
+		releaseCache, err := releaseSources.GetReleaseCache()
 		if err != nil {
-			return fmt.Errorf("while finding release %q, encountered error: %w", rel.Name, err)
+			return err
 		}
-		if component.IsErrNotFound(err) {
-			return fmt.Errorf("couldn't find release %q", rel.Name)
+		remote, err := releaseCache.GetMatchedRelease(spec)
+		if err != nil {
+			releaseSource, err := releaseSources.FindByID(spec.ReleaseSource)
+			if err != nil {
+				return err
+			}
+			remote, err = releaseSource.GetMatchedRelease(spec)
+			if err != nil {
+				return fmt.Errorf("failed to get release %q: %w", spec.Name, err)
+			}
 		}
-
-		if remote.RemotePath == rel.RemotePath && remote.RemoteSource == rel.RemoteSource {
-			update.Logger.Printf("No change for release %q\n", rel.Name)
+		if remote.RemotePath == existingLock.RemotePath && remote.RemoteSource == existingLock.RemoteSource {
+			update.Logger.Printf("No change for release %q\n", existingLock.Name)
 			continue
 		}
-
-		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
+		downloadSource, err := releaseSources.FindByID(remote.RemoteSource)
 		if err != nil {
-			return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
+			return err
 		}
-
-		lock := &kilnfileLock.Releases[i]
-		lock.SHA1 = local.SHA1
-		lock.RemotePath = remote.RemotePath
-		lock.RemoteSource = remote.RemoteSource
+		local, err := downloadSource.DownloadRelease(update.Options.ReleasesDir, remote)
+		if err != nil {
+			return fmt.Errorf("while downloading release %q, encountered error: %w", existingLock.Name, err)
+		}
+		kilnfileLock.Releases[i].SHA1 = local.SHA1
+		kilnfileLock.Releases[i].RemotePath = remote.RemotePath
+		kilnfileLock.Releases[i].RemoteSource = remote.RemoteSource
 	}
 
 	kilnfileLock.Stemcell.Version = trimmedInputVersion

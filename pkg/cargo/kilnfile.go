@@ -92,7 +92,7 @@ func (kf Kilnfile) ComponentSpec(name string) (ComponentSpec, bool) {
 }
 
 func ErrorSpecNotFound(name string) error {
-	return fmt.Errorf("failed to find repository with name %q in Kilnfile", name)
+	return fmt.Errorf("failed to find release with name %q in Kilnfile", name)
 }
 
 type ReleaseSourceConfig struct {

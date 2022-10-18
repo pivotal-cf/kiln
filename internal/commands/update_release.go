@@ -63,7 +63,9 @@ func (u UpdateRelease) Execute(args []string) error {
 		releaseVersionConstraint = u.Options.Version
 	}
 
-	releaseSource, err := getReleaseSource(releaseSpec, u.multiReleaseSourceProvider(kilnfile, u.Options.AllowOnlyPublishableReleases), u.logger)
+	releaseSources := u.multiReleaseSourceProvider(kilnfile, u.Options.AllowOnlyPublishableReleases)
+
+	releaseSource, err := releaseSources.FindByID(releaseSpec.ReleaseSource)
 	if err != nil {
 		return err
 	}
@@ -102,7 +104,6 @@ func (u UpdateRelease) Execute(args []string) error {
 			StemcellVersion:  kilnfileLock.Stemcell.Version,
 			GitHubRepository: releaseSpec.GitHubRepository,
 		})
-
 		if err != nil {
 			if component.IsErrNotFound(err) {
 				return fmt.Errorf("error finding the release: %w", err)

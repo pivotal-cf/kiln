@@ -15,6 +15,11 @@ func Validate(spec Kilnfile, lock KilnfileLock) []error {
 			continue
 		}
 
+		err := checkReleaseSourceIsSet(index, componentSpec)
+		if err != nil {
+			result = append(result, err)
+		}
+
 		componentLock, err := lock.FindReleaseWithName(componentSpec.Name)
 		if err != nil {
 			result = append(result,
@@ -31,6 +36,13 @@ func Validate(spec Kilnfile, lock KilnfileLock) []error {
 		return result
 	}
 
+	return nil
+}
+
+func checkReleaseSourceIsSet(index int, componentSpec ComponentSpec) error {
+	if componentSpec.ReleaseSource == "" {
+		return fmt.Errorf("release_source property required for release named %q (index %d in Kilnfile)", componentSpec.Name, index)
+	}
 	return nil
 }
 

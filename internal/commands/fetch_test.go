@@ -22,7 +22,7 @@ import (
 
 var _ = Describe("Fetch", func() {
 	var (
-		fetch                       commands.Fetch
+		fetch                       *commands.Fetch
 		logger                      *log.Logger
 		tmpDir                      string
 		someKilnfilePath            string
@@ -101,15 +101,6 @@ stemcell_criteria:
 			releaseSourceList = component.NewMultiReleaseSource(fakeS3CompiledReleaseSource, fakeBoshIOReleaseSource, fakeS3BuiltReleaseSource)
 			fakeReleaseSources.FindByIDStub = func(s string) (component.ReleaseSource, error) {
 				return releaseSourceList.FindByID(s)
-			}
-			fakeReleaseSources.DownloadReleaseStub = func(s string, lock cargo.ComponentLock) (component.Local, error) {
-				return releaseSourceList.DownloadRelease(s, lock)
-			}
-			fakeReleaseSources.FindReleaseVersionStub = func(requirement component.Spec, withSHA bool) (cargo.ComponentLock, error) {
-				return releaseSourceList.FindReleaseVersion(requirement, false)
-			}
-			fakeReleaseSources.GetMatchedReleaseStub = func(requirement component.Spec) (cargo.ComponentLock, error) {
-				return releaseSourceList.GetMatchedRelease(requirement)
 			}
 			multiReleaseSourceProvider = func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
 				return fakeReleaseSources

@@ -21,12 +21,27 @@ func TestValidate_MissingName(t *testing.T) {
 	please.Expect(results).To(Ω.HaveLen(1))
 }
 
+func TestValidate_MissingReleaseSource(t *testing.T) {
+	t.Parallel()
+	please := Ω.NewWithT(t)
+	results := Validate(Kilnfile{
+		Releases: []ComponentSpec{
+			{Name: "banana", ReleaseSource: ""},
+		},
+	}, KilnfileLock{
+		Releases: []ComponentLock{
+			{Name: "banana", Version: "1.2.3"},
+		},
+	})
+	please.Expect(results).To(Ω.ContainElement(Ω.MatchError(Ω.ContainSubstring("release_source"))))
+}
+
 func TestValidate_FloatingRelease(t *testing.T) {
 	t.Parallel()
 	please := Ω.NewWithT(t)
 	results := Validate(Kilnfile{
 		Releases: []ComponentSpec{
-			{Name: "banana", Version: "1.1.*"},
+			{Name: "banana", Version: "1.1.*", ReleaseSource: ReleaseSourceTypeBOSHIO},
 		},
 	}, KilnfileLock{
 		Releases: []ComponentLock{
@@ -41,7 +56,7 @@ func TestValidate_MissingLock(t *testing.T) {
 	please := Ω.NewWithT(t)
 	results := Validate(Kilnfile{
 		Releases: []ComponentSpec{
-			{Name: "banana", Version: "1.1.*"},
+			{Name: "banana", Version: "1.1.*", ReleaseSource: ReleaseSourceTypeBOSHIO},
 		},
 	}, KilnfileLock{})
 	please.Expect(results).To(Ω.HaveLen(1))
@@ -52,7 +67,7 @@ func TestValidate_InvalidConstraint(t *testing.T) {
 	please := Ω.NewWithT(t)
 	results := Validate(Kilnfile{
 		Releases: []ComponentSpec{
-			{Name: "banana", Version: "NOT A CONSTRAINT"},
+			{Name: "banana", Version: "NOT A CONSTRAINT", ReleaseSource: ReleaseSourceTypeBOSHIO},
 		},
 	}, KilnfileLock{
 		Releases: []ComponentLock{
@@ -67,7 +82,7 @@ func TestValidate_PinnedRelease(t *testing.T) {
 	please := Ω.NewWithT(t)
 	results := Validate(Kilnfile{
 		Releases: []ComponentSpec{
-			{Name: "banana", Version: "1.2.3"},
+			{Name: "banana", Version: "1.2.3", ReleaseSource: ReleaseSourceTypeBOSHIO},
 		},
 	}, KilnfileLock{
 		Releases: []ComponentLock{

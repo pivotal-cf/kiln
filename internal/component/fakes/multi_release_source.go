@@ -5,24 +5,9 @@ import (
 	"sync"
 
 	"github.com/pivotal-cf/kiln/internal/component"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type MultiReleaseSource struct {
-	DownloadReleaseStub        func(string, cargo.ComponentLock) (component.Local, error)
-	downloadReleaseMutex       sync.RWMutex
-	downloadReleaseArgsForCall []struct {
-		arg1 string
-		arg2 cargo.ComponentLock
-	}
-	downloadReleaseReturns struct {
-		result1 component.Local
-		result2 error
-	}
-	downloadReleaseReturnsOnCall map[int]struct {
-		result1 component.Local
-		result2 error
-	}
 	FindByIDStub        func(string) (component.ReleaseSource, error)
 	findByIDMutex       sync.RWMutex
 	findByIDArgsForCall []struct {
@@ -36,31 +21,16 @@ type MultiReleaseSource struct {
 		result1 component.ReleaseSource
 		result2 error
 	}
-	FindReleaseVersionStub        func(cargo.ComponentSpec, bool) (cargo.ComponentLock, error)
-	findReleaseVersionMutex       sync.RWMutex
-	findReleaseVersionArgsForCall []struct {
-		arg1 cargo.ComponentSpec
-		arg2 bool
+	GetReleaseCacheStub        func() (component.ReleaseSource, error)
+	getReleaseCacheMutex       sync.RWMutex
+	getReleaseCacheArgsForCall []struct {
 	}
-	findReleaseVersionReturns struct {
-		result1 cargo.ComponentLock
+	getReleaseCacheReturns struct {
+		result1 component.ReleaseSource
 		result2 error
 	}
-	findReleaseVersionReturnsOnCall map[int]struct {
-		result1 cargo.ComponentLock
-		result2 error
-	}
-	GetMatchedReleaseStub        func(cargo.ComponentSpec) (cargo.ComponentLock, error)
-	getMatchedReleaseMutex       sync.RWMutex
-	getMatchedReleaseArgsForCall []struct {
-		arg1 cargo.ComponentSpec
-	}
-	getMatchedReleaseReturns struct {
-		result1 cargo.ComponentLock
-		result2 error
-	}
-	getMatchedReleaseReturnsOnCall map[int]struct {
-		result1 cargo.ComponentLock
+	getReleaseCacheReturnsOnCall map[int]struct {
+		result1 component.ReleaseSource
 		result2 error
 	}
 	SetDownloadThreadsStub        func(int)
@@ -70,71 +40,6 @@ type MultiReleaseSource struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *MultiReleaseSource) DownloadRelease(arg1 string, arg2 cargo.ComponentLock) (component.Local, error) {
-	fake.downloadReleaseMutex.Lock()
-	ret, specificReturn := fake.downloadReleaseReturnsOnCall[len(fake.downloadReleaseArgsForCall)]
-	fake.downloadReleaseArgsForCall = append(fake.downloadReleaseArgsForCall, struct {
-		arg1 string
-		arg2 cargo.ComponentLock
-	}{arg1, arg2})
-	stub := fake.DownloadReleaseStub
-	fakeReturns := fake.downloadReleaseReturns
-	fake.recordInvocation("DownloadRelease", []interface{}{arg1, arg2})
-	fake.downloadReleaseMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *MultiReleaseSource) DownloadReleaseCallCount() int {
-	fake.downloadReleaseMutex.RLock()
-	defer fake.downloadReleaseMutex.RUnlock()
-	return len(fake.downloadReleaseArgsForCall)
-}
-
-func (fake *MultiReleaseSource) DownloadReleaseCalls(stub func(string, cargo.ComponentLock) (component.Local, error)) {
-	fake.downloadReleaseMutex.Lock()
-	defer fake.downloadReleaseMutex.Unlock()
-	fake.DownloadReleaseStub = stub
-}
-
-func (fake *MultiReleaseSource) DownloadReleaseArgsForCall(i int) (string, cargo.ComponentLock) {
-	fake.downloadReleaseMutex.RLock()
-	defer fake.downloadReleaseMutex.RUnlock()
-	argsForCall := fake.downloadReleaseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *MultiReleaseSource) DownloadReleaseReturns(result1 component.Local, result2 error) {
-	fake.downloadReleaseMutex.Lock()
-	defer fake.downloadReleaseMutex.Unlock()
-	fake.DownloadReleaseStub = nil
-	fake.downloadReleaseReturns = struct {
-		result1 component.Local
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *MultiReleaseSource) DownloadReleaseReturnsOnCall(i int, result1 component.Local, result2 error) {
-	fake.downloadReleaseMutex.Lock()
-	defer fake.downloadReleaseMutex.Unlock()
-	fake.DownloadReleaseStub = nil
-	if fake.downloadReleaseReturnsOnCall == nil {
-		fake.downloadReleaseReturnsOnCall = make(map[int]struct {
-			result1 component.Local
-			result2 error
-		})
-	}
-	fake.downloadReleaseReturnsOnCall[i] = struct {
-		result1 component.Local
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *MultiReleaseSource) FindByID(arg1 string) (component.ReleaseSource, error) {
@@ -201,19 +106,17 @@ func (fake *MultiReleaseSource) FindByIDReturnsOnCall(i int, result1 component.R
 	}{result1, result2}
 }
 
-func (fake *MultiReleaseSource) FindReleaseVersion(arg1 cargo.ComponentSpec, arg2 bool) (cargo.ComponentLock, error) {
-	fake.findReleaseVersionMutex.Lock()
-	ret, specificReturn := fake.findReleaseVersionReturnsOnCall[len(fake.findReleaseVersionArgsForCall)]
-	fake.findReleaseVersionArgsForCall = append(fake.findReleaseVersionArgsForCall, struct {
-		arg1 cargo.ComponentSpec
-		arg2 bool
-	}{arg1, arg2})
-	stub := fake.FindReleaseVersionStub
-	fakeReturns := fake.findReleaseVersionReturns
-	fake.recordInvocation("FindReleaseVersion", []interface{}{arg1, arg2})
-	fake.findReleaseVersionMutex.Unlock()
+func (fake *MultiReleaseSource) GetReleaseCache() (component.ReleaseSource, error) {
+	fake.getReleaseCacheMutex.Lock()
+	ret, specificReturn := fake.getReleaseCacheReturnsOnCall[len(fake.getReleaseCacheArgsForCall)]
+	fake.getReleaseCacheArgsForCall = append(fake.getReleaseCacheArgsForCall, struct {
+	}{})
+	stub := fake.GetReleaseCacheStub
+	fakeReturns := fake.getReleaseCacheReturns
+	fake.recordInvocation("GetReleaseCache", []interface{}{})
+	fake.getReleaseCacheMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -221,111 +124,40 @@ func (fake *MultiReleaseSource) FindReleaseVersion(arg1 cargo.ComponentSpec, arg
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *MultiReleaseSource) FindReleaseVersionCallCount() int {
-	fake.findReleaseVersionMutex.RLock()
-	defer fake.findReleaseVersionMutex.RUnlock()
-	return len(fake.findReleaseVersionArgsForCall)
+func (fake *MultiReleaseSource) GetReleaseCacheCallCount() int {
+	fake.getReleaseCacheMutex.RLock()
+	defer fake.getReleaseCacheMutex.RUnlock()
+	return len(fake.getReleaseCacheArgsForCall)
 }
 
-func (fake *MultiReleaseSource) FindReleaseVersionCalls(stub func(cargo.ComponentSpec, bool) (cargo.ComponentLock, error)) {
-	fake.findReleaseVersionMutex.Lock()
-	defer fake.findReleaseVersionMutex.Unlock()
-	fake.FindReleaseVersionStub = stub
+func (fake *MultiReleaseSource) GetReleaseCacheCalls(stub func() (component.ReleaseSource, error)) {
+	fake.getReleaseCacheMutex.Lock()
+	defer fake.getReleaseCacheMutex.Unlock()
+	fake.GetReleaseCacheStub = stub
 }
 
-func (fake *MultiReleaseSource) FindReleaseVersionArgsForCall(i int) (cargo.ComponentSpec, bool) {
-	fake.findReleaseVersionMutex.RLock()
-	defer fake.findReleaseVersionMutex.RUnlock()
-	argsForCall := fake.findReleaseVersionArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *MultiReleaseSource) FindReleaseVersionReturns(result1 cargo.ComponentLock, result2 error) {
-	fake.findReleaseVersionMutex.Lock()
-	defer fake.findReleaseVersionMutex.Unlock()
-	fake.FindReleaseVersionStub = nil
-	fake.findReleaseVersionReturns = struct {
-		result1 cargo.ComponentLock
+func (fake *MultiReleaseSource) GetReleaseCacheReturns(result1 component.ReleaseSource, result2 error) {
+	fake.getReleaseCacheMutex.Lock()
+	defer fake.getReleaseCacheMutex.Unlock()
+	fake.GetReleaseCacheStub = nil
+	fake.getReleaseCacheReturns = struct {
+		result1 component.ReleaseSource
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *MultiReleaseSource) FindReleaseVersionReturnsOnCall(i int, result1 cargo.ComponentLock, result2 error) {
-	fake.findReleaseVersionMutex.Lock()
-	defer fake.findReleaseVersionMutex.Unlock()
-	fake.FindReleaseVersionStub = nil
-	if fake.findReleaseVersionReturnsOnCall == nil {
-		fake.findReleaseVersionReturnsOnCall = make(map[int]struct {
-			result1 cargo.ComponentLock
+func (fake *MultiReleaseSource) GetReleaseCacheReturnsOnCall(i int, result1 component.ReleaseSource, result2 error) {
+	fake.getReleaseCacheMutex.Lock()
+	defer fake.getReleaseCacheMutex.Unlock()
+	fake.GetReleaseCacheStub = nil
+	if fake.getReleaseCacheReturnsOnCall == nil {
+		fake.getReleaseCacheReturnsOnCall = make(map[int]struct {
+			result1 component.ReleaseSource
 			result2 error
 		})
 	}
-	fake.findReleaseVersionReturnsOnCall[i] = struct {
-		result1 cargo.ComponentLock
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *MultiReleaseSource) GetMatchedRelease(arg1 cargo.ComponentSpec) (cargo.ComponentLock, error) {
-	fake.getMatchedReleaseMutex.Lock()
-	ret, specificReturn := fake.getMatchedReleaseReturnsOnCall[len(fake.getMatchedReleaseArgsForCall)]
-	fake.getMatchedReleaseArgsForCall = append(fake.getMatchedReleaseArgsForCall, struct {
-		arg1 cargo.ComponentSpec
-	}{arg1})
-	stub := fake.GetMatchedReleaseStub
-	fakeReturns := fake.getMatchedReleaseReturns
-	fake.recordInvocation("GetMatchedRelease", []interface{}{arg1})
-	fake.getMatchedReleaseMutex.Unlock()
-	if stub != nil {
-		return stub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *MultiReleaseSource) GetMatchedReleaseCallCount() int {
-	fake.getMatchedReleaseMutex.RLock()
-	defer fake.getMatchedReleaseMutex.RUnlock()
-	return len(fake.getMatchedReleaseArgsForCall)
-}
-
-func (fake *MultiReleaseSource) GetMatchedReleaseCalls(stub func(cargo.ComponentSpec) (cargo.ComponentLock, error)) {
-	fake.getMatchedReleaseMutex.Lock()
-	defer fake.getMatchedReleaseMutex.Unlock()
-	fake.GetMatchedReleaseStub = stub
-}
-
-func (fake *MultiReleaseSource) GetMatchedReleaseArgsForCall(i int) cargo.ComponentSpec {
-	fake.getMatchedReleaseMutex.RLock()
-	defer fake.getMatchedReleaseMutex.RUnlock()
-	argsForCall := fake.getMatchedReleaseArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *MultiReleaseSource) GetMatchedReleaseReturns(result1 cargo.ComponentLock, result2 error) {
-	fake.getMatchedReleaseMutex.Lock()
-	defer fake.getMatchedReleaseMutex.Unlock()
-	fake.GetMatchedReleaseStub = nil
-	fake.getMatchedReleaseReturns = struct {
-		result1 cargo.ComponentLock
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *MultiReleaseSource) GetMatchedReleaseReturnsOnCall(i int, result1 cargo.ComponentLock, result2 error) {
-	fake.getMatchedReleaseMutex.Lock()
-	defer fake.getMatchedReleaseMutex.Unlock()
-	fake.GetMatchedReleaseStub = nil
-	if fake.getMatchedReleaseReturnsOnCall == nil {
-		fake.getMatchedReleaseReturnsOnCall = make(map[int]struct {
-			result1 cargo.ComponentLock
-			result2 error
-		})
-	}
-	fake.getMatchedReleaseReturnsOnCall[i] = struct {
-		result1 cargo.ComponentLock
+	fake.getReleaseCacheReturnsOnCall[i] = struct {
+		result1 component.ReleaseSource
 		result2 error
 	}{result1, result2}
 }
@@ -365,14 +197,10 @@ func (fake *MultiReleaseSource) SetDownloadThreadsArgsForCall(i int) int {
 func (fake *MultiReleaseSource) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.downloadReleaseMutex.RLock()
-	defer fake.downloadReleaseMutex.RUnlock()
 	fake.findByIDMutex.RLock()
 	defer fake.findByIDMutex.RUnlock()
-	fake.findReleaseVersionMutex.RLock()
-	defer fake.findReleaseVersionMutex.RUnlock()
-	fake.getMatchedReleaseMutex.RLock()
-	defer fake.getMatchedReleaseMutex.RUnlock()
+	fake.getReleaseCacheMutex.RLock()
+	defer fake.getReleaseCacheMutex.RUnlock()
 	fake.setDownloadThreadsMutex.RLock()
 	defer fake.setDownloadThreadsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Masterminds/semver"
-
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -115,20 +113,6 @@ func NewMultiReleaseSource(sources ...ReleaseSource) ReleaseSourceList {
 	return sources
 }
 
-func (list ReleaseSourceList) GetMatchedRelease(requirement Spec) (Lock, error) {
-	for _, src := range list {
-		rel, err := src.GetMatchedRelease(requirement)
-		if err != nil {
-			if IsErrNotFound(err) {
-				continue
-			}
-			return Lock{}, scopedError(src.Configuration().ID, err)
-		}
-		return rel, nil
-	}
-	return Lock{}, ErrNotFound
-}
-
 func (list ReleaseSourceList) SetDownloadThreads(n int) {
 	for i, rs := range list {
 		s3rs, ok := rs.(S3ReleaseSource)
@@ -139,71 +123,33 @@ func (list ReleaseSourceList) SetDownloadThreads(n int) {
 	}
 }
 
-func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
-	src, err := list.FindByID(remoteRelease.RemoteSource)
-	if err != nil {
-		return Local{}, err
-	}
-
-	localRelease, err := src.DownloadRelease(releaseDir, remoteRelease)
-	if err != nil {
-		return Local{}, scopedError(src.Configuration().ID, err)
-	}
-
-	return localRelease, nil
-}
-
-func (list ReleaseSourceList) FindReleaseVersion(requirement Spec, noDownload bool) (Lock, error) {
-	var foundReleaseLock []Lock
-	for _, src := range list {
-		rel, err := src.FindReleaseVersion(requirement, noDownload)
-		if err != nil {
-			if !IsErrNotFound(err) {
-				return Lock{}, scopedError(src.Configuration().ID, err)
-			}
-			continue
-		}
-		foundReleaseLock = append(foundReleaseLock, rel)
-	}
-	if len(foundReleaseLock) == 0 {
-		return Lock{}, ErrNotFound
-	}
-	highestLock := foundReleaseLock[0]
-	highestVersion, err := highestLock.ParseVersion()
-	if err != nil {
-		return Lock{}, fmt.Errorf("failed to parse version from release source: %w", err)
-	}
-	for _, rel := range foundReleaseLock[1:] {
-		newVersion, err := semver.NewVersion(rel.Version)
-		if err != nil {
-			return Lock{}, fmt.Errorf("failed to parse version from release source: %w", err)
-		}
-		if highestVersion.LessThan(newVersion) {
-			highestVersion = newVersion
-			highestLock = rel
-		}
-	}
-	return highestLock, nil
-}
-
 func (list ReleaseSourceList) FindByID(id string) (ReleaseSource, error) {
-	var correctSrc ReleaseSource
+	if id == "" {
+		return nil, newReleaseSourceNotFoundError(id, list)
+	}
 	for _, src := range list {
 		if src.Configuration().ID == id {
-			correctSrc = src
-			break
+			return src, nil
 		}
 	}
+	return nil, newReleaseSourceNotFoundError(id, list)
+}
 
-	if correctSrc == nil {
-		ids := make([]string, 0, len(list))
-		for _, src := range list {
-			ids = append(ids, src.Configuration().ID)
+func (list ReleaseSourceList) GetReleaseCache() (ReleaseSource, error) {
+	for _, src := range list {
+		if src.Configuration().Publishable {
+			return src, nil
 		}
-		return nil, fmt.Errorf("couldn't find a release source with ID %q. Available choices: %q", id, ids)
 	}
+	return nil, fmt.Errorf("publishable release source not found")
+}
 
-	return correctSrc, nil
+func newReleaseSourceNotFoundError(id string, list ReleaseSourceList) error {
+	ids := make([]string, 0, len(list))
+	for _, src := range list {
+		ids = append(ids, src.Configuration().ID)
+	}
+	return fmt.Errorf("release source with name %q not found in Kilnfile release_sources (the named release sources are: %q)", id, ids)
 }
 
 func scopedError(sourceID string, err error) error {

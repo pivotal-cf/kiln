@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -53,7 +54,8 @@ var _ = Describe("UpdateStemcell", func() {
 			fs                                     billy.Filesystem
 			kilnfile                               cargo.Kilnfile
 			kilnfileLock                           cargo.KilnfileLock
-			releaseSource                          *fetcherFakes.MultiReleaseSource
+			releaseSources                         *fetcherFakes.MultiReleaseSource
+			releaseSource                          *fetcherFakes.ReleaseSource
 			outputBuffer                           *gbytes.Buffer
 		)
 
@@ -61,13 +63,19 @@ var _ = Describe("UpdateStemcell", func() {
 			fs = memfs.New()
 
 			kilnfile = cargo.Kilnfile{
+				ReleaseSources: []cargo.ReleaseSourceConfig{
+					{
+						Type: "github",
+						Org:  "example",
+					},
+				},
 				Stemcell: cargo.Stemcell{
 					OS:      "old-os",
 					Version: "^1",
 				},
 				Releases: []cargo.ComponentSpec{
-					{Name: release1Name, GitHubRepository: "https://example.com/lemon"},
-					{Name: release2Name, GitHubRepository: "https://example.com/orange"},
+					{Name: release1Name, GitHubRepository: "https://example.com/example/lemon", ReleaseSource: "example"},
+					{Name: release2Name, GitHubRepository: "https://example.com/example/orange", ReleaseSource: "example"},
 				},
 			}
 			kilnfileLock = cargo.KilnfileLock{
@@ -93,8 +101,25 @@ var _ = Describe("UpdateStemcell", func() {
 				},
 			}
 
-			releaseSource = new(fetcherFakes.MultiReleaseSource)
-			releaseSource.GetMatchedReleaseCalls(func(requirement component.Spec) (component.Lock, error) {
+			releaseSource = new(fetcherFakes.ReleaseSource)
+			releaseCache := new(fetcherFakes.ReleaseSource)
+			releaseSources = new(fetcherFakes.MultiReleaseSource)
+			releaseSources.GetReleaseCacheStub = func() (component.ReleaseSource, error) {
+				// this is to force using the specified release source
+				return releaseCache, nil
+			}
+			releaseSources.FindByIDStub = func(string) (component.ReleaseSource, error) {
+				// this is to force using the specified release source
+				return releaseSource, nil
+			}
+			releaseCache.GetMatchedReleaseStub = func(cargo.ComponentSpec) (cargo.ComponentLock, error) {
+				return cargo.ComponentLock{}, fmt.Errorf("release cache is empty in this test")
+			}
+			releaseCache.DownloadReleaseStub = func(s string, lock cargo.ComponentLock) (component.Local, error) {
+				return component.Local{}, fmt.Errorf("release cache is empty in this test")
+			}
+
+			releaseSource.GetMatchedReleaseStub = func(requirement component.Spec) (component.Lock, error) {
 				switch requirement.Name {
 				case release1Name:
 					remote := component.Lock{
@@ -111,11 +136,11 @@ var _ = Describe("UpdateStemcell", func() {
 					}
 					return remote, nil
 				default:
-					panic("unexpected release name")
+					panic(fmt.Sprintf("unexpected release name %q", requirement.Name))
 				}
-			})
+			}
 
-			releaseSource.DownloadReleaseCalls(func(_ string, remote component.Lock) (component.Local, error) {
+			releaseSource.DownloadReleaseStub = func(_ string, remote component.Lock) (component.Local, error) {
 				switch remote.Name {
 				case release1Name:
 					local := component.Local{
@@ -130,12 +155,12 @@ var _ = Describe("UpdateStemcell", func() {
 					}
 					return local, nil
 				default:
-					panic("unexpected release name")
+					panic(fmt.Sprintf("unexpected release name %q", remote.Name))
 				}
-			})
+			}
 
 			multiReleaseSourceProvider := new(fakes.MultiReleaseSourceProvider)
-			multiReleaseSourceProvider.Returns(releaseSource)
+			multiReleaseSourceProvider.Returns(releaseSources)
 
 			kilnfilePath = filepath.Join("Kilnfile")
 			kilnfileLockPath = kilnfilePath + ".lock"
@@ -198,20 +223,23 @@ var _ = Describe("UpdateStemcell", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
+			Expect(releaseSources.FindByIDCallCount()).To(Equal(2 * 2))
 			Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(2))
 
 			req1 := releaseSource.GetMatchedReleaseArgsForCall(0)
 			Expect(req1).To(Equal(component.Spec{
 				Name: release1Name, Version: release1Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
-				GitHubRepository: "https://example.com/lemon",
+				GitHubRepository: "https://example.com/example/lemon",
+				ReleaseSource:    "example",
 			}))
 
 			req2 := releaseSource.GetMatchedReleaseArgsForCall(1)
 			Expect(req2).To(Equal(component.Spec{
 				Name: release2Name, Version: release2Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
-				GitHubRepository: "https://example.com/orange",
+				GitHubRepository: "https://example.com/example/orange",
+				ReleaseSource:    "example",
 			}))
 		})
 
@@ -408,7 +436,7 @@ var _ = Describe("UpdateStemcell", func() {
 			It("errors", func() {
 				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
 
-				Expect(err).To(MatchError(ContainSubstring("finding release")))
+				Expect(err).To(MatchError(ContainSubstring("failed to get release")))
 				Expect(err).To(MatchError(ContainSubstring(release1Name)))
 				Expect(err).To(MatchError(ContainSubstring("big badda boom")))
 			})

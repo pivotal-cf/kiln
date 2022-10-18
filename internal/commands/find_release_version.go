@@ -44,7 +44,7 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 	releaseSources := cmd.mrsProvider(kilnfile, false)
 	releaseSource, err := releaseSources.FindByID(spec.ReleaseSource)
 	if err != nil {
-		return errReleaseSourceNotSpecified(cmd.Options.Release)
+		return fmt.Errorf("release source not specified for %q", cmd.Options.Release)
 	}
 
 	spec.StemcellOS = kilnfileLock.Stemcell.OS
