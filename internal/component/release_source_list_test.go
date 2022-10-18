@@ -16,12 +16,6 @@ var _ = Describe("multiReleaseSource", func() {
 		src1IsPublishable = true
 	)
 
-	const (
-		releaseName         = "stuff-and-things"
-		releaseVersion      = "42.42"
-		releaseVersionNewer = "43.43"
-	)
-
 	JustBeforeEach(func() {
 		src1 = new(fakes.ReleaseSource)
 		src1.ConfigurationReturns(cargo.ReleaseSourceConfig{ID: "src-1", Publishable: src1IsPublishable})

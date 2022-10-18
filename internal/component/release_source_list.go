@@ -151,7 +151,3 @@ func newReleaseSourceNotFoundError(id string, list ReleaseSourceList) error {
 	}
 	return fmt.Errorf("release source with name %q not found in Kilnfile release_sources (the named release sources are: %q)", id, ids)
 }
-
-func scopedError(sourceID string, err error) error {
-	return fmt.Errorf("error from release source %q: %w", sourceID, err)
-}
