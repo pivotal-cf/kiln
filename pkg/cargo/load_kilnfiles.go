@@ -38,6 +38,7 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("unable to open file %q: %w", kilnfilePath, err)
 	}
 	defer closeAndIgnoreError(kf)
+
 	kilnfileYAML, err := io.ReadAll(kf)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, fmt.Errorf("unable to read file %q: %w", kilnfilePath, err)
@@ -58,6 +59,7 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 	}
 
 	lockFileName := kilnfileLockPath(kilnfilePath)
+
 	lockFile, err := fs.Open(lockFileName)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, err
@@ -69,6 +71,9 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, ConfigFileError{err: err, HumanReadableConfigFileName: "Kilnfile.lock " + lockFileName}
 	}
+
+	setReleaseSourceIDs(&kilnfile)
+
 	return kilnfile, kilnfileLock, nil
 }
 
@@ -97,3 +102,9 @@ func kilnfileLockPath(kilnfilePath string) string {
 }
 
 func closeAndIgnoreError(c io.Closer) { _ = c.Close() }
+
+func setReleaseSourceIDs(kilnfile *Kilnfile) {
+	for i, source := range kilnfile.ReleaseSources {
+		kilnfile.ReleaseSources[i].ID = ReleaseSourceID(source)
+	}
+}

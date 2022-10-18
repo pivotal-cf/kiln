@@ -34,6 +34,9 @@ type ComponentSpec struct {
 
 	// GitHubRepository are where the BOSH release source code is
 	GitHubRepository string `yaml:"github_repository,omitempty"`
+
+	// ReleaseSource is where new releases come from
+	ReleaseSource string `yaml:"release_source,omitempty"`
 }
 
 func (spec ComponentSpec) VersionConstraints() (*semver.Constraints, error) {

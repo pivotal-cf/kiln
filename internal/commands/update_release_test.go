@@ -17,7 +17,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/internal/component"
-	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
+	"github.com/pivotal-cf/kiln/internal/component/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -48,7 +48,8 @@ var _ = Describe("UpdateRelease", func() {
 		updateReleaseCommand       commands.UpdateRelease
 		filesystem                 billy.Filesystem
 		multiReleaseSourceProvider *commandsFakes.MultiReleaseSourceProvider
-		releaseSource              *fetcherFakes.MultiReleaseSource
+		multiReleaseSource         *fakes.MultiReleaseSource
+		releaseSource              *fakes.ReleaseSource
 		logger                     *log.Logger
 		downloadedReleasePath      string
 		expectedDownloadedRelease  component.Local
@@ -58,9 +59,10 @@ var _ = Describe("UpdateRelease", func() {
 
 	Context("Execute", func() {
 		BeforeEach(func() {
-			releaseSource = new(fetcherFakes.MultiReleaseSource)
+			multiReleaseSource = new(fakes.MultiReleaseSource)
 			multiReleaseSourceProvider = new(commandsFakes.MultiReleaseSourceProvider)
-			multiReleaseSourceProvider.Returns(releaseSource)
+			releaseSource = new(fakes.ReleaseSource)
+			multiReleaseSourceProvider.Returns(multiReleaseSource)
 
 			filesystem = osfs.New("/tmp/")
 
@@ -124,6 +126,7 @@ var _ = Describe("UpdateRelease", func() {
 			releaseSource.GetMatchedReleaseReturns(expectedRemoteRelease, nil)
 			releaseSource.FindReleaseVersionReturns(exepectedNotDownloadedRelease, nil)
 			releaseSource.DownloadReleaseReturns(expectedDownloadedRelease, nil)
+			multiReleaseSource.FindByIDReturns(releaseSource, nil)
 		})
 
 		JustBeforeEach(func() {
@@ -200,22 +203,20 @@ var _ = Describe("UpdateRelease", func() {
 		})
 
 		When("passing the --allow-only-publishable-releases flag", func() {
-			var downloadErr error
-
 			BeforeEach(func() {
-				downloadErr = errors.New("asplode!!")
-				releaseSource.DownloadReleaseReturns(component.Local{}, downloadErr)
+				downloadErr := errors.New("asplode!!")
+				multiReleaseSource.FindByIDReturns(nil, downloadErr)
 			})
 
 			It("tells the release downloader factory to allow only publishable releases", func() {
-				err := updateReleaseCommand.Execute([]string{
+				findReleaseSourceErr := updateReleaseCommand.Execute([]string{
 					"--allow-only-publishable-releases",
 					"--kilnfile", "Kilnfile",
 					"--name", releaseName,
 					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
-				Expect(err).To(MatchError(downloadErr))
+				Expect(findReleaseSourceErr).To(MatchError(ContainSubstring("!!")))
 
 				Expect(multiReleaseSourceProvider.CallCount()).To(Equal(1))
 				_, allowOnlyPublishable := multiReleaseSourceProvider.ArgsForCall(0)
@@ -389,6 +390,7 @@ var _ = Describe("UpdateRelease", func() {
 					"--releases-directory", releasesDir,
 					"--without-download",
 				})
+				Expect(multiReleaseSource.FindByIDCallCount()).To(Equal(1))
 				Expect(err).NotTo(HaveOccurred())
 
 				receivedReleaseRequirement, _ := releaseSource.FindReleaseVersionArgsForCall(0)

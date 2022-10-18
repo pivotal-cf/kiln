@@ -95,6 +95,7 @@ path_template: "not-used"
 				ReleaseSources: []cargo.ReleaseSourceConfig{
 					{
 						Type:            "s3",
+						ID:              "my-bucket",
 						Bucket:          "my-bucket",
 						Region:          "middle-earth",
 						AccessKeyId:     "id",

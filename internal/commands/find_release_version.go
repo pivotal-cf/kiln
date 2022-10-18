@@ -23,13 +23,6 @@ type FindReleaseVersion struct {
 	}
 }
 
-type releaseVersionOutput struct {
-	Version    string `json:"version"`
-	RemotePath string `json:"remote_path"`
-	Source     string `json:"source"`
-	SHA        string `json:"sha"`
-}
-
 func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider) *FindReleaseVersion {
 	return &FindReleaseVersion{
 		outLogger:   outLogger,
@@ -42,11 +35,16 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	releaseSource := cmd.mrsProvider(kilnfile, false)
 
 	spec, ok := kilnfile.ComponentSpec(cmd.Options.Release)
 	if !ok {
 		return cargo.ErrorSpecNotFound(cmd.Options.Release)
+	}
+
+	releaseSources := cmd.mrsProvider(kilnfile, false)
+	releaseSource, err := releaseSources.FindByID(spec.ReleaseSource)
+	if err != nil {
+		return errReleaseSourceNotSpecified(cmd.Options.Release)
 	}
 
 	spec.StemcellOS = kilnfileLock.Stemcell.OS
@@ -57,7 +55,12 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 		return err
 	}
 
-	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{
+	releaseVersionJson, _ := json.Marshal(struct {
+		Version    string `json:"version"`
+		RemotePath string `json:"remote_path"`
+		Source     string `json:"source"`
+		SHA        string `json:"sha"`
+	}{
 		Version:    releaseRemote.Version,
 		RemotePath: releaseRemote.RemotePath,
 		Source:     releaseRemote.RemoteSource,
@@ -65,6 +68,10 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 	})
 	cmd.outLogger.Println(string(releaseVersionJson))
 	return err
+}
+
+func errReleaseSourceNotSpecified(releaseName string) error {
+	return fmt.Errorf("release source not specified in Kilnfile for %q", releaseName)
 }
 
 func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, error) {

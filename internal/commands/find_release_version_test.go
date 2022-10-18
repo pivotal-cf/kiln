@@ -17,9 +17,10 @@ import (
 
 var _ = Describe("Find the release version", func() {
 	var (
-		findReleaseVersion *commands.FindReleaseVersion
-		logger             *log.Logger
-		fakeReleasesSource *fakes.MultiReleaseSource
+		findReleaseVersion      *commands.FindReleaseVersion
+		logger                  *log.Logger
+		fakeMultiReleasesSource *fakes.MultiReleaseSource
+		fakeReleasesSource      *fakes.ReleaseSource
 
 		writer strings.Builder
 
@@ -32,7 +33,8 @@ var _ = Describe("Find the release version", func() {
 	Describe("Execute", func() {
 		BeforeEach(func() {
 			logger = log.New(&writer, "", 0)
-			fakeReleasesSource = new(fakes.MultiReleaseSource)
+			fakeMultiReleasesSource = new(fakes.MultiReleaseSource)
+			fakeReleasesSource = new(fakes.ReleaseSource)
 
 			tmpDir, err := os.MkdirTemp("", "fetch-test")
 			Expect(err).NotTo(HaveOccurred())
@@ -41,7 +43,7 @@ var _ = Describe("Find the release version", func() {
 releases:
 - name: some-release
   version: "1.2.3"
-  remote_source:
+  remote_source: some-remote
   remote_path: my-remote-path
 stemcell_criteria:
   os: some-os
@@ -53,9 +55,10 @@ stemcell_criteria:
 releases:
 - name: has-constraint
   version: ~74.16.0
-  source: bosh.io
+  release_source: some-cool-name
 - name: has-no-constraint
-  source: bosh.io`
+  release_source: bosh.io
+`
 
 			someKilnfilePath = filepath.Join(tmpDir, "Kilnfile")
 			err = os.WriteFile(someKilnfilePath, []byte(kilnContents), 0o644)
@@ -63,11 +66,13 @@ releases:
 			someKilnfileLockPath := filepath.Join(tmpDir, "Kilnfile.lock")
 			err = os.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
 			Expect(err).NotTo(HaveOccurred())
+
+			fakeMultiReleasesSource.FindByIDReturns(fakeReleasesSource, nil)
 		})
 
 		JustBeforeEach(func() {
 			multiReleaseSourceProvider := func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
-				return fakeReleasesSource
+				return fakeMultiReleasesSource
 			}
 			findReleaseVersion = commands.NewFindReleaseVersion(logger, multiReleaseSourceProvider)
 
@@ -103,6 +108,7 @@ releases:
 
 				When("uaac has releases on bosh.io", func() {
 					It("returns the latest release version", func() {
+						Expect(fakeMultiReleasesSource.FindByIDCallCount()).To(Equal(1))
 						Expect(executeErr).NotTo(HaveOccurred())
 						args, _ := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
 						Expect(args.StemcellVersion).To(Equal("4.5.6"))
