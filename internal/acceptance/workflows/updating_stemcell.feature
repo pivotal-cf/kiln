@@ -20,4 +20,4 @@ Feature: As a dependabot, I want to update a stemcell
       | update-stemcell                           |
       | --version=621.261                         |
       | --variable=github_token="${GITHUB_TOKEN}" |
-    Then "./hello-tile/Kilnfile.lock" contains substring: version: "621.261"
+    Then "./hello-tile/Kilnfile.lock" contains substring: version: "621.296"
