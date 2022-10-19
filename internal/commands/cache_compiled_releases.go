@@ -151,7 +151,7 @@ func (cmd *CacheCompiledReleases) Execute(args []string) error {
 		remote.SHA1 = sum
 
 		releasesUpdatedFromCache = true
-		err = updateLock(lock, remote, cmd.Options.UploadTargetID)
+		err = updateLock(lock, remote)
 		if err != nil {
 			return fmt.Errorf("failed to update lock file: %w", err)
 		}
@@ -218,7 +218,7 @@ func (cmd *CacheCompiledReleases) Execute(args []string) error {
 			continue
 		}
 
-		err = updateLock(lock, newRemote, cmd.Options.UploadTargetID)
+		err = updateLock(lock, newRemote)
 		if err != nil {
 			return fmt.Errorf("failed to lock release %s: %w", rel.Name, err)
 		}
@@ -309,7 +309,7 @@ func (cmd *CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc Release
 	}
 
 	cmd.Logger.Printf("\tdownloading %s\n", releaseSlug)
-	releaseFilePath, _, sha1sum, err := cmd.saveReleaseLocally(bosh, cmd.Options.ReleasesDir, releaseSlug, stemcellSlug, result)
+	releaseFilePath, _, _, err := cmd.saveReleaseLocally(bosh, cmd.Options.ReleasesDir, releaseSlug, stemcellSlug, result)
 	if err != nil {
 		return component.Lock{}, err
 	}
@@ -325,35 +325,25 @@ func (cmd *CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc Release
 		return component.Lock{}, err
 	}
 
-	remoteRelease.SHA1 = sha1sum
-
 	return remoteRelease, nil
 }
 
-func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string) error {
+func updateLock(lock cargo.KilnfileLock, release component.Lock) error {
 	for index, releaseLock := range lock.Releases {
 		if release.Name != releaseLock.Name {
 			continue
 		}
 
-		checksum := release.SHA1
-		if releaseLock.RemoteSource == targetID {
-			checksum = releaseLock.SHA1
-		}
-
-		lock.Releases[index] = cargo.ComponentLock{
-			Name:         release.Name,
-			Version:      release.Version,
-			RemoteSource: release.RemoteSource,
-			RemotePath:   release.RemotePath,
-			SHA1:         checksum,
-		}
+		lock.Releases[index] = release
 		return nil
 	}
-	return fmt.Errorf("existing release not found in Kilnfile.lock")
+	return fmt.Errorf("existing release with name %q not found in Kilnfile.lock", release.Name)
 }
 
 func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Spec, fp string, uploader ReleaseStorage) (component.Lock, error) {
+	if lock, err := uploader.GetMatchedRelease(spec); err == nil {
+		return lock, nil
+	}
 	f, err := cmd.FS.Open(fp)
 	if err != nil {
 		return component.Lock{}, err

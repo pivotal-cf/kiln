@@ -95,6 +95,29 @@ func newCacheCompiledReleasesTestData(t *testing.T, kf cargo.Kilnfile, kl cargo.
 	bosh := new(boshdirFakes.FakeDirector)
 	bosh.FindDeploymentReturns(deployment, nil)
 
+	deployment.ExportReleaseReturns(director.ExportReleaseResult{
+		BlobstoreID: "some-blob-id",
+		SHA1:        fmt.Sprintf("sha256:%x", sha256.Sum256([]byte(releaseInBlobstore))),
+	}, nil)
+	bosh.DownloadResourceUncheckedCalls(func(_ string, writer io.Writer) error {
+		_, _ = writer.Write([]byte(releaseInBlobstore))
+		return nil
+	})
+	bosh.FindReleaseReturns(&boshdirFakes.FakeRelease{
+		PackagesStub: func() ([]director.Package, error) {
+			return []director.Package{{CompiledPackages: []director.CompiledPackage{{Stemcell: director.NewOSVersionSlug("alpine", "9.0.0")}}}}, nil
+		},
+	}, nil)
+	releaseStorage.UploadReleaseCalls(func(_ component.Spec, reader io.Reader) (component.Lock, error) {
+		return component.Lock{
+			Name: "lemon", Version: "3.0.0",
+
+			RemoteSource: "cached-compiled-releases",
+			RemotePath:   "lemon-3.0.0-alpine-9.0.0",
+			SHA1:         "012ed191f1d07c14bbcbbc0423d0de1c56757348",
+		}, nil
+	})
+
 	cmd := commands.CacheCompiledReleases{
 		FS:     fs,
 		Logger: logger,
@@ -309,7 +332,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	// check
 	please := Ω.NewWithT(t)
 	please.Expect(err).NotTo(Ω.HaveOccurred())
-	please.Expect(test.releaseStorage.GetMatchedReleaseCallCount()).To(Ω.Equal(3))
+	please.Expect(test.releaseStorage.GetMatchedReleaseCallCount()).To(Ω.Equal(4))
 	please.Expect(test.bosh.DownloadResourceUncheckedCallCount()).To(Ω.Equal(1))
 
 	requestedID, _ := test.bosh.DownloadResourceUncheckedArgsForCall(0)
@@ -492,6 +515,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 		l := spec.Lock()
 		l.RemotePath = "BANANA.tgz"
 		l.RemoteSource = "BASKET"
+		l.SHA1 = "new checksum"
 		return l, nil
 	}
 	test.releaseStorage.DownloadReleaseReturns(component.Local{}, fmt.Errorf("SO MUCH NOTHING"))
@@ -528,12 +552,71 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 		RemoteSource: "BASKET",
 		RemotePath:   "BANANA.tgz",
 
-		SHA1: "fake-checksum",
+		SHA1: "new checksum",
 	}), "it should not override the in-correct element in the Kilnfile.lock")
 
 	please.Expect(err).NotTo(Ω.HaveOccurred())
 
 	please.Expect(test.output.String()).To(Ω.ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
+}
+
+func TestCacheCompiledReleases_Execute_release_is_uploaded_while_exporting(t *testing.T) {
+	// setup
+
+	test := newCacheCompiledReleasesTestData(t, cargo.Kilnfile{
+		ReleaseSources: []cargo.ReleaseSourceConfig{
+			{
+				ID: "compiled-releases",
+			},
+		},
+	}, cargo.KilnfileLock{
+		Releases: []cargo.ComponentLock{
+			{
+				Name:         "banana",
+				Version:      "2.0.0",
+				RemoteSource: "compiled-releases",
+				RemotePath:   "banana-2.0.0-alpine-9.0.0",
+				SHA1:         "fake-checksum",
+			},
+		},
+		Stemcell: cargo.Stemcell{
+			OS:      "alpine",
+			Version: "9.0.0",
+		},
+	}, "9.0.0")
+
+	test.releaseStorage.GetMatchedReleaseStub = nil
+	test.releaseStorage.GetMatchedReleaseReturnsOnCall(0, cargo.ComponentLock{}, component.ErrNotFound)
+	test.releaseStorage.GetMatchedReleaseReturnsOnCall(1, cargo.ComponentLock{
+		Name:         "banana",
+		Version:      "2.0.0",
+		RemoteSource: "compiled-releases",
+		RemotePath:   "banana-2.0.0-alpine-9.0.0",
+		SHA1:         "A CHECKSUM FROM THE CACHE",
+	}, nil)
+
+	// run
+
+	err := test.cmd.Execute([]string{
+		"--upload-target-id", "compiled-releases",
+	})
+
+	// check
+	please := Ω.NewWithT(t)
+	please.Expect(test.releaseStorage.UploadReleaseCallCount()).To(Ω.Equal(0))
+	please.Expect(err).NotTo(Ω.HaveOccurred())
+
+	please.Expect(test.releaseStorage.GetMatchedReleaseCallCount()).To(Ω.Equal(2))
+
+	var updatedKilnfile cargo.KilnfileLock
+	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
+	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(component.Lock{
+		Name:         "banana",
+		Version:      "2.0.0",
+		RemoteSource: "compiled-releases",
+		RemotePath:   "banana-2.0.0-alpine-9.0.0",
+		SHA1:         "A CHECKSUM FROM THE CACHE",
+	}))
 }
 
 func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_same(t *testing.T) {
