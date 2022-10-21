@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -19,6 +20,10 @@ func (cmd *Glaze) Execute(args []string) error {
 	_, err := jhanda.Parse(&cmd.Options, args)
 	if err != nil {
 		return err
+	}
+
+	if info, err := os.Stat(cmd.Options.Kilnfile); err == nil && info.IsDir() {
+		cmd.Options.Kilnfile = filepath.Join(cmd.Options.Kilnfile, "Kilnfile")
 	}
 
 	kf, err := os.ReadFile(cmd.Options.Kilnfile)

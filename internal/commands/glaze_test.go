@@ -83,6 +83,21 @@ func TestGlaze_Execute(t *testing.T) {
 		g.Expect(err).To(MatchError(ContainSubstring("Kilnfile")))
 	})
 
+	t.Run("Kilnfile path is a directory", func(t *testing.T) {
+		tmp := t.TempDir()
+
+		kfp := filepath.Join(tmp, "Kilnfile")
+		writeYAML(t, kfp, cargo.Kilnfile{})
+		klp := filepath.Join(tmp, "Kilnfile.lock")
+		writeYAML(t, klp, cargo.KilnfileLock{})
+
+		cmd := new(Glaze)
+		err := cmd.Execute([]string{"--kilnfile", tmp})
+
+		g := NewWithT(t)
+		g.Expect(err).NotTo(HaveOccurred())
+	})
+
 	t.Run("Kilnfile lock is missing", func(t *testing.T) {
 		tmp := t.TempDir()
 		kfp := filepath.Join(tmp, "Kilnfile")
