@@ -92,6 +92,8 @@ func main() {
 		FS:                         osfs.New(""),
 	}
 
+	commandSet["glaze"] = new(commands.Glaze)
+
 	commandSet["find-release-version"] = commands.NewFindReleaseVersion(outLogger, mrsProvider)
 
 	commandSet["find-stemcell-version"] = commands.NewFindStemcellVersion(outLogger, pivnetService)

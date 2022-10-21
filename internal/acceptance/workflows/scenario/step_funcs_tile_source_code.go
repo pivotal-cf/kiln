@@ -213,3 +213,39 @@ func theLockStemcellVersionIs(ctx context.Context, version string) error {
 	}
 	return nil
 }
+
+func theKilnfileVersionForReleaseIs(ctx context.Context, releaseName, releaseVersion string) error {
+	lockPath, err := kilnfilePath(ctx)
+	if err != nil {
+		return err
+	}
+	var kf cargo.Kilnfile
+	err = loadFileAsYAML(lockPath, &kf)
+	if err != nil {
+		return err
+	}
+	releaseLock, found := kf.ComponentSpec(releaseName)
+	if !found {
+		return component.ErrNotFound
+	}
+	if releaseVersion != releaseLock.Version {
+		return fmt.Errorf("the versions are not equal (%q != %q)", releaseVersion, releaseLock.Version)
+	}
+	return nil
+}
+
+func theKilnfileVersionForTheStemcellIs(ctx context.Context, stemcellVersion string) error {
+	lockPath, err := kilnfilePath(ctx)
+	if err != nil {
+		return err
+	}
+	var kf cargo.Kilnfile
+	err = loadFileAsYAML(lockPath, &kf)
+	if err != nil {
+		return err
+	}
+	if stemcellVersion != kf.Stemcell.Version {
+		return fmt.Errorf("the versions are not equal (%q != %q)", stemcellVersion, kf.Stemcell.Version)
+	}
+	return nil
+}
