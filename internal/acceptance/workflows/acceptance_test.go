@@ -41,6 +41,10 @@ func Test_updating_releases(t *testing.T) {
 	)
 }
 
+func Test_glaze(t *testing.T) {
+	setupAndRunFeatureTest(t)
+}
+
 func Test_updating_stemcell(t *testing.T) {
 	setupAndRunFeatureTest(t,
 		scenario.InitializeTanzuNetwork,

@@ -146,4 +146,7 @@ func initializeTileSourceCode(ctx scenarioContext) {
 
 	ctx.Step(regexp.MustCompile(`^the Kilnfile\.lock specifies version "([^"]*)" for release "([^"]*)"$`), theLockSpecifiesVersionForRelease)
 	ctx.Step(regexp.MustCompile(`^the Kilnfile\.lock specifies version "([^"]*)" for the stemcell$`), theLockStemcellVersionIs)
+
+	ctx.Step(regexp.MustCompile(`^the Kilnfile version for release "([^"]*)" is "([^"]*)"$`), theKilnfileVersionForReleaseIs)
+	ctx.Step(regexp.MustCompile(`^the Kilnfile version for the stemcell is "([^"]*)"$`), theKilnfileVersionForTheStemcellIs)
 }
