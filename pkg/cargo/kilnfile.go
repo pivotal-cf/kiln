@@ -217,3 +217,9 @@ func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock ComponentLock)
 	}
 	return errors.New("not found")
 }
+
+type Stemcell struct {
+	Alias   string `yaml:"alias,omitempty"`
+	OS      string `yaml:"os"`
+	Version string `yaml:"version"`
+}
