@@ -2,12 +2,12 @@ package component
 
 import (
 	"github.com/google/go-github/v40/github"
-	Ω "github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	"testing"
 )
 
 func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 	b := Bump{
 		Releases: []*github.RepositoryRelease{
 			{TagName: ptr("Y")},
@@ -27,7 +27,7 @@ func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {
 	for _, r := range b.Releases {
 		tags = append(tags, r.GetTagName())
 	}
-	please.Expect(tags).To(Ω.Equal([]string{
+	please.Expect(tags).To(Equal([]string{
 		"Y",
 		"1",
 		"2",

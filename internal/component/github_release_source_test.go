@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v40/github"
-	Ω "github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
@@ -105,45 +105,45 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 		})
 
 		t.Run("it returns success stuff", func(t *testing.T) {
-			damnIt := Ω.NewWithT(t)
+			damnIt := NewWithT(t)
 
-			damnIt.Expect(err).NotTo(Ω.HaveOccurred())
+			damnIt.Expect(err).NotTo(HaveOccurred())
 		})
 
 		t.Run("it sets the lock fields properly", func(t *testing.T) {
-			damnIt := Ω.NewWithT(t)
+			damnIt := NewWithT(t)
 
-			damnIt.Expect(lock.Name).To(Ω.Equal("routing"))
-			damnIt.Expect(lock.Version).To(Ω.Equal("0.226.0"))
-			damnIt.Expect(lock.RemoteSource).To(Ω.Equal(owner))
-			damnIt.Expect(lock.RemotePath).To(Ω.Equal("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz"))
+			damnIt.Expect(lock.Name).To(Equal("routing"))
+			damnIt.Expect(lock.Version).To(Equal("0.226.0"))
+			damnIt.Expect(lock.RemoteSource).To(Equal(owner))
+			damnIt.Expect(lock.RemotePath).To(Equal("https://github.com/cloudfoundry/routing-release/releases/download/0.226.0/routing-0.226.0.tgz"))
 		})
 
 		t.Run("it downloads the file", func(t *testing.T) {
-			damnIt := Ω.NewWithT(t)
+			damnIt := NewWithT(t)
 
-			damnIt.Expect(downloader.DownloadReleaseAssetCallCount()).To(Ω.Equal(1))
+			damnIt.Expect(downloader.DownloadReleaseAssetCallCount()).To(Equal(1))
 			_, org, repo, build, client := downloader.DownloadReleaseAssetArgsForCall(0)
-			damnIt.Expect(org).To(Ω.Equal("cloudfoundry"))
-			damnIt.Expect(repo).To(Ω.Equal("routing-release"))
-			damnIt.Expect(build).To(Ω.Equal(int64(420)))
-			damnIt.Expect(client).NotTo(Ω.BeNil())
+			damnIt.Expect(org).To(Equal("cloudfoundry"))
+			damnIt.Expect(repo).To(Equal("routing-release"))
+			damnIt.Expect(build).To(Equal(int64(420)))
+			damnIt.Expect(client).NotTo(BeNil())
 
 			t.Run("it sets the tarball hash", func(t *testing.T) {
-				doubleDamnIt := Ω.NewWithT(t)
-				doubleDamnIt.Expect(lock.SHA1).To(Ω.Equal("aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"))
-				doubleDamnIt.Expect(file.CloseCalled).To(Ω.BeTrue())
+				doubleDamnIt := NewWithT(t)
+				doubleDamnIt.Expect(lock.SHA1).To(Equal("aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"))
+				doubleDamnIt.Expect(file.CloseCalled).To(BeTrue())
 			})
 		})
 
 		t.Run("it makes the right request", func(t *testing.T) {
-			damnIt := Ω.NewWithT(t)
+			damnIt := NewWithT(t)
 
-			damnIt.Expect(releaseGetter.GetReleaseByTagCallCount()).To(Ω.Equal(1))
+			damnIt.Expect(releaseGetter.GetReleaseByTagCallCount()).To(Equal(1))
 			_, org, repo, tag := releaseGetter.GetReleaseByTagArgsForCall(0)
-			damnIt.Expect(org).To(Ω.Equal("cloudfoundry"))
-			damnIt.Expect(repo).To(Ω.Equal("routing-release"))
-			damnIt.Expect(tag).To(Ω.Equal("v0.226.0"))
+			damnIt.Expect(org).To(Equal("cloudfoundry"))
+			damnIt.Expect(repo).To(Equal("routing-release"))
+			damnIt.Expect(tag).To(Equal("v0.226.0"))
 		})
 	})
 
@@ -196,30 +196,30 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 
 		// Then...
 		t.Run("it returns success stuff", func(t *testing.T) {
-			damnIt := Ω.NewWithT(t)
+			damnIt := NewWithT(t)
 
-			damnIt.Expect(err).NotTo(Ω.HaveOccurred())
+			damnIt.Expect(err).NotTo(HaveOccurred())
 		})
 
 		t.Run("it sets the lock fields properly", func(t *testing.T) {
-			damnIt := Ω.NewWithT(t)
+			damnIt := NewWithT(t)
 
-			damnIt.Expect(lock.Name).To(Ω.Equal("routing"))
-			damnIt.Expect(lock.Version).To(Ω.Equal("0.226.0"))
-			damnIt.Expect(lock.RemoteSource).To(Ω.Equal(owner))
-			damnIt.Expect(lock.RemotePath).To(Ω.Equal("https://github.com/cloudfoundry/routing-release/releases/download/v0.226.0/routing-0.226.0.tgz"))
+			damnIt.Expect(lock.Name).To(Equal("routing"))
+			damnIt.Expect(lock.Version).To(Equal("0.226.0"))
+			damnIt.Expect(lock.RemoteSource).To(Equal(owner))
+			damnIt.Expect(lock.RemotePath).To(Equal("https://github.com/cloudfoundry/routing-release/releases/download/v0.226.0/routing-0.226.0.tgz"))
 		})
 
 		t.Run("it makes the right request", func(t *testing.T) {
-			damnIt := Ω.NewWithT(t)
+			damnIt := NewWithT(t)
 
-			damnIt.Expect(releaseGetter.GetReleaseByTagCallCount()).To(Ω.Equal(2))
+			damnIt.Expect(releaseGetter.GetReleaseByTagCallCount()).To(Equal(2))
 
 			_, _, _, tag := releaseGetter.GetReleaseByTagArgsForCall(0)
-			damnIt.Expect(tag).To(Ω.Equal("v0.226.0"))
+			damnIt.Expect(tag).To(Equal("v0.226.0"))
 
 			_, _, _, tag = releaseGetter.GetReleaseByTagArgsForCall(1)
-			damnIt.Expect(tag).To(Ω.Equal("0.226.0"))
+			damnIt.Expect(tag).To(Equal("0.226.0"))
 		})
 	})
 }
@@ -233,14 +233,14 @@ func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 		_, err := grs.FindReleaseVersion(s, false)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
-			damnIt := Ω.NewWithT(t)
-			damnIt.Expect(err).To(Ω.HaveOccurred())
-			damnIt.Expect(err.Error()).To(Ω.ContainSubstring("expected version to be a constraint"))
+			damnIt := NewWithT(t)
+			damnIt.Expect(err).To(HaveOccurred())
+			damnIt.Expect(err.Error()).To(ContainSubstring("expected version to be a constraint"))
 		})
 	})
 
 	t.Run("noDownload is true", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 
 		downloader := new(fakes.ReleaseAssetDownloader)
 		downloader.DownloadReleaseAssetReturns(nil, "", fmt.Errorf("this is a mistake! I'm not supposed to be here!"))
@@ -287,10 +287,10 @@ func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 		}
 
 		lock, err := grsMock.FindReleaseVersion(s, true)
-		please.Expect(err).ToNot(Ω.HaveOccurred())
+		please.Expect(err).ToNot(HaveOccurred())
 
-		please.Expect(lock.SHA1).To(Ω.Equal("not-calculated"))
-		please.Expect(downloader.Invocations()).To(Ω.BeEmpty())
+		please.Expect(lock.SHA1).To(Equal("not-calculated"))
+		please.Expect(downloader.Invocations()).To(BeEmpty())
 	})
 }
 
@@ -303,16 +303,16 @@ func TestGithubReleaseSource_GetMatchedRelease(t *testing.T) {
 		_, err := grs.GetMatchedRelease(s)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
-			damnIt := Ω.NewWithT(t)
-			damnIt.Expect(err).To(Ω.HaveOccurred())
-			damnIt.Expect(err.Error()).To(Ω.ContainSubstring("expected version to be an exact version"))
+			damnIt := NewWithT(t)
+			damnIt.Expect(err).To(HaveOccurred())
+			damnIt.Expect(err.Error()).To(ContainSubstring("expected version to be an exact version"))
 		})
 	})
 }
 
 func TestGetGithubReleaseWithTag(t *testing.T) {
 	t.Run("when get release with tag api request fails", func(t *testing.T) {
-		damnIt := Ω.NewWithT(t)
+		damnIt := NewWithT(t)
 
 		releaseGetter := new(fakes.ReleaseByTagGetter)
 
@@ -341,12 +341,12 @@ func TestGetGithubReleaseWithTag(t *testing.T) {
 		}
 
 		_, err := grsMock.GetGithubReleaseWithTag(ctx, s)
-		damnIt.Expect(err).To(Ω.HaveOccurred())
+		damnIt.Expect(err).To(HaveOccurred())
 	})
 
 	t.Run("when the status code is unauthorized and the error is nil", func(t *testing.T) {
 		// yes this happened... how is this not an error?
-		damnIt := Ω.NewWithT(t)
+		damnIt := NewWithT(t)
 
 		defer func() {
 			r := recover()
@@ -382,7 +382,7 @@ func TestGetGithubReleaseWithTag(t *testing.T) {
 		}
 
 		_, err := grsMock.GetGithubReleaseWithTag(ctx, s)
-		damnIt.Expect(err).To(Ω.HaveOccurred())
+		damnIt.Expect(err).To(HaveOccurred())
 	})
 }
 
@@ -390,7 +390,7 @@ func TestGetLatestMatchingRelease(t *testing.T) {
 	strPtr := func(s string) *string { return &s }
 
 	t.Run("when get release with tag api request fails", func(t *testing.T) {
-		damnIt := Ω.NewWithT(t)
+		damnIt := NewWithT(t)
 
 		releaseGetter := new(fakes.ReleasesLister)
 
@@ -446,13 +446,13 @@ func TestGetLatestMatchingRelease(t *testing.T) {
 		}
 
 		rel, err := grsMock.GetLatestMatchingRelease(context.TODO(), s)
-		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
-		damnIt.Expect(rel.GetTagName()).To(Ω.Equal("2.0.4"))
-		damnIt.Expect(releaseGetter.ListReleasesCallCount()).To(Ω.Equal(3))
+		damnIt.Expect(err).NotTo(HaveOccurred())
+		damnIt.Expect(rel.GetTagName()).To(Equal("2.0.4"))
+		damnIt.Expect(releaseGetter.ListReleasesCallCount()).To(Equal(3))
 	})
 
 	t.Run("when some of the github releases tags have a v prefix", func(t *testing.T) {
-		damnIt := Ω.NewWithT(t)
+		damnIt := NewWithT(t)
 
 		releaseGetter := new(fakes.ReleasesLister)
 
@@ -496,9 +496,9 @@ func TestGetLatestMatchingRelease(t *testing.T) {
 		}
 
 		rel, err := grsMock.GetLatestMatchingRelease(context.TODO(), s)
-		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
-		damnIt.Expect(rel.GetTagName()).To(Ω.Equal("v2.0.4"))
-		damnIt.Expect(releaseGetter.ListReleasesCallCount()).To(Ω.Equal(3))
+		damnIt.Expect(err).NotTo(HaveOccurred())
+		damnIt.Expect(rel.GetTagName()).To(Equal("v2.0.4"))
+		damnIt.Expect(releaseGetter.ListReleasesCallCount()).To(Equal(3))
 	})
 
 	t.Run("component repo does not match release source org", func(t *testing.T) {
@@ -525,8 +525,8 @@ func TestGetLatestMatchingRelease(t *testing.T) {
 		_, err := grsMock.GetLatestMatchingRelease(ctx, spec)
 
 		// then
-		please := Ω.NewWithT(t)
-		please.Expect(component.IsErrNotFound(err)).To(Ω.BeTrue())
+		please := NewWithT(t)
+		please.Expect(component.IsErrNotFound(err)).To(BeTrue())
 	})
 }
 
@@ -544,15 +544,15 @@ func TestDownloadReleaseAsset(t *testing.T) {
 	}
 
 	t.Run("when the release is downloaded", func(t *testing.T) {
-		damnIt := Ω.NewWithT(t)
+		damnIt := NewWithT(t)
 		tempDir := t.TempDir()
 		t.Cleanup(func() {
 			_ = os.RemoveAll(tempDir)
 		})
 
 		local, err := grs.DownloadRelease(tempDir, testLock)
-		damnIt.Expect(err).NotTo(Ω.HaveOccurred())
+		damnIt.Expect(err).NotTo(HaveOccurred())
 
-		damnIt.Expect(local.LocalPath).NotTo(Ω.BeAnExistingFile(), "it creates the expected asset")
+		damnIt.Expect(local.LocalPath).NotTo(BeAnExistingFile(), "it creates the expected asset")
 	})
 }

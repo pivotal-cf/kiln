@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	Ω "github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
@@ -17,7 +17,7 @@ import (
 )
 
 func TestVersion(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	// START setup
 	tileDir := "tile"
@@ -51,15 +51,15 @@ func TestVersion(t *testing.T) {
 	t.Run("alpha", func(t *testing.T) {
 		version, err := Version(repo.Storer, initialHash, "tile")
 
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(version).To(Ω.Equal("1.0.0-alpha.1"))
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(version).To(Equal("1.0.0-alpha.1"))
 	})
 
 	t.Run("ga release", func(t *testing.T) {
 		version, err := Version(repo.Storer, finalHash, "tile")
 
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(version).To(Ω.Equal("1.0.0"))
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(version).To(Equal("1.0.0"))
 	})
 }
 
@@ -120,24 +120,24 @@ func TestKilnfile(t *testing.T) {
 	// END setup
 
 	t.Run("legacy bill of materials", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 
 		_, kl, err := Kilnfile(repo.Storer, initialHash, "tile")
 
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(kl.Releases).To(Ω.Equal([]cargo.ComponentLock{
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(kl.Releases).To(Equal([]cargo.ComponentLock{
 			{Name: "banana", Version: "0.1.0"},
 			{Name: "lemon", Version: "1.1.0"},
 		}))
 	})
 
 	t.Run("Kilnfile.lock", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 
 		_, finalKF, err := Kilnfile(repo.Storer, finalHash, "tile/Kilnfile")
 
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(finalKF.Releases).To(Ω.Equal([]cargo.ComponentLock{
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(finalKF.Releases).To(Equal([]cargo.ComponentLock{
 			{Name: "banana", Version: "0.9.0"},
 			{Name: "lemon", Version: "1.9.0"},
 			{Name: "apple", Version: "0.0.1"},
@@ -145,23 +145,23 @@ func TestKilnfile(t *testing.T) {
 	})
 
 	t.Run("Kilnfile", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 
 		kf, _, err := Kilnfile(repo.Storer, finalHash, "tile")
 
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(kf.Releases).To(Ω.Equal([]cargo.ComponentSpec{
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(kf.Releases).To(Equal([]cargo.ComponentSpec{
 			{Name: "banana"},
 			{Name: "lemon"},
 		}))
 	})
 
 	t.Run("bad yaml", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 
 		_, _, err := Kilnfile(repo.Storer, badYAML, "tile")
 
-		please.Expect(err).To(Ω.MatchError(Ω.ContainSubstring("cannot unmarshal")))
+		please.Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
 	})
 }
 
@@ -217,15 +217,15 @@ func TestWalk(t *testing.T) {
 		}, h1)
 		// END setup
 
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 
 		callCount := 0
 		err := Walk(repo.Storer, hf, func(*object.Commit) error {
 			callCount++
 			return nil
 		})
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(callCount).To(Ω.Equal(3))
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(callCount).To(Equal(3))
 	})
 
 	t.Run("with branch", func(t *testing.T) {
@@ -277,15 +277,15 @@ func TestWalk(t *testing.T) {
 		}, h1, b2)
 		// END setup
 
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 
 		callCount := 0
 		err := Walk(repo.Storer, hf, func(*object.Commit) error {
 			callCount++
 			return nil
 		})
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(callCount).To(Ω.Equal(5))
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(callCount).To(Equal(5))
 	})
 }
 

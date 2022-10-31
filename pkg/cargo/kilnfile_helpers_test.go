@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	Ω "github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 func TestInterpolateAndParseKilnfile(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	variables := map[string]interface{}{
 		"bucket":        "my-bucket",
@@ -25,9 +25,9 @@ func TestInterpolateAndParseKilnfile(t *testing.T) {
 		strings.NewReader(validKilnfile), variables,
 	)
 
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 
-	please.Expect(kilnfile).To(Ω.Equal(cargo.Kilnfile{
+	please.Expect(kilnfile).To(Equal(cargo.Kilnfile{
 		ReleaseSources: []cargo.ReleaseSourceConfig{
 			{
 				Type:            "s3",
@@ -42,7 +42,7 @@ func TestInterpolateAndParseKilnfile(t *testing.T) {
 }
 
 func TestInterpolateAndParseKilnfile_input_is_not_valid_yaml(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	variables := map[string]interface{}{
 		"bucket":        "my-bucket",
@@ -57,11 +57,11 @@ func TestInterpolateAndParseKilnfile_input_is_not_valid_yaml(t *testing.T) {
 		strings.NewReader("invalid : bad : yaml"), variables,
 	)
 
-	please.Expect(err).To(Ω.HaveOccurred())
+	please.Expect(err).To(HaveOccurred())
 }
 
 func TestInterpolateAndParseKilnfile_interpolation_variable_not_found(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	variables := map[string]interface{}{
 		"bucket": "my-bucket",
@@ -76,7 +76,7 @@ func TestInterpolateAndParseKilnfile_interpolation_variable_not_found(t *testing
 		strings.NewReader(validKilnfile), variables,
 	)
 
-	please.Expect(err).To(Ω.HaveOccurred())
+	please.Expect(err).To(HaveOccurred())
 }
 
 const validKilnfile = `---

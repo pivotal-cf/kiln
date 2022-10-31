@@ -3,7 +3,7 @@ package cargo
 import (
 	"testing"
 
-	Ω "github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v2"
 )
 
@@ -14,7 +14,7 @@ version: fake-version
 remote_source: fake-source
 remote_path: fake/path/to/fake-component-name
 `
-	damnit := Ω.NewWithT(t)
+	damnit := NewWithT(t)
 
 	cl, err := yaml.Marshal(ComponentLock{
 		Name:         "fake-component-name",
@@ -24,6 +24,6 @@ remote_path: fake/path/to/fake-component-name
 		RemotePath:   "fake/path/to/fake-component-name",
 	})
 
-	damnit.Expect(err).NotTo(Ω.HaveOccurred())
-	damnit.Expect(string(cl)).To(Ω.Equal(validComponentLockYaml))
+	damnit.Expect(err).NotTo(HaveOccurred())
+	damnit.Expect(string(cl)).To(Equal(validComponentLockYaml))
 }

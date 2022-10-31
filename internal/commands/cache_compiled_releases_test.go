@@ -11,7 +11,7 @@ import (
 	"github.com/cloudfoundry/bosh-cli/director"
 	boshdirFakes "github.com/cloudfoundry/bosh-cli/director/directorfakes"
 	"github.com/go-git/go-billy/v5/memfs"
-	Ω "github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
@@ -24,14 +24,14 @@ import (
 var _ jhanda.Command = (*commands.CacheCompiledReleases)(nil)
 
 func TestNewCacheCompiledReleases(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 	cmd := commands.NewCacheCompiledReleases()
-	please.Expect(cmd).NotTo(Ω.BeNil())
-	please.Expect(cmd.Logger).NotTo(Ω.BeNil())
-	please.Expect(cmd.FS).NotTo(Ω.BeNil())
-	please.Expect(cmd.ReleaseSourceAndCache).NotTo(Ω.BeNil())
-	please.Expect(cmd.OpsManager).NotTo(Ω.BeNil())
-	please.Expect(cmd.Director).NotTo(Ω.BeNil())
+	please.Expect(cmd).NotTo(BeNil())
+	please.Expect(cmd.Logger).NotTo(BeNil())
+	please.Expect(cmd.FS).NotTo(BeNil())
+	please.Expect(cmd.ReleaseSourceAndCache).NotTo(BeNil())
+	please.Expect(cmd.OpsManager).NotTo(BeNil())
+	please.Expect(cmd.Director).NotTo(BeNil())
 }
 
 type cacheCompiledReleasesTestData struct {
@@ -120,7 +120,7 @@ func newCacheCompiledReleasesTestData(t *testing.T, kf cargo.Kilnfile, kl cargo.
 }
 
 func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	// setup
 
@@ -154,12 +154,12 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 
 	// check
 
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("cache already contains releases"))
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(test.output.String()).To(ContainSubstring("cache already contains releases"))
+	please.Expect(err).NotTo(HaveOccurred())
 }
 
 func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	// setup
 
@@ -195,12 +195,12 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 
 	// check
 
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("cache already contains releases"))
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(test.output.String()).To(ContainSubstring("cache already contains releases"))
+	please.Expect(err).NotTo(HaveOccurred())
 
 	var updatedKilnfile cargo.KilnfileLock
-	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
-	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(component.Lock{
+	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(HaveOccurred())
+	please.Expect(updatedKilnfile.Releases).To(ContainElement(component.Lock{
 		Name: "orange", Version: "1.0.0",
 		SHA1:         "fake-checksum",
 		RemoteSource: "cached-compiled-releases",
@@ -307,27 +307,27 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	})
 
 	// check
-	please := Ω.NewWithT(t)
-	please.Expect(err).NotTo(Ω.HaveOccurred())
-	please.Expect(test.releaseStorage.GetMatchedReleaseCallCount()).To(Ω.Equal(3))
-	please.Expect(test.bosh.DownloadResourceUncheckedCallCount()).To(Ω.Equal(1))
+	please := NewWithT(t)
+	please.Expect(err).NotTo(HaveOccurred())
+	please.Expect(test.releaseStorage.GetMatchedReleaseCallCount()).To(Equal(3))
+	please.Expect(test.bosh.DownloadResourceUncheckedCallCount()).To(Equal(1))
 
 	requestedID, _ := test.bosh.DownloadResourceUncheckedArgsForCall(0)
-	please.Expect(requestedID).To(Ω.Equal("some-blob-id"))
+	please.Expect(requestedID).To(Equal("some-blob-id"))
 
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("1 release needs to be exported and cached"))
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("lemon/3.0.0 compiled with alpine/9.0.0 not found in cache"))
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("exporting lemon"))
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("downloading lemon"))
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("uploading lemon"))
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
+	please.Expect(test.output.String()).To(ContainSubstring("1 release needs to be exported and cached"))
+	please.Expect(test.output.String()).To(ContainSubstring("lemon/3.0.0 compiled with alpine/9.0.0 not found in cache"))
+	please.Expect(test.output.String()).To(ContainSubstring("exporting from bosh deployment cf-some-id"))
+	please.Expect(test.output.String()).To(ContainSubstring("exporting lemon"))
+	please.Expect(test.output.String()).To(ContainSubstring("downloading lemon"))
+	please.Expect(test.output.String()).To(ContainSubstring("uploading lemon"))
+	please.Expect(test.output.String()).To(ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
 
-	please.Expect(uploadedRelease.String()).To(Ω.Equal(releaseInBlobstore))
+	please.Expect(uploadedRelease.String()).To(Equal(releaseInBlobstore))
 
 	var updatedKilnfile cargo.KilnfileLock
-	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
-	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(component.Lock{
+	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(HaveOccurred())
+	please.Expect(updatedKilnfile.Releases).To(ContainElement(component.Lock{
 		Name:         "lemon",
 		Version:      "3.0.0",
 		SHA1:         "012ed191f1d07c14bbcbbc0423d0de1c56757348",
@@ -342,7 +342,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 // - export release returns a broken bosh release because we requested the wrong compilation target and the director didn't have the source code necessarily to re-compile against the requested stemcell
 // - (ideally bosh export-release should return an error but in this case it doesn't so we are just checking for a release with the correct stemcell before downloading a bad one)
 func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_correct_stemcell(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	// setup
 
@@ -398,27 +398,27 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 
 	// check
 
-	please.Expect(err).To(Ω.MatchError(Ω.ContainSubstring("not found on bosh director")))
+	please.Expect(err).To(MatchError(ContainSubstring("not found on bosh director")))
 
-	please.Expect(test.bosh.DownloadResourceUncheckedCallCount()).To(Ω.Equal(0))
-	please.Expect(test.bosh.HasReleaseCallCount()).To(Ω.Equal(0))
-	please.Expect(test.bosh.FindReleaseCallCount()).To(Ω.Equal(1))
+	please.Expect(test.bosh.DownloadResourceUncheckedCallCount()).To(Equal(0))
+	please.Expect(test.bosh.HasReleaseCallCount()).To(Equal(0))
+	please.Expect(test.bosh.FindReleaseCallCount()).To(Equal(1))
 
 	{
 		requestedReleaseSlug := test.bosh.FindReleaseArgsForCall(0)
-		please.Expect(requestedReleaseSlug.Name()).To(Ω.Equal("banana"))
-		please.Expect(requestedReleaseSlug.Version()).To(Ω.Equal("2.0.0"))
+		please.Expect(requestedReleaseSlug.Name()).To(Equal("banana"))
+		please.Expect(requestedReleaseSlug.Version()).To(Equal("2.0.0"))
 	}
 
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("1 release needs to be exported and cached"))
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("banana/2.0.0 compiled with alpine/8.0.0 not found in cache"))
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
-	please.Expect(test.output.String()).NotTo(Ω.ContainSubstring("exporting lemon"))
-	please.Expect(test.output.String()).NotTo(Ω.ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
+	please.Expect(test.output.String()).To(ContainSubstring("1 release needs to be exported and cached"))
+	please.Expect(test.output.String()).To(ContainSubstring("banana/2.0.0 compiled with alpine/8.0.0 not found in cache"))
+	please.Expect(test.output.String()).To(ContainSubstring("exporting from bosh deployment cf-some-id"))
+	please.Expect(test.output.String()).NotTo(ContainSubstring("exporting lemon"))
+	please.Expect(test.output.String()).NotTo(ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
 
 	var updatedKilnfile cargo.KilnfileLock
-	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
-	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(component.Lock{
+	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(HaveOccurred())
+	please.Expect(updatedKilnfile.Releases).To(ContainElement(component.Lock{
 		Name:    "banana",
 		Version: "2.0.0",
 
@@ -432,7 +432,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 // this test covers
 // - when a release does not contain packages
 func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	// setup
 	test := newCacheCompiledReleasesTestData(t, cargo.Kilnfile{
@@ -503,25 +503,25 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 
 	// check
 
-	please.Expect(test.bosh.DownloadResourceUncheckedCallCount()).To(Ω.Equal(1))
-	please.Expect(test.bosh.HasReleaseCallCount()).To(Ω.Equal(0))
-	please.Expect(test.bosh.FindReleaseCallCount()).To(Ω.Equal(1))
+	please.Expect(test.bosh.DownloadResourceUncheckedCallCount()).To(Equal(1))
+	please.Expect(test.bosh.HasReleaseCallCount()).To(Equal(0))
+	please.Expect(test.bosh.FindReleaseCallCount()).To(Equal(1))
 
 	{
 		requestedReleaseSlug := test.bosh.FindReleaseArgsForCall(0)
-		please.Expect(requestedReleaseSlug.Name()).To(Ω.Equal("banana"))
-		please.Expect(requestedReleaseSlug.Version()).To(Ω.Equal("2.0.0"))
+		please.Expect(requestedReleaseSlug.Name()).To(Equal("banana"))
+		please.Expect(requestedReleaseSlug.Version()).To(Equal("2.0.0"))
 	}
 
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("1 release needs to be exported and cached"))
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("banana/2.0.0 compiled with alpine/8.0.0 not found in cache"))
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("exporting from bosh deployment cf-some-id"))
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("oes not have any packages"))
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("exporting banana"))
+	please.Expect(test.output.String()).To(ContainSubstring("1 release needs to be exported and cached"))
+	please.Expect(test.output.String()).To(ContainSubstring("banana/2.0.0 compiled with alpine/8.0.0 not found in cache"))
+	please.Expect(test.output.String()).To(ContainSubstring("exporting from bosh deployment cf-some-id"))
+	please.Expect(test.output.String()).To(ContainSubstring("oes not have any packages"))
+	please.Expect(test.output.String()).To(ContainSubstring("exporting banana"))
 
 	var updatedKilnfile cargo.KilnfileLock
-	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(Ω.HaveOccurred())
-	please.Expect(updatedKilnfile.Releases).To(Ω.ContainElement(component.Lock{
+	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(HaveOccurred())
+	please.Expect(updatedKilnfile.Releases).To(ContainElement(component.Lock{
 		Name:    "banana",
 		Version: "2.0.0",
 
@@ -531,13 +531,13 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 		SHA1: "fake-checksum",
 	}), "it should not override the in-correct element in the Kilnfile.lock")
 
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 
-	please.Expect(test.output.String()).To(Ω.ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
+	please.Expect(test.output.String()).To(ContainSubstring("DON'T FORGET TO MAKE A COMMIT AND PR"))
 }
 
 func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_same(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	// setup
 
@@ -598,11 +598,11 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 
 	// check
 
-	please.Expect(test.releaseStorage.GetMatchedReleaseCallCount()).To(Ω.Equal(0))
-	please.Expect(test.bosh.DownloadResourceUncheckedCallCount()).To(Ω.Equal(0))
-	please.Expect(err).To(Ω.MatchError(Ω.Equal("staged stemcell (alpine 9.0.1) and lock stemcell (alpine 9.0.0) do not match")))
+	please.Expect(test.releaseStorage.GetMatchedReleaseCallCount()).To(Equal(0))
+	please.Expect(test.bosh.DownloadResourceUncheckedCallCount()).To(Equal(0))
+	please.Expect(err).To(MatchError(Equal("staged stemcell (alpine 9.0.1) and lock stemcell (alpine 9.0.0) do not match")))
 
 	var updatedLock cargo.KilnfileLock
-	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedLock)).NotTo(Ω.HaveOccurred())
-	please.Expect(updatedLock).To(Ω.Equal(initialLock))
+	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedLock)).NotTo(HaveOccurred())
+	please.Expect(updatedLock).To(Equal(initialLock))
 }
