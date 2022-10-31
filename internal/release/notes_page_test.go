@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	Ω "github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -27,18 +27,18 @@ import (
 var releaseNotesPageTAS27 string
 
 func TestParseNotesPage(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	t0, err := time.Parse("2006-01-02", "2021-11-23")
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 
 	someDeveloper := &object.Signature{Name: "author", Email: "email", When: t0}
 
 	// setup docs repo with initial state
 	repo, err := git.Init(memory.NewStorage(), memfs.New())
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 	wt, err := repo.Worktree()
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 	{
 		notesMD, _ := wt.Filesystem.Create("notes.md")
 		_, _ = notesMD.Write([]byte(releaseNotesPageTAS27))
@@ -49,12 +49,12 @@ func TestParseNotesPage(t *testing.T) {
 			Author:    someDeveloper,
 			Committer: someDeveloper,
 		})
-		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(err).NotTo(HaveOccurred())
 	}
 	// parse release notes
 	page, err := ParseNotesPage(releaseNotesPageTAS27)
-	please.Expect(err).NotTo(Ω.HaveOccurred())
-	please.Expect(page.Releases).To(Ω.HaveLen(42))
+	please.Expect(err).NotTo(HaveOccurred())
+	please.Expect(page.Releases).To(HaveLen(42))
 
 	// assign new release notes data
 	alreadyPublishedReleaseNotesData := NotesData{
@@ -138,25 +138,25 @@ func TestParseNotesPage(t *testing.T) {
 	}
 
 	alreadyPublishedVersionNote, err := alreadyPublishedReleaseNotesData.WriteVersionNotes()
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 
 	err = page.Add(alreadyPublishedVersionNote)
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 
 	notesMD, _ := wt.Filesystem.Create("notes.md")
 	pageContent := new(bytes.Buffer)
 	_, err = page.WriteTo(io.MultiWriter(notesMD, pageContent))
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 	_ = notesMD.Close()
 	_, _ = wt.Add(notesMD.Name())
 	status, err := wt.Status()
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 	if !status.IsClean() {
 		_ = os.WriteFile("exp.txt", []byte(releaseNotesPageTAS27), fs.ModePerm)
 		_ = os.WriteFile("got.txt", pageContent.Bytes(), fs.ModePerm)
 		t.Logf("run: %q", "diff --unified internal/release/{exp,got}.txt | colordiff")
 	}
-	please.Expect(status.IsClean()).To(Ω.BeTrue())
+	please.Expect(status.IsClean()).To(BeTrue())
 }
 
 func TestParseNotesPageWithExpressionAndReleasesSentinel(t *testing.T) {
@@ -164,15 +164,15 @@ func TestParseNotesPageWithExpressionAndReleasesSentinel(t *testing.T) {
 	exp := regexp.MustCompile(`(?m)(?P<notes>r(?P<version>\d+)\.*)`).String()
 
 	t.Run("multiple releases", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 
 		input := "prefix.releases:r1.r2..r3r4...r5...suffix"
 
 		page, err := ParseNotesPageWithExpressionAndReleasesSentinel(input, exp, testReleasesSentinel)
-		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(err).NotTo(HaveOccurred())
 
-		please.Expect(page.Releases).To(Ω.HaveLen(5))
-		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+		please.Expect(page.Releases).To(HaveLen(5))
+		please.Expect(page.Releases).To(Equal([]VersionNote{
 			{Version: "1", Notes: "r1."},
 			{Version: "2", Notes: "r2.."},
 			{Version: "3", Notes: "r3"},
@@ -180,73 +180,73 @@ func TestParseNotesPageWithExpressionAndReleasesSentinel(t *testing.T) {
 			{Version: "5", Notes: "r5..."},
 		}))
 
-		please.Expect(page.Prefix).To(Ω.Equal("prefix.releases:"))
-		please.Expect(page.Suffix).To(Ω.Equal("suffix"))
+		please.Expect(page.Prefix).To(Equal("prefix.releases:"))
+		please.Expect(page.Suffix).To(Equal("suffix"))
 	})
 
 	t.Run("no releases", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 
 		input := "prefix.releases:suffix"
 
 		page, err := ParseNotesPageWithExpressionAndReleasesSentinel(input, exp, testReleasesSentinel)
-		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(err).NotTo(HaveOccurred())
 
-		please.Expect(page.Releases).To(Ω.HaveLen(0))
-		please.Expect(page.Prefix).To(Ω.Equal("prefix.releases:"))
-		please.Expect(page.Suffix).To(Ω.Equal("suffix"))
+		please.Expect(page.Releases).To(HaveLen(0))
+		please.Expect(page.Prefix).To(Equal("prefix.releases:"))
+		please.Expect(page.Suffix).To(Equal("suffix"))
 	})
 }
 
 func Test_newFetchNotesData(t *testing.T) {
 	t.Run("when called", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{
 			IssueMilestone: "BLA",
 		})
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(f.repoOwner).To(Ω.Equal("o"))
-		please.Expect(f.repoName).To(Ω.Equal("r"))
-		please.Expect(f.kilnfilePath).To(Ω.Equal("k"))
-		please.Expect(f.initialRevision).To(Ω.Equal("ri"))
-		please.Expect(f.finalRevision).To(Ω.Equal("rf"))
-		please.Expect(f.historicKilnfile).NotTo(Ω.BeNil())
-		please.Expect(f.historicVersion).NotTo(Ω.BeNil())
-		please.Expect(f.issuesQuery).To(Ω.Equal(IssuesQuery{
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(f.repoOwner).To(Equal("o"))
+		please.Expect(f.repoName).To(Equal("r"))
+		please.Expect(f.kilnfilePath).To(Equal("k"))
+		please.Expect(f.initialRevision).To(Equal("ri"))
+		please.Expect(f.finalRevision).To(Equal("rf"))
+		please.Expect(f.historicKilnfile).NotTo(BeNil())
+		please.Expect(f.historicVersion).NotTo(BeNil())
+		please.Expect(f.issuesQuery).To(Equal(IssuesQuery{
 			IssueMilestone: "BLA",
 		}))
 	})
 	t.Run("when repo is nil", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		_, err := newFetchNotesData(nil, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{})
-		please.Expect(err).To(Ω.HaveOccurred())
+		please.Expect(err).To(HaveOccurred())
 	})
 	t.Run("when repo is not nil", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		f, err := newFetchNotesData(&git.Repository{
 			Storer: &memory.Storage{},
 		}, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{})
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(f.repository).NotTo(Ω.BeNil())
-		please.Expect(f.revisionResolver).NotTo(Ω.BeNil())
-		please.Expect(f.Storer).NotTo(Ω.BeNil())
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(f.repository).NotTo(BeNil())
+		please.Expect(f.revisionResolver).NotTo(BeNil())
+		please.Expect(f.Storer).NotTo(BeNil())
 	})
 	t.Run("when github client is not nil", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", &github.Client{
 			Issues:       &github.IssuesService{},
 			Repositories: &github.RepositoriesService{},
 		}, IssuesQuery{})
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(f.issuesService).NotTo(Ω.BeNil())
-		please.Expect(f.releasesService).NotTo(Ω.BeNil())
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(f.issuesService).NotTo(BeNil())
+		please.Expect(f.releasesService).NotTo(BeNil())
 	})
 	t.Run("when github client is nil", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{})
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(f.issuesService).To(Ω.BeNil())
-		please.Expect(f.releasesService).To(Ω.BeNil())
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(f.issuesService).To(BeNil())
+		please.Expect(f.releasesService).To(BeNil())
 	})
 }
 
@@ -259,17 +259,17 @@ func TestReleaseNotesPage_Add(t *testing.T) {
 	//   The release notes for tile 2.7.43 were inserted at the top of the document (index 0)
 
 	t.Run("initial release", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		page := NotesPage{
 			Exp: regexp.MustCompile(`r\d+`), // a simpler release expression
 		}
 		note := VersionNote{Version: "1", Notes: "r1"}
 		err := page.Add(note)
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(page.Releases).To(Ω.ConsistOf(note))
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(page.Releases).To(ConsistOf(note))
 	})
 	t.Run("new latest release", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		page := NotesPage{
 			Exp: regexp.MustCompile(`r\d+`),
 			Releases: []VersionNote{
@@ -278,14 +278,14 @@ func TestReleaseNotesPage_Add(t *testing.T) {
 		}
 		newNote := VersionNote{Version: "3", Notes: "r3"}
 		err := page.Add(newNote)
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(page.Releases).To(Equal([]VersionNote{
 			{Version: "3", Notes: "r3"},
 			{Version: "2", Notes: "r2"},
 		}))
 	})
 	t.Run("update existing release notes", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		page := NotesPage{
 			Exp: regexp.MustCompile(`r\d+`),
 			Releases: []VersionNote{
@@ -294,13 +294,13 @@ func TestReleaseNotesPage_Add(t *testing.T) {
 		}
 		newNote := VersionNote{Version: "1", Notes: "r2"}
 		err := page.Add(newNote)
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(page.Releases).To(Equal([]VersionNote{
 			{Version: "1", Notes: "r2"},
 		}))
 	})
 	t.Run("insert between", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		page := NotesPage{
 			Exp: regexp.MustCompile(`r\d+`),
 			Releases: []VersionNote{
@@ -310,15 +310,15 @@ func TestReleaseNotesPage_Add(t *testing.T) {
 		}
 		newNote := VersionNote{Version: "2", Notes: "r2"}
 		err := page.Add(newNote)
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(page.Releases).To(Equal([]VersionNote{
 			{Version: "3", Notes: "r3"},
 			{Version: "2", Notes: "r2"},
 			{Version: "1", Notes: "r1"},
 		}))
 	})
 	t.Run("notes version field is invalid", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		page := NotesPage{
 			Exp: regexp.MustCompile(`r\d+`),
 			Releases: []VersionNote{
@@ -327,10 +327,10 @@ func TestReleaseNotesPage_Add(t *testing.T) {
 		}
 		newNote := VersionNote{Version: "s", Notes: "r2"}
 		err := page.Add(newNote)
-		please.Expect(err).To(Ω.HaveOccurred())
+		please.Expect(err).To(HaveOccurred())
 	})
 	t.Run("add notes to end", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		page := NotesPage{
 			Exp: regexp.MustCompile(`r\d+`),
 			Releases: []VersionNote{
@@ -340,15 +340,15 @@ func TestReleaseNotesPage_Add(t *testing.T) {
 		}
 		newNote := VersionNote{Version: "1", Notes: "r1"}
 		err := page.Add(newNote)
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(page.Releases).To(Ω.Equal([]VersionNote{
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(page.Releases).To(Equal([]VersionNote{
 			{Version: "3", Notes: "r3"},
 			{Version: "2", Notes: "r2"},
 			{Version: "1", Notes: "r1"},
 		}))
 	})
 	t.Run("notes content does not match page regex", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		page := NotesPage{
 			Exp: regexp.MustCompile(`r\d+`),
 			Releases: []VersionNote{
@@ -357,7 +357,7 @@ func TestReleaseNotesPage_Add(t *testing.T) {
 		}
 		newNote := VersionNote{Version: "2", Notes: "s2"}
 		err := page.Add(newNote)
-		please.Expect(err).To(Ω.HaveOccurred())
+		please.Expect(err).To(HaveOccurred())
 	})
 }
 

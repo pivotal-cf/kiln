@@ -8,7 +8,7 @@ import (
 	"sort"
 	"testing"
 
-	Ω "github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
@@ -21,7 +21,7 @@ import (
 )
 
 func Test_fetch(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	t.Setenv("GITHUB_TOKEN", "")
 
@@ -110,85 +110,85 @@ func Test_fetch(t *testing.T) {
 	}
 
 	_, err := rn.fetch(context.Background())
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 
-	please.Expect(revisionResolver.ResolveRevisionCallCount()).To(Ω.Equal(2))
-	please.Expect(revisionResolver.ResolveRevisionArgsForCall(0)).To(Ω.Equal(plumbing.Revision("tile/1.1.0")))
-	please.Expect(revisionResolver.ResolveRevisionArgsForCall(1)).To(Ω.Equal(plumbing.Revision("tile/1.2.0")))
+	please.Expect(revisionResolver.ResolveRevisionCallCount()).To(Equal(2))
+	please.Expect(revisionResolver.ResolveRevisionArgsForCall(0)).To(Equal(plumbing.Revision("tile/1.1.0")))
+	please.Expect(revisionResolver.ResolveRevisionArgsForCall(1)).To(Equal(plumbing.Revision("tile/1.2.0")))
 
-	please.Expect(historicVersion.CallCount()).To(Ω.Equal(1))
+	please.Expect(historicVersion.CallCount()).To(Equal(1))
 	_, historicVersionHashArg, _ := historicVersion.ArgsForCall(0)
-	please.Expect(historicVersionHashArg).To(Ω.Equal(finalHash))
-	please.Expect(fakeReleaseService.ListReleasesCallCount()).To(Ω.Equal(2))
-	please.Expect(fakeIssuesService.GetCallCount()).To(Ω.Equal(2))
+	please.Expect(historicVersionHashArg).To(Equal(finalHash))
+	please.Expect(fakeReleaseService.ListReleasesCallCount()).To(Equal(2))
+	please.Expect(fakeIssuesService.GetCallCount()).To(Equal(2))
 
 	_, orgName, repoName, n := fakeIssuesService.GetArgsForCall(0)
-	please.Expect(orgName).To(Ω.Equal("pivotal-cf"))
-	please.Expect(repoName).To(Ω.Equal("fake-tile-repo"))
-	please.Expect(n).To(Ω.Equal(54000))
+	please.Expect(orgName).To(Equal("pivotal-cf"))
+	please.Expect(repoName).To(Equal("fake-tile-repo"))
+	please.Expect(n).To(Equal(54000))
 
 	_, orgName, repoName, n = fakeIssuesService.GetArgsForCall(1)
-	please.Expect(orgName).To(Ω.Equal("pivotal-cf"))
-	please.Expect(repoName).To(Ω.Equal("fake-tile-repo"))
-	please.Expect(n).To(Ω.Equal(54321))
+	please.Expect(orgName).To(Equal("pivotal-cf"))
+	please.Expect(repoName).To(Equal("fake-tile-repo"))
+	please.Expect(n).To(Equal(54321))
 }
 
 func Test_issuesFromIssueIDs(t *testing.T) {
 	t.Parallel()
 
 	t.Run("no ids", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		issuesService := new(fakes.IssueGetter)
 
 		result, err := issuesFromIssueIDs(context.Background(), issuesService, "o", "n", nil)
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(result).To(Ω.HaveLen(0))
-		please.Expect(issuesService.GetCallCount()).To(Ω.Equal(0))
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(result).To(HaveLen(0))
+		please.Expect(issuesService.GetCallCount()).To(Equal(0))
 	})
 
 	t.Run("some ids", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		issuesService := new(fakes.IssueGetter)
 
 		issuesService.GetReturnsOnCall(0, &github.Issue{Number: intPtr(1)}, githubResponse(t, 200), nil)
 		issuesService.GetReturnsOnCall(1, &github.Issue{Number: intPtr(2)}, githubResponse(t, 200), nil)
 
 		result, err := issuesFromIssueIDs(context.Background(), issuesService, "o", "n", []string{"1", "2"})
-		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(err).NotTo(HaveOccurred())
 
-		please.Expect(result).To(Ω.HaveLen(2))
-		please.Expect(result[0].GetNumber()).To(Ω.Equal(1))
-		please.Expect(result[1].GetNumber()).To(Ω.Equal(2))
+		please.Expect(result).To(HaveLen(2))
+		please.Expect(result[0].GetNumber()).To(Equal(1))
+		please.Expect(result[1].GetNumber()).To(Equal(2))
 
-		please.Expect(issuesService.GetCallCount()).To(Ω.Equal(2))
+		please.Expect(issuesService.GetCallCount()).To(Equal(2))
 		ctx, ro, rn, number := issuesService.GetArgsForCall(0)
-		please.Expect(ctx).NotTo(Ω.BeNil())
-		please.Expect(ro).To(Ω.Equal("o"))
-		please.Expect(rn).To(Ω.Equal("n"))
-		please.Expect(number).To(Ω.Equal(1))
+		please.Expect(ctx).NotTo(BeNil())
+		please.Expect(ro).To(Equal("o"))
+		please.Expect(rn).To(Equal("n"))
+		please.Expect(number).To(Equal(1))
 
 		_, _, _, number = issuesService.GetArgsForCall(1)
-		please.Expect(number).To(Ω.Equal(2))
+		please.Expect(number).To(Equal(2))
 	})
 
 	t.Run("the issues service returns an error", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		issuesService := new(fakes.IssueGetter)
 
 		issuesService.GetReturnsOnCall(0, &github.Issue{Number: intPtr(1)}, nil, errors.New("banana"))
 
 		_, err := issuesFromIssueIDs(context.Background(), issuesService, "o", "n", []string{"1"})
-		please.Expect(err).To(Ω.HaveOccurred())
+		please.Expect(err).To(HaveOccurred())
 	})
 
 	t.Run("the issues service returns a not okay status", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		issuesService := new(fakes.IssueGetter)
 
 		issuesService.GetReturnsOnCall(0, &github.Issue{Number: intPtr(1)}, githubResponse(t, http.StatusUnauthorized), nil)
 
 		_, err := issuesFromIssueIDs(context.Background(), issuesService, "o", "n", []string{"1"})
-		please.Expect(err).To(Ω.HaveOccurred())
+		please.Expect(err).To(HaveOccurred())
 	})
 }
 
@@ -196,26 +196,26 @@ func Test_resolveMilestoneNumber(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty milestone option", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		issuesService := new(fakes.MilestoneLister)
 
 		result, err := resolveMilestoneNumber(context.Background(), issuesService, "o", "n", "")
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(result).To(Ω.Equal(""))
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(result).To(Equal(""))
 	})
 
 	t.Run("when passed a number", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		issuesService := new(fakes.MilestoneLister)
 
 		result, err := resolveMilestoneNumber(context.Background(), issuesService, "o", "n", "42")
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(result).To(Ω.Equal("42"), "it returns that number")
-		please.Expect(issuesService.ListMilestonesCallCount()).To(Ω.Equal(0), "it does not reach out o")
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(result).To(Equal("42"), "it returns that number")
+		please.Expect(issuesService.ListMilestonesCallCount()).To(Equal(0), "it does not reach out o")
 	})
 
 	t.Run("when the milestone is found on the second page", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		issuesService := new(fakes.MilestoneLister)
 
 		issuesService.ListMilestonesReturnsOnCall(0,
@@ -237,31 +237,31 @@ func Test_resolveMilestoneNumber(t *testing.T) {
 
 		result, err := resolveMilestoneNumber(context.Background(), issuesService, "o", "n", "banana")
 
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(issuesService.ListMilestonesCallCount()).To(Ω.Equal(2))
-		please.Expect(result).To(Ω.Equal("42"))
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(issuesService.ListMilestonesCallCount()).To(Equal(2))
+		please.Expect(result).To(Equal("42"))
 	})
 
 	// TODO: test pagination
 
 	t.Run("the issues service returns an error", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		issuesService := new(fakes.MilestoneLister)
 
 		issuesService.ListMilestonesReturns(nil, nil, errors.New("banana"))
 
 		_, err := resolveMilestoneNumber(context.Background(), issuesService, "o", "n", "m")
-		please.Expect(err).To(Ω.HaveOccurred())
+		please.Expect(err).To(HaveOccurred())
 	})
 
 	t.Run("the issues service returns a not okay status", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		issuesService := new(fakes.MilestoneLister)
 
 		issuesService.ListMilestonesReturns(nil, githubResponse(t, http.StatusUnauthorized), nil)
 
 		_, err := resolveMilestoneNumber(context.Background(), issuesService, "o", "n", "m")
-		please.Expect(err).To(Ω.HaveOccurred())
+		please.Expect(err).To(HaveOccurred())
 	})
 }
 
@@ -269,39 +269,39 @@ func Test_fetchIssuesWithLabelAndMilestone(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty milestone and labels", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		issuesService := new(fakes.IssuesByRepoLister)
 
 		result, err := fetchIssuesWithLabelAndMilestone(context.Background(), issuesService, "o", "n", "", nil)
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(result).To(Ω.HaveLen(0))
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(result).To(HaveLen(0))
 	})
 
 	// TODO: issue service call params
 
 	t.Run("the issues service returns an error", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		issuesService := new(fakes.IssuesByRepoLister)
 
 		issuesService.ListByRepoReturns(nil, nil, errors.New("banana"))
 
 		_, err := fetchIssuesWithLabelAndMilestone(context.Background(), issuesService, "o", "n", "1", nil)
-		please.Expect(err).To(Ω.HaveOccurred())
+		please.Expect(err).To(HaveOccurred())
 	})
 
 	t.Run("the issues service returns a not okay status", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		issuesService := new(fakes.IssuesByRepoLister)
 
 		issuesService.ListByRepoReturns(nil, githubResponse(t, http.StatusUnauthorized), nil)
 
 		_, err := fetchIssuesWithLabelAndMilestone(context.Background(), issuesService, "o", "n", "1", nil)
-		please.Expect(err).To(Ω.HaveOccurred())
+		please.Expect(err).To(HaveOccurred())
 	})
 }
 
 func Test_issuesBySemanticTitlePrefix(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	issues := []*github.Issue{
 		{Title: strPtr("**[NONE]** lorem ipsum")},
@@ -318,7 +318,7 @@ func Test_issuesBySemanticTitlePrefix(t *testing.T) {
 		titles = append(titles, issue.GetTitle())
 	}
 
-	please.Expect(titles).To(Ω.Equal([]string{
+	please.Expect(titles).To(Equal([]string{
 		"**[security Fix]** 111 lorem ipsum",
 		"**[security fix]** 222 lorem ipsum",
 		"**[Feature]** lorem ipsum",
@@ -329,7 +329,7 @@ func Test_issuesBySemanticTitlePrefix(t *testing.T) {
 }
 
 func Test_appendFilterAndSortIssues(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 	getID := func() func() int64 {
 		var n int64
 		return func() int64 {
@@ -358,7 +358,7 @@ func Test_appendFilterAndSortIssues(t *testing.T) {
 		titles = append(titles, issue.GetTitle())
 	}
 
-	please.Expect(titles).To(Ω.Equal([]string{
+	please.Expect(titles).To(Equal([]string{
 		"**[security Fix]** 111 lorem ipsum",
 		"**[security fix]** 222 lorem ipsum",
 		"**[Feature]** lorem ipsum",
@@ -369,24 +369,24 @@ func Test_appendFilterAndSortIssues(t *testing.T) {
 }
 
 func TestReleaseNotes_Options_IssueTitleExp(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	exp, err := IssuesQuery{}.Exp()
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 
-	please.Expect(exp.MatchString("**[Bug Fix]** Lorem Ipsum")).To(Ω.BeTrue())
-	please.Expect(exp.MatchString("**[bug fix]** Lorem Ipsum")).To(Ω.BeTrue())
-	please.Expect(exp.MatchString("**[Feature]** Lorem Ipsum")).To(Ω.BeTrue())
-	please.Expect(exp.MatchString("**[feature improvement]** Lorem Ipsum")).To(Ω.BeTrue())
-	please.Expect(exp.MatchString("**[security fix]** Lorem Ipsum")).To(Ω.BeTrue())
+	please.Expect(exp.MatchString("**[Bug Fix]** Lorem Ipsum")).To(BeTrue())
+	please.Expect(exp.MatchString("**[bug fix]** Lorem Ipsum")).To(BeTrue())
+	please.Expect(exp.MatchString("**[Feature]** Lorem Ipsum")).To(BeTrue())
+	please.Expect(exp.MatchString("**[feature improvement]** Lorem Ipsum")).To(BeTrue())
+	please.Expect(exp.MatchString("**[security fix]** Lorem Ipsum")).To(BeTrue())
 
-	please.Expect(exp.MatchString("**[none]** Lorem Ipsum")).To(Ω.BeFalse())
-	please.Expect(exp.MatchString("**[none]** feature bug fix security")).To(Ω.BeFalse())
-	please.Expect(exp.MatchString("Lorem Ipsum")).To(Ω.BeFalse())
-	please.Expect(exp.MatchString("")).To(Ω.BeFalse())
-	please.Expect(exp.MatchString("**[]**")).To(Ω.BeFalse())
-	please.Expect(exp.MatchString("**[bugFix]**")).To(Ω.BeFalse())
-	please.Expect(exp.MatchString("**[security]**")).To(Ω.BeFalse())
+	please.Expect(exp.MatchString("**[none]** Lorem Ipsum")).To(BeFalse())
+	please.Expect(exp.MatchString("**[none]** feature bug fix security")).To(BeFalse())
+	please.Expect(exp.MatchString("Lorem Ipsum")).To(BeFalse())
+	please.Expect(exp.MatchString("")).To(BeFalse())
+	please.Expect(exp.MatchString("**[]**")).To(BeFalse())
+	please.Expect(exp.MatchString("**[bugFix]**")).To(BeFalse())
+	please.Expect(exp.MatchString("**[security]**")).To(BeFalse())
 }
 
 func getIssueTitleExp(t *testing.T) string {

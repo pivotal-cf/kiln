@@ -7,16 +7,16 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
-	Ω "github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 )
 
 func Test_defaultReleaseNotesTemplate(t *testing.T) {
 	t.Run("empty github release body", func(t *testing.T) {
-		please := Ω.NewWithT(t)
+		please := NewWithT(t)
 		tmp, err := DefaultTemplateFuncs(template.New("")).Parse(DefaultNotesTemplate())
-		please.Expect(err).NotTo(Ω.HaveOccurred())
+		please.Expect(err).NotTo(HaveOccurred())
 		var b bytes.Buffer
 		err = tmp.Execute(&b, NotesData{
 			Version: semver.MustParse("0.0"),
@@ -30,7 +30,7 @@ func Test_defaultReleaseNotesTemplate(t *testing.T) {
 				},
 			},
 		})
-		please.Expect(err).NotTo(Ω.HaveOccurred())
-		please.Expect(b.String()).To(Ω.ContainSubstring("<tr><td>banana</td><td>1.2</td><td></td></tr>"))
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(b.String()).To(ContainSubstring("<tr><td>banana</td><td>1.2</td><td></td></tr>"))
 	})
 }

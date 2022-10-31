@@ -6,13 +6,13 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/builder"
 
-	Ω "github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 )
 
 var _ metadataTemplatesParser = (*builder.MetadataPartsDirectoryReader)(nil)
 
 func TestBake_loadFlags_sets_reasonable_defaults(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	var (
 		bake Bake
@@ -33,27 +33,27 @@ func TestBake_loadFlags_sets_reasonable_defaults(t *testing.T) {
 
 	err := bake.loadFlags([]string{}, statNoError, readFile)
 
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 
-	please.Expect(bake.Options.Kilnfile).To(Ω.Equal("Kilnfile"))
-	please.Expect(bake.Options.Metadata).To(Ω.Equal("base.yml"))
-	please.Expect(bake.Options.IconPath).To(Ω.Equal("icon.png"))
-	please.Expect(bake.Options.OutputFile).To(Ω.Equal("tile-4.2.0.pivotal"))
+	please.Expect(bake.Options.Kilnfile).To(Equal("Kilnfile"))
+	please.Expect(bake.Options.Metadata).To(Equal("base.yml"))
+	please.Expect(bake.Options.IconPath).To(Equal("icon.png"))
+	please.Expect(bake.Options.OutputFile).To(Equal("tile-4.2.0.pivotal"))
 
-	please.Expect(bake.Options.ReleaseDirectories).To(Ω.Equal([]string{"releases"}))
-	please.Expect(bake.Options.FormDirectories).To(Ω.Equal([]string{"forms"}))
-	please.Expect(bake.Options.InstanceGroupDirectories).To(Ω.Equal([]string{"instance_groups"}))
-	please.Expect(bake.Options.JobDirectories).To(Ω.Equal([]string{"jobs"}))
-	please.Expect(bake.Options.MigrationDirectories).To(Ω.Equal([]string{"migrations"}))
-	please.Expect(bake.Options.PropertyDirectories).To(Ω.Equal([]string{"properties"}))
-	please.Expect(bake.Options.RuntimeConfigDirectories).To(Ω.Equal([]string{"runtime_configs"}))
-	please.Expect(bake.Options.BOSHVariableDirectories).To(Ω.Equal([]string{"bosh_variables"}))
+	please.Expect(bake.Options.ReleaseDirectories).To(Equal([]string{"releases"}))
+	please.Expect(bake.Options.FormDirectories).To(Equal([]string{"forms"}))
+	please.Expect(bake.Options.InstanceGroupDirectories).To(Equal([]string{"instance_groups"}))
+	please.Expect(bake.Options.JobDirectories).To(Equal([]string{"jobs"}))
+	please.Expect(bake.Options.MigrationDirectories).To(Equal([]string{"migrations"}))
+	please.Expect(bake.Options.PropertyDirectories).To(Equal([]string{"properties"}))
+	please.Expect(bake.Options.RuntimeConfigDirectories).To(Equal([]string{"runtime_configs"}))
+	please.Expect(bake.Options.BOSHVariableDirectories).To(Equal([]string{"bosh_variables"}))
 
-	please.Expect(readFileCallCount).To(Ω.Equal(1))
+	please.Expect(readFileCallCount).To(Equal(1))
 }
 
 func TestBake_loadFlags_kilnfile_path_provided(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	var (
 		bake Bake
@@ -77,30 +77,30 @@ func TestBake_loadFlags_kilnfile_path_provided(t *testing.T) {
 		"--forms-directory", "do-not-change",
 	}, statNoError, readFile)
 
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 
-	please.Expect(bake.Options.Kilnfile).To(Ω.Equal("some-dir/Kilnfile"))
+	please.Expect(bake.Options.Kilnfile).To(Equal("some-dir/Kilnfile"))
 
 	description := "it should prefix defaults with kiln path"
-	please.Expect(bake.Options.Metadata).To(Ω.Equal("some-dir/base.yml"), description)
-	please.Expect(bake.Options.IconPath).To(Ω.Equal("some-dir/icon.png"), description)
-	please.Expect(bake.Options.OutputFile).To(Ω.Equal("tile-4.2.0.pivotal"))
+	please.Expect(bake.Options.Metadata).To(Equal("some-dir/base.yml"), description)
+	please.Expect(bake.Options.IconPath).To(Equal("some-dir/icon.png"), description)
+	please.Expect(bake.Options.OutputFile).To(Equal("tile-4.2.0.pivotal"))
 
-	please.Expect(bake.Options.FormDirectories).To(Ω.Equal([]string{"do-not-change"}), "it should not prefix explicitly passed flags")
+	please.Expect(bake.Options.FormDirectories).To(Equal([]string{"do-not-change"}), "it should not prefix explicitly passed flags")
 
-	please.Expect(bake.Options.ReleaseDirectories).To(Ω.Equal([]string{"some-dir/releases"}), description)
-	please.Expect(bake.Options.InstanceGroupDirectories).To(Ω.Equal([]string{"some-dir/instance_groups"}), description)
-	please.Expect(bake.Options.JobDirectories).To(Ω.Equal([]string{"some-dir/jobs"}), description)
-	please.Expect(bake.Options.MigrationDirectories).To(Ω.Equal([]string{"some-dir/migrations"}), description)
-	please.Expect(bake.Options.PropertyDirectories).To(Ω.Equal([]string{"some-dir/properties"}), description)
-	please.Expect(bake.Options.RuntimeConfigDirectories).To(Ω.Equal([]string{"some-dir/runtime_configs"}), description)
-	please.Expect(bake.Options.BOSHVariableDirectories).To(Ω.Equal([]string{"some-dir/bosh_variables"}), description)
+	please.Expect(bake.Options.ReleaseDirectories).To(Equal([]string{"some-dir/releases"}), description)
+	please.Expect(bake.Options.InstanceGroupDirectories).To(Equal([]string{"some-dir/instance_groups"}), description)
+	please.Expect(bake.Options.JobDirectories).To(Equal([]string{"some-dir/jobs"}), description)
+	please.Expect(bake.Options.MigrationDirectories).To(Equal([]string{"some-dir/migrations"}), description)
+	please.Expect(bake.Options.PropertyDirectories).To(Equal([]string{"some-dir/properties"}), description)
+	please.Expect(bake.Options.RuntimeConfigDirectories).To(Equal([]string{"some-dir/runtime_configs"}), description)
+	please.Expect(bake.Options.BOSHVariableDirectories).To(Equal([]string{"some-dir/bosh_variables"}), description)
 
-	please.Expect(readFileCallCount).To(Ω.Equal(1))
+	please.Expect(readFileCallCount).To(Equal(1))
 }
 
 func TestBake_loadFlags_sets_empty_options_when_default_is_not_applicable(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	var (
 		bake Bake
@@ -111,24 +111,24 @@ func TestBake_loadFlags_sets_empty_options_when_default_is_not_applicable(t *tes
 
 	err := bake.loadFlags([]string{}, statError, readError)
 
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 
-	please.Expect(bake.Options.Kilnfile).To(Ω.Equal(""))
-	please.Expect(bake.Options.Metadata).To(Ω.Equal(""))
-	please.Expect(bake.Options.Version).To(Ω.Equal(""))
+	please.Expect(bake.Options.Kilnfile).To(Equal(""))
+	please.Expect(bake.Options.Metadata).To(Equal(""))
+	please.Expect(bake.Options.Version).To(Equal(""))
 
-	please.Expect(bake.Options.ReleaseDirectories).To(Ω.HaveLen(0))
-	please.Expect(bake.Options.FormDirectories).To(Ω.HaveLen(0))
-	please.Expect(bake.Options.InstanceGroupDirectories).To(Ω.HaveLen(0))
-	please.Expect(bake.Options.JobDirectories).To(Ω.HaveLen(0))
-	please.Expect(bake.Options.MigrationDirectories).To(Ω.HaveLen(0))
-	please.Expect(bake.Options.PropertyDirectories).To(Ω.HaveLen(0))
-	please.Expect(bake.Options.RuntimeConfigDirectories).To(Ω.HaveLen(0))
-	please.Expect(bake.Options.BOSHVariableDirectories).To(Ω.HaveLen(0))
+	please.Expect(bake.Options.ReleaseDirectories).To(HaveLen(0))
+	please.Expect(bake.Options.FormDirectories).To(HaveLen(0))
+	please.Expect(bake.Options.InstanceGroupDirectories).To(HaveLen(0))
+	please.Expect(bake.Options.JobDirectories).To(HaveLen(0))
+	please.Expect(bake.Options.MigrationDirectories).To(HaveLen(0))
+	please.Expect(bake.Options.PropertyDirectories).To(HaveLen(0))
+	please.Expect(bake.Options.RuntimeConfigDirectories).To(HaveLen(0))
+	please.Expect(bake.Options.BOSHVariableDirectories).To(HaveLen(0))
 }
 
 func TestBake_loadFlags_does_not_override_provided_flags(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	var (
 		bake Bake
@@ -175,28 +175,28 @@ func TestBake_loadFlags_does_not_override_provided_flags(t *testing.T) {
 		"--bosh-variables-directory", "bosh-variables-directory-2",
 	}, statError, readNotFound)
 
-	please.Expect(err).NotTo(Ω.HaveOccurred())
+	please.Expect(err).NotTo(HaveOccurred())
 
-	please.Expect(bake.Options.Kilnfile).To(Ω.Equal("kilnfile"))
-	please.Expect(bake.Options.Metadata).To(Ω.Equal("metadata"))
-	please.Expect(bake.Options.IconPath).To(Ω.Equal("icon"))
-	please.Expect(bake.Options.Version).To(Ω.Equal("4.2.0"))
-	please.Expect(bake.Options.OutputFile).To(Ω.Equal("some-tile.pivotal"))
+	please.Expect(bake.Options.Kilnfile).To(Equal("kilnfile"))
+	please.Expect(bake.Options.Metadata).To(Equal("metadata"))
+	please.Expect(bake.Options.IconPath).To(Equal("icon"))
+	please.Expect(bake.Options.Version).To(Equal("4.2.0"))
+	please.Expect(bake.Options.OutputFile).To(Equal("some-tile.pivotal"))
 
-	please.Expect(bake.Options.ReleaseDirectories).To(Ω.Equal([]string{"releases-directory-1", "releases-directory-2"}))
-	please.Expect(bake.Options.FormDirectories).To(Ω.Equal([]string{"forms-directory-1", "forms-directory-2"}))
-	please.Expect(bake.Options.InstanceGroupDirectories).To(Ω.Equal([]string{"instance-groups-directory-1", "instance-groups-directory-2"}))
-	please.Expect(bake.Options.JobDirectories).To(Ω.Equal([]string{"jobs-directory-1", "jobs-directory-2"}))
-	please.Expect(bake.Options.MigrationDirectories).To(Ω.Equal([]string{"migrations-directory-1", "migrations-directory-2"}))
-	please.Expect(bake.Options.PropertyDirectories).To(Ω.Equal([]string{"properties-directory-1", "properties-directory-2"}))
-	please.Expect(bake.Options.RuntimeConfigDirectories).To(Ω.Equal([]string{"runtime-configs-directory-1", "runtime-configs-directory-2"}))
-	please.Expect(bake.Options.BOSHVariableDirectories).To(Ω.Equal([]string{"bosh-variables-directory-1", "bosh-variables-directory-2"}))
+	please.Expect(bake.Options.ReleaseDirectories).To(Equal([]string{"releases-directory-1", "releases-directory-2"}))
+	please.Expect(bake.Options.FormDirectories).To(Equal([]string{"forms-directory-1", "forms-directory-2"}))
+	please.Expect(bake.Options.InstanceGroupDirectories).To(Equal([]string{"instance-groups-directory-1", "instance-groups-directory-2"}))
+	please.Expect(bake.Options.JobDirectories).To(Equal([]string{"jobs-directory-1", "jobs-directory-2"}))
+	please.Expect(bake.Options.MigrationDirectories).To(Equal([]string{"migrations-directory-1", "migrations-directory-2"}))
+	please.Expect(bake.Options.PropertyDirectories).To(Equal([]string{"properties-directory-1", "properties-directory-2"}))
+	please.Expect(bake.Options.RuntimeConfigDirectories).To(Equal([]string{"runtime-configs-directory-1", "runtime-configs-directory-2"}))
+	please.Expect(bake.Options.BOSHVariableDirectories).To(Equal([]string{"bosh-variables-directory-1", "bosh-variables-directory-2"}))
 
-	please.Expect(readFileCallCount).To(Ω.Equal(0))
+	please.Expect(readFileCallCount).To(Equal(0))
 }
 
 func TestBake_loadFlags_sets_default_output_file_if_not_set(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	var (
 		bake Bake
@@ -217,13 +217,13 @@ func TestBake_loadFlags_sets_default_output_file_if_not_set(t *testing.T) {
 
 	err := bake.loadFlags([]string{}, statNoError, readFile)
 
-	please.Expect(err).NotTo(Ω.HaveOccurred())
-	please.Expect(bake.Options.OutputFile).To(Ω.Equal("tile-1.2.3.pivotal"))
-	please.Expect(readFileCallCount).To(Ω.Equal(1))
+	please.Expect(err).NotTo(HaveOccurred())
+	please.Expect(bake.Options.OutputFile).To(Equal("tile-1.2.3.pivotal"))
+	please.Expect(readFileCallCount).To(Equal(1))
 }
 
 func TestBake_loadFlags_does_not_set_outputs_file_when_meta_data_only_is_true(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	var (
 		bake Bake
@@ -236,12 +236,12 @@ func TestBake_loadFlags_does_not_set_outputs_file_when_meta_data_only_is_true(t 
 		"--metadata-only",
 	}, statNoError, readFileError)
 
-	please.Expect(err).NotTo(Ω.HaveOccurred())
-	please.Expect(bake.Options.OutputFile).To(Ω.Equal(""))
+	please.Expect(err).NotTo(HaveOccurred())
+	please.Expect(bake.Options.OutputFile).To(Equal(""))
 }
 
 func TestBake_loadFlags_version_file_does_not_exist(t *testing.T) {
-	please := Ω.NewWithT(t)
+	please := NewWithT(t)
 
 	var (
 		bake Bake
@@ -256,5 +256,5 @@ func TestBake_loadFlags_version_file_does_not_exist(t *testing.T) {
 
 	err := bake.loadFlags([]string{}, statError, readFileError)
 
-	please.Expect(err).NotTo(Ω.HaveOccurred(), "it should not return an error")
+	please.Expect(err).NotTo(HaveOccurred(), "it should not return an error")
 }
