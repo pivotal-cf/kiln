@@ -20,7 +20,6 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/internal/release"
 )
 
@@ -273,7 +272,7 @@ func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, erro
 		return "", "", fmt.Errorf("remote github URL not found for repo")
 	}
 
-	repoOwner, repoName, err := component.OwnerAndRepoFromGitHubURI(remoteURL)
+	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(remoteURL)
 	if err != nil {
 		return "", "", err
 	}

@@ -23,13 +23,12 @@ import (
 	"github.com/google/go-github/v40/github"
 	"gopkg.in/yaml.v2"
 
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/history"
 )
 
 type ComponentData struct {
-	component.Lock
+	cargo.ComponentLock
 	Releases []*github.RepositoryRelease
 }
 
@@ -48,7 +47,7 @@ type NotesData struct {
 
 	Issues     []*github.Issue
 	Components []ComponentData
-	Bumps      component.BumpList
+	Bumps      cargo.BumpList
 
 	Stemcell cargo.Stemcell
 }
@@ -146,7 +145,7 @@ type fetchNotesData struct {
 	repository *git.Repository
 
 	issuesService
-	releasesService component.RepositoryReleaseLister
+	releasesService cargo.RepositoryReleaseLister
 
 	repoOwner, repoName,
 	kilnfilePath,
@@ -163,7 +162,7 @@ func (r fetchNotesData) fetch(ctx context.Context) (NotesData, error) {
 
 	data := NotesData{
 		Version:  finalVersion,
-		Bumps:    component.CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
+		Bumps:    cargo.CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
 		Stemcell: finalKilnfileLock.Stemcell,
 	}
 
@@ -179,8 +178,8 @@ func (r fetchNotesData) fetch(ctx context.Context) (NotesData, error) {
 
 	for _, c := range finalKilnfileLock.Releases {
 		data.Components = append(data.Components, ComponentData{
-			Lock:     c,
-			Releases: data.Bumps.ForLock(c).Releases,
+			ComponentLock: c,
+			Releases:      data.Bumps.ForLock(c).Releases,
 		})
 	}
 
@@ -273,11 +272,11 @@ type issuesService interface {
 // The function can be tested by generating release notes for a tile with issue ids and a milestone set. The happy path
 // test for Execute does not set GithubToken intentionally so this code is not triggered and Execute does not actually
 // reach out to GitHub.
-func (r fetchNotesData) fetchIssuesAndReleaseNotes(ctx context.Context, finalKF, wtKF cargo.Kilnfile, bumpList component.BumpList, issuesQuery IssuesQuery) ([]*github.Issue, component.BumpList, error) {
+func (r fetchNotesData) fetchIssuesAndReleaseNotes(ctx context.Context, finalKF, wtKF cargo.Kilnfile, bumpList cargo.BumpList, issuesQuery IssuesQuery) ([]*github.Issue, cargo.BumpList, error) {
 	if r.releasesService == nil || r.issuesService == nil {
 		return nil, bumpList, nil
 	}
-	bumpList, err := component.ReleaseNotes(ctx, r.releasesService, setEmptyComponentGitHubRepositoryFromOtherKilnfile(finalKF, wtKF), bumpList)
+	bumpList, err := cargo.ReleaseNotes(ctx, r.releasesService, setEmptyComponentGitHubRepositoryFromOtherKilnfile(finalKF, wtKF), bumpList)
 	if err != nil {
 		return nil, nil, err
 	}

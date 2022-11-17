@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/gh"
 	"io"
 	"log"
 	"net/http"
@@ -90,7 +91,7 @@ type ReleaseByTagGetter interface {
 }
 
 func (grs GithubReleaseSource) GetGithubReleaseWithTag(ctx context.Context, s Spec) (*github.RepositoryRelease, error) {
-	repoOwner, repoName, err := OwnerAndRepoFromGitHubURI(s.GitHubRepository)
+	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(s.GitHubRepository)
 	if err != nil {
 		return nil, ErrNotFound
 	}
@@ -117,7 +118,7 @@ func (grs GithubReleaseSource) GetLatestMatchingRelease(ctx context.Context, s S
 		return nil, fmt.Errorf("expected version to be a constraint")
 	}
 
-	repoOwner, repoName, err := OwnerAndRepoFromGitHubURI(s.GitHubRepository)
+	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(s.GitHubRepository)
 	if err != nil {
 		return nil, ErrNotFound
 	}
@@ -221,7 +222,7 @@ func (grs GithubReleaseSource) getLockFromRelease(ctx context.Context, r *github
 }
 
 func (grs GithubReleaseSource) getReleaseSHA1(ctx context.Context, s Spec, id int64) (string, error) {
-	repoOwner, repoName, err := OwnerAndRepoFromGitHubURI(s.GitHubRepository)
+	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(s.GitHubRepository)
 	if err != nil {
 		return "", fmt.Errorf("could not parse repository name: %v", err)
 	}

@@ -6,7 +6,8 @@ import (
 	"sync"
 
 	"github.com/google/go-github/v40/github"
-	"github.com/pivotal-cf/kiln/internal/component"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type ReleaseService struct {
@@ -126,4 +127,4 @@ func (fake *ReleaseService) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ component.RepositoryReleaseLister = new(ReleaseService)
+var _ cargo.RepositoryReleaseLister = new(ReleaseService)

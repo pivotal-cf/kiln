@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	. "github.com/onsi/gomega"
@@ -89,13 +88,13 @@ func TestReleaseNotes_Execute(t *testing.T) {
 						OS: "fruit-tree", Version: "40000.2",
 					},
 					Components: []release.ComponentData{
-						{Lock: cargo.ComponentLock{Name: "banana", Version: "1.2.0"}, Releases: []*github.RepositoryRelease{
+						{ComponentLock: cargo.ComponentLock{Name: "banana", Version: "1.2.0"}, Releases: []*github.RepositoryRelease{
 							{TagName: strPtr("1.2.0"), Body: strPtr("peal\nis\nyellow")},
 							{TagName: strPtr("1.1.1"), Body: strPtr("remove from bunch")},
 						}},
-						{Lock: cargo.ComponentLock{Name: "lemon", Version: "1.1.0"}},
+						{ComponentLock: cargo.ComponentLock{Name: "lemon", Version: "1.1.0"}},
 					},
-					Bumps: component.BumpList{
+					Bumps: cargo.BumpList{
 						{Name: "banana", FromVersion: "1.1.0", ToVersion: "1.2.0"},
 					},
 				}, nil

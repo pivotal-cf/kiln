@@ -1,4 +1,4 @@
-package component
+package cargo
 
 import (
 	"context"
@@ -11,8 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	fakes "github.com/pivotal-cf/kiln/internal/component/fakes_internal"
-
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 func TestCalculateBumps(t *testing.T) {
@@ -20,18 +18,18 @@ func TestCalculateBumps(t *testing.T) {
 	please := NewWithT(t)
 
 	t.Run("when the components stay the same", func(t *testing.T) {
-		please.Expect(CalculateBumps([]Lock{
+		please.Expect(CalculateBumps([]ComponentLock{
 			{Name: "a", Version: "1"},
-		}, []Lock{
+		}, []ComponentLock{
 			{Name: "a", Version: "1"},
 		})).To(HaveLen(0))
 	})
 
 	t.Run("when a component is bumped", func(t *testing.T) {
-		please.Expect(CalculateBumps([]Lock{
+		please.Expect(CalculateBumps([]ComponentLock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "2"},
-		}, []Lock{
+		}, []ComponentLock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
 		})).To(Equal([]Bump{
@@ -42,11 +40,11 @@ func TestCalculateBumps(t *testing.T) {
 	})
 
 	t.Run("when many but not all components are bumped", func(t *testing.T) {
-		please.Expect(CalculateBumps([]Lock{
+		please.Expect(CalculateBumps([]ComponentLock{
 			{Name: "a", Version: "2"},
 			{Name: "b", Version: "1"},
 			{Name: "c", Version: "2"},
-		}, []Lock{
+		}, []ComponentLock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
 			{Name: "c", Version: "1"},
@@ -59,9 +57,9 @@ func TestCalculateBumps(t *testing.T) {
 	})
 
 	t.Run("when a component is removed", func(t *testing.T) {
-		please.Expect(CalculateBumps([]Lock{
+		please.Expect(CalculateBumps([]ComponentLock{
 			{Name: "a", Version: "1"},
-		}, []Lock{
+		}, []ComponentLock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
 		})).To(HaveLen(0),
@@ -73,10 +71,10 @@ func TestCalculateBumps(t *testing.T) {
 		// I'm not sure what we actually want to do here?
 		// Is this actually a bump? Not really...
 
-		please.Expect(CalculateBumps([]Lock{
+		please.Expect(CalculateBumps([]ComponentLock{
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
-		}, []Lock{
+		}, []ComponentLock{
 			{Name: "a", Version: "1"},
 		})).To(Equal([]Bump{
 			{Name: "b", FromVersion: "", ToVersion: "1"},
@@ -127,8 +125,8 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 	result, err := ReleaseNotes(
 		context.Background(),
 		releaseLister,
-		cargo.Kilnfile{
-			Releases: []cargo.ComponentSpec{
+		Kilnfile{
+			Releases: []ComponentSpec{
 				{
 					Name: "mango",
 				},

@@ -22,7 +22,7 @@ func Test_defaultReleaseNotesTemplate(t *testing.T) {
 			Version: semver.MustParse("0.0"),
 			Components: []ComponentData{
 				{
-					Lock: component.Lock{Name: "banana", Version: "1.2"},
+					ComponentLock: component.Lock{Name: "banana", Version: "1.2"},
 					Releases: []*github.RepositoryRelease{
 						{TagName: strPtr("1.1"), Body: strPtr("\n   ")},
 						{TagName: strPtr("1.2"), Body: strPtr("")},

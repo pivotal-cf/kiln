@@ -1,4 +1,4 @@
-package component
+package cargo
 
 import (
 	"github.com/google/go-github/v40/github"
@@ -22,7 +22,7 @@ func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {
 			{TagName: ptr("4")},
 		},
 	}
-	b.deduplicateReleasesWithTheSameTagName()
+	b = deduplicateReleasesWithTheSameTagName(b)
 	tags := make([]string, 0, len(b.Releases))
 	for _, r := range b.Releases {
 		tags = append(tags, r.GetTagName())

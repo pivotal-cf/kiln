@@ -1,15 +1,15 @@
-package component
+package cargo
 
 import (
 	"context"
+	"github.com/pivotal-cf/kiln/internal/gh"
+	"golang.org/x/exp/slices"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
-
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type Bump struct {
@@ -33,26 +33,29 @@ func (bump Bump) ReleaseNotes() string {
 	return strings.TrimSpace(s.String())
 }
 
-func (bump *Bump) deduplicateReleasesWithTheSameTagName() {
-	for i, r := range bump.Releases {
-		if i+1 >= len(bump.Releases) {
+func deduplicateReleasesWithTheSameTagName(bump Bump) Bump {
+	updated := bump
+	updated.Releases = slices.Clone(bump.Releases)
+	for i, r := range updated.Releases {
+		if i+1 >= len(updated.Releases) {
 			break
 		}
-		for j := i + 1; j < len(bump.Releases); {
-			after := bump.Releases[j]
+		for j := i + 1; j < len(updated.Releases); {
+			after := updated.Releases[j]
 			if r.GetTagName() != after.GetTagName() {
 				j++
 				continue
 			}
-			bump.Releases = append(bump.Releases[:j], bump.Releases[j+1:]...)
+			updated.Releases = append(updated.Releases[:j], updated.Releases[j+1:]...)
 		}
 	}
+	return updated
 }
 
-func CalculateBumps(current, previous []Lock) []Bump {
+func CalculateBumps(current, previous []ComponentLock) []Bump {
 	var (
 		bumps         []Bump
-		previousSpecs = make(map[string]Lock, len(previous))
+		previousSpecs = make(map[string]ComponentLock, len(previous))
 	)
 	for _, p := range previous {
 		previousSpecs[p.Name] = p
@@ -86,7 +89,7 @@ func (bump Bump) toFrom() (to, from *semver.Version, _ error) {
 
 type BumpList []Bump
 
-func (list BumpList) ForLock(lock Lock) Bump {
+func (list BumpList) ForLock(lock ComponentLock) Bump {
 	for _, b := range list {
 		if b.Name == lock.Name {
 			return b
@@ -109,7 +112,7 @@ type repositoryReleaseLister interface {
 
 type RepositoryReleaseLister = repositoryReleaseLister
 
-func ReleaseNotes(ctx context.Context, repoService RepositoryReleaseLister, kf cargo.Kilnfile, list BumpList) (BumpList, error) {
+func ReleaseNotes(ctx context.Context, repoService RepositoryReleaseLister, kf Kilnfile, list BumpList) (BumpList, error) {
 	const workerCount = 10
 
 	type fetchReleaseNotesForBump struct {
@@ -161,7 +164,7 @@ func ReleaseNotes(ctx context.Context, repoService RepositoryReleaseLister, kf c
 }
 
 func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLister, repository string, from, to *semver.Version) []*github.RepositoryRelease {
-	owner, repo, err := OwnerAndRepoFromGitHubURI(repository)
+	owner, repo, err := gh.OwnerAndRepoFromURI(repository)
 	if err != nil {
 		return nil
 	}
@@ -188,7 +191,7 @@ func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLis
 	return result
 }
 
-func fetchReleasesForBump(ctx context.Context, repoService RepositoryReleaseLister, kf cargo.Kilnfile, bump Bump) Bump {
+func fetchReleasesForBump(ctx context.Context, repoService RepositoryReleaseLister, kf Kilnfile, bump Bump) Bump {
 	spec, ok := kf.ComponentSpec(bump.Name)
 	if !ok {
 		return bump
@@ -205,7 +208,7 @@ func fetchReleasesForBump(ctx context.Context, repoService RepositoryReleaseList
 	}
 
 	sort.Sort(sort.Reverse(releasesByIncreasingSemanticVersion(bump.Releases)))
-	bump.deduplicateReleasesWithTheSameTagName()
+	bump = deduplicateReleasesWithTheSameTagName(bump)
 
 	return bump
 }

@@ -62,3 +62,5 @@ func TestGithubReleaseSource_downloadRelease(t *testing.T) {
 	please.Expect(local.LocalPath).To(BeAnExistingFile(), "it finds the created asset file")
 	please.Expect(local.SHA1).To(Equal("3a2be7b07a1a19072bf54c95a8c4a3fe0cdb35d4"))
 }
+
+func ptr[T any](v T) *T { return &v }
