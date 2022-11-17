@@ -10,7 +10,7 @@ import (
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
-//go:embed notes.md
+//go:embed notes.go.md
 var defaultReleaseNotesTemplate string
 
 func DefaultNotesTemplate() string {
