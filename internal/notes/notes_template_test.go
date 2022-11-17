@@ -1,4 +1,4 @@
-package release
+package notes
 
 import (
 	"bytes"
@@ -15,12 +15,12 @@ import (
 func Test_defaultReleaseNotesTemplate(t *testing.T) {
 	t.Run("empty github release body", func(t *testing.T) {
 		please := NewWithT(t)
-		tmp, err := DefaultTemplateFunctions(template.New("")).Parse(DefaultNotesTemplate())
+		tmp, err := DefaultTemplateFunctions(template.New("")).Parse(DefaultTemplate())
 		please.Expect(err).NotTo(HaveOccurred())
 		var b bytes.Buffer
-		err = tmp.Execute(&b, NotesData{
+		err = tmp.Execute(&b, Data{
 			Version: semver.MustParse("0.0"),
-			Components: []ComponentData{
+			Components: []BOSHReleaseData{
 				{
 					ComponentLock: component.Lock{Name: "banana", Version: "1.2"},
 					Releases: []*github.RepositoryRelease{

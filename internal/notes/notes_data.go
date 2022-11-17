@@ -1,4 +1,4 @@
-package release
+package notes
 
 import (
 	"bytes"
@@ -27,12 +27,12 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/history"
 )
 
-type ComponentData struct {
+type BOSHReleaseData struct {
 	cargo.ComponentLock
 	Releases []*github.RepositoryRelease
 }
 
-func (cd ComponentData) HasReleaseNotes() bool {
+func (cd BOSHReleaseData) HasReleaseNotes() bool {
 	for _, r := range cd.Releases {
 		if len(strings.TrimSpace(r.GetBody())) > 0 {
 			return true
@@ -41,39 +41,39 @@ func (cd ComponentData) HasReleaseNotes() bool {
 	return false
 }
 
-type NotesData struct {
+type Data struct {
 	Version     *semver.Version
 	ReleaseDate time.Time
 
 	Issues     []*github.Issue
-	Components []ComponentData
+	Components []BOSHReleaseData
 	Bumps      cargo.BumpList
 
 	Stemcell cargo.Stemcell
 }
 
-//func (notes NotesData) String() string {
+//func (notes Data) String() string {
 //	note, _ := notes.WriteVersionNotes()
 //	return note.Notes
 //}
 
-func (notes NotesData) WriteVersionNotes() (VersionNote, error) {
-	noteTemplate, err := DefaultTemplateFunctions(template.New("")).Parse(DefaultNotesTemplate())
+func (notes Data) WriteVersionNotes() (TileRelease, error) {
+	noteTemplate, err := DefaultTemplateFunctions(template.New("")).Parse(DefaultTemplate())
 	if err != nil {
-		return VersionNote{}, err
+		return TileRelease{}, err
 	}
 	var buf bytes.Buffer
 	err = noteTemplate.Execute(&buf, notes)
 	if err != nil {
-		return VersionNote{}, err
+		return TileRelease{}, err
 	}
-	return VersionNote{
+	return TileRelease{
 		Version: notes.Version.String(),
 		Notes:   buf.String(),
 	}, nil
 }
 
-func (notes NotesData) HasComponentReleases() bool {
+func (notes Data) HasComponentReleases() bool {
 	for _, r := range notes.Components {
 		if len(r.Releases) > 0 {
 			return true
@@ -101,10 +101,10 @@ func (q IssuesQuery) Exp() (*regexp.Regexp, error) {
 	return regexp.Compile(str)
 }
 
-func FetchNotesData(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery IssuesQuery) (NotesData, error) {
+func FetchData(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery IssuesQuery) (Data, error) {
 	f, err := newFetchNotesData(repo, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision, client, issuesQuery)
 	if err != nil {
-		return NotesData{}, err
+		return Data{}, err
 	}
 	return f.fetch(ctx)
 }
@@ -154,13 +154,13 @@ type fetchNotesData struct {
 	issuesQuery IssuesQuery
 }
 
-func (r fetchNotesData) fetch(ctx context.Context) (NotesData, error) {
+func (r fetchNotesData) fetch(ctx context.Context) (Data, error) {
 	initialKilnfileLock, finalKilnfileLock, finalKilnfile, finalVersion, err := r.fetchHistoricFiles(r.kilnfilePath, r.initialRevision, r.finalRevision)
 	if err != nil {
-		return NotesData{}, err
+		return Data{}, err
 	}
 
-	data := NotesData{
+	data := Data{
 		Version:  finalVersion,
 		Bumps:    cargo.CalculateBumps(finalKilnfileLock.Releases, initialKilnfileLock.Releases),
 		Stemcell: finalKilnfileLock.Stemcell,
@@ -168,16 +168,16 @@ func (r fetchNotesData) fetch(ctx context.Context) (NotesData, error) {
 
 	wtKilnfile, err := r.kilnfileFromWorktree(r.kilnfilePath)
 	if err != nil {
-		return NotesData{}, err
+		return Data{}, err
 	}
 
 	data.Issues, data.Bumps, err = r.fetchIssuesAndReleaseNotes(ctx, finalKilnfile, wtKilnfile, data.Bumps, r.issuesQuery)
 	if err != nil {
-		return NotesData{}, err
+		return Data{}, err
 	}
 
 	for _, c := range finalKilnfileLock.Releases {
-		data.Components = append(data.Components, ComponentData{
+		data.Components = append(data.Components, BOSHReleaseData{
 			ComponentLock: c,
 			Releases:      data.Bumps.ForLock(c).Releases,
 		})

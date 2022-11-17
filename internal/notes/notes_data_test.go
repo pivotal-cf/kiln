@@ -1,4 +1,4 @@
-package release
+package notes
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/google/go-github/v40/github"
 
-	"github.com/pivotal-cf/kiln/internal/release/fakes"
+	"github.com/pivotal-cf/kiln/internal/notes/fakes"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 

@@ -15,12 +15,12 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/pivotal-cf/kiln/internal/gh"
-
 	"github.com/go-git/go-git/v5"
 	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/internal/release"
+
+	"github.com/pivotal-cf/kiln/internal/gh"
+	"github.com/pivotal-cf/kiln/internal/notes"
 )
 
 const releaseDateFormat = "2006-01-02"
@@ -32,7 +32,7 @@ type ReleaseNotes struct {
 		GithubToken  string `long:"github-token" short:"g" description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
 		Kilnfile     string `long:"kilnfile"     short:"k" description:"path to Kilnfile"`
 		DocsFile     string `long:"update-docs"  short:"u" description:"path to docs file to update"`
-		release.IssuesQuery
+		notes.IssuesQuery
 	}
 
 	repository *git.Repository
@@ -45,11 +45,11 @@ type ReleaseNotes struct {
 	repoOwner, repoName string
 }
 
-type FetchNotesData func(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery release.IssuesQuery) (release.NotesData, error)
+type FetchNotesData func(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery notes.IssuesQuery) (notes.Data, error)
 
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	return ReleaseNotes{
-		fetchNotesData: release.FetchNotesData,
+		fetchNotesData: notes.FetchData,
 		readFile:       os.ReadFile,
 		Writer:         os.Stdout,
 		stat:           os.Stat,
@@ -86,7 +86,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 		client = gh.Client(ctx, r.Options.GithubToken)
 	}
 
-	_ = release.FetchNotesData // fetchNotesData is FetchNotesData
+	_ = notes.FetchData // fetchNotesData is github.com/pivotal/kiln/internal/notes.FetchData
 	data, err := r.fetchNotesData(ctx,
 		r.repository, client, r.repoOwner, r.repoName,
 		r.Options.Kilnfile,
@@ -111,13 +111,13 @@ func (r ReleaseNotes) Execute(args []string) error {
 	return r.updateDocsFile(data)
 }
 
-func (r *ReleaseNotes) updateDocsFile(data release.NotesData) error {
+func (r *ReleaseNotes) updateDocsFile(data notes.Data) error {
 	// TODO: add helpful logging
 	docsFileContent, err := r.readFile(r.Options.DocsFile)
 	if err != nil {
 		return err
 	}
-	page, err := release.ParseNotesPage(string(docsFileContent))
+	page, err := notes.ParsePage(string(docsFileContent))
 	if err != nil {
 		return err
 	}
@@ -183,8 +183,8 @@ func (r *ReleaseNotes) initRepo() error {
 	return nil
 }
 
-func (r ReleaseNotes) writeNotes(w io.Writer, info release.NotesData) error {
-	releaseNotesTemplate := release.DefaultNotesTemplate()
+func (r ReleaseNotes) writeNotes(w io.Writer, info notes.Data) error {
+	releaseNotesTemplate := notes.DefaultTemplate()
 	if r.Options.TemplateName != "" {
 		templateBuf, err := r.readFile(r.Options.TemplateName)
 		if err != nil {
@@ -193,7 +193,7 @@ func (r ReleaseNotes) writeNotes(w io.Writer, info release.NotesData) error {
 		releaseNotesTemplate = string(templateBuf)
 	}
 
-	t, err := release.DefaultTemplateFunctions(template.New(r.Options.TemplateName)).Parse(releaseNotesTemplate)
+	t, err := notes.DefaultTemplateFunctions(template.New(r.Options.TemplateName)).Parse(releaseNotesTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %w", err)
 	}

@@ -1,4 +1,4 @@
-package release
+package notes
 
 import (
 	_ "embed"
@@ -11,10 +11,10 @@ import (
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 //go:embed notes.go.md
-var defaultReleaseNotesTemplate string
+var defaultTemplate string
 
-func DefaultNotesTemplate() string {
-	return defaultReleaseNotesTemplate
+func DefaultTemplate() string {
+	return defaultTemplate
 }
 
 func DefaultTemplateFunctions(t *template.Template) *template.Template {
