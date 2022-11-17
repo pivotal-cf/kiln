@@ -59,7 +59,7 @@ type NotesData struct {
 //}
 
 func (notes NotesData) WriteVersionNotes() (VersionNote, error) {
-	noteTemplate, err := DefaultTemplateFuncs(template.New("")).Parse(DefaultNotesTemplate())
+	noteTemplate, err := DefaultTemplateFunctions(template.New("")).Parse(DefaultNotesTemplate())
 	if err != nil {
 		return VersionNote{}, err
 	}

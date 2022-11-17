@@ -15,7 +15,7 @@ import (
 func Test_defaultReleaseNotesTemplate(t *testing.T) {
 	t.Run("empty github release body", func(t *testing.T) {
 		please := NewWithT(t)
-		tmp, err := DefaultTemplateFuncs(template.New("")).Parse(DefaultNotesTemplate())
+		tmp, err := DefaultTemplateFunctions(template.New("")).Parse(DefaultNotesTemplate())
 		please.Expect(err).NotTo(HaveOccurred())
 		var b bytes.Buffer
 		err = tmp.Execute(&b, NotesData{

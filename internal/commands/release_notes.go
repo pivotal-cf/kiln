@@ -194,7 +194,7 @@ func (r ReleaseNotes) writeNotes(w io.Writer, info release.NotesData) error {
 		releaseNotesTemplate = string(templateBuf)
 	}
 
-	t, err := release.DefaultTemplateFuncs(template.New(r.Options.TemplateName)).Parse(releaseNotesTemplate)
+	t, err := release.DefaultTemplateFunctions(template.New(r.Options.TemplateName)).Parse(releaseNotesTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %w", err)
 	}

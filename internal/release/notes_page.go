@@ -76,7 +76,7 @@ func ParseNotesPageWithExpressionAndReleasesSentinel(input, releaseRegularExpres
 	return page, nil
 }
 
-func (page NotesPage) validateRelease(tile VersionNote) error {
+func (page *NotesPage) validateRelease(tile VersionNote) error {
 	_, err := tile.version()
 	if err != nil {
 		return fmt.Errorf("invalid version: %w", err)
