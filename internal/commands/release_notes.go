@@ -20,7 +20,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/gh"
-	"github.com/pivotal-cf/kiln/internal/notes"
+	"github.com/pivotal-cf/kiln/pkg/notes"
 )
 
 const releaseDateFormat = "2006-01-02"

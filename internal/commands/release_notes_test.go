@@ -4,11 +4,8 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
-	"github.com/pivotal-cf/kiln/internal/notes"
 	"testing"
 	"time"
-
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	. "github.com/onsi/gomega"
 
@@ -19,6 +16,9 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/google/go-github/v40/github"
 	"github.com/pivotal-cf/jhanda"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/notes"
 )
 
 var _ jhanda.Command = ReleaseNotes{}
