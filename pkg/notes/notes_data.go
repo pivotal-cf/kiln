@@ -89,6 +89,11 @@ type IssuesQuery struct {
 	IssueTitleExp  string   `long:"issues-title-exp"       short:"x" description:"issues with title matching regular expression will be added. Issues must first be fetched with github-issue* flags. The default expression can be disabled by setting an empty string" default:"(?i)^\\*\\*\\[(security fix|feature|feature improvement|bug fix|breaking change)\\]\\*\\*.*$"`
 }
 
+func IssueTitleRegex() *regexp.Regexp {
+	f, _ := reflect.ValueOf(IssuesQuery{}).Type().FieldByName("IssueTitleExp")
+	return regexp.MustCompile(f.Tag.Get("default"))
+}
+
 func (q IssuesQuery) Exp() (*regexp.Regexp, error) {
 	str := q.IssueTitleExp
 	if str == "" {
