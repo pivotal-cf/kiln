@@ -12,7 +12,7 @@ import (
 
 const DefaultReleasesSentinel = "\n## <a id='releases'></a> Releases\n\n"
 
-var releaseNoteExp = regexp.MustCompile(`(?m)(?P<notes>### <a id='(?P<version>\d+\.\d+\.\d+(-.+)?)'></a> (\d+\.\d+\.\d+(-.+)?)\w*(?P<header_suffix>.*)\n*((\*.*\n)|\n|(</?.*)|( +.*)|(####+.*)|(\t.*)|(\w.*))*)`)
+var releaseNoteExp = regexp.MustCompile(`(?m)(?P<notes>### <a id='(?P<version>.+)'></a> (\d+\.\d+\.\d+(-.+)?)\w*(?P<header_suffix>.*)\n*((\*.*\n)|\n|(</?.*)|( +.*)|(####+.*)|(\t.*)|(\w.*))*)`)
 
 func ReleaseExpression() *regexp.Regexp {
 	return regexp.MustCompile(releaseNoteExp.String())
