@@ -5,3 +5,7 @@ type CollectionPropertyInput struct {
 
 	PropertyInputs []CollectionSubfieldPropertyInput `yaml:"property_inputs"`
 }
+
+func (input CollectionPropertyInput) Ref() string {
+	return input.SimplePropertyInput.Reference
+}

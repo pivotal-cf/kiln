@@ -2,7 +2,9 @@ package proofing
 
 import "gopkg.in/yaml.v2"
 
-type PropertyInput interface{}
+type PropertyInput interface {
+	Ref() string
+}
 
 type PropertyInputs []PropertyInput
 

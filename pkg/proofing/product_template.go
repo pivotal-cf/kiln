@@ -1,7 +1,5 @@
 package proofing
 
-import "fmt"
-
 type ProductTemplate struct {
 	Name                     string `yaml:"name"`
 	ProductVersion           string `yaml:"product_version"`
@@ -42,23 +40,4 @@ type ProductTemplate struct {
 	// TODO: validates: https://github.com/pivotal-cf/installation/blob/039a2ef3f751ef5915c425da8150a29af4b764dd/web/app/models/persistence/metadata/product_template.rb#L72
 	// TODO: validates_object(s): https://github.com/pivotal-cf/installation/blob/039a2ef3f751ef5915c425da8150a29af4b764dd/web/app/models/persistence/metadata/product_template.rb#L74-L82
 	// TODO: find_object: https://github.com/pivotal-cf/installation/blob/039a2ef3f751ef5915c425da8150a29af4b764dd/web/app/models/persistence/metadata/product_template.rb#L84-L86
-}
-
-func (pt ProductTemplate) AllPropertyBlueprints() []NormalizedPropertyBlueprint {
-	var propertyBlueprints []NormalizedPropertyBlueprint
-
-	propertyBlueprints = make([]NormalizedPropertyBlueprint, 0, len(pt.PropertyBlueprints))
-
-	for _, pb := range pt.PropertyBlueprints {
-		propertyBlueprints = append(propertyBlueprints, pb.Normalize(".properties")...)
-	}
-
-	for _, jobType := range pt.JobTypes {
-		for _, pb := range jobType.PropertyBlueprints {
-			prefix := fmt.Sprintf(".%s", jobType.Name)
-			propertyBlueprints = append(propertyBlueprints, pb.Normalize(prefix)...)
-		}
-	}
-
-	return propertyBlueprints
 }
