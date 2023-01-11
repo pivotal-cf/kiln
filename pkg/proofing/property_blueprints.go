@@ -3,20 +3,10 @@ package proofing
 import "gopkg.in/yaml.v2"
 
 type PropertyBlueprint interface {
-	Normalize(prefix string) []NormalizedPropertyBlueprint
+	PropertyName() string
 }
 
 type PropertyBlueprints []PropertyBlueprint
-
-type NormalizedPropertyBlueprint struct {
-	Property     string
-	Configurable bool
-	Default      interface{}
-	Required     bool
-	Type         string
-}
-
-// TODO: Less ugly.
 
 func (pb *PropertyBlueprints) UnmarshalYAML(unmarshal func(v interface{}) error) error {
 	var sniffs []map[string]interface{}

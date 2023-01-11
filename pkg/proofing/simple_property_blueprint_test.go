@@ -38,31 +38,6 @@ var _ = Describe("SimplePropertyBlueprint", func() {
 		Expect(simplePropertyBlueprint.ResourceDefinitions).To(HaveLen(1))
 	})
 
-	Describe("Normalize", func() {
-		It("returns a list of normalized property blueprints", func() {
-			normalized := simplePropertyBlueprint.Normalize("some-prefix")
-
-			Expect(normalized).To(ConsistOf([]proofing.NormalizedPropertyBlueprint{
-				{
-					Property:     "some-prefix.some-simple-name",
-					Configurable: true,
-					Default:      "some-default",
-					Required:     false,
-					Type:         "some-type",
-				},
-			}))
-		})
-
-		Context("when the property blueprint is not optional", func() {
-			It("marks the property blueprint as required", func() {
-				simplePropertyBlueprint.Optional = false
-
-				normalized := simplePropertyBlueprint.Normalize("some-prefix")
-				Expect(normalized[0].Required).To(BeTrue())
-			})
-		})
-	})
-
 	Context("options", func() {
 		It("parses their structure", func() {
 			option := simplePropertyBlueprint.Options[0]

@@ -36,29 +36,4 @@ var _ = Describe("CollectionPropertyBlueprint", func() {
 		Expect(collectionPropertyBlueprint.Unique).To(BeFalse())
 		Expect(collectionPropertyBlueprint.ResourceDefinitions).To(HaveLen(1))
 	})
-
-	Describe("Normalize", func() {
-		It("returns a list of normalized property blueprints", func() {
-			normalized := collectionPropertyBlueprint.Normalize("some-prefix")
-
-			Expect(normalized).To(ConsistOf([]proofing.NormalizedPropertyBlueprint{
-				{
-					Property:     "some-prefix.some-collection-name",
-					Configurable: true,
-					Default:      "some-default",
-					Required:     false,
-					Type:         "collection",
-				},
-			}))
-		})
-
-		Context("when the property blueprint is not optional", func() {
-			It("marks the property blueprint as required", func() {
-				collectionPropertyBlueprint.Optional = false
-
-				normalized := collectionPropertyBlueprint.Normalize("some-prefix")
-				Expect(normalized[0].Required).To(BeTrue())
-			})
-		})
-	})
 })

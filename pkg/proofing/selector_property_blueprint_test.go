@@ -37,36 +37,4 @@ var _ = Describe("SelectorPropertyBlueprint", func() {
 		Expect(selectorPropertyBlueprint.ResourceDefinitions).To(HaveLen(1))
 		Expect(selectorPropertyBlueprint.OptionTemplates).To(HaveLen(1))
 	})
-
-	Describe("Normalize", func() {
-		It("returns a list of normalized property blueprints", func() {
-			normalized := selectorPropertyBlueprint.Normalize("some-prefix")
-
-			Expect(normalized).To(ConsistOf([]proofing.NormalizedPropertyBlueprint{
-				{
-					Property:     "some-prefix.some-selector-name",
-					Configurable: true,
-					Default:      "some-default",
-					Required:     false,
-					Type:         "selector",
-				},
-				{
-					Property:     "some-prefix.some-selector-name.some-option-template-name.some-nested-simple-name",
-					Configurable: true,
-					Default:      1,
-					Required:     false,
-					Type:         "some-type",
-				},
-			}))
-		})
-
-		Context("when the property blueprint is not optional", func() {
-			It("marks the property blueprint as required", func() {
-				selectorPropertyBlueprint.Optional = false
-
-				normalized := selectorPropertyBlueprint.Normalize("some-prefix")
-				Expect(normalized[0].Required).To(BeTrue())
-			})
-		})
-	})
 })
