@@ -73,6 +73,7 @@ func main() {
 	})
 
 	commandSet := jhanda.CommandSet{}
+	commandSet["test"] = commands.NewTestTile(outLogger)
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger)
