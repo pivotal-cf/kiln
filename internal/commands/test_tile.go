@@ -6,10 +6,10 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/pivotal-cf/jhanda"
+	"io/ioutil"
 	"log"
-	"os"
+	"time"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
@@ -33,7 +33,7 @@ func NewTestTile(logger *log.Logger) TestTile {
 }
 
 func (u TestTile) Execute(args []string) error {
-	u.logger.Printf("Beginning tests for tile in CWD")
+	u.logger.Printf("Beginning stability tests for tas tile")
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -41,10 +41,9 @@ func (u TestTile) Execute(args []string) error {
 	}
 	defer cli.Close()
 
-	//getwd, err := os.Getwd()
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: "d6ad8b39237e",
-		Cmd:   []string{"go", "test", "/tas/test/stability/", "-json"},
+		Image: "gcr.io/tas-ppe/monorepo:latest",
+		Cmd:   []string{"/bin/bash", "-c", "cd /tas/test/stability && go env -w GO111MODULE=off && for i in $(seq 1 10); do go test ./; done"},
 		Tty:   false,
 	}, &container.HostConfig{
 		Mounts: []mount.Mount{
@@ -63,25 +62,40 @@ func (u TestTile) Execute(args []string) error {
 		return err
 	}
 
+	fmt.Printf("<wait condition WaitConditionNotRunning> %s\n", time.Now())
 	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+	var statusCode bool
 	select {
 	case err := <-errCh:
 		if err != nil {
 			return err
 		}
-	case <-statusCh:
+	case status := <-statusCh:
+		statusCode = status.StatusCode != 1
 	}
 
-	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+	fmt.Printf("</wait condition WaitConditionNotRunning> %s\n\n", time.Now())
+	fmt.Printf("<container logs> %s\n", time.Now())
+	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
+	if err != nil {
+		return err
+	}
+	fmt.Printf("</container logs> %s\n", time.Now())
+
+	b, err := ioutil.ReadAll(out)
 	if err != nil {
 		return err
 	}
 
-	_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, out)
-	if err != nil {
-		return err
-	}
-	return nil
+	u.logger.Print(string(b))
+
+	timeout := time.Minute * 1
+	err = cli.ContainerStop(ctx, resp.ID, &timeout)
+
+	u.logger.Printf("test success: %t\n", statusCode)
+
+	return err
+
 }
 
 func (u TestTile) Usage() jhanda.Usage {
