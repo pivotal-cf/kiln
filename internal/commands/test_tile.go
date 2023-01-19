@@ -37,25 +37,45 @@ func NewTestTile(logger *log.Logger) TestTile {
 	}
 }
 
+type status int64
+
+func (statusState status) String() string {
+	colorRed := "\033[31m"
+	colorGreen := "\033[32m"
+
+	if statusState == 0 {
+		return fmt.Sprintf("%s%s", colorGreen, "success")
+	} else {
+		return fmt.Sprintf("%s%s (status code %d)", colorRed, "failure", statusState)
+	}
+}
+
 func (u TestTile) Execute(args []string) error {
 	u.logger.Printf("Beginning stability tests for tas tile")
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	defer func(cli *client.Client) {
+		err := cli.Close()
+		if err != nil {
+			u.logger.Printf("error closing docker cli: +%v", err)
+		}
+	}(cli)
+
 	if err != nil {
 		return err
 	}
-	defer cli.Close()
-	defer fmt.Println("kiln test exiting gracefully")
+
+	// todo: pull image
 
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: "gcr.io/tas-ppe/monorepo:latest",
-		Cmd:   []string{"/bin/bash", "-c", "cd /tas/test/stability && go env -w GO111MODULE=off && for i in $(seq 1 3); do go test ./; sleep 1; done"},
+		Image: "gcr.io/tas-ppe/monorepo:25c68328471ce80cbcbf4dfe8045b754019e2e3b",
+		Cmd:   []string{"/bin/bash", "-cx", "cd /tas/tas; for i in $(seq 1 10); do go test ./test/stability/; done; echo \"done\";"},
 		Tty:   false,
 	}, &container.HostConfig{
 		Mounts: []mount.Mount{
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%s", "/Users/pivotal/workspace/tas/tas"),
+				Source: fmt.Sprintf("%s", "/Users/pivotal/workspace/tas/"),
 				Target: "/tas",
 			},
 		},
@@ -68,14 +88,18 @@ func (u TestTile) Execute(args []string) error {
 		return err
 	}
 
-	fmt.Printf("</wait condition WaitConditionNotRunning> %s\n\n", time.Now())
-	fmt.Printf("<container logs> %s\n", time.Now())
+	fmt.Printf("tests starting @ %s\n", time.Now())
 	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
 	timeout := time.Minute * 1
-	defer cli.ContainerStop(ctx, resp.ID, &timeout)
+	defer func(cli *client.Client, ctx context.Context, containerID string, timeout *time.Duration) {
+		err := cli.ContainerStop(ctx, containerID, timeout)
+		if err != nil {
+			u.logger.Printf("error stopping container: +%v", err)
+		}
+	}(cli, ctx, resp.ID, &timeout)
 
 	if err != nil {
 		return err
@@ -83,31 +107,62 @@ func (u TestTile) Execute(args []string) error {
 	bufOut := new(bytes.Buffer)
 	w := bufio.NewWriter(bufOut)
 	buf := make([]byte, 1024)
+
+readLogs:
 	for {
 		select {
-		case interrupted := <-interrupt:
-			fmt.Printf("got a ctrl-c %+v\n", interrupted)
-			return nil
+		case <-interrupt:
+			interrupt <- syscall.SIGINFO
+			break readLogs
 		default:
 			n, err := io.ReadAtLeast(out, buf, 1)
 			if err != nil && err != io.EOF {
+				interrupt <- syscall.SIGINT
 				return err
 			}
 			if n == 0 {
-				break
+				break readLogs
 			}
-			w.Write([]byte("line: "))
+			_, err = w.Write([]byte(fmt.Sprintf("[%s] ", time.Now())))
+			if err != nil {
+				return err
+			}
 			if _, err := w.Write(buf[:n]); err != nil {
+				interrupt <- syscall.SIGINT
 				return err
 			}
 			u.logger.Printf("line: %s", bufOut)
-			w.Flush()
+			err = w.Flush()
+			if err != nil {
+				return err
+			}
 		}
 	}
+	select {
+	case x, ok := <-interrupt:
+		if ok && x == syscall.SIGINFO {
+			u.logger.Println("Cancelling tests!")
+			return nil
+		}
+	default:
+	}
 
-	fmt.Printf("</container logs> %s\n", time.Now())
+	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+
+	var statusCode status
+	select {
+	case err := <-errCh:
+		if err != nil {
+			return err
+		}
+	case <-statusCh:
+	case testStatus := <-statusCh:
+		statusCode = status(testStatus.StatusCode)
+	}
+
+	colorReset := "\033[0m"
+	fmt.Printf("tests finished @ %s\ntest status %s%s!\n", time.Now(), statusCode, colorReset)
 	return err
-
 }
 
 func (u TestTile) Usage() jhanda.Usage {
