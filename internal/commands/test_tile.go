@@ -11,6 +11,9 @@ import (
 	"github.com/pivotal-cf/jhanda"
 	"io"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/go-git/go-billy/v5"
@@ -42,6 +45,7 @@ func (u TestTile) Execute(args []string) error {
 		return err
 	}
 	defer cli.Close()
+	defer fmt.Println("kiln test exiting gracefully")
 
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: "gcr.io/tas-ppe/monorepo:latest",
@@ -64,21 +68,15 @@ func (u TestTile) Execute(args []string) error {
 		return err
 	}
 
-	//fmt.Printf("<wait condition WaitConditionNotRunning> %s\n", time.Now())
-	//statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-	//var statusCode bool
-	//select {
-	//case err := <-errCh:
-	//	if err != nil {
-	//		return err
-	//	}
-	//case status := <-statusCh:
-	//	statusCode = status.StatusCode != 1
-	//}
-
 	fmt.Printf("</wait condition WaitConditionNotRunning> %s\n\n", time.Now())
 	fmt.Printf("<container logs> %s\n", time.Now())
 	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
+	timeout := time.Minute * 1
+	defer cli.ContainerStop(ctx, resp.ID, &timeout)
+
 	if err != nil {
 		return err
 	}
@@ -86,35 +84,28 @@ func (u TestTile) Execute(args []string) error {
 	w := bufio.NewWriter(bufOut)
 	buf := make([]byte, 1024)
 	for {
-		n, err := io.ReadAtLeast(out, buf, 1)
-		if err != nil && err != io.EOF {
-			return err
+		select {
+		case interrupted := <-interrupt:
+			fmt.Printf("got a ctrl-c %+v\n", interrupted)
+			return nil
+		default:
+			n, err := io.ReadAtLeast(out, buf, 1)
+			if err != nil && err != io.EOF {
+				return err
+			}
+			if n == 0 {
+				break
+			}
+			w.Write([]byte("line: "))
+			if _, err := w.Write(buf[:n]); err != nil {
+				return err
+			}
+			u.logger.Printf("line: %s", bufOut)
+			w.Flush()
 		}
-		if n == 0 {
-			break
-		}
-		w.Write([]byte("line: "))
-		if _, err := w.Write(buf[:n]); err != nil {
-			return err
-		}
-		u.logger.Printf("line: %s", bufOut)
-		w.Flush()
 	}
 
 	fmt.Printf("</container logs> %s\n", time.Now())
-
-	//b, err := ioutil.ReadAll(out)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//u.logger.Print(string(b))
-
-	timeout := time.Minute * 1
-	err = cli.ContainerStop(ctx, resp.ID, &timeout)
-
-	//u.logger.Printf("test success: %t\n", statusCode)
-
 	return err
 
 }
