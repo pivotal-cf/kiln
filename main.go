@@ -73,7 +73,7 @@ func main() {
 	})
 
 	commandSet := jhanda.CommandSet{}
-	commandSet["easy-bake"] = commands.NewEasyBake(outLogger,  mrsProvider, localReleaseDirectory)
+	commandSet["easy-bake"] = commands.NewEasyBake(outLogger, fs, releasesService)
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger)
