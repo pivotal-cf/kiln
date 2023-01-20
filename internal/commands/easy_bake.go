@@ -19,27 +19,32 @@ type EasyBake struct {
 	fetcher Fetch 
 }
 
-func NewEasyBake(logger *log.Logger, fs billy.Filesystem, releaseService baking.ReleasesService) EasyBake {
+func NewEasyBake(logger *log.Logger, fs billy.Filesystem, releaseService baking.ReleasesService, fetch Fetch) EasyBake {
 	return EasyBake{
 		logger: logger,
 		fs: fs,
 		releasesService: releaseService,
+		fetcher: fetch,
 	}
 }
 
 func (e EasyBake) Execute(args []string) error {
 	e.logger.Println("Hello, EasyBake")
 
-	args = append(args, "--metadata", "base.yml", "--variables-file", "variables.yml")
-	err := NewBake(e.fs, e.releasesService, e.logger, e.logger).Execute(args)
+	// e.fetcher.Execute(args)
 
-	return err
+	args = append(args, "--metadata", "base.yml")
+	args = append(args, "--instance-groups-directory", "./instance_groups")
+	args = append(args, "--variables-file", "./variables/srt.yml")
+	bake := NewBake(e.fs, e.releasesService, e.logger, e.logger).Execute(args)
+
+	return bake
 }
 
 func (e EasyBake) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "This command is used to bake a release",
-		ShortDescription: "bakes a release",
+		ShortDescription: "easily bakes a tile",
 		Flags:            e.Options,
 	}
 }
