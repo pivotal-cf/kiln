@@ -13,26 +13,20 @@ type EasyBake struct {
 	Options struct {
 		flags.Standard
 	}
-	logger  *log.Logger
-	fs 	billy.Filesystem
+	logger          *log.Logger
+	fs              billy.Filesystem
 	releasesService baking.ReleasesService
-	fetcher Fetch 
 }
 
-func NewEasyBake(logger *log.Logger, fs billy.Filesystem, releaseService baking.ReleasesService, fetch Fetch) EasyBake {
+func NewEasyBake(logger *log.Logger, fs billy.Filesystem, releaseService baking.ReleasesService) EasyBake {
 	return EasyBake{
-		logger: logger,
-		fs: fs,
+		logger:          logger,
+		fs:              fs,
 		releasesService: releaseService,
-		fetcher: fetch,
 	}
 }
 
 func (e EasyBake) Execute(args []string) error {
-	e.logger.Println("Hello, EasyBake")
-
-	// e.fetcher.Execute(args)
-
 	args = append(args, "--metadata", "base.yml")
 	args = append(args, "--instance-groups-directory", "./instance_groups")
 	args = append(args, "--variables-file", "./variables/srt.yml")
