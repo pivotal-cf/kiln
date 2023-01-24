@@ -1,10 +1,16 @@
 package commands
 
 import (
+<<<<<<< HEAD
 	"context"
 	"io"
 	"log"
 	"os"
+=======
+	"fmt"
+	"log"
+	"strings"
+>>>>>>> f4818457 (wip: musings about kiln bake)
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
@@ -20,16 +26,29 @@ type EasyBake struct {
 	Options struct {
 		flags.Standard
 	}
+<<<<<<< HEAD
 	logger  *log.Logger
 	fetcher Fetch
+=======
+	logger          *log.Logger
+	fs              billy.Filesystem
+	releasesService baking.ReleasesService
+	fetcher         Fetch
+>>>>>>> f4818457 (wip: musings about kiln bake)
 }
 
 func NewEasyBake(logger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider, localReleaseDirectory LocalReleaseDirectory) EasyBake {
 	fetcher := NewFetch(logger, multiReleaseSourceProvider, localReleaseDirectory)
 	fetcher.Options.AllowOnlyPublishableReleases = true
 	return EasyBake{
+<<<<<<< HEAD
 		logger:  logger,
 		fetcher: fetcher,
+=======
+		logger:          logger,
+		fs:              fs,
+		releasesService: releaseService,
+>>>>>>> f4818457 (wip: musings about kiln bake)
 	}
 }
 
@@ -39,8 +58,51 @@ func (e EasyBake) Execute(args []string) error {
 	e.logger.Println("We're fetching releases!")
 	e.fetcher.Execute(args)
 
+<<<<<<< HEAD
 	e.logger.Println("We're baking a tile! (easy)")
 	e.binBuild()
+=======
+	//download_releases "${tile_dir}"
+	(func() { fmt.Println("downloading releases") })()
+	//download_stemcell "${build_dir}"
+	(func() { fmt.Println("downloading stemcell") })()
+	//set_flags "${tile_dir}"
+	tile_flags := ""
+	explicitTile := fmt.Sprintf("-%s", args[0])
+	switch args[0] {
+	case "example-tile":
+		explicitTile = ""
+		tile_flags += "--migrations-directory=./migrations"
+		args = append(args, tile_flags)
+		args = args[1:]
+	case "tas":
+		tile_flags += "--migrations-directory ./migrations/ "
+		tile_flags += "--migrations-directory ./migrations/${PRODUCT} "
+		tile_flags += "--runtime-configs-directory ./runtime_configs "
+		tile_flags += "--variables-file ./variables/${PRODUCT}.yml "
+		args = append(args, tile_flags)
+		args = args[1:]
+	case "ist":
+		tile_flags += "--migrations-directory ./migrations "
+		tile_flags += "--variables-file ./variables/ist.yml "
+		args = args[1:]
+		args = append(args, tile_flags)
+	case "windows":
+		// figure out if it's hydrated
+		// if not
+		(func() { fmt.Println("hydration flag") })()
+		tile_flags += "--migrations-directory ./migrations "
+		tile_flags += "--variables-file ./variables/wrt.yml "
+		args = args[1:]
+		args = append(args, tile_flags)
+		explicitTile = ""
+	default:
+	}
+
+	args = append(args, "--metadata", "base.yml", "--variables-file", fmt.Sprintf("variables%.yml", explicitTile))
+	fmt.Printf("running: bake %s\n", strings.Join(args, " "))
+	err := NewBake(e.fs, e.releasesService, e.logger, e.logger).Execute(args)
+>>>>>>> f4818457 (wip: musings about kiln bake)
 
 	return nil
 }
