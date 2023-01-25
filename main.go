@@ -73,9 +73,7 @@ func main() {
 	})
 
 	commandSet := jhanda.CommandSet{}
-<<<<<<< HEAD
-
-	if command == "easy-bake" {
+	if command == "bake" {
 		commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 		
 		fetchArgs := []string{"--allow-only-publishable"}
@@ -84,7 +82,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		commandSet["easy-bake"] = commands.NewEasyBake(outLogger, fs, releasesService)
+		commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger)
 		err = commandSet.Execute(command, args)
 		if err != nil {
 			log.Fatal(err)
@@ -93,10 +91,10 @@ func main() {
 	}
 
 	commandSet["test"] = commands.NewTestTile(outLogger)
-	commandSet["easy-bake"] = commands.NewEasyBake(outLogger, fs, releasesService)
+	// commandSet["easy-bake"] = commands.NewEasyBake(outLogger, fs, releasesService)
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
-	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger)
+	// commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger)
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)
 	commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 	commandSet["upload-release"] = commands.UploadRelease{
