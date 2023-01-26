@@ -47,6 +47,16 @@ type LocalReleaseDirectory interface {
 }
 
 func (f Fetch) Execute(args []string) error {
+	f.logger.Println(">>>>>>>>>>>>>>>>>>>>>>>>> ")
+	f.logger.Println(">>>>>>>>>>>>>>>>>>>>>>>>> ")
+	f.logger.Println(">>>>>>>>>>>>>>>>>>>>>>>>> ")
+	f.logger.Println(">>>>>>>>>>>>>>>>>>>>>>>>> ")
+	f.logger.Println(">>>>>>>>>>>>>>>>>>>>>>>>> ")
+	f.logger.Println(">>>>>>>>>>>>>>>>>>>>>>>>> ")
+	f.logger.Println(">>>>>>>>>>>>>>>>>>>>>>>>> ")
+	f.logger.Println(">>>>>>>>>>>>>>>>>>>>>>>>> ")
+	f.logger.Println(">>>>>>>>>>>>>>>>>>>>>>>>> ")
+	f.logger.Println(">>>>>>>>>>>>>>>>>>>>>>>>> ")
 	kilnfile, kilnfileLock, availableLocalReleaseSet, err := f.setup(args)
 	if err != nil {
 		return err

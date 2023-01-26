@@ -75,7 +75,7 @@ func main() {
 	commandSet := jhanda.CommandSet{}
 	if command == "bake" {
 		commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
-		
+
 		fetchArgs := []string{"--allow-only-publishable"}
 		err = commandSet.Execute("fetch", fetchArgs)
 		if err != nil {
@@ -90,7 +90,7 @@ func main() {
 		return
 	}
 
-	commandSet["test"] = commands.NewTestTile(outLogger)
+	commandSet["test"] = commands.NewTestTile(outLogger, mrsProvider, localReleaseDirectory)
 	// commandSet["easy-bake"] = commands.NewEasyBake(outLogger, fs, releasesService)
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)

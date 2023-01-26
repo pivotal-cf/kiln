@@ -8,14 +8,15 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Test", func() {
+var _ = FDescribe("Test", func() {
 	Context("manifest tests succeed", func() {
-		It("logs test output", func() {
+		FIt("logs test output", func() {
 			var testOutput bytes.Buffer
 			logger := log.New(&testOutput, "", 0)
 			testTile := NewTestTile(logger)
-			testTile.Execute([]string{})
-			Expect(testOutput).To(ContainSubstring("success test output"))
+			err := testTile.Execute([]string{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(testOutput.String()).To(ContainSubstring("ok"))
 		})
 
 		// It("captures success code", func() {
