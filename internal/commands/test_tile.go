@@ -81,7 +81,7 @@ func (statusState status) String() string {
 
 func (u TestTile) Execute(args []string) error {
 
-	err := NewFetch(u.logger, u.multiReleaseSourceProvider, u.localReleaseDirectory).Execute([]string{"--variables-file=./credentials.txt"})
+	err := NewFetch(u.logger, u.multiReleaseSourceProvider, u.localReleaseDirectory).Execute([]string{"--variables-file=./credentials.txt", "--no-confirm"})
 	if err != nil {
 		return err
 	}
@@ -104,8 +104,8 @@ func (u TestTile) Execute(args []string) error {
 	// todo: pull image
 
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: "gcr.io/tas-ppe/monorepo:25c68328471ce80cbcbf4dfe8045b754019e2e3b",
-		Cmd:   []string{"/bin/bash", "-cx", "cd /tas/tas; for i in $(seq 1 1); do echo \"<log $i>\"; export PRODUCT=ert; RENDERER=ops-manifest; ./bin/test-manifest-raw; echo \"</log $i>\"; done; echo \"done\";"},
+		Image: "ops-manifest-do-not-push",
+		Cmd:   []string{"/bin/bash", "-cx", "cd /tas/tas; for i in $(seq 1 1); do echo \"<log $i>\"; pushd test/manifest && PRODUCT=ert RENDERER=ops-manifest ginkgo -p -r -slowSpecThreshold 15; echo \"</log $i>\"; done; echo \"done\";"},
 		Tty:   false,
 	}, &container.HostConfig{
 		LogConfig: container.LogConfig{
