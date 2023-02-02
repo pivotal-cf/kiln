@@ -14,9 +14,9 @@ Feature: As a dependabot, I want to update a stemcell
 
   Scenario: Update the stemcell
     Given I have a "hello-tile" repository checked out at v0.1.5
-    And TanzuNetwork has product "stemcells-ubuntu-xenial" with version "621.401"
+    And TanzuNetwork has product "stemcells-ubuntu-xenial" with version "621.330"
     When I invoke kiln
       | update-stemcell                           |
       | --version=621.330                         |
       | --variable=github_token="${GITHUB_TOKEN}" |
-    Then "./hello-tile/Kilnfile.lock" contains substring: version: "621.401"
+    Then "./hello-tile/Kilnfile.lock" contains substring: version: "621.330"
