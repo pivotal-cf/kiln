@@ -44,6 +44,12 @@ type CacheCompiledReleases struct {
 		flags.Standard
 		om.ClientConfiguration
 
+		BoshEnvironment  string `long:"bosh-environment" env:"BOSH_ENVIRONMENT"`
+		BoshClient       string `long:"bosh-client" env:"BOSH_CLIENT"`
+		BoshCACert       string `long:"bosh-ca-cert" env:"BOSH_CA_CERT"`
+		BoshClientSecret string `long:"bosh-client-secret" env:"BOSH_CLIENT_SECRET"`
+		BoshDeployment   string `long:"bosh-deployment" env:"BOSH_DEPLOYMENT"`
+
 		UploadTargetID string `           long:"upload-target-id"   required:"true"    description:"the ID of the release source where the built release will be uploaded"`
 		ReleasesDir    string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
 		Name           string `short:"n"  long:"name"               default:"cf"       description:"name of the tile"` // TODO: parse from base.yml
