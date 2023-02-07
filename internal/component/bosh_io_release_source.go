@@ -63,7 +63,7 @@ func NewBOSHIOReleaseSource(c cargo.ReleaseSourceConfig, customServerURI string,
 		customServerURI = "https://bosh.io"
 	}
 	if logger == nil {
-		logger = log.New(os.Stdout, "[bosh.io release source] ", log.Default().Flags())
+		logger = log.New(os.Stderr, "[bosh.io release source] ", log.Default().Flags())
 	}
 	return &BOSHIOReleaseSource{
 		ReleaseSourceConfig: c,
