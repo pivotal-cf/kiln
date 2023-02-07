@@ -53,7 +53,7 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 	return &GithubReleaseSource{
 		ReleaseSourceConfig: c,
 		Token:               c.GithubToken,
-		Logger:              log.New(os.Stdout, "[Github release source] ", log.Default().Flags()),
+		Logger:              log.New(os.Stderr, "[Github release source] ", log.Default().Flags()),
 
 		ReleaseAssetDownloader: githubClient.Repositories,
 		ReleaseByTagGetter:     githubClient.Repositories,

@@ -59,7 +59,7 @@ func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig) *ArtifactoryReleas
 	return &ArtifactoryReleaseSource{
 		ReleaseSourceConfig: c,
 		ID:                  c.ID,
-		logger:              log.New(os.Stdout, "[Artifactory release source] ", log.Default().Flags()),
+		logger:              log.New(os.Stderr, "[Artifactory release source] ", log.Default().Flags()),
 	}
 }
 
