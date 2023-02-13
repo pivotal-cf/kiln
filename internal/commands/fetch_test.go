@@ -622,7 +622,7 @@ release_sources:
 	Describe("Usage", func() {
 		It("returns usage information for the command", func() {
 			Expect(fetch.Usage()).To(Equal(jhanda.Usage{
-				Description:      "Fetches releases listed in Kilnfile.lock from S3 and downloads it locally",
+				Description:      "Fetches releases in Kilnfile.lock from sources and save in releases directory locally",
 				ShortDescription: "fetches releases",
 				Flags:            fetch.Options,
 			}))

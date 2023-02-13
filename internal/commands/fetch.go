@@ -140,7 +140,7 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []c
 
 func (f Fetch) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Fetches releases listed in Kilnfile.lock from S3 and downloads it locally",
+		Description:      "Fetches releases in Kilnfile.lock from sources and save in releases directory locally",
 		ShortDescription: "fetches releases",
 		Flags:            f.Options,
 	}
