@@ -255,7 +255,7 @@ type ReleaseByTagGetterAssetDownloader interface {
 	ReleaseAssetDownloader
 }
 
-func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client ReleaseByTagGetterAssetDownloader, _ *log.Logger) (Local, error) {
+func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client ReleaseByTagGetterAssetDownloader, logger *log.Logger) (Local, error) {
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
 
 	remoteUrl, err := url.Parse(remoteRelease.RemotePath)
@@ -268,7 +268,7 @@ func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock,
 
 	rTag, _, err := client.GetReleaseByTag(ctx, org, repo, remoteRelease.Version)
 	if err != nil {
-		log.Println("warning: failed to find release tag of ", remoteRelease.Version)
+		logger.Println("warning: failed to find release tag of ", remoteRelease.Version)
 		rTag, _, err = client.GetReleaseByTag(ctx, org, repo, "v"+remoteRelease.Version)
 		if err != nil {
 			return Local{}, fmt.Errorf("cant find release tag: %+v", err.Error())
