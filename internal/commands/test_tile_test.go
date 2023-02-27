@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/pkg/stdcopy"
 	"io"
 	"log"
@@ -82,7 +83,7 @@ var _ = Describe("kiln test docker", func() {
 			Expect(config.Env[0]).To(Equal("TAS_METADATA_PATH=/tas/ist/test/manifest/fixtures/tas_metadata.yml"))
 			Expect(config.Env[1]).To(Equal("TAS_CONFIG_FILE=/tas/ist/test/manifest/fixtures/tas_config.yml"))
 			dockerCmd := fmt.Sprintf("cd /tas/%s/test/manifest && PRODUCT=ist RENDERER=ops-manifest ginkgo %s", "ist", "-r -slowSpecThreshold 1")
-			Expect(config.Cmd).To(Equal([]string{"/bin/bash", "-c", dockerCmd}))
+			Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
 			GinkgoT().Log(writer.String())
 			Expect((&writer).String()).To(ContainSubstring("tagged dont_push_me_vmware_confidential:123"))
 			Expect((&writer).String()).To(ContainSubstring("Building / restoring cached docker image"))
@@ -140,8 +141,6 @@ var _ = Describe("kiln test docker", func() {
 			Expect((&writer).String()).To(ContainSubstring("Building / restoring cached docker image"))
 			os.Stdin = oldStdin
 		})
-	})
-})
 
 		It("exits with an error if docker isn't running", func() {
 			fakeMobyClient := &commandsFakes.MobyClient{}

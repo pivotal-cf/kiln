@@ -5,8 +5,7 @@ FROM pivotalcfreleng/kiln:v0.77.0 as kiln
 
 FROM ruby:3.2.0 as builder
 RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
-ADD https://$TOKEN@api.github.com/repos/pivotal/kiln-dev/git/refs/heads/main version.json
-RUN --mount=type=ssh git clone git@github.com:pivotal-cf/ops-manager /tmp/ops-manager
+ADD git@github.com:pivotal-cf/ops-manager.git#releases/2.10 /tmp/ops-manager
 
 FROM ruby:3.2.0
 
