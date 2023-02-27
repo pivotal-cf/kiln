@@ -1,0 +1,7 @@
+name: first
+label: First
+description: This is the first form tab.
+property_inputs:
+- reference: .properties.element_1
+  label: Element 1
+  description: The first element.

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
+
+	"github.com/docker/docker/client"
 
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pivotal-cf/jhanda"
@@ -18,6 +21,11 @@ import (
 var version = "unknown"
 
 func main() {
+	//err := commands.VaultGetCred("tas-ppe/dockerhub_username")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//os.Exit(0)
 	errLogger := log.New(os.Stderr, "", 0)
 	outLogger := log.New(os.Stdout, "", 0)
 
@@ -73,11 +81,74 @@ func main() {
 	})
 
 	commandSet := jhanda.CommandSet{}
+	//<<<<<<< HEAD
+	//<<<<<<< HEAD
+	//if command == "bake" {
+	//	commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
+	//
+	//	fetchArgs := []string{
+	//		"--allow-only-publishable-releases",
+	//		"--no-confirm",
+	//		"--releases-directory", "/Users/wadams/workspace/tas/tas/releases",
+	//		"--kilnfile", "/Users/wadams/workspace/tas/tas/Kilnfile",
+	//
+	//	}
+	//	err = commandSet.Execute("fetch", fetchArgs)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger)
+	//	err = commandSet.Execute(command, args)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//	return
+	//}
+	//=======
+	fetch := commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
+	commandSet["fetch"] = fetch
+	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger, fetch)
+	//>>>>>>> 13f257e4 (wip: pass arguments from bake to fetch)
+	//if command == "bake" {
+	//	fetchArgs := []string{
+	//		"--allow-only-publishable-releases",
+	//		"--no-confirm",
+	//		"--releases-directory", "/Users/wadams/workspace/tas/tas/releases",
+	//		"--kilnfile", "/Users/wadams/workspace/tas/tas/Kilnfile",
+	//	}
+	//
+	//	fetch := commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
+	//	err := fetch.Execute(fetchArgs)
+	//	if err != nil {
+	//		return
+	//	}
+	//
+	//	err = commandSet.Execute("fetch", fetchArgs)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	err = commandSet.Execute(command, args)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//	return
+	//}
+	mobyClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sshProvider, err := commands.NewSshProvider(commands.SSHClientCreator{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	commandSet["test"] = commands.NewManifestTest(outLogger, context.Background(), mobyClient, sshProvider)
+	// commandSet["easy-bake"] = commands.NewEasyBake(outLogger, fs, releasesService)
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
-	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger)
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)
-	commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 	commandSet["upload-release"] = commands.UploadRelease{
 		FS:                    fs,
 		Logger:                outLogger,
@@ -92,6 +163,7 @@ func main() {
 		FS:                         osfs.New(""),
 	}
 
+	//commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 	commandSet["glaze"] = new(commands.Glaze)
 
 	commandSet["find-release-version"] = commands.NewFindReleaseVersion(outLogger, mrsProvider)

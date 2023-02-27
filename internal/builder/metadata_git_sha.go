@@ -25,6 +25,7 @@ func GitMetadataSHA(p string, isDev bool) func() (string, error) {
 		}
 
 		wt, err := repo.Worktree()
+
 		if err != nil {
 			return "", nil
 		}
@@ -41,7 +42,7 @@ func GitMetadataSHA(p string, isDev bool) func() (string, error) {
 		}
 
 		if !status.IsClean() {
-			if !isDev {
+			if isDev {
 				cache = plumbing.ZeroHash.String()
 				return cache, nil
 			}

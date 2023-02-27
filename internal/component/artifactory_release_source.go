@@ -5,9 +5,11 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -67,15 +69,21 @@ func (ars ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRel
 	downloadURL := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + remoteRelease.RemotePath
 	ars.logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeArtifactory, ars.ID)
 	resp, err := http.Get(downloadURL)
-	if err != nil {
-		return Local{}, err
+
+	unwrapped := err
+	for errors.Unwrap(unwrapped) != nil {
+		unwrapped = errors.Unwrap(unwrapped)
 	}
-	if resp.StatusCode != http.StatusOK {
-		return Local{}, fmt.Errorf("failed to download %s release from artifactory with error code %d", remoteRelease.Name, resp.StatusCode)
+	switch e := unwrapped.(type) {
+	case *net.DNSError:
+		return Local{}, fmt.Errorf("Failed to download %s release from artifactory: %w. (hint: Are you connected to the corporate vpn?)", remoteRelease.Name, e)
+	case nil: // continue
+	default:
+		return Local{}, e
 	}
 
-	if err != nil {
-		return Local{}, err
+	if resp.StatusCode != http.StatusOK {
+		return Local{}, fmt.Errorf("failed to download %s release from artifactory with error code %d", remoteRelease.Name, resp.StatusCode)
 	}
 
 	filePath := filepath.Join(releaseDir, filepath.Base(remoteRelease.RemotePath))

@@ -3,18 +3,18 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
-
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/helper"
+	"io"
+	"log"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
 )
 
 //counterfeiter:generate -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
@@ -64,7 +64,29 @@ type checksummer interface {
 	Sum(path string) error
 }
 
-func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLogger *log.Logger, errLogger *log.Logger) Bake {
+//counterfeiter:generate -o ./fakes/FileInfo.go --fake-name FileInfo . FileInfo
+type FileInfo interface {
+	os.FileInfo
+}
+
+//counterfeiter:generate -o ./fakes/file.go --fake-name File . File
+type File interface {
+	io.ReadCloser
+	billy.File
+}
+
+//counterfeiter:generate -o ./fakes/filesystem.go --fake-name FileSystem . FileSystem
+type FileSystem interface {
+	billy.Basic
+	billy.Dir
+}
+
+//counterfeiter:generate -o ./fakes/fetch.go --fake-name Fetch . fetch
+type fetch interface {
+	jhanda.Command
+}
+
+func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLogger *log.Logger, errLogger *log.Logger, fetch fetch) Bake {
 	filesystem := helper.NewFilesystem()
 	zipper := builder.NewZipper()
 	interpolator := builder.NewInterpolator()
@@ -100,6 +122,11 @@ func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLog
 		jobs:           builder.MetadataPartsDirectoryReader{},
 		properties:     builder.MetadataPartsDirectoryReader{},
 		runtimeConfigs: builder.MetadataPartsDirectoryReader{},
+		fetcher:        fetch,
+		fs:             fs,
+		homeDir: func() (string, error) {
+			return os.UserHomeDir()
+		},
 	}
 }
 
@@ -119,12 +146,16 @@ type Bake struct {
 	jobs,
 	properties,
 	runtimeConfigs metadataTemplatesParser
+	fs      FileSystem
+	homeDir flags.HomeDirFunc
 
 	icon     iconService
 	metadata metadataService
 
+	fetcher jhanda.Command
 	Options struct {
 		flags.Standard
+		flags.FetchBakeOptions
 
 		Metadata                 string   `short:"m"   long:"metadata"                   default:"base.yml"         description:"path to the metadata file"`
 		ReleaseDirectories       []string `short:"rd"  long:"releases-directory"         default:"releases"         description:"path to a directory containing release tarballs"`
@@ -147,24 +178,7 @@ type Bake struct {
 	}
 }
 
-func NewBakeWithInterfaces(
-	interpolator interpolator,
-	tileWriter tileWriter,
-	outLogger *log.Logger,
-	errLogger *log.Logger,
-	templateVariablesService templateVariablesService,
-	boshVariablesService metadataTemplatesParser,
-	releasesService fromDirectories,
-	stemcellService stemcellService,
-	formsService metadataTemplatesParser,
-	instanceGroupsService metadataTemplatesParser,
-	jobsService metadataTemplatesParser,
-	propertiesService metadataTemplatesParser,
-	runtimeConfigsService metadataTemplatesParser,
-	iconService iconService,
-	metadataService metadataService,
-	checksummer checksummer,
-) Bake {
+func NewBakeWithInterfaces(interpolator interpolator, tileWriter tileWriter, outLogger *log.Logger, errLogger *log.Logger, templateVariablesService templateVariablesService, boshVariablesService metadataTemplatesParser, releasesService fromDirectories, stemcellService stemcellService, formsService metadataTemplatesParser, instanceGroupsService metadataTemplatesParser, jobsService metadataTemplatesParser, propertiesService metadataTemplatesParser, runtimeConfigsService metadataTemplatesParser, iconService iconService, metadataService metadataService, checksummer checksummer, fetcher jhanda.Command, fs FileSystem, homeDir flags.HomeDirFunc) Bake {
 	return Bake{
 		interpolator:      interpolator,
 		tileWriter:        tileWriter,
@@ -183,6 +197,10 @@ func NewBakeWithInterfaces(
 		jobs:           jobsService,
 		properties:     propertiesService,
 		runtimeConfigs: runtimeConfigsService,
+
+		fetcher: fetcher,
+		fs:      fs,
+		homeDir: homeDir,
 	}
 }
 
@@ -201,14 +219,67 @@ func shouldNotUseDefaultKilnfileFlag(args []string) bool {
 		!flags.IsSet("kf", "kilnfile", args)
 }
 
-func (b *Bake) loadFlags(args []string, stat flags.StatFunc, readFile func(string) ([]byte, error)) error {
-	_, err := flags.LoadFlagsWithDefaults(&b.Options, args, stat)
+func variablesDirPresent(fs flags.FileSystem) bool {
+	_, err := fs.Stat("variables")
+	return err == nil
+}
+
+func getVariablesFilePaths(fs flags.FileSystem) ([]string, error) {
+	files, err := fs.ReadDir("variables")
+	if err != nil {
+		return nil, err
+	}
+	var varFiles []string
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), ".yml") {
+			varFiles = append(varFiles, "variables/"+file.Name())
+		}
+	}
+	return varFiles, nil
+}
+
+func (b *Bake) loadFlags(args []string) error {
+	_, err := flags.LoadFlagsWithDefaults(&b.Options, args, b.fs.Stat)
 	if err != nil {
 		return err
 	}
 
+	// setup default creds
+	added, err := addDefaultCredentials(b)
+	if err != nil {
+		return err
+	}
+	if added {
+		b.outLogger.Println("Info: Setting default credentials from ~/.kiln/credentials.yml. (hint: --variable-file overrides this default. --variable overrides both.)")
+	} else {
+		b.outLogger.Println("Warning: No credentials file found at ~/.kiln/credentials.yml. (hint: create this file to set default credentials. see --help for more info.)")
+	}
+
+	// setup default tile variables
+	if variablesDirPresent(b.fs) {
+		variablesFilePaths, err := getVariablesFilePaths(b.fs)
+		if err == nil {
+			if noTileVariablesFileAlreadySet(b, variablesFilePaths) {
+				setADefaultTileVariablesFile(b, variablesFilePaths)
+			}
+		}
+	}
+
 	if shouldReadVersionFile(b, args) {
-		versionBuf, _ := readFile("version")
+		fileInfo, err := b.fs.Stat("version")
+		if err != nil {
+			return nil
+		}
+		file, err := b.fs.Open(fileInfo.Name())
+		if err != nil {
+			return nil
+		}
+
+		versionBuf := make([]byte, fileInfo.Size())
+		_, err = file.Read(versionBuf)
+		if err != nil {
+			return err
+		}
 		b.Options.Version = strings.TrimSpace(string(versionBuf))
 	}
 
@@ -226,11 +297,74 @@ func (b *Bake) loadFlags(args []string, stat flags.StatFunc, readFile func(strin
 	return nil
 }
 
+func addDefaultCredentials(b *Bake) (addedDefault bool, err error) {
+	home, err := b.homeDir()
+	if err != nil {
+		return false, err
+	}
+	defaultCredPath := filepath.Join(home, ".kiln", "credentials.yml")
+	if _, err := b.fs.Stat(defaultCredPath); err == nil {
+		b.Options.VariableFiles = append(b.Options.VariableFiles, defaultCredPath)
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func setADefaultTileVariablesFile(b *Bake, variablesFilePath []string) {
+	for _, filePath := range variablesFilePath {
+		if strings.Contains(filePath, "ert") {
+			variablesFilePath = []string{filePath}
+			break
+		}
+	}
+	b.Options.VariableFiles = append(variablesFilePath, b.Options.VariableFiles...)
+}
+
+func noTileVariablesFileAlreadySet(b *Bake, variablesFilePaths []string) bool {
+	for _, filePath := range variablesFilePaths {
+		for _, varFile := range b.Options.VariableFiles {
+			if path.Base(varFile) == path.Base(filePath) &&
+				path.Dir(varFile) == path.Dir(filePath) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func (b Bake) Execute(args []string) error {
-	err := b.loadFlags(args, os.Stat, os.ReadFile)
+	err := b.loadFlags(args)
 	if err != nil {
 		return err
 	}
+
+	if !b.Options.StubReleases {
+		// assert len(b.Options.ReleaseDirectories) > 0
+		if len(b.Options.ReleaseDirectories) == 0 {
+			return errors.New("missing required flag \"--release-directory\": could not automatically determine release directory")
+		}
+		releaseDir := b.Options.ReleaseDirectories[len(b.Options.ReleaseDirectories)-1]
+		b.outLogger.Println("Info: using release directory:", releaseDir)
+
+		fetchOptions := struct {
+			flags.Standard
+			flags.FetchBakeOptions
+			FetchReleaseDir
+		}{
+			b.Options.Standard,
+			b.Options.FetchBakeOptions,
+			FetchReleaseDir{releaseDir},
+		}
+		fetchArgs := flags.ToStrings(fetchOptions)
+		fmt.Printf("kiln fetch %s\n", strings.Join(fetchArgs, " "))
+		err = b.fetcher.Execute(fetchArgs)
+		if err != nil {
+			return err
+		}
+	}
+
+	b.outLogger.Println("Baking tile...")
 
 	if b.Options.Metadata == "" {
 		return errors.New("missing required flag \"--metadata\"")
