@@ -12,3 +12,4 @@ internal/release/got.txt
 env.yml
 *.key
 *.pem
+.vscode
