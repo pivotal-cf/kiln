@@ -340,12 +340,11 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	if !b.Options.StubReleases {
-		// assert len(b.Options.ReleaseDirectories) > 0
 		if len(b.Options.ReleaseDirectories) == 0 {
 			return errors.New("missing required flag \"--release-directory\": could not automatically determine release directory")
 		}
 		releaseDir := b.Options.ReleaseDirectories[len(b.Options.ReleaseDirectories)-1]
-		b.outLogger.Println("Info: using release directory:", releaseDir)
+		b.outLogger.Println("Info: Using release directory:", releaseDir)
 
 		fetchOptions := struct {
 			flags.Standard
@@ -357,7 +356,7 @@ func (b Bake) Execute(args []string) error {
 			FetchReleaseDir{releaseDir},
 		}
 		fetchArgs := flags.ToStrings(fetchOptions)
-		fmt.Printf("kiln fetch %s\n", strings.Join(fetchArgs, " "))
+		fmt.Printf("Info: Calling \"kiln fetch %s\"\n", strings.Join(fetchArgs, " "))
 		err = b.fetcher.Execute(fetchArgs)
 		if err != nil {
 			return err
