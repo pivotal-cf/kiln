@@ -250,7 +250,7 @@ func (b *Bake) loadFlags(args []string) error {
 		return err
 	}
 	if added {
-		b.outLogger.Println("Info: Setting default credentials from ~/.kiln/credentials.yml. (hint: --variable-file overrides this default. --variable overrides both.)")
+		b.outLogger.Println("Setting default credentials from ~/.kiln/credentials.yml. (hint: --variable-file overrides this default. --variable overrides both.)")
 	} else {
 		b.outLogger.Println("Warning: No credentials file found at ~/.kiln/credentials.yml. (hint: create this file to set default credentials. see --help for more info.)")
 	}
@@ -344,7 +344,7 @@ func (b Bake) Execute(args []string) error {
 			return errors.New("missing required flag \"--release-directory\": could not automatically determine release directory")
 		}
 		releaseDir := b.Options.ReleaseDirectories[len(b.Options.ReleaseDirectories)-1]
-		b.outLogger.Println("Info: Using release directory:", releaseDir)
+		b.outLogger.Println("Using release directory:", releaseDir)
 
 		fetchOptions := struct {
 			flags.Standard
@@ -356,7 +356,7 @@ func (b Bake) Execute(args []string) error {
 			FetchReleaseDir{releaseDir},
 		}
 		fetchArgs := flags.ToStrings(fetchOptions)
-		fmt.Printf("Info: Calling \"kiln fetch %s\"\n", strings.Join(fetchArgs, " "))
+		fmt.Printf("Calling \"kiln fetch %s\"\n", strings.Join(fetchArgs, " "))
 		err = b.fetcher.Execute(fetchArgs)
 		if err != nil {
 			return err
