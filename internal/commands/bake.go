@@ -175,6 +175,7 @@ type Bake struct {
 		Sha256                   bool     `            long:"sha256"                                                description:"calculates a SHA256 checksum of the output file"`
 		StubReleases             bool     `short:"sr"  long:"stub-releases"                                         description:"skips importing release tarballs into the tile"`
 		Version                  string   `short:"v"   long:"version"                                               description:"version of the tile"`
+		FetchReleases            bool     `short:"fr" long:"fetch-releases" description:"fetches releases"`
 	}
 }
 
@@ -339,7 +340,8 @@ func (b Bake) Execute(args []string) error {
 		return err
 	}
 
-	if !b.Options.StubReleases {
+	if !b.Options.StubReleases && b.Options.FetchReleases {
+		// assert len(b.Options.ReleaseDirectories) > 0
 		if len(b.Options.ReleaseDirectories) == 0 {
 			return errors.New("missing required flag \"--release-directory\": could not automatically determine release directory")
 		}
@@ -356,14 +358,13 @@ func (b Bake) Execute(args []string) error {
 			FetchReleaseDir{releaseDir},
 		}
 		fetchArgs := flags.ToStrings(fetchOptions)
-		fmt.Printf("Calling \"kiln fetch %s\"\n", strings.Join(fetchArgs, " "))
-		err = b.fetcher.Execute(fetchArgs)
+		_ = b.fetcher.Execute(fetchArgs)
 		if err != nil {
 			return err
 		}
 	}
 
-	b.outLogger.Println("Baking tile...")
+	//b.outLogger.Println("Baking tile...")
 
 	if b.Options.Metadata == "" {
 		return errors.New("missing required flag \"--metadata\"")

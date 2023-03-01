@@ -8,7 +8,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/pkg/stdcopy"
 	"io"
 	"log"
 	"net"
@@ -200,7 +199,18 @@ func (u ManifestTest) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	stdcopy.StdCopy(u.logger.Writer(), u.logger.Writer(), out)
+	//scanner = bufio.NewScanner(out)
+	//for scanner.Scan() {
+	//	text := scanner.Text()
+	//	u.logger.Println(text)
+	//}
+	scanner = bufio.NewScanner(out)
+	for scanner.Scan() {
+		text := scanner.Text()
+		u.logger.Println(text)
+	}
+	//_, err = io.Copy(u.logger.Writer(), u.logger.Writer(), out)
+
 	statusCh, errCh := u.mobi.ContainerWait(u.ctx, createResp.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:

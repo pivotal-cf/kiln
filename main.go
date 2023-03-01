@@ -81,60 +81,10 @@ func main() {
 	})
 
 	commandSet := jhanda.CommandSet{}
-	//<<<<<<< HEAD
-	//<<<<<<< HEAD
-	//if command == "bake" {
-	//	commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
-	//
-	//	fetchArgs := []string{
-	//		"--allow-only-publishable-releases",
-	//		"--no-confirm",
-	//		"--releases-directory", "/Users/wadams/workspace/tas/tas/releases",
-	//		"--kilnfile", "/Users/wadams/workspace/tas/tas/Kilnfile",
-	//
-	//	}
-	//	err = commandSet.Execute("fetch", fetchArgs)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger)
-	//	err = commandSet.Execute(command, args)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	return
-	//}
-	//=======
+
 	fetch := commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 	commandSet["fetch"] = fetch
 	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger, fetch)
-	//>>>>>>> 13f257e4 (wip: pass arguments from bake to fetch)
-	//if command == "bake" {
-	//	fetchArgs := []string{
-	//		"--allow-only-publishable-releases",
-	//		"--no-confirm",
-	//		"--releases-directory", "/Users/wadams/workspace/tas/tas/releases",
-	//		"--kilnfile", "/Users/wadams/workspace/tas/tas/Kilnfile",
-	//	}
-	//
-	//	fetch := commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
-	//	err := fetch.Execute(fetchArgs)
-	//	if err != nil {
-	//		return
-	//	}
-	//
-	//	err = commandSet.Execute("fetch", fetchArgs)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	err = commandSet.Execute(command, args)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	return
-	//}
 	mobyClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Fatal(err)
@@ -145,7 +95,6 @@ func main() {
 		log.Fatal(err)
 	}
 	commandSet["test"] = commands.NewManifestTest(outLogger, context.Background(), mobyClient, sshProvider)
-	// commandSet["easy-bake"] = commands.NewEasyBake(outLogger, fs, releasesService)
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)

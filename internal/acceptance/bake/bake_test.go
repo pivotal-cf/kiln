@@ -659,6 +659,7 @@ var _ = Describe("bake command", func() {
 			}
 
 			command := exec.Command(pathToMain, commandWithArgs...)
+			fmt.Println(commandWithArgs)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())

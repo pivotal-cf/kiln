@@ -203,6 +203,7 @@ var _ = Describe("Bake", func() {
 				"--variables-file", "some-variables-file",
 				"--sha256",
 				"--download-threads", "5",
+				"--fetch-releases",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
