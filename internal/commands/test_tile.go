@@ -44,8 +44,8 @@ type mobyClient interface {
 
 type ManifestTest struct {
 	Options struct {
-		TilePath            string `short:"tp"   long:"tile-path"                       default:"."         description:"path to the tile directory (e.g., ~/workspace/tas/ist)"`
-		GingkoManifestFlags string `short:"gmf" long:"ginkgo-manifest-flags" default:"-r -slowSpecThreshold 15"          description:"flags to pass to the gingko manifest test suite"`
+		TilePath            string `short:"tp"   long:"tile-path"                default:"."                          description:"path to the tile directory (e.g., ~/workspace/tas/ist)"`
+		GingkoManifestFlags string `short:"gmf"  long:"ginkgo-manifest-flags"    default:"-r -slowSpecThreshold 15"   description:"flags to pass to the gingko manifest test suite"`
 	}
 
 	logger      *log.Logger

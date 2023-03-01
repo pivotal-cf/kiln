@@ -484,6 +484,30 @@ provides_product_versions:
   version: $( version )
 ```
 
+### `test`
+
+The `test` command exercises to ginkgo tests under the `/<tile>/test/manifest` path of the `pivotal/tas` repos (where `<tile>` is tas, ist, or tasw). 
+
+Running these tests require a docker daemon to be running.
+
+Here is an example command line:
+```
+$ kiln test \
+    --ginkgo-manifest-flags  "-randomizeAllSpecs -randomizeAllSpecs" \
+    --tile-path ist
+```
+
+#### Options
+
+##### `--ginkgo-manifest-flags`
+
+The `--ginkgo-manifest-flags` flag can be used to pass through Ginkgo test flags. The defaults being passed through are `-r -slowSpecThreshold 15`. Pass `help` as a flag to retrieve the available options for the embeded version of ginkgo.
+
+##### `--tile-path`
+
+The `--tile-path` flag can be set the path the the directory you wish to test. It defaults to the current working directory.
+
+
 ### Template functions
 
 #### `select`
