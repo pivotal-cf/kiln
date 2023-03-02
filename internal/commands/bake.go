@@ -412,13 +412,10 @@ func (b Bake) Execute(args []string) error {
 	var stemcellManifest interface{}
 	if b.Options.StemcellTarball != "" {
 		// TODO remove when stemcell tarball is deprecated
-		//return fmt.Errorf("stemcell tarball")
 		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
 	} else if b.Options.Kilnfile != "" {
-		//return fmt.Errorf("kilnfile entry")
 		stemcellManifests, err = b.stemcell.FromKilnfile(b.Options.Kilnfile)
 	} else if len(b.Options.StemcellsDirectories) > 0 {
-		//return fmt.Errorf("stemcell dir entry")
 		stemcellManifests, err = b.stemcell.FromDirectories(b.Options.StemcellsDirectories)
 	}
 	if err != nil {
