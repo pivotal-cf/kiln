@@ -204,7 +204,7 @@ var _ = Describe("Bake", func() {
 				"--variables-file", "some-variables-file",
 				"--sha256",
 				"--download-threads", "5",
-				"--skip-fetch-releases", fmt.Sprintf("%s %s", otherReleasesDirectory, someReleasesDirectory),
+				"--skip-fetch-directories", fmt.Sprintf("%s %s", otherReleasesDirectory, someReleasesDirectory),
 			})
 			Expect(err).NotTo(HaveOccurred())
 

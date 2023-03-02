@@ -175,7 +175,7 @@ type Bake struct {
 		Sha256                   bool     `            long:"sha256"                                                description:"calculates a SHA256 checksum of the output file"`
 		StubReleases             bool     `short:"sr"  long:"stub-releases"                                         description:"skips importing release tarballs into the tile"`
 		Version                  string   `short:"v"   long:"version"                                               description:"version of the tile"`
-		SkipFetchReleases        []string `short:"sfr" long:"skip-fetch-releases"        description:"skips the automatic release fetch the specified release directories"`
+		SkipFetchReleases        []string `short:"sfr" long:"skip-fetch-directories"        description:"skips the automatic release fetch the specified release directories"`
 	}
 }
 
