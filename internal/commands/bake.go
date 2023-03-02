@@ -348,7 +348,8 @@ func (b Bake) Execute(args []string) error {
 	fetch:
 		for _, dir := range b.Options.ReleaseDirectories {
 			for _, dirToSkip := range b.Options.SkipFetchReleases {
-				if dir == dirToSkip {
+				if path.Base(dir) == path.Base(dirToSkip) &&
+					path.Dir(dir) == path.Dir(dirToSkip) {
 					break fetch
 				}
 			}
