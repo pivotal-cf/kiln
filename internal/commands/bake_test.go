@@ -356,6 +356,18 @@ var _ = Describe("Bake", func() {
 				"--download-threads", "5",
 				"--no-confirm",
 				"--releases-directory",
+				otherReleasesDirectory,
+			}))
+			executeArgsForFetch = fakeFetcher.ExecuteArgsForCall(1)
+			Expect(executeArgsForFetch).To(Equal([]string{
+				"--kilnfile", "",
+				"--variables-file", "some-variables-file",
+				"--variables-file",
+				"/home/.kiln/credentials.yml",
+				"--variable", "some-variable=some-variable-value",
+				"--download-threads", "5",
+				"--no-confirm",
+				"--releases-directory",
 				someReleasesDirectory,
 			}))
 		})
