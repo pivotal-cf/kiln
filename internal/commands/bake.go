@@ -246,15 +246,17 @@ func (b *Bake) loadFlags(args []string) error {
 	}
 
 	// setup default creds
-	_, err = addDefaultCredentials(b)
-	if err != nil {
-		return err
+	if !b.Options.MetadataOnly {
+		added, err := addDefaultCredentials(b)
+		if err != nil {
+			return err
+		}
+		if added {
+			b.outLogger.Println("Setting default credentials from ~/.kiln/credentials.yml. (hint: --variable-file overrides this default. --variable overrides both.)")
+		} else {
+			b.outLogger.Println("Warning: No credentials file found at ~/.kiln/credentials.yml. (hint: create this file to set default credentials. see --help for more info.)")
+		}
 	}
-	//if added {
-	//	b.outLogger.Println("Setting default credentials from ~/.kiln/credentials.yml. (hint: --variable-file overrides this default. --variable overrides both.)")
-	//} else {
-	//	b.outLogger.Println("Warning: No credentials file found at ~/.kiln/credentials.yml. (hint: create this file to set default credentials. see --help for more info.)")
-	//}
 
 	// setup default tile variables
 	if variablesDirPresent(b.fs) {
@@ -342,6 +344,7 @@ func (b Bake) Execute(args []string) error {
 
 	if !b.Options.StubReleases {
 	fetch:
+		// TODO update to take the union of release dirs into account
 		for _, dir := range b.Options.ReleaseDirectories {
 			for _, dirToSkip := range b.Options.SkipFetchReleases {
 				if path.Base(dir) == path.Base(dirToSkip) &&

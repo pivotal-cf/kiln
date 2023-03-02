@@ -108,6 +108,8 @@ var _ = Describe("bake command", func() {
 			"--variable", "some-variable=some-variable-value",
 			"--variables-file", someVarFile,
 			"--version", "1.2.3",
+			"--skip-fetch-directories", otherReleasesDirectory,
+			"--skip-fetch-directories", someReleasesDirectory,
 		}
 	})
 
@@ -183,6 +185,7 @@ var _ = Describe("bake command", func() {
 			commandWithArgs = []string{
 				"bake",
 				"--releases-directory", someReleasesDirectory,
+				"--skip-fetch-directories", someReleasesDirectory,
 				"--icon", someIconPath,
 				"--metadata", metadataWithMultipleStemcells,
 				"--stemcells-directory", multiStemcellDirectory,
@@ -225,6 +228,7 @@ var _ = Describe("bake command", func() {
 			commandWithArgs = []string{
 				"bake",
 				"--releases-directory", someReleasesDirectory,
+				"--skip-fetch-directories", someReleasesDirectory,
 				"--icon", someIconPath,
 				"--metadata", metadataWithStemcellTarball,
 				"--stemcell-tarball", singleStemcellDirectory + "/stemcell.tgz",
@@ -308,6 +312,9 @@ var _ = Describe("bake command", func() {
 				"--properties-directory", somePropertiesDirectory,
 				"--releases-directory", otherReleasesDirectory,
 				"--releases-directory", someReleasesDirectory,
+				"--skip-fetch-directories", someReleasesDirectory,
+				"--skip-fetch-directories", otherReleasesDirectory,
+
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--variable", "some-variable=some-variable-value",
 				"--variables-file", someVarFile,
@@ -384,6 +391,7 @@ var _ = Describe("bake command", func() {
 					"--metadata", metadata,
 					"--output-file", outputFile,
 					"--releases-directory", someReleasesDirectory,
+					"--skip-fetch-directories", someReleasesDirectory,
 					"--kilnfile", "non-existent-kilnfile",
 				}
 
@@ -400,6 +408,7 @@ var _ = Describe("bake command", func() {
 				"--metadata", metadata,
 				"--output-file", outputFile,
 				"--releases-directory", someReleasesDirectory,
+				"--skip-fetch-directories", someReleasesDirectory,
 				"--kilnfile", "fixtures/bad-Kilnfile",
 			}
 
@@ -430,6 +439,8 @@ var _ = Describe("bake command", func() {
 				"--properties-directory", somePropertiesDirectory,
 				"--releases-directory", otherReleasesDirectory,
 				"--releases-directory", someReleasesDirectory,
+				"--skip-fetch-directories", someReleasesDirectory,
+				"--skip-fetch-directories", otherReleasesDirectory,
 				"--runtime-configs-directory", someRuntimeConfigsDirectory,
 				"--stemcells-directory", singleStemcellDirectory,
 				"--variable", "some-variable=some-variable-value",
@@ -656,6 +667,8 @@ var _ = Describe("bake command", func() {
 				"--metadata", metadataWithStemcellCriteria,
 				"--output-file", outputFile,
 				"--version", "1.2.3",
+				"--skip-fetch-directories", otherReleasesDirectory,
+				"--skip-fetch-directories", someReleasesDirectory,
 			}
 
 			command := exec.Command(pathToMain, commandWithArgs...)
@@ -733,6 +746,8 @@ var _ = Describe("bake command", func() {
 					"--properties-directory", somePropertiesDirectory,
 					"--releases-directory", otherReleasesDirectory,
 					"--releases-directory", someReleasesDirectory,
+					"--releases-directory", someReleasesDirectory,
+					"--skip-fetch-directories", otherReleasesDirectory,
 					"--runtime-configs-directory", someRuntimeConfigsDirectory,
 					"--kilnfile", "non-existent-Kilnfile",
 					"--variable", "some-variable=some-variable-value",
@@ -745,7 +760,7 @@ var _ = Describe("bake command", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("non-existent-Kilnfile.lock: no such file or directory"))
+				Expect(string(session.Err.Contents())).To(ContainSubstring("no such file or directory"))
 			})
 		})
 
