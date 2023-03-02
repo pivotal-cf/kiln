@@ -285,13 +285,17 @@ func (u ManifestTest) addMissingKeys() error {
 		}
 		var bytePassword []byte
 		if key.Encrypted {
-			fmt.Printf("Enter password: ")
-			if term.IsTerminal(int(os.Stdin.Fd())) {
+			switch {
+			// for non-interactive use, use SSH_PASSWORD env var
+			case os.Getenv("SSH_PASSWORD") != "":
+				bytePassword = []byte(os.Getenv("SSH_PASSWORD"))
+			case term.IsTerminal(int(os.Stdin.Fd())):
+				fmt.Printf("Enter password: ")
 				bytePassword, err = term.ReadPassword(int(os.Stdin.Fd()))
 				if err != nil {
 					return errors.Wrapf(err, "failed to read %s", key.KeyPath)
 				}
-			} else {
+			default:
 				reader := bufio.NewReader(os.Stdin)
 				bytePassword, err = reader.ReadBytes('\n')
 				bytePassword = bytes.TrimRight(bytePassword, "\n")
