@@ -339,12 +339,11 @@ func (b Bake) Execute(args []string) error {
 		return err
 	}
 
-	if !b.Options.StubReleases && b.Options.FetchReleases {
+	if !b.Options.StubReleases {
 		if len(b.Options.ReleaseDirectories) == 0 {
 			return errors.New("missing required flag \"--release-directory\": could not automatically determine release directory")
 		}
 		releaseDir := b.Options.ReleaseDirectories[len(b.Options.ReleaseDirectories)-1]
-		b.outLogger.Println("Using release directory:", releaseDir)
 
 		fetchOptions := struct {
 			flags.Standard
