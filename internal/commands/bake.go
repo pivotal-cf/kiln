@@ -268,7 +268,8 @@ func (b *Bake) loadFlags(args []string) error {
 
 	if shouldReadVersionFile(b, args) {
 		fileInfo, err := b.fs.Stat("version")
-		if fileInfo != nil && err != nil {
+		// TODO: test this
+		if fileInfo != nil && err == nil {
 			var file File
 			file, err = b.fs.Open(fileInfo.Name())
 			if err != nil && file == nil {
@@ -340,11 +341,10 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	if !b.Options.StubReleases {
+		releaseDir := "releases"
 		if len(b.Options.ReleaseDirectories) == 0 {
-			return errors.New("missing required flag \"--release-directory\": could not automatically determine release directory")
+			b.Options.ReleaseDirectories = append(b.Options.ReleaseDirectories, releaseDir)
 		}
-		releaseDir := b.Options.ReleaseDirectories[len(b.Options.ReleaseDirectories)-1]
-
 		fetchOptions := struct {
 			flags.Standard
 			flags.FetchBakeOptions
@@ -352,7 +352,7 @@ func (b Bake) Execute(args []string) error {
 		}{
 			b.Options.Standard,
 			b.Options.FetchBakeOptions,
-			FetchReleaseDir{releaseDir},
+			FetchReleaseDir{b.Options.ReleaseDirectories[len(b.Options.ReleaseDirectories)-1]},
 		}
 		fetchArgs := flags.ToStrings(fetchOptions)
 		err = b.fetcher.Execute(fetchArgs)

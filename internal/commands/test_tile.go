@@ -70,7 +70,10 @@ func NewManifestTest(logger *log.Logger, ctx context.Context, mobi mobyClient, s
 var dockerfileContents string
 
 func (u ManifestTest) Execute(args []string) error {
-
+	// TODO: check if ssh provider isn't borked
+	if u.sshProvider == nil {
+		return errors.New("ssh provider failed to initialize. check your ssh-agent is running")
+	}
 	_, err := jhanda.Parse(&u.Options, args)
 	if err != nil {
 		return fmt.Errorf("could not parse manifest-test flags: %s", err)
