@@ -341,10 +341,6 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	if !b.Options.StubReleases {
-		releaseDir := "releases"
-		if len(b.Options.ReleaseDirectories) == 0 {
-			b.Options.ReleaseDirectories = append(b.Options.ReleaseDirectories, releaseDir)
-		}
 	fetch:
 		for _, dir := range b.Options.ReleaseDirectories {
 			for _, dirToSkip := range b.Options.SkipFetchReleases {
