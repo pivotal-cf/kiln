@@ -30,8 +30,6 @@ import (
 	"golang.org/x/term"
 )
 
-var sshAuthSock = os.Getenv("SSH_AUTH_SOCK")
-
 //counterfeiter:generate -o ./fakes/moby_client.go --fake-name MobyClient . mobyClient
 type mobyClient interface {
 	DialHijack(ctx context.Context, url, proto string, meta map[string][]string) (net.Conn, error)
@@ -199,11 +197,7 @@ func (u ManifestTest) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	//scanner = bufio.NewScanner(out)
-	//for scanner.Scan() {
-	//	text := scanner.Text()
-	//	u.logger.Println(text)
-	//}
+
 	scanner = bufio.NewScanner(out)
 	for scanner.Scan() {
 		text := scanner.Text()
