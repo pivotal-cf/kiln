@@ -505,6 +505,7 @@ var _ = Describe("Bake", func() {
 					"--bosh-variables-directory", "some-variables-directory",
 					"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
 					"--migrations-directory", "some-other-migrations-directory",
+					"--fetch-releases",
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeStemcellService.FromKilnfileCallCount()).To(Equal(1))
@@ -547,6 +548,7 @@ var _ = Describe("Bake", func() {
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--releases-directory", someReleasesDirectory,
 						"--kilnfile", "Kilnfile",
+						"--fetch-releases",
 					})
 					Expect(err).To(MatchError("fetching failed"))
 				})

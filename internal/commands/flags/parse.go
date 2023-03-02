@@ -196,8 +196,8 @@ func configureArrayDefaults(v reflect.Value, pathPrefix string, args []string, s
 			if pathPrefix != "" {
 				p = filepath.Join(pathPrefix, p)
 			}
-			_, err := stat(p)
-			if err != nil {
+			info, err := stat(p)
+			if os.IsNotExist(err) || info.IsDir() {
 				continue
 			}
 			filteredDefaults = append(filteredDefaults, p)

@@ -221,8 +221,8 @@ func shouldNotUseDefaultKilnfileFlag(args []string) bool {
 }
 
 func variablesDirPresent(fs flags.FileSystem) bool {
-	_, err := fs.Stat("variables")
-	return err == nil
+	file, err := fs.Stat("variables")
+	return err == nil && file != nil
 }
 
 func getVariablesFilePaths(fs flags.FileSystem) ([]string, error) {
@@ -246,15 +246,15 @@ func (b *Bake) loadFlags(args []string) error {
 	}
 
 	// setup default creds
-	added, err := addDefaultCredentials(b)
+	_, err = addDefaultCredentials(b)
 	if err != nil {
 		return err
 	}
-	if added {
-		b.outLogger.Println("Setting default credentials from ~/.kiln/credentials.yml. (hint: --variable-file overrides this default. --variable overrides both.)")
-	} else {
-		b.outLogger.Println("Warning: No credentials file found at ~/.kiln/credentials.yml. (hint: create this file to set default credentials. see --help for more info.)")
-	}
+	//if added {
+	//	b.outLogger.Println("Setting default credentials from ~/.kiln/credentials.yml. (hint: --variable-file overrides this default. --variable overrides both.)")
+	//} else {
+	//	b.outLogger.Println("Warning: No credentials file found at ~/.kiln/credentials.yml. (hint: create this file to set default credentials. see --help for more info.)")
+	//}
 
 	// setup default tile variables
 	if variablesDirPresent(b.fs) {
@@ -268,20 +268,18 @@ func (b *Bake) loadFlags(args []string) error {
 
 	if shouldReadVersionFile(b, args) {
 		fileInfo, err := b.fs.Stat("version")
-		if err != nil {
-			return nil
-		}
-		file, err := b.fs.Open(fileInfo.Name())
-		if err != nil {
-			return nil
-		}
+		if fileInfo != nil && err != nil {
+			var file File
+			file, err = b.fs.Open(fileInfo.Name())
+			if err != nil && file == nil {
+				return err
+			}
+			defer closeAndIgnoreError(file)
 
-		versionBuf := make([]byte, fileInfo.Size())
-		_, err = file.Read(versionBuf)
-		if err != nil {
-			return err
+			versionBuf := make([]byte, fileInfo.Size())
+			_, _ = file.Read(versionBuf)
+			b.Options.Version = strings.TrimSpace(string(versionBuf))
 		}
-		b.Options.Version = strings.TrimSpace(string(versionBuf))
 	}
 
 	if shouldGenerateTileFileName(b, args) {
@@ -290,6 +288,7 @@ func (b *Bake) loadFlags(args []string) error {
 			b.Options.OutputFile = "tile-" + b.Options.Version + ".pivotal"
 		}
 	}
+	// st", "stemcell-tarball", args) || flags.IsSet("sd", "stemcells-directory
 
 	if shouldNotUseDefaultKilnfileFlag(args) {
 		b.Options.Standard.Kilnfile = ""
@@ -304,7 +303,7 @@ func addDefaultCredentials(b *Bake) (addedDefault bool, err error) {
 		return false, err
 	}
 	defaultCredPath := filepath.Join(home, ".kiln", "credentials.yml")
-	if _, err := b.fs.Stat(defaultCredPath); err == nil {
+	if file, err := b.fs.Stat(defaultCredPath); err == nil && file != nil {
 		b.Options.VariableFiles = append(b.Options.VariableFiles, defaultCredPath)
 		return true, nil
 	}
@@ -341,7 +340,6 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	if !b.Options.StubReleases && b.Options.FetchReleases {
-		// assert len(b.Options.ReleaseDirectories) > 0
 		if len(b.Options.ReleaseDirectories) == 0 {
 			return errors.New("missing required flag \"--release-directory\": could not automatically determine release directory")
 		}
@@ -358,13 +356,11 @@ func (b Bake) Execute(args []string) error {
 			FetchReleaseDir{releaseDir},
 		}
 		fetchArgs := flags.ToStrings(fetchOptions)
-		_ = b.fetcher.Execute(fetchArgs)
+		err = b.fetcher.Execute(fetchArgs)
 		if err != nil {
 			return err
 		}
 	}
-
-	//b.outLogger.Println("Baking tile...")
 
 	if b.Options.Metadata == "" {
 		return errors.New("missing required flag \"--metadata\"")
@@ -409,10 +405,13 @@ func (b Bake) Execute(args []string) error {
 	var stemcellManifest interface{}
 	if b.Options.StemcellTarball != "" {
 		// TODO remove when stemcell tarball is deprecated
+		//return fmt.Errorf("stemcell tarball")
 		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
 	} else if b.Options.Kilnfile != "" {
+		//return fmt.Errorf("kilnfile entry")
 		stemcellManifests, err = b.stemcell.FromKilnfile(b.Options.Kilnfile)
 	} else if len(b.Options.StemcellsDirectories) > 0 {
+		//return fmt.Errorf("stemcell dir entry")
 		stemcellManifests, err = b.stemcell.FromDirectories(b.Options.StemcellsDirectories)
 	}
 	if err != nil {
@@ -459,7 +458,7 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to read metadata: %s", err)
 	}
 
-	interpolatedMetadata, err := b.interpolator.Interpolate(builder.InterpolateInput{
+	input := builder.InterpolateInput{
 		Version:            b.Options.Version,
 		Variables:          templateVariables,
 		BOSHVariables:      boshVariables,
@@ -474,7 +473,8 @@ func (b Bake) Execute(args []string) error {
 		RuntimeConfigs:     runtimeConfigs,
 		StubReleases:       b.Options.StubReleases,
 		MetadataGitSHA:     builder.GitMetadataSHA(filepath.Dir(b.Options.Kilnfile), b.Options.MetadataOnly || b.Options.StubReleases),
-	}, b.Options.Metadata, metadata)
+	}
+	interpolatedMetadata, err := b.interpolator.Interpolate(input, b.Options.Metadata, metadata)
 	if err != nil {
 		return err
 	}
