@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"errors"
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
@@ -203,7 +204,7 @@ var _ = Describe("Bake", func() {
 				"--variables-file", "some-variables-file",
 				"--sha256",
 				"--download-threads", "5",
-				"--fetch-releases",
+				"--skip-fetch-releases", fmt.Sprintf("%s %s", otherReleasesDirectory, someReleasesDirectory),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -344,7 +345,7 @@ var _ = Describe("Bake", func() {
 			outputFilePath := fakeChecksummer.SumArgsForCall(0)
 			Expect(outputFilePath).To(Equal(filepath.Join("some-output-dir", "some-product-file-1.2.3-build.4")))
 
-			Expect(fakeFetcher.ExecuteCallCount()).To(Equal(1))
+			Expect(fakeFetcher.ExecuteCallCount()).To(Equal(2))
 			executeArgsForFetch := fakeFetcher.ExecuteArgsForCall(0)
 			Expect(executeArgsForFetch).To(Equal([]string{
 				"--kilnfile", "",
@@ -505,7 +506,6 @@ var _ = Describe("Bake", func() {
 					"--bosh-variables-directory", "some-variables-directory",
 					"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
 					"--migrations-directory", "some-other-migrations-directory",
-					"--fetch-releases",
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeStemcellService.FromKilnfileCallCount()).To(Equal(1))
@@ -548,7 +548,6 @@ var _ = Describe("Bake", func() {
 						"--output-file", "some-output-dir/some-product-file-1.2.3-build.4",
 						"--releases-directory", someReleasesDirectory,
 						"--kilnfile", "Kilnfile",
-						"--fetch-releases",
 					})
 					Expect(err).To(MatchError("fetching failed"))
 				})
