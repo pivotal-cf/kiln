@@ -291,7 +291,6 @@ func (b *Bake) loadFlags(args []string) error {
 			b.Options.OutputFile = "tile-" + b.Options.Version + ".pivotal"
 		}
 	}
-	// st", "stemcell-tarball", args) || flags.IsSet("sd", "stemcells-directory
 
 	if shouldNotUseDefaultKilnfileFlag(args) {
 		b.Options.Standard.Kilnfile = ""
