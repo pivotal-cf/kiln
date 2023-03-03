@@ -1,3 +1,6 @@
 [submodule "internal/acceptance/workflows/hello-tile"]
 	path = internal/acceptance/workflows/hello-tile
 	url = git@github.com:crhntr/hello-tile
+[submodule "pkg/bake/testdata/hello-tile"]
+	path = pkg/bake/testdata/hello-tile
+	url = git@github.com:crhntr/hello-tile.git
