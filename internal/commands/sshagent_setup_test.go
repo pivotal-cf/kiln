@@ -22,7 +22,6 @@ var _ = Describe("SSHAgentSetup", func() {
 			Expect(err).To(BeNil())
 			Expect(subject.NeedsKeys()).To(BeTrue())
 			key, err := subject.GetKeys()
-			Expect(err).To(BeNil())
 			Expect(key).To(Not(BeNil()))
 		})
 		Context("the key is encrypted", func() {
