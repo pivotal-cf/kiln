@@ -1,12 +1,13 @@
 package commands_test
 
 import (
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"golang.org/x/crypto/ssh/agent"
-	"os"
 )
 
 var _ = Describe("SSHAgentSetup", func() {
@@ -21,7 +22,7 @@ var _ = Describe("SSHAgentSetup", func() {
 			subject, err := commands.NewSshProvider(fakeSshAgentCreator)
 			Expect(err).To(BeNil())
 			Expect(subject.NeedsKeys()).To(BeTrue())
-			key, err := subject.GetKeys()
+			key, _ := subject.GetKeys()
 			Expect(key).To(Not(BeNil()))
 		})
 		Context("the key is encrypted", func() {
