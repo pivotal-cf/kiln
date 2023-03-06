@@ -18,10 +18,15 @@ func VaultGetCred(credential string) error {
 	}
 
 	client, err := vault.NewClient(config)
+	if err != nil {
+		return fmt.Errorf("unable to initialize Vault client: %v", err)
+	}
+
 	loginRespFromFile, err := client.Auth().Login(context.TODO(), authFromFile)
 	if err != nil {
 		return fmt.Errorf("unable to initialize Vault client: %v", err)
 	}
+	
 	if loginRespFromFile.Auth == nil || loginRespFromFile.Auth.ClientToken == "" {
 		return fmt.Errorf("no authentication info returned by login")
 	}

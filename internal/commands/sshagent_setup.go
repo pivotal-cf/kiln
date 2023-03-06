@@ -104,6 +104,9 @@ func (st SshThing) GetKeys(optionalKeyPaths ...string) (key Key, err error) {
 		return Key{}, err
 	}
 	dt, err := io.ReadAll(&io.LimitedReader{R: f, N: 100 * 1024})
+	if err != nil {
+		return Key{}, err
+	}
 	_, err = ssh.ParseRawPrivateKey(dt)
 	encrypted := false
 	if _, ok := err.(*ssh.PassphraseMissingError); ok {
@@ -117,6 +120,9 @@ func (st SshThing) GetKeys(optionalKeyPaths ...string) (key Key, err error) {
 
 func (st SshThing) AddKey(key Key, passphrase []byte) error {
 	f, err := os.Open(key.KeyPath)
+	if err != nil {
+		return err
+	}
 	dt, err := io.ReadAll(&io.LimitedReader{R: f, N: 100 * 1024})
 	if err != nil {
 		fmt.Printf("Error reading key: %s", err)

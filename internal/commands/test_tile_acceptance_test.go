@@ -16,6 +16,7 @@ var _ = Describe("test", func() {
 			logger := log.New(&testOutput, "", 0)
 			ctx := context.Background()
 			cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+			Expect(err).NotTo(HaveOccurred())
 
 			sshProvider, err := NewSshProvider(SSHClientCreator{})
 			Expect(err).NotTo(HaveOccurred())
@@ -34,6 +35,7 @@ var _ = Describe("test", func() {
 			logger := log.New(&testOutput, "", 0)
 			ctx := context.Background()
 			cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+			Expect(err).NotTo(HaveOccurred())
 
 			sshProvider, err := NewSshProvider(SSHClientCreator{})
 			Expect(err).NotTo(HaveOccurred())

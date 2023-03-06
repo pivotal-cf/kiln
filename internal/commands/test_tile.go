@@ -88,7 +88,7 @@ func (u ManifestTest) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	sshp, err := sshprovider.NewSSHAgentProvider([]sshprovider.AgentConfig{{"default", nil}})
+	sshp, err := sshprovider.NewSSHAgentProvider([]sshprovider.AgentConfig{{ID: "default", Paths: nil}})
 	if err != nil {
 		return err
 	}
@@ -148,6 +148,9 @@ func (u ManifestTest) Execute(args []string) error {
 
 	localTileDir := u.Options.TilePath
 	absRepoDir, err := filepath.Abs(localTileDir)
+	if err != nil {
+		return err
+	}
 	parentDir := path.Dir(absRepoDir)
 	tileDir := path.Base(absRepoDir)
 
@@ -179,7 +182,7 @@ func (u ManifestTest) Execute(args []string) error {
 	}
 	sigInt := make(chan struct{})
 	go func() {
-		c := make(chan os.Signal)
+		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt)
 		<-c
 		close(sigInt)
@@ -191,9 +194,12 @@ func (u ManifestTest) Execute(args []string) error {
 	go func() {
 		<-sigInt
 		fmt.Println("Canceling tests")
-		u.mobi.ContainerStop(u.ctx, createResp.ID, container.StopOptions{
+		err := u.mobi.ContainerStop(u.ctx, createResp.ID, container.StopOptions{
 			Signal: "SIGKILL",
 		})
+		if err != nil {
+			fmt.Println("Error stopping container", err)
+		}
 	}()
 
 	out, err := u.mobi.ContainerLogs(u.ctx, createResp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
@@ -206,7 +212,6 @@ func (u ManifestTest) Execute(args []string) error {
 		text := scanner.Text()
 		u.logger.Println(text)
 	}
-	//_, err = io.Copy(u.logger.Writer(), u.logger.Writer(), out)
 
 	statusCh, errCh := u.mobi.ContainerWait(u.ctx, createResp.ID, container.WaitConditionNotRunning)
 	select {

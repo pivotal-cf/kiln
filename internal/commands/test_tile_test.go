@@ -42,8 +42,11 @@ var _ = Describe("kiln test docker", func() {
 			passwd := "password\n"
 			content := []byte(passwd)
 			tmpfile, err := os.CreateTemp(GinkgoT().TempDir(), GinkgoT().Name())
-			tmpfile.Write(content)
-			tmpfile.Seek(0, 0)
+			Expect(err).To(BeNil())
+			_, err = tmpfile.Write(content)
+			Expect(err).To(BeNil())
+			_, err = tmpfile.Seek(0, 0)
+			Expect(err).To(BeNil())
 			os.Stdin = tmpfile
 
 			fakeMobyClient := &commandsFakes.MobyClient{}
@@ -96,8 +99,11 @@ var _ = Describe("kiln test docker", func() {
 			passwd := "password\n"
 			content := []byte(passwd)
 			tmpfile, err := os.CreateTemp(GinkgoT().TempDir(), GinkgoT().Name())
-			tmpfile.Write(content)
-			tmpfile.Seek(0, 0)
+			Expect(err).To(BeNil())
+			_, err = tmpfile.Write(content)
+			Expect(err).To(BeNil())
+			_, err = tmpfile.Seek(0, 0)
+			Expect(err).To(BeNil())
 			os.Stdin = tmpfile
 
 			fakeMobyClient := &commandsFakes.MobyClient{}
