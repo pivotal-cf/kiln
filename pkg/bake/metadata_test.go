@@ -3,7 +3,6 @@ package bake
 import (
 	"bytes"
 	"errors"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,8 +27,7 @@ func TestMetadata(t *testing.T) {
 
 	t.Run("hello_tile", func(t *testing.T) {
 		helloTileDirectory := resetHelloTile(t)
-		var buf bytes.Buffer
-		err := Metadata(&buf, os.DirFS(helloTileDirectory), Options{})
+		_, err := Metadata(os.DirFS(helloTileDirectory), Options{})
 		require.NoError(t, err)
 	})
 
@@ -38,9 +36,10 @@ func TestMetadata(t *testing.T) {
 
 		require.NoError(t, os.Rename(filepath.Join(helloTileDirectory, "jobs"), filepath.Join(helloTileDirectory, "bananas")))
 
-		require.NoError(t, Metadata(io.Discard, os.DirFS(helloTileDirectory), Options{
+		_, err := Metadata(os.DirFS(helloTileDirectory), Options{
 			Jobs: []string{"bananas"},
-		}))
+		})
+		require.NoError(t, err)
 	})
 
 	t.Run("non standard instance_groups directory", func(t *testing.T) {
@@ -48,9 +47,10 @@ func TestMetadata(t *testing.T) {
 
 		require.NoError(t, os.Rename(filepath.Join(helloTileDirectory, "instance_groups"), filepath.Join(helloTileDirectory, "bananas")))
 
-		require.NoError(t, Metadata(io.Discard, os.DirFS(helloTileDirectory), Options{
+		_, err := Metadata(os.DirFS(helloTileDirectory), Options{
 			InstanceGroups: []string{"bananas"},
-		}))
+		})
+		require.NoError(t, err)
 	})
 
 	t.Run("non standard metadata file", func(t *testing.T) {
@@ -58,9 +58,10 @@ func TestMetadata(t *testing.T) {
 
 		require.NoError(t, os.Rename(filepath.Join(helloTileDirectory, "base.yml"), filepath.Join(helloTileDirectory, "metadata.yml")))
 
-		require.NoError(t, Metadata(io.Discard, os.DirFS(helloTileDirectory), Options{
+		_, err := Metadata(os.DirFS(helloTileDirectory), Options{
 			Metadata: "metadata.yml",
-		}))
+		})
+		require.NoError(t, err)
 	})
 
 	t.Run("non icon file metadata file", func(t *testing.T) {
@@ -68,9 +69,10 @@ func TestMetadata(t *testing.T) {
 
 		require.NoError(t, os.Rename(filepath.Join(helloTileDirectory, "icon.png"), filepath.Join(helloTileDirectory, "logo.png")))
 
-		require.NoError(t, Metadata(io.Discard, os.DirFS(helloTileDirectory), Options{
+		_, err := Metadata(os.DirFS(helloTileDirectory), Options{
 			Icon: "logo.png",
-		}))
+		})
+		require.NoError(t, err)
 	})
 
 	t.Run("non standard version file", func(t *testing.T) {
@@ -78,19 +80,36 @@ func TestMetadata(t *testing.T) {
 
 		require.NoError(t, os.Rename(filepath.Join(helloTileDirectory, "version"), filepath.Join(helloTileDirectory, "banana")))
 
-		require.NoError(t, Metadata(io.Discard, os.DirFS(helloTileDirectory), Options{
+		_, err := Metadata(os.DirFS(helloTileDirectory), Options{
 			VersionFile: "banana",
-		}))
+		})
+		require.NoError(t, err)
 	})
 
-	t.Run("version value", func(t *testing.T) {
+	t.Run("version value takes precedent over a version file", func(t *testing.T) {
 		helloTileDirectory := resetHelloTile(t)
 
-		require.NoError(t, os.Remove(filepath.Join(helloTileDirectory, "version")))
+		const versionValue = "0.99.0"
+		metadataBytes, err := Metadata(os.DirFS(helloTileDirectory), Options{
+			VersionValue: versionValue,
+		})
+		require.NoError(t, err)
 
-		require.NoError(t, Metadata(io.Discard, os.DirFS(helloTileDirectory), Options{
-			VersionValue: "0.2.0",
-		}))
+		var m struct {
+			ProductVersion string `yaml:"product_version"`
+		}
+		require.NoError(t, yaml.Unmarshal(metadataBytes, &m))
+
+		require.Equal(t, versionValue, m.ProductVersion)
+	})
+
+	t.Run("no variables files are provided", func(t *testing.T) {
+		helloTileDirectory := resetHelloTile(t)
+
+		require.NoError(t, os.RemoveAll(filepath.Join(helloTileDirectory, "variables")))
+
+		_, err := Metadata(os.DirFS(helloTileDirectory), Options{})
+		require.NoError(t, err)
 	})
 }
 
@@ -114,16 +133,17 @@ func TestMetadata_CompareMetadataWithLegacyKilnBake(t *testing.T) {
 			tasTileDirFS := os.DirFS(tileDirectory)
 
 			var (
-				newMetadataBuffer, oldMetadataBuffer bytes.Buffer
-				newMetadata, oldMetadata             yaml.Node
-				o                                    = Options{
+				oldMetadataBuffer        bytes.Buffer
+				newMetadata, oldMetadata yaml.Node
+				o                        = Options{
 					TileName: tt.Name,
 				}
 			)
-			require.NoError(t, SetGitMetaDataSHA(&o, tileDirectory))
-			err := Metadata(&newMetadataBuffer, tasTileDirFS, o)
+			require.NoError(t, EnsureVariableGitMetaDataSHA(&o, tileDirectory))
+			newMetadataBytes, err := Metadata(tasTileDirFS, o)
 			require.NoError(t, err)
-			require.NoError(t, yaml.Unmarshal(newMetadataBuffer.Bytes(), &newMetadata))
+
+			require.NoError(t, yaml.Unmarshal(newMetadataBytes, &newMetadata))
 
 			var kilnStdErr bytes.Buffer
 			kilnBake := exec.Command("kiln", "bake", "--metadata-only", "--stub-releases", "--variables-file", tt.VariablesFile, "--variable=git_metadata_sha=development")

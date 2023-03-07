@@ -64,6 +64,7 @@ type Options struct {
 	Jobs           []string `default_path:"jobs"`
 	RuntimeConfigs []string `default_path:"runtime_configs"`
 	Properties     []string `default_path:"properties"`
+	Releases       []string `default_path:"releases"`
 
 	// VariablesFiles may provide additional variables files.
 	// If a file "variables/${TILE_NAME}.yml" (TileName) exists, it will be added even if not provided in VariablesFiles.
@@ -152,18 +153,34 @@ func loadVariablesFile(dir fs.FS, p string, vars Variables) error {
 	return yaml.Unmarshal(buf, &vars)
 }
 
-func Metadata(out io.Writer, tileDirectory fs.FS, o Options) error {
+func Metadata(tileDirectory fs.FS, o Options) ([]byte, error) {
+	tc, metadataNode, err := metadataSetup(tileDirectory, o)
+	if err != nil {
+		return nil, err
+	}
+	result, err := interpolate(tc, newPart(tc.options.Metadata, metadataNode))
+	if err != nil {
+		return nil, err
+	}
+	resultBuffer, err := yaml.Marshal(result)
+	if err != nil {
+		return nil, err
+	}
+	return resultBuffer, nil
+}
+
+func metadataSetup(tileDirectory fs.FS, o Options) (*templateContext, *yaml.Node, error) {
 	setDefaultOptions(&o, tileDirectory)
 	if err := loadVariables(tileDirectory, o.TileName, o.Variables); err != nil {
-		return fmt.Errorf("failed to load variables: %w", err)
+		return nil, nil, fmt.Errorf("failed to load variables: %w", err)
 	}
 	metadataNode, err := o.metadata(tileDirectory)
 	if err != nil {
-		return fmt.Errorf("failed to open metadata: %w", err)
+		return nil, nil, fmt.Errorf("failed to open metadata: %w", err)
 	}
 	lock, err := o.kilnfileLock(tileDirectory)
 	if err != nil {
-		return fmt.Errorf("failed to open kilnfile: %w", err)
+		return nil, nil, fmt.Errorf("failed to open kilnfile: %w", err)
 	}
 	tc := &templateContext{
 		tileName:      o.TileName,
@@ -204,25 +221,13 @@ func Metadata(out io.Writer, tileDirectory fs.FS, o Options) error {
 		for _, dir := range row.configDirs {
 			err := parseAndPreprocessMetadataPart(tc.tileDirectory, tc.tileName, dir, parts)
 			if err != nil {
-				return fmt.Errorf("failed to open %s: %w", row.configDirs, err)
+				return nil, nil, fmt.Errorf("failed to open %s: %w", row.configDirs, err)
 			}
 		}
 		tc.templateFunctions[row.tmplFnName] = createMetadataFunc(parts, tc)
 		*row.nameParts = parts
 	}
-	result, err := interpolate(tc, newPart(tc.options.Metadata, metadataNode))
-	if err != nil {
-		return err
-	}
-	resultBuffer, err := yaml.Marshal(result)
-	if err != nil {
-		return err
-	}
-	_, err = out.Write(resultBuffer)
-	if err != nil {
-		return err
-	}
-	return nil
+	return tc, metadataNode, nil
 }
 
 func interpolate(tc *templateContext, p part) (*yaml.Node, error) {
@@ -366,6 +371,8 @@ type templateContext struct {
 
 	kilnfileLock cargo.KilnfileLock
 
+	releasesDirectoryIndex map[string]release
+
 	instanceGroups, jobs, forms, properties, runtimeConfigs namedParts
 
 	templateFunctions template.FuncMap
@@ -407,26 +414,7 @@ func createMetadataFunc(m namedParts, tc *templateContext) func(string) (string,
 }
 
 func (tc *templateContext) releaseFromKilnfileLock(name string) (string, error) {
-	lock, err := tc.kilnfileLock.FindReleaseWithName(name)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve release %s: %w", name, err)
-	}
-	localFilePath := path.Base(lock.RemotePath)
-	if lock.RemoteSource == cargo.ReleaseSourceTypeBOSHIO {
-		localFilePath = fmt.Sprintf("%s-%v.tgz", lock.Name, lock.Version)
-	}
-	return encodeJSONString(struct {
-		// these fields must be ordered alphabetically
-		File    string `json:"file"`
-		Name    string `json:"name"`
-		SHA1    string `json:"sha1"`
-		Version string `json:"version"`
-	}{
-		Name:    lock.Name,
-		Version: lock.Version,
-		SHA1:    lock.SHA1,
-		File:    localFilePath,
-	}, err)
+	return encodeJSONString(releaseFromKilnfile(tc.kilnfileLock, name))
 }
 
 func nodeToJSONString(node *yaml.Node, err error) (string, error) {
@@ -554,7 +542,7 @@ const (
 	repositoryGitSHAVariableName = "metadata-git-sha"
 )
 
-func SetGitMetaDataSHA(o *Options, repositoryDirectory string) error {
+func EnsureVariableGitMetaDataSHA(o *Options, repositoryDirectory string) error {
 	if o.Variables == nil {
 		o.Variables = make(Variables)
 	}
