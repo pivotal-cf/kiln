@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"errors"
@@ -9,9 +10,12 @@ import (
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/pkg/stdcopy"
 	"io"
+	"io/fs"
 	"log"
 	"net"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,7 +27,14 @@ import (
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
 )
 
-var _ = Describe("kiln test docker", func() {
+var _ = FDescribe("kiln test docker", func() {
+	var (
+		fakeTasDirectory string
+	)
+	BeforeEach(func() {
+		fakeTasDirectory = setupFakeTAS(GinkgoT())
+	})
+
 	Context("locally missing docker image is built", func() {
 		var (
 			ctx    context.Context
@@ -52,7 +63,7 @@ var _ = Describe("kiln test docker", func() {
 			fakeMobyClient := &commandsFakes.MobyClient{}
 			fakeMobyClient.PingReturns(types.Ping{}, nil)
 			r, w := io.Pipe()
-			w.Close()
+			_ = w.Close()
 			fakeConn := &fakeConn{r: r, w: stdcopy.NewStdWriter(io.Discard, stdcopy.Stdout)}
 			fakeMobyClient.DialHijackReturns(fakeConn, nil)
 			rc := io.NopCloser(strings.NewReader(`{"error": "", "message": "tagged dont_push_me_vmware_confidential:123"}`))
@@ -78,13 +89,15 @@ var _ = Describe("kiln test docker", func() {
 			fakeSshThinger := commandsFakes.SshProvider{}
 			fakeSshThinger.NeedsKeysReturns(false, nil)
 			subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, &fakeSshThinger)
-			err = subjectUnderTest.Execute([]string{"--tile-path", "tas_fake/ist", "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
 
+			err = subjectUnderTest.Execute([]string{"--tile-path", filepath.Join(fakeTasDirectory, "ist"), "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
 			Expect(err).To(BeNil())
+
 			_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
 			Expect(len(config.Env)).To(Equal(2))
 			Expect(config.Env[0]).To(Equal("TAS_METADATA_PATH=/tas/ist/test/manifest/fixtures/tas_metadata.yml"))
 			Expect(config.Env[1]).To(Equal("TAS_CONFIG_FILE=/tas/ist/test/manifest/fixtures/tas_config.yml"))
+
 			dockerCmd := fmt.Sprintf("cd /tas/%s/test/manifest && PRODUCT=ist RENDERER=ops-manifest ginkgo %s", "ist", "-r -slowSpecThreshold 1")
 			Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
 			GinkgoT().Log(writer.String())
@@ -109,7 +122,7 @@ var _ = Describe("kiln test docker", func() {
 			fakeMobyClient := &commandsFakes.MobyClient{}
 			fakeMobyClient.PingReturns(types.Ping{}, nil)
 			r, w := io.Pipe()
-			w.Close()
+			_ = w.Close()
 			fakeConn := &fakeConn{r: r, w: stdcopy.NewStdWriter(io.Discard, stdcopy.Stdout)}
 			fakeMobyClient.DialHijackReturns(fakeConn, nil)
 
@@ -136,7 +149,7 @@ var _ = Describe("kiln test docker", func() {
 			fakeSshThinger := commandsFakes.SshProvider{}
 			fakeSshThinger.NeedsKeysReturns(false, nil)
 			subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, &fakeSshThinger)
-			err = subjectUnderTest.Execute([]string{"--tile-path", "tas_fake/tas"})
+			err = subjectUnderTest.Execute([]string{"--tile-path", filepath.Join(fakeTasDirectory, "tas")})
 
 			Expect(err).To(BeNil())
 			_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
@@ -167,7 +180,7 @@ var _ = Describe("kiln test docker", func() {
 			ctx := context.Background()
 			fakeMobyClient.PingReturns(types.Ping{}, nil)
 			r, w := io.Pipe()
-			w.Close()
+			_ = w.Close()
 			fakeConn := &fakeConn{r: r, w: stdcopy.NewStdWriter(io.Discard, stdcopy.Stdout)}
 			fakeMobyClient.DialHijackReturns(fakeConn, nil)
 			output := "Successfully built 1234"
@@ -199,7 +212,7 @@ var _ = Describe("kiln test docker", func() {
 			}()
 			fakeMobyClient.ContainerWaitReturns(responses, nil)
 
-			err := subjectUnderTest.Execute([]string{"--tile-path", "tas_fake/tas"})
+			err := subjectUnderTest.Execute([]string{"--tile-path", filepath.Join(fakeTasDirectory, "tas")})
 			Expect(err).To(BeNil())
 
 			Expect(logLogOutput.String()).To(ContainSubstring("manifest tests completed successfully"))
@@ -220,15 +233,15 @@ func (c *fakeConn) RemoteAddr() net.Addr {
 	return &net.UnixAddr{Name: "test", Net: "test"}
 }
 
-func (c *fakeConn) SetDeadline(t time.Time) error {
+func (c *fakeConn) SetDeadline(time.Time) error {
 	return nil
 }
 
-func (c *fakeConn) SetReadDeadline(t time.Time) error {
+func (c *fakeConn) SetReadDeadline(time.Time) error {
 	return nil
 }
 
-func (c *fakeConn) SetWriteDeadline(t time.Time) error {
+func (c *fakeConn) SetWriteDeadline(time.Time) error {
 	return nil
 }
 
@@ -242,4 +255,56 @@ func (c *fakeConn) Write(p []byte) (int, error) {
 
 func (c *fakeConn) Close() error {
 	return nil
+}
+
+func setupFakeTAS(t GinkgoTInterface) string {
+	fakeTasDirectory := os.TempDir() // t.TempDir is making a dir in the current directory
+	t.Cleanup(func() {
+		_ = os.RemoveAll(fakeTasDirectory)
+	})
+	tasFakeZipFile, err := os.Open(filepath.Join("testdata", "tas_fake.zip"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	zipStat, err := tasFakeZipFile.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+	zr, err := zip.NewReader(tasFakeZipFile, zipStat.Size())
+	if err != nil {
+		t.Fatal(err)
+	}
+	walkErr := fs.WalkDir(zr, ".", func(filePath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		filePathDirSegments := strings.Split(path.Dir(filePath), "/")
+		err = os.MkdirAll(filepath.Join(append([]string{fakeTasDirectory}, filePathDirSegments...)...), 0755)
+		if err != nil {
+			return err
+		}
+		filePathSegments := strings.Split(filePath, "/")
+		f, err := os.Create(filepath.Join(append([]string{fakeTasDirectory}, filePathSegments...)...))
+		if err != nil {
+			return err
+		}
+		defer closeAndIgnoreError(f)
+		zf, err := zr.Open(filePath)
+		if err != nil {
+			return err
+		}
+		defer closeAndIgnoreError(zf)
+		_, err = io.Copy(f, zf)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(walkErr)
+	}
+	return fakeTasDirectory
 }
