@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/exp/slices"
 	"io"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -20,8 +22,6 @@ import (
 
 	"github.com/crhntr/yamlutil/yamlconv"
 	"github.com/crhntr/yamlutil/yamlnode"
-	"golang.org/x/exp/constraints"
-	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -64,6 +64,7 @@ type Options struct {
 	Jobs           []string `default_path:"jobs"`
 	RuntimeConfigs []string `default_path:"runtime_configs"`
 	Properties     []string `default_path:"properties"`
+	Releases       []string `default_path:"releases"`
 
 	// VariablesFiles may provide additional variables files.
 	// If a file "variables/${TILE_NAME}.yml" (TileName) exists, it will be added even if not provided in VariablesFiles.
@@ -76,7 +77,7 @@ type Options struct {
 	Variables Variables
 }
 
-func setDefaultOptions(o *Options, tileDirectory fs.FS) {
+func setDefaultOptions(tileDirectory fs.FS, o *Options) {
 	v := reflect.ValueOf(o).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		f := v.Field(i)
@@ -97,6 +98,25 @@ func setDefaultOptions(o *Options, tileDirectory fs.FS) {
 	}
 	if o.Variables == nil {
 		o.Variables = make(Variables)
+	}
+	tryToAddVariablesFiles(tileDirectory, o)
+}
+
+func tryToAddVariablesFiles(tileDirectory fs.FS, o *Options) {
+	variablesFiles, err := fs.ReadDir(tileDirectory, "variables")
+	if err != nil {
+		return
+	}
+	if len(variablesFiles) == 1 && len(o.VariablesFiles) == 0 {
+		o.VariablesFiles = []string{path.Join("variables", variablesFiles[0].Name())}
+	}
+	for _, file := range variablesFiles {
+		candidate := filepath.Join("variables", file.Name())
+		if strings.ToLower(strings.TrimSuffix(path.Base(file.Name()), path.Ext(file.Name()))) == strings.ToLower(o.TileName) &&
+			!slices.Contains(o.VariablesFiles, candidate) {
+			o.VariablesFiles = append([]string{candidate}, o.VariablesFiles...)
+			break
+		}
 	}
 }
 
@@ -129,17 +149,11 @@ func (o Options) kilnfileLock(tileDirectory fs.FS) (cargo.KilnfileLock, error) {
 	return lock, nil
 }
 
-func loadVariables(dir fs.FS, tileName string, vars Variables) error {
-	if tileName == "" {
-		return nil
-	}
-	for _, tryName := range slices.Compact(crossProduct([]string{tileName, strings.ToLower(tileName), strings.ToUpper(tileName)}, []string{".yml", ".yaml"})) {
-		p := path.Join(defaultVariablesDirectory, tryName)
-		_, err := fs.Stat(dir, p)
-		if err != nil && errors.Is(err, os.ErrNotExist) {
-			continue
+func loadVariables(dir fs.FS, variablesFiles []string, vars Variables) error {
+	for _, filePath := range variablesFiles {
+		if err := loadVariablesFile(dir, filePath, vars); err != nil {
+			return err
 		}
-		return loadVariablesFile(dir, p, vars)
 	}
 	return nil
 }
@@ -153,17 +167,37 @@ func loadVariablesFile(dir fs.FS, p string, vars Variables) error {
 }
 
 func Metadata(out io.Writer, tileDirectory fs.FS, o Options) error {
-	setDefaultOptions(&o, tileDirectory)
-	if err := loadVariables(tileDirectory, o.TileName, o.Variables); err != nil {
-		return fmt.Errorf("failed to load variables: %w", err)
+	tc, metadataNode, err := metadataSetup(tileDirectory, o)
+	if err != nil {
+		return err
+	}
+	result, err := interpolate(tc, newPart(tc.options.Metadata, metadataNode))
+	if err != nil {
+		return err
+	}
+	resultBuffer, err := yaml.Marshal(result)
+	if err != nil {
+		return err
+	}
+	_, err = out.Write(resultBuffer)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func metadataSetup(tileDirectory fs.FS, o Options) (*templateContext, *yaml.Node, error) {
+	setDefaultOptions(tileDirectory, &o)
+	if err := loadVariables(tileDirectory, o.VariablesFiles, o.Variables); err != nil {
+		return nil, nil, fmt.Errorf("failed to load variables: %w", err)
 	}
 	metadataNode, err := o.metadata(tileDirectory)
 	if err != nil {
-		return fmt.Errorf("failed to open metadata: %w", err)
+		return nil, nil, fmt.Errorf("failed to open metadata: %w", err)
 	}
 	lock, err := o.kilnfileLock(tileDirectory)
 	if err != nil {
-		return fmt.Errorf("failed to open kilnfile: %w", err)
+		return nil, nil, fmt.Errorf("failed to open kilnfile: %w", err)
 	}
 	tc := &templateContext{
 		tileName:      o.TileName,
@@ -204,25 +238,13 @@ func Metadata(out io.Writer, tileDirectory fs.FS, o Options) error {
 		for _, dir := range row.configDirs {
 			err := parseAndPreprocessMetadataPart(tc.tileDirectory, tc.tileName, dir, parts)
 			if err != nil {
-				return fmt.Errorf("failed to open %s: %w", row.configDirs, err)
+				return nil, nil, fmt.Errorf("failed to open %s: %w", row.configDirs, err)
 			}
 		}
 		tc.templateFunctions[row.tmplFnName] = createMetadataFunc(parts, tc)
 		*row.nameParts = parts
 	}
-	result, err := interpolate(tc, newPart(tc.options.Metadata, metadataNode))
-	if err != nil {
-		return err
-	}
-	resultBuffer, err := yaml.Marshal(result)
-	if err != nil {
-		return err
-	}
-	_, err = out.Write(resultBuffer)
-	if err != nil {
-		return err
-	}
-	return nil
+	return tc, metadataNode, nil
 }
 
 func interpolate(tc *templateContext, p part) (*yaml.Node, error) {
@@ -366,6 +388,8 @@ type templateContext struct {
 
 	kilnfileLock cargo.KilnfileLock
 
+	releasesDirectoryIndex map[string]release
+
 	instanceGroups, jobs, forms, properties, runtimeConfigs namedParts
 
 	templateFunctions template.FuncMap
@@ -407,26 +431,7 @@ func createMetadataFunc(m namedParts, tc *templateContext) func(string) (string,
 }
 
 func (tc *templateContext) releaseFromKilnfileLock(name string) (string, error) {
-	lock, err := tc.kilnfileLock.FindReleaseWithName(name)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve release %s: %w", name, err)
-	}
-	localFilePath := path.Base(lock.RemotePath)
-	if lock.RemoteSource == cargo.ReleaseSourceTypeBOSHIO {
-		localFilePath = fmt.Sprintf("%s-%v.tgz", lock.Name, lock.Version)
-	}
-	return encodeJSONString(struct {
-		// these fields must be ordered alphabetically
-		File    string `json:"file"`
-		Name    string `json:"name"`
-		SHA1    string `json:"sha1"`
-		Version string `json:"version"`
-	}{
-		Name:    lock.Name,
-		Version: lock.Version,
-		SHA1:    lock.SHA1,
-		File:    localFilePath,
-	}, err)
+	return encodeJSONString(releaseFromKilnfile(tc.kilnfileLock, name))
 }
 
 func nodeToJSONString(node *yaml.Node, err error) (string, error) {
@@ -538,16 +543,6 @@ func decodeNamedMetadata(r io.Reader, fileName string, result namedParts) error 
 			return err
 		}
 	}
-}
-
-func crossProduct[T string | constraints.Float | constraints.Integer | constraints.Complex](a, b []T) []T {
-	res := make([]T, 0, len(a)*len(b))
-	for _, av := range a {
-		for _, bv := range b {
-			res = append(res, av+bv)
-		}
-	}
-	return res
 }
 
 const (
