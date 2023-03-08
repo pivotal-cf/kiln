@@ -94,7 +94,7 @@ func (u ManifestTest) Execute(args []string) error {
 	}
 
 	session, _ := mobySession.NewSession(u.ctx, "waypoint", "")
-	defer session.Close()
+	defer closeAndIgnoreError(session)
 	session.Allow(sshp)
 	dialSession := func(ctx context.Context, proto string, meta map[string][]string) (net.Conn, error) {
 		return u.mobi.DialHijack(ctx, "/session", proto, meta)

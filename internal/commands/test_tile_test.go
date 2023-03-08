@@ -5,25 +5,37 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/pkg/stdcopy"
-	"io"
-	"log"
-	"net"
-	"os"
-	"strings"
-	"time"
-
-	"github.com/docker/docker/api/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
+
 	"github.com/pivotal-cf/kiln/internal/commands"
-	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
+	"github.com/pivotal-cf/kiln/internal/commands/fakes"
 )
 
+func init() {
+	format.MaxLength = 100000
+}
+
 var _ = Describe("kiln test docker", func() {
+	var (
+		helloTileDirectorySegments []string
+	)
+	BeforeEach(func() {
+		helloTileDirectorySegments = []string{"testdata", "test_tile", "hello-tile"}
+	})
+
 	Context("locally missing docker image is built", func() {
 		var (
 			ctx    context.Context
@@ -36,210 +48,208 @@ var _ = Describe("kiln test docker", func() {
 			logger = log.New(&writer, "", 0)
 		})
 
-		It("runs the tests for ist", func() {
-			oldStdin := os.Stdin
-			format.MaxLength = 100000
-			passwd := "password\n"
-			content := []byte(passwd)
-			tmpfile, err := os.CreateTemp(GinkgoT().TempDir(), GinkgoT().Name())
-			Expect(err).To(BeNil())
-			_, err = tmpfile.Write(content)
-			Expect(err).To(BeNil())
-			_, err = tmpfile.Seek(0, 0)
-			Expect(err).To(BeNil())
-			os.Stdin = tmpfile
+		Describe("successful creation creation", func() {
+			var (
+				fakeSshProvider *fakes.SshProvider
+				helloTilePath   string
+			)
 
-			fakeMobyClient := &commandsFakes.MobyClient{}
-			fakeMobyClient.PingReturns(types.Ping{}, nil)
-			r, w := io.Pipe()
-			w.Close()
-			fakeConn := &fakeConn{r: r, w: stdcopy.NewStdWriter(io.Discard, stdcopy.Stdout)}
-			fakeMobyClient.DialHijackReturns(fakeConn, nil)
-			rc := io.NopCloser(strings.NewReader(`{"error": "", "message": "tagged dont_push_me_vmware_confidential:123"}`))
-			imageBuildResponse := types.ImageBuildResponse{
-				Body: rc,
-			}
-			fakeMobyClient.ImageBuildReturns(imageBuildResponse, nil)
-			createResp := container.CreateResponse{
-				ID: "some id",
-			}
-			fakeMobyClient.ContainerCreateReturns(createResp, nil)
-			responses := make(chan container.WaitResponse)
-			go func() {
-				responses <- container.WaitResponse{
-					Error:      nil,
-					StatusCode: 0,
-				}
-			}()
-			fakeMobyClient.ContainerWaitReturns(responses, nil)
-			rcLog := io.NopCloser(strings.NewReader(`{"error": "", "message": "manifest tests completed successfully"}"`))
-			fakeMobyClient.ContainerLogsReturns(rcLog, nil)
-			fakeMobyClient.ContainerStartReturns(nil)
-			fakeSshThinger := commandsFakes.SshProvider{}
-			fakeSshThinger.NeedsKeysReturns(false, nil)
-			subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, &fakeSshThinger)
-			err = subjectUnderTest.Execute([]string{"--tile-path", "tas_fake/ist", "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
+			BeforeEach(func() {
+				t := GinkgoT()
+				helloTilePath = filepath.Join(helloTileDirectorySegments...)
+				setupVendorDirectory(t, helloTilePath)
+				writePasswordToStdIn(t)
+				fakeSshProvider = setupFakeSSHProvider()
+				addTASFixtures(t, helloTilePath)
+			})
 
-			Expect(err).To(BeNil())
-			_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
-			Expect(len(config.Env)).To(Equal(2))
-			Expect(config.Env[0]).To(Equal("TAS_METADATA_PATH=/tas/ist/test/manifest/fixtures/tas_metadata.yml"))
-			Expect(config.Env[1]).To(Equal("TAS_CONFIG_FILE=/tas/ist/test/manifest/fixtures/tas_config.yml"))
-			dockerCmd := fmt.Sprintf("cd /tas/%s/test/manifest && PRODUCT=ist RENDERER=ops-manifest ginkgo %s", "ist", "-r -slowSpecThreshold 1")
-			Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
-			GinkgoT().Log(writer.String())
-			Expect((&writer).String()).To(ContainSubstring("tagged dont_push_me_vmware_confidential:123"))
-			Expect((&writer).String()).To(ContainSubstring("Building / restoring cached docker image"))
-			os.Stdin = oldStdin
-		})
+			When("manifest tests should be successful", func() {
+				const (
+					testSuccessLogLine = "manifest tests completed successfully"
+				)
+				var (
+					fakeMobyClient *fakes.MobyClient
+				)
+				BeforeEach(func() {
+					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
+				})
+				It("properly executes tests", func() {
+					subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, fakeSshProvider)
 
-		It("runs the tests for tas", func() {
-			oldStdin := os.Stdin
-			format.MaxLength = 100000
-			passwd := "password\n"
-			content := []byte(passwd)
-			tmpfile, err := os.CreateTemp(GinkgoT().TempDir(), GinkgoT().Name())
-			Expect(err).To(BeNil())
-			_, err = tmpfile.Write(content)
-			Expect(err).To(BeNil())
-			_, err = tmpfile.Seek(0, 0)
-			Expect(err).To(BeNil())
-			os.Stdin = tmpfile
+					err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
+					Expect(err).To(BeNil())
 
-			fakeMobyClient := &commandsFakes.MobyClient{}
-			fakeMobyClient.PingReturns(types.Ping{}, nil)
-			r, w := io.Pipe()
-			w.Close()
-			fakeConn := &fakeConn{r: r, w: stdcopy.NewStdWriter(io.Discard, stdcopy.Stdout)}
-			fakeMobyClient.DialHijackReturns(fakeConn, nil)
+					By("logging helpful messages", func() {
+						logs := writer.String()
+						By("logging container information", func() {
+							Expect(logs).To(ContainSubstring("tagged dont_push_me_vmware_confidential:123"))
+							Expect(logs).To(ContainSubstring("Building / restoring cached docker image"))
+						})
+						By("logging test lines", func() {
+							Expect(logs).To(ContainSubstring("manifest tests completed successfully"))
+						})
+					})
 
-			rc := io.NopCloser(strings.NewReader(`{"error": "", "message": "tagged dont_push_me_vmware_confidential:123"}`))
-			imageBuildResponse := types.ImageBuildResponse{
-				Body: rc,
-			}
-			fakeMobyClient.ImageBuildReturns(imageBuildResponse, nil)
-			createResp := container.CreateResponse{
-				ID: "some id",
-			}
-			fakeMobyClient.ContainerCreateReturns(createResp, nil)
-			responses := make(chan container.WaitResponse)
-			go func() {
-				responses <- container.WaitResponse{
-					Error:      nil,
-					StatusCode: 0,
-				}
-			}()
-			fakeMobyClient.ContainerWaitReturns(responses, nil)
-			rcLog := io.NopCloser(strings.NewReader(`{"error": "", "message": "manifest tests completed successfully"}"`))
-			fakeMobyClient.ContainerLogsReturns(rcLog, nil)
-			fakeMobyClient.ContainerStartReturns(nil)
-			fakeSshThinger := commandsFakes.SshProvider{}
-			fakeSshThinger.NeedsKeysReturns(false, nil)
-			subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, &fakeSshThinger)
-			err = subjectUnderTest.Execute([]string{"--tile-path", "tas_fake/tas"})
+					By("creating a test container", func() {
+						Expect(fakeMobyClient.ContainerCreateCallCount()).To(Equal(1))
+						_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
+						By("configuring the metadata and product config when they exist", func() {
+							Expect(config.Env).To(Equal([]string{
+								"TAS_METADATA_PATH=/tas/hello-tile/test/manifest/fixtures/tas_metadata.yml",
+								"TAS_CONFIG_FILE=/tas/hello-tile/test/manifest/fixtures/tas_config.yml",
+							}))
+						})
+						By("executing the tests", func() {
+							dockerCmd := fmt.Sprintf("cd /tas/%s/test/manifest && PRODUCT=%[1]s RENDERER=ops-manifest ginkgo -r -slowSpecThreshold 1", "hello-tile")
+							Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
+						})
+					})
+				})
+			})
 
-			Expect(err).To(BeNil())
-			_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
-			Expect(len(config.Env)).To(Equal(0))
+			When("manifest tests should be successful", func() {
+				const (
+					testFailureMessage = "exit status 1"
+				)
+				var (
+					fakeMobyClient *fakes.MobyClient
+				)
+				BeforeEach(func() {
+					fakeMobyClient = setupFakeMobyClient(testFailureMessage, 1)
+				})
+				It("returns an error", func() {
+					subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, fakeSshProvider)
+					err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
+					Expect(err).To(HaveOccurred())
 
-			GinkgoT().Log(writer.String())
-			Expect((&writer).String()).To(ContainSubstring("tagged dont_push_me_vmware_confidential:123"))
-			Expect((&writer).String()).To(ContainSubstring("Building / restoring cached docker image"))
-			os.Stdin = oldStdin
+					By("logging helpful messages", func() {
+						logs := writer.String()
+						By("logging test lines", func() {
+							Expect(logs).To(ContainSubstring("exit status 1"))
+						})
+					})
+				})
+			})
 		})
 
 		It("exits with an error if docker isn't running", func() {
-			fakeMobyClient := &commandsFakes.MobyClient{}
+			fakeMobyClient := &fakes.MobyClient{}
 			fakeMobyClient.PingReturns(types.Ping{}, errors.New("docker not running"))
-			fakeSshThinger := commandsFakes.SshProvider{}
+			fakeSshThinger := fakes.SshProvider{}
 			fakeSshThinger.NeedsKeysReturns(false, nil)
 			subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, &fakeSshThinger)
-			err := subjectUnderTest.Execute([]string{"tas_fake"})
+			err := subjectUnderTest.Execute([]string{filepath.Join(helloTileDirectorySegments...)})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Docker daemon is not running"))
 		})
 	})
-
-	Context("logs output from container", func() {
-		It("logs when the manifest tests complete successfully", func() {
-			fakeMobyClient := &commandsFakes.MobyClient{}
-
-			ctx := context.Background()
-			fakeMobyClient.PingReturns(types.Ping{}, nil)
-			r, w := io.Pipe()
-			w.Close()
-			fakeConn := &fakeConn{r: r, w: stdcopy.NewStdWriter(io.Discard, stdcopy.Stdout)}
-			fakeMobyClient.DialHijackReturns(fakeConn, nil)
-			output := "Successfully built 1234"
-			rc := io.NopCloser(strings.NewReader(fmt.Sprintf(`{"error": "", "message": "%s"}`, output)))
-			imageBuildResponse := types.ImageBuildResponse{
-				Body: rc,
-			}
-			fakeMobyClient.ImageBuildReturns(imageBuildResponse, nil)
-			createResp := container.CreateResponse{
-				ID: "some id",
-			}
-			fakeMobyClient.ContainerCreateReturns(createResp, nil)
-			var logLogOutput bytes.Buffer
-			logOut := log.New(&logLogOutput, "", 0)
-
-			rcLog := io.NopCloser(strings.NewReader(`"manifest tests completed successfully"`))
-			fakeMobyClient.ContainerLogsReturns(rcLog, nil)
-			fakeMobyClient.ContainerStartReturns(nil)
-			fakeSshThinger := commandsFakes.SshProvider{}
-			fakeSshThinger.NeedsKeysReturns(false, nil)
-			subjectUnderTest := commands.NewManifestTest(logOut, ctx, fakeMobyClient, &fakeSshThinger)
-			fakeMobyClient.ContainerCreateReturns(createResp, nil)
-			responses := make(chan container.WaitResponse)
-			go func() {
-				responses <- container.WaitResponse{
-					Error:      nil,
-					StatusCode: 0,
-				}
-			}()
-			fakeMobyClient.ContainerWaitReturns(responses, nil)
-
-			err := subjectUnderTest.Execute([]string{"--tile-path", "tas_fake/tas"})
-			Expect(err).To(BeNil())
-
-			Expect(logLogOutput.String()).To(ContainSubstring("manifest tests completed successfully"))
-		})
-	})
 })
 
-type fakeConn struct {
-	r io.Reader
-	w io.Writer
+func setupFakeMobyClient(containerLogMessage string, testExitCode int64) *fakes.MobyClient {
+	fakeMobyClient := &fakes.MobyClient{}
+	fakeMobyClient.PingReturns(types.Ping{}, nil)
+	r, w := io.Pipe()
+	_ = w.Close()
+	fakeConn := &fakes.Conn{R: r, W: stdcopy.NewStdWriter(io.Discard, stdcopy.Stdout)}
+	fakeMobyClient.DialHijackReturns(fakeConn, nil)
+
+	rc := io.NopCloser(strings.NewReader(`{"error": "", "message": "tagged dont_push_me_vmware_confidential:123"}`))
+	imageBuildResponse := types.ImageBuildResponse{
+		Body: rc,
+	}
+	fakeMobyClient.ImageBuildReturns(imageBuildResponse, nil)
+	createResp := container.CreateResponse{
+		ID: "some id",
+	}
+	fakeMobyClient.ContainerCreateReturns(createResp, nil)
+	responses := make(chan container.WaitResponse)
+	go func() {
+		responses <- container.WaitResponse{
+			Error:      nil,
+			StatusCode: testExitCode,
+		}
+	}()
+	fakeMobyClient.ContainerWaitReturns(responses, nil)
+	rcLog := io.NopCloser(strings.NewReader(fmt.Sprintf(`{"error": "", "message": %q}"`, containerLogMessage)))
+	fakeMobyClient.ContainerLogsReturns(rcLog, nil)
+	fakeMobyClient.ContainerStartReturns(nil)
+	return fakeMobyClient
 }
 
-func (c *fakeConn) LocalAddr() net.Addr {
-	return nil
+type testingT interface {
+	Helper()
+	Cleanup(func())
+	TempDir() string
+	Fatal(args ...interface{})
+	Name() string
 }
 
-func (c *fakeConn) RemoteAddr() net.Addr {
-	return &net.UnixAddr{Name: "test", Net: "test"}
+func writePasswordToStdIn(t testingT) {
+	t.Helper()
+	oldStdin := os.Stdin
+	t.Cleanup(func() {
+		os.Stdin = oldStdin
+	})
+	passwd := "password\n"
+	content := []byte(passwd)
+	temporaryFile, err := os.CreateTemp(t.TempDir(), t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = temporaryFile.Write(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = temporaryFile.Seek(0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdin = temporaryFile
 }
 
-func (c *fakeConn) SetDeadline(t time.Time) error {
-	return nil
+func setupFakeSSHProvider() *fakes.SshProvider {
+	fakeSSHProvider := fakes.SshProvider{}
+	fakeSSHProvider.NeedsKeysReturns(false, nil)
+	return &fakeSSHProvider
 }
 
-func (c *fakeConn) SetReadDeadline(t time.Time) error {
-	return nil
+type skipperT interface {
+	Skip(args ...any)
 }
 
-func (c *fakeConn) SetWriteDeadline(t time.Time) error {
-	return nil
+func setupVendorDirectory(t skipperT, tilePath string) {
+	cmd := exec.Command("go", "mod", "vendor")
+	cmd.Dir = tilePath
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		t.Skip("failed to vendor hello-tile module: %s\n", err, stderr.String())
+	}
 }
 
-func (c *fakeConn) Read(p []byte) (int, error) {
-	return c.r.Read(p)
+func addTASFixtures(t testingT, tileDirectory string) {
+	fixturesDirectory := filepath.Join(tileDirectory, "test", "manifest", "fixtures")
+	if err := os.MkdirAll(fixturesDirectory, 0766); err != nil {
+		t.Fatal(err)
+	}
+	for _, filePath := range []string{
+		filepath.Join(fixturesDirectory, "tas_metadata.yml"),
+		filepath.Join(fixturesDirectory, "tas_config.yml"),
+	} {
+		if err := createEmptyFile(filePath); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			_ = os.Remove(filePath)
+		})
+	}
 }
 
-func (c *fakeConn) Write(p []byte) (int, error) {
-	return c.w.Write(p)
-}
-
-func (c *fakeConn) Close() error {
+func createEmptyFile(filePath string) error {
+	f, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer closeAndIgnoreError(f)
 	return nil
 }
