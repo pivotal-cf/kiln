@@ -1,14 +1,12 @@
 package commands_test
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -57,7 +55,6 @@ var _ = Describe("kiln test docker", func() {
 			BeforeEach(func() {
 				t := GinkgoT()
 				helloTilePath = filepath.Join(helloTileDirectorySegments...)
-				setupVendorDirectory(t, helloTilePath)
 				writePasswordToStdIn(t)
 				fakeSshProvider = setupFakeSSHProvider()
 				addTASFixtures(t, helloTilePath)
@@ -215,16 +212,6 @@ func setupFakeSSHProvider() *fakes.SshProvider {
 
 type skipperT interface {
 	Skip(args ...any)
-}
-
-func setupVendorDirectory(t skipperT, tilePath string) {
-	cmd := exec.Command("go", "mod", "vendor")
-	cmd.Dir = tilePath
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		t.Skip("failed to vendor hello-tile module: %s\n", err, stderr.String())
-	}
 }
 
 func addTASFixtures(t testingT, tileDirectory string) {
