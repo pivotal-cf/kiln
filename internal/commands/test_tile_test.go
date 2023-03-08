@@ -210,10 +210,6 @@ func setupFakeSSHProvider() *fakes.SshProvider {
 	return &fakeSSHProvider
 }
 
-type skipperT interface {
-	Skip(args ...any)
-}
-
 func addTASFixtures(t testingT, tileDirectory string) {
 	fixturesDirectory := filepath.Join(tileDirectory, "test", "manifest", "fixtures")
 	if err := os.MkdirAll(fixturesDirectory, 0766); err != nil {
