@@ -290,7 +290,7 @@ func (r fetchNotesData) fetchHistoricFiles(kilnfilePath, start, end string) (klI
 	return klInitial, klFinal, kfFinal, v, nil
 }
 
-//counterfeiter:generate -o ./fakes/releases_service.go --fake-name ReleaseService github.com/pivotal-cf/kiln/internal/component.RepositoryReleaseLister
+//counterfeiter:generate -o ./fakes/releases_service.go --fake-name ReleaseService github.com/pivotal-cf/kiln/pkg/cargo.RepositoryReleaseLister
 //counterfeiter:generate -o ./fakes/issues_service.go --fake-name IssuesService . issuesService
 
 type issuesService interface {
