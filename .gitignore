@@ -13,3 +13,5 @@ env.yml
 *.key
 *.pem
 .vscode
+
+vendor
