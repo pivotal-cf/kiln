@@ -25,6 +25,11 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
 
+      - name: Ensure Generate Succeeds and Does Not Make Changes
+        run: |
+          go generate ./...
+          git status --porcelain # When this fails, things have changed.
+
       - name: Build
         run: go build -v ./...
 
