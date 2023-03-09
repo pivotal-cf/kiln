@@ -161,7 +161,7 @@ func TestGlaze_Execute(t *testing.T) {
 		t.Run("Kilnfile", func(t *testing.T) {
 			tmp := t.TempDir()
 			kfp := filepath.Join(tmp, "Kilnfile")
-			_ = os.WriteFile(kfp, []byte(invalidYAML), 0777)
+			_ = os.WriteFile(kfp, []byte(invalidYAML), 0o777)
 			cmd := new(Glaze)
 			err := cmd.Execute([]string{"--kilnfile", kfp})
 			g := NewWithT(t)
@@ -173,9 +173,9 @@ func TestGlaze_Execute(t *testing.T) {
 		t.Run("Kilnfile.lock", func(t *testing.T) {
 			tmp := t.TempDir()
 			kfp := filepath.Join(tmp, "Kilnfile")
-			_ = os.WriteFile(kfp, []byte(`{}`), 0777)
+			_ = os.WriteFile(kfp, []byte(`{}`), 0o777)
 			klp := filepath.Join(tmp, "Kilnfile.lock")
-			_ = os.WriteFile(klp, []byte(invalidYAML), 0777)
+			_ = os.WriteFile(klp, []byte(invalidYAML), 0o777)
 			cmd := new(Glaze)
 			err := cmd.Execute([]string{"--kilnfile", kfp})
 			g := NewWithT(t)

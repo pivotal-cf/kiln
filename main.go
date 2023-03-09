@@ -107,7 +107,7 @@ func main() {
 		FS:                         osfs.New(""),
 	}
 
-	//commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
+	// commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 	commandSet["glaze"] = new(commands.Glaze)
 
 	commandSet["find-release-version"] = commands.NewFindReleaseVersion(outLogger, mrsProvider)

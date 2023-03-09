@@ -1,11 +1,12 @@
 package flags_test
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
-	"strings"
 )
 
 var _ = Describe("ToStrings", func() {

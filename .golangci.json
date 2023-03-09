@@ -17,7 +17,8 @@
       "containedctx",
       "contextcheck",
       "noctx",
-      "predeclared"
+      "predeclared",
+      "gofumpt"
     ]
   }
 }

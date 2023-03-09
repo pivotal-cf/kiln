@@ -81,7 +81,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	fmt.Printf("Testing product: %s", productToBuild)
 
 	cmd := exec.Command("../../bin/build")
-	//cmd := exec.Command("docker", "echo \"hello\"")
+	// cmd := exec.Command("docker", "echo \"hello\"")
 	cmd.Env = append(os.Environ(),
 		"METADATA_ONLY=true",
 		"STUB_RELEASES=true",
@@ -89,13 +89,11 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	)
 
 	output, err := cmd.Output()
-
-	//Expect(string(output)).To(Equal("hi"))
-
+	// Expect(string(output)).To(Equal("hi"))
 	if err != nil {
 		Expect(err).To(BeNil())
-		//msg := fmt.Sprintf("error running bin/build: %s", err.(*exec.ExitError).Stderr)
-		//Expect(err).NotTo(HaveOccurred(), msg)
+		// msg := fmt.Sprintf("error running bin/build: %s", err.(*exec.ExitError).Stderr)
+		// Expect(err).NotTo(HaveOccurred(), msg)
 	}
 
 	return []byte(output)

@@ -3,9 +3,10 @@ package commands
 import (
 	"context"
 	"fmt"
+	"log"
+
 	vault "github.com/hashicorp/vault/api"
 	vault_auth "github.com/hashicorp/vault/api/auth/ldap"
-	"log"
 )
 
 func VaultGetCred(credential string) error {
@@ -26,7 +27,7 @@ func VaultGetCred(credential string) error {
 	if err != nil {
 		return fmt.Errorf("unable to initialize Vault client: %v", err)
 	}
-	
+
 	if loginRespFromFile.Auth == nil || loginRespFromFile.Auth.ClientToken == "" {
 		return fmt.Errorf("no authentication info returned by login")
 	}

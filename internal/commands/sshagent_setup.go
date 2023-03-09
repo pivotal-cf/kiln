@@ -3,13 +3,14 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"github.com/docker/docker/pkg/homedir"
-	"golang.org/x/crypto/ssh"
-	sshagent "golang.org/x/crypto/ssh/agent"
 	"io"
 	"net"
 	"os"
 	"path"
+
+	"github.com/docker/docker/pkg/homedir"
+	"golang.org/x/crypto/ssh"
+	sshagent "golang.org/x/crypto/ssh/agent"
 )
 
 //counterfeiter:generate -o fakes/fake_ssh_client_creator.go --fake-name SshClientCreator . SshClientCreator
