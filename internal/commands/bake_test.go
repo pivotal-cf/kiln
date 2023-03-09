@@ -211,7 +211,7 @@ var _ = Describe("Bake", func() {
 
 			Expect(fakeTemplateVariablesService.FromPathsAndPairsCallCount()).To(Equal(1))
 			varFiles, variables := fakeTemplateVariablesService.FromPathsAndPairsArgsForCall(0)
-			Expect(len(varFiles)).To(Equal(2))
+			Expect(varFiles).To(HaveLen(2))
 			Expect(varFiles[0]).To(Equal("some-variables-file"))
 			Expect(varFiles[1]).To(Equal("/home/.kiln/credentials.yml"))
 			Expect(variables).To(Equal([]string{"some-variable=some-variable-value"}))

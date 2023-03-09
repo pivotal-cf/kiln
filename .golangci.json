@@ -18,7 +18,8 @@
       "contextcheck",
       "noctx",
       "predeclared",
-      "gofumpt"
+      "gofumpt",
+      "ginkgolinter"
     ]
   }
 }

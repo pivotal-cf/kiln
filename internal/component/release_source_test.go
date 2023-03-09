@@ -34,7 +34,7 @@ var _ = Describe("ReleaseSourceList", func() {
 
 			It("constructs all the release sources", func() {
 				releaseSources := component.NewReleaseSourceRepo(kilnfile, logger)
-				Expect(len(releaseSources)).To(Equal(4)) // not using HaveLen because S3 struct is so huge
+				Expect(releaseSources).To(HaveLen(4)) // not using HaveLen because S3 struct is so huge
 			})
 
 			It("constructs the compiled release source properly", func() {

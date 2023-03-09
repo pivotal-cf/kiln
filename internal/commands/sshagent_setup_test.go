@@ -20,7 +20,7 @@ var _ = Describe("SSHAgentSetup", func() {
 			fakeSshAgentCreator.NewClientReturns(fakeSshClient)
 
 			subject, err := commands.NewSshProvider(fakeSshAgentCreator)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(subject.NeedsKeys()).To(BeTrue())
 			key, _ := subject.GetKeys()
 			Expect(key).To(Not(BeNil()))
@@ -28,11 +28,11 @@ var _ = Describe("SSHAgentSetup", func() {
 		Context("the key is encrypted", func() {
 			It("adds them successfully", func() {
 				tmpfile, err := os.CreateTemp(GinkgoT().TempDir(), GinkgoT().Name())
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				_, err = tmpfile.Write(PEMEncryptedKey.PEMBytes)
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				_, err = tmpfile.Seek(0, 0)
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 
 				fakeSshAgentCreator := &fakes.SshClientCreator{}
 				fakeSshClient := &fakes.SSHAgent{}
@@ -41,7 +41,7 @@ var _ = Describe("SSHAgentSetup", func() {
 				fakeSshAgentCreator.NewClientReturns(fakeSshClient)
 
 				subject, err := commands.NewSshProvider(fakeSshAgentCreator)
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				err = subject.AddKey(fakeKey, PEMEncryptedKey.EncryptionKey)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(fakeSshClient.AddCallCount()).To(Equal(1))
@@ -50,11 +50,11 @@ var _ = Describe("SSHAgentSetup", func() {
 		Context("the key isn't encrypted", func() {
 			It("fails with a passphrase", func() {
 				tmpfile, err := os.CreateTemp(GinkgoT().TempDir(), GinkgoT().Name())
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				_, err = tmpfile.Write(PEMUnencryptedKey.PEMBytes)
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				_, err = tmpfile.Seek(0, 0)
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 
 				fakeSshAgentCreator := &fakes.SshClientCreator{}
 				fakeSshClient := &fakes.SSHAgent{}
@@ -63,10 +63,10 @@ var _ = Describe("SSHAgentSetup", func() {
 				fakeSshAgentCreator.NewClientReturns(fakeSshClient)
 
 				subject, err := commands.NewSshProvider(fakeSshAgentCreator)
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				key, err := subject.GetKeys(fakeKey.KeyPath)
 				Expect(key.Encrypted).To(BeFalse())
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 
 				err = subject.AddKey(fakeKey, []byte("unnecessary-passphrase"))
 				Expect(err).To(HaveOccurred())
@@ -75,11 +75,11 @@ var _ = Describe("SSHAgentSetup", func() {
 
 			It("adds without a passphrase", func() {
 				tmpfile, err := os.CreateTemp(GinkgoT().TempDir(), GinkgoT().Name())
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				_, err = tmpfile.Write(PEMUnencryptedKey.PEMBytes)
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				_, err = tmpfile.Seek(0, 0)
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 
 				fakeSshAgentCreator := &fakes.SshClientCreator{}
 				fakeSshClient := &fakes.SSHAgent{}
@@ -88,10 +88,10 @@ var _ = Describe("SSHAgentSetup", func() {
 				fakeSshAgentCreator.NewClientReturns(fakeSshClient)
 
 				subject, err := commands.NewSshProvider(fakeSshAgentCreator)
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				key, err := subject.GetKeys(fakeKey.KeyPath)
 				Expect(key.Encrypted).To(BeFalse())
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				err = subject.AddKey(fakeKey, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeSshClient.AddCallCount()).To(Equal(1))
@@ -108,9 +108,9 @@ var _ = Describe("SSHAgentSetup", func() {
 			fakeSshAgentCreator.NewClientReturns(fakeSshClient)
 
 			subject, err := commands.NewSshProvider(fakeSshAgentCreator)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(subject.NeedsKeys()).To(BeFalse())
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

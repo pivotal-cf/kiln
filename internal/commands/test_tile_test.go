@@ -67,7 +67,7 @@ var _ = Describe("kiln test docker", func() {
 					subjectUnderTest := commands.NewManifestTest(logger, fakeMobyClient, fakeSshProvider)
 
 					err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
-					Expect(err).To(BeNil())
+					Expect(err).NotTo(HaveOccurred())
 
 					By("logging helpful messages", func() {
 						logs := writer.String()

@@ -168,7 +168,7 @@ stemcell_criteria:
 
 					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
 					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
-					Expect(noConfirm).To(Equal(true))
+					Expect(noConfirm).To(BeTrue())
 					Expect(extras).To(HaveLen(1))
 					Expect(extras).To(ConsistOf(releaseOnDisk))
 				})
@@ -190,7 +190,7 @@ stemcell_criteria:
 
 					Expect(fakeLocalReleaseDirectory.DeleteExtraReleasesCallCount()).To(Equal(1))
 					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
-					Expect(noConfirm).To(Equal(true))
+					Expect(noConfirm).To(BeTrue())
 					Expect(extras).To(HaveLen(0))
 				})
 			})
@@ -489,7 +489,7 @@ stemcell_criteria:
 
 					extras, noConfirm := fakeLocalReleaseDirectory.DeleteExtraReleasesArgsForCall(0)
 					Expect(extras).To(HaveLen(1))
-					Expect(noConfirm).To(Equal(true))
+					Expect(noConfirm).To(BeTrue())
 					Expect(extras).To(ConsistOf(
 						component.Local{
 							Lock:      component.Lock{Name: "some-extra-release", Version: "1.2.3", SHA1: "correct-sha"},
