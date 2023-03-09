@@ -22,7 +22,8 @@
       "ginkgolinter",
       "goconst",
       "goimports",
-      "unconvert"
+      "unconvert",
+      "tenv"
     ]
   },
   "linters-settings": {
