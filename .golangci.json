@@ -23,7 +23,8 @@
       "goconst",
       "goimports",
       "unconvert",
-      "tenv"
+      "tenv",
+      "reassign"
     ]
   },
   "linters-settings": {
