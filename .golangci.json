@@ -16,7 +16,8 @@
       "whitespace",
       "containedctx",
       "contextcheck",
-      "noctx"
+      "noctx",
+      "predeclared"
     ]
   }
 }
