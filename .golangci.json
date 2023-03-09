@@ -19,7 +19,13 @@
       "noctx",
       "predeclared",
       "gofmt",
-      "ginkgolinter"
+      "ginkgolinter",
+      "goconst"
     ]
+  },
+  "linters-settings": {
+    "goconst": {
+     "ignore-tests": true
+    }
   }
 }

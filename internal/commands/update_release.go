@@ -140,7 +140,7 @@ func (u UpdateRelease) Execute(args []string) error {
 
 func (u UpdateRelease) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Bumps a release to a new version in Kilnfile.lock",
+		Description:      fmt.Sprintf("Bumps a release to a new version in %s.lock", cargo.KilnfileFileName),
 		ShortDescription: "bumps a release to a new version",
 		Flags:            u.Options,
 	}

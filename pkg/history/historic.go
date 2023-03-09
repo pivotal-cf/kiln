@@ -15,7 +15,7 @@ var billOfMaterialFileNames = []string{"Kilnfile.lock", "assets.lock"} // tileRo
 
 func Kilnfile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (cargo.Kilnfile, cargo.KilnfileLock, error) {
 	tilePath := kilnfilePath
-	if filepath.Base(tilePath) == "Kilnfile" {
+	if filepath.Base(tilePath) == cargo.KilnfileFileName {
 		tilePath = filepath.Dir(tilePath)
 	}
 
@@ -37,7 +37,7 @@ func Kilnfile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, kiln
 	}
 
 	var spec cargo.Kilnfile
-	err = unmarshalFile(storage, commitHash, &spec, filepath.Join(tilePath, "Kilnfile"))
+	err = unmarshalFile(storage, commitHash, &spec, filepath.Join(tilePath, cargo.KilnfileFileName))
 	if err != nil && err != object.ErrFileNotFound {
 		return cargo.Kilnfile{}, lock, err
 	}
@@ -47,7 +47,7 @@ func Kilnfile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, kiln
 
 func Version(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (string, error) {
 	tilePath := kilnfilePath
-	if filepath.Base(tilePath) == "Kilnfile" {
+	if filepath.Base(tilePath) == cargo.KilnfileFileName {
 		tilePath = filepath.Dir(tilePath)
 	}
 	buf, err := fileAtCommit(storage, commitHash, filepath.Join(tilePath, "version"))

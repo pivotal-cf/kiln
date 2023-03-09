@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"os"
 	"os/exec"
@@ -62,7 +63,7 @@ func kilnfilePath(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	result := filepath.Join(p, "Kilnfile")
+	result := filepath.Join(p, cargo.KilnfileFileName)
 	return result, nil
 }
 

@@ -46,7 +46,7 @@ func (k KilnfileLoader) LoadKilnfiles(fs billy.Filesystem, kilnfilePath string, 
 	interpolator := builder.NewInterpolator()
 	interpolatedMetadata, err := interpolator.Interpolate(builder.InterpolateInput{
 		Variables: templateVariables,
-	}, "Kilnfile", kilnfileYAML)
+	}, KilnfileFileName, kilnfileYAML)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, ConfigFileError{err: err, HumanReadableConfigFileName: "interpolating variable files with Kilnfile"}
 	}

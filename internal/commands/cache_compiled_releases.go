@@ -351,7 +351,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 		}
 		return nil
 	}
-	return fmt.Errorf("existing release not found in Kilnfile.lock")
+	return fmt.Errorf("existing release not found in %s.lock", cargo.KilnfileFileName)
 }
 
 func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Spec, fp string, uploader ReleaseStorage) (component.Lock, error) {

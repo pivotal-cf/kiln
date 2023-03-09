@@ -12,10 +12,12 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
+
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/helper"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 //counterfeiter:generate -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
@@ -218,7 +220,7 @@ func shouldReadVersionFile(b *Bake, args []string) bool {
 
 func shouldNotUseDefaultKilnfileFlag(args []string) bool {
 	return (flags.IsSet("st", "stemcell-tarball", args) || flags.IsSet("sd", "stemcells-directory", args)) &&
-		!flags.IsSet("kf", "kilnfile", args)
+		!flags.IsSet("kf", strings.ToLower(cargo.KilnfileFileName), args)
 }
 
 func variablesDirPresent(fs flags.FileSystem) bool {

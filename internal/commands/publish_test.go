@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"errors"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"log"
 	"strings"
@@ -89,7 +90,7 @@ pre_ga_user_groups:
 				_, _ = vf.Write([]byte(versionStr))
 				defer closeAndIgnoreError(vf)
 
-				kf, _ := fs.Create("Kilnfile")
+				kf, _ := fs.Create(cargo.KilnfileFileName)
 				_, _ = kf.Write([]byte(defaultKilnFileBody))
 				defer closeAndIgnoreError(kf)
 

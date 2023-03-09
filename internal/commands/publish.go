@@ -177,7 +177,7 @@ func (p *Publish) parseArgsAndSetup(args []string) (cargo.Kilnfile, *semver.Vers
 
 	var kilnfile cargo.Kilnfile
 	if err := yaml.NewDecoder(file).Decode(&kilnfile); err != nil {
-		return cargo.Kilnfile{}, nil, fmt.Errorf("could not parse Kilnfile: %s", err)
+		return cargo.Kilnfile{}, nil, fmt.Errorf("could not parse %s: %s", cargo.KilnfileFileName, err)
 	}
 
 	window := p.Options.Window

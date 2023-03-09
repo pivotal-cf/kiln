@@ -2,6 +2,7 @@ package history
 
 import (
 	"encoding/json"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"path/filepath"
 
@@ -28,7 +29,7 @@ func unmarshalFile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash,
 //}
 
 func decodeFile(buf []byte, fileName string, data interface{}) error {
-	if filepath.Base(fileName) == "Kilnfile" {
+	if filepath.Base(fileName) == cargo.KilnfileFileName {
 		return yaml.Unmarshal(buf, data)
 	}
 	switch filepath.Ext(fileName) {

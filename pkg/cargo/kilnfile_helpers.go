@@ -18,7 +18,7 @@ func InterpolateAndParseKilnfile(in io.Reader, templateVariables map[string]inte
 	interpolator := builder.NewInterpolator()
 	interpolatedMetadata, err := interpolator.Interpolate(builder.InterpolateInput{
 		Variables: templateVariables,
-	}, "Kilnfile", kilnfileYAML)
+	}, KilnfileFileName, kilnfileYAML)
 	if err != nil {
 		return Kilnfile{}, err
 	}

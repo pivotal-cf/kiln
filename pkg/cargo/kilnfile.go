@@ -9,6 +9,8 @@ import (
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
 )
 
+const KilnfileFileName = "Kilnfile"
+
 type KilnfileLock struct {
 	Releases []ComponentLock `yaml:"releases"`
 	Stemcell Stemcell        `yaml:"stemcell_criteria"`
