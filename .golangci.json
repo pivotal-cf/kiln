@@ -24,7 +24,8 @@
       "goimports",
       "unconvert",
       "tenv",
-      "reassign"
+      "reassign",
+      "predeclared"
     ]
   },
   "linters-settings": {
