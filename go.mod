@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.38.2
 	github.com/cloudfoundry/bosh-cli v6.4.1+incompatible
 	github.com/cloudfoundry/bosh-utils v0.0.0-20210130100352-ab14c90ad9f2
+	github.com/cppforlife/go-patch v0.2.0
 	github.com/cucumber/godog v0.12.5
 	github.com/cucumber/messages-go/v16 v16.0.1
 	github.com/ghodss/yaml v1.0.0
