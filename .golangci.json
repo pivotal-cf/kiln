@@ -13,7 +13,8 @@
       "unused",
       "asasalint",
       "containedctx",
-      "whitespace"
+      "whitespace",
+      "containedctx"
     ]
   }
 }
