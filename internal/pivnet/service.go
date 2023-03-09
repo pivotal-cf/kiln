@@ -1,6 +1,7 @@
 package pivnet
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -81,8 +82,8 @@ type Release struct {
 	ID      int    `json:"id"`
 }
 
-func (service Service) Releases(productSlug string) ([]Release, error) {
-	req, _ := http.NewRequest(http.MethodGet, "/api/v2/products/"+productSlug+"/releases", nil)
+func (service Service) Releases(ctx context.Context, productSlug string) ([]Release, error) {
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "/api/v2/products/"+productSlug+"/releases", nil)
 
 	var body struct {
 		Releases []Release `json:"releases"`
@@ -109,7 +110,7 @@ func (service Service) Releases(productSlug string) ([]Release, error) {
 	return body.Releases, nil
 }
 
-func (service *Service) StemcellVersion(slug string, majorStemcellVersion string) (string, error) {
+func (service *Service) StemcellVersion(ctx context.Context, slug string, majorStemcellVersion string) (string, error) {
 	if slug == "" {
 		return "", ErrProductSlugMustNotBeEmpty
 	}
@@ -130,7 +131,7 @@ func (service *Service) StemcellVersion(slug string, majorStemcellVersion string
 		return "", ErrDecodingURLRequest
 	}
 
-	req, err := http.NewRequest(http.MethodGet, getURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, getURL, nil)
 	if err != nil {
 		return "", ErrCouldNotCreateRequest
 	}

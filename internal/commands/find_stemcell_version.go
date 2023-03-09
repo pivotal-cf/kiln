@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -79,7 +80,7 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 	}
 
 	// Get stemcell version from pivnet
-	stemcellVersion, err := cmd.pivnetService.StemcellVersion(productSlug, majorVersion)
+	stemcellVersion, err := cmd.pivnetService.StemcellVersion(context.Background(), productSlug, majorVersion)
 	if err != nil {
 		return err
 	}

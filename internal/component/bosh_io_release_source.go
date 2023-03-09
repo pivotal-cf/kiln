@@ -1,6 +1,7 @@
 package component
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
@@ -78,13 +79,13 @@ func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 	return src.ReleaseSourceConfig
 }
 
-func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, error) {
+func (src BOSHIOReleaseSource) GetMatchedRelease(ctx context.Context, requirement Spec) (Lock, error) {
 	requirement = requirement.UnsetStemcell()
 
 	for _, repo := range repos {
 		for _, suf := range suffixes {
 			fullName := repo + "/" + requirement.Name + suf
-			exists, err := src.releaseExistOnBoshio(fullName, requirement.Version)
+			exists, err := src.releaseExistOnBoshio(ctx, fullName, requirement.Version)
 			if err != nil {
 				return Lock{}, err
 			}
@@ -98,7 +99,7 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, error)
 	return Lock{}, ErrNotFound
 }
 
-func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock, error) {
+func (src BOSHIOReleaseSource) FindReleaseVersion(ctx context.Context, spec Spec, _ bool) (Lock, error) {
 	spec = spec.UnsetStemcell()
 
 	constraint, err := spec.VersionConstraints()
@@ -111,7 +112,7 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock, erro
 	for _, repo := range repos {
 		for _, suf := range suffixes {
 			fullName := repo + "/" + spec.Name + suf
-			releaseResponses, err := src.getReleases(fullName)
+			releaseResponses, err := src.getReleases(ctx, fullName)
 			if err != nil {
 				return Lock{}, err
 			}
@@ -134,12 +135,16 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock, erro
 	return Lock{}, ErrNotFound
 }
 
-func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
+func (src BOSHIOReleaseSource) DownloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock) (Local, error) {
 	src.logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeBOSHIO, src.ID())
 
 	downloadURL := remoteRelease.RemotePath
 
-	resp, err := http.Get(downloadURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+	if err != nil {
+		return Local{}, err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return Local{}, err
 	}
@@ -188,8 +193,15 @@ func (src BOSHIOReleaseSource) createReleaseRemote(spec Spec, fullName string) L
 	return releaseRemote
 }
 
-func (src BOSHIOReleaseSource) getReleases(name string) ([]releaseResponse, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/api/v1/releases/github.com/%s", src.serverURI, name))
+func (src BOSHIOReleaseSource) getReleases(ctx context.Context, name string) ([]releaseResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/api/v1/releases/github.com/%s", src.serverURI, name), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
 	if err != nil {
 		return nil, fmt.Errorf("bosh.io API is down with error: %w", err)
 	}
@@ -227,8 +239,8 @@ type releaseResponse struct {
 	SHA     string `json:"sha1"`
 }
 
-func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {
-	releaseResponses, err := src.getReleases(name)
+func (src BOSHIOReleaseSource) releaseExistOnBoshio(ctx context.Context, name, version string) (bool, error) {
+	releaseResponses, err := src.getReleases(ctx, name)
 	if err != nil {
 		return false, err
 	}

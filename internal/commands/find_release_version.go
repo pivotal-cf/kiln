@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -52,7 +53,7 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 	spec.StemcellOS = kilnfileLock.Stemcell.OS
 	spec.StemcellVersion = kilnfileLock.Stemcell.Version
 
-	releaseRemote, err := releaseSource.FindReleaseVersion(spec, cmd.Options.NoDownload)
+	releaseRemote, err := releaseSource.FindReleaseVersion(context.Background(), spec, cmd.Options.NoDownload)
 	if err != nil {
 		return err
 	}

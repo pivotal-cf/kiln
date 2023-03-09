@@ -1,6 +1,7 @@
 package pivnet_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -78,7 +79,7 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 		})
 
 		JustBeforeEach(func() {
-			stemcellVersion, gotErr = pivnetService.StemcellVersion(stemcellSlug, majorStemcellVersion)
+			stemcellVersion, gotErr = pivnetService.StemcellVersion(context.Background(), stemcellSlug, majorStemcellVersion)
 		})
 
 		When("fetching with an empty product Slug", func() {

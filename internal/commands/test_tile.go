@@ -49,17 +49,12 @@ type ManifestTest struct {
 	}
 
 	logger      *log.Logger
-	ctx         context.Context
-	cancelFunc  context.CancelFunc
 	mobi        mobyClient
 	sshProvider SshProvider
 }
 
-func NewManifestTest(logger *log.Logger, ctx context.Context, mobi mobyClient, sshThing SshProvider) ManifestTest {
-	ctx, cancelFunc := context.WithCancel(ctx)
+func NewManifestTest(logger *log.Logger, mobi mobyClient, sshThing SshProvider) ManifestTest {
 	return ManifestTest{
-		ctx:         ctx,
-		cancelFunc:  cancelFunc,
 		logger:      logger,
 		mobi:        mobi,
 		sshProvider: sshThing,
@@ -70,6 +65,9 @@ func NewManifestTest(logger *log.Logger, ctx context.Context, mobi mobyClient, s
 var dockerfileContents string
 
 func (u ManifestTest) Execute(args []string) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
 	// TODO: check if ssh provider isn't borked
 	if u.sshProvider == nil {
 		return errors.New("ssh provider failed to initialize. check your ssh-agent is running")
@@ -79,7 +77,7 @@ func (u ManifestTest) Execute(args []string) error {
 		return fmt.Errorf("could not parse manifest-test flags: %s", err)
 	}
 
-	_, err = u.mobi.Ping(u.ctx)
+	_, err = u.mobi.Ping(ctx)
 	if err != nil {
 		return errors.New("Docker daemon is not running")
 	}
@@ -93,14 +91,14 @@ func (u ManifestTest) Execute(args []string) error {
 		return err
 	}
 
-	session, _ := mobySession.NewSession(u.ctx, "waypoint", "")
+	session, _ := mobySession.NewSession(ctx, "waypoint", "")
 	defer closeAndIgnoreError(session)
 	session.Allow(sshp)
 	dialSession := func(ctx context.Context, proto string, meta map[string][]string) (net.Conn, error) {
 		return u.mobi.DialHijack(ctx, "/session", proto, meta)
 	}
 	go func() {
-		err := session.Run(u.ctx, dialSession)
+		err := session.Run(ctx, dialSession)
 		if err != nil {
 			fmt.Printf("%+v\n", err)
 		}
@@ -114,7 +112,7 @@ func (u ManifestTest) Execute(args []string) error {
 	}
 
 	u.logger.Println("Info: Building / restoring cached docker image. This may take several minutes during updates to Ops Manager or the first run...")
-	res, err := u.mobi.ImageBuild(u.ctx, tr, types.ImageBuildOptions{
+	res, err := u.mobi.ImageBuild(ctx, tr, types.ImageBuildOptions{
 		Tags:      []string{"dont_push_me_vmware_confidential:123"},
 		Version:   types.BuilderBuildKit,
 		SessionID: session.ID(),
@@ -159,7 +157,7 @@ func (u ManifestTest) Execute(args []string) error {
 	envVars := getManifestTestEnvVars(absRepoDir, tileDir)
 	dockerCmd := fmt.Sprintf("cd /tas/%s/test/manifest && PRODUCT=%s RENDERER=ops-manifest ginkgo %s", tileDir, toProduct(tileDir), u.Options.GingkoManifestFlags)
 	fmt.Println(dockerCmd)
-	createResp, err := u.mobi.ContainerCreate(u.ctx, &container.Config{
+	createResp, err := u.mobi.ContainerCreate(ctx, &container.Config{
 		Image: "dont_push_me_vmware_confidential:123",
 		Cmd:   []string{"/bin/bash", "-c", dockerCmd},
 		Env:   envVars,
@@ -188,13 +186,13 @@ func (u ManifestTest) Execute(args []string) error {
 		close(sigInt)
 	}()
 
-	if err := u.mobi.ContainerStart(u.ctx, createResp.ID, types.ContainerStartOptions{}); err != nil {
+	if err := u.mobi.ContainerStart(ctx, createResp.ID, types.ContainerStartOptions{}); err != nil {
 		return err
 	}
 	go func() {
 		<-sigInt
 		fmt.Println("Canceling tests")
-		err := u.mobi.ContainerStop(u.ctx, createResp.ID, container.StopOptions{
+		err := u.mobi.ContainerStop(ctx, createResp.ID, container.StopOptions{
 			Signal: "SIGKILL",
 		})
 		if err != nil {
@@ -202,7 +200,7 @@ func (u ManifestTest) Execute(args []string) error {
 		}
 	}()
 
-	out, err := u.mobi.ContainerLogs(u.ctx, createResp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
+	out, err := u.mobi.ContainerLogs(ctx, createResp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
 	if err != nil {
 		return err
 	}
@@ -213,7 +211,7 @@ func (u ManifestTest) Execute(args []string) error {
 		u.logger.Println(text)
 	}
 
-	statusCh, errCh := u.mobi.ContainerWait(u.ctx, createResp.ID, container.WaitConditionNotRunning)
+	statusCh, errCh := u.mobi.ContainerWait(ctx, createResp.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:
 		return err

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"crypto/sha1"
 	"crypto/sha256"
 	"errors"
@@ -122,7 +123,7 @@ func (cmd *CacheCompiledReleases) Execute(args []string) error {
 		releasesUpdatedFromCache = false
 	)
 	for _, rel := range lock.Releases {
-		remote, err := releaseStore.GetMatchedRelease(component.Spec{
+		remote, err := releaseStore.GetMatchedRelease(context.Background(), component.Spec{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      lock.Stemcell.OS,
@@ -409,7 +410,7 @@ func (cmd *CacheCompiledReleases) downloadAndComputeSHA(cache component.ReleaseS
 		}
 	}()
 
-	comp, err := cache.DownloadRelease(tmpdir, remote)
+	comp, err := cache.DownloadRelease(context.Background(), tmpdir, remote)
 	if err != nil {
 		return "", fmt.Errorf("failed to download release: %s", err)
 	}

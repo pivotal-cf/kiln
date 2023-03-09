@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -64,7 +65,7 @@ func newCacheCompiledReleasesTestData(t *testing.T, kf cargo.Kilnfile, kl cargo.
 	logger := log.New(&output, "", 0)
 
 	releaseStorage := new(fakes.ReleaseStorage)
-	releaseStorage.GetMatchedReleaseCalls(func(spec component.Spec) (component.Lock, error) {
+	releaseStorage.GetMatchedReleaseCalls(func(_ context.Context, spec component.Spec) (component.Lock, error) {
 		switch spec.Lock() {
 		case component.Lock{Name: "orange", Version: "1.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
 			return component.Lock{

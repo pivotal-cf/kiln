@@ -104,7 +104,7 @@ releases:
 				When("uaac has releases on bosh.io", func() {
 					It("returns the latest release version", func() {
 						Expect(executeErr).NotTo(HaveOccurred())
-						args, _ := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+						_, args, _ := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
 						Expect(args.StemcellVersion).To(Equal("4.5.6"))
 						Expect(args.StemcellOS).To(Equal("some-os"))
 						Expect(args.Version).To(Equal(""))
@@ -137,7 +137,7 @@ releases:
 				When("uaa has releases on bosh.io", func() {
 					It("returns the latest release version", func() {
 						Expect(executeErr).NotTo(HaveOccurred())
-						args, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+						_, args, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
 						Expect(noDownload).To(BeFalse())
 						Expect(args.Version).To(Equal("~74.16.0"))
 						Expect(args.StemcellVersion).To(Equal("4.5.6"))
@@ -161,7 +161,7 @@ releases:
 
 			It("calls source with correct args", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
-				_, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+				_, _, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
 				Expect(noDownload).To(BeTrue())
 			})
 		})
@@ -177,7 +177,7 @@ releases:
 
 			It("calls source with correct args", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
-				_, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+				_, _, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
 				Expect(noDownload).To(BeFalse())
 			})
 		})

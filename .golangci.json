@@ -14,7 +14,9 @@
       "asasalint",
       "containedctx",
       "whitespace",
-      "containedctx"
+      "containedctx",
+      "contextcheck",
+      "noctx"
     ]
   }
 }

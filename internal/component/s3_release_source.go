@@ -2,6 +2,7 @@ package component
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
@@ -104,7 +105,7 @@ func (src S3ReleaseSource) Publishable() bool                        { return sr
 func (src S3ReleaseSource) Configuration() cargo.ReleaseSourceConfig { return src.ReleaseSourceConfig }
 
 //counterfeiter:generate -o ./fakes/s3_request_failure.go --fake-name S3RequestFailure github.com/aws/aws-sdk-go/service/s3.RequestFailure
-func (src S3ReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
+func (src S3ReleaseSource) GetMatchedRelease(_ context.Context, spec Spec) (Lock, error) {
 	remotePath, err := src.RemotePath(spec)
 	if err != nil {
 		return Lock{}, err
@@ -131,7 +132,7 @@ func (src S3ReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 	}, nil
 }
 
-func (src S3ReleaseSource) FindReleaseVersion(spec Spec, noDownload bool) (Lock, error) {
+func (src S3ReleaseSource) FindReleaseVersion(ctx context.Context, spec Spec, noDownload bool) (Lock, error) {
 	pathTemplatePattern, _ := regexp.Compile(`^\d+\.\d+`)
 	tasVersion := pathTemplatePattern.FindString(src.ReleaseSourceConfig.PathTemplate)
 	var prefix string
@@ -203,7 +204,7 @@ func (src S3ReleaseSource) FindReleaseVersion(spec Spec, noDownload bool) (Lock,
 		foundRelease.SHA1 = "not-calculated"
 	} else {
 		var releaseLocal Local
-		releaseLocal, err = src.DownloadRelease("/tmp", foundRelease)
+		releaseLocal, err = src.DownloadRelease(ctx, "/tmp", foundRelease)
 		if err != nil {
 			return Lock{}, err
 		}
@@ -212,7 +213,7 @@ func (src S3ReleaseSource) FindReleaseVersion(spec Spec, noDownload bool) (Lock,
 	return foundRelease, nil
 }
 
-func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock Lock) (Local, error) {
+func (src S3ReleaseSource) DownloadRelease(_ context.Context, releaseDir string, lock Lock) (Local, error) {
 	setConcurrency := func(dl *s3manager.Downloader) {
 		if src.DownloadThreads > 0 {
 			dl.Concurrency = src.DownloadThreads
@@ -255,7 +256,7 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock Lock) (Local,
 	return Local{Lock: lock, LocalPath: outputFile}, nil
 }
 
-func (src S3ReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error) {
+func (src S3ReleaseSource) UploadRelease(_ context.Context, spec Spec, file io.Reader) (Lock, error) {
 	remotePath, err := src.RemotePath(spec)
 	if err != nil {
 		return Lock{}, err

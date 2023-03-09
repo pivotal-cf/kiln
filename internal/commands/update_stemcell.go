@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -79,7 +80,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 		spec.StemcellVersion = trimmedInputVersion
 		spec.Version = rel.Version
 
-		remote, err := releaseSource.GetMatchedRelease(spec)
+		remote, err := releaseSource.GetMatchedRelease(context.TODO(), spec)
 		if err != nil {
 			return fmt.Errorf("while finding release %q, encountered error: %w", rel.Name, err)
 		}
@@ -92,7 +93,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 			continue
 		}
 
-		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
+		local, err := releaseSource.DownloadRelease(context.TODO(), update.Options.ReleasesDir, remote)
 		if err != nil {
 			return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
 		}

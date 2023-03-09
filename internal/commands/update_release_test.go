@@ -142,7 +142,7 @@ var _ = Describe("UpdateRelease", func() {
 
 				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(1))
 
-				receivedReleaseRequirement := releaseSource.GetMatchedReleaseArgsForCall(0)
+				_, receivedReleaseRequirement := releaseSource.GetMatchedReleaseArgsForCall(0)
 				releaseRequirement := component.Spec{
 					Name:             releaseName,
 					Version:          newReleaseVersion,
@@ -154,7 +154,7 @@ var _ = Describe("UpdateRelease", func() {
 
 				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(1))
 
-				receivedReleasesDir, receivedRemoteRelease := releaseSource.DownloadReleaseArgsForCall(0)
+				_, receivedReleasesDir, receivedRemoteRelease := releaseSource.DownloadReleaseArgsForCall(0)
 				Expect(receivedReleasesDir).To(Equal(releasesDir))
 				Expect(receivedRemoteRelease).To(Equal(expectedRemoteRelease))
 			})
@@ -391,7 +391,7 @@ var _ = Describe("UpdateRelease", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				receivedReleaseRequirement, _ := releaseSource.FindReleaseVersionArgsForCall(0)
+				_, receivedReleaseRequirement, _ := releaseSource.FindReleaseVersionArgsForCall(0)
 				releaseRequirement := component.Spec{
 					Name:             releaseName,
 					Version:          newReleaseVersion,

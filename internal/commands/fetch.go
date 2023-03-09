@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -124,7 +125,7 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []c
 			RemoteSource: rl.RemoteSource,
 		}
 
-		local, err := releaseSource.DownloadRelease(f.Options.ReleasesDir, remoteRelease)
+		local, err := releaseSource.DownloadRelease(context.Background(), f.Options.ReleasesDir, remoteRelease)
 		if err != nil {
 			return nil, fmt.Errorf("download failed: %w", err)
 		}

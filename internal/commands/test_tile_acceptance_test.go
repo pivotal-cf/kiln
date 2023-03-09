@@ -2,11 +2,11 @@ package commands
 
 import (
 	"bytes"
-	"context"
+	"log"
+
 	"github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"log"
 )
 
 var _ = Describe("test", func() {
@@ -14,13 +14,12 @@ var _ = Describe("test", func() {
 		It("succeeds", func() {
 			var testOutput bytes.Buffer
 			logger := log.New(&testOutput, "", 0)
-			ctx := context.Background()
 			cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 			Expect(err).NotTo(HaveOccurred())
 
 			sshProvider, err := NewSshProvider(SSHClientCreator{})
 			Expect(err).NotTo(HaveOccurred())
-			testTile := NewManifestTest(logger, ctx, cli, sshProvider)
+			testTile := NewManifestTest(logger, cli, sshProvider)
 			err = testTile.Execute([]string{"--tile-path", "tas_fake/tas"})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -33,13 +32,12 @@ var _ = Describe("test", func() {
 		It("fails", func() {
 			var testOutput bytes.Buffer
 			logger := log.New(&testOutput, "", 0)
-			ctx := context.Background()
 			cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 			Expect(err).NotTo(HaveOccurred())
 
 			sshProvider, err := NewSshProvider(SSHClientCreator{})
 			Expect(err).NotTo(HaveOccurred())
-			testTile := NewManifestTest(logger, ctx, cli, sshProvider)
+			testTile := NewManifestTest(logger, cli, sshProvider)
 			err = testTile.Execute([]string{"--tile-path", "tas_fake/tas_failing"})
 
 			Expect(err).To(HaveOccurred())

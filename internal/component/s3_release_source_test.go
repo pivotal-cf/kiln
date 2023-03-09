@@ -1,6 +1,7 @@
 package component_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -128,7 +129,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		It("downloads the appropriate versions of built releases listed in remoteReleases", func() {
 			releaseSource.DownloadThreads = 7
-			localRelease, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
+			localRelease, err := releaseSource.DownloadRelease(context.Background(), releaseDir, remoteRelease)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(1))
 
@@ -152,7 +153,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		Context("when number of threads is not specified", func() {
 			It("uses the s3manager package's default download concurrency", func() {
 				releaseSource.DownloadThreads = 0
-				_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
+				_, err := releaseSource.DownloadRelease(context.Background(), releaseDir, remoteRelease)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeS3Downloader.DownloadCallCount()).To(Equal(1))
 
@@ -164,7 +165,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		Context("failure cases", func() {
 			Context("when a file can't be created", func() {
 				It("returns an error", func() {
-					_, err := releaseSource.DownloadRelease("/non-existent-folder", remoteRelease)
+					_, err := releaseSource.DownloadRelease(context.Background(), "/non-existent-folder", remoteRelease)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("/non-existent-folder"))
 				})
@@ -178,7 +179,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
+					_, err := releaseSource.DownloadRelease(context.Background(), releaseDir, remoteRelease)
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError("failed to download file: 503 Service Unavailable\n"))
 				})
@@ -227,7 +228,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		})
 
 		It("searches for the requested release", func() {
-			remoteRelease, err := releaseSource.GetMatchedRelease(desiredRelease)
+			remoteRelease, err := releaseSource.GetMatchedRelease(context.Background(), desiredRelease)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeS3Client.HeadObjectCallCount()).To(Equal(1))
@@ -251,7 +252,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns not found", func() {
-				_, err := releaseSource.GetMatchedRelease(desiredRelease)
+				_, err := releaseSource.GetMatchedRelease(context.Background(), desiredRelease)
 				Expect(err).To(HaveOccurred())
 				Expect(component.IsErrNotFound(err)).To(BeTrue())
 			})
@@ -274,7 +275,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns a descriptive error", func() {
-				_, err := releaseSource.GetMatchedRelease(desiredRelease)
+				_, err := releaseSource.GetMatchedRelease(context.Background(), desiredRelease)
 
 				Expect(err).To(MatchError(ContainSubstring(`unable to evaluate path_template`)))
 			})
@@ -339,7 +340,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("gets the version that satisfies the constraint", func() {
-				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease, false)
+				remoteRelease, err := releaseSource.FindReleaseVersion(context.Background(), desiredRelease, false)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
@@ -401,7 +402,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("gets the latest version of a release", func() {
-				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease, false)
+				remoteRelease, err := releaseSource.FindReleaseVersion(context.Background(), desiredRelease, false)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
@@ -463,7 +464,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("gets the latest version of a release", func() {
-				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease, true)
+				remoteRelease, err := releaseSource.FindReleaseVersion(context.Background(), desiredRelease, true)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
@@ -538,7 +539,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("gets the latest version of a release", func() {
-				remoteRelease, err := releaseSource.FindReleaseVersion(desiredRelease, false)
+				remoteRelease, err := releaseSource.FindReleaseVersion(context.Background(), desiredRelease, false)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeS3Client.ListObjectsV2CallCount()).To(Equal(1))
@@ -576,7 +577,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		Context("happy path", func() {
 			It("uploads the file to the correct location", func() {
-				_, err := releaseSource.UploadRelease(component.Spec{
+				_, err := releaseSource.UploadRelease(context.Background(), component.Spec{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
@@ -594,7 +595,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns the remote release", func() {
-				remoteRelease, err := releaseSource.UploadRelease(component.Spec{
+				remoteRelease, err := releaseSource.UploadRelease(context.Background(), component.Spec{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
@@ -626,7 +627,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns a descriptive error", func() {
-				_, err := releaseSource.UploadRelease(component.Spec{
+				_, err := releaseSource.UploadRelease(context.Background(), component.Spec{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)

@@ -69,13 +69,12 @@ func (grs GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
-func (grs GithubReleaseSource) GetMatchedRelease(s Spec) (Lock, error) {
+func (grs GithubReleaseSource) GetMatchedRelease(ctx context.Context, s Spec) (Lock, error) {
 	_, err := semver.NewVersion(s.Version)
 	if err != nil {
 		return Lock{}, fmt.Errorf("expected version to be an exact version")
 	}
 
-	ctx := context.TODO()
 	release, err := grs.GetGithubReleaseWithTag(ctx, s)
 	if err != nil {
 		return Lock{}, err
@@ -178,8 +177,7 @@ func (grs GithubReleaseSource) GetLatestMatchingRelease(ctx context.Context, s S
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
-func (grs GithubReleaseSource) FindReleaseVersion(s Spec, noDownload bool) (Lock, error) {
-	ctx := context.TODO()
+func (grs GithubReleaseSource) FindReleaseVersion(ctx context.Context, s Spec, noDownload bool) (Lock, error) {
 	release, err := grs.GetLatestMatchingRelease(ctx, s)
 	if err != nil {
 		return Lock{}, err
@@ -243,9 +241,9 @@ type ReleasesLister interface {
 // DownloadRelease downloads the release and writes the resulting file to the releasesDir.
 // It should also calculate and set the SHA1 field on the Local result; it does not need
 // to ensure the sums match, the caller must verify this.
-func (grs GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
+func (grs GithubReleaseSource) DownloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock) (Local, error) {
 	grs.Logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeGithub, grs.ID)
-	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs, grs.Logger)
+	return downloadRelease(ctx, releaseDir, remoteRelease, grs, grs.Logger)
 }
 
 //counterfeiter:generate -o ./fakes/release_by_tag_getter_asset_downloader.go --fake-name ReleaseByTagGetterAssetDownloader . ReleaseByTagGetterAssetDownloader

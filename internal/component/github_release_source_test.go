@@ -98,7 +98,7 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 			},
 		}
 
-		lock, err := grsMock.GetMatchedRelease(component.Spec{
+		lock, err := grsMock.GetMatchedRelease(context.Background(), component.Spec{
 			Name:             "routing",
 			Version:          "0.226.0",
 			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
@@ -188,7 +188,7 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 		}
 
 		// When...
-		lock, err := grsMock.GetMatchedRelease(component.Spec{
+		lock, err := grsMock.GetMatchedRelease(context.Background(), component.Spec{
 			Name:             "routing",
 			Version:          "0.226.0",
 			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
@@ -230,7 +230,7 @@ func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 			Version: "garbage",
 		}
 		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
-		_, err := grs.FindReleaseVersion(s, false)
+		_, err := grs.FindReleaseVersion(context.Background(), s, false)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
 			damnIt := NewWithT(t)
@@ -286,7 +286,7 @@ func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 			},
 		}
 
-		lock, err := grsMock.FindReleaseVersion(s, true)
+		lock, err := grsMock.FindReleaseVersion(context.Background(), s, true)
 		please.Expect(err).ToNot(HaveOccurred())
 
 		please.Expect(lock.SHA1).To(Equal("not-calculated"))
@@ -300,7 +300,7 @@ func TestGithubReleaseSource_GetMatchedRelease(t *testing.T) {
 			Version: ">1.0.0",
 		}
 		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
-		_, err := grs.GetMatchedRelease(s)
+		_, err := grs.GetMatchedRelease(context.Background(), s)
 
 		t.Run("it returns an error about version not being specific", func(t *testing.T) {
 			damnIt := NewWithT(t)
@@ -538,7 +538,7 @@ func TestDownloadReleaseAsset(t *testing.T) {
 		GithubToken: os.Getenv("GITHUB_TOKEN"),
 		Org:         "cloudfoundry",
 	})
-	testLock, err := grs.GetMatchedRelease(component.Spec{Name: "routing", Version: "0.226.0", GitHubRepository: "https://github.com/cloudfoundry/routing-release"})
+	testLock, err := grs.GetMatchedRelease(context.Background(), component.Spec{Name: "routing", Version: "0.226.0", GitHubRepository: "https://github.com/cloudfoundry/routing-release"})
 	if err != nil {
 		fmt.Println(testLock.Spec())
 	}
@@ -550,7 +550,7 @@ func TestDownloadReleaseAsset(t *testing.T) {
 			_ = os.RemoveAll(tempDir)
 		})
 
-		local, err := grs.DownloadRelease(tempDir, testLock)
+		local, err := grs.DownloadRelease(context.Background(), tempDir, testLock)
 		damnIt.Expect(err).NotTo(HaveOccurred())
 
 		damnIt.Expect(local.LocalPath).NotTo(BeAnExistingFile(), "it creates the expected asset")

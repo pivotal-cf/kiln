@@ -66,7 +66,7 @@ var _ = Describe("UploadRelease", func() {
 
 				Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(1))
 
-				spec, file := releaseUploader.UploadReleaseArgsForCall(0)
+				_, spec, file := releaseUploader.UploadReleaseArgsForCall(0)
 				Expect(spec.Name).To(Equal("banana"))
 				Expect(spec.Version).To(Equal("1.2.3"))
 
@@ -96,7 +96,7 @@ var _ = Describe("UploadRelease", func() {
 
 					Expect(releaseUploader.GetMatchedReleaseCallCount()).To(Equal(1))
 
-					requirement := releaseUploader.GetMatchedReleaseArgsForCall(0)
+					_, requirement := releaseUploader.GetMatchedReleaseArgsForCall(0)
 					Expect(requirement).To(Equal(component.Spec{Name: "banana", Version: "1.2.3"}))
 
 					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))

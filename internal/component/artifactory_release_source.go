@@ -2,6 +2,7 @@ package component
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
@@ -65,21 +66,31 @@ func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig) *ArtifactoryReleas
 	}
 }
 
-func (ars ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
+func (ars ArtifactoryReleaseSource) DownloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock) (Local, error) {
 	downloadURL := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + remoteRelease.RemotePath
 	ars.logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeArtifactory, ars.ID)
-	resp, err := http.Get(downloadURL)
-
-	unwrapped := err
-	for errors.Unwrap(unwrapped) != nil {
-		unwrapped = errors.Unwrap(unwrapped)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+	if err != nil {
+		return Local{}, err
 	}
-	switch e := unwrapped.(type) {
-	case *net.DNSError:
-		return Local{}, fmt.Errorf("Failed to download %s release from artifactory: %w. (hint: Are you connected to the corporate vpn?)", remoteRelease.Name, e)
-	case nil: // continue
-	default:
-		return Local{}, e
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return Local{}, fmt.Errorf("failed to download %s release from artifactory with error: %w", remoteRelease.Name, err)
+	}
+	if err != nil {
+		unwrapped := err
+		for errors.Unwrap(unwrapped) != nil {
+			unwrapped = errors.Unwrap(unwrapped)
+		}
+		switch e := unwrapped.(type) {
+		case *net.DNSError:
+			return Local{}, fmt.Errorf("failed to download %s release from artifactory: %w. (hint: Are you connected to the corporate vpn?)", remoteRelease.Name, e)
+		default:
+			return Local{}, e
+		}
+	}
+	if resp.StatusCode != http.StatusOK {
+		return Local{}, fmt.Errorf("failed to download %s release from artifactory with error code %d", remoteRelease.Name, resp.StatusCode)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -116,10 +127,14 @@ func (ars ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRel
 	return Local{Lock: remoteRelease, LocalPath: filePath}, nil
 }
 
-func (ars ArtifactoryReleaseSource) getFileSHA1(release Lock) (string, error) {
+func (ars ArtifactoryReleaseSource) getFileSHA1(ctx context.Context, release Lock) (string, error) {
 	fullURL := ars.ArtifactoryHost + "/api/storage/" + ars.Repo + "/" + release.RemotePath
 	ars.logger.Printf("Getting %s file info from artifactory", release.Name)
-	resp, err := http.Get(fullURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -147,14 +162,14 @@ func (ars ArtifactoryReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
-func (ars ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
+func (ars ArtifactoryReleaseSource) GetMatchedRelease(ctx context.Context, spec Spec) (Lock, error) {
 	remotePath, err := ars.RemotePath(spec)
 	if err != nil {
 		return Lock{}, err
 	}
 
 	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, remotePath)
-	request, err := http.NewRequest(http.MethodGet, fullUrl, nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, fullUrl, nil)
 	if err != nil {
 		return Lock{}, err
 	}
@@ -186,7 +201,7 @@ func (ars ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
-func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock, error) {
+func (ars ArtifactoryReleaseSource) FindReleaseVersion(ctx context.Context, spec Spec, _ bool) (Lock, error) {
 	remotePath, err := ars.RemotePath(spec)
 	if err != nil {
 		return Lock{}, err
@@ -194,7 +209,7 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock,
 
 	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, path.Dir(remotePath))
 
-	request, err := http.NewRequest(http.MethodGet, fullUrl, nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, fullUrl, nil)
 	if err != nil {
 		return Lock{}, err
 	}
@@ -284,16 +299,16 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock,
 	if (foundRelease == Lock{}) {
 		return Lock{}, ErrNotFound
 	}
-	var sha1 string
-	sha1, err = ars.getFileSHA1(foundRelease)
+	var checksum string
+	checksum, err = ars.getFileSHA1(ctx, foundRelease)
 	if err != nil {
 		return Lock{}, err
 	}
-	foundRelease.SHA1 = sha1
+	foundRelease.SHA1 = checksum
 	return foundRelease, nil
 }
 
-func (ars ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error) {
+func (ars ArtifactoryReleaseSource) UploadRelease(ctx context.Context, spec Spec, file io.Reader) (Lock, error) {
 	remotePath, err := ars.RemotePath(spec)
 	if err != nil {
 		return Lock{}, err
@@ -303,7 +318,7 @@ func (ars ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lo
 
 	fullUrl := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + remotePath
 
-	request, err := http.NewRequest(http.MethodPut, fullUrl, file)
+	request, err := http.NewRequestWithContext(ctx, http.MethodPut, fullUrl, file)
 	if err != nil {
 		fmt.Println(err)
 		return Lock{}, err

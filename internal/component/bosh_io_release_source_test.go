@@ -1,6 +1,7 @@
 package component_test
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
@@ -65,7 +66,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				uaaRequirement := component.Spec{Name: "uaa", Version: "73.3.0", StemcellOS: os, StemcellVersion: version}
 				rabbitmqRequirement := component.Spec{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: os, StemcellVersion: version}
 
-				foundRelease, err := releaseSource.GetMatchedRelease(uaaRequirement)
+				foundRelease, err := releaseSource.GetMatchedRelease(context.Background(), uaaRequirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(component.IsErrNotFound(err)).To(BeFalse())
 				uaaURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/uaa-release?v=73.3.0", testServer.URL())
@@ -76,7 +77,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 					RemoteSource: component.ReleaseSourceTypeBOSHIO,
 				}))
 
-				foundRelease, err = releaseSource.GetMatchedRelease(rabbitmqRequirement)
+				foundRelease, err = releaseSource.GetMatchedRelease(context.Background(), rabbitmqRequirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(component.IsErrNotFound(err)).To(BeFalse())
 				cfRabbitURL := fmt.Sprintf("%s/d/github.com/pivotal-cf/cf-rabbitmq-release?v=268.0.0", testServer.URL())
@@ -111,7 +112,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 			It("doesn't find releases which don't exist on bosh.io", func() {
 				zzzRequirement := component.Spec{Name: "zzz", Version: "999", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}
-				_, err := releaseSource.GetMatchedRelease(zzzRequirement)
+				_, err := releaseSource.GetMatchedRelease(context.Background(), zzzRequirement)
 				Expect(err).To(HaveOccurred())
 				Expect(component.IsErrNotFound(err)).To(BeTrue())
 			})
@@ -139,7 +140,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			It("does not match that release", func() {
-				_, err := releaseSource.GetMatchedRelease(component.Spec{
+				_, err := releaseSource.GetMatchedRelease(context.Background(), component.Spec{
 					Name:            releaseName,
 					Version:         releaseVersion,
 					StemcellOS:      "ignored",
@@ -185,7 +186,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 						StemcellVersion: "4.5.6",
 					}
 
-					foundRelease, err := releaseSource.GetMatchedRelease(releaseRequirement)
+					foundRelease, err := releaseSource.GetMatchedRelease(context.Background(), releaseRequirement)
 
 					Expect(err).NotTo(HaveOccurred())
 
@@ -263,7 +264,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 		})
 
 		It("downloads the given releases into the release dir", func() {
-			localRelease, err := releaseSource.DownloadRelease(releaseDir, release1)
+			localRelease, err := releaseSource.DownloadRelease(context.Background(), releaseDir, release1)
 
 			Expect(err).NotTo(HaveOccurred())
 
@@ -311,7 +312,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				It("gets the latest version from bosh.io", func() {
 					rabbitmqRequirement := component.Spec{Name: "cf-rabbitmq"}
 
-					foundRelease, err := releaseSource.FindReleaseVersion(rabbitmqRequirement, false)
+					foundRelease, err := releaseSource.FindReleaseVersion(context.Background(), rabbitmqRequirement, false)
 					Expect(err).NotTo(HaveOccurred())
 					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.5", testServer.URL())
 					Expect(foundRelease).To(Equal(component.Lock{
@@ -327,7 +328,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				It("gets the latest version from bosh.io", func() {
 					rabbitmqRequirement := component.Spec{Name: "cf-rabbitmq", Version: "~309"}
 
-					foundRelease, err := releaseSource.FindReleaseVersion(rabbitmqRequirement, false)
+					foundRelease, err := releaseSource.FindReleaseVersion(context.Background(), rabbitmqRequirement, false)
 					Expect(err).NotTo(HaveOccurred())
 					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.5", testServer.URL())
 					Expect(foundRelease).To(Equal(component.Lock{
@@ -358,7 +359,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			It("returns not found", func() {
 				rabbitmqRequirement := component.Spec{Name: "cf-rabbitmq"}
 
-				foundRelease, err := releaseSource.FindReleaseVersion(rabbitmqRequirement, false)
+				foundRelease, err := releaseSource.FindReleaseVersion(context.Background(), rabbitmqRequirement, false)
 				Expect(err).To(HaveOccurred())
 				Expect(component.IsErrNotFound(err)).To(BeTrue())
 				Expect(foundRelease).To(Equal(component.Lock{}))

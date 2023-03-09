@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -71,7 +72,7 @@ func (command UploadRelease) Execute(args []string) error {
 	}
 
 	requirement := component.Spec{Name: manifest.Name, Version: manifest.Version}
-	_, err = releaseUploader.GetMatchedRelease(requirement)
+	_, err = releaseUploader.GetMatchedRelease(context.TODO(), requirement)
 
 	if err != nil {
 		if !component.IsErrNotFound(err) {
@@ -82,7 +83,7 @@ func (command UploadRelease) Execute(args []string) error {
 			manifest.Name, manifest.Version, command.Options.UploadTargetID)
 	}
 
-	_, err = releaseUploader.UploadRelease(component.Spec{
+	_, err = releaseUploader.UploadRelease(context.TODO(), component.Spec{
 		Name:    manifest.Name,
 		Version: manifest.Version,
 	}, file)

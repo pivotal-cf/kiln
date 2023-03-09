@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
 
@@ -90,7 +89,7 @@ func main() {
 	}
 
 	sshProvider, _ := commands.NewSshProvider(commands.SSHClientCreator{})
-	commandSet["test"] = commands.NewManifestTest(outLogger, context.Background(), mobyClient, sshProvider)
+	commandSet["test"] = commands.NewManifestTest(outLogger, mobyClient, sshProvider)
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)

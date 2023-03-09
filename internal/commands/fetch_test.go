@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -102,14 +103,14 @@ stemcell_criteria:
 			fakeReleaseSources.FindByIDStub = func(s string) (component.ReleaseSource, error) {
 				return releaseSourceList.FindByID(s)
 			}
-			fakeReleaseSources.DownloadReleaseStub = func(s string, lock cargo.ComponentLock) (component.Local, error) {
-				return releaseSourceList.DownloadRelease(s, lock)
+			fakeReleaseSources.DownloadReleaseStub = func(_ context.Context, s string, lock cargo.ComponentLock) (component.Local, error) {
+				return releaseSourceList.DownloadRelease(context.Background(), s, lock)
 			}
-			fakeReleaseSources.FindReleaseVersionStub = func(requirement component.Spec, withSHA bool) (cargo.ComponentLock, error) {
-				return releaseSourceList.FindReleaseVersion(requirement, false)
+			fakeReleaseSources.FindReleaseVersionStub = func(_ context.Context, requirement component.Spec, withSHA bool) (cargo.ComponentLock, error) {
+				return releaseSourceList.FindReleaseVersion(context.Background(), requirement, false)
 			}
-			fakeReleaseSources.GetMatchedReleaseStub = func(requirement component.Spec) (cargo.ComponentLock, error) {
-				return releaseSourceList.GetMatchedRelease(requirement)
+			fakeReleaseSources.GetMatchedReleaseStub = func(_ context.Context, requirement component.Spec) (cargo.ComponentLock, error) {
+				return releaseSourceList.GetMatchedRelease(context.Background(), requirement)
 			}
 			multiReleaseSourceProvider = func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
 				return fakeReleaseSources
@@ -245,7 +246,7 @@ stemcell_criteria:
 			It("fetches compiled release from s3 compiled release source", func() {
 				Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
 
-				releasesDir, object := fakeS3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
+				_, releasesDir, object := fakeS3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(object).To(Equal(
 					s3CompiledReleaseID.Lock().WithRemote(s3CompiledReleaseSourceID, "some-s3-key"),
@@ -254,7 +255,7 @@ stemcell_criteria:
 
 			It("fetches built release from s3 built release source", func() {
 				Expect(fakeS3BuiltReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				releasesDir, object := fakeS3BuiltReleaseSource.DownloadReleaseArgsForCall(0)
+				_, releasesDir, object := fakeS3BuiltReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(object).To(Equal(
 					s3BuiltReleaseID.Lock().WithRemote(s3BuiltReleaseSourceID, "some-other-s3-key"),
@@ -263,7 +264,7 @@ stemcell_criteria:
 
 			It("fetches bosh.io release from bosh.io release source", func() {
 				Expect(fakeBoshIOReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				releasesDir, object := fakeBoshIOReleaseSource.DownloadReleaseArgsForCall(0)
+				_, releasesDir, object := fakeBoshIOReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(releasesDir).To(Equal(someReleasesDirectory))
 				Expect(object).To(Equal(
 					boshIOReleaseID.Lock().WithRemote(boshIOReleaseSourceID, "some-bosh-io-url"),
@@ -384,15 +385,15 @@ stemcell_criteria:
 				Expect(fetchExecuteErr).NotTo(HaveOccurred())
 
 				Expect(fakeS3CompiledReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				_, object := fakeS3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
+				_, _, object := fakeS3CompiledReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(object).To(Equal(missingReleaseS3Compiled))
 
 				Expect(fakeBoshIOReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				_, object = fakeBoshIOReleaseSource.DownloadReleaseArgsForCall(0)
+				_, _, object = fakeBoshIOReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(object).To(Equal(missingReleaseBoshIO))
 
 				Expect(fakeS3BuiltReleaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				_, object = fakeS3BuiltReleaseSource.DownloadReleaseArgsForCall(0)
+				_, _, object = fakeS3BuiltReleaseSource.DownloadReleaseArgsForCall(0)
 				Expect(object).To(Equal(missingReleaseS3Built))
 			})
 
@@ -420,7 +421,7 @@ stemcell_criteria:
 				BeforeEach(func() {
 					badReleasePath = filepath.Join(someReleasesDirectory, "local-path-3")
 
-					fakeS3BuiltReleaseSource.DownloadReleaseCalls(func(string, component.Lock) (component.Local, error) {
+					fakeS3BuiltReleaseSource.DownloadReleaseCalls(func(context.Context, string, component.Lock) (component.Local, error) {
 						f, err := os.Create(badReleasePath)
 						Expect(err).NotTo(HaveOccurred())
 						defer closeAndIgnoreError(f)

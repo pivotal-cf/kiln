@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -71,7 +72,7 @@ func (u UpdateRelease) Execute(args []string) error {
 	var remoteRelease component.Lock
 	var newVersion, newSHA1, newSourceID, newRemotePath string
 	if u.Options.WithoutDownload {
-		remoteRelease, err = releaseSource.FindReleaseVersion(component.Spec{
+		remoteRelease, err = releaseSource.FindReleaseVersion(context.Background(), component.Spec{
 			Name:             u.Options.Name,
 			Version:          releaseVersionConstraint,
 			StemcellVersion:  kilnfileLock.Stemcell.Version,
@@ -91,7 +92,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		newSourceID = remoteRelease.RemoteSource
 		newRemotePath = remoteRelease.RemotePath
 	} else {
-		remoteRelease, err = releaseSource.GetMatchedRelease(component.Spec{
+		remoteRelease, err = releaseSource.GetMatchedRelease(context.Background(), component.Spec{
 			Name:             u.Options.Name,
 			Version:          u.Options.Version,
 			StemcellOS:       kilnfileLock.Stemcell.OS,
@@ -106,7 +107,7 @@ func (u UpdateRelease) Execute(args []string) error {
 			return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
 		}
 
-		localRelease, err = releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease)
+		localRelease, err = releaseSource.DownloadRelease(context.Background(), u.Options.ReleasesDir, remoteRelease)
 		if err != nil {
 			return fmt.Errorf("error downloading the release: %w", err)
 		}

@@ -1,6 +1,7 @@
 package component_test
 
 import (
+	"context"
 	"errors"
 
 	. "github.com/onsi/ginkgo"
@@ -58,7 +59,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns that match", func() {
-				rel, err := multiSrc.GetMatchedRelease(requirement)
+				rel, err := multiSrc.GetMatchedRelease(context.Background(), requirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).To(Equal(matchedRelease))
 			})
@@ -71,7 +72,7 @@ var _ = Describe("multiReleaseSource", func() {
 				src2.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
 			})
 			It("returns no match", func() {
-				_, err := multiSrc.GetMatchedRelease(requirement)
+				_, err := multiSrc.GetMatchedRelease(context.Background(), requirement)
 				Expect(err).To(HaveOccurred())
 				Expect(component.IsErrNotFound(err)).To(BeTrue())
 			})
@@ -86,7 +87,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns that error", func() {
-				_, err := multiSrc.GetMatchedRelease(requirement)
+				_, err := multiSrc.GetMatchedRelease(context.Background(), requirement)
 				Expect(err).To(MatchError(ContainSubstring(src1.Configuration().ID)))
 				Expect(err).To(MatchError(ContainSubstring(expectedErr.Error())))
 			})
@@ -115,12 +116,12 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns the local release", func() {
-				l, err := multiSrc.DownloadRelease("somewhere", remote)
+				l, err := multiSrc.DownloadRelease(context.Background(), "somewhere", remote)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(l).To(Equal(local))
 
 				Expect(src2.DownloadReleaseCallCount()).To(Equal(1))
-				dir, r := src2.DownloadReleaseArgsForCall(0)
+				_, dir, r := src2.DownloadReleaseArgsForCall(0)
 				Expect(dir).To(Equal("somewhere"))
 				Expect(r).To(Equal(remote))
 			})
@@ -134,7 +135,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns the error", func() {
-				_, err := multiSrc.DownloadRelease("somewhere", remote)
+				_, err := multiSrc.DownloadRelease(context.Background(), "somewhere", remote)
 				Expect(err).To(MatchError(ContainSubstring(src2.Configuration().ID)))
 				Expect(err).To(MatchError(ContainSubstring(expectedErr.Error())))
 			})
@@ -146,7 +147,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("errors", func() {
-				_, err := multiSrc.DownloadRelease("somewhere", remote)
+				_, err := multiSrc.DownloadRelease(context.Background(), "somewhere", remote)
 				Expect(err).To(MatchError(ContainSubstring("couldn't find a release source")))
 				Expect(err).To(MatchError(ContainSubstring("no-such-source")))
 				Expect(err).To(MatchError(ContainSubstring(src1.Configuration().ID)))
@@ -203,7 +204,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns that match", func() {
-				rel, err := multiSrc.FindReleaseVersion(requirement, false)
+				rel, err := multiSrc.FindReleaseVersion(context.Background(), requirement, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).To(Equal(matchedRelease))
 			})
@@ -230,7 +231,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns that match", func() {
-				rel, err := multiSrc.FindReleaseVersion(requirement, false)
+				rel, err := multiSrc.FindReleaseVersion(context.Background(), requirement, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).To(Equal(matchedRelease))
 			})
@@ -257,7 +258,7 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 
 			It("returns the match from the first source", func() {
-				rel, err := multiSrc.FindReleaseVersion(requirement, false)
+				rel, err := multiSrc.FindReleaseVersion(context.Background(), requirement, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).To(Equal(matchedRelease))
 			})

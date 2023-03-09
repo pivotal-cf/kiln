@@ -1,7 +1,6 @@
 package commands_test
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -36,13 +35,11 @@ var _ = Describe("kiln test docker", func() {
 
 	Context("locally missing docker image is built", func() {
 		var (
-			ctx    context.Context
 			writer strings.Builder
 			logger *log.Logger
 		)
 
 		BeforeEach(func() {
-			ctx = context.Background()
 			logger = log.New(&writer, "", 0)
 		})
 
@@ -71,7 +68,7 @@ var _ = Describe("kiln test docker", func() {
 					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
 				})
 				It("properly executes tests", func() {
-					subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, fakeSshProvider)
+					subjectUnderTest := commands.NewManifestTest(logger, fakeMobyClient, fakeSshProvider)
 
 					err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
 					Expect(err).To(BeNil())
@@ -115,7 +112,7 @@ var _ = Describe("kiln test docker", func() {
 					fakeMobyClient = setupFakeMobyClient(testFailureMessage, 1)
 				})
 				It("returns an error", func() {
-					subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, fakeSshProvider)
+					subjectUnderTest := commands.NewManifestTest(logger, fakeMobyClient, fakeSshProvider)
 					err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
 					Expect(err).To(HaveOccurred())
 
@@ -134,7 +131,7 @@ var _ = Describe("kiln test docker", func() {
 			fakeMobyClient.PingReturns(types.Ping{}, errors.New("docker not running"))
 			fakeSshThinger := fakes.SshProvider{}
 			fakeSshThinger.NeedsKeysReturns(false, nil)
-			subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, &fakeSshThinger)
+			subjectUnderTest := commands.NewManifestTest(logger, fakeMobyClient, &fakeSshThinger)
 			err := subjectUnderTest.Execute([]string{filepath.Join(helloTileDirectorySegments...)})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Docker daemon is not running"))

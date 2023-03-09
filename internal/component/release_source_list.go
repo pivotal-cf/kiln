@@ -1,6 +1,7 @@
 package component
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -115,9 +116,9 @@ func NewMultiReleaseSource(sources ...ReleaseSource) ReleaseSourceList {
 	return sources
 }
 
-func (list ReleaseSourceList) GetMatchedRelease(requirement Spec) (Lock, error) {
+func (list ReleaseSourceList) GetMatchedRelease(ctx context.Context, requirement Spec) (Lock, error) {
 	for _, src := range list {
-		rel, err := src.GetMatchedRelease(requirement)
+		rel, err := src.GetMatchedRelease(ctx, requirement)
 		if err != nil {
 			if IsErrNotFound(err) {
 				continue
@@ -139,13 +140,13 @@ func (list ReleaseSourceList) SetDownloadThreads(n int) {
 	}
 }
 
-func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
+func (list ReleaseSourceList) DownloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock) (Local, error) {
 	src, err := list.FindByID(remoteRelease.RemoteSource)
 	if err != nil {
 		return Local{}, err
 	}
 
-	localRelease, err := src.DownloadRelease(releaseDir, remoteRelease)
+	localRelease, err := src.DownloadRelease(ctx, releaseDir, remoteRelease)
 	if err != nil {
 		return Local{}, scopedError(src.Configuration().ID, err)
 	}
@@ -153,10 +154,10 @@ func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease L
 	return localRelease, nil
 }
 
-func (list ReleaseSourceList) FindReleaseVersion(requirement Spec, noDownload bool) (Lock, error) {
+func (list ReleaseSourceList) FindReleaseVersion(ctx context.Context, requirement Spec, noDownload bool) (Lock, error) {
 	var foundReleaseLock []Lock
 	for _, src := range list {
-		rel, err := src.FindReleaseVersion(requirement, noDownload)
+		rel, err := src.FindReleaseVersion(ctx, requirement, noDownload)
 		if err != nil {
 			if !IsErrNotFound(err) {
 				return Lock{}, scopedError(src.Configuration().ID, err)
