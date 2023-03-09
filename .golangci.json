@@ -20,7 +20,8 @@
       "predeclared",
       "gofmt",
       "ginkgolinter",
-      "goconst"
+      "goconst",
+      "goimports"
     ]
   },
   "linters-settings": {

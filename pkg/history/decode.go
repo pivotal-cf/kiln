@@ -2,7 +2,6 @@ package history
 
 import (
 	"encoding/json"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"path/filepath"
 
@@ -10,6 +9,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/storer"
 	"gopkg.in/yaml.v2"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 func unmarshalFile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, data interface{}, filePath string) error {

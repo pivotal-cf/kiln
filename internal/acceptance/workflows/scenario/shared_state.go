@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"os"
 	"os/exec"
@@ -12,6 +11,8 @@ import (
 	"strconv"
 
 	"gopkg.in/yaml.v2"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 // key represents the type of the context key for shared values between steps

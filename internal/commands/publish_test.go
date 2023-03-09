@@ -2,7 +2,6 @@ package commands_test
 
 import (
 	"errors"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"io"
 	"log"
 	"strings"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 var _ = Describe("Publish", func() {
