@@ -90,7 +90,6 @@ func (u UpdateRelease) Execute(args []string) error {
 		newSHA1 = remoteRelease.SHA1
 		newSourceID = remoteRelease.RemoteSource
 		newRemotePath = remoteRelease.RemotePath
-
 	} else {
 		remoteRelease, err = releaseSource.GetMatchedRelease(component.Spec{
 			Name:             u.Options.Name,

@@ -11,7 +11,9 @@
       "staticcheck",
       "typecheck",
       "unused",
-      "asasalint"
+      "asasalint",
+      "containedctx",
+      "whitespace"
     ]
   }
 }
