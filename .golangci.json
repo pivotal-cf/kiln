@@ -21,7 +21,8 @@
       "gofmt",
       "ginkgolinter",
       "goconst",
-      "goimports"
+      "goimports",
+      "unconvert"
     ]
   },
   "linters-settings": {
