@@ -25,7 +25,8 @@
       "unconvert",
       "tenv",
       "reassign",
-      "predeclared"
+      "predeclared",
+      "nosprintfhostport"
     ]
   },
   "linters-settings": {

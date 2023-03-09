@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
@@ -138,7 +139,7 @@ func BoshDirector(omConfig ClientConfiguration, omAPI GetBoshEnvironmentAndSecur
 	boshLogger := boshlog.NewLogger(boshlog.LevelError)
 	boshFactory := boshdir.NewFactory(boshLogger)
 
-	boshDirectorURL := fmt.Sprintf("https://%s:%d", directorConfig.Host, directorConfig.Port)
+	boshDirectorURL := "https://" + net.JoinHostPort(directorConfig.Host, strconv.Itoa(directorConfig.Port))
 
 	unAuthedDirector := boshdir.NewClient(boshDirectorURL, boshhttpclient.NewHTTPClient(httpClient, boshLogger),
 		boshdir.NewNoopTaskReporter(), boshdir.NewNoopFileReporter(), boshLogger,
