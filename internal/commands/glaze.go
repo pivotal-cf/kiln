@@ -2,12 +2,9 @@ package commands
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"gopkg.in/yaml.v2"
 )
 
 type Glaze struct {
@@ -22,9 +19,9 @@ func (cmd *Glaze) Execute(args []string) error {
 		return err
 	}
 
-	kfPath := fullKilnfilePath(cmd.Options.Kilnfile)
+	kfPath := cargo.FullKilnfilePath(cmd.Options.Kilnfile)
 
-	kilnfile, kilnfileLock, err := getKilnfiles(kfPath)
+	kilnfile, kilnfileLock, err := cargo.GetKilnfiles(kfPath)
 	if err != nil {
 		return err
 	}
@@ -34,7 +31,7 @@ func (cmd *Glaze) Execute(args []string) error {
 		return err
 	}
 
-	return writeKilnfile(kilnfile, kfPath)
+	return cargo.WriteKilnfile(kilnfile, kfPath)
 }
 
 func (cmd *Glaze) Usage() jhanda.Usage {
@@ -42,58 +39,6 @@ func (cmd *Glaze) Usage() jhanda.Usage {
 		Description:      "This command locks all the components.",
 		ShortDescription: "Pin versions in Kilnfile to match lock.",
 	}
-}
-
-func fullKilnfilePath(path string) string {
-	var kfPath string = path
-	if info, err := os.Stat(path); err == nil && info.IsDir() {
-		kfPath = filepath.Join(path, "Kilnfile")
-	}
-
-	return kfPath
-}
-
-func getKilnfiles(path string) (cargo.Kilnfile, cargo.KilnfileLock, error) {
-	kilnfile, err := getKilnfile(path)
-	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
-	}
-	kilnfileLock, err := getKilnfileLock(path)
-	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
-	}
-
-	return kilnfile, kilnfileLock, nil
-}
-
-func getKilnfile(path string) (cargo.Kilnfile, error) {
-	kf, err := os.ReadFile(path)
-	if err != nil {
-		return cargo.Kilnfile{}, fmt.Errorf("failed to read Kilnfile: %w", err)
-	}
-
-	var kilnfile cargo.Kilnfile
-	err = yaml.Unmarshal(kf, &kilnfile)
-	if err != nil {
-		return cargo.Kilnfile{}, fmt.Errorf("failed to unmarshall Kilnfile: %w", err)
-	}
-
-	return kilnfile, nil
-}
-
-func getKilnfileLock(path string) (cargo.KilnfileLock, error) {
-	kfl, err := os.ReadFile(path + ".lock")
-	if err != nil {
-		return cargo.KilnfileLock{}, fmt.Errorf("failed to read Kilnfile.lock: %w", err)
-	}
-
-	var kilnfileLock cargo.KilnfileLock
-	err = yaml.Unmarshal(kfl, &kilnfileLock)
-	if err != nil {
-		return cargo.KilnfileLock{}, fmt.Errorf("failed to unmarshall Kilnfile.lock: %w", err)
-	}
-
-	return kilnfileLock, nil
 }
 
 func pinVersions(kf cargo.Kilnfile, kl cargo.KilnfileLock) (cargo.Kilnfile, error) {
@@ -108,19 +53,4 @@ func pinVersions(kf cargo.Kilnfile, kl cargo.KilnfileLock) (cargo.Kilnfile, erro
 	}
 
 	return kf, nil
-}
-
-func writeKilnfile(kf cargo.Kilnfile, path string) error {
-	kfBytes, err := yaml.Marshal(kf)
-	if err != nil {
-		return err
-	}
-
-	outputKilnfile, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer closeAndIgnoreError(outputKilnfile)
-	_, err = outputKilnfile.Write(kfBytes)
-	return err
 }
