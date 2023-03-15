@@ -19,7 +19,13 @@ import (
 )
 
 type (
-	StatFunc func(string) (os.FileInfo, error)
+	HomeDirFunc func() (string, error)
+	StatFunc    func(string) (os.FileInfo, error)
+
+	FileSystem interface {
+		billy.Basic
+		billy.Dir
+	}
 
 	KilnfileOptions interface {
 		KilnfilePathPrefix() string
@@ -34,6 +40,12 @@ type Standard struct {
 	Kilnfile      string   `short:"kf"  long:"kilnfile"                   default:"Kilnfile"         description:"path to Kilnfile"`
 	VariableFiles []string `short:"vf"  long:"variables-file"                                        description:"path to a file containing variables to interpolate"`
 	Variables     []string `short:"vr"  long:"variable"                                              description:"key value pairs of variables to interpolate"`
+}
+
+type FetchBakeOptions struct {
+	DownloadThreads              int  `short:"dt" long:"download-threads" description:"number of parallel threads to download parts from S3"`
+	NoConfirm                    bool `short:"n" long:"no-confirm" default:"true" description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
+	AllowOnlyPublishableReleases bool `long:"allow-only-publishable-releases" default:"false" description:"include releases that would not be shipped with the tile (development builds)"`
 }
 
 // LoadKilnfiles parses and interpolates the Kilnfile and parsed the Kilnfile.lock.
@@ -123,9 +135,9 @@ func (options Standard) KilnfileLockPath() string {
 // LoadFlagsWithDefaults only sets default values if the flag is not set
 // this permits explicitly setting "zero values" for in arguments without them being
 // overwritten.
-func LoadFlagsWithDefaults(options KilnfileOptions, args []string, statOverride StatFunc) ([]string, error) {
-	if statOverride == nil {
-		statOverride = os.Stat
+func LoadFlagsWithDefaults(options KilnfileOptions, args []string, stat StatFunc) ([]string, error) {
+	if stat == nil {
+		stat = os.Stat
 	}
 	argsAfterFlags, err := jhanda.Parse(options, args)
 	if err != nil {
@@ -137,8 +149,8 @@ func LoadFlagsWithDefaults(options KilnfileOptions, args []string, statOverride 
 	pathPrefix := options.KilnfilePathPrefix()
 
 	// handle simple case first
-	configureArrayDefaults(v, pathPrefix, args, statOverride)
-	configurePathDefaults(v, pathPrefix, args, statOverride)
+	configureArrayDefaults(v, pathPrefix, args, stat)
+	configurePathDefaults(v, pathPrefix, args, stat)
 
 	return argsAfterFlags, nil
 }
@@ -185,7 +197,7 @@ func configureArrayDefaults(v reflect.Value, pathPrefix string, args []string, s
 				p = filepath.Join(pathPrefix, p)
 			}
 			_, err := stat(p)
-			if err != nil {
+			if os.IsNotExist(err) {
 				continue
 			}
 			filteredDefaults = append(filteredDefaults, p)
@@ -272,6 +284,52 @@ func IsSet(short, long string, args []string) bool {
 	}
 
 	return false
+}
+
+func ToStrings[t any](v t) []string {
+	return _encode(reflect.ValueOf(v))
+}
+
+func _encode(v reflect.Value) []string {
+	var result []string
+	switch v.Kind() {
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			sv := v.Index(i)
+			encode := _encode(sv)
+			result = append(result, encode...)
+		}
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			fieldVal := v.Field(i)
+			fieldType := v.Type().Field(i)
+			fieldAnnotation := fieldType.Tag.Get("long")
+			if fieldAnnotation == "" {
+				fieldAnnotation = fieldType.Tag.Get("short")
+			}
+
+			encode := _encode(fieldVal)
+			// TODO: make sure that valueless flags are passed correctly
+			if fieldAnnotation != "" && fieldVal.Kind() == reflect.Bool {
+				isSet := fieldVal.Bool()
+				if isSet {
+					result = append(result, "--"+fieldAnnotation)
+				}
+				continue
+			}
+
+			for _, enc := range encode {
+				if fieldAnnotation != "" {
+					result = append(result, "--"+fieldAnnotation, enc)
+				} else {
+					result = append(result, enc)
+				}
+			}
+		}
+	default:
+		result = append(result, fmt.Sprintf("%v", v))
+	}
+	return result
 }
 
 func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

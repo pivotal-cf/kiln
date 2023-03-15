@@ -624,7 +624,7 @@ release_sources:
 			Expect(fetch.Usage()).To(Equal(jhanda.Usage{
 				Description:      "Fetches releases in Kilnfile.lock from sources and save in releases directory locally",
 				ShortDescription: "fetches releases",
-				Flags:            fetch.Options,
+				Flags:            commands.FetchOptions{},
 			}))
 		})
 	})

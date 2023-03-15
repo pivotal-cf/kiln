@@ -1,0 +1,10 @@
+#!/bin/bash -eu
+
+function main() {
+  local cwd
+  cwd="${1}"
+
+  echo "${cwd}/tile-1.2.3.pivotal"
+}
+
+main "$(cd "$(dirname "${0}")" && pwd)"

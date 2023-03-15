@@ -52,7 +52,7 @@ type Data struct {
 	Stemcell cargo.Stemcell
 }
 
-//func (notes Data) String() string {
+//func (notes Data) Strings() string {
 //	note, _ := notes.WriteVersionNotes()
 //	return note.Notes
 //}

@@ -12,21 +12,22 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
+type FetchReleaseDir struct {
+	ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+}
+
+type FetchOptions struct {
+	flags.Standard
+	flags.FetchBakeOptions
+	FetchReleaseDir
+}
+
 type Fetch struct {
 	logger *log.Logger
 
 	multiReleaseSourceProvider MultiReleaseSourceProvider
 	localReleaseDirectory      LocalReleaseDirectory
-
-	Options struct {
-		flags.Standard
-
-		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
-
-		DownloadThreads              int  `short:"dt" long:"download-threads" description:"number of parallel threads to download parts from S3"`
-		NoConfirm                    bool `short:"n" long:"no-confirm" description:"non-interactive mode, will delete extra releases in releases dir without prompting"`
-		AllowOnlyPublishableReleases bool `long:"allow-only-publishable-releases" description:"include releases that would not be shipped with the tile (development builds)"`
-	}
+	Options                    FetchOptions
 }
 
 //counterfeiter:generate -o ./fakes/multi_release_source_provider.go --fake-name MultiReleaseSourceProvider . MultiReleaseSourceProvider
@@ -66,19 +67,25 @@ func (f Fetch) Execute(args []string) error {
 		if err != nil {
 			return err
 		}
+	} else {
+		f.logger.Println("All releases already downloaded")
 	}
 
 	return nil
 }
 
 func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []component.Local, error) {
-	_, err := flags.LoadFlagsWithDefaults(&f.Options, args, nil)
-	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
+	if f.Options.ReleasesDir == "" {
+		_, err := flags.LoadFlagsWithDefaults(&f.Options, args, nil)
+		if err != nil {
+			return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
+		}
 	}
+
 	if !f.Options.AllowOnlyPublishableReleases {
-		f.logger.Println("WARNING - the \"allow-only-publishable-releases\" flag was not set. Some fetched releases may be intended for development/testing only.\nEXERCISE CAUTION WHEN PUBLISHING A TILE WITH THESE RELEASES!")
+		f.logger.Println("Warning: The \"allow-only-publishable-releases\" flag was not set. Some fetched releases may be intended for development/testing only. EXERCISE CAUTION WHEN PUBLISHING A TILE WITH THESE RELEASES!")
 	}
+
 	if _, err := os.Stat(f.Options.ReleasesDir); err != nil {
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(f.Options.ReleasesDir, 0o777)
@@ -95,6 +102,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []comp
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 	}
 
+	f.logger.Printf("Gathering releases...")
 	availableLocalReleaseSet, err := f.localReleaseDirectory.GetLocalReleases(f.Options.ReleasesDir)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
@@ -105,8 +113,6 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []comp
 
 func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ComponentLock) ([]component.Local, error) {
 	releaseSource := f.multiReleaseSourceProvider(kilnfile, f.Options.AllowOnlyPublishableReleases)
-
-	// f.Options.DownloadThreads
 
 	var downloaded []component.Local
 
