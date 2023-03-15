@@ -243,10 +243,7 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(ctx context.Context, spec
 		return Lock{}, fmt.Errorf("json from %s is malformed: %s", request.URL.Host, err)
 	}
 
-	semverPattern, err := regexp.Compile(`([-v])\d+(.\d+)*`)
-	if err != nil {
-		return Lock{}, err
-	}
+	semverPattern := regexp.MustCompile(`([-v])\d+(.\d+)*`)
 
 	foundRelease := Lock{}
 	constraint, err := spec.VersionConstraints()
@@ -261,9 +258,9 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(ctx context.Context, spec
 		versions := semverPattern.FindAllString(filepath.Base(releases.URI), -1)
 		version := versions[0]
 		stemcellVersion := versions[len(versions)-1]
-		version = strings.Replace(version, "-", "", -1)
-		version = strings.Replace(version, "v", "", -1)
-		stemcellVersion = strings.Replace(stemcellVersion, "-", "", -1)
+		version = strings.ReplaceAll(version, "-", "")
+		version = strings.ReplaceAll(version, "v", "")
+		stemcellVersion = strings.ReplaceAll(stemcellVersion, "-", "")
 		if len(versions) > 1 && stemcellVersion != spec.StemcellVersion {
 			continue
 		}

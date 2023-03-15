@@ -41,16 +41,16 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				logger := log.New(GinkgoWriter, "", 0)
 				testServer = ghttp.NewServer()
 
-				path, _ := regexp.Compile(`/api/v1/releases/github.com/pivotal-cf/cf-rabbitmq.*`)
+				path := regexp.MustCompile(`/api/v1/releases/github.com/pivotal-cf/cf-rabbitmq.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "268.0.0"}]`))
 
-				path, _ = regexp.Compile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
+				path = regexp.MustCompile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
 
-				path, _ = regexp.Compile(`/api/v1/releases/github.com/\S+/uaa.*`)
+				path = regexp.MustCompile(`/api/v1/releases/github.com/\S+/uaa.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "73.3.0"}]`))
 
-				path, _ = regexp.Compile(`/api/v1/releases/github.com/\S+/metrics.*`)
+				path = regexp.MustCompile(`/api/v1/releases/github.com/\S+/metrics.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "2.3.0"}]`))
 
 				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
@@ -100,7 +100,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				logger := log.New(GinkgoWriter, "", 0)
 				testServer = ghttp.NewServer()
 
-				path, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/zzz.*`)
+				path := regexp.MustCompile(`/api/v1/releases/github.com/\S+/zzz.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
 
 				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
@@ -129,7 +129,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			BeforeEach(func() {
 				testServer = ghttp.NewServer()
 
-				pathRegex, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/.*`)
+				pathRegex := regexp.MustCompile(`/api/v1/releases/github.com/\S+/.*`)
 				testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `[{"version": "4.0.4"}]`))
 
 				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), log.New(GinkgoWriter, "", 0))
@@ -175,7 +175,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 					path := fmt.Sprintf("/api/v1/releases/github.com/%s/%s%s", organization, releaseName, suffix)
 					testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, fmt.Sprintf(`[{"version": %q}]`, releaseVersion)))
 
-					pathRegex, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/.*`)
+					pathRegex := regexp.MustCompile(`/api/v1/releases/github.com/\S+/.*`)
 					testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `null`))
 
 					releaseID := component.Spec{Name: releaseName, Version: releaseVersion}
@@ -299,7 +299,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				logger := log.New(GinkgoWriter, "", 0)
 				testServer = ghttp.NewServer()
 
-				path, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
+				path := regexp.MustCompile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"309.0.5","url":"https://bosh.io/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.0","sha1":"5df538657c2cc830bda679420a9b162682018ded"},{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"308.0.0","url":"https://bosh.io/d/github.com/cloudfoundry/cf-rabbitmq-release?v=308.0.0","sha1":"56202c9a466a8394683ae432ee2dea21ef6ef865"}]`))
 
 				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
@@ -346,7 +346,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				logger := log.New(GinkgoWriter, "", 0)
 				testServer = ghttp.NewServer()
 
-				path, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
+				path := regexp.MustCompile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
 
 				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)

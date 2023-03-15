@@ -52,11 +52,6 @@ type Data struct {
 	Stemcell cargo.Stemcell
 }
 
-//func (notes Data) Strings() string {
-//	note, _ := notes.WriteVersionNotes()
-//	return note.Notes
-//}
-
 func (notes Data) WriteVersionNotes() (TileRelease, error) {
 	noteTemplate, err := DefaultTemplateFunctions(template.New("")).Parse(DefaultTemplate())
 	if err != nil {

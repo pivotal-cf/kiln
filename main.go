@@ -20,11 +20,6 @@ import (
 var version = "unknown"
 
 func main() {
-	//err := commands.VaultGetCred("tas-ppe/dockerhub_username")
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//os.Exit(0)
 	errLogger := log.New(os.Stderr, "", 0)
 	outLogger := log.New(os.Stdout, "", 0)
 

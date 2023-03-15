@@ -284,7 +284,8 @@ func (p Publish) eogsDate(rv *releaseVersion, releases releaseSet) (string, erro
 
 		if !matchExists {
 			return endOfSupportFor(p.Now()), nil
-		} else if lastPatchRelease.EndOfSupportDate != "" {
+		}
+		if lastPatchRelease.EndOfSupportDate != "" {
 			return lastPatchRelease.EndOfSupportDate, nil
 		} else {
 			return "", fmt.Errorf("previously published release %q does not have an End of General Support date", lastPatchRelease.Version)

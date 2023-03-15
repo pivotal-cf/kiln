@@ -127,9 +127,7 @@ func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLog
 		runtimeConfigs: builder.MetadataPartsDirectoryReader{},
 		fetcher:        fetch,
 		fs:             fs,
-		homeDir: func() (string, error) {
-			return os.UserHomeDir()
-		},
+		homeDir:        os.UserHomeDir,
 	}
 }
 
@@ -412,16 +410,25 @@ func (b Bake) Execute(args []string) error {
 
 	var stemcellManifests map[string]interface{}
 	var stemcellManifest interface{}
-	if b.Options.StemcellTarball != "" {
+	switch {
+	case b.Options.StemcellTarball != "":
 		// TODO remove when stemcell tarball is deprecated
 		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
-	} else if b.Options.Kilnfile != "" {
+		if err != nil {
+			return fmt.Errorf("failed to parse stemcell: %s", err)
+		}
+	case b.Options.Kilnfile != "":
 		stemcellManifests, err = b.stemcell.FromKilnfile(b.Options.Kilnfile)
-	} else if len(b.Options.StemcellsDirectories) > 0 {
+		if err != nil {
+			return fmt.Errorf("failed to parse stemcell: %s", err)
+		}
+	case len(b.Options.StemcellsDirectories) > 0:
 		stemcellManifests, err = b.stemcell.FromDirectories(b.Options.StemcellsDirectories)
-	}
-	if err != nil {
-		return fmt.Errorf("failed to parse stemcell: %s", err)
+		if err != nil {
+			return fmt.Errorf("failed to parse stemcell: %s", err)
+		}
+	default:
+		// TODO: add failure case for this not being configured properly
 	}
 
 	boshVariables, err := b.boshVariables.ParseMetadataTemplates(b.Options.BOSHVariableDirectories, templateVariables)

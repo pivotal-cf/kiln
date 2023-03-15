@@ -91,35 +91,35 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 
 	releaseLister := new(fakes.RepositoryReleaseLister)
 	releaseLister.ListReleasesStub = func(ctx context.Context, org string, repo string, options *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error) {
-		switch repo {
-		case "lts-peach-release":
-			switch ltsCallCount {
-			case 0:
-				ltsCallCount++
-				return []*github.RepositoryRelease{
-					{Body: strPtr("stored"), TagName: strPtr("1.1.0")},
-					{Body: strPtr("served"), TagName: strPtr("2.0.1")},
-					{Body: strPtr("plated"), TagName: strPtr("2.0.0")},
-					{Body: strPtr("labeled"), TagName: strPtr("1.0.1")},
-					{Body: strPtr("chopped"), TagName: strPtr("0.2.2")},
-					{Body: strPtr("preserved"), TagName: strPtr("1.0.0")},
-				}, githubResponse(t, 200), nil
-			case 1:
-				ltsCallCount++
-				return []*github.RepositoryRelease{
-					{Body: strPtr("cleaned"), TagName: strPtr("0.2.1")},
-					{Body: strPtr("ripe"), TagName: strPtr("0.1.3")},
-					{Body: strPtr("unripe"), TagName: strPtr("0.1.2")},
-					{Body: strPtr("flower"), TagName: strPtr("0.1.1")},
-					{Body: strPtr("growing"), TagName: strPtr("0.1.0")},
-				}, githubResponse(t, 200), nil
-			default:
-				ltsCallCount++
-				return nil, nil, errors.New("ERROR")
-			}
+		if repo != "lts-peach-release" {
+			t.Fatalf("unexpected repo: %q", repo)
+			return nil, nil, nil
 		}
-		t.Errorf("unexpected repo: %q", repo)
-		return nil, nil, nil
+
+		switch ltsCallCount {
+		case 0:
+			ltsCallCount++
+			return []*github.RepositoryRelease{
+				{Body: strPtr("stored"), TagName: strPtr("1.1.0")},
+				{Body: strPtr("served"), TagName: strPtr("2.0.1")},
+				{Body: strPtr("plated"), TagName: strPtr("2.0.0")},
+				{Body: strPtr("labeled"), TagName: strPtr("1.0.1")},
+				{Body: strPtr("chopped"), TagName: strPtr("0.2.2")},
+				{Body: strPtr("preserved"), TagName: strPtr("1.0.0")},
+			}, githubResponse(t, 200), nil
+		case 1:
+			ltsCallCount++
+			return []*github.RepositoryRelease{
+				{Body: strPtr("cleaned"), TagName: strPtr("0.2.1")},
+				{Body: strPtr("ripe"), TagName: strPtr("0.1.3")},
+				{Body: strPtr("unripe"), TagName: strPtr("0.1.2")},
+				{Body: strPtr("flower"), TagName: strPtr("0.1.1")},
+				{Body: strPtr("growing"), TagName: strPtr("0.1.0")},
+			}, githubResponse(t, 200), nil
+		default:
+			ltsCallCount++
+			return nil, nil, errors.New("ERROR")
+		}
 	}
 
 	result, err := ReleaseNotes(

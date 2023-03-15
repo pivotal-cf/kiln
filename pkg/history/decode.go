@@ -21,14 +21,6 @@ func unmarshalFile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash,
 	return decodeFile(buf, filePath, data)
 }
 
-//func readDataFromTree(tree *object.Tree, data interface{}, names []string) error {
-//	buf, fileName, err := readBytesFromTree(tree, names)
-//	if err != nil {
-//		return err
-//	}
-//	return decodeFile(buf, fileName, data)
-//}
-
 func decodeFile(buf []byte, fileName string, data interface{}) error {
 	if filepath.Base(fileName) == cargo.KilnfileFileName {
 		return yaml.Unmarshal(buf, data)
@@ -80,56 +72,5 @@ func readBytesFromTree(storage storer.EncodedObjectStorer, tree *object.Tree, fi
 	}
 	return buf, nil
 }
-
-//func findTileRootsInTree(repo *git.Repository, tree *object.Tree) []string {
-//	for _, sentinelFileName := range tileRootSentinelFiles {
-//		_, err := tree.File(sentinelFileName)
-//		if err != nil {
-//			continue
-//		}
-//		return []string{""}
-//	}
-//
-//	var result []string
-//
-//	for _, entree := range tree.Entries {
-//		if strings.HasPrefix(entree.Name, ".") {
-//			continue
-//		}
-//		if entree.Mode != filemode.Dir {
-//			continue
-//		}
-//		child, err := repo.TreeObject(entree.Hash)
-//		if err != nil {
-//			continue
-//		}
-//		childRoots := findTileRootsInTree(repo, child)
-//		for i := range childRoots {
-//			childRoots[i] = filepath.Join(entree.Name, childRoots[i])
-//		}
-//		result = append(result, childRoots...)
-//	}
-//
-//	return result
-//}
-
-// var releasedVersionTag = regexp.MustCompile(`^((\w+/)*)(\d+\.\d+\.\d+)$`)
-
-//func isReleaseTag(reference *plumbing.Reference) (string, string, bool) {
-//	if !reference.Name().IsTag() {
-//		return "", "", false
-//	}
-//	isMatch := releasedVersionTag.MatchString(reference.Name().Short())
-//	if !isMatch {
-//		return "", "", false
-//	}
-//
-//	matches := releasedVersionTag.FindStringSubmatch(reference.Name().Short())
-//	if len(matches) > 2 {
-//		return strings.TrimSuffix(matches[1], "/"), matches[len(matches)-1], true
-//	}
-//
-//	return "", matches[len(matches)-1], true
-//}
 
 func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

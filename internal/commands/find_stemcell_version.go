@@ -56,16 +56,15 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 	}
 
 	productSlug := ""
-
 	// Get Stemcell OS and major from Kilnfile
-	if kilnfile.Stemcell.OS == "ubuntu-xenial" {
+	switch kilnfile.Stemcell.OS {
+	case "ubuntu-xenial":
 		productSlug = "stemcells-ubuntu-xenial"
-	} else if kilnfile.Stemcell.OS == "ubuntu-jammy" {
+	case "ubuntu-jammy":
 		productSlug = "stemcells-ubuntu-jammy"
-	} else if kilnfile.Stemcell.OS == "windows2019" {
+	case "windows2019":
 		productSlug = "stemcells-windows-server"
 	}
-
 	if productSlug == "" {
 		return fmt.Errorf(ErrStemcellOSInfoMustBeValid)
 	}
@@ -107,12 +106,7 @@ func ExtractMajorVersion(version string) (string, error) {
 
 	semVer := strings.Split(version, ".")
 
-	reg, err := regexp.Compile(`[^0-9]+`)
-	if err != nil {
-		return "", err
-	}
-
-	majorVersion := reg.ReplaceAllString(semVer[0], "")
+	majorVersion := regexp.MustCompile(`[^0-9]+`).ReplaceAllString(semVer[0], "")
 
 	if majorVersion == "" {
 		return "", fmt.Errorf(ErrStemcellMajorVersionMustBeValid)

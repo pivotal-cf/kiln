@@ -36,7 +36,7 @@ func invokeKiln(ctx context.Context, requireSuccess bool, args ...string) (conte
 			envName := match[1]
 			envPattern := fmt.Sprintf(`"${%s}"`, envName)
 			if strings.Contains(inputArg, envPattern) {
-				args[i] = strings.Replace(inputArg, envPattern, os.Getenv(envName), -1)
+				args[i] = strings.ReplaceAll(inputArg, envPattern, os.Getenv(envName))
 			}
 		}
 	}

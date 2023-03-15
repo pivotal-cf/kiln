@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"os"
-	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -138,7 +137,7 @@ var _ = Describe("UpdateStemcell", func() {
 			multiReleaseSourceProvider := new(fakes.MultiReleaseSourceProvider)
 			multiReleaseSourceProvider.Returns(releaseSource)
 
-			kilnfilePath = filepath.Join("Kilnfile")
+			kilnfilePath = cargo.KilnfileFileName
 			kilnfileLockPath = kilnfilePath + ".lock"
 
 			outputBuffer = gbytes.NewBuffer()
