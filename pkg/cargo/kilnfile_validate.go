@@ -3,6 +3,8 @@ package cargo
 import (
 	"fmt"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/Masterminds/semver"
 )
 
@@ -27,11 +29,26 @@ func Validate(spec Kilnfile, lock KilnfileLock) []error {
 		}
 	}
 
+	result = append(result, ensureRemoteSourceExistsForEachReleaseLock(spec, lock)...)
+
 	if len(result) > 0 {
 		return result
 	}
 
 	return nil
+}
+
+func ensureRemoteSourceExistsForEachReleaseLock(spec Kilnfile, lock KilnfileLock) []error {
+	var result []error
+	for _, release := range lock.Releases {
+		if releaseSourceIndex := slices.IndexFunc(spec.ReleaseSources, func(config ReleaseSourceConfig) bool {
+			return config.ID == release.RemoteSource || (config.ID == "" && config.Type == release.RemoteSource)
+		}); releaseSourceIndex < 0 {
+			result = append(result,
+				fmt.Errorf("release source %q for release lock %q not found in Kilnfile", release.RemoteSource, release.Name))
+		}
+	}
+	return result
 }
 
 func checkComponentVersionsAndConstraint(spec ComponentSpec, lock ComponentLock, index int) error {
