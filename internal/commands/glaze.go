@@ -45,7 +45,7 @@ func (cmd *Glaze) Usage() jhanda.Usage {
 }
 
 func fullKilnfilePath(path string) string {
-	var kfPath = path
+	kfPath := path
 	if info, err := os.Stat(path); err == nil && info.IsDir() {
 		kfPath = filepath.Join(path, "Kilnfile")
 	}
