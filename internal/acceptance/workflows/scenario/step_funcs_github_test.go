@@ -13,6 +13,7 @@ func Test_githubRepoHasReleaseWithTag(t *testing.T) {
 		t.Skip("skip this step in CI. GitHub action credentials do not have access to crhntr/hello-release")
 	}
 	setup := func(t *testing.T) (context.Context, Gomega) {
+		t.Helper()
 		please := NewWithT(t)
 		ctx := context.Background()
 		err := checkoutMain(testTilePath)

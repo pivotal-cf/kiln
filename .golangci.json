@@ -26,6 +26,7 @@
       "revive",
       "staticcheck",
       "tenv",
+      "thelper",
       "typecheck",
       "unconvert",
       "unused",

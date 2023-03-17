@@ -9,6 +9,7 @@ import (
 
 func Test_theLockSpecifiesVersionForRelease(t *testing.T) {
 	setup := func(t *testing.T) (context.Context, Gomega) {
+		t.Helper()
 		please := NewWithT(t)
 		ctx := context.Background()
 		err := checkoutMain(testTilePath)

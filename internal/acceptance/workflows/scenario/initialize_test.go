@@ -164,6 +164,7 @@ type fakeScenarioContext struct {
 }
 
 func newFakeScenarioContext(t *testing.T) fakeScenarioContext {
+	t.Helper()
 	return fakeScenarioContext{t: t}
 }
 
