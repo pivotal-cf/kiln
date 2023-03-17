@@ -10,11 +10,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
+
 	"github.com/pivotal-cf/jhanda"
+	"gopkg.in/yaml.v2"
+
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
-	"gopkg.in/yaml.v2"
 )
 
 var _ = Describe("Bake", func() {

@@ -23,6 +23,7 @@
       "predeclared",
       "predeclared",
       "reassign",
+      "revive",
       "staticcheck",
       "tenv",
       "typecheck",

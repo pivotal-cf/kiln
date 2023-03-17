@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	GLOBAL_USAGE = `kiln
+	globalCommandUsage = `kiln
 kiln helps you build ops manager compatible tiles
 
 Usage: kiln [options] <command> [<args>]
@@ -26,7 +26,7 @@ Commands:
   cook   cooks you a stew
 `
 
-	COMMAND_USAGE = `kiln cook
+	commandUsage = `kiln cook
 This command will help you cook a stew.
 
 Usage: kiln [options] cook [<args>]
@@ -39,7 +39,7 @@ Command Arguments:
   --water, -w  int  cups of water
 `
 
-	FLAGLESS_USAGE = `kiln cook
+	usageWithNoFlags = `kiln cook
 This command will help you cook a stew.
 
 Usage: kiln [options] cook
@@ -78,7 +78,7 @@ var _ = Describe("Help", func() {
 				err := help.Execute([]string{})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(output.String()).To(ContainSubstring(GLOBAL_USAGE))
+				Expect(output.String()).To(ContainSubstring(globalCommandUsage))
 			})
 		})
 
@@ -99,7 +99,7 @@ var _ = Describe("Help", func() {
 				err := help.Execute([]string{"cook"})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(output.String()).To(ContainSubstring(COMMAND_USAGE))
+				Expect(output.String()).To(ContainSubstring(commandUsage))
 			})
 
 			Context("when the command does not exist", func() {
@@ -137,7 +137,7 @@ var _ = Describe("Help", func() {
 					err := help.Execute([]string{"cook"})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(output.String()).To(ContainSubstring(FLAGLESS_USAGE))
+					Expect(output.String()).To(ContainSubstring(usageWithNoFlags))
 					Expect(output.String()).NotTo(ContainSubstring("Command Arguments"))
 				})
 			})
@@ -155,7 +155,7 @@ var _ = Describe("Help", func() {
 					err := help.Execute([]string{"cook"})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(output.String()).To(ContainSubstring(FLAGLESS_USAGE))
+					Expect(output.String()).To(ContainSubstring(usageWithNoFlags))
 					Expect(output.String()).NotTo(ContainSubstring("Command Arguments"))
 				})
 			})

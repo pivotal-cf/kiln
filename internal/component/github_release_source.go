@@ -257,11 +257,11 @@ type ReleaseByTagGetterAssetDownloader interface {
 func downloadRelease(ctx context.Context, releaseDir string, remoteRelease Lock, client ReleaseByTagGetterAssetDownloader, logger *log.Logger) (Local, error) {
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
 
-	remoteUrl, err := url.Parse(remoteRelease.RemotePath)
+	remoteURL, err := url.Parse(remoteRelease.RemotePath)
 	if err != nil {
 		return Local{}, fmt.Errorf("failed to parse remote_path as url: %w", err)
 	}
-	remotePathParts := strings.Split(remoteUrl.Path, "/")
+	remotePathParts := strings.Split(remoteURL.Path, "/")
 	// TODO: add test coverage for length
 	org, repo := remotePathParts[1], remotePathParts[2]
 

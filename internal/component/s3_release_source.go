@@ -72,7 +72,7 @@ func NewS3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
 	awsConfig := &aws.Config{
 		Region:      aws.String(config.Region),
-		Credentials: credentials.NewStaticCredentials(config.AccessKeyId, config.SecretAccessKey, ""),
+		Credentials: credentials.NewStaticCredentials(config.AccessKeyID, config.SecretAccessKey, ""),
 	}
 	if config.Endpoint != "" { // for acceptance testing
 		awsConfig = awsConfig.WithEndpoint(config.Endpoint)
@@ -234,7 +234,7 @@ func (src S3ReleaseSource) DownloadRelease(_ context.Context, releaseDir string,
 		Key:    aws.String(lock.RemotePath),
 	}, setConcurrency)
 	if err != nil {
-		return Local{}, fmt.Errorf("failed to download file: %w\n", err)
+		return Local{}, fmt.Errorf("failed to download file: %w", err)
 	}
 
 	_, err = file.Seek(0, 0)

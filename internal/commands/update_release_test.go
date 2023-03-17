@@ -203,7 +203,7 @@ var _ = Describe("UpdateRelease", func() {
 			var downloadErr error
 
 			BeforeEach(func() {
-				downloadErr = errors.New("asplode!!")
+				downloadErr = errors.New("asplode")
 				releaseSource.DownloadReleaseReturns(component.Local{}, downloadErr)
 			})
 

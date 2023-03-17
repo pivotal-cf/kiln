@@ -33,7 +33,7 @@ func TestInterpolateAndParseKilnfile(t *testing.T) {
 				Type:            "s3",
 				Bucket:          "my-bucket",
 				Region:          "middle-earth",
-				AccessKeyId:     "id",
+				AccessKeyID:     "id",
 				SecretAccessKey: "key",
 				PathTemplate:    "not-used",
 			},

@@ -58,13 +58,13 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 		return err
 	}
 
-	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{
+	releaseVersionJSON, _ := json.Marshal(releaseVersionOutput{
 		Version:    releaseRemote.Version,
 		RemotePath: releaseRemote.RemotePath,
 		Source:     releaseRemote.RemoteSource,
 		SHA:        releaseRemote.SHA1,
 	})
-	cmd.outLogger.Println(string(releaseVersionJson))
+	cmd.outLogger.Println(string(releaseVersionJSON))
 	return err
 }
 

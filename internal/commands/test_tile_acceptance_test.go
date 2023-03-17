@@ -17,7 +17,7 @@ var _ = Describe("test", func() {
 			cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 			Expect(err).NotTo(HaveOccurred())
 
-			sshProvider, err := NewSshProvider(SSHClientCreator{})
+			sshProvider, err := NewSSHProvider(SSHClientConstructor{})
 			Expect(err).NotTo(HaveOccurred())
 			testTile := NewManifestTest(logger, cli, sshProvider)
 			err = testTile.Execute([]string{"--tile-path", "tas_fake/tas"})
@@ -35,7 +35,7 @@ var _ = Describe("test", func() {
 			cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 			Expect(err).NotTo(HaveOccurred())
 
-			sshProvider, err := NewSshProvider(SSHClientCreator{})
+			sshProvider, err := NewSSHProvider(SSHClientConstructor{})
 			Expect(err).NotTo(HaveOccurred())
 			testTile := NewManifestTest(logger, cli, sshProvider)
 			err = testTile.Execute([]string{"--tile-path", "tas_fake/tas_failing"})

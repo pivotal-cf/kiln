@@ -100,7 +100,7 @@ type ReleaseSourceConfig struct {
 	Publishable     bool   `yaml:"publishable,omitempty"`
 	Bucket          string `yaml:"bucket,omitempty"`
 	Region          string `yaml:"region,omitempty"`
-	AccessKeyId     string `yaml:"access_key_id,omitempty"`
+	AccessKeyID     string `yaml:"access_key_id,omitempty"`
 	SecretAccessKey string `yaml:"secret_access_key,omitempty"`
 	PathTemplate    string `yaml:"path_template,omitempty"`
 	Endpoint        string `yaml:"endpoint,omitempty"`

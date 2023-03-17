@@ -16,8 +16,8 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/internal/component/componenttest"
 	"github.com/pivotal-cf/kiln/internal/component/fakes"
-	testHelpers "github.com/pivotal-cf/kiln/internal/test-helpers"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -51,7 +51,7 @@ var _ = Describe("UploadRelease", func() {
 			Expect(fsWriteYAML(fs, "Kilnfile.lock", cargo.KilnfileLock{})).NotTo(HaveOccurred())
 
 			var err error
-			expectedReleaseSHA, err = testHelpers.WriteReleaseTarball("banana-release.tgz", "banana", "1.2.3", fs)
+			expectedReleaseSHA, err = componenttest.WriteReleaseTarball("banana-release.tgz", "banana", "1.2.3", fs)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -105,7 +105,7 @@ var _ = Describe("UploadRelease", func() {
 
 			When("the release tarball is compiled", func() {
 				BeforeEach(func() {
-					_, err := testHelpers.WriteTarballWithFile("banana-release.tgz", "release.MF", `
+					_, err := componenttest.WriteTarballWithFile("banana-release.tgz", "release.MF", `
 name: banana
 version: 1.2.3
 compiled_packages:
@@ -138,7 +138,7 @@ compiled_packages:
 
 				BeforeEach(func() {
 					for _, rel := range devReleases {
-						_, err = testHelpers.WriteReleaseTarball(rel.tarballName, "banana", rel.version, fs)
+						_, err = componenttest.WriteReleaseTarball(rel.tarballName, "banana", rel.version, fs)
 						Expect(err).NotTo(HaveOccurred())
 					}
 				})
@@ -158,7 +158,7 @@ compiled_packages:
 
 			When("the release version is malformed", func() {
 				BeforeEach(func() {
-					_, err := testHelpers.WriteReleaseTarball("banana-malformed.tgz", "banana", "v1_2_garbage", fs)
+					_, err := componenttest.WriteReleaseTarball("banana-malformed.tgz", "banana", "v1_2_garbage", fs)
 					Expect(err).NotTo(HaveOccurred())
 				})
 

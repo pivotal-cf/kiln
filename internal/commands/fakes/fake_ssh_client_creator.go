@@ -9,22 +9,22 @@ import (
 )
 
 type SshClientCreator struct {
-	NewClientStub        func(io.ReadWriter) commands.SshAgent
+	NewClientStub        func(io.ReadWriter) commands.SSHAgent
 	newClientMutex       sync.RWMutex
 	newClientArgsForCall []struct {
 		arg1 io.ReadWriter
 	}
 	newClientReturns struct {
-		result1 commands.SshAgent
+		result1 commands.SSHAgent
 	}
 	newClientReturnsOnCall map[int]struct {
-		result1 commands.SshAgent
+		result1 commands.SSHAgent
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *SshClientCreator) NewClient(arg1 io.ReadWriter) commands.SshAgent {
+func (fake *SshClientCreator) NewClient(arg1 io.ReadWriter) commands.SSHAgent {
 	fake.newClientMutex.Lock()
 	ret, specificReturn := fake.newClientReturnsOnCall[len(fake.newClientArgsForCall)]
 	fake.newClientArgsForCall = append(fake.newClientArgsForCall, struct {
@@ -49,7 +49,7 @@ func (fake *SshClientCreator) NewClientCallCount() int {
 	return len(fake.newClientArgsForCall)
 }
 
-func (fake *SshClientCreator) NewClientCalls(stub func(io.ReadWriter) commands.SshAgent) {
+func (fake *SshClientCreator) NewClientCalls(stub func(io.ReadWriter) commands.SSHAgent) {
 	fake.newClientMutex.Lock()
 	defer fake.newClientMutex.Unlock()
 	fake.NewClientStub = stub
@@ -62,26 +62,26 @@ func (fake *SshClientCreator) NewClientArgsForCall(i int) io.ReadWriter {
 	return argsForCall.arg1
 }
 
-func (fake *SshClientCreator) NewClientReturns(result1 commands.SshAgent) {
+func (fake *SshClientCreator) NewClientReturns(result1 commands.SSHAgent) {
 	fake.newClientMutex.Lock()
 	defer fake.newClientMutex.Unlock()
 	fake.NewClientStub = nil
 	fake.newClientReturns = struct {
-		result1 commands.SshAgent
+		result1 commands.SSHAgent
 	}{result1}
 }
 
-func (fake *SshClientCreator) NewClientReturnsOnCall(i int, result1 commands.SshAgent) {
+func (fake *SshClientCreator) NewClientReturnsOnCall(i int, result1 commands.SSHAgent) {
 	fake.newClientMutex.Lock()
 	defer fake.newClientMutex.Unlock()
 	fake.NewClientStub = nil
 	if fake.newClientReturnsOnCall == nil {
 		fake.newClientReturnsOnCall = make(map[int]struct {
-			result1 commands.SshAgent
+			result1 commands.SSHAgent
 		})
 	}
 	fake.newClientReturnsOnCall[i] = struct {
-		result1 commands.SshAgent
+		result1 commands.SSHAgent
 	}{result1}
 }
 
@@ -109,4 +109,4 @@ func (fake *SshClientCreator) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ commands.SshClientCreator = new(SshClientCreator)
+var _ commands.SSHClientCreator = new(SshClientCreator)

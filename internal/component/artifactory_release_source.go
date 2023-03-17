@@ -168,8 +168,8 @@ func (ars ArtifactoryReleaseSource) GetMatchedRelease(ctx context.Context, spec 
 		return Lock{}, err
 	}
 
-	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, remotePath)
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, fullUrl, nil)
+	fullURL := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, remotePath)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
 	if err != nil {
 		return Lock{}, err
 	}
@@ -207,9 +207,9 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(ctx context.Context, spec
 		return Lock{}, err
 	}
 
-	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, path.Dir(remotePath))
+	fullURL := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, path.Dir(remotePath))
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, fullUrl, nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
 	if err != nil {
 		return Lock{}, err
 	}
@@ -313,9 +313,9 @@ func (ars ArtifactoryReleaseSource) UploadRelease(ctx context.Context, spec Spec
 
 	ars.logger.Printf("uploading release %q to %s at %q...\n", spec.Name, ars.ID, remotePath)
 
-	fullUrl := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + remotePath
+	fullURL := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + remotePath
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodPut, fullUrl, file)
+	request, err := http.NewRequestWithContext(ctx, http.MethodPut, fullURL, file)
 	if err != nil {
 		fmt.Println(err)
 		return Lock{}, err

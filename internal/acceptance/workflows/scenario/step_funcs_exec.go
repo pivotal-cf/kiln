@@ -20,10 +20,7 @@ func outputContainsSubstring(ctx context.Context, outputName, substring string) 
 		if len(outStr) == 0 {
 			return fmt.Errorf("expected substring %q not found: %s was empty", substring, outputName)
 		}
-		if len(outStr) < 500 {
-			return fmt.Errorf("expected substring %q not found in: %q", substring, outStr)
-		}
-		return fmt.Errorf("expected substring \n\n%s\n\n not found in:\n\n%s\n\n", substring, outStr)
+		return fmt.Errorf("expected substring %q not found in %q", substring, outStr)
 	}
 	return nil
 }

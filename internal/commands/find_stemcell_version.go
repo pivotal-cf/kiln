@@ -84,7 +84,7 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 		return err
 	}
 
-	stemcellVersionJson, err := json.Marshal(stemcellVersionOutput{
+	stemcellVersionJSON, err := json.Marshal(stemcellVersionOutput{
 		Version:    stemcellVersion,
 		Source:     "Tanzunet",
 		RemotePath: TanzuNetRemotePath,
@@ -93,7 +93,7 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 		return err
 	}
 
-	cmd.outLogger.Println(string(stemcellVersionJson))
+	cmd.outLogger.Println(string(stemcellVersionJSON))
 
 	return nil
 }

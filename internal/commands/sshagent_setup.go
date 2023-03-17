@@ -13,20 +13,20 @@ import (
 	sshagent "golang.org/x/crypto/ssh/agent"
 )
 
-//counterfeiter:generate -o fakes/fake_ssh_client_creator.go --fake-name SshClientCreator . SshClientCreator
-type SshClientCreator interface {
-	NewClient(rw io.ReadWriter) SshAgent
+//counterfeiter:generate -o fakes/fake_ssh_client_creator.go --fake-name SSHClientCreator . SSHClientCreator
+type SSHClientCreator interface {
+	NewClient(rw io.ReadWriter) SSHAgent
 }
 
-//counterfeiter:generate -o fakes/fake_ssh_agent.go --fake-name SSHAgent . SshAgent
-type SshAgent interface {
+//counterfeiter:generate -o fakes/fake_ssh_agent.go --fake-name SSHAgent . SSHAgent
+type SSHAgent interface {
 	Add(key sshagent.AddedKey) error
 	List() ([]*sshagent.Key, error)
 }
 
-type SSHClientCreator struct{}
+type SSHClientConstructor struct{}
 
-func (s SSHClientCreator) NewClient(rw io.ReadWriter) SshAgent {
+func (s SSHClientConstructor) NewClient(rw io.ReadWriter) SSHAgent {
 	return sshagent.NewClient(rw)
 }
 
@@ -43,30 +43,30 @@ var StandardSSHKeys = []string{
 	"identity",
 }
 
-//counterfeiter:generate -o ./fakes/ssh_thing.go --fake-name SshProvider . SshProvider
-type SshProvider interface {
+//counterfeiter:generate -o ./fakes/ssh_thing.go --fake-name SSHProvider . SSHProvider
+type SSHProvider interface {
 	NeedsKeys() (bool, error)
 	GetKeys(optionalKeyPaths ...string) (key Key, err error)
 	AddKey(key Key, passphrase []byte) error
 }
 
-type SshThing struct {
-	sshAgent SshAgent
+type SSHThing struct {
+	sshAgent SSHAgent
 }
 
-func NewSshProvider(creator SshClientCreator) (SshProvider, error) {
+func NewSSHProvider(creator SSHClientCreator) (SSHProvider, error) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
 	conn, err := net.Dial("unix", socket)
 	if err != nil {
-		return SshThing{}, err
+		return SSHThing{}, err
 	}
 	agentClient := creator.NewClient(conn)
-	return SshThing{
+	return SSHThing{
 		sshAgent: agentClient,
 	}, nil
 }
 
-func (st SshThing) NeedsKeys() (bool, error) {
+func (st SSHThing) NeedsKeys() (bool, error) {
 	keys, err := st.sshAgent.List()
 	if err != nil {
 		fmt.Printf("Error listing keys: %s", err)
@@ -75,7 +75,7 @@ func (st SshThing) NeedsKeys() (bool, error) {
 	return len(keys) == 0, nil
 }
 
-func (st SshThing) GetKeys(optionalKeyPaths ...string) (key Key, err error) {
+func (st SSHThing) GetKeys(optionalKeyPaths ...string) (key Key, err error) {
 	var keyPaths []string
 	if len(optionalKeyPaths) > 0 {
 		keyPaths = optionalKeyPaths
@@ -119,7 +119,7 @@ func (st SshThing) GetKeys(optionalKeyPaths ...string) (key Key, err error) {
 	return Key{KeyPath: keyPath, Encrypted: encrypted}, nil
 }
 
-func (st SshThing) AddKey(key Key, passphrase []byte) error {
+func (st SSHThing) AddKey(key Key, passphrase []byte) error {
 	f, err := os.Open(key.KeyPath)
 	if err != nil {
 		return err

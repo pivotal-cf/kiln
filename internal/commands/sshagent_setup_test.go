@@ -13,13 +13,13 @@ import (
 var _ = Describe("SSHAgentSetup", func() {
 	Context("doesn't have keys", func() {
 		It("needs to add keys", func() {
-			fakeSshAgentCreator := &fakes.SshClientCreator{}
-			fakeSshClient := &fakes.SSHAgent{}
-			fakeSshClient.ListReturns([]*agent.Key{}, nil)
-			fakeSshClient.AddReturns(nil)
-			fakeSshAgentCreator.NewClientReturns(fakeSshClient)
+			fakeSSHAgentCreator := &fakes.SSHClientCreator{}
+			fakeSSHClient := &fakes.SSHAgent{}
+			fakeSSHClient.ListReturns([]*agent.Key{}, nil)
+			fakeSSHClient.AddReturns(nil)
+			fakeSSHAgentCreator.NewClientReturns(fakeSSHClient)
 
-			subject, err := commands.NewSshProvider(fakeSshAgentCreator)
+			subject, err := commands.NewSSHProvider(fakeSSHAgentCreator)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(subject.NeedsKeys()).To(BeTrue())
 			key, _ := subject.GetKeys()
@@ -34,17 +34,17 @@ var _ = Describe("SSHAgentSetup", func() {
 				_, err = tmpfile.Seek(0, 0)
 				Expect(err).NotTo(HaveOccurred())
 
-				fakeSshAgentCreator := &fakes.SshClientCreator{}
-				fakeSshClient := &fakes.SSHAgent{}
+				fakeSSHAgentCreator := &fakes.SSHClientCreator{}
+				fakeSSHClient := &fakes.SSHAgent{}
 				fakeKey := commands.Key{KeyPath: tmpfile.Name(), Encrypted: true}
-				fakeSshClient.AddReturns(nil)
-				fakeSshAgentCreator.NewClientReturns(fakeSshClient)
+				fakeSSHClient.AddReturns(nil)
+				fakeSSHAgentCreator.NewClientReturns(fakeSSHClient)
 
-				subject, err := commands.NewSshProvider(fakeSshAgentCreator)
+				subject, err := commands.NewSSHProvider(fakeSSHAgentCreator)
 				Expect(err).NotTo(HaveOccurred())
 				err = subject.AddKey(fakeKey, PEMEncryptedKey.EncryptionKey)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(fakeSshClient.AddCallCount()).To(Equal(1))
+				Expect(fakeSSHClient.AddCallCount()).To(Equal(1))
 			})
 		})
 		Context("the key isn't encrypted", func() {
@@ -56,13 +56,13 @@ var _ = Describe("SSHAgentSetup", func() {
 				_, err = tmpfile.Seek(0, 0)
 				Expect(err).NotTo(HaveOccurred())
 
-				fakeSshAgentCreator := &fakes.SshClientCreator{}
-				fakeSshClient := &fakes.SSHAgent{}
+				fakeSSHAgentCreator := &fakes.SSHClientCreator{}
+				fakeSSHClient := &fakes.SSHAgent{}
 				fakeKey := commands.Key{KeyPath: tmpfile.Name(), Encrypted: true}
-				fakeSshClient.AddReturns(nil)
-				fakeSshAgentCreator.NewClientReturns(fakeSshClient)
+				fakeSSHClient.AddReturns(nil)
+				fakeSSHAgentCreator.NewClientReturns(fakeSSHClient)
 
-				subject, err := commands.NewSshProvider(fakeSshAgentCreator)
+				subject, err := commands.NewSSHProvider(fakeSSHAgentCreator)
 				Expect(err).NotTo(HaveOccurred())
 				key, err := subject.GetKeys(fakeKey.KeyPath)
 				Expect(key.Encrypted).To(BeFalse())
@@ -70,7 +70,7 @@ var _ = Describe("SSHAgentSetup", func() {
 
 				err = subject.AddKey(fakeKey, []byte("unnecessary-passphrase"))
 				Expect(err).To(HaveOccurred())
-				Expect(fakeSshClient.AddCallCount()).To(Equal(0))
+				Expect(fakeSSHClient.AddCallCount()).To(Equal(0))
 			})
 
 			It("adds without a passphrase", func() {
@@ -81,33 +81,33 @@ var _ = Describe("SSHAgentSetup", func() {
 				_, err = tmpfile.Seek(0, 0)
 				Expect(err).NotTo(HaveOccurred())
 
-				fakeSshAgentCreator := &fakes.SshClientCreator{}
-				fakeSshClient := &fakes.SSHAgent{}
+				fakeSSHAgentCreator := &fakes.SSHClientCreator{}
+				fakeSSHClient := &fakes.SSHAgent{}
 				fakeKey := commands.Key{KeyPath: tmpfile.Name(), Encrypted: false}
-				fakeSshClient.AddReturns(nil)
-				fakeSshAgentCreator.NewClientReturns(fakeSshClient)
+				fakeSSHClient.AddReturns(nil)
+				fakeSSHAgentCreator.NewClientReturns(fakeSSHClient)
 
-				subject, err := commands.NewSshProvider(fakeSshAgentCreator)
+				subject, err := commands.NewSSHProvider(fakeSSHAgentCreator)
 				Expect(err).NotTo(HaveOccurred())
 				key, err := subject.GetKeys(fakeKey.KeyPath)
 				Expect(key.Encrypted).To(BeFalse())
 				Expect(err).NotTo(HaveOccurred())
 				err = subject.AddKey(fakeKey, nil)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(fakeSshClient.AddCallCount()).To(Equal(1))
+				Expect(fakeSSHClient.AddCallCount()).To(Equal(1))
 			})
 		})
 	})
 	Context("has keys", func() {
 		It("doesn't need to add keys", func() {
-			fakeSshAgentCreator := &fakes.SshClientCreator{}
-			fakeSshClient := &fakes.SSHAgent{}
+			fakeSSHAgentCreator := &fakes.SSHClientCreator{}
+			fakeSSHClient := &fakes.SSHAgent{}
 			agentList := []*agent.Key{{Format: "rsa", Blob: []byte("something")}}
-			fakeSshClient.AddReturns(nil)
-			fakeSshClient.ListReturns(agentList, nil)
-			fakeSshAgentCreator.NewClientReturns(fakeSshClient)
+			fakeSSHClient.AddReturns(nil)
+			fakeSSHClient.ListReturns(agentList, nil)
+			fakeSSHAgentCreator.NewClientReturns(fakeSSHClient)
 
-			subject, err := commands.NewSshProvider(fakeSshAgentCreator)
+			subject, err := commands.NewSSHProvider(fakeSSHAgentCreator)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(subject.NeedsKeys()).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())

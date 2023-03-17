@@ -450,7 +450,7 @@ releases:
 		Context("failure cases", func() {
 			Context("when creating the zip file fails", func() {
 				BeforeEach(func() {
-					filesystem.CreateReturns(nil, errors.New("boom!"))
+					filesystem.CreateReturns(nil, errors.New("boom"))
 				})
 
 				It("returns the error", func() {
@@ -460,7 +460,7 @@ releases:
 
 					err := tileWriter.Write([]byte{}, input)
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("boom!"))
+					Expect(err).To(MatchError("boom"))
 				})
 			})
 			Context("when the releases are stubbed", func() {
@@ -515,7 +515,7 @@ releases:
 
 				Context("when removing the zip file fails", func() {
 					BeforeEach(func() {
-						filesystem.RemoveReturns(errors.New("boom!"))
+						filesystem.RemoveReturns(errors.New("boom"))
 					})
 
 					It("returns an error", func() {
@@ -528,7 +528,7 @@ releases:
 						Expect(err).To(HaveOccurred())
 						Expect(err).To(MatchError("failed to create folder"))
 
-						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom!")
+						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom")
 						Expect(logger.PrintfCall.Receives.LogLines).To(
 							ContainElement(expectedLogLine),
 						)
@@ -577,7 +577,7 @@ releases:
 
 				Context("when removing the zip file fails", func() {
 					BeforeEach(func() {
-						filesystem.RemoveReturns(errors.New("boom!"))
+						filesystem.RemoveReturns(errors.New("boom"))
 					})
 
 					It("returns an error", func() {
@@ -585,7 +585,7 @@ releases:
 						Expect(err).To(HaveOccurred())
 						Expect(err).To(MatchError("failed to open release"))
 
-						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom!")
+						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom")
 						Expect(logger.PrintfCall.Receives.LogLines).To(
 							ContainElement(expectedLogLine),
 						)
@@ -649,7 +649,7 @@ releases:
 
 				Context("when removing the zip file fails", func() {
 					BeforeEach(func() {
-						filesystem.RemoveReturns(errors.New("boom!"))
+						filesystem.RemoveReturns(errors.New("boom"))
 					})
 
 					It("returns an error", func() {
@@ -657,7 +657,7 @@ releases:
 						Expect(err).To(HaveOccurred())
 						Expect(err).To(MatchError("failed to open migration"))
 
-						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom!")
+						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom")
 						Expect(logger.PrintfCall.Receives.LogLines).To(
 							ContainElement(expectedLogLine),
 						)
@@ -706,7 +706,7 @@ releases:
 
 				Context("when removing the zip file fails", func() {
 					BeforeEach(func() {
-						filesystem.RemoveReturns(errors.New("boom!"))
+						filesystem.RemoveReturns(errors.New("boom"))
 					})
 
 					It("returns an error", func() {
@@ -714,7 +714,7 @@ releases:
 						Expect(err).To(HaveOccurred())
 						Expect(err).To(MatchError("failed to open embed"))
 
-						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom!")
+						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom")
 						Expect(logger.PrintfCall.Receives.LogLines).To(
 							ContainElement(expectedLogLine),
 						)
@@ -742,7 +742,7 @@ releases:
 
 				Context("when removing the zip file fails", func() {
 					BeforeEach(func() {
-						filesystem.RemoveReturns(errors.New("boom!"))
+						filesystem.RemoveReturns(errors.New("boom"))
 					})
 
 					It("returns an error", func() {
@@ -755,7 +755,7 @@ releases:
 						Expect(err).To(HaveOccurred())
 						Expect(err).To(MatchError("failed to add file to zip"))
 
-						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom!")
+						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom")
 						Expect(logger.PrintfCall.Receives.LogLines).To(
 							ContainElement(expectedLogLine),
 						)
@@ -785,7 +785,7 @@ releases:
 
 				Context("when removing the zip file fails", func() {
 					BeforeEach(func() {
-						filesystem.RemoveReturns(errors.New("boom!"))
+						filesystem.RemoveReturns(errors.New("boom"))
 					})
 
 					It("returns an error", func() {
@@ -793,7 +793,7 @@ releases:
 						Expect(err).To(HaveOccurred())
 						Expect(err).To(MatchError("failed to close the zip"))
 
-						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom!")
+						expectedLogLine := fmt.Sprintf("failed cleaning up zip %q: %s", outputFile, "boom")
 						Expect(logger.PrintfCall.Receives.LogLines).To(
 							ContainElement(expectedLogLine),
 						)

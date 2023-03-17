@@ -50,10 +50,10 @@ type ManifestTest struct {
 
 	logger      *log.Logger
 	mobi        mobyClient
-	sshProvider SshProvider
+	sshProvider SSHProvider
 }
 
-func NewManifestTest(logger *log.Logger, mobi mobyClient, sshThing SshProvider) ManifestTest {
+func NewManifestTest(logger *log.Logger, mobi mobyClient, sshThing SSHProvider) ManifestTest {
 	return ManifestTest{
 		logger:      logger,
 		mobi:        mobi,
@@ -217,7 +217,7 @@ func (u ManifestTest) Execute(args []string) error {
 		return err
 	case status := <-statusCh:
 		if status.StatusCode != 0 {
-			return errors.New(fmt.Sprintf("%+v", status))
+			return errors.Errorf("%+v", status)
 		}
 	}
 

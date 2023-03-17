@@ -178,7 +178,7 @@ func iAddACompiledSReleaseSourceToTheKilnfile(ctx context.Context, bucketName st
 		PathTemplate:    "{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz",
 		Region:          "us-west-1",
 		Publishable:     true,
-		AccessKeyId:     keyID,
+		AccessKeyID:     keyID,
 		SecretAccessKey: accessKey,
 	})
 

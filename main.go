@@ -83,7 +83,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	sshProvider, _ := commands.NewSshProvider(commands.SSHClientCreator{})
+	sshProvider, _ := commands.NewSSHProvider(commands.SSHClientConstructor{})
 	commandSet["test"] = commands.NewManifestTest(outLogger, mobyClient, sshProvider)
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)

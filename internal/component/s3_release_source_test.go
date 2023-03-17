@@ -52,7 +52,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				Bucket:          "my-bucket",
 				PathTemplate:    "my-path-template",
 				Region:          "my-region",
-				AccessKeyId:     "my-access-key",
+				AccessKeyID:     "my-access-key",
 				SecretAccessKey: "my-secret",
 			}
 			logger = log.New(GinkgoWriter, "", 0)
@@ -181,7 +181,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				It("returns an error", func() {
 					_, err := releaseSource.DownloadRelease(context.Background(), releaseDir, remoteRelease)
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("failed to download file: 503 Service Unavailable\n"))
+					Expect(err).To(MatchError("failed to download file: 503 Service Unavailable"))
 				})
 			})
 		})

@@ -264,4 +264,4 @@ func (fake *SshProvider) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ commands.SshProvider = new(SshProvider)
+var _ commands.SSHProvider = new(SshProvider)

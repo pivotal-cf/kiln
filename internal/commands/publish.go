@@ -95,9 +95,8 @@ func (p Publish) Execute(args []string) error {
 	err = p.updateReleaseOnPivnet(kilnfile, buildVersion)
 	if err != nil {
 		return fmt.Errorf("failed to publish tile: %s", err)
-	} else {
-		p.OutLogger.Println("Successfully published tile.")
 	}
+	p.OutLogger.Println("Successfully published tile.")
 	return nil
 }
 
@@ -193,7 +192,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 
 	window := p.Options.Window
 
-	rv, err := ReleaseVersionFromBuildVersion(buildVersion, window)
+	rv, err := releaseVersionFromBuildVersion(buildVersion, window)
 	if err != nil {
 		return err
 	}
@@ -285,11 +284,10 @@ func (p Publish) eogsDate(rv *releaseVersion, releases releaseSet) (string, erro
 		if !matchExists {
 			return endOfSupportFor(p.Now()), nil
 		}
-		if lastPatchRelease.EndOfSupportDate != "" {
-			return lastPatchRelease.EndOfSupportDate, nil
-		} else {
+		if lastPatchRelease.EndOfSupportDate == "" {
 			return "", fmt.Errorf("previously published release %q does not have an End of General Support date", lastPatchRelease.Version)
 		}
+		return lastPatchRelease.EndOfSupportDate, nil
 	}
 	return "", nil
 }
@@ -388,11 +386,10 @@ func (p Publish) attachLicenseFile(slug string, releaseID int, version *releaseV
 		}
 
 		err = p.PivnetProductFilesService.AddToRelease(slug, releaseID, productFile.ID)
-		if err == nil {
-			return productFile.Name, nil
-		} else {
+		if err != nil {
 			return "", err
 		}
+		return productFile.Name, nil
 	}
 	return "", nil
 }
@@ -424,7 +421,7 @@ func (p Publish) determineVersion(releases releaseSet, version *releaseVersion) 
 		return version, nil
 	}
 
-	maxPublishedVersion, err := ReleaseVersionFromPublishedVersion(latestRelease.Version)
+	maxPublishedVersion, err := releaseVersionFromPublishedVersion(latestRelease.Version)
 	if err != nil {
 		return nil, fmt.Errorf("determineVersion: error parsing release version: %w", err)
 	}
@@ -454,9 +451,8 @@ func releaseType(window string, includesSecurityFix bool, v *releaseVersion) piv
 		default:
 			if includesSecurityFix {
 				return "Security Release"
-			} else {
-				return "Maintenance Release"
 			}
+			return "Maintenance Release"
 		}
 	default:
 		return "Developer Release"
@@ -516,10 +512,10 @@ type releaseVersion struct {
 	prereleaseVersion int
 }
 
-func ReleaseVersionFromBuildVersion(baseVersion *semver.Version, window string) (*releaseVersion, error) {
+func releaseVersionFromBuildVersion(baseVersion *semver.Version, window string) (*releaseVersion, error) {
 	v2, err := baseVersion.SetPrerelease("")
 	if err != nil {
-		return nil, fmt.Errorf("ReleaseVersionFromBuildVersion: error clearing prerelease of %q: %w", v2, err)
+		return nil, fmt.Errorf("releaseVersionFromBuildVersion: error clearing prerelease of %q: %w", v2, err)
 	}
 
 	rv := &releaseVersion{semver: v2, window: window, prereleaseVersion: 0}
@@ -527,26 +523,26 @@ func ReleaseVersionFromBuildVersion(baseVersion *semver.Version, window string) 
 	if window != "ga" {
 		rv, err = rv.SetPrereleaseVersion(1)
 		if err != nil {
-			return nil, fmt.Errorf("ReleaseVersionFromBuildVersion: error setting prerelease of %q to 1: %w", rv, err)
+			return nil, fmt.Errorf("releaseVersionFromBuildVersion: error setting prerelease of %q to 1: %w", rv, err)
 		}
 	}
 	return rv, nil
 }
 
-func ReleaseVersionFromPublishedVersion(versionString string) (*releaseVersion, error) {
+func releaseVersionFromPublishedVersion(versionString string) (*releaseVersion, error) {
 	version, err := semver.NewVersion(versionString)
 	if err != nil {
-		return nil, fmt.Errorf("ReleaseVersionFromPublishedVersion: unable to parse version %q: %w", versionString, err)
+		return nil, fmt.Errorf("releaseVersionFromPublishedVersion: unable to parse version %q: %w", versionString, err)
 	}
 	segments := strings.Split(version.Prerelease(), ".")
 	if len(segments) != 2 {
-		return nil, fmt.Errorf("ReleaseVersionFromPublishedVersion: expected prerelease to have a dot (%q)", version)
+		return nil, fmt.Errorf("releaseVersionFromPublishedVersion: expected prerelease to have a dot (%q)", version)
 	}
 
 	window := segments[0]
 	prereleaseVersion, err := strconv.Atoi(segments[len(segments)-1])
 	if err != nil {
-		return nil, fmt.Errorf("ReleaseVersionFromPublishedVersion: release has malformed prelease version (%s): %w", version, err)
+		return nil, fmt.Errorf("releaseVersionFromPublishedVersion: release has malformed prelease version (%s): %w", version, err)
 	}
 
 	return &releaseVersion{

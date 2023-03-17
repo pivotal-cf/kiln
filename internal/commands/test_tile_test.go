@@ -43,7 +43,7 @@ var _ = Describe("kiln test docker", func() {
 
 		Describe("successful creation creation", func() {
 			var (
-				fakeSshProvider *fakes.SshProvider
+				fakeSSHProvider *fakes.SSHProvider
 				helloTilePath   string
 			)
 
@@ -51,7 +51,7 @@ var _ = Describe("kiln test docker", func() {
 				t := GinkgoT()
 				helloTilePath = filepath.Join(helloTileDirectorySegments...)
 				writePasswordToStdIn(t)
-				fakeSshProvider = setupFakeSSHProvider()
+				fakeSSHProvider = setupfakeSSHProvider()
 				addTASFixtures(t, helloTilePath)
 			})
 
@@ -64,7 +64,7 @@ var _ = Describe("kiln test docker", func() {
 					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
 				})
 				It("properly executes tests", func() {
-					subjectUnderTest := commands.NewManifestTest(logger, fakeMobyClient, fakeSshProvider)
+					subjectUnderTest := commands.NewManifestTest(logger, fakeMobyClient, fakeSSHProvider)
 
 					err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
 					Expect(err).NotTo(HaveOccurred())
@@ -106,7 +106,7 @@ var _ = Describe("kiln test docker", func() {
 					fakeMobyClient = setupFakeMobyClient(testFailureMessage, 1)
 				})
 				It("returns an error", func() {
-					subjectUnderTest := commands.NewManifestTest(logger, fakeMobyClient, fakeSshProvider)
+					subjectUnderTest := commands.NewManifestTest(logger, fakeMobyClient, fakeSSHProvider)
 					err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
 					Expect(err).To(HaveOccurred())
 
@@ -123,9 +123,9 @@ var _ = Describe("kiln test docker", func() {
 		It("exits with an error if docker isn't running", func() {
 			fakeMobyClient := &fakes.MobyClient{}
 			fakeMobyClient.PingReturns(types.Ping{}, errors.New("docker not running"))
-			fakeSshThinger := fakes.SshProvider{}
-			fakeSshThinger.NeedsKeysReturns(false, nil)
-			subjectUnderTest := commands.NewManifestTest(logger, fakeMobyClient, &fakeSshThinger)
+			fakeSSHThinger := fakes.SSHProvider{}
+			fakeSSHThinger.NeedsKeysReturns(false, nil)
+			subjectUnderTest := commands.NewManifestTest(logger, fakeMobyClient, &fakeSSHThinger)
 			err := subjectUnderTest.Execute([]string{filepath.Join(helloTileDirectorySegments...)})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Docker daemon is not running"))
@@ -195,8 +195,8 @@ func writePasswordToStdIn(t testingT) {
 	os.Stdin = temporaryFile
 }
 
-func setupFakeSSHProvider() *fakes.SshProvider {
-	fakeSSHProvider := fakes.SshProvider{}
+func setupfakeSSHProvider() *fakes.SSHProvider {
+	fakeSSHProvider := fakes.SSHProvider{}
 	fakeSSHProvider.NeedsKeysReturns(false, nil)
 	return &fakeSSHProvider
 }

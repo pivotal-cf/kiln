@@ -39,6 +39,6 @@ func Test_outputContainsSubstring(t *testing.T) {
 		please.Expect(err).NotTo(HaveOccurred())
 
 		err = outputContainsSubstring(ctx, "stdout", "banana")
-		please.Expect(err).To(MatchError(Equal("expected substring \"banana\" not found in: \"Hello, world!\"")))
+		please.Expect(err).To(MatchError(Equal("expected substring \"banana\" not found in \"Hello, world!\"")))
 	})
 }

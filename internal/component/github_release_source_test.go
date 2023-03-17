@@ -243,7 +243,7 @@ func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 		please := NewWithT(t)
 
 		downloader := new(fakes.ReleaseAssetDownloader)
-		downloader.DownloadReleaseAssetReturns(nil, "", fmt.Errorf("this is a mistake! I'm not supposed to be here!"))
+		downloader.DownloadReleaseAssetReturns(nil, "", fmt.Errorf("this is a mistake! I'm not supposed to be here"))
 
 		releaseName := "bpm"
 		version := "v1.1.19"
