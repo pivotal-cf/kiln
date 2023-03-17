@@ -53,6 +53,7 @@ func (env *opsManagerEnvironment) loadFromEnvironmentVariables() error {
 }
 
 func (env *opsManagerEnvironment) fetchNetworksAndAvailabilityZones(ctx context.Context) (context.Context, error) {
+	//nolint:tagliatelle
 	var directorConfig struct {
 		AvailabilityZoneConfiguration []struct {
 			Name string `yaml:"name"`

@@ -25,6 +25,7 @@
       "reassign",
       "revive",
       "staticcheck",
+      "tagliatelle",
       "tenv",
       "thelper",
       "typecheck",
@@ -36,6 +37,14 @@
   "linters-settings": {
     "goconst": {
      "ignore-tests": true
+    },
+    "tagliatelle": {
+      "case": {
+        "rules": {
+          "yaml": "snake",
+          "json": "snake"
+        }
+      }
     }
   }
 }
