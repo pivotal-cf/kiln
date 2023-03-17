@@ -8,7 +8,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 )
 
-type SshClientCreator struct {
+type SSHClientCreator struct {
 	NewClientStub        func(io.ReadWriter) commands.SSHAgent
 	newClientMutex       sync.RWMutex
 	newClientArgsForCall []struct {
@@ -24,7 +24,7 @@ type SshClientCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *SshClientCreator) NewClient(arg1 io.ReadWriter) commands.SSHAgent {
+func (fake *SSHClientCreator) NewClient(arg1 io.ReadWriter) commands.SSHAgent {
 	fake.newClientMutex.Lock()
 	ret, specificReturn := fake.newClientReturnsOnCall[len(fake.newClientArgsForCall)]
 	fake.newClientArgsForCall = append(fake.newClientArgsForCall, struct {
@@ -43,26 +43,26 @@ func (fake *SshClientCreator) NewClient(arg1 io.ReadWriter) commands.SSHAgent {
 	return fakeReturns.result1
 }
 
-func (fake *SshClientCreator) NewClientCallCount() int {
+func (fake *SSHClientCreator) NewClientCallCount() int {
 	fake.newClientMutex.RLock()
 	defer fake.newClientMutex.RUnlock()
 	return len(fake.newClientArgsForCall)
 }
 
-func (fake *SshClientCreator) NewClientCalls(stub func(io.ReadWriter) commands.SSHAgent) {
+func (fake *SSHClientCreator) NewClientCalls(stub func(io.ReadWriter) commands.SSHAgent) {
 	fake.newClientMutex.Lock()
 	defer fake.newClientMutex.Unlock()
 	fake.NewClientStub = stub
 }
 
-func (fake *SshClientCreator) NewClientArgsForCall(i int) io.ReadWriter {
+func (fake *SSHClientCreator) NewClientArgsForCall(i int) io.ReadWriter {
 	fake.newClientMutex.RLock()
 	defer fake.newClientMutex.RUnlock()
 	argsForCall := fake.newClientArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *SshClientCreator) NewClientReturns(result1 commands.SSHAgent) {
+func (fake *SSHClientCreator) NewClientReturns(result1 commands.SSHAgent) {
 	fake.newClientMutex.Lock()
 	defer fake.newClientMutex.Unlock()
 	fake.NewClientStub = nil
@@ -71,7 +71,7 @@ func (fake *SshClientCreator) NewClientReturns(result1 commands.SSHAgent) {
 	}{result1}
 }
 
-func (fake *SshClientCreator) NewClientReturnsOnCall(i int, result1 commands.SSHAgent) {
+func (fake *SSHClientCreator) NewClientReturnsOnCall(i int, result1 commands.SSHAgent) {
 	fake.newClientMutex.Lock()
 	defer fake.newClientMutex.Unlock()
 	fake.NewClientStub = nil
@@ -85,7 +85,7 @@ func (fake *SshClientCreator) NewClientReturnsOnCall(i int, result1 commands.SSH
 	}{result1}
 }
 
-func (fake *SshClientCreator) Invocations() map[string][][]interface{} {
+func (fake *SSHClientCreator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.newClientMutex.RLock()
@@ -97,7 +97,7 @@ func (fake *SshClientCreator) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *SshClientCreator) recordInvocation(key string, args []interface{}) {
+func (fake *SSHClientCreator) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -109,4 +109,4 @@ func (fake *SshClientCreator) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ commands.SSHClientCreator = new(SshClientCreator)
+var _ commands.SSHClientCreator = new(SSHClientCreator)

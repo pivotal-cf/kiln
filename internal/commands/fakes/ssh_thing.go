@@ -7,7 +7,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 )
 
-type SshProvider struct {
+type SSHProvider struct {
 	AddKeyStub        func(commands.Key, []byte) error
 	addKeyMutex       sync.RWMutex
 	addKeyArgsForCall []struct {
@@ -49,7 +49,7 @@ type SshProvider struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *SshProvider) AddKey(arg1 commands.Key, arg2 []byte) error {
+func (fake *SSHProvider) AddKey(arg1 commands.Key, arg2 []byte) error {
 	var arg2Copy []byte
 	if arg2 != nil {
 		arg2Copy = make([]byte, len(arg2))
@@ -74,26 +74,26 @@ func (fake *SshProvider) AddKey(arg1 commands.Key, arg2 []byte) error {
 	return fakeReturns.result1
 }
 
-func (fake *SshProvider) AddKeyCallCount() int {
+func (fake *SSHProvider) AddKeyCallCount() int {
 	fake.addKeyMutex.RLock()
 	defer fake.addKeyMutex.RUnlock()
 	return len(fake.addKeyArgsForCall)
 }
 
-func (fake *SshProvider) AddKeyCalls(stub func(commands.Key, []byte) error) {
+func (fake *SSHProvider) AddKeyCalls(stub func(commands.Key, []byte) error) {
 	fake.addKeyMutex.Lock()
 	defer fake.addKeyMutex.Unlock()
 	fake.AddKeyStub = stub
 }
 
-func (fake *SshProvider) AddKeyArgsForCall(i int) (commands.Key, []byte) {
+func (fake *SSHProvider) AddKeyArgsForCall(i int) (commands.Key, []byte) {
 	fake.addKeyMutex.RLock()
 	defer fake.addKeyMutex.RUnlock()
 	argsForCall := fake.addKeyArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *SshProvider) AddKeyReturns(result1 error) {
+func (fake *SSHProvider) AddKeyReturns(result1 error) {
 	fake.addKeyMutex.Lock()
 	defer fake.addKeyMutex.Unlock()
 	fake.AddKeyStub = nil
@@ -102,7 +102,7 @@ func (fake *SshProvider) AddKeyReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *SshProvider) AddKeyReturnsOnCall(i int, result1 error) {
+func (fake *SSHProvider) AddKeyReturnsOnCall(i int, result1 error) {
 	fake.addKeyMutex.Lock()
 	defer fake.addKeyMutex.Unlock()
 	fake.AddKeyStub = nil
@@ -116,7 +116,7 @@ func (fake *SshProvider) AddKeyReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *SshProvider) GetKeys(arg1 ...string) (commands.Key, error) {
+func (fake *SSHProvider) GetKeys(arg1 ...string) (commands.Key, error) {
 	fake.getKeysMutex.Lock()
 	ret, specificReturn := fake.getKeysReturnsOnCall[len(fake.getKeysArgsForCall)]
 	fake.getKeysArgsForCall = append(fake.getKeysArgsForCall, struct {
@@ -135,26 +135,26 @@ func (fake *SshProvider) GetKeys(arg1 ...string) (commands.Key, error) {
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *SshProvider) GetKeysCallCount() int {
+func (fake *SSHProvider) GetKeysCallCount() int {
 	fake.getKeysMutex.RLock()
 	defer fake.getKeysMutex.RUnlock()
 	return len(fake.getKeysArgsForCall)
 }
 
-func (fake *SshProvider) GetKeysCalls(stub func(...string) (commands.Key, error)) {
+func (fake *SSHProvider) GetKeysCalls(stub func(...string) (commands.Key, error)) {
 	fake.getKeysMutex.Lock()
 	defer fake.getKeysMutex.Unlock()
 	fake.GetKeysStub = stub
 }
 
-func (fake *SshProvider) GetKeysArgsForCall(i int) []string {
+func (fake *SSHProvider) GetKeysArgsForCall(i int) []string {
 	fake.getKeysMutex.RLock()
 	defer fake.getKeysMutex.RUnlock()
 	argsForCall := fake.getKeysArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *SshProvider) GetKeysReturns(result1 commands.Key, result2 error) {
+func (fake *SSHProvider) GetKeysReturns(result1 commands.Key, result2 error) {
 	fake.getKeysMutex.Lock()
 	defer fake.getKeysMutex.Unlock()
 	fake.GetKeysStub = nil
@@ -164,7 +164,7 @@ func (fake *SshProvider) GetKeysReturns(result1 commands.Key, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *SshProvider) GetKeysReturnsOnCall(i int, result1 commands.Key, result2 error) {
+func (fake *SSHProvider) GetKeysReturnsOnCall(i int, result1 commands.Key, result2 error) {
 	fake.getKeysMutex.Lock()
 	defer fake.getKeysMutex.Unlock()
 	fake.GetKeysStub = nil
@@ -180,7 +180,7 @@ func (fake *SshProvider) GetKeysReturnsOnCall(i int, result1 commands.Key, resul
 	}{result1, result2}
 }
 
-func (fake *SshProvider) NeedsKeys() (bool, error) {
+func (fake *SSHProvider) NeedsKeys() (bool, error) {
 	fake.needsKeysMutex.Lock()
 	ret, specificReturn := fake.needsKeysReturnsOnCall[len(fake.needsKeysArgsForCall)]
 	fake.needsKeysArgsForCall = append(fake.needsKeysArgsForCall, struct {
@@ -198,19 +198,19 @@ func (fake *SshProvider) NeedsKeys() (bool, error) {
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *SshProvider) NeedsKeysCallCount() int {
+func (fake *SSHProvider) NeedsKeysCallCount() int {
 	fake.needsKeysMutex.RLock()
 	defer fake.needsKeysMutex.RUnlock()
 	return len(fake.needsKeysArgsForCall)
 }
 
-func (fake *SshProvider) NeedsKeysCalls(stub func() (bool, error)) {
+func (fake *SSHProvider) NeedsKeysCalls(stub func() (bool, error)) {
 	fake.needsKeysMutex.Lock()
 	defer fake.needsKeysMutex.Unlock()
 	fake.NeedsKeysStub = stub
 }
 
-func (fake *SshProvider) NeedsKeysReturns(result1 bool, result2 error) {
+func (fake *SSHProvider) NeedsKeysReturns(result1 bool, result2 error) {
 	fake.needsKeysMutex.Lock()
 	defer fake.needsKeysMutex.Unlock()
 	fake.NeedsKeysStub = nil
@@ -220,7 +220,7 @@ func (fake *SshProvider) NeedsKeysReturns(result1 bool, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *SshProvider) NeedsKeysReturnsOnCall(i int, result1 bool, result2 error) {
+func (fake *SSHProvider) NeedsKeysReturnsOnCall(i int, result1 bool, result2 error) {
 	fake.needsKeysMutex.Lock()
 	defer fake.needsKeysMutex.Unlock()
 	fake.NeedsKeysStub = nil
@@ -236,7 +236,7 @@ func (fake *SshProvider) NeedsKeysReturnsOnCall(i int, result1 bool, result2 err
 	}{result1, result2}
 }
 
-func (fake *SshProvider) Invocations() map[string][][]interface{} {
+func (fake *SSHProvider) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.addKeyMutex.RLock()
@@ -252,7 +252,7 @@ func (fake *SshProvider) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *SshProvider) recordInvocation(key string, args []interface{}) {
+func (fake *SSHProvider) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -264,4 +264,4 @@ func (fake *SshProvider) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ commands.SSHProvider = new(SshProvider)
+var _ commands.SSHProvider = new(SSHProvider)
