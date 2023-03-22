@@ -1,9 +1,14 @@
 package commands_test
 
 import (
+	"context"
+	"github.com/google/go-github/v50/github"
+	"github.com/migueleliasweb/go-github-mock/src/mock"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
@@ -185,6 +190,54 @@ func TestOSM_Execute(t *testing.T) {
 		Eventually(outBuffer).Should(gbytes.Say("  interactions:"))
 		Eventually(outBuffer).Should(gbytes.Say("  - Distributed - Calling Existing Classes"))
 		Eventually(outBuffer).Should(gbytes.Say("  other-distribution: ./lemon-offline-buildpack-1.2.3.zip"))
+	})
+
+	t.Run("it will fetch only a single package if only flag and url is specified", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		testPackage := "zebes-tallon"
+		testUrl := "https://www.github.com/samus/zebes-tallon"
+		splitString := strings.SplitN(testUrl, "/", -1)
+		testRepo := splitString[len(splitString)-1]
+		testOwner := splitString[len(splitString)-2]
+		testVersion := "1.2.3"
+
+		mockClient := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.GetReposReleasesLatestByOwnerByRepo,
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					_, err := w.Write(mock.MustMarshal(github.RepositoryRelease{
+						Name: &testVersion,
+					}),
+					)
+					if err != nil {
+						return
+					}
+				}),
+			),
+		)
+
+		outBuffer := gbytes.NewBuffer()
+		defer outBuffer.Close()
+		rs := new(fakes.ReleaseStorage)
+		logger := log.New(outBuffer, "", 0)
+		c := github.NewClient(mockClient)
+		ctx := context.Background()
+		testLatestRelease, _, _ := c.Repositories.GetLatestRelease(ctx, testOwner, testRepo)
+		testName := testLatestRelease.GetName()
+
+		cmd := commands.NewOSMWithGHClient(logger, rs, c)
+		Expect(cmd.Execute([]string{"--only", testPackage, "--url", testUrl, "--no-download"})).Error().ToNot(HaveOccurred())
+
+		Eventually(outBuffer).Should(gbytes.Say("other:zebes-tallon:"+testName+":"), "output should contain special formatted row")
+		Eventually(outBuffer).Should(gbytes.Say("  name: zebes-tallon"))
+		Eventually(outBuffer).Should(gbytes.Say("  version: " + testName))
+		Eventually(outBuffer).Should(gbytes.Say("  repository: Other"))
+		Eventually(outBuffer).Should(gbytes.Say("  url: https://www.github.com/samus/zebes-tallon"))
+		Eventually(outBuffer).Should(gbytes.Say("  license: Apache2.0"))
+		Eventually(outBuffer).Should(gbytes.Say("  interactions:"))
+		Eventually(outBuffer).Should(gbytes.Say("  - Distributed - Calling Existing Classes"))
+		Eventually(outBuffer).Should(gbytes.Say("  other-distribution: ./zebes-tallon-" + testName + ".zip"))
 	})
 }
 
