@@ -207,10 +207,9 @@ func (u ManifestTest) Execute(args []string) error {
 		return err
 	}
 
-	scanner = bufio.NewScanner(out)
-	for scanner.Scan() {
-		text := scanner.Text()
-		u.logger.Println(text)
+	_, err = io.Copy(u.logger.Writer(), out)
+	if err != nil {
+		return err
 	}
 
 	statusCh, errCh := u.mobi.ContainerWait(u.ctx, createResp.ID, container.WaitConditionNotRunning)
