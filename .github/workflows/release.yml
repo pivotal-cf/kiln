@@ -27,6 +27,11 @@ jobs:
 
       - name: Build
         run: go build ./...
+        
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.RELENG_CI_BOT_KEY }}
 
       - name: Unit Test
         env:
