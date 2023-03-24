@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/cucumber/godog"
 	"io"
 	"os"
 	"os/exec"
@@ -41,6 +42,26 @@ func tileRepoPath(ctx context.Context) (string, error) {
 
 func setTileRepoPath(ctx context.Context, p string) context.Context {
 	return context.WithValue(ctx, tileRepoKey, p)
+}
+
+func setKilnBuildPath(ctx context.Context) context.Context {
+	tempKiln := filepath.Join(os.TempDir(), "kiln")
+	return context.WithValue(ctx, kilnBuildCacheKey, tempKiln)
+}
+
+func kilnBuildPath(ctx context.Context) string {
+	value := ctx.Value(kilnBuildCacheKey)
+	p, ok := value.(string)
+	if !ok {
+		_, _ = os.Stderr.WriteString("failed to get path for binary built of kiln")
+		os.Exit(1)
+	}
+	return p
+}
+
+func removeKilnBuild(ctx context.Context, _ *godog.Scenario, err error) (context.Context, error) {
+	_ = os.RemoveAll(filepath.Dir(kilnBuildPath(ctx)))
+	return ctx, err
 }
 
 // defaultFilePathForTile returns a path based on the default output tile value of bake

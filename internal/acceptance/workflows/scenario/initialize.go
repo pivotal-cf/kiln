@@ -131,9 +131,11 @@ func InitializeTileSourceCode(ctx *godog.ScenarioContext) { initializeTileSource
 func initializeTileSourceCode(ctx scenarioContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		err := exec.CommandContext(ctx, "git", "submodule", "update", "--init", "--recursive").Run()
+		ctx = setKilnBuildPath(ctx)
 		return setTileRepoPath(ctx, "hello-tile"), err
 	})
 	ctx.After(resetTileRepository)
+	ctx.After(removeKilnBuild)
 
 	ctx.Step(regexp.MustCompile(`^kiln validate succeeds$`), kilnValidateSucceeds)
 
