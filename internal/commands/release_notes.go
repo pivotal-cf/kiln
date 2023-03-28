@@ -98,13 +98,6 @@ func (r ReleaseNotes) Execute(args []string) error {
 	}
 	data.ReleaseDate, _ = r.parseReleaseDate()
 
-	nvm := data.Version
-	if strings.Contains(nvm.Prerelease(), "build") {
-		v, _ := nvm.SetPrerelease("")
-		nvm = &v
-	}
-	data.Version = nvm
-
 	if r.Options.DocsFile == "" {
 		return r.writeNotes(r.Writer, data)
 	}

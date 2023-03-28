@@ -5,7 +5,7 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/Masterminds/semver"
+	"github.com/blang/semver/v4"
 	"github.com/google/go-github/v40/github"
 	. "github.com/onsi/gomega"
 
@@ -19,7 +19,7 @@ func Test_defaultReleaseNotesTemplate(t *testing.T) {
 		please.Expect(err).NotTo(HaveOccurred())
 		var b bytes.Buffer
 		err = tmp.Execute(&b, Data{
-			Version: semver.MustParse("0.0"),
+			Version: semver.MustParse("0.0.0"),
 			Components: []BOSHReleaseData{
 				{
 					ComponentLock: component.Lock{Name: "banana", Version: "1.2"},

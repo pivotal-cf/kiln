@@ -8,6 +8,8 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/blang/semver/v4"
+
 	. "github.com/onsi/gomega"
 
 	"github.com/go-git/go-billy/v5/memfs"
@@ -418,3 +420,43 @@ func githubResponse(t *testing.T, status int) *github.Response {
 func intPtr(n int) *int       { return &n }
 func int64Ptr(n int64) *int64 { return &n }
 func strPtr(n string) *string { return &n }
+
+func TestData_WriteVersionNotes(t *testing.T) {
+	t.Run("version has the correct header", func(t *testing.T) {
+		please := NewWithT(t)
+		data := Data{
+			Version: semver.MustParse("4.0.0+LTS-T"),
+		}
+
+		releaseNotes, err := data.WriteVersionNotes()
+		please.Expect(err).NotTo(HaveOccurred())
+
+		// Note having '+' in the ID is not spec compliant with html4 but is for html5. So we may need
+		// to change this.
+		please.Expect(releaseNotes.Notes).To(ContainSubstring("### <a id='4.0.0+LTS-T'></a> 4.0.0+LTS-T"))
+	})
+
+	t.Run("version has a build pre-release suffix", func(t *testing.T) {
+		please := NewWithT(t)
+		data := Data{
+			Version: semver.MustParse("4.0.0-build.3"),
+		}
+
+		releaseNotes, err := data.WriteVersionNotes()
+		please.Expect(err).NotTo(HaveOccurred())
+
+		please.Expect(releaseNotes.Notes).To(ContainSubstring("### <a id='4.0.0'></a> 4.0.0"))
+	})
+
+	t.Run("version has a build pre-release and build metadata", func(t *testing.T) {
+		please := NewWithT(t)
+		data := Data{
+			Version: semver.MustParse("4.0.0-build.3+LTS-T"),
+		}
+
+		releaseNotes, err := data.WriteVersionNotes()
+		please.Expect(err).NotTo(HaveOccurred())
+
+		please.Expect(releaseNotes.Notes).To(ContainSubstring("### <a id='4.0.0+LTS-T'></a> 4.0.0+LTS-T"))
+	})
+}

@@ -16,7 +16,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/blang/semver/v4"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/storer"
@@ -42,7 +42,7 @@ func (cd BOSHReleaseData) HasReleaseNotes() bool {
 }
 
 type Data struct {
-	Version     *semver.Version
+	Version     semver.Version
 	ReleaseDate time.Time
 
 	Issues     []*github.Issue
@@ -62,6 +62,7 @@ func (notes Data) WriteVersionNotes() (TileRelease, error) {
 	if err != nil {
 		return TileRelease{}, err
 	}
+	notes.Version.Pre = nil
 	var buf bytes.Buffer
 	err = noteTemplate.Execute(&buf, notes)
 	if err != nil {
@@ -259,32 +260,32 @@ type revisionResolver interface {
 	ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, error)
 }
 
-func (r fetchNotesData) fetchHistoricFiles(kilnfilePath, start, end string) (klInitial, klFinal cargo.KilnfileLock, kfFinal cargo.Kilnfile, _ *semver.Version, _ error) {
+func (r fetchNotesData) fetchHistoricFiles(kilnfilePath, start, end string) (klInitial, klFinal cargo.KilnfileLock, kfFinal cargo.Kilnfile, _ semver.Version, _ error) {
 	initialCommitSHA, err := r.ResolveRevision(plumbing.Revision(start))
 	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to resolve inital revision %q: %w", start, err)
+		return klInitial, klFinal, kfFinal, semver.Version{}, fmt.Errorf("failed to resolve inital revision %q: %w", start, err)
 	}
 	finalCommitSHA, err := r.ResolveRevision(plumbing.Revision(end))
 	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to resolve final revision %q: %w", end, err)
+		return klInitial, klFinal, kfFinal, semver.Version{}, fmt.Errorf("failed to resolve final revision %q: %w", end, err)
 	}
 
 	_, klInitial, err = r.historicKilnfile(r.Storer, *initialCommitSHA, kilnfilePath)
 	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to get kilnfile from initial commit: %w", err)
+		return klInitial, klFinal, kfFinal, semver.Version{}, fmt.Errorf("failed to get kilnfile from initial commit: %w", err)
 	}
 	kfFinal, klFinal, err = r.historicKilnfile(r.Storer, *finalCommitSHA, kilnfilePath)
 	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to get kilnfile from final commit: %w", err)
+		return klInitial, klFinal, kfFinal, semver.Version{}, fmt.Errorf("failed to get kilnfile from final commit: %w", err)
 	}
 	version, err := r.historicVersion(r.Storer, *finalCommitSHA, kilnfilePath)
 	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to get version file from final commit: %w", err)
+		return klInitial, klFinal, kfFinal, semver.Version{}, fmt.Errorf("failed to get version file from final commit: %w", err)
 	}
 
-	v, err := semver.NewVersion(version)
+	v, err := semver.ParseTolerant(version)
 	if err != nil {
-		return klInitial, klFinal, kfFinal, nil, fmt.Errorf("failed to parse version: %w", err)
+		return klInitial, klFinal, kfFinal, semver.Version{}, fmt.Errorf("failed to parse version: %w", err)
 	}
 
 	return klInitial, klFinal, kfFinal, v, nil

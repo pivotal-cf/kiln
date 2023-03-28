@@ -1,7 +1,4 @@
-{{with $releaseVersion := (printf "%d.%d.%d" .Version.Major .Version.Minor .Version.Patch) -}}
-
-### <a id='{{ $releaseVersion }}'></a> {{ $releaseVersion }}
-{{- end }}
+### <a id='{{ .Version }}'></a> {{ .Version }}
 
 {{ if not .ReleaseDate.IsZero }}**Release Date:** {{ .ReleaseDate.Format "01/02/2006" }}{{ end }}
 

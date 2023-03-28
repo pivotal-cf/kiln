@@ -9,7 +9,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/Masterminds/semver"
+	"github.com/blang/semver/v4"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -78,7 +78,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 				issuesQuery = iq
 				return notes.Data{
 					ReleaseDate: mustParseTime(time.Parse(releaseDateFormat, "2021-11-04")),
-					Version:     semver.MustParse("0.1.0-build.50000"),
+					Version:     semver.MustParse("0.1.0"),
 					Issues: []*github.Issue{
 						{Title: strPtr("**[Feature Improvement]** Reduce default log-cache max per source")},
 						{Title: strPtr("**[Bug Fix]** banana metadata migration does not fail on upgrade from previous LTS")},
@@ -132,9 +132,6 @@ func TestReleaseNotes_Execute(t *testing.T) {
 
 		t.Log(out.String())
 		please.Expect(out.String()).To(Equal(releaseNotesExpectedOutput))
-	})
-
-	t.Run("when updating a docs file", func(t *testing.T) {
 	})
 }
 

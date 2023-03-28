@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/aws/aws-sdk-go v1.44.95
+	github.com/blang/semver/v4 v4.0.0
 	github.com/cloudfoundry/bosh-cli v6.4.1+incompatible
 	github.com/cloudfoundry/bosh-utils v0.0.0-20210130100352-ab14c90ad9f2
 	github.com/cucumber/godog v0.12.5
@@ -14,10 +15,12 @@ require (
 	github.com/go-git/go-billy/v5 v5.3.1
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/google/go-github/v40 v40.0.0
+	github.com/google/go-github/v50 v50.2.0
 	github.com/hashicorp/vault/api v1.9.0
 	github.com/hashicorp/vault/api/auth/ldap v0.4.0
 	github.com/masterminds/sprig v2.22.0+incompatible
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.5.0
+	github.com/migueleliasweb/go-github-mock v0.0.16
 	github.com/moby/buildkit v0.11.2
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.18.1
@@ -44,7 +47,6 @@ require (
 	github.com/VividCortex/ewma v1.1.1 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
-	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/charlievieth/fs v0.0.1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.5 // indirect
@@ -64,8 +66,6 @@ require (
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
-	github.com/go-kit/log v0.2.0 // indirect
-	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -74,7 +74,6 @@ require (
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-github/v50 v50.2.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
@@ -104,7 +103,6 @@ require (
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.10 // indirect
-	github.com/migueleliasweb/go-github-mock v0.0.16 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect

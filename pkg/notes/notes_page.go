@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Masterminds/semver"
+	"github.com/blang/semver/v4"
 )
 
 const DefaultReleasesSentinel = "\n## <a id='releases'></a> Releases\n\n"
@@ -108,11 +108,11 @@ func (page *Page) Add(versionNote TileRelease) error {
 		if err != nil {
 			continue
 		}
-		if nv.Equal(tv) {
+		if nv.EQ(tv) {
 			page.Releases[i] = versionNote
 			return nil
 		}
-		if !nv.GreaterThan(tv) {
+		if !nv.GT(tv) {
 			continue
 		}
 		page.Releases = append(page.Releases[:i], append([]TileRelease{versionNote}, page.Releases[i:]...)...)
@@ -148,8 +148,8 @@ type TileRelease struct {
 	Notes   string
 }
 
-func (notes TileRelease) version() (*semver.Version, error) {
-	return semver.NewVersion(notes.Version)
+func (notes TileRelease) version() (semver.Version, error) {
+	return semver.ParseTolerant(notes.Version)
 }
 
 func stringsSliceContains(slice []string, value string) bool {
