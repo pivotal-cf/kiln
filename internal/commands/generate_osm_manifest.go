@@ -136,7 +136,7 @@ func (cmd *OSM) Execute(args []string) error {
 		if cmd.gc == nil {
 			cmd.gc = getClient(cmd.Options.GithubToken, ctx)
 		}
-		entry, s, err := cmd.singlePackage(cmd.Options.Only, cmd.Options.Url, cmd.Options.NoDownload, ctx)
+		entry, s, err := cmd.singlePackage(cmd.Options.Only, cmd.Options.Url, ctx)
 		out[s] = entry
 		if err != nil {
 			return fmt.Errorf("could not read single package for %s: %s", cmd.Options.Only, err)
@@ -161,7 +161,7 @@ func (cmd *OSM) Usage() jhanda.Usage {
 	}
 }
 
-func (cmd *OSM) singlePackage(name string, url string, noDownload bool, ctx context.Context) (osmEntry, string, error) {
+func (cmd *OSM) singlePackage(name string, url string, ctx context.Context) (osmEntry, string, error) {
 	//setting up for API call
 	splitString := strings.SplitN(url, "/", -1)
 	repo := splitString[len(splitString)-1]
@@ -186,16 +186,18 @@ func (cmd *OSM) singlePackage(name string, url string, noDownload bool, ctx cont
 		OtherDistribution: fmt.Sprintf("./%s-%s.zip", name, version),
 	}
 
-	if !noDownload {
-		repoPath := fmt.Sprintf("/tmp/osm/%s", name)
-		err := cloneGitRepo(url, repoPath, cmd.Options.GithubToken)
-		if err != nil {
-			return osmEntry{}, "nil", fmt.Errorf("could not clone repo %s, %s", url, err)
-		}
-		err = zipRepo(repoPath, fmt.Sprintf("%s-%s.zip", name, release.GetName()))
-		if err != nil {
-			return osmEntry{}, "nil", fmt.Errorf("could not zip repo at %s, %s", repoPath, err)
-		}
+	if cmd.Options.NoDownload {
+		return entry, s, nil
+	}
+
+	repoPath := fmt.Sprintf("/tmp/osm/%s", name)
+	err = cloneGitRepo(url, repoPath, cmd.Options.GithubToken)
+	if err != nil {
+		return osmEntry{}, "nil", fmt.Errorf("could not clone repo %s, %s", url, err)
+	}
+	err = zipRepo(repoPath, fmt.Sprintf("%s-%s.zip", name, release.GetName()))
+	if err != nil {
+		return osmEntry{}, "nil", fmt.Errorf("could not zip repo at %s, %s", repoPath, err)
 	}
 
 	return entry, s, nil
