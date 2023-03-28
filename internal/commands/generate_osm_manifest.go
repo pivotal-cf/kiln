@@ -76,7 +76,7 @@ func (cmd *OSM) Execute(args []string) error {
 
 	out := map[string]osmEntry{}
 
-	if cmd.Options.Only == "" {
+	if cmd.Options.Only == "" && cmd.Options.Url == "" {
 		kfPath := cargo.FullKilnfilePath(cmd.Options.Kilnfile)
 
 		kilnfile, kilnfileLock, err := cargo.GetKilnfiles(kfPath)
@@ -124,8 +124,14 @@ func (cmd *OSM) Execute(args []string) error {
 		}
 	} else {
 		// assumes --only was specified
-		if cmd.Options.Url == "" || !strings.Contains(cmd.Options.Url, "github.com") {
-			return fmt.Errorf("--only must be specified with a Github --url, provide a --url for the Github repository of specified package")
+		if cmd.Options.Url == "" {
+			return fmt.Errorf("missing --url, must provide a --url for the Github repository of specified package")
+		}
+		if cmd.Options.Only == "" {
+			return fmt.Errorf("missing --only, must provide a --only for the specified package of the Github repository")
+		}
+		if !strings.Contains(cmd.Options.Url, "github.com") {
+			return fmt.Errorf("invalid --url, must provide a valid Github --url for specified package")
 		}
 		if cmd.gc == nil {
 			cmd.gc = getClient(cmd.Options.GithubToken, ctx)
@@ -139,7 +145,7 @@ func (cmd *OSM) Execute(args []string) error {
 
 	o, err := yaml.Marshal(out)
 	if err != nil {
-		return fmt.Errorf("coudl not marshal output into yaml: %s", err)
+		return fmt.Errorf("could not marshal output into yaml: %s", err)
 	}
 
 	cmd.outLogger.Printf("%s", o)

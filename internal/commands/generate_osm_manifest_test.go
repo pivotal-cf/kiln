@@ -239,6 +239,98 @@ func TestOSM_Execute(t *testing.T) {
 		Eventually(outBuffer).Should(gbytes.Say("  - Distributed - Calling Existing Classes"))
 		Eventually(outBuffer).Should(gbytes.Say("  other-distribution: ./zebes-tallon-" + testName + ".zip"))
 	})
+
+	t.Run("it will fail if only flag is specified without a url flag", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		testPackage := "zebes-tallon"
+		testVersion := "1.2.3"
+		mockClient := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.GetReposReleasesLatestByOwnerByRepo,
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					_, err := w.Write(mock.MustMarshal(github.RepositoryRelease{
+						Name: &testVersion,
+					}),
+					)
+					if err != nil {
+						return
+					}
+				}),
+			),
+		)
+
+		outBuffer := gbytes.NewBuffer()
+		defer outBuffer.Close()
+		rs := new(fakes.ReleaseStorage)
+		logger := log.New(outBuffer, "", 0)
+		c := github.NewClient(mockClient)
+
+		cmd := commands.NewOSMWithGHClient(logger, rs, c)
+		Expect(cmd.Execute([]string{"--only", testPackage, "--no-download"})).Error().To(MatchError("missing --url, must provide a --url for the Github repository of specified package"))
+	})
+
+	t.Run("it will fail if url flag is specified without an only flag", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		testUrl := "https://www.github.com/samus/zebes-tallon"
+		testVersion := "1.2.3"
+		mockClient := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.GetReposReleasesLatestByOwnerByRepo,
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					_, err := w.Write(mock.MustMarshal(github.RepositoryRelease{
+						Name: &testVersion,
+					}),
+					)
+					if err != nil {
+						return
+					}
+				}),
+			),
+		)
+
+		outBuffer := gbytes.NewBuffer()
+		defer outBuffer.Close()
+		rs := new(fakes.ReleaseStorage)
+		logger := log.New(outBuffer, "", 0)
+		c := github.NewClient(mockClient)
+
+		cmd := commands.NewOSMWithGHClient(logger, rs, c)
+		Expect(cmd.Execute([]string{"--url", testUrl, "--no-download"})).Error().To(MatchError("missing --only, must provide a --only for the specified package of the Github repository"))
+	})
+
+	t.Run("it will fail if only flag is specified with an invalid url flag", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		testPackage := "zebes-tallon"
+		testUrl := "actual-garbage"
+		testVersion := "1.2.3"
+		mockClient := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.GetReposReleasesLatestByOwnerByRepo,
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					_, err := w.Write(mock.MustMarshal(github.RepositoryRelease{
+						Name: &testVersion,
+					}),
+					)
+					if err != nil {
+						return
+					}
+				}),
+			),
+		)
+
+		outBuffer := gbytes.NewBuffer()
+		defer outBuffer.Close()
+		rs := new(fakes.ReleaseStorage)
+		logger := log.New(outBuffer, "", 0)
+		c := github.NewClient(mockClient)
+
+		cmd := commands.NewOSMWithGHClient(logger, rs, c)
+		Expect(cmd.Execute([]string{"--only", testPackage, "--url", testUrl, "--no-download"})).Error().To(MatchError("invalid --url, must provide a valid Github --url for specified package"))
+	})
+
 }
 
 func writeYAML(t *testing.T, path string, data interface{}) {
