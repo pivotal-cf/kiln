@@ -197,11 +197,12 @@ func TestOSM_Execute(t *testing.T) {
 
 		testPackage := "zebes-tallon"
 		testUrl := "https://www.github.com/samus/zebes-tallon"
+
 		splitString := strings.SplitN(testUrl, "/", -1)
 		testRepo := splitString[len(splitString)-1]
 		testOwner := splitString[len(splitString)-2]
-		testVersion := "1.2.3"
 
+		testVersion := "1.2.3"
 		mockClient := mock.NewMockedHTTPClient(
 			mock.WithRequestMatchHandler(
 				mock.GetReposReleasesLatestByOwnerByRepo,

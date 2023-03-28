@@ -104,14 +104,9 @@ func (cmd *OSM) Execute(args []string) error {
 				continue
 			}
 
-			repoPath := fmt.Sprintf("/tmp/osm/%s", r.Name)
-			err = cloneGitRepo(url, repoPath, cmd.Options.GithubToken)
+			err = downloadAndZip(r.Name, url, cmd.Options.GithubToken, lockVersion)
 			if err != nil {
-				return fmt.Errorf("could not clone repo %s, %s", url, err)
-			}
-			err = zipRepo(repoPath, fmt.Sprintf("%s-%s.zip", r.Name, lockVersion))
-			if err != nil {
-				return fmt.Errorf("could not zip repo at %s, %s", repoPath, err)
+				return fmt.Errorf("download and zip failed %s", err)
 			}
 		}
 	} else {
@@ -171,14 +166,9 @@ func (cmd *OSM) singlePackage(name string, url string, ctx context.Context) (osm
 		return entry, s, nil
 	}
 
-	repoPath := fmt.Sprintf("/tmp/osm/%s", name)
-	err = cloneGitRepo(url, repoPath, cmd.Options.GithubToken)
+	err = downloadAndZip(name, url, cmd.Options.GithubToken, release.GetName())
 	if err != nil {
-		return osmEntry{}, "nil", fmt.Errorf("could not clone repo %s, %s", url, err)
-	}
-	err = zipRepo(repoPath, fmt.Sprintf("%s-%s.zip", name, release.GetName()))
-	if err != nil {
-		return osmEntry{}, "nil", fmt.Errorf("could not zip repo at %s, %s", repoPath, err)
+		return osmEntry{}, "nil", fmt.Errorf("download and zip failed %s", err)
 	}
 
 	return entry, s, nil
@@ -287,6 +277,19 @@ func formatOSMEntry(name, lockVersion, url string) (string, osmEntry) {
 		OtherDistribution: fmt.Sprintf("./%s-%s.zip", name, lockVersion),
 	}
 	return s, e
+}
+
+func downloadAndZip(name, url, githubToken, lockVersion string) error {
+	repoPath := fmt.Sprintf("/tmp/osm/%s", name)
+	err := cloneGitRepo(url, repoPath, githubToken)
+	if err != nil {
+		return fmt.Errorf("could not clone repo %s, %s", url, err)
+	}
+	err = zipRepo(repoPath, fmt.Sprintf("%s-%s.zip", name, lockVersion))
+	if err != nil {
+		return fmt.Errorf("could not zip repo at %s, %s", repoPath, err)
+	}
+	return nil
 }
 
 type osmEntry struct {
