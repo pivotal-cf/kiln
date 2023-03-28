@@ -97,16 +97,8 @@ func (cmd *OSM) Execute(args []string) error {
 				url = getURLFromLock(lock)
 			}
 
-			s := fmt.Sprintf("other:%s:%s", r.Name, lockVersion)
-			out[s] = osmEntry{
-				Name:              r.Name,
-				Version:           lockVersion,
-				Repository:        "Other",
-				URL:               url,
-				License:           "Apache2.0",
-				Interactions:      []string{"Distributed - Calling Existing Classes"},
-				OtherDistribution: fmt.Sprintf("./%s-%s.zip", r.Name, lockVersion),
-			}
+			s, e := formatOSMEntry(r.Name, lockVersion, url)
+			out[s] = e
 
 			if cmd.Options.NoDownload {
 				continue
@@ -173,18 +165,7 @@ func (cmd *OSM) singlePackage(name string, url string, ctx context.Context) (osm
 		return osmEntry{}, "", fmt.Errorf("unable to find repository for: %s", release.GetName())
 	}
 
-	version := release.GetName()
-
-	s := fmt.Sprintf("other:%s:%s", name, version)
-	entry := osmEntry{
-		Name:              name,
-		Version:           version,
-		Repository:        "Other",
-		URL:               url,
-		License:           "Apache2.0",
-		Interactions:      []string{"Distributed - Calling Existing Classes"},
-		OtherDistribution: fmt.Sprintf("./%s-%s.zip", name, version),
-	}
+	s, entry := formatOSMEntry(name, release.GetName(), url)
 
 	if cmd.Options.NoDownload {
 		return entry, s, nil
@@ -292,6 +273,20 @@ func specWithoutOffline(cs cargo.ComponentSpec) cargo.ComponentSpec {
 func getURLFromLock(l cargo.ComponentLock) string {
 	url := strings.Replace(l.RemotePath, "https://bosh.io/d/github.com", "https://github.com", 1)
 	return url[:strings.Index(url, "?")]
+}
+
+func formatOSMEntry(name, lockVersion, url string) (string, osmEntry) {
+	s := fmt.Sprintf("other:%s:%s", name, lockVersion)
+	e := osmEntry{
+		Name:              name,
+		Version:           lockVersion,
+		Repository:        "Other",
+		URL:               url,
+		License:           "Apache2.0",
+		Interactions:      []string{"Distributed - Calling Existing Classes"},
+		OtherDistribution: fmt.Sprintf("./%s-%s.zip", name, lockVersion),
+	}
+	return s, e
 }
 
 type osmEntry struct {
