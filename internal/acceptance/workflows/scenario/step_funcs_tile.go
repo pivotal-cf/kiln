@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
+	"log"
 	"os"
 	"strings"
 
@@ -41,7 +43,15 @@ func theTileContains(ctx context.Context, table *godog.Table) error {
 		for _, cell := range row.Cells {
 			_, err := tile.Open(cell.Value)
 			if err != nil {
-				return fmt.Errorf("tile did not contain file %s", cell.Value)
+				var contents []string
+				err2 := fs.WalkDir(tile, ".", func(path string, _ fs.DirEntry, err error) error {
+					contents = append(contents, path)
+					return err
+				})
+				if err2 != nil {
+					log.Fatal(err2)
+				}
+				return fmt.Errorf("tile did not contain file %s. Tile contents: %v", cell.Value, contents)
 			}
 		}
 	}

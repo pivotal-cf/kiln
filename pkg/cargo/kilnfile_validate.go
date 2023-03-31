@@ -42,7 +42,7 @@ func ensureRemoteSourceExistsForEachReleaseLock(spec Kilnfile, lock KilnfileLock
 	var result []error
 	for _, release := range lock.Releases {
 		if releaseSourceIndex := slices.IndexFunc(spec.ReleaseSources, func(config ReleaseSourceConfig) bool {
-			return config.ID == release.RemoteSource || (config.ID == "" && config.Type == release.RemoteSource)
+			return ReleaseSourceID(config) == release.RemoteSource
 		}); releaseSourceIndex < 0 {
 			result = append(result,
 				fmt.Errorf("release source %q for release lock %q not found in Kilnfile", release.RemoteSource, release.Name))

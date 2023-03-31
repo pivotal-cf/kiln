@@ -164,6 +164,22 @@ func TestValidate_release_sources(t *testing.T) {
 		})
 		please.Expect(results).To(HaveLen(1))
 	})
+	t.Run("github release source", func(t *testing.T) {
+		please := NewWithT(t)
+		results := Validate(Kilnfile{
+			ReleaseSources: []ReleaseSourceConfig{
+				{Org: "crhntr", Type: ReleaseSourceTypeGithub},
+			},
+			Releases: []ComponentSpec{
+				{Name: "hello-tile", GitHubRepository: "https://github.com/crhntr/hello-tile"},
+			},
+		}, KilnfileLock{
+			Releases: []ComponentLock{
+				{Name: "hello-tile", Version: "1.2.3", RemoteSource: "crhntr"},
+			},
+		})
+		please.Expect(results).To(HaveLen(0))
+	})
 }
 
 func TestValidate_checkComponentVersionsAndConstraint(t *testing.T) {

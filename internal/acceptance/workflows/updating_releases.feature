@@ -1,6 +1,6 @@
 Feature: As a dependabot, I want to update a BOSH Release
   Scenario: Find a version on GitHub
-    Given I have a "hello-tile" repository checked out at v0.1.1
+    Given I have a "hello-tile" repository checked out at v0.1.7
     And GitHub repository "crhntr/hello-release" has release with tag "v0.1.4"
     When I invoke kiln
       | find-release-version                      |
@@ -17,14 +17,14 @@ Feature: As a dependabot, I want to update a BOSH Release
     Then stdout contains substring: "1.1.18"
 
   Scenario: Update a component to a new release
-    Given I have a "hello-tile" repository checked out at v0.1.1
-    And the Kilnfile.lock specifies version "v0.1.3" for release "hello-release"
-    And GitHub repository "crhntr/hello-release" has release with tag "v0.1.4"
+    Given I have a "hello-tile" repository checked out at v0.1.2
+    And the Kilnfile.lock specifies version "v0.1.4" for release "hello-release"
+    And GitHub repository "crhntr/hello-release" has release with tag "v0.1.5"
     When I invoke kiln
       | update-release                            |
       | --name=hello-release                      |
-      | --version=0.1.4                           |
+      | --version=0.1.5                           |
       | --without-download                        |
       | --variable=github_token="${GITHUB_TOKEN}" |
-    Then the Kilnfile.lock specifies version "0.1.4" for release "hello-release"
+    Then the Kilnfile.lock specifies version "0.1.5" for release "hello-release"
     And kiln validate succeeds
