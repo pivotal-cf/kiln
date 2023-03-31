@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
-	"path"
 	"strings"
 )
 
@@ -107,59 +105,4 @@ func (service Service) Releases(productSlug string) ([]Release, error) {
 	}
 
 	return body.Releases, nil
-}
-
-func (service *Service) StemcellVersion(slug string, majorStemcellVersion string) (string, error) {
-	if slug == "" {
-		return "", ErrProductSlugMustNotBeEmpty
-	}
-
-	if majorStemcellVersion == "" {
-		return "", ErrStemcellMajorVersionMustNotBeEmpty
-	}
-
-	locator := url.URL{
-		Scheme:   "https",
-		Host:     "network.pivotal.io",
-		Path:     path.Join("/api/v2/products", slug, "releases/latest"),
-		RawQuery: fmt.Sprintf("major=%s", majorStemcellVersion),
-	}
-
-	getURL, err := url.PathUnescape(locator.String())
-	if err != nil {
-		return "", ErrDecodingURLRequest
-	}
-
-	req, err := http.NewRequest(http.MethodGet, getURL, nil)
-	if err != nil {
-		return "", ErrCouldNotCreateRequest
-	}
-
-	response, err := service.Do(req)
-	if err != nil {
-		return "", err
-	}
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		if response.StatusCode == http.StatusUnauthorized {
-			return "", fmt.Errorf("could not make pivnet request: endpoint requires authorization (set --pivotal-network-token with UAA token)")
-		}
-		return "", fmt.Errorf("request was not successful, response had status %s (%d)", response.Status, response.StatusCode)
-	}
-
-	responesBody, err := io.ReadAll(response.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var body struct {
-		Version string `json:"version"`
-	}
-
-	if err := json.Unmarshal(responesBody, &body); err != nil {
-		return "", err
-	}
-
-	version := body.Version
-
-	return version, nil
 }
