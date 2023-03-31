@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"regexp"
-	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-billy/v5"
@@ -73,19 +71,24 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 		return fmt.Errorf(ErrStemcellMajorVersionMustBeValid)
 	}
 
-	majorVersion, err := ExtractMajorVersion(kilnfile.Stemcell.Version)
+	// Get stemcell version from pivnet
+	stemcellVersions, err := cmd.pivnetService.Releases(productSlug)
 	if err != nil {
 		return err
 	}
 
-	// Get stemcell version from pivnet
-	stemcellVersion, err := cmd.pivnetService.StemcellVersion(productSlug, majorVersion)
+	c, err := semver.NewConstraint(kilnfile.Stemcell.Version)
+	if err != nil {
+		return err
+	}
+
+	v, err := findReleaseWithMatchingConstraint(stemcellVersions, c)
 	if err != nil {
 		return err
 	}
 
 	stemcellVersionJson, err := json.Marshal(stemcellVersionOutput{
-		Version:    stemcellVersion,
+		Version:    v,
 		Source:     "Tanzunet",
 		RemotePath: TanzuNetRemotePath,
 	})
@@ -96,28 +99,6 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 	cmd.outLogger.Println(string(stemcellVersionJson))
 
 	return nil
-}
-
-func ExtractMajorVersion(version string) (string, error) {
-	_, err := semver.NewConstraint(version)
-	if err != nil {
-		return "", fmt.Errorf("invalid stemcell constraint in kilnfile: %w", err)
-	}
-
-	semVer := strings.Split(version, ".")
-
-	reg, err := regexp.Compile(`[^0-9]+`)
-	if err != nil {
-		return "", err
-	}
-
-	majorVersion := reg.ReplaceAllString(semVer[0], "")
-
-	if majorVersion == "" {
-		return "", fmt.Errorf(ErrStemcellMajorVersionMustBeValid)
-	}
-
-	return majorVersion, nil
 }
 
 func (cmd *FindStemcellVersion) setup(args []string) (cargo.Kilnfile, error) {
@@ -145,4 +126,21 @@ func (cmd FindStemcellVersion) Usage() jhanda.Usage {
 		ShortDescription: "prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile",
 		Flags:            cmd.Options,
 	}
+}
+
+func findReleaseWithMatchingConstraint(releases []pivnet.Release, c *semver.Constraints) (string, error) {
+	var matchingVersion *semver.Version
+	for _, release := range releases {
+		v, err := semver.NewVersion(release.Version)
+		if err != nil {
+			return "", err
+		}
+		if c.Check(v) && (matchingVersion == nil || v.GreaterThan(matchingVersion)) {
+			matchingVersion = v
+		}
+	}
+	if matchingVersion == nil {
+		return "", fmt.Errorf("no versions matching constraint")
+	}
+	return matchingVersion.Original(), nil
 }
