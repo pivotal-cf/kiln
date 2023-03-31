@@ -33,6 +33,7 @@ type ReleaseNotes struct {
 		Kilnfile     string `long:"kilnfile"     short:"k" description:"path to Kilnfile"`
 		DocsFile     string `long:"update-docs"  short:"u" description:"path to docs file to update"`
 		notes.IssuesQuery
+		notes.TrainstatQuery
 	}
 
 	repository *git.Repository
@@ -45,7 +46,7 @@ type ReleaseNotes struct {
 	repoOwner, repoName string
 }
 
-type FetchNotesData func(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery notes.IssuesQuery) (notes.Data, error)
+type FetchNotesData func(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery notes.IssuesQuery, trainstatClient notes.TrainstatFetcher) (notes.Data, error)
 
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	return ReleaseNotes{
@@ -86,12 +87,15 @@ func (r ReleaseNotes) Execute(args []string) error {
 		client = gh.Client(ctx, r.Options.GithubToken)
 	}
 
+	var trainstatClient = notes.NewTrainstatClient(r.Options.TrainstatQuery.TrainstatUrl)
+
 	_ = notes.FetchData // fetchNotesData is github.com/pivotal/kiln/internal/notes.FetchData
 	data, err := r.fetchNotesData(ctx,
 		r.repository, client, r.repoOwner, r.repoName,
 		r.Options.Kilnfile,
 		nonFlagArgs[0], nonFlagArgs[1],
 		r.Options.IssuesQuery,
+		&trainstatClient,
 	)
 	if err != nil {
 		return err

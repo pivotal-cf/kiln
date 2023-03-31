@@ -29,6 +29,9 @@
 {{range .Issues -}}
   * {{.GetTitle}}
 {{ end -}}
+{{range .TrainstatNotes -}}
+  {{.}}
+{{ end -}}
 {{range .Bumps -}}
   * Bump {{ .Name }} to version `{{ .ToVersion }}`
 {{ end }}

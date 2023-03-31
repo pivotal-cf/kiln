@@ -63,6 +63,10 @@ func TestParseNotesPage(t *testing.T) {
 			{Title: strPtr("**[Bug Fix]** Breaking Change: Any customers with gorouter certificates lacking a SubjectAltName extension will experience failures upon deployment. As a workaround to complete deployment while new certificates are procured, enable the \"Enable temporary workaround for certs without SANs\" property in the Networking section of the TAS tile. For more information on updating certs, see https://community.pivotal.io/s/article/Routing-and-golang-1-15-X-509-CommonName-deprecation?language=en_US")},
 			{Title: strPtr("**[Bug Fix]** Cloud Controller - Ensure app lifecycle_type is not nil when determining app lifecycle")},
 		},
+		TrainstatNotes: []string{
+			"* **[Feature]** this is a feature.",
+			"* **[Bug Fix]** this is a bug fix.",
+		},
 		Stemcell: cargo.Stemcell{
 			OS: "ubuntu-xenial", Version: "456.0",
 		},
@@ -202,6 +206,8 @@ func Test_newFetchNotesData(t *testing.T) {
 		please := NewWithT(t)
 		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{
 			IssueMilestone: "BLA",
+		}, &TrainstatClient{
+			host: "test",
 		})
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(f.repoOwner).To(Equal("o"))
@@ -214,17 +220,20 @@ func Test_newFetchNotesData(t *testing.T) {
 		please.Expect(f.issuesQuery).To(Equal(IssuesQuery{
 			IssueMilestone: "BLA",
 		}))
+		please.Expect(f.trainstatClient).To(Equal(&TrainstatClient{
+			host: "test",
+		}))
 	})
 	t.Run("when repo is nil", func(t *testing.T) {
 		please := NewWithT(t)
-		_, err := newFetchNotesData(nil, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{})
+		_, err := newFetchNotesData(nil, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{}, &TrainstatClient{})
 		please.Expect(err).To(HaveOccurred())
 	})
 	t.Run("when repo is not nil", func(t *testing.T) {
 		please := NewWithT(t)
 		f, err := newFetchNotesData(&git.Repository{
 			Storer: &memory.Storage{},
-		}, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{})
+		}, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{}, &TrainstatClient{})
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(f.repository).NotTo(BeNil())
 		please.Expect(f.revisionResolver).NotTo(BeNil())
@@ -235,14 +244,14 @@ func Test_newFetchNotesData(t *testing.T) {
 		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", &github.Client{
 			Issues:       &github.IssuesService{},
 			Repositories: &github.RepositoriesService{},
-		}, IssuesQuery{})
+		}, IssuesQuery{}, &TrainstatClient{})
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(f.issuesService).NotTo(BeNil())
 		please.Expect(f.releasesService).NotTo(BeNil())
 	})
 	t.Run("when github client is nil", func(t *testing.T) {
 		please := NewWithT(t)
-		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{})
+		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{}, &TrainstatClient{})
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(f.issuesService).To(BeNil())
 		please.Expect(f.releasesService).To(BeNil())

@@ -56,6 +56,7 @@ func Test_fetch(t *testing.T) {
 			{Name: "banana", GitHubRepository: "https://github.com/pivotal-cf/lts-banana-release"},
 			{Name: "lemon"},
 		},
+		Slug: "elastic-runtime",
 	}, cargo.KilnfileLock{
 		Releases: []cargo.ComponentLock{
 			{Name: "banana", Version: "1.2.0"},
@@ -64,7 +65,7 @@ func Test_fetch(t *testing.T) {
 	}, nil)
 
 	historicVersion := new(fakes.HistoricVersion)
-	historicVersion.Returns("0.1.0-build.50000", nil)
+	historicVersion.Returns("4.0.0-build.50000", nil)
 
 	fakeIssuesService := new(fakes.IssuesService)
 	fakeIssuesService.GetReturnsOnCall(0, &github.Issue{
@@ -91,6 +92,12 @@ func Test_fetch(t *testing.T) {
 	}, githubResponse(t, 200), nil)
 	fakeReleaseService.ListReleasesReturnsOnCall(3, []*github.RepositoryRelease{}, githubResponse(t, 400), nil)
 
+	fakeTrainstatClient := new(fakes.TrainstatClient)
+	fakeTrainstatClient.FetchReturnsOnCall(0, []string{
+		"* **[Feature]** this is a feature.",
+		"* **[Bug Fix]** this is a bug fix.",
+	}, nil)
+
 	rn := fetchNotesData{
 		repoOwner:       "pivotal-cf",
 		repoName:        "fake-tile-repo",
@@ -109,6 +116,7 @@ func Test_fetch(t *testing.T) {
 
 		issuesService:   fakeIssuesService,
 		releasesService: fakeReleaseService,
+		trainstatClient: fakeTrainstatClient,
 	}
 
 	_, err := rn.fetch(context.Background())
@@ -133,6 +141,12 @@ func Test_fetch(t *testing.T) {
 	please.Expect(orgName).To(Equal("pivotal-cf"))
 	please.Expect(repoName).To(Equal("fake-tile-repo"))
 	please.Expect(n).To(Equal(54321))
+
+	milestone, version, tile := fakeTrainstatClient.GetArgsForCall(0)
+	please.Expect(milestone).To(Equal(rn.issuesQuery.IssueMilestone))
+	please.Expect(version).To(Equal("4.0"))
+	please.Expect(tile).To(Equal("elastic-runtime"))
+	please.Expect(fakeTrainstatClient.GetCallCount()).To(Equal(1))
 }
 
 func Test_issuesFromIssueIDs(t *testing.T) {

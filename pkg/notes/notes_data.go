@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -45,9 +46,10 @@ type Data struct {
 	Version     semver.Version
 	ReleaseDate time.Time
 
-	Issues     []*github.Issue
-	Components []BOSHReleaseData
-	Bumps      cargo.BumpList
+	Issues         []*github.Issue
+	Components     []BOSHReleaseData
+	Bumps          cargo.BumpList
+	TrainstatNotes []string
 
 	Stemcell cargo.Stemcell
 }
@@ -90,6 +92,15 @@ type IssuesQuery struct {
 	IssueTitleExp  string   `long:"issues-title-exp"       short:"x" description:"issues with title matching regular expression will be added. Issues must first be fetched with github-issue* flags. The default expression can be disabled by setting an empty string" default:"(?i)^\\*\\*\\[(security fix|feature|feature improvement|bug fix|breaking change)\\]\\*\\*.*$"`
 }
 
+type TrainstatQuery struct {
+	TrainstatUrl string `long:"trainstat-url" short:"tu" description:"trainstat url to fetch the release notes for component bumps" default:"https://trainstat.sc2-04-pcf1-apps.oc.vmware.com"`
+}
+
+func TrainstatUrl() string {
+	f, _ := reflect.ValueOf(TrainstatQuery{}).Type().FieldByName("TrainstatUrl")
+	return f.Tag.Get("default")
+}
+
 func IssueTitleRegex() *regexp.Regexp {
 	f, _ := reflect.ValueOf(IssuesQuery{}).Type().FieldByName("IssueTitleExp")
 	return regexp.MustCompile(f.Tag.Get("default"))
@@ -107,8 +118,8 @@ func (q IssuesQuery) Exp() (*regexp.Regexp, error) {
 	return regexp.Compile(str)
 }
 
-func FetchData(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery IssuesQuery) (Data, error) {
-	f, err := newFetchNotesData(repo, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision, client, issuesQuery)
+func FetchData(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery IssuesQuery, trainstatClient TrainstatFetcher) (Data, error) {
+	f, err := newFetchNotesData(repo, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision, client, issuesQuery, trainstatClient)
 	if err != nil {
 		return Data{}, err
 	}
@@ -144,7 +155,7 @@ func FetchDataWithoutRepo(ctx context.Context, client *github.Client, tileRepoOw
 	return data, nil
 }
 
-func newFetchNotesData(repo *git.Repository, tileRepoOwner string, tileRepoName string, kilnfilePath string, initialRevision string, finalRevision string, client *github.Client, issuesQuery IssuesQuery) (fetchNotesData, error) {
+func newFetchNotesData(repo *git.Repository, tileRepoOwner string, tileRepoName string, kilnfilePath string, initialRevision string, finalRevision string, client *github.Client, issuesQuery IssuesQuery, trainstatClient TrainstatFetcher) (fetchNotesData, error) {
 	if repo == nil {
 		return fetchNotesData{}, errors.New("git repository required to generate release notes")
 	}
@@ -162,7 +173,8 @@ func newFetchNotesData(repo *git.Repository, tileRepoOwner string, tileRepoName 
 		Storer:           repo.Storer,
 		repository:       repo,
 
-		issuesQuery: issuesQuery,
+		issuesQuery:     issuesQuery,
+		trainstatClient: trainstatClient,
 	}
 
 	if client != nil {
@@ -186,7 +198,8 @@ type fetchNotesData struct {
 	kilnfilePath,
 	initialRevision, finalRevision string
 
-	issuesQuery IssuesQuery
+	issuesQuery     IssuesQuery
+	trainstatClient TrainstatFetcher
 }
 
 func (r fetchNotesData) fetch(ctx context.Context) (Data, error) {
@@ -207,6 +220,12 @@ func (r fetchNotesData) fetch(ctx context.Context) (Data, error) {
 	}
 
 	data.Issues, data.Bumps, err = r.fetchIssuesAndReleaseNotes(ctx, finalKilnfile, wtKilnfile, data.Bumps, r.issuesQuery)
+	if err != nil {
+		return Data{}, err
+	}
+
+	majorMinor := fmt.Sprintf("%d.%d", finalVersion.Major, finalVersion.Minor)
+	data.TrainstatNotes, err = r.trainstatClient.FetchTrainstatNotes(r.issuesQuery.IssueMilestone, majorMinor, finalKilnfile.Slug)
 	if err != nil {
 		return Data{}, err
 	}
@@ -513,3 +532,74 @@ func setEmptyComponentGitHubRepositoryFromOtherKilnfile(k1, k2 cargo.Kilnfile) c
 }
 
 func closeAndIgnoreError(c io.Closer) { _ = c.Close() }
+
+type TrainstatFetcher interface {
+	FetchTrainstatNotes(milestone string, version string, tile string) ([]string, error)
+}
+
+type TrainstatClient struct {
+	host       string
+	httpClient *http.Client
+}
+
+func NewTrainstatClient(host string) TrainstatClient {
+	if host == "null" || strings.TrimSpace(host) == "" {
+		host = TrainstatUrl()
+	}
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+	return TrainstatClient{
+		host:       host,
+		httpClient: client,
+	}
+}
+
+func (t *TrainstatClient) FetchTrainstatNotes(milestone string, version string, tile string) (notes []string, err error) {
+	if !t.tileSupported(tile) {
+		return []string{}, nil
+	}
+
+	baseURL := fmt.Sprintf("%s/%s", t.host, "/api/v1/release_notes")
+	req, err := http.NewRequest(http.MethodGet, baseURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	q := req.URL.Query()
+	q.Set("milestone", milestone)
+	q.Set("version", version)
+	q.Set("tile", tile)
+	req.URL.RawQuery = q.Encode()
+
+	res, err := t.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	responseData, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = json.Unmarshal(responseData, &notes); err != nil {
+		return notes, err
+	}
+	return
+}
+
+func (t *TrainstatClient) tileSupported(tile string) bool {
+	switch tile {
+	case "elastic-runtime":
+		return true
+	case "p-isolation-segment":
+		return true
+	case "pas-windows":
+		return true
+	default:
+		return false
+	}
+}

@@ -72,7 +72,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 			repoOwner:  "bunch",
 			repoName:   "banana",
 			readFile:   readFileFunc,
-			fetchNotesData: func(c context.Context, repo *git.Repository, ghc *github.Client, tro, trn, kfp, ir, fr string, iq notes.IssuesQuery) (notes.Data, error) {
+			fetchNotesData: func(c context.Context, repo *git.Repository, ghc *github.Client, tro, trn, kfp, ir, fr string, iq notes.IssuesQuery, tf notes.TrainstatFetcher) (notes.Data, error) {
 				ctx, repository, client = c, repo, ghc
 				tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision = tro, trn, kfp, ir, fr
 				issuesQuery = iq
@@ -95,6 +95,10 @@ func TestReleaseNotes_Execute(t *testing.T) {
 					},
 					Bumps: cargo.BumpList{
 						{Name: "banana", FromVersion: "1.1.0", ToVersion: "1.2.0"},
+					},
+					TrainstatNotes: []string{
+						"* **[Feature]** this is a feature.",
+						"* **[Bug Fix]** this is a bug fix.",
 					},
 				}, nil
 			},
