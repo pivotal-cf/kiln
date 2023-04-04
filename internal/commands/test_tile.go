@@ -163,6 +163,7 @@ func (u ManifestTest) Execute(args []string) error {
 		Image: "dont_push_me_vmware_confidential:123",
 		Cmd:   []string{"/bin/bash", "-c", dockerCmd},
 		Env:   envVars,
+		Tty:   true,
 	}, &container.HostConfig{
 		LogConfig: container.LogConfig{
 			Config: map[string]string{
@@ -207,10 +208,9 @@ func (u ManifestTest) Execute(args []string) error {
 		return err
 	}
 
-	scanner = bufio.NewScanner(out)
-	for scanner.Scan() {
-		text := scanner.Text()
-		u.logger.Println(text)
+	_, err = io.Copy(u.logger.Writer(), out)
+	if err != nil {
+		return err
 	}
 
 	statusCh, errCh := u.mobi.ContainerWait(u.ctx, createResp.ID, container.WaitConditionNotRunning)
