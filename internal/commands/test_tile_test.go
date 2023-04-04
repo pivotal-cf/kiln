@@ -1,7 +1,6 @@
 package commands_test
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -37,14 +36,14 @@ var _ = Describe("kiln test docker", func() {
 
 	Context("locally missing docker image is built", func() {
 		var (
-			ctx       context.Context
-			logger    *log.Logger
-			logBuffer bytes.Buffer
+			ctx    context.Context
+			writer strings.Builder
+			logger *log.Logger
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			logger = log.New(&logBuffer, "", 0)
+			logger = log.New(&writer, "", 0)
 		})
 
 		Describe("successful creation creation", func() {
@@ -78,7 +77,7 @@ var _ = Describe("kiln test docker", func() {
 					Expect(err).To(BeNil())
 
 					By("logging helpful messages", func() {
-						logs := (&logBuffer).String()
+						logs := writer.String()
 						By("logging container information", func() {
 							Expect(logs).To(ContainSubstring("tagged dont_push_me_vmware_confidential:123"))
 							Expect(logs).To(ContainSubstring("Building / restoring cached docker image"))
@@ -121,7 +120,7 @@ var _ = Describe("kiln test docker", func() {
 					Expect(err).To(HaveOccurred())
 
 					By("logging helpful messages", func() {
-						logs := (&logBuffer).String()
+						logs := writer.String()
 						By("logging test lines", func() {
 							Expect(logs).To(ContainSubstring("exit status 1"))
 						})
