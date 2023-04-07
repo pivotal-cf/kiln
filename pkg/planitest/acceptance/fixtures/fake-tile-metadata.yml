@@ -1,0 +1,72 @@
+name: some-product
+description: This is a tile.
+product_version: 1.2.3
+form_types:
+- description: |
+    This is a form type
+  label: This is a form type
+  name: form_type
+  property_inputs:
+  - description: |
+      This is a global property with a default
+    label: Global Property Default
+    reference: .properties.with_default
+  - description: |
+      This is a global property without a default
+    label: Global Property No Default
+    reference: .properties.required
+property_blueprints:
+- name: with_default
+  configurable: true
+  optional: false
+  type: string
+  default: "some-default"
+- name: required
+  configurable: true
+  optional: false
+  type: string
+job_types:
+- name: some-instance-group
+  resource_label: some-instance-group
+  description: This is a cool instance group
+  instance_definition:
+    configurable: false
+    default: 1
+    label: Instances
+    name: instances
+    type: integer
+  resource_definitions:
+  - configurable: true
+    constraints:
+      min: 1
+    default: 2
+    label: CPU
+    name: cpu
+    type: integer
+  - configurable: true
+    constraints:
+      min: 4096
+    default: 8192
+    label: RAM
+    name: ram
+    type: integer
+  - configurable: true
+    constraints:
+      min: 10000
+    default: 30000
+    label: Ephemeral Disk
+    name: ephemeral_disk
+    type: integer
+  - configurable: true
+    constraints:
+      min: 10000
+    default: 100000
+    label: Persistent Disk
+    name: persistent_disk
+    type: integer
+  templates:
+  - name: some-job
+    release: some-release
+    manifest: |
+      with_default: (( .properties.with_default.value ))
+      required: (( .properties.required.value ))
