@@ -44,6 +44,8 @@ dockers:
   - image_templates:
       - "pivotalcfreleng/kiln:latest"
       - "pivotalcfreleng/kiln:{{ .Tag }}"
+      - "gcr.io/tas-ppe/pivotalcfreleng/kiln:latest"
+      - "gcr.io/tas-ppe/pivotalcfreleng/kiln:{{ .Tag }}"
 
     skip_push: false
 
