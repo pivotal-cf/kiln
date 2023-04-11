@@ -93,11 +93,11 @@ type IssuesQuery struct {
 }
 
 type TrainstatQuery struct {
-	TrainstatUrl string `long:"trainstat-url" short:"tu" description:"trainstat url to fetch the release notes for component bumps" default:"https://trainstat.sc2-04-pcf1-apps.oc.vmware.com"`
+	TrainstatURL string `long:"trainstat-url" short:"tu" description:"trainstat url to fetch the release notes for component bumps" default:"https://trainstat.sc2-04-pcf1-apps.oc.vmware.com"`
 }
 
-func TrainstatUrl() string {
-	f, _ := reflect.ValueOf(TrainstatQuery{}).Type().FieldByName("TrainstatUrl")
+func TrainstatURL() string {
+	f, _ := reflect.ValueOf(TrainstatQuery{}).Type().FieldByName("TrainstatURL")
 	return f.Tag.Get("default")
 }
 
@@ -118,7 +118,7 @@ func (q IssuesQuery) Exp() (*regexp.Regexp, error) {
 	return regexp.Compile(str)
 }
 
-func FetchData(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery IssuesQuery, trainstatClient TrainstatFetcher) (Data, error) {
+func FetchData(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery IssuesQuery, trainstatClient TrainstatNotesFetcher) (Data, error) {
 	f, err := newFetchNotesData(repo, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision, client, issuesQuery, trainstatClient)
 	if err != nil {
 		return Data{}, err
@@ -155,7 +155,7 @@ func FetchDataWithoutRepo(ctx context.Context, client *github.Client, tileRepoOw
 	return data, nil
 }
 
-func newFetchNotesData(repo *git.Repository, tileRepoOwner string, tileRepoName string, kilnfilePath string, initialRevision string, finalRevision string, client *github.Client, issuesQuery IssuesQuery, trainstatClient TrainstatFetcher) (fetchNotesData, error) {
+func newFetchNotesData(repo *git.Repository, tileRepoOwner string, tileRepoName string, kilnfilePath string, initialRevision string, finalRevision string, client *github.Client, issuesQuery IssuesQuery, trainstatClient TrainstatNotesFetcher) (fetchNotesData, error) {
 	if repo == nil {
 		return fetchNotesData{}, errors.New("git repository required to generate release notes")
 	}
@@ -199,7 +199,7 @@ type fetchNotesData struct {
 	initialRevision, finalRevision string
 
 	issuesQuery     IssuesQuery
-	trainstatClient TrainstatFetcher
+	trainstatClient TrainstatNotesFetcher
 }
 
 func (r fetchNotesData) fetch(ctx context.Context) (Data, error) {
@@ -225,7 +225,7 @@ func (r fetchNotesData) fetch(ctx context.Context) (Data, error) {
 	}
 
 	majorMinor := fmt.Sprintf("%d.%d", finalVersion.Major, finalVersion.Minor)
-	data.TrainstatNotes, err = r.trainstatClient.FetchTrainstatNotes(r.issuesQuery.IssueMilestone, majorMinor, finalKilnfile.Slug)
+	data.TrainstatNotes, err = r.trainstatClient.FetchTrainstatNotes(ctx, r.issuesQuery.IssueMilestone, majorMinor, finalKilnfile.Slug)
 	if err != nil {
 		return Data{}, err
 	}
@@ -533,8 +533,8 @@ func setEmptyComponentGitHubRepositoryFromOtherKilnfile(k1, k2 cargo.Kilnfile) c
 
 func closeAndIgnoreError(c io.Closer) { _ = c.Close() }
 
-type TrainstatFetcher interface {
-	FetchTrainstatNotes(milestone string, version string, tile string) ([]string, error)
+type TrainstatNotesFetcher interface {
+	FetchTrainstatNotes(ctx context.Context, milestone string, version string, tile string) ([]string, error)
 }
 
 type TrainstatClient struct {
@@ -543,8 +543,8 @@ type TrainstatClient struct {
 }
 
 func NewTrainstatClient(host string) TrainstatClient {
-	if host == "null" || strings.TrimSpace(host) == "" {
-		host = TrainstatUrl()
+	if strings.TrimSpace(host) == "" {
+		host = TrainstatURL()
 	}
 	client := &http.Client{
 		Timeout: time.Second * 10,
@@ -555,13 +555,13 @@ func NewTrainstatClient(host string) TrainstatClient {
 	}
 }
 
-func (t *TrainstatClient) FetchTrainstatNotes(milestone string, version string, tile string) (notes []string, err error) {
+func (t *TrainstatClient) FetchTrainstatNotes(ctx context.Context, milestone string, version string, tile string) (notes []string, err error) {
 	if !t.tileSupported(tile) {
 		return []string{}, nil
 	}
 
 	baseURL := fmt.Sprintf("%s/%s", t.host, "/api/v1/release_notes")
-	req, err := http.NewRequest(http.MethodGet, baseURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -577,8 +577,10 @@ func (t *TrainstatClient) FetchTrainstatNotes(milestone string, version string, 
 	if err != nil {
 		return nil, err
 	}
-
-	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("request status code is not ok: got %d", res.StatusCode)
+	}
+	defer closeAndIgnoreError(res.Body)
 
 	responseData, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -593,11 +595,7 @@ func (t *TrainstatClient) FetchTrainstatNotes(milestone string, version string, 
 
 func (t *TrainstatClient) tileSupported(tile string) bool {
 	switch tile {
-	case "elastic-runtime":
-		return true
-	case "p-isolation-segment":
-		return true
-	case "pas-windows":
+	case "elastic-runtime", "p-isolation-segment", "pas-windows":
 		return true
 	default:
 		return false

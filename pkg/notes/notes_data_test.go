@@ -474,3 +474,10 @@ func TestData_WriteVersionNotes(t *testing.T) {
 		please.Expect(releaseNotes.Notes).To(ContainSubstring("### <a id='4.0.0+LTS-T'></a> 4.0.0+LTS-T"))
 	})
 }
+
+func Test_trainstatURLFieldName_shouldNotChange(t *testing.T) {
+	please := NewWithT(t)
+	_, found := reflect.ValueOf(TrainstatQuery{}).Type().FieldByName("TrainstatURL")
+
+	please.Expect(found).To(BeTrue())
+}

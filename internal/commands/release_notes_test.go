@@ -72,7 +72,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 			repoOwner:  "bunch",
 			repoName:   "banana",
 			readFile:   readFileFunc,
-			fetchNotesData: func(c context.Context, repo *git.Repository, ghc *github.Client, tro, trn, kfp, ir, fr string, iq notes.IssuesQuery, tf notes.TrainstatFetcher) (notes.Data, error) {
+			fetchNotesData: func(c context.Context, repo *git.Repository, ghc *github.Client, tro, trn, kfp, ir, fr string, iq notes.IssuesQuery, _ notes.TrainstatNotesFetcher) (notes.Data, error) {
 				ctx, repository, client = c, repo, ghc
 				tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision = tro, trn, kfp, ir, fr
 				issuesQuery = iq

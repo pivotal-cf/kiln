@@ -1,6 +1,7 @@
 package fakes
 
 import (
+	"context"
 	"sync"
 )
 
@@ -12,6 +13,7 @@ type TrainstatClient struct {
 		result2 error
 	}
 	fetchArgsForCall []struct {
+		ctx  context.Context
 		arg1 string
 		arg2 string
 		arg3 string
@@ -24,14 +26,15 @@ type TrainstatClient struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TrainstatClient) FetchTrainstatNotes(arg1 string, arg2 string, arg3 string) (notes []string, err error) {
+func (fake *TrainstatClient) FetchTrainstatNotes(ctx context.Context, arg1 string, arg2 string, arg3 string) (notes []string, err error) {
 	fake.fetchMutex.Lock()
 	ret, specificReturn := fake.fetchReturnsOnCall[len(fake.fetchArgsForCall)]
 	fake.fetchArgsForCall = append(fake.fetchArgsForCall, struct {
+		ctx  context.Context
 		arg1 string
 		arg2 string
 		arg3 string
-	}{arg1, arg2, arg3})
+	}{ctx, arg1, arg2, arg3})
 	stub := fake.FetchStub
 	fakeReturns := fake.fetchReturns
 	fake.recordInvocation("Get", []interface{}{arg1, arg2, arg3})

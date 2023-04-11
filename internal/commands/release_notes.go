@@ -46,7 +46,7 @@ type ReleaseNotes struct {
 	repoOwner, repoName string
 }
 
-type FetchNotesData func(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery notes.IssuesQuery, trainstatClient notes.TrainstatFetcher) (notes.Data, error)
+type FetchNotesData func(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery notes.IssuesQuery, trainstatClient notes.TrainstatNotesFetcher) (notes.Data, error)
 
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	return ReleaseNotes{
@@ -87,7 +87,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 		client = gh.Client(ctx, r.Options.GithubToken)
 	}
 
-	var trainstatClient = notes.NewTrainstatClient(r.Options.TrainstatQuery.TrainstatUrl)
+	var trainstatClient = notes.NewTrainstatClient(r.Options.TrainstatQuery.TrainstatURL)
 
 	_ = notes.FetchData // fetchNotesData is github.com/pivotal/kiln/internal/notes.FetchData
 	data, err := r.fetchNotesData(ctx,
