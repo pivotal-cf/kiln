@@ -4,6 +4,8 @@
 
 * **[Feature Improvement]** Reduce default log-cache max per source
 * **[Bug Fix]** banana metadata migration does not fail on upgrade from previous LTS
+* **[Feature]** this is a feature.
+* **[Bug Fix]** this is a bug fix.
 * Bump banana to version `1.2.0`
 
 <table border="1" class="nice">
