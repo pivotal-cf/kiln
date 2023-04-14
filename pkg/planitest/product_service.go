@@ -101,7 +101,3 @@ func ExtractTileMetadataFile(path string) (io.ReadSeeker, error) {
 	b, err := tile.ReadMetadataFromFile(path)
 	return bytes.NewReader(b), err
 }
-
-func closeAndIgnoreError(c io.Closer) {
-	_ = c.Close()
-}
