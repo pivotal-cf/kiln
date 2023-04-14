@@ -1,12 +1,18 @@
-package commands
+package commands_test
 
 import (
 	"bytes"
 	"context"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+
 	"github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"log"
+
+	"github.com/pivotal-cf/kiln/internal/commands"
 )
 
 var _ = Describe("test", func() {
@@ -18,10 +24,12 @@ var _ = Describe("test", func() {
 			cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 			Expect(err).NotTo(HaveOccurred())
 
-			sshProvider, err := NewSshProvider(SSHClientCreator{})
+			sshProvider, err := commands.NewSshProvider(commands.SSHClientCreator{})
 			Expect(err).NotTo(HaveOccurred())
-			testTile := NewManifestTest(logger, ctx, cli, sshProvider)
-			err = testTile.Execute([]string{"--tile-path", "tas_fake/tas"})
+			tilePath := filepath.Join("testdata", "tas_fake", "tas")
+			Expect(goVendor(tilePath)).NotTo(HaveOccurred())
+			testTile := commands.NewManifestTest(logger, ctx, cli, sshProvider)
+			err = testTile.Execute([]string{"--tile-path", tilePath})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(testOutput.String()).To(ContainSubstring("SUCCESS"))
@@ -37,10 +45,12 @@ var _ = Describe("test", func() {
 			cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 			Expect(err).NotTo(HaveOccurred())
 
-			sshProvider, err := NewSshProvider(SSHClientCreator{})
+			sshProvider, err := commands.NewSshProvider(commands.SSHClientCreator{})
 			Expect(err).NotTo(HaveOccurred())
-			testTile := NewManifestTest(logger, ctx, cli, sshProvider)
-			err = testTile.Execute([]string{"--tile-path", "tas_fake/tas_failing"})
+			testTile := commands.NewManifestTest(logger, ctx, cli, sshProvider)
+			tilePath := filepath.Join("testdata", "tas_fake", "tas_failing")
+			Expect(goVendor(tilePath)).NotTo(HaveOccurred())
+			err = testTile.Execute([]string{"--tile-path", tilePath})
 
 			Expect(err).To(HaveOccurred())
 			Expect(testOutput.String()).NotTo(ContainSubstring("SUCCESS"))
@@ -48,3 +58,16 @@ var _ = Describe("test", func() {
 		})
 	})
 })
+
+func goVendor(modulePath string) error {
+	var buf bytes.Buffer
+	cmd := exec.Command("go", "mod", "vendor")
+	cmd.Dir = modulePath
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+	err := cmd.Run()
+	if err != nil {
+		_, _ = os.Stderr.Write(buf.Bytes())
+	}
+	return err
+}

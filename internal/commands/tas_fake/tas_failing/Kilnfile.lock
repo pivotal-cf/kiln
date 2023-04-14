@@ -1,7 +1,0 @@
-#releases:
-#- name: my-release
-#  sha1: 040d8b5fafc70630f872f2945496b579846934f8
-#  version: 1.2.3
-stemcell_criteria:
-  os: ubuntu-trusty
-  version: "3468.1"
