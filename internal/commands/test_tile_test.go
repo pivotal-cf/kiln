@@ -32,6 +32,7 @@ var _ = Describe("kiln test docker", func() {
 	)
 	BeforeEach(func() {
 		helloTileDirectorySegments = []string{"testdata", "test_tile", "hello-tile"}
+		Expect(goVendor(filepath.Join(helloTileDirectorySegments...))).NotTo(HaveOccurred())
 	})
 
 	Context("locally missing docker image is built", func() {
