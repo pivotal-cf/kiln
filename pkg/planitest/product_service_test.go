@@ -1,8 +1,12 @@
 package planitest
 
 import (
+	"archive/zip"
 	"io"
+	"log"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -110,6 +114,39 @@ var _ = Describe("Product Service", func() {
 				tileConfig, err := io.ReadAll(tileConfigReader)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(tileConfig)).To(ContainSubstring("product-properties: {}"))
+			})
+		})
+	})
+
+	Describe("ExtractTileMetadataFile", func() {
+		When("it reads metadata from a tile", func() {
+			var (
+				tileFileName string
+			)
+			BeforeEach(func() {
+				t := GinkgoT()
+				tempDir := t.TempDir()
+				tileFileName = filepath.Join(tempDir, "tile.pivotal")
+				zf, err := os.Create(tileFileName)
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer closeAndIgnoreError(zf)
+				zw := zip.NewWriter(zf)
+				defer closeAndIgnoreError(zw)
+				if err != nil {
+					log.Fatal(err)
+				}
+				mf, err := zw.Create(path.Join("metadata/a.yml"))
+				if err != nil {
+					log.Fatal(err)
+				}
+				_, _ = mf.Write([]byte("---\nhello: world\n"))
+			})
+
+			It("sets the key's value to an empty hash in the YAML", func() {
+				_, err := ExtractTileMetadataFile(tileFileName)
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

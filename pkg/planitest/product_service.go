@@ -1,9 +1,9 @@
 package planitest
 
 import (
-	"archive/zip"
 	"bytes"
 	"errors"
+	"github.com/pivotal-cf/kiln/pkg/tile"
 	"io"
 	"os"
 
@@ -93,28 +93,13 @@ func (p *ProductService) RenderManifest(additionalProperties map[string]interfac
 	return Manifest(m), nil
 }
 
+// ExtractTileMetadataFile reads a metadata file in the metadata directory.
+// It will read the first yaml file found.
 func ExtractTileMetadataFile(path string) (io.ReadSeeker, error) {
-	f, err := zip.OpenReader(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
+	b, err := tile.ReadMetadataFromFile(path)
+	return bytes.NewReader(b), err
+}
 
-	for _, file := range f.File {
-		if file.Name == "metadata/metadata.yml" {
-			r, err := file.Open()
-			if err != nil {
-				return nil, err
-			}
-
-			b, err := io.ReadAll(r)
-			if err != nil {
-				return nil, err
-			}
-
-			return bytes.NewReader(b), nil
-		}
-	}
-
-	return nil, errors.New("did not find metadata/metadata.yml in tile")
+func closeAndIgnoreError(c io.Closer) {
+	_ = c.Close()
 }

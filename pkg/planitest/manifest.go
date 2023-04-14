@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	"github.com/cppforlife/go-patch/patch"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 type Manifest string
 
-func (m *Manifest) FindInstanceGroupJob(instanceGroup, job string) (Manifest, error) {
+func (m Manifest) FindInstanceGroupJob(instanceGroup, job string) (Manifest, error) {
 	path := fmt.Sprintf("/instance_groups/name=%s/jobs/name=%s", instanceGroup, job)
 
 	result, err := m.interpolate(path)
@@ -21,7 +21,7 @@ func (m *Manifest) FindInstanceGroupJob(instanceGroup, job string) (Manifest, er
 	if err != nil {
 		return "", err // should never happen
 	}
-	return Manifest(string(content)), nil
+	return Manifest(content), nil
 }
 
 func (m Manifest) Property(path string) (interface{}, error) {
