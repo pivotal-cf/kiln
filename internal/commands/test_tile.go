@@ -44,8 +44,9 @@ type mobyClient interface {
 
 type ManifestTest struct {
 	Options struct {
-		TilePath            string `short:"tp"   long:"tile-path"                default:"."                          description:"path to the tile directory (e.g., ~/workspace/tas/ist)"`
-		GingkoManifestFlags string `short:"gmf"  long:"ginkgo-manifest-flags"    default:"-r -slowSpecThreshold 15"   description:"flags to pass to the gingko manifest test suite"`
+		TilePath            string `short:"tp"   long:"tile-path"                default:"."                             description:"path to the tile directory (e.g., ~/workspace/tas/ist)"`
+		GingkoManifestFlags string `short:"gmf"  long:"ginkgo-manifest-flags"    default:"-r -p -slowSpecThreshold 15"   description:"flags to pass to the gingko manifest test suite"`
+		Verbose             bool   `short:"v"    long:"verbose"                  default:"false"                         description:"log info lines. this doesn't apply to ginkgo.'"`
 	}
 
 	logger      *log.Logger
@@ -105,6 +106,10 @@ func (u ManifestTest) Execute(args []string) error {
 			fmt.Printf("%+v\n", err)
 		}
 	}()
+	originalOutput := u.logger.Writer()
+	if !u.Options.Verbose {
+		u.logger.SetOutput(io.Discard)
+	}
 
 	u.logger.Println("Info: Checking for the latest ops-manager image...")
 
@@ -151,11 +156,12 @@ func (u ManifestTest) Execute(args []string) error {
 	parentDir := path.Dir(absRepoDir)
 	tileDir := path.Base(absRepoDir)
 
-	u.logger.Println("Info: Mounting ", parentDir, "and testing", tileDir)
+	u.logger.Println("Info: Mounting", parentDir, "and testing", tileDir)
 
 	envVars := getManifestTestEnvVars(absRepoDir, tileDir)
 	dockerCmd := fmt.Sprintf("cd /tas/%s/test/manifest && PRODUCT=%s RENDERER=ops-manifest ginkgo %s", tileDir, toProduct(tileDir), u.Options.GingkoManifestFlags)
-	fmt.Println(dockerCmd)
+	u.logger.Println("Info: Running:", dockerCmd)
+	u.logger.SetOutput(originalOutput)
 	createResp, err := u.mobi.ContainerCreate(u.ctx, &container.Config{
 		Image: "kiln_test_dependencies:vmware",
 		Cmd:   []string{"/bin/bash", "-c", dockerCmd},
@@ -318,7 +324,7 @@ type ErrorLine struct {
 
 func (u ManifestTest) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Test the manifest for a product inside a docker container. Requires a docker daemon to be running and ssh keys with access to Ops Manager's git repo.",
+		Description:      "Test the manifest for a product inside a docker container. Requires a docker daemon to be running and ssh keys with access to Ops Manager's git repo. For non-interactive use either set the env var SSH_PASSWORD or add your ssh identify before running.",
 		ShortDescription: "Test manifest for a product",
 		Flags:            u.Options,
 	}
