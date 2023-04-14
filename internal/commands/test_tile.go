@@ -113,9 +113,9 @@ func (u ManifestTest) Execute(args []string) error {
 		return err
 	}
 
-	u.logger.Println("Info: Building / restoring cached docker image. This may take several minutes during updates to Ops Manager or the first run...")
+	u.logger.Println("Info: Building / restoring cached docker image.\nInfo: This may take several minutes during updates to Ops Manager or the first run...")
 	res, err := u.mobi.ImageBuild(u.ctx, tr, types.ImageBuildOptions{
-		Tags:      []string{"dont_push_me_vmware_confidential:123"},
+		Tags:      []string{"kiln_test_dependencies:vmware"},
 		Version:   types.BuilderBuildKit,
 		SessionID: session.ID(),
 	})
@@ -124,7 +124,6 @@ func (u ManifestTest) Execute(args []string) error {
 	}
 
 	scanner := bufio.NewScanner(res.Body)
-	lastLine := ""
 	for scanner.Scan() {
 		text := scanner.Text()
 		errLine := &ErrorLine{}
@@ -142,9 +141,7 @@ func (u ManifestTest) Execute(args []string) error {
 			}
 			return errors.New(buildError)
 		}
-		lastLine = text
 	}
-	u.logger.Println("Info:", lastLine)
 
 	localTileDir := u.Options.TilePath
 	absRepoDir, err := filepath.Abs(localTileDir)
@@ -160,7 +157,7 @@ func (u ManifestTest) Execute(args []string) error {
 	dockerCmd := fmt.Sprintf("cd /tas/%s/test/manifest && PRODUCT=%s RENDERER=ops-manifest ginkgo %s", tileDir, toProduct(tileDir), u.Options.GingkoManifestFlags)
 	fmt.Println(dockerCmd)
 	createResp, err := u.mobi.ContainerCreate(u.ctx, &container.Config{
-		Image: "dont_push_me_vmware_confidential:123",
+		Image: "kiln_test_dependencies:vmware",
 		Cmd:   []string{"/bin/bash", "-c", dockerCmd},
 		Env:   envVars,
 		Tty:   true,
