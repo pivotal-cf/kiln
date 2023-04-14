@@ -390,9 +390,7 @@ Running these tests require a docker daemon to be running.
 
 Here is an example command line:
 ```
-$ kiln test \
-    --ginkgo-manifest-flags  "-randomizeAllSpecs -randomizeAllSpecs" \
-    --tile-path ist
+$ kiln test
 ```
 
 <details>
