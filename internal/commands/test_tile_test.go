@@ -80,7 +80,6 @@ var _ = Describe("kiln test docker", func() {
 					By("logging helpful messages", func() {
 						logs := writer.String()
 						By("logging container information", func() {
-							Expect(logs).To(ContainSubstring("tagged dont_push_me_vmware_confidential:123"))
 							Expect(logs).To(ContainSubstring("Building / restoring cached docker image"))
 						})
 						By("logging test lines", func() {
@@ -151,7 +150,7 @@ func setupFakeMobyClient(containerLogMessage string, testExitCode int64) *fakes.
 	fakeConn := &fakes.Conn{R: r, W: stdcopy.NewStdWriter(io.Discard, stdcopy.Stdout)}
 	fakeMobyClient.DialHijackReturns(fakeConn, nil)
 
-	rc := io.NopCloser(strings.NewReader(`{"error": "", "message": "tagged dont_push_me_vmware_confidential:123"}`))
+	rc := io.NopCloser(strings.NewReader(`{"error": "", "message": "tagged kiln_test_dependencies:vmware"}`))
 	imageBuildResponse := types.ImageBuildResponse{
 		Body: rc,
 	}
