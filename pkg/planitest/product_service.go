@@ -1,9 +1,7 @@
 package planitest
 
 import (
-	"bytes"
 	"errors"
-	"github.com/pivotal-cf/kiln/pkg/tile"
 	"io"
 	"os"
 
@@ -91,13 +89,4 @@ func (p *ProductService) RenderManifest(additionalProperties map[string]interfac
 	}
 
 	return Manifest(m), nil
-}
-
-// ExtractTileMetadataFile reads a metadata file in the metadata directory.
-// It will read the first yaml file found.
-//
-// Deprecated: please use github.com/pivotal-cf/kiln/pkg/tile.ReadMetadataFromFile instead.
-func ExtractTileMetadataFile(path string) (io.ReadSeeker, error) {
-	b, err := tile.ReadMetadataFromFile(path)
-	return bytes.NewReader(b), err
 }
