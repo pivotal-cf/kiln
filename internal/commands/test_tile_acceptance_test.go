@@ -29,7 +29,7 @@ var _ = Describe("test", func() {
 			tilePath := filepath.Join("testdata", "tas_fake", "tas")
 			Expect(goVendor(tilePath)).NotTo(HaveOccurred())
 			testTile := commands.NewManifestTest(logger, ctx, cli, sshProvider)
-			err = testTile.Execute([]string{"--tile-path", tilePath})
+			err = testTile.Execute([]string{"--verbose", "--tile-path", tilePath})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(testOutput.String()).To(ContainSubstring("SUCCESS"))
@@ -50,7 +50,7 @@ var _ = Describe("test", func() {
 			testTile := commands.NewManifestTest(logger, ctx, cli, sshProvider)
 			tilePath := filepath.Join("testdata", "tas_fake", "tas_failing")
 			Expect(goVendor(tilePath)).NotTo(HaveOccurred())
-			err = testTile.Execute([]string{"--tile-path", tilePath})
+			err = testTile.Execute([]string{"--verbose", "--tile-path", tilePath})
 
 			Expect(err).To(HaveOccurred())
 			Expect(testOutput.String()).NotTo(ContainSubstring("SUCCESS"))

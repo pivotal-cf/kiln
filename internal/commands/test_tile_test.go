@@ -71,40 +71,66 @@ var _ = Describe("kiln test docker", func() {
 				BeforeEach(func() {
 					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
 				})
-				It("properly executes tests", func() {
-					subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, fakeSshProvider)
+				When("executing tests", func() {
+					var (
+						subjectUnderTest commands.ManifestTest
+					)
+					BeforeEach(func() {
+						writer.Reset()
+						subjectUnderTest = commands.NewManifestTest(logger, ctx, fakeMobyClient, fakeSshProvider)
+					})
+					When("verbose is passed", func() {
+						It("succeeds and logs info", func() {
+							err := subjectUnderTest.Execute([]string{"--verbose", "--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
+							Expect(err).To(BeNil())
 
-					err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
-					Expect(err).To(BeNil())
+							By("logging helpful messages", func() {
+								logs := writer.String()
+								By("logging container information", func() {
+									Expect(logs).To(ContainSubstring("Building / restoring cached docker image"))
+								})
+								By("logging test lines", func() {
+									Expect(logs).To(ContainSubstring("manifest tests completed successfully"))
+								})
+							})
 
-					By("logging helpful messages", func() {
-						logs := writer.String()
-						By("logging container information", func() {
-							Expect(logs).To(ContainSubstring("Building / restoring cached docker image"))
-						})
-						By("logging test lines", func() {
-							Expect(logs).To(ContainSubstring("manifest tests completed successfully"))
+							By("creating a test container", func() {
+								Expect(fakeMobyClient.ContainerCreateCallCount()).To(Equal(1))
+								_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
+								By("configuring the metadata and product config when they exist", func() {
+									Expect(config.Env).To(Equal([]string{
+										"TAS_METADATA_PATH=/tas/hello-tile/test/manifest/fixtures/tas_metadata.yml",
+										"TAS_CONFIG_FILE=/tas/hello-tile/test/manifest/fixtures/tas_config.yml",
+									}))
+								})
+								By("executing the tests", func() {
+									dockerCmd := fmt.Sprintf("cd /tas/%s/test/manifest && PRODUCT=%[1]s RENDERER=ops-manifest ginkgo -r -slowSpecThreshold 1", "hello-tile")
+									Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
+								})
+							})
 						})
 					})
+					When("verbose isn't passed", func() {
+						It("doesn't log info", func() {
+							err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
+							Expect(err).To(BeNil())
 
-					By("creating a test container", func() {
-						Expect(fakeMobyClient.ContainerCreateCallCount()).To(Equal(1))
-						_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
-						By("configuring the metadata and product config when they exist", func() {
-							Expect(config.Env).To(Equal([]string{
-								"TAS_METADATA_PATH=/tas/hello-tile/test/manifest/fixtures/tas_metadata.yml",
-								"TAS_CONFIG_FILE=/tas/hello-tile/test/manifest/fixtures/tas_config.yml",
-							}))
-						})
-						By("executing the tests", func() {
-							dockerCmd := fmt.Sprintf("cd /tas/%s/test/manifest && PRODUCT=%[1]s RENDERER=ops-manifest ginkgo -r -slowSpecThreshold 1", "hello-tile")
-							Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
+							By("logging helpful messages", func() {
+								logs := writer.String()
+								By("logging container information", func() {
+									Expect(logs).NotTo(ContainSubstring("Building / restoring cached docker image"))
+									Expect(logs).NotTo(ContainSubstring("Info:"))
+								})
+								By("logging test lines", func() {
+									Expect(logs).To(ContainSubstring("manifest tests completed successfully"))
+								})
+							})
 						})
 					})
 				})
 			})
 
-			When("manifest tests should be successful", func() {
+			When("manifest tests shouldn't be successful", func() {
 				const (
 					testFailureMessage = "exit status 1"
 				)
@@ -116,7 +142,7 @@ var _ = Describe("kiln test docker", func() {
 				})
 				It("returns an error", func() {
 					subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, fakeSshProvider)
-					err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
+					err := subjectUnderTest.Execute([]string{"--verbose", "--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
 					Expect(err).To(HaveOccurred())
 
 					By("logging helpful messages", func() {

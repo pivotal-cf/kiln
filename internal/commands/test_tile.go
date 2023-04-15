@@ -16,6 +16,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -42,10 +43,40 @@ type mobyClient interface {
 	ContainerStop(ctx context.Context, containerID string, options container.StopOptions) error
 }
 
+type infoLog struct {
+	logger  *log.Logger
+	logging *sync.Mutex
+	enabled bool
+}
+
+func (l infoLog) Info(v ...any) {
+	if l.enabled {
+		// the below should be a single atomic op
+		l.logging.Lock()
+		defer l.logging.Unlock()
+		originalFlags := l.logger.Flags()
+		originalPrefix := l.logger.Prefix()
+		l.logger.SetFlags(log.Lmicroseconds)
+		l.logger.SetPrefix("Info: ")
+		l.logger.Println(v...)
+		l.logger.SetFlags(originalFlags)
+		l.logger.SetPrefix(originalPrefix)
+	}
+}
+
+func (l infoLog) Println(v ...any) {
+	l.logger.Println(v...)
+}
+
+func (l infoLog) Writer() io.Writer {
+	return l.logger.Writer()
+}
+
 type ManifestTest struct {
 	Options struct {
-		TilePath            string `short:"tp"   long:"tile-path"                default:"."                          description:"path to the tile directory (e.g., ~/workspace/tas/ist)"`
-		GingkoManifestFlags string `short:"gmf"  long:"ginkgo-manifest-flags"    default:"-r -slowSpecThreshold 15"   description:"flags to pass to the gingko manifest test suite"`
+		TilePath            string `short:"tp"   long:"tile-path"                default:"."                             description:"path to the tile directory (e.g., ~/workspace/tas/ist)"`
+		GingkoManifestFlags string `short:"gmf"  long:"ginkgo-manifest-flags"    default:"-r -p -slowSpecThreshold 15"   description:"flags to pass to the gingko manifest test suite"`
+		Verbose             bool   `short:"v"    long:"verbose"                  default:"false"                         description:"log info lines. this doesn't apply to ginkgo.'"`
 	}
 
 	logger      *log.Logger
@@ -64,19 +95,25 @@ func NewManifestTest(logger *log.Logger, ctx context.Context, mobi mobyClient, s
 		mobi:        mobi,
 		sshProvider: sshThing,
 	}
+
 }
 
 //go:embed manifest_test_docker/*
 var dockerfileContents string
 
 func (u ManifestTest) Execute(args []string) error {
-	// TODO: check if ssh provider isn't borked
 	if u.sshProvider == nil {
 		return errors.New("ssh provider failed to initialize. check your ssh-agent is running")
 	}
 	_, err := jhanda.Parse(&u.Options, args)
 	if err != nil {
 		return fmt.Errorf("could not parse manifest-test flags: %s", err)
+	}
+
+	loggerWithInfo := infoLog{
+		logger:  u.logger,
+		logging: &sync.Mutex{},
+		enabled: u.Options.Verbose,
 	}
 
 	_, err = u.mobi.Ping(u.ctx)
@@ -106,14 +143,15 @@ func (u ManifestTest) Execute(args []string) error {
 		}
 	}()
 
-	u.logger.Println("Info: Checking for the latest ops-manager image...")
+	loggerWithInfo.Info("Checking for the latest ops-manager image...")
 
 	tr, err := getTarReader(dockerfileContents)
 	if err != nil {
 		return err
 	}
 
-	u.logger.Println("Info: Building / restoring cached docker image.\nInfo: This may take several minutes during updates to Ops Manager or the first run...")
+	loggerWithInfo.Info("Building / restoring cached docker image")
+	loggerWithInfo.Info("This may take several minutes during updates to Ops Manager or the first run...")
 	res, err := u.mobi.ImageBuild(u.ctx, tr, types.ImageBuildOptions{
 		Tags:      []string{"kiln_test_dependencies:vmware"},
 		Version:   types.BuilderBuildKit,
@@ -151,11 +189,11 @@ func (u ManifestTest) Execute(args []string) error {
 	parentDir := path.Dir(absRepoDir)
 	tileDir := path.Base(absRepoDir)
 
-	u.logger.Println("Info: Mounting ", parentDir, "and testing", tileDir)
+	loggerWithInfo.Info("Mounting", parentDir, "and testing", tileDir)
 
 	envVars := getManifestTestEnvVars(absRepoDir, tileDir)
 	dockerCmd := fmt.Sprintf("cd /tas/%s/test/manifest && PRODUCT=%s RENDERER=ops-manifest ginkgo %s", tileDir, toProduct(tileDir), u.Options.GingkoManifestFlags)
-	fmt.Println(dockerCmd)
+	loggerWithInfo.Info("Running:", dockerCmd)
 	createResp, err := u.mobi.ContainerCreate(u.ctx, &container.Config{
 		Image: "kiln_test_dependencies:vmware",
 		Cmd:   []string{"/bin/bash", "-c", dockerCmd},
@@ -191,12 +229,12 @@ func (u ManifestTest) Execute(args []string) error {
 	}
 	go func() {
 		<-sigInt
-		fmt.Println("Canceling tests")
+		loggerWithInfo.Println("Canceling tests")
 		err := u.mobi.ContainerStop(u.ctx, createResp.ID, container.StopOptions{
 			Signal: "SIGKILL",
 		})
 		if err != nil {
-			fmt.Println("Error stopping container", err)
+			loggerWithInfo.Println("Error stopping container", err)
 		}
 	}()
 
@@ -205,7 +243,7 @@ func (u ManifestTest) Execute(args []string) error {
 		return err
 	}
 
-	_, err = io.Copy(u.logger.Writer(), out)
+	_, err = io.Copy(loggerWithInfo.Writer(), out)
 	if err != nil {
 		return err
 	}
@@ -318,7 +356,7 @@ type ErrorLine struct {
 
 func (u ManifestTest) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Test the manifest for a product inside a docker container. Requires a docker daemon to be running and ssh keys with access to Ops Manager's git repo.",
+		Description:      "Test the manifest for a product inside a docker container. Requires a docker daemon to be running and ssh keys with access to Ops Manager's git repo. For non-interactive use either set the env var SSH_PASSWORD or add your ssh identify before running.",
 		ShortDescription: "Test manifest for a product",
 		Flags:            u.Options,
 	}

@@ -379,6 +379,10 @@ provides_product_versions:
   version: $( version )
 ```
 
+#### `--skip-fetch-directories`
+
+The `--skip-fetch-directories` flag bypasses the default behavior to fetch releases when running `kiln bake`.
+
 </details>
 
 
@@ -386,11 +390,27 @@ provides_product_versions:
 
 The `test` command exercises to ginkgo tests under the `/<tile>/test/manifest` path of the `pivotal/tas` repos (where `<tile>` is tas, ist, or tasw). 
 
-Running these tests require a docker daemon to be running.
-
-Here is an example command line:
+Running these tests require a docker daemon and ssh-agent to be running. If no ssh identity is added (check with `ssh-add -l`) , then `kiln test`
+will add a ssh key in the following order, prompting for a passphrase if required:
 ```
+	~/.ssh/id_rs
+	~/.ssh/id_dsa
+	~/.ssh/d_ecdsa
+	~/.ssh/d_ed25519
+	~/.ssh/dentity
+```
+
+The identity must have access to github.com/pivotal/ops-manager.
+
+Here are command line examples:
+```
+$ cd ~/workspace/tas/ist
 $ kiln test
+```
+
+```
+cd ~
+$ kiln test --verbose -tp ~/workspace/tas/ist --ginkgo-manifest-flags "-p -nodes 8 -v" 
 ```
 
 <details>
@@ -398,11 +418,19 @@ $ kiln test
 
 ##### `--ginkgo-manifest-flags`
 
-The `--ginkgo-manifest-flags` flag can be used to pass through Ginkgo test flags. The defaults being passed through are `-r -slowSpecThreshold 15`. Pass `help` as a flag to retrieve the available options for the embeded version of ginkgo.
+The `--ginkgo-manifest-flags` flag can be used to pass through Ginkgo test flags. The defaults being passed through are `-r -p -slowSpecThreshold 15`. Pass `help` as a flag to retrieve the available options for the embeded version of ginkgo.
 
 ##### `--tile-path`
 
-The `--tile-path` flag can be set the path the the directory you wish to test. It defaults to the current working directory.
+The `--tile-path` (`-tp`) flag can be set the path the directory you wish to test. It defaults to the current working directory. For example
+```
+$ kiln test -tp ~/workspace/tas/ist
+```
+
+##### `--verbose`
+
+The `--verbose` (`-v`) flag will log additional debugging info.
+
 </details>
 
 ### `fetch`
