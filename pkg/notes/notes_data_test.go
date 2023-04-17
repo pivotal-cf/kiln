@@ -19,7 +19,7 @@ import (
 	"github.com/google/go-github/v40/github"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/notes/fakes"
+	"github.com/pivotal-cf/kiln/pkg/notes/internal/fakes"
 )
 
 func Test_fetch(t *testing.T) {
