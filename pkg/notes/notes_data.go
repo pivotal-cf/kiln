@@ -560,7 +560,7 @@ func (t *TrainstatClient) FetchTrainstatNotes(ctx context.Context, milestone str
 		return []string{}, nil
 	}
 
-	baseURL := fmt.Sprintf("%s/%s", t.host, "/api/v1/release_notes")
+	baseURL := fmt.Sprintf("%s/%s", t.host, "api/v1/release_notes")
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL, nil)
 	if err != nil {
 		return nil, err
