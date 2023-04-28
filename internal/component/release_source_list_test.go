@@ -2,6 +2,9 @@ package component_test
 
 import (
 	"errors"
+	"fmt"
+	"io"
+	"log"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -260,6 +263,56 @@ var _ = Describe("multiReleaseSource", func() {
 				rel, err := multiSrc.FindReleaseVersion(requirement, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).To(Equal(matchedRelease))
+			})
+		})
+		When("the spec has a GitHub repo", func() {
+			When("the multi release source does not have a github release source", func() {
+				BeforeEach(func() {
+					requirement.GitHubRepository = "https://github.com/pivotal/hello-tile"
+					src1.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
+					src2.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
+					src3.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
+				})
+				It("it does not check non-github release sources", func() {
+					_, _ = multiSrc.FindReleaseVersion(requirement, false)
+					Expect(src1.FindReleaseVersionCallCount()).To(BeZero())
+					Expect(src2.FindReleaseVersionCallCount()).To(BeZero())
+					Expect(src3.FindReleaseVersionCallCount()).To(BeZero())
+				})
+			})
+			When("the multi release source has a github release source", func() {
+				var (
+					releaseTagGetter       *fakes.ReleaseByTagGetter
+					releaseLister          *fakes.ReleasesLister
+					releaseAssetDownloader *fakes.ReleaseAssetDownloader
+				)
+
+				BeforeEach(func() {
+					releaseTagGetter = new(fakes.ReleaseByTagGetter)
+					releaseTagGetter.GetReleaseByTagReturns(nil, nil, fmt.Errorf("return error to avoid panic in gh client fake"))
+					releaseLister = new(fakes.ReleasesLister)
+					releaseLister.ListReleasesReturns(nil, nil, fmt.Errorf("return error to avoid panic in gh client fake"))
+					releaseAssetDownloader = new(fakes.ReleaseAssetDownloader)
+					releaseAssetDownloader.DownloadReleaseAssetReturns(nil, "", fmt.Errorf("return error to avoid panic in gh client fake"))
+
+					requirement.GitHubRepository = "https://github.com/pivotal/hello-tile"
+					multiSrc = component.NewMultiReleaseSource(src1, &component.GithubReleaseSource{
+						ReleaseSourceConfig: cargo.ReleaseSourceConfig{
+							Org: "pivotal",
+						},
+						Token:                  "banana",
+						Logger:                 log.New(io.Discard, "", 0),
+						ReleaseAssetDownloader: releaseAssetDownloader,
+						ReleaseByTagGetter:     releaseTagGetter,
+						ReleasesLister:         releaseLister,
+					})
+				})
+
+				It("it calls the github release source", func() {
+					_, _ = multiSrc.FindReleaseVersion(requirement, false)
+					Expect(releaseLister.ListReleasesCallCount()).NotTo(BeZero())
+					Expect(src1.FindReleaseVersionCallCount()).To(BeZero())
+				})
 			})
 		})
 	})

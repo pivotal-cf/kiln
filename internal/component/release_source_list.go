@@ -156,6 +156,9 @@ func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease L
 func (list ReleaseSourceList) FindReleaseVersion(requirement Spec, noDownload bool) (Lock, error) {
 	var foundReleaseLock []Lock
 	for _, src := range list {
+		if skipReleaseSource(requirement, src) {
+			continue
+		}
 		rel, err := src.FindReleaseVersion(requirement, noDownload)
 		if err != nil {
 			if !IsErrNotFound(err) {
@@ -184,6 +187,15 @@ func (list ReleaseSourceList) FindReleaseVersion(requirement Spec, noDownload bo
 		}
 	}
 	return highestLock, nil
+}
+
+func skipReleaseSource(spec Spec, src ReleaseSource) bool {
+	// unfortunately both the type and pointer type implement ReleaseSource.
+	// we should require pointer receivers on this type so that we don't need to type assert both
+	// the pointer type and type
+	_, isGithubReleaseSourcePtr := src.(*GithubReleaseSource)
+	_, isGithubReleaseSource := src.(GithubReleaseSource)
+	return spec.GitHubRepository != "" && !(isGithubReleaseSource || isGithubReleaseSourcePtr)
 }
 
 func (list ReleaseSourceList) FindByID(id string) (ReleaseSource, error) {
