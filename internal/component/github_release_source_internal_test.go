@@ -16,6 +16,21 @@ import (
 	"github.com/pivotal-cf/kiln/internal/component/fakes_internal"
 )
 
+func TestGithubReleaseSource_interface_compliance(t *testing.T) {
+	t.Run("non-ptr", func(t *testing.T) {
+		please := NewWithT(t)
+		var grs any = GithubReleaseSource{}
+		_, ok := grs.(ReleaseSource)
+		please.Expect(ok).To(BeFalse())
+	})
+	t.Run("ptr", func(t *testing.T) {
+		please := NewWithT(t)
+		var grs any = new(GithubReleaseSource)
+		_, ok := grs.(ReleaseSource)
+		please.Expect(ok).To(BeTrue())
+	})
+}
+
 func TestGithubReleaseSource_downloadRelease(t *testing.T) {
 	lock := Lock{
 		Name:       "routing",
