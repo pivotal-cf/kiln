@@ -190,12 +190,8 @@ func (list ReleaseSourceList) FindReleaseVersion(requirement Spec, noDownload bo
 }
 
 func skipReleaseSource(spec Spec, src ReleaseSource) bool {
-	// unfortunately both the type and pointer type implement ReleaseSource.
-	// we should require pointer receivers on this type so that we don't need to type assert both
-	// the pointer type and type
 	_, isGithubReleaseSourcePtr := src.(*GithubReleaseSource)
-	_, isGithubReleaseSource := src.(GithubReleaseSource)
-	return spec.GitHubRepository != "" && !(isGithubReleaseSource || isGithubReleaseSourcePtr)
+	return spec.GitHubRepository != "" && !isGithubReleaseSourcePtr
 }
 
 func (list ReleaseSourceList) FindByID(id string) (ReleaseSource, error) {

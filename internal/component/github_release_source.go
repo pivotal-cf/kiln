@@ -63,13 +63,13 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 
 // Configuration returns the configuration of the ReleaseSource that came from the kilnfile.
 // It should not be modified.
-func (grs GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
+func (grs *GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 	return grs.ReleaseSourceConfig
 }
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
-func (grs GithubReleaseSource) GetMatchedRelease(s Spec) (Lock, error) {
+func (grs *GithubReleaseSource) GetMatchedRelease(s Spec) (Lock, error) {
 	_, err := semver.NewVersion(s.Version)
 	if err != nil {
 		return Lock{}, fmt.Errorf("expected version to be an exact version")
@@ -90,7 +90,7 @@ type ReleaseByTagGetter interface {
 	GetReleaseByTag(ctx context.Context, owner, repo, tag string) (*github.RepositoryRelease, *github.Response, error)
 }
 
-func (grs GithubReleaseSource) GetGithubReleaseWithTag(ctx context.Context, s Spec) (*github.RepositoryRelease, error) {
+func (grs *GithubReleaseSource) GetGithubReleaseWithTag(ctx context.Context, s Spec) (*github.RepositoryRelease, error) {
 	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(s.GitHubRepository)
 	if err != nil {
 		return nil, ErrNotFound
@@ -112,7 +112,7 @@ func (grs GithubReleaseSource) GetGithubReleaseWithTag(ctx context.Context, s Sp
 	return release, nil
 }
 
-func (grs GithubReleaseSource) GetLatestMatchingRelease(ctx context.Context, s Spec) (*github.RepositoryRelease, error) {
+func (grs *GithubReleaseSource) GetLatestMatchingRelease(ctx context.Context, s Spec) (*github.RepositoryRelease, error) {
 	c, err := s.VersionConstraints()
 	if err != nil {
 		return nil, fmt.Errorf("expected version to be a constraint")
@@ -178,7 +178,7 @@ func (grs GithubReleaseSource) GetLatestMatchingRelease(ctx context.Context, s S
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
-func (grs GithubReleaseSource) FindReleaseVersion(s Spec, noDownload bool) (Lock, error) {
+func (grs *GithubReleaseSource) FindReleaseVersion(s Spec, noDownload bool) (Lock, error) {
 	ctx := context.TODO()
 	release, err := grs.GetLatestMatchingRelease(ctx, s)
 	if err != nil {
@@ -188,7 +188,7 @@ func (grs GithubReleaseSource) FindReleaseVersion(s Spec, noDownload bool) (Lock
 	return grs.getLockFromRelease(ctx, release, s, noDownload)
 }
 
-func (grs GithubReleaseSource) getLockFromRelease(ctx context.Context, r *github.RepositoryRelease, s Spec, noDownload bool) (Lock, error) {
+func (grs *GithubReleaseSource) getLockFromRelease(ctx context.Context, r *github.RepositoryRelease, s Spec, noDownload bool) (Lock, error) {
 	lockVersion := strings.TrimPrefix(r.GetTagName(), "v")
 	expectedAssetName := fmt.Sprintf("%s-%s.tgz", s.Name, lockVersion)
 	malformedAssetName := fmt.Sprintf("%s-v%s.tgz", s.Name, lockVersion)
@@ -221,7 +221,7 @@ func (grs GithubReleaseSource) getLockFromRelease(ctx context.Context, r *github
 	return Lock{}, fmt.Errorf("no matching GitHub release asset file name equal to %q", expectedAssetName)
 }
 
-func (grs GithubReleaseSource) getReleaseSHA1(ctx context.Context, s Spec, id int64) (string, error) {
+func (grs *GithubReleaseSource) getReleaseSHA1(ctx context.Context, s Spec, id int64) (string, error) {
 	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(s.GitHubRepository)
 	if err != nil {
 		return "", fmt.Errorf("could not parse repository name: %v", err)
@@ -243,7 +243,7 @@ type ReleasesLister interface {
 // DownloadRelease downloads the release and writes the resulting file to the releasesDir.
 // It should also calculate and set the SHA1 field on the Local result; it does not need
 // to ensure the sums match, the caller must verify this.
-func (grs GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
+func (grs *GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
 	grs.Logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeGithub, grs.ID)
 	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs, grs.Logger)
 }
