@@ -221,8 +221,12 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 		return err
 	}
 
-	licenseFileName, err := p.attachLicenseFile(kilnfile.Slug, release.ID, versionToPublish)
+	licenseFileNames, err := p.attachLicenseFiles(kilnfile.Slug, release.ID, versionToPublish)
 	if err != nil {
+		if len(licenseFileNames) > 0 {
+			p.ErrLogger.Println("Attached the following license files before failure:")
+			p.printLicenseFiles(licenseFileNames, p.ErrLogger)
+		}
 		return err
 	}
 
@@ -257,7 +261,7 @@ func (p Publish) updateReleaseOnPivnet(kilnfile cargo.Kilnfile, buildVersion *se
 	}
 
 	releaseDate := p.Now().Format(publishDateFormat)
-	updatedRelease, err := p.updateRelease(release, kilnfile.Slug, versionToPublish.String(), releaseType, releaseDate, endOfSupportDate, availability, licenseFileName)
+	updatedRelease, err := p.updateRelease(release, kilnfile.Slug, versionToPublish.String(), releaseType, releaseDate, endOfSupportDate, availability, licenseFileNames)
 	if err != nil {
 		return err
 	}
@@ -293,7 +297,13 @@ func (p Publish) eogsDate(rv *releaseVersion, releases releaseSet) (string, erro
 	return "", nil
 }
 
-func (p Publish) updateRelease(release pivnet.Release, slug, version string, releaseType pivnet.ReleaseType, releaseDate, endOfSupportDate, availability, licenseFileName string) (pivnet.Release, error) {
+func (p Publish) printLicenseFiles(licenseFileNames []string, logger *log.Logger) {
+	for _, licenseFileName := range licenseFileNames {
+		logger.Printf("  License file: %s\n", licenseFileName)
+	}
+}
+
+func (p Publish) updateRelease(release pivnet.Release, slug, version string, releaseType pivnet.ReleaseType, releaseDate, endOfSupportDate, availability string, licenseFileNames []string) (pivnet.Release, error) {
 	p.OutLogger.Println("Updating product record on PivNet...")
 	p.OutLogger.Printf("  Version: %s\n", version)
 	p.OutLogger.Printf("  Release date: %s\n", releaseDate)
@@ -302,8 +312,8 @@ func (p Publish) updateRelease(release pivnet.Release, slug, version string, rel
 		p.OutLogger.Printf("  EOGS date: %s\n", endOfSupportDate)
 	}
 	p.OutLogger.Printf("  Availability: %s\n", availability)
-	if licenseFileName != "" {
-		p.OutLogger.Printf("  License file: %s\n", licenseFileName)
+	if len(licenseFileNames) > 0 {
+		p.printLicenseFiles(licenseFileNames, p.OutLogger)
 	} else {
 		p.OutLogger.Printf("  License file: None, pre-GA release")
 	}
@@ -374,35 +384,44 @@ func endOfSupportFor(publishDate time.Time) string {
 	return endOfNinthMonth.Format(publishDateFormat)
 }
 
-func (p Publish) attachLicenseFile(slug string, releaseID int, version *releaseVersion) (string, error) {
+func (p Publish) attachLicenseFiles(slug string, releaseID int, version *releaseVersion) ([]string, error) {
+	var attachedLicenseFileNames []string
+
 	if version.IsGA() {
 		productFiles, err := p.PivnetProductFilesService.List(slug)
 		if err != nil {
-			return "", err
+			return attachedLicenseFileNames, err
 		}
 
-		productFile, found := findMatchingOSL(productFiles, version)
+		licenseFiles, found := findMatchingLicenseFiles(productFiles, version)
 		if !found {
-			return "", errors.New("required license file doesn't exist on Pivnet")
+			return attachedLicenseFileNames, errors.New("required license file doesn't exist on Pivnet")
 		}
 
-		err = p.PivnetProductFilesService.AddToRelease(slug, releaseID, productFile.ID)
-		if err == nil {
-			return productFile.Name, nil
-		} else {
-			return "", err
+		for _, licenseFile := range licenseFiles {
+			err = p.PivnetProductFilesService.AddToRelease(slug, releaseID, licenseFile.ID)
+
+			if err == nil {
+				attachedLicenseFileNames = append(attachedLicenseFileNames, licenseFile.Name)
+			} else {
+				return attachedLicenseFileNames, err
+			}
 		}
 	}
-	return "", nil
+	return attachedLicenseFileNames, nil
 }
 
-func findMatchingOSL(productFiles []pivnet.ProductFile, version *releaseVersion) (pivnet.ProductFile, bool) {
+func findMatchingLicenseFiles(productFiles []pivnet.ProductFile, version *releaseVersion) ([]pivnet.ProductFile, bool) {
+	var matchingLicenseFiles []pivnet.ProductFile
+	foundLicenses := false
+
 	for _, file := range productFiles {
 		if file.FileType == oslFileType && file.FileVersion == version.MajorAndMinor() {
-			return file, true
+			matchingLicenseFiles = append(matchingLicenseFiles, file)
+			foundLicenses = true
 		}
 	}
-	return pivnet.ProductFile{}, false
+	return matchingLicenseFiles, foundLicenses
 }
 
 func (p Publish) determineVersion(releases releaseSet, version *releaseVersion) (*releaseVersion, error) {
