@@ -394,8 +394,11 @@ pre_ga_user_groups:
 
 			Context("during the ga window", func() {
 				const (
-					version20FileID = 42
-					version21FileID = 43
+					version20OslFileID = 42
+					version21OslFileID = 43
+					version21OsmPartOneFileId = 44
+					version21OsmPartTwoFileId = 45
+					version20OsmFileId = 46
 				)
 				var (
 					args             []string
@@ -423,14 +426,32 @@ pre_ga_user_groups:
 								FileType:    "Snake Oil",
 							},
 							{
-								ID:          version21FileID,
+								ID:          version21OslFileID,
 								Name:        "PCF Pivotal Application Service v2.1 OSL",
 								FileVersion: "2.1",
 								FileType:    "Open Source License",
 							},
 							{
-								ID:          version20FileID,
+								ID:          version20OslFileID,
 								Name:        "PCF Pivotal Application Service v2.0 OSL",
+								FileVersion: "2.0",
+								FileType:    "Open Source License",
+							},
+							{
+								ID:          version21OsmPartOneFileId,
+								Name:        "PCF Pivotal Application Service v2.1 OSM Part 1/2",
+								FileVersion: "2.1",
+								FileType:    "Open Source License",
+							},
+							{
+								ID:          version21OsmPartTwoFileId,
+								Name:        "PCF Pivotal Application Service v2.1 OSM Part 2/2",
+								FileVersion: "2.1",
+								FileType:    "Open Source License",
+							},
+							{
+								ID:          version20OsmFileId,
+								Name:        "PCF Pivotal Application Service v2.0 OSM",
 								FileVersion: "2.0",
 								FileType:    "Open Source License",
 							},
@@ -468,17 +489,25 @@ pre_ga_user_groups:
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("Availability: All Users"))
 					})
 
-					It("adds the appropriate OSL file", func() {
+					It("attaches all license files to the release that match its major and minor", func() {
+						expectedProductFileIds := []int{version20OslFileID, version20OsmFileId}
+
 						err := publish.Execute(args)
 						Expect(err).NotTo(HaveOccurred())
 
-						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
-						productSlug, productReleaseID, fileID := pfs.AddToReleaseArgsForCall(0)
-						Expect(productSlug).To(Equal(slug))
-						Expect(productReleaseID).To(Equal(releaseID))
-						Expect(fileID).To(Equal(version20FileID))
+						Expect(pfs.AddToReleaseCallCount()).To(Equal(2))
+
+						var productFileIds []int
+						for i := 0; i <= 1; i++ {
+							productSlug, productReleaseID, fileID := pfs.AddToReleaseArgsForCall(i)
+							Expect(productSlug).To(Equal(slug))
+							Expect(productReleaseID).To(Equal(releaseID))
+							productFileIds = append(productFileIds, fileID)
+						}
+						Expect(productFileIds).To(Equal(expectedProductFileIds))
 
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("License file: PCF Pivotal Application Service v2.0 OSL"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("License file: PCF Pivotal Application Service v2.0 OSM"))
 					})
 
 					Context("when the --security-fix flag is given", func() {
@@ -526,17 +555,26 @@ pre_ga_user_groups:
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("Availability: All Users"))
 					})
 
-					It("adds the appropriate OSL file", func() {
+					It("attaches all license files to the release that match its major and minor", func() {
+						expectedProductFileIds := []int{version21OslFileID, version21OsmPartOneFileId, version21OsmPartTwoFileId}
+
 						err := publish.Execute(args)
 						Expect(err).NotTo(HaveOccurred())
 
-						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
-						productSlug, productReleaseID, fileID := pfs.AddToReleaseArgsForCall(0)
-						Expect(productSlug).To(Equal(slug))
-						Expect(productReleaseID).To(Equal(releaseID))
-						Expect(fileID).To(Equal(version21FileID))
+						Expect(pfs.AddToReleaseCallCount()).To(Equal(3))
+
+						var productFileIds []int
+						for i := 0; i <= 2; i++ {
+							productSlug, productReleaseID, fileID := pfs.AddToReleaseArgsForCall(i)
+							Expect(productSlug).To(Equal(slug))
+							Expect(productReleaseID).To(Equal(releaseID))
+							productFileIds = append(productFileIds, fileID)
+						}
+						Expect(productFileIds).To(Equal(expectedProductFileIds))
 
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("License file: PCF Pivotal Application Service v2.1 OSL"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("License file: PCF Pivotal Application Service v2.1 OSM Part 1/2"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("License file: PCF Pivotal Application Service v2.1 OSM Part 2/2"))
 					})
 
 					Context("when the --security-fix flag is given", func() {
@@ -592,17 +630,26 @@ pre_ga_user_groups:
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("Availability: All Users"))
 					})
 
-					It("adds the appropriate OSL file", func() {
+					It("attaches all license files to the release that match its major and minor", func() {
+						expectedProductFileIds := []int{version21OslFileID, version21OsmPartOneFileId, version21OsmPartTwoFileId}
+
 						err := publish.Execute(args)
 						Expect(err).NotTo(HaveOccurred())
 
-						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
-						productSlug, productReleaseID, fileID := pfs.AddToReleaseArgsForCall(0)
-						Expect(productSlug).To(Equal(slug))
-						Expect(productReleaseID).To(Equal(releaseID))
-						Expect(fileID).To(Equal(version21FileID))
+						Expect(pfs.AddToReleaseCallCount()).To(Equal(3))
+
+						var productFileIds []int
+						for i := 0; i <= 2; i++ {
+							productSlug, productReleaseID, fileID := pfs.AddToReleaseArgsForCall(i)
+							Expect(productSlug).To(Equal(slug))
+							Expect(productReleaseID).To(Equal(releaseID))
+							productFileIds = append(productFileIds, fileID)
+						}
+						Expect(productFileIds).To(Equal(expectedProductFileIds))
 
 						Expect(outLoggerBuffer.String()).To(ContainSubstring("License file: PCF Pivotal Application Service v2.1 OSL"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("License file: PCF Pivotal Application Service v2.1 OSM Part 1/2"))
+						Expect(outLoggerBuffer.String()).To(ContainSubstring("License file: PCF Pivotal Application Service v2.1 OSM Part 2/2"))
 					})
 
 					Context("when the --security-fix flag is given", func() {
@@ -639,6 +686,7 @@ pre_ga_user_groups:
 
 				executeArgs     []string
 				outLoggerBuffer strings.Builder
+				errLoggerBuffer strings.Builder
 			)
 
 			BeforeEach(func() {
@@ -646,7 +694,7 @@ pre_ga_user_groups:
 				publish.Options.Kilnfile = "Kilnfile"
 				outLoggerBuffer = strings.Builder{}
 				publish.OutLogger = log.New(&outLoggerBuffer, "", 0)
-				publish.ErrLogger = log.New(io.Discard, "", 0)
+				publish.ErrLogger = log.New(&errLoggerBuffer, "", 0)
 
 				rs = new(commandsFakes.PivnetReleasesService)
 				pfs = new(commandsFakes.PivnetProductFilesService)
@@ -840,20 +888,70 @@ pre_ga_user_groups:
 								FileVersion: "2.8",
 								FileType:    "Open Source License",
 							},
+							{
+								ID:          43,
+								Name:        "PCF Pivotal Application Service v2.8 OSM Part 1/3",
+								FileVersion: "2.8",
+								FileType:    "Open Source License",
+							},
+							{
+								ID:          44,
+								Name:        "PCF Pivotal Application Service v2.8 OSM Part 2/3",
+								FileVersion: "2.8",
+								FileType:    "Open Source License",
+							},
+							{
+								ID:          45,
+								Name:        "PCF Pivotal Application Service v2.8 OSM Part 3/3",
+								FileVersion: "2.8",
+								FileType:    "Open Source License",
+							},
 						},
 						nil,
 					)
-					pfs.AddToReleaseReturns(errors.New("more bad stuff happened"))
 				})
 
-				It("returns an error and makes no changes", func() {
-					err := publish.Execute(executeArgs)
-					Expect(err).To(HaveOccurred())
+				When("the error occurs before any license files have been attached", func() {
+					BeforeEach(func() {
+						pfs.AddToReleaseReturns(errors.New("more bad stuff happened"))
+					})
 
-					Expect(rs.UpdateCallCount()).To(Equal(0))
-					Expect(pfs.ListCallCount()).To(Equal(1))
-					Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
-					Expect(err).To(MatchError(ContainSubstring("failed to publish tile: more bad stuff happened")))
+					It("returns an error and makes no changes", func() {
+						err := publish.Execute(executeArgs)
+						Expect(err).To(HaveOccurred())
+
+						Expect(rs.UpdateCallCount()).To(Equal(0))
+						Expect(pfs.ListCallCount()).To(Equal(1))
+						Expect(pfs.AddToReleaseCallCount()).To(Equal(1))
+						Expect(err).To(MatchError(ContainSubstring("failed to publish tile: more bad stuff happened")))
+						Expect(errLoggerBuffer.String()).NotTo(ContainSubstring("Attached the following license files before failure:"))
+						Expect(errLoggerBuffer.String()).NotTo(ContainSubstring("  License file: PCF Pivotal Application Service v2.8 OSL"))
+						Expect(errLoggerBuffer.String()).NotTo(ContainSubstring("  License file: PCF Pivotal Application Service v2.8 OSM Part 1/3"))
+						Expect(errLoggerBuffer.String()).NotTo(ContainSubstring("  License file: PCF Pivotal Application Service v2.8 OSM Part 2/3"))
+						Expect(errLoggerBuffer.String()).NotTo(ContainSubstring("  License file: PCF Pivotal Application Service v2.8 OSM Part 3/3"))
+					})
+				})
+
+				When("the error occurs after some license files have already been attached", func() {
+					BeforeEach(func() {
+						pfs.AddToReleaseReturnsOnCall(2, errors.New("more bad stuff happened"))
+					})
+
+					It("returns an error and prints out which product files were already attached", func() {
+						err := publish.Execute(executeArgs)
+						Expect(err).To(HaveOccurred())
+
+						Expect(rs.UpdateCallCount()).To(Equal(0))
+						Expect(pfs.ListCallCount()).To(Equal(1))
+						Expect(pfs.AddToReleaseCallCount()).To(Equal(3))
+						Expect(err).To(MatchError(ContainSubstring("failed to publish tile: more bad stuff happened")))
+
+						Expect(errLoggerBuffer.String()).To(ContainSubstring("Attached the following license files before failure:"))
+						Expect(errLoggerBuffer.String()).To(ContainSubstring("  License file: PCF Pivotal Application Service v2.8 OSL"))
+						Expect(errLoggerBuffer.String()).To(ContainSubstring("  License file: PCF Pivotal Application Service v2.8 OSM Part 1/3"))
+						Expect(errLoggerBuffer.String()).NotTo(ContainSubstring("  License file: PCF Pivotal Application Service v2.8 OSM Part 2/3"))
+						Expect(errLoggerBuffer.String()).NotTo(ContainSubstring("  License file: PCF Pivotal Application Service v2.8 OSM Part 3/3"))
+					})
 				})
 			})
 
