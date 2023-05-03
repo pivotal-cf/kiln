@@ -40,7 +40,7 @@ jobs:
 
       - name: Unit Tests
         run: |
-          go test ./...
+          go test -cover ./...
 
       - name: Acceptance Tests
         env:
