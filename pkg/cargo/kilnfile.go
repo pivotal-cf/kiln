@@ -1,12 +1,29 @@
 package cargo
 
 import (
+	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/Masterminds/semver"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
+	"github.com/google/go-github/v40/github"
+	"github.com/pivotal-cf/kiln/internal/gh"
 )
 
 type Kilnfile struct {
@@ -197,4 +214,243 @@ type Stemcell struct {
 	Alias   string `yaml:"alias,omitempty"`
 	OS      string `yaml:"os"`
 	Version string `yaml:"version"`
+}
+
+func (kf Kilnfile) DownloadBOSHRelease(ctx context.Context, logger *log.Logger, lock ComponentLock, releasesDirectory string) (string, error) {
+	source, found := releaseSourceByID(kf, lock.RemoteSource)
+	if !found {
+		return "", fmt.Errorf("bosh release source configuration not found in Kilnfile")
+	}
+	clients, err := configureDownloadClient(ctx, logger, source)
+	if err != nil {
+		return "", err
+	}
+	return downloadBOSHRelease(ctx, logger, source, lock, releasesDirectory, clients)
+}
+
+//func (kf Kilnfile) UpdateBOSHReleasesLock(ctx context.Context, logger *log.Logger, lock KilnfileLock, releasesDirectory string) (KilnfileLock, error) {
+//	for i, componentLock := range lock.Releases {
+//		updatedLock, err := kf.UpdateBOSHReleaseLock(ctx, logger, componentLock, releasesDirectory)
+//		if err != nil {
+//			return lock, err
+//		}
+//		lock.Releases[i] = updatedLock
+//	}
+//	return lock, nil
+//}
+
+//func (kf Kilnfile) UpdateBOSHReleaseLock(ctx context.Context, logger *log.Logger, lock ComponentLock, releasesDirectory string) (ComponentLock, error) {
+//	panic("not implemented")
+//}
+//
+//func (kf Kilnfile) UploadPublishableBOSHReleaseArtifactory(ctx context.Context, logger *log.Logger, lock KilnfileLock) (KilnfileLock, error) {
+//	panic("not implemented")
+//}
+
+func releaseSourceByID(kilnfile Kilnfile, releaseSourceID string) (ReleaseSourceConfig, bool) {
+	for _, config := range kilnfile.ReleaseSources {
+		if ReleaseSourceID(config) == releaseSourceID {
+			return config, true
+		}
+	}
+	return ReleaseSourceConfig{}, false
+}
+
+type s3Downloader interface {
+	DownloadWithContext(ctx aws.Context, w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
+}
+
+// downloadClients wraps the client types used to download bosh release tarballs
+type downloadClients struct {
+	artifactoryClient, boshIOClient *http.Client
+	githubClient                    *github.Client
+	s3ObjectDownloader              s3Downloader
+}
+
+// configureDownloadClient sets the one download client field needed for releaseSourceConfiguration
+func configureDownloadClient(ctx context.Context, _ *log.Logger, releaseSourceConfiguration ReleaseSourceConfig) (downloadClients, error) {
+	switch releaseSourceConfiguration.Type {
+	case ReleaseSourceTypeArtifactory:
+		return downloadClients{
+			artifactoryClient: http.DefaultClient,
+		}, nil
+	case ReleaseSourceTypeBOSHIO:
+		return downloadClients{
+			boshIOClient: http.DefaultClient,
+		}, nil
+	case ReleaseSourceTypeGithub:
+		client, err := githubAPIClient(ctx, releaseSourceConfiguration)
+		return downloadClients{
+			githubClient: client,
+		}, err
+	case ReleaseSourceTypeS3:
+		downloader, err := awsS3DownloadManager(releaseSourceConfiguration)
+		return downloadClients{
+			s3ObjectDownloader: downloader,
+		}, err
+	default:
+		return downloadClients{}, fmt.Errorf("setup for BOSH release tarball source not implemented")
+	}
+}
+
+func downloadBOSHRelease(ctx context.Context, logger *log.Logger, releaseSourceConfiguration ReleaseSourceConfig, lock ComponentLock, releasesDirectory string, clients downloadClients) (string, error) {
+	switch releaseSourceConfiguration.Type {
+	case ReleaseSourceTypeArtifactory:
+		downloadURL := releaseSourceConfiguration.ArtifactoryHost + "/" + path.Join("artifactory", releaseSourceConfiguration.Repo, lock.RemotePath)
+		tarballFilePath := filepath.Join(releasesDirectory, filepath.Base(lock.RemotePath))
+		return tarballFilePath, downloadTarballFromURL(ctx, clients.artifactoryClient, logger, lock, downloadURL, tarballFilePath)
+	case ReleaseSourceTypeBOSHIO:
+		tarballFilePath := filepath.Join(releasesDirectory, fmt.Sprintf("%s-%s.tgz", lock.Name, lock.Version))
+		return tarballFilePath, downloadTarballFromURL(ctx, clients.boshIOClient, logger, lock, lock.RemotePath, tarballFilePath)
+	case ReleaseSourceTypeGithub:
+		tarballFilePath := filepath.Join(releasesDirectory, fmt.Sprintf("%s-%s.tgz", lock.Name, lock.Version))
+		return downloadBOSHReleaseFromGitHub(ctx, logger, lock, clients.githubClient, tarballFilePath)
+	case ReleaseSourceTypeS3:
+		tarballFilePath := filepath.Join(releasesDirectory, filepath.Base(lock.RemotePath))
+		file, err := os.Create(tarballFilePath)
+		if err != nil {
+			return "", err
+		}
+		defer closeAndIgnoreError(file)
+		_, err = clients.s3ObjectDownloader.DownloadWithContext(ctx, file, &s3.GetObjectInput{
+			Bucket: aws.String(releaseSourceConfiguration.Bucket),
+			Key:    aws.String(lock.RemotePath),
+		})
+		if err != nil {
+			return "", err
+		}
+		return tarballFilePath, checkFilePathSum(file, lock)
+	default:
+		return "", fmt.Errorf("download for BOSH release tarball source not implemented")
+	}
+}
+
+func downloadBOSHReleaseFromGitHub(ctx context.Context, logger *log.Logger, lock ComponentLock, githubClient *github.Client, tarballFilePath string) (string, error) {
+	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(lock.RemotePath)
+	if err != nil {
+		return "", err
+	}
+	rTag, _, err := githubClient.Repositories.GetReleaseByTag(ctx, repoOwner, repoName, lock.Version)
+	if err != nil {
+		logger.Println("warning: failed to find release tag of ", lock.Version)
+		rTag, _, err = githubClient.Repositories.GetReleaseByTag(ctx, repoOwner, repoName, "v"+lock.Version)
+		if err != nil {
+			return "", fmt.Errorf("cant find release tag: %+v", err.Error())
+		}
+	}
+	assetFile, found := findGitHubReleaseAssetFile(rTag.Assets, lock)
+	if !found {
+		return "", errors.New("failed to download file for release: expected release asset not found")
+	}
+	rc, _, err := githubClient.Repositories.DownloadReleaseAsset(ctx, repoOwner, repoName, assetFile.GetID(), http.DefaultClient)
+	if err != nil {
+		fmt.Printf("failed to download file for release: %+v: ", err)
+		return "", err
+	}
+	defer closeAndIgnoreError(rc)
+	file, err := os.Create(tarballFilePath)
+	if err != nil {
+		fmt.Printf("failed to create file for release: %+v: ", err)
+		return "", err
+	}
+	defer closeAndIgnoreError(file)
+	return tarballFilePath, checkIOSum(file, rc, lock)
+}
+
+func awsS3DownloadManager(releaseSourceConfig ReleaseSourceConfig) (s3Downloader, error) {
+	s3Client, err := awsS3Client(releaseSourceConfig)
+	if err != nil {
+		return nil, err
+	}
+	return s3manager.NewDownloaderWithClient(s3Client), nil
+}
+
+func awsS3Client(releaseSourceConfig ReleaseSourceConfig) (*s3.S3, error) {
+	var config aws.Config
+	if releaseSourceConfig.AccessKeyId != "" && !strings.HasPrefix(releaseSourceConfig.AccessKeyId, "$(") {
+		config.Credentials = credentials.NewStaticCredentials(releaseSourceConfig.AccessKeyId, releaseSourceConfig.SecretAccessKey, "")
+	}
+	awsSession, err := session.NewSessionWithOptions(session.Options{
+		Config: config,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s3.New(awsSession), nil
+}
+
+// downloadTarballFromURL downloads a tarball from a URL that does not require authentication: bosh.io and Build Artifactory.
+func downloadTarballFromURL(ctx context.Context, client *http.Client, _ *log.Logger, lock ComponentLock, downloadURL, filePath string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+	if err != nil {
+		return err
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		var dnsErr net.DNSError
+		for errors.Is(err, &dnsErr) {
+			return fmt.Errorf("failed to do HTTP request (are you connected to the VPN?): %w", err)
+		}
+		return err
+	}
+	defer closeAndIgnoreError(res.Body)
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected HTTP status code %d %q", res.StatusCode, http.StatusText(res.StatusCode))
+	}
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer closeAndIgnoreError(file)
+	return checkIOSum(file, res.Body, lock)
+}
+
+func checkIOSum(w io.Writer, r io.Reader, lock ComponentLock) error {
+	hash := sha1.New()
+
+	mw := io.MultiWriter(w, hash)
+	_, err := io.Copy(mw, r)
+	if err != nil {
+		return fmt.Errorf("failed to calculate checksum for downloaded file: %+v: ", err)
+	}
+
+	if hex.EncodeToString(hash.Sum(nil)) != lock.SHA1 {
+		return fmt.Errorf("lock checksum does not match downloaded file")
+	}
+
+	return nil
+}
+
+func checkFilePathSum(file *os.File, lock ComponentLock) error {
+	_, err := file.Seek(0, 0)
+	if err != nil {
+		return fmt.Errorf("error reseting file cursor: %w", err) // untested
+	}
+	hash := sha1.New()
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		return fmt.Errorf("error hashing file contents: %w", err) // untested
+	}
+	if hex.EncodeToString(hash.Sum(nil)) != lock.SHA1 {
+		return fmt.Errorf("lock checksum does not match downloaded file")
+	}
+	return nil
+}
+
+func findGitHubReleaseAssetFile(list []*github.ReleaseAsset, lock ComponentLock) (*github.ReleaseAsset, bool) {
+	lockVersion := strings.TrimPrefix(lock.Version, "v")
+	expectedAssetName := fmt.Sprintf("%s-%s.tgz", lock.Name, lockVersion)
+	malformedAssetName := fmt.Sprintf("%s-v%s.tgz", lock.Name, lockVersion)
+	for _, val := range list {
+		switch val.GetName() {
+		case expectedAssetName, malformedAssetName:
+			return val, true
+		}
+	}
+	return nil, false
+}
+
+func githubAPIClient(ctx context.Context, config ReleaseSourceConfig) (*github.Client, error) {
+	githubHTTPClient, err := gh.HTTPClient(ctx, config.GithubToken)
+	return github.NewClient(githubHTTPClient), err
 }

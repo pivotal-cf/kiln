@@ -1,6 +1,12 @@
 package cargo
 
 import (
+	"context"
+	"io"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -71,4 +77,85 @@ func TestKilnfileLock_UpdateReleaseLockWithName(t *testing.T) {
 			assert.Equal(t, tt.KilnfileResult, tt.KilnfileLock)
 		})
 	}
+}
+
+func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
+	t.Run("bosh.io", func(t *testing.T) {
+		var requestURLs []string
+		server := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+			requestURLs = append(requestURLs, req.URL.Path)
+			res.WriteHeader(http.StatusOK)
+			_, _ = res.Write([]byte("just some text"))
+		}))
+		lock := ComponentLock{
+			Name:         "banana",
+			Version:      "1.2.3",
+			RemoteSource: ReleaseSourceTypeBOSHIO,
+			RemotePath:   server.URL + "/banana-file",
+			SHA1:         "bd907aa2280549494055de165f6230d94ce69af1",
+		}
+		kilnfile := Kilnfile{
+			ReleaseSources: []ReleaseSourceConfig{
+				{Type: ReleaseSourceTypeBOSHIO},
+			},
+		}
+
+		dir := t.TempDir()
+		ctx := context.Background()
+		logger := log.New(io.Discard, "", 0)
+
+		tarballPath, err := kilnfile.DownloadBOSHRelease(ctx, logger, lock, dir)
+
+		please := NewWithT(t)
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(tarballPath).To(BeAnExistingFile())
+		please.Expect(requestURLs).To(Equal([]string{
+			"/banana-file",
+		}))
+		buf, err := os.ReadFile(tarballPath)
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(string(buf)).To(Equal("just some text"))
+	})
+	t.Run("artifactory", func(t *testing.T) {
+		var requestURLs []string
+		server := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+			requestURLs = append(requestURLs, req.URL.Path)
+			res.WriteHeader(http.StatusOK)
+			_, _ = res.Write([]byte("just some text"))
+		}))
+		lock := ComponentLock{
+			Name:         "banana",
+			Version:      "1.2.3",
+			RemoteSource: ReleaseSourceTypeArtifactory,
+			RemotePath:   "/banana-file/tarball.tgz",
+			SHA1:         "bd907aa2280549494055de165f6230d94ce69af1",
+		}
+		kilnfile := Kilnfile{
+			ReleaseSources: []ReleaseSourceConfig{
+				{
+					Type:            ReleaseSourceTypeArtifactory,
+					Repo:            "some-repo",
+					ArtifactoryHost: server.URL,
+					Username:        "cat",
+					Password:        "password",
+				},
+			},
+		}
+
+		dir := t.TempDir()
+		ctx := context.Background()
+		logger := log.New(io.Discard, "", 0)
+
+		tarballPath, err := kilnfile.DownloadBOSHRelease(ctx, logger, lock, dir)
+
+		please := NewWithT(t)
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(tarballPath).To(BeAnExistingFile())
+		please.Expect(requestURLs).To(Equal([]string{
+			"/artifactory/some-repo/banana-file/tarball.tgz",
+		}))
+		buf, err := os.ReadFile(tarballPath)
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(string(buf)).To(Equal("just some text"))
+	})
 }
