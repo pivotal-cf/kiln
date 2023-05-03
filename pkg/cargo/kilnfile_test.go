@@ -2,13 +2,16 @@ package cargo
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 
+	"github.com/google/go-github/v40/github"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 
@@ -158,4 +161,115 @@ func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(string(buf)).To(Equal("just some text"))
 	})
+
+	t.Run("artifactory", func(t *testing.T) {
+		var requestURLs []string
+		server := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+			requestURLs = append(requestURLs, req.URL.Path)
+			res.WriteHeader(http.StatusOK)
+			_, _ = res.Write([]byte("just some text"))
+		}))
+		lock := ComponentLock{
+			Name:         "banana",
+			Version:      "1.2.3",
+			RemoteSource: ReleaseSourceTypeArtifactory,
+			RemotePath:   "/banana-file/tarball.tgz",
+			SHA1:         "bd907aa2280549494055de165f6230d94ce69af1",
+		}
+		kilnfile := Kilnfile{
+			ReleaseSources: []ReleaseSourceConfig{
+				{
+					Type:            ReleaseSourceTypeArtifactory,
+					Repo:            "some-repo",
+					ArtifactoryHost: server.URL,
+					Username:        "cat",
+					Password:        "password",
+				},
+			},
+		}
+
+		dir := t.TempDir()
+		ctx := context.Background()
+		logger := log.New(io.Discard, "", 0)
+
+		tarballPath, err := kilnfile.DownloadBOSHRelease(ctx, logger, lock, dir)
+
+		please := NewWithT(t)
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(tarballPath).To(BeAnExistingFile())
+		please.Expect(requestURLs).To(Equal([]string{
+			"/artifactory/some-repo/banana-file/tarball.tgz",
+		}))
+		buf, err := os.ReadFile(tarballPath)
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(string(buf)).To(Equal("just some text"))
+	})
+	t.Run("github", func(t *testing.T) {
+		t.Run("configure client", func(t *testing.T) {
+			logger := log.New(io.Discard, "", 0)
+			source := ReleaseSourceConfig{
+				Type:        ReleaseSourceTypeGithub,
+				GithubToken: "orange",
+				Org:         "pivotal",
+			}
+
+			clients, err := configureDownloadClient(context.Background(), logger, source)
+			please := NewWithT(t)
+			please.Expect(err).NotTo(HaveOccurred())
+			please.Expect(clients.githubClient).NotTo(BeNil())
+		})
+		t.Run("download", func(t *testing.T) {
+			logger := log.New(io.Discard, "", 0)
+			source := ReleaseSourceConfig{
+				Type:        ReleaseSourceTypeGithub,
+				GithubToken: "orange",
+				Org:         "pivotal-cf",
+			}
+			lock := ComponentLock{
+				Name:         "hello-release",
+				Version:      "1.2.3",
+				RemoteSource: ReleaseSourceTypeGithub,
+				RemotePath:   "https//github.com/pivotal/hello-release/releases/v1.2.3/files/banana-file/tarball.tgz",
+				SHA1:         "bd907aa2280549494055de165f6230d94ce69af1",
+			}
+
+			dir := t.TempDir()
+
+			server := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+				switch req.URL.Path {
+				case "/repos/pivotal/hello-release/releases/tags/1.2.3":
+					res.WriteHeader(http.StatusNotFound)
+				case "/repos/pivotal/hello-release/releases/tags/v1.2.3":
+					res.WriteHeader(http.StatusOK)
+					buf, _ := json.Marshal(github.RepositoryRelease{
+						Assets: []*github.ReleaseAsset{
+							{Name: ptr("not-tarball.tgz"), ID: ptr[int64](50)},
+							{Name: ptr("hello-release-1.2.3.tgz"), ID: ptr[int64](60)},
+						},
+					})
+					_, _ = res.Write(buf)
+				case "/repos/pivotal/hello-release/releases/assets/60":
+					res.WriteHeader(http.StatusOK)
+					_, _ = res.Write([]byte("just some text"))
+				default:
+					res.WriteHeader(http.StatusInternalServerError)
+					t.Fatalf("unexpected URL path: %s", req.URL.Path)
+				}
+			}))
+			t.Cleanup(server.Close)
+			ghClient := github.NewClient(server.Client())
+			ghClient.BaseURL, _ = url.Parse(server.URL + "/")
+
+			tarballPath, err := downloadBOSHRelease(context.Background(), logger, source, lock, dir, clients{
+				githubClient: ghClient,
+			})
+			please := NewWithT(t)
+			please.Expect(err).NotTo(HaveOccurred())
+			please.Expect(tarballPath).To(BeAnExistingFile())
+			buf, err := os.ReadFile(tarballPath)
+			please.Expect(err).NotTo(HaveOccurred())
+			please.Expect(string(buf)).To(Equal("just some text"))
+		})
+	})
+
 }

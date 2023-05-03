@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -20,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
 	"github.com/google/go-github/v40/github"
@@ -260,40 +262,40 @@ type s3Downloader interface {
 	DownloadWithContext(ctx aws.Context, w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
 }
 
-// downloadClients wraps the client types used to download bosh release tarballs
-type downloadClients struct {
+// clients wraps the client types used to download bosh release tarballs
+type clients struct {
 	artifactoryClient, boshIOClient *http.Client
 	githubClient                    *github.Client
-	s3ObjectDownloader              s3Downloader
+	s3Client                        s3iface.S3API
 }
 
 // configureDownloadClient sets the one download client field needed for releaseSourceConfiguration
-func configureDownloadClient(ctx context.Context, _ *log.Logger, releaseSourceConfiguration ReleaseSourceConfig) (downloadClients, error) {
+func configureDownloadClient(ctx context.Context, _ *log.Logger, releaseSourceConfiguration ReleaseSourceConfig) (clients, error) {
 	switch releaseSourceConfiguration.Type {
 	case ReleaseSourceTypeArtifactory:
-		return downloadClients{
+		return clients{
 			artifactoryClient: http.DefaultClient,
 		}, nil
 	case ReleaseSourceTypeBOSHIO:
-		return downloadClients{
+		return clients{
 			boshIOClient: http.DefaultClient,
 		}, nil
 	case ReleaseSourceTypeGithub:
 		client, err := githubAPIClient(ctx, releaseSourceConfiguration)
-		return downloadClients{
+		return clients{
 			githubClient: client,
 		}, err
 	case ReleaseSourceTypeS3:
-		downloader, err := awsS3DownloadManager(releaseSourceConfiguration)
-		return downloadClients{
-			s3ObjectDownloader: downloader,
+		s3Client, err := awsS3Client(releaseSourceConfiguration)
+		return clients{
+			s3Client: s3Client,
 		}, err
 	default:
-		return downloadClients{}, fmt.Errorf("setup for BOSH release tarball source not implemented")
+		return clients{}, fmt.Errorf("setup for BOSH release tarball source not implemented")
 	}
 }
 
-func downloadBOSHRelease(ctx context.Context, logger *log.Logger, releaseSourceConfiguration ReleaseSourceConfig, lock ComponentLock, releasesDirectory string, clients downloadClients) (string, error) {
+func downloadBOSHRelease(ctx context.Context, logger *log.Logger, releaseSourceConfiguration ReleaseSourceConfig, lock ComponentLock, releasesDirectory string, clients clients) (string, error) {
 	switch releaseSourceConfiguration.Type {
 	case ReleaseSourceTypeArtifactory:
 		downloadURL := releaseSourceConfiguration.ArtifactoryHost + "/" + path.Join("artifactory", releaseSourceConfiguration.Repo, lock.RemotePath)
@@ -312,7 +314,7 @@ func downloadBOSHRelease(ctx context.Context, logger *log.Logger, releaseSourceC
 			return "", err
 		}
 		defer closeAndIgnoreError(file)
-		_, err = clients.s3ObjectDownloader.DownloadWithContext(ctx, file, &s3.GetObjectInput{
+		_, err = s3manager.NewDownloaderWithClient(clients.s3Client).DownloadWithContext(ctx, file, &s3.GetObjectInput{
 			Bucket: aws.String(releaseSourceConfiguration.Bucket),
 			Key:    aws.String(lock.RemotePath),
 		})
@@ -326,16 +328,21 @@ func downloadBOSHRelease(ctx context.Context, logger *log.Logger, releaseSourceC
 }
 
 func downloadBOSHReleaseFromGitHub(ctx context.Context, logger *log.Logger, lock ComponentLock, githubClient *github.Client, tarballFilePath string) (string, error) {
-	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(lock.RemotePath)
+	u, err := url.Parse(lock.RemotePath)
 	if err != nil {
 		return "", err
 	}
+	segments := strings.Split(u.Path, "/")
+	if len(segments) < 2 {
+		return "", fmt.Errorf("failed to parse repository name and owner from bosh release remote path")
+	}
+	repoOwner, repoName := segments[3], segments[4]
 	rTag, _, err := githubClient.Repositories.GetReleaseByTag(ctx, repoOwner, repoName, lock.Version)
 	if err != nil {
 		logger.Println("warning: failed to find release tag of ", lock.Version)
 		rTag, _, err = githubClient.Repositories.GetReleaseByTag(ctx, repoOwner, repoName, "v"+lock.Version)
 		if err != nil {
-			return "", fmt.Errorf("cant find release tag: %+v", err.Error())
+			return "", fmt.Errorf("failed to find release tag: %w", err)
 		}
 	}
 	assetFile, found := findGitHubReleaseAssetFile(rTag.Assets, lock)
@@ -357,15 +364,7 @@ func downloadBOSHReleaseFromGitHub(ctx context.Context, logger *log.Logger, lock
 	return tarballFilePath, checkIOSum(file, rc, lock)
 }
 
-func awsS3DownloadManager(releaseSourceConfig ReleaseSourceConfig) (s3Downloader, error) {
-	s3Client, err := awsS3Client(releaseSourceConfig)
-	if err != nil {
-		return nil, err
-	}
-	return s3manager.NewDownloaderWithClient(s3Client), nil
-}
-
-func awsS3Client(releaseSourceConfig ReleaseSourceConfig) (*s3.S3, error) {
+func awsS3Client(releaseSourceConfig ReleaseSourceConfig) (s3iface.S3API, error) {
 	var config aws.Config
 	if releaseSourceConfig.AccessKeyId != "" && !strings.HasPrefix(releaseSourceConfig.AccessKeyId, "$(") {
 		config.Credentials = credentials.NewStaticCredentials(releaseSourceConfig.AccessKeyId, releaseSourceConfig.SecretAccessKey, "")
