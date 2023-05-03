@@ -387,41 +387,38 @@ func endOfSupportFor(publishDate time.Time) string {
 func (p Publish) attachLicenseFiles(slug string, releaseID int, version *releaseVersion) ([]string, error) {
 	var attachedLicenseFileNames []string
 
-	if version.IsGA() {
-		productFiles, err := p.PivnetProductFilesService.List(slug)
-		if err != nil {
+	if !version.IsGA() {
+		return []string{}, nil
+	}
+
+	productFiles, err := p.PivnetProductFilesService.List(slug)
+	if err != nil {
+		return []string{}, err
+	}
+
+	licenseFiles := findMatchingLicenseFiles(productFiles, version)
+	if len(licenseFiles) == 0 {
+		return []string{}, errors.New("required license file doesn't exist on Pivnet")
+	}
+
+	for _, licenseFile := range licenseFiles {
+		if err := p.PivnetProductFilesService.AddToRelease(slug, releaseID, licenseFile.ID); err != nil {
 			return attachedLicenseFileNames, err
 		}
-
-		licenseFiles, found := findMatchingLicenseFiles(productFiles, version)
-		if !found {
-			return attachedLicenseFileNames, errors.New("required license file doesn't exist on Pivnet")
-		}
-
-		for _, licenseFile := range licenseFiles {
-			err = p.PivnetProductFilesService.AddToRelease(slug, releaseID, licenseFile.ID)
-
-			if err == nil {
-				attachedLicenseFileNames = append(attachedLicenseFileNames, licenseFile.Name)
-			} else {
-				return attachedLicenseFileNames, err
-			}
-		}
+		attachedLicenseFileNames = append(attachedLicenseFileNames, licenseFile.Name)
 	}
 	return attachedLicenseFileNames, nil
 }
 
-func findMatchingLicenseFiles(productFiles []pivnet.ProductFile, version *releaseVersion) ([]pivnet.ProductFile, bool) {
+func findMatchingLicenseFiles(productFiles []pivnet.ProductFile, version *releaseVersion) []pivnet.ProductFile {
 	var matchingLicenseFiles []pivnet.ProductFile
-	foundLicenses := false
 
 	for _, file := range productFiles {
 		if file.FileType == oslFileType && file.FileVersion == version.MajorAndMinor() {
 			matchingLicenseFiles = append(matchingLicenseFiles, file)
-			foundLicenses = true
 		}
 	}
-	return matchingLicenseFiles, foundLicenses
+	return matchingLicenseFiles
 }
 
 func (p Publish) determineVersion(releases releaseSet, version *releaseVersion) (*releaseVersion, error) {
