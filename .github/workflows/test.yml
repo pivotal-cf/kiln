@@ -25,6 +25,10 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
 
+      - uses: dominikh/staticcheck-action@v1.3.0
+        with:
+          install-go: false
+
       - name: Ensure Generate Succeeds and Does Not Make Changes
         run: |
           go generate ./...
