@@ -38,7 +38,13 @@ jobs:
           RELEEN_GITHUB_TOKEN: ${{ secrets.RELEEN_GITHUB_TOKEN }}
         run: |
           export GITHUB_TOKEN="${RELEEN_GITHUB_TOKEN}"
-          go test ./...
+          go test --covermode=atomic --coverprofile=unit-test-code-coverage.out ./...
+
+      - name: Archive Unit Test Code Coverage Output
+        uses: actions/upload-artifact@v3
+        with:
+          name: Unit Test Code Coverage Output
+          path: unit-test-code-coverage.out
 
       - name: Acceptance Tests
         env:
