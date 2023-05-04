@@ -388,17 +388,17 @@ func (p Publish) attachLicenseFiles(slug string, releaseID int, version *release
 	var attachedLicenseFileNames []string
 
 	if !version.IsGA() {
-		return []string{}, nil
+		return nil, nil
 	}
 
 	productFiles, err := p.PivnetProductFilesService.List(slug)
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 
 	licenseFiles := findMatchingLicenseFiles(productFiles, version)
 	if len(licenseFiles) == 0 {
-		return []string{}, errors.New("required license file doesn't exist on Pivnet")
+		return nil, errors.New("required license file doesn't exist on Pivnet")
 	}
 
 	for _, licenseFile := range licenseFiles {
