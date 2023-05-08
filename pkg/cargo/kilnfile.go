@@ -223,11 +223,11 @@ func (kf Kilnfile) DownloadBOSHRelease(ctx context.Context, logger *log.Logger, 
 	if !found {
 		return "", fmt.Errorf("bosh release source configuration not found in Kilnfile")
 	}
-	clients, err := configureDownloadClient(ctx, logger, source)
+	downloadClients, err := configureDownloadClient(ctx, logger, source)
 	if err != nil {
 		return "", err
 	}
-	return downloadBOSHRelease(ctx, logger, source, lock, releasesDirectory, clients)
+	return downloadBOSHRelease(ctx, logger, source, lock, releasesDirectory, downloadClients)
 }
 
 //func (kf Kilnfile) UpdateBOSHReleasesLock(ctx context.Context, logger *log.Logger, lock KilnfileLock, releasesDirectory string) (KilnfileLock, error) {
@@ -258,10 +258,6 @@ func releaseSourceByID(kilnfile Kilnfile, releaseSourceID string) (ReleaseSource
 	return ReleaseSourceConfig{}, false
 }
 
-type s3Downloader interface {
-	DownloadWithContext(ctx aws.Context, w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
-}
-
 // clients wraps the client types used to download bosh release tarballs
 type clients struct {
 	artifactoryClient, boshIOClient *http.Client
@@ -269,7 +265,8 @@ type clients struct {
 	s3Client                        s3iface.S3API
 }
 
-// configureDownloadClient sets the one download client field needed for releaseSourceConfiguration
+// configureDownloadClient sets the ONE download client field needed for releaseSourceConfiguration it does not bother
+// with other release sources.
 func configureDownloadClient(ctx context.Context, _ *log.Logger, releaseSourceConfiguration ReleaseSourceConfig) (clients, error) {
 	switch releaseSourceConfiguration.Type {
 	case ReleaseSourceTypeArtifactory:
@@ -309,22 +306,26 @@ func downloadBOSHRelease(ctx context.Context, logger *log.Logger, releaseSourceC
 		return downloadBOSHReleaseFromGitHub(ctx, logger, lock, clients.githubClient, tarballFilePath)
 	case ReleaseSourceTypeS3:
 		tarballFilePath := filepath.Join(releasesDirectory, filepath.Base(lock.RemotePath))
-		file, err := os.Create(tarballFilePath)
-		if err != nil {
-			return "", err
-		}
-		defer closeAndIgnoreError(file)
-		_, err = s3manager.NewDownloaderWithClient(clients.s3Client).DownloadWithContext(ctx, file, &s3.GetObjectInput{
-			Bucket: aws.String(releaseSourceConfiguration.Bucket),
-			Key:    aws.String(lock.RemotePath),
-		})
-		if err != nil {
-			return "", err
-		}
-		return tarballFilePath, checkFilePathSum(file, lock)
+		return downloadBOSHReleaseFromS3(ctx, clients.s3Client, releaseSourceConfiguration, lock, tarballFilePath)
 	default:
 		return "", fmt.Errorf("download for BOSH release tarball source not implemented")
 	}
+}
+
+func downloadBOSHReleaseFromS3(ctx context.Context, s3Client s3iface.S3API, releaseSourceConfiguration ReleaseSourceConfig, lock ComponentLock, tarballFilePath string) (string, error) {
+	file, err := os.Create(tarballFilePath)
+	if err != nil {
+		return "", err
+	}
+	defer closeAndIgnoreError(file)
+	_, err = s3manager.NewDownloaderWithClient(s3Client).DownloadWithContext(ctx, file, &s3.GetObjectInput{
+		Bucket: aws.String(releaseSourceConfiguration.Bucket),
+		Key:    aws.String(lock.RemotePath),
+	})
+	if err != nil {
+		return "", err
+	}
+	return tarballFilePath, checkFilePathSum(file, lock)
 }
 
 func downloadBOSHReleaseFromGitHub(ctx context.Context, logger *log.Logger, lock ComponentLock, githubClient *github.Client, tarballFilePath string) (string, error) {
