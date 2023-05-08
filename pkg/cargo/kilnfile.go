@@ -189,12 +189,6 @@ func (lock ComponentLock) WithRemote(source, path string) ComponentLock {
 	return lock
 }
 
-func (lock ComponentLock) UnsetStemcell() ComponentLock {
-	lock.StemcellOS = ""
-	lock.StemcellVersion = ""
-	return lock
-}
-
 func (lock ComponentLock) ParseVersion() (*semver.Version, error) {
 	return semver.NewVersion(lock.Version)
 }
