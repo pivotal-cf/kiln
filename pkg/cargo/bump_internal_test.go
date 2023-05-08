@@ -1,9 +1,11 @@
 package cargo
 
 import (
-	"github.com/google/go-github/v40/github"
-	. "github.com/onsi/gomega"
 	"testing"
+
+	. "github.com/onsi/gomega"
+
+	"github.com/google/go-github/v40/github"
 )
 
 func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {

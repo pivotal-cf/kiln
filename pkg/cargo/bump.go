@@ -2,14 +2,15 @@ package cargo
 
 import (
 	"context"
-	"github.com/pivotal-cf/kiln/internal/gh"
-	"golang.org/x/exp/slices"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
+	"golang.org/x/exp/slices"
+
+	"github.com/pivotal-cf/kiln/internal/gh"
 )
 
 type Bump struct {
