@@ -9,9 +9,46 @@ import (
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
 )
 
+type Kilnfile struct {
+	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources,omitempty"`
+	Slug            string                `yaml:"slug,omitempty"`
+	PreGaUserGroups []string              `yaml:"pre_ga_user_groups,omitempty"`
+	Releases        []ComponentSpec       `yaml:"releases,omitempty"`
+	TileNames       []string              `yaml:"tile_names,omitempty"`
+	Stemcell        Stemcell              `yaml:"stemcell_criteria,omitempty"`
+}
+
+func (kf Kilnfile) ComponentSpec(name string) (ComponentSpec, bool) {
+	for _, s := range kf.Releases {
+		if s.Name == name {
+			return s, true
+		}
+	}
+	return ComponentSpec{}, false
+}
+
 type KilnfileLock struct {
 	Releases []ComponentLock `yaml:"releases"`
 	Stemcell Stemcell        `yaml:"stemcell_criteria"`
+}
+
+func (k KilnfileLock) FindReleaseWithName(name string) (ComponentLock, error) {
+	for _, r := range k.Releases {
+		if r.Name == name {
+			return r, nil
+		}
+	}
+	return ComponentLock{}, errors.New("not found")
+}
+
+func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock ComponentLock) error {
+	for i, r := range k.Releases {
+		if r.Name == name {
+			k.Releases[i] = lock
+			return nil
+		}
+	}
+	return errors.New("not found")
 }
 
 type ComponentSpec struct {
@@ -62,28 +99,6 @@ func (spec ComponentSpec) OSVersionSlug() boshdir.OSVersionSlug {
 
 func (spec ComponentSpec) ReleaseSlug() boshdir.ReleaseSlug {
 	return boshdir.NewReleaseSlug(spec.Name, spec.Version)
-}
-
-type Kilnfile struct {
-	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources,omitempty"`
-	Slug            string                `yaml:"slug,omitempty"`
-	PreGaUserGroups []string              `yaml:"pre_ga_user_groups,omitempty"`
-	Releases        []ComponentSpec       `yaml:"releases,omitempty"`
-	TileNames       []string              `yaml:"tile_names,omitempty"`
-	Stemcell        Stemcell              `yaml:"stemcell_criteria,omitempty"`
-}
-
-func (kf Kilnfile) ComponentSpec(name string) (ComponentSpec, bool) {
-	for _, s := range kf.Releases {
-		if s.Name == name {
-			return s, true
-		}
-	}
-	return ComponentSpec{}, false
-}
-
-func ErrorSpecNotFound(name string) error {
-	return fmt.Errorf("failed to find repository with name %q in Kilnfile", name)
 }
 
 type ReleaseSourceConfig struct {
@@ -184,27 +199,12 @@ func (lock ComponentLock) ParseVersion() (*semver.Version, error) {
 	return semver.NewVersion(lock.Version)
 }
 
-func (k KilnfileLock) FindReleaseWithName(name string) (ComponentLock, error) {
-	for _, r := range k.Releases {
-		if r.Name == name {
-			return r, nil
-		}
-	}
-	return ComponentLock{}, errors.New("not found")
-}
-
-func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock ComponentLock) error {
-	for i, r := range k.Releases {
-		if r.Name == name {
-			k.Releases[i] = lock
-			return nil
-		}
-	}
-	return errors.New("not found")
-}
-
 type Stemcell struct {
 	Alias   string `yaml:"alias,omitempty"`
 	OS      string `yaml:"os"`
 	Version string `yaml:"version"`
+}
+
+func ErrorSpecNotFound(name string) error {
+	return fmt.Errorf("failed to find repository with name %q in Kilnfile", name)
 }
