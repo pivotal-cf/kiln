@@ -18,13 +18,13 @@ type Kilnfile struct {
 	Stemcell        Stemcell              `yaml:"stemcell_criteria,omitempty"`
 }
 
-func (kf Kilnfile) ComponentSpec(name string) (ComponentSpec, bool) {
+func (kf Kilnfile) ComponentSpec(name string) (ComponentSpec, error) {
 	for _, s := range kf.Releases {
 		if s.Name == name {
-			return s, true
+			return s, nil
 		}
 	}
-	return ComponentSpec{}, false
+	return ComponentSpec{}, fmt.Errorf("failed to find component specification  with name %q in Kilnfile", name)
 }
 
 type KilnfileLock struct {
@@ -197,8 +197,4 @@ type Stemcell struct {
 	Alias   string `yaml:"alias,omitempty"`
 	OS      string `yaml:"os"`
 	Version string `yaml:"version"`
-}
-
-func ErrorSpecNotFound(name string) error {
-	return fmt.Errorf("failed to find repository with name %q in Kilnfile", name)
 }

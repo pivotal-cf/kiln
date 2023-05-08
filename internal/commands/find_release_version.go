@@ -44,9 +44,9 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 	}
 	releaseSource := cmd.mrsProvider(kilnfile, false)
 
-	spec, ok := kilnfile.ComponentSpec(cmd.Options.Release)
-	if !ok {
-		return cargo.ErrorSpecNotFound(cmd.Options.Release)
+	spec, err := kilnfile.ComponentSpec(cmd.Options.Release)
+	if err != nil {
+		return err
 	}
 
 	spec.StemcellOS = kilnfileLock.Stemcell.OS

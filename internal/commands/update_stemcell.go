@@ -5,8 +5,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/pivotal-cf/kiln/pkg/cargo"
-
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
@@ -71,9 +69,9 @@ func (update UpdateStemcell) Execute(args []string) error {
 	for i, rel := range kilnfileLock.Releases {
 		update.Logger.Printf("Updating release %q with stemcell %s %s...", rel.Name, kilnfileLock.Stemcell.OS, trimmedInputVersion)
 
-		spec, found := kilnfile.ComponentSpec(rel.Name)
-		if !found {
-			return cargo.ErrorSpecNotFound(rel.Name)
+		spec, err := kilnfile.ComponentSpec(rel.Name)
+		if err != nil {
+			return err
 		}
 		spec.StemcellOS = kilnfileLock.Stemcell.OS
 		spec.StemcellVersion = trimmedInputVersion

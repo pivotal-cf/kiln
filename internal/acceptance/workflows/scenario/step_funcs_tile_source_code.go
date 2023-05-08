@@ -73,7 +73,7 @@ func iSetAVersionConstraintForRelease(ctx context.Context, versionConstraint, re
 		return release.Name == releaseName
 	})
 	if specIndex == indexNotFound {
-		return cargo.ErrorSpecNotFound(releaseName)
+		return fmt.Errorf("index for component specification with name %q not found", releaseName)
 	}
 	spec.Releases[specIndex].Version = versionConstraint
 	return saveAsYAML(kfPath, spec)
@@ -224,9 +224,9 @@ func theKilnfileVersionForReleaseIs(ctx context.Context, releaseName, releaseVer
 	if err != nil {
 		return err
 	}
-	releaseLock, found := kf.ComponentSpec(releaseName)
-	if !found {
-		return component.ErrNotFound
+	releaseLock, err := kf.ComponentSpec(releaseName)
+	if err != nil {
+		return err
 	}
 	if releaseVersion != releaseLock.Version {
 		return fmt.Errorf("the versions are not equal (%q != %q)", releaseVersion, releaseLock.Version)

@@ -193,8 +193,8 @@ func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLis
 }
 
 func fetchReleasesForBump(ctx context.Context, repoService RepositoryReleaseLister, kf Kilnfile, bump Bump) Bump {
-	spec, ok := kf.ComponentSpec(bump.Name)
-	if !ok {
+	spec, err := kf.ComponentSpec(bump.Name)
+	if err != nil {
 		return bump
 	}
 
