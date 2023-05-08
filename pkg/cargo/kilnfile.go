@@ -64,12 +64,6 @@ func (spec ComponentSpec) ReleaseSlug() boshdir.ReleaseSlug {
 	return boshdir.NewReleaseSlug(spec.Name, spec.Version)
 }
 
-func (spec ComponentSpec) UnsetStemcell() ComponentSpec {
-	spec.StemcellOS = ""
-	spec.StemcellVersion = ""
-	return spec
-}
-
 type Kilnfile struct {
 	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources,omitempty"`
 	Slug            string                `yaml:"slug,omitempty"`
@@ -167,15 +161,6 @@ func (lock ComponentLock) String() string {
 	}
 
 	return b.String()
-}
-
-func (lock ComponentLock) Spec() ComponentSpec {
-	return ComponentSpec{
-		Name:            lock.Name,
-		Version:         lock.Version,
-		StemcellOS:      lock.StemcellOS,
-		StemcellVersion: lock.StemcellVersion,
-	}
 }
 
 func (lock ComponentLock) WithSHA1(sum string) ComponentLock {

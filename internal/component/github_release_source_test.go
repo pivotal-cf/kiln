@@ -540,7 +540,7 @@ func TestDownloadReleaseAsset(t *testing.T) {
 	})
 	testLock, err := grs.GetMatchedRelease(component.Spec{Name: "routing", Version: "0.226.0", GitHubRepository: "https://github.com/cloudfoundry/routing-release"})
 	if err != nil {
-		fmt.Println(testLock.Spec())
+		t.Fatal(err)
 	}
 
 	t.Run("when the release is downloaded", func(t *testing.T) {

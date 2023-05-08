@@ -78,8 +78,14 @@ func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 	return src.ReleaseSourceConfig
 }
 
+func unsetStemcell(spec cargo.ComponentSpec) cargo.ComponentSpec {
+	spec.StemcellOS = ""
+	spec.StemcellVersion = ""
+	return spec
+}
+
 func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, error) {
-	requirement = requirement.UnsetStemcell()
+	requirement = unsetStemcell(requirement)
 
 	for _, repo := range repos {
 		for _, suf := range suffixes {
@@ -99,7 +105,7 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement Spec) (Lock, error)
 }
 
 func (src BOSHIOReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock, error) {
-	spec = spec.UnsetStemcell()
+	spec = unsetStemcell(spec)
 
 	constraint, err := spec.VersionConstraints()
 	if err != nil {
