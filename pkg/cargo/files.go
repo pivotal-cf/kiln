@@ -90,6 +90,8 @@ func ReadKilnfileLock(path string) (KilnfileLock, error) {
 	return kilnfileLock, nil
 }
 
+// WriteKilnfile does not validate the Kilnfile nor does it validate the path.
+// Use ResolveKilnfilePath and maybe Validate before calling this.
 func WriteKilnfile(path string, kf Kilnfile) error {
 	f, err := os.Create(path)
 	if err != nil {
