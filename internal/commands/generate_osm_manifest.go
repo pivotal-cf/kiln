@@ -77,9 +77,12 @@ func (cmd *OSM) Execute(args []string) error {
 	out := map[string]osmEntry{}
 
 	if cmd.Options.Only == "" && cmd.Options.Url == "" {
-		kfPath := cargo.FullKilnfilePath(cmd.Options.Kilnfile)
+		kfPath, err := cargo.ResolveKilnfilePath(cmd.Options.Kilnfile)
+		if err != nil {
+			return err
+		}
 
-		kilnfile, kilnfileLock, err := cargo.GetKilnfiles(kfPath)
+		kilnfile, kilnfileLock, err := cargo.ReadKilnfiles(kfPath)
 		if err != nil {
 			return err
 		}

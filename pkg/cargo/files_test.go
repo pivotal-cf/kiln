@@ -1,10 +1,16 @@
 package cargo_test
 
 import (
+	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -39,6 +45,12 @@ func TestInterpolateAndParseKilnfile(t *testing.T) {
 			},
 		},
 	}))
+
+	t.Run("reading fails", func(t *testing.T) {
+		r := iotest.ErrReader(errors.New("lemon"))
+		_, err := cargo.InterpolateAndParseKilnfile(r, make(map[string]any))
+		assert.Error(t, err)
+	})
 }
 
 func TestInterpolateAndParseKilnfile_input_is_not_valid_yaml(t *testing.T) {
@@ -89,3 +101,112 @@ release_sources:
     secret_access_key: $( variable "secret_key" )
     path_template: $( variable "path_template" )
 `
+
+func TestReadKilnfiles(t *testing.T) {
+	t.Run("missing Kilnfile", func(t *testing.T) {
+		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
+		_, _, err := cargo.ReadKilnfiles(kilnfilePath)
+		assert.Error(t, err)
+	})
+	t.Run("missing Kilnfile.lock", func(t *testing.T) {
+		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
+		_ = os.WriteFile(kilnfilePath, nil, 0666)
+		f, _ := os.Create(kilnfilePath)
+		_ = f.Close()
+		_, _, err := cargo.ReadKilnfiles(kilnfilePath)
+		assert.Error(t, err)
+	})
+	t.Run("invalid spec yaml", func(t *testing.T) {
+		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
+		_ = os.WriteFile(kilnfilePath, []byte(`slug: {}`), 0666) // will cause parse type error
+		_, _, err := cargo.ReadKilnfiles(kilnfilePath)
+		assert.Error(t, err)
+	})
+	t.Run("invalid lock yaml", func(t *testing.T) {
+		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
+		_ = os.WriteFile(kilnfilePath, []byte(``), 0666)
+		_ = os.WriteFile(kilnfilePath+".lock", []byte(`releases: 7`), 0666) // will cause parse type error
+		_, _, err := cargo.ReadKilnfiles(kilnfilePath)
+		assert.Error(t, err)
+	})
+	t.Run("parse files", func(t *testing.T) {
+		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
+		_ = os.WriteFile(kilnfilePath, []byte(`slug: "banana"`), 0666)
+		_ = os.WriteFile(kilnfilePath+".lock", []byte(`releases: [{}]`), 0666) // will cause parse type error
+		spec, lock, err := cargo.ReadKilnfiles(kilnfilePath)
+		assert.NoError(t, err)
+		assert.Equal(t, "banana", spec.Slug)
+		assert.Len(t, lock.Releases, 1)
+	})
+}
+
+func TestWriteKilnfile(t *testing.T) {
+	t.Run("it writes a file to a directory", func(t *testing.T) {
+		dir := t.TempDir()
+		assert.NoError(t, cargo.WriteKilnfile(dir, cargo.Kilnfile{
+			Slug: "banana",
+		}))
+		assert.FileExists(t, filepath.Join(dir, "Kilnfile"))
+
+		kfYAML, err := os.ReadFile(filepath.Join(dir, "Kilnfile"))
+		assert.NoError(t, err)
+		assert.Contains(t, string(kfYAML), "slug: banana")
+	})
+	t.Run("it writes a Kilnfile", func(t *testing.T) {
+		dir := filepath.Join(t.TempDir(), "Kilnfile")
+		assert.NoError(t, cargo.WriteKilnfile(dir, cargo.Kilnfile{
+			Slug: "banana",
+		}))
+		assert.FileExists(t, dir)
+
+		kfYAML, err := os.ReadFile(dir)
+		assert.NoError(t, err)
+		assert.Contains(t, string(kfYAML), "slug: banana")
+	})
+	t.Run("it writes a file", func(t *testing.T) {
+		dir := t.TempDir()
+		notValidPath := filepath.Join(dir, "not-a-dir")
+		assert.Error(t, cargo.WriteKilnfile(notValidPath, cargo.Kilnfile{
+			Slug: "banana",
+		}))
+	})
+}
+
+func TestResolveKilnfilePath(t *testing.T) {
+	t.Run("path to an existing Kilnfile", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "Kilnfile")
+		require.NoError(t, os.WriteFile(path, nil, 0666))
+		result, err := cargo.ResolveKilnfilePath(path)
+		assert.NoError(t, err)
+		require.Equal(t, path, result)
+	})
+	t.Run("path is a directory", func(t *testing.T) {
+		path := t.TempDir()
+		result, err := cargo.ResolveKilnfilePath(path)
+		assert.NoError(t, err)
+		require.Equal(t, filepath.Join(path, "Kilnfile"), result)
+	})
+	t.Run("path to a non-directory file", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "not-a-directory")
+		require.NoError(t, os.WriteFile(path, nil, 0666))
+		_, err := cargo.ResolveKilnfilePath(path)
+		assert.Error(t, err)
+	})
+	t.Run("path to a an invalid path", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "not-a-directory")
+		_, err := cargo.ResolveKilnfilePath(path)
+		assert.Error(t, err)
+	})
+	t.Run("path to a lock", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "Kilnfile.lock")
+		require.NoError(t, os.WriteFile(path, nil, 0666))
+		result, err := cargo.ResolveKilnfilePath(path)
+		assert.NoError(t, err)
+		assert.Equal(t, filepath.Join(dir, "Kilnfile"), result)
+	})
+}
+
+func touch(t *testing.T, path string) {
+
+}

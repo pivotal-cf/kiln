@@ -31,7 +31,7 @@ require (
 	github.com/pivotal-cf/jhanda v0.0.0-20200619200912-8de8eb943a43
 	github.com/pivotal-cf/om v0.0.0-20211027143906-30b10602e528
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.2
 	golang.org/x/crypto v0.7.0
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	golang.org/x/oauth2 v0.6.0

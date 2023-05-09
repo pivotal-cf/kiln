@@ -5,24 +5,16 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
-type ConfigFileError struct {
-	HumanReadableConfigFileName string
-	err                         error
-}
-
-func (err ConfigFileError) Unwrap() error {
-	return err.err
-}
-
-func (err ConfigFileError) Error() string {
-	return fmt.Sprintf("encountered a configuration file error with %s: %s", err.HumanReadableConfigFileName, err.err.Error())
-}
+const (
+	kilnfileFileMode = 0666
+)
 
 func InterpolateAndParseKilnfile(in io.Reader, templateVariables map[string]interface{}) (Kilnfile, error) {
 	kilnfileYAML, err := io.ReadAll(in)
@@ -39,29 +31,32 @@ func InterpolateAndParseKilnfile(in io.Reader, templateVariables map[string]inte
 	}
 
 	var kilnfile Kilnfile
-	err = yaml.Unmarshal(interpolatedMetadata, &kilnfile)
+	return kilnfile, yaml.Unmarshal(interpolatedMetadata, &kilnfile)
+}
+
+func ResolveKilnfilePath(path string) (string, error) {
+	if ext := filepath.Ext(path); ext == ".lock" {
+		path = strings.TrimSuffix(path, ".lock")
+	}
+	if filepath.Base(path) == "Kilnfile" {
+		path = filepath.Dir(path)
+	}
+	info, err := os.Stat(path)
 	if err != nil {
-		return Kilnfile{}, err
+		return "", err
 	}
-
-	return kilnfile, nil
+	if !info.IsDir() {
+		return "", fmt.Errorf("kilnfile invalid expected a path to a Kilnfile")
+	}
+	return filepath.Join(path, "Kilnfile"), nil
 }
 
-func FullKilnfilePath(path string) string {
-	var kfPath string = path
-	if info, err := os.Stat(path); err == nil && info.IsDir() {
-		kfPath = filepath.Join(path, "Kilnfile")
-	}
-
-	return kfPath
-}
-
-func GetKilnfiles(path string) (Kilnfile, KilnfileLock, error) {
-	kilnfile, err := GetKilnfile(path)
+func ReadKilnfiles(path string) (Kilnfile, KilnfileLock, error) {
+	kilnfile, err := ReadKilnfile(path)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, err
 	}
-	kilnfileLock, err := GetKilnfileLock(path)
+	kilnfileLock, err := ReadKilnfileLock(path)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, err
 	}
@@ -69,7 +64,7 @@ func GetKilnfiles(path string) (Kilnfile, KilnfileLock, error) {
 	return kilnfile, kilnfileLock, nil
 }
 
-func GetKilnfile(path string) (Kilnfile, error) {
+func ReadKilnfile(path string) (Kilnfile, error) {
 	kf, err := os.ReadFile(path)
 	if err != nil {
 		return Kilnfile{}, fmt.Errorf("failed to read Kilnfile: %w", err)
@@ -84,7 +79,7 @@ func GetKilnfile(path string) (Kilnfile, error) {
 	return kilnfile, nil
 }
 
-func GetKilnfileLock(path string) (KilnfileLock, error) {
+func ReadKilnfileLock(path string) (KilnfileLock, error) {
 	kfl, err := os.ReadFile(path + ".lock")
 	if err != nil {
 		return KilnfileLock{}, fmt.Errorf("failed to read Kilnfile.lock: %w", err)
@@ -99,19 +94,20 @@ func GetKilnfileLock(path string) (KilnfileLock, error) {
 	return kilnfileLock, nil
 }
 
-func WriteKilnfile(kf Kilnfile, path string) error {
-	kfBytes, err := yaml.Marshal(kf)
+func WriteKilnfile(path string, kf Kilnfile) error {
+	if filepath.Base(path) != "Kilnfile" {
+		path = filepath.Join(path, "Kilnfile")
+	}
+	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
-
-	outputKilnfile, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer closeAndIgnoreError(outputKilnfile)
-	_, err = outputKilnfile.Write(kfBytes)
-	return err
+	defer closeAndIgnoreError(f)
+	e := yaml.NewEncoder(f)
+	defer closeAndIgnoreError(e)
+	return e.Encode(kf)
 }
 
-func closeAndIgnoreError(c io.Closer) { _ = c.Close() }
+func closeAndIgnoreError(c io.Closer) {
+	_ = c.Close()
+}

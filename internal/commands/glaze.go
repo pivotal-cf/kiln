@@ -19,9 +19,12 @@ func (cmd *Glaze) Execute(args []string) error {
 		return err
 	}
 
-	kfPath := cargo.FullKilnfilePath(cmd.Options.Kilnfile)
+	kfPath, err := cargo.ResolveKilnfilePath(cmd.Options.Kilnfile)
+	if err != nil {
+		return err
+	}
 
-	kilnfile, kilnfileLock, err := cargo.GetKilnfiles(kfPath)
+	kilnfile, kilnfileLock, err := cargo.ReadKilnfiles(kfPath)
 	if err != nil {
 		return err
 	}
@@ -31,7 +34,7 @@ func (cmd *Glaze) Execute(args []string) error {
 		return err
 	}
 
-	return cargo.WriteKilnfile(kilnfile, kfPath)
+	return cargo.WriteKilnfile(kfPath, kilnfile)
 }
 
 func (cmd *Glaze) Usage() jhanda.Usage {
