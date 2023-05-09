@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 
 	"gopkg.in/yaml.v2"
 )
@@ -27,4 +28,47 @@ remote_path: fake/path/to/fake-component-name
 
 	damnit.Expect(err).NotTo(HaveOccurred())
 	damnit.Expect(string(cl)).To(Equal(validComponentLockYaml))
+}
+
+func TestKilnfileLock_UpdateReleaseLockWithName(t *testing.T) {
+	type args struct {
+		name string
+		lock ComponentLock
+	}
+	tests := []struct {
+		name                         string
+		KilnfileLock, KilnfileResult KilnfileLock
+		args                         args
+		wantErr                      bool
+	}{
+		{name: "empty inputs", wantErr: true},
+
+		{
+			name: "lock with name found",
+			KilnfileLock: KilnfileLock{
+				Releases: []ComponentLock{
+					{Name: "banana"},
+				},
+			},
+			KilnfileResult: KilnfileLock{
+				Releases: []ComponentLock{
+					{Name: "orange", Version: "some-version"},
+				},
+			},
+			args: args{
+				name: "banana", lock: ComponentLock{Name: "orange", Version: "some-version"},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.KilnfileLock.UpdateReleaseLockWithName(tt.args.name, tt.args.lock); tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.KilnfileResult, tt.KilnfileLock)
+		})
+	}
 }

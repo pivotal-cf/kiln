@@ -24,7 +24,7 @@ func (kf Kilnfile) ComponentSpec(name string) (ComponentSpec, error) {
 			return s, nil
 		}
 	}
-	return ComponentSpec{}, fmt.Errorf("failed to find component specification  with name %q in Kilnfile", name)
+	return ComponentSpec{}, fmt.Errorf("failed to find component specification with name %q in Kilnfile", name)
 }
 
 type KilnfileLock struct {
