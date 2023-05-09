@@ -105,7 +105,7 @@ release_sources:
 func TestReadKilnfiles(t *testing.T) {
 	t.Run("missing Kilnfile", func(t *testing.T) {
 		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
-		_, _, err := cargo.ReadKilnfiles(kilnfilePath)
+		_, _, err := cargo.ReadKilnfileAndKilnfileLock(kilnfilePath)
 		assert.Error(t, err)
 	})
 	t.Run("missing Kilnfile.lock", func(t *testing.T) {
@@ -113,27 +113,27 @@ func TestReadKilnfiles(t *testing.T) {
 		_ = os.WriteFile(kilnfilePath, nil, 0666)
 		f, _ := os.Create(kilnfilePath)
 		_ = f.Close()
-		_, _, err := cargo.ReadKilnfiles(kilnfilePath)
+		_, _, err := cargo.ReadKilnfileAndKilnfileLock(kilnfilePath)
 		assert.Error(t, err)
 	})
 	t.Run("invalid spec yaml", func(t *testing.T) {
 		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
 		_ = os.WriteFile(kilnfilePath, []byte(`slug: {}`), 0666) // will cause parse type error
-		_, _, err := cargo.ReadKilnfiles(kilnfilePath)
+		_, _, err := cargo.ReadKilnfileAndKilnfileLock(kilnfilePath)
 		assert.Error(t, err)
 	})
 	t.Run("invalid lock yaml", func(t *testing.T) {
 		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
 		_ = os.WriteFile(kilnfilePath, []byte(``), 0666)
 		_ = os.WriteFile(kilnfilePath+".lock", []byte(`releases: 7`), 0666) // will cause parse type error
-		_, _, err := cargo.ReadKilnfiles(kilnfilePath)
+		_, _, err := cargo.ReadKilnfileAndKilnfileLock(kilnfilePath)
 		assert.Error(t, err)
 	})
 	t.Run("parse files", func(t *testing.T) {
 		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
 		_ = os.WriteFile(kilnfilePath, []byte(`slug: "banana"`), 0666)
 		_ = os.WriteFile(kilnfilePath+".lock", []byte(`releases: [{}]`), 0666) // will cause parse type error
-		spec, lock, err := cargo.ReadKilnfiles(kilnfilePath)
+		spec, lock, err := cargo.ReadKilnfileAndKilnfileLock(kilnfilePath)
 		assert.NoError(t, err)
 		assert.Equal(t, "banana", spec.Slug)
 		assert.Len(t, lock.Releases, 1)

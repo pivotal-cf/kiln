@@ -12,10 +12,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
-const (
-	kilnfileFileMode = 0666
-)
-
 func InterpolateAndParseKilnfile(in io.Reader, templateVariables map[string]interface{}) (Kilnfile, error) {
 	kilnfileYAML, err := io.ReadAll(in)
 	if err != nil {
@@ -51,7 +47,7 @@ func ResolveKilnfilePath(path string) (string, error) {
 	return filepath.Join(path, "Kilnfile"), nil
 }
 
-func ReadKilnfiles(path string) (Kilnfile, KilnfileLock, error) {
+func ReadKilnfileAndKilnfileLock(path string) (Kilnfile, KilnfileLock, error) {
 	kilnfile, err := ReadKilnfile(path)
 	if err != nil {
 		return Kilnfile{}, KilnfileLock{}, err

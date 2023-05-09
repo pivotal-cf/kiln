@@ -24,7 +24,7 @@ func (cmd *Glaze) Execute(args []string) error {
 		return err
 	}
 
-	kilnfile, kilnfileLock, err := cargo.ReadKilnfiles(kfPath)
+	kilnfile, kilnfileLock, err := cargo.ReadKilnfileAndKilnfileLock(kfPath)
 	if err != nil {
 		return err
 	}
