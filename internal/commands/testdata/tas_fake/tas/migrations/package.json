@@ -1,0 +1,15 @@
+{
+  "name": "migrations",
+  "version": "1.0.0",
+  "description": "Tests for Testing Test Migrations (Test)",
+  "scripts": {
+    "test": "tap -Rspec tests/*_test.js"
+  },
+  "author": "VMware Test Application Service (TAS)",
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "tap": "^12.5.3"
+  },
+  "dependencies": {}
+}
