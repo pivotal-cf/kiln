@@ -42,7 +42,7 @@ func ResolveKilnfilePath(path string) (string, error) {
 		return "", err
 	}
 	if !info.IsDir() {
-		return "", fmt.Errorf("kilnfile invalid expected a path to a Kilnfile")
+		return "", fmt.Errorf("expected a path to an existing directory that may/may-not contain a Kilnfile: %q is not a directory", path)
 	}
 	return filepath.Join(path, "Kilnfile"), nil
 }
@@ -91,9 +91,6 @@ func ReadKilnfileLock(path string) (KilnfileLock, error) {
 }
 
 func WriteKilnfile(path string, kf Kilnfile) error {
-	if filepath.Base(path) != "Kilnfile" {
-		path = filepath.Join(path, "Kilnfile")
-	}
 	f, err := os.Create(path)
 	if err != nil {
 		return err

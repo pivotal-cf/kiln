@@ -141,16 +141,12 @@ func TestReadKilnfiles(t *testing.T) {
 }
 
 func TestWriteKilnfile(t *testing.T) {
-	t.Run("it writes a file to a directory", func(t *testing.T) {
+	t.Run("it fails to write to a directory", func(t *testing.T) {
+		// you should call ResolveKilnfilePath on the input
 		dir := t.TempDir()
-		assert.NoError(t, cargo.WriteKilnfile(dir, cargo.Kilnfile{
+		assert.Error(t, cargo.WriteKilnfile(dir, cargo.Kilnfile{
 			Slug: "banana",
 		}))
-		assert.FileExists(t, filepath.Join(dir, "Kilnfile"))
-
-		kfYAML, err := os.ReadFile(filepath.Join(dir, "Kilnfile"))
-		assert.NoError(t, err)
-		assert.Contains(t, string(kfYAML), "slug: banana")
 	})
 	t.Run("it writes a Kilnfile", func(t *testing.T) {
 		dir := filepath.Join(t.TempDir(), "Kilnfile")
@@ -162,13 +158,6 @@ func TestWriteKilnfile(t *testing.T) {
 		kfYAML, err := os.ReadFile(dir)
 		assert.NoError(t, err)
 		assert.Contains(t, string(kfYAML), "slug: banana")
-	})
-	t.Run("it writes a file", func(t *testing.T) {
-		dir := t.TempDir()
-		notValidPath := filepath.Join(dir, "not-a-dir")
-		assert.Error(t, cargo.WriteKilnfile(notValidPath, cargo.Kilnfile{
-			Slug: "banana",
-		}))
 	})
 }
 
@@ -205,8 +194,4 @@ func TestResolveKilnfilePath(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, filepath.Join(dir, "Kilnfile"), result)
 	})
-}
-
-func touch(t *testing.T, path string) {
-
 }
