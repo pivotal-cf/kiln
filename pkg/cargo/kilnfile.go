@@ -333,7 +333,6 @@ func downloadBOSHReleaseFromGitHub(ctx context.Context, logger *log.Logger, lock
 	if err != nil {
 		return "", err
 	}
-	fmt.Printf("%q\n%#v\n", lock.RemotePath, u)
 	segments := strings.Split(u.Path, "/")
 	if len(segments) < 2 {
 		return "", fmt.Errorf("failed to parse repository name and owner from bosh release remote path")
