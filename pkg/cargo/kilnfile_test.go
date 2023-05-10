@@ -229,7 +229,7 @@ func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
 				Name:         "hello-release",
 				Version:      "1.2.3",
 				RemoteSource: ReleaseSourceTypeGithub,
-				RemotePath:   "https//github.com/pivotal/hello-release/releases/v1.2.3/files/banana-file/tarball.tgz",
+				RemotePath:   "https://github.com/pivotal/hello-release/releases/v1.2.3/files/banana-file/tarball.tgz",
 				SHA1:         "bd907aa2280549494055de165f6230d94ce69af1",
 			}
 
