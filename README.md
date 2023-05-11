@@ -1,4 +1,4 @@
-# Kiln [![release](https://github.com/pivotal-cf/kiln/actions/workflows/release.yml/badge.svg)](https://github.com/pivotal-cf/kiln/actions/workflows/release.yml)
+# Kiln [![release](https://github.com/pivotal-cf/kiln/actions/workflows/release.yml/badge.svg)](https://github.com/pivotal-cf/kiln/actions/workflows/release.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/pivotal-cf/kiln.svg)](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg)
 
 _Kiln bakes tiles_
 
