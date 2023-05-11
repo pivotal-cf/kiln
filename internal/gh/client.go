@@ -29,6 +29,9 @@ func HTTPClient(ctx context.Context, accessToken string) (*http.Client, error) {
 			return nil, err
 		}
 	}
+	if accessToken == "" {
+		return http.DefaultClient, nil
+	}
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
 	tokenClient := oauth2.NewClient(ctx, tokenSource)
 	return tokenClient, nil
