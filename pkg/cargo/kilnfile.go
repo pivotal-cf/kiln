@@ -452,5 +452,9 @@ func findGitHubReleaseAssetFile(list []*github.ReleaseAsset, lock ComponentLock)
 
 func githubAPIClient(ctx context.Context, config ReleaseSourceConfig) (*github.Client, error) {
 	githubHTTPClient, err := gh.HTTPClient(ctx, config.GithubToken)
+	if err != nil {
+		log.Println("CONFIGURATION WARNING", err)
+		return github.NewClient(http.DefaultClient), nil
+	}
 	return github.NewClient(githubHTTPClient), err
 }
