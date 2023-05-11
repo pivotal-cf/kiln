@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 
@@ -84,7 +85,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	sshProvider, _ := commands.NewSshProvider(commands.SSHClientCreator{})
+	sshProvider, err := commands.NewSshProvider(commands.SSHClientCreator{})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error fetching SSH provider: %s\n", err)
+	}
 	commandSet["test"] = commands.NewTileTest(outLogger, context.Background(), mobyClient, sshProvider)
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
