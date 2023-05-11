@@ -84,11 +84,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	sshProvider, err := commands.NewSshProvider(commands.SSHClientCreator{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	commandSet["test"] = commands.NewTileTest(outLogger, context.Background(), mobyClient, sshProvider)
+	sshProvider, _ := commands.NewSshProvider(commands.SSHClientCreator{})
+	commandSet["test"] = commands.NewManifestTest(outLogger, context.Background(), mobyClient, sshProvider)
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)

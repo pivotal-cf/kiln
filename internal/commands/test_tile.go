@@ -72,13 +72,11 @@ func (l infoLog) Writer() io.Writer {
 	return l.logger.Writer()
 }
 
-type TileTest struct {
+type ManifestTest struct {
 	Options struct {
 		TilePath            string `short:"tp"   long:"tile-path"                default:"."                             description:"path to the tile directory (e.g., ~/workspace/tas/ist)"`
 		GingkoManifestFlags string `short:"gmf"  long:"ginkgo-manifest-flags"    default:"-r -p -slowSpecThreshold 15"   description:"flags to pass to the gingko manifest test suite"`
 		Verbose             bool   `short:"v"    long:"verbose"                  default:"false"                         description:"log info lines. this doesn't apply to ginkgo.'"`
-		ManifestOnly        bool   `             long:"manifest-only"            default:"false"                         description:"run only manifest tests"`
-		MigrationsOnly      bool   `             long:"migrations-only"          default:"false"                         description:"run only migration tests"`
 	}
 
 	logger      *log.Logger
@@ -88,9 +86,9 @@ type TileTest struct {
 	sshProvider SshProvider
 }
 
-func NewTileTest(logger *log.Logger, ctx context.Context, mobi mobyClient, sshThing SshProvider) TileTest {
+func NewManifestTest(logger *log.Logger, ctx context.Context, mobi mobyClient, sshThing SshProvider) ManifestTest {
 	ctx, cancelFunc := context.WithCancel(ctx)
-	return TileTest{
+	return ManifestTest{
 		ctx:         ctx,
 		cancelFunc:  cancelFunc,
 		logger:      logger,
@@ -103,7 +101,7 @@ func NewTileTest(logger *log.Logger, ctx context.Context, mobi mobyClient, sshTh
 //go:embed manifest_test_docker/*
 var dockerfileContents string
 
-func (u TileTest) Execute(args []string) error {
+func (u ManifestTest) Execute(args []string) error {
 	if u.sshProvider == nil {
 		return errors.New("ssh provider failed to initialize. check your ssh-agent is running")
 	}
@@ -193,22 +191,8 @@ func (u TileTest) Execute(args []string) error {
 
 	loggerWithInfo.Info("Mounting", parentDir, "and testing", tileDir)
 
-	runAll := !u.Options.ManifestOnly && !u.Options.MigrationsOnly
-
-	var dockerCmds []string
-	if u.Options.ManifestOnly || runAll {
-		dockerCmds = append(dockerCmds, fmt.Sprintf("cd /tas/%s/test/manifest", tileDir))
-		dockerCmds = append(dockerCmds, fmt.Sprintf("PRODUCT=%s RENDERER=ops-manifest ginkgo %s", toProduct(tileDir), u.Options.GingkoManifestFlags))
-	}
-	if u.Options.MigrationsOnly || runAll {
-		dockerCmds = append(dockerCmds, fmt.Sprintf("cd /tas/%s/migrations", tileDir))
-		dockerCmds = append(dockerCmds, "npm install")
-		dockerCmds = append(dockerCmds, "npm test")
-	}
-
-	dockerCmd := strings.Join(dockerCmds, " && ")
-
-	envVars := getTileTestEnvVars(absRepoDir, tileDir)
+	envVars := getManifestTestEnvVars(absRepoDir, tileDir)
+	dockerCmd := fmt.Sprintf("cd /tas/%s/test/manifest && PRODUCT=%s RENDERER=ops-manifest ginkgo %s", tileDir, toProduct(tileDir), u.Options.GingkoManifestFlags)
 	loggerWithInfo.Info("Running:", dockerCmd)
 	createResp, err := u.mobi.ContainerCreate(u.ctx, &container.Config{
 		Image: "kiln_test_dependencies:vmware",
@@ -288,7 +272,7 @@ func toProduct(dir string) string {
 	}
 }
 
-func getTileTestEnvVars(dir, productDir string) []string {
+func getManifestTestEnvVars(dir, productDir string) []string {
 	const fixturesFormat = "%s/test/manifest/fixtures"
 	metadataPath := fmt.Sprintf(fixturesFormat+"/tas_metadata.yml", dir)
 	configPath := fmt.Sprintf(fixturesFormat+"/tas_config.yml", dir)
@@ -329,7 +313,7 @@ func getTarReader(fileContents string) (*bufio.Reader, error) {
 	return tr, nil
 }
 
-func (u TileTest) addMissingKeys() error {
+func (u ManifestTest) addMissingKeys() error {
 	needsKeys, err := u.sshProvider.NeedsKeys()
 	if needsKeys {
 		key, err := u.sshProvider.GetKeys()
@@ -370,7 +354,7 @@ type ErrorLine struct {
 	Error string `json:"error"`
 }
 
-func (u TileTest) Usage() jhanda.Usage {
+func (u ManifestTest) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "Test the manifest for a product inside a docker container. Requires a docker daemon to be running and ssh keys with access to Ops Manager's git repo. For non-interactive use either set the env var SSH_PASSWORD or add your ssh identify before running.",
 		ShortDescription: "Test manifest for a product",

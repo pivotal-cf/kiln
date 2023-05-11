@@ -47,7 +47,7 @@ var _ = Describe("kiln test docker", func() {
 			logger = log.New(&writer, "", 0)
 		})
 
-		Describe("test outcomes", func() {
+		Describe("successful creation creation", func() {
 			var (
 				fakeSshProvider *fakes.SshProvider
 				helloTilePath   string
@@ -73,15 +73,15 @@ var _ = Describe("kiln test docker", func() {
 				})
 				When("executing tests", func() {
 					var (
-						subjectUnderTest commands.TileTest
+						subjectUnderTest commands.ManifestTest
 					)
 					BeforeEach(func() {
 						writer.Reset()
-						subjectUnderTest = commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
+						subjectUnderTest = commands.NewManifestTest(logger, ctx, fakeMobyClient, fakeSshProvider)
 					})
 					When("verbose is passed", func() {
 						It("succeeds and logs info", func() {
-							err := subjectUnderTest.Execute([]string{"--manifest-only", "--verbose", "--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
+							err := subjectUnderTest.Execute([]string{"--verbose", "--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
 							Expect(err).To(BeNil())
 
 							By("logging helpful messages", func() {
@@ -112,7 +112,7 @@ var _ = Describe("kiln test docker", func() {
 					})
 					When("verbose isn't passed", func() {
 						It("doesn't log info", func() {
-							err := subjectUnderTest.Execute([]string{"--manifest-only", "--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
+							err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
 							Expect(err).To(BeNil())
 
 							By("logging helpful messages", func() {
@@ -141,8 +141,8 @@ var _ = Describe("kiln test docker", func() {
 					fakeMobyClient = setupFakeMobyClient(testFailureMessage, 1)
 				})
 				It("returns an error", func() {
-					subjectUnderTest := commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
-					err := subjectUnderTest.Execute([]string{"--manifest-only", "--verbose", "--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
+					subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, fakeSshProvider)
+					err := subjectUnderTest.Execute([]string{"--verbose", "--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
 					Expect(err).To(HaveOccurred())
 
 					By("logging helpful messages", func() {
@@ -153,86 +153,6 @@ var _ = Describe("kiln test docker", func() {
 					})
 				})
 			})
-
-			When("all tests are run", func() {
-				var (
-					fakeMobyClient *fakes.MobyClient
-				)
-				BeforeEach(func() {
-					fakeMobyClient = setupFakeMobyClient("success", 0)
-				})
-				When("executing migration tests", func() {
-					var (
-						subjectUnderTest commands.TileTest
-					)
-					BeforeEach(func() {
-						writer.Reset()
-						subjectUnderTest = commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
-					})
-
-					It("succeeds", func() {
-						err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath})
-						Expect(err).To(BeNil())
-
-						By("creating a test container", func() {
-							Expect(fakeMobyClient.ContainerCreateCallCount()).To(Equal(1))
-							_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
-
-							By("executing the tests", func() {
-								dockerCmd := "cd /tas/hello-tile/test/manifest && PRODUCT=hello-tile RENDERER=ops-manifest ginkgo -r -p -slowSpecThreshold 15 && cd /tas/hello-tile/migrations && npm install && npm test"
-								Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
-							})
-						})
-					})
-				})
-			})
-
-			When("migration tests should be successful", func() {
-				const (
-					testSuccessLogLine = "migration tests completed successfully"
-				)
-				var (
-					fakeMobyClient *fakes.MobyClient
-				)
-				BeforeEach(func() {
-					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
-				})
-				When("executing migration tests", func() {
-					var (
-						subjectUnderTest commands.TileTest
-					)
-					BeforeEach(func() {
-						writer.Reset()
-						subjectUnderTest = commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
-					})
-
-					It("succeeds and logs info", func() {
-						err := subjectUnderTest.Execute([]string{"--migrations-only", "--verbose", "--tile-path", helloTilePath})
-						Expect(err).To(BeNil())
-
-						By("logging helpful messages", func() {
-							logs := writer.String()
-							By("logging container information", func() {
-								Expect(logs).To(ContainSubstring("Building / restoring cached docker image"))
-							})
-							By("logging test lines", func() {
-								Expect(logs).To(ContainSubstring("migration tests completed successfully"))
-							})
-						})
-
-						By("creating a test container", func() {
-							Expect(fakeMobyClient.ContainerCreateCallCount()).To(Equal(1))
-							_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
-
-							By("executing the tests", func() {
-								dockerCmd := "cd /tas/hello-tile/migrations && npm install && npm test"
-								Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
-							})
-						})
-					})
-				})
-			})
-
 		})
 
 		It("exits with an error if docker isn't running", func() {
@@ -240,7 +160,7 @@ var _ = Describe("kiln test docker", func() {
 			fakeMobyClient.PingReturns(types.Ping{}, errors.New("docker not running"))
 			fakeSshThinger := fakes.SshProvider{}
 			fakeSshThinger.NeedsKeysReturns(false, nil)
-			subjectUnderTest := commands.NewTileTest(logger, ctx, fakeMobyClient, &fakeSshThinger)
+			subjectUnderTest := commands.NewManifestTest(logger, ctx, fakeMobyClient, &fakeSshThinger)
 			err := subjectUnderTest.Execute([]string{filepath.Join(helloTileDirectorySegments...)})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Docker daemon is not running"))
