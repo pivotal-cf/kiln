@@ -16,7 +16,7 @@ import (
 )
 
 var _ = Describe("test", func() {
-	Context("manifest tests succeed", func() {
+	Context("all tests succeed", func() {
 		It("succeeds", func() {
 			var testOutput bytes.Buffer
 			logger := log.New(&testOutput, "", 0)
@@ -28,16 +28,17 @@ var _ = Describe("test", func() {
 			Expect(err).NotTo(HaveOccurred())
 			tilePath := filepath.Join("testdata", "tas_fake", "tas")
 			Expect(goVendor(tilePath)).NotTo(HaveOccurred())
-			testTile := commands.NewManifestTest(logger, ctx, cli, sshProvider)
+			testTile := commands.NewTileTest(logger, ctx, cli, sshProvider)
 			err = testTile.Execute([]string{"--verbose", "--tile-path", tilePath})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(testOutput.String()).To(ContainSubstring("SUCCESS"))
+			Expect(testOutput.String()).To(ContainSubstring("hello, world"))
 			Expect(testOutput.String()).NotTo(ContainSubstring("Failure"))
 		})
 	})
 
-	Context("manifest tests fail", func() {
+	Context("all tests fail", func() {
 		It("fails", func() {
 			var testOutput bytes.Buffer
 			logger := log.New(&testOutput, "", 0)
@@ -47,7 +48,7 @@ var _ = Describe("test", func() {
 
 			sshProvider, err := commands.NewSshProvider(commands.SSHClientCreator{})
 			Expect(err).NotTo(HaveOccurred())
-			testTile := commands.NewManifestTest(logger, ctx, cli, sshProvider)
+			testTile := commands.NewTileTest(logger, ctx, cli, sshProvider)
 			tilePath := filepath.Join("testdata", "tas_fake", "tas_failing")
 			Expect(goVendor(tilePath)).NotTo(HaveOccurred())
 			err = testTile.Execute([]string{"--verbose", "--tile-path", tilePath})
