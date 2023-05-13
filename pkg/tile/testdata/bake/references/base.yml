@@ -1,0 +1,29 @@
+---
+name: "min"
+label: $(variable "label")
+description: Serves a "Hello World" server.
+metadata_version: "2.11"
+product_version: $(version)
+minimum_version_for_upgrade: "0.0.0"
+icon_image: $(icon)
+
+stemcell_criteria:
+  os: "ubuntu-jammy"
+  version: "1.108"
+
+property_blueprints:
+  - $(property "port")
+
+releases:
+  - name: bpm
+    version: 1.1.18
+    file: bpm-release-1.1.18.tgz
+  - name: hello-release
+    version: 0.1.5
+    file: hello-release-0.1.5.tgz
+
+job_types:
+  - $(instance_group "hello-server")
+
+form_types:
+  - $(form "networking")

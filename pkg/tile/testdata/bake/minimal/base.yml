@@ -1,0 +1,89 @@
+---
+name: "min"
+label: "Minimal Tile"
+description: Serves a "Hello World" server.
+metadata_version: "2.11"
+product_version: $(version)
+minimum_version_for_upgrade: "0.0.0"
+icon_image: $(icon)
+
+stemcell_criteria:
+  os: "ubuntu-jammy"
+  version: "1.108"
+
+property_blueprints:
+  - name: port
+    type: port
+    configurable: true
+    default: 8080
+
+releases:
+  - name: bpm
+    version: 1.1.18
+    file: bpm-release-1.1.18.tgz
+  - name: hello-release
+    version: 0.1.5
+    file: hello-release-0.1.5.tgz
+
+job_types:
+  - name: hello-server
+    label: Server
+    resource_label: Server
+    description: HTTP Server
+
+    templates:
+      - name: bpm
+        release: bpm
+      - name: hello-server
+        release: hello-release
+        manifest: |
+          port: (( .properties.port.value ))
+
+    static_ip: 1
+    dynamic_ip: 0
+
+    max_in_flight: 1
+    single_az_only: true
+
+    instance_definition:
+      name: instances
+      type: integer
+      label: Instances
+      configurable: true
+      default: 1
+      constraints:
+        min: 0
+        max: 1
+
+    resource_definitions:
+      - name: ram
+        type: integer
+        label: RAM
+        configurable: true
+        default: 1024
+        constraints:
+          min: 1024
+
+      - name: ephemeral_disk
+        type: integer
+        label: Ephemeral Disk
+        configurable: true
+        default: 4000
+        constraints:
+          min: 2000
+
+      - name: persistent_disk
+        type: integer
+        label: Persistent Disk
+        configurable: false
+        default: 4000
+        constraints:
+          min: 2000
+
+      - name: cpu
+        type: integer
+        label: CPU
+        configurable: true
+        default: 1
+        constraints:
+          min: 1

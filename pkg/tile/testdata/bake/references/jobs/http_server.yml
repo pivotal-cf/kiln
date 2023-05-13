@@ -1,0 +1,6 @@
+---
+- name: hello-server
+  alias: http_server
+  release: hello-release
+  manifest: |
+    port: (( .properties.port.value ))

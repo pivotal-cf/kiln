@@ -1,0 +1,8 @@
+---
+name: networking
+label: Networking
+description: Networking
+property_inputs:
+  - reference: .properties.port
+    label: Port
+    description: The HTTP port number for the hello server.

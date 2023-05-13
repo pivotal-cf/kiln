@@ -1,0 +1,5 @@
+---
+name: port
+type: port
+configurable: true
+default: 8080

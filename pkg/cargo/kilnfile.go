@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"io"
 	"log"
 	"net"
@@ -68,6 +69,26 @@ func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock ComponentLock)
 		}
 	}
 	return errors.New("not found")
+}
+
+func (k KilnfileLock) MetadataReleases() []proofing.Release {
+	releases := make([]proofing.Release, 0, len(k.Releases))
+	for _, release := range k.Releases {
+		filePath := fmt.Sprintf("%s-%s.tgz", release.Name, strings.TrimPrefix(release.Version, "v"))
+		switch release.RemoteSource {
+		case ReleaseSourceTypeArtifactory, ReleaseSourceTypeS3:
+			if p := path.Base(release.RemotePath); p != "" {
+				filePath = p
+			}
+		}
+		releases = append(releases, proofing.Release{
+			Name:    release.Name,
+			Version: strings.TrimPrefix(release.Version, "v"),
+			SHA1:    release.SHA1,
+			File:    filePath,
+		})
+	}
+	return releases
 }
 
 type ComponentSpec struct {
