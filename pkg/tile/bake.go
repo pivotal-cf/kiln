@@ -1,11 +1,16 @@
 package tile
 
 import (
+	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"compress/gzip"
+	"crypto/sha1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash"
 	"io"
 	"io/fs"
 	"log"
@@ -15,6 +20,7 @@ import (
 	"strings"
 	"text/template"
 
+	boshman "github.com/cloudfoundry/bosh-cli/release/manifest"
 	yamlConverter "github.com/ghodss/yaml"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
@@ -183,6 +189,10 @@ func (bakeConfiguration *BakeConfiguration) release(name string) (string, error)
 	return string(releaseJSON), err
 }
 
+const PanicBakeImplementationIncomplete = "bake implementation is incomplete"
+
+// Bake is not yet fully implemented.
+// THIS FUNCTION WILL PANIC UNTIL IT IS COMPLETE.
 func Bake(w io.Writer, tileDirectory fs.FS, configuration *BakeConfiguration, logger *log.Logger) error {
 	w, tileDirectory, configuration, logger = bakePrecondition(w, tileDirectory, configuration, logger)
 	if err := configuration.validate(); err != nil {
@@ -192,7 +202,11 @@ func Bake(w io.Writer, tileDirectory fs.FS, configuration *BakeConfiguration, lo
 	if err := writeMetadataFile(tile, tileDirectory, configuration, logger); err != nil {
 		return err
 	}
-	return tile.Close()
+	err := tile.Close()
+	if err != nil {
+		return err
+	}
+	panic(PanicBakeImplementationIncomplete)
 }
 
 func bakePrecondition(w io.Writer, tileDirectory fs.FS, configuration *BakeConfiguration, logger *log.Logger) (io.Writer, fs.FS, *BakeConfiguration, *log.Logger) {
@@ -220,12 +234,24 @@ func writeMetadataFile(z *zip.Writer, d fs.FS, sc *BakeConfiguration, logger *lo
 	return Metadata(f, d, sc, logger)
 }
 
+// Metadata is not fully implemented.
 func Metadata(w io.Writer, tileDirectory fs.FS, configuration *BakeConfiguration, logger *log.Logger) error {
-	var err error
 	w, tileDirectory, configuration, logger = bakePrecondition(w, tileDirectory, configuration, logger)
 	if err := configuration.validate(); err != nil {
 		return err
 	}
+	if err := loadVariablesFromFiles(configuration, tileDirectory); err != nil {
+		return err
+	}
+	interpolatedMetadata, err := interpolate(tileDirectory, configuration.MetadataTemplateFilePath, configuration)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(interpolatedMetadata)
+	return err
+}
+
+func loadVariablesFromFiles(configuration *BakeConfiguration, tileDirectory fs.FS) error {
 	for _, variablesFile := range configuration.VariablesFilePaths {
 		buf, err := fs.ReadFile(tileDirectory, variablesFile)
 		if err != nil {
@@ -235,12 +261,7 @@ func Metadata(w io.Writer, tileDirectory fs.FS, configuration *BakeConfiguration
 			return err
 		}
 	}
-	interpolatedMetadata, err := interpolate(tileDirectory, configuration.MetadataTemplateFilePath, configuration)
-	if err != nil {
-		return err
-	}
-	_, err = w.Write(interpolatedMetadata)
-	return err
+	return nil
 }
 
 func readAndEncodeIcon(tileDirectory fs.FS, bakeConfiguration *BakeConfiguration) (string, error) {
@@ -382,4 +403,102 @@ func encodeNode(out io.Writer, node *yaml.Node) error {
 		return err
 	}
 	return nil
+}
+
+func ReleasesMetadataFromReleasesDirectory(releasesDirectory fs.FS) ([]proofing.Release, error) {
+	files, err := fs.ReadDir(releasesDirectory, ".")
+	if err != nil {
+		return nil, err
+	}
+	var result []proofing.Release
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		switch path.Ext(file.Name()) {
+		default:
+			continue
+		case ".tgz": // ".tar" not supported yet
+		}
+		release, err := ReleasesMetadataFromReleaseTarball(releasesDirectory, file.Name())
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, release)
+	}
+	return result, nil
+}
+
+func ReleasesMetadataFromReleaseTarball(releasesDirectory fs.FS, filePath string) (proofing.Release, error) {
+	checkSum := sha1.New()
+	if err := fileChecksum(releasesDirectory, filePath, checkSum); err != nil {
+		return proofing.Release{}, err
+	}
+
+	releaseMF, _, err := BOSHReleaseManifestAndLicense(releasesDirectory, filePath)
+	if err != nil {
+		return proofing.Release{}, err
+	}
+
+	return proofing.Release{
+		Name:    releaseMF.Name,
+		Version: releaseMF.Version,
+		File:    filePath,
+		SHA1:    hex.EncodeToString(checkSum.Sum(nil)),
+	}, nil
+}
+
+func BOSHReleaseManifestAndLicense(releasesDirectory fs.FS, filePath string) (boshman.Manifest, []byte, error) {
+	f, err := releasesDirectory.Open(filePath)
+	if err != nil {
+		return boshman.Manifest{}, nil, err
+	}
+	defer closeAndIgnoreError(f)
+	fileContents, err := readTarballFiles(f, "release.MF", "LICENSE")
+	if err != nil {
+		return boshman.Manifest{}, nil, err
+	}
+	var releaseMF boshman.Manifest
+	if err := yaml.Unmarshal(fileContents["release.MF"], &releaseMF); err != nil {
+		return boshman.Manifest{}, nil, err
+	}
+	return releaseMF, fileContents["LICENSE"], nil
+}
+
+func fileChecksum(dir fs.FS, fileName string, hash hash.Hash) error {
+	f, err := dir.Open(fileName)
+	if err != nil {
+		return err
+	}
+	defer closeAndIgnoreError(f)
+	_, err = io.Copy(hash, f)
+	return err
+}
+
+func readTarballFiles(r io.Reader, fileNames ...string) (map[string][]byte, error) {
+	m := make(map[string][]byte, len(fileNames))
+	gzipReader, err := gzip.NewReader(r)
+	if err != nil {
+		return nil, err
+	}
+	tarball := tar.NewReader(gzipReader)
+	for {
+		h, err := tarball.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+		}
+		cleanFilename := cleanReleaseTarballFileName(h.Name)
+		buf, err := io.ReadAll(r)
+		if err != nil {
+			return nil, err
+		}
+		m[cleanFilename] = buf
+	}
+	return m, nil
+}
+
+func cleanReleaseTarballFileName(name string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(name, "/"), "./")
 }

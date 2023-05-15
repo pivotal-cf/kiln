@@ -46,9 +46,10 @@ func TestMetadata(t *testing.T) {
 func TestBake(t *testing.T) {
 	t.Run("minimal", func(t *testing.T) {
 		tileDir := bakeTestTile(t, testdataTile(t))
-		err := tile.Bake(nil, tileDir, nil, nil)
-		require.NoError(t, err)
-
+		assert.PanicsWithValue(t, tile.PanicBakeImplementationIncomplete, func() {
+			err := tile.Bake(nil, tileDir, nil, nil)
+			assert.NoError(t, err)
+		})
 		runKilnTest(t)
 	})
 }
