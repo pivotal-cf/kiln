@@ -10,6 +10,8 @@ dist
 internal/release/exp.txt
 internal/release/got.txt
 
+pkg/cargo/testdata/bosh/releases/bpm-release-1.2.1/
+
 env.yml
 *.key
 *.pem
