@@ -74,11 +74,11 @@ func (l infoLog) Writer() io.Writer {
 
 type TileTest struct {
 	Options struct {
-		TilePath            string `short:"tp"   long:"tile-path"                default:"."                             description:"path to the tile directory (e.g., ~/workspace/tas/ist)"`
-		GingkoManifestFlags string `short:"gmf"  long:"ginkgo-manifest-flags"    default:"-r -p -slowSpecThreshold 15"   description:"flags to pass to the gingko manifest test suite"`
-		Verbose             bool   `short:"v"    long:"verbose"                  default:"false"                         description:"log info lines. this doesn't apply to ginkgo.'"`
-		ManifestOnly        bool   `             long:"manifest-only"            default:"false"                         description:"run only manifest tests"`
-		MigrationsOnly      bool   `             long:"migrations-only"          default:"false"                         description:"run only migration tests"`
+		TilePath            string `short:"tp"   long:"tile-path"                default:"."                             description:"Path to the Tile directory (e.g., ~/workspace/tas/ist)."`
+		GingkoManifestFlags string `short:"gmf"  long:"ginkgo-manifest-flags"    default:"-r -p -slowSpecThreshold 15"   description:"Flags to pass to the Ginkgo Manifest test suite."`
+		Verbose             bool   `short:"v"    long:"verbose"                  default:"false"                         description:"Print info lines. This doesn't affect Ginkgo output."`
+		ManifestOnly        bool   `             long:"manifest-only"            default:"false"                         description:"Run only Manifest tests."`
+		MigrationsOnly      bool   `             long:"migrations-only"          default:"false"                         description:"Run only Migration tests."`
 	}
 
 	logger      *log.Logger
@@ -372,8 +372,8 @@ type ErrorLine struct {
 
 func (u TileTest) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Test the manifest for a product inside a docker container. Requires a docker daemon to be running and ssh keys with access to Ops Manager's git repo. For non-interactive use either set the env var SSH_PASSWORD or add your ssh identify before running.",
-		ShortDescription: "Test manifest for a product",
+		Description:      "Tests the Manifest and Migrations for a Tile in a Docker container. Requires a Docker daemon to be running and ssh keys with access to Ops Manager's Git repository. For non-interactive use, either set the environment variable SSH_PASSWORD, or `ssh add` your identity before running.",
+		ShortDescription: "Tests the Manifest and Migrations for a Tile.",
 		Flags:            u.Options,
 	}
 }
