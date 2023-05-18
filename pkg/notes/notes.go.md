@@ -1,4 +1,4 @@
-### <a id='{{ .Version }}'></a> {{ .Version }}
+### <a id='{{ .Version.SetMetadata "" }}'></a> {{ .Version }}
 
 {{ if not .ReleaseDate.IsZero }}**Release Date:** {{ .ReleaseDate.Format "01/02/2006" }}{{ end }}
 
