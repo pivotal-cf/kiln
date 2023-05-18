@@ -8,7 +8,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/blang/semver/v4"
+	"github.com/Masterminds/semver/v3"
 
 	. "github.com/onsi/gomega"
 
