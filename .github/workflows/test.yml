@@ -34,7 +34,7 @@ jobs:
         run: go build -v ./...
 
       - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.7.0
+        uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.RELENG_CI_BOT_KEY }}
 
