@@ -1,8 +1,9 @@
 package internal
 
 import (
-	"gopkg.in/yaml.v2"
 	"io"
+
+	"gopkg.in/yaml.v2"
 )
 
 type OMService struct {

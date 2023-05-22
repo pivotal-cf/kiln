@@ -27,9 +27,7 @@ func init() {
 }
 
 var _ = Describe("kiln test docker", func() {
-	var (
-		helloTileDirectorySegments []string
-	)
+	var helloTileDirectorySegments []string
 	BeforeEach(func() {
 		helloTileDirectorySegments = []string{"testdata", "test_tile", "hello-tile"}
 		Expect(goVendor(filepath.Join(helloTileDirectorySegments...))).NotTo(HaveOccurred())
@@ -65,16 +63,12 @@ var _ = Describe("kiln test docker", func() {
 				const (
 					testSuccessLogLine = "manifest tests completed successfully"
 				)
-				var (
-					fakeMobyClient *fakes.MobyClient
-				)
+				var fakeMobyClient *fakes.MobyClient
 				BeforeEach(func() {
 					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
 				})
 				When("executing tests", func() {
-					var (
-						subjectUnderTest commands.TileTest
-					)
+					var subjectUnderTest commands.TileTest
 					BeforeEach(func() {
 						writer.Reset()
 						subjectUnderTest = commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
@@ -134,9 +128,7 @@ var _ = Describe("kiln test docker", func() {
 				const (
 					testFailureMessage = "exit status 1"
 				)
-				var (
-					fakeMobyClient *fakes.MobyClient
-				)
+				var fakeMobyClient *fakes.MobyClient
 				BeforeEach(func() {
 					fakeMobyClient = setupFakeMobyClient(testFailureMessage, 1)
 				})
@@ -155,16 +147,12 @@ var _ = Describe("kiln test docker", func() {
 			})
 
 			When("all tests are run", func() {
-				var (
-					fakeMobyClient *fakes.MobyClient
-				)
+				var fakeMobyClient *fakes.MobyClient
 				BeforeEach(func() {
 					fakeMobyClient = setupFakeMobyClient("success", 0)
 				})
 				When("executing migration tests", func() {
-					var (
-						subjectUnderTest commands.TileTest
-					)
+					var subjectUnderTest commands.TileTest
 					BeforeEach(func() {
 						writer.Reset()
 						subjectUnderTest = commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
@@ -191,16 +179,12 @@ var _ = Describe("kiln test docker", func() {
 				const (
 					testSuccessLogLine = "migration tests completed successfully"
 				)
-				var (
-					fakeMobyClient *fakes.MobyClient
-				)
+				var fakeMobyClient *fakes.MobyClient
 				BeforeEach(func() {
 					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
 				})
 				When("executing migration tests", func() {
-					var (
-						subjectUnderTest commands.TileTest
-					)
+					var subjectUnderTest commands.TileTest
 					BeforeEach(func() {
 						writer.Reset()
 						subjectUnderTest = commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
@@ -232,7 +216,6 @@ var _ = Describe("kiln test docker", func() {
 					})
 				})
 			})
-
 		})
 
 		It("exits with an error if docker isn't running", func() {
@@ -318,7 +301,7 @@ func setupFakeSSHProvider() *fakes.SshProvider {
 
 func addTASFixtures(t testingT, tileDirectory string) {
 	fixturesDirectory := filepath.Join(tileDirectory, "test", "manifest", "fixtures")
-	if err := os.MkdirAll(fixturesDirectory, 0766); err != nil {
+	if err := os.MkdirAll(fixturesDirectory, 0o766); err != nil {
 		t.Fatal(err)
 	}
 	for _, filePath := range []string{

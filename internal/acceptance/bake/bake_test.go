@@ -725,7 +725,7 @@ var _ = Describe("bake command", func() {
 
 				Eventually(session).Should(gexec.Exit(1))
 				// TODO: this expectation seems incorrect, but it's what the test was doing before
-				//Expect(string(session.Err.Contents())).To(ContainSubstring("lstat missing-directory: no such file or directory"))
+				// Expect(string(session.Err.Contents())).To(ContainSubstring("lstat missing-directory: no such file or directory"))
 			})
 		})
 

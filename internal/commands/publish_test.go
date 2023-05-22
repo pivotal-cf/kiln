@@ -2,11 +2,12 @@ package commands_test
 
 import (
 	"errors"
-	"github.com/Masterminds/semver/v3"
 	"io"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/Masterminds/semver/v3"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

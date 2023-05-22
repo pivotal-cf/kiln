@@ -87,7 +87,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 		client = gh.Client(ctx, r.Options.GithubToken)
 	}
 
-	var trainstatClient = notes.NewTrainstatClient(r.Options.TrainstatQuery.TrainstatURL)
+	trainstatClient := notes.NewTrainstatClient(r.Options.TrainstatQuery.TrainstatURL)
 
 	_ = notes.FetchData // fetchNotesData is github.com/pivotal/kiln/internal/notes.FetchData
 	data, err := r.fetchNotesData(ctx,

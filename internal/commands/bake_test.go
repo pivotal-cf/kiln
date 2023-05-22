@@ -3,6 +3,10 @@ package commands_test
 import (
 	"errors"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
@@ -11,9 +15,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"gopkg.in/yaml.v2"
-	"log"
-	"os"
-	"path/filepath"
 )
 
 var _ = Describe("Bake", func() {
@@ -533,7 +534,6 @@ var _ = Describe("Bake", func() {
 					"--releases-directory",
 					someReleasesDirectory,
 				}))
-
 			})
 		})
 
