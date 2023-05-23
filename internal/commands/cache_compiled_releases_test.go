@@ -131,7 +131,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 			},
 		},
 	}, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.BOSHReleaseLock{
 			{
 				Name:         "banana",
 				Version:      "2.0.0",
@@ -170,7 +170,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 			},
 		},
 	}, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.BOSHReleaseLock{
 			{
 				Name:    "orange",
 				Version: "1.0.0",
@@ -231,7 +231,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 			},
 		},
 	}, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.BOSHReleaseLock{
 			{
 				Name:    "orange",
 				Version: "1.0.0",
@@ -360,7 +360,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 			},
 		},
 	}, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.BOSHReleaseLock{
 			{
 				Name:    "banana",
 				Version: "2.0.0",
@@ -448,13 +448,13 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
 		},
-		Releases: []cargo.ComponentSpec{
+		Releases: []cargo.BOSHReleaseSpec{
 			{
 				Name: "banana",
 			},
 		},
 	}, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.BOSHReleaseLock{
 			{
 				Name:    "banana",
 				Version: "2.0.0",
@@ -488,7 +488,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 			}, nil
 		}
 	}
-	test.releaseStorage.UploadReleaseStub = func(spec cargo.ComponentSpec, reader io.Reader) (cargo.ComponentLock, error) {
+	test.releaseStorage.UploadReleaseStub = func(spec cargo.BOSHReleaseSpec, reader io.Reader) (cargo.BOSHReleaseLock, error) {
 		l := spec.Lock()
 		l.RemotePath = "BANANA.tgz"
 		l.RemoteSource = "BASKET"

@@ -27,7 +27,7 @@ remote_path: fake/path/to/fake-component-name
 `
 	damnit := NewWithT(t)
 
-	cl, err := yaml.Marshal(ComponentLock{
+	cl, err := yaml.Marshal(BOSHReleaseLock{
 		Name:         "fake-component-name",
 		Version:      "fake-version",
 		SHA1:         "fake-component-sha1",
@@ -42,7 +42,7 @@ remote_path: fake/path/to/fake-component-name
 func TestKilnfileLock_UpdateReleaseLockWithName(t *testing.T) {
 	type args struct {
 		name string
-		lock ComponentLock
+		lock BOSHReleaseLock
 	}
 	tests := []struct {
 		name                         string
@@ -55,17 +55,17 @@ func TestKilnfileLock_UpdateReleaseLockWithName(t *testing.T) {
 		{
 			name: "lock with name found",
 			KilnfileLock: KilnfileLock{
-				Releases: []ComponentLock{
+				Releases: []BOSHReleaseLock{
 					{Name: "banana"},
 				},
 			},
 			KilnfileResult: KilnfileLock{
-				Releases: []ComponentLock{
+				Releases: []BOSHReleaseLock{
 					{Name: "orange", Version: "some-version"},
 				},
 			},
 			args: args{
-				name: "banana", lock: ComponentLock{Name: "orange", Version: "some-version"},
+				name: "banana", lock: BOSHReleaseLock{Name: "orange", Version: "some-version"},
 			},
 			wantErr: false,
 		},
@@ -90,7 +90,7 @@ func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
 			res.WriteHeader(http.StatusOK)
 			_, _ = res.Write([]byte("just some text"))
 		}))
-		lock := ComponentLock{
+		lock := BOSHReleaseLock{
 			Name:         "banana",
 			Version:      "1.2.3",
 			RemoteSource: ReleaseSourceTypeBOSHIO,
@@ -126,7 +126,7 @@ func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
 			res.WriteHeader(http.StatusOK)
 			_, _ = res.Write([]byte("just some text"))
 		}))
-		lock := ComponentLock{
+		lock := BOSHReleaseLock{
 			Name:         "banana",
 			Version:      "1.2.3",
 			RemoteSource: ReleaseSourceTypeArtifactory,
@@ -169,7 +169,7 @@ func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
 			res.WriteHeader(http.StatusOK)
 			_, _ = res.Write([]byte("just some text"))
 		}))
-		lock := ComponentLock{
+		lock := BOSHReleaseLock{
 			Name:         "banana",
 			Version:      "1.2.3",
 			RemoteSource: ReleaseSourceTypeArtifactory,
@@ -225,7 +225,7 @@ func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
 				GithubToken: "orange",
 				Org:         "pivotal-cf",
 			}
-			lock := ComponentLock{
+			lock := BOSHReleaseLock{
 				Name:         "hello-release",
 				Version:      "1.2.3",
 				RemoteSource: ReleaseSourceTypeGithub,

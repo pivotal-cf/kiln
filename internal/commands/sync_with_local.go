@@ -74,7 +74,7 @@ func (command SyncWithLocal) Execute(args []string) error {
 			return fmt.Errorf("couldn't generate a remote path for release %q: %w", rel.Name, err)
 		}
 
-		var matchingRelease *cargo.ComponentLock
+		var matchingRelease *cargo.BOSHReleaseLock
 		for i := range kilnfileLock.Releases {
 			if kilnfileLock.Releases[i].Name == rel.Name {
 				matchingRelease = &kilnfileLock.Releases[i]

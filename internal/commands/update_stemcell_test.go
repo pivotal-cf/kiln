@@ -65,13 +65,13 @@ var _ = Describe("UpdateStemcell", func() {
 					OS:      "old-os",
 					Version: "^1",
 				},
-				Releases: []cargo.ComponentSpec{
+				Releases: []cargo.BOSHReleaseSpec{
 					{Name: release1Name, GitHubRepository: "https://example.com/lemon"},
 					{Name: release2Name, GitHubRepository: "https://example.com/orange"},
 				},
 			}
 			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.ComponentLock{
+				Releases: []cargo.BOSHReleaseLock{
 					{
 						Name:         release1Name,
 						Version:      release1Version,
@@ -173,7 +173,7 @@ var _ = Describe("UpdateStemcell", func() {
 			}))
 			Expect(updatedLockfile.Releases).To(HaveLen(2))
 			Expect(updatedLockfile.Releases).To(ContainElement(
-				cargo.ComponentLock{
+				cargo.BOSHReleaseLock{
 					Name:         release1Name,
 					Version:      release1Version,
 					SHA1:         newRelease1SHA,
@@ -182,7 +182,7 @@ var _ = Describe("UpdateStemcell", func() {
 				},
 			))
 			Expect(updatedLockfile.Releases).To(ContainElement(
-				cargo.ComponentLock{
+				cargo.BOSHReleaseLock{
 					Name:         release2Name,
 					Version:      release2Version,
 					SHA1:         newRelease2SHA,
@@ -346,7 +346,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
-					cargo.ComponentLock{
+					cargo.BOSHReleaseLock{
 						Name:         release1Name,
 						Version:      release1Version,
 						SHA1:         newRelease1SHA,
@@ -355,7 +355,7 @@ var _ = Describe("UpdateStemcell", func() {
 					},
 				))
 				Expect(updatedLockfile.Releases).To(ContainElement(
-					cargo.ComponentLock{
+					cargo.BOSHReleaseLock{
 						Name:         release2Name,
 						Version:      release2Version,
 						SHA1:         newRelease2SHA,

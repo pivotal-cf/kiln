@@ -32,35 +32,35 @@ type Kilnfile struct {
 	ReleaseSources  []ReleaseSourceConfig `yaml:"release_sources,omitempty"`
 	Slug            string                `yaml:"slug,omitempty"`
 	PreGaUserGroups []string              `yaml:"pre_ga_user_groups,omitempty"`
-	Releases        []ComponentSpec       `yaml:"releases,omitempty"`
+	Releases        []BOSHReleaseSpec     `yaml:"releases,omitempty"`
 	TileNames       []string              `yaml:"tile_names,omitempty"`
 	Stemcell        Stemcell              `yaml:"stemcell_criteria,omitempty"`
 }
 
-func (kf Kilnfile) ComponentSpec(name string) (ComponentSpec, error) {
+func (kf Kilnfile) ComponentSpec(name string) (BOSHReleaseSpec, error) {
 	for _, s := range kf.Releases {
 		if s.Name == name {
 			return s, nil
 		}
 	}
-	return ComponentSpec{}, fmt.Errorf("failed to find component specification with name %q in Kilnfile", name)
+	return BOSHReleaseSpec{}, fmt.Errorf("failed to find component specification with name %q in Kilnfile", name)
 }
 
 type KilnfileLock struct {
-	Releases []ComponentLock `yaml:"releases"`
-	Stemcell Stemcell        `yaml:"stemcell_criteria"`
+	Releases []BOSHReleaseLock `yaml:"releases"`
+	Stemcell Stemcell          `yaml:"stemcell_criteria"`
 }
 
-func (k KilnfileLock) FindReleaseWithName(name string) (ComponentLock, error) {
+func (k KilnfileLock) FindReleaseWithName(name string) (BOSHReleaseLock, error) {
 	for _, r := range k.Releases {
 		if r.Name == name {
 			return r, nil
 		}
 	}
-	return ComponentLock{}, errors.New("not found")
+	return BOSHReleaseLock{}, errors.New("not found")
 }
 
-func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock ComponentLock) error {
+func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock BOSHReleaseLock) error {
 	for i, r := range k.Releases {
 		if r.Name == name {
 			k.Releases[i] = lock
@@ -70,7 +70,7 @@ func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock ComponentLock)
 	return errors.New("not found")
 }
 
-type ComponentSpec struct {
+type BOSHReleaseSpec struct {
 	// Name is a required field and must be set with the bosh release name
 	Name string `yaml:"name"`
 
@@ -92,7 +92,7 @@ type ComponentSpec struct {
 	GitHubRepository string `yaml:"github_repository,omitempty"`
 }
 
-func (spec ComponentSpec) VersionConstraints() (*semver.Constraints, error) {
+func (spec BOSHReleaseSpec) VersionConstraints() (*semver.Constraints, error) {
 	if spec.Version == "" {
 		spec.Version = ">=0"
 	}
@@ -103,8 +103,8 @@ func (spec ComponentSpec) VersionConstraints() (*semver.Constraints, error) {
 	return c, nil
 }
 
-func (spec ComponentSpec) Lock() ComponentLock {
-	return ComponentLock{
+func (spec BOSHReleaseSpec) Lock() BOSHReleaseLock {
+	return BOSHReleaseLock{
 		Name:            spec.Name,
 		Version:         spec.Version,
 		StemcellOS:      spec.StemcellOS,
@@ -112,11 +112,11 @@ func (spec ComponentSpec) Lock() ComponentLock {
 	}
 }
 
-func (spec ComponentSpec) OSVersionSlug() boshdir.OSVersionSlug {
+func (spec BOSHReleaseSpec) OSVersionSlug() boshdir.OSVersionSlug {
 	return boshdir.NewOSVersionSlug(spec.StemcellOS, spec.StemcellVersion)
 }
 
-func (spec ComponentSpec) ReleaseSlug() boshdir.ReleaseSlug {
+func (spec BOSHReleaseSpec) ReleaseSlug() boshdir.ReleaseSlug {
 	return boshdir.NewReleaseSlug(spec.Name, spec.Version)
 }
 
@@ -138,13 +138,13 @@ type ReleaseSourceConfig struct {
 	Password        string `yaml:"password,omitempty"`
 }
 
-// ComponentLock represents an exact build of a bosh release
+// BOSHReleaseLock represents an exact build of a bosh release
 // It may identify the where the release is cached;
 // it may identify the stemcell used to compile the release.
 //
 // All fields must be comparable because this struct may be
 // used as a key type in a map. Don't add array or map fields.
-type ComponentLock struct {
+type BOSHReleaseLock struct {
 	Name    string `yaml:"name"`
 	SHA1    string `yaml:"sha1"`
 	Version string `yaml:"version,omitempty"`
@@ -156,15 +156,15 @@ type ComponentLock struct {
 	RemotePath   string `yaml:"remote_path"`
 }
 
-func (lock ComponentLock) ReleaseSlug() boshdir.ReleaseSlug {
+func (lock BOSHReleaseLock) ReleaseSlug() boshdir.ReleaseSlug {
 	return boshdir.NewReleaseSlug(lock.Name, lock.Version)
 }
 
-func (lock ComponentLock) StemcellSlug() boshdir.OSVersionSlug {
+func (lock BOSHReleaseLock) StemcellSlug() boshdir.OSVersionSlug {
 	return boshdir.NewOSVersionSlug(lock.StemcellOS, lock.StemcellVersion)
 }
 
-func (lock ComponentLock) String() string {
+func (lock BOSHReleaseLock) String() string {
 	var b strings.Builder
 	b.WriteString(lock.Name)
 	b.WriteByte(' ')
@@ -197,18 +197,18 @@ func (lock ComponentLock) String() string {
 	return b.String()
 }
 
-func (lock ComponentLock) WithSHA1(sum string) ComponentLock {
+func (lock BOSHReleaseLock) WithSHA1(sum string) BOSHReleaseLock {
 	lock.SHA1 = sum
 	return lock
 }
 
-func (lock ComponentLock) WithRemote(source, path string) ComponentLock {
+func (lock BOSHReleaseLock) WithRemote(source, path string) BOSHReleaseLock {
 	lock.RemoteSource = source
 	lock.RemotePath = path
 	return lock
 }
 
-func (lock ComponentLock) ParseVersion() (*semver.Version, error) {
+func (lock BOSHReleaseLock) ParseVersion() (*semver.Version, error) {
 	return semver.NewVersion(lock.Version)
 }
 
@@ -218,7 +218,7 @@ type Stemcell struct {
 	Version string `yaml:"version"`
 }
 
-func (kf Kilnfile) DownloadBOSHRelease(ctx context.Context, logger *log.Logger, lock ComponentLock, releasesDirectory string) (string, error) {
+func (kf Kilnfile) DownloadBOSHRelease(ctx context.Context, logger *log.Logger, lock BOSHReleaseLock, releasesDirectory string) (string, error) {
 	source, found := releaseSourceByID(kf, lock.RemoteSource)
 	if !found {
 		return "", fmt.Errorf("bosh release source configuration not found in Kilnfile")
@@ -241,7 +241,7 @@ func (kf Kilnfile) DownloadBOSHRelease(ctx context.Context, logger *log.Logger, 
 //	return lock, nil
 //}
 
-//func (kf Kilnfile) UpdateBOSHReleaseLock(ctx context.Context, logger *log.Logger, lock ComponentLock, releasesDirectory string) (ComponentLock, error) {
+//func (kf Kilnfile) UpdateBOSHReleaseLock(ctx context.Context, logger *log.Logger, lock BOSHReleaseLock, releasesDirectory string) (BOSHReleaseLock, error) {
 //	panic("not implemented")
 //}
 //
@@ -292,7 +292,7 @@ func configureDownloadClient(ctx context.Context, _ *log.Logger, releaseSourceCo
 	}
 }
 
-func downloadBOSHRelease(ctx context.Context, logger *log.Logger, releaseSourceConfiguration ReleaseSourceConfig, lock ComponentLock, releasesDirectory string, clients clients) (string, error) {
+func downloadBOSHRelease(ctx context.Context, logger *log.Logger, releaseSourceConfiguration ReleaseSourceConfig, lock BOSHReleaseLock, releasesDirectory string, clients clients) (string, error) {
 	switch releaseSourceConfiguration.Type {
 	case ReleaseSourceTypeArtifactory:
 		downloadURL := releaseSourceConfiguration.ArtifactoryHost + "/" + path.Join("artifactory", releaseSourceConfiguration.Repo, lock.RemotePath)
@@ -312,7 +312,7 @@ func downloadBOSHRelease(ctx context.Context, logger *log.Logger, releaseSourceC
 	}
 }
 
-func downloadBOSHReleaseFromS3(ctx context.Context, s3Client s3iface.S3API, releaseSourceConfiguration ReleaseSourceConfig, lock ComponentLock, tarballFilePath string) (string, error) {
+func downloadBOSHReleaseFromS3(ctx context.Context, s3Client s3iface.S3API, releaseSourceConfiguration ReleaseSourceConfig, lock BOSHReleaseLock, tarballFilePath string) (string, error) {
 	file, err := os.Create(tarballFilePath)
 	if err != nil {
 		return "", err
@@ -328,7 +328,7 @@ func downloadBOSHReleaseFromS3(ctx context.Context, s3Client s3iface.S3API, rele
 	return tarballFilePath, checkFilePathSum(file, lock)
 }
 
-func downloadBOSHReleaseFromGitHub(ctx context.Context, logger *log.Logger, lock ComponentLock, githubClient *github.Client, tarballFilePath string) (string, error) {
+func downloadBOSHReleaseFromGitHub(ctx context.Context, logger *log.Logger, lock BOSHReleaseLock, githubClient *github.Client, tarballFilePath string) (string, error) {
 	u, err := url.Parse(lock.RemotePath)
 	if err != nil {
 		return "", err
@@ -380,7 +380,7 @@ func awsS3Client(releaseSourceConfig ReleaseSourceConfig) (s3iface.S3API, error)
 }
 
 // downloadTarballFromURL downloads a tarball from a URL that does not require authentication: bosh.io and Build Artifactory.
-func downloadTarballFromURL(ctx context.Context, client *http.Client, _ *log.Logger, lock ComponentLock, downloadURL, filePath string) error {
+func downloadTarballFromURL(ctx context.Context, client *http.Client, _ *log.Logger, lock BOSHReleaseLock, downloadURL, filePath string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
 	if err != nil {
 		return err
@@ -405,7 +405,7 @@ func downloadTarballFromURL(ctx context.Context, client *http.Client, _ *log.Log
 	return checkIOSum(file, res.Body, lock)
 }
 
-func checkIOSum(w io.Writer, r io.Reader, lock ComponentLock) error {
+func checkIOSum(w io.Writer, r io.Reader, lock BOSHReleaseLock) error {
 	hash := sha1.New()
 
 	mw := io.MultiWriter(w, hash)
@@ -421,7 +421,7 @@ func checkIOSum(w io.Writer, r io.Reader, lock ComponentLock) error {
 	return nil
 }
 
-func checkFilePathSum(file *os.File, lock ComponentLock) error {
+func checkFilePathSum(file *os.File, lock BOSHReleaseLock) error {
 	_, err := file.Seek(0, 0)
 	if err != nil {
 		return fmt.Errorf("error reseting file cursor: %w", err) // untested
@@ -437,7 +437,7 @@ func checkFilePathSum(file *os.File, lock ComponentLock) error {
 	return nil
 }
 
-func findGitHubReleaseAssetFile(list []*github.ReleaseAsset, lock ComponentLock) (*github.ReleaseAsset, bool) {
+func findGitHubReleaseAssetFile(list []*github.ReleaseAsset, lock BOSHReleaseLock) (*github.ReleaseAsset, bool) {
 	lockVersion := strings.TrimPrefix(lock.Version, "v")
 	expectedAssetName := fmt.Sprintf("%s-%s.tgz", lock.Name, lockVersion)
 	malformedAssetName := fmt.Sprintf("%s-v%s.tgz", lock.Name, lockVersion)

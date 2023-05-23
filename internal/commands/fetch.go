@@ -111,7 +111,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []comp
 	return kilnfile, kilnfileLock, availableLocalReleaseSet, nil
 }
 
-func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.ComponentLock) ([]component.Local, error) {
+func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []cargo.BOSHReleaseLock) ([]component.Local, error) {
 	releaseSource := f.multiReleaseSourceProvider(kilnfile, f.Options.AllowOnlyPublishableReleases)
 
 	var downloaded []component.Local
@@ -152,8 +152,8 @@ func (f Fetch) Usage() jhanda.Usage {
 	}
 }
 
-func partition(releaseLocks []cargo.ComponentLock, localReleases []component.Local) (intersection []component.Local, missing []cargo.ComponentLock, extra []component.Local) {
-	missing = make([]cargo.ComponentLock, len(releaseLocks))
+func partition(releaseLocks []cargo.BOSHReleaseLock, localReleases []component.Local) (intersection []component.Local, missing []cargo.BOSHReleaseLock, extra []component.Local) {
+	missing = make([]cargo.BOSHReleaseLock, len(releaseLocks))
 	copy(missing, releaseLocks)
 
 nextRelease:

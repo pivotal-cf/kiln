@@ -118,7 +118,7 @@ func (cmd *CacheCompiledReleases) Execute(args []string) error {
 	}
 
 	var (
-		releasesToExport         []cargo.ComponentLock
+		releasesToExport         []cargo.BOSHReleaseLock
 		releasesUpdatedFromCache = false
 	)
 	for _, rel := range lock.Releases {
@@ -315,7 +315,7 @@ func (cmd *CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc Release
 	}
 
 	cmd.Logger.Printf("\tuploading %s\n", releaseSlug)
-	remoteRelease, err := cmd.uploadLocalRelease(cargo.ComponentSpec{
+	remoteRelease, err := cmd.uploadLocalRelease(cargo.BOSHReleaseSpec{
 		Name:            releaseSlug.Name(),
 		Version:         releaseSlug.Version(),
 		StemcellOS:      stemcellSlug.OS(),
@@ -341,7 +341,7 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 			checksum = releaseLock.SHA1
 		}
 
-		lock.Releases[index] = cargo.ComponentLock{
+		lock.Releases[index] = cargo.BOSHReleaseLock{
 			Name:         release.Name,
 			Version:      release.Version,
 			RemoteSource: release.RemoteSource,
@@ -393,7 +393,7 @@ func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, 
 	return filePath, sha256sumString, sha1sumString, nil
 }
 
-func (cmd *CacheCompiledReleases) downloadAndComputeSHA(cache component.ReleaseSource, remote cargo.ComponentLock) (string, error) {
+func (cmd *CacheCompiledReleases) downloadAndComputeSHA(cache component.ReleaseSource, remote cargo.BOSHReleaseLock) (string, error) {
 	if remote.SHA1 != "" {
 		return remote.SHA1, nil
 	}

@@ -77,7 +77,7 @@ func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 	return src.ReleaseSourceConfig
 }
 
-func unsetStemcell(spec cargo.ComponentSpec) cargo.ComponentSpec {
+func unsetStemcell(spec cargo.BOSHReleaseSpec) cargo.BOSHReleaseSpec {
 	spec.StemcellOS = ""
 	spec.StemcellVersion = ""
 	return spec

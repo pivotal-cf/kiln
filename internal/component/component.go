@@ -6,7 +6,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type Spec = cargo.ComponentSpec
+type Spec = cargo.BOSHReleaseSpec
 
 type Exported struct {
 	Lock
@@ -19,6 +19,6 @@ type Local struct {
 	LocalPath string
 }
 
-type Lock = cargo.ComponentLock
+type Lock = cargo.BOSHReleaseLock
 
 func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

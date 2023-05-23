@@ -508,7 +508,7 @@ func TestGetLatestMatchingRelease(t *testing.T) {
 			otherGitHubOrg = "orange"
 
 			ctx  = context.Background()
-			spec = cargo.ComponentSpec{
+			spec = cargo.BOSHReleaseSpec{
 				GitHubRepository: "https://github.com/" + otherGitHubOrg + "/muffin",
 			}
 		)

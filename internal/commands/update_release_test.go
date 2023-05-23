@@ -65,7 +65,7 @@ var _ = Describe("UpdateRelease", func() {
 			filesystem = osfs.New("/tmp/")
 
 			kilnfile := cargo.Kilnfile{
-				Releases: []cargo.ComponentSpec{
+				Releases: []cargo.BOSHReleaseSpec{
 					{Name: "minecraft"},
 					{
 						Name:             releaseName,
@@ -75,7 +75,7 @@ var _ = Describe("UpdateRelease", func() {
 			}
 
 			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.ComponentLock{
+				Releases: []cargo.BOSHReleaseLock{
 					{
 						Name:    "minecraft",
 						Version: "2.0.1",
@@ -173,7 +173,7 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
-					cargo.ComponentLock{
+					cargo.BOSHReleaseLock{
 						Name:    releaseName,
 						Version: newReleaseVersion,
 
@@ -408,7 +408,7 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
-					cargo.ComponentLock{
+					cargo.BOSHReleaseLock{
 						Name:         releaseName,
 						Version:      notDownloadedReleaseVersion,
 						SHA1:         notDownloadedReleaseSha1,

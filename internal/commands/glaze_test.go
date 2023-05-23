@@ -17,7 +17,7 @@ func TestGlaze_Execute(t *testing.T) {
 		tmp := t.TempDir()
 		kfp := filepath.Join(tmp, "Kilnfile")
 		writeYAML(t, kfp, cargo.Kilnfile{
-			Releases: []cargo.ComponentSpec{
+			Releases: []cargo.BOSHReleaseSpec{
 				{Name: "banana"},
 				{Name: "orange", Version: "~ 8.0"},
 			},
@@ -28,7 +28,7 @@ func TestGlaze_Execute(t *testing.T) {
 
 		klp := filepath.Join(tmp, "Kilnfile.lock")
 		writeYAML(t, klp, cargo.KilnfileLock{
-			Releases: []cargo.ComponentLock{
+			Releases: []cargo.BOSHReleaseLock{
 				{Name: "banana", Version: "1.2.3"},
 				{Name: "orange", Version: "8.0.8"},
 			},
@@ -48,7 +48,7 @@ func TestGlaze_Execute(t *testing.T) {
 		readYAML(t, kfp, &updatedKilnfile)
 
 		g.Expect(updatedKilnfile).To(Equal(cargo.Kilnfile{
-			Releases: []cargo.ComponentSpec{
+			Releases: []cargo.BOSHReleaseSpec{
 				{Name: "banana", Version: "1.2.3"},
 				{Name: "orange", Version: "8.0.8"},
 			},
@@ -114,13 +114,13 @@ func TestGlaze_Execute(t *testing.T) {
 		tmp := t.TempDir()
 		kfp := filepath.Join(tmp, "Kilnfile")
 		writeYAML(t, kfp, cargo.Kilnfile{
-			Releases: []cargo.ComponentSpec{
+			Releases: []cargo.BOSHReleaseSpec{
 				{Name: "banana"},
 			},
 		})
 		klp := filepath.Join(tmp, "Kilnfile.lock")
 		writeYAML(t, klp, cargo.KilnfileLock{
-			Releases: []cargo.ComponentLock{},
+			Releases: []cargo.BOSHReleaseLock{},
 		})
 		cmd := new(Glaze)
 		err := cmd.Execute([]string{"--kilnfile", kfp})
@@ -134,13 +134,13 @@ func TestGlaze_Execute(t *testing.T) {
 
 		kfp := filepath.Join(tmp, "Kilnfile")
 		writeYAML(t, kfp, cargo.Kilnfile{
-			Releases: []cargo.ComponentSpec{
+			Releases: []cargo.BOSHReleaseSpec{
 				{Name: "banana"},
 			},
 		})
 		klp := filepath.Join(tmp, "Kilnfile.lock")
 		writeYAML(t, klp, cargo.KilnfileLock{
-			Releases: []cargo.ComponentLock{},
+			Releases: []cargo.BOSHReleaseLock{},
 		})
 		cmd := new(Glaze)
 		err := cmd.Execute([]string{"--kilnfile", kfp})
