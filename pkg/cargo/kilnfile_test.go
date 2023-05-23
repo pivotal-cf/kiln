@@ -107,7 +107,7 @@ func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
 		ctx := context.Background()
 		logger := log.New(io.Discard, "", 0)
 
-		tarballPath, err := kilnfile.DownloadBOSHRelease(ctx, logger, lock, dir)
+		tarballPath, err := kilnfile.DownloadBOSHReleaseTarball(ctx, logger, lock, dir)
 
 		please := NewWithT(t)
 		please.Expect(err).NotTo(HaveOccurred())
@@ -149,7 +149,7 @@ func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
 		ctx := context.Background()
 		logger := log.New(io.Discard, "", 0)
 
-		tarballPath, err := kilnfile.DownloadBOSHRelease(ctx, logger, lock, dir)
+		tarballPath, err := kilnfile.DownloadBOSHReleaseTarball(ctx, logger, lock, dir)
 
 		please := NewWithT(t)
 		please.Expect(err).NotTo(HaveOccurred())
@@ -192,7 +192,7 @@ func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
 		ctx := context.Background()
 		logger := log.New(io.Discard, "", 0)
 
-		tarballPath, err := kilnfile.DownloadBOSHRelease(ctx, logger, lock, dir)
+		tarballPath, err := kilnfile.DownloadBOSHReleaseTarball(ctx, logger, lock, dir)
 
 		please := NewWithT(t)
 		please.Expect(err).NotTo(HaveOccurred())

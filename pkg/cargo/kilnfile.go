@@ -218,16 +218,17 @@ type Stemcell struct {
 	Version string `yaml:"version"`
 }
 
-func (kf Kilnfile) DownloadBOSHRelease(ctx context.Context, logger *log.Logger, lock BOSHReleaseLock, releasesDirectory string) (string, error) {
-	source, found := releaseSourceByID(kf, lock.RemoteSource)
+func (kf Kilnfile) DownloadBOSHReleaseTarball(ctx context.Context, logger *log.Logger, lock BOSHReleaseLock, releasesDirectory string) (string, error) {
+	sourceConfig, found := releaseSourceByID(kf, lock.RemoteSource)
 	if !found {
 		return "", fmt.Errorf("bosh release source configuration not found in Kilnfile")
 	}
-	downloadClients, err := configureDownloadClient(ctx, logger, source)
+	downloadClients, err := configureDownloadClient(ctx, logger, sourceConfig)
 	if err != nil {
 		return "", err
 	}
-	return downloadBOSHRelease(ctx, logger, source, lock, releasesDirectory, downloadClients)
+	tarballPath, err := downloadBOSHRelease(ctx, logger, sourceConfig, lock, releasesDirectory, downloadClients)
+	return tarballPath, err
 }
 
 //func (kf Kilnfile) UpdateBOSHReleasesLock(ctx context.Context, logger *log.Logger, lock KilnfileLock, releasesDirectory string) (KilnfileLock, error) {
