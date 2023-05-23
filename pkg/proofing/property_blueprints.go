@@ -1,6 +1,11 @@
 package proofing
 
-import "gopkg.in/yaml.v2"
+import (
+	"fmt"
+
+	"github.com/crhntr/yamlutil/yamlnode"
+	"gopkg.in/yaml.v3"
+)
 
 type PropertyBlueprint interface {
 	PropertyName() string
@@ -8,37 +13,44 @@ type PropertyBlueprint interface {
 
 type PropertyBlueprints []PropertyBlueprint
 
-func (pb *PropertyBlueprints) UnmarshalYAML(unmarshal func(v interface{}) error) error {
-	var sniffs []map[string]interface{}
-	err := unmarshal(&sniffs)
-	if err != nil {
-		return err
+func (pb *PropertyBlueprints) UnmarshalYAML(list *yaml.Node) error {
+	if list.Kind != yaml.SequenceNode {
+		return fmt.Errorf("expected a list of property inputs")
 	}
-
-	for _, sniff := range sniffs {
-		contents, err := yaml.Marshal(sniff)
+	for _, element := range list.Content {
+		propertyBlueprint, err := unmarshalPropertyBlueprint(element)
 		if err != nil {
-			return err // NOTE: this cannot happen, the YAML has already been unmarshalled
+			return err
 		}
-
-		switch sniff["type"] {
-		case "selector":
-			var propertyBlueprint SelectorPropertyBlueprint
-			err = yaml.Unmarshal(contents, &propertyBlueprint)
-			*pb = append(*pb, propertyBlueprint)
-		case "collection":
-			var propertyBlueprint CollectionPropertyBlueprint
-			err = yaml.Unmarshal(contents, &propertyBlueprint)
-			*pb = append(*pb, propertyBlueprint)
-		default:
-			var propertyBlueprint SimplePropertyBlueprint
-			err = yaml.Unmarshal(contents, &propertyBlueprint)
-			*pb = append(*pb, propertyBlueprint)
-		}
-		if err != nil {
-			return err // NOTE: this cannot happen, the YAML has already been unmarshalled
-		}
+		*pb = append(*pb, propertyBlueprint)
 	}
-
 	return nil
+}
+
+func unmarshalPropertyBlueprint(node *yaml.Node) (PropertyBlueprint, error) {
+	typeField, found := yamlnode.LookupKey(node, "type")
+	if found {
+		switch typeField.Value {
+		case "selector":
+			var selectorPropertyInputs SelectorPropertyBlueprint
+			err := node.Decode(&selectorPropertyInputs)
+			if err != nil {
+				return nil, err
+			}
+			return &selectorPropertyInputs, nil
+		case "collection":
+			var collectionPropertyInput CollectionPropertyBlueprint
+			err := node.Decode(&collectionPropertyInput)
+			if err != nil {
+				return nil, err
+			}
+			return &collectionPropertyInput, nil
+		}
+	}
+	var simplePropertyBlueprint SimplePropertyBlueprint
+	err := node.Decode(&simplePropertyBlueprint)
+	if err != nil {
+		return nil, err
+	}
+	return &simplePropertyBlueprint, nil
 }

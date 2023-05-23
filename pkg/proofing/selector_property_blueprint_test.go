@@ -10,7 +10,7 @@ import (
 )
 
 var _ = Describe("SelectorPropertyBlueprint", func() {
-	var selectorPropertyBlueprint proofing.SelectorPropertyBlueprint
+	var selectorPropertyBlueprint *proofing.SelectorPropertyBlueprint
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/property_blueprints.yml")
@@ -21,7 +21,7 @@ var _ = Describe("SelectorPropertyBlueprint", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		var ok bool
-		selectorPropertyBlueprint, ok = productTemplate.PropertyBlueprints[1].(proofing.SelectorPropertyBlueprint)
+		selectorPropertyBlueprint, ok = productTemplate.PropertyBlueprints[1].(*proofing.SelectorPropertyBlueprint)
 		Expect(ok).To(BeTrue())
 	})
 

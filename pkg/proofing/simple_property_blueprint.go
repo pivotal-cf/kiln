@@ -17,7 +17,7 @@ type SimplePropertyBlueprint struct {
 	// TODO: validations: https://github.com/pivotal-cf/installation/blob/039a2ef3f751ef5915c425da8150a29af4b764dd/web/app/models/persistence/metadata/property_blueprint.rb#L27-L39
 }
 
-func (blueprint SimplePropertyBlueprint) PropertyName() string { return blueprint.Name }
+func (blueprint *SimplePropertyBlueprint) PropertyName() string { return blueprint.Name }
 
 type PropertyBlueprintOption struct {
 	Label string `yaml:"label"`
