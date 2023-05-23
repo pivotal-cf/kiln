@@ -75,7 +75,7 @@ type BOSHReleaseSpec struct {
 	Name string `yaml:"name"`
 
 	// Version if not set, it will default to ">0".
-	// See https://github.com/Masterminds/semver for syntax
+	// See https://github.com/Masterminds/semver/v3 for syntax
 	Version string `yaml:"version,omitempty"`
 
 	// StemcellOS may be set when a specifying a component
@@ -231,24 +231,13 @@ func (kf Kilnfile) DownloadBOSHReleaseTarball(ctx context.Context, logger *log.L
 	return tarballPath, err
 }
 
-//func (kf Kilnfile) UpdateBOSHReleasesLock(ctx context.Context, logger *log.Logger, lock KilnfileLock, releasesDirectory string) (KilnfileLock, error) {
-//	for i, componentLock := range lock.Releases {
-//		updatedLock, err := kf.UpdateBOSHReleaseLock(ctx, logger, componentLock, releasesDirectory)
-//		if err != nil {
-//			return lock, err
-//		}
-//		lock.Releases[i] = updatedLock
-//	}
-//	return lock, nil
-//}
+func (kf Kilnfile) ListBOSHReleaseLocks(ctx context.Context, logger *log.Logger, boshReleaseName string) ([]BOSHReleaseLock, error) {
+	return kf.ListBOSHReleaseLocksWithLimit(ctx, logger, boshReleaseName, 1)
+}
 
-//func (kf Kilnfile) UpdateBOSHReleaseLock(ctx context.Context, logger *log.Logger, lock BOSHReleaseLock, releasesDirectory string) (BOSHReleaseLock, error) {
-//	panic("not implemented")
-//}
-//
-//func (kf Kilnfile) UploadPublishableBOSHReleaseArtifactory(ctx context.Context, logger *log.Logger, lock KilnfileLock) (KilnfileLock, error) {
-//	panic("not implemented")
-//}
+func (kf Kilnfile) ListBOSHReleaseLocksWithLimit(ctx context.Context, logger *log.Logger, boshReleaseName string, limit int) ([]BOSHReleaseLock, error) {
+	panic("not implemented")
+}
 
 func releaseSourceByID(kilnfile Kilnfile, releaseSourceID string) (ReleaseSourceConfig, bool) {
 	for _, config := range kilnfile.ReleaseSources {

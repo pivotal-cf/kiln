@@ -1,14 +1,23 @@
 package cargo
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/stretchr/testify/require"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-github/v40/github"
@@ -82,7 +91,7 @@ func TestKilnfileLock_UpdateReleaseLockWithName(t *testing.T) {
 	}
 }
 
-func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
+func TestKilnfile_DownloadBOSHReleaseTarball(t *testing.T) {
 	t.Run("bosh.io", func(t *testing.T) {
 		var requestURLs []string
 		server := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
@@ -119,49 +128,6 @@ func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(string(buf)).To(Equal("just some text"))
 	})
-	t.Run("artifactory", func(t *testing.T) {
-		var requestURLs []string
-		server := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-			requestURLs = append(requestURLs, req.URL.Path)
-			res.WriteHeader(http.StatusOK)
-			_, _ = res.Write([]byte("just some text"))
-		}))
-		lock := BOSHReleaseLock{
-			Name:         "banana",
-			Version:      "1.2.3",
-			RemoteSource: ReleaseSourceTypeArtifactory,
-			RemotePath:   "/banana-file/tarball.tgz",
-			SHA1:         "bd907aa2280549494055de165f6230d94ce69af1",
-		}
-		kilnfile := Kilnfile{
-			ReleaseSources: []ReleaseSourceConfig{
-				{
-					Type:            ReleaseSourceTypeArtifactory,
-					Repo:            "some-repo",
-					ArtifactoryHost: server.URL,
-					Username:        "cat",
-					Password:        "password",
-				},
-			},
-		}
-
-		dir := t.TempDir()
-		ctx := context.Background()
-		logger := log.New(io.Discard, "", 0)
-
-		tarballPath, err := kilnfile.DownloadBOSHReleaseTarball(ctx, logger, lock, dir)
-
-		please := NewWithT(t)
-		please.Expect(err).NotTo(HaveOccurred())
-		please.Expect(tarballPath).To(BeAnExistingFile())
-		please.Expect(requestURLs).To(Equal([]string{
-			"/artifactory/some-repo/banana-file/tarball.tgz",
-		}))
-		buf, err := os.ReadFile(tarballPath)
-		please.Expect(err).NotTo(HaveOccurred())
-		please.Expect(string(buf)).To(Equal("just some text"))
-	})
-
 	t.Run("artifactory", func(t *testing.T) {
 		var requestURLs []string
 		server := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
@@ -271,4 +237,65 @@ func TestKilnfile_DownloadBOSHRelease(t *testing.T) {
 			please.Expect(string(buf)).To(Equal("just some text"))
 		})
 	})
+	t.Run("s3", func(t *testing.T) {
+		t.Run("releaseSourceByID", func(t *testing.T) {
+			_, found := releaseSourceByID(Kilnfile{
+				ReleaseSources: []ReleaseSourceConfig{
+					{ID: "apple"},
+				},
+			}, "banana")
+			assert.False(t, found)
+		})
+		t.Run("configureDownloadClient", func(t *testing.T) {
+			ctx := context.Background()
+			logger := log.New(io.Discard, "", 0)
+			_, err := configureDownloadClient(ctx, logger, ReleaseSourceConfig{
+				Type: ReleaseSourceTypeS3,
+			})
+			assert.NoError(t, err)
+		})
+		t.Run("downloadBOSHReleaseFromS3", func(t *testing.T) {
+			ctx := context.Background()
+			logger := log.New(io.Discard, "", 0)
+
+			const content = "release.MF"
+			var sum = sha1.Sum([]byte(content))
+			s3Fake := &fakeS3{
+				content: content,
+			}
+
+			releasesDirectory := t.TempDir()
+
+			_, err := downloadBOSHRelease(ctx, logger, ReleaseSourceConfig{
+				Type: ReleaseSourceTypeS3,
+				ID:   "los-angeles",
+			}, BOSHReleaseLock{
+				Name:         "manny",
+				Version:      "1.2.3",
+				RemoteSource: "los-angeles",
+				RemotePath:   "labrea/mammoth.tgz",
+				SHA1:         hex.EncodeToString(sum[:]),
+			}, releasesDirectory, clients{
+				s3Client: s3Fake,
+			})
+
+			assert.NoError(t, err)
+
+			resultContent, err := os.ReadFile(filepath.Join(releasesDirectory, "mammoth.tgz"))
+			require.NoError(t, err)
+			assert.Equal(t, content, string(resultContent))
+		})
+	})
+}
+
+type fakeS3 struct {
+	content string
+	s3iface.S3API
+}
+
+func (fake fakeS3) GetObjectWithContext(aws.Context, *s3.GetObjectInput, ...request.Option) (*s3.GetObjectOutput, error) {
+	return &s3.GetObjectOutput{
+		ContentLength: ptr(int64(len(fake.content))),
+		Body:          io.NopCloser(bytes.NewReader([]byte(fake.content))),
+	}, nil
 }
