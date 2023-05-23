@@ -1,0 +1,19 @@
+---
+# REQUIRED PROPERTIES START {
+name: example
+product_version: 2.0.0
+minimum_version_for_upgrade: 1.0.0
+metadata_version: 2.11
+stemcell_criteria:
+  os: ubuntu-jammy
+  version: "1.8"
+releases: []
+# The image was generated from this: https://go.dev/play/p/XN6x3L23Vok
+icon_image: iVBORw0KGgoAAAANSUhEUgAAABAAAAAPBAMAAAAfXVIcAAAAD1BMVEV63/39//w5TVIZFhXDjXbHNiz1AAAAQElEQVQI15XJ0Q3AIAwD0SNdoEkXIEzAEOw/U43CApz88STjMVQ60VGWdBzNGO2bmhGFJOra4JkU1jpob0Hd4gfbtQXK27Ka3QAAAABJRU5ErkJggg==
+# } REQUIRED PROPERTIES END
+
+# TEST PROPERTIES
+property_blueprints:
+  - name: existing_property
+    type: port
+    configurable: true

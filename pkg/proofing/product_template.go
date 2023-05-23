@@ -1,5 +1,11 @@
 package proofing
 
+import (
+	"fmt"
+
+	"golang.org/x/exp/slices"
+)
+
 type ProductTemplate struct {
 	Name                     string `yaml:"name"`
 	ProductVersion           string `yaml:"product_version"`
@@ -40,4 +46,38 @@ type ProductTemplate struct {
 	// TODO: validates: https://github.com/pivotal-cf/installation/blob/039a2ef3f751ef5915c425da8150a29af4b764dd/web/app/models/persistence/metadata/product_template.rb#L72
 	// TODO: validates_object(s): https://github.com/pivotal-cf/installation/blob/039a2ef3f751ef5915c425da8150a29af4b764dd/web/app/models/persistence/metadata/product_template.rb#L74-L82
 	// TODO: find_object: https://github.com/pivotal-cf/installation/blob/039a2ef3f751ef5915c425da8150a29af4b764dd/web/app/models/persistence/metadata/product_template.rb#L84-L86
+}
+
+func (productTemplate *ProductTemplate) FindPropertyBlueprintWithName(name string) (PropertyBlueprint, int, error) {
+	index := slices.IndexFunc(productTemplate.PropertyBlueprints, func(blueprint PropertyBlueprint) bool {
+		return blueprint.PropertyName() == name
+	})
+	if index < 0 {
+		return nil, 0, fmt.Errorf("not found")
+	}
+	return productTemplate.PropertyBlueprints[index], index, nil
+}
+
+func (productTemplate *ProductTemplate) HasPostDeployErrandWithName(name string) bool {
+	index := slices.IndexFunc(productTemplate.PostDeployErrands, func(errandTemplate ErrandTemplate) bool {
+		return errandTemplate.Name == name
+	})
+	return index >= 0
+}
+
+func (productTemplate *ProductTemplate) HasJobTypeWithName(name string) bool {
+	index := slices.IndexFunc(productTemplate.JobTypes, func(errandTemplate JobType) bool {
+		return errandTemplate.Name == name
+	})
+	return index >= 0
+}
+
+func (productTemplate *ProductTemplate) FindJobTypeWithName(name string) (*JobType, int, error) {
+	index := slices.IndexFunc(productTemplate.JobTypes, func(errandTemplate JobType) bool {
+		return errandTemplate.Name == name
+	})
+	if index < 0 {
+		return nil, 0, fmt.Errorf("not found")
+	}
+	return &productTemplate.JobTypes[index], index, nil
 }
