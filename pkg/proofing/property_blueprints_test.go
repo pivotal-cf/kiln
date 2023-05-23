@@ -13,7 +13,7 @@ var _ = Describe("PropertyBlueprints", func() {
 	var productTemplate proofing.ProductTemplate
 
 	BeforeEach(func() {
-		f, err := os.Open("fixtures/property_blueprints.yml")
+		f, err := os.Open("testdata/property_blueprints.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 

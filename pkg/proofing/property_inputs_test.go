@@ -13,7 +13,7 @@ var _ = Describe("PropertyInputs", func() {
 	var formType proofing.FormType
 
 	BeforeEach(func() {
-		f, err := os.Open("fixtures/form_types.yml")
+		f, err := os.Open("testdata/form_types.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 

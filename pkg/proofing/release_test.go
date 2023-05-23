@@ -13,7 +13,7 @@ var _ = Describe("Release", func() {
 	var release proofing.Release
 
 	BeforeEach(func() {
-		f, err := os.Open("fixtures/metadata.yml")
+		f, err := os.Open("testdata/metadata.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 
