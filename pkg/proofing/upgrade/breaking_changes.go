@@ -1,4 +1,4 @@
-package tile
+package upgrade
 
 import (
 	"fmt"
@@ -224,24 +224,27 @@ func detectTightenedInstanceGroupConstraints(stable, candidate proofing.ProductT
 		if err != nil {
 			continue
 		}
-		if candidateJob.InstanceDefinition.Constraints == nil {
-			continue
-		}
-
-		if stableJob.InstanceDefinition.Constraints == nil && candidateJob.InstanceDefinition.Constraints != nil {
-			breakingChanges = append(breakingChanges, fmt.Errorf("breaking change for instance group with name %q: constraints tightened", stableJob.Name))
-			continue
-		}
-
-		oldMin := stableJob.InstanceDefinition.Constraints.Min
-		newMin := candidateJob.InstanceDefinition.Constraints.Min
-		oldMax := stableJob.InstanceDefinition.Constraints.Max
-		newMax := candidateJob.InstanceDefinition.Constraints.Max
-		if newMin > oldMin || newMax < oldMax {
-			breakingChanges = append(breakingChanges, fmt.Errorf("breaking change for instance group with name %q: constraints tightened", stableJob.Name))
+		for _, constraintErr := range checkTighterConstraints(stableJob.InstanceDefinition, candidateJob.InstanceDefinition) {
+			breakingChanges = append(breakingChanges, fmt.Errorf("breaking change for instance definition constraint with name %q: %w", stableJob.Name, constraintErr))
 		}
 	}
 	return breakingChanges
+}
+
+// checkTighterConstraints only check proofing.IntegerConstraints.Min and proofing.IntegerConstraints.Max
+// TODO: implement checks for other fields
+func checkTighterConstraints(stableJob, candidateJob proofing.InstanceDefinition) []error {
+	if candidateJob.Constraints == nil {
+		return nil
+	}
+	var errList []error
+	if stableJob.Constraints != nil && candidateJob.Constraints.Max != nil && ((stableJob.Constraints.Max == nil) || (*candidateJob.Constraints.Max < *stableJob.Constraints.Max)) {
+		errList = append(errList, fmt.Errorf("reduced max constraint"))
+	}
+	if stableJob.Constraints != nil && candidateJob.Constraints.Min != nil && ((stableJob.Constraints.Min == nil) || (*candidateJob.Constraints.Min > *stableJob.Constraints.Min)) {
+		errList = append(errList, fmt.Errorf("increased min constraint"))
+	}
+	return errList
 }
 
 func listNewPropertyBlueprints(stable, candidate proofing.ProductTemplate) []proofing.PropertyBlueprint {
