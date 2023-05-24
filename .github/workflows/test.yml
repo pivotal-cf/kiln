@@ -36,7 +36,6 @@ jobs:
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.0
         with:
-          ssh-auth-sock:  /home/runner/work/agent.sock
           ssh-private-key: ${{ secrets.RELENG_CI_BOT_KEY }}
 
       - name: Unit Tests
