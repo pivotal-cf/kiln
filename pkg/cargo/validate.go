@@ -3,7 +3,7 @@ package cargo
 import (
 	"fmt"
 
-	"github.com/Masterminds/semver/v3"
+	"github.com/Masterminds/semver"
 	"golang.org/x/exp/slices"
 )
 

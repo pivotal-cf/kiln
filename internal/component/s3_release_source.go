@@ -13,7 +13,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/Masterminds/semver/v3"
+	"github.com/Masterminds/semver"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
