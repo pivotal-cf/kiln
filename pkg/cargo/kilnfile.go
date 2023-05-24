@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
+	"github.com/Masterminds/semver"
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
 )
 

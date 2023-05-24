@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
+	"github.com/Masterminds/semver"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

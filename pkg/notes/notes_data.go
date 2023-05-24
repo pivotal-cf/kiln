@@ -17,7 +17,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
+	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/storer"
@@ -69,6 +69,7 @@ func (notes Data) WriteVersionNotes() (TileRelease, error) {
 		return TileRelease{}, err
 	}
 	notes.Version = &v
+	
 	var buf bytes.Buffer
 	err = noteTemplate.Execute(&buf, notes)
 	if err != nil {

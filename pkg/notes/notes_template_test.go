@@ -5,7 +5,7 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/Masterminds/semver/v3"
+	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
 	. "github.com/onsi/gomega"
 
