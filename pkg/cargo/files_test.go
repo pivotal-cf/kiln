@@ -110,7 +110,7 @@ func TestReadKilnfiles(t *testing.T) {
 	})
 	t.Run("missing Kilnfile.lock", func(t *testing.T) {
 		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
-		_ = os.WriteFile(kilnfilePath, nil, 0o666)
+		_ = os.WriteFile(kilnfilePath, nil, 0666)
 		f, _ := os.Create(kilnfilePath)
 		_ = f.Close()
 		_, _, err := cargo.ReadKilnfileAndKilnfileLock(kilnfilePath)
@@ -118,21 +118,21 @@ func TestReadKilnfiles(t *testing.T) {
 	})
 	t.Run("invalid spec yaml", func(t *testing.T) {
 		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
-		_ = os.WriteFile(kilnfilePath, []byte(`slug: {}`), 0o666) // will cause parse type error
+		_ = os.WriteFile(kilnfilePath, []byte(`slug: {}`), 0666) // will cause parse type error
 		_, _, err := cargo.ReadKilnfileAndKilnfileLock(kilnfilePath)
 		assert.Error(t, err)
 	})
 	t.Run("invalid lock yaml", func(t *testing.T) {
 		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
-		_ = os.WriteFile(kilnfilePath, []byte(``), 0o666)
-		_ = os.WriteFile(kilnfilePath+".lock", []byte(`releases: 7`), 0o666) // will cause parse type error
+		_ = os.WriteFile(kilnfilePath, []byte(``), 0666)
+		_ = os.WriteFile(kilnfilePath+".lock", []byte(`releases: 7`), 0666) // will cause parse type error
 		_, _, err := cargo.ReadKilnfileAndKilnfileLock(kilnfilePath)
 		assert.Error(t, err)
 	})
 	t.Run("parse files", func(t *testing.T) {
 		kilnfilePath := filepath.Join(t.TempDir(), "Kilnfile")
-		_ = os.WriteFile(kilnfilePath, []byte(`slug: "banana"`), 0o666)
-		_ = os.WriteFile(kilnfilePath+".lock", []byte(`releases: [{}]`), 0o666) // will cause parse type error
+		_ = os.WriteFile(kilnfilePath, []byte(`slug: "banana"`), 0666)
+		_ = os.WriteFile(kilnfilePath+".lock", []byte(`releases: [{}]`), 0666) // will cause parse type error
 		spec, lock, err := cargo.ReadKilnfileAndKilnfileLock(kilnfilePath)
 		assert.NoError(t, err)
 		assert.Equal(t, "banana", spec.Slug)
@@ -164,7 +164,7 @@ func TestWriteKilnfile(t *testing.T) {
 func TestResolveKilnfilePath(t *testing.T) {
 	t.Run("path to an existing Kilnfile", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "Kilnfile")
-		require.NoError(t, os.WriteFile(path, nil, 0o666))
+		require.NoError(t, os.WriteFile(path, nil, 0666))
 		result, err := cargo.ResolveKilnfilePath(path)
 		assert.NoError(t, err)
 		require.Equal(t, path, result)
@@ -177,7 +177,7 @@ func TestResolveKilnfilePath(t *testing.T) {
 	})
 	t.Run("path to a non-directory file", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "not-a-directory")
-		require.NoError(t, os.WriteFile(path, nil, 0o666))
+		require.NoError(t, os.WriteFile(path, nil, 0666))
 		_, err := cargo.ResolveKilnfilePath(path)
 		assert.Error(t, err)
 	})
@@ -189,7 +189,7 @@ func TestResolveKilnfilePath(t *testing.T) {
 	t.Run("path to a lock", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "Kilnfile.lock")
-		require.NoError(t, os.WriteFile(path, nil, 0o666))
+		require.NoError(t, os.WriteFile(path, nil, 0666))
 		result, err := cargo.ResolveKilnfilePath(path)
 		assert.NoError(t, err)
 		assert.Equal(t, filepath.Join(dir, "Kilnfile"), result)

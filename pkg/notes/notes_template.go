@@ -19,8 +19,7 @@ func DefaultTemplate() string {
 
 func DefaultTemplateFunctions(t *template.Template) *template.Template {
 	return t.Funcs(sprig.TxtFuncMap()).Funcs(template.FuncMap{
-		"removeEmptyLines": removeEmptyLines,
-	})
+		"removeEmptyLines": removeEmptyLines})
 }
 
 func removeEmptyLines(input string) string {

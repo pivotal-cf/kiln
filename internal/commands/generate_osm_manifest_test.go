@@ -2,15 +2,14 @@ package commands_test
 
 import (
 	"context"
+	"github.com/google/go-github/v50/github"
+	"github.com/migueleliasweb/go-github-mock/src/mock"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/google/go-github/v50/github"
-	"github.com/migueleliasweb/go-github-mock/src/mock"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
@@ -332,6 +331,7 @@ func TestOSM_Execute(t *testing.T) {
 		cmd := commands.NewOSMWithGHClient(logger, rs, c)
 		Expect(cmd.Execute([]string{"--only", testPackage, "--url", testUrl, "--no-download"})).Error().To(MatchError("invalid --url, must provide a valid Github --url for specified package"))
 	})
+
 }
 
 func writeYAML(t *testing.T, path string, data interface{}) {

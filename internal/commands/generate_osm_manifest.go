@@ -4,14 +4,14 @@ import (
 	"archive/zip"
 	"context"
 	"fmt"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"golang.org/x/oauth2"
 	"io"
 	"log"
+
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/go-git/go-git/v5/plumbing/transport/http"
-	"golang.org/x/oauth2"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/google/go-github/v50/github"
@@ -58,7 +58,7 @@ func NewOSMWithGHClient(outLogger *log.Logger, rs component.ReleaseSource, githu
 }
 
 func getClient(token string, ctx context.Context) *github.Client {
-	// go-github client needed for singlePackage() to reach out to Github
+	//go-github client needed for singlePackage() to reach out to Github
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
 	)
@@ -152,12 +152,13 @@ func (cmd *OSM) Usage() jhanda.Usage {
 }
 
 func (cmd *OSM) singlePackage(name string, url string, ctx context.Context) (osmEntry, string, error) {
-	// setting up for API call
+	//setting up for API call
 	splitString := strings.SplitN(url, "/", -1)
 	repo := splitString[len(splitString)-1]
 	owner := splitString[len(splitString)-2]
 
 	release, _, err := cmd.gc.Repositories.GetLatestRelease(ctx, owner, repo)
+
 	if err != nil {
 		return osmEntry{}, "", fmt.Errorf("unable to find repository for: %s", release.GetName())
 	}
@@ -178,6 +179,7 @@ func (cmd *OSM) singlePackage(name string, url string, ctx context.Context) (osm
 
 func cloneGitRepo(url, repoPath, githubToken string) error {
 	_, err := git.PlainClone(repoPath, false, &git.CloneOptions{
+
 		Auth: &http.BasicAuth{
 			Username: "kiln-generate-osm",
 			Password: githubToken,

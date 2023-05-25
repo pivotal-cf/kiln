@@ -3,19 +3,18 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"io"
-	"log"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
-
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/helper"
+	"io"
+	"log"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
 )
 
 //counterfeiter:generate -o ./fakes/interpolator.go --fake-name Interpolator . interpolator

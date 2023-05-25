@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/cucumber/godog"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
-
-	"github.com/cucumber/godog"
 
 	"gopkg.in/yaml.v2"
 )

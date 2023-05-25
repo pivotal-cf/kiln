@@ -2,9 +2,8 @@ package internal
 
 import (
 	"fmt"
-	"io"
-
 	"gopkg.in/yaml.v2"
+	"io"
 )
 
 type OpsManifestService struct {

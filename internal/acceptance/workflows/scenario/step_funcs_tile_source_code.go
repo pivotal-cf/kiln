@@ -3,14 +3,13 @@ package scenario
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
-	"strings"
-
 	"github.com/cucumber/godog"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"golang.org/x/exp/slices"
+	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"

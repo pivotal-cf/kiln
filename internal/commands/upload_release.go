@@ -2,9 +2,8 @@ package commands
 
 import (
 	"fmt"
-	"log"
-
 	"github.com/Masterminds/semver/v3"
+	"log"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"

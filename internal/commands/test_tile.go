@@ -97,6 +97,7 @@ func NewTileTest(logger *log.Logger, ctx context.Context, mobi mobyClient, sshTh
 		mobi:        mobi,
 		sshProvider: sshThing,
 	}
+
 }
 
 //go:embed manifest_test_docker/*
@@ -309,7 +310,7 @@ func getTarReader(fileContents string) (*bufio.Reader, error) {
 	tw := tar.NewWriter(&buf)
 	tarHeader := &tar.Header{
 		Name: "Dockerfile",
-		Mode: 0o600,
+		Mode: 0600,
 		Size: int64(len(fileContents)),
 	}
 	err := tw.WriteHeader(tarHeader)

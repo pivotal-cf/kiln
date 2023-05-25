@@ -81,6 +81,7 @@ var _ = Describe("SSHAgentSetup", func() {
 				_, err = tmpfile.Seek(0, 0)
 				Expect(err).To(BeNil())
 
+
 				fakeSshAgentCreator := &fakes.SshClientCreator{}
 				fakeSshClient := &fakes.SSHAgent{}
 				fakeKey := commands.Key{KeyPath: tmpfile.Name(), Encrypted: false}
