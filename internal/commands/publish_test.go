@@ -2,7 +2,6 @@ package commands_test
 
 import (
 	"errors"
-	"github.com/Masterminds/semver/v3"
 	"io"
 	"log"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/pivotal-cf/go-pivnet/v2"
@@ -394,11 +394,11 @@ pre_ga_user_groups:
 
 			Context("during the ga window", func() {
 				const (
-					version20OslFileID        = 42
-					version21OslFileID        = 43
+					version20OslFileID = 42
+					version21OslFileID = 43
 					version21OsmPartOneFileId = 44
 					version21OsmPartTwoFileId = 45
-					version20OsmFileId        = 46
+					version20OsmFileId = 46
 				)
 				var (
 					args             []string

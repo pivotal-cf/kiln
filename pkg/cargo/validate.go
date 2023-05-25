@@ -3,8 +3,9 @@ package cargo
 import (
 	"fmt"
 
-	"github.com/Masterminds/semver/v3"
 	"golang.org/x/exp/slices"
+
+	"github.com/Masterminds/semver"
 )
 
 func Validate(spec Kilnfile, lock KilnfileLock) []error {

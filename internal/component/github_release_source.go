@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/gh"
 	"io"
 	"log"
 	"net/http"
@@ -14,11 +15,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
+	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v40/github"
 	"golang.org/x/oauth2"
 
-	"github.com/pivotal-cf/kiln/internal/gh"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Masterminds/semver/v3"
+	"github.com/Masterminds/semver"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
