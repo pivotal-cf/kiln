@@ -13,7 +13,7 @@ var _ = Describe("CollectionPropertyInput", func() {
 	var collectionPropertyInput proofing.CollectionPropertyInput
 
 	BeforeEach(func() {
-		f, err := os.Open("testdata/form_types.yml")
+		f, err := os.Open("fixtures/form_types.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 

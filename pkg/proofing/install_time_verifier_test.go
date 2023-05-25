@@ -13,7 +13,7 @@ var _ = Describe("InstallTimeVerifier", func() {
 	var installTimeVerifier proofing.InstallTimeVerifier
 
 	BeforeEach(func() {
-		f, err := os.Open("testdata/metadata.yml")
+		f, err := os.Open("fixtures/metadata.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 

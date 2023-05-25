@@ -13,7 +13,7 @@ var _ = Describe("JobType", func() {
 	var jobType proofing.JobType
 
 	BeforeEach(func() {
-		f, err := os.Open("testdata/job_types.yml")
+		f, err := os.Open("fixtures/job_types.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 

@@ -13,7 +13,7 @@ var _ = Describe("ErrandTemplate", func() {
 	var errandTemplate proofing.ErrandTemplate
 
 	BeforeEach(func() {
-		f, err := os.Open("testdata/errands.yml")
+		f, err := os.Open("fixtures/errands.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 

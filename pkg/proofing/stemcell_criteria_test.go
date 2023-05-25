@@ -13,7 +13,7 @@ var _ = Describe("StemcellCriteria", func() {
 	var stemcellCriteria proofing.StemcellCriteria
 
 	BeforeEach(func() {
-		f, err := os.Open("testdata/metadata.yml")
+		f, err := os.Open("fixtures/metadata.yml")
 		defer closeAndIgnoreError(f)
 		Expect(err).NotTo(HaveOccurred())
 
