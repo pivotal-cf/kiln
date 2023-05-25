@@ -27,6 +27,6 @@ var _ = Describe("InstanceDefinition", func() {
 		Expect(instanceDefinition.Configurable).To(BeTrue())
 		Expect(instanceDefinition.Default).To(Equal(2))
 		Expect(instanceDefinition.ZeroIf.PropertyReference).To(Equal("some-property-reference"))
-		Expect(instanceDefinition.Constraints).To(Equal(&proofing.IntegerConstraints{Min: ptr(1), Max: ptr(5)}))
+		Expect(instanceDefinition.Constraints).To(Equal(proofing.IntegerConstraints{Min: ptr(1), Max: ptr(5)}))
 	})
 })
