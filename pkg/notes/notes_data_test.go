@@ -447,7 +447,7 @@ func TestData_WriteVersionNotes(t *testing.T) {
 
 		// Note having '+' in the ID is not spec compliant with html4 but is for html5. So we may need
 		// to change this.
-		please.Expect(releaseNotes.Notes).To(ContainSubstring("### <a id='4.0.0'></a> 4.0.0+LTS-T"))
+		please.Expect(releaseNotes.Notes).To(ContainSubstring("### <a id='4.0.0+LTS-T'></a> 4.0.0+LTS-T"))
 	})
 
 	t.Run("version has a build pre-release suffix", func(t *testing.T) {
@@ -471,7 +471,7 @@ func TestData_WriteVersionNotes(t *testing.T) {
 		releaseNotes, err := data.WriteVersionNotes()
 		please.Expect(err).NotTo(HaveOccurred())
 
-		please.Expect(releaseNotes.Notes).To(ContainSubstring("### <a id='4.0.0'></a> 4.0.0+LTS-T"))
+		please.Expect(releaseNotes.Notes).To(ContainSubstring("### <a id='4.0.0+LTS-T'></a> 4.0.0+LTS-T"))
 	})
 }
 
