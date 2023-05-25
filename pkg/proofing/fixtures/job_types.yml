@@ -5,7 +5,7 @@ job_types:
   errand: true
   instance_definition:
     configurable: true
-    constraints: { min: 1, max: 5 }
+    constraints: some-constraints
     default: 2
     zero_if:
       property_reference: some-property-reference

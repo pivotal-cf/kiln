@@ -9,9 +9,6 @@ import (
 
 type PropertyBlueprint interface {
 	PropertyName() string
-	PropertyType() string
-	HasDefault() bool
-	IsConfigurable() bool
 }
 
 type PropertyBlueprints []PropertyBlueprint
