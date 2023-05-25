@@ -45,7 +45,7 @@ var _ = Describe("JobType", func() {
 
 	Context("property_blueprints", func() {
 		It("parses their structure", func() {
-			propertyBlueprint, ok := jobType.PropertyBlueprints[0].(*proofing.SimplePropertyBlueprint)
+			propertyBlueprint, ok := jobType.PropertyBlueprints[0].(proofing.SimplePropertyBlueprint)
 			Expect(ok).To(BeTrue())
 
 			Expect(propertyBlueprint.Configurable).To(BeTrue())

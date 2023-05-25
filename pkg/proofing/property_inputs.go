@@ -1,11 +1,6 @@
 package proofing
 
-import (
-	"fmt"
-
-	"github.com/crhntr/yamlutil/yamlnode"
-	"gopkg.in/yaml.v3"
-)
+import "gopkg.in/yaml.v2"
 
 type PropertyInput interface {
 	Ref() string
@@ -13,34 +8,44 @@ type PropertyInput interface {
 
 type PropertyInputs []PropertyInput
 
-func (pi *PropertyInputs) UnmarshalYAML(list *yaml.Node) error {
-	if list.Kind != yaml.SequenceNode {
-		return fmt.Errorf("expected a list of property inputs")
+// TODO: Less ugly.
+
+func (pi *PropertyInputs) UnmarshalYAML(unmarshal func(v interface{}) error) error {
+	var sniffs []map[string]interface{}
+	err := unmarshal(&sniffs)
+	if err != nil {
+		return err
 	}
-	for _, property := range list.Content {
-		if _, hasSelectorPropertyInputsField := yamlnode.LookupKey(property, "selector_property_inputs"); hasSelectorPropertyInputsField {
-			var selectorPropertyInputs SelectorPropertyInput
-			err := property.Decode(&selectorPropertyInputs)
-			if err != nil {
-				return err
-			}
-			*pi = append(*pi, selectorPropertyInputs)
-		} else if _, hasPropertyInputsField := yamlnode.LookupKey(property, "property_inputs"); hasPropertyInputsField {
-			var collectionPropertyInput CollectionPropertyInput
-			err := property.Decode(&collectionPropertyInput)
-			if err != nil {
-				return err
-			}
-			*pi = append(*pi, collectionPropertyInput)
-			continue
-		} else {
+
+	contains := func(m map[string]interface{}, key string) bool {
+		_, ok := m[key]
+		return ok
+	}
+
+	for _, sniff := range sniffs {
+		contents, err := yaml.Marshal(sniff)
+		if err != nil {
+			return err // NOTE: this cannot happen, the YAML has already been unmarshalled
+		}
+
+		switch {
+		case contains(sniff, "selector_property_inputs"):
+			var propertyInput SelectorPropertyInput
+			err = yaml.Unmarshal(contents, &propertyInput)
+			*pi = append(*pi, propertyInput)
+		case contains(sniff, "property_inputs"):
+			var propertyInput CollectionPropertyInput
+			err = yaml.Unmarshal(contents, &propertyInput)
+			*pi = append(*pi, propertyInput)
+		default:
 			var propertyInput SimplePropertyInput
-			err := property.Decode(&propertyInput)
-			if err != nil {
-				return err
-			}
+			err = yaml.Unmarshal(contents, &propertyInput)
 			*pi = append(*pi, propertyInput)
 		}
+		if err != nil {
+			return err // NOTE: this cannot happen, the YAML has already been unmarshalled
+		}
 	}
+
 	return nil
 }

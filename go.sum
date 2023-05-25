@@ -196,8 +196,6 @@ github.com/cppforlife/go-semi-semantic v0.0.0-20160921010311-576b6af77ae4 h1:J+g
 github.com/cppforlife/go-semi-semantic v0.0.0-20160921010311-576b6af77ae4/go.mod h1:socxpf5+mELPbosI149vWpNlHK6mbfWFxSWOoSndXR8=
 github.com/cpuguy83/go-md2man/v2 v2.0.0/go.mod h1:maD7wRr/U5Z6m/iR4s+kqSMx2CaBsrgA7czyZG/E6dU=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
-github.com/crhntr/yamlutil v0.0.0-20230523004714-d7a84a7a5d64 h1:v9TB0YLlfTV7nZtDt8Amb9ml/udpjSE63P+0qmfK6aA=
-github.com/crhntr/yamlutil v0.0.0-20230523004714-d7a84a7a5d64/go.mod h1:ksg8an2nXLcrZReC9jceNV/Wj9OPSrN4YIH3qYRCswo=
 github.com/cucumber/gherkin-go/v19 v19.0.3 h1:mMSKu1077ffLbTJULUfM5HPokgeBcIGboyeNUof1MdE=
 github.com/cucumber/gherkin-go/v19 v19.0.3/go.mod h1:jY/NP6jUtRSArQQJ5h1FXOUgk5fZK24qtE7vKi776Vw=
 github.com/cucumber/godog v0.12.5 h1:FZIy6VCfMbmGHts9qd6UjBMT9abctws/pQYO/ZcwOVs=
@@ -802,8 +800,8 @@ golang.org/x/exp v0.0.0-20191227195350-da58074b4299/go.mod h1:2RIsYlXP63K8oxa1u0
 golang.org/x/exp v0.0.0-20200119233911-0405dc783f0a/go.mod h1:2RIsYlXP63K8oxa1u096TMicItID8zy7Y6sNkU49FU4=
 golang.org/x/exp v0.0.0-20200207192155-f17229e696bd/go.mod h1:J/WKrq2StrnmMY6+EHIKF9dgMWnmCNThgcyBT1FY9mM=
 golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6/go.mod h1:3jZMyOhIsHpP37uCMkUooju7aAi5cS1Q23tOzKc+0MU=
-golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2 h1:Jvc7gsqn21cJHCmAWx0LiimpP18LZmUxkT5Mp7EZ1mI=
-golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2/go.mod h1:CxIveKay+FTh1D0yPZemJVgC/95VzuuOLq5Qi4xnoYc=
+golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e h1:+WEEuIdZHnUeJJmEUjyYC2gfUMj69yZXw17EnHg/otA=
+golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e/go.mod h1:Kr81I6Kryrl9sr8s2FK3vxD90NdsKWRuOIl2O4CvYbA=
 golang.org/x/image v0.0.0-20190227222117-0694c2d4d067/go.mod h1:kZ7UVZpmo3dzQBMxlp+ypCbDeSB+sBbTgSJuh5dn5js=
 golang.org/x/image v0.0.0-20190802002840-cff245a6509b/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
 golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=

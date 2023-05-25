@@ -10,7 +10,7 @@ import (
 )
 
 var _ = Describe("SimplePropertyBlueprint", func() {
-	var simplePropertyBlueprint *proofing.SimplePropertyBlueprint
+	var simplePropertyBlueprint proofing.SimplePropertyBlueprint
 
 	BeforeEach(func() {
 		f, err := os.Open("fixtures/property_blueprints.yml")
@@ -21,7 +21,7 @@ var _ = Describe("SimplePropertyBlueprint", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		var ok bool
-		simplePropertyBlueprint, ok = productTemplate.PropertyBlueprints[0].(*proofing.SimplePropertyBlueprint)
+		simplePropertyBlueprint, ok = productTemplate.PropertyBlueprints[0].(proofing.SimplePropertyBlueprint)
 		Expect(ok).To(BeTrue())
 	})
 

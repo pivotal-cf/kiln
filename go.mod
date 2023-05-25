@@ -9,7 +9,6 @@ require (
 	github.com/cloudfoundry/bosh-cli v6.4.1+incompatible
 	github.com/cloudfoundry/bosh-utils v0.0.0-20210130100352-ab14c90ad9f2
 	github.com/cppforlife/go-patch v0.2.0
-	github.com/crhntr/yamlutil v0.0.0-20230523004714-d7a84a7a5d64
 	github.com/cucumber/godog v0.12.5
 	github.com/cucumber/messages-go/v16 v16.0.1
 	github.com/docker/docker v23.0.0-rc.1+incompatible
@@ -34,11 +33,10 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/crypto v0.7.0
-	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
+	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	golang.org/x/oauth2 v0.6.0
 	golang.org/x/term v0.6.0
 	gopkg.in/yaml.v2 v2.4.0
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -144,5 +142,6 @@ require (
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.4.0 // indirect
 )

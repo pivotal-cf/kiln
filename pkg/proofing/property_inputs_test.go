@@ -1,6 +1,7 @@
 package proofing_test
 
 import (
+	"errors"
 	"os"
 
 	"github.com/pivotal-cf/kiln/pkg/proofing"
@@ -27,5 +28,19 @@ var _ = Describe("PropertyInputs", func() {
 		Expect(formType.PropertyInputs[0]).To(BeAssignableToTypeOf(proofing.SimplePropertyInput{}))
 		Expect(formType.PropertyInputs[1]).To(BeAssignableToTypeOf(proofing.CollectionPropertyInput{}))
 		Expect(formType.PropertyInputs[2]).To(BeAssignableToTypeOf(proofing.SelectorPropertyInput{}))
+	})
+
+	Context("failure cases", func() {
+		Context("when the YAML cannot be unmarshalled", func() {
+			It("returns an error", func() {
+				propertyInputs := proofing.PropertyInputs([]proofing.PropertyInput{})
+
+				err := propertyInputs.UnmarshalYAML(func(v interface{}) error {
+					return errors.New("unmarshal failed")
+				})
+
+				Expect(err).To(MatchError("unmarshal failed"))
+			})
+		})
 	})
 })
