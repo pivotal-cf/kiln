@@ -13,8 +13,10 @@ package workflows
 
 import (
 	"context"
+	"golang.org/x/exp/slices"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -65,6 +67,10 @@ func Test_using_kiln(t *testing.T) {
 }
 
 func setupAndRunFeatureTest(t *testing.T, initializers ...func(ctx *godog.ScenarioContext)) {
+	kilnExecutable := filepath.Join(t.TempDir(), "kiln")
+
+	buildKilnBinary(t, kilnExecutable)
+
 	trimmedTestFuncName := strings.TrimPrefix(t.Name(), "Test_")
 	featurePath := trimmedTestFuncName + ".feature"
 
@@ -87,12 +93,26 @@ func setupAndRunFeatureTest(t *testing.T, initializers ...func(ctx *godog.Scenar
 		Options: &godog.Options{
 			Format:         "pretty",
 			Paths:          []string{featurePath},
-			DefaultContext: scenario.DefaultContext(context.Background(), t.TempDir()),
+			DefaultContext: scenario.DefaultContext(context.Background(), kilnExecutable),
 			TestingT:       t, // Testing instance that will run subtests.
 		},
 	}
 
 	if code := suite.Run(); code != 0 {
 		t.Fatalf("status %d returned, failed to run %s", code, featurePath)
+	}
+}
+
+func buildKilnBinary(t *testing.T, kilnExecutable string) {
+	t.Helper()
+	const kilnVersion = "0.0.0+acceptance-tests"
+	goBuild := exec.Command("go", "build", "-o", kilnExecutable, "-ldflags", "-X main.version="+kilnVersion, "github.com/pivotal-cf/kiln")
+	if testing.Verbose() {
+		goBuild.Stderr = os.Stdout
+		goBuild.Stdout = os.Stdout
+		goBuild.Args = slices.Insert(goBuild.Args, slices.Index(goBuild.Args, "build")+1, "-v")
+	}
+	if err := goBuild.Run(); err != nil {
+		t.Fatal(err)
 	}
 }
