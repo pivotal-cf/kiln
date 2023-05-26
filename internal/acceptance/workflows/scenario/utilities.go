@@ -15,8 +15,6 @@ import (
 )
 
 const (
-	kilnDevVersion = "1.0.0-dev"
-
 	indexNotFound = -1
 
 	kilnBuildCacheKey kilnBuildCacheKeyType = 0
@@ -25,16 +23,7 @@ const (
 type kilnBuildCacheKeyType int
 
 func kilnCommand(ctx context.Context, args ...string) *exec.Cmd {
-	kilnExecutable := kilnBuildPath(ctx)
-	_, err := os.Stat(kilnExecutable)
-	if err != nil {
-		err := exec.CommandContext(ctx, "go", "build", "-o", kilnExecutable, "-ldflags", "-X main.version="+kilnDevVersion, "github.com/pivotal-cf/kiln").Run()
-		if err != nil {
-			_, _ = os.Stderr.WriteString(err.Error())
-			os.Exit(1)
-		}
-	}
-	return exec.CommandContext(ctx, kilnExecutable, args...)
+	return exec.CommandContext(ctx, kilnBuildPath(ctx), args...)
 }
 
 func checkoutMain(repoPath string) error {
