@@ -75,7 +75,7 @@ type ComponentSpec struct {
 
 func (spec ComponentSpec) VersionConstraints() (*semver.Constraints, error) {
 	if spec.Version == "" {
-		spec.Version = ">0"
+		spec.Version = ">=0"
 	}
 	c, err := semver.NewConstraint(spec.Version)
 	if err != nil {
