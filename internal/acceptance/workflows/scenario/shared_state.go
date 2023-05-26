@@ -5,12 +5,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
-
-	"github.com/cucumber/godog"
 
 	"gopkg.in/yaml.v2"
 )
@@ -37,6 +36,16 @@ func contextValue[T any](ctx context.Context, k key, name string) (T, error) {
 	return s, nil
 }
 
+type tempDirKeyType byte
+
+const tempDirKey tempDirKeyType = 1
+
+// DefaultContext must be configured for tests to run properly
+// it sets up a context with required data for all scenarios.
+func DefaultContext(ctx context.Context, tempDir string) context.Context {
+	return context.WithValue(ctx, tempDirKey, tempDir)
+}
+
 func tileRepoPath(ctx context.Context) (string, error) {
 	return contextValue[string](ctx, tileRepoKey, "tile repository path")
 }
@@ -46,7 +55,11 @@ func setTileRepoPath(ctx context.Context, p string) context.Context {
 }
 
 func setKilnBuildPath(ctx context.Context) context.Context {
-	tempKiln := filepath.Join(os.TempDir(), "kiln")
+	val := ctx.Value(tempDirKey)
+	if val == nil {
+		log.Fatal("temporary directory for test not set (call SetTempDir on context passed to godog.Options)")
+	}
+	tempKiln := filepath.Join(val.(string), "kiln")
 	return context.WithValue(ctx, kilnBuildCacheKey, tempKiln)
 }
 
@@ -58,11 +71,6 @@ func kilnBuildPath(ctx context.Context) string {
 		os.Exit(1)
 	}
 	return p
-}
-
-func removeKilnBuild(ctx context.Context, _ *godog.Scenario, err error) (context.Context, error) {
-	_ = os.RemoveAll(filepath.Dir(kilnBuildPath(ctx)))
-	return ctx, err
 }
 
 // defaultFilePathForTile returns a path based on the default output tile value of bake

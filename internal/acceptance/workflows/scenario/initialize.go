@@ -135,7 +135,6 @@ func initializeTileSourceCode(ctx scenarioContext) {
 		return setTileRepoPath(ctx, "hello-tile"), err
 	})
 	ctx.After(resetTileRepository)
-	ctx.After(removeKilnBuild)
 
 	ctx.Step(regexp.MustCompile(`^kiln validate succeeds$`), kilnValidateSucceeds)
 
