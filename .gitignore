@@ -10,6 +10,8 @@ dist
 internal/release/exp.txt
 internal/release/got.txt
 
+node_modules
+
 env.yml
 *.key
 *.pem
