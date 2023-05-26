@@ -12,6 +12,7 @@
 package workflows
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"strings"
@@ -84,9 +85,10 @@ func setupAndRunFeatureTest(t *testing.T, initializers ...func(ctx *godog.Scenar
 			}
 		},
 		Options: &godog.Options{
-			Format:   "pretty",
-			Paths:    []string{featurePath},
-			TestingT: t, // Testing instance that will run subtests.
+			Format:         "pretty",
+			Paths:          []string{featurePath},
+			DefaultContext: scenario.DefaultContext(context.Background(), t.TempDir()),
+			TestingT:       t, // Testing instance that will run subtests.
 		},
 	}
 
