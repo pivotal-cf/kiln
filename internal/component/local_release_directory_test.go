@@ -51,7 +51,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 	Describe("GetLocalReleases", func() {
 		Context("when releases exist in the releases dir", func() {
 			BeforeEach(func() {
-				fixtureContent, err := os.ReadFile(filepath.Join("fixtures", "some-release.tgz"))
+				fixtureContent, err := os.ReadFile(filepath.Join("testdata", "some-release.tgz"))
 				Expect(err).NotTo(HaveOccurred())
 				err = os.WriteFile(releaseFile, fixtureContent, 0o755)
 				Expect(err).NotTo(HaveOccurred())
