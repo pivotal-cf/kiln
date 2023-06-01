@@ -158,7 +158,6 @@ func (ars ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 	if err != nil {
 		return Lock{}, err
 	}
-	request.SetBasicAuth(ars.Username, ars.Password)
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
@@ -198,7 +197,6 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock,
 	if err != nil {
 		return Lock{}, err
 	}
-	request.SetBasicAuth(ars.Username, ars.Password)
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
