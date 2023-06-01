@@ -100,8 +100,8 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				Expect(resultLock).To(Equal(component.Lock{
 					Name:    "mango",
 					Version: "2.3.4",
-					//StemcellOS:      "smoothie",
-					//StemcellVersion: "9.9",
+					// StemcellOS:      "smoothie",
+					// StemcellVersion: "9.9",
 					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
 					RemoteSource: "some-mango-tree",
 				}))
@@ -119,8 +119,8 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				Expect(resultLock).To(Equal(component.Lock{
 					Name:    "mango",
 					Version: "2.3.4",
-					//StemcellOS:      "smoothie",
-					//StemcellVersion: "9.9",
+					// StemcellOS:      "smoothie",
+					// StemcellVersion: "9.9",
 					SHA1:         "some-sha",
 					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
 					RemoteSource: "some-mango-tree",
@@ -185,9 +185,9 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 			Expect(resultLock).To(Equal(component.Lock{
 				Name:    "mango",
 				Version: "2.3.4",
-				//StemcellOS:      "smoothie",
-				//StemcellVersion: "9.9",
-				//SHA1:         "some-sha",
+				// StemcellOS:      "smoothie",
+				// StemcellVersion: "9.9",
+				// SHA1:         "some-sha",
 				RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
 				RemoteSource: "some-mango-tree",
 			}))
