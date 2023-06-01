@@ -24,6 +24,7 @@ import (
 
 type ArtifactoryReleaseSource struct {
 	cargo.ReleaseSourceConfig
+	Client *http.Client
 	logger *log.Logger
 	ID     string
 }
@@ -69,18 +70,9 @@ func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig) *ArtifactoryReleas
 func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
 	downloadURL := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + remoteRelease.RemotePath
 	ars.logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeArtifactory, ars.ID)
-	resp, err := http.Get(downloadURL)
-
-	unwrapped := err
-	for errors.Unwrap(unwrapped) != nil {
-		unwrapped = errors.Unwrap(unwrapped)
-	}
-	switch e := unwrapped.(type) {
-	case *net.DNSError:
-		return Local{}, fmt.Errorf("failed to download %s release from artifactory: %w. (hint: Are you connected to the corporate vpn?)", remoteRelease.Name, e)
-	case nil: // continue
-	default:
-		return Local{}, e
+	resp, err := ars.Client.Get(downloadURL)
+	if err != nil {
+		return Local{}, wrapVPNError(err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -120,9 +112,9 @@ func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRe
 func (ars *ArtifactoryReleaseSource) getFileSHA1(release Lock) (string, error) {
 	fullURL := ars.ArtifactoryHost + "/api/storage/" + ars.Repo + "/" + release.RemotePath
 	ars.logger.Printf("Getting %s file info from artifactory", release.Name)
-	resp, err := http.Get(fullURL)
+	resp, err := ars.Client.Get(fullURL)
 	if err != nil {
-		return "", err
+		return "", wrapVPNError(err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("failed to get %s release info from artifactory with error code %d", release.Name, resp.StatusCode)
@@ -160,9 +152,9 @@ func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) 
 		return Lock{}, err
 	}
 
-	response, err := http.DefaultClient.Do(request)
+	response, err := ars.Client.Do(request)
 	if err != nil {
-		return Lock{}, err
+		return Lock{}, wrapVPNError(err)
 	}
 	defer func() {
 		_ = response.Body.Close()
@@ -199,9 +191,9 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock
 		return Lock{}, err
 	}
 
-	response, err := http.DefaultClient.Do(request)
+	response, err := ars.Client.Do(request)
 	if err != nil {
-		return Lock{}, err
+		return Lock{}, wrapVPNError(err)
 	}
 	defer func() {
 		_ = response.Body.Close()
@@ -309,10 +301,9 @@ func (ars *ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (L
 	// TODO: check Sha1/2
 	// request.Header.Set("X-Checksum-Sha1", spec.??? )
 
-	response, err := http.DefaultClient.Do(request)
+	response, err := ars.Client.Do(request)
 	if err != nil {
-		fmt.Println(err)
-		return Lock{}, err
+		return Lock{}, wrapVPNError(err)
 	}
 
 	switch response.StatusCode {
@@ -345,4 +336,24 @@ func (ars *ArtifactoryReleaseSource) pathTemplate() *template.Template {
 		template.New("remote-path").
 			Funcs(template.FuncMap{"trimSuffix": strings.TrimSuffix}).
 			Parse(ars.ReleaseSourceConfig.PathTemplate))
+}
+
+type vpnError struct {
+	wrapped error
+}
+
+func (fe *vpnError) Unwrap() error {
+	return fe.wrapped
+}
+
+func (fe *vpnError) Error() string {
+	return fmt.Sprintf("failed to dial (hint: Are you connected to the corporate vpn?): %s", fe.wrapped)
+}
+
+func wrapVPNError(err error) error {
+	x := new(net.DNSError)
+	if errors.As(err, &x) {
+		return &vpnError{wrapped: err}
+	}
+	return err
 }
