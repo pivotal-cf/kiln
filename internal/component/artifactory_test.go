@@ -1,8 +1,10 @@
 package component_test
 
 import (
+	"bytes"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -54,6 +56,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 		server = httptest.NewServer(artifactoryRouter)
 		config.ArtifactoryHost = server.URL
 		source = component.NewArtifactoryReleaseSource(config)
+		source.Client = server.Client()
 	})
 	AfterEach(func() {
 		server.Close()
@@ -61,34 +64,29 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 	})
 
 	Describe("read operations", func() {
+		BeforeEach(func() {
+			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+				res.WriteHeader(http.StatusOK)
+				// language=json
+				_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
+			})))
+			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+				res.WriteHeader(http.StatusOK)
+				// language=json
+				_, _ = io.WriteString(res, `{"children": [{"uri": "/mango-2.3.4-smoothie-9.9.tgz", "folder": false}]}`)
+			})))
+			artifactoryRouter.Handler(http.MethodGet, "/artifactory/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+				res.WriteHeader(http.StatusOK)
+				f, err := os.Open(filepath.Join("testdata", "some-release.tgz"))
+				if err != nil {
+					log.Fatal("failed to open some release test artifact")
+				}
+				defer closeAndIgnoreError(f)
+				_, _ = io.Copy(res, f)
+			}) /* put middleware here */))
+		})
 		When("the server has the a file at the expected path", func() {
-			BeforeEach(func() {
-				requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
-
-				artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-					res.WriteHeader(http.StatusOK)
-					// language=json
-					_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
-				})))
-				artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-					res.WriteHeader(http.StatusOK)
-					// language=json
-					_, _ = io.WriteString(res, `{"children": [{"uri": "/mango-2.3.4-smoothie-9.9.tgz", "folder": false}]}`)
-				}), requireAuth))
-				artifactoryRouter.Handler(http.MethodGet, "/artifactory/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-					res.WriteHeader(http.StatusOK)
-					f, err := os.Open(filepath.Join("testdata", "some-release.tgz"))
-					if err != nil {
-						log.Fatal("failed to open some release test artifact")
-					}
-					defer closeAndIgnoreError(f)
-					_, _ = io.Copy(res, f)
-				}) /* put middleware here */))
-			})
-
 			It("resolves the lock from the spec", func() { // testing GetMatchedRelease
-				source.ID = "some-mango-tree"
-				source.ReleaseSourceConfig.ID = "why-are-we-not-using-this-field"
 				resultLock, resultErr := source.GetMatchedRelease(component.Spec{
 					Name:            "mango",
 					Version:         "2.3.4",
@@ -127,10 +125,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				}))
 			})
 
-			It("downloads the release", func() {
-				source.ID = "some-mango-tree"
-				source.ReleaseSourceConfig.ID = "why-are-we-not-using-this-field"
-
+			It("downloads the release", func() { // teesting DownloadRelease
 				By("calling FindReleaseVersion")
 				local, resultErr := source.DownloadRelease(releasesDirectory, component.Lock{
 					Name:         "mango",
@@ -173,7 +168,6 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer closeAndIgnoreError(f)
 
-			By("calling UploadRelease")
 			resultLock, resultErr := source.UploadRelease(component.Spec{
 				Name:            "mango",
 				Version:         "2.3.4",
@@ -192,6 +186,60 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				RemoteSource: "some-mango-tree",
 			}))
 			Expect(filepath.Join(serverReleasesDirectory, "mango-2.3.4-smoothie-9.9.tgz")).To(BeAnExistingFile())
+		})
+	})
+
+	When("not behind the corporate firewall", func() {
+		JustBeforeEach(func() {
+			source.Client.Transport = dnsFailure{}
+		})
+		Describe("GetMatchedRelease", func() {
+			It("returns a helpful message", func() {
+				_, resultErr := source.GetMatchedRelease(component.Spec{
+					Name:            "mango",
+					Version:         "2.3.4",
+					StemcellOS:      "smoothie",
+					StemcellVersion: "9.9",
+				})
+				Expect(resultErr).To(HaveOccurred())
+				Expect(resultErr.Error()).To(ContainSubstring("vpn"))
+			})
+		})
+		Describe("FindReleaseVersion", func() {
+			It("returns a helpful message", func() {
+				_, resultErr := source.FindReleaseVersion(component.Spec{
+					Name:            "mango",
+					Version:         "2.3.4",
+					StemcellOS:      "smoothie",
+					StemcellVersion: "9.9",
+				}, false)
+				Expect(resultErr).To(HaveOccurred())
+				Expect(resultErr.Error()).To(ContainSubstring("vpn"))
+			})
+		})
+		Describe("DownloadRelease", func() {
+			It("returns a helpful message", func() {
+				_, resultErr := source.DownloadRelease(releasesDirectory, component.Lock{
+					Name:         "mango",
+					Version:      "2.3.4",
+					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
+					RemoteSource: "some-mango-tree",
+				})
+				Expect(resultErr).To(HaveOccurred())
+				Expect(resultErr.Error()).To(ContainSubstring("vpn"))
+			})
+		})
+		Describe("UploadRelease", func() {
+			It("returns a helpful message", func() {
+				_, resultErr := source.UploadRelease(component.Spec{
+					Name:            "mango",
+					Version:         "2.3.4",
+					StemcellOS:      "smoothie",
+					StemcellVersion: "9.9",
+				}, bytes.NewBuffer(nil))
+				Expect(resultErr).To(HaveOccurred())
+				Expect(resultErr.Error()).To(ContainSubstring("vpn"))
+			})
 		})
 	})
 })
@@ -229,8 +277,15 @@ func applyMiddleware(endpoint http.Handler, middleware ...func(http.Handler) htt
 	return h
 }
 
+type dnsFailure struct{}
+
+func (dnsFailure) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, &net.DNSError{Err: "some error"}
+}
+
 func must[T any](value T, err error) T {
 	if err != nil {
 		log.Fatal(err)
 	}
+	return value
 }
