@@ -59,13 +59,14 @@ func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig) *ArtifactoryReleas
 	// ctx := context.TODO()
 
 	return &ArtifactoryReleaseSource{
+		Client:              http.DefaultClient,
 		ReleaseSourceConfig: c,
 		ID:                  c.ID,
 		logger:              log.New(os.Stderr, "[Artifactory release source] ", log.Default().Flags()),
 	}
 }
 
-func (ars ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
+func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
 	downloadURL := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + remoteRelease.RemotePath
 	ars.logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeArtifactory, ars.ID)
 	resp, err := http.Get(downloadURL)
@@ -116,7 +117,7 @@ func (ars ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRel
 	return Local{Lock: remoteRelease, LocalPath: filePath}, nil
 }
 
-func (ars ArtifactoryReleaseSource) getFileSHA1(release Lock) (string, error) {
+func (ars *ArtifactoryReleaseSource) getFileSHA1(release Lock) (string, error) {
 	fullURL := ars.ArtifactoryHost + "/api/storage/" + ars.Repo + "/" + release.RemotePath
 	ars.logger.Printf("Getting %s file info from artifactory", release.Name)
 	resp, err := http.Get(fullURL)
@@ -141,13 +142,13 @@ func (ars ArtifactoryReleaseSource) getFileSHA1(release Lock) (string, error) {
 	return artifactoryFileInfo.Checksums.SHA1, nil
 }
 
-func (ars ArtifactoryReleaseSource) Configuration() cargo.ReleaseSourceConfig {
+func (ars *ArtifactoryReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 	return ars.ReleaseSourceConfig
 }
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
-func (ars ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
+func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 	remotePath, err := ars.RemotePath(spec)
 	if err != nil {
 		return Lock{}, err
@@ -186,7 +187,7 @@ func (ars ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) {
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
-func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock, error) {
+func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock, error) {
 	remotePath, err := ars.RemotePath(spec)
 	if err != nil {
 		return Lock{}, err
@@ -291,7 +292,7 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock,
 	return foundRelease, nil
 }
 
-func (ars ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error) {
+func (ars *ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error) {
 	remotePath, err := ars.RemotePath(spec)
 	if err != nil {
 		return Lock{}, err
@@ -330,7 +331,7 @@ func (ars ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lo
 	}, nil
 }
 
-func (ars ArtifactoryReleaseSource) RemotePath(spec Spec) (string, error) {
+func (ars *ArtifactoryReleaseSource) RemotePath(spec Spec) (string, error) {
 	pathBuf := new(bytes.Buffer)
 
 	err := ars.pathTemplate().Execute(pathBuf, spec)
@@ -341,7 +342,7 @@ func (ars ArtifactoryReleaseSource) RemotePath(spec Spec) (string, error) {
 	return pathBuf.String(), nil
 }
 
-func (ars ArtifactoryReleaseSource) pathTemplate() *template.Template {
+func (ars *ArtifactoryReleaseSource) pathTemplate() *template.Template {
 	return template.Must(
 		template.New("remote-path").
 			Funcs(template.FuncMap{"trimSuffix": strings.TrimSuffix}).
