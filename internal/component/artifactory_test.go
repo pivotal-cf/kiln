@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync/atomic"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -32,9 +33,13 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 		server            *httptest.Server
 		artifactoryRouter *httprouter.Router
 
+		calledUnexpectedEndpoint *atomic.Bool
+
 		releasesDirectory string
 	)
 	BeforeEach(func() {
+		calledUnexpectedEndpoint = new(atomic.Bool)
+		calledUnexpectedEndpoint.Store(false)
 		source = new(component.ArtifactoryReleaseSource)
 
 		releasesDirectory = must(os.MkdirTemp("", "releases"))
@@ -48,8 +53,10 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 		config.ID = "some-mango-tree"
 
 		artifactoryRouter = httprouter.New()
+		artifactoryRouter.RedirectTrailingSlash = false
 		artifactoryRouter.NotFound = http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-			log.Fatalf("handler on fake artifactory server not found not found for request: %s %s", req.Method, req.URL)
+			calledUnexpectedEndpoint.Store(true)
+			log.Printf("handler on fake artifactory server not found not found for request: %s %s", req.Method, req.URL)
 		})
 	})
 	JustBeforeEach(func() {
@@ -65,19 +72,34 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 
 	Describe("read operations", func() {
 		BeforeEach(func() {
-			requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
-
-			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+			artifactoryRouter.Handler(http.MethodHead, "/artifactory/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+				res.Header().Set("x-checksum-sha1", "some-sha")
 				res.WriteHeader(http.StatusOK)
-				// language=json
-				_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
 			})))
-			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+			artifactoryRouter.Handler(http.MethodGet, "/artifactory/basket/bosh-releases/smoothie/9.9/mango/", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 				res.WriteHeader(http.StatusOK)
-				// language=json
-				_, _ = io.WriteString(res, `{"children": [{"uri": "/mango-2.3.4-smoothie-9.9.tgz", "folder": false}]}`)
-			}), requireAuth))
+				// language=html
+				_, _ = io.WriteString(res, `<!DOCTYPE html>
+<html>
+<head>
+	<title>Index of 🥭</title>
+</head>
+<body>
+	<h1>Index of tanzu-application-services-generic-local/shared-releases</h1>
+	<pre>Name           Last modified      Size</pre><hr/>
+	<pre>
+		<a href="../">../</a>
+		<a href="mango-1.0.0-smoothie-9.9.tgz">mango-1.0.0-smoothie-9.9.tgz</a>	18-Apr-2023 14:05  162.89 MB
+		<a href="mango-2.1.0-smoothie-9.9.tgz">mango-2.1.0-smoothie-9.9.tgz</a>	18-Apr-2023 14:05  162.89 MB
+		<a href="mango-2.3.4-smoothie-9.9.tgz">mango-2.3.4-smoothie-9.9.tgz</a>	18-Apr-2023 14:05  162.89 MB
+		<a href="mango-3.0.0-smoothie-9.9.tgz">mango-3.0.0-smoothie-9.9.tgz</a>	18-Apr-2023 14:05  162.89 MB
+	</pre>
+	<hr/>
+</body>
+</html>`)
+			})))
 			artifactoryRouter.Handler(http.MethodGet, "/artifactory/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+
 				res.WriteHeader(http.StatusOK)
 				f, err := os.Open(filepath.Join("testdata", "some-release.tgz"))
 				if err != nil {
@@ -102,9 +124,14 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					Version: "2.3.4",
 					// StemcellOS:      "smoothie",
 					// StemcellVersion: "9.9",
+					SHA1:         "some-sha",
 					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
 					RemoteSource: "some-mango-tree",
 				}))
+
+				By("only calling expected endpoints", func() {
+					Expect(calledUnexpectedEndpoint.Load()).To(BeFalse())
+				})
 			})
 
 			It("finds the bosh release", func() { // testing FindReleaseVersion
@@ -117,14 +144,18 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 
 				Expect(resultErr).NotTo(HaveOccurred())
 				Expect(resultLock).To(Equal(component.Lock{
-					Name:    "mango",
-					Version: "2.3.4",
-					// StemcellOS:      "smoothie",
-					// StemcellVersion: "9.9",
-					SHA1:         "some-sha",
-					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
-					RemoteSource: "some-mango-tree",
+					Name:            "mango",
+					Version:         "2.3.4",
+					StemcellOS:      "smoothie",
+					StemcellVersion: "9.9",
+					SHA1:            "some-sha",
+					RemotePath:      "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
+					RemoteSource:    "some-mango-tree",
 				}))
+
+				By("only calling expected endpoints", func() {
+					Expect(calledUnexpectedEndpoint.Load()).To(BeFalse())
+				})
 			})
 
 			It("downloads the release", func() { // teesting DownloadRelease
@@ -138,6 +169,10 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 
 				Expect(resultErr).NotTo(HaveOccurred())
 				Expect(local.LocalPath).To(BeAnExistingFile())
+
+				By("only calling expected endpoints", func() {
+					Expect(calledUnexpectedEndpoint.Load()).To(BeFalse())
+				})
 			})
 		})
 	})
@@ -282,7 +317,7 @@ func applyMiddleware(endpoint http.Handler, middleware ...func(http.Handler) htt
 type dnsFailure struct{}
 
 func (dnsFailure) RoundTrip(*http.Request) (*http.Response, error) {
-	return nil, &net.DNSError{Err: "some error"}
+	return nil, &net.DNSError{Err: "lemon sorbet"}
 }
 
 func must[T any](value T, err error) T {

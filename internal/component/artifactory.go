@@ -4,22 +4,27 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/andybalholm/cascadia"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"golang.org/x/exp/slices"
+	"golang.org/x/net/html"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
+)
 
-	"github.com/Masterminds/semver/v3"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
+const (
+	headerChecksumSHA1 = "x-checksum-sha1"
 )
 
 type ArtifactoryReleaseSource struct {
@@ -29,35 +34,12 @@ type ArtifactoryReleaseSource struct {
 	ID     string
 }
 
-type ArtifactoryFileMetadata struct {
-	Checksums struct {
-		Sha1   string `json:"sha1"`
-		Sha256 string `json:"sha256"`
-		MD5    string `json:"md5"`
-	} `json:"checksums"`
-}
-
-type ArtifactoryFolderInfo struct {
-	Children []struct {
-		URI    string `json:"uri"`
-		Folder bool   `json:"folder"`
-	} `json:"children"`
-}
-
-type ArtifactoryFileInfo struct {
-	Checksums struct {
-		SHA1 string `json:"sha1"`
-	} `json:"checksums"`
-}
-
 // NewArtifactoryReleaseSource will provision a new ArtifactoryReleaseSource Project
 // from the Kilnfile (ReleaseSourceConfig). If type is incorrect it will PANIC
 func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig) *ArtifactoryReleaseSource {
 	if c.Type != "" && c.Type != ReleaseSourceTypeArtifactory {
 		panic(panicMessageWrongReleaseSourceType)
 	}
-
-	// ctx := context.TODO()
 
 	return &ArtifactoryReleaseSource{
 		Client:              http.DefaultClient,
@@ -110,28 +92,23 @@ func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRe
 }
 
 func (ars *ArtifactoryReleaseSource) getFileSHA1(release Lock) (string, error) {
-	fullURL := ars.ArtifactoryHost + "/api/storage/" + ars.Repo + "/" + release.RemotePath
-	ars.logger.Printf("Getting %s file info from artifactory", release.Name)
-	resp, err := ars.Client.Get(fullURL)
-	if err != nil {
-		return "", wrapVPNError(err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to get %s release info from artifactory with error code %d", release.Name, resp.StatusCode)
-	}
-
-	responseBody, err := io.ReadAll(resp.Body)
+	boshReleaseURL := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + release.RemotePath
+	req, err := http.NewRequest(http.MethodHead, boshReleaseURL, nil)
 	if err != nil {
 		return "", err
 	}
-
-	var artifactoryFileInfo ArtifactoryFileInfo
-
-	if err := json.Unmarshal(responseBody, &artifactoryFileInfo); err != nil {
-		return "", fmt.Errorf("json is malformed: %s", err)
+	res, err := ars.Client.Do(req)
+	if err != nil {
+		return "", wrapVPNError(err)
 	}
-
-	return artifactoryFileInfo.Checksums.SHA1, nil
+	if res.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to get %s release info from artifactory with error code %d", release.Name, res.StatusCode)
+	}
+	checksums := res.Header.Values(headerChecksumSHA1)
+	if len(checksums) == 0 {
+		return "", fmt.Errorf("failed to get %s release info from artifactory with error code %d", release.Name, res.StatusCode)
+	}
+	return checksums[0], nil
 }
 
 func (ars *ArtifactoryReleaseSource) Configuration() cargo.ReleaseSourceConfig {
@@ -146,12 +123,12 @@ func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) 
 		return Lock{}, err
 	}
 
-	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, remotePath)
-	request, err := http.NewRequest(http.MethodGet, fullUrl, nil)
+	remoteReleasesDirectoryURL := ars.ArtifactoryHost + "/" + path.Join("artifactory", ars.ReleaseSourceConfig.Repo, remotePath)
+
+	request, err := http.NewRequest(http.MethodHead, remoteReleasesDirectoryURL, nil)
 	if err != nil {
 		return Lock{}, err
 	}
-	request.SetBasicAuth(ars.Username, ars.Password)
 
 	response, err := ars.Client.Do(request)
 	if err != nil {
@@ -173,6 +150,7 @@ func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) 
 		Name:         spec.Name,
 		Version:      spec.Version,
 		RemotePath:   remotePath,
+		SHA1:         response.Header.Get("x-checksum-sha1"),
 		RemoteSource: ars.ID,
 	}, nil
 }
@@ -185,7 +163,7 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock
 		return Lock{}, err
 	}
 
-	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, path.Dir(remotePath))
+	fullUrl := fmt.Sprintf("%s/%s/%s/%s/", ars.ArtifactoryHost, "artifactory", ars.Repo, path.Dir(remotePath))
 
 	request, err := http.NewRequest(http.MethodGet, fullUrl, nil)
 	if err != nil {
@@ -197,9 +175,7 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock
 	if err != nil {
 		return Lock{}, wrapVPNError(err)
 	}
-	defer func() {
-		_ = response.Body.Close()
-	}()
+	defer closeAndIgnoreError(response.Body)
 
 	switch response.StatusCode {
 	case http.StatusOK:
@@ -209,79 +185,98 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock
 		return Lock{}, fmt.Errorf("unexpected http status: %s", http.StatusText(response.StatusCode))
 	}
 
-	var artifactoryFolderInfo ArtifactoryFolderInfo
-	var _ *semver.Constraints
-
-	responseBody, err := io.ReadAll(response.Body)
+	document, err := html.Parse(response.Body)
 	if err != nil {
-		return Lock{}, err
+		return Lock{}, fmt.Errorf("failed to parse html response body: %w", err)
 	}
 
-	if err := json.Unmarshal(responseBody, &artifactoryFolderInfo); err != nil {
-		return Lock{}, fmt.Errorf("json from %s is malformed: %s", request.URL.Host, err)
-	}
-
-	semverPattern, err := regexp.Compile(`([-v])\d+(.\d+)*`)
+	boshReleaseVersionConstraint, err := spec.VersionConstraints()
 	if err != nil {
-		return Lock{}, err
+		return Lock{}, fmt.Errorf("failed to parse version constraint: %w", err)
 	}
 
-	foundRelease := Lock{}
-	constraint, err := spec.VersionConstraints()
-	if err != nil {
-		return Lock{}, err
-	}
-
-	for _, releases := range artifactoryFolderInfo.Children {
-		if releases.Folder {
+	var locks []Lock
+	for _, linkElement := range cascadia.QueryAll(document, cascadia.MustCompile(`a[href]`)) {
+		hrefStr := getAttribute(linkElement, "href")
+		if hrefStr == "" || strings.HasSuffix(hrefStr, "/") {
 			continue
 		}
-		versions := semverPattern.FindAllString(filepath.Base(releases.URI), -1)
-		version := versions[0]
-		stemcellVersion := versions[len(versions)-1]
-		version = strings.Replace(version, "-", "", -1)
-		version = strings.Replace(version, "v", "", -1)
-		stemcellVersion = strings.Replace(stemcellVersion, "-", "", -1)
-		if len(versions) > 1 && stemcellVersion != spec.StemcellVersion {
+		u, err := url.Parse(hrefStr)
+		if err != nil {
 			continue
 		}
-		if version != "" {
-			newVersion, _ := semver.NewVersion(version)
-			if !constraint.Check(newVersion) {
-				continue
-			}
-
-			remotePathToUpdate := path.Dir(remotePath) + releases.URI
-
-			if (foundRelease == Lock{}) {
-				foundRelease = Lock{
-					Name:         spec.Name,
-					Version:      version,
-					RemotePath:   remotePathToUpdate,
-					RemoteSource: ars.ReleaseSourceConfig.ID,
-				}
-			} else {
-				foundVersion, _ := semver.NewVersion(foundRelease.Version)
-				if newVersion.GreaterThan(foundVersion) {
-					foundRelease = Lock{
-						Name:         spec.Name,
-						Version:      version,
-						RemotePath:   remotePathToUpdate,
-						RemoteSource: ars.ReleaseSourceConfig.ID,
-					}
-				}
-			}
+		if path.Ext(u.Path) != ".tgz" {
+			continue
 		}
+		lock, err := lockVersionsFromPath(ars.PathTemplate, path.Base(u.Path))
+		if err != nil {
+			continue
+		}
+		v, err := lock.ParseVersion()
+		if err != nil {
+			continue
+		}
+		if !boshReleaseVersionConstraint.Check(v) {
+			continue
+		}
+		lock.Name = spec.Name
+		lock.StemcellOS = spec.StemcellOS
+		lock.StemcellVersion = spec.StemcellVersion
+		lock.RemotePath = path.Join(path.Dir(remotePath), path.Base(u.Path))
+		lock.RemoteSource = cargo.ReleaseSourceID(ars.ReleaseSourceConfig)
+		locks = append(locks, lock)
 	}
-
-	if (foundRelease == Lock{}) {
-		return Lock{}, ErrNotFound
+	if len(locks) == 0 {
+		return Lock{}, fmt.Errorf("no locks found for path: %s", remotePath)
 	}
+	slices.SortFunc(locks, func(a, b Lock) bool {
+		av, _ := a.ParseVersion()
+		bv, _ := b.ParseVersion()
+		return av.LessThan(bv)
+	})
+	foundRelease := locks[len(locks)-1]
 	foundRelease.SHA1, err = ars.getFileSHA1(foundRelease)
 	if err != nil {
 		return Lock{}, err
 	}
 	return foundRelease, nil
+}
+
+func lockVersionsFromPath(pathTemplateString, fileName string) (Lock, error) {
+	fileNameTemplate := pathTemplateString
+	lastSlashIndex := strings.LastIndexByte(pathTemplateString, '/')
+	if lastSlashIndex >= 0 {
+		fileNameTemplate = pathTemplateString[lastSlashIndex+1:]
+	}
+	hasBOSHReleaseVersion, err := regexp.MatchString(`\{\{.*\.Version.*}}`, fileNameTemplate)
+	if err != nil {
+		return Lock{}, err
+	}
+	if !hasBOSHReleaseVersion {
+		return Lock{}, fmt.Errorf("path template does not specify .Version")
+	}
+	hasStemcellVersion, err := regexp.MatchString(`\{\{.*\.StemcellVersion.*}}`, fileNameTemplate)
+	if err != nil {
+		return Lock{}, err
+	}
+
+	semverPattern := regexp.MustCompile(`([-v])(?P<version>\d+(.\d+)(.\d+)?)`)
+	versionMatchIndex := semverPattern.SubexpIndex("version")
+	versionMatches := semverPattern.FindAllStringSubmatch(filepath.Base(fileName), -1)
+
+	if hasStemcellVersion && len(versionMatches) < 2 {
+		return Lock{}, fmt.Errorf("path template (base file name) contains .StemcellVersion and .Version but provided file name does not have two versions")
+	}
+
+	var stemcellVersion string
+	if len(versionMatches) > 1 {
+		stemcellVersion = versionMatches[1][versionMatchIndex]
+	}
+
+	return Lock{
+		Version:         versionMatches[0][versionMatchIndex],
+		StemcellVersion: stemcellVersion,
+	}, nil
 }
 
 func (ars *ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (Lock, error) {
@@ -300,8 +295,6 @@ func (ars *ArtifactoryReleaseSource) UploadRelease(spec Spec, file io.Reader) (L
 		return Lock{}, err
 	}
 	request.SetBasicAuth(ars.Username, ars.Password)
-	// TODO: check Sha1/2
-	// request.Header.Set("X-Checksum-Sha1", spec.??? )
 
 	response, err := ars.Client.Do(request)
 	if err != nil {
@@ -358,4 +351,13 @@ func wrapVPNError(err error) error {
 		return &vpnError{wrapped: err}
 	}
 	return err
+}
+
+func getAttribute(node *html.Node, name string) string {
+	for _, attr := range node.Attr {
+		if attr.Key == name {
+			return attr.Val
+		}
+	}
+	return ""
 }
