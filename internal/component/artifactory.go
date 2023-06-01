@@ -76,7 +76,7 @@ func (ars ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRel
 	}
 	switch e := unwrapped.(type) {
 	case *net.DNSError:
-		return Local{}, fmt.Errorf("Failed to download %s release from artifactory: %w. (hint: Are you connected to the corporate vpn?)", remoteRelease.Name, e)
+		return Local{}, fmt.Errorf("failed to download %s release from artifactory: %w. (hint: Are you connected to the corporate vpn?)", remoteRelease.Name, e)
 	case nil: // continue
 	default:
 		return Local{}, e
@@ -284,12 +284,10 @@ func (ars ArtifactoryReleaseSource) FindReleaseVersion(spec Spec, _ bool) (Lock,
 	if (foundRelease == Lock{}) {
 		return Lock{}, ErrNotFound
 	}
-	var sha1 string
-	sha1, err = ars.getFileSHA1(foundRelease)
+	foundRelease.SHA1, err = ars.getFileSHA1(foundRelease)
 	if err != nil {
 		return Lock{}, err
 	}
-	foundRelease.SHA1 = sha1
 	return foundRelease, nil
 }
 
