@@ -134,9 +134,7 @@ func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec Spec) (Lock, error) 
 	if err != nil {
 		return Lock{}, wrapVPNError(err)
 	}
-	defer func() {
-		_ = response.Body.Close()
-	}()
+	defer closeAndIgnoreError(response.Body)
 
 	switch response.StatusCode {
 	case http.StatusOK:
