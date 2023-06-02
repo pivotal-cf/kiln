@@ -41,9 +41,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 		calledUnexpectedEndpoint = new(atomic.Bool)
 		calledUnexpectedEndpoint.Store(false)
 		source = new(component.ArtifactoryReleaseSource)
-
 		releasesDirectory = must(os.MkdirTemp("", "releases"))
-
 		config = cargo.ReleaseSourceConfig{}
 
 		config.Repo = "basket"

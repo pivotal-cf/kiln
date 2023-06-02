@@ -3,7 +3,6 @@ package component
 import (
 	"net/http"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -69,8 +68,12 @@ func TestArtifactoryAgainstTheRealServer(t *testing.T) {
 
 	t.Run("DownloadRelease", func(t *testing.T) {
 		t.Parallel()
-		dir := filepath.Join(os.TempDir(), "kiln-DownloadRelease")
+		dir, err := os.MkdirTemp("", "kiln-DownloadRelease")
+		require.NoError(t, err)
 		require.NoError(t, os.MkdirAll(dir, 0744))
+		t.Cleanup(func() {
+			_ = os.RemoveAll(dir)
+		})
 
 		local, err := source.DownloadRelease(dir, Lock{
 			Name:         "bpm",
