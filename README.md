@@ -388,7 +388,7 @@ The `--skip-fetch-directories` flag bypasses the default behavior to fetch relea
 
 ### `test`
 
-The `test` command exercises to ginkgo tests under the `/<tile>/test/manifest` path of the `pivotal/tas` repos (where `<tile>` is tas, ist, or tasw). 
+The `test` command exercises to ginkgo tests under the `/<tile>/test/manifest` and `/<tile>/migrations` paths of the `pivotal/tas` repos (where `<tile>` is tas, ist, or tasw). 
 
 Running these tests require a docker daemon and ssh-agent to be running. If no ssh identity is added (check with `ssh-add -l`) , then `kiln test`
 will add a ssh key in the following order, prompting for a passphrase if required:
@@ -419,6 +419,14 @@ $ kiln test --verbose -tp ~/workspace/tas/ist --ginkgo-manifest-flags "-p -nodes
 ##### `--ginkgo-manifest-flags`
 
 The `--ginkgo-manifest-flags` flag can be used to pass through Ginkgo test flags. The defaults being passed through are `-r -p -slowSpecThreshold 15`. Pass `help` as a flag to retrieve the available options for the embeded version of ginkgo.
+
+#### `--manifest-only`
+
+The `--manifest-only` flag can be used to run only Manifest tests. If not passed, `kiln test` will run both Manifest and Migration tests by default.
+
+#### `--migrations-only`
+	
+The `--migrations-only` flag can be used to run only Migration tests. If not passed, `kiln test` will run both Manifest and Migration tests by default.
 
 ##### `--tile-path`
 
