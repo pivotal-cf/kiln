@@ -2,7 +2,9 @@ name: release
 
 on:
   push:
-    tags: ['v*']
+    tags: ['v0*']
+    # We need to do an API code review before we allow v1.
+    # Our command and package are not yet stable.
 
 permissions:
   contents: write
