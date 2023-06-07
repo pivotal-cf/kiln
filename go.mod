@@ -147,3 +147,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gotest.tools/v3 v3.4.0 // indirect
 )
+
+retract (
+	v1.0.0 // Published accidentally
+)
