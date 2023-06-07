@@ -150,4 +150,5 @@ require (
 
 retract (
 	v1.0.0 // Published accidentally
+	v1.0.1 // Using this as a workaround to retract the previous version. See https://github.com/golang/go/issues/60336 where a go maintainer described this workaround.
 )
