@@ -16,6 +16,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -72,12 +73,20 @@ func NewS3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.
 		Region:      aws.String(config.Region),
 		Credentials: credentials.NewStaticCredentials(config.AccessKeyId, config.SecretAccessKey, ""),
 	}
+
+	var assumedRoleAwsConfig aws.Config
+	if config.AwsRoleARN != "" {
+		stsSession := session.Must(session.NewSession(awsConfig))
+		roleCredentials := stscreds.NewCredentials(stsSession, config.AwsRoleARN)
+		assumedRoleAwsConfig.Credentials = roleCredentials
+	}
+
 	if config.Endpoint != "" { // for acceptance testing
 		awsConfig = awsConfig.WithEndpoint(config.Endpoint)
 		awsConfig = awsConfig.WithS3ForcePathStyle(true)
 	}
 
-	sess := session.Must(session.NewSession(awsConfig))
+	sess := session.Must(session.NewSession(awsConfig, &assumedRoleAwsConfig))
 	client := s3.New(sess)
 
 	return NewS3ReleaseSource(
