@@ -109,6 +109,7 @@ type ReleaseSourceConfig struct {
 	Region          string `yaml:"region,omitempty"`
 	AccessKeyId     string `yaml:"access_key_id,omitempty"`
 	SecretAccessKey string `yaml:"secret_access_key,omitempty"`
+	AwsRoleARN      string `yaml:"aws_role_arn,omitempty"`
 	PathTemplate    string `yaml:"path_template,omitempty"`
 	Endpoint        string `yaml:"endpoint,omitempty"`
 	Org             string `yaml:"org,omitempty"`

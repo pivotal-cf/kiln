@@ -53,6 +53,58 @@ func TestInterpolateAndParseKilnfile(t *testing.T) {
 	})
 }
 
+func TestInterpolateAndParseKilnfileWithRoleARN(t *testing.T) {
+	please := NewWithT(t)
+
+	const validKilnfileWithRoleARN = `---
+release_sources:
+  - type: s3
+    compiled: true
+    bucket: $( variable "bucket" )
+    region: $( variable "region" )
+    access_key_id: $( variable "access_key" )
+    secret_access_key: $( variable "secret_key" )
+    aws_role_arn: $( variable "role_arn" )
+    path_template: $( variable "path_template" )
+`
+
+	variables := map[string]interface{}{
+		"bucket":        "my-bucket",
+		"region":        "middle-earth",
+		"path_template": "not-used",
+
+		"access_key": "id",
+		"secret_key": "key",
+		"role_arn":   "role-arn",
+	}
+
+	kilnfile, err := cargo.InterpolateAndParseKilnfile(
+		strings.NewReader(validKilnfileWithRoleARN), variables,
+	)
+
+	please.Expect(err).NotTo(HaveOccurred())
+
+	please.Expect(kilnfile).To(Equal(cargo.Kilnfile{
+		ReleaseSources: []cargo.ReleaseSourceConfig{
+			{
+				Type:            "s3",
+				Bucket:          "my-bucket",
+				Region:          "middle-earth",
+				AccessKeyId:     "id",
+				AwsRoleARN:      "role-arn",
+				SecretAccessKey: "key",
+				PathTemplate:    "not-used",
+			},
+		},
+	}))
+
+	t.Run("reading fails", func(t *testing.T) {
+		r := iotest.ErrReader(errors.New("lemon"))
+		_, err := cargo.InterpolateAndParseKilnfile(r, make(map[string]any))
+		assert.Error(t, err)
+	})
+}
+
 func TestInterpolateAndParseKilnfile_input_is_not_valid_yaml(t *testing.T) {
 	please := NewWithT(t)
 
@@ -88,7 +140,7 @@ func TestInterpolateAndParseKilnfile_interpolation_variable_not_found(t *testing
 		strings.NewReader(validKilnfile), variables,
 	)
 
-	please.Expect(err).To(HaveOccurred())
+	please.Expect(err).To(MatchError(ContainSubstring(`could not find variable with key 'region'`)))
 }
 
 const validKilnfile = `---
