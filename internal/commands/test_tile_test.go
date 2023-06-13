@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -75,7 +76,7 @@ var _ = Describe("kiln test docker", func() {
 					})
 					When("verbose is passed", func() {
 						It("succeeds and logs info", func() {
-							err := subjectUnderTest.Execute([]string{"--manifest-only", "--verbose", "--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
+							err := subjectUnderTest.Execute([]string{"--manifest", "--verbose", "--tile-path", helloTilePath, "--ginkgo-flags", "-r -slowSpecThreshold 1"})
 							Expect(err).To(BeNil())
 
 							By("logging helpful messages", func() {
@@ -92,13 +93,30 @@ var _ = Describe("kiln test docker", func() {
 								Expect(fakeMobyClient.ContainerCreateCallCount()).To(Equal(1))
 								_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
 								By("configuring the metadata and product config when they exist", func() {
-									Expect(config.Env).To(Equal([]string{
+									expected := []string{
+										"PRODUCT=hello-tile",
+										"RENDERER=ops-manifest",
 										"TAS_METADATA_PATH=/tas/hello-tile/test/manifest/fixtures/tas_metadata.yml",
 										"TAS_CONFIG_FILE=/tas/hello-tile/test/manifest/fixtures/tas_config.yml",
-									}))
+									}
+									actual := config.Env
+									sort.Strings(actual)
+									sort.Strings(expected)
+
+									Expect(actual).To(BeEquivalentTo(expected))
 								})
 								By("executing the tests", func() {
-									dockerCmd := fmt.Sprintf("cd /tas/%s/test/manifest && PRODUCT=%[1]s RENDERER=ops-manifest ginkgo -r -slowSpecThreshold 1", "hello-tile")
+									expected := []string{
+										"PRODUCT=hello-tile",
+										"RENDERER=ops-manifest",
+										"TAS_METADATA_PATH=/tas/hello-tile/test/manifest/fixtures/tas_metadata.yml",
+										"TAS_CONFIG_FILE=/tas/hello-tile/test/manifest/fixtures/tas_config.yml",
+									}
+									actual := config.Env
+									sort.Strings(actual)
+									sort.Strings(expected)
+
+									dockerCmd := "cd /tas/hello-tile && ginkgo -r -slowSpecThreshold 1 /tas/hello-tile/test/manifest"
 									Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
 								})
 							})
@@ -106,7 +124,7 @@ var _ = Describe("kiln test docker", func() {
 					})
 					When("verbose isn't passed", func() {
 						It("doesn't log info", func() {
-							err := subjectUnderTest.Execute([]string{"--manifest-only", "--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
+							err := subjectUnderTest.Execute([]string{"--manifest", "--tile-path", helloTilePath, "--ginkgo-flags", "-r -slowSpecThreshold 1"})
 							Expect(err).To(BeNil())
 
 							By("logging helpful messages", func() {
@@ -134,7 +152,7 @@ var _ = Describe("kiln test docker", func() {
 				})
 				It("returns an error", func() {
 					subjectUnderTest := commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
-					err := subjectUnderTest.Execute([]string{"--manifest-only", "--verbose", "--tile-path", helloTilePath, "--ginkgo-manifest-flags", "-r -slowSpecThreshold 1"})
+					err := subjectUnderTest.Execute([]string{"--manifest", "--verbose", "--tile-path", helloTilePath, "--ginkgo-flags", "-r -slowSpecThreshold 1"})
 					Expect(err).To(HaveOccurred())
 
 					By("logging helpful messages", func() {
@@ -143,6 +161,94 @@ var _ = Describe("kiln test docker", func() {
 							Expect(logs).To(ContainSubstring("exit status 1"))
 						})
 					})
+				})
+			})
+
+			When("stability tests should be successful", func() {
+				const (
+					testSuccessLogLine = "manifest tests completed successfully"
+				)
+				var fakeMobyClient *fakes.MobyClient
+				BeforeEach(func() {
+					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
+				})
+				When("executing tests", func() {
+					var subjectUnderTest commands.TileTest
+					BeforeEach(func() {
+						writer.Reset()
+						subjectUnderTest = commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
+					})
+					When("verbose is passed", func() {
+						It("succeeds and logs info", func() {
+							err := subjectUnderTest.Execute([]string{"--stability", "--verbose", "--tile-path", helloTilePath, "--ginkgo-flags", "-r -slowSpecThreshold 1"})
+							Expect(err).To(BeNil())
+
+							By("logging helpful messages", func() {
+								logs := writer.String()
+								By("logging container information", func() {
+									Expect(logs).To(ContainSubstring("Building / restoring cached docker image"))
+								})
+								By("logging test lines", func() {
+									Expect(logs).To(ContainSubstring("manifest tests completed successfully"))
+								})
+							})
+
+							By("creating a test container", func() {
+								Expect(fakeMobyClient.ContainerCreateCallCount()).To(Equal(1))
+								_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
+
+								By("executing the tests", func() {
+									expected := []string{
+										"PRODUCT=hello-tile",
+										"RENDERER=ops-manifest",
+										"TAS_METADATA_PATH=/tas/hello-tile/test/manifest/fixtures/tas_metadata.yml",
+										"TAS_CONFIG_FILE=/tas/hello-tile/test/manifest/fixtures/tas_config.yml",
+									}
+									actual := config.Env
+									sort.Strings(actual)
+									sort.Strings(expected)
+
+									dockerCmd := "cd /tas/hello-tile && ginkgo -r -slowSpecThreshold 1 /tas/hello-tile/test/stability"
+									Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
+								})
+							})
+						})
+					})
+					When("verbose isn't passed", func() {
+						It("doesn't log info", func() {
+							err := subjectUnderTest.Execute([]string{"--stability", "--tile-path", helloTilePath, "--ginkgo-flags", "-r -slowSpecThreshold 1"})
+							Expect(err).To(BeNil())
+
+							By("logging helpful messages", func() {
+								logs := writer.String()
+								By("logging container information", func() {
+									Expect(logs).NotTo(ContainSubstring("Building / restoring cached docker image"))
+									Expect(logs).NotTo(ContainSubstring("Info:"))
+								})
+								By("logging test lines", func() {
+									Expect(logs).To(ContainSubstring("manifest tests completed successfully"))
+								})
+							})
+						})
+					})
+				})
+			})
+
+			When("stability tests shouldn't be successful", func() {
+				const (
+					testSuccessLogLine = "stability tests completed successfully"
+				)
+				var fakeMobyClient *fakes.MobyClient
+
+				BeforeEach(func() {
+					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
+				})
+
+				It("exits with an error if env vars are incorrectly formatted", func() {
+					subjectUnderTest := commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
+					err := subjectUnderTest.Execute([]string{"--stability", "--verbose", "--tile-path", helloTilePath, "--ginkgo-flags", "-r -slowSpecThreshold 1", "--environment-variable", "MISFORMATTED_ENV_VAR"})
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("Environment variables must have the format [key]=[value]"))
 				})
 			})
 
@@ -167,7 +273,18 @@ var _ = Describe("kiln test docker", func() {
 							_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
 
 							By("executing the tests", func() {
-								dockerCmd := "cd /tas/hello-tile/test/manifest && PRODUCT=hello-tile RENDERER=ops-manifest ginkgo -r -p -slowSpecThreshold 15 && cd /tas/hello-tile/migrations && npm install && npm test"
+								dockerCmd := "cd /tas/hello-tile/migrations && npm install && npm test && cd /tas/hello-tile && ginkgo -r -p -slowSpecThreshold 15 /tas/hello-tile/test/stability /tas/hello-tile/test/manifest"
+								actual := config.Env
+								expected := []string{
+									"TAS_CONFIG_FILE=/tas/hello-tile/test/manifest/fixtures/tas_config.yml",
+									"PRODUCT=hello-tile",
+									"RENDERER=ops-manifest",
+									"TAS_METADATA_PATH=/tas/hello-tile/test/manifest/fixtures/tas_metadata.yml",
+								}
+
+								sort.Strings(expected)
+								sort.Strings(actual)
+								Expect(actual).To(Equal(expected))
 								Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
 							})
 						})
@@ -191,7 +308,7 @@ var _ = Describe("kiln test docker", func() {
 					})
 
 					It("succeeds and logs info", func() {
-						err := subjectUnderTest.Execute([]string{"--migrations-only", "--verbose", "--tile-path", helloTilePath})
+						err := subjectUnderTest.Execute([]string{"--migrations", "--verbose", "--tile-path", helloTilePath})
 						Expect(err).To(BeNil())
 
 						By("logging helpful messages", func() {
@@ -228,6 +345,7 @@ var _ = Describe("kiln test docker", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Docker daemon is not running"))
 		})
+
 	})
 })
 

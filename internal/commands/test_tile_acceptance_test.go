@@ -55,7 +55,7 @@ var _ = Describe("test", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(testOutput.String()).NotTo(ContainSubstring("SUCCESS"))
-			Expect(testOutput.String()).To(ContainSubstring("Failure"))
+			Expect(testOutput.String()).To(Or(ContainSubstring("ERR!"), ContainSubstring("Failure")))
 		})
 	})
 })

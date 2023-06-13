@@ -74,11 +74,13 @@ func (l infoLog) Writer() io.Writer {
 
 type TileTest struct {
 	Options struct {
-		TilePath            string `short:"tp"   long:"tile-path"                default:"."                             description:"Path to the Tile directory (e.g., ~/workspace/tas/ist)."`
-		GingkoManifestFlags string `short:"gmf"  long:"ginkgo-manifest-flags"    default:"-r -p -slowSpecThreshold 15"   description:"Flags to pass to the Ginkgo Manifest test suite."`
-		Verbose             bool   `short:"v"    long:"verbose"                  default:"false"                         description:"Print info lines. This doesn't affect Ginkgo output."`
-		ManifestOnly        bool   `             long:"manifest-only"            default:"false"                         description:"Run only Manifest tests."`
-		MigrationsOnly      bool   `             long:"migrations-only"          default:"false"                         description:"Run only Migration tests."`
+		TilePath        string   `short:"tp"   long:"tile-path"                default:"."                             description:"Path to the Tile directory (e.g., ~/workspace/tas/ist)."`
+		GingkoFlags     string   `short:"gmf"  long:"ginkgo-flags"             default:"-r -p -slowSpecThreshold 15"   description:"Flags to pass to the Ginkgo Manifest and Stability test suites."`
+		Verbose         bool     `short:"v"    long:"verbose"                  default:"false"                         description:"Print info lines. This doesn't affect Ginkgo output."`
+		Manifest        bool     `             long:"manifest"                 default:"false"                         description:"Focus the Manifest tests."`
+		Migrations      bool     `             long:"migrations"               default:"false"                         description:"Focus the Migration tests."`
+		Stability       bool     `             long:"stability"                default:"false"                         description:"Focus the Stability tests."`
+		EnvironmentVars []string `short:"e"    long:"environment-variable"                                             description:"Pass environment variable to the test suites. For example --stability -e 'PRODUCT=srt'."`
 	}
 
 	logger      *log.Logger
@@ -107,6 +109,10 @@ func (u TileTest) Execute(args []string) error {
 		return errors.New("ssh provider failed to initialize. check your ssh-agent is running")
 	}
 	_, err := jhanda.Parse(&u.Options, args)
+	if err != nil {
+		return fmt.Errorf("could not parse manifest-test flags: %s", err)
+	}
+	envMap, err := validateAndParseEnvVars(u.Options.EnvironmentVars)
 	if err != nil {
 		return fmt.Errorf("could not parse manifest-test flags: %s", err)
 	}
@@ -174,8 +180,7 @@ func (u TileTest) Execute(args []string) error {
 		if buildError != "" {
 			if strings.Contains(buildError, "exit code: 128") {
 				format := `Does your private key have access to the ops-manifest repo?\n error: %s
-				Automatically looking in %s for ssh keys. We use SSH_AUTH_SOCK environment variable
-                for the socket.`
+				Automatically looking in %s for ssh keys. SSH_AUTH_SOCK needs to be set.`
 				return fmt.Errorf(format, buildError, strings.Join(StandardSSHKeys, ", "))
 			}
 			return errors.New(buildError)
@@ -192,27 +197,34 @@ func (u TileTest) Execute(args []string) error {
 
 	loggerWithInfo.Info("Mounting", parentDir, "and testing", tileDir)
 
-	runAll := !u.Options.ManifestOnly && !u.Options.MigrationsOnly
+	runAll := !u.Options.Manifest && !u.Options.Migrations && !u.Options.Stability
 
 	var dockerCmds []string
-	if u.Options.ManifestOnly || runAll {
-		dockerCmds = append(dockerCmds, fmt.Sprintf("cd /tas/%s/test/manifest", tileDir))
-		dockerCmds = append(dockerCmds, fmt.Sprintf("PRODUCT=%s RENDERER=ops-manifest ginkgo %s", toProduct(tileDir), u.Options.GingkoManifestFlags))
-	}
-	if u.Options.MigrationsOnly || runAll {
+	if u.Options.Migrations || runAll {
 		dockerCmds = append(dockerCmds, fmt.Sprintf("cd /tas/%s/migrations", tileDir))
 		dockerCmds = append(dockerCmds, "npm install")
 		dockerCmds = append(dockerCmds, "npm test")
 	}
+	ginkgo := []string{}
+	if u.Options.Stability || runAll {
+		ginkgo = append(ginkgo, fmt.Sprintf("/tas/%s/test/stability", tileDir))
+	}
+	if u.Options.Manifest || runAll {
+		ginkgo = append(ginkgo, fmt.Sprintf("/tas/%s/test/manifest", tileDir))
+	}
+	if u.Options.Stability || u.Options.Manifest || runAll {
+		ginkgoCommand := fmt.Sprintf("cd /tas/%s && ginkgo %s %s", tileDir, u.Options.GingkoFlags, strings.Join(ginkgo, " "))
+		dockerCmds = append(dockerCmds, ginkgoCommand)
+	}
 
 	dockerCmd := strings.Join(dockerCmds, " && ")
-
-	envVars := getTileTestEnvVars(absRepoDir, tileDir)
 	loggerWithInfo.Info("Running:", dockerCmd)
+	envVars := getTileTestEnvVars(absRepoDir, tileDir, envMap)
+	fmt.Printf("%+v\n", envVarsToSlice(envVars))
 	createResp, err := u.mobi.ContainerCreate(u.ctx, &container.Config{
 		Image: "kiln_test_dependencies:vmware",
 		Cmd:   []string{"/bin/bash", "-c", dockerCmd},
-		Env:   envVars,
+		Env:   envVarsToSlice(envVars),
 		Tty:   true,
 	}, &container.HostConfig{
 		LogConfig: container.LogConfig{
@@ -276,6 +288,18 @@ func (u TileTest) Execute(args []string) error {
 	return nil
 }
 
+func validateAndParseEnvVars(environmentVarArgs []string) (environmentVars, error) {
+	envMap := make(environmentVars)
+	for _, envVar := range environmentVarArgs {
+		parts := strings.SplitN(envVar, "=", 2)
+		if len(parts) != 2 {
+			return nil, errors.New("Environment variables must have the format [key]=[value]")
+		}
+		envMap[parts[0]] = parts[1]
+	}
+	return envMap, nil
+}
+
 func toProduct(dir string) string {
 	switch dir {
 	case "tas":
@@ -287,21 +311,32 @@ func toProduct(dir string) string {
 	}
 }
 
-func getTileTestEnvVars(dir, productDir string) []string {
+func getTileTestEnvVars(dir, productDir string, envMap environmentVars) environmentVars {
 	const fixturesFormat = "%s/test/manifest/fixtures"
 	metadataPath := fmt.Sprintf(fixturesFormat+"/tas_metadata.yml", dir)
 	configPath := fmt.Sprintf(fixturesFormat+"/tas_config.yml", dir)
-
 	_, configErr := os.Stat(configPath)
 	_, metadataErr := os.Stat(metadataPath)
+
+	envVarsMap := make(map[string]string)
 	if metadataErr == nil && configErr == nil {
-		return []string{
-			fmt.Sprintf("TAS_METADATA_PATH=%s", fmt.Sprintf(fixturesFormat+"/%s", "/tas/"+productDir, "tas_metadata.yml")),
-			fmt.Sprintf("TAS_CONFIG_FILE=%s", fmt.Sprintf(fixturesFormat+"/%s", "/tas/"+productDir, "tas_config.yml")),
-		}
+		envVarsMap["TAS_METADATA_PATH"] = fmt.Sprintf(fixturesFormat+"/%s", "/tas/"+productDir, "tas_metadata.yml")
+		envVarsMap["TAS_CONFIG_FILE"] = fmt.Sprintf(fixturesFormat+"/%s", "/tas/"+productDir, "tas_config.yml")
 	}
 
-	return nil
+	// no need to set for tas tile, since it defaults to ert.
+	// for ist and tasw, we need to set it, as there's no default.
+	if toProduct(productDir) != "ert" {
+		envVarsMap["PRODUCT"] = toProduct(productDir)
+	}
+	envVarsMap["RENDERER"] = "ops-manifest"
+
+	// overwrite with / include optional env vars
+	for k, v := range envMap {
+		envVarsMap[k] = v
+	}
+
+	return envVarsMap
 }
 
 func getTarReader(fileContents string) (*bufio.Reader, error) {
@@ -365,14 +400,24 @@ func (u TileTest) addMissingKeys() error {
 	return err
 }
 
+type environmentVars map[string]string
+
+func envVarsToSlice(envVars environmentVars) []string {
+	convertedEnvVars := []string{}
+	for k, v := range envVars {
+		convertedEnvVars = append(convertedEnvVars, fmt.Sprintf("%s=%s", k, v))
+	}
+	return convertedEnvVars
+}
+
 type ErrorLine struct {
 	Error string `json:"error"`
 }
 
 func (u TileTest) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Tests the Manifest and Migrations for a Tile in a Docker container. Requires a Docker daemon to be running and ssh keys with access to Ops Manager's Git repository. For non-interactive use, either set the environment variable SSH_PASSWORD, or `ssh add` your identity before running.",
-		ShortDescription: "Tests the Manifest and Migrations for a Tile.",
+		Description:      "Run the Manifest, Migrations, and Stability tests for a Tile in a Docker container. Requires a Docker daemon to be running and ssh keys with access to Ops Manager's Git repository. For non-interactive use, either set the environment variable SSH_PASSWORD, or `ssh add` your identity before running.",
+		ShortDescription: "Runs unit tests for a Tile.",
 		Flags:            u.Options,
 	}
 }
