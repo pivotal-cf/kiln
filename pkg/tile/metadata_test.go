@@ -2,6 +2,7 @@ package tile_test
 
 import (
 	"testing"
+	"testing/fstest"
 
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v2"
@@ -22,4 +23,14 @@ func TestReadMetadataFromFile(t *testing.T) {
 	please.Expect(err).NotTo(HaveOccurred(), string(metadataBytes))
 
 	please.Expect(metadata.Name).To(Equal("hello"), string(metadataBytes))
+}
+
+func TestNonStandardMetadataFilename(t *testing.T) {
+	fileFS := fstest.MapFS{
+		"metadata/banana.yml": &fstest.MapFile{Data: []byte(`{name: "banana"}`)},
+	}
+	buf, err := tile.ReadMetadataFromFS(fileFS)
+	please := NewWithT(t)
+	please.Expect(err).NotTo(HaveOccurred())
+	please.Expect(string(buf)).To(Equal(`{name: "banana"}`))
 }
