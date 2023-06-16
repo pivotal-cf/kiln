@@ -356,17 +356,24 @@ func downloadBOSHReleaseFromGitHub(ctx context.Context, logger *log.Logger, lock
 }
 
 func awsS3Client(releaseSourceConfig ReleaseSourceConfig) (s3iface.S3API, error) {
-	var config aws.Config
-	if releaseSourceConfig.AccessKeyId != "" && !strings.HasPrefix(releaseSourceConfig.AccessKeyId, "$(") {
-		config.Credentials = credentials.NewStaticCredentials(releaseSourceConfig.AccessKeyId, releaseSourceConfig.SecretAccessKey, "")
-	}
 	awsSession, err := session.NewSessionWithOptions(session.Options{
-		Config: config,
+		Config: newAWSConfig(releaseSourceConfig),
 	})
 	if err != nil {
 		return nil, err
 	}
 	return s3.New(awsSession), nil
+}
+
+func newAWSConfig(releaseSourceConfig ReleaseSourceConfig) aws.Config {
+	var config aws.Config
+	if releaseSourceConfig.AccessKeyId != "" && !strings.HasPrefix(releaseSourceConfig.AccessKeyId, "$(") {
+		config.Credentials = credentials.NewStaticCredentials(releaseSourceConfig.AccessKeyId, releaseSourceConfig.SecretAccessKey, "")
+	}
+	if releaseSourceConfig.Region != "" {
+		config.Region = aws.String(releaseSourceConfig.Region)
+	}
+	return config
 }
 
 // downloadTarballFromURL downloads a tarball from a URL that does not require authentication: bosh.io and Build Artifactory.

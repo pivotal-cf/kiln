@@ -238,6 +238,16 @@ func TestKilnfile_DownloadBOSHReleaseTarball(t *testing.T) {
 		})
 	})
 	t.Run("s3", func(t *testing.T) {
+		t.Run("newAWSConfig", func(t *testing.T) {
+			config := newAWSConfig(ReleaseSourceConfig{
+				AccessKeyId:     "x",
+				SecretAccessKey: "y",
+				Region:          "z",
+			})
+			require.NotNil(t, config.Credentials)
+			require.NotNil(t, config.Region)
+			assert.Equal(t, "z", *config.Region)
+		})
 		t.Run("releaseSourceByID", func(t *testing.T) {
 			_, found := releaseSourceByID(Kilnfile{
 				ReleaseSources: []ReleaseSourceConfig{
@@ -249,10 +259,11 @@ func TestKilnfile_DownloadBOSHReleaseTarball(t *testing.T) {
 		t.Run("configureDownloadClient", func(t *testing.T) {
 			ctx := context.Background()
 			logger := log.New(io.Discard, "", 0)
-			_, err := configureDownloadClient(ctx, logger, ReleaseSourceConfig{
+			cl, err := configureDownloadClient(ctx, logger, ReleaseSourceConfig{
 				Type: ReleaseSourceTypeS3,
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
+			assert.NotNil(t, cl.s3Client)
 		})
 		t.Run("downloadBOSHReleaseFromS3", func(t *testing.T) {
 			ctx := context.Background()
