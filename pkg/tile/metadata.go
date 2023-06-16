@@ -30,7 +30,15 @@ func ReadMetadataFromZip(ra io.ReaderAt, zipFileSize int64) ([]byte, error) {
 }
 
 func ReadMetadataFromFS(dir fs.FS) ([]byte, error) {
-	metadataFile, err := dir.Open("metadata/metadata.yml")
+	const pattern = "metadata/*.yml"
+	matches, err := fs.Glob(dir, pattern)
+	if err != nil {
+		return nil, err
+	}
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("metadata file not found in the tile: expected a file matching glob %q", pattern)
+	}
+	metadataFile, err := dir.Open(matches[0])
 	if err != nil {
 		return nil, fmt.Errorf("failed to do open metadata zip file: %w", err)
 	}
