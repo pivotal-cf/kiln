@@ -220,7 +220,6 @@ func (u TileTest) Execute(args []string) error {
 	dockerCmd := strings.Join(dockerCmds, " && ")
 	loggerWithInfo.Info("Running:", dockerCmd)
 	envVars := getTileTestEnvVars(absRepoDir, tileDir, envMap)
-	fmt.Printf("%+v\n", envVarsToSlice(envVars))
 	createResp, err := u.mobi.ContainerCreate(u.ctx, &container.Config{
 		Image: "kiln_test_dependencies:vmware",
 		Cmd:   []string{"/bin/bash", "-c", dockerCmd},
