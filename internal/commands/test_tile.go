@@ -238,6 +238,7 @@ func (u TileTest) Execute(args []string) error {
 				Target: "/tas",
 			},
 		},
+		AutoRemove: true,
 	}, nil, nil, "")
 	if err != nil {
 		return err
