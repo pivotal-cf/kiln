@@ -35,7 +35,7 @@ type (
 
 	ReleaseStorage interface {
 		component.ReleaseSource
-		UploadRelease(spec cargo.BOSHReleaseSpecification, file io.Reader) (cargo.BOSHReleaseLock, error)
+		UploadRelease(spec cargo.BOSHReleaseTarballSpecification, file io.Reader) (cargo.BOSHReleaseTarballLock, error)
 	}
 )
 
@@ -118,11 +118,11 @@ func (cmd *CacheCompiledReleases) Execute(args []string) error {
 	}
 
 	var (
-		releasesToExport         []cargo.BOSHReleaseLock
+		releasesToExport         []cargo.BOSHReleaseTarballLock
 		releasesUpdatedFromCache = false
 	)
 	for _, rel := range lock.Releases {
-		remote, err := releaseStore.GetMatchedRelease(cargo.BOSHReleaseSpecification{
+		remote, err := releaseStore.GetMatchedRelease(cargo.BOSHReleaseTarballSpecification{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      lock.Stemcell.OS,
@@ -132,7 +132,7 @@ func (cmd *CacheCompiledReleases) Execute(args []string) error {
 			if !component.IsErrNotFound(err) {
 				return fmt.Errorf("failed check for matched release: %w", err)
 			}
-			releasesToExport = append(releasesToExport, cargo.BOSHReleaseLock{
+			releasesToExport = append(releasesToExport, cargo.BOSHReleaseTarballLock{
 				Name:            rel.Name,
 				Version:         rel.Version,
 				StemcellOS:      lock.Stemcell.OS,
@@ -301,28 +301,28 @@ func (cmd *CacheCompiledReleases) fetchProductDeploymentData() (_ OpsManagerRele
 	return omAPI, manifest.Name, stagedStemcell.OS, stagedStemcell.Version, nil
 }
 
-func (cmd *CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc ReleaseStorage, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (cargo.BOSHReleaseLock, error) {
+func (cmd *CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc ReleaseStorage, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (cargo.BOSHReleaseTarballLock, error) {
 	cmd.Logger.Printf("\texporting %s\n", releaseSlug)
 	result, err := deployment.ExportRelease(releaseSlug, stemcellSlug, nil)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
 	cmd.Logger.Printf("\tdownloading %s\n", releaseSlug)
 	releaseFilePath, _, sha1sum, err := cmd.saveReleaseLocally(bosh, cmd.Options.ReleasesDir, releaseSlug, stemcellSlug, result)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
 	cmd.Logger.Printf("\tuploading %s\n", releaseSlug)
-	remoteRelease, err := cmd.uploadLocalRelease(cargo.BOSHReleaseSpecification{
+	remoteRelease, err := cmd.uploadLocalRelease(cargo.BOSHReleaseTarballSpecification{
 		Name:            releaseSlug.Name(),
 		Version:         releaseSlug.Version(),
 		StemcellOS:      stemcellSlug.OS(),
 		StemcellVersion: stemcellSlug.Version(),
 	}, releaseFilePath, rc)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
 	remoteRelease.SHA1 = sha1sum
@@ -330,7 +330,7 @@ func (cmd *CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc Release
 	return remoteRelease, nil
 }
 
-func updateLock(lock cargo.KilnfileLock, release cargo.BOSHReleaseLock, targetID string) error {
+func updateLock(lock cargo.KilnfileLock, release cargo.BOSHReleaseTarballLock, targetID string) error {
 	for index, releaseLock := range lock.Releases {
 		if release.Name != releaseLock.Name {
 			continue
@@ -341,7 +341,7 @@ func updateLock(lock cargo.KilnfileLock, release cargo.BOSHReleaseLock, targetID
 			checksum = releaseLock.SHA1
 		}
 
-		lock.Releases[index] = cargo.BOSHReleaseLock{
+		lock.Releases[index] = cargo.BOSHReleaseTarballLock{
 			Name:         release.Name,
 			Version:      release.Version,
 			RemoteSource: release.RemoteSource,
@@ -353,10 +353,10 @@ func updateLock(lock cargo.KilnfileLock, release cargo.BOSHReleaseLock, targetID
 	return fmt.Errorf("existing release not found in Kilnfile.lock")
 }
 
-func (cmd *CacheCompiledReleases) uploadLocalRelease(spec cargo.BOSHReleaseSpecification, fp string, uploader ReleaseStorage) (cargo.BOSHReleaseLock, error) {
+func (cmd *CacheCompiledReleases) uploadLocalRelease(spec cargo.BOSHReleaseTarballSpecification, fp string, uploader ReleaseStorage) (cargo.BOSHReleaseTarballLock, error) {
 	f, err := cmd.FS.Open(fp)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 	defer closeAndIgnoreError(f)
 	return uploader.UploadRelease(spec, f)
@@ -393,7 +393,7 @@ func (cmd *CacheCompiledReleases) saveReleaseLocally(director boshdir.Director, 
 	return filePath, sha256sumString, sha1sumString, nil
 }
 
-func (cmd *CacheCompiledReleases) downloadAndComputeSHA(cache component.ReleaseSource, remote cargo.BOSHReleaseLock) (string, error) {
+func (cmd *CacheCompiledReleases) downloadAndComputeSHA(cache component.ReleaseSource, remote cargo.BOSHReleaseTarballLock) (string, error) {
 	if remote.SHA1 != "" {
 		return remote.SHA1, nil
 	}

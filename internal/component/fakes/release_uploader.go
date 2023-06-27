@@ -10,42 +10,42 @@ import (
 )
 
 type ReleaseUploader struct {
-	GetMatchedReleaseStub        func(cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error)
+	GetMatchedReleaseStub        func(cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error)
 	getMatchedReleaseMutex       sync.RWMutex
 	getMatchedReleaseArgsForCall []struct {
-		arg1 cargo.BOSHReleaseSpecification
+		arg1 cargo.BOSHReleaseTarballSpecification
 	}
 	getMatchedReleaseReturns struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}
 	getMatchedReleaseReturnsOnCall map[int]struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}
-	UploadReleaseStub        func(cargo.BOSHReleaseSpecification, io.Reader) (cargo.BOSHReleaseLock, error)
+	UploadReleaseStub        func(cargo.BOSHReleaseTarballSpecification, io.Reader) (cargo.BOSHReleaseTarballLock, error)
 	uploadReleaseMutex       sync.RWMutex
 	uploadReleaseArgsForCall []struct {
-		arg1 cargo.BOSHReleaseSpecification
+		arg1 cargo.BOSHReleaseTarballSpecification
 		arg2 io.Reader
 	}
 	uploadReleaseReturns struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}
 	uploadReleaseReturnsOnCall map[int]struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ReleaseUploader) GetMatchedRelease(arg1 cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error) {
+func (fake *ReleaseUploader) GetMatchedRelease(arg1 cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error) {
 	fake.getMatchedReleaseMutex.Lock()
 	ret, specificReturn := fake.getMatchedReleaseReturnsOnCall[len(fake.getMatchedReleaseArgsForCall)]
 	fake.getMatchedReleaseArgsForCall = append(fake.getMatchedReleaseArgsForCall, struct {
-		arg1 cargo.BOSHReleaseSpecification
+		arg1 cargo.BOSHReleaseTarballSpecification
 	}{arg1})
 	stub := fake.GetMatchedReleaseStub
 	fakeReturns := fake.getMatchedReleaseReturns
@@ -66,50 +66,50 @@ func (fake *ReleaseUploader) GetMatchedReleaseCallCount() int {
 	return len(fake.getMatchedReleaseArgsForCall)
 }
 
-func (fake *ReleaseUploader) GetMatchedReleaseCalls(stub func(cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error)) {
+func (fake *ReleaseUploader) GetMatchedReleaseCalls(stub func(cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error)) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = stub
 }
 
-func (fake *ReleaseUploader) GetMatchedReleaseArgsForCall(i int) cargo.BOSHReleaseSpecification {
+func (fake *ReleaseUploader) GetMatchedReleaseArgsForCall(i int) cargo.BOSHReleaseTarballSpecification {
 	fake.getMatchedReleaseMutex.RLock()
 	defer fake.getMatchedReleaseMutex.RUnlock()
 	argsForCall := fake.getMatchedReleaseArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *ReleaseUploader) GetMatchedReleaseReturns(result1 cargo.BOSHReleaseLock, result2 error) {
+func (fake *ReleaseUploader) GetMatchedReleaseReturns(result1 cargo.BOSHReleaseTarballLock, result2 error) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = nil
 	fake.getMatchedReleaseReturns = struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseUploader) GetMatchedReleaseReturnsOnCall(i int, result1 cargo.BOSHReleaseLock, result2 error) {
+func (fake *ReleaseUploader) GetMatchedReleaseReturnsOnCall(i int, result1 cargo.BOSHReleaseTarballLock, result2 error) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = nil
 	if fake.getMatchedReleaseReturnsOnCall == nil {
 		fake.getMatchedReleaseReturnsOnCall = make(map[int]struct {
-			result1 cargo.BOSHReleaseLock
+			result1 cargo.BOSHReleaseTarballLock
 			result2 error
 		})
 	}
 	fake.getMatchedReleaseReturnsOnCall[i] = struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseUploader) UploadRelease(arg1 cargo.BOSHReleaseSpecification, arg2 io.Reader) (cargo.BOSHReleaseLock, error) {
+func (fake *ReleaseUploader) UploadRelease(arg1 cargo.BOSHReleaseTarballSpecification, arg2 io.Reader) (cargo.BOSHReleaseTarballLock, error) {
 	fake.uploadReleaseMutex.Lock()
 	ret, specificReturn := fake.uploadReleaseReturnsOnCall[len(fake.uploadReleaseArgsForCall)]
 	fake.uploadReleaseArgsForCall = append(fake.uploadReleaseArgsForCall, struct {
-		arg1 cargo.BOSHReleaseSpecification
+		arg1 cargo.BOSHReleaseTarballSpecification
 		arg2 io.Reader
 	}{arg1, arg2})
 	stub := fake.UploadReleaseStub
@@ -131,41 +131,41 @@ func (fake *ReleaseUploader) UploadReleaseCallCount() int {
 	return len(fake.uploadReleaseArgsForCall)
 }
 
-func (fake *ReleaseUploader) UploadReleaseCalls(stub func(cargo.BOSHReleaseSpecification, io.Reader) (cargo.BOSHReleaseLock, error)) {
+func (fake *ReleaseUploader) UploadReleaseCalls(stub func(cargo.BOSHReleaseTarballSpecification, io.Reader) (cargo.BOSHReleaseTarballLock, error)) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = stub
 }
 
-func (fake *ReleaseUploader) UploadReleaseArgsForCall(i int) (cargo.BOSHReleaseSpecification, io.Reader) {
+func (fake *ReleaseUploader) UploadReleaseArgsForCall(i int) (cargo.BOSHReleaseTarballSpecification, io.Reader) {
 	fake.uploadReleaseMutex.RLock()
 	defer fake.uploadReleaseMutex.RUnlock()
 	argsForCall := fake.uploadReleaseArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *ReleaseUploader) UploadReleaseReturns(result1 cargo.BOSHReleaseLock, result2 error) {
+func (fake *ReleaseUploader) UploadReleaseReturns(result1 cargo.BOSHReleaseTarballLock, result2 error) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = nil
 	fake.uploadReleaseReturns = struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseUploader) UploadReleaseReturnsOnCall(i int, result1 cargo.BOSHReleaseLock, result2 error) {
+func (fake *ReleaseUploader) UploadReleaseReturnsOnCall(i int, result1 cargo.BOSHReleaseTarballLock, result2 error) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = nil
 	if fake.uploadReleaseReturnsOnCall == nil {
 		fake.uploadReleaseReturnsOnCall = make(map[int]struct {
-			result1 cargo.BOSHReleaseLock
+			result1 cargo.BOSHReleaseTarballLock
 			result2 error
 		})
 	}
 	fake.uploadReleaseReturnsOnCall[i] = struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}{result1, result2}
 }

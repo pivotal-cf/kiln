@@ -236,7 +236,7 @@ func zipWalker(repoPath string, zw *zip.Writer) filepath.WalkFunc {
 	}
 }
 
-func (cmd *OSM) getReleaseLockFromBOSHIO(cs cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error) {
+func (cmd *OSM) getReleaseLockFromBOSHIO(cs cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error) {
 	lock, err := cmd.FindReleaseVersion(cs, true)
 	if err != nil {
 		return cmd.FindReleaseVersion(specWithoutOffline(cs), true)
@@ -244,7 +244,7 @@ func (cmd *OSM) getReleaseLockFromBOSHIO(cs cargo.BOSHReleaseSpecification) (car
 	return lock, nil
 }
 
-func findVersionForRelease(name string, releases []cargo.BOSHReleaseLock) string {
+func findVersionForRelease(name string, releases []cargo.BOSHReleaseTarballLock) string {
 	for _, lr := range releases {
 		if lr.Name == name {
 			return lr.Version
@@ -253,15 +253,15 @@ func findVersionForRelease(name string, releases []cargo.BOSHReleaseLock) string
 	return ""
 }
 
-func specWithoutOffline(cs cargo.BOSHReleaseSpecification) cargo.BOSHReleaseSpecification {
+func specWithoutOffline(cs cargo.BOSHReleaseTarballSpecification) cargo.BOSHReleaseTarballSpecification {
 	name := strings.Replace(cs.Name, "offline-", "", 1)
-	return cargo.BOSHReleaseSpecification{
+	return cargo.BOSHReleaseTarballSpecification{
 		Name:    name,
 		Version: cs.Version,
 	}
 }
 
-func getURLFromLock(l cargo.BOSHReleaseLock) string {
+func getURLFromLock(l cargo.BOSHReleaseTarballLock) string {
 	url := strings.Replace(l.RemotePath, "https://bosh.io/d/github.com", "https://github.com", 1)
 	return url[:strings.Index(url, "?")]
 }

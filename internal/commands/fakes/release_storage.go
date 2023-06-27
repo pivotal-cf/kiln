@@ -21,11 +21,11 @@ type ReleaseStorage struct {
 	configurationReturnsOnCall map[int]struct {
 		result1 cargo.ReleaseSourceConfig
 	}
-	DownloadReleaseStub        func(string, cargo.BOSHReleaseLock) (component.Local, error)
+	DownloadReleaseStub        func(string, cargo.BOSHReleaseTarballLock) (component.Local, error)
 	downloadReleaseMutex       sync.RWMutex
 	downloadReleaseArgsForCall []struct {
 		arg1 string
-		arg2 cargo.BOSHReleaseLock
+		arg2 cargo.BOSHReleaseTarballLock
 	}
 	downloadReleaseReturns struct {
 		result1 component.Local
@@ -35,45 +35,45 @@ type ReleaseStorage struct {
 		result1 component.Local
 		result2 error
 	}
-	FindReleaseVersionStub        func(cargo.BOSHReleaseSpecification, bool) (cargo.BOSHReleaseLock, error)
+	FindReleaseVersionStub        func(cargo.BOSHReleaseTarballSpecification, bool) (cargo.BOSHReleaseTarballLock, error)
 	findReleaseVersionMutex       sync.RWMutex
 	findReleaseVersionArgsForCall []struct {
-		arg1 cargo.BOSHReleaseSpecification
+		arg1 cargo.BOSHReleaseTarballSpecification
 		arg2 bool
 	}
 	findReleaseVersionReturns struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}
 	findReleaseVersionReturnsOnCall map[int]struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}
-	GetMatchedReleaseStub        func(cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error)
+	GetMatchedReleaseStub        func(cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error)
 	getMatchedReleaseMutex       sync.RWMutex
 	getMatchedReleaseArgsForCall []struct {
-		arg1 cargo.BOSHReleaseSpecification
+		arg1 cargo.BOSHReleaseTarballSpecification
 	}
 	getMatchedReleaseReturns struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}
 	getMatchedReleaseReturnsOnCall map[int]struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}
-	UploadReleaseStub        func(cargo.BOSHReleaseSpecification, io.Reader) (cargo.BOSHReleaseLock, error)
+	UploadReleaseStub        func(cargo.BOSHReleaseTarballSpecification, io.Reader) (cargo.BOSHReleaseTarballLock, error)
 	uploadReleaseMutex       sync.RWMutex
 	uploadReleaseArgsForCall []struct {
-		arg1 cargo.BOSHReleaseSpecification
+		arg1 cargo.BOSHReleaseTarballSpecification
 		arg2 io.Reader
 	}
 	uploadReleaseReturns struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}
 	uploadReleaseReturnsOnCall map[int]struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}
 	invocations      map[string][][]interface{}
@@ -133,12 +133,12 @@ func (fake *ReleaseStorage) ConfigurationReturnsOnCall(i int, result1 cargo.Rele
 	}{result1}
 }
 
-func (fake *ReleaseStorage) DownloadRelease(arg1 string, arg2 cargo.BOSHReleaseLock) (component.Local, error) {
+func (fake *ReleaseStorage) DownloadRelease(arg1 string, arg2 cargo.BOSHReleaseTarballLock) (component.Local, error) {
 	fake.downloadReleaseMutex.Lock()
 	ret, specificReturn := fake.downloadReleaseReturnsOnCall[len(fake.downloadReleaseArgsForCall)]
 	fake.downloadReleaseArgsForCall = append(fake.downloadReleaseArgsForCall, struct {
 		arg1 string
-		arg2 cargo.BOSHReleaseLock
+		arg2 cargo.BOSHReleaseTarballLock
 	}{arg1, arg2})
 	stub := fake.DownloadReleaseStub
 	fakeReturns := fake.downloadReleaseReturns
@@ -159,13 +159,13 @@ func (fake *ReleaseStorage) DownloadReleaseCallCount() int {
 	return len(fake.downloadReleaseArgsForCall)
 }
 
-func (fake *ReleaseStorage) DownloadReleaseCalls(stub func(string, cargo.BOSHReleaseLock) (component.Local, error)) {
+func (fake *ReleaseStorage) DownloadReleaseCalls(stub func(string, cargo.BOSHReleaseTarballLock) (component.Local, error)) {
 	fake.downloadReleaseMutex.Lock()
 	defer fake.downloadReleaseMutex.Unlock()
 	fake.DownloadReleaseStub = stub
 }
 
-func (fake *ReleaseStorage) DownloadReleaseArgsForCall(i int) (string, cargo.BOSHReleaseLock) {
+func (fake *ReleaseStorage) DownloadReleaseArgsForCall(i int) (string, cargo.BOSHReleaseTarballLock) {
 	fake.downloadReleaseMutex.RLock()
 	defer fake.downloadReleaseMutex.RUnlock()
 	argsForCall := fake.downloadReleaseArgsForCall[i]
@@ -198,11 +198,11 @@ func (fake *ReleaseStorage) DownloadReleaseReturnsOnCall(i int, result1 componen
 	}{result1, result2}
 }
 
-func (fake *ReleaseStorage) FindReleaseVersion(arg1 cargo.BOSHReleaseSpecification, arg2 bool) (cargo.BOSHReleaseLock, error) {
+func (fake *ReleaseStorage) FindReleaseVersion(arg1 cargo.BOSHReleaseTarballSpecification, arg2 bool) (cargo.BOSHReleaseTarballLock, error) {
 	fake.findReleaseVersionMutex.Lock()
 	ret, specificReturn := fake.findReleaseVersionReturnsOnCall[len(fake.findReleaseVersionArgsForCall)]
 	fake.findReleaseVersionArgsForCall = append(fake.findReleaseVersionArgsForCall, struct {
-		arg1 cargo.BOSHReleaseSpecification
+		arg1 cargo.BOSHReleaseTarballSpecification
 		arg2 bool
 	}{arg1, arg2})
 	stub := fake.FindReleaseVersionStub
@@ -224,50 +224,50 @@ func (fake *ReleaseStorage) FindReleaseVersionCallCount() int {
 	return len(fake.findReleaseVersionArgsForCall)
 }
 
-func (fake *ReleaseStorage) FindReleaseVersionCalls(stub func(cargo.BOSHReleaseSpecification, bool) (cargo.BOSHReleaseLock, error)) {
+func (fake *ReleaseStorage) FindReleaseVersionCalls(stub func(cargo.BOSHReleaseTarballSpecification, bool) (cargo.BOSHReleaseTarballLock, error)) {
 	fake.findReleaseVersionMutex.Lock()
 	defer fake.findReleaseVersionMutex.Unlock()
 	fake.FindReleaseVersionStub = stub
 }
 
-func (fake *ReleaseStorage) FindReleaseVersionArgsForCall(i int) (cargo.BOSHReleaseSpecification, bool) {
+func (fake *ReleaseStorage) FindReleaseVersionArgsForCall(i int) (cargo.BOSHReleaseTarballSpecification, bool) {
 	fake.findReleaseVersionMutex.RLock()
 	defer fake.findReleaseVersionMutex.RUnlock()
 	argsForCall := fake.findReleaseVersionArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *ReleaseStorage) FindReleaseVersionReturns(result1 cargo.BOSHReleaseLock, result2 error) {
+func (fake *ReleaseStorage) FindReleaseVersionReturns(result1 cargo.BOSHReleaseTarballLock, result2 error) {
 	fake.findReleaseVersionMutex.Lock()
 	defer fake.findReleaseVersionMutex.Unlock()
 	fake.FindReleaseVersionStub = nil
 	fake.findReleaseVersionReturns = struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseStorage) FindReleaseVersionReturnsOnCall(i int, result1 cargo.BOSHReleaseLock, result2 error) {
+func (fake *ReleaseStorage) FindReleaseVersionReturnsOnCall(i int, result1 cargo.BOSHReleaseTarballLock, result2 error) {
 	fake.findReleaseVersionMutex.Lock()
 	defer fake.findReleaseVersionMutex.Unlock()
 	fake.FindReleaseVersionStub = nil
 	if fake.findReleaseVersionReturnsOnCall == nil {
 		fake.findReleaseVersionReturnsOnCall = make(map[int]struct {
-			result1 cargo.BOSHReleaseLock
+			result1 cargo.BOSHReleaseTarballLock
 			result2 error
 		})
 	}
 	fake.findReleaseVersionReturnsOnCall[i] = struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseStorage) GetMatchedRelease(arg1 cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error) {
+func (fake *ReleaseStorage) GetMatchedRelease(arg1 cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error) {
 	fake.getMatchedReleaseMutex.Lock()
 	ret, specificReturn := fake.getMatchedReleaseReturnsOnCall[len(fake.getMatchedReleaseArgsForCall)]
 	fake.getMatchedReleaseArgsForCall = append(fake.getMatchedReleaseArgsForCall, struct {
-		arg1 cargo.BOSHReleaseSpecification
+		arg1 cargo.BOSHReleaseTarballSpecification
 	}{arg1})
 	stub := fake.GetMatchedReleaseStub
 	fakeReturns := fake.getMatchedReleaseReturns
@@ -288,50 +288,50 @@ func (fake *ReleaseStorage) GetMatchedReleaseCallCount() int {
 	return len(fake.getMatchedReleaseArgsForCall)
 }
 
-func (fake *ReleaseStorage) GetMatchedReleaseCalls(stub func(cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error)) {
+func (fake *ReleaseStorage) GetMatchedReleaseCalls(stub func(cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error)) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = stub
 }
 
-func (fake *ReleaseStorage) GetMatchedReleaseArgsForCall(i int) cargo.BOSHReleaseSpecification {
+func (fake *ReleaseStorage) GetMatchedReleaseArgsForCall(i int) cargo.BOSHReleaseTarballSpecification {
 	fake.getMatchedReleaseMutex.RLock()
 	defer fake.getMatchedReleaseMutex.RUnlock()
 	argsForCall := fake.getMatchedReleaseArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *ReleaseStorage) GetMatchedReleaseReturns(result1 cargo.BOSHReleaseLock, result2 error) {
+func (fake *ReleaseStorage) GetMatchedReleaseReturns(result1 cargo.BOSHReleaseTarballLock, result2 error) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = nil
 	fake.getMatchedReleaseReturns = struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseStorage) GetMatchedReleaseReturnsOnCall(i int, result1 cargo.BOSHReleaseLock, result2 error) {
+func (fake *ReleaseStorage) GetMatchedReleaseReturnsOnCall(i int, result1 cargo.BOSHReleaseTarballLock, result2 error) {
 	fake.getMatchedReleaseMutex.Lock()
 	defer fake.getMatchedReleaseMutex.Unlock()
 	fake.GetMatchedReleaseStub = nil
 	if fake.getMatchedReleaseReturnsOnCall == nil {
 		fake.getMatchedReleaseReturnsOnCall = make(map[int]struct {
-			result1 cargo.BOSHReleaseLock
+			result1 cargo.BOSHReleaseTarballLock
 			result2 error
 		})
 	}
 	fake.getMatchedReleaseReturnsOnCall[i] = struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseStorage) UploadRelease(arg1 cargo.BOSHReleaseSpecification, arg2 io.Reader) (cargo.BOSHReleaseLock, error) {
+func (fake *ReleaseStorage) UploadRelease(arg1 cargo.BOSHReleaseTarballSpecification, arg2 io.Reader) (cargo.BOSHReleaseTarballLock, error) {
 	fake.uploadReleaseMutex.Lock()
 	ret, specificReturn := fake.uploadReleaseReturnsOnCall[len(fake.uploadReleaseArgsForCall)]
 	fake.uploadReleaseArgsForCall = append(fake.uploadReleaseArgsForCall, struct {
-		arg1 cargo.BOSHReleaseSpecification
+		arg1 cargo.BOSHReleaseTarballSpecification
 		arg2 io.Reader
 	}{arg1, arg2})
 	stub := fake.UploadReleaseStub
@@ -353,41 +353,41 @@ func (fake *ReleaseStorage) UploadReleaseCallCount() int {
 	return len(fake.uploadReleaseArgsForCall)
 }
 
-func (fake *ReleaseStorage) UploadReleaseCalls(stub func(cargo.BOSHReleaseSpecification, io.Reader) (cargo.BOSHReleaseLock, error)) {
+func (fake *ReleaseStorage) UploadReleaseCalls(stub func(cargo.BOSHReleaseTarballSpecification, io.Reader) (cargo.BOSHReleaseTarballLock, error)) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = stub
 }
 
-func (fake *ReleaseStorage) UploadReleaseArgsForCall(i int) (cargo.BOSHReleaseSpecification, io.Reader) {
+func (fake *ReleaseStorage) UploadReleaseArgsForCall(i int) (cargo.BOSHReleaseTarballSpecification, io.Reader) {
 	fake.uploadReleaseMutex.RLock()
 	defer fake.uploadReleaseMutex.RUnlock()
 	argsForCall := fake.uploadReleaseArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *ReleaseStorage) UploadReleaseReturns(result1 cargo.BOSHReleaseLock, result2 error) {
+func (fake *ReleaseStorage) UploadReleaseReturns(result1 cargo.BOSHReleaseTarballLock, result2 error) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = nil
 	fake.uploadReleaseReturns = struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *ReleaseStorage) UploadReleaseReturnsOnCall(i int, result1 cargo.BOSHReleaseLock, result2 error) {
+func (fake *ReleaseStorage) UploadReleaseReturnsOnCall(i int, result1 cargo.BOSHReleaseTarballLock, result2 error) {
 	fake.uploadReleaseMutex.Lock()
 	defer fake.uploadReleaseMutex.Unlock()
 	fake.UploadReleaseStub = nil
 	if fake.uploadReleaseReturnsOnCall == nil {
 		fake.uploadReleaseReturnsOnCall = make(map[int]struct {
-			result1 cargo.BOSHReleaseLock
+			result1 cargo.BOSHReleaseTarballLock
 			result2 error
 		})
 	}
 	fake.uploadReleaseReturnsOnCall[i] = struct {
-		result1 cargo.BOSHReleaseLock
+		result1 cargo.BOSHReleaseTarballLock
 		result2 error
 	}{result1, result2}
 }

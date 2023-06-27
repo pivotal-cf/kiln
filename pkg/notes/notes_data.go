@@ -29,7 +29,7 @@ import (
 )
 
 type BOSHReleaseData struct {
-	cargo.BOSHReleaseLock
+	cargo.BOSHReleaseTarballLock
 	Releases []*github.RepositoryRelease
 }
 
@@ -151,8 +151,8 @@ func FetchDataWithoutRepo(ctx context.Context, client *github.Client, tileRepoOw
 
 	for _, c := range kilnfileLockFinal.Releases {
 		data.Components = append(data.Components, BOSHReleaseData{
-			BOSHReleaseLock: c,
-			Releases:        data.Bumps.ForLock(c).Releases,
+			BOSHReleaseTarballLock: c,
+			Releases:               data.Bumps.ForLock(c).Releases,
 		})
 	}
 
@@ -236,8 +236,8 @@ func (r fetchNotesData) fetch(ctx context.Context) (Data, error) {
 
 	for _, c := range finalKilnfileLock.Releases {
 		data.Components = append(data.Components, BOSHReleaseData{
-			BOSHReleaseLock: c,
-			Releases:        data.Bumps.ForLock(c).Releases,
+			BOSHReleaseTarballLock: c,
+			Releases:               data.Bumps.ForLock(c).Releases,
 		})
 	}
 

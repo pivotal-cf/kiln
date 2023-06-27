@@ -17,11 +17,11 @@ func TestValidate_MissingName(t *testing.T) {
 		ReleaseSources: []ReleaseSourceConfig{
 			{ID: someReleaseSourceID},
 		},
-		Releases: []BOSHReleaseSpecification{
+		Releases: []BOSHReleaseTarballSpecification{
 			{},
 		},
 	}, KilnfileLock{
-		Releases: []BOSHReleaseLock{
+		Releases: []BOSHReleaseTarballLock{
 			{Name: "banana", Version: "1.2.3", RemoteSource: someReleaseSourceID},
 		},
 	})
@@ -35,11 +35,11 @@ func TestValidate_FloatingRelease(t *testing.T) {
 		ReleaseSources: []ReleaseSourceConfig{
 			{ID: someReleaseSourceID},
 		},
-		Releases: []BOSHReleaseSpecification{
+		Releases: []BOSHReleaseTarballSpecification{
 			{Name: "banana", Version: "1.1.*"},
 		},
 	}, KilnfileLock{
-		Releases: []BOSHReleaseLock{
+		Releases: []BOSHReleaseTarballLock{
 			{Name: "banana", Version: "1.1.12", RemoteSource: someReleaseSourceID},
 		},
 	})
@@ -50,7 +50,7 @@ func TestValidate_MissingLock(t *testing.T) {
 	t.Parallel()
 	please := NewWithT(t)
 	results := Validate(Kilnfile{
-		Releases: []BOSHReleaseSpecification{
+		Releases: []BOSHReleaseTarballSpecification{
 			{Name: "banana", Version: "1.1.*"},
 		},
 	}, KilnfileLock{})
@@ -64,11 +64,11 @@ func TestValidate_InvalidConstraint(t *testing.T) {
 		ReleaseSources: []ReleaseSourceConfig{
 			{ID: someReleaseSourceID},
 		},
-		Releases: []BOSHReleaseSpecification{
+		Releases: []BOSHReleaseTarballSpecification{
 			{Name: "banana", Version: "NOT A CONSTRAINT"},
 		},
 	}, KilnfileLock{
-		Releases: []BOSHReleaseLock{
+		Releases: []BOSHReleaseTarballLock{
 			{Name: "banana", Version: "1.2.3", RemoteSource: someReleaseSourceID},
 		},
 	})
@@ -82,11 +82,11 @@ func TestValidate_PinnedRelease(t *testing.T) {
 		ReleaseSources: []ReleaseSourceConfig{
 			{ID: someReleaseSourceID},
 		},
-		Releases: []BOSHReleaseSpecification{
+		Releases: []BOSHReleaseTarballSpecification{
 			{Name: "banana", Version: "1.2.3"},
 		},
 	}, KilnfileLock{
-		Releases: []BOSHReleaseLock{
+		Releases: []BOSHReleaseTarballLock{
 			{Name: "banana", Version: "1.2.3", RemoteSource: someReleaseSourceID},
 		},
 	})
@@ -100,12 +100,12 @@ func TestValidate_release_sources(t *testing.T) {
 			ReleaseSources: []ReleaseSourceConfig{
 				{ID: "ORANGE_SOURCE"},
 			},
-			Releases: []BOSHReleaseSpecification{
+			Releases: []BOSHReleaseTarballSpecification{
 				{Name: "lemon"},
 				{Name: "orange"},
 			},
 		}, KilnfileLock{
-			Releases: []BOSHReleaseLock{
+			Releases: []BOSHReleaseTarballLock{
 				{Name: "lemon", Version: "1.2.3", RemoteSource: "LEMON_SOURCE"},
 				{Name: "orange", Version: "1.2.3", RemoteSource: "ORANGE_SOURCE"},
 			},
@@ -120,12 +120,12 @@ func TestValidate_release_sources(t *testing.T) {
 			ReleaseSources: []ReleaseSourceConfig{
 				{ID: "SOME_TREE"},
 			},
-			Releases: []BOSHReleaseSpecification{
+			Releases: []BOSHReleaseTarballSpecification{
 				{Name: "lemon"},
 				{Name: "orange"},
 			},
 		}, KilnfileLock{
-			Releases: []BOSHReleaseLock{
+			Releases: []BOSHReleaseTarballLock{
 				{Name: "lemon", Version: "1.2.3", RemoteSource: "SOME_TREE"},
 				{Name: "orange", Version: "1.2.3", RemoteSource: "SOME_TREE"},
 			},
@@ -138,11 +138,11 @@ func TestValidate_release_sources(t *testing.T) {
 			ReleaseSources: []ReleaseSourceConfig{
 				{Type: ReleaseSourceTypeBOSHIO},
 			},
-			Releases: []BOSHReleaseSpecification{
+			Releases: []BOSHReleaseTarballSpecification{
 				{Name: "orange"},
 			},
 		}, KilnfileLock{
-			Releases: []BOSHReleaseLock{
+			Releases: []BOSHReleaseTarballLock{
 				{Name: "orange", Version: "1.2.3", RemoteSource: ReleaseSourceTypeBOSHIO},
 			},
 		})
@@ -154,11 +154,11 @@ func TestValidate_release_sources(t *testing.T) {
 			ReleaseSources: []ReleaseSourceConfig{
 				{ID: "open source", Type: ReleaseSourceTypeBOSHIO},
 			},
-			Releases: []BOSHReleaseSpecification{
+			Releases: []BOSHReleaseTarballSpecification{
 				{Name: "orange"},
 			},
 		}, KilnfileLock{
-			Releases: []BOSHReleaseLock{
+			Releases: []BOSHReleaseTarballLock{
 				{Name: "orange", Version: "1.2.3", RemoteSource: ReleaseSourceTypeBOSHIO},
 			},
 		})
@@ -170,11 +170,11 @@ func TestValidate_release_sources(t *testing.T) {
 			ReleaseSources: []ReleaseSourceConfig{
 				{Org: "crhntr", Type: ReleaseSourceTypeGithub},
 			},
-			Releases: []BOSHReleaseSpecification{
+			Releases: []BOSHReleaseTarballSpecification{
 				{Name: "hello-tile", GitHubRepository: "https://github.com/crhntr/hello-tile"},
 			},
 		}, KilnfileLock{
-			Releases: []BOSHReleaseLock{
+			Releases: []BOSHReleaseTarballLock{
 				{Name: "hello-tile", Version: "1.2.3", RemoteSource: "crhntr"},
 			},
 		})
@@ -185,10 +185,10 @@ func TestValidate_release_sources(t *testing.T) {
 func TestValidate_checkComponentVersionsAndConstraint(t *testing.T) {
 	t.Run("no version", func(t *testing.T) {
 		please := NewWithT(t)
-		r := BOSHReleaseSpecification{
+		r := BOSHReleaseTarballSpecification{
 			Name: "capi",
 		}
-		l := BOSHReleaseLock{
+		l := BOSHReleaseTarballLock{
 			Name:    "capi",
 			Version: "2.3.4",
 		}
@@ -198,11 +198,11 @@ func TestValidate_checkComponentVersionsAndConstraint(t *testing.T) {
 
 	t.Run("invalid version constraint", func(t *testing.T) {
 		please := NewWithT(t)
-		r := BOSHReleaseSpecification{
+		r := BOSHReleaseTarballSpecification{
 			Name:    "capi",
 			Version: "meh",
 		}
-		l := BOSHReleaseLock{
+		l := BOSHReleaseTarballLock{
 			Name:    "capi",
 			Version: "2.3.4",
 		}
@@ -215,11 +215,11 @@ func TestValidate_checkComponentVersionsAndConstraint(t *testing.T) {
 
 	t.Run("version does not match constraint", func(t *testing.T) {
 		please := NewWithT(t)
-		r := BOSHReleaseSpecification{
+		r := BOSHReleaseTarballSpecification{
 			Name:    "capi",
 			Version: "~2",
 		}
-		l := BOSHReleaseLock{
+		l := BOSHReleaseTarballLock{
 			Name:    "capi",
 			Version: "3.0.5",
 		}
@@ -232,11 +232,11 @@ func TestValidate_checkComponentVersionsAndConstraint(t *testing.T) {
 
 	t.Run("invalid lock version", func(t *testing.T) {
 		please := NewWithT(t)
-		r := BOSHReleaseSpecification{
+		r := BOSHReleaseTarballSpecification{
 			Name:    "capi",
 			Version: "~2",
 		}
-		l := BOSHReleaseLock{
+		l := BOSHReleaseTarballLock{
 			Name:    "capi",
 			Version: "BAD",
 		}

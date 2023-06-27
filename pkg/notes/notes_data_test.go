@@ -42,7 +42,7 @@ func Test_fetch(t *testing.T) {
 			OS:      "fruit-tree",
 			Version: "40000.1",
 		},
-		Releases: []cargo.BOSHReleaseLock{
+		Releases: []cargo.BOSHReleaseTarballLock{
 			{Name: "banana", Version: "1.1.0"},
 			{Name: "lemon", Version: "1.1.0"},
 		},
@@ -52,13 +52,13 @@ func Test_fetch(t *testing.T) {
 			OS:      "fruit-tree",
 			Version: "40000.2",
 		},
-		Releases: []cargo.BOSHReleaseSpecification{
+		Releases: []cargo.BOSHReleaseTarballSpecification{
 			{Name: "banana", GitHubRepository: "https://github.com/pivotal-cf/lts-banana-release"},
 			{Name: "lemon"},
 		},
 		Slug: "elastic-runtime",
 	}, cargo.KilnfileLock{
-		Releases: []cargo.BOSHReleaseLock{
+		Releases: []cargo.BOSHReleaseTarballLock{
 			{Name: "banana", Version: "1.2.0"},
 			{Name: "lemon", Version: "1.1.0"},
 		},

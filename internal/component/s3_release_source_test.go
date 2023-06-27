@@ -91,9 +91,9 @@ var _ = Describe("S3ReleaseSource", func() {
 			releaseSource         component.S3ReleaseSource
 			logger                *log.Logger
 			releaseDir            string
-			remoteRelease         cargo.BOSHReleaseLock
+			remoteRelease         cargo.BOSHReleaseTarballLock
 			expectedLocalFilename string
-			releaseID             cargo.BOSHReleaseSpecification
+			releaseID             cargo.BOSHReleaseTarballSpecification
 			fakeS3Downloader      *fetcherFakes.S3Downloader
 		)
 
@@ -103,7 +103,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			releaseDir, err = os.MkdirTemp("", "kiln-releaseSource-test")
 			Expect(err).NotTo(HaveOccurred())
 
-			releaseID = cargo.BOSHReleaseSpecification{Name: "uaa", Version: "1.2.3"}
+			releaseID = cargo.BOSHReleaseTarballSpecification{Name: "uaa", Version: "1.2.3"}
 			remoteRelease = releaseID.Lock().WithRemote(bucket, "2.10/uaa/uaa-1.2.3-ubuntu-xenial-621.55.tgz")
 			expectedLocalFilename = filepath.Base(remoteRelease.RemotePath)
 
@@ -192,15 +192,15 @@ var _ = Describe("S3ReleaseSource", func() {
 		var (
 			releaseSource  component.S3ReleaseSource
 			fakeS3Client   *fetcherFakes.S3Client
-			desiredRelease cargo.BOSHReleaseSpecification
-			bpmReleaseID   cargo.BOSHReleaseSpecification
+			desiredRelease cargo.BOSHReleaseTarballSpecification
+			bpmReleaseID   cargo.BOSHReleaseTarballSpecification
 			bpmKey         string
 			logger         *log.Logger
 		)
 
 		BeforeEach(func() {
-			bpmReleaseID = cargo.BOSHReleaseSpecification{Name: "bpm-release", Version: "1.2.3"}
-			desiredRelease = cargo.BOSHReleaseSpecification{
+			bpmReleaseID = cargo.BOSHReleaseTarballSpecification{Name: "bpm-release", Version: "1.2.3"}
+			desiredRelease = cargo.BOSHReleaseTarballSpecification{
 				Name:            "bpm-release",
 				Version:         "1.2.3",
 				StemcellOS:      "ubuntu-xenial",
@@ -235,7 +235,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(input.Bucket).To(PointTo(BeEquivalentTo(bucket)))
 			Expect(input.Key).To(PointTo(BeEquivalentTo(bpmKey)))
 
-			Expect(remoteRelease).To(Equal(cargo.BOSHReleaseLock{
+			Expect(remoteRelease).To(Equal(cargo.BOSHReleaseTarballLock{
 				Name:         bpmReleaseID.Name,
 				Version:      bpmReleaseID.Version,
 				RemotePath:   bpmKey,
@@ -288,15 +288,15 @@ var _ = Describe("S3ReleaseSource", func() {
 			releaseSource    component.S3ReleaseSource
 			fakeS3Client     *fetcherFakes.S3Client
 			fakeS3Downloader *fetcherFakes.S3Downloader
-			desiredRelease   cargo.BOSHReleaseSpecification
-			releaseID        cargo.BOSHReleaseSpecification
+			desiredRelease   cargo.BOSHReleaseTarballSpecification
+			releaseID        cargo.BOSHReleaseTarballSpecification
 			uaaKey           string
 			logger           *log.Logger
 		)
 		When("version is semantic and release has version constraint", func() {
 			BeforeEach(func() {
-				releaseID = cargo.BOSHReleaseSpecification{Name: "uaa", Version: "1.1.1"}
-				desiredRelease = cargo.BOSHReleaseSpecification{
+				releaseID = cargo.BOSHReleaseTarballSpecification{Name: "uaa", Version: "1.1.1"}
+				desiredRelease = cargo.BOSHReleaseTarballSpecification{
 					Name:            "uaa",
 					Version:         "~1.1",
 					StemcellVersion: "621.71",
@@ -357,8 +357,8 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		When("version is a single number", func() {
 			BeforeEach(func() {
-				releaseID = cargo.BOSHReleaseSpecification{Name: "uaa", Version: "123"}
-				desiredRelease = cargo.BOSHReleaseSpecification{
+				releaseID = cargo.BOSHReleaseTarballSpecification{Name: "uaa", Version: "123"}
+				desiredRelease = cargo.BOSHReleaseTarballSpecification{
 					Name:            "uaa",
 					StemcellVersion: "621.71",
 				}
@@ -408,7 +408,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
 				Expect(*input.Prefix).To(Equal("uaa/"))
 
-				Expect(remoteRelease).To(Equal(cargo.BOSHReleaseLock{
+				Expect(remoteRelease).To(Equal(cargo.BOSHReleaseTarballLock{
 					Name:         releaseID.Name,
 					Version:      releaseID.Version,
 					RemotePath:   uaaKey,
@@ -420,8 +420,8 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		When("noDownload is specified", func() {
 			BeforeEach(func() {
-				releaseID = cargo.BOSHReleaseSpecification{Name: "uaa", Version: "123"}
-				desiredRelease = cargo.BOSHReleaseSpecification{
+				releaseID = cargo.BOSHReleaseTarballSpecification{Name: "uaa", Version: "123"}
+				desiredRelease = cargo.BOSHReleaseTarballSpecification{
 					Name:            "uaa",
 					StemcellVersion: "621.71",
 				}
@@ -470,7 +470,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				input := fakeS3Client.ListObjectsV2ArgsForCall(0)
 				Expect(*input.Prefix).To(Equal("uaa/"))
 
-				Expect(remoteRelease).To(Equal(cargo.BOSHReleaseLock{
+				Expect(remoteRelease).To(Equal(cargo.BOSHReleaseTarballLock{
 					Name:         releaseID.Name,
 					Version:      releaseID.Version,
 					RemotePath:   uaaKey,
@@ -487,15 +487,15 @@ var _ = Describe("S3ReleaseSource", func() {
 		var (
 			releaseSource  component.S3ReleaseSource
 			fakeS3Client   *fetcherFakes.S3Client
-			desiredRelease cargo.BOSHReleaseSpecification
-			releaseID      cargo.BOSHReleaseSpecification
+			desiredRelease cargo.BOSHReleaseTarballSpecification
+			releaseID      cargo.BOSHReleaseTarballSpecification
 			uaaKey         string
 			logger         *log.Logger
 		)
 		When("version is semantic and has 2 latest versions with different stemcell versions", func() {
 			BeforeEach(func() {
-				releaseID = cargo.BOSHReleaseSpecification{Name: "uaa", Version: "1.2.3"}
-				desiredRelease = cargo.BOSHReleaseSpecification{
+				releaseID = cargo.BOSHReleaseTarballSpecification{Name: "uaa", Version: "1.2.3"}
+				desiredRelease = cargo.BOSHReleaseTarballSpecification{
 					Name:            "uaa",
 					StemcellVersion: "621.71",
 				}
@@ -576,7 +576,7 @@ var _ = Describe("S3ReleaseSource", func() {
 
 		Context("happy path", func() {
 			It("uploads the file to the correct location", func() {
-				_, err := releaseSource.UploadRelease(cargo.BOSHReleaseSpecification{
+				_, err := releaseSource.UploadRelease(cargo.BOSHReleaseTarballSpecification{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
@@ -594,13 +594,13 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns the remote release", func() {
-				remoteRelease, err := releaseSource.UploadRelease(cargo.BOSHReleaseSpecification{
+				remoteRelease, err := releaseSource.UploadRelease(cargo.BOSHReleaseTarballSpecification{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(remoteRelease).To(Equal(cargo.BOSHReleaseLock{
+				Expect(remoteRelease).To(Equal(cargo.BOSHReleaseTarballLock{
 					Name:         "banana",
 					Version:      "1.2.3",
 					RemotePath:   "banana/banana-1.2.3.tgz",
@@ -626,7 +626,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			})
 
 			It("returns a descriptive error", func() {
-				_, err := releaseSource.UploadRelease(cargo.BOSHReleaseSpecification{
+				_, err := releaseSource.UploadRelease(cargo.BOSHReleaseTarballSpecification{
 					Name:    "banana",
 					Version: "1.2.3",
 				}, file)
@@ -639,7 +639,7 @@ var _ = Describe("S3ReleaseSource", func() {
 	Describe("RemotePath", func() {
 		var (
 			releaseSource component.S3ReleaseSource
-			requirement   cargo.BOSHReleaseSpecification
+			requirement   cargo.BOSHReleaseTarballSpecification
 		)
 
 		BeforeEach(func() {
@@ -655,7 +655,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				nil,
 				log.New(GinkgoWriter, "", 0),
 			)
-			requirement = cargo.BOSHReleaseSpecification{
+			requirement = cargo.BOSHReleaseTarballSpecification{
 				Name:            "bob",
 				Version:         "2.0",
 				StemcellOS:      "plan9",

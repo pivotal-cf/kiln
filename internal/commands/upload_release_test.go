@@ -37,7 +37,7 @@ var _ = Describe("UploadRelease", func() {
 			fs = memfs.New()
 
 			releaseUploader = new(fakes.ReleaseUploader)
-			releaseUploader.GetMatchedReleaseReturns(cargo.BOSHReleaseLock{}, component.ErrNotFound)
+			releaseUploader.GetMatchedReleaseReturns(cargo.BOSHReleaseTarballLock{}, component.ErrNotFound)
 			releaseUploaderFinder = new(commandsFakes.ReleaseUploaderFinder)
 			releaseUploaderFinder.Returns(releaseUploader, nil)
 
@@ -80,7 +80,7 @@ var _ = Describe("UploadRelease", func() {
 
 			When("the release already exists on the release source", func() {
 				BeforeEach(func() {
-					releaseUploader.GetMatchedReleaseReturns(cargo.BOSHReleaseLock{
+					releaseUploader.GetMatchedReleaseReturns(cargo.BOSHReleaseTarballLock{
 						Name: "banana", Version: "1.2.3",
 						RemotePath:   "banana/banana-1.2.3.tgz",
 						RemoteSource: "orange-bucket",
@@ -97,7 +97,7 @@ var _ = Describe("UploadRelease", func() {
 					Expect(releaseUploader.GetMatchedReleaseCallCount()).To(Equal(1))
 
 					requirement := releaseUploader.GetMatchedReleaseArgsForCall(0)
-					Expect(requirement).To(Equal(cargo.BOSHReleaseSpecification{Name: "banana", Version: "1.2.3"}))
+					Expect(requirement).To(Equal(cargo.BOSHReleaseTarballSpecification{Name: "banana", Version: "1.2.3"}))
 
 					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
 				})
@@ -210,7 +210,7 @@ compiled_packages:
 
 		When("querying the release source fails", func() {
 			BeforeEach(func() {
-				releaseUploader.GetMatchedReleaseReturns(cargo.BOSHReleaseLock{}, errors.New("boom"))
+				releaseUploader.GetMatchedReleaseReturns(cargo.BOSHReleaseTarballLock{}, errors.New("boom"))
 			})
 
 			It("returns an error", func() {
@@ -233,7 +233,7 @@ compiled_packages:
 
 		When("the upload fails", func() {
 			BeforeEach(func() {
-				releaseUploader.UploadReleaseReturns(cargo.BOSHReleaseLock{}, errors.New("boom"))
+				releaseUploader.UploadReleaseReturns(cargo.BOSHReleaseTarballLock{}, errors.New("boom"))
 			})
 
 			It("returns an error", func() {
