@@ -70,7 +70,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 	for i, rel := range kilnfileLock.Releases {
 		update.Logger.Printf("Updating release %q with stemcell %s %s...", rel.Name, kilnfileLock.Stemcell.OS, trimmedInputVersion)
 
-		spec, err := kilnfile.ComponentSpec(rel.Name)
+		spec, err := kilnfile.BOSHReleaseTarballSpecification(rel.Name)
 		if err != nil {
 			return err
 		}

@@ -136,14 +136,14 @@ func TestValidate_release_sources(t *testing.T) {
 		please := NewWithT(t)
 		results := Validate(Kilnfile{
 			ReleaseSources: []ReleaseSourceConfig{
-				{Type: ReleaseSourceTypeBOSHIO},
+				{Type: BOSHReleaseTarballSourceTypeBOSHIO},
 			},
 			Releases: []BOSHReleaseTarballSpecification{
 				{Name: "orange"},
 			},
 		}, KilnfileLock{
 			Releases: []BOSHReleaseTarballLock{
-				{Name: "orange", Version: "1.2.3", RemoteSource: ReleaseSourceTypeBOSHIO},
+				{Name: "orange", Version: "1.2.3", RemoteSource: BOSHReleaseTarballSourceTypeBOSHIO},
 			},
 		})
 		please.Expect(results).To(BeEmpty())
@@ -152,14 +152,14 @@ func TestValidate_release_sources(t *testing.T) {
 		please := NewWithT(t)
 		results := Validate(Kilnfile{
 			ReleaseSources: []ReleaseSourceConfig{
-				{ID: "open source", Type: ReleaseSourceTypeBOSHIO},
+				{ID: "open source", Type: BOSHReleaseTarballSourceTypeBOSHIO},
 			},
 			Releases: []BOSHReleaseTarballSpecification{
 				{Name: "orange"},
 			},
 		}, KilnfileLock{
 			Releases: []BOSHReleaseTarballLock{
-				{Name: "orange", Version: "1.2.3", RemoteSource: ReleaseSourceTypeBOSHIO},
+				{Name: "orange", Version: "1.2.3", RemoteSource: BOSHReleaseTarballSourceTypeBOSHIO},
 			},
 		})
 		please.Expect(results).To(HaveLen(1))
@@ -168,7 +168,7 @@ func TestValidate_release_sources(t *testing.T) {
 		please := NewWithT(t)
 		results := Validate(Kilnfile{
 			ReleaseSources: []ReleaseSourceConfig{
-				{Org: "crhntr", Type: ReleaseSourceTypeGithub},
+				{Org: "crhntr", Type: BOSHReleaseTarballSourceTypeGithub},
 			},
 			Releases: []BOSHReleaseTarballSpecification{
 				{Name: "hello-tile", GitHubRepository: "https://github.com/crhntr/hello-tile"},

@@ -15,18 +15,18 @@ func TestReleaseSourceID(t *testing.T) {
 		{Name: "zero value", ExpectedID: "", Configuration: ReleaseSourceConfig{}},
 		{Name: "unknown type", ExpectedID: "", Configuration: ReleaseSourceConfig{Type: "banana"}},
 
-		{Name: ReleaseSourceTypeArtifactory + " with ID set", ExpectedID: "identifier", Configuration: ReleaseSourceConfig{ID: "identifier", Type: ReleaseSourceTypeArtifactory}},
-		{Name: ReleaseSourceTypeBOSHIO + " with ID set", ExpectedID: "identifier", Configuration: ReleaseSourceConfig{ID: "identifier", Type: ReleaseSourceTypeBOSHIO}},
-		{Name: ReleaseSourceTypeGithub + " with ID set", ExpectedID: "identifier", Configuration: ReleaseSourceConfig{ID: "identifier", Type: ReleaseSourceTypeGithub}},
-		{Name: ReleaseSourceTypeS3 + " with ID set", ExpectedID: "identifier", Configuration: ReleaseSourceConfig{ID: "identifier", Type: ReleaseSourceTypeS3}},
+		{Name: BOSHReleaseTarballSourceTypeArtifactory + " with ID set", ExpectedID: "identifier", Configuration: ReleaseSourceConfig{ID: "identifier", Type: BOSHReleaseTarballSourceTypeArtifactory}},
+		{Name: BOSHReleaseTarballSourceTypeBOSHIO + " with ID set", ExpectedID: "identifier", Configuration: ReleaseSourceConfig{ID: "identifier", Type: BOSHReleaseTarballSourceTypeBOSHIO}},
+		{Name: BOSHReleaseTarballSourceTypeGithub + " with ID set", ExpectedID: "identifier", Configuration: ReleaseSourceConfig{ID: "identifier", Type: BOSHReleaseTarballSourceTypeGithub}},
+		{Name: BOSHReleaseTarballSourceTypeS3 + " with ID set", ExpectedID: "identifier", Configuration: ReleaseSourceConfig{ID: "identifier", Type: BOSHReleaseTarballSourceTypeS3}},
 
-		{Name: ReleaseSourceTypeArtifactory + " default", ExpectedID: ReleaseSourceTypeArtifactory, Configuration: ReleaseSourceConfig{ID: "", Type: ReleaseSourceTypeArtifactory}},
-		{Name: ReleaseSourceTypeBOSHIO + " default", ExpectedID: ReleaseSourceTypeBOSHIO, Configuration: ReleaseSourceConfig{ID: "", Type: ReleaseSourceTypeBOSHIO}},
-		{Name: ReleaseSourceTypeGithub + " default", ExpectedID: "identifier", Configuration: ReleaseSourceConfig{ID: "", Type: ReleaseSourceTypeGithub, Org: "identifier"}},
-		{Name: ReleaseSourceTypeS3 + " default", ExpectedID: "identifier", Configuration: ReleaseSourceConfig{ID: "", Type: ReleaseSourceTypeS3, Bucket: "identifier"}},
+		{Name: BOSHReleaseTarballSourceTypeArtifactory + " default", ExpectedID: BOSHReleaseTarballSourceTypeArtifactory, Configuration: ReleaseSourceConfig{ID: "", Type: BOSHReleaseTarballSourceTypeArtifactory}},
+		{Name: BOSHReleaseTarballSourceTypeBOSHIO + " default", ExpectedID: BOSHReleaseTarballSourceTypeBOSHIO, Configuration: ReleaseSourceConfig{ID: "", Type: BOSHReleaseTarballSourceTypeBOSHIO}},
+		{Name: BOSHReleaseTarballSourceTypeGithub + " default", ExpectedID: "identifier", Configuration: ReleaseSourceConfig{ID: "", Type: BOSHReleaseTarballSourceTypeGithub, Org: "identifier"}},
+		{Name: BOSHReleaseTarballSourceTypeS3 + " default", ExpectedID: "identifier", Configuration: ReleaseSourceConfig{ID: "", Type: BOSHReleaseTarballSourceTypeS3, Bucket: "identifier"}},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
-			assert.Equal(t, tt.ExpectedID, ReleaseSourceID(tt.Configuration))
+			assert.Equal(t, tt.ExpectedID, BOSHReleaseTarballSourceID(tt.Configuration))
 		})
 	}
 }

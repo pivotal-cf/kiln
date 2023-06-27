@@ -44,7 +44,7 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 	}
 	releaseSource := cmd.mrsProvider(kilnfile, false)
 
-	spec, err := kilnfile.ComponentSpec(cmd.Options.Release)
+	spec, err := kilnfile.BOSHReleaseTarballSpecification(cmd.Options.Release)
 	if err != nil {
 		return err
 	}
