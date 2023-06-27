@@ -50,7 +50,7 @@ func ensureRemoteSourceExistsForEachReleaseLock(spec Kilnfile, lock KilnfileLock
 	return result
 }
 
-func checkComponentVersionsAndConstraint(spec BOSHReleaseSpecification, lock BOSHReleaseLock, index int) error {
+func checkComponentVersionsAndConstraint(spec BOSHReleaseTarballSpecification, lock BOSHReleaseTarballLock, index int) error {
 	v, err := semver.NewVersion(lock.Version)
 	if err != nil {
 		return fmt.Errorf("spec %s (index %d in Kilnfile.lock) has invalid lock version %q: %w",

@@ -77,13 +77,13 @@ func (src BOSHIOReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 	return src.ReleaseSourceConfig
 }
 
-func unsetStemcell(spec cargo.BOSHReleaseSpecification) cargo.BOSHReleaseSpecification {
+func unsetStemcell(spec cargo.BOSHReleaseTarballSpecification) cargo.BOSHReleaseTarballSpecification {
 	spec.StemcellOS = ""
 	spec.StemcellVersion = ""
 	return spec
 }
 
-func (src BOSHIOReleaseSource) GetMatchedRelease(requirement cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error) {
+func (src BOSHIOReleaseSource) GetMatchedRelease(requirement cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error) {
 	requirement = unsetStemcell(requirement)
 
 	for _, repo := range repos {
@@ -91,7 +91,7 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement cargo.BOSHReleaseSp
 			fullName := repo + "/" + requirement.Name + suf
 			exists, err := src.releaseExistOnBoshio(fullName, requirement.Version)
 			if err != nil {
-				return cargo.BOSHReleaseLock{}, err
+				return cargo.BOSHReleaseTarballLock{}, err
 			}
 
 			if exists {
@@ -100,15 +100,15 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement cargo.BOSHReleaseSp
 			}
 		}
 	}
-	return cargo.BOSHReleaseLock{}, ErrNotFound
+	return cargo.BOSHReleaseTarballLock{}, ErrNotFound
 }
 
-func (src BOSHIOReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseSpecification, _ bool) (cargo.BOSHReleaseLock, error) {
+func (src BOSHIOReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTarballSpecification, _ bool) (cargo.BOSHReleaseTarballLock, error) {
 	spec = unsetStemcell(spec)
 
 	constraint, err := spec.VersionConstraints()
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
 	var validReleases []releaseResponse
@@ -118,7 +118,7 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseSpecific
 			fullName := repo + "/" + spec.Name + suf
 			releaseResponses, err := src.getReleases(fullName)
 			if err != nil {
-				return cargo.BOSHReleaseLock{}, err
+				return cargo.BOSHReleaseTarballLock{}, err
 			}
 
 			for _, release := range releaseResponses {
@@ -136,10 +136,10 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseSpecific
 			return lock, nil
 		}
 	}
-	return cargo.BOSHReleaseLock{}, ErrNotFound
+	return cargo.BOSHReleaseTarballLock{}, ErrNotFound
 }
 
-func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease cargo.BOSHReleaseLock) (Local, error) {
+func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease cargo.BOSHReleaseTarballLock) (Local, error) {
 	src.logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeBOSHIO, src.ID())
 
 	downloadURL := remoteRelease.RemotePath
@@ -185,7 +185,7 @@ func (err ResponseStatusCodeError) Error() string {
 	return fmt.Sprintf("response to %s %s got status %d when a success was expected", err.Request.Method, err.Request.URL, err.StatusCode)
 }
 
-func (src BOSHIOReleaseSource) createReleaseRemote(spec cargo.BOSHReleaseSpecification, fullName string) cargo.BOSHReleaseLock {
+func (src BOSHIOReleaseSource) createReleaseRemote(spec cargo.BOSHReleaseTarballSpecification, fullName string) cargo.BOSHReleaseTarballLock {
 	downloadURL := fmt.Sprintf("%s/d/github.com/%s?v=%s", src.serverURI, fullName, spec.Version)
 	releaseRemote := spec.Lock()
 	releaseRemote.RemoteSource = src.ID()

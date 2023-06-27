@@ -53,10 +53,10 @@ func deduplicateReleasesWithTheSameTagName(bump Bump) Bump {
 	return updated
 }
 
-func CalculateBumps(current, previous []BOSHReleaseLock) []Bump {
+func CalculateBumps(current, previous []BOSHReleaseTarballLock) []Bump {
 	var (
 		bumps         []Bump
-		previousSpecs = make(map[string]BOSHReleaseLock, len(previous))
+		previousSpecs = make(map[string]BOSHReleaseTarballLock, len(previous))
 	)
 	for _, p := range previous {
 		previousSpecs[p.Name] = p
@@ -90,7 +90,7 @@ func (bump Bump) toFrom() (to, from *semver.Version, _ error) {
 
 type BumpList []Bump
 
-func (list BumpList) ForLock(lock BOSHReleaseLock) Bump {
+func (list BumpList) ForLock(lock BOSHReleaseTarballLock) Bump {
 	for _, b := range list {
 		if b.Name == lock.Name {
 			return b

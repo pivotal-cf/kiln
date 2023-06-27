@@ -67,7 +67,7 @@ func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig) *ArtifactoryReleas
 	}
 }
 
-func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRelease cargo.BOSHReleaseLock) (Local, error) {
+func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRelease cargo.BOSHReleaseTarballLock) (Local, error) {
 	downloadURL := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + remoteRelease.RemotePath
 	ars.logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeArtifactory, ars.ID)
 	resp, err := ars.Client.Get(downloadURL)
@@ -109,7 +109,7 @@ func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRe
 	return Local{Lock: remoteRelease, LocalPath: filePath}, nil
 }
 
-func (ars *ArtifactoryReleaseSource) getFileSHA1(release cargo.BOSHReleaseLock) (string, error) {
+func (ars *ArtifactoryReleaseSource) getFileSHA1(release cargo.BOSHReleaseTarballLock) (string, error) {
 	fullURL := ars.ArtifactoryHost + "/api/storage/" + ars.Repo + "/" + release.RemotePath
 	ars.logger.Printf("Getting %s file info from artifactory", release.Name)
 	resp, err := ars.Client.Get(fullURL)
@@ -140,21 +140,21 @@ func (ars *ArtifactoryReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
-func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error) {
+func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error) {
 	remotePath, err := ars.RemotePath(spec)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
 	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, remotePath)
 	request, err := http.NewRequest(http.MethodGet, fullUrl, nil)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
 	response, err := ars.Client.Do(request)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, wrapVPNError(err)
+		return cargo.BOSHReleaseTarballLock{}, wrapVPNError(err)
 	}
 	defer func() {
 		_ = response.Body.Close()
@@ -163,12 +163,12 @@ func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseSpe
 	switch response.StatusCode {
 	case http.StatusOK:
 	case http.StatusNotFound:
-		return cargo.BOSHReleaseLock{}, ErrNotFound
+		return cargo.BOSHReleaseTarballLock{}, ErrNotFound
 	default:
-		return cargo.BOSHReleaseLock{}, fmt.Errorf("unexpected http status: %s", http.StatusText(response.StatusCode))
+		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("unexpected http status: %s", http.StatusText(response.StatusCode))
 	}
 
-	return cargo.BOSHReleaseLock{
+	return cargo.BOSHReleaseTarballLock{
 		Name:         spec.Name,
 		Version:      spec.Version,
 		RemotePath:   remotePath,
@@ -178,22 +178,22 @@ func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseSpe
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
-func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseSpecification, _ bool) (cargo.BOSHReleaseLock, error) {
+func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTarballSpecification, _ bool) (cargo.BOSHReleaseTarballLock, error) {
 	remotePath, err := ars.RemotePath(spec)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
 	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, path.Dir(remotePath))
 
 	request, err := http.NewRequest(http.MethodGet, fullUrl, nil)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
 	response, err := ars.Client.Do(request)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, wrapVPNError(err)
+		return cargo.BOSHReleaseTarballLock{}, wrapVPNError(err)
 	}
 	defer func() {
 		_ = response.Body.Close()
@@ -202,9 +202,9 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseSp
 	switch response.StatusCode {
 	case http.StatusOK:
 	case http.StatusNotFound:
-		return cargo.BOSHReleaseLock{}, ErrNotFound
+		return cargo.BOSHReleaseTarballLock{}, ErrNotFound
 	default:
-		return cargo.BOSHReleaseLock{}, fmt.Errorf("unexpected http status: %s", http.StatusText(response.StatusCode))
+		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("unexpected http status: %s", http.StatusText(response.StatusCode))
 	}
 
 	var artifactoryFolderInfo ArtifactoryFolderInfo
@@ -212,22 +212,22 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseSp
 
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
 	if err := json.Unmarshal(responseBody, &artifactoryFolderInfo); err != nil {
-		return cargo.BOSHReleaseLock{}, fmt.Errorf("json from %s is malformed: %s", request.URL.Host, err)
+		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("json from %s is malformed: %s", request.URL.Host, err)
 	}
 
 	semverPattern, err := regexp.Compile(`([-v])\d+(.\d+)*`)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
-	foundRelease := cargo.BOSHReleaseLock{}
+	foundRelease := cargo.BOSHReleaseTarballLock{}
 	constraint, err := spec.VersionConstraints()
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
 	for _, releases := range artifactoryFolderInfo.Children {
@@ -251,8 +251,8 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseSp
 
 			remotePathToUpdate := path.Dir(remotePath) + releases.URI
 
-			if (foundRelease == cargo.BOSHReleaseLock{}) {
-				foundRelease = cargo.BOSHReleaseLock{
+			if (foundRelease == cargo.BOSHReleaseTarballLock{}) {
+				foundRelease = cargo.BOSHReleaseTarballLock{
 					Name:         spec.Name,
 					Version:      version,
 					RemotePath:   remotePathToUpdate,
@@ -261,7 +261,7 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseSp
 			} else {
 				foundVersion, _ := semver.NewVersion(foundRelease.Version)
 				if newVersion.GreaterThan(foundVersion) {
-					foundRelease = cargo.BOSHReleaseLock{
+					foundRelease = cargo.BOSHReleaseTarballLock{
 						Name:         spec.Name,
 						Version:      version,
 						RemotePath:   remotePathToUpdate,
@@ -272,20 +272,20 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseSp
 		}
 	}
 
-	if (foundRelease == cargo.BOSHReleaseLock{}) {
-		return cargo.BOSHReleaseLock{}, ErrNotFound
+	if (foundRelease == cargo.BOSHReleaseTarballLock{}) {
+		return cargo.BOSHReleaseTarballLock{}, ErrNotFound
 	}
 	foundRelease.SHA1, err = ars.getFileSHA1(foundRelease)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 	return foundRelease, nil
 }
 
-func (ars *ArtifactoryReleaseSource) UploadRelease(spec cargo.BOSHReleaseSpecification, file io.Reader) (cargo.BOSHReleaseLock, error) {
+func (ars *ArtifactoryReleaseSource) UploadRelease(spec cargo.BOSHReleaseTarballSpecification, file io.Reader) (cargo.BOSHReleaseTarballLock, error) {
 	remotePath, err := ars.RemotePath(spec)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
 	ars.logger.Printf("uploading release %q to %s at %q...\n", spec.Name, ars.ID, remotePath)
@@ -295,7 +295,7 @@ func (ars *ArtifactoryReleaseSource) UploadRelease(spec cargo.BOSHReleaseSpecifi
 	request, err := http.NewRequest(http.MethodPut, fullUrl, file)
 	if err != nil {
 		fmt.Println(err)
-		return cargo.BOSHReleaseLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 	request.SetBasicAuth(ars.Username, ars.Password)
 	// TODO: check Sha1/2
@@ -303,16 +303,16 @@ func (ars *ArtifactoryReleaseSource) UploadRelease(spec cargo.BOSHReleaseSpecifi
 
 	response, err := ars.Client.Do(request)
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, wrapVPNError(err)
+		return cargo.BOSHReleaseTarballLock{}, wrapVPNError(err)
 	}
 
 	switch response.StatusCode {
 	case http.StatusCreated:
 	default:
-		return cargo.BOSHReleaseLock{}, fmt.Errorf(response.Status)
+		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf(response.Status)
 	}
 
-	return cargo.BOSHReleaseLock{
+	return cargo.BOSHReleaseTarballLock{
 		Name:         spec.Name,
 		Version:      spec.Version,
 		RemotePath:   remotePath,
@@ -320,7 +320,7 @@ func (ars *ArtifactoryReleaseSource) UploadRelease(spec cargo.BOSHReleaseSpecifi
 	}, nil
 }
 
-func (ars *ArtifactoryReleaseSource) RemotePath(spec cargo.BOSHReleaseSpecification) (string, error) {
+func (ars *ArtifactoryReleaseSource) RemotePath(spec cargo.BOSHReleaseTarballSpecification) (string, error) {
 	pathBuf := new(bytes.Buffer)
 
 	err := ars.pathTemplate().Execute(pathBuf, spec)

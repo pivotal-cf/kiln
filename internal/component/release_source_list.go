@@ -115,18 +115,18 @@ func NewMultiReleaseSource(sources ...ReleaseSource) ReleaseSourceList {
 	return sources
 }
 
-func (list ReleaseSourceList) GetMatchedRelease(requirement cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error) {
+func (list ReleaseSourceList) GetMatchedRelease(requirement cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error) {
 	for _, src := range list {
 		rel, err := src.GetMatchedRelease(requirement)
 		if err != nil {
 			if IsErrNotFound(err) {
 				continue
 			}
-			return cargo.BOSHReleaseLock{}, scopedError(src.Configuration().ID, err)
+			return cargo.BOSHReleaseTarballLock{}, scopedError(src.Configuration().ID, err)
 		}
 		return rel, nil
 	}
-	return cargo.BOSHReleaseLock{}, ErrNotFound
+	return cargo.BOSHReleaseTarballLock{}, ErrNotFound
 }
 
 func (list ReleaseSourceList) SetDownloadThreads(n int) {
@@ -139,7 +139,7 @@ func (list ReleaseSourceList) SetDownloadThreads(n int) {
 	}
 }
 
-func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease cargo.BOSHReleaseLock) (Local, error) {
+func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease cargo.BOSHReleaseTarballLock) (Local, error) {
 	src, err := list.FindByID(remoteRelease.RemoteSource)
 	if err != nil {
 		return Local{}, err
@@ -153,30 +153,30 @@ func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease c
 	return localRelease, nil
 }
 
-func (list ReleaseSourceList) FindReleaseVersion(requirement cargo.BOSHReleaseSpecification, noDownload bool) (cargo.BOSHReleaseLock, error) {
-	var foundReleaseLock []cargo.BOSHReleaseLock
+func (list ReleaseSourceList) FindReleaseVersion(requirement cargo.BOSHReleaseTarballSpecification, noDownload bool) (cargo.BOSHReleaseTarballLock, error) {
+	var foundReleaseLock []cargo.BOSHReleaseTarballLock
 	for _, src := range list {
 		rel, err := src.FindReleaseVersion(requirement, noDownload)
 		if err != nil {
 			if !IsErrNotFound(err) {
-				return cargo.BOSHReleaseLock{}, scopedError(src.Configuration().ID, err)
+				return cargo.BOSHReleaseTarballLock{}, scopedError(src.Configuration().ID, err)
 			}
 			continue
 		}
 		foundReleaseLock = append(foundReleaseLock, rel)
 	}
 	if len(foundReleaseLock) == 0 {
-		return cargo.BOSHReleaseLock{}, ErrNotFound
+		return cargo.BOSHReleaseTarballLock{}, ErrNotFound
 	}
 	highestLock := foundReleaseLock[0]
 	highestVersion, err := highestLock.ParseVersion()
 	if err != nil {
-		return cargo.BOSHReleaseLock{}, fmt.Errorf("failed to parse version from release source: %w", err)
+		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("failed to parse version from release source: %w", err)
 	}
 	for _, rel := range foundReleaseLock[1:] {
 		newVersion, err := semver.NewVersion(rel.Version)
 		if err != nil {
-			return cargo.BOSHReleaseLock{}, fmt.Errorf("failed to parse version from release source: %w", err)
+			return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("failed to parse version from release source: %w", err)
 		}
 		if highestVersion.LessThan(newVersion) {
 			highestVersion = newVersion

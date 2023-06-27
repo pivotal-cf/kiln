@@ -10,38 +10,38 @@ import (
 )
 
 type Kilnfile struct {
-	ReleaseSources  []ReleaseSourceConfig      `yaml:"release_sources,omitempty"`
-	Slug            string                     `yaml:"slug,omitempty"`
-	PreGaUserGroups []string                   `yaml:"pre_ga_user_groups,omitempty"`
-	Releases        []BOSHReleaseSpecification `yaml:"releases,omitempty"`
-	TileNames       []string                   `yaml:"tile_names,omitempty"`
-	Stemcell        Stemcell                   `yaml:"stemcell_criteria,omitempty"`
+	ReleaseSources  []ReleaseSourceConfig             `yaml:"release_sources,omitempty"`
+	Slug            string                            `yaml:"slug,omitempty"`
+	PreGaUserGroups []string                          `yaml:"pre_ga_user_groups,omitempty"`
+	Releases        []BOSHReleaseTarballSpecification `yaml:"releases,omitempty"`
+	TileNames       []string                          `yaml:"tile_names,omitempty"`
+	Stemcell        Stemcell                          `yaml:"stemcell_criteria,omitempty"`
 }
 
-func (kf Kilnfile) ComponentSpec(name string) (BOSHReleaseSpecification, error) {
+func (kf Kilnfile) ComponentSpec(name string) (BOSHReleaseTarballSpecification, error) {
 	for _, s := range kf.Releases {
 		if s.Name == name {
 			return s, nil
 		}
 	}
-	return BOSHReleaseSpecification{}, fmt.Errorf("failed to find component specification with name %q in Kilnfile", name)
+	return BOSHReleaseTarballSpecification{}, fmt.Errorf("failed to find component specification with name %q in Kilnfile", name)
 }
 
 type KilnfileLock struct {
-	Releases []BOSHReleaseLock `yaml:"releases"`
-	Stemcell Stemcell          `yaml:"stemcell_criteria"`
+	Releases []BOSHReleaseTarballLock `yaml:"releases"`
+	Stemcell Stemcell                 `yaml:"stemcell_criteria"`
 }
 
-func (k KilnfileLock) FindReleaseWithName(name string) (BOSHReleaseLock, error) {
+func (k KilnfileLock) FindReleaseWithName(name string) (BOSHReleaseTarballLock, error) {
 	for _, r := range k.Releases {
 		if r.Name == name {
 			return r, nil
 		}
 	}
-	return BOSHReleaseLock{}, errors.New("not found")
+	return BOSHReleaseTarballLock{}, errors.New("not found")
 }
 
-func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock BOSHReleaseLock) error {
+func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock BOSHReleaseTarballLock) error {
 	for i, r := range k.Releases {
 		if r.Name == name {
 			k.Releases[i] = lock
@@ -51,7 +51,7 @@ func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock BOSHReleaseLoc
 	return errors.New("not found")
 }
 
-type BOSHReleaseSpecification struct {
+type BOSHReleaseTarballSpecification struct {
 	// Name is a required field and must be set with the bosh release name
 	Name string `yaml:"name"`
 
@@ -73,7 +73,7 @@ type BOSHReleaseSpecification struct {
 	GitHubRepository string `yaml:"github_repository,omitempty"`
 }
 
-func (spec BOSHReleaseSpecification) VersionConstraints() (*semver.Constraints, error) {
+func (spec BOSHReleaseTarballSpecification) VersionConstraints() (*semver.Constraints, error) {
 	if spec.Version == "" {
 		spec.Version = ">=0"
 	}
@@ -84,8 +84,8 @@ func (spec BOSHReleaseSpecification) VersionConstraints() (*semver.Constraints, 
 	return c, nil
 }
 
-func (spec BOSHReleaseSpecification) Lock() BOSHReleaseLock {
-	return BOSHReleaseLock{
+func (spec BOSHReleaseTarballSpecification) Lock() BOSHReleaseTarballLock {
+	return BOSHReleaseTarballLock{
 		Name:            spec.Name,
 		Version:         spec.Version,
 		StemcellOS:      spec.StemcellOS,
@@ -93,11 +93,11 @@ func (spec BOSHReleaseSpecification) Lock() BOSHReleaseLock {
 	}
 }
 
-func (spec BOSHReleaseSpecification) OSVersionSlug() boshdir.OSVersionSlug {
+func (spec BOSHReleaseTarballSpecification) OSVersionSlug() boshdir.OSVersionSlug {
 	return boshdir.NewOSVersionSlug(spec.StemcellOS, spec.StemcellVersion)
 }
 
-func (spec BOSHReleaseSpecification) ReleaseSlug() boshdir.ReleaseSlug {
+func (spec BOSHReleaseTarballSpecification) ReleaseSlug() boshdir.ReleaseSlug {
 	return boshdir.NewReleaseSlug(spec.Name, spec.Version)
 }
 
@@ -119,13 +119,13 @@ type ReleaseSourceConfig struct {
 	Password        string `yaml:"password,omitempty"`
 }
 
-// BOSHReleaseLock represents an exact build of a bosh release
+// BOSHReleaseTarballLock represents an exact build of a bosh release
 // It may identify the where the release is cached;
 // it may identify the stemcell used to compile the release.
 //
 // All fields must be comparable because this struct may be
 // used as a key type in a map. Don't add array or map fields.
-type BOSHReleaseLock struct {
+type BOSHReleaseTarballLock struct {
 	Name    string `yaml:"name"`
 	SHA1    string `yaml:"sha1"`
 	Version string `yaml:"version,omitempty"`
@@ -137,15 +137,15 @@ type BOSHReleaseLock struct {
 	RemotePath   string `yaml:"remote_path"`
 }
 
-func (lock BOSHReleaseLock) ReleaseSlug() boshdir.ReleaseSlug {
+func (lock BOSHReleaseTarballLock) ReleaseSlug() boshdir.ReleaseSlug {
 	return boshdir.NewReleaseSlug(lock.Name, lock.Version)
 }
 
-func (lock BOSHReleaseLock) StemcellSlug() boshdir.OSVersionSlug {
+func (lock BOSHReleaseTarballLock) StemcellSlug() boshdir.OSVersionSlug {
 	return boshdir.NewOSVersionSlug(lock.StemcellOS, lock.StemcellVersion)
 }
 
-func (lock BOSHReleaseLock) String() string {
+func (lock BOSHReleaseTarballLock) String() string {
 	var b strings.Builder
 	b.WriteString(lock.Name)
 	b.WriteByte(' ')
@@ -178,18 +178,18 @@ func (lock BOSHReleaseLock) String() string {
 	return b.String()
 }
 
-func (lock BOSHReleaseLock) WithSHA1(sum string) BOSHReleaseLock {
+func (lock BOSHReleaseTarballLock) WithSHA1(sum string) BOSHReleaseTarballLock {
 	lock.SHA1 = sum
 	return lock
 }
 
-func (lock BOSHReleaseLock) WithRemote(source, path string) BOSHReleaseLock {
+func (lock BOSHReleaseTarballLock) WithRemote(source, path string) BOSHReleaseTarballLock {
 	lock.RemoteSource = source
 	lock.RemotePath = path
 	return lock
 }
 
-func (lock BOSHReleaseLock) ParseVersion() (*semver.Version, error) {
+func (lock BOSHReleaseTarballLock) ParseVersion() (*semver.Version, error) {
 	return semver.NewVersion(lock.Version)
 }
 

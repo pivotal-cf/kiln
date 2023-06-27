@@ -98,7 +98,7 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 			},
 		}
 
-		lock, err := grsMock.GetMatchedRelease(cargo.BOSHReleaseSpecification{
+		lock, err := grsMock.GetMatchedRelease(cargo.BOSHReleaseTarballSpecification{
 			Name:             "routing",
 			Version:          "0.226.0",
 			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
@@ -188,7 +188,7 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 		}
 
 		// When...
-		lock, err := grsMock.GetMatchedRelease(cargo.BOSHReleaseSpecification{
+		lock, err := grsMock.GetMatchedRelease(cargo.BOSHReleaseTarballSpecification{
 			Name:             "routing",
 			Version:          "0.226.0",
 			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
@@ -226,7 +226,7 @@ func TestGithubReleaseSource_ComponentLockFromGithubRelease(t *testing.T) {
 
 func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 	t.Run("when spec contains a version string other than semver", func(t *testing.T) {
-		s := cargo.BOSHReleaseSpecification{
+		s := cargo.BOSHReleaseTarballSpecification{
 			Version: "garbage",
 		}
 		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
@@ -268,7 +268,7 @@ func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 			return listResponse, httpResponse, nil
 		}
 
-		s := cargo.BOSHReleaseSpecification{
+		s := cargo.BOSHReleaseTarballSpecification{
 			Name:             releaseName,
 			GitHubRepository: "https://github.com/cloudfoundry/bpm-release",
 		}
@@ -296,7 +296,7 @@ func TestGithubReleaseSource_FindReleaseVersion(t *testing.T) {
 
 func TestGithubReleaseSource_GetMatchedRelease(t *testing.T) {
 	t.Run("when spec contains a version string other than semver", func(t *testing.T) {
-		s := cargo.BOSHReleaseSpecification{
+		s := cargo.BOSHReleaseTarballSpecification{
 			Version: ">1.0.0",
 		}
 		grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{Type: component.ReleaseSourceTypeGithub, GithubToken: "fake_token", Org: "cloudfoundry"})
@@ -334,7 +334,7 @@ func TestGetGithubReleaseWithTag(t *testing.T) {
 				GithubToken: "fake-token",
 			},
 		}
-		s := cargo.BOSHReleaseSpecification{
+		s := cargo.BOSHReleaseTarballSpecification{
 			Name:             "routing",
 			Version:          "0.226.0",
 			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
@@ -375,7 +375,7 @@ func TestGetGithubReleaseWithTag(t *testing.T) {
 				GithubToken: "fake-token",
 			},
 		}
-		s := cargo.BOSHReleaseSpecification{
+		s := cargo.BOSHReleaseTarballSpecification{
 			Name:             "routing",
 			Version:          "0.226.0",
 			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
@@ -439,7 +439,7 @@ func TestGetLatestMatchingRelease(t *testing.T) {
 			},
 		}
 
-		s := cargo.BOSHReleaseSpecification{
+		s := cargo.BOSHReleaseTarballSpecification{
 			Name:             "test",
 			Version:          "~2.0",
 			GitHubRepository: "git@github.com:test-org/test.git",
@@ -489,7 +489,7 @@ func TestGetLatestMatchingRelease(t *testing.T) {
 			},
 		}
 
-		s := cargo.BOSHReleaseSpecification{
+		s := cargo.BOSHReleaseTarballSpecification{
 			Name:             "test",
 			Version:          "~2.0",
 			GitHubRepository: "git@github.com:test-org/test.git",
@@ -508,7 +508,7 @@ func TestGetLatestMatchingRelease(t *testing.T) {
 			otherGitHubOrg = "orange"
 
 			ctx  = context.Background()
-			spec = cargo.BOSHReleaseSpecification{
+			spec = cargo.BOSHReleaseTarballSpecification{
 				GitHubRepository: "https://github.com/" + otherGitHubOrg + "/muffin",
 			}
 		)
@@ -538,7 +538,7 @@ func TestDownloadReleaseAsset(t *testing.T) {
 		GithubToken: os.Getenv("GITHUB_TOKEN"),
 		Org:         "cloudfoundry",
 	})
-	testLock, err := grs.GetMatchedRelease(cargo.BOSHReleaseSpecification{Name: "routing", Version: "0.226.0", GitHubRepository: "https://github.com/cloudfoundry/routing-release"})
+	testLock, err := grs.GetMatchedRelease(cargo.BOSHReleaseTarballSpecification{Name: "routing", Version: "0.226.0", GitHubRepository: "https://github.com/cloudfoundry/routing-release"})
 	if err != nil {
 		t.Fatal(err)
 	}

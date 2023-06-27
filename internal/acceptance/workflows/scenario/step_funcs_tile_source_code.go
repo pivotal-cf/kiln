@@ -70,7 +70,7 @@ func iSetAVersionConstraintForRelease(ctx context.Context, versionConstraint, re
 	if err != nil {
 		return err
 	}
-	specIndex := slices.IndexFunc(spec.Releases, func(release cargo.BOSHReleaseSpecification) bool {
+	specIndex := slices.IndexFunc(spec.Releases, func(release cargo.BOSHReleaseTarballSpecification) bool {
 		return release.Name == releaseName
 	})
 	if specIndex == indexNotFound {

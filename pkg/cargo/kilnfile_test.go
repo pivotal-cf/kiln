@@ -18,7 +18,7 @@ remote_path: fake/path/to/fake-component-name
 `
 	damnit := NewWithT(t)
 
-	cl, err := yaml.Marshal(BOSHReleaseLock{
+	cl, err := yaml.Marshal(BOSHReleaseTarballLock{
 		Name:         "fake-component-name",
 		Version:      "fake-version",
 		SHA1:         "fake-component-sha1",
@@ -33,7 +33,7 @@ remote_path: fake/path/to/fake-component-name
 func TestKilnfileLock_UpdateReleaseLockWithName(t *testing.T) {
 	type args struct {
 		name string
-		lock BOSHReleaseLock
+		lock BOSHReleaseTarballLock
 	}
 	tests := []struct {
 		name                         string
@@ -46,17 +46,17 @@ func TestKilnfileLock_UpdateReleaseLockWithName(t *testing.T) {
 		{
 			name: "lock with name found",
 			KilnfileLock: KilnfileLock{
-				Releases: []BOSHReleaseLock{
+				Releases: []BOSHReleaseTarballLock{
 					{Name: "banana"},
 				},
 			},
 			KilnfileResult: KilnfileLock{
-				Releases: []BOSHReleaseLock{
+				Releases: []BOSHReleaseTarballLock{
 					{Name: "orange", Version: "some-version"},
 				},
 			},
 			args: args{
-				name: "banana", lock: BOSHReleaseLock{Name: "orange", Version: "some-version"},
+				name: "banana", lock: BOSHReleaseTarballLock{Name: "orange", Version: "some-version"},
 			},
 			wantErr: false,
 		},

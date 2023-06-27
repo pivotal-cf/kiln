@@ -65,13 +65,13 @@ var _ = Describe("UpdateStemcell", func() {
 					OS:      "old-os",
 					Version: "^1",
 				},
-				Releases: []cargo.BOSHReleaseSpecification{
+				Releases: []cargo.BOSHReleaseTarballSpecification{
 					{Name: release1Name, GitHubRepository: "https://example.com/lemon"},
 					{Name: release2Name, GitHubRepository: "https://example.com/orange"},
 				},
 			}
 			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.BOSHReleaseLock{
+				Releases: []cargo.BOSHReleaseTarballLock{
 					{
 						Name:         release1Name,
 						Version:      release1Version,
@@ -94,17 +94,17 @@ var _ = Describe("UpdateStemcell", func() {
 			}
 
 			releaseSource = new(fetcherFakes.MultiReleaseSource)
-			releaseSource.GetMatchedReleaseCalls(func(requirement cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error) {
+			releaseSource.GetMatchedReleaseCalls(func(requirement cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error) {
 				switch requirement.Name {
 				case release1Name:
-					remote := cargo.BOSHReleaseLock{
+					remote := cargo.BOSHReleaseTarballLock{
 						Name: release1Name, Version: release1Version,
 						RemotePath:   newRelease1RemotePath,
 						RemoteSource: publishableReleaseSourceID,
 					}
 					return remote, nil
 				case release2Name:
-					remote := cargo.BOSHReleaseLock{
+					remote := cargo.BOSHReleaseTarballLock{
 						Name: release2Name, Version: release2Version,
 						RemotePath:   newRelease2RemotePath,
 						RemoteSource: unpublishableReleaseSourceID,
@@ -115,17 +115,17 @@ var _ = Describe("UpdateStemcell", func() {
 				}
 			})
 
-			releaseSource.DownloadReleaseCalls(func(_ string, remote cargo.BOSHReleaseLock) (component.Local, error) {
+			releaseSource.DownloadReleaseCalls(func(_ string, remote cargo.BOSHReleaseTarballLock) (component.Local, error) {
 				switch remote.Name {
 				case release1Name:
 					local := component.Local{
-						Lock:      cargo.BOSHReleaseLock{Name: release1Name, Version: release1Version, SHA1: newRelease1SHA},
+						Lock:      cargo.BOSHReleaseTarballLock{Name: release1Name, Version: release1Version, SHA1: newRelease1SHA},
 						LocalPath: "not-used",
 					}
 					return local, nil
 				case release2Name:
 					local := component.Local{
-						Lock:      cargo.BOSHReleaseLock{Name: release2Name, Version: release2Version, SHA1: newRelease2SHA},
+						Lock:      cargo.BOSHReleaseTarballLock{Name: release2Name, Version: release2Version, SHA1: newRelease2SHA},
 						LocalPath: "not-used",
 					}
 					return local, nil
@@ -173,7 +173,7 @@ var _ = Describe("UpdateStemcell", func() {
 			}))
 			Expect(updatedLockfile.Releases).To(HaveLen(2))
 			Expect(updatedLockfile.Releases).To(ContainElement(
-				cargo.BOSHReleaseLock{
+				cargo.BOSHReleaseTarballLock{
 					Name:         release1Name,
 					Version:      release1Version,
 					SHA1:         newRelease1SHA,
@@ -182,7 +182,7 @@ var _ = Describe("UpdateStemcell", func() {
 				},
 			))
 			Expect(updatedLockfile.Releases).To(ContainElement(
-				cargo.BOSHReleaseLock{
+				cargo.BOSHReleaseTarballLock{
 					Name:         release2Name,
 					Version:      release2Version,
 					SHA1:         newRelease2SHA,
@@ -201,14 +201,14 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(2))
 
 			req1 := releaseSource.GetMatchedReleaseArgsForCall(0)
-			Expect(req1).To(Equal(cargo.BOSHReleaseSpecification{
+			Expect(req1).To(Equal(cargo.BOSHReleaseTarballSpecification{
 				Name: release1Name, Version: release1Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
 				GitHubRepository: "https://example.com/lemon",
 			}))
 
 			req2 := releaseSource.GetMatchedReleaseArgsForCall(1)
-			Expect(req2).To(Equal(cargo.BOSHReleaseSpecification{
+			Expect(req2).To(Equal(cargo.BOSHReleaseTarballSpecification{
 				Name: release2Name, Version: release2Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
 				GitHubRepository: "https://example.com/orange",
@@ -226,7 +226,7 @@ var _ = Describe("UpdateStemcell", func() {
 			actualDir, remote1 := releaseSource.DownloadReleaseArgsForCall(0)
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote1).To(Equal(
-				cargo.BOSHReleaseLock{
+				cargo.BOSHReleaseTarballLock{
 					Name: release1Name, Version: release1Version,
 					RemotePath:   newRelease1RemotePath,
 					RemoteSource: publishableReleaseSourceID,
@@ -236,7 +236,7 @@ var _ = Describe("UpdateStemcell", func() {
 			actualDir, remote2 := releaseSource.DownloadReleaseArgsForCall(1)
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote2).To(Equal(
-				cargo.BOSHReleaseLock{
+				cargo.BOSHReleaseTarballLock{
 					Name: release2Name, Version: release2Version,
 					RemotePath:   newRelease2RemotePath,
 					RemoteSource: unpublishableReleaseSourceID,
@@ -346,7 +346,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
-					cargo.BOSHReleaseLock{
+					cargo.BOSHReleaseTarballLock{
 						Name:         release1Name,
 						Version:      release1Version,
 						SHA1:         newRelease1SHA,
@@ -355,7 +355,7 @@ var _ = Describe("UpdateStemcell", func() {
 					},
 				))
 				Expect(updatedLockfile.Releases).To(ContainElement(
-					cargo.BOSHReleaseLock{
+					cargo.BOSHReleaseTarballLock{
 						Name:         release2Name,
 						Version:      release2Version,
 						SHA1:         newRelease2SHA,
@@ -387,7 +387,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 		When("the release can't be found", func() {
 			BeforeEach(func() {
-				releaseSource.GetMatchedReleaseReturns(cargo.BOSHReleaseLock{}, component.ErrNotFound)
+				releaseSource.GetMatchedReleaseReturns(cargo.BOSHReleaseTarballLock{}, component.ErrNotFound)
 			})
 
 			It("errors", func() {
@@ -402,7 +402,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 		When("finding the release errors", func() {
 			BeforeEach(func() {
-				releaseSource.GetMatchedReleaseReturns(cargo.BOSHReleaseLock{}, errors.New("big badda boom"))
+				releaseSource.GetMatchedReleaseReturns(cargo.BOSHReleaseTarballLock{}, errors.New("big badda boom"))
 			})
 
 			It("errors", func() {
