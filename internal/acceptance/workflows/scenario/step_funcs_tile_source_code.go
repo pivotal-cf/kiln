@@ -50,7 +50,7 @@ func theLockSpecifiesVersionForRelease(ctx context.Context, releaseVersion, rele
 	if err != nil {
 		return err
 	}
-	releaseLock, err := lock.FindReleaseWithName(releaseName)
+	releaseLock, err := lock.FindBOSHReleaseWithName(releaseName)
 	if err != nil {
 		return err
 	}
@@ -225,7 +225,7 @@ func theKilnfileVersionForReleaseIs(ctx context.Context, releaseName, releaseVer
 	if err != nil {
 		return err
 	}
-	releaseLock, err := kf.ComponentSpec(releaseName)
+	releaseLock, err := kf.BOSHReleaseTarballSpecification(releaseName)
 	if err != nil {
 		return err
 	}

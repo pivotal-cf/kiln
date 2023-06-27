@@ -1,36 +1,36 @@
 package cargo
 
 const (
-	// ReleaseSourceTypeBOSHIO is the value of the Type field on cargo.ReleaseSourceConfig
+	// BOSHReleaseTarballSourceTypeBOSHIO is the value of the Type field on cargo.ReleaseSourceConfig
 	// for fetching https://bosh.io releases.
-	ReleaseSourceTypeBOSHIO = "bosh.io"
+	BOSHReleaseTarballSourceTypeBOSHIO = "bosh.io"
 
-	// ReleaseSourceTypeS3 is the value for the Type field on cargo.ReleaseSourceConfig
+	// BOSHReleaseTarballSourceTypeS3 is the value for the Type field on cargo.ReleaseSourceConfig
 	// for releases stored on
-	ReleaseSourceTypeS3 = "s3"
+	BOSHReleaseTarballSourceTypeS3 = "s3"
 
-	// ReleaseSourceTypeGithub is the value for the Type field on cargo.ReleaseSourceConfig
+	// BOSHReleaseTarballSourceTypeGithub is the value for the Type field on cargo.ReleaseSourceConfig
 	// for releases stored on GitHub.
-	ReleaseSourceTypeGithub = "github"
+	BOSHReleaseTarballSourceTypeGithub = "github"
 
-	// ReleaseSourceTypeArtifactory is the value for the Type field on cargo.ReleaseSourceConfig
+	// BOSHReleaseTarballSourceTypeArtifactory is the value for the Type field on cargo.ReleaseSourceConfig
 	// for releases stored on Artifactory.
-	ReleaseSourceTypeArtifactory = "artifactory"
+	BOSHReleaseTarballSourceTypeArtifactory = "artifactory"
 )
 
-func ReleaseSourceID(releaseConfig ReleaseSourceConfig) string {
+func BOSHReleaseTarballSourceID(releaseConfig ReleaseSourceConfig) string {
 	if releaseConfig.ID != "" {
 		return releaseConfig.ID
 	}
 	switch releaseConfig.Type {
-	case ReleaseSourceTypeBOSHIO:
-		return ReleaseSourceTypeBOSHIO
-	case ReleaseSourceTypeS3:
+	case BOSHReleaseTarballSourceTypeBOSHIO:
+		return BOSHReleaseTarballSourceTypeBOSHIO
+	case BOSHReleaseTarballSourceTypeS3:
 		return releaseConfig.Bucket
-	case ReleaseSourceTypeGithub:
+	case BOSHReleaseTarballSourceTypeGithub:
 		return releaseConfig.Org
-	case ReleaseSourceTypeArtifactory:
-		return ReleaseSourceTypeArtifactory
+	case BOSHReleaseTarballSourceTypeArtifactory:
+		return BOSHReleaseTarballSourceTypeArtifactory
 	default:
 		return ""
 	}

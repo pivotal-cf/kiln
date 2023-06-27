@@ -47,7 +47,7 @@ func (cmd *Glaze) Usage() jhanda.Usage {
 func pinVersions(kf cargo.Kilnfile, kl cargo.KilnfileLock) (cargo.Kilnfile, error) {
 	kf.Stemcell.Version = kl.Stemcell.Version
 	for releaseIndex, release := range kf.Releases {
-		l, err := kl.FindReleaseWithName(release.Name)
+		l, err := kl.FindBOSHReleaseWithName(release.Name)
 		if err != nil {
 			return cargo.Kilnfile{}, fmt.Errorf("release with name %q not found in Kilnfile.lock: %w", release.Name, err)
 		}

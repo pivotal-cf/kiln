@@ -73,16 +73,16 @@ const (
 
 // TODO: use the constants from "cargo" everywhere
 const (
-	ReleaseSourceTypeBOSHIO      = cargo.ReleaseSourceTypeBOSHIO
-	ReleaseSourceTypeS3          = cargo.ReleaseSourceTypeS3
-	ReleaseSourceTypeGithub      = cargo.ReleaseSourceTypeGithub
-	ReleaseSourceTypeArtifactory = cargo.ReleaseSourceTypeArtifactory
+	ReleaseSourceTypeBOSHIO      = cargo.BOSHReleaseTarballSourceTypeBOSHIO
+	ReleaseSourceTypeS3          = cargo.BOSHReleaseTarballSourceTypeS3
+	ReleaseSourceTypeGithub      = cargo.BOSHReleaseTarballSourceTypeGithub
+	ReleaseSourceTypeArtifactory = cargo.BOSHReleaseTarballSourceTypeArtifactory
 )
 
 // ReleaseSourceFactory returns a configured ReleaseSource based on the Type field on the
 // cargo.ReleaseSourceConfig structure.
 func ReleaseSourceFactory(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
-	releaseConfig.ID = cargo.ReleaseSourceID(releaseConfig)
+	releaseConfig.ID = cargo.BOSHReleaseTarballSourceID(releaseConfig)
 	switch releaseConfig.Type {
 	case ReleaseSourceTypeBOSHIO:
 		return NewBOSHIOReleaseSource(releaseConfig, "", outLogger)

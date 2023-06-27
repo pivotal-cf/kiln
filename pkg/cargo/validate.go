@@ -16,7 +16,7 @@ func Validate(spec Kilnfile, lock KilnfileLock) []error {
 			continue
 		}
 
-		componentLock, err := lock.FindReleaseWithName(componentSpec.Name)
+		componentLock, err := lock.FindBOSHReleaseWithName(componentSpec.Name)
 		if err != nil {
 			result = append(result,
 				fmt.Errorf("component spec for release %q not found in lock", componentSpec.Name))
@@ -41,7 +41,7 @@ func ensureRemoteSourceExistsForEachReleaseLock(spec Kilnfile, lock KilnfileLock
 	var result []error
 	for _, release := range lock.Releases {
 		if releaseSourceIndex := slices.IndexFunc(spec.ReleaseSources, func(config ReleaseSourceConfig) bool {
-			return ReleaseSourceID(config) == release.RemoteSource
+			return BOSHReleaseTarballSourceID(config) == release.RemoteSource
 		}); releaseSourceIndex < 0 {
 			result = append(result,
 				fmt.Errorf("release source %q for release lock %q not found in Kilnfile", release.RemoteSource, release.Name))

@@ -526,7 +526,7 @@ func setEmptyComponentGitHubRepositoryFromOtherKilnfile(k1, k2 cargo.Kilnfile) c
 		if r.GitHubRepository != "" {
 			continue
 		}
-		spec, err := k2.ComponentSpec(r.Name)
+		spec, err := k2.BOSHReleaseTarballSpecification(r.Name)
 		if err != nil {
 			continue
 		}

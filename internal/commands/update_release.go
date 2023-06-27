@@ -46,14 +46,14 @@ func (u UpdateRelease) Execute(args []string) error {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
 
-	releaseLock, err := kilnfileLock.FindReleaseWithName(u.Options.Name)
+	releaseLock, err := kilnfileLock.FindBOSHReleaseWithName(u.Options.Name)
 	if err != nil {
 		return fmt.Errorf(
 			"no release named %q exists in your Kilnfile.lock - try removing the -release, -boshrelease, or -bosh-release suffix if present",
 			u.Options.Name,
 		)
 	}
-	releaseSpec, err := kilnfile.ComponentSpec(u.Options.Name)
+	releaseSpec, err := kilnfile.BOSHReleaseTarballSpecification(u.Options.Name)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func (u UpdateRelease) Execute(args []string) error {
 	releaseLock.RemoteSource = newSourceID
 	releaseLock.RemotePath = newRemotePath
 
-	_ = kilnfileLock.UpdateReleaseLockWithName(u.Options.Name, releaseLock)
+	_ = kilnfileLock.UpdateBOSHReleaseTarballLockWithName(u.Options.Name, releaseLock)
 
 	err = u.Options.Standard.SaveKilnfileLock(u.filesystem, kilnfileLock)
 	if err != nil {

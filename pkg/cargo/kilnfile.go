@@ -18,7 +18,7 @@ type Kilnfile struct {
 	Stemcell        Stemcell                          `yaml:"stemcell_criteria,omitempty"`
 }
 
-func (kf Kilnfile) ComponentSpec(name string) (BOSHReleaseTarballSpecification, error) {
+func (kf Kilnfile) BOSHReleaseTarballSpecification(name string) (BOSHReleaseTarballSpecification, error) {
 	for _, s := range kf.Releases {
 		if s.Name == name {
 			return s, nil
@@ -32,7 +32,7 @@ type KilnfileLock struct {
 	Stemcell Stemcell                 `yaml:"stemcell_criteria"`
 }
 
-func (k KilnfileLock) FindReleaseWithName(name string) (BOSHReleaseTarballLock, error) {
+func (k KilnfileLock) FindBOSHReleaseWithName(name string) (BOSHReleaseTarballLock, error) {
 	for _, r := range k.Releases {
 		if r.Name == name {
 			return r, nil
@@ -41,7 +41,7 @@ func (k KilnfileLock) FindReleaseWithName(name string) (BOSHReleaseTarballLock, 
 	return BOSHReleaseTarballLock{}, errors.New("not found")
 }
 
-func (k KilnfileLock) UpdateReleaseLockWithName(name string, lock BOSHReleaseTarballLock) error {
+func (k KilnfileLock) UpdateBOSHReleaseTarballLockWithName(name string, lock BOSHReleaseTarballLock) error {
 	for i, r := range k.Releases {
 		if r.Name == name {
 			k.Releases[i] = lock

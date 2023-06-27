@@ -30,7 +30,7 @@ remote_path: fake/path/to/fake-component-name
 	damnit.Expect(string(cl)).To(Equal(validComponentLockYaml))
 }
 
-func TestKilnfileLock_UpdateReleaseLockWithName(t *testing.T) {
+func TestKilnfileLock_UpdateBOSHReleaseTarballLockWithName(t *testing.T) {
 	type args struct {
 		name string
 		lock BOSHReleaseTarballLock
@@ -63,7 +63,7 @@ func TestKilnfileLock_UpdateReleaseLockWithName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.KilnfileLock.UpdateReleaseLockWithName(tt.args.name, tt.args.lock); tt.wantErr {
+			if err := tt.KilnfileLock.UpdateBOSHReleaseTarballLockWithName(tt.args.name, tt.args.lock); tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
