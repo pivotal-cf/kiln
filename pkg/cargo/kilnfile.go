@@ -108,6 +108,9 @@ type BOSHReleaseTarballSpecification struct {
 
 	// DeGlazeBehavior changes how version filed changes when de-glaze is run.
 	DeGlazeBehavior DeGlazeBehavior `yaml:"glaze_behavior"`
+
+	// TeamSlackChannel slack channel for team that maintains this bosh release
+	TeamSlackChannel string `yaml:"slack,omitempty"`
 }
 
 func (spec BOSHReleaseTarballSpecification) VersionConstraints() (*semver.Constraints, error) {
