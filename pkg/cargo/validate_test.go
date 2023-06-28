@@ -17,11 +17,11 @@ func TestValidate_MissingName(t *testing.T) {
 		ReleaseSources: []ReleaseSourceConfig{
 			{ID: someReleaseSourceID},
 		},
-		Releases: []ComponentSpec{
+		Releases: []BOSHReleaseSpecification{
 			{},
 		},
 	}, KilnfileLock{
-		Releases: []ComponentLock{
+		Releases: []BOSHReleaseLock{
 			{Name: "banana", Version: "1.2.3", RemoteSource: someReleaseSourceID},
 		},
 	})
@@ -35,11 +35,11 @@ func TestValidate_FloatingRelease(t *testing.T) {
 		ReleaseSources: []ReleaseSourceConfig{
 			{ID: someReleaseSourceID},
 		},
-		Releases: []ComponentSpec{
+		Releases: []BOSHReleaseSpecification{
 			{Name: "banana", Version: "1.1.*"},
 		},
 	}, KilnfileLock{
-		Releases: []ComponentLock{
+		Releases: []BOSHReleaseLock{
 			{Name: "banana", Version: "1.1.12", RemoteSource: someReleaseSourceID},
 		},
 	})
@@ -50,7 +50,7 @@ func TestValidate_MissingLock(t *testing.T) {
 	t.Parallel()
 	please := NewWithT(t)
 	results := Validate(Kilnfile{
-		Releases: []ComponentSpec{
+		Releases: []BOSHReleaseSpecification{
 			{Name: "banana", Version: "1.1.*"},
 		},
 	}, KilnfileLock{})
@@ -64,11 +64,11 @@ func TestValidate_InvalidConstraint(t *testing.T) {
 		ReleaseSources: []ReleaseSourceConfig{
 			{ID: someReleaseSourceID},
 		},
-		Releases: []ComponentSpec{
+		Releases: []BOSHReleaseSpecification{
 			{Name: "banana", Version: "NOT A CONSTRAINT"},
 		},
 	}, KilnfileLock{
-		Releases: []ComponentLock{
+		Releases: []BOSHReleaseLock{
 			{Name: "banana", Version: "1.2.3", RemoteSource: someReleaseSourceID},
 		},
 	})
@@ -82,11 +82,11 @@ func TestValidate_PinnedRelease(t *testing.T) {
 		ReleaseSources: []ReleaseSourceConfig{
 			{ID: someReleaseSourceID},
 		},
-		Releases: []ComponentSpec{
+		Releases: []BOSHReleaseSpecification{
 			{Name: "banana", Version: "1.2.3"},
 		},
 	}, KilnfileLock{
-		Releases: []ComponentLock{
+		Releases: []BOSHReleaseLock{
 			{Name: "banana", Version: "1.2.3", RemoteSource: someReleaseSourceID},
 		},
 	})
@@ -100,12 +100,12 @@ func TestValidate_release_sources(t *testing.T) {
 			ReleaseSources: []ReleaseSourceConfig{
 				{ID: "ORANGE_SOURCE"},
 			},
-			Releases: []ComponentSpec{
+			Releases: []BOSHReleaseSpecification{
 				{Name: "lemon"},
 				{Name: "orange"},
 			},
 		}, KilnfileLock{
-			Releases: []ComponentLock{
+			Releases: []BOSHReleaseLock{
 				{Name: "lemon", Version: "1.2.3", RemoteSource: "LEMON_SOURCE"},
 				{Name: "orange", Version: "1.2.3", RemoteSource: "ORANGE_SOURCE"},
 			},
@@ -120,12 +120,12 @@ func TestValidate_release_sources(t *testing.T) {
 			ReleaseSources: []ReleaseSourceConfig{
 				{ID: "SOME_TREE"},
 			},
-			Releases: []ComponentSpec{
+			Releases: []BOSHReleaseSpecification{
 				{Name: "lemon"},
 				{Name: "orange"},
 			},
 		}, KilnfileLock{
-			Releases: []ComponentLock{
+			Releases: []BOSHReleaseLock{
 				{Name: "lemon", Version: "1.2.3", RemoteSource: "SOME_TREE"},
 				{Name: "orange", Version: "1.2.3", RemoteSource: "SOME_TREE"},
 			},
@@ -138,11 +138,11 @@ func TestValidate_release_sources(t *testing.T) {
 			ReleaseSources: []ReleaseSourceConfig{
 				{Type: ReleaseSourceTypeBOSHIO},
 			},
-			Releases: []ComponentSpec{
+			Releases: []BOSHReleaseSpecification{
 				{Name: "orange"},
 			},
 		}, KilnfileLock{
-			Releases: []ComponentLock{
+			Releases: []BOSHReleaseLock{
 				{Name: "orange", Version: "1.2.3", RemoteSource: ReleaseSourceTypeBOSHIO},
 			},
 		})
@@ -154,11 +154,11 @@ func TestValidate_release_sources(t *testing.T) {
 			ReleaseSources: []ReleaseSourceConfig{
 				{ID: "open source", Type: ReleaseSourceTypeBOSHIO},
 			},
-			Releases: []ComponentSpec{
+			Releases: []BOSHReleaseSpecification{
 				{Name: "orange"},
 			},
 		}, KilnfileLock{
-			Releases: []ComponentLock{
+			Releases: []BOSHReleaseLock{
 				{Name: "orange", Version: "1.2.3", RemoteSource: ReleaseSourceTypeBOSHIO},
 			},
 		})
@@ -170,11 +170,11 @@ func TestValidate_release_sources(t *testing.T) {
 			ReleaseSources: []ReleaseSourceConfig{
 				{Org: "crhntr", Type: ReleaseSourceTypeGithub},
 			},
-			Releases: []ComponentSpec{
+			Releases: []BOSHReleaseSpecification{
 				{Name: "hello-tile", GitHubRepository: "https://github.com/crhntr/hello-tile"},
 			},
 		}, KilnfileLock{
-			Releases: []ComponentLock{
+			Releases: []BOSHReleaseLock{
 				{Name: "hello-tile", Version: "1.2.3", RemoteSource: "crhntr"},
 			},
 		})
@@ -185,10 +185,10 @@ func TestValidate_release_sources(t *testing.T) {
 func TestValidate_checkComponentVersionsAndConstraint(t *testing.T) {
 	t.Run("no version", func(t *testing.T) {
 		please := NewWithT(t)
-		r := ComponentSpec{
+		r := BOSHReleaseSpecification{
 			Name: "capi",
 		}
-		l := ComponentLock{
+		l := BOSHReleaseLock{
 			Name:    "capi",
 			Version: "2.3.4",
 		}
@@ -198,11 +198,11 @@ func TestValidate_checkComponentVersionsAndConstraint(t *testing.T) {
 
 	t.Run("invalid version constraint", func(t *testing.T) {
 		please := NewWithT(t)
-		r := ComponentSpec{
+		r := BOSHReleaseSpecification{
 			Name:    "capi",
 			Version: "meh",
 		}
-		l := ComponentLock{
+		l := BOSHReleaseLock{
 			Name:    "capi",
 			Version: "2.3.4",
 		}
@@ -215,11 +215,11 @@ func TestValidate_checkComponentVersionsAndConstraint(t *testing.T) {
 
 	t.Run("version does not match constraint", func(t *testing.T) {
 		please := NewWithT(t)
-		r := ComponentSpec{
+		r := BOSHReleaseSpecification{
 			Name:    "capi",
 			Version: "~2",
 		}
-		l := ComponentLock{
+		l := BOSHReleaseLock{
 			Name:    "capi",
 			Version: "3.0.5",
 		}
@@ -232,11 +232,11 @@ func TestValidate_checkComponentVersionsAndConstraint(t *testing.T) {
 
 	t.Run("invalid lock version", func(t *testing.T) {
 		please := NewWithT(t)
-		r := ComponentSpec{
+		r := BOSHReleaseSpecification{
 			Name:    "capi",
 			Version: "~2",
 		}
-		l := ComponentLock{
+		l := BOSHReleaseLock{
 			Name:    "capi",
 			Version: "BAD",
 		}

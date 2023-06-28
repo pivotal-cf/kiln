@@ -87,11 +87,11 @@ func TestReleaseNotes_Execute(t *testing.T) {
 						OS: "fruit-tree", Version: "40000.2",
 					},
 					Components: []notes.BOSHReleaseData{
-						{ComponentLock: cargo.ComponentLock{Name: "banana", Version: "1.2.0"}, Releases: []*github.RepositoryRelease{
+						{BOSHReleaseLock: cargo.BOSHReleaseLock{Name: "banana", Version: "1.2.0"}, Releases: []*github.RepositoryRelease{
 							{TagName: strPtr("1.2.0"), Body: strPtr("peal\nis\nyellow")},
 							{TagName: strPtr("1.1.1"), Body: strPtr("remove from bunch")},
 						}},
-						{ComponentLock: cargo.ComponentLock{Name: "lemon", Version: "1.1.0"}},
+						{BOSHReleaseLock: cargo.BOSHReleaseLock{Name: "lemon", Version: "1.1.0"}},
 					},
 					Bumps: cargo.BumpList{
 						{Name: "banana", FromVersion: "1.1.0", ToVersion: "1.2.0"},

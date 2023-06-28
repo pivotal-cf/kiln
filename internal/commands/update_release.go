@@ -68,10 +68,10 @@ func (u UpdateRelease) Execute(args []string) error {
 	u.logger.Println("Searching for the release...")
 
 	var localRelease component.Local
-	var remoteRelease cargo.ComponentLock
+	var remoteRelease cargo.BOSHReleaseLock
 	var newVersion, newSHA1, newSourceID, newRemotePath string
 	if u.Options.WithoutDownload {
-		remoteRelease, err = releaseSource.FindReleaseVersion(cargo.ComponentSpec{
+		remoteRelease, err = releaseSource.FindReleaseVersion(cargo.BOSHReleaseSpecification{
 			Name:             u.Options.Name,
 			Version:          releaseVersionConstraint,
 			StemcellVersion:  kilnfileLock.Stemcell.Version,
@@ -92,7 +92,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		newRemotePath = remoteRelease.RemotePath
 
 	} else {
-		remoteRelease, err = releaseSource.GetMatchedRelease(cargo.ComponentSpec{
+		remoteRelease, err = releaseSource.GetMatchedRelease(cargo.BOSHReleaseSpecification{
 			Name:             u.Options.Name,
 			Version:          u.Options.Version,
 			StemcellOS:       kilnfileLock.Stemcell.OS,

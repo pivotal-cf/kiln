@@ -11,9 +11,9 @@ import (
 // MultiReleaseSource wraps a set of release sources. It is mostly used to generate fakes
 // for testing commands. See ReleaseSourceList for the concrete implementation.
 type MultiReleaseSource interface {
-	GetMatchedRelease(cargo.ComponentSpec) (cargo.ComponentLock, error)
-	FindReleaseVersion(spec cargo.ComponentSpec, noDownload bool) (cargo.ComponentLock, error)
-	DownloadRelease(releasesDir string, remoteRelease cargo.ComponentLock) (Local, error)
+	GetMatchedRelease(cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error)
+	FindReleaseVersion(spec cargo.BOSHReleaseSpecification, noDownload bool) (cargo.BOSHReleaseLock, error)
+	DownloadRelease(releasesDir string, remoteRelease cargo.BOSHReleaseLock) (Local, error)
 
 	FindByID(string) (ReleaseSource, error)
 
@@ -27,8 +27,8 @@ type MultiReleaseSource interface {
 // should implement this interface. Credentials for this should come from an interpolated
 // cargo.ReleaseSourceConfig.
 type ReleaseUploader interface {
-	GetMatchedRelease(cargo.ComponentSpec) (cargo.ComponentLock, error)
-	UploadRelease(spec cargo.ComponentSpec, file io.Reader) (cargo.ComponentLock, error)
+	GetMatchedRelease(cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error)
+	UploadRelease(spec cargo.BOSHReleaseSpecification, file io.Reader) (cargo.BOSHReleaseLock, error)
 }
 
 //counterfeiter:generate -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
@@ -38,7 +38,7 @@ type ReleaseUploader interface {
 //
 // This interface may be ripe for removal.
 type RemotePather interface {
-	RemotePath(cargo.ComponentSpec) (string, error)
+	RemotePath(cargo.BOSHReleaseSpecification) (string, error)
 }
 
 //counterfeiter:generate -o ./fakes/remote_pather.go --fake-name RemotePather . RemotePather
@@ -52,16 +52,16 @@ type ReleaseSource interface {
 
 	// GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 	// fields on Requirement to download a specific release.
-	GetMatchedRelease(cargo.ComponentSpec) (cargo.ComponentLock, error)
+	GetMatchedRelease(cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error)
 
 	// FindReleaseVersion may use any of the fields on Requirement to return the best matching
 	// release.
-	FindReleaseVersion(spec cargo.ComponentSpec, noDownload bool) (cargo.ComponentLock, error)
+	FindReleaseVersion(spec cargo.BOSHReleaseSpecification, noDownload bool) (cargo.BOSHReleaseLock, error)
 
 	// DownloadRelease downloads the release and writes the resulting file to the releasesDir.
 	// It should also calculate and set the SHA1 field on the Local result; it does not need
 	// to ensure the sums match, the caller must verify this.
-	DownloadRelease(releasesDir string, remoteRelease cargo.ComponentLock) (Local, error)
+	DownloadRelease(releasesDir string, remoteRelease cargo.BOSHReleaseLock) (Local, error)
 }
 
 //counterfeiter:generate -o ./fakes/release_source.go --fake-name ReleaseSource . ReleaseSource

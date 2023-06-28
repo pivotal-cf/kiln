@@ -64,7 +64,7 @@ func (command SyncWithLocal) Execute(args []string) error {
 	command.logger.Printf("Found %d releases on disk\n", len(releases))
 
 	for _, rel := range releases {
-		remotePath, err := remotePather.RemotePath(cargo.ComponentSpec{
+		remotePath, err := remotePather.RemotePath(cargo.BOSHReleaseSpecification{
 			Name:            rel.Lock.Name,
 			Version:         rel.Lock.Version,
 			StemcellOS:      kilnfileLock.Stemcell.OS,
@@ -74,7 +74,7 @@ func (command SyncWithLocal) Execute(args []string) error {
 			return fmt.Errorf("couldn't generate a remote path for release %q: %w", rel.Lock.Name, err)
 		}
 
-		var matchingRelease *cargo.ComponentLock
+		var matchingRelease *cargo.BOSHReleaseLock
 		for i := range kilnfileLock.Releases {
 			if kilnfileLock.Releases[i].Name == rel.Lock.Name {
 				matchingRelease = &kilnfileLock.Releases[i]

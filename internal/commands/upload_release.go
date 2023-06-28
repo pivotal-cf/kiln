@@ -71,7 +71,7 @@ func (command UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("cannot upload development release %q - only finalized releases are allowed", manifest.Version)
 	}
 
-	requirement := cargo.ComponentSpec{Name: manifest.Name, Version: manifest.Version}
+	requirement := cargo.BOSHReleaseSpecification{Name: manifest.Name, Version: manifest.Version}
 	_, err = releaseUploader.GetMatchedRelease(requirement)
 
 	if err != nil {
@@ -83,7 +83,7 @@ func (command UploadRelease) Execute(args []string) error {
 			manifest.Name, manifest.Version, command.Options.UploadTargetID)
 	}
 
-	_, err = releaseUploader.UploadRelease(cargo.ComponentSpec{
+	_, err = releaseUploader.UploadRelease(cargo.BOSHReleaseSpecification{
 		Name:    manifest.Name,
 		Version: manifest.Version,
 	}, file)

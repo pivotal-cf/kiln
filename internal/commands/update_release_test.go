@@ -52,7 +52,7 @@ var _ = Describe("UpdateRelease", func() {
 		logger                     *log.Logger
 		downloadedReleasePath      string
 		expectedDownloadedRelease  component.Local
-		expectedRemoteRelease      cargo.ComponentLock
+		expectedRemoteRelease      cargo.BOSHReleaseLock
 		kilnfileLock               cargo.KilnfileLock
 	)
 
@@ -65,7 +65,7 @@ var _ = Describe("UpdateRelease", func() {
 			filesystem = osfs.New("/tmp/")
 
 			kilnfile := cargo.Kilnfile{
-				Releases: []cargo.ComponentSpec{
+				Releases: []cargo.BOSHReleaseSpecification{
 					{Name: "minecraft"},
 					{
 						Name:             releaseName,
@@ -75,7 +75,7 @@ var _ = Describe("UpdateRelease", func() {
 			}
 
 			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.ComponentLock{
+				Releases: []cargo.BOSHReleaseLock{
 					{
 						Name:    "minecraft",
 						Version: "2.0.1",
@@ -109,11 +109,11 @@ var _ = Describe("UpdateRelease", func() {
 
 			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, newReleaseVersion))
 			expectedDownloadedRelease = component.Local{
-				Lock:      cargo.ComponentLock{Name: releaseName, Version: newReleaseVersion, SHA1: newReleaseSha1},
+				Lock:      cargo.BOSHReleaseLock{Name: releaseName, Version: newReleaseVersion, SHA1: newReleaseSha1},
 				LocalPath: downloadedReleasePath,
 			}
 			expectedRemoteRelease = expectedDownloadedRelease.Lock.WithRemote(newReleaseSourceName, newRemotePath)
-			exepectedNotDownloadedRelease := cargo.ComponentLock{
+			exepectedNotDownloadedRelease := cargo.BOSHReleaseLock{
 				Name:         releaseName,
 				Version:      notDownloadedReleaseVersion,
 				RemotePath:   notDownloadedRemotePath,
@@ -143,7 +143,7 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(1))
 
 				receivedReleaseRequirement := releaseSource.GetMatchedReleaseArgsForCall(0)
-				releaseRequirement := cargo.ComponentSpec{
+				releaseRequirement := cargo.BOSHReleaseSpecification{
 					Name:             releaseName,
 					Version:          newReleaseVersion,
 					StemcellOS:       "some-os",
@@ -173,7 +173,7 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
-					cargo.ComponentLock{
+					cargo.BOSHReleaseLock{
 						Name:    releaseName,
 						Version: newReleaseVersion,
 
@@ -228,10 +228,10 @@ var _ = Describe("UpdateRelease", func() {
 
 			BeforeEach(func() {
 				expectedDownloadedRelease = component.Local{
-					Lock:      cargo.ComponentLock{Name: releaseName, Version: oldReleaseVersion, SHA1: oldReleaseSha1},
+					Lock:      cargo.BOSHReleaseLock{Name: releaseName, Version: oldReleaseVersion, SHA1: oldReleaseSha1},
 					LocalPath: "not-used",
 				}
-				expectedRemoteRelease = cargo.ComponentLock{
+				expectedRemoteRelease = cargo.BOSHReleaseLock{
 					Name: releaseName, Version: oldReleaseVersion,
 					RemotePath:   oldRemotePath,
 					RemoteSource: oldReleaseSourceName,
@@ -315,7 +315,7 @@ var _ = Describe("UpdateRelease", func() {
 
 		When("the release can't be found", func() {
 			BeforeEach(func() {
-				releaseSource.GetMatchedReleaseReturns(cargo.ComponentLock{}, component.ErrNotFound)
+				releaseSource.GetMatchedReleaseReturns(cargo.BOSHReleaseLock{}, component.ErrNotFound)
 			})
 
 			It("errors", func() {
@@ -392,7 +392,7 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				receivedReleaseRequirement, _ := releaseSource.FindReleaseVersionArgsForCall(0)
-				releaseRequirement := cargo.ComponentSpec{
+				releaseRequirement := cargo.BOSHReleaseSpecification{
 					Name:             releaseName,
 					Version:          newReleaseVersion,
 					StemcellOS:       "some-os",
@@ -408,7 +408,7 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(updatedLockfile.Releases).To(HaveLen(2))
 				Expect(updatedLockfile.Releases).To(ContainElement(
-					cargo.ComponentLock{
+					cargo.BOSHReleaseLock{
 						Name:         releaseName,
 						Version:      notDownloadedReleaseVersion,
 						SHA1:         notDownloadedReleaseSha1,

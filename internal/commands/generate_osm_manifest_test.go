@@ -30,7 +30,7 @@ func TestOSM_Execute(t *testing.T) {
 		tmp := t.TempDir()
 		kfp := filepath.Join(tmp, "Kilnfile")
 		writeYAML(t, kfp, cargo.Kilnfile{
-			Releases: []cargo.ComponentSpec{
+			Releases: []cargo.BOSHReleaseSpecification{
 				{
 					Name:             "banana",
 					GitHubRepository: "https://github.com/cloudfoundry/banana",
@@ -43,7 +43,7 @@ func TestOSM_Execute(t *testing.T) {
 
 		klp := filepath.Join(tmp, "Kilnfile.lock")
 		writeYAML(t, klp, cargo.KilnfileLock{
-			Releases: []cargo.ComponentLock{
+			Releases: []cargo.BOSHReleaseLock{
 				{Name: "banana", Version: "1.2.3"},
 			},
 			Stemcell: cargo.Stemcell{
@@ -53,7 +53,7 @@ func TestOSM_Execute(t *testing.T) {
 		})
 
 		rs := new(fakes.ReleaseStorage)
-		rs.FindReleaseVersionReturns(cargo.ComponentLock{}, nil)
+		rs.FindReleaseVersionReturns(cargo.BOSHReleaseLock{}, nil)
 
 		outBuffer := gbytes.NewBuffer()
 		defer outBuffer.Close()
@@ -81,7 +81,7 @@ func TestOSM_Execute(t *testing.T) {
 		tmp := t.TempDir()
 		kfp := filepath.Join(tmp, "Kilnfile")
 		writeYAML(t, kfp, cargo.Kilnfile{
-			Releases: []cargo.ComponentSpec{
+			Releases: []cargo.BOSHReleaseSpecification{
 				{
 					Name:             "banana",
 					GitHubRepository: "https://github.com/cloudfoundry/banana",
@@ -98,7 +98,7 @@ func TestOSM_Execute(t *testing.T) {
 
 		klp := filepath.Join(tmp, "Kilnfile.lock")
 		writeYAML(t, klp, cargo.KilnfileLock{
-			Releases: []cargo.ComponentLock{
+			Releases: []cargo.BOSHReleaseLock{
 				{Name: "banana", Version: "1.2.3"},
 				{Name: "apple", Version: "1.2.4"},
 			},
@@ -109,12 +109,12 @@ func TestOSM_Execute(t *testing.T) {
 		})
 
 		rs := new(fakes.ReleaseStorage)
-		rs.FindReleaseVersionCalls(func(spec cargo.ComponentSpec, _ bool) (cargo.ComponentLock, error) {
+		rs.FindReleaseVersionCalls(func(spec cargo.BOSHReleaseSpecification, _ bool) (cargo.BOSHReleaseLock, error) {
 			switch spec.Name {
 			case "banana":
-				return cargo.ComponentLock{}, nil
+				return cargo.BOSHReleaseLock{}, nil
 			}
-			return cargo.ComponentLock{}, component.ErrNotFound
+			return cargo.BOSHReleaseLock{}, component.ErrNotFound
 		})
 
 		outBuffer := gbytes.NewBuffer()
@@ -135,7 +135,7 @@ func TestOSM_Execute(t *testing.T) {
 		tmp := t.TempDir()
 		kfp := filepath.Join(tmp, "Kilnfile")
 		writeYAML(t, kfp, cargo.Kilnfile{
-			Releases: []cargo.ComponentSpec{
+			Releases: []cargo.BOSHReleaseSpecification{
 				{
 					Name: "lemon-offline-buildpack",
 				},
@@ -151,7 +151,7 @@ func TestOSM_Execute(t *testing.T) {
 
 		klp := filepath.Join(tmp, "Kilnfile.lock")
 		writeYAML(t, klp, cargo.KilnfileLock{
-			Releases: []cargo.ComponentLock{
+			Releases: []cargo.BOSHReleaseLock{
 				{Name: "lemon-offline-buildpack", Version: "1.2.3"},
 				{Name: "banana", Version: "1.2.3"},
 			},
@@ -162,16 +162,16 @@ func TestOSM_Execute(t *testing.T) {
 		})
 
 		rs := new(fakes.ReleaseStorage)
-		rs.FindReleaseVersionCalls(func(spec cargo.ComponentSpec, _ bool) (cargo.ComponentLock, error) {
+		rs.FindReleaseVersionCalls(func(spec cargo.BOSHReleaseSpecification, _ bool) (cargo.BOSHReleaseLock, error) {
 			switch spec.Name {
 			case "lemon-buildpack":
-				return cargo.ComponentLock{
+				return cargo.BOSHReleaseLock{
 					RemotePath: "https://bosh.io/d/github.com/cloudfoundry/lemon-buildpack-release?v=1.2.3",
 				}, nil
 			case "banana":
-				return cargo.ComponentLock{}, nil
+				return cargo.BOSHReleaseLock{}, nil
 			}
-			return cargo.ComponentLock{}, component.ErrNotFound
+			return cargo.BOSHReleaseLock{}, component.ErrNotFound
 		})
 
 		outBuffer := gbytes.NewBuffer()

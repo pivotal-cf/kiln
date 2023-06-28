@@ -55,7 +55,7 @@ var _ = Describe("sync-with-local", func() {
 
 		BeforeEach(func() {
 			kilnfileLock = cargo.KilnfileLock{
-				Releases: []cargo.ComponentLock{
+				Releases: []cargo.BOSHReleaseLock{
 					{
 						Name:         release1Name,
 						Version:      release1OldVersion,
@@ -77,11 +77,11 @@ var _ = Describe("sync-with-local", func() {
 			localReleaseDirectory = new(commandsFakes.LocalReleaseDirectory)
 			localReleaseDirectory.GetLocalReleasesReturns([]component.Local{
 				{
-					Lock:      cargo.ComponentLock{Name: release1Name, Version: release1NewVersion, SHA1: release1NewSha},
+					Lock:      cargo.BOSHReleaseLock{Name: release1Name, Version: release1NewVersion, SHA1: release1NewSha},
 					LocalPath: "local-path",
 				},
 				{
-					Lock:      cargo.ComponentLock{Name: releaseName, Version: releaseNewVersion, SHA1: releaseNewSha},
+					Lock:      cargo.BOSHReleaseLock{Name: releaseName, Version: releaseNewVersion, SHA1: releaseNewSha},
 					LocalPath: "local-path-2",
 				},
 			}, nil)
@@ -90,7 +90,7 @@ var _ = Describe("sync-with-local", func() {
 			remotePather = new(fetcherFakes.RemotePather)
 
 			remotePatherFinder.Returns(remotePather, nil)
-			remotePather.RemotePathCalls(func(requirement cargo.ComponentSpec) (path string, err error) {
+			remotePather.RemotePathCalls(func(requirement cargo.BOSHReleaseSpecification) (path string, err error) {
 				switch requirement.Name {
 				case release1Name:
 					return release1NewRemotePath, nil
@@ -121,7 +121,7 @@ var _ = Describe("sync-with-local", func() {
 
 			var updatedLockfile cargo.KilnfileLock
 			Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
-			Expect(updatedLockfile.Releases).To(Equal([]cargo.ComponentLock{
+			Expect(updatedLockfile.Releases).To(Equal([]cargo.BOSHReleaseLock{
 				{
 					Name:         release1Name,
 					Version:      release1NewVersion,
@@ -143,11 +143,11 @@ var _ = Describe("sync-with-local", func() {
 			BeforeEach(func() {
 				localReleaseDirectory.GetLocalReleasesReturns([]component.Local{
 					{
-						Lock:      cargo.ComponentLock{Name: release1Name, Version: release1OldVersion, SHA1: release1NewSha},
+						Lock:      cargo.BOSHReleaseLock{Name: release1Name, Version: release1OldVersion, SHA1: release1NewSha},
 						LocalPath: "local-path",
 					},
 					{
-						Lock:      cargo.ComponentLock{Name: releaseName, Version: releaseNewVersion, SHA1: releaseNewSha},
+						Lock:      cargo.BOSHReleaseLock{Name: releaseName, Version: releaseNewVersion, SHA1: releaseNewSha},
 						LocalPath: "local-path-2",
 					},
 				}, nil)
@@ -162,7 +162,7 @@ var _ = Describe("sync-with-local", func() {
 
 				var updatedLockfile cargo.KilnfileLock
 				Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
-				Expect(updatedLockfile.Releases).To(Equal([]cargo.ComponentLock{
+				Expect(updatedLockfile.Releases).To(Equal([]cargo.BOSHReleaseLock{
 					{
 						Name:         release1Name,
 						Version:      release1OldVersion,
@@ -191,7 +191,7 @@ var _ = Describe("sync-with-local", func() {
 
 					var updatedLockfile cargo.KilnfileLock
 					Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
-					Expect(updatedLockfile.Releases).To(Equal([]cargo.ComponentLock{
+					Expect(updatedLockfile.Releases).To(Equal([]cargo.BOSHReleaseLock{
 						{
 							Name:         release1Name,
 							Version:      release1OldVersion,
@@ -214,7 +214,7 @@ var _ = Describe("sync-with-local", func() {
 		When("a release on disk doesn't exist in the Kilnfile.lock", func() {
 			BeforeEach(func() {
 				kilnfileLock = cargo.KilnfileLock{
-					Releases: []cargo.ComponentLock{
+					Releases: []cargo.BOSHReleaseLock{
 						{
 							Name:         release1Name,
 							Version:      release1OldVersion,

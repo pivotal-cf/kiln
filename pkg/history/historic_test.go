@@ -87,7 +87,7 @@ func TestKilnfile(t *testing.T) {
 		p := wt.Filesystem.Join(tileDir, "Kilnfile")
 		f, _ := wt.Filesystem.Create(p)
 		buf, _ := yaml.Marshal(cargo.Kilnfile{
-			Releases: []cargo.ComponentSpec{
+			Releases: []cargo.BOSHReleaseSpecification{
 				{Name: "banana"},
 				{Name: "lemon"},
 			},
@@ -125,7 +125,7 @@ func TestKilnfile(t *testing.T) {
 		_, kl, err := Kilnfile(repo.Storer, initialHash, "tile")
 
 		please.Expect(err).NotTo(HaveOccurred())
-		please.Expect(kl.Releases).To(Equal([]cargo.ComponentLock{
+		please.Expect(kl.Releases).To(Equal([]cargo.BOSHReleaseLock{
 			{Name: "banana", Version: "0.1.0"},
 			{Name: "lemon", Version: "1.1.0"},
 		}))
@@ -137,7 +137,7 @@ func TestKilnfile(t *testing.T) {
 		_, finalKF, err := Kilnfile(repo.Storer, finalHash, "tile/Kilnfile")
 
 		please.Expect(err).NotTo(HaveOccurred())
-		please.Expect(finalKF.Releases).To(Equal([]cargo.ComponentLock{
+		please.Expect(finalKF.Releases).To(Equal([]cargo.BOSHReleaseLock{
 			{Name: "banana", Version: "0.9.0"},
 			{Name: "lemon", Version: "1.9.0"},
 			{Name: "apple", Version: "0.0.1"},
@@ -150,7 +150,7 @@ func TestKilnfile(t *testing.T) {
 		kf, _, err := Kilnfile(repo.Storer, finalHash, "tile")
 
 		please.Expect(err).NotTo(HaveOccurred())
-		please.Expect(kf.Releases).To(Equal([]cargo.ComponentSpec{
+		please.Expect(kf.Releases).To(Equal([]cargo.BOSHReleaseSpecification{
 			{Name: "banana"},
 			{Name: "lemon"},
 		}))

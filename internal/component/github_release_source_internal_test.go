@@ -33,7 +33,7 @@ func TestGithubReleaseSource_interface_compliance(t *testing.T) {
 }
 
 func TestGithubReleaseSource_downloadRelease(t *testing.T) {
-	lock := cargo.ComponentLock{
+	lock := cargo.BOSHReleaseLock{
 		Name:       "routing",
 		Version:    "0.239.0",
 		RemotePath: "https://github.com/cloudfoundry/routing-release/releases/download/v0.239.0/routing-0.239.0.tgz",
