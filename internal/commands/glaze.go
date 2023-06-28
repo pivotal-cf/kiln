@@ -5,46 +5,28 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type (
-	glazeCommandOptions struct {
+type Glaze struct {
+	Options struct {
 		Kilnfile string `short:"kf" long:"kilnfile" default:"Kilnfile"  description:"path to Kilnfile"`
+		Undo     bool   `           long:"undo"                         description:"loosens bosh release constraints post-GA based on 'maintenance_version_bump_policy' and 'float_always'"`
 	}
-	Glaze struct {
-		Options glazeCommandOptions
+
+	glaze, deGlaze func(kf *cargo.Kilnfile, kl cargo.KilnfileLock) error
+}
+
+func NewGlaze() *Glaze {
+	return &Glaze{
+		glaze:   (*cargo.Kilnfile).Glaze,
+		deGlaze: (*cargo.Kilnfile).DeGlaze,
 	}
-	DeGlaze struct {
-		Options glazeCommandOptions
-	}
-)
+}
 
 func (cmd *Glaze) Execute(args []string) error {
-	return glazeCommandExecute(cmd.Options, args, (*cargo.Kilnfile).Glaze)
-}
-
-func (cmd *Glaze) Usage() jhanda.Usage {
-	return jhanda.Usage{
-		Description:      "This command locks all the components.",
-		ShortDescription: "Pin versions in Kilnfile to match lock.",
-	}
-}
-
-func (cmd *DeGlaze) Execute(args []string) error {
-	return glazeCommandExecute(cmd.Options, args, (*cargo.Kilnfile).DeGlaze)
-}
-
-func (cmd *DeGlaze) Usage() jhanda.Usage {
-	return jhanda.Usage{
-		Description:      "This command unlocks all the components.",
-		ShortDescription: "Unpin version constraints in Kilnfile based on de_glaze_behavior.",
-	}
-}
-
-func glazeCommandExecute(options glazeCommandOptions, args []string, fn func(kilnfile *cargo.Kilnfile, lock cargo.KilnfileLock) error) error {
-	_, err := jhanda.Parse(&options, args)
+	_, err := jhanda.Parse(&cmd.Options, args)
 	if err != nil {
 		return err
 	}
-	kfPath, err := cargo.ResolveKilnfilePath(options.Kilnfile)
+	kfPath, err := cargo.ResolveKilnfilePath(cmd.Options.Kilnfile)
 	if err != nil {
 		return err
 	}
@@ -52,8 +34,20 @@ func glazeCommandExecute(options glazeCommandOptions, args []string, fn func(kil
 	if err != nil {
 		return err
 	}
-	if err := fn(&kilnfile, kilnfileLock); err != nil {
+	if cmd.Options.Undo {
+		err = cmd.deGlaze(&kilnfile, kilnfileLock)
+	} else {
+		err = cmd.glaze(&kilnfile, kilnfileLock)
+	}
+	if err != nil {
 		return err
 	}
 	return cargo.WriteKilnfile(kfPath, kilnfile)
+}
+
+func (cmd *Glaze) Usage() jhanda.Usage {
+	return jhanda.Usage{
+		Description:      "This command locks all the components.",
+		ShortDescription: "Pin versions in Kilnfile to match lock.",
+	}
 }
