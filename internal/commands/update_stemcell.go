@@ -97,7 +97,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 		}
 
 		lock := &kilnfileLock.Releases[i]
-		lock.SHA1 = local.SHA1
+		lock.SHA1 = local.Lock.SHA1
 		lock.RemotePath = remote.RemotePath
 		lock.RemoteSource = remote.RemoteSource
 	}

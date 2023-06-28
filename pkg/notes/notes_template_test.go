@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-github/v40/github"
 	. "github.com/onsi/gomega"
 
-	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 func Test_defaultReleaseNotesTemplate(t *testing.T) {
@@ -22,7 +22,7 @@ func Test_defaultReleaseNotesTemplate(t *testing.T) {
 			Version: semver.MustParse("0.0.0"),
 			Components: []BOSHReleaseData{
 				{
-					ComponentLock: component.Lock{Name: "banana", Version: "1.2"},
+					ComponentLock: cargo.ComponentLock{Name: "banana", Version: "1.2"},
 					Releases: []*github.RepositoryRelease{
 						{TagName: strPtr("1.1"), Body: strPtr("\n   ")},
 						{TagName: strPtr("1.2"), Body: strPtr("")},

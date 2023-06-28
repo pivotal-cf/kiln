@@ -9,6 +9,7 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type UpdateRelease struct {
@@ -67,10 +68,10 @@ func (u UpdateRelease) Execute(args []string) error {
 	u.logger.Println("Searching for the release...")
 
 	var localRelease component.Local
-	var remoteRelease component.Lock
+	var remoteRelease cargo.ComponentLock
 	var newVersion, newSHA1, newSourceID, newRemotePath string
 	if u.Options.WithoutDownload {
-		remoteRelease, err = releaseSource.FindReleaseVersion(component.Spec{
+		remoteRelease, err = releaseSource.FindReleaseVersion(cargo.ComponentSpec{
 			Name:             u.Options.Name,
 			Version:          releaseVersionConstraint,
 			StemcellVersion:  kilnfileLock.Stemcell.Version,
@@ -91,7 +92,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		newRemotePath = remoteRelease.RemotePath
 
 	} else {
-		remoteRelease, err = releaseSource.GetMatchedRelease(component.Spec{
+		remoteRelease, err = releaseSource.GetMatchedRelease(cargo.ComponentSpec{
 			Name:             u.Options.Name,
 			Version:          u.Options.Version,
 			StemcellOS:       kilnfileLock.Stemcell.OS,
@@ -110,8 +111,8 @@ func (u UpdateRelease) Execute(args []string) error {
 		if err != nil {
 			return fmt.Errorf("error downloading the release: %w", err)
 		}
-		newVersion = localRelease.Version
-		newSHA1 = localRelease.SHA1
+		newVersion = localRelease.Lock.Version
+		newSHA1 = localRelease.Lock.SHA1
 		newSourceID = remoteRelease.RemoteSource
 		newRemotePath = remoteRelease.RemotePath
 	}

@@ -115,18 +115,18 @@ func NewMultiReleaseSource(sources ...ReleaseSource) ReleaseSourceList {
 	return sources
 }
 
-func (list ReleaseSourceList) GetMatchedRelease(requirement Spec) (Lock, error) {
+func (list ReleaseSourceList) GetMatchedRelease(requirement cargo.ComponentSpec) (cargo.ComponentLock, error) {
 	for _, src := range list {
 		rel, err := src.GetMatchedRelease(requirement)
 		if err != nil {
 			if IsErrNotFound(err) {
 				continue
 			}
-			return Lock{}, scopedError(src.Configuration().ID, err)
+			return cargo.ComponentLock{}, scopedError(src.Configuration().ID, err)
 		}
 		return rel, nil
 	}
-	return Lock{}, ErrNotFound
+	return cargo.ComponentLock{}, ErrNotFound
 }
 
 func (list ReleaseSourceList) SetDownloadThreads(n int) {
@@ -139,7 +139,7 @@ func (list ReleaseSourceList) SetDownloadThreads(n int) {
 	}
 }
 
-func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease Lock) (Local, error) {
+func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease cargo.ComponentLock) (Local, error) {
 	src, err := list.FindByID(remoteRelease.RemoteSource)
 	if err != nil {
 		return Local{}, err
@@ -153,30 +153,30 @@ func (list ReleaseSourceList) DownloadRelease(releaseDir string, remoteRelease L
 	return localRelease, nil
 }
 
-func (list ReleaseSourceList) FindReleaseVersion(requirement Spec, noDownload bool) (Lock, error) {
-	var foundReleaseLock []Lock
+func (list ReleaseSourceList) FindReleaseVersion(requirement cargo.ComponentSpec, noDownload bool) (cargo.ComponentLock, error) {
+	var foundReleaseLock []cargo.ComponentLock
 	for _, src := range list {
 		rel, err := src.FindReleaseVersion(requirement, noDownload)
 		if err != nil {
 			if !IsErrNotFound(err) {
-				return Lock{}, scopedError(src.Configuration().ID, err)
+				return cargo.ComponentLock{}, scopedError(src.Configuration().ID, err)
 			}
 			continue
 		}
 		foundReleaseLock = append(foundReleaseLock, rel)
 	}
 	if len(foundReleaseLock) == 0 {
-		return Lock{}, ErrNotFound
+		return cargo.ComponentLock{}, ErrNotFound
 	}
 	highestLock := foundReleaseLock[0]
 	highestVersion, err := highestLock.ParseVersion()
 	if err != nil {
-		return Lock{}, fmt.Errorf("failed to parse version from release source: %w", err)
+		return cargo.ComponentLock{}, fmt.Errorf("failed to parse version from release source: %w", err)
 	}
 	for _, rel := range foundReleaseLock[1:] {
 		newVersion, err := semver.NewVersion(rel.Version)
 		if err != nil {
-			return Lock{}, fmt.Errorf("failed to parse version from release source: %w", err)
+			return cargo.ComponentLock{}, fmt.Errorf("failed to parse version from release source: %w", err)
 		}
 		if highestVersion.LessThan(newVersion) {
 			highestVersion = newVersion

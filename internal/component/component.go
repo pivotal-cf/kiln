@@ -6,19 +6,15 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type Spec = cargo.ComponentSpec
-
 type Exported struct {
-	Lock
+	Lock        cargo.ComponentLock
 	TarballPath string
 	BlobstoreID string
 }
 
 type Local struct {
-	Lock
+	Lock      cargo.ComponentLock
 	LocalPath string
 }
-
-type Lock = cargo.ComponentLock
 
 func closeAndIgnoreError(c io.Closer) { _ = c.Close() }

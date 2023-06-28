@@ -35,7 +35,7 @@ type (
 
 	ReleaseStorage interface {
 		component.ReleaseSource
-		UploadRelease(spec component.Spec, file io.Reader) (component.Lock, error)
+		UploadRelease(spec cargo.ComponentSpec, file io.Reader) (cargo.ComponentLock, error)
 	}
 )
 
@@ -122,7 +122,7 @@ func (cmd *CacheCompiledReleases) Execute(args []string) error {
 		releasesUpdatedFromCache = false
 	)
 	for _, rel := range lock.Releases {
-		remote, err := releaseStore.GetMatchedRelease(component.Spec{
+		remote, err := releaseStore.GetMatchedRelease(cargo.ComponentSpec{
 			Name:            rel.Name,
 			Version:         rel.Version,
 			StemcellOS:      lock.Stemcell.OS,
@@ -132,7 +132,7 @@ func (cmd *CacheCompiledReleases) Execute(args []string) error {
 			if !component.IsErrNotFound(err) {
 				return fmt.Errorf("failed check for matched release: %w", err)
 			}
-			releasesToExport = append(releasesToExport, component.Lock{
+			releasesToExport = append(releasesToExport, cargo.ComponentLock{
 				Name:            rel.Name,
 				Version:         rel.Version,
 				StemcellOS:      lock.Stemcell.OS,
@@ -301,17 +301,17 @@ func (cmd *CacheCompiledReleases) fetchProductDeploymentData() (_ OpsManagerRele
 	return omAPI, manifest.Name, stagedStemcell.OS, stagedStemcell.Version, nil
 }
 
-func (cmd *CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc ReleaseStorage, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (component.Lock, error) {
+func (cmd *CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc ReleaseStorage, deployment boshdir.Deployment, releaseSlug boshdir.ReleaseSlug, stemcellSlug boshdir.OSVersionSlug) (cargo.ComponentLock, error) {
 	cmd.Logger.Printf("\texporting %s\n", releaseSlug)
 	result, err := deployment.ExportRelease(releaseSlug, stemcellSlug, nil)
 	if err != nil {
-		return component.Lock{}, err
+		return cargo.ComponentLock{}, err
 	}
 
 	cmd.Logger.Printf("\tdownloading %s\n", releaseSlug)
 	releaseFilePath, _, sha1sum, err := cmd.saveReleaseLocally(bosh, cmd.Options.ReleasesDir, releaseSlug, stemcellSlug, result)
 	if err != nil {
-		return component.Lock{}, err
+		return cargo.ComponentLock{}, err
 	}
 
 	cmd.Logger.Printf("\tuploading %s\n", releaseSlug)
@@ -322,7 +322,7 @@ func (cmd *CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc Release
 		StemcellVersion: stemcellSlug.Version(),
 	}, releaseFilePath, rc)
 	if err != nil {
-		return component.Lock{}, err
+		return cargo.ComponentLock{}, err
 	}
 
 	remoteRelease.SHA1 = sha1sum
@@ -330,7 +330,7 @@ func (cmd *CacheCompiledReleases) cacheRelease(bosh boshdir.Director, rc Release
 	return remoteRelease, nil
 }
 
-func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string) error {
+func updateLock(lock cargo.KilnfileLock, release cargo.ComponentLock, targetID string) error {
 	for index, releaseLock := range lock.Releases {
 		if release.Name != releaseLock.Name {
 			continue
@@ -353,10 +353,10 @@ func updateLock(lock cargo.KilnfileLock, release component.Lock, targetID string
 	return fmt.Errorf("existing release not found in Kilnfile.lock")
 }
 
-func (cmd *CacheCompiledReleases) uploadLocalRelease(spec component.Spec, fp string, uploader ReleaseStorage) (component.Lock, error) {
+func (cmd *CacheCompiledReleases) uploadLocalRelease(spec cargo.ComponentSpec, fp string, uploader ReleaseStorage) (cargo.ComponentLock, error) {
 	f, err := cmd.FS.Open(fp)
 	if err != nil {
-		return component.Lock{}, err
+		return cargo.ComponentLock{}, err
 	}
 	defer closeAndIgnoreError(f)
 	return uploader.UploadRelease(spec, f)
@@ -414,7 +414,7 @@ func (cmd *CacheCompiledReleases) downloadAndComputeSHA(cache component.ReleaseS
 		return "", fmt.Errorf("failed to download release: %s", err)
 	}
 
-	return comp.SHA1, nil
+	return comp.Lock.SHA1, nil
 }
 
 func (cmd *CacheCompiledReleases) Usage() jhanda.Usage {

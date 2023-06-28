@@ -15,7 +15,7 @@ var _ = Describe("multiReleaseSource", func() {
 	var (
 		multiSrc         component.MultiReleaseSource
 		src1, src2, src3 *fakes.ReleaseSource
-		requirement      component.Spec
+		requirement      cargo.ComponentSpec
 	)
 
 	const (
@@ -33,7 +33,7 @@ var _ = Describe("multiReleaseSource", func() {
 		src3.ConfigurationReturns(cargo.ReleaseSourceConfig{ID: "src-3"})
 		multiSrc = component.NewMultiReleaseSource(src1, src2, src3)
 
-		requirement = component.Spec{
+		requirement = cargo.ComponentSpec{
 			Name:            releaseName,
 			Version:         releaseVersion,
 			StemcellOS:      "not-used",
@@ -43,17 +43,17 @@ var _ = Describe("multiReleaseSource", func() {
 
 	Describe("GetMatchedRelease", func() {
 		When("one of the release sources has a match", func() {
-			var matchedRelease component.Lock
+			var matchedRelease cargo.ComponentLock
 
 			BeforeEach(func() {
-				matchedRelease = component.Lock{
+				matchedRelease = cargo.ComponentLock{
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
 					RemoteSource: src2.Configuration().ID,
 				}
-				src1.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
-				src3.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
+				src1.GetMatchedReleaseReturns(cargo.ComponentLock{}, component.ErrNotFound)
+				src3.GetMatchedReleaseReturns(cargo.ComponentLock{}, component.ErrNotFound)
 				src2.GetMatchedReleaseReturns(matchedRelease, nil)
 			})
 
@@ -66,9 +66,9 @@ var _ = Describe("multiReleaseSource", func() {
 
 		When("none of the release sources has a match", func() {
 			BeforeEach(func() {
-				src1.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
-				src3.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
-				src2.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
+				src1.GetMatchedReleaseReturns(cargo.ComponentLock{}, component.ErrNotFound)
+				src3.GetMatchedReleaseReturns(cargo.ComponentLock{}, component.ErrNotFound)
+				src2.GetMatchedReleaseReturns(cargo.ComponentLock{}, component.ErrNotFound)
 			})
 			It("returns no match", func() {
 				_, err := multiSrc.GetMatchedRelease(requirement)
@@ -82,7 +82,7 @@ var _ = Describe("multiReleaseSource", func() {
 
 			BeforeEach(func() {
 				expectedErr = errors.New("bad stuff happened")
-				src1.GetMatchedReleaseReturns(component.Lock{}, expectedErr)
+				src1.GetMatchedReleaseReturns(cargo.ComponentLock{}, expectedErr)
 			})
 
 			It("returns that error", func() {
@@ -95,12 +95,12 @@ var _ = Describe("multiReleaseSource", func() {
 
 	Describe("DownloadRelease", func() {
 		var (
-			releaseID component.Spec
-			remote    component.Lock
+			releaseID cargo.ComponentSpec
+			remote    cargo.ComponentLock
 		)
 
 		BeforeEach(func() {
-			releaseID = component.Spec{Name: releaseName, Version: releaseVersion}
+			releaseID = cargo.ComponentSpec{Name: releaseName, Version: releaseVersion}
 			remote = releaseID.Lock().WithRemote(src2.Configuration().ID, "/some/remote/path")
 		})
 
@@ -188,18 +188,18 @@ var _ = Describe("multiReleaseSource", func() {
 
 	Describe("FindReleaseVersion", func() {
 		When("one of the release sources has a match", func() {
-			var matchedRelease component.Lock
+			var matchedRelease cargo.ComponentLock
 
 			BeforeEach(func() {
-				matchedRelease = component.Lock{
+				matchedRelease = cargo.ComponentLock{
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
 					RemoteSource: src2.Configuration().ID,
 				}
-				src1.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
+				src1.FindReleaseVersionReturns(cargo.ComponentLock{}, component.ErrNotFound)
 				src2.FindReleaseVersionReturns(matchedRelease, nil)
-				src3.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
+				src3.FindReleaseVersionReturns(cargo.ComponentLock{}, component.ErrNotFound)
 			})
 
 			It("returns that match", func() {
@@ -209,16 +209,16 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 		})
 		When("two of the release sources have a match", func() {
-			var matchedRelease component.Lock
+			var matchedRelease cargo.ComponentLock
 
 			BeforeEach(func() {
-				unmatchedRelease := component.Lock{
+				unmatchedRelease := cargo.ComponentLock{
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
 					RemoteSource: src1.Configuration().ID,
 				}
-				matchedRelease = component.Lock{
+				matchedRelease = cargo.ComponentLock{
 					Name:         releaseName,
 					Version:      releaseVersionNewer,
 					RemotePath:   "/some/path",
@@ -226,7 +226,7 @@ var _ = Describe("multiReleaseSource", func() {
 				}
 				src1.FindReleaseVersionReturns(unmatchedRelease, nil)
 				src2.FindReleaseVersionReturns(matchedRelease, nil)
-				src3.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
+				src3.FindReleaseVersionReturns(cargo.ComponentLock{}, component.ErrNotFound)
 			})
 
 			It("returns that match", func() {
@@ -236,16 +236,16 @@ var _ = Describe("multiReleaseSource", func() {
 			})
 		})
 		When("two of the release sources match the same version", func() {
-			var matchedRelease component.Lock
+			var matchedRelease cargo.ComponentLock
 
 			BeforeEach(func() {
-				matchedRelease = component.Lock{
+				matchedRelease = cargo.ComponentLock{
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
 					RemoteSource: src1.Configuration().ID,
 				}
-				unmatchedRelease := component.Lock{
+				unmatchedRelease := cargo.ComponentLock{
 					Name:         releaseName,
 					Version:      releaseVersion,
 					RemotePath:   "/some/path",
@@ -253,7 +253,7 @@ var _ = Describe("multiReleaseSource", func() {
 				}
 				src1.FindReleaseVersionReturns(matchedRelease, nil)
 				src2.FindReleaseVersionReturns(unmatchedRelease, nil)
-				src3.FindReleaseVersionReturns(component.Lock{}, component.ErrNotFound)
+				src3.FindReleaseVersionReturns(cargo.ComponentLock{}, component.ErrNotFound)
 			})
 
 			It("returns the match from the first source", func() {

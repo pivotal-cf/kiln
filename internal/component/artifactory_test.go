@@ -87,7 +87,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 		})
 		When("the server has the a file at the expected path", func() {
 			It("resolves the lock from the spec", func() { // testing GetMatchedRelease
-				resultLock, resultErr := source.GetMatchedRelease(component.Spec{
+				resultLock, resultErr := source.GetMatchedRelease(cargo.ComponentSpec{
 					Name:            "mango",
 					Version:         "2.3.4",
 					StemcellOS:      "smoothie",
@@ -95,7 +95,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				})
 
 				Expect(resultErr).NotTo(HaveOccurred())
-				Expect(resultLock).To(Equal(component.Lock{
+				Expect(resultLock).To(Equal(cargo.ComponentLock{
 					Name:    "mango",
 					Version: "2.3.4",
 					// StemcellOS:      "smoothie",
@@ -106,7 +106,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 			})
 
 			It("finds the bosh release", func() { // testing FindReleaseVersion
-				resultLock, resultErr := source.FindReleaseVersion(component.Spec{
+				resultLock, resultErr := source.FindReleaseVersion(cargo.ComponentSpec{
 					Name:            "mango",
 					Version:         "2.3.4",
 					StemcellOS:      "smoothie",
@@ -114,7 +114,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				}, false)
 
 				Expect(resultErr).NotTo(HaveOccurred())
-				Expect(resultLock).To(Equal(component.Lock{
+				Expect(resultLock).To(Equal(cargo.ComponentLock{
 					Name:    "mango",
 					Version: "2.3.4",
 					// StemcellOS:      "smoothie",
@@ -127,7 +127,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 
 			It("downloads the release", func() { // teesting DownloadRelease
 				By("calling FindReleaseVersion")
-				local, resultErr := source.DownloadRelease(releasesDirectory, component.Lock{
+				local, resultErr := source.DownloadRelease(releasesDirectory, cargo.ComponentLock{
 					Name:         "mango",
 					Version:      "2.3.4",
 					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
@@ -168,7 +168,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer closeAndIgnoreError(f)
 
-			resultLock, resultErr := source.UploadRelease(component.Spec{
+			resultLock, resultErr := source.UploadRelease(cargo.ComponentSpec{
 				Name:            "mango",
 				Version:         "2.3.4",
 				StemcellOS:      "smoothie",
@@ -176,7 +176,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 			}, f)
 
 			Expect(resultErr).NotTo(HaveOccurred())
-			Expect(resultLock).To(Equal(component.Lock{
+			Expect(resultLock).To(Equal(cargo.ComponentLock{
 				Name:    "mango",
 				Version: "2.3.4",
 				// StemcellOS:      "smoothie",
@@ -195,7 +195,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 		})
 		Describe("GetMatchedRelease", func() {
 			It("returns a helpful message", func() {
-				_, resultErr := source.GetMatchedRelease(component.Spec{
+				_, resultErr := source.GetMatchedRelease(cargo.ComponentSpec{
 					Name:            "mango",
 					Version:         "2.3.4",
 					StemcellOS:      "smoothie",
@@ -207,7 +207,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 		})
 		Describe("FindReleaseVersion", func() {
 			It("returns a helpful message", func() {
-				_, resultErr := source.FindReleaseVersion(component.Spec{
+				_, resultErr := source.FindReleaseVersion(cargo.ComponentSpec{
 					Name:            "mango",
 					Version:         "2.3.4",
 					StemcellOS:      "smoothie",
@@ -219,7 +219,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 		})
 		Describe("DownloadRelease", func() {
 			It("returns a helpful message", func() {
-				_, resultErr := source.DownloadRelease(releasesDirectory, component.Lock{
+				_, resultErr := source.DownloadRelease(releasesDirectory, cargo.ComponentLock{
 					Name:         "mango",
 					Version:      "2.3.4",
 					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
@@ -231,7 +231,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 		})
 		Describe("UploadRelease", func() {
 			It("returns a helpful message", func() {
-				_, resultErr := source.UploadRelease(component.Spec{
+				_, resultErr := source.UploadRelease(cargo.ComponentSpec{
 					Name:            "mango",
 					Version:         "2.3.4",
 					StemcellOS:      "smoothie",
