@@ -105,10 +105,10 @@ stemcell_criteria:
 			fakeReleaseSources.DownloadReleaseStub = func(s string, lock cargo.ComponentLock) (component.Local, error) {
 				return releaseSourceList.DownloadRelease(s, lock)
 			}
-			fakeReleaseSources.FindReleaseVersionStub = func(requirement component.Spec, withSHA bool) (cargo.ComponentLock, error) {
+			fakeReleaseSources.FindReleaseVersionStub = func(requirement cargo.ComponentSpec, withSHA bool) (cargo.ComponentLock, error) {
 				return releaseSourceList.FindReleaseVersion(requirement, false)
 			}
-			fakeReleaseSources.GetMatchedReleaseStub = func(requirement component.Spec) (cargo.ComponentLock, error) {
+			fakeReleaseSources.GetMatchedReleaseStub = func(requirement cargo.ComponentSpec) (cargo.ComponentLock, error) {
 				return releaseSourceList.GetMatchedRelease(requirement)
 			}
 			multiReleaseSourceProvider = func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
@@ -128,11 +128,11 @@ stemcell_criteria:
 				expectedStemcellVersion = "0.2.0"
 			)
 			var (
-				releaseID     component.Spec
+				releaseID     cargo.ComponentSpec
 				releaseOnDisk component.Local
 			)
 			BeforeEach(func() {
-				releaseID = component.Spec{Name: "some-release", Version: "0.1.0"}
+				releaseID = cargo.ComponentSpec{Name: "some-release", Version: "0.1.0"}
 				fakeS3CompiledReleaseSource.DownloadReleaseReturns(
 					component.Local{
 						Lock:      releaseID.Lock().WithSHA1("correct-sha"),
@@ -197,9 +197,9 @@ stemcell_criteria:
 
 		Context("starting with no releases but all can be downloaded from their source (happy path)", func() {
 			var (
-				s3CompiledReleaseID = component.Spec{Name: "lts-compiled-release", Version: "1.2.4"}
-				s3BuiltReleaseID    = component.Spec{Name: "lts-built-release", Version: "1.3.9"}
-				boshIOReleaseID     = component.Spec{Name: "boshio-release", Version: "1.4.16"}
+				s3CompiledReleaseID = cargo.ComponentSpec{Name: "lts-compiled-release", Version: "1.2.4"}
+				s3BuiltReleaseID    = cargo.ComponentSpec{Name: "lts-built-release", Version: "1.3.9"}
+				boshIOReleaseID     = cargo.ComponentSpec{Name: "boshio-release", Version: "1.4.16"}
 			)
 			BeforeEach(func() {
 				lockContents = `---
@@ -285,7 +285,7 @@ stemcell_criteria:
   version: "4.5.6"
 `
 
-				someLocalReleaseID := component.Spec{
+				someLocalReleaseID := cargo.ComponentSpec{
 					Name:    "some-release-from-local-dir",
 					Version: "1.2.3",
 				}
@@ -305,16 +305,16 @@ stemcell_criteria:
 
 		Context("when some releases are already present in output directory", func() {
 			var (
-				missingReleaseS3CompiledID   component.Spec
+				missingReleaseS3CompiledID   cargo.ComponentSpec
 				missingReleaseS3CompiledPath = "s3-key-some-missing-release-on-s3-compiled"
-				missingReleaseBoshIOID       component.Spec
+				missingReleaseBoshIOID       cargo.ComponentSpec
 				missingReleaseBoshIOPath     = "some-other-bosh-io-key"
-				missingReleaseS3BuiltID      component.Spec
+				missingReleaseS3BuiltID      cargo.ComponentSpec
 				missingReleaseS3BuiltPath    = "s3-key-some-missing-release-on-s3-built"
 
 				missingReleaseS3Compiled,
 				missingReleaseBoshIO,
-				missingReleaseS3Built component.Lock
+				missingReleaseS3Built cargo.ComponentLock
 			)
 			BeforeEach(func() {
 				lockContents = `---
@@ -348,17 +348,17 @@ stemcell_criteria:
   os: some-os
   version: "4.5.6"`
 
-				missingReleaseS3CompiledID = component.Spec{Name: "some-missing-release-on-s3-compiled", Version: "4.5.6"}
-				missingReleaseBoshIOID = component.Spec{Name: "some-missing-release-on-boshio", Version: "5.6.7"}
-				missingReleaseS3BuiltID = component.Spec{Name: "some-missing-release-on-s3-built", Version: "8.9.0"}
+				missingReleaseS3CompiledID = cargo.ComponentSpec{Name: "some-missing-release-on-s3-compiled", Version: "4.5.6"}
+				missingReleaseBoshIOID = cargo.ComponentSpec{Name: "some-missing-release-on-boshio", Version: "5.6.7"}
+				missingReleaseS3BuiltID = cargo.ComponentSpec{Name: "some-missing-release-on-s3-built", Version: "8.9.0"}
 
 				fakeLocalReleaseDirectory.GetLocalReleasesReturns([]component.Local{
 					{
-						Lock:      component.Lock{Name: "some-release", Version: "1.2.3", SHA1: "correct-sha"},
+						Lock:      cargo.ComponentLock{Name: "some-release", Version: "1.2.3", SHA1: "correct-sha"},
 						LocalPath: "path/to/some/release",
 					},
 					{
-						Lock:      component.Lock{Name: "some-tiny-release", Version: "1.2.3", SHA1: "correct-sha"},
+						Lock:      cargo.ComponentLock{Name: "some-tiny-release", Version: "1.2.3", SHA1: "correct-sha"},
 						LocalPath: "path/to/some/tiny/release",
 					},
 				}, nil)
@@ -420,7 +420,7 @@ stemcell_criteria:
 				BeforeEach(func() {
 					badReleasePath = filepath.Join(someReleasesDirectory, "local-path-3")
 
-					fakeS3BuiltReleaseSource.DownloadReleaseCalls(func(string, component.Lock) (component.Local, error) {
+					fakeS3BuiltReleaseSource.DownloadReleaseCalls(func(string, cargo.ComponentLock) (component.Local, error) {
 						f, err := os.Create(badReleasePath)
 						Expect(err).NotTo(HaveOccurred())
 						defer closeAndIgnoreError(f)
@@ -447,8 +447,8 @@ stemcell_criteria:
 
 		Context("when there are extra releases locally that are not in the Kilnfile.lock", func() {
 			var (
-				boshIOReleaseID = component.Spec{Name: "some-release", Version: "1.2.3"}
-				localReleaseID  = component.Spec{Name: "some-extra-release", Version: "1.2.3"}
+				boshIOReleaseID = cargo.ComponentSpec{Name: "some-release", Version: "1.2.3"}
+				localReleaseID  = cargo.ComponentSpec{Name: "some-extra-release", Version: "1.2.3"}
 			)
 			BeforeEach(func() {
 				lockContents = `---
@@ -491,7 +491,7 @@ stemcell_criteria:
 					Expect(noConfirm).To(Equal(true))
 					Expect(extras).To(ConsistOf(
 						component.Local{
-							Lock:      component.Lock{Name: "some-extra-release", Version: "1.2.3", SHA1: "correct-sha"},
+							Lock:      cargo.ComponentLock{Name: "some-extra-release", Version: "1.2.3", SHA1: "correct-sha"},
 							LocalPath: "path/to/some/extra/release",
 						},
 					))

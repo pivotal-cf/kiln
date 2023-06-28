@@ -53,7 +53,7 @@ func TestOSM_Execute(t *testing.T) {
 		})
 
 		rs := new(fakes.ReleaseStorage)
-		rs.FindReleaseVersionReturns(component.Lock{}, nil)
+		rs.FindReleaseVersionReturns(cargo.ComponentLock{}, nil)
 
 		outBuffer := gbytes.NewBuffer()
 		defer outBuffer.Close()
@@ -112,9 +112,9 @@ func TestOSM_Execute(t *testing.T) {
 		rs.FindReleaseVersionCalls(func(spec cargo.ComponentSpec, _ bool) (cargo.ComponentLock, error) {
 			switch spec.Name {
 			case "banana":
-				return component.Lock{}, nil
+				return cargo.ComponentLock{}, nil
 			}
-			return component.Lock{}, component.ErrNotFound
+			return cargo.ComponentLock{}, component.ErrNotFound
 		})
 
 		outBuffer := gbytes.NewBuffer()
@@ -165,13 +165,13 @@ func TestOSM_Execute(t *testing.T) {
 		rs.FindReleaseVersionCalls(func(spec cargo.ComponentSpec, _ bool) (cargo.ComponentLock, error) {
 			switch spec.Name {
 			case "lemon-buildpack":
-				return component.Lock{
+				return cargo.ComponentLock{
 					RemotePath: "https://bosh.io/d/github.com/cloudfoundry/lemon-buildpack-release?v=1.2.3",
 				}, nil
 			case "banana":
-				return component.Lock{}, nil
+				return cargo.ComponentLock{}, nil
 			}
-			return component.Lock{}, component.ErrNotFound
+			return cargo.ComponentLock{}, component.ErrNotFound
 		})
 
 		outBuffer := gbytes.NewBuffer()

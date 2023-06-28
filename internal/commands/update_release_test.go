@@ -52,7 +52,7 @@ var _ = Describe("UpdateRelease", func() {
 		logger                     *log.Logger
 		downloadedReleasePath      string
 		expectedDownloadedRelease  component.Local
-		expectedRemoteRelease      component.Lock
+		expectedRemoteRelease      cargo.ComponentLock
 		kilnfileLock               cargo.KilnfileLock
 	)
 
@@ -109,11 +109,11 @@ var _ = Describe("UpdateRelease", func() {
 
 			downloadedReleasePath = filepath.Join(releasesDir, fmt.Sprintf("%s-%s.tgz", releaseName, newReleaseVersion))
 			expectedDownloadedRelease = component.Local{
-				Lock:      component.Lock{Name: releaseName, Version: newReleaseVersion, SHA1: newReleaseSha1},
+				Lock:      cargo.ComponentLock{Name: releaseName, Version: newReleaseVersion, SHA1: newReleaseSha1},
 				LocalPath: downloadedReleasePath,
 			}
 			expectedRemoteRelease = expectedDownloadedRelease.Lock.WithRemote(newReleaseSourceName, newRemotePath)
-			exepectedNotDownloadedRelease := component.Lock{
+			exepectedNotDownloadedRelease := cargo.ComponentLock{
 				Name:         releaseName,
 				Version:      notDownloadedReleaseVersion,
 				RemotePath:   notDownloadedRemotePath,
@@ -143,7 +143,7 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(1))
 
 				receivedReleaseRequirement := releaseSource.GetMatchedReleaseArgsForCall(0)
-				releaseRequirement := component.Spec{
+				releaseRequirement := cargo.ComponentSpec{
 					Name:             releaseName,
 					Version:          newReleaseVersion,
 					StemcellOS:       "some-os",
@@ -228,10 +228,10 @@ var _ = Describe("UpdateRelease", func() {
 
 			BeforeEach(func() {
 				expectedDownloadedRelease = component.Local{
-					Lock:      component.Lock{Name: releaseName, Version: oldReleaseVersion, SHA1: oldReleaseSha1},
+					Lock:      cargo.ComponentLock{Name: releaseName, Version: oldReleaseVersion, SHA1: oldReleaseSha1},
 					LocalPath: "not-used",
 				}
-				expectedRemoteRelease = component.Lock{
+				expectedRemoteRelease = cargo.ComponentLock{
 					Name: releaseName, Version: oldReleaseVersion,
 					RemotePath:   oldRemotePath,
 					RemoteSource: oldReleaseSourceName,
@@ -315,7 +315,7 @@ var _ = Describe("UpdateRelease", func() {
 
 		When("the release can't be found", func() {
 			BeforeEach(func() {
-				releaseSource.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
+				releaseSource.GetMatchedReleaseReturns(cargo.ComponentLock{}, component.ErrNotFound)
 			})
 
 			It("errors", func() {
@@ -392,7 +392,7 @@ var _ = Describe("UpdateRelease", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				receivedReleaseRequirement, _ := releaseSource.FindReleaseVersionArgsForCall(0)
-				releaseRequirement := component.Spec{
+				releaseRequirement := cargo.ComponentSpec{
 					Name:             releaseName,
 					Version:          newReleaseVersion,
 					StemcellOS:       "some-os",

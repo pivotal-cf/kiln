@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/component/fakes_internal"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 func TestGithubReleaseSource_interface_compliance(t *testing.T) {
@@ -32,7 +33,7 @@ func TestGithubReleaseSource_interface_compliance(t *testing.T) {
 }
 
 func TestGithubReleaseSource_downloadRelease(t *testing.T) {
-	lock := Lock{
+	lock := cargo.ComponentLock{
 		Name:       "routing",
 		Version:    "0.239.0",
 		RemotePath: "https://github.com/cloudfoundry/routing-release/releases/download/v0.239.0/routing-0.239.0.tgz",
@@ -75,7 +76,7 @@ func TestGithubReleaseSource_downloadRelease(t *testing.T) {
 	}
 
 	please.Expect(local.LocalPath).To(BeAnExistingFile(), "it finds the created asset file")
-	please.Expect(local.SHA1).To(Equal("3a2be7b07a1a19072bf54c95a8c4a3fe0cdb35d4"))
+	please.Expect(local.Lock.SHA1).To(Equal("3a2be7b07a1a19072bf54c95a8c4a3fe0cdb35d4"))
 }
 
 func ptr[T any](v T) *T { return &v }

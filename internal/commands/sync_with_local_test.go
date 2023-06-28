@@ -77,11 +77,11 @@ var _ = Describe("sync-with-local", func() {
 			localReleaseDirectory = new(commandsFakes.LocalReleaseDirectory)
 			localReleaseDirectory.GetLocalReleasesReturns([]component.Local{
 				{
-					Lock:      component.Lock{Name: release1Name, Version: release1NewVersion, SHA1: release1NewSha},
+					Lock:      cargo.ComponentLock{Name: release1Name, Version: release1NewVersion, SHA1: release1NewSha},
 					LocalPath: "local-path",
 				},
 				{
-					Lock:      component.Lock{Name: releaseName, Version: releaseNewVersion, SHA1: releaseNewSha},
+					Lock:      cargo.ComponentLock{Name: releaseName, Version: releaseNewVersion, SHA1: releaseNewSha},
 					LocalPath: "local-path-2",
 				},
 			}, nil)
@@ -90,7 +90,7 @@ var _ = Describe("sync-with-local", func() {
 			remotePather = new(fetcherFakes.RemotePather)
 
 			remotePatherFinder.Returns(remotePather, nil)
-			remotePather.RemotePathCalls(func(requirement component.Spec) (path string, err error) {
+			remotePather.RemotePathCalls(func(requirement cargo.ComponentSpec) (path string, err error) {
 				switch requirement.Name {
 				case release1Name:
 					return release1NewRemotePath, nil
@@ -143,11 +143,11 @@ var _ = Describe("sync-with-local", func() {
 			BeforeEach(func() {
 				localReleaseDirectory.GetLocalReleasesReturns([]component.Local{
 					{
-						Lock:      component.Lock{Name: release1Name, Version: release1OldVersion, SHA1: release1NewSha},
+						Lock:      cargo.ComponentLock{Name: release1Name, Version: release1OldVersion, SHA1: release1NewSha},
 						LocalPath: "local-path",
 					},
 					{
-						Lock:      component.Lock{Name: releaseName, Version: releaseNewVersion, SHA1: releaseNewSha},
+						Lock:      cargo.ComponentLock{Name: releaseName, Version: releaseNewVersion, SHA1: releaseNewSha},
 						LocalPath: "local-path-2",
 					},
 				}, nil)

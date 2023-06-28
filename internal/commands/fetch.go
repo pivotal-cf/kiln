@@ -117,7 +117,7 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []c
 	var downloaded []component.Local
 
 	for _, rl := range releaseLocks {
-		remoteRelease := component.Lock{
+		remoteRelease := cargo.ComponentLock{
 			Name:         rl.Name,
 			Version:      rl.Version,
 			RemotePath:   rl.RemotePath,
@@ -129,13 +129,13 @@ func (f Fetch) downloadMissingReleases(kilnfile cargo.Kilnfile, releaseLocks []c
 			return nil, fmt.Errorf("download failed: %w", err)
 		}
 
-		if local.SHA1 != rl.SHA1 {
+		if local.Lock.SHA1 != rl.SHA1 {
 			err = os.Remove(local.LocalPath)
 			if err != nil {
 				return nil, fmt.Errorf("error deleting bad release file %q: %w", local.LocalPath, err) // untested
 			}
 
-			return nil, fmt.Errorf("downloaded release %q had an incorrect SHA1 - expected %q, got %q", local.LocalPath, rl.SHA1, local.SHA1)
+			return nil, fmt.Errorf("downloaded release %q had an incorrect SHA1 - expected %q, got %q", local.LocalPath, rl.SHA1, local.Lock.SHA1)
 		}
 
 		downloaded = append(downloaded, local)
@@ -159,7 +159,7 @@ func partition(releaseLocks []cargo.ComponentLock, localReleases []component.Loc
 nextRelease:
 	for _, rel := range localReleases {
 		for j, lock := range missing {
-			if rel.Name == lock.Name && rel.Version == lock.Version && rel.SHA1 == lock.SHA1 {
+			if rel.Lock.Name == lock.Name && rel.Lock.Version == lock.Version && rel.Lock.SHA1 == lock.SHA1 {
 				intersection = append(intersection, rel)
 				missing = append(missing[:j], missing[j+1:]...)
 				continue nextRelease

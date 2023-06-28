@@ -94,17 +94,17 @@ var _ = Describe("UpdateStemcell", func() {
 			}
 
 			releaseSource = new(fetcherFakes.MultiReleaseSource)
-			releaseSource.GetMatchedReleaseCalls(func(requirement component.Spec) (component.Lock, error) {
+			releaseSource.GetMatchedReleaseCalls(func(requirement cargo.ComponentSpec) (cargo.ComponentLock, error) {
 				switch requirement.Name {
 				case release1Name:
-					remote := component.Lock{
+					remote := cargo.ComponentLock{
 						Name: release1Name, Version: release1Version,
 						RemotePath:   newRelease1RemotePath,
 						RemoteSource: publishableReleaseSourceID,
 					}
 					return remote, nil
 				case release2Name:
-					remote := component.Lock{
+					remote := cargo.ComponentLock{
 						Name: release2Name, Version: release2Version,
 						RemotePath:   newRelease2RemotePath,
 						RemoteSource: unpublishableReleaseSourceID,
@@ -115,17 +115,17 @@ var _ = Describe("UpdateStemcell", func() {
 				}
 			})
 
-			releaseSource.DownloadReleaseCalls(func(_ string, remote component.Lock) (component.Local, error) {
+			releaseSource.DownloadReleaseCalls(func(_ string, remote cargo.ComponentLock) (component.Local, error) {
 				switch remote.Name {
 				case release1Name:
 					local := component.Local{
-						Lock:      component.Lock{Name: release1Name, Version: release1Version, SHA1: newRelease1SHA},
+						Lock:      cargo.ComponentLock{Name: release1Name, Version: release1Version, SHA1: newRelease1SHA},
 						LocalPath: "not-used",
 					}
 					return local, nil
 				case release2Name:
 					local := component.Local{
-						Lock:      component.Lock{Name: release2Name, Version: release2Version, SHA1: newRelease2SHA},
+						Lock:      cargo.ComponentLock{Name: release2Name, Version: release2Version, SHA1: newRelease2SHA},
 						LocalPath: "not-used",
 					}
 					return local, nil
@@ -201,14 +201,14 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(2))
 
 			req1 := releaseSource.GetMatchedReleaseArgsForCall(0)
-			Expect(req1).To(Equal(component.Spec{
+			Expect(req1).To(Equal(cargo.ComponentSpec{
 				Name: release1Name, Version: release1Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
 				GitHubRepository: "https://example.com/lemon",
 			}))
 
 			req2 := releaseSource.GetMatchedReleaseArgsForCall(1)
-			Expect(req2).To(Equal(component.Spec{
+			Expect(req2).To(Equal(cargo.ComponentSpec{
 				Name: release2Name, Version: release2Version,
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
 				GitHubRepository: "https://example.com/orange",
@@ -226,7 +226,7 @@ var _ = Describe("UpdateStemcell", func() {
 			actualDir, remote1 := releaseSource.DownloadReleaseArgsForCall(0)
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote1).To(Equal(
-				component.Lock{
+				cargo.ComponentLock{
 					Name: release1Name, Version: release1Version,
 					RemotePath:   newRelease1RemotePath,
 					RemoteSource: publishableReleaseSourceID,
@@ -236,7 +236,7 @@ var _ = Describe("UpdateStemcell", func() {
 			actualDir, remote2 := releaseSource.DownloadReleaseArgsForCall(1)
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote2).To(Equal(
-				component.Lock{
+				cargo.ComponentLock{
 					Name: release2Name, Version: release2Version,
 					RemotePath:   newRelease2RemotePath,
 					RemoteSource: unpublishableReleaseSourceID,
@@ -387,7 +387,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 		When("the release can't be found", func() {
 			BeforeEach(func() {
-				releaseSource.GetMatchedReleaseReturns(component.Lock{}, component.ErrNotFound)
+				releaseSource.GetMatchedReleaseReturns(cargo.ComponentLock{}, component.ErrNotFound)
 			})
 
 			It("errors", func() {
@@ -402,7 +402,7 @@ var _ = Describe("UpdateStemcell", func() {
 
 		When("finding the release errors", func() {
 			BeforeEach(func() {
-				releaseSource.GetMatchedReleaseReturns(component.Lock{}, errors.New("big badda boom"))
+				releaseSource.GetMatchedReleaseReturns(cargo.ComponentLock{}, errors.New("big badda boom"))
 			})
 
 			It("errors", func() {

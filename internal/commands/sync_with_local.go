@@ -64,38 +64,38 @@ func (command SyncWithLocal) Execute(args []string) error {
 	command.logger.Printf("Found %d releases on disk\n", len(releases))
 
 	for _, rel := range releases {
-		remotePath, err := remotePather.RemotePath(component.Spec{
-			Name:            rel.Name,
-			Version:         rel.Version,
+		remotePath, err := remotePather.RemotePath(cargo.ComponentSpec{
+			Name:            rel.Lock.Name,
+			Version:         rel.Lock.Version,
 			StemcellOS:      kilnfileLock.Stemcell.OS,
 			StemcellVersion: kilnfileLock.Stemcell.Version,
 		})
 		if err != nil {
-			return fmt.Errorf("couldn't generate a remote path for release %q: %w", rel.Name, err)
+			return fmt.Errorf("couldn't generate a remote path for release %q: %w", rel.Lock.Name, err)
 		}
 
 		var matchingRelease *cargo.ComponentLock
 		for i := range kilnfileLock.Releases {
-			if kilnfileLock.Releases[i].Name == rel.Name {
+			if kilnfileLock.Releases[i].Name == rel.Lock.Name {
 				matchingRelease = &kilnfileLock.Releases[i]
 				break
 			}
 		}
 		if matchingRelease == nil {
-			return fmt.Errorf("the local release %q does not exist in the Kilnfile.lock", rel.Name)
+			return fmt.Errorf("the local release %q does not exist in the Kilnfile.lock", rel.Lock.Name)
 		}
 
-		if command.Options.SkipSameVersion && matchingRelease.Version == rel.Version {
-			command.logger.Printf("Skipping %s. Release version hasn't changed\n", rel.Name)
+		if command.Options.SkipSameVersion && matchingRelease.Version == rel.Lock.Version {
+			command.logger.Printf("Skipping %s. Release version hasn't changed\n", rel.Lock.Name)
 			continue
 		}
 
-		matchingRelease.Version = rel.Version
-		matchingRelease.SHA1 = rel.SHA1
+		matchingRelease.Version = rel.Lock.Version
+		matchingRelease.SHA1 = rel.Lock.SHA1
 		matchingRelease.RemoteSource = command.Options.ReleaseSourceID
 		matchingRelease.RemotePath = remotePath
 
-		command.logger.Printf("Updated %s to %s\n", rel.Name, rel.Version)
+		command.logger.Printf("Updated %s to %s\n", rel.Lock.Name, rel.Lock.Version)
 	}
 
 	err = command.Options.SaveKilnfileLock(command.fs, kilnfileLock)
