@@ -103,10 +103,10 @@ func (src S3ReleaseSource) Publishable() bool                        { return sr
 func (src S3ReleaseSource) Configuration() cargo.ReleaseSourceConfig { return src.ReleaseSourceConfig }
 
 //counterfeiter:generate -o ./fakes/s3_request_failure.go --fake-name S3RequestFailure github.com/aws/aws-sdk-go/service/s3.RequestFailure
-func (src S3ReleaseSource) GetMatchedRelease(spec cargo.ComponentSpec) (cargo.ComponentLock, error) {
+func (src S3ReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error) {
 	remotePath, err := src.RemotePath(spec)
 	if err != nil {
-		return cargo.ComponentLock{}, err
+		return cargo.BOSHReleaseLock{}, err
 	}
 
 	headRequest := new(s3.HeadObjectInput)
@@ -117,12 +117,12 @@ func (src S3ReleaseSource) GetMatchedRelease(spec cargo.ComponentSpec) (cargo.Co
 	if err != nil {
 		requestFailure, ok := err.(s3.RequestFailure)
 		if ok && requestFailure.StatusCode() == 404 {
-			return cargo.ComponentLock{}, ErrNotFound
+			return cargo.BOSHReleaseLock{}, ErrNotFound
 		}
-		return cargo.ComponentLock{}, err
+		return cargo.BOSHReleaseLock{}, err
 	}
 
-	return cargo.ComponentLock{
+	return cargo.BOSHReleaseLock{
 		Name:         spec.Name,
 		Version:      spec.Version,
 		RemotePath:   remotePath,
@@ -130,7 +130,7 @@ func (src S3ReleaseSource) GetMatchedRelease(spec cargo.ComponentSpec) (cargo.Co
 	}, nil
 }
 
-func (src S3ReleaseSource) FindReleaseVersion(spec cargo.ComponentSpec, noDownload bool) (cargo.ComponentLock, error) {
+func (src S3ReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseSpecification, noDownload bool) (cargo.BOSHReleaseLock, error) {
 	pathTemplatePattern, _ := regexp.Compile(`^\d+\.\d+`)
 	tasVersion := pathTemplatePattern.FindString(src.ReleaseSourceConfig.PathTemplate)
 	var prefix string
@@ -144,18 +144,18 @@ func (src S3ReleaseSource) FindReleaseVersion(spec cargo.ComponentSpec, noDownlo
 		Prefix: &prefix,
 	})
 	if err != nil {
-		return cargo.ComponentLock{}, err
+		return cargo.BOSHReleaseLock{}, err
 	}
 
 	semverPattern, err := regexp.Compile(`([-v])\d+(.\d+)*`)
 	if err != nil {
-		return cargo.ComponentLock{}, err
+		return cargo.BOSHReleaseLock{}, err
 	}
 
-	foundRelease := cargo.ComponentLock{}
+	foundRelease := cargo.BOSHReleaseLock{}
 	constraint, err := spec.VersionConstraints()
 	if err != nil {
-		return cargo.ComponentLock{}, err
+		return cargo.BOSHReleaseLock{}, err
 	}
 
 	for _, result := range releaseResults.Contents {
@@ -174,8 +174,8 @@ func (src S3ReleaseSource) FindReleaseVersion(spec cargo.ComponentSpec, noDownlo
 				continue
 			}
 
-			if (foundRelease == cargo.ComponentLock{}) {
-				foundRelease = cargo.ComponentLock{
+			if (foundRelease == cargo.BOSHReleaseLock{}) {
+				foundRelease = cargo.BOSHReleaseLock{
 					Name:         spec.Name,
 					Version:      version,
 					RemotePath:   *result.Key,
@@ -184,7 +184,7 @@ func (src S3ReleaseSource) FindReleaseVersion(spec cargo.ComponentSpec, noDownlo
 			} else {
 				foundVersion, _ := semver.NewVersion(foundRelease.Version)
 				if newVersion.GreaterThan(foundVersion) {
-					foundRelease = cargo.ComponentLock{
+					foundRelease = cargo.BOSHReleaseLock{
 						Name:         spec.Name,
 						Version:      version,
 						RemotePath:   *result.Key,
@@ -194,8 +194,8 @@ func (src S3ReleaseSource) FindReleaseVersion(spec cargo.ComponentSpec, noDownlo
 			}
 		}
 	}
-	if (foundRelease == cargo.ComponentLock{}) {
-		return cargo.ComponentLock{}, ErrNotFound
+	if (foundRelease == cargo.BOSHReleaseLock{}) {
+		return cargo.BOSHReleaseLock{}, ErrNotFound
 	}
 
 	if noDownload {
@@ -204,14 +204,14 @@ func (src S3ReleaseSource) FindReleaseVersion(spec cargo.ComponentSpec, noDownlo
 		var releaseLocal Local
 		releaseLocal, err = src.DownloadRelease("/tmp", foundRelease)
 		if err != nil {
-			return cargo.ComponentLock{}, err
+			return cargo.BOSHReleaseLock{}, err
 		}
 		foundRelease.SHA1 = releaseLocal.Lock.SHA1
 	}
 	return foundRelease, nil
 }
 
-func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock cargo.ComponentLock) (Local, error) {
+func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock cargo.BOSHReleaseLock) (Local, error) {
 	setConcurrency := func(dl *s3manager.Downloader) {
 		if src.DownloadThreads > 0 {
 			dl.Concurrency = src.DownloadThreads
@@ -254,10 +254,10 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock cargo.Compone
 	return Local{Lock: lock, LocalPath: outputFile}, nil
 }
 
-func (src S3ReleaseSource) UploadRelease(spec cargo.ComponentSpec, file io.Reader) (cargo.ComponentLock, error) {
+func (src S3ReleaseSource) UploadRelease(spec cargo.BOSHReleaseSpecification, file io.Reader) (cargo.BOSHReleaseLock, error) {
 	remotePath, err := src.RemotePath(spec)
 	if err != nil {
-		return cargo.ComponentLock{}, err
+		return cargo.BOSHReleaseLock{}, err
 	}
 
 	src.logger.Printf("uploading release %q to %s at %q...\n", spec.Name, src.ReleaseSourceConfig.Bucket, remotePath)
@@ -268,10 +268,10 @@ func (src S3ReleaseSource) UploadRelease(spec cargo.ComponentSpec, file io.Reade
 		Body:   file,
 	})
 	if err != nil {
-		return cargo.ComponentLock{}, err
+		return cargo.BOSHReleaseLock{}, err
 	}
 
-	return cargo.ComponentLock{
+	return cargo.BOSHReleaseLock{
 		Name:         spec.Name,
 		Version:      spec.Version,
 		RemotePath:   remotePath,
@@ -279,7 +279,7 @@ func (src S3ReleaseSource) UploadRelease(spec cargo.ComponentSpec, file io.Reade
 	}, nil
 }
 
-func (src S3ReleaseSource) RemotePath(spec cargo.ComponentSpec) (string, error) {
+func (src S3ReleaseSource) RemotePath(spec cargo.BOSHReleaseSpecification) (string, error) {
 	pathBuf := new(bytes.Buffer)
 
 	err := src.pathTemplate().Execute(pathBuf, spec)

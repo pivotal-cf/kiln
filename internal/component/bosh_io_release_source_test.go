@@ -62,14 +62,14 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			It("finds built releases which exist on bosh.io", func() {
 				os := "ubuntu-xenial"
 				version := "190.0.0"
-				uaaRequirement := cargo.ComponentSpec{Name: "uaa", Version: "73.3.0", StemcellOS: os, StemcellVersion: version}
-				rabbitmqRequirement := cargo.ComponentSpec{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: os, StemcellVersion: version}
+				uaaRequirement := cargo.BOSHReleaseSpecification{Name: "uaa", Version: "73.3.0", StemcellOS: os, StemcellVersion: version}
+				rabbitmqRequirement := cargo.BOSHReleaseSpecification{Name: "cf-rabbitmq", Version: "268.0.0", StemcellOS: os, StemcellVersion: version}
 
 				foundRelease, err := releaseSource.GetMatchedRelease(uaaRequirement)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(component.IsErrNotFound(err)).To(BeFalse())
 				uaaURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/uaa-release?v=73.3.0", testServer.URL())
-				Expect(foundRelease).To(Equal(cargo.ComponentLock{
+				Expect(foundRelease).To(Equal(cargo.BOSHReleaseLock{
 					Name:         "uaa",
 					Version:      "73.3.0",
 					RemotePath:   uaaURL,
@@ -80,7 +80,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(component.IsErrNotFound(err)).To(BeFalse())
 				cfRabbitURL := fmt.Sprintf("%s/d/github.com/pivotal-cf/cf-rabbitmq-release?v=268.0.0", testServer.URL())
-				Expect(foundRelease).To(Equal(cargo.ComponentLock{
+				Expect(foundRelease).To(Equal(cargo.BOSHReleaseLock{
 					Name:         "cf-rabbitmq",
 					Version:      "268.0.0",
 					RemotePath:   cfRabbitURL,
@@ -110,7 +110,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			It("doesn't find releases which don't exist on bosh.io", func() {
-				zzzRequirement := cargo.ComponentSpec{Name: "zzz", Version: "999", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}
+				zzzRequirement := cargo.BOSHReleaseSpecification{Name: "zzz", Version: "999", StemcellOS: "ubuntu-xenial", StemcellVersion: "190.0.0"}
 				_, err := releaseSource.GetMatchedRelease(zzzRequirement)
 				Expect(err).To(HaveOccurred())
 				Expect(component.IsErrNotFound(err)).To(BeTrue())
@@ -139,7 +139,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			It("does not match that release", func() {
-				_, err := releaseSource.GetMatchedRelease(cargo.ComponentSpec{
+				_, err := releaseSource.GetMatchedRelease(cargo.BOSHReleaseSpecification{
 					Name:            releaseName,
 					Version:         releaseVersion,
 					StemcellOS:      "ignored",
@@ -177,8 +177,8 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 					pathRegex, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/.*`)
 					testServer.RouteToHandler("GET", pathRegex, ghttp.RespondWith(http.StatusOK, `null`))
 
-					releaseID := cargo.ComponentSpec{Name: releaseName, Version: releaseVersion}
-					releaseRequirement := cargo.ComponentSpec{
+					releaseID := cargo.BOSHReleaseSpecification{Name: releaseName, Version: releaseVersion}
+					releaseRequirement := cargo.BOSHReleaseSpecification{
 						Name:            releaseName,
 						Version:         releaseVersion,
 						StemcellOS:      "generic-os",
@@ -226,8 +226,8 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			releaseSource *component.BOSHIOReleaseSource
 			testServer    *ghttp.Server
 
-			release1ID cargo.ComponentSpec
-			release1   cargo.ComponentLock
+			release1ID cargo.BOSHReleaseSpecification
+			release1   cargo.BOSHReleaseLock
 
 			release1Sha1 string
 		)
@@ -241,7 +241,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 
 			releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), log.New(GinkgoWriter, "", 0))
 
-			release1ID = cargo.ComponentSpec{Name: "some", Version: "1.2.3"}
+			release1ID = cargo.BOSHReleaseSpecification{Name: "some", Version: "1.2.3"}
 			release1 = release1ID.Lock().WithRemote(component.ReleaseSourceTypeBOSHIO, testServer.URL()+release1ServerPath)
 
 			hash := sha1.New()
@@ -309,12 +309,12 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 			When("there is no version requirement", func() {
 				It("gets the latest version from bosh.io", func() {
-					rabbitmqRequirement := cargo.ComponentSpec{Name: "cf-rabbitmq"}
+					rabbitmqRequirement := cargo.BOSHReleaseSpecification{Name: "cf-rabbitmq"}
 
 					foundRelease, err := releaseSource.FindReleaseVersion(rabbitmqRequirement, false)
 					Expect(err).NotTo(HaveOccurred())
 					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.5", testServer.URL())
-					Expect(foundRelease).To(Equal(cargo.ComponentLock{
+					Expect(foundRelease).To(Equal(cargo.BOSHReleaseLock{
 						Name:         "cf-rabbitmq",
 						Version:      "309.0.5",
 						SHA1:         "5df538657c2cc830bda679420a9b162682018ded",
@@ -325,12 +325,12 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 			When("there is a version requirement", func() {
 				It("gets the latest version from bosh.io", func() {
-					rabbitmqRequirement := cargo.ComponentSpec{Name: "cf-rabbitmq", Version: "~309"}
+					rabbitmqRequirement := cargo.BOSHReleaseSpecification{Name: "cf-rabbitmq", Version: "~309"}
 
 					foundRelease, err := releaseSource.FindReleaseVersion(rabbitmqRequirement, false)
 					Expect(err).NotTo(HaveOccurred())
 					cfRabbitURL := fmt.Sprintf("%s/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.5", testServer.URL())
-					Expect(foundRelease).To(Equal(cargo.ComponentLock{
+					Expect(foundRelease).To(Equal(cargo.BOSHReleaseLock{
 						Name:         "cf-rabbitmq",
 						Version:      "309.0.5",
 						SHA1:         "5df538657c2cc830bda679420a9b162682018ded",
@@ -356,12 +356,12 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 			})
 
 			It("returns not found", func() {
-				rabbitmqRequirement := cargo.ComponentSpec{Name: "cf-rabbitmq"}
+				rabbitmqRequirement := cargo.BOSHReleaseSpecification{Name: "cf-rabbitmq"}
 
 				foundRelease, err := releaseSource.FindReleaseVersion(rabbitmqRequirement, false)
 				Expect(err).To(HaveOccurred())
 				Expect(component.IsErrNotFound(err)).To(BeTrue())
-				Expect(foundRelease).To(Equal(cargo.ComponentLock{}))
+				Expect(foundRelease).To(Equal(cargo.BOSHReleaseLock{}))
 			})
 		})
 	})

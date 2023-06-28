@@ -69,16 +69,16 @@ func (grs *GithubReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
-func (grs *GithubReleaseSource) GetMatchedRelease(s cargo.ComponentSpec) (cargo.ComponentLock, error) {
+func (grs *GithubReleaseSource) GetMatchedRelease(s cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error) {
 	_, err := semver.NewVersion(s.Version)
 	if err != nil {
-		return cargo.ComponentLock{}, fmt.Errorf("expected version to be an exact version")
+		return cargo.BOSHReleaseLock{}, fmt.Errorf("expected version to be an exact version")
 	}
 
 	ctx := context.TODO()
 	release, err := grs.GetGithubReleaseWithTag(ctx, s)
 	if err != nil {
-		return cargo.ComponentLock{}, err
+		return cargo.BOSHReleaseLock{}, err
 	}
 
 	return grs.getLockFromRelease(ctx, release, s, false)
@@ -90,7 +90,7 @@ type ReleaseByTagGetter interface {
 	GetReleaseByTag(ctx context.Context, owner, repo, tag string) (*github.RepositoryRelease, *github.Response, error)
 }
 
-func (grs *GithubReleaseSource) GetGithubReleaseWithTag(ctx context.Context, s cargo.ComponentSpec) (*github.RepositoryRelease, error) {
+func (grs *GithubReleaseSource) GetGithubReleaseWithTag(ctx context.Context, s cargo.BOSHReleaseSpecification) (*github.RepositoryRelease, error) {
 	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(s.GitHubRepository)
 	if err != nil {
 		return nil, ErrNotFound
@@ -112,7 +112,7 @@ func (grs *GithubReleaseSource) GetGithubReleaseWithTag(ctx context.Context, s c
 	return release, nil
 }
 
-func (grs *GithubReleaseSource) GetLatestMatchingRelease(ctx context.Context, s cargo.ComponentSpec) (*github.RepositoryRelease, error) {
+func (grs *GithubReleaseSource) GetLatestMatchingRelease(ctx context.Context, s cargo.BOSHReleaseSpecification) (*github.RepositoryRelease, error) {
 	c, err := s.VersionConstraints()
 	if err != nil {
 		return nil, fmt.Errorf("expected version to be a constraint")
@@ -178,17 +178,17 @@ func (grs *GithubReleaseSource) GetLatestMatchingRelease(ctx context.Context, s 
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
-func (grs *GithubReleaseSource) FindReleaseVersion(s cargo.ComponentSpec, noDownload bool) (cargo.ComponentLock, error) {
+func (grs *GithubReleaseSource) FindReleaseVersion(s cargo.BOSHReleaseSpecification, noDownload bool) (cargo.BOSHReleaseLock, error) {
 	ctx := context.TODO()
 	release, err := grs.GetLatestMatchingRelease(ctx, s)
 	if err != nil {
-		return cargo.ComponentLock{}, err
+		return cargo.BOSHReleaseLock{}, err
 	}
 
 	return grs.getLockFromRelease(ctx, release, s, noDownload)
 }
 
-func (grs *GithubReleaseSource) getLockFromRelease(ctx context.Context, r *github.RepositoryRelease, s cargo.ComponentSpec, noDownload bool) (cargo.ComponentLock, error) {
+func (grs *GithubReleaseSource) getLockFromRelease(ctx context.Context, r *github.RepositoryRelease, s cargo.BOSHReleaseSpecification, noDownload bool) (cargo.BOSHReleaseLock, error) {
 	lockVersion := strings.TrimPrefix(r.GetTagName(), "v")
 	expectedAssetName := fmt.Sprintf("%s-%s.tgz", s.Name, lockVersion)
 	malformedAssetName := fmt.Sprintf("%s-v%s.tgz", s.Name, lockVersion)
@@ -205,11 +205,11 @@ func (grs *GithubReleaseSource) getLockFromRelease(ctx context.Context, r *githu
 			var err error
 			sum, err = grs.getReleaseSHA1(ctx, s, *asset.ID)
 			if err != nil {
-				return cargo.ComponentLock{}, err
+				return cargo.BOSHReleaseLock{}, err
 			}
 		}
 
-		return cargo.ComponentLock{
+		return cargo.BOSHReleaseLock{
 			Name:         s.Name,
 			Version:      lockVersion,
 			RemoteSource: grs.Org,
@@ -218,10 +218,10 @@ func (grs *GithubReleaseSource) getLockFromRelease(ctx context.Context, r *githu
 		}, nil
 	}
 
-	return cargo.ComponentLock{}, fmt.Errorf("no matching GitHub release asset file name equal to %q", expectedAssetName)
+	return cargo.BOSHReleaseLock{}, fmt.Errorf("no matching GitHub release asset file name equal to %q", expectedAssetName)
 }
 
-func (grs *GithubReleaseSource) getReleaseSHA1(ctx context.Context, s cargo.ComponentSpec, id int64) (string, error) {
+func (grs *GithubReleaseSource) getReleaseSHA1(ctx context.Context, s cargo.BOSHReleaseSpecification, id int64) (string, error) {
 	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(s.GitHubRepository)
 	if err != nil {
 		return "", fmt.Errorf("could not parse repository name: %v", err)
@@ -243,7 +243,7 @@ type ReleasesLister interface {
 // DownloadRelease downloads the release and writes the resulting file to the releasesDir.
 // It should also calculate and set the SHA1 field on the Local result; it does not need
 // to ensure the sums match, the caller must verify this.
-func (grs *GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease cargo.ComponentLock) (Local, error) {
+func (grs *GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease cargo.BOSHReleaseLock) (Local, error) {
 	grs.Logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeGithub, grs.ID)
 	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs, grs.Logger)
 }
@@ -255,7 +255,7 @@ type ReleaseByTagGetterAssetDownloader interface {
 	ReleaseAssetDownloader
 }
 
-func downloadRelease(ctx context.Context, releaseDir string, remoteRelease cargo.ComponentLock, client ReleaseByTagGetterAssetDownloader, logger *log.Logger) (Local, error) {
+func downloadRelease(ctx context.Context, releaseDir string, remoteRelease cargo.BOSHReleaseLock, client ReleaseByTagGetterAssetDownloader, logger *log.Logger) (Local, error) {
 	filePath := filepath.Join(releaseDir, fmt.Sprintf("%s-%s.tgz", remoteRelease.Name, remoteRelease.Version))
 
 	remoteUrl, err := url.Parse(remoteRelease.RemotePath)
@@ -311,7 +311,7 @@ type ReleaseAssetDownloader interface {
 	DownloadReleaseAsset(ctx context.Context, owner, repo string, id int64, followRedirectsClient *http.Client) (rc io.ReadCloser, redirectURL string, err error)
 }
 
-func findAssetFile(list []*github.ReleaseAsset, lock cargo.ComponentLock) (*github.ReleaseAsset, bool) {
+func findAssetFile(list []*github.ReleaseAsset, lock cargo.BOSHReleaseLock) (*github.ReleaseAsset, bool) {
 	lockVersion := strings.TrimPrefix(lock.Version, "v")
 	expectedAssetName := fmt.Sprintf("%s-%s.tgz", lock.Name, lockVersion)
 	malformedAssetName := fmt.Sprintf("%s-v%s.tgz", lock.Name, lockVersion)

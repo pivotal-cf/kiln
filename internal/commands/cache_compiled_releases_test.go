@@ -64,25 +64,25 @@ func newCacheCompiledReleasesTestData(t *testing.T, kf cargo.Kilnfile, kl cargo.
 	logger := log.New(&output, "", 0)
 
 	releaseStorage := new(fakes.ReleaseStorage)
-	releaseStorage.GetMatchedReleaseCalls(func(spec cargo.ComponentSpec) (cargo.ComponentLock, error) {
+	releaseStorage.GetMatchedReleaseCalls(func(spec cargo.BOSHReleaseSpecification) (cargo.BOSHReleaseLock, error) {
 		switch spec.Lock() {
-		case cargo.ComponentLock{Name: "orange", Version: "1.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
-			return cargo.ComponentLock{
+		case cargo.BOSHReleaseLock{Name: "orange", Version: "1.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
+			return cargo.BOSHReleaseLock{
 				Name: "orange", Version: "1.0.0",
 				SHA1:         "fake-checksum",
 				RemoteSource: "cached-compiled-releases",
 				RemotePath:   "orange-1.0.0-alpine-9.0.0",
 			}, nil
-		case cargo.ComponentLock{Name: "banana", Version: "2.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
-			return cargo.ComponentLock{
+		case cargo.BOSHReleaseLock{Name: "banana", Version: "2.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"}:
+			return cargo.BOSHReleaseLock{
 				Name: "banana", Version: "2.0.0",
 				SHA1:         "fake-checksum",
 				RemoteSource: "cached-compiled-releases",
 				RemotePath:   "banana-2.0.0-alpine-9.0.0",
 			}, nil
-		case cargo.ComponentLock{Name: "lemon", Version: "3.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"},
-			cargo.ComponentLock{Name: "banana", Version: "2.0.0", StemcellOS: "alpine", StemcellVersion: "8.0.0"}:
-			return cargo.ComponentLock{}, component.ErrNotFound
+		case cargo.BOSHReleaseLock{Name: "lemon", Version: "3.0.0", StemcellOS: "alpine", StemcellVersion: "9.0.0"},
+			cargo.BOSHReleaseLock{Name: "banana", Version: "2.0.0", StemcellOS: "alpine", StemcellVersion: "8.0.0"}:
+			return cargo.BOSHReleaseLock{}, component.ErrNotFound
 		}
 
 		panic(fmt.Sprintf("unexpected spec %#v", spec))
@@ -131,7 +131,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_compiled(t *test
 			},
 		},
 	}, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.BOSHReleaseLock{
 			{
 				Name:         "banana",
 				Version:      "2.0.0",
@@ -170,7 +170,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 			},
 		},
 	}, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.BOSHReleaseLock{
 			{
 				Name:    "orange",
 				Version: "1.0.0",
@@ -200,7 +200,7 @@ func TestCacheCompiledReleases_Execute_all_releases_are_already_cached(t *testin
 
 	var updatedKilnfile cargo.KilnfileLock
 	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(HaveOccurred())
-	please.Expect(updatedKilnfile.Releases).To(ContainElement(cargo.ComponentLock{
+	please.Expect(updatedKilnfile.Releases).To(ContainElement(cargo.BOSHReleaseLock{
 		Name: "orange", Version: "1.0.0",
 		SHA1:         "fake-checksum",
 		RemoteSource: "cached-compiled-releases",
@@ -231,7 +231,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 			},
 		},
 	}, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.BOSHReleaseLock{
 			{
 				Name:    "orange",
 				Version: "1.0.0",
@@ -288,9 +288,9 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 	}
 
 	var uploadedRelease bytes.Buffer
-	test.releaseStorage.UploadReleaseCalls(func(_ cargo.ComponentSpec, reader io.Reader) (cargo.ComponentLock, error) {
+	test.releaseStorage.UploadReleaseCalls(func(_ cargo.BOSHReleaseSpecification, reader io.Reader) (cargo.BOSHReleaseLock, error) {
 		_, _ = io.Copy(&uploadedRelease, reader)
-		return cargo.ComponentLock{
+		return cargo.BOSHReleaseLock{
 			Name: "lemon", Version: "3.0.0",
 
 			RemoteSource: "cached-compiled-releases",
@@ -327,7 +327,7 @@ func TestCacheCompiledReleases_Execute_when_one_release_is_cached_another_is_alr
 
 	var updatedKilnfile cargo.KilnfileLock
 	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(HaveOccurred())
-	please.Expect(updatedKilnfile.Releases).To(ContainElement(cargo.ComponentLock{
+	please.Expect(updatedKilnfile.Releases).To(ContainElement(cargo.BOSHReleaseLock{
 		Name:         "lemon",
 		Version:      "3.0.0",
 		SHA1:         "012ed191f1d07c14bbcbbc0423d0de1c56757348",
@@ -360,7 +360,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 			},
 		},
 	}, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.BOSHReleaseLock{
 			{
 				Name:    "banana",
 				Version: "2.0.0",
@@ -418,7 +418,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_is_not_compiled_with_the_c
 
 	var updatedKilnfile cargo.KilnfileLock
 	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(HaveOccurred())
-	please.Expect(updatedKilnfile.Releases).To(ContainElement(cargo.ComponentLock{
+	please.Expect(updatedKilnfile.Releases).To(ContainElement(cargo.BOSHReleaseLock{
 		Name:    "banana",
 		Version: "2.0.0",
 
@@ -448,13 +448,13 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 				PathTemplate: "{{.Release}}-{{.Version}}.tgz",
 			},
 		},
-		Releases: []cargo.ComponentSpec{
+		Releases: []cargo.BOSHReleaseSpecification{
 			{
 				Name: "banana",
 			},
 		},
 	}, cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.BOSHReleaseLock{
 			{
 				Name:    "banana",
 				Version: "2.0.0",
@@ -488,7 +488,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 			}, nil
 		}
 	}
-	test.releaseStorage.UploadReleaseStub = func(spec cargo.ComponentSpec, reader io.Reader) (cargo.ComponentLock, error) {
+	test.releaseStorage.UploadReleaseStub = func(spec cargo.BOSHReleaseSpecification, reader io.Reader) (cargo.BOSHReleaseLock, error) {
 		l := spec.Lock()
 		l.RemotePath = "BANANA.tgz"
 		l.RemoteSource = "BASKET"
@@ -521,7 +521,7 @@ func TestCacheCompiledReleases_Execute_when_a_release_has_no_packages(t *testing
 
 	var updatedKilnfile cargo.KilnfileLock
 	please.Expect(fsReadYAML(test.cmd.FS, "Kilnfile.lock", &updatedKilnfile)).NotTo(HaveOccurred())
-	please.Expect(updatedKilnfile.Releases).To(ContainElement(cargo.ComponentLock{
+	please.Expect(updatedKilnfile.Releases).To(ContainElement(cargo.BOSHReleaseLock{
 		Name:    "banana",
 		Version: "2.0.0",
 
@@ -542,7 +542,7 @@ func TestCacheCompiledReleases_Execute_staged_and_lock_stemcells_are_not_the_sam
 	// setup
 
 	initialLock := cargo.KilnfileLock{
-		Releases: []cargo.ComponentLock{
+		Releases: []cargo.BOSHReleaseLock{
 			{
 				Name:    "orange",
 				Version: "1.0.0",

@@ -7,13 +7,13 @@ import (
 )
 
 type Exported struct {
-	Lock        cargo.ComponentLock
+	Lock        cargo.BOSHReleaseLock
 	TarballPath string
 	BlobstoreID string
 }
 
 type Local struct {
-	Lock      cargo.ComponentLock
+	Lock      cargo.BOSHReleaseLock
 	LocalPath string
 }
 

@@ -93,7 +93,7 @@ releases:
 			})
 			When("a latest release exists", func() {
 				BeforeEach(func() {
-					fakeReleasesSource.FindReleaseVersionReturns(cargo.ComponentLock{
+					fakeReleasesSource.FindReleaseVersionReturns(cargo.BOSHReleaseLock{
 						Name: releaseName, Version: "74.12.5",
 						RemotePath:   "remote_url",
 						RemoteSource: "bosh.io",
@@ -127,7 +127,7 @@ releases:
 			})
 			When("a release exists", func() {
 				BeforeEach(func() {
-					fakeReleasesSource.FindReleaseVersionReturns(cargo.ComponentLock{
+					fakeReleasesSource.FindReleaseVersionReturns(cargo.BOSHReleaseLock{
 						Name: releaseName, Version: "74.16.5",
 						RemotePath:   "remote_url",
 						RemoteSource: "sourceId",
