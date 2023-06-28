@@ -49,7 +49,7 @@ func (kf *Kilnfile) Glaze(kl KilnfileLock) error {
 }
 
 func (kf *Kilnfile) DeGlaze(kl KilnfileLock) error {
-	// TODO: what do do about the stemcell???
+	// TODO: what do about the stemcell???
 	for index, spec := range kf.Releases {
 		lock, err := kl.FindBOSHReleaseWithName(spec.Name)
 		if err != nil {
