@@ -36,6 +36,9 @@ func (kf Kilnfile) BOSHReleaseTarballSpecification(name string) (BOSHReleaseTarb
 func (kf *Kilnfile) Glaze(kl KilnfileLock) error {
 	kf.Stemcell.Version = kl.Stemcell.Version
 	for index, spec := range kf.Releases {
+		if spec.FloatAlways {
+			continue
+		}
 		lock, err := kl.FindBOSHReleaseWithName(spec.Name)
 		if err != nil {
 			return fmt.Errorf("release with name %q not found in Kilnfile.lock: %w", spec.Name, err)
@@ -107,7 +110,11 @@ type BOSHReleaseTarballSpecification struct {
 	GitHubRepository string `yaml:"github_repository,omitempty"`
 
 	// DeGlazeBehavior changes how version filed changes when de-glaze is run.
-	DeGlazeBehavior DeGlazeBehavior `yaml:"glaze_behavior"`
+	DeGlazeBehavior DeGlazeBehavior `yaml:"maintenance_version_bump_policy"`
+
+	// FloatAlways when does not override version constraint.
+	// It skips locking it during Kilnfile.Glaze.
+	FloatAlways bool `yaml:"float_always,omitempty"`
 
 	// TeamSlackChannel slack channel for team that maintains this bosh release
 	TeamSlackChannel string `yaml:"slack,omitempty"`

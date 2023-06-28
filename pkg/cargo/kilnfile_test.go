@@ -123,7 +123,7 @@ func TestStemcell_ProductSlug(t *testing.T) {
 }
 
 func TestKilnfile_Glaze(t *testing.T) {
-	t.Run("it updates the Kilnfile", func(t *testing.T) {
+	t.Run("locks versions to the value in the lock", func(t *testing.T) {
 		kf := Kilnfile{
 			Releases: []BOSHReleaseTarballSpecification{
 				{Name: "banana"},
@@ -157,10 +157,42 @@ func TestKilnfile_Glaze(t *testing.T) {
 			},
 		}, kf)
 	})
+
+	t.Run("when float always is true", func(t *testing.T) {
+		kf := Kilnfile{
+			Releases: []BOSHReleaseTarballSpecification{
+				{Name: "orange", Version: "<3", FloatAlways: true},
+			},
+			Stemcell: Stemcell{
+				OS: "alpine",
+			},
+		}
+		kl := KilnfileLock{
+			Releases: []BOSHReleaseTarballLock{
+				{Name: "orange", Version: "2.3.4"},
+			},
+			Stemcell: Stemcell{
+				OS:      "alpine",
+				Version: "42.0",
+			},
+		}
+
+		require.NoError(t, kf.Glaze(kl))
+
+		assert.Equal(t, Kilnfile{
+			Releases: []BOSHReleaseTarballSpecification{
+				{Name: "orange", Version: "<3", FloatAlways: true},
+			},
+			Stemcell: Stemcell{
+				OS:      "alpine",
+				Version: "42.0",
+			},
+		}, kf, "it does not alter the versio constraint")
+	})
 }
 
 func TestKilnfile_DeGlaze(t *testing.T) {
-	t.Run("it updates the Kilnfile", func(t *testing.T) {
+	t.Run("when de glazing", func(t *testing.T) {
 		kf := Kilnfile{
 			Releases: []BOSHReleaseTarballSpecification{
 				{Name: "mango", Version: "1.2.3", DeGlazeBehavior: LockMajor},
@@ -188,6 +220,27 @@ func TestKilnfile_DeGlaze(t *testing.T) {
 				{Name: "peach", Version: "*", DeGlazeBehavior: LockNone},
 			},
 		}, kf)
+	})
+
+	t.Run("when float_always is true", func(t *testing.T) {
+		kf := Kilnfile{
+			Releases: []BOSHReleaseTarballSpecification{
+				{Name: "mango", Version: "1.2.3", DeGlazeBehavior: LockMajor, FloatAlways: true},
+			},
+		}
+		kl := KilnfileLock{
+			Releases: []BOSHReleaseTarballLock{
+				{Name: "mango", Version: "1.2.3"},
+			},
+		}
+
+		require.NoError(t, kf.DeGlaze(kl))
+
+		assert.Equal(t, Kilnfile{
+			Releases: []BOSHReleaseTarballSpecification{
+				{Name: "mango", Version: "~1", DeGlazeBehavior: LockMajor, FloatAlways: true},
+			},
+		}, kf, "it should change the constraint")
 	})
 }
 
