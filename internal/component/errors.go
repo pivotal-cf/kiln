@@ -1,6 +1,7 @@
 package component
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -8,11 +9,7 @@ import (
 const ErrNotFound stringError = "not found"
 
 func IsErrNotFound(err error) bool {
-	if err == nil {
-		return false
-	}
-	e, ok := err.(stringError)
-	return ok && e == ErrNotFound
+	return errors.Is(err, ErrNotFound)
 }
 
 type stringError string
