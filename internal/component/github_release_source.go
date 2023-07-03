@@ -218,7 +218,7 @@ func (grs *GithubReleaseSource) getLockFromRelease(ctx context.Context, r *githu
 		}, nil
 	}
 
-	return Lock{}, fmt.Errorf("no matching GitHub release asset file name equal to %q", expectedAssetName)
+	return Lock{}, errors.Join(ErrNotFound, fmt.Errorf("no matching GitHub release asset file name equal to %q", expectedAssetName))
 }
 
 func (grs *GithubReleaseSource) getReleaseSHA1(ctx context.Context, s Spec, id int64) (string, error) {

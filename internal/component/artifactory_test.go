@@ -2,6 +2,7 @@ package component_test
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -240,6 +241,26 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				Expect(resultErr).To(HaveOccurred())
 				Expect(resultErr.Error()).To(ContainSubstring("vpn"))
 			})
+		})
+	})
+
+	When("a bosh release is not found", func() {
+		BeforeEach(func() {
+			artifactoryRouter.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+				w.WriteHeader(http.StatusNotFound)
+				_, _ = fmt.Fprintln(w, `{"errors":[{"status":404,"message":"File not found."}]}`)
+			})
+		})
+		It("returns ErrNotFound", func() {
+			_, err := source.FindReleaseVersion(component.Spec{
+				Name:            "missing-release",
+				Version:         "1.2.3",
+				StemcellOS:      "ubuntu-jammy",
+				StemcellVersion: "1.234",
+			}, false)
+
+			Expect(component.IsErrNotFound(err)).To(BeTrue())
 		})
 	})
 })
