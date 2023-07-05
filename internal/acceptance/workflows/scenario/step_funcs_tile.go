@@ -78,7 +78,7 @@ func theTileOnlyContainsCompiledReleases(ctx context.Context) error {
 
 	for _, release := range metadata.Releases {
 		helloReleaseTarball := bytes.NewBuffer(nil)
-		_, err := tile.ReadReleaseFromFile(tilePath, release.Name, release.Version, helloReleaseTarball)
+		_, err := tile.ReadBOSHReleaseFromFile(tilePath, release.Name, release.Version, helloReleaseTarball)
 		if err != nil {
 			return err
 		}
