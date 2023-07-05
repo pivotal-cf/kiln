@@ -183,7 +183,7 @@ version: 1.2.3
 					Expect(gw.Close()).NotTo(HaveOccurred())
 
 					_, err = reader.Read(tarball.Name())
-					Expect(err).To(MatchError(fmt.Sprintf("could not find release.MF in %q", tarball.Name())))
+					Expect(err).To(MatchError("failed to find release.MF in tarball"))
 				})
 			})
 
@@ -220,7 +220,7 @@ version: 1.2.3
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = reader.Read(tarball.Name())
-					Expect(err).To(MatchError(fmt.Sprintf("could not find release.MF in %q", tarball.Name())))
+					Expect(err).To(MatchError("failed to find release.MF in tarball"))
 				})
 			})
 
@@ -242,7 +242,7 @@ version: 1.2.3
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = reader.Read(tarball.Name())
-					Expect(err).To(MatchError(fmt.Sprintf("error while reading %q: unexpected EOF", tarball.Name())))
+					Expect(err).To(MatchError("unexpected EOF"))
 				})
 			})
 

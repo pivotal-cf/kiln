@@ -2,6 +2,7 @@ package tile_test
 
 import (
 	"bytes"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
 	"os"
@@ -31,6 +32,16 @@ func TestReadReleaseFromFile(t *testing.T) {
 
 	_, err = io.ReadAll(buf)
 	please.Expect(err).NotTo(HaveOccurred())
+}
+
+func TestReadBOSHReleaseManifestsFromTarballs(t *testing.T) {
+	boshReleases, err := tile.ReadBOSHReleaseManifestsFromTarballs(os.DirFS("testdata"), "bpm-1.1.21-ubuntu-xenial-621.463.tgz", "bpm-1.1.21.tgz")
+	require.NoError(t, err)
+	require.Len(t, boshReleases, 2)
+	assert.Equal(t, "be5b1710f33128f6c864eae1d97effddb94dd3ac", boshReleases[0].SHA1)
+	assert.Equal(t, "519b78f2f3333a7b9c000bbef325e12a2f36996d", boshReleases[1].SHA1)
+	assert.Equal(t, "bpm-1.1.21-ubuntu-xenial-621.463.tgz", boshReleases[0].FilePath)
+	assert.Equal(t, "bpm-1.1.21.tgz", boshReleases[1].FilePath)
 }
 
 func TestReadProductTemplatePartFromBOSHReleaseTarball(t *testing.T) {
