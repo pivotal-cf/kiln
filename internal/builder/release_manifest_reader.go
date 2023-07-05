@@ -1,18 +1,14 @@
 package builder
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
-	"io"
-	"path/filepath"
-	"strings"
-
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
-
-	"gopkg.in/yaml.v2"
+	"github.com/pivotal-cf/kiln/pkg/tile"
+	"io"
+	"path/filepath"
 )
 
 type ReleaseManifest struct {
@@ -22,17 +18,6 @@ type ReleaseManifest struct {
 	SHA1            string
 	StemcellOS      string `yaml:"-"`
 	StemcellVersion string `yaml:"-"`
-}
-
-// inputReleaseManifest is a subset of release.MF
-type inputReleaseManifest struct {
-	Name             string            `yaml:"name"`
-	Version          string            `yaml:"version"`
-	CompiledPackages []compiledPackage `yaml:"compiled_packages"`
-}
-
-type compiledPackage struct {
-	Stemcell string `yaml:"stemcell"`
 }
 
 type ReleaseManifestReader struct {
@@ -54,54 +39,14 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 	}
 	defer closeAndIgnoreError(file)
 
-	// TODO: use component.ReadReleaseManifest
-	// we could not do it yet due to a circular package reference where we import builder in the local release source
-
-	gr, err := gzip.NewReader(file)
-	if err != nil {
-		return Part{}, err
-	}
-	defer closeAndIgnoreError(gr)
-
-	tr := tar.NewReader(gr)
-
-	var header *tar.Header
-	for {
-		header, err = tr.Next()
-		if err != nil {
-			if err == io.EOF {
-				return Part{}, fmt.Errorf("could not find release.MF in %q", releaseTarball)
-			}
-
-			return Part{}, fmt.Errorf("error while reading %q: %s", releaseTarball, err)
-		}
-
-		if filepath.Base(header.Name) == "release.MF" {
-			break
-		}
-	}
-
-	var inputReleaseManifest inputReleaseManifest
-	inputReleaseManifestContents, err := io.ReadAll(tr)
-	if err != nil {
-		return Part{}, err // NOTE: cannot replicate this error scenario in a test
-	}
-
-	err = yaml.Unmarshal(inputReleaseManifestContents, &inputReleaseManifest)
+	inputReleaseManifest, err := tile.ReadProductTemplatePartFromBOSHReleaseTarball(file)
 	if err != nil {
 		return Part{}, err
 	}
 
-	var stemcellOS, stemcellVersion string
-	compiledPackages := inputReleaseManifest.CompiledPackages
-	if len(compiledPackages) > 0 {
-		inputStemcell := inputReleaseManifest.CompiledPackages[0].Stemcell
-		stemcellParts := strings.Split(inputStemcell, "/")
-		if len(stemcellParts) != 2 {
-			return Part{}, fmt.Errorf("Invalid format for compiled package stemcell inside release.MF (expected 'os/version'): %s", inputStemcell)
-		}
-		stemcellOS = stemcellParts[0]
-		stemcellVersion = stemcellParts[1]
+	stemcellOS, stemcellVersion, stemcellOK := inputReleaseManifest.Stemcell()
+	if !stemcellOK && len(inputReleaseManifest.CompiledPackages) > 0 {
+		return Part{}, fmt.Errorf("%s/%s has invalid stemcell: %q", inputReleaseManifest.Name, inputReleaseManifest.Version, inputReleaseManifest.CompiledPackages[0].Stemcell)
 	}
 
 	outputReleaseManifest := ReleaseManifest{
@@ -123,7 +68,7 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 		return Part{}, err // NOTE: cannot replicate this error scenario in a test
 	}
 
-	outputReleaseManifest.SHA1 = fmt.Sprintf("%x", hash.Sum(nil))
+	outputReleaseManifest.SHA1 = hex.EncodeToString(hash.Sum(nil))
 
 	return Part{
 		File:     releaseTarball,

@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"strings"
 
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
@@ -102,6 +103,13 @@ type BOSHReleaseManifest struct {
 
 	CompiledPackages []CompiledBOSHReleasePackage `yaml:"compiled_packages"`
 	Packages         []BOSHReleasePackage         `yaml:"packages"`
+}
+
+func (mf BOSHReleaseManifest) Stemcell() (string, string, bool) {
+	if len(mf.CompiledPackages) == 0 {
+		return "", "", false
+	}
+	return strings.Cut(mf.CompiledPackages[0].Stemcell, "/")
 }
 
 type BOSHReleaseTarball struct {
