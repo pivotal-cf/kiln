@@ -24,7 +24,7 @@ require (
 	github.com/masterminds/sprig v2.22.0+incompatible
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.5.0
 	github.com/migueleliasweb/go-github-mock v0.0.16
-	github.com/moby/buildkit v0.11.2
+	github.com/moby/buildkit v0.11.4
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.18.1
 	github.com/opencontainers/image-spec v1.0.3-0.20220303224323-02efb9a75ee1
@@ -149,6 +149,6 @@ require (
 )
 
 retract (
-	v1.0.0 // Published accidentally
 	v1.0.1 // Using this as a workaround to retract the previous version. See https://github.com/golang/go/issues/60336 where a go maintainer described this workaround.
+	v1.0.0 // Published accidentally
 )
