@@ -5,8 +5,8 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
-
-	"gopkg.in/yaml.v2"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestComponentLock_yaml_marshal_order(t *testing.T) {
@@ -69,6 +69,55 @@ func TestKilnfileLock_UpdateBOSHReleaseTarballLockWithName(t *testing.T) {
 				assert.NoError(t, err)
 			}
 			assert.Equal(t, tt.KilnfileResult, tt.KilnfileLock)
+		})
+	}
+}
+
+func TestStemcell_ProductSlug(t *testing.T) {
+	for _, tt := range []struct {
+		Name                     string
+		Stemcell                 Stemcell
+		ExpSlug, ExpErrSubstring string
+	}{
+		{
+			Name:     "when using known os ubuntu-xenial",
+			Stemcell: Stemcell{OS: "ubuntu-xenial"},
+			ExpSlug:  "stemcells-ubuntu-xenial",
+		},
+		{
+			Name:     "when using known os ubuntu-jammy",
+			Stemcell: Stemcell{OS: "ubuntu-jammy"},
+			ExpSlug:  "stemcells-ubuntu-jammy",
+		},
+		{
+			Name:     "when using known os windows2019",
+			Stemcell: Stemcell{OS: "windows2019"},
+			ExpSlug:  "stemcells-windows-server",
+		},
+		{
+			Name:            "when slug is not set",
+			Stemcell:        Stemcell{OS: "orange"},
+			ExpErrSubstring: "stemcell slug not set",
+		},
+		{
+			Name:     "when slug is set",
+			Stemcell: Stemcell{TanzuNetSlug: "naval-orange"},
+			ExpSlug:  "naval-orange",
+		},
+		{
+			Name:     "when slug is set and os is a known value windows2019",
+			Stemcell: Stemcell{OS: "windows2019", TanzuNetSlug: "naval-orange"},
+			ExpSlug:  "naval-orange",
+		},
+	} {
+		t.Run(tt.Name, func(t *testing.T) {
+			productSlug, err := tt.Stemcell.ProductSlug()
+			if tt.ExpErrSubstring != "" {
+				require.ErrorContains(t, err, tt.ExpErrSubstring)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.ExpSlug, productSlug)
+			}
 		})
 	}
 }

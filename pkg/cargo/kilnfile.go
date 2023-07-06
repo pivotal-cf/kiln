@@ -194,7 +194,25 @@ func (lock BOSHReleaseTarballLock) ParseVersion() (*semver.Version, error) {
 }
 
 type Stemcell struct {
-	Alias   string `yaml:"alias,omitempty"`
-	OS      string `yaml:"os"`
-	Version string `yaml:"version"`
+	Alias        string `yaml:"alias,omitempty"`
+	OS           string `yaml:"os"`
+	Version      string `yaml:"version"`
+	TanzuNetSlug string `yaml:"slug,omitempty"`
+}
+
+func (stemcell Stemcell) ProductSlug() (string, error) {
+	if stemcell.TanzuNetSlug != "" {
+		return stemcell.TanzuNetSlug, nil
+	}
+	// fall back behavior for compatability
+	switch stemcell.OS {
+	case "ubuntu-xenial":
+		return "stemcells-ubuntu-xenial", nil
+	case "ubuntu-jammy":
+		return "stemcells-ubuntu-jammy", nil
+	case "windows2019":
+		return "stemcells-windows-server", nil
+	default:
+		return "", fmt.Errorf("stemcell slug not set for os %s", stemcell.OS)
+	}
 }
