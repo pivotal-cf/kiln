@@ -21,7 +21,7 @@ This guide intends to be more opinionated while the README.me is more general.
 - Stemcell Version Management
 - Testing
 - Tile release note Generation
-- PivNet Release Publication
+- TanzuNet Release Publication
 - Provides importable utilities for Tile Authors
 
 Again, see [hello-tile](https://github.com/crhntr/hello-tile) (non-VMware employees) or the TAS repo (VMware employees) for tile source code that kiln "just works" with.
@@ -106,7 +106,7 @@ When you `kiln bake`, the contents of `base.yml` go through a few templating ste
 One of those steps exposes the following functions.
 These functions will read, interpolate, and format metadata parts for use in your tile's metadata.yml.
 
-You can reference the part in base.yml by using the follwing template functions:
+You can reference the part in base.yml by using the following template functions:
 - `bosh_variable` reads, interpolates, and formats a product template part from `./bosh_variables`
 - `form` reads, interpolates, and formats a product template part from `./forms`
 - `property` reads, interpolates, and formats a product template part from `./properties`
@@ -150,7 +150,7 @@ While the following examples start from empty directories and mostly use S3 and 
 There are similar simple scripts for a small test tile illustrating similar usage patterns to the follwoing example.
 See [hello-tile](https://github.com/crhntr/hello-tile).
 Hello Tile consumes a single custom BOSH Release, [hello-release](https://github.com/crhntr/hello-release), from a GitHub release.
-It does not upload the release to PivNet but adds the built tile to a GitHub Release.
+It does not upload the release to TanzuNet but adds the built tile to a GitHub Release.
 
 #### <a id="kiln-fetch-example"></a> **EXAMPLE** Using Kiln to Download BOSH Release Tarballs
 This starts from an empty directory and downloads the latest BPM release from bosh.io.
@@ -161,7 +161,7 @@ Note, the Kilnfile and Kilnfile.lock (unfortunately/frustratingly) must be creat
 mkdir -p /tmp/try-kiln-fetch
 cd !$
 mkdir -p releases
-touch release/.gitkeep # not required but a good idea
+touch releases/.gitkeep # not required but a good idea
 
 # Hack a Kilnfile and Kilnfile lock
 echo '{"release_sources": [{type: bosh.io}], "releases": [{"name": "bpm"}]}' > Kilnfile
@@ -384,7 +384,7 @@ release_sources:
     path_template: "some-path-template/tarball.tgz"
 ```
 
-Note `repo` is not a GitHub repository. It is an Artifactory thing. 
+Note `repo` is not a GitHub repository. It refers to an Artifactory repository. 
 
 Please see [Path Templates](#path-templates). The value of `remote_path` in the BOSH release tarball lock is part of the path needed to construct a URL to download the release.
 
@@ -473,14 +473,15 @@ PPE uses this command for TAS/IST/TASW prior to new major versions.
 
 `kiln find-stemcell-version` and `kiln update-stemcell`
 
-Find the latest stemcell releases on PivNet. They behave similarly to the bosh release commands above.
+Find the latest stemcell releases on TanzuNet. They behave similarly to the bosh release commands above.
 
 _If I remember right, the find-stemcell-version command has a bug where the stemcell criteria version in the Kilnfile is not respected and the result of the command is always the latest version._
 
 ## Tile Release Note Generation
 
-If you GitHub BOSH Release tarball sources,
-you can generate release notes for your tile that contain release notes for each BOSH release.
+If you use GitHub BOSH Release tarball sources,
+you can generate release notes for your tile.
+The notes will contain release notes for each BOSH release.
 
 This feature requires you to have a previous tile release that used a Kilnfile.lock to specify the BOSH releases packaged.
 You pass two references
@@ -495,10 +496,10 @@ I recommend you use the defaults.
 
 If you omit `--update-docs` the notes will be written to standard out.
 
-## PivNet Release Publication
+## TanzuNet Release Publication
 
 `kiln publish` does not in-fact publish a tile.
-It changes some of the configuration on a previously created PivNet release.
+It changes some of the configuration on a previously created TanzuNet release.
 While we use it for TAS, it is not ready/intended to be used by other tiles quite yet.
 
 ## Importing Go Source Code [![Go Reference](https://pkg.go.dev/badge/github.com/pivotal-cf/kiln.svg)](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg).
@@ -551,13 +552,13 @@ func main() {
 
 ## Tile Build Packs
 
-There is an internal VMware intiative to build stuff using TAP and buildpacks.
+There is an internal VMware intiative to build tiles using TAP and buildpacks.
 The Kiln Buildpack can take tile source code and create a tile.
 For it to work,
 you need to have your BOSH Release Tarballs fetch-able by Kiln (and only using GitHub or BOSH.io release sources)
 and it is nice if your bake command not require too many flags (see [Tile Source Conventions](#tile-source-conventions)).
 
-The private repository [kiln buildpack](https://github.com/pivotal/kiln-buildpack) has the Pakito buildpack source.
+The private repository [kiln buildpack](https://github.com/pivotal/kiln-buildpack) has the Paketo buildpack source.
 You can run the acceptance tests with a `TILE_DIRECTORY` environment variable set to your tile source to see if your tile will build with the buildpack.
 
 ```
