@@ -52,15 +52,9 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 		return err
 	}
 
-	productSlug := ""
-
-	// Get Stemcell OS and major from Kilnfile
-	if kilnfile.Stemcell.OS == "ubuntu-xenial" {
-		productSlug = "stemcells-ubuntu-xenial"
-	} else if kilnfile.Stemcell.OS == "ubuntu-jammy" {
-		productSlug = "stemcells-ubuntu-jammy"
-	} else if kilnfile.Stemcell.OS == "windows2019" {
-		productSlug = "stemcells-windows-server"
+	productSlug, err := kilnfile.Stemcell.ProductSlug()
+	if err != nil {
+		return err
 	}
 
 	if productSlug == "" {
