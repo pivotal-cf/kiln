@@ -13,12 +13,13 @@ package workflows
 
 import (
 	"context"
-	"golang.org/x/exp/slices"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/cucumber/godog"
 

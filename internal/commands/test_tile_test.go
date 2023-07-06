@@ -345,7 +345,6 @@ var _ = Describe("kiln test docker", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Docker daemon is not running"))
 		})
-
 	})
 })
 
