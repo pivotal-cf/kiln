@@ -327,7 +327,15 @@ Kiln can only download releases from BOSH.io and can not upload BOSH Releases to
 This release source has minimal configuration.
 Just add it to your `release_sources` and you can get releases from [BOSH.io](https://bosh.io/releases/).
 
+```yaml
+# Expected Kilnfile.lock
+release_sources:
+  - type: bosh.io
+    id: community # (optional)
+```
+
 The value of `remote_path` in the BOSH release tarball lock is a URL.
+
 
 #### <a id='release-source-github'></a> GitHub Release Artifacts
 
