@@ -4,6 +4,9 @@
 
 _The shell script examples use [kiln 0.85.0](https://github.com/pivotal-cf/kiln/releases/tag/v0.85.0), [yq 4.34.1](https://github.com/mikefarah/yq), and **curl 7.88.1**._
 
+Some parts of this page are also documented in [README.md](./README.md).
+This guide intends to be more opinionated while the README.me is more general.
+
 ### Table of Contents
 - [Authoring Product Template Parts](#authoring-product-template-parts)
 - [Managing BOSH Release Tarballs](#bosh-release-tarballs)
