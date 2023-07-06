@@ -13,8 +13,8 @@ This guide intends to be more opinionated while the README.me is more general.
   - [Kilnfile BOSH Release Specification and Locking](#bosh-release-sources)
     - Sources
       - [BOSH.io](#release-source-boshio)
-      - [GitHub releases](#release-source-github)
-      - [Build Artifactory](#release-source-artifactory)
+      - [GitHub releases](#release-source-github) <- _Please use this for BOSH Release tarballs_
+      - [Build Artifactory](#release-source-artifactory)  <- _Please use this for compiled BOSH Release tarballs_
       - [AWS S3](#release-source-s3)
       - [Local Files](#release-source-directory)
   - BOSH release compilation
