@@ -4,11 +4,12 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"path/filepath"
+
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pivotal-cf/kiln/pkg/tile"
-	"io"
-	"path/filepath"
 )
 
 type ReleaseManifest struct {

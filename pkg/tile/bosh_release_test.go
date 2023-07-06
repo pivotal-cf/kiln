@@ -2,12 +2,13 @@ package tile_test
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/pivotal-cf/kiln/pkg/proofing"
 
@@ -65,35 +66,40 @@ func TestReadProductTemplatePartFromBOSHReleaseTarball(t *testing.T) {
 					Fingerprint:  "be375c78c703cea04667ea7cbbc6d024bb391182",
 					SHA1:         "b67ab0ceb0cab69a170521bb1a77c91a8546ac21",
 					Dependencies: []string{"golang-1-linux", "bpm-runc", "tini"},
-					Stemcell:     "ubuntu-xenial/621.463"},
+					Stemcell:     "ubuntu-xenial/621.463",
+				},
 				{
 					Name:         "test-server",
 					Version:      "12eba471a2c3dddb8547ef03c23a3231d1f62e6c",
 					Fingerprint:  "12eba471a2c3dddb8547ef03c23a3231d1f62e6c",
 					SHA1:         "7ab0c2066c63eb5c5dd2c06d35b73376f4ad9a81",
 					Dependencies: []string{"golang-1-linux"},
-					Stemcell:     "ubuntu-xenial/621.463"},
+					Stemcell:     "ubuntu-xenial/621.463",
+				},
 				{
 					Name:         "bpm-runc",
 					Version:      "464c6e6611f814bd12016156bf3e682486f34672",
 					Fingerprint:  "464c6e6611f814bd12016156bf3e682486f34672",
 					SHA1:         "bacd602ee0830a30c17b7a502aa0021a6739a3ff",
 					Dependencies: []string{"golang-1-linux"},
-					Stemcell:     "ubuntu-xenial/621.463"},
+					Stemcell:     "ubuntu-xenial/621.463",
+				},
 				{
 					Name:         "golang-1-linux",
 					Version:      "2336380dbf01a44020813425f92be34685ce118bf4767406c461771cfef14fc9",
 					Fingerprint:  "2336380dbf01a44020813425f92be34685ce118bf4767406c461771cfef14fc9",
 					SHA1:         "e8dad3e51eeb5f5fb41dd56bbb8a3ec9655bd4f7",
 					Dependencies: []string{},
-					Stemcell:     "ubuntu-xenial/621.463"},
+					Stemcell:     "ubuntu-xenial/621.463",
+				},
 				{
 					Name:         "tini",
 					Version:      "3d7b02f3eeb480b9581bec4a0096dab9ebdfa4bc",
 					Fingerprint:  "3d7b02f3eeb480b9581bec4a0096dab9ebdfa4bc",
 					SHA1:         "347c76d509ad4b82d99bbbb4b291768ff90b0fba",
 					Dependencies: []string{},
-					Stemcell:     "ubuntu-xenial/621.463"},
+					Stemcell:     "ubuntu-xenial/621.463",
+				},
 			},
 		}, result)
 	})
@@ -119,7 +125,8 @@ func TestReadProductTemplatePartFromBOSHReleaseTarball(t *testing.T) {
 					Version:      "be375c78c703cea04667ea7cbbc6d024bb391182",
 					Fingerprint:  "be375c78c703cea04667ea7cbbc6d024bb391182",
 					SHA1:         "6ae70da9768bd7333b883463e089c65bea44c685",
-					Dependencies: []string{"golang-1-linux", "bpm-runc", "tini"}},
+					Dependencies: []string{"golang-1-linux", "bpm-runc", "tini"},
+				},
 				{
 					Name:         "bpm-runc",
 					Version:      "464c6e6611f814bd12016156bf3e682486f34672",
