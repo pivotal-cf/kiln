@@ -331,7 +331,7 @@ Just add it to your `release_sources` and you can get releases from [BOSH.io](ht
 # Expected Kilnfile.lock
 release_sources:
   - type: bosh.io
-    id: community # (optional)
+    id: community # (optional) the default ID for this type is the constant string "bosh.io"
 ```
 
 The value of `remote_path` in the BOSH release tarball lock is a URL.
@@ -345,6 +345,7 @@ To download BOSH Release Tarballs from GitHub Releases, add the following
 ```
 release_sources:
   - type: "github"
+    id: crhntr # (optional) the default ID in this case is the value of org
     org: "crhntr"
     github_token: $(variable "github_token")
 ```
@@ -373,6 +374,7 @@ The release source specification should look like this:
 ```yaml
 release_sources:
   - type: "artifactory"
+    id: "official-storage"  # (optional) the default ID for this type is the constant string value "artifactory"
     repo: "some-repository"
     username: "some-username"
     password: "some-password"
@@ -391,6 +393,7 @@ Kiln can fetch and upload releases to/from AWS S3.
 release_sources:
   - type: "artifactory"
     bucket: "some-bucket"
+    id: "legacy-storage"  # (optional) the default ID for this type is the value of bucket
     region: "some-region"
     access_key_id: "some-access-key-id"
     secret_access_key: "some-secret-access-key"
