@@ -112,7 +112,7 @@ release_sources:
 			})
 			It("returns the stemcell os info missing error message", func() {
 				Expect(executeErr).To(HaveOccurred())
-				Expect(executeErr).To(MatchError(ContainSubstring(commands.ErrStemcellOSInfoMustBeValid)))
+				Expect(executeErr).To(MatchError(ContainSubstring("stemcell slug not set")))
 			})
 		})
 
