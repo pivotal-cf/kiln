@@ -11,6 +11,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+
 	"github.com/cucumber/godog"
 	"gopkg.in/yaml.v2"
 
@@ -78,7 +80,7 @@ func theTileOnlyContainsCompiledReleases(ctx context.Context) error {
 
 	for _, release := range metadata.Releases {
 		helloReleaseTarball := bytes.NewBuffer(nil)
-		_, err := tile.ReadBOSHReleaseFromFile(tilePath, release.Name, release.Version, helloReleaseTarball)
+		_, err := cargo.ReadBOSHReleaseFromFile(tilePath, release.Name, release.Version, helloReleaseTarball)
 		if err != nil {
 			return err
 		}

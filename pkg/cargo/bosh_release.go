@@ -1,4 +1,4 @@
-package tile
+package cargo
 
 import (
 	"archive/tar"
@@ -13,6 +13,8 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"github.com/pivotal-cf/kiln/pkg/tile"
 
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
@@ -42,7 +44,7 @@ func ReadBOSHReleaseFromZip(ra io.ReaderAt, zipFileSize int64, releaseName, rele
 }
 
 func ReadBOSHReleaseFromFS(dir fs.FS, releaseName, releaseVersion string, releaseTarball io.Writer) (proofing.Release, error) {
-	metadataBuf, err := ReadMetadataFromFS(dir)
+	metadataBuf, err := tile.ReadMetadataFromFS(dir)
 	if err != nil {
 		return proofing.Release{}, err
 	}

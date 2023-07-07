@@ -1,4 +1,4 @@
-package tile_test
+package cargo_test
 
 import (
 	"bytes"
@@ -7,21 +7,21 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/pivotal-cf/kiln/pkg/proofing"
 
 	. "github.com/onsi/gomega"
-
-	"github.com/pivotal-cf/kiln/pkg/tile"
 )
 
 func TestReadReleaseFromFile(t *testing.T) {
 	please := NewWithT(t)
 
 	buf := bytes.NewBuffer(nil)
-	releaseMetadata, err := tile.ReadBOSHReleaseFromFile(filepath.Join("testdata", "tile-0.1.2.pivotal"), "hello-release", "v0.1.4", buf)
+	releaseMetadata, err := cargo.ReadBOSHReleaseFromFile(filepath.Join("testdata", "tile-0.1.2.pivotal"), "hello-release", "v0.1.4", buf)
 	please.Expect(err).NotTo(HaveOccurred())
 
 	please.Expect(releaseMetadata).To(Equal(proofing.Release{
@@ -36,7 +36,7 @@ func TestReadReleaseFromFile(t *testing.T) {
 }
 
 func TestReadBOSHReleaseManifestsFromTarballs(t *testing.T) {
-	boshReleases, err := tile.ReadBOSHReleaseManifestsFromTarballs(os.DirFS("testdata"), "bpm-1.1.21-ubuntu-xenial-621.463.tgz", "bpm-1.1.21.tgz")
+	boshReleases, err := cargo.ReadBOSHReleaseManifestsFromTarballs(os.DirFS("testdata"), "bpm-1.1.21-ubuntu-xenial-621.463.tgz", "bpm-1.1.21.tgz")
 	require.NoError(t, err)
 	require.Len(t, boshReleases, 2)
 	assert.Equal(t, "be5b1710f33128f6c864eae1d97effddb94dd3ac", boshReleases[0].SHA1)
@@ -53,13 +53,13 @@ func TestReadProductTemplatePartFromBOSHReleaseTarball(t *testing.T) {
 			closeAndIgnoreError(f)
 		})
 
-		result, err := tile.ReadProductTemplatePartFromBOSHReleaseTarball(f)
+		result, err := cargo.ReadProductTemplatePartFromBOSHReleaseTarball(f)
 		require.NoError(t, err)
 
-		require.Equal(t, tile.BOSHReleaseManifest{
+		require.Equal(t, cargo.BOSHReleaseManifest{
 			Name:       "bpm",
 			Version:    "1.1.21",
-			CommitHash: "fd88358", UncommittedChanges: false, CompiledPackages: []tile.CompiledBOSHReleasePackage{
+			CommitHash: "fd88358", UncommittedChanges: false, CompiledPackages: []cargo.CompiledBOSHReleasePackage{
 				{
 					Name:         "bpm",
 					Version:      "be375c78c703cea04667ea7cbbc6d024bb391182",
@@ -111,15 +111,15 @@ func TestReadProductTemplatePartFromBOSHReleaseTarball(t *testing.T) {
 			closeAndIgnoreError(f)
 		})
 
-		result, err := tile.ReadProductTemplatePartFromBOSHReleaseTarball(f)
+		result, err := cargo.ReadProductTemplatePartFromBOSHReleaseTarball(f)
 		require.NoError(t, err)
 
-		require.Equal(t, tile.BOSHReleaseManifest{
+		require.Equal(t, cargo.BOSHReleaseManifest{
 			Name:               "bpm",
 			Version:            "1.1.21",
 			CommitHash:         "fd88358",
 			UncommittedChanges: false,
-			Packages: []tile.BOSHReleasePackage{
+			Packages: []cargo.BOSHReleasePackage{
 				{
 					Name:         "bpm",
 					Version:      "be375c78c703cea04667ea7cbbc6d024bb391182",
