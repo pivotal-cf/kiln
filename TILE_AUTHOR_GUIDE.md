@@ -164,8 +164,8 @@ mkdir -p releases
 touch releases/.gitkeep # not required but a good idea
 
 # Hack a Kilnfile and Kilnfile lock
-echo '{"release_sources": [{type: bosh.io}], "releases": [{"name": "bpm"}]}' > Kilnfile
-yq '{"releases": [. | {"name": "bpm", "version": .version, "sha1": .sha, "remote_source": "bosh.io", "remote_path": .remote_path}]}' <(kiln find-release-version --release=bpm) > Kilnfile.lock
+echo '{"release_sources": [{type: bosh.io}], "releases": [{"name": "bpm"}]}' | yq --prettyPrint . > Kilnfile
+yq '{"releases": [. | {"name": "bpm", "version": .version, "sha1": .sha, "remote_source": "bosh.io", "remote_path": .remote_path}]}' <(kiln find-release-version --release=bpm) | yq --prettyPrint . > Kilnfile.lock
 
 # Call Kiln fetch
 kiln fetch
