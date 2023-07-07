@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	ErrStemcellOSInfoMustBeValid       = "stemcell os information is missing or invalid"
 	ErrStemcellMajorVersionMustBeValid = "stemcell major Version is missing or invalid"
 	TanzuNetRemotePath                 = "network.pivotal.io"
 )
@@ -55,10 +54,6 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 	productSlug, err := kilnfile.Stemcell.ProductSlug()
 	if err != nil {
 		return err
-	}
-
-	if productSlug == "" {
-		return fmt.Errorf(ErrStemcellOSInfoMustBeValid)
 	}
 
 	if kilnfile.Stemcell.Version == "" {
