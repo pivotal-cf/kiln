@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/sha1"
-	"fmt"
+	"encoding/hex"
 	"io"
 	"os"
 	"path/filepath"
@@ -59,7 +59,7 @@ func createReleaseTarball(releaseMetadata string) (*os.File, string) {
 	_, err = io.Copy(hash, file)
 	Expect(err).NotTo(HaveOccurred())
 
-	releaseSHA1 := fmt.Sprintf("%x", hash.Sum(nil))
+	releaseSHA1 := hex.EncodeToString(hash.Sum(nil))
 
 	err = file.Close()
 	Expect(err).NotTo(HaveOccurred())
