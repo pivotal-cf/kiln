@@ -7,9 +7,10 @@ import (
 	"io"
 	"path/filepath"
 
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
-	"github.com/pivotal-cf/kiln/pkg/tile"
 )
 
 type ReleaseManifest struct {
@@ -40,7 +41,7 @@ func (r ReleaseManifestReader) Read(releaseTarball string) (Part, error) {
 	}
 	defer closeAndIgnoreError(file)
 
-	inputReleaseManifest, err := tile.ReadProductTemplatePartFromBOSHReleaseTarball(file)
+	inputReleaseManifest, err := cargo.ReadProductTemplatePartFromBOSHReleaseTarball(file)
 	if err != nil {
 		return Part{}, err
 	}
