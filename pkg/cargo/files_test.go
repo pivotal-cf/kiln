@@ -64,7 +64,7 @@ release_sources:
     region: $( variable "region" )
     access_key_id: $( variable "access_key" )
     secret_access_key: $( variable "secret_key" )
-    aws_role_arn: $( variable "role_arn" )
+    role_arn: $( variable "role_arn" )
     path_template: $( variable "path_template" )
 `
 
@@ -91,7 +91,7 @@ release_sources:
 				Bucket:          "my-bucket",
 				Region:          "middle-earth",
 				AccessKeyId:     "id",
-				AwsRoleARN:      "role-arn",
+				RoleARN:         "role-arn",
 				SecretAccessKey: "key",
 				PathTemplate:    "not-used",
 			},

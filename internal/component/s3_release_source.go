@@ -68,25 +68,23 @@ func NewS3ReleaseSource(c cargo.ReleaseSourceConfig, client S3Client, downloader
 func NewS3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.Logger) S3ReleaseSource {
 	validateConfig(config)
 
-	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
-	awsConfig := &aws.Config{
-		Region:      aws.String(config.Region),
-		Credentials: credentials.NewStaticCredentials(config.AccessKeyId, config.SecretAccessKey, ""),
+	awsConfig := awsRegionAndEndpointConfiguration(config).WithCredentials(credentials.NewStaticCredentials(config.AccessKeyId, config.SecretAccessKey, ""))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		// TODO: add test coverage for this block
+		panic(err)
 	}
 
-	var assumedRoleAwsConfig aws.Config
-	if config.AwsRoleARN != "" {
-		stsSession := session.Must(session.NewSession(awsConfig))
-		roleCredentials := stscreds.NewCredentials(stsSession, config.AwsRoleARN)
-		assumedRoleAwsConfig.Credentials = roleCredentials
+	if config.RoleARN != "" {
+		// TODO: add test coverage for this block
+		awsConfigWithARN := awsRegionAndEndpointConfiguration(config).WithCredentials(stscreds.NewCredentials(sess, config.RoleARN))
+		sess, err = session.NewSession(awsConfigWithARN)
+		if err != nil {
+			// TODO: add test coverage for this block
+			panic(err)
+		}
 	}
 
-	if config.Endpoint != "" { // for acceptance testing
-		awsConfig = awsConfig.WithEndpoint(config.Endpoint)
-		awsConfig = awsConfig.WithS3ForcePathStyle(true)
-	}
-
-	sess := session.Must(session.NewSession(awsConfig, &assumedRoleAwsConfig))
 	client := s3.New(sess)
 
 	return NewS3ReleaseSource(
@@ -96,6 +94,19 @@ func NewS3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.
 		s3manager.NewUploaderWithClient(client),
 		logger,
 	)
+}
+
+func awsRegionAndEndpointConfiguration(config cargo.ReleaseSourceConfig) *aws.Config {
+	awsConfig := &aws.Config{
+		Region: aws.String(config.Region),
+	}
+
+	if config.Endpoint != "" { // for acceptance testing
+		awsConfig = awsConfig.WithEndpoint(config.Endpoint)
+		awsConfig = awsConfig.WithS3ForcePathStyle(true)
+	}
+
+	return awsConfig
 }
 
 func validateConfig(config cargo.ReleaseSourceConfig) {
