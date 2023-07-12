@@ -443,6 +443,7 @@ yq -i '.release_sources = [{"type": "s3", "id": "my_compiled_release_bucket", bu
 smith claim -p us_4_0
 eval "$(smith om)"
 eval "$(smith bosh)"
+export OM_PRIVATE_KEY="$(cat $(echo "${BOSH_ALL_PROXY}" | awk -F= '{print $2}'))"
 
 # deploy your Product (the commands should look something like this)
 om upload-product --product=tile.pivotal
