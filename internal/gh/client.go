@@ -8,7 +8,5 @@ import (
 )
 
 func Client(ctx context.Context, accessToken string) *github.Client {
-	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
-	tokenClient := oauth2.NewClient(ctx, tokenSource)
-	return github.NewClient(tokenClient)
+	return github.NewClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})))
 }

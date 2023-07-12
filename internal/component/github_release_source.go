@@ -91,7 +91,7 @@ type ReleaseByTagGetter interface {
 }
 
 func (grs *GithubReleaseSource) GetGithubReleaseWithTag(ctx context.Context, s cargo.BOSHReleaseTarballSpecification) (*github.RepositoryRelease, error) {
-	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(s.GitHubRepository)
+	repoOwner, repoName, err := gh.RepositoryOwnerAndNameFromPath(s.GitHubRepository)
 	if err != nil {
 		return nil, ErrNotFound
 	}
@@ -118,7 +118,7 @@ func (grs *GithubReleaseSource) GetLatestMatchingRelease(ctx context.Context, s 
 		return nil, fmt.Errorf("expected version to be a constraint")
 	}
 
-	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(s.GitHubRepository)
+	repoOwner, repoName, err := gh.RepositoryOwnerAndNameFromPath(s.GitHubRepository)
 	if err != nil {
 		return nil, ErrNotFound
 	}
@@ -222,7 +222,7 @@ func (grs *GithubReleaseSource) getLockFromRelease(ctx context.Context, r *githu
 }
 
 func (grs *GithubReleaseSource) getReleaseSHA1(ctx context.Context, s cargo.BOSHReleaseTarballSpecification, id int64) (string, error) {
-	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(s.GitHubRepository)
+	repoOwner, repoName, err := gh.RepositoryOwnerAndNameFromPath(s.GitHubRepository)
 	if err != nil {
 		return "", fmt.Errorf("could not parse repository name: %v", err)
 	}

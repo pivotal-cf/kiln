@@ -269,7 +269,7 @@ func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, erro
 		return "", "", fmt.Errorf("remote github URL not found for repo")
 	}
 
-	repoOwner, repoName, err := gh.OwnerAndRepoFromURI(remoteURL)
+	repoOwner, repoName, err := gh.RepositoryOwnerAndNameFromPath(remoteURL)
 	if err != nil {
 		return "", "", err
 	}

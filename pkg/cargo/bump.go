@@ -165,7 +165,7 @@ func ReleaseNotes(ctx context.Context, repoService RepositoryReleaseLister, kf K
 }
 
 func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLister, repository string, from, to *semver.Version) []*github.RepositoryRelease {
-	owner, repo, err := gh.OwnerAndRepoFromURI(repository)
+	owner, repo, err := gh.RepositoryOwnerAndNameFromPath(repository)
 	if err != nil {
 		return nil
 	}
