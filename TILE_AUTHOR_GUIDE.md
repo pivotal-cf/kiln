@@ -17,12 +17,13 @@ This guide intends to be more opinionated while the README.me is more general.
       - [Build Artifactory](#release-source-artifactory)  <- _Please use this for compiled BOSH Release tarballs_
       - [AWS S3](#release-source-s3)
       - [Local Files](#release-source-directory)
-  - BOSH release compilation
-- Stemcell Version Management
-- Testing
-- Tile release note Generation
-- TanzuNet Release Publication
-- Provides importable utilities for Tile Authors
+  - [BOSH release compilation](#bosh-release-compilation)
+- [Stemcell Version Management](#stemcell-version-management)
+- [Tile release note Generation](#release-notes)
+- [TanzuNet Release Publication](#kiln-publish)
+- [Importing Go Source Code](#go-import-kiln)
+#### Helpful external links
+- [Metadata Testing Example](https://github.com/crhntr/hello-tile/blob/main/test/manifest/manifest_test.go)
 
 Again, see [hello-tile](https://github.com/crhntr/hello-tile) (non-VMware employees) or the TAS repo (VMware employees) for tile source code that kiln "just works" with.
 
@@ -436,9 +437,10 @@ artifactory_username: some-username
 artifactory_password: some-password
 ```
 
-### Release Compilation
+### <a id="bosh-release-compilation"></a> BOSH Release Compilation
 
-_WORK IN PROGRESS EXAMPLE_
+The following code will allow you to export/cache compiled BOSH Release Tarballs to either S3 or Artifactory after the tile has been deployed.
+Before `kiln cache-compiled-releases` exports the BOSH Release Tarballs it checks the specified source to ensure a tarball with a name containing the stemcell version does not exist.
 
 ```shellh
 # create a tile with the releases you want compiled
@@ -467,18 +469,7 @@ git commit -m "compile BOSH Releases with $(yq '.stemcell_criteria.os' Kilnfile.
 git push origin HEAD
 ```
 
-### Temporary BOSH Release Tarball Locking
-
-This functionality is likely not helpful for tile authors who only package their own BOSH releases or for those who only package a few BOSH releases.
-
-If you need to pause BOSH Release bumps in your Kilnfile.lock,
-you can execute `kiln glaze`.
-It sets the BOSH release version (constraint) fields to the semver from the Kilnfile.lock.
-[This command has a PR to make it more helpful for TAS/IST/TASW. See the PR here](https://github.com/pivotal-cf/kiln/pull/406).
-This effectively pins releaess to block Dependabot updates.
-PPE uses this command for TAS/IST/TASW prior to new major versions.
-
-## Stemcell Version Management
+## <a id='stemcell-version-management'></a> Stemcell Version Management
 
 `kiln find-stemcell-version` and `kiln update-stemcell`
 
@@ -486,7 +477,7 @@ Find the latest stemcell releases on TanzuNet. They behave similarly to the bosh
 
 _If I remember right, the find-stemcell-version command has a bug where the stemcell criteria version in the Kilnfile is not respected and the result of the command is always the latest version._
 
-## Tile Release Note Generation
+## <a id="release-notes"></a> Tile Release Note Generation
 
 If you use GitHub BOSH Release tarball sources,
 you can generate release notes for your tile.
@@ -505,13 +496,13 @@ I recommend you use the defaults.
 
 If you omit `--update-docs` the notes will be written to standard out.
 
-## TanzuNet Release Publication
+## <a id="kiln-publish"></a> TanzuNet Release Publication
 
 `kiln publish` does not in-fact publish a tile.
 It changes some of the configuration on a previously created TanzuNet release.
 While we use it for TAS, it is not ready/intended to be used by other tiles quite yet.
 
-## Importing Go Source Code [![Go Reference](https://pkg.go.dev/badge/github.com/pivotal-cf/kiln.svg)](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg).
+## <a id="go-import-kiln"></a> Importing Go Source Code [![Go Reference](https://pkg.go.dev/badge/github.com/pivotal-cf/kiln.svg)](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg).
 
 **Note the Kiln repository is pre-1.0.0. While we _try_ to maintain backwards compatablility with the commands. The package API is subject to change without notice.**  
 
