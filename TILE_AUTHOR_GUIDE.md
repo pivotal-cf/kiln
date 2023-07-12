@@ -202,6 +202,14 @@ Kiln fetch was built around an existing "assets.lock";
 the developer experience for starting from an empty directory is not polished.
 </details>
 
+##### Ordering
+
+Kiln searches each BOSH Release tarball source in order when you call `kiln find-release-version`;
+The tarball lock printed if from the first release source that has a matching lock.
+1. You should put your publishable release tarball source (where you cache compiled release tarballs first).
+2. Then you should put your closed source release tarball source.
+3. Then you should put open source places like BOSH.io or open source GitHub.
+
 #### **EXAMPLE** Using Kiln to update BOSH Release Tarballs
 
 Updating a release in a lock file requires two kiln commands.
