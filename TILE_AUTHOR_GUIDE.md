@@ -157,7 +157,7 @@ It does not upload the release to TanzuNet but adds the built tile to a GitHub R
 This starts from an empty directory and downloads the latest BPM release from bosh.io.
 Note, the Kilnfile and Kilnfile.lock (unfortunately/frustratingly) must be created manually.
 
-```shellh
+```shell
 # Create and go into an empty directory
 mkdir -p /tmp/try-kiln-fetch
 cd !$
@@ -217,7 +217,7 @@ Updating a release in a lock file requires two kiln commands.
 
 Please follow the ["Kiln Fetch Example"](#kiln-fetch-example) before following this one.
 
-```shellh
+```shell
 # (optional) Add a version constraint to the Kilnfile.
 # This shows how Kiln will select a version that matches a constrint.
 yq '(.releases[] | select(.name == "bpm")) |= .version = "~1.1"' Kilnfile
@@ -442,7 +442,7 @@ artifactory_password: some-password
 The following code will allow you to export/cache compiled BOSH Release Tarballs to either S3 or Artifactory after the tile has been deployed.
 Before `kiln cache-compiled-releases` exports the BOSH Release Tarballs it checks the specified source to ensure a tarball with a name containing the stemcell version does not exist.
 
-```shellh
+```shell
 # create a tile with the releases you want compiled
 kiln bake
 
@@ -561,7 +561,7 @@ and it is nice if your bake command not require too many flags (see [Tile Source
 The private repository [kiln buildpack](https://github.com/pivotal/kiln-buildpack) has the Paketo buildpack source.
 You can run the acceptance tests with a `TILE_DIRECTORY` environment variable set to your tile source to see if your tile will build with the buildpack.
 
-```shellh
+```shell
 mkdir -p /tmp/try-kiln-buildpack
 cd !$
 
