@@ -16,9 +16,7 @@ func RepositoryOwnerAndNameFromPath(urlStr string) (owner, repo string, err erro
 			err = fmt.Errorf("failed to parse owner and repo name from URI %q: %w", urlStr, err)
 		}
 	}()
-	if strings.HasPrefix(urlStr, "git@github.com:") {
-		urlStr = strings.TrimPrefix(urlStr, "git@github.com:")
-	}
+	urlStr = strings.TrimPrefix(urlStr, "git@github.com:")
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return "", "", err
