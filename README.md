@@ -18,7 +18,7 @@ To install the `kiln` CLI
 
 - download from the [releases page](https://github.com/pivotal-cf/kiln/releases)
 
-  ```shellh
+  ```shell
   export KILN_VERSION
   KILN_VERSION="$(curl -H "Accept: application/vnd.github.v3+json" 'https://api.github.com/repos/pivotal-cf/kiln/releases?per_page=1' | jq -r '.[0].name')"
   curl -L -o kiln "https://github.com/pivotal-cf/kiln/releases/download/${KILN_VERSION}/kiln-darwin-${KILN_VERSION}"
@@ -29,7 +29,7 @@ To install the `kiln` CLI
 
 - build from source
   
-  ```shellh
+  ```shell
   git clone git@github.com:pivotal-cf/kiln.git
   cd kiln
   git checkout 0.60.2
@@ -38,7 +38,7 @@ To install the `kiln` CLI
 
 - copy from a Docker image (to another image)
 
-  ```shellh
+  ```shell
   docker pull pivotalcfreleng/kiln:latest
   ```
 
