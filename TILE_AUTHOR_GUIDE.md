@@ -156,7 +156,7 @@ It does not upload the release to TanzuNet but adds the built tile to a GitHub R
 This starts from an empty directory and downloads the latest BPM release from bosh.io.
 Note, the Kilnfile and Kilnfile.lock (unfortunately/frustratingly) must be created manually.
 
-```sh
+```shellh
 # Create and go into an empty directory
 mkdir -p /tmp/try-kiln-fetch
 cd !$
@@ -216,7 +216,7 @@ Updating a release in a lock file requires two kiln commands.
 
 Please follow the ["Kiln Fetch Example"](#kiln-fetch-example) before following this one.
 
-```sh
+```shellh
 # (optional) Add a version constraint to the Kilnfile.
 # This shows how Kiln will select a version that matches a constrint.
 yq '(.releases[] | select(.name == "bpm")) |= .version = "~1.1"' Kilnfile
@@ -279,7 +279,7 @@ To use the `--variable` flag run something like this:
 
 In your Kilnfile use the fruit variable like this.
 
-```
+```yaml
 release_source:
   - some_field: $(variable "banana")
   - some_field: "$(variable "banana")"
@@ -353,7 +353,7 @@ The value of `remote_path` in the BOSH release tarball lock is a URL.
 Kiln can only download releases from GitHub Releases and can not upload BOSH Releases to BOSH.io.
 
 To download BOSH Release Tarballs from GitHub Releases, add the following
-```
+```yaml
 release_sources:
   - type: "github"
     id: crhntr # (optional) the default ID in this case is the value of org
@@ -440,7 +440,7 @@ artifactory_password: some-password
 
 _WORK IN PROGRESS EXAMPLE_
 
-```sh
+```shellh
 # create a tile with the releases you want compiled
 kiln bake
 
@@ -570,7 +570,7 @@ and it is nice if your bake command not require too many flags (see [Tile Source
 The private repository [kiln buildpack](https://github.com/pivotal/kiln-buildpack) has the Paketo buildpack source.
 You can run the acceptance tests with a `TILE_DIRECTORY` environment variable set to your tile source to see if your tile will build with the buildpack.
 
-```
+```shellh
 mkdir -p /tmp/try-kiln-buildpack
 cd !$
 
