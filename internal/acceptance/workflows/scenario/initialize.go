@@ -10,7 +10,7 @@ import (
 
 // scenarioContext is based on *godog.ScenarioContext
 type scenarioContext interface {
-	Step(expr, stepFunc interface{})
+	Step(expr, stepFunc any)
 	Before(h godog.BeforeScenarioHook)
 	After(h godog.AfterScenarioHook)
 }

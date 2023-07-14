@@ -67,7 +67,7 @@ func opsManifestAdditionalArgs() []string {
 	return args
 }
 
-func (p *ProductService) RenderManifest(additionalProperties map[string]interface{}) (Manifest, error) {
+func (p *ProductService) RenderManifest(additionalProperties map[string]any) (Manifest, error) {
 	_, err := p.config.ConfigFile.Seek(0, 0)
 	if err != nil {
 		return "", err

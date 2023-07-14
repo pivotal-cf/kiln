@@ -194,7 +194,7 @@ func loadMetadataProperties(t *testing.T) (initial, patch proofing.ProductTempla
 	return
 }
 
-func readYAMLFile(t *testing.T, filePath string, data interface{}) {
+func readYAMLFile(t *testing.T, filePath string, data any) {
 	iBuf, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Fatal(err)

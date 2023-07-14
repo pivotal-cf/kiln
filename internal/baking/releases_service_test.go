@@ -69,13 +69,13 @@ var _ = Describe("ReleasesService", func() {
 
 			releases, err := service.FromDirectories([]string{tempDir})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(releases).To(Equal(map[string]interface{}{
+			Expect(releases).To(Equal(map[string]any{
 				"some-name":  "some-metadata",
 				"other-name": "other-metadata",
 			}))
 
 			Expect(logger.PrintlnCallCount()).To(Equal(1))
-			Expect(logger.PrintlnArgsForCall(0)).To(Equal([]interface{}{"Reading release manifests..."}))
+			Expect(logger.PrintlnArgsForCall(0)).To(Equal([]any{"Reading release manifests..."}))
 
 			Expect(reader.ReadCallCount()).To(Equal(2))
 			Expect(reader.ReadArgsForCall(0)).To(Equal(filepath.Join(tempDir, "other-release.tgz")))

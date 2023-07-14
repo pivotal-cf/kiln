@@ -116,7 +116,7 @@ var _ = Describe("ReleaseSourceList", func() {
 			})
 
 			It("panics with a helpful message", func() {
-				var r interface{}
+				var r any
 				func() {
 					defer func() {
 						r = recover()

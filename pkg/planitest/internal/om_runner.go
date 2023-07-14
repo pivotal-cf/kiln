@@ -18,7 +18,7 @@ type StagedProduct struct {
 }
 
 type stagedManifestResponse struct {
-	Manifest map[string]interface{}
+	Manifest map[string]any
 	Errors   OMError `json:"errors"`
 }
 
@@ -122,7 +122,7 @@ func (o OMRunner) ResetAndConfigure(productName string, productVersion string, c
 	return nil
 }
 
-func (o OMRunner) GetManifest(productGUID string) (map[string]interface{}, error) {
+func (o OMRunner) GetManifest(productGUID string) (map[string]any, error) {
 	response, errOutput, err := o.cmdRunner.Run(
 		"om",
 		"--skip-ssl-validation",

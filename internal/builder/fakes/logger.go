@@ -16,10 +16,10 @@ type Logger struct {
 	}
 }
 
-func (l *Logger) Printf(format string, v ...interface{}) {
+func (l *Logger) Printf(format string, v ...any) {
 	l.PrintfCall.Receives.LogLines = append(l.PrintfCall.Receives.LogLines, fmt.Sprintf(format, v...))
 }
 
-func (l *Logger) Println(v ...interface{}) {
+func (l *Logger) Println(v ...any) {
 	l.PrintlnCall.Receives.LogLines = append(l.PrintlnCall.Receives.LogLines, fmt.Sprintf("%s", v...))
 }

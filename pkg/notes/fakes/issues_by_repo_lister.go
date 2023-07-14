@@ -27,7 +27,7 @@ type IssuesByRepoLister struct {
 		result2 *github.Response
 		result3 error
 	}
-	invocations      map[string][][]any
+	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
@@ -42,7 +42,7 @@ func (fake *IssuesByRepoLister) ListByRepo(arg1 context.Context, arg2 string, ar
 	}{arg1, arg2, arg3, arg4})
 	stub := fake.ListByRepoStub
 	fakeReturns := fake.listByRepoReturns
-	fake.recordInvocation("ListByRepo", []any{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("ListByRepo", []interface{}{arg1, arg2, arg3, arg4})
 	fake.listByRepoMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3, arg4)
@@ -101,26 +101,26 @@ func (fake *IssuesByRepoLister) ListByRepoReturnsOnCall(i int, result1 []*github
 	}{result1, result2, result3}
 }
 
-func (fake *IssuesByRepoLister) Invocations() map[string][][]any {
+func (fake *IssuesByRepoLister) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.listByRepoMutex.RLock()
 	defer fake.listByRepoMutex.RUnlock()
-	copiedInvocations := map[string][][]any{}
+	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
 	return copiedInvocations
 }
 
-func (fake *IssuesByRepoLister) recordInvocation(key string, args []any) {
+func (fake *IssuesByRepoLister) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
-		fake.invocations = map[string][][]any{}
+		fake.invocations = map[string][][]interface{}{}
 	}
 	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]any{}
+		fake.invocations[key] = [][]interface{}{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }

@@ -50,10 +50,10 @@ var _ = Describe("OMRunner", func() {
 			Expect(args[2]).To(ContainSubstring("--metadata-path"))
 			Expect(args[3]).To(ContainSubstring("some/metadata/path"))
 
-			Expect(manifest).To(Equal(map[string]interface{}{
+			Expect(manifest).To(Equal(map[string]any{
 				"name": "cf-some-guid",
-				"releases": []interface{}{
-					map[interface{}]interface{}{
+				"releases": []any{
+					map[any]any{
 						"name":    "some-release",
 						"version": "1.2.3",
 					},
@@ -94,10 +94,10 @@ var _ = Describe("OMRunner", func() {
 				Expect(args[6]).To(Equal("--tas-config-file"))
 				Expect(args[7]).To(Equal(tasConfigPath))
 
-				Expect(manifest).To(Equal(map[string]interface{}{
+				Expect(manifest).To(Equal(map[string]any{
 					"name": "cf-some-guid",
-					"releases": []interface{}{
-						map[interface{}]interface{}{
+					"releases": []any{
+						map[any]any{
 							"name":    "some-release",
 							"version": "1.2.3",
 						},

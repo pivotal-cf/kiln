@@ -6,25 +6,25 @@ import (
 )
 
 type TemplateVariablesService struct {
-	FromPathsAndPairsStub        func([]string, []string) (map[string]interface{}, error)
+	FromPathsAndPairsStub        func([]string, []string) (map[string]any, error)
 	fromPathsAndPairsMutex       sync.RWMutex
 	fromPathsAndPairsArgsForCall []struct {
 		arg1 []string
 		arg2 []string
 	}
 	fromPathsAndPairsReturns struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}
 	fromPathsAndPairsReturnsOnCall map[int]struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TemplateVariablesService) FromPathsAndPairs(arg1 []string, arg2 []string) (map[string]interface{}, error) {
+func (fake *TemplateVariablesService) FromPathsAndPairs(arg1 []string, arg2 []string) (map[string]any, error) {
 	var arg1Copy []string
 	if arg1 != nil {
 		arg1Copy = make([]string, len(arg1))
@@ -60,7 +60,7 @@ func (fake *TemplateVariablesService) FromPathsAndPairsCallCount() int {
 	return len(fake.fromPathsAndPairsArgsForCall)
 }
 
-func (fake *TemplateVariablesService) FromPathsAndPairsCalls(stub func([]string, []string) (map[string]interface{}, error)) {
+func (fake *TemplateVariablesService) FromPathsAndPairsCalls(stub func([]string, []string) (map[string]any, error)) {
 	fake.fromPathsAndPairsMutex.Lock()
 	defer fake.fromPathsAndPairsMutex.Unlock()
 	fake.FromPathsAndPairsStub = stub
@@ -73,28 +73,28 @@ func (fake *TemplateVariablesService) FromPathsAndPairsArgsForCall(i int) ([]str
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *TemplateVariablesService) FromPathsAndPairsReturns(result1 map[string]interface{}, result2 error) {
+func (fake *TemplateVariablesService) FromPathsAndPairsReturns(result1 map[string]any, result2 error) {
 	fake.fromPathsAndPairsMutex.Lock()
 	defer fake.fromPathsAndPairsMutex.Unlock()
 	fake.FromPathsAndPairsStub = nil
 	fake.fromPathsAndPairsReturns = struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *TemplateVariablesService) FromPathsAndPairsReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
+func (fake *TemplateVariablesService) FromPathsAndPairsReturnsOnCall(i int, result1 map[string]any, result2 error) {
 	fake.fromPathsAndPairsMutex.Lock()
 	defer fake.fromPathsAndPairsMutex.Unlock()
 	fake.FromPathsAndPairsStub = nil
 	if fake.fromPathsAndPairsReturnsOnCall == nil {
 		fake.fromPathsAndPairsReturnsOnCall = make(map[int]struct {
-			result1 map[string]interface{}
+			result1 map[string]any
 			result2 error
 		})
 	}
 	fake.fromPathsAndPairsReturnsOnCall[i] = struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}{result1, result2}
 }

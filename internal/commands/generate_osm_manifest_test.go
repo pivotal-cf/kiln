@@ -334,7 +334,7 @@ func TestOSM_Execute(t *testing.T) {
 	})
 }
 
-func writeYAML(t *testing.T, path string, data interface{}) {
+func writeYAML(t *testing.T, path string, data any) {
 	t.Helper()
 	buf, err := yaml.Marshal(data)
 	if err != nil {

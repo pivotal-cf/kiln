@@ -24,16 +24,16 @@ func (m Manifest) FindInstanceGroupJob(instanceGroup, job string) (Manifest, err
 	return Manifest(content), nil
 }
 
-func (m Manifest) Property(path string) (interface{}, error) {
+func (m Manifest) Property(path string) (any, error) {
 	return m.interpolate(fmt.Sprintf("/properties/%s", path))
 }
 
-func (m Manifest) Path(path string) (interface{}, error) {
+func (m Manifest) Path(path string) (any, error) {
 	return m.interpolate(path)
 }
 
-func (m Manifest) interpolate(path string) (interface{}, error) {
-	var content interface{}
+func (m Manifest) interpolate(path string) (any, error) {
+	var content any
 	err := yaml.Unmarshal([]byte(m), &content)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse manifest: %s", err)

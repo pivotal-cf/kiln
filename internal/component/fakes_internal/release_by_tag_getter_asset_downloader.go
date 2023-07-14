@@ -48,7 +48,7 @@ type ReleaseByTagGetterAssetDownloader struct {
 		result2 *github.Response
 		result3 error
 	}
-	invocations      map[string][][]interface{}
+	invocations      map[string][][]any
 	invocationsMutex sync.RWMutex
 }
 
@@ -64,7 +64,7 @@ func (fake *ReleaseByTagGetterAssetDownloader) DownloadReleaseAsset(arg1 context
 	}{arg1, arg2, arg3, arg4, arg5})
 	stub := fake.DownloadReleaseAssetStub
 	fakeReturns := fake.downloadReleaseAssetReturns
-	fake.recordInvocation("DownloadReleaseAsset", []interface{}{arg1, arg2, arg3, arg4, arg5})
+	fake.recordInvocation("DownloadReleaseAsset", []any{arg1, arg2, arg3, arg4, arg5})
 	fake.downloadReleaseAssetMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3, arg4, arg5)
@@ -134,7 +134,7 @@ func (fake *ReleaseByTagGetterAssetDownloader) GetReleaseByTag(arg1 context.Cont
 	}{arg1, arg2, arg3, arg4})
 	stub := fake.GetReleaseByTagStub
 	fakeReturns := fake.getReleaseByTagReturns
-	fake.recordInvocation("GetReleaseByTag", []interface{}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("GetReleaseByTag", []any{arg1, arg2, arg3, arg4})
 	fake.getReleaseByTagMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3, arg4)
@@ -193,28 +193,28 @@ func (fake *ReleaseByTagGetterAssetDownloader) GetReleaseByTagReturnsOnCall(i in
 	}{result1, result2, result3}
 }
 
-func (fake *ReleaseByTagGetterAssetDownloader) Invocations() map[string][][]interface{} {
+func (fake *ReleaseByTagGetterAssetDownloader) Invocations() map[string][][]any {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.downloadReleaseAssetMutex.RLock()
 	defer fake.downloadReleaseAssetMutex.RUnlock()
 	fake.getReleaseByTagMutex.RLock()
 	defer fake.getReleaseByTagMutex.RUnlock()
-	copiedInvocations := map[string][][]interface{}{}
+	copiedInvocations := map[string][][]any{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
 	return copiedInvocations
 }
 
-func (fake *ReleaseByTagGetterAssetDownloader) recordInvocation(key string, args []interface{}) {
+func (fake *ReleaseByTagGetterAssetDownloader) recordInvocation(key string, args []any) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
-		fake.invocations = map[string][][]interface{}{}
+		fake.invocations = map[string][][]any{}
 	}
 	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]interface{}{}
+		fake.invocations[key] = [][]any{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }

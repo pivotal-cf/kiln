@@ -67,7 +67,7 @@ var _ = Describe("StemcellService", func() {
 
 			stemcell, err := service.FromDirectories([]string{tempDir})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(stemcell).To(Equal(map[string]interface{}{
+			Expect(stemcell).To(Equal(map[string]any{
 				"some-os": builder.StemcellManifest{
 					Version:         "some-version",
 					OperatingSystem: "some-os",
@@ -128,7 +128,7 @@ var _ = Describe("StemcellService", func() {
 			}))
 
 			Expect(logger.PrintlnCallCount()).To(Equal(1))
-			Expect(logger.PrintlnArgsForCall(0)).To(Equal([]interface{}{"Reading stemcell manifest..."}))
+			Expect(logger.PrintlnArgsForCall(0)).To(Equal([]any{"Reading stemcell manifest..."}))
 
 			Expect(reader.ReadCallCount()).To(Equal(1))
 			Expect(reader.ReadArgsForCall(0)).To(Equal("some-stemcell-tarball"))

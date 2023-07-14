@@ -3,8 +3,8 @@ package proofing
 type SimplePropertyBlueprint struct {
 	Name           string                    `yaml:"name"`
 	Type           string                    `yaml:"type"`
-	Default        interface{}               `yaml:"default"`     // TODO: schema?
-	Constraints    interface{}               `yaml:"constraints"` // TODO: schema?
+	Default        any                       `yaml:"default"`     // TODO: schema?
+	Constraints    any                       `yaml:"constraints"` // TODO: schema?
 	Options        []PropertyBlueprintOption `yaml:"options"`     // TODO: schema?
 	Configurable   bool                      `yaml:"configurable"`
 	Optional       bool                      `yaml:"optional"`

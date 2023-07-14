@@ -32,7 +32,7 @@ type (
 	}
 
 	VariablesService interface {
-		FromPathsAndPairs(paths []string, pairs []string) (templateVariables map[string]interface{}, err error)
+		FromPathsAndPairs(paths []string, pairs []string) (templateVariables map[string]any, err error)
 	}
 )
 

@@ -21,7 +21,7 @@ func NewOpsManifestRunner(cmdRunner CommandRunner, fileIO FileIO, additionalArgs
 	}
 }
 
-func (o OpsManifestRunner) GetManifest(productProperties, metadataFilePath string) (map[string]interface{}, error) {
+func (o OpsManifestRunner) GetManifest(productProperties, metadataFilePath string) (map[string]any, error) {
 	configFile, err := o.FileIO.TempFile("", "")
 	configFileYML := fmt.Sprintf("%s.yml", configFile.Name())
 	_ = os.Rename(configFile.Name(), configFileYML)
@@ -43,7 +43,7 @@ func (o OpsManifestRunner) GetManifest(productProperties, metadataFilePath strin
 		return nil, fmt.Errorf("Unable to retrieve manifest: %s: %s", err, errOutput)
 	}
 
-	var manifest map[string]interface{}
+	var manifest map[string]any
 	err = yaml.Unmarshal([]byte(response), &manifest)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to unmarshal yaml: %s", err)

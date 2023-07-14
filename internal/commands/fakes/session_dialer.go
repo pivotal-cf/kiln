@@ -26,7 +26,7 @@ type SessionDialer struct {
 	runReturnsOnCall map[int]struct {
 		result1 error
 	}
-	invocations      map[string][][]interface{}
+	invocations      map[string][][]any
 	invocationsMutex sync.RWMutex
 }
 
@@ -36,7 +36,7 @@ func (fake *SessionDialer) Allow(arg1 session.Attachable) {
 		arg1 session.Attachable
 	}{arg1})
 	stub := fake.AllowStub
-	fake.recordInvocation("Allow", []interface{}{arg1})
+	fake.recordInvocation("Allow", []any{arg1})
 	fake.allowMutex.Unlock()
 	if stub != nil {
 		fake.AllowStub(arg1)
@@ -71,7 +71,7 @@ func (fake *SessionDialer) Run(arg1 context.Context, arg2 session.Dialer) error 
 	}{arg1, arg2})
 	stub := fake.RunStub
 	fakeReturns := fake.runReturns
-	fake.recordInvocation("Run", []interface{}{arg1, arg2})
+	fake.recordInvocation("Run", []any{arg1, arg2})
 	fake.runMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
@@ -124,28 +124,28 @@ func (fake *SessionDialer) RunReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *SessionDialer) Invocations() map[string][][]interface{} {
+func (fake *SessionDialer) Invocations() map[string][][]any {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.allowMutex.RLock()
 	defer fake.allowMutex.RUnlock()
 	fake.runMutex.RLock()
 	defer fake.runMutex.RUnlock()
-	copiedInvocations := map[string][][]interface{}{}
+	copiedInvocations := map[string][][]any{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
 	return copiedInvocations
 }
 
-func (fake *SessionDialer) recordInvocation(key string, args []interface{}) {
+func (fake *SessionDialer) recordInvocation(key string, args []any) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
-		fake.invocations = map[string][][]interface{}{}
+		fake.invocations = map[string][][]any{}
 	}
 	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]interface{}{}
+		fake.invocations[key] = [][]any{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
