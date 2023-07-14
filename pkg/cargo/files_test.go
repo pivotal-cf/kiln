@@ -140,7 +140,7 @@ func TestInterpolateAndParseKilnfile_interpolation_variable_not_found(t *testing
 		strings.NewReader(validKilnfile), variables,
 	)
 
-	please.Expect(err).To(MatchError(ContainSubstring(`could not find variable with key 'region'`)))
+	please.Expect(err).To(MatchError(ContainSubstring(`could not find variable with key "region"`)))
 }
 
 const validKilnfile = `---
