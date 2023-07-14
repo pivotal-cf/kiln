@@ -1,15 +1,17 @@
 package cargo
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"text/template"
 
-	"gopkg.in/yaml.v2"
-
-	"github.com/pivotal-cf/kiln/internal/builder"
+	"gopkg.in/yaml.v3"
 )
 
 func InterpolateAndParseKilnfile(in io.Reader, templateVariables map[string]interface{}) (Kilnfile, error) {
@@ -18,16 +20,44 @@ func InterpolateAndParseKilnfile(in io.Reader, templateVariables map[string]inte
 		return Kilnfile{}, fmt.Errorf("unable to read Kilnfile: %w", err)
 	}
 
-	interpolator := builder.NewInterpolator()
-	interpolatedMetadata, err := interpolator.Interpolate(builder.InterpolateInput{
-		Variables: templateVariables,
-	}, "Kilnfile", kilnfileYAML)
+	kilnfileTemplate, err := template.New("Kilnfile").
+		Funcs(template.FuncMap{
+			"variable": variableTemplateFunction(templateVariables),
+		}).
+		Delims("$(", ")").
+		Option("missingkey=error").
+		Parse(string(kilnfileYAML))
 	if err != nil {
 		return Kilnfile{}, err
 	}
 
+	var buf bytes.Buffer
+	if err := kilnfileTemplate.Execute(&buf, struct{}{}); err != nil {
+		return Kilnfile{}, err
+	}
+
 	var kilnfile Kilnfile
-	return kilnfile, yaml.Unmarshal(interpolatedMetadata, &kilnfile)
+	return kilnfile, yaml.Unmarshal(buf.Bytes(), &kilnfile)
+}
+
+func variableTemplateFunction(templateVariables map[string]any) func(name string) (string, error) {
+	return func(name string) (string, error) {
+		if templateVariables == nil {
+			return "", errors.New("--variable or --variables-file must be specified")
+		}
+		val, ok := templateVariables[name]
+		if !ok {
+			return "", fmt.Errorf("could not find variable with key %q", name)
+		}
+		switch value := val.(type) {
+		case string:
+			return value, nil
+		case int:
+			return strconv.Itoa(value), nil
+		default:
+			return "", fmt.Errorf("the variables function used to interpolate variables in the Kilnfile only supports int and string values (%q has type %s)", name, value)
+		}
+	}
 }
 
 func ResolveKilnfilePath(path string) (string, error) {
@@ -99,6 +129,7 @@ func WriteKilnfile(path string, kf Kilnfile) error {
 	}
 	defer closeAndIgnoreError(f)
 	e := yaml.NewEncoder(f)
+	e.SetIndent(2)
 	defer closeAndIgnoreError(e)
 	return e.Encode(kf)
 }
