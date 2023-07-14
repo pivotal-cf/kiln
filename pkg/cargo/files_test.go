@@ -18,7 +18,7 @@ import (
 func TestInterpolateAndParseKilnfile(t *testing.T) {
 	please := NewWithT(t)
 
-	variables := map[string]interface{}{
+	variables := map[string]any{
 		"bucket":        "my-bucket",
 		"region":        "middle-earth",
 		"path_template": "not-used",
@@ -68,7 +68,7 @@ release_sources:
     path_template: $( variable "path_template" )
 `
 
-	variables := map[string]interface{}{
+	variables := map[string]any{
 		"bucket":        "my-bucket",
 		"region":        "middle-earth",
 		"path_template": "not-used",
@@ -108,7 +108,7 @@ release_sources:
 func TestInterpolateAndParseKilnfile_input_is_not_valid_yaml(t *testing.T) {
 	please := NewWithT(t)
 
-	variables := map[string]interface{}{
+	variables := map[string]any{
 		"bucket":        "my-bucket",
 		"region":        "middle-earth",
 		"path_template": "not-used",
@@ -127,7 +127,7 @@ func TestInterpolateAndParseKilnfile_input_is_not_valid_yaml(t *testing.T) {
 func TestInterpolateAndParseKilnfile_interpolation_variable_not_found(t *testing.T) {
 	please := NewWithT(t)
 
-	variables := map[string]interface{}{
+	variables := map[string]any{
 		"bucket": "my-bucket",
 		// "region": "middle-earth", // <- the missing variable
 		"path_template": "not-used",

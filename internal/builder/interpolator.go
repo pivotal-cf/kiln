@@ -35,17 +35,17 @@ type Interpolator struct{}
 
 type InterpolateInput struct {
 	Version            string
-	BOSHVariables      map[string]interface{}
-	Variables          map[string]interface{}
-	ReleaseManifests   map[string]interface{}
-	StemcellManifests  map[string]interface{}
-	StemcellManifest   interface{}
-	FormTypes          map[string]interface{}
+	BOSHVariables      map[string]any
+	Variables          map[string]any
+	ReleaseManifests   map[string]any
+	StemcellManifests  map[string]any
+	StemcellManifest   any
+	FormTypes          map[string]any
 	IconImage          string
-	InstanceGroups     map[string]interface{}
-	Jobs               map[string]interface{}
-	PropertyBlueprints map[string]interface{}
-	RuntimeConfigs     map[string]interface{}
+	InstanceGroups     map[string]any
+	Jobs               map[string]any
+	PropertyBlueprints map[string]any
+	RuntimeConfigs     map[string]any
 	StubReleases       bool
 	MetadataGitSHA     func() (string, error)
 }
@@ -124,7 +124,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 
 			if !ok {
 				if input.StubReleases {
-					val = map[string]interface{}{
+					val = map[string]any{
 						"name":    name,
 						"version": "UNKNOWN",
 						"file":    fmt.Sprintf("%s-UNKNOWN.tgz", name),
@@ -221,7 +221,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 			return i.interpolateValueIntoYAML(input, name, val)
 		},
 		"select": func(field, input string) (string, error) {
-			object := map[string]interface{}{}
+			object := map[string]any{}
 
 			err := json.Unmarshal([]byte(input), &object)
 			if err != nil {
@@ -263,7 +263,7 @@ func (i Interpolator) interpolate(input InterpolateInput, name string, templateY
 	return buffer.Bytes(), nil
 }
 
-func (i Interpolator) interpolateValueIntoYAML(input InterpolateInput, name string, val interface{}) (string, error) {
+func (i Interpolator) interpolateValueIntoYAML(input InterpolateInput, name string, val any) (string, error) {
 	initialYAML, err := yaml.Marshal(val)
 	if err != nil {
 		return "", err // should never happen
@@ -288,7 +288,7 @@ func (i Interpolator) yamlMarshalOneLine(yamlContents []byte) ([]byte, error) {
 }
 
 func (i Interpolator) prettyPrint(inputYAML []byte) ([]byte, error) {
-	var data interface{}
+	var data any
 	err := yaml.Unmarshal(inputYAML, &data)
 	if err != nil {
 		return []byte{}, err // should never happen
@@ -297,7 +297,7 @@ func (i Interpolator) prettyPrint(inputYAML []byte) ([]byte, error) {
 	return yaml.Marshal(data)
 }
 
-func PreProcessMetadataWithTileFunction(variables map[string]interface{}, name string, dst io.Writer, in []byte) error {
+func PreProcessMetadataWithTileFunction(variables map[string]any, name string, dst io.Writer, in []byte) error {
 	tileFN := tileFunc(variables)
 
 	t, err := template.New(name).
@@ -313,9 +313,9 @@ func PreProcessMetadataWithTileFunction(variables map[string]interface{}, name s
 
 // tileFunc is used both in pre-processing and is also available
 // to Interpolator
-func tileFunc(variables map[string]interface{}) func() (string, error) {
+func tileFunc(variables map[string]any) func() (string, error) {
 	if variables == nil {
-		variables = make(map[string]interface{})
+		variables = make(map[string]any)
 	}
 
 	return func() (string, error) {

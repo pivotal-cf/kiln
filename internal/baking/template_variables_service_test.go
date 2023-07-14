@@ -49,9 +49,9 @@ key-3: value-3
 		It("parses template variables from a collection of files", func() {
 			variables, err := service.FromPathsAndPairs([]string{path}, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(variables).To(Equal(map[string]interface{}{
-				"key-1": map[interface{}]interface{}{
-					"key-2": []interface{}{
+			Expect(variables).To(Equal(map[string]any{
+				"key-1": map[any]any{
+					"key-2": []any{
 						"value-1",
 						"value-2",
 					},
@@ -66,7 +66,7 @@ key-3: value-3
 				"key-2=value-2",
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(variables).To(Equal(map[string]interface{}{
+			Expect(variables).To(Equal(map[string]any{
 				"key-1": "value-1",
 				"key-2": "value-2",
 			}))

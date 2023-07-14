@@ -22,7 +22,7 @@ type TrainstatClient struct {
 		result1 []string
 		result2 error
 	}
-	invocations      map[string][][]interface{}
+	invocations      map[string][][]any
 	invocationsMutex sync.RWMutex
 }
 
@@ -37,7 +37,7 @@ func (fake *TrainstatClient) FetchTrainstatNotes(ctx context.Context, arg1 strin
 	}{ctx, arg1, arg2, arg3})
 	stub := fake.FetchStub
 	fakeReturns := fake.fetchReturns
-	fake.recordInvocation("Get", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("Get", []any{arg1, arg2, arg3})
 	fake.fetchMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3)
@@ -83,24 +83,24 @@ func (fake *TrainstatClient) GetArgsForCall(i int) (string, string, string) {
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *TrainstatClient) Invocations() map[string][][]interface{} {
+func (fake *TrainstatClient) Invocations() map[string][][]any {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	copiedInvocations := map[string][][]interface{}{}
+	copiedInvocations := map[string][][]any{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
 	return copiedInvocations
 }
 
-func (fake *TrainstatClient) recordInvocation(key string, args []interface{}) {
+func (fake *TrainstatClient) recordInvocation(key string, args []any) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
-		fake.invocations = map[string][][]interface{}{}
+		fake.invocations = map[string][][]any{}
 	}
 	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]interface{}{}
+		fake.invocations[key] = [][]any{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }

@@ -5,8 +5,8 @@ type JobType struct {
 	ResourceLabel string `yaml:"resource_label"`
 	Description   string `yaml:"description,omitempty"`
 
-	Manifest    string      `yaml:"manifest"`
-	MaxInFlight interface{} `yaml:"max_in_flight"`
+	Manifest    string `yaml:"manifest"`
+	MaxInFlight any    `yaml:"max_in_flight"`
 
 	Canaries     int  `yaml:"canaries"`
 	Serial       bool `yaml:"serial,omitempty"`

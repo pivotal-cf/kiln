@@ -24,7 +24,7 @@ type CommandRunner struct {
 		result2 string
 		result3 error
 	}
-	invocations      map[string][][]interface{}
+	invocations      map[string][][]any
 	invocationsMutex sync.RWMutex
 }
 
@@ -35,7 +35,7 @@ func (fake *CommandRunner) Run(arg1 string, arg2 ...string) (string, string, err
 		arg1 string
 		arg2 []string
 	}{arg1, arg2})
-	fake.recordInvocation("Run", []interface{}{arg1, arg2})
+	fake.recordInvocation("Run", []any{arg1, arg2})
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
 		return fake.RunStub(arg1, arg2...)
@@ -95,26 +95,26 @@ func (fake *CommandRunner) RunReturnsOnCall(i int, result1 string, result2 strin
 	}{result1, result2, result3}
 }
 
-func (fake *CommandRunner) Invocations() map[string][][]interface{} {
+func (fake *CommandRunner) Invocations() map[string][][]any {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.runMutex.RLock()
 	defer fake.runMutex.RUnlock()
-	copiedInvocations := map[string][][]interface{}{}
+	copiedInvocations := map[string][][]any{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
 	return copiedInvocations
 }
 
-func (fake *CommandRunner) recordInvocation(key string, args []interface{}) {
+func (fake *CommandRunner) recordInvocation(key string, args []any) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
-		fake.invocations = map[string][][]interface{}{}
+		fake.invocations = map[string][][]any{}
 	}
 	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]interface{}{}
+		fake.invocations[key] = [][]any{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }

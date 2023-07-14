@@ -55,7 +55,7 @@ type: password
 				{
 					File: "vars-file-1.yml",
 					Name: "variable-1",
-					Metadata: map[interface{}]interface{}{
+					Metadata: map[any]any{
 						"name": "variable-1",
 						"type": "certificate",
 					},
@@ -63,7 +63,7 @@ type: password
 				{
 					File: "vars-file-1.yml",
 					Name: "variable-2-alias",
-					Metadata: map[interface{}]interface{}{
+					Metadata: map[any]any{
 						"name": "variable-2",
 						"type": "user",
 					},
@@ -71,7 +71,7 @@ type: password
 				{
 					File: "vars-file-2.yml",
 					Name: "variable-3",
-					Metadata: map[interface{}]interface{}{
+					Metadata: map[any]any{
 						"name": "variable-3",
 						"type": "password",
 					},
@@ -171,7 +171,7 @@ variables:
 					{
 						File: "vars-file-1.yml",
 						Name: "variable-1",
-						Metadata: map[interface{}]interface{}{
+						Metadata: map[any]any{
 							"name": "variable-1",
 							"type": "certificate",
 						},
@@ -179,7 +179,7 @@ variables:
 					{
 						File: "vars-file-1.yml",
 						Name: "variable-2",
-						Metadata: map[interface{}]interface{}{
+						Metadata: map[any]any{
 							"name": "variable-2",
 							"type": "user",
 						},
@@ -187,7 +187,7 @@ variables:
 					{
 						File: "vars-file-2.yml",
 						Name: "variable-3",
-						Metadata: map[interface{}]interface{}{
+						Metadata: map[any]any{
 							"name": "variable-3",
 							"type": "password",
 						},
@@ -273,7 +273,7 @@ variables:
 					{
 						File: "vars-file-2.yml",
 						Name: "variable-3",
-						Metadata: map[interface{}]interface{}{
+						Metadata: map[any]any{
 							"name": "variable-3",
 							"type": "password",
 						},
@@ -281,7 +281,7 @@ variables:
 					{
 						File: "vars-file-1.yml",
 						Name: "variable-2",
-						Metadata: map[interface{}]interface{}{
+						Metadata: map[any]any{
 							"name": "variable-2",
 							"type": "user",
 						},
@@ -289,7 +289,7 @@ variables:
 					{
 						File: "vars-file-1.yml",
 						Name: "variable-1",
-						Metadata: map[interface{}]interface{}{
+						Metadata: map[any]any{
 							"name": "variable-1",
 							"type": "certificate",
 						},

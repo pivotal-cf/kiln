@@ -6,50 +6,50 @@ import (
 )
 
 type StemcellService struct {
-	FromDirectoriesStub        func([]string) (map[string]interface{}, error)
+	FromDirectoriesStub        func([]string) (map[string]any, error)
 	fromDirectoriesMutex       sync.RWMutex
 	fromDirectoriesArgsForCall []struct {
 		arg1 []string
 	}
 	fromDirectoriesReturns struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}
 	fromDirectoriesReturnsOnCall map[int]struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}
-	FromKilnfileStub        func(string) (map[string]interface{}, error)
+	FromKilnfileStub        func(string) (map[string]any, error)
 	fromKilnfileMutex       sync.RWMutex
 	fromKilnfileArgsForCall []struct {
 		arg1 string
 	}
 	fromKilnfileReturns struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}
 	fromKilnfileReturnsOnCall map[int]struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}
-	FromTarballStub        func(string) (interface{}, error)
+	FromTarballStub        func(string) (any, error)
 	fromTarballMutex       sync.RWMutex
 	fromTarballArgsForCall []struct {
 		arg1 string
 	}
 	fromTarballReturns struct {
-		result1 interface{}
+		result1 any
 		result2 error
 	}
 	fromTarballReturnsOnCall map[int]struct {
-		result1 interface{}
+		result1 any
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *StemcellService) FromDirectories(arg1 []string) (map[string]interface{}, error) {
+func (fake *StemcellService) FromDirectories(arg1 []string) (map[string]any, error) {
 	var arg1Copy []string
 	if arg1 != nil {
 		arg1Copy = make([]string, len(arg1))
@@ -79,7 +79,7 @@ func (fake *StemcellService) FromDirectoriesCallCount() int {
 	return len(fake.fromDirectoriesArgsForCall)
 }
 
-func (fake *StemcellService) FromDirectoriesCalls(stub func([]string) (map[string]interface{}, error)) {
+func (fake *StemcellService) FromDirectoriesCalls(stub func([]string) (map[string]any, error)) {
 	fake.fromDirectoriesMutex.Lock()
 	defer fake.fromDirectoriesMutex.Unlock()
 	fake.FromDirectoriesStub = stub
@@ -92,33 +92,33 @@ func (fake *StemcellService) FromDirectoriesArgsForCall(i int) []string {
 	return argsForCall.arg1
 }
 
-func (fake *StemcellService) FromDirectoriesReturns(result1 map[string]interface{}, result2 error) {
+func (fake *StemcellService) FromDirectoriesReturns(result1 map[string]any, result2 error) {
 	fake.fromDirectoriesMutex.Lock()
 	defer fake.fromDirectoriesMutex.Unlock()
 	fake.FromDirectoriesStub = nil
 	fake.fromDirectoriesReturns = struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *StemcellService) FromDirectoriesReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
+func (fake *StemcellService) FromDirectoriesReturnsOnCall(i int, result1 map[string]any, result2 error) {
 	fake.fromDirectoriesMutex.Lock()
 	defer fake.fromDirectoriesMutex.Unlock()
 	fake.FromDirectoriesStub = nil
 	if fake.fromDirectoriesReturnsOnCall == nil {
 		fake.fromDirectoriesReturnsOnCall = make(map[int]struct {
-			result1 map[string]interface{}
+			result1 map[string]any
 			result2 error
 		})
 	}
 	fake.fromDirectoriesReturnsOnCall[i] = struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *StemcellService) FromKilnfile(arg1 string) (map[string]interface{}, error) {
+func (fake *StemcellService) FromKilnfile(arg1 string) (map[string]any, error) {
 	fake.fromKilnfileMutex.Lock()
 	ret, specificReturn := fake.fromKilnfileReturnsOnCall[len(fake.fromKilnfileArgsForCall)]
 	fake.fromKilnfileArgsForCall = append(fake.fromKilnfileArgsForCall, struct {
@@ -143,7 +143,7 @@ func (fake *StemcellService) FromKilnfileCallCount() int {
 	return len(fake.fromKilnfileArgsForCall)
 }
 
-func (fake *StemcellService) FromKilnfileCalls(stub func(string) (map[string]interface{}, error)) {
+func (fake *StemcellService) FromKilnfileCalls(stub func(string) (map[string]any, error)) {
 	fake.fromKilnfileMutex.Lock()
 	defer fake.fromKilnfileMutex.Unlock()
 	fake.FromKilnfileStub = stub
@@ -156,33 +156,33 @@ func (fake *StemcellService) FromKilnfileArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *StemcellService) FromKilnfileReturns(result1 map[string]interface{}, result2 error) {
+func (fake *StemcellService) FromKilnfileReturns(result1 map[string]any, result2 error) {
 	fake.fromKilnfileMutex.Lock()
 	defer fake.fromKilnfileMutex.Unlock()
 	fake.FromKilnfileStub = nil
 	fake.fromKilnfileReturns = struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *StemcellService) FromKilnfileReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
+func (fake *StemcellService) FromKilnfileReturnsOnCall(i int, result1 map[string]any, result2 error) {
 	fake.fromKilnfileMutex.Lock()
 	defer fake.fromKilnfileMutex.Unlock()
 	fake.FromKilnfileStub = nil
 	if fake.fromKilnfileReturnsOnCall == nil {
 		fake.fromKilnfileReturnsOnCall = make(map[int]struct {
-			result1 map[string]interface{}
+			result1 map[string]any
 			result2 error
 		})
 	}
 	fake.fromKilnfileReturnsOnCall[i] = struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *StemcellService) FromTarball(arg1 string) (interface{}, error) {
+func (fake *StemcellService) FromTarball(arg1 string) (any, error) {
 	fake.fromTarballMutex.Lock()
 	ret, specificReturn := fake.fromTarballReturnsOnCall[len(fake.fromTarballArgsForCall)]
 	fake.fromTarballArgsForCall = append(fake.fromTarballArgsForCall, struct {
@@ -207,7 +207,7 @@ func (fake *StemcellService) FromTarballCallCount() int {
 	return len(fake.fromTarballArgsForCall)
 }
 
-func (fake *StemcellService) FromTarballCalls(stub func(string) (interface{}, error)) {
+func (fake *StemcellService) FromTarballCalls(stub func(string) (any, error)) {
 	fake.fromTarballMutex.Lock()
 	defer fake.fromTarballMutex.Unlock()
 	fake.FromTarballStub = stub
@@ -220,28 +220,28 @@ func (fake *StemcellService) FromTarballArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *StemcellService) FromTarballReturns(result1 interface{}, result2 error) {
+func (fake *StemcellService) FromTarballReturns(result1 any, result2 error) {
 	fake.fromTarballMutex.Lock()
 	defer fake.fromTarballMutex.Unlock()
 	fake.FromTarballStub = nil
 	fake.fromTarballReturns = struct {
-		result1 interface{}
+		result1 any
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *StemcellService) FromTarballReturnsOnCall(i int, result1 interface{}, result2 error) {
+func (fake *StemcellService) FromTarballReturnsOnCall(i int, result1 any, result2 error) {
 	fake.fromTarballMutex.Lock()
 	defer fake.fromTarballMutex.Unlock()
 	fake.FromTarballStub = nil
 	if fake.fromTarballReturnsOnCall == nil {
 		fake.fromTarballReturnsOnCall = make(map[int]struct {
-			result1 interface{}
+			result1 any
 			result2 error
 		})
 	}
 	fake.fromTarballReturnsOnCall[i] = struct {
-		result1 interface{}
+		result1 any
 		result2 error
 	}{result1, result2}
 }

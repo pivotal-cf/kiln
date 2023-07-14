@@ -17,8 +17,8 @@ func NewTemplateVariablesService(fs billy.Basic) TemplateVariablesService {
 	return TemplateVariablesService{filesystem: fs}
 }
 
-func (s TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []string) (map[string]interface{}, error) {
-	variables := map[string]interface{}{}
+func (s TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []string) (map[string]any, error) {
+	variables := map[string]any{}
 
 	for _, path := range paths {
 		err := parseVariablesFromFile(s.filesystem, path, variables)
@@ -40,7 +40,7 @@ func (s TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []stri
 	return variables, nil
 }
 
-func parseVariablesFromFile(fs billy.Basic, path string, variables map[string]interface{}) error {
+func parseVariablesFromFile(fs billy.Basic, path string, variables map[string]any) error {
 	file, err := fs.Open(path)
 	if err != nil {
 		return fmt.Errorf("unable to open file %q: %w", path, err)

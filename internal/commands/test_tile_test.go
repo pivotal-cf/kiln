@@ -345,7 +345,6 @@ var _ = Describe("kiln test docker", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Docker daemon is not running"))
 		})
-
 	})
 })
 
@@ -384,7 +383,7 @@ type testingT interface {
 	Helper()
 	Cleanup(func())
 	TempDir() string
-	Fatal(args ...interface{})
+	Fatal(args ...any)
 	Name() string
 }
 

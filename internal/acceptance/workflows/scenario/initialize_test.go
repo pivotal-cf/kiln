@@ -172,7 +172,7 @@ var (
 	tableType   = reflect.TypeOf((*godog.Table)(nil))
 )
 
-func (fake fakeScenarioContext) Step(expr, stepFunc interface{}) {
+func (fake fakeScenarioContext) Step(expr, stepFunc any) {
 	fn := reflect.ValueOf(stepFunc)
 	if fn.Kind() != reflect.Func {
 		fake.t.Errorf("expected stepFunc to be %s got %s", reflect.Func, fn.Kind())

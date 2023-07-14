@@ -64,7 +64,7 @@ product_version: 1.2.3
 				Type:           "some-type",
 				ProductVersion: "some-version",
 			}, nil)
-			omRunner.GetManifestReturns(map[string]interface{}{
+			omRunner.GetManifestReturns(map[string]any{
 				"some-key": "some-value",
 			}, nil)
 		})

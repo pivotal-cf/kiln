@@ -6,24 +6,24 @@ import (
 )
 
 type FromDirectories struct {
-	FromDirectoriesStub        func([]string) (map[string]interface{}, error)
+	FromDirectoriesStub        func([]string) (map[string]any, error)
 	fromDirectoriesMutex       sync.RWMutex
 	fromDirectoriesArgsForCall []struct {
 		arg1 []string
 	}
 	fromDirectoriesReturns struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}
 	fromDirectoriesReturnsOnCall map[int]struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FromDirectories) FromDirectories(arg1 []string) (map[string]interface{}, error) {
+func (fake *FromDirectories) FromDirectories(arg1 []string) (map[string]any, error) {
 	var arg1Copy []string
 	if arg1 != nil {
 		arg1Copy = make([]string, len(arg1))
@@ -53,7 +53,7 @@ func (fake *FromDirectories) FromDirectoriesCallCount() int {
 	return len(fake.fromDirectoriesArgsForCall)
 }
 
-func (fake *FromDirectories) FromDirectoriesCalls(stub func([]string) (map[string]interface{}, error)) {
+func (fake *FromDirectories) FromDirectoriesCalls(stub func([]string) (map[string]any, error)) {
 	fake.fromDirectoriesMutex.Lock()
 	defer fake.fromDirectoriesMutex.Unlock()
 	fake.FromDirectoriesStub = stub
@@ -66,28 +66,28 @@ func (fake *FromDirectories) FromDirectoriesArgsForCall(i int) []string {
 	return argsForCall.arg1
 }
 
-func (fake *FromDirectories) FromDirectoriesReturns(result1 map[string]interface{}, result2 error) {
+func (fake *FromDirectories) FromDirectoriesReturns(result1 map[string]any, result2 error) {
 	fake.fromDirectoriesMutex.Lock()
 	defer fake.fromDirectoriesMutex.Unlock()
 	fake.FromDirectoriesStub = nil
 	fake.fromDirectoriesReturns = struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FromDirectories) FromDirectoriesReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
+func (fake *FromDirectories) FromDirectoriesReturnsOnCall(i int, result1 map[string]any, result2 error) {
 	fake.fromDirectoriesMutex.Lock()
 	defer fake.fromDirectoriesMutex.Unlock()
 	fake.FromDirectoriesStub = nil
 	if fake.fromDirectoriesReturnsOnCall == nil {
 		fake.fromDirectoriesReturnsOnCall = make(map[int]struct {
-			result1 map[string]interface{}
+			result1 map[string]any
 			result2 error
 		})
 	}
 	fake.fromDirectoriesReturnsOnCall[i] = struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}{result1, result2}
 }

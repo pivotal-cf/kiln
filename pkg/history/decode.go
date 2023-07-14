@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func unmarshalFile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, data interface{}, filePath string) error {
+func unmarshalFile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash, data any, filePath string) error {
 	buf, err := fileAtCommit(storage, commitHash, filePath)
 	if err != nil {
 		return err
@@ -19,7 +19,7 @@ func unmarshalFile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash,
 	return decodeFile(buf, filePath, data)
 }
 
-//func readDataFromTree(tree *object.Tree, data interface{}, names []string) error {
+//func readDataFromTree(tree *object.Tree, data any, names []string) error {
 //	buf, fileName, err := readBytesFromTree(tree, names)
 //	if err != nil {
 //		return err
@@ -27,7 +27,7 @@ func unmarshalFile(storage storer.EncodedObjectStorer, commitHash plumbing.Hash,
 //	return decodeFile(buf, fileName, data)
 //}
 
-func decodeFile(buf []byte, fileName string, data interface{}) error {
+func decodeFile(buf []byte, fileName string, data any) error {
 	if filepath.Base(fileName) == "Kilnfile" {
 		return yaml.Unmarshal(buf, data)
 	}

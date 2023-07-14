@@ -20,7 +20,7 @@ type MetadataPartsDirectoryReader struct {
 type Part struct {
 	File     string
 	Name     string
-	Metadata interface{}
+	Metadata any
 }
 
 func NewMetadataPartsDirectoryReader() MetadataPartsDirectoryReader {
@@ -48,7 +48,7 @@ func (r MetadataPartsDirectoryReader) Read(path string) ([]Part, error) {
 	return r.orderAlphabeticallyByName(path, parts)
 }
 
-func (r MetadataPartsDirectoryReader) ParseMetadataTemplates(directories []string, variables map[string]interface{}) (map[string]interface{}, error) {
+func (r MetadataPartsDirectoryReader) ParseMetadataTemplates(directories []string, variables map[string]any) (map[string]any, error) {
 	var releases []Part
 	for _, directory := range directories {
 		newReleases, err := r.ReadPreProcess(directory, variables)
@@ -59,7 +59,7 @@ func (r MetadataPartsDirectoryReader) ParseMetadataTemplates(directories []strin
 		releases = append(releases, newReleases...)
 	}
 
-	manifests := map[string]interface{}{}
+	manifests := map[string]any{}
 	for _, rel := range releases {
 		manifests[rel.Name] = rel.Metadata
 	}
@@ -67,7 +67,7 @@ func (r MetadataPartsDirectoryReader) ParseMetadataTemplates(directories []strin
 	return manifests, nil
 }
 
-func (r MetadataPartsDirectoryReader) ReadPreProcess(path string, variables map[string]interface{}) ([]Part, error) {
+func (r MetadataPartsDirectoryReader) ReadPreProcess(path string, variables map[string]any) ([]Part, error) {
 	parts, err := r.readMetadataRecursivelyFromDir(path, variables)
 	if err != nil {
 		return []Part{}, err
@@ -80,7 +80,7 @@ func (r MetadataPartsDirectoryReader) ReadPreProcess(path string, variables map[
 	return r.orderAlphabeticallyByName(path, parts)
 }
 
-func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(p string, variables map[string]interface{}) ([]Part, error) {
+func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(p string, variables map[string]any) ([]Part, error) {
 	var parts []Part
 
 	var buf bytes.Buffer
@@ -108,9 +108,9 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(p string, v
 			data = buf.Bytes()
 		}
 
-		var vars interface{}
+		var vars any
 		if r.topLevelKey != "" {
-			var fileVars map[string]interface{}
+			var fileVars map[string]any
 			err = yaml.Unmarshal(data, &fileVars)
 			if err != nil {
 				return fmt.Errorf("cannot unmarshal '%s': %s", filePath, err)
@@ -139,11 +139,11 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(p string, v
 	return parts, err
 }
 
-func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, vars interface{}, parts []Part) ([]Part, error) {
+func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, vars any, parts []Part) ([]Part, error) {
 	switch v := vars.(type) {
-	case []interface{}:
+	case []any:
 		for _, item := range v {
-			i, ok := item.(map[interface{}]interface{})
+			i, ok := item.(map[any]any)
 			if !ok {
 				return []Part{}, fmt.Errorf("metadata item '%v' must be a map", item)
 			}
@@ -155,7 +155,7 @@ func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, var
 
 			parts = append(parts, part)
 		}
-	case map[interface{}]interface{}:
+	case map[any]any:
 		part, err := r.buildPartFromMetadata(v, fileName)
 		if err != nil {
 			return []Part{}, err
@@ -168,7 +168,7 @@ func (r MetadataPartsDirectoryReader) readMetadataIntoParts(fileName string, var
 	return parts, nil
 }
 
-func (r MetadataPartsDirectoryReader) buildPartFromMetadata(metadata map[interface{}]interface{}, legacyFilename string) (Part, error) {
+func (r MetadataPartsDirectoryReader) buildPartFromMetadata(metadata map[any]any, legacyFilename string) (Part, error) {
 	name, ok := metadata["alias"].(string)
 	if !ok {
 		name, ok = metadata["name"].(string)
@@ -194,7 +194,7 @@ func (r MetadataPartsDirectoryReader) orderWithOrderFromFile(path string, parts 
 		return []Part{}, err
 	}
 
-	var files map[string][]interface{}
+	var files map[string][]any
 	err = yaml.Unmarshal(data, &files)
 	if err != nil {
 		return []Part{}, fmt.Errorf("invalid format for %q: %w", orderPath, err)

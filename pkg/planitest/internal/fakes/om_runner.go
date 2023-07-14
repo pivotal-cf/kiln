@@ -21,17 +21,17 @@ type OMRunner struct {
 		result1 internal.StagedProduct
 		result2 error
 	}
-	GetManifestStub        func(string) (map[string]interface{}, error)
+	GetManifestStub        func(string) (map[string]any, error)
 	getManifestMutex       sync.RWMutex
 	getManifestArgsForCall []struct {
 		arg1 string
 	}
 	getManifestReturns struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}
 	getManifestReturnsOnCall map[int]struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}
 	ResetAndConfigureStub        func(string, string, string) error
@@ -47,7 +47,7 @@ type OMRunner struct {
 	resetAndConfigureReturnsOnCall map[int]struct {
 		result1 error
 	}
-	invocations      map[string][][]interface{}
+	invocations      map[string][][]any
 	invocationsMutex sync.RWMutex
 }
 
@@ -57,7 +57,7 @@ func (fake *OMRunner) FindStagedProduct(arg1 string) (internal.StagedProduct, er
 	fake.findStagedProductArgsForCall = append(fake.findStagedProductArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	fake.recordInvocation("FindStagedProduct", []interface{}{arg1})
+	fake.recordInvocation("FindStagedProduct", []any{arg1})
 	fake.findStagedProductMutex.Unlock()
 	if fake.FindStagedProductStub != nil {
 		return fake.FindStagedProductStub(arg1)
@@ -114,13 +114,13 @@ func (fake *OMRunner) FindStagedProductReturnsOnCall(i int, result1 internal.Sta
 	}{result1, result2}
 }
 
-func (fake *OMRunner) GetManifest(arg1 string) (map[string]interface{}, error) {
+func (fake *OMRunner) GetManifest(arg1 string) (map[string]any, error) {
 	fake.getManifestMutex.Lock()
 	ret, specificReturn := fake.getManifestReturnsOnCall[len(fake.getManifestArgsForCall)]
 	fake.getManifestArgsForCall = append(fake.getManifestArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	fake.recordInvocation("GetManifest", []interface{}{arg1})
+	fake.recordInvocation("GetManifest", []any{arg1})
 	fake.getManifestMutex.Unlock()
 	if fake.GetManifestStub != nil {
 		return fake.GetManifestStub(arg1)
@@ -138,7 +138,7 @@ func (fake *OMRunner) GetManifestCallCount() int {
 	return len(fake.getManifestArgsForCall)
 }
 
-func (fake *OMRunner) GetManifestCalls(stub func(string) (map[string]interface{}, error)) {
+func (fake *OMRunner) GetManifestCalls(stub func(string) (map[string]any, error)) {
 	fake.getManifestMutex.Lock()
 	defer fake.getManifestMutex.Unlock()
 	fake.GetManifestStub = stub
@@ -151,28 +151,28 @@ func (fake *OMRunner) GetManifestArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *OMRunner) GetManifestReturns(result1 map[string]interface{}, result2 error) {
+func (fake *OMRunner) GetManifestReturns(result1 map[string]any, result2 error) {
 	fake.getManifestMutex.Lock()
 	defer fake.getManifestMutex.Unlock()
 	fake.GetManifestStub = nil
 	fake.getManifestReturns = struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *OMRunner) GetManifestReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
+func (fake *OMRunner) GetManifestReturnsOnCall(i int, result1 map[string]any, result2 error) {
 	fake.getManifestMutex.Lock()
 	defer fake.getManifestMutex.Unlock()
 	fake.GetManifestStub = nil
 	if fake.getManifestReturnsOnCall == nil {
 		fake.getManifestReturnsOnCall = make(map[int]struct {
-			result1 map[string]interface{}
+			result1 map[string]any
 			result2 error
 		})
 	}
 	fake.getManifestReturnsOnCall[i] = struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}{result1, result2}
 }
@@ -185,7 +185,7 @@ func (fake *OMRunner) ResetAndConfigure(arg1 string, arg2 string, arg3 string) e
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
-	fake.recordInvocation("ResetAndConfigure", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("ResetAndConfigure", []any{arg1, arg2, arg3})
 	fake.resetAndConfigureMutex.Unlock()
 	if fake.ResetAndConfigureStub != nil {
 		return fake.ResetAndConfigureStub(arg1, arg2, arg3)
@@ -239,7 +239,7 @@ func (fake *OMRunner) ResetAndConfigureReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *OMRunner) Invocations() map[string][][]interface{} {
+func (fake *OMRunner) Invocations() map[string][][]any {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.findStagedProductMutex.RLock()
@@ -248,21 +248,21 @@ func (fake *OMRunner) Invocations() map[string][][]interface{} {
 	defer fake.getManifestMutex.RUnlock()
 	fake.resetAndConfigureMutex.RLock()
 	defer fake.resetAndConfigureMutex.RUnlock()
-	copiedInvocations := map[string][][]interface{}{}
+	copiedInvocations := map[string][][]any{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
 	return copiedInvocations
 }
 
-func (fake *OMRunner) recordInvocation(key string, args []interface{}) {
+func (fake *OMRunner) recordInvocation(key string, args []any) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
-		fake.invocations = map[string][][]interface{}{}
+		fake.invocations = map[string][][]any{}
 	}
 	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]interface{}{}
+		fake.invocations[key] = [][]any{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }

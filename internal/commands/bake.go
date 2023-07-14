@@ -30,24 +30,24 @@ type tileWriter interface {
 
 //counterfeiter:generate -o ./fakes/from_directories.go --fake-name FromDirectories . fromDirectories
 type fromDirectories interface {
-	FromDirectories(directories []string) (map[string]interface{}, error)
+	FromDirectories(directories []string) (map[string]any, error)
 }
 
 //counterfeiter:generate -o ./fakes/parse_metadata_templates.go --fake-name MetadataTemplatesParser . metadataTemplatesParser
 type metadataTemplatesParser interface {
-	ParseMetadataTemplates(directories []string, variables map[string]interface{}) (map[string]interface{}, error)
+	ParseMetadataTemplates(directories []string, variables map[string]any) (map[string]any, error)
 }
 
 //counterfeiter:generate -o ./fakes/stemcell_service.go --fake-name StemcellService . stemcellService
 type stemcellService interface {
 	fromDirectories
-	FromKilnfile(path string) (stemcell map[string]interface{}, err error)
-	FromTarball(path string) (stemcell interface{}, err error)
+	FromKilnfile(path string) (stemcell map[string]any, err error)
+	FromTarball(path string) (stemcell any, err error)
 }
 
 //counterfeiter:generate -o ./fakes/template_variables_service.go --fake-name TemplateVariablesService . templateVariablesService
 type templateVariablesService interface {
-	FromPathsAndPairs(paths []string, pairs []string) (templateVariables map[string]interface{}, err error)
+	FromPathsAndPairs(paths []string, pairs []string) (templateVariables map[string]any, err error)
 }
 
 //counterfeiter:generate -o ./fakes/icon_service.go --fake-name IconService . iconService
@@ -408,8 +408,8 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to parse releases: %s", err)
 	}
 
-	var stemcellManifests map[string]interface{}
-	var stemcellManifest interface{}
+	var stemcellManifests map[string]any
+	var stemcellManifest any
 	if b.Options.StemcellTarball != "" {
 		// TODO remove when stemcell tarball is deprecated
 		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)

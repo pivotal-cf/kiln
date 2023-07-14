@@ -20,7 +20,7 @@ func NewReleasesService(logger logger, reader partReader) ReleasesService {
 	}
 }
 
-func (s ReleasesService) FromDirectories(directories []string) (map[string]interface{}, error) {
+func (s ReleasesService) FromDirectories(directories []string) (map[string]any, error) {
 	s.logger.Println("Reading release manifests...")
 
 	var releases []builder.Part
@@ -33,7 +33,7 @@ func (s ReleasesService) FromDirectories(directories []string) (map[string]inter
 		releases = append(releases, newReleases...)
 	}
 
-	manifests := map[string]interface{}{}
+	manifests := map[string]any{}
 	for _, rel := range releases {
 		manifests[rel.Name] = rel.Metadata
 	}
