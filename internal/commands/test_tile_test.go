@@ -61,6 +61,16 @@ var _ = Describe("kiln test", func() {
 			Expect(output.String()).To(BeEmpty())
 		})
 	})
+	AfterEach(func() {
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Fatal(err)
+		}
+		vendorDir := filepath.Join(filepath.Dir(filepath.Dir(wd)), "vendor")
+		if info, err := os.Stat(vendorDir); err == nil && info.IsDir() { // no error
+			_ = os.RemoveAll(vendorDir)
+		}
+	})
 
 	When("when the tile directory does not exist", func() {
 		It("runs all the tests with initalized collaborators", func() {
