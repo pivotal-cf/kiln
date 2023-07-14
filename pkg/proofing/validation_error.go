@@ -7,11 +7,11 @@ import (
 )
 
 type ValidationError struct {
-	Kind    interface{}
+	Kind    any
 	Message string
 }
 
-func NewValidationError(kind interface{}, message string) ValidationError {
+func NewValidationError(kind any, message string) ValidationError {
 	return ValidationError{
 		Kind:    kind,
 		Message: message,
@@ -23,7 +23,7 @@ func (ve ValidationError) Error() string {
 	return fmt.Sprintf("%s %s", strings.ToLower(t.Name()), ve.Message)
 }
 
-func ValidatePresence(err error, v interface{}, field string) error {
+func ValidatePresence(err error, v any, field string) error {
 	value := reflect.ValueOf(v).FieldByName(field)
 	if value.Len() == 0 {
 		validationError := NewValidationError(v, fmt.Sprintf("%s must be present", strings.ToLower(field)))

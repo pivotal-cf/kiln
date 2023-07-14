@@ -14,7 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func InterpolateAndParseKilnfile(in io.Reader, templateVariables map[string]interface{}) (Kilnfile, error) {
+func InterpolateAndParseKilnfile(in io.Reader, templateVariables map[string]any) (Kilnfile, error) {
 	kilnfileYAML, err := io.ReadAll(in)
 	if err != nil {
 		return Kilnfile{}, fmt.Errorf("unable to read Kilnfile: %w", err)

@@ -43,7 +43,7 @@ var _ = Describe("IconService", func() {
 			Expect(encoding).To(Equal("dGhpcyBpcyBzb21lIGRhdGE="))
 
 			Expect(logger.PrintlnCallCount()).To(Equal(1))
-			Expect(logger.PrintlnArgsForCall(0)).To(Equal([]interface{}{"Encoding icon..."}))
+			Expect(logger.PrintlnArgsForCall(0)).To(Equal([]any{"Encoding icon..."}))
 		})
 
 		Context("when the icon path is empty", func() {

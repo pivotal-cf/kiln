@@ -26,7 +26,7 @@ func NewStemcellService(logger logger, tarballReader partReader) StemcellService
 	}
 }
 
-func (ss StemcellService) FromDirectories(directories []string) (stemcell map[string]interface{}, err error) {
+func (ss StemcellService) FromDirectories(directories []string) (stemcell map[string]any, err error) {
 	ss.logger.Println("Reading stemcells from directories...")
 
 	var tarballs []string
@@ -47,7 +47,7 @@ func (ss StemcellService) FromDirectories(directories []string) (stemcell map[st
 		}
 	}
 
-	manifests := map[string]interface{}{}
+	manifests := map[string]any{}
 	for _, tarball := range tarballs {
 		manifest, err := ss.tarballReader.Read(tarball)
 		if err != nil {
@@ -66,7 +66,7 @@ func (ss StemcellService) FromDirectories(directories []string) (stemcell map[st
 	return manifests, nil
 }
 
-func (ss StemcellService) FromTarball(path string) (interface{}, error) {
+func (ss StemcellService) FromTarball(path string) (any, error) {
 	if path == "" {
 		return nil, nil
 	}
@@ -81,7 +81,7 @@ func (ss StemcellService) FromTarball(path string) (interface{}, error) {
 	return stemcell.Metadata, nil
 }
 
-func (ss StemcellService) FromKilnfile(kilnfilePath string) (map[string]interface{}, error) {
+func (ss StemcellService) FromKilnfile(kilnfilePath string) (map[string]any, error) {
 	kilnfileLockPath := fmt.Sprintf("%s.lock", kilnfilePath)
 	kilnfileLockBasename := path.Base(kilnfileLockPath)
 	ss.logger.Println(fmt.Sprintf("Reading stemcell criteria from %s", kilnfileLockBasename))
@@ -111,7 +111,7 @@ func (ss StemcellService) FromKilnfile(kilnfilePath string) (map[string]interfac
 
 	stemcell := stemcellCriteria.Metadata
 
-	stemcellManifest := map[string]interface{}{
+	stemcellManifest := map[string]any{
 		stemcell.OperatingSystem: stemcellCriteria.Metadata,
 	}
 

@@ -383,7 +383,7 @@ type testingT interface {
 	Helper()
 	Cleanup(func())
 	TempDir() string
-	Fatal(args ...interface{})
+	Fatal(args ...any)
 	Name() string
 }
 

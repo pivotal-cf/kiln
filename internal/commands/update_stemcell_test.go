@@ -430,7 +430,7 @@ var _ = Describe("UpdateStemcell", func() {
 	})
 })
 
-func createYAMLFile(fs billy.Filesystem, fp string, data interface{}) error {
+func createYAMLFile(fs billy.Filesystem, fp string, data any) error {
 	f, err := fs.Create(fp)
 	if err != nil {
 		return err

@@ -37,7 +37,7 @@ product-properties: {}
 		panic(err)
 	}
 
-	manifest, err := product.RenderManifest(map[string]interface{}{
+	manifest, err := product.RenderManifest(map[string]any{
 		".properties.required": "foo",
 	})
 	if err != nil {

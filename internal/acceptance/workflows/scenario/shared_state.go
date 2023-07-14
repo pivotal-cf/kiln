@@ -205,7 +205,7 @@ func runAndLogOnError(ctx context.Context, cmd *exec.Cmd, requireSuccess bool) (
 	return ctx, nil
 }
 
-func runAndParseStdoutAsYAML(ctx context.Context, cmd *exec.Cmd, d interface{}) (context.Context, error) {
+func runAndParseStdoutAsYAML(ctx context.Context, cmd *exec.Cmd, d any) (context.Context, error) {
 	var stdout, stderr bytes.Buffer
 	fds := ctx.Value(standardFileDescriptorsKey).(standardFileDescriptors)
 	cmd.Stdout = io.MultiWriter(&stdout, fds[1])

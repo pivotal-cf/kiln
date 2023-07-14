@@ -29,7 +29,7 @@ var _ = Describe("OpsManifest Service", func() {
 
 	Describe("RenderManifest", func() {
 		It("calls ops-manifest to retrieve the manifest", func() {
-			opsManifestRunner.GetManifestReturns(map[string]interface{}{
+			opsManifestRunner.GetManifestReturns(map[string]any{
 				"some-key": "some-value",
 			}, nil)
 

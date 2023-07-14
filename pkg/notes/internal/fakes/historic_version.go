@@ -24,7 +24,7 @@ type HistoricVersion struct {
 		result1 string
 		result2 error
 	}
-	invocations      map[string][][]interface{}
+	invocations      map[string][][]any
 	invocationsMutex sync.RWMutex
 }
 
@@ -38,7 +38,7 @@ func (fake *HistoricVersion) Spy(arg1 storer.EncodedObjectStorer, arg2 plumbing.
 	}{arg1, arg2, arg3})
 	stub := fake.Stub
 	returns := fake.returns
-	fake.recordInvocation("historicVersion", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("historicVersion", []any{arg1, arg2, arg3})
 	fake.mutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3)
@@ -93,26 +93,26 @@ func (fake *HistoricVersion) ReturnsOnCall(i int, result1 string, result2 error)
 	}{result1, result2}
 }
 
-func (fake *HistoricVersion) Invocations() map[string][][]interface{} {
+func (fake *HistoricVersion) Invocations() map[string][][]any {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.mutex.RLock()
 	defer fake.mutex.RUnlock()
-	copiedInvocations := map[string][][]interface{}{}
+	copiedInvocations := map[string][][]any{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
 	return copiedInvocations
 }
 
-func (fake *HistoricVersion) recordInvocation(key string, args []interface{}) {
+func (fake *HistoricVersion) recordInvocation(key string, args []any) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
-		fake.invocations = map[string][][]interface{}{}
+		fake.invocations = map[string][][]any{}
 	}
 	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]interface{}{}
+		fake.invocations[key] = [][]any{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }

@@ -6,25 +6,25 @@ import (
 )
 
 type MetadataTemplatesParser struct {
-	ParseMetadataTemplatesStub        func([]string, map[string]interface{}) (map[string]interface{}, error)
+	ParseMetadataTemplatesStub        func([]string, map[string]any) (map[string]any, error)
 	parseMetadataTemplatesMutex       sync.RWMutex
 	parseMetadataTemplatesArgsForCall []struct {
 		arg1 []string
-		arg2 map[string]interface{}
+		arg2 map[string]any
 	}
 	parseMetadataTemplatesReturns struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}
 	parseMetadataTemplatesReturnsOnCall map[int]struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *MetadataTemplatesParser) ParseMetadataTemplates(arg1 []string, arg2 map[string]interface{}) (map[string]interface{}, error) {
+func (fake *MetadataTemplatesParser) ParseMetadataTemplates(arg1 []string, arg2 map[string]any) (map[string]any, error) {
 	var arg1Copy []string
 	if arg1 != nil {
 		arg1Copy = make([]string, len(arg1))
@@ -34,7 +34,7 @@ func (fake *MetadataTemplatesParser) ParseMetadataTemplates(arg1 []string, arg2 
 	ret, specificReturn := fake.parseMetadataTemplatesReturnsOnCall[len(fake.parseMetadataTemplatesArgsForCall)]
 	fake.parseMetadataTemplatesArgsForCall = append(fake.parseMetadataTemplatesArgsForCall, struct {
 		arg1 []string
-		arg2 map[string]interface{}
+		arg2 map[string]any
 	}{arg1Copy, arg2})
 	stub := fake.ParseMetadataTemplatesStub
 	fakeReturns := fake.parseMetadataTemplatesReturns
@@ -55,41 +55,41 @@ func (fake *MetadataTemplatesParser) ParseMetadataTemplatesCallCount() int {
 	return len(fake.parseMetadataTemplatesArgsForCall)
 }
 
-func (fake *MetadataTemplatesParser) ParseMetadataTemplatesCalls(stub func([]string, map[string]interface{}) (map[string]interface{}, error)) {
+func (fake *MetadataTemplatesParser) ParseMetadataTemplatesCalls(stub func([]string, map[string]any) (map[string]any, error)) {
 	fake.parseMetadataTemplatesMutex.Lock()
 	defer fake.parseMetadataTemplatesMutex.Unlock()
 	fake.ParseMetadataTemplatesStub = stub
 }
 
-func (fake *MetadataTemplatesParser) ParseMetadataTemplatesArgsForCall(i int) ([]string, map[string]interface{}) {
+func (fake *MetadataTemplatesParser) ParseMetadataTemplatesArgsForCall(i int) ([]string, map[string]any) {
 	fake.parseMetadataTemplatesMutex.RLock()
 	defer fake.parseMetadataTemplatesMutex.RUnlock()
 	argsForCall := fake.parseMetadataTemplatesArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *MetadataTemplatesParser) ParseMetadataTemplatesReturns(result1 map[string]interface{}, result2 error) {
+func (fake *MetadataTemplatesParser) ParseMetadataTemplatesReturns(result1 map[string]any, result2 error) {
 	fake.parseMetadataTemplatesMutex.Lock()
 	defer fake.parseMetadataTemplatesMutex.Unlock()
 	fake.ParseMetadataTemplatesStub = nil
 	fake.parseMetadataTemplatesReturns = struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *MetadataTemplatesParser) ParseMetadataTemplatesReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
+func (fake *MetadataTemplatesParser) ParseMetadataTemplatesReturnsOnCall(i int, result1 map[string]any, result2 error) {
 	fake.parseMetadataTemplatesMutex.Lock()
 	defer fake.parseMetadataTemplatesMutex.Unlock()
 	fake.ParseMetadataTemplatesStub = nil
 	if fake.parseMetadataTemplatesReturnsOnCall == nil {
 		fake.parseMetadataTemplatesReturnsOnCall = make(map[int]struct {
-			result1 map[string]interface{}
+			result1 map[string]any
 			result2 error
 		})
 	}
 	fake.parseMetadataTemplatesReturnsOnCall[i] = struct {
-		result1 map[string]interface{}
+		result1 map[string]any
 		result2 error
 	}{result1, result2}
 }

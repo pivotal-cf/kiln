@@ -63,7 +63,7 @@ type IssuesService struct {
 		result2 *github.Response
 		result3 error
 	}
-	invocations      map[string][][]any
+	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
@@ -78,7 +78,7 @@ func (fake *IssuesService) Get(arg1 context.Context, arg2 string, arg3 string, a
 	}{arg1, arg2, arg3, arg4})
 	stub := fake.GetStub
 	fakeReturns := fake.getReturns
-	fake.recordInvocation("Get", []any{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("Get", []interface{}{arg1, arg2, arg3, arg4})
 	fake.getMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3, arg4)
@@ -148,7 +148,7 @@ func (fake *IssuesService) ListByRepo(arg1 context.Context, arg2 string, arg3 st
 	}{arg1, arg2, arg3, arg4})
 	stub := fake.ListByRepoStub
 	fakeReturns := fake.listByRepoReturns
-	fake.recordInvocation("ListByRepo", []any{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("ListByRepo", []interface{}{arg1, arg2, arg3, arg4})
 	fake.listByRepoMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3, arg4)
@@ -218,7 +218,7 @@ func (fake *IssuesService) ListMilestones(arg1 context.Context, arg2 string, arg
 	}{arg1, arg2, arg3, arg4})
 	stub := fake.ListMilestonesStub
 	fakeReturns := fake.listMilestonesReturns
-	fake.recordInvocation("ListMilestones", []any{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("ListMilestones", []interface{}{arg1, arg2, arg3, arg4})
 	fake.listMilestonesMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3, arg4)
@@ -277,7 +277,7 @@ func (fake *IssuesService) ListMilestonesReturnsOnCall(i int, result1 []*github.
 	}{result1, result2, result3}
 }
 
-func (fake *IssuesService) Invocations() map[string][][]any {
+func (fake *IssuesService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.getMutex.RLock()
@@ -286,21 +286,21 @@ func (fake *IssuesService) Invocations() map[string][][]any {
 	defer fake.listByRepoMutex.RUnlock()
 	fake.listMilestonesMutex.RLock()
 	defer fake.listMilestonesMutex.RUnlock()
-	copiedInvocations := map[string][][]any{}
+	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
 	return copiedInvocations
 }
 
-func (fake *IssuesService) recordInvocation(key string, args []any) {
+func (fake *IssuesService) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
-		fake.invocations = map[string][][]any{}
+		fake.invocations = map[string][][]interface{}{}
 	}
 	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]any{}
+		fake.invocations[key] = [][]interface{}{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }

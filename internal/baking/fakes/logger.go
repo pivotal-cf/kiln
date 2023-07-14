@@ -6,19 +6,19 @@ import (
 )
 
 type Logger struct {
-	PrintlnStub        func(...interface{})
+	PrintlnStub        func(...any)
 	printlnMutex       sync.RWMutex
 	printlnArgsForCall []struct {
-		arg1 []interface{}
+		arg1 []any
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Logger) Println(arg1 ...interface{}) {
+func (fake *Logger) Println(arg1 ...any) {
 	fake.printlnMutex.Lock()
 	fake.printlnArgsForCall = append(fake.printlnArgsForCall, struct {
-		arg1 []interface{}
+		arg1 []any
 	}{arg1})
 	stub := fake.PrintlnStub
 	fake.recordInvocation("Println", []interface{}{arg1})
@@ -34,13 +34,13 @@ func (fake *Logger) PrintlnCallCount() int {
 	return len(fake.printlnArgsForCall)
 }
 
-func (fake *Logger) PrintlnCalls(stub func(...interface{})) {
+func (fake *Logger) PrintlnCalls(stub func(...any)) {
 	fake.printlnMutex.Lock()
 	defer fake.printlnMutex.Unlock()
 	fake.PrintlnStub = stub
 }
 
-func (fake *Logger) PrintlnArgsForCall(i int) []interface{} {
+func (fake *Logger) PrintlnArgsForCall(i int) []any {
 	fake.printlnMutex.RLock()
 	defer fake.printlnMutex.RUnlock()
 	argsForCall := fake.printlnArgsForCall[i]

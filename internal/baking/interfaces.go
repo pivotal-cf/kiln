@@ -8,7 +8,7 @@ import (
 
 //counterfeiter:generate -o ./fakes/logger.go --fake-name Logger . logger
 type logger interface {
-	Println(v ...interface{})
+	Println(v ...any)
 }
 
 //counterfeiter:generate -o ./fakes/part_reader.go --fake-name PartReader . partReader

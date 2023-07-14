@@ -7,13 +7,13 @@ import (
 //counterfeiter:generate ./fakes/om_runner.go --fake-name OMRunner . OMRunnerI
 type OMRunnerI interface {
 	ResetAndConfigure(productName string, productVersion string, configJSON string) error
-	GetManifest(productGUID string) (map[string]interface{}, error)
+	GetManifest(productGUID string) (map[string]any, error)
 	FindStagedProduct(productName string) (StagedProduct, error)
 }
 
 //counterfeiter:generate ./fakes/ops_manifest_runner.go --fake-name OpsManifestRunner . OpsManifestRunnerI
 type OpsManifestRunnerI interface {
-	GetManifest(productProperties, metadataFilePath string) (map[string]interface{}, error)
+	GetManifest(productProperties, metadataFilePath string) (map[string]any, error)
 }
 
 //counterfeiter:generate ./fakes/file_io.go --fake-name FileIO . FileIO

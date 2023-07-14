@@ -23,11 +23,11 @@ import (
 // To work around this, we now have our own copy of ProductConfiguration without omit-empty on product-properties
 type ProductConfiguration struct {
 	ProductName              string                           `yaml:"product-name,omitempty"`
-	ProductProperties        map[string]interface{}           `yaml:"product-properties"` // remove omitempty
-	NetworkProperties        map[string]interface{}           `yaml:"network-properties,omitempty"`
+	ProductProperties        map[string]any                   `yaml:"product-properties"` // remove omitempty
+	NetworkProperties        map[string]any                   `yaml:"network-properties,omitempty"`
 	ResourceConfigProperties map[string]config.ResourceConfig `yaml:"resource-config,omitempty"`
 	ErrandConfigs            map[string]config.ErrandConfig   `yaml:"errand-config,omitempty"`
-	SyslogProperties         map[string]interface{}           `yaml:"syslog-properties,omitempty"`
+	SyslogProperties         map[string]any                   `yaml:"syslog-properties,omitempty"`
 }
 
 // Force our "fork" of ProductConfiguration to have the same fields as the version in om/config
@@ -35,7 +35,7 @@ var _ = config.ProductConfiguration(ProductConfiguration{})
 
 // MergeAdditionalProductProperties takes product properties from the provided reader and merges them with data from the
 // additionalProperties parameter. It also does some validation to ensure required fields are set.
-func MergeAdditionalProductProperties(configFile io.Reader, additionalProperties map[string]interface{}) (io.Reader, error) {
+func MergeAdditionalProductProperties(configFile io.Reader, additionalProperties map[string]any) (io.Reader, error) {
 	yamlInput, err := io.ReadAll(configFile)
 	if err != nil {
 		return nil, err
@@ -67,14 +67,14 @@ func MergeAdditionalProductProperties(configFile io.Reader, additionalProperties
 	return modifiedConfigFile, nil
 }
 
-func mergeProperties(minimalProperties, additionalProperties map[string]interface{}) map[string]interface{} {
-	combinedProperties := make(map[string]interface{}, len(minimalProperties)+len(additionalProperties))
+func mergeProperties(minimalProperties, additionalProperties map[string]any) map[string]any {
+	combinedProperties := make(map[string]any, len(minimalProperties)+len(additionalProperties))
 	for k, v := range minimalProperties {
 		combinedProperties[k] = v
 	}
 
 	for k, v := range additionalProperties {
-		combinedProperties[k] = map[string]interface{}{
+		combinedProperties[k] = map[string]any{
 			"value": v,
 		}
 	}

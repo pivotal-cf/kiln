@@ -49,16 +49,16 @@ selected_value: $( release "some-release" | select "version" )
 
 		input = builder.InterpolateInput{
 			Version: "3.4.5",
-			BOSHVariables: map[string]interface{}{
+			BOSHVariables: map[string]any{
 				"some-bosh-variable": builder.Metadata{
 					"name": "some-bosh-variable",
 					"type": "some-bosh-type",
 				},
 			},
-			Variables: map[string]interface{}{
+			Variables: map[string]any{
 				"some-variable": "some-value",
 			},
-			ReleaseManifests: map[string]interface{}{
+			ReleaseManifests: map[string]any{
 				"some-release": builder.ReleaseManifest{
 					Name:    "some-release",
 					Version: "1.2.3",
@@ -70,14 +70,14 @@ selected_value: $( release "some-release" | select "version" )
 				Version:         "2.3.4",
 				OperatingSystem: "an-operating-system",
 			},
-			FormTypes: map[string]interface{}{
+			FormTypes: map[string]any{
 				"some-form": builder.Metadata{
 					"name":  "some-form",
 					"label": "some-form-label",
 				},
 			},
 			IconImage: "some-icon-image",
-			InstanceGroups: map[string]interface{}{
+			InstanceGroups: map[string]any{
 				"some-instance-group": builder.Metadata{
 					"name": "some-instance-group",
 					"templates": []string{
@@ -85,13 +85,13 @@ selected_value: $( release "some-release" | select "version" )
 					},
 				},
 			},
-			Jobs: map[string]interface{}{
+			Jobs: map[string]any{
 				"some-job": builder.Metadata{
 					"name":    "some-job",
 					"release": "some-release",
 				},
 			},
-			PropertyBlueprints: map[string]interface{}{
+			PropertyBlueprints: map[string]any{
 				"some-templated-property": builder.Metadata{
 					"name":         "some-templated-property",
 					"type":         "boolean",
@@ -105,7 +105,7 @@ selected_value: $( release "some-release" | select "version" )
 					"default":      "some-value",
 				},
 			},
-			RuntimeConfigs: map[string]interface{}{
+			RuntimeConfigs: map[string]any{
 				"some-runtime-config": builder.Metadata{
 					"name":           "some-runtime-config",
 					"runtime_config": "some-addon-runtime-config\n",
@@ -198,10 +198,10 @@ some_form_types:
 - $( form "some-form" )`
 
 		input = builder.InterpolateInput{
-			Variables: map[string]interface{}{
+			Variables: map[string]any{
 				"some-form-variable": "variable-form-label",
 			},
-			FormTypes: map[string]interface{}{
+			FormTypes: map[string]any{
 				"some-form": builder.Metadata{
 					"name":  "some-form",
 					"label": `$( variable "some-form-variable" )`,
@@ -223,7 +223,7 @@ some_form_types:
 
 		BeforeEach(func() {
 			input = builder.InterpolateInput{
-				ReleaseManifests: map[string]interface{}{
+				ReleaseManifests: map[string]any{
 					"some-release": builder.ReleaseManifest{
 						Name:    "some-release",
 						Version: "1.2.3",
@@ -231,7 +231,7 @@ some_form_types:
 						SHA1:    "123abc",
 					},
 				},
-				StemcellManifests: map[string]interface{}{
+				StemcellManifests: map[string]any{
 					"windows": builder.StemcellManifest{
 						OperatingSystem: "windows",
 						Version:         "2019.4",
@@ -288,7 +288,7 @@ additional_stemcells_criteria:
 stemcell_criteria: $( stemcell )`
 
 			input = builder.InterpolateInput{
-				ReleaseManifests: map[string]interface{}{
+				ReleaseManifests: map[string]any{
 					"some-release": builder.ReleaseManifest{
 						Name:    "some-release",
 						Version: "1.2.3",
@@ -296,7 +296,7 @@ stemcell_criteria: $( stemcell )`
 						SHA1:    "123abc",
 					},
 				},
-				StemcellManifests: map[string]interface{}{
+				StemcellManifests: map[string]any{
 					"centOS": builder.StemcellManifest{
 						OperatingSystem: "centOS",
 						Version:         "5.4",
@@ -328,7 +328,7 @@ some_runtime_configs:
 - $( runtime_config "some-runtime-config" )`
 
 			input = builder.InterpolateInput{
-				ReleaseManifests: map[string]interface{}{
+				ReleaseManifests: map[string]any{
 					"some-release": builder.ReleaseManifest{
 						Name:    "some-release",
 						Version: "1.2.3",
@@ -336,7 +336,7 @@ some_runtime_configs:
 						SHA1:    "123abc",
 					},
 				},
-				RuntimeConfigs: map[string]interface{}{
+				RuntimeConfigs: map[string]any{
 					"some-runtime-config": builder.Metadata{
 						"name": "some-runtime-config",
 						"runtime_config": `releases:
@@ -350,14 +350,14 @@ some_runtime_configs:
 			interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 			Expect(err).NotTo(HaveOccurred())
 
-			var output map[string]interface{}
+			var output map[string]any
 			err = yaml.Unmarshal(interpolatedYAML, &output)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(output).To(HaveKey("some_runtime_configs"))
-			configs, ok := output["some_runtime_configs"].([]interface{})
+			configs, ok := output["some_runtime_configs"].([]any)
 			Expect(ok).To(BeTrue())
-			config, ok := configs[0].(map[interface{}]interface{})
+			config, ok := configs[0].(map[any]any)
 			Expect(ok).To(BeTrue())
 
 			Expect(config).To(HaveKeyWithValue("name", "some-runtime-config"))
@@ -371,7 +371,7 @@ releases:
 
 		Context("when the interpolated runtime config does not have a runtime_config key", func() {
 			JustBeforeEach(func() {
-				input.RuntimeConfigs = map[string]interface{}{
+				input.RuntimeConfigs = map[string]any{
 					"some-runtime-config": builder.Metadata{
 						"name": "some-runtime-config",
 					},
@@ -406,7 +406,7 @@ some_runtime_configs:
 	Context("failure cases", func() {
 		Context("when the requested form name is not found", func() {
 			It("returns an error", func() {
-				input.FormTypes = map[string]interface{}{}
+				input.FormTypes = map[string]any{}
 				interpolator := builder.NewInterpolator()
 				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
@@ -417,7 +417,7 @@ some_runtime_configs:
 
 		Context("when the requested property blueprint is not found", func() {
 			It("returns an error", func() {
-				input.PropertyBlueprints = map[string]interface{}{}
+				input.PropertyBlueprints = map[string]any{}
 				interpolator := builder.NewInterpolator()
 				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
@@ -428,7 +428,7 @@ some_runtime_configs:
 
 		Context("when the requested runtime config is not found", func() {
 			It("returns an error", func() {
-				input.RuntimeConfigs = map[string]interface{}{}
+				input.RuntimeConfigs = map[string]any{}
 				interpolator := builder.NewInterpolator()
 				_, err := interpolator.Interpolate(input, "", []byte(templateYAML))
 
@@ -439,7 +439,7 @@ some_runtime_configs:
 
 		Context("when the nested form contains invalid templating", func() {
 			It("returns an error", func() {
-				input.FormTypes = map[string]interface{}{
+				input.FormTypes = map[string]any{
 					"some-form": builder.Metadata{
 						"name":  "some-form",
 						"label": "$( invalid_helper )",
@@ -711,13 +711,13 @@ tile: {{if eq tile "ert" -}}
 {{- end -}}
 `
 		var buf bytes.Buffer
-		err := builder.PreProcessMetadataWithTileFunction(map[string]interface{}{"tile_name": "ERT"}, "m.yml", &buf, []byte(partYML))
+		err := builder.PreProcessMetadataWithTileFunction(map[string]any{"tile_name": "ERT"}, "m.yml", &buf, []byte(partYML))
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(buf.Bytes()).To(MatchYAML(`tile: big-foot`))
 
 		buf.Reset()
 
-		err = builder.PreProcessMetadataWithTileFunction(map[string]interface{}{"tile_name": "SRT"}, "m.yml", &buf, []byte(partYML))
+		err = builder.PreProcessMetadataWithTileFunction(map[string]any{"tile_name": "SRT"}, "m.yml", &buf, []byte(partYML))
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(buf.Bytes()).To(MatchYAML(`tile: small-foot`))
 	})
@@ -726,7 +726,7 @@ tile: {{if eq tile "ert" -}}
 		please := NewWithT(t)
 
 		partYML := `tile: {{tile}}`
-		err := builder.PreProcessMetadataWithTileFunction(map[string]interface{}{"tile_name": 27}, "m.yml", io.Discard, []byte(partYML))
+		err := builder.PreProcessMetadataWithTileFunction(map[string]any{"tile_name": 27}, "m.yml", io.Discard, []byte(partYML))
 		please.Expect(err).To(And(
 			HaveOccurred(),
 			MatchError(ContainSubstring("expected string")),
@@ -737,7 +737,7 @@ tile: {{if eq tile "ert" -}}
 		please := NewWithT(t)
 
 		partYML := `tile: {{tile}}`
-		err := builder.PreProcessMetadataWithTileFunction(make(map[string]interface{}), "m.yml", io.Discard, []byte(partYML))
+		err := builder.PreProcessMetadataWithTileFunction(make(map[string]any), "m.yml", io.Discard, []byte(partYML))
 		please.Expect(err).To(And(
 			HaveOccurred(),
 			MatchError(ContainSubstring("could not find variable")),

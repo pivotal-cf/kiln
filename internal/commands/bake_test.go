@@ -96,12 +96,12 @@ var _ = Describe("Bake", func() {
 			return "/home/", nil
 		}
 
-		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]interface{}{
+		fakeTemplateVariablesService.FromPathsAndPairsReturns(map[string]any{
 			"some-variable-from-file": "some-variable-value-from-file",
 			"some-variable":           "some-variable-value",
 		}, nil)
 
-		fakeReleasesService.FromDirectoriesReturns(map[string]interface{}{
+		fakeReleasesService.FromDirectoriesReturns(map[string]any{
 			"some-release-1": builder.ReleaseManifest{
 				Name:    "some-release-1",
 				Version: "1.2.3",
@@ -119,21 +119,21 @@ var _ = Describe("Bake", func() {
 			OperatingSystem: "an-operating-system",
 		}, nil)
 
-		fakeFormsService.ParseMetadataTemplatesReturns(map[string]interface{}{
+		fakeFormsService.ParseMetadataTemplatesReturns(map[string]any{
 			"some-form": builder.Metadata{
 				"name":  "some-form",
 				"label": "some-form-label",
 			},
 		}, nil)
 
-		fakeBOSHVariablesService.ParseMetadataTemplatesReturns(map[string]interface{}{
+		fakeBOSHVariablesService.ParseMetadataTemplatesReturns(map[string]any{
 			"some-secret": builder.Metadata{
 				"name": "some-secret",
 				"type": "password",
 			},
 		}, nil)
 
-		fakeInstanceGroupsService.ParseMetadataTemplatesReturns(map[string]interface{}{
+		fakeInstanceGroupsService.ParseMetadataTemplatesReturns(map[string]any{
 			"some-instance-group": builder.Metadata{
 				"name":     "some-instance-group",
 				"manifest": "some-manifest",
@@ -142,7 +142,7 @@ var _ = Describe("Bake", func() {
 			},
 		}, nil)
 
-		fakeJobsService.ParseMetadataTemplatesReturns(map[string]interface{}{
+		fakeJobsService.ParseMetadataTemplatesReturns(map[string]any{
 			"some-job": builder.Metadata{
 				"name":     "some-job",
 				"release":  "some-release",
@@ -150,7 +150,7 @@ var _ = Describe("Bake", func() {
 			},
 		}, nil)
 
-		fakePropertiesService.ParseMetadataTemplatesReturns(map[string]interface{}{
+		fakePropertiesService.ParseMetadataTemplatesReturns(map[string]any{
 			"some-property": builder.Metadata{
 				"name":         "some-property",
 				"type":         "boolean",
@@ -159,7 +159,7 @@ var _ = Describe("Bake", func() {
 			},
 		}, nil)
 
-		fakeRuntimeConfigsService.ParseMetadataTemplatesReturns(map[string]interface{}{
+		fakeRuntimeConfigsService.ParseMetadataTemplatesReturns(map[string]any{
 			"some-runtime-config": builder.Metadata{
 				"name":           "some-runtime-config",
 				"runtime_config": "some-addon-runtime-config",
@@ -265,17 +265,17 @@ var _ = Describe("Bake", func() {
 			input.MetadataGitSHA = nil // func pointers are not comparable unless they are both nil
 			Expect(input).To(Equal(builder.InterpolateInput{
 				Version: "1.2.3",
-				BOSHVariables: map[string]interface{}{
+				BOSHVariables: map[string]any{
 					"some-secret": builder.Metadata{
 						"name": "some-secret",
 						"type": "password",
 					},
 				},
-				Variables: map[string]interface{}{
+				Variables: map[string]any{
 					"some-variable-from-file": "some-variable-value-from-file",
 					"some-variable":           "some-variable-value",
 				},
-				ReleaseManifests: map[string]interface{}{
+				ReleaseManifests: map[string]any{
 					"some-release-1": builder.ReleaseManifest{
 						Name:    "some-release-1",
 						Version: "1.2.3",
@@ -291,14 +291,14 @@ var _ = Describe("Bake", func() {
 					Version:         "2.3.4",
 					OperatingSystem: "an-operating-system",
 				},
-				FormTypes: map[string]interface{}{
+				FormTypes: map[string]any{
 					"some-form": builder.Metadata{
 						"name":  "some-form",
 						"label": "some-form-label",
 					},
 				},
 				IconImage: "some-encoded-icon",
-				InstanceGroups: map[string]interface{}{
+				InstanceGroups: map[string]any{
 					"some-instance-group": builder.Metadata{
 						"name":     "some-instance-group",
 						"manifest": "some-manifest",
@@ -306,14 +306,14 @@ var _ = Describe("Bake", func() {
 						"release":  "some-release",
 					},
 				},
-				Jobs: map[string]interface{}{
+				Jobs: map[string]any{
 					"some-job": builder.Metadata{
 						"name":     "some-job",
 						"release":  "some-release",
 						"consumes": "some-link",
 					},
 				},
-				PropertyBlueprints: map[string]interface{}{
+				PropertyBlueprints: map[string]any{
 					"some-property": builder.Metadata{
 						"name":         "some-property",
 						"type":         "boolean",
@@ -321,7 +321,7 @@ var _ = Describe("Bake", func() {
 						"default":      false,
 					},
 				},
-				RuntimeConfigs: map[string]interface{}{
+				RuntimeConfigs: map[string]any{
 					"some-runtime-config": builder.Metadata{
 						"name":           "some-runtime-config",
 						"runtime_config": "some-addon-runtime-config",

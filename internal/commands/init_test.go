@@ -26,7 +26,7 @@ type command interface {
 
 var _ command
 
-func fsWriteYAML(fs billy.Basic, path string, data interface{}) error {
+func fsWriteYAML(fs billy.Basic, path string, data any) error {
 	buf, err := yaml.Marshal(data)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func fsWriteYAML(fs billy.Basic, path string, data interface{}) error {
 	return err
 }
 
-func fsReadYAML(fs billy.Basic, path string, data interface{}) error {
+func fsReadYAML(fs billy.Basic, path string, data any) error {
 	f, err := fs.Open(path)
 	if err != nil {
 		return nil

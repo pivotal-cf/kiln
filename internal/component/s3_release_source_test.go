@@ -60,7 +60,7 @@ var _ = Describe("S3ReleaseSource", func() {
 		DescribeTable("bad config", func(before func(sourceConfig *cargo.ReleaseSourceConfig), expectedSubstring string) {
 			before(config)
 
-			var r interface{}
+			var r any
 			func() {
 				defer func() {
 					r = recover()

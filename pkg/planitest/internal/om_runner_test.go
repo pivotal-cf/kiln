@@ -258,10 +258,10 @@ network-properties:
 				"--path", "/api/v0/staged/products/some-guid/manifest",
 			}))
 
-			Expect(manifest).To(Equal(map[string]interface{}{
+			Expect(manifest).To(Equal(map[string]any{
 				"name": "cf-some-guid",
-				"releases": []interface{}{
-					map[string]interface{}{
+				"releases": []any{
+					map[string]any{
 						"name":    "some-release",
 						"version": "1.2.3",
 					},
