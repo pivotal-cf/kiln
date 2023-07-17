@@ -1,444 +1,233 @@
 package commands_test
 
 import (
+	"bytes"
 	"context"
-	"errors"
-	"fmt"
 	"io"
-	"log"
-	"os"
-	"path/filepath"
-	"sort"
-	"strings"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/strslice"
-	"github.com/docker/docker/pkg/stdcopy"
-	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-cf/kiln/internal/commands/fakes"
+	"github.com/pivotal-cf/kiln/internal/test"
+
+	. "github.com/onsi/ginkgo"
 	"github.com/onsi/gomega/format"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
-	"github.com/pivotal-cf/kiln/internal/commands/fakes"
 )
 
 func init() {
 	format.MaxLength = 100000
 }
 
-var _ = Describe("kiln test docker", func() {
-	var helloTileDirectorySegments []string
-	BeforeEach(func() {
-		helloTileDirectorySegments = []string{"testdata", "test_tile", "hello-tile"}
-		Expect(goVendor(filepath.Join(helloTileDirectorySegments...))).NotTo(HaveOccurred())
+// counterfeiter does not handle publicly exported type function spy generation super well.
+// So I am telling it to generate the spy off of a private type alias. This works but is a bit confusing.
+//
+//counterfeiter:generate -o ./fakes/test_tile_function.go --fake-name TestTileFunction . tileTestFunction
+
+// nolint:unused
+type tileTestFunction = commands.TileTestFunction
+
+var _ = Describe("kiln test", func() {
+	var output bytes.Buffer
+	AfterEach(func() {
+		output.Reset()
+	})
+	When("when no arguments are passed", func() {
+		It("runs all the tests with initalized collaborators", func() {
+			var emptySlice []string
+
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
+			fakeTestFunc.Stub = func(_ context.Context, w io.Writer, _ test.Configuration) error {
+				_, _ = io.WriteString(w, "hello")
+				return nil
+			}
+
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(emptySlice)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeTestFunc.CallCount()).To(Equal(1))
+			ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
+			Expect(ctx).NotTo(BeNil())
+			Expect(w).NotTo(BeNil())
+
+			Expect(configuration.AbsoluteTileDirectory).To(BeADirectory())
+			Expect(configuration.RunAll).To(BeTrue())
+			Expect(output.String()).To(BeEmpty())
+		})
 	})
 
-	Context("locally missing docker image is built", func() {
-		var (
-			ctx    context.Context
-			writer strings.Builder
-			logger *log.Logger
-		)
+	When("when the verbose flag argument is passed", func() {
+		It("runs all the tests with initalized collaborators", func() {
+			verboseFlagArgument := []string{"--verbose"}
 
-		BeforeEach(func() {
-			ctx = context.Background()
-			logger = log.New(&writer, "", 0)
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
+			fakeTestFunc.Stub = func(_ context.Context, w io.Writer, _ test.Configuration) error {
+				_, _ = io.WriteString(w, "hello")
+				return nil
+			}
+
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(verboseFlagArgument)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeTestFunc.CallCount()).To(Equal(1))
+
+			ctx, w, _ := fakeTestFunc.ArgsForCall(0)
+			Expect(ctx).NotTo(BeNil())
+			Expect(w).NotTo(BeNil())
+
+			Expect(output.String()).To(ContainSubstring("hello"))
 		})
+	})
 
-		Describe("test outcomes", func() {
-			var (
-				fakeSshProvider *fakes.SshProvider
-				helloTilePath   string
-			)
+	When("when the manifest test is enabled", func() {
+		It("it sets the manifest configuration flag", func() {
+			args := []string{"--manifest"}
 
-			BeforeEach(func() {
-				t := GinkgoT()
-				helloTilePath = filepath.Join(helloTileDirectorySegments...)
-				writePasswordToStdIn(t)
-				fakeSshProvider = setupFakeSSHProvider()
-				addTASFixtures(t, helloTilePath)
-			})
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
 
-			When("manifest tests should be successful", func() {
-				const (
-					testSuccessLogLine = "manifest tests completed successfully"
-				)
-				var fakeMobyClient *fakes.MobyClient
-				BeforeEach(func() {
-					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
-				})
-				When("executing tests", func() {
-					var subjectUnderTest commands.TileTest
-					BeforeEach(func() {
-						writer.Reset()
-						subjectUnderTest = commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
-					})
-					When("verbose is passed", func() {
-						It("succeeds and logs info", func() {
-							err := subjectUnderTest.Execute([]string{"--manifest", "--verbose", "--tile-path", helloTilePath, "--ginkgo-flags", "-r -slowSpecThreshold 1"})
-							Expect(err).To(BeNil())
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
+			Expect(err).NotTo(HaveOccurred())
 
-							By("logging helpful messages", func() {
-								logs := writer.String()
-								By("logging container information", func() {
-									Expect(logs).To(ContainSubstring("Building / restoring cached docker image"))
-								})
-								By("logging test lines", func() {
-									Expect(logs).To(ContainSubstring("manifest tests completed successfully"))
-								})
-							})
+			Expect(fakeTestFunc.CallCount()).To(Equal(1))
 
-							By("creating a test container", func() {
-								Expect(fakeMobyClient.ContainerCreateCallCount()).To(Equal(1))
-								_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
-								By("configuring the metadata and product config when they exist", func() {
-									expected := []string{
-										"PRODUCT=hello-tile",
-										"RENDERER=ops-manifest",
-										"TAS_METADATA_PATH=/tas/hello-tile/test/manifest/fixtures/tas_metadata.yml",
-										"TAS_CONFIG_FILE=/tas/hello-tile/test/manifest/fixtures/tas_config.yml",
-									}
-									actual := config.Env
-									sort.Strings(actual)
-									sort.Strings(expected)
+			ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
+			Expect(ctx).NotTo(BeNil())
+			Expect(w).NotTo(BeNil())
 
-									Expect(actual).To(BeEquivalentTo(expected))
-								})
-								By("executing the tests", func() {
-									expected := []string{
-										"PRODUCT=hello-tile",
-										"RENDERER=ops-manifest",
-										"TAS_METADATA_PATH=/tas/hello-tile/test/manifest/fixtures/tas_metadata.yml",
-										"TAS_CONFIG_FILE=/tas/hello-tile/test/manifest/fixtures/tas_config.yml",
-									}
-									actual := config.Env
-									sort.Strings(actual)
-									sort.Strings(expected)
+			Expect(configuration.RunManifest).To(BeTrue())
+			Expect(configuration.RunMetadata).To(BeFalse())
+			Expect(configuration.RunMigrations).To(BeFalse())
+		})
+	})
 
-									dockerCmd := "cd /tas/hello-tile && ginkgo -r -slowSpecThreshold 1 /tas/hello-tile/test/manifest"
-									Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
-								})
-							})
-						})
-					})
-					When("verbose isn't passed", func() {
-						It("doesn't log info", func() {
-							err := subjectUnderTest.Execute([]string{"--manifest", "--tile-path", helloTilePath, "--ginkgo-flags", "-r -slowSpecThreshold 1"})
-							Expect(err).To(BeNil())
+	When("when the migrations test is enabled", func() {
+		It("it sets the migrations configuration flag", func() {
+			args := []string{"--migrations"}
 
-							By("logging helpful messages", func() {
-								logs := writer.String()
-								By("logging container information", func() {
-									Expect(logs).NotTo(ContainSubstring("Building / restoring cached docker image"))
-									Expect(logs).NotTo(ContainSubstring("Info:"))
-								})
-								By("logging test lines", func() {
-									Expect(logs).To(ContainSubstring("manifest tests completed successfully"))
-								})
-							})
-						})
-					})
-				})
-			})
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
 
-			When("manifest tests shouldn't be successful", func() {
-				const (
-					testFailureMessage = "exit status 1"
-				)
-				var fakeMobyClient *fakes.MobyClient
-				BeforeEach(func() {
-					fakeMobyClient = setupFakeMobyClient(testFailureMessage, 1)
-				})
-				It("returns an error", func() {
-					subjectUnderTest := commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
-					err := subjectUnderTest.Execute([]string{"--manifest", "--verbose", "--tile-path", helloTilePath, "--ginkgo-flags", "-r -slowSpecThreshold 1"})
-					Expect(err).To(HaveOccurred())
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
+			Expect(err).NotTo(HaveOccurred())
 
-					By("logging helpful messages", func() {
-						logs := writer.String()
-						By("logging test lines", func() {
-							Expect(logs).To(ContainSubstring("exit status 1"))
-						})
-					})
-				})
-			})
+			Expect(fakeTestFunc.CallCount()).To(Equal(1))
 
-			When("stability tests should be successful", func() {
-				const (
-					testSuccessLogLine = "manifest tests completed successfully"
-				)
-				var fakeMobyClient *fakes.MobyClient
-				BeforeEach(func() {
-					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
-				})
-				When("executing tests", func() {
-					var subjectUnderTest commands.TileTest
-					BeforeEach(func() {
-						writer.Reset()
-						subjectUnderTest = commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
-					})
-					When("verbose is passed", func() {
-						It("succeeds and logs info", func() {
-							err := subjectUnderTest.Execute([]string{"--stability", "--verbose", "--tile-path", helloTilePath, "--ginkgo-flags", "-r -slowSpecThreshold 1"})
-							Expect(err).To(BeNil())
+			ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
+			Expect(ctx).NotTo(BeNil())
+			Expect(w).NotTo(BeNil())
 
-							By("logging helpful messages", func() {
-								logs := writer.String()
-								By("logging container information", func() {
-									Expect(logs).To(ContainSubstring("Building / restoring cached docker image"))
-								})
-								By("logging test lines", func() {
-									Expect(logs).To(ContainSubstring("manifest tests completed successfully"))
-								})
-							})
+			Expect(configuration.RunManifest).To(BeFalse())
+			Expect(configuration.RunMetadata).To(BeFalse())
+			Expect(configuration.RunMigrations).To(BeTrue())
+		})
+	})
 
-							By("creating a test container", func() {
-								Expect(fakeMobyClient.ContainerCreateCallCount()).To(Equal(1))
-								_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
+	When("when the stability test is enabled", func() {
+		It("it sets the metadata configuration flag", func() {
+			args := []string{"--stability"}
 
-								By("executing the tests", func() {
-									expected := []string{
-										"PRODUCT=hello-tile",
-										"RENDERER=ops-manifest",
-										"TAS_METADATA_PATH=/tas/hello-tile/test/manifest/fixtures/tas_metadata.yml",
-										"TAS_CONFIG_FILE=/tas/hello-tile/test/manifest/fixtures/tas_config.yml",
-									}
-									actual := config.Env
-									sort.Strings(actual)
-									sort.Strings(expected)
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
 
-									dockerCmd := "cd /tas/hello-tile && ginkgo -r -slowSpecThreshold 1 /tas/hello-tile/test/stability"
-									Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
-								})
-							})
-						})
-					})
-					When("verbose isn't passed", func() {
-						It("doesn't log info", func() {
-							err := subjectUnderTest.Execute([]string{"--stability", "--tile-path", helloTilePath, "--ginkgo-flags", "-r -slowSpecThreshold 1"})
-							Expect(err).To(BeNil())
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
+			Expect(err).NotTo(HaveOccurred())
 
-							By("logging helpful messages", func() {
-								logs := writer.String()
-								By("logging container information", func() {
-									Expect(logs).NotTo(ContainSubstring("Building / restoring cached docker image"))
-									Expect(logs).NotTo(ContainSubstring("Info:"))
-								})
-								By("logging test lines", func() {
-									Expect(logs).To(ContainSubstring("manifest tests completed successfully"))
-								})
-							})
-						})
-					})
-				})
-			})
+			Expect(fakeTestFunc.CallCount()).To(Equal(1))
 
-			When("stability tests shouldn't be successful", func() {
-				const (
-					testSuccessLogLine = "stability tests completed successfully"
-				)
-				var fakeMobyClient *fakes.MobyClient
+			ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
+			Expect(ctx).NotTo(BeNil())
+			Expect(w).NotTo(BeNil())
 
-				BeforeEach(func() {
-					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
-				})
+			Expect(configuration.RunManifest).To(BeFalse())
+			Expect(configuration.RunMetadata).To(BeTrue())
+			Expect(configuration.RunMigrations).To(BeFalse())
+		})
+	})
 
-				It("exits with an error if env vars are incorrectly formatted", func() {
-					subjectUnderTest := commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
-					err := subjectUnderTest.Execute([]string{"--stability", "--verbose", "--tile-path", helloTilePath, "--ginkgo-flags", "-r -slowSpecThreshold 1", "--environment-variable", "MISFORMATTED_ENV_VAR"})
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("Environment variables must have the format [key]=[value]"))
-				})
-			})
+	When("when the stability test is enabled", func() {
+		It("it sets the metadata configuration flag", func() {
+			args := []string{"--stability"}
 
-			When("all tests are run", func() {
-				var fakeMobyClient *fakes.MobyClient
-				BeforeEach(func() {
-					fakeMobyClient = setupFakeMobyClient("success", 0)
-				})
-				When("executing migration tests", func() {
-					var subjectUnderTest commands.TileTest
-					BeforeEach(func() {
-						writer.Reset()
-						subjectUnderTest = commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
-					})
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
 
-					It("succeeds", func() {
-						err := subjectUnderTest.Execute([]string{"--tile-path", helloTilePath})
-						Expect(err).To(BeNil())
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
+			Expect(err).NotTo(HaveOccurred())
 
-						By("creating a test container", func() {
-							Expect(fakeMobyClient.ContainerCreateCallCount()).To(Equal(1))
-							_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
+			Expect(fakeTestFunc.CallCount()).To(Equal(1))
 
-							By("executing the tests", func() {
-								dockerCmd := "cd /tas/hello-tile/migrations && npm install && npm test && cd /tas/hello-tile && ginkgo -r -p -slowSpecThreshold 15 /tas/hello-tile/test/stability /tas/hello-tile/test/manifest"
-								actual := config.Env
-								expected := []string{
-									"TAS_CONFIG_FILE=/tas/hello-tile/test/manifest/fixtures/tas_config.yml",
-									"PRODUCT=hello-tile",
-									"RENDERER=ops-manifest",
-									"TAS_METADATA_PATH=/tas/hello-tile/test/manifest/fixtures/tas_metadata.yml",
-								}
+			ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
+			Expect(ctx).NotTo(BeNil())
+			Expect(w).NotTo(BeNil())
 
-								sort.Strings(expected)
-								sort.Strings(actual)
-								Expect(actual).To(Equal(expected))
-								Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
-							})
-						})
-					})
-				})
-			})
+			Expect(configuration.RunManifest).To(BeFalse())
+			Expect(configuration.RunMetadata).To(BeTrue())
+			Expect(configuration.RunMigrations).To(BeFalse())
+		})
+	})
 
-			When("migration tests should be successful", func() {
-				const (
-					testSuccessLogLine = "migration tests completed successfully"
-				)
-				var fakeMobyClient *fakes.MobyClient
-				BeforeEach(func() {
-					fakeMobyClient = setupFakeMobyClient(testSuccessLogLine, 0)
-				})
-				When("executing migration tests", func() {
-					var subjectUnderTest commands.TileTest
-					BeforeEach(func() {
-						writer.Reset()
-						subjectUnderTest = commands.NewTileTest(logger, ctx, fakeMobyClient, fakeSshProvider)
-					})
+	When("when ginkgo flag arguments are passed", func() {
+		It("it sets the metadata configuration flag", func() {
+			args := []string{"--ginkgo-flags=peach pair"}
 
-					It("succeeds and logs info", func() {
-						err := subjectUnderTest.Execute([]string{"--migrations", "--verbose", "--tile-path", helloTilePath})
-						Expect(err).To(BeNil())
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
 
-						By("logging helpful messages", func() {
-							logs := writer.String()
-							By("logging container information", func() {
-								Expect(logs).To(ContainSubstring("Building / restoring cached docker image"))
-							})
-							By("logging test lines", func() {
-								Expect(logs).To(ContainSubstring("migration tests completed successfully"))
-							})
-						})
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
+			Expect(err).NotTo(HaveOccurred())
 
-						By("creating a test container", func() {
-							Expect(fakeMobyClient.ContainerCreateCallCount()).To(Equal(1))
-							_, config, _, _, _, _ := fakeMobyClient.ContainerCreateArgsForCall(0)
+			Expect(fakeTestFunc.CallCount()).To(Equal(1))
 
-							By("executing the tests", func() {
-								dockerCmd := "cd /tas/hello-tile/migrations && npm install && npm test"
-								Expect(config.Cmd).To(Equal(strslice.StrSlice{"/bin/bash", "-c", dockerCmd}))
-							})
-						})
-					})
-				})
+			ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
+			Expect(ctx).NotTo(BeNil())
+			Expect(w).NotTo(BeNil())
+
+			Expect(configuration.GinkgoFlags).To(Equal("peach pair"))
+		})
+	})
+
+	When("when environment variables flags arguments are passed", func() {
+		When("the using the short environment variable flag", func() {
+			It("it sets the metadata configuration flag", func() {
+				args := []string{"-e=PEAR=on-pizza"}
+
+				fakeTestFunc := fakes.TestTileFunction{}
+				fakeTestFunc.Returns(nil)
+
+				err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeTestFunc.CallCount()).To(Equal(1))
+
+				ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
+				Expect(ctx).NotTo(BeNil())
+				Expect(w).NotTo(BeNil())
+
+				Expect(configuration.Environment).To(Equal([]string{"PEAR=on-pizza"}))
 			})
 		})
 
-		It("exits with an error if docker isn't running", func() {
-			fakeMobyClient := &fakes.MobyClient{}
-			fakeMobyClient.PingReturns(types.Ping{}, errors.New("docker not running"))
-			fakeSshThinger := fakes.SshProvider{}
-			fakeSshThinger.NeedsKeysReturns(false, nil)
-			subjectUnderTest := commands.NewTileTest(logger, ctx, fakeMobyClient, &fakeSshThinger)
-			err := subjectUnderTest.Execute([]string{filepath.Join(helloTileDirectorySegments...)})
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("Docker daemon is not running"))
+		When("the using the long environment variable flag", func() {
+			It("it sets the metadata configuration flag", func() {
+				args := []string{"--environment-variable=PEAR=on-pizza"}
+
+				fakeTestFunc := fakes.TestTileFunction{}
+				fakeTestFunc.Returns(nil)
+
+				err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeTestFunc.CallCount()).To(Equal(1))
+
+				ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
+				Expect(ctx).NotTo(BeNil())
+				Expect(w).NotTo(BeNil())
+
+				Expect(configuration.Environment).To(Equal([]string{"PEAR=on-pizza"}))
+			})
 		})
 	})
 })
-
-func setupFakeMobyClient(containerLogMessage string, testExitCode int64) *fakes.MobyClient {
-	fakeMobyClient := &fakes.MobyClient{}
-	fakeMobyClient.PingReturns(types.Ping{}, nil)
-	r, w := io.Pipe()
-	_ = w.Close()
-	fakeConn := &fakes.Conn{R: r, W: stdcopy.NewStdWriter(io.Discard, stdcopy.Stdout)}
-	fakeMobyClient.DialHijackReturns(fakeConn, nil)
-
-	rc := io.NopCloser(strings.NewReader(`{"error": "", "message": "tagged kiln_test_dependencies:vmware"}`))
-	imageBuildResponse := types.ImageBuildResponse{
-		Body: rc,
-	}
-	fakeMobyClient.ImageBuildReturns(imageBuildResponse, nil)
-	createResp := container.CreateResponse{
-		ID: "some id",
-	}
-	fakeMobyClient.ContainerCreateReturns(createResp, nil)
-	responses := make(chan container.WaitResponse)
-	go func() {
-		responses <- container.WaitResponse{
-			Error:      nil,
-			StatusCode: testExitCode,
-		}
-	}()
-	fakeMobyClient.ContainerWaitReturns(responses, nil)
-	rcLog := io.NopCloser(strings.NewReader(fmt.Sprintf(`{"error": "", "message": %q}"`, containerLogMessage)))
-	fakeMobyClient.ContainerLogsReturns(rcLog, nil)
-	fakeMobyClient.ContainerStartReturns(nil)
-	return fakeMobyClient
-}
-
-type testingT interface {
-	Helper()
-	Cleanup(func())
-	TempDir() string
-	Fatal(args ...any)
-	Name() string
-}
-
-func writePasswordToStdIn(t testingT) {
-	t.Helper()
-	oldStdin := os.Stdin
-	t.Cleanup(func() {
-		os.Stdin = oldStdin
-	})
-	passwd := "password\n"
-	content := []byte(passwd)
-	temporaryFile, err := os.CreateTemp(t.TempDir(), t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = temporaryFile.Write(content)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = temporaryFile.Seek(0, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	os.Stdin = temporaryFile
-}
-
-func setupFakeSSHProvider() *fakes.SshProvider {
-	fakeSSHProvider := fakes.SshProvider{}
-	fakeSSHProvider.NeedsKeysReturns(false, nil)
-	return &fakeSSHProvider
-}
-
-func addTASFixtures(t testingT, tileDirectory string) {
-	fixturesDirectory := filepath.Join(tileDirectory, "test", "manifest", "fixtures")
-	if err := os.MkdirAll(fixturesDirectory, 0o766); err != nil {
-		t.Fatal(err)
-	}
-	for _, filePath := range []string{
-		filepath.Join(fixturesDirectory, "tas_metadata.yml"),
-		filepath.Join(fixturesDirectory, "tas_config.yml"),
-	} {
-		if err := createEmptyFile(filePath); err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(func() {
-			_ = os.Remove(filePath)
-		})
-	}
-}
-
-func createEmptyFile(filePath string) error {
-	f, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer closeAndIgnoreError(f)
-	return nil
-}

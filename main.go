@@ -1,12 +1,8 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"os"
-
-	"github.com/docker/docker/client"
 
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pivotal-cf/jhanda"
@@ -80,16 +76,8 @@ func main() {
 	fetch := commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 	commandSet["fetch"] = fetch
 	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger, fetch)
-	mobyClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	sshProvider, err := commands.NewSshProvider(commands.SSHClientCreator{})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error fetching SSH provider: %s\n", err)
-	}
-	commandSet["test"] = commands.NewTileTest(outLogger, context.Background(), mobyClient, sshProvider)
+	commandSet["test"] = commands.NewTileTest()
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)
