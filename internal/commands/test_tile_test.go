@@ -28,6 +28,8 @@ func init() {
 //counterfeiter:generate -o ./fakes/test_tile_function.go --fake-name TestTileFunction . tileTestFunction
 
 // nolint:unused
+//
+//goland:noinspection GoUnusedType
 type tileTestFunction = commands.TileTestFunction
 
 var _ = Describe("kiln test", func() {
@@ -36,7 +38,7 @@ var _ = Describe("kiln test", func() {
 		output.Reset()
 	})
 	When("when no arguments are passed", func() {
-		It("runs all the tests with initalized collaborators", func() {
+		It("runs all the tests with initialized collaborators", func() {
 			var emptySlice []string
 
 			fakeTestFunc := fakes.TestTileFunction{}
