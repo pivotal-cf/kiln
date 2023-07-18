@@ -23,6 +23,10 @@ type Job struct {
 func TestManifestGeneration(t *testing.T) {
 	RegisterFailHandler(Fail)
 
+	if value, hasField := os.LookupEnv("FAIL_TEST"); hasField && value == "true" {
+		t.Fatal("FAIL_TEST is true")
+	}
+
 	RunSpecs(t, "Manifest Generation Suite")
 }
 
