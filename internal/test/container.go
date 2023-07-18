@@ -9,16 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"log"
-	"net"
-	"os"
-	"os/signal"
-	"path"
-	"path/filepath"
-	"strings"
-	"time"
-
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -29,11 +19,19 @@ import (
 	"github.com/moby/buildkit/session/sshforward"
 	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	specV1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"golang.org/x/sync/errgroup"
+	"io"
+	"log"
+	"net"
+	"os"
+	"os/signal"
+	"path"
+	"path/filepath"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/exp/slices"
-	"golang.org/x/sync/errgroup"
 	"golang.org/x/term"
 )
 
@@ -141,8 +139,6 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 			return err
 		}
 
-		errG, ctx := errgroup.WithContext(ctx)
-
 		logger.Println("creating test image")
 		imageBuildResult, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
 			Tags:      []string{"kiln_test_dependencies:vmware"},
@@ -193,6 +189,8 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 			return fmt.Errorf("failed to create container: %w", err)
 		}
 		logger.Printf("created test container with id %s", testContainer.ID)
+
+		errG, ctx := errgroup.WithContext(ctx)
 
 		sigInt := make(chan os.Signal, 1)
 		signal.Notify(sigInt, os.Interrupt)
@@ -247,9 +245,7 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 func configureSession(ctx context.Context, logger *log.Logger, configuration Configuration, dockerDaemon mobyClient, function func(sessionID string) error) error {
 	logger.Printf("pinging docker daemon")
 
-	pingCtx, cancel := context.WithTimeout(ctx, time.Second*5)
-	defer cancel()
-	if _, err := dockerDaemon.Ping(pingCtx); err != nil {
+	if _, err := dockerDaemon.Ping(ctx); err != nil {
 		return fmt.Errorf("failed to connect to Docker daemon: %w", err)
 	}
 
