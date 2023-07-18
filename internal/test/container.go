@@ -190,7 +190,7 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 		}
 		logger.Printf("created test container with id %s", testContainer.ID)
 
-		errG, ctx := errgroup.WithContext(ctx)
+		errG := errgroup.Group{}
 
 		sigInt := make(chan os.Signal, 1)
 		signal.Notify(sigInt, os.Interrupt)
