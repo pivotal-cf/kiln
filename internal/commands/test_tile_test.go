@@ -3,7 +3,10 @@ package commands_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
@@ -54,6 +57,27 @@ var _ = Describe("kiln test", func() {
 			Expect(configuration.AbsoluteTileDirectory).To(BeADirectory())
 			Expect(configuration.RunAll).To(BeTrue())
 			Expect(output.String()).To(BeEmpty())
+		})
+	})
+
+	When("when the tile directory does not exist", func() {
+		It("runs all the tests with initalized collaborators", func() {
+			dir, err := os.MkdirTemp("", "")
+			Expect(err).NotTo(HaveOccurred())
+			tilePath := filepath.Join(dir, "some-dir")
+
+			args := []string{"--tile-path", tilePath}
+
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
+			fakeTestFunc.Stub = func(_ context.Context, w io.Writer, _ test.Configuration) error {
+				_, _ = io.WriteString(w, "hello")
+				return nil
+			}
+
+			err = commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
+			fmt.Println(err.Error())
+			Expect(err).To(MatchError(ContainSubstring("failed to get information about --tile-path")))
 		})
 	})
 
