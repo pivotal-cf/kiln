@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -58,6 +59,9 @@ func (cmd TileTest) Execute(args []string) error {
 
 func (cmd TileTest) configuration() (test.Configuration, error) {
 	absPath, absErr := filepath.Abs(cmd.Options.TilePath)
+	if _, err := os.Stat(absPath); err != nil {
+		return test.Configuration{}, fmt.Errorf("failed to get information about --tile-path: %w", err)
+	}
 	return test.Configuration{
 		AbsoluteTileDirectory: absPath,
 
