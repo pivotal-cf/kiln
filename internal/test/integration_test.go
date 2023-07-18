@@ -17,7 +17,8 @@ import (
 var _ commands.TileTestFunction = test.Run
 
 func TestDockerIntegration(t *testing.T) {
-	if testing.Short() {
+	_, githubWorkspaceEnvVarFound := os.LookupEnv("GITHUB_WORKSPACE")
+	if testing.Short() || githubWorkspaceEnvVarFound {
 		t.Skip("integration test is slow")
 	}
 
