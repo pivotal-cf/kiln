@@ -58,9 +58,7 @@ func Run(ctx context.Context, w io.Writer, configuration Configuration) error {
 
 	logger.Printf("connecting to ssh socket %q", configuration.SSHSocketAddress)
 	var dialer net.Dialer
-	dialCtx, cancel := context.WithTimeout(ctx, time.Second*5)
-	defer cancel()
-	conn, err := dialer.DialContext(dialCtx, "unix", configuration.SSHSocketAddress)
+	conn, err := dialer.DialContext(ctx, "unix", configuration.SSHSocketAddress)
 	if err != nil {
 		return fmt.Errorf("failed to dial %s: %w", authSockEnvVarName, err)
 	}
