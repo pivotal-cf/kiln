@@ -150,7 +150,7 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 			SessionID: sessionID,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to build image: %w", err)
 		}
 
 		if err := checkSSHPrivateKeyError(imageBuildResult.Body); err != nil {
@@ -190,7 +190,7 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 			AutoRemove: true,
 		}, nil, nil, "")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create container: %w", err)
 		}
 		logger.Printf("created test container with id %s", testContainer.ID)
 
@@ -198,9 +198,13 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 		signal.Notify(sigInt, os.Interrupt)
 		errG.Go(func() error {
 			<-sigInt
-			return dockerDaemon.ContainerStop(ctx, testContainer.ID, container.StopOptions{
+			err := dockerDaemon.ContainerStop(ctx, testContainer.ID, container.StopOptions{
 				Signal: "SIGKILL",
 			})
+			if err != nil {
+				return fmt.Errorf("failed to stop container: %w", err)
+			}
+			return nil
 		})
 
 		if err := dockerDaemon.ContainerStart(ctx, testContainer.ID, types.ContainerStartOptions{}); err != nil {
@@ -251,13 +255,13 @@ func configureSession(ctx context.Context, logger *log.Logger, configuration Con
 
 	s, err := session.NewSession(ctx, "waypoint", "")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create docker daemon session: %w", err)
 	}
 	defer closeAndIgnoreError(s)
 
 	sshProvider, err := sshprovider.NewSSHAgentProvider([]sshprovider.AgentConfig{{ID: sshforward.DefaultID, Paths: []string{configuration.SSHSocketAddress}}})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to initalize ssh-agent provider: %w", err)
 	}
 	s.Allow(sshProvider)
 
@@ -265,7 +269,11 @@ func configureSession(ctx context.Context, logger *log.Logger, configuration Con
 	go func() {
 		defer close(runErrC)
 		runErrC <- s.Run(ctx, func(ctx context.Context, proto string, meta map[string][]string) (net.Conn, error) {
-			return dockerDaemon.DialHijack(ctx, "/session", proto, meta)
+			conn, err := dockerDaemon.DialHijack(ctx, "/session", proto, meta)
+			if err != nil {
+				return nil, fmt.Errorf("session hyjack error: %w", err)
+			}
+			return conn, nil
 		})
 	}()
 
