@@ -267,7 +267,7 @@ func configureSession(ctx context.Context, logger *log.Logger, configuration Con
 		runErrC <- s.Run(ctx, func(ctx context.Context, proto string, meta map[string][]string) (net.Conn, error) {
 			conn, err := dockerDaemon.DialHijack(ctx, "/session", proto, meta)
 			if err != nil {
-				return nil, fmt.Errorf("session hyjack error: %w", err)
+				return nil, fmt.Errorf("session hijack error: %w", err)
 			}
 			return conn, nil
 		})
