@@ -6,7 +6,10 @@ Kiln helps tile developers build products for [VMware Tanzu Operations Manager](
 an opinionated folder structure and templating capabilities. It is designed to be used
 both in CI environments and in command-line to produce a tile.
 
-## Instalation
+More information for those just getting started can be found in the [Ops Manager Tile Developer Guide](https://docs.vmware.com/en/Tile-Developer-Guide/3.0/tile-dev-guide/index.html) .
+Looking at an [example kiln tile](https://github.com/crhntr/hello-tile/tree/main) may also be helpful
+
+## Installation
 
 To install the `kiln` CLI 
 - install with Homebrew
@@ -97,6 +100,12 @@ different features kiln supports.
 <details>
   <summary>Additional bake options</summary>
 
+##### `--allow-only-publishable-releases`
+
+The `--allow-only-publishable-releases` flag should be used for development only
+and allows additional releases other than those specified in the kilnfile.lock to 
+be included in the tile
+
 ##### `--bosh-variables-directory`
 
 The `--bosh-variables-directory` flag can be used to include CredHub variable
@@ -108,6 +117,11 @@ This flag can be specified multiple times if you have organized your
 variables into subdirectories for development convenience.
 
 Example [variables](example-tile/bosh_variables) directory.
+
+##### `--download-threads`
+
+The `--download-threads` flag is for those using S3 as a BOSH release source.
+This flag sets the number of parallel threads to download parts from S3
 
 ##### `--embed`
 
@@ -193,6 +207,21 @@ name: my-job
 alias: my-aliased-job
 ```
 
+##### `--kilnfile`
+
+The `--kilnfile` flag is required with kiln version v0.84.0 and later
+The flag expects filepath to a Kilnfile (default: Kilnfile). This
+file contain links to all the bosh sources used to build a tile
+
+See the [Kilnfile](#kilnfile) section for more information on Kilnfile formatting
+
+
+
+Tile authors will also need to include a Kilnfile.lock in the same directory 
+as the Kilnfile. 
+
+See the [Kilnfile.lock](#kilnfile-lock) section for more information on Kilnfile.lock formatting
+
 ##### `--metadata`
 
 Specify a file path to a tile metadata file for the `--metadata` flag. This
@@ -201,13 +230,19 @@ in the OpsManager tile development documentation.
 
 ##### `--metadata-only`
 
-Output the generated metadata to stdout. Cannot be used with `--output-file`.
+The `--metadata-only` flag outputs the generated metadata to stdout. 
+This flag cannot be used with `--output-file`.
 
 ##### `--migrations-directory`
 
 If your tile has JavaScript migrations, then you will need to include the
 `--migrations-directory` flag. This flag can be specified multiple times if you
 have organized your migrations into subdirectories for development convenience.
+
+##### `--no-confirm`
+
+The `no-confirm` flag will delete extra releases in releases directory without prompting.
+This flag defaults to `true`
 
 ##### `--output-file`
 
@@ -292,25 +327,15 @@ runtime_configs:
 
 Example [runtime-configs](example-tile/runtime_configs) directory.
 
-##### `--stemcells-directory`
+##### `--sha256`
 
-The `--stemcell-directory` flag takes a path to a directory containing one
-or more stemcells.
+The `--sha256` flag calculates the sha256 checksum of the output file
 
-To include information about the stemcell in your metadata you can use the
-`stemcell` template helper. It takes a single argument that specifies which
-stemcell os.
+##### `--skip-fetch-directories`
 
-The `stemcell` helper does not support multiple versions of the same operating
-system currently.
+The `--skip-fetch-directories` skips the automatic release fetching of 
+the specified release directories
 
-```
-$ cat /path/to/metadata
----
-stemcell_criteria: $( stemcell "ubuntu-xenial" )
-additional_stemcells_criteria:
-- $( stemcell "windows" )
-```
 
 ##### `--stemcell-tarball` (Deprecated)
 
@@ -326,6 +351,26 @@ To include information about the stemcell in your metadata you can use the
 $ cat /path/to/metadata
 ---
 stemcell_criteria: $( stemcell )
+```
+
+##### `--stemcells-directory`
+
+The `--stemcells-directory` flag takes a path to a directory containing one
+or more stemcells.
+
+To include information about the stemcell in your metadata you can use the
+`stemcell` template helper. It takes a single argument that specifies which
+stemcell os.
+
+The `stemcell` helper does not support multiple versions of the same operating
+system currently.
+
+```
+$ cat /path/to/metadata
+---
+stemcell_criteria: $( stemcell "ubuntu-xenial" )
+additional_stemcells_criteria:
+- $( stemcell "windows" )
 ```
 
 ##### `--stub-releases`
@@ -378,12 +423,8 @@ provides_product_versions:
 - name: example
   version: $( version )
 ```
-
-#### `--skip-fetch-directories`
-
-The `--skip-fetch-directories` flag bypasses the default behavior to fetch releases when running `kiln bake`.
-
 </details>
+
 
 
 ### `test`
@@ -443,13 +484,9 @@ The `--verbose` (`-v`) flag will log additional debugging info.
 
 ### `fetch`
 
-The `fetch` command downloads bosh release tarballs from an AWS S3 bucket to a
-a local directory specified by the `--releases-directory` flag. It discovers
-releases based on information from both the Kilnfile and an Kilnfile.lock file.
-The Kilnfile.lock file name is expected to be a file in the same directory as the
-specified Kilnfile with `lock` as as the filename extension.
-The S3 object name is determined based on using regular expression capture
-groups.
+The `fetch` command downloads bosh release tarballs specified in the Kilnfile and 
+Kilnfile.lock files to a local directory specified by the `--releases-directory` flag. 
+
 
 Kiln verifies that the checksum (SHA1) of the downloaded release matches
 checksum specified for the release in the Kilnfile.lock file. If the checksums do
@@ -462,57 +499,96 @@ will be deleted.*
 Kiln will not download releases if an existing release exists with the correct
 release version and checksum.
 
-#### Kilnfile
-The Kilnfile must also have information about how to access the S3 Bucket.
-Two types of release sources are allowed in the list under the `release_sources`
-key:
+<a id="kilnfile"></a>
+## Kilnfile
+A Kilnfile contains information about the bosh releases and stemcell used by 
+a particular tile
 
-1. `type: bosh.io`. For this type, no other keys are required/allowed.
-2. `type: s3`. The following other keys **required** in this case.
-
-- `publishable` (boolean): true if this bucket contains releases that are suitable to ship to customers
-- `bucket`: must be the name of the s3 bucket
-- `region`: must be the region of the bucket
-- `access_key_id`: must be an IAM access key id that has read permission for the
-  specified bucket
-- `secret_access_key`: must be the secret for the specified `access_key_id`
-- `release_path:`: a (text/template package) template expression used to build the 
-  full-path to a release in the S3 bucket. The template should evaluate to the exact 
-  path within the s3 bucket for a given release name+version+stemcell combination. 
-  The template has access to the following fields:
-  - release name (e.g. `{{.Name}}`)
-  - release version (e.g. `{{.Version}}`)
-  - stemcell OS (e.g. `{{.StemcellOS}}`)
-  - stemcell version (e.g. `{{.StemcellVersion}}`)
-  - There's also access to a `trimSuffix` helper (e.g. `{{trimSuffix .Name "-release"}}`)
-
-### Kilnfile.lock
-
-This file contains the full list of specific versions of all releases that will
-go into the tile AND the target stemcell.
-
-Currently the releases for the Kilnfile.lock file can not be generated by kiln.
-The update command is in development and only (loosely) supports updating the
-stemcell based on stemcells on https://network.pivotal.io. On PAS Release
-Engineering we use a consourse task in our CI to generate the Kilnfile.lock
-file.
-
-The file has two top level members `releases` and `stemcell_criteria`.
-
-The `releases` member is an array of members with each element having the following members.
-- `name`: bosh release name
-- `sha1`: checksum of the tarball
-- `version`: semantic version of the release
-
-The `stemcell_criteria ` member is an array of members with each element having the following members.
-- `name`: bosh release name
-- `sha1`: checksum of the tarball
-- `version`: semantic version of the release
-
-### Example with Variable Interpolation
-
+Example Kilnfile:
+```yaml
+---
+slug: some-slug #optional but if included should match network.pivotal.io
+release_sources:
+- type: bosh.io
+  releases:
+- name: bpm
+  version: '*'
+stemcell_criteria:
+  os: ubuntu-xenial
+  version: "~621"
 ```
-$ cat Kilnfile
+
+#### Supported release sources
+##### Bosh.io
+  ```yaml
+  release_sources:
+  - type: bosh.io
+  ```
+##### s3
+```yaml
+  release_sources:
+  - type: s3
+    id: unique-name
+    publishable: true # if this bucket contains releases that are suitable to ship to customers
+    bucket: some-bucket-in-s3
+    region: us-east-1 # must be the region of the above bucket
+    access_key_id: $(variable "s3_access_key_id") # Must have at least read permissions to bucket
+    secret_access_key: $(variable "s3_secret_access_key")
+    path_template: bosh-releases/compiled/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz # See Templating
+```
+
+##### github
+```yaml
+  - type: github
+    id: optional-unique-name-defaults-to-github-org-name
+    org: the-github-org
+    github_token: $(variable "github_token")
+```
+
+##### artifactory
+```yaml
+  - type: artifactory
+    id: unique-name
+    artifactory_host: https://build-artifactory.your-artifactory-url.com
+    repo: some-artifactory-repo 
+    publishable: true # if this repo contains releases that are suitable to ship to customers
+    username: $(variable "artifactory_username")
+    password: $(variable "artifactory_password")
+    path_template: shared-releases/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz # See Templating
+```
+<a id="kilnfile-templating"></a>
+### Templating
+#### Options
+Kilnfile files support the following templating options:
+
+- `{{.Name}}` for release name 
+- `{{.Version}}` for release version 
+- `{{.StemcellOS}}` for stemcell OS 
+- `{{.StemcellVersion}}` for stemcell version 
+
+- There's also access to a `trimSuffix` helper (e.g. `{{trimSuffix .Name "-release"}}`)
+
+#### Functions
+##### `select`
+
+The `select` function allows you to pluck values for nested fields from a
+template helper.
+
+For instance, this section in our example tile:
+
+```yaml
+my_release_version: $( release "my-release" | select "version" )
+```
+
+Results in:
+
+```yaml
+my_release_version: 1.2.3
+```
+
+#### Variable Interpolation
+
+```yaml
 release_sources:
   - type: s3
     compiled: true
@@ -527,8 +603,7 @@ release_sources:
 that information from non-sensitive configuration, you can reference variables
 like you do in tile config.*
 
-```
-$ lpass show --notes 'pas-releng-fetch-releases'
+```yaml
 ---
 aws_access_key_id: SOME_REALLY_SECRET_ID
 aws_secret_access_key: SOME_REALLY_SECRET_KEY
@@ -536,25 +611,51 @@ aws_secret_access_key: SOME_REALLY_SECRET_KEY
 
 Interpolating this file in kiln would look something like this.
 
-```
-kiln fetch --kilnfile random-Kilnfile --variables-file <(lpass show --notes 'pas-releng-fetch-releases')
-```
-
-### Template functions
-
-#### `select`
-
-The `select` function allows you to pluck values for nested fields from a
-template helper.
-
-For instance, this section in our example tile:
-
-```
-my_release_version: $( release "my-release" | select "version" )
+```bash
+kiln bake --kilnfile random-Kilnfile --variables-file <(lpass show --notes 'pas-releng-fetch-releases')
 ```
 
-Results in:
+<a id="kilnfile-lock"></a>
+### Kilnfile.lock
 
-```
-my_release_version: 1.2.3
+The Kilnfile.lock file name is expected to be a file in the same directory as the
+Kilnfile with `lock` as as the filename extension.
+
+This file contains the full list of specific versions of all releases, shas, and sources for 
+bosh releases that will go into the tile as well as the target stemcell.
+
+The file has two top level members `releases` and `stemcell_criteria`.
+
+The `releases` member is an array of members with each element having the following members.
+- `name`: bosh release name
+- `sha1`: checksum of the tarball
+- `version`: semantic version of the release
+- `remote_source`: the resource-type for bosh.io or the id for the other types
+- `remote_path`: the path that where the bosh release is stored
+
+The `stemcell_criteria ` member is defines the stemcell used to generate the tile
+- `os`: the stemcell os used (e.g. ubuntu-xenial)
+- `version`: semantic version of the stemcell
+
+Example Kilnfile.lock :
+```yaml
+releases:
+- name: bpm
+  sha1: 86675f90d66f7018c57f4ae0312f1b3834dd58c9
+  version: 1.1.18
+  remote_source: bosh.io
+  remote_path: https://bosh.io/d/github.com/cloudfoundry/bpm-release?v=1.1.18
+- name: backup-and-restore-sdk
+  sha1: 0f48faa2f85297043e5201e2200567c2fe5a9f9a
+  version: 1.18.84
+  remote_source: unique-name # this could be artifactory or s3
+  remote_path: bosh-releases/compiled/backup-and-restore-sdk-1.18.84-ubuntu-jammy-1.179.tgz
+- name: hello-release
+  sha1: 06500a2002f6e14f6c258b7ee7044761a28d3d5a
+  version: 0.1.5
+  remote_source: the-github-org 
+  remote_path: https://github.com/crhntr/hello-release/releases/download/v0.1.5/hello-release-v0.1.5.tgz
+stemcell_criteria:
+  os: ubuntu-xenial
+  version: "621.0"
 ```
