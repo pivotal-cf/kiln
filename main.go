@@ -97,6 +97,7 @@ func main() {
 
 	// commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 	commandSet["glaze"] = new(commands.Glaze)
+	commandSet["de-glaze"] = new(commands.DeGlaze)
 
 	commandSet["generate-osm-manifest"] = commands.NewOSM(outLogger, nil)
 
