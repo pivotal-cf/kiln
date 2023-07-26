@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"gopkg.in/yaml.v2"
 )
@@ -13,52 +14,14 @@ import (
 const invalidYAML = `}`
 
 func TestGlaze_Execute(t *testing.T) {
-	t.Run("it updates the Kilnfile", func(t *testing.T) {
-		tmp := t.TempDir()
-		kfp := filepath.Join(tmp, "Kilnfile")
-		writeYAML(t, kfp, cargo.Kilnfile{
-			Releases: []cargo.BOSHReleaseTarballSpecification{
-				{Name: "banana"},
-				{Name: "orange", Version: "~ 8.0"},
-			},
-			Stemcell: cargo.Stemcell{
-				OS: "alpine",
-			},
-		})
+	testGlazeCommand(t, &Glaze{})
+}
 
-		klp := filepath.Join(tmp, "Kilnfile.lock")
-		writeYAML(t, klp, cargo.KilnfileLock{
-			Releases: []cargo.BOSHReleaseTarballLock{
-				{Name: "banana", Version: "1.2.3"},
-				{Name: "orange", Version: "8.0.8"},
-			},
-			Stemcell: cargo.Stemcell{
-				OS:      "alpine",
-				Version: "42.0",
-			},
-		})
+func TestDeGlaze_Execute(t *testing.T) {
+	testGlazeCommand(t, &DeGlaze{})
+}
 
-		cmd := new(Glaze)
-		err := cmd.Execute([]string{"--kilnfile", kfp})
-
-		g := NewWithT(t)
-		g.Expect(err).ToNot(HaveOccurred())
-
-		var updatedKilnfile cargo.Kilnfile
-		readYAML(t, kfp, &updatedKilnfile)
-
-		g.Expect(updatedKilnfile).To(Equal(cargo.Kilnfile{
-			Releases: []cargo.BOSHReleaseTarballSpecification{
-				{Name: "banana", Version: "1.2.3"},
-				{Name: "orange", Version: "8.0.8"},
-			},
-			Stemcell: cargo.Stemcell{
-				OS:      "alpine",
-				Version: "42.0",
-			},
-		}))
-	})
-
+func testGlazeCommand(t *testing.T, cmd jhanda.Command) {
 	t.Run("Kilnfile passed in as argument", func(t *testing.T) {
 		tmp := t.TempDir()
 		kfp := filepath.Join(tmp, "Kilnfile")
@@ -67,7 +30,6 @@ func TestGlaze_Execute(t *testing.T) {
 		klp := filepath.Join(tmp, "Kilnfile.lock")
 		writeYAML(t, klp, cargo.KilnfileLock{})
 
-		cmd := new(Glaze)
 		err := cmd.Execute([]string{"--kilnfile", kfp})
 
 		g := NewWithT(t)
@@ -76,7 +38,6 @@ func TestGlaze_Execute(t *testing.T) {
 
 	t.Run("Kilnfile is missing", func(t *testing.T) {
 		tmp := t.TempDir()
-		cmd := new(Glaze)
 		err := cmd.Execute([]string{"--kilnfile", tmp})
 
 		g := NewWithT(t)
@@ -91,7 +52,6 @@ func TestGlaze_Execute(t *testing.T) {
 		klp := filepath.Join(tmp, "Kilnfile.lock")
 		writeYAML(t, klp, cargo.KilnfileLock{})
 
-		cmd := new(Glaze)
 		err := cmd.Execute([]string{"--kilnfile", tmp})
 
 		g := NewWithT(t)
@@ -103,7 +63,6 @@ func TestGlaze_Execute(t *testing.T) {
 		kfp := filepath.Join(tmp, "Kilnfile")
 		writeYAML(t, kfp, cargo.Kilnfile{})
 
-		cmd := new(Glaze)
 		err := cmd.Execute([]string{"--kilnfile", kfp})
 
 		g := NewWithT(t)
@@ -122,7 +81,6 @@ func TestGlaze_Execute(t *testing.T) {
 		writeYAML(t, klp, cargo.KilnfileLock{
 			Releases: []cargo.BOSHReleaseTarballLock{},
 		})
-		cmd := new(Glaze)
 		err := cmd.Execute([]string{"--kilnfile", kfp})
 
 		g := NewWithT(t)
@@ -142,7 +100,6 @@ func TestGlaze_Execute(t *testing.T) {
 		writeYAML(t, klp, cargo.KilnfileLock{
 			Releases: []cargo.BOSHReleaseTarballLock{},
 		})
-		cmd := new(Glaze)
 		err := cmd.Execute([]string{"--kilnfile", kfp})
 
 		g := NewWithT(t)
@@ -150,7 +107,6 @@ func TestGlaze_Execute(t *testing.T) {
 	})
 
 	t.Run("bad flag passed", func(t *testing.T) {
-		cmd := new(Glaze)
 		err := cmd.Execute([]string{"--unknown-flag"})
 
 		g := NewWithT(t)
@@ -162,7 +118,6 @@ func TestGlaze_Execute(t *testing.T) {
 			tmp := t.TempDir()
 			kfp := filepath.Join(tmp, "Kilnfile")
 			_ = os.WriteFile(kfp, []byte(invalidYAML), 0o777)
-			cmd := new(Glaze)
 			err := cmd.Execute([]string{"--kilnfile", kfp})
 			g := NewWithT(t)
 			g.Expect(err).To(MatchError(And(
@@ -176,7 +131,6 @@ func TestGlaze_Execute(t *testing.T) {
 			_ = os.WriteFile(kfp, []byte(`{}`), 0o777)
 			klp := filepath.Join(tmp, "Kilnfile.lock")
 			_ = os.WriteFile(klp, []byte(invalidYAML), 0o777)
-			cmd := new(Glaze)
 			err := cmd.Execute([]string{"--kilnfile", kfp})
 			g := NewWithT(t)
 			g.Expect(err).To(MatchError(And(
@@ -201,20 +155,6 @@ func writeYAML(t *testing.T, path string, data any) {
 	defer closeAndIgnoreError(f)
 
 	_, err = f.Write(buf)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func readYAML(t *testing.T, path string, data any) {
-	t.Helper()
-
-	buf, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal()
-	}
-
-	err = yaml.Unmarshal(buf, data)
 	if err != nil {
 		t.Fatal(err)
 	}

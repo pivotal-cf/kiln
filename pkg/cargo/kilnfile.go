@@ -3,10 +3,16 @@ package cargo
 import (
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
+	"github.com/crhntr/bijection"
+)
+
+const (
+	unconstrainedVersion = "*"
 )
 
 type Kilnfile struct {
@@ -25,6 +31,34 @@ func (kf Kilnfile) BOSHReleaseTarballSpecification(name string) (BOSHReleaseTarb
 		}
 	}
 	return BOSHReleaseTarballSpecification{}, fmt.Errorf("failed to find component specification with name %q in Kilnfile", name)
+}
+
+func (kf *Kilnfile) Glaze(kl KilnfileLock) error {
+	kf.Stemcell.Version = kl.Stemcell.Version
+	for index, spec := range kf.Releases {
+		lock, err := kl.FindBOSHReleaseWithName(spec.Name)
+		if err != nil {
+			return fmt.Errorf("release with name %q not found in Kilnfile.lock: %w", spec.Name, err)
+		}
+		kf.Releases[index].Version = lock.Version
+	}
+	return nil
+}
+
+func (kf *Kilnfile) DeGlaze(kl KilnfileLock) error {
+	// TODO: what do do about the stemcell???
+	for index, spec := range kf.Releases {
+		lock, err := kl.FindBOSHReleaseWithName(spec.Name)
+		if err != nil {
+			return fmt.Errorf("release with name %q not found in Kilnfile.lock: %w", spec.Name, err)
+		}
+		deGlazed, err := deGlazeBOSHReleaseTarballSpecification(spec, lock)
+		if err != nil {
+			return err
+		}
+		kf.Releases[index] = deGlazed
+	}
+	return nil
 }
 
 type KilnfileLock struct {
@@ -71,11 +105,14 @@ type BOSHReleaseTarballSpecification struct {
 
 	// GitHubRepository are where the BOSH release source code is
 	GitHubRepository string `yaml:"github_repository,omitempty"`
+
+	// DeGlazeBehavior changes how version filed changes when de-glaze is run.
+	DeGlazeBehavior DeGlazeBehavior `yaml:"glaze_behavior"`
 }
 
 func (spec BOSHReleaseTarballSpecification) VersionConstraints() (*semver.Constraints, error) {
 	if spec.Version == "" {
-		spec.Version = ">=0"
+		spec.Version = unconstrainedVersion
 	}
 	c, err := semver.NewConstraint(spec.Version)
 	if err != nil {
@@ -216,4 +253,94 @@ func (stemcell Stemcell) ProductSlug() (string, error) {
 	default:
 		return "", fmt.Errorf("stemcell slug not set for os %s", stemcell.OS)
 	}
+}
+
+type DeGlazeBehavior int
+
+const (
+	LockNone  DeGlazeBehavior = iota - 1
+	LockMajor                 // default value
+	LockMinor
+	LockPatch
+)
+
+var deGlazeStrings = bijection.New(map[DeGlazeBehavior]string{
+	LockNone:  "LockNone",
+	LockPatch: "LockPatch",
+	LockMinor: "LockMinor",
+	LockMajor: "LockMajor",
+})
+
+//goland:noinspection GoMixedReceiverTypes
+func (dgb DeGlazeBehavior) String() string {
+	buf, _ := dgb.MarshalText()
+	return string(buf)
+}
+
+//goland:noinspection GoMixedReceiverTypes
+func (dgb DeGlazeBehavior) MarshalText() (text []byte, err error) {
+	s, found := deGlazeStrings.GetB(dgb)
+	if !found {
+		return nil, fmt.Errorf("unknown behavior")
+	}
+	return []byte(s), nil
+}
+
+//goland:noinspection GoMixedReceiverTypes
+func (dgb *DeGlazeBehavior) UnmarshalText(text []byte) error {
+	behavior, found := deGlazeStrings.GetA(string(text))
+	if !found {
+		return fmt.Errorf("unknown behavior")
+	}
+	*dgb = behavior
+	return nil
+}
+
+//goland:noinspection GoMixedReceiverTypes
+func (dgb DeGlazeBehavior) MarshalYAML() (any, error) {
+	s, found := deGlazeStrings.GetB(dgb)
+	if !found {
+		return nil, fmt.Errorf("unknown behavior")
+	}
+	return s, nil
+}
+
+//goland:noinspection GoMixedReceiverTypes
+func (dgb *DeGlazeBehavior) UnmarshalYAML(node *yaml.Node) error {
+	var s string
+	if err := node.Decode(&s); err != nil {
+		return err
+	}
+	behavior, found := deGlazeStrings.GetA(s)
+	if !found {
+		return fmt.Errorf("unknown behavior")
+	}
+	*dgb = behavior
+	return nil
+}
+
+//goland:noinspection GoMixedReceiverTypes
+func (dgb DeGlazeBehavior) createConstraint(lockVersion string) (string, error) {
+	v, err := BOSHReleaseTarballLock{Version: lockVersion}.ParseVersion()
+	if err != nil {
+		return "", err
+	}
+	var versionConstraint string
+	switch dgb {
+	case LockNone:
+		versionConstraint = unconstrainedVersion
+	case LockPatch:
+		versionConstraint = fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch())
+	case LockMinor:
+		versionConstraint = fmt.Sprintf("~%d.%d", v.Major(), v.Minor())
+	case LockMajor:
+		versionConstraint = fmt.Sprintf("~%d", v.Major())
+	}
+	return versionConstraint, nil
+}
+
+func deGlazeBOSHReleaseTarballSpecification(spec BOSHReleaseTarballSpecification, lock BOSHReleaseTarballLock) (BOSHReleaseTarballSpecification, error) {
+	var err error
+	spec.Version, err = spec.DeGlazeBehavior.createConstraint(lock.Version)
+	return spec, err
 }

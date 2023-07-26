@@ -1,40 +1,24 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
-type Glaze struct {
-	Options struct {
+type (
+	glazeCommandOptions struct {
 		Kilnfile string `short:"kf" long:"kilnfile" default:"Kilnfile"  description:"path to Kilnfile"`
 	}
-}
+	Glaze struct {
+		Options glazeCommandOptions
+	}
+	DeGlaze struct {
+		Options glazeCommandOptions
+	}
+)
 
 func (cmd *Glaze) Execute(args []string) error {
-	_, err := jhanda.Parse(&cmd.Options, args)
-	if err != nil {
-		return err
-	}
-
-	kfPath, err := cargo.ResolveKilnfilePath(cmd.Options.Kilnfile)
-	if err != nil {
-		return err
-	}
-
-	kilnfile, kilnfileLock, err := cargo.ReadKilnfileAndKilnfileLock(kfPath)
-	if err != nil {
-		return err
-	}
-
-	kilnfile, err = pinVersions(kilnfile, kilnfileLock)
-	if err != nil {
-		return err
-	}
-
-	return cargo.WriteKilnfile(kfPath, kilnfile)
+	return glazeCommandExecute(cmd.Options, args, (*cargo.Kilnfile).Glaze)
 }
 
 func (cmd *Glaze) Usage() jhanda.Usage {
@@ -44,16 +28,32 @@ func (cmd *Glaze) Usage() jhanda.Usage {
 	}
 }
 
-func pinVersions(kf cargo.Kilnfile, kl cargo.KilnfileLock) (cargo.Kilnfile, error) {
-	kf.Stemcell.Version = kl.Stemcell.Version
-	for releaseIndex, release := range kf.Releases {
-		l, err := kl.FindBOSHReleaseWithName(release.Name)
-		if err != nil {
-			return cargo.Kilnfile{}, fmt.Errorf("release with name %q not found in Kilnfile.lock: %w", release.Name, err)
-		}
+func (cmd *DeGlaze) Execute(args []string) error {
+	return glazeCommandExecute(cmd.Options, args, (*cargo.Kilnfile).DeGlaze)
+}
 
-		kf.Releases[releaseIndex].Version = l.Version
+func (cmd *DeGlaze) Usage() jhanda.Usage {
+	return jhanda.Usage{
+		Description:      "This command unlocks all the components.",
+		ShortDescription: "Unpin version constraints in Kilnfile based on de_glaze_behavior.",
 	}
+}
 
-	return kf, nil
+func glazeCommandExecute(options glazeCommandOptions, args []string, fn func(kilnfile *cargo.Kilnfile, lock cargo.KilnfileLock) error) error {
+	_, err := jhanda.Parse(&options, args)
+	if err != nil {
+		return err
+	}
+	kfPath, err := cargo.ResolveKilnfilePath(options.Kilnfile)
+	if err != nil {
+		return err
+	}
+	kilnfile, kilnfileLock, err := cargo.ReadKilnfileAndKilnfileLock(kfPath)
+	if err != nil {
+		return err
+	}
+	if err := fn(&kilnfile, kilnfileLock); err != nil {
+		return err
+	}
+	return cargo.WriteKilnfile(kfPath, kilnfile)
 }
