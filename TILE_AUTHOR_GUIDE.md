@@ -340,7 +340,6 @@ This release source has minimal configuration.
 Just add it to your `release_sources` and you can get releases from [BOSH.io](https://bosh.io/releases/).
 
 ```yaml
-# Expected Kilnfile.lock
 release_sources:
   - type: bosh.io
     id: community # (optional) the default ID for this type is the constant string "bosh.io"
