@@ -348,7 +348,7 @@ release_sources:
 The value of `remote_path` in the BOSH release tarball lock is a URL.
 
 
-#### <a id='release-source-github'></a> GitHub Release Artifacts
+#### <a id='release-source-github'></a> GitHub Releases
 
 Kiln can only download releases from GitHub Releases and can not upload BOSH Releases to BOSH.io.
 
@@ -558,7 +558,7 @@ There is an internal VMware intiative to build tiles using TAP and buildpacks.
 The Kiln Buildpack can take tile source code and create a tile.
 For it to work,
 you need to have your BOSH Release Tarballs fetch-able by Kiln (and only using GitHub or BOSH.io release sources)
-and it is nice if your bake command not require too many flags (see [Tile Source Conventions](#tile-source-conventions)).
+and it is nice if your bake command does not require too many flags (see [Tile Source Conventions](#tile-source-conventions)).
 
 The private repository [kiln buildpack](https://github.com/pivotal/kiln-buildpack) has the Paketo buildpack source.
 You can run the acceptance tests with a `TILE_DIRECTORY` environment variable set to your tile source to see if your tile will build with the buildpack.
