@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
+	"gopkg.in/yaml.v3"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -20,14 +21,8 @@ type FindReleaseVersion struct {
 		flags.Standard
 		Release    string `short:"r" long:"release" description:"release name"`
 		NoDownload bool   `long:"no-download" description:"do not download any files"`
+		Format     string `short:"o" long:"output" description:"output format json/yaml"`
 	}
-}
-
-type releaseVersionOutput struct {
-	Version    string `json:"version"`
-	RemotePath string `json:"remote_path"`
-	Source     string `json:"source"`
-	SHA        string `json:"sha"`
 }
 
 func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider) *FindReleaseVersion {
@@ -51,18 +46,18 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 
 	spec.StemcellOS = kilnfileLock.Stemcell.OS
 	spec.StemcellVersion = kilnfileLock.Stemcell.Version
-
 	releaseRemote, err := releaseSource.FindReleaseVersion(spec, cmd.Options.NoDownload)
 	if err != nil {
 		return err
 	}
 
-	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{
-		Version:    releaseRemote.Version,
-		RemotePath: releaseRemote.RemotePath,
-		Source:     releaseRemote.RemoteSource,
-		SHA:        releaseRemote.SHA1,
-	})
+	if cmd.Options.Format == `yaml` {
+		releaseVersionYaml, err := yaml.Marshal(releaseRemote)
+		cmd.outLogger.Println(string(releaseVersionYaml))
+		return err
+	}
+
+	releaseVersionJson, err := json.Marshal(releaseRemote)
 	cmd.outLogger.Println(string(releaseVersionJson))
 	return err
 }

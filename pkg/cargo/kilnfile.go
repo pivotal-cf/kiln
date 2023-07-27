@@ -127,15 +127,15 @@ type ReleaseSourceConfig struct {
 // All fields must be comparable because this struct may be
 // used as a key type in a map. Don't add array or map fields.
 type BOSHReleaseTarballLock struct {
-	Name    string `yaml:"name"`
-	SHA1    string `yaml:"sha1"`
-	Version string `yaml:"version,omitempty"`
+	Name    string `yaml:"name" json:"name"`
+	SHA1    string `yaml:"sha1" json:"sha1"`
+	Version string `yaml:"version,omitempty" json:"version,omitempty"`
 
-	StemcellOS      string `yaml:"-"`
-	StemcellVersion string `yaml:"-"`
+	StemcellOS      string `yaml:"-" json:"-"`
+	StemcellVersion string `yaml:"-" json:"-"`
 
-	RemoteSource string `yaml:"remote_source"`
-	RemotePath   string `yaml:"remote_path"`
+	RemoteSource string `yaml:"remote_source" json:"remote_source"`
+	RemotePath   string `yaml:"remote_path" json:"remote_path"`
 }
 
 func (lock BOSHReleaseTarballLock) ReleaseSlug() boshdir.ReleaseSlug {
