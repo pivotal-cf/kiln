@@ -409,8 +409,8 @@ release_sources:
     bucket: "some-bucket"
     id: "legacy-storage"  # (optional) the default ID for this type is the value of bucket
     region: "some-region"
-    access_key_id: "some-access-key-id"
-    secret_access_key: "some-secret-access-key"
+    access_key_id: $(variable "access_key_id")
+    secret_access_key: $(variable "secret_access_key")
     path_template: "some-path-template/{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz"
 ```
 
