@@ -43,7 +43,7 @@ curl -L -o icon.png "https://github.com/crhntr/hello-tile/blob/main/icon.png?raw
 echo '0.1.0' > 'version'
 
 # Create a "base.yml" with some minimal fields
-# See documentation here: `https://docs.pivotal.io/tiledev/2-9/property-template-references.html`
+# See documentation here: `https://docs.vmware.com/en/Tile-Developer-Guide/3.0/tile-dev-guide/property-template-references.html`
 cat << EOF > base.yml
 name: my-tile-name
 label: ""
