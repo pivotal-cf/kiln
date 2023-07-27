@@ -362,6 +362,9 @@ release_sources:
     github_token: $(variable "github_token")
 ```
 
+**`github_token` is always required even for public repositories because we make API requests**
+<!-- Look up what minimal permissions are for granular tokens and document that here. -->
+
 You will need one entry per organization.
 Some examples are: "pivotal", "cloudfoundry", "pivotal-cf", or your personal/company GitHub username.
 
