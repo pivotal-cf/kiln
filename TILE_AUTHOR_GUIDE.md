@@ -390,9 +390,9 @@ release_sources:
   - type: "artifactory"
     id: "official-storage"  # (optional) the default ID for this type is the constant string value "artifactory"
     repo: "some-repository"
-    username: "some-username"
-    password: "some-password"
-    path_template: "some-path-template/tarball.tgz"
+    username: $(variable "artifactory_username")
+    password: $(variable "artifactory_password")
+    path_template: "some-path-template/{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz"
 ```
 
 Note `repo` is not a GitHub repository. It refers to an Artifactory repository. 
@@ -411,7 +411,7 @@ release_sources:
     region: "some-region"
     access_key_id: "some-access-key-id"
     secret_access_key: "some-secret-access-key"
-    path_template: "some-path-template/tarball.tgz"
+    path_template: "some-path-template/{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz"
 ```
 
 Please see [Path Templates](#path-templates). The value of `remote_path` in the BOSH release tarball lock is part of the path needed to make the S3 object name.
