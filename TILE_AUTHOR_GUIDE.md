@@ -351,7 +351,7 @@ The value of `remote_path` in the BOSH release tarball lock is a URL.
 
 #### <a id='release-source-github'></a> GitHub Release Artifacts
 
-Kiln can only download releases from GitHub Releases and can not upload BOSH Releases to BOSH.io.
+Kiln can only download releases from GitHub Releases and can not upload BOSH Releases to Github.
 
 To download BOSH Release Tarballs from GitHub Releases, add the following
 ```yaml
@@ -393,7 +393,9 @@ release_sources:
     path_template: "some-path-template/tarball.tgz"
 ```
 
-Note `repo` is not a GitHub repository. It refers to an Artifactory repository. 
+Notes:
+* `repo` is not a GitHub repository. It refers to an Artifactory repository.
+* `username` and `password` values can be non-empty arbitrary values for read-only access
 
 Please see [Path Templates](#path-templates). The value of `remote_path` in the BOSH release tarball lock is part of the path needed to construct a URL to download the release.
 
@@ -425,7 +427,7 @@ You can add a default credentials file to `~/.kiln/credentials.yml` so you don't
 Don't do this with production creds but if you have credentials you can safely write to your disk, consider using this functionality.
 The file can look like this
 ```yaml
-# GitHub BOSH release tarball release sources credentials
+# GitHub release sources credentials. Github Release should contain BOSH tarballs
 github_token: some-token
 
 # S3 release BOSH release tarball source credentials
@@ -479,14 +481,14 @@ _If I remember right, the find-stemcell-version command has a bug where the stem
 
 ## <a id="release-notes"></a> Tile Release Note Generation
 
-If you use GitHub BOSH Release tarball sources,
+If you use the GitHub release source for your BOSH release tarballs,
 you can generate release notes for your tile.
 The notes will contain release notes for each BOSH release.
 
 This feature requires you to have a previous tile release that used a Kilnfile.lock to specify the BOSH releases packaged.
 You pass two references
-- the Git Reference or SHA of the commit of the source used to generate the previously published tile
-- Git Reference or SHA of the commit of the source used to generate the **next** tile
+- the Git Reference or SHA of the commit of the tile repo source used to generate the previously published tile
+- Git Reference or SHA of the commit of the tile repo source used to generate the **next** tile
 
 While you can override the template and the regular expression used to make these notes.
 They are quite hard to craft.
