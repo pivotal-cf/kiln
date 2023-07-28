@@ -77,6 +77,8 @@ func main() {
 	commandSet["fetch"] = fetch
 	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger, fetch)
 
+	commandSet["compile-bosh-release-tarballs"] = commands.NewCompileBOSHReleaseTarballs()
+
 	commandSet["test"] = commands.NewTileTest()
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)

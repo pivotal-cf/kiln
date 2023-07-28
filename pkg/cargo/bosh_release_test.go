@@ -7,14 +7,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pivotal-cf/kiln/pkg/cargo"
+	. "github.com/onsi/gomega"
 
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/pivotal-cf/kiln/pkg/proofing"
-
-	. "github.com/onsi/gomega"
 )
 
 func TestReadReleaseFromFile(t *testing.T) {
