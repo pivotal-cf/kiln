@@ -1,0 +1,83 @@
+description: Serves a "Hello World" server.
+icon_image: some-image
+form_types: []
+job_types:
+  - description: HTTP Server
+    dynamic_ip: 0
+    instance_definition:
+      configurable: true
+      constraints:
+        max: 1
+        min: 0
+      default: 1
+      label: Instances
+      name: instances
+      type: integer
+    label: Server
+    max_in_flight: 1
+    name: hello-server
+    resource_definitions:
+      - configurable: true
+        constraints:
+          min: 1024
+        default: 1024
+        label: RAM
+        name: ram
+        type: integer
+      - configurable: true
+        constraints:
+          min: 2000
+        default: 4000
+        label: Ephemeral Disk
+        name: ephemeral_disk
+        type: integer
+      - configurable: false
+        constraints:
+          min: 2000
+        default: 4000
+        label: Persistent Disk
+        name: persistent_disk
+        type: integer
+      - configurable: true
+        constraints:
+          min: 1
+        default: 1
+        label: CPU
+        name: cpu
+        type: integer
+    resource_label: Server
+    single_az_only: true
+    static_ip: 1
+    templates:
+      - manifest: |
+          job-properties:
+            port: 8080
+        name: hello-server
+        release: hello-release
+      - manifest: {}
+        name: bpm
+        release: bpm
+label: Hello
+metadata_version: 2.7.0
+minimum_version_for_upgrade: 0.1.0
+name: hello
+product_version: 0.1.2
+property_blueprints: []
+provides_product_versions:
+  - name: hello
+    version: 0.1.2
+rank: 90
+releases:
+  - file: hello-release-v0.1.4-ubuntu-xenial-621.256.tgz
+    name: hello-release
+    sha1: c471ac6371eb8fc24508b14d9a49a44f9a5ef98c
+    version: v0.1.4
+  - file: bpm-1.1.18-ubuntu-xenial-621.256.tgz
+    name: bpm
+    sha1: 476c516e0644564838c025b165560bb24102fe6f
+    version: 1.1.18
+runtime_configs: []
+serial: false
+stemcell_criteria:
+  os: ubuntu-xenial
+  version: "621.256"

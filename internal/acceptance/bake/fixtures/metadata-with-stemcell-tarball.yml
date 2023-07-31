@@ -7,3 +7,4 @@ icon_img: $( icon )
 product_version: $( version )
 label: Pivotal Elastic Runtime
 stemcell_criteria: $( stemcell )
+kiln_metadata: {}
