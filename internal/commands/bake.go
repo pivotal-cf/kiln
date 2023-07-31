@@ -141,6 +141,8 @@ type Bake struct {
 	stemcell          stemcellService
 	releases          fromDirectories
 
+	KilnVersion string
+
 	boshVariables,
 	forms,
 	instanceGroups,
@@ -455,6 +457,7 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	input := builder.InterpolateInput{
+		KilnVersion:        b.KilnVersion,
 		Version:            b.Options.Version,
 		Variables:          templateVariables,
 		BOSHVariables:      boshVariables,

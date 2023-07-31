@@ -75,7 +75,10 @@ func main() {
 	commandSet := jhanda.CommandSet{}
 	fetch := commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 	commandSet["fetch"] = fetch
-	commandSet["bake"] = commands.NewBake(fs, releasesService, outLogger, errLogger, fetch)
+
+	bakeCommand := commands.NewBake(fs, releasesService, outLogger, errLogger, fetch)
+	bakeCommand.KilnVersion = version
+	commandSet["bake"] = bakeCommand
 
 	commandSet["test"] = commands.NewTileTest()
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)

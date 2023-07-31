@@ -12,3 +12,4 @@ stemcell_criteria:
   version: 250.21
   requires_cpi: false
   enable_patch_security_updates: true
+kiln_metadata: {}

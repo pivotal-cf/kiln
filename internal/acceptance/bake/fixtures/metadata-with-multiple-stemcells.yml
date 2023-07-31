@@ -9,3 +9,4 @@ label: Pivotal Elastic Runtime
 stemcell_criteria: $( stemcell "ubuntu-trusty" )
 additional_stemcells_criteria:
 - $( stemcell "windows" )
+kiln_metadata: {}

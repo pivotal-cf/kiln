@@ -35,6 +35,7 @@ type Interpolator struct{}
 
 type InterpolateInput struct {
 	Version            string
+	KilnVersion        string
 	BOSHVariables      map[string]any
 	Variables          map[string]any
 	ReleaseManifests   map[string]any
@@ -55,6 +56,15 @@ func NewInterpolator() Interpolator {
 }
 
 func (i Interpolator) Interpolate(input InterpolateInput, name string, templateYAML []byte) ([]byte, error) {
+	var gitMetadataSHA string
+	if input.MetadataGitSHA != nil {
+		sha, err := input.MetadataGitSHA()
+		if err != nil {
+			return nil, err
+		}
+		gitMetadataSHA = sha
+	}
+
 	interpolatedYAML, err := i.interpolate(input, name, templateYAML)
 	if err != nil {
 		return nil, err
@@ -65,7 +75,10 @@ func (i Interpolator) Interpolate(input InterpolateInput, name string, templateY
 		return nil, err // un-tested
 	}
 
-	return prettyMetadata, nil
+	return setKilnMetadata(prettyMetadata, KilnMetadata{
+		KilnVersion:    input.KilnVersion,
+		MetadataGitSHA: gitMetadataSHA,
+	})
 }
 
 func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
