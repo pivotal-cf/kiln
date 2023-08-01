@@ -290,7 +290,7 @@ func CompileBOSHReleaseTarballs(_ context.Context, logger *log.Logger, boshDirec
 
 func exportAndDownloadBOSHRelease(releasesDirectory string, boshDirector director.Director, deployment director.Deployment, source BOSHReleaseTarball, sc Stemcell) (BOSHReleaseTarball, error) {
 	releaseMF := source.Manifest
-	exportFileName := fmt.Sprintf("%s-%s-%s-%s.tgz", releaseMF.Name, releaseMF.Name, sc.OS, sc.Version)
+	exportFileName := fmt.Sprintf("%s-%s-%s-%s.tgz", releaseMF.Name, releaseMF.Version, sc.OS, sc.Version)
 	exportFilePath := filepath.Join(filepath.Dir(source.FilePath), exportFileName)
 
 	releaseSlug := director.NewReleaseSlug(releaseMF.Name, releaseMF.Version)
