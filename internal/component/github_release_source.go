@@ -266,10 +266,10 @@ func downloadRelease(ctx context.Context, releaseDir string, remoteRelease cargo
 	// TODO: add test coverage for length
 	org, repo := remotePathParts[1], remotePathParts[2]
 
-	rTag, _, err := client.GetReleaseByTag(ctx, org, repo, remoteRelease.Version)
+	rTag, _, err := client.GetReleaseByTag(ctx, org, repo, "v"+remoteRelease.Version)
 	if err != nil {
-		logger.Println("warning: failed to find release tag of ", remoteRelease.Version)
-		rTag, _, err = client.GetReleaseByTag(ctx, org, repo, "v"+remoteRelease.Version)
+		logger.Println("warning: failed to find release tag of ", "v"+remoteRelease.Version)
+		rTag, _, err = client.GetReleaseByTag(ctx, org, repo, remoteRelease.Version)
 		if err != nil {
 			return Local{}, fmt.Errorf("cant find release tag: %+v", err.Error())
 		}

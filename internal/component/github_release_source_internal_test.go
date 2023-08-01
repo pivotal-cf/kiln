@@ -66,13 +66,13 @@ func TestGithubReleaseSource_downloadRelease(t *testing.T) {
 		_, org, repo, tag := downloader.GetReleaseByTagArgsForCall(0)
 		please.Expect(org).To(Equal("cloudfoundry"))
 		please.Expect(repo).To(Equal("routing-release"))
-		please.Expect(tag).To(Equal("0.239.0"))
+		please.Expect(tag).To(Equal("v0.239.0"))
 	}
 	{
 		_, org, repo, tag := downloader.GetReleaseByTagArgsForCall(1)
 		please.Expect(org).To(Equal("cloudfoundry"))
 		please.Expect(repo).To(Equal("routing-release"))
-		please.Expect(tag).To(Equal("v0.239.0"))
+		please.Expect(tag).To(Equal("0.239.0"))
 	}
 
 	please.Expect(local.LocalPath).To(BeAnExistingFile(), "it finds the created asset file")
