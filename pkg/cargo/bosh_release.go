@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -246,6 +247,7 @@ func CompileBOSHReleaseTarballs(_ context.Context, logger *log.Logger, boshDirec
 			logger.Printf("Uploading BOSH Release %s/%s [try %d]", tarball.Manifest.Name, tarball.Manifest.Version, try)
 			err = uploadBOSHReleaseTarballToDirector(boshDirector, sc, tarball)
 			if err != nil {
+				log.Printf("try %d of %d failed with error: %s", try, uploadTries, err)
 				continue
 			}
 			break
@@ -336,7 +338,7 @@ func uploadBOSHReleaseTarballToDirector(boshDirector director.Director, sc Stemc
 	if findReleaseErr == nil {
 		exists, err := release.Exists()
 		if err != nil {
-			return err
+			return errors.Join(findReleaseErr, err)
 		}
 		if exists {
 			directorPackages, err := release.Packages()
@@ -353,14 +355,27 @@ func uploadBOSHReleaseTarballToDirector(boshDirector director.Director, sc Stemc
 				}
 			}
 		}
-		return findReleaseErr
 	}
 	f, err := os.Open(tarball.FilePath)
 	if err != nil {
 		return err
 	}
 	defer closeAndIgnoreError(f)
-	return boshDirector.UploadReleaseFile(f, false, false)
+	if err := boshDirector.UploadReleaseFile(f, false, false); err != nil {
+		return err
+	}
+	release, err = boshDirector.FindRelease(director.NewReleaseSlug(tarball.Manifest.Name, tarball.Manifest.Version))
+	if err != nil {
+		return err
+	}
+	exists, err := release.Exists()
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("failed to upload release %s/%s", tarball.Manifest.Name, tarball.Manifest.Version)
+	}
+	return nil
 }
 
 func ensureBOSHDirectorHasStemcell(sc Stemcell, boshDirector director.Director) error {
