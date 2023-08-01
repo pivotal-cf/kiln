@@ -37,6 +37,14 @@ type Configuration struct {
 func New(configuration Configuration) (director.Director, error) {
 	boshLogger := boshLog.NewLogger(boshLog.LevelError)
 
+	if configuration.AllProxy != "" {
+		err := os.Setenv("BOSH_ALL_PROXY", configuration.AllProxy)
+		if err != nil {
+			return nil, err
+		}
+		boshHTTPClient.ResetDialerContext()
+	}
+
 	directorConfig, err := director.NewConfigFromURL(configuration.Environment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get director config from BOSH_ENVIRONMENT: %w", err)

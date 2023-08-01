@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"log"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 
 	"golang.org/x/exp/slices"
 
@@ -112,7 +113,7 @@ func (cmd *CompileBOSHReleaseTarballs) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(cmd.Options.Kilnfile+".lock", out, 0600)
+	return os.WriteFile(cmd.Options.Kilnfile+".lock", out, 0o600)
 }
 
 func (cmd *CompileBOSHReleaseTarballs) Usage() jhanda.Usage {

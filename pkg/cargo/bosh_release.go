@@ -278,7 +278,7 @@ func CompileBOSHReleaseTarballs(_ context.Context, logger *log.Logger, boshDirec
 	result := make([]BOSHReleaseTarball, 0, len(releasesToCompile))
 	for _, tarball := range releasesToCompile {
 		logger.Printf("Exporting and Downloading BOSH Release %s/%s", tarball.Manifest.Name, tarball.Manifest.Version)
-		boshReleaseTarball, err := exportAndDownloadBOSHRelease("releases", boshDirector, deployment, tarball, sc)
+		boshReleaseTarball, err := exportAndDownloadBOSHRelease(boshDirector, deployment, tarball, sc)
 		if err != nil {
 			return nil, err
 		}
@@ -288,7 +288,7 @@ func CompileBOSHReleaseTarballs(_ context.Context, logger *log.Logger, boshDirec
 	return result, nil
 }
 
-func exportAndDownloadBOSHRelease(releasesDirectory string, boshDirector director.Director, deployment director.Deployment, source BOSHReleaseTarball, sc Stemcell) (BOSHReleaseTarball, error) {
+func exportAndDownloadBOSHRelease(boshDirector director.Director, deployment director.Deployment, source BOSHReleaseTarball, sc Stemcell) (BOSHReleaseTarball, error) {
 	releaseMF := source.Manifest
 	exportFileName := fmt.Sprintf("%s-%s-%s-%s.tgz", releaseMF.Name, releaseMF.Version, sc.OS, sc.Version)
 	exportFilePath := filepath.Join(filepath.Dir(source.FilePath), exportFileName)
