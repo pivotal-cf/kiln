@@ -176,7 +176,7 @@ type Bake struct {
 		Sha256                   bool     `            long:"sha256"                                                description:"calculates a SHA256 checksum of the output file"`
 		StubReleases             bool     `short:"sr"  long:"stub-releases"                                         description:"skips importing release tarballs into the tile"`
 		Version                  string   `short:"v"   long:"version"                                               description:"version of the tile"`
-		SkipFetchReleases        []string `short:"sfr" long:"skip-fetch-directories"        description:"skips the automatic release fetch the specified release directories"`
+		SkipFetchReleases        bool     `short:"sfr" long:"skip-fetch-directories"                                description:"skips the automatic release fetch for all release directories"`
 	}
 }
 
@@ -342,16 +342,8 @@ func (b Bake) Execute(args []string) error {
 		return err
 	}
 
-	if !b.Options.StubReleases {
-	fetch:
-		// TODO update to take the union of release dirs into account
-		for _, dir := range b.Options.ReleaseDirectories {
-			for _, dirToSkip := range b.Options.SkipFetchReleases {
-				if path.Base(dir) == path.Base(dirToSkip) &&
-					path.Dir(dir) == path.Dir(dirToSkip) {
-					break fetch
-				}
-			}
+	if !b.Options.SkipFetchReleases && !b.Options.StubReleases {
+		for _, releaseDir := range b.Options.ReleaseDirectories {
 			fetchOptions := struct {
 				flags.Standard
 				flags.FetchBakeOptions
@@ -359,7 +351,7 @@ func (b Bake) Execute(args []string) error {
 			}{
 				b.Options.Standard,
 				b.Options.FetchBakeOptions,
-				FetchReleaseDir{dir},
+				FetchReleaseDir{releaseDir},
 			}
 			fetchArgs := flags.ToStrings(fetchOptions)
 			err = b.fetcher.Execute(fetchArgs)
