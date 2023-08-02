@@ -2,7 +2,6 @@ package commands_test
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -205,7 +204,6 @@ var _ = Describe("Bake", func() {
 				"--variables-file", "some-variables-file",
 				"--sha256",
 				"--download-threads", "5",
-				"--skip-fetch-directories", fmt.Sprintf("%s %s", otherReleasesDirectory, someReleasesDirectory),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
