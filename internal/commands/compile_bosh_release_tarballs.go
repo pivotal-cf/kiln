@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/component"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -27,10 +31,10 @@ type NewDirectorFunc func(configuration directorclient.Configuration) (director.
 
 type CompileBOSHReleaseTarballs struct {
 	Options struct {
-		Kilnfile         string `long:"kilnfile"           default:"Kilnfile" description:"path to Kilnfile"`
-		ReleaseDirectory string `long:"releases-directory" default:"releases" description:"path to a directory containing release tarballs"`
+		flags.Standard
 
-		// UploadTargetID   string `long:"upload-target-id"                      description:"the ID of the release source where the built release will be uploaded"`
+		ReleaseDirectory string `long:"releases-directory" default:"releases" description:"path to a directory containing release tarballs"`
+		UploadTargetID   string `long:"upload-target-id"                      description:"the ID of the release source where the built release will be uploaded"`
 
 		directorclient.Configuration
 	}
@@ -86,6 +90,31 @@ func (cmd *CompileBOSHReleaseTarballs) Execute(args []string) error {
 		return err
 	}
 
+	var uploader component.ReleaseUploader = noopUploader{}
+	if cmd.Options.UploadTargetID != "" {
+		_, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, os.Stat)
+		if err != nil {
+			return err
+		}
+
+		kilnfile, _, err := cmd.Options.LoadKilnfiles(osfs.New("."), nil)
+		if err != nil {
+			return fmt.Errorf("failed to load kilnfiles: %w", err)
+		}
+		index := slices.IndexFunc(kilnfile.ReleaseSources, func(config cargo.ReleaseSourceConfig) bool {
+			return cmd.Options.UploadTargetID == cargo.BOSHReleaseTarballSourceID(config)
+		})
+		if index < 0 {
+			return fmt.Errorf("failed to load release source with ID %q", cmd.Options.UploadTargetID)
+		}
+		source := component.ReleaseSourceFactory(kilnfile.ReleaseSources[index], log.New(io.Discard, "", 0))
+		var ok bool
+		uploader, ok = source.(component.ReleaseUploader)
+		if !ok {
+			return fmt.Errorf("upload to release source type %s not implemented", source.Configuration().Type)
+		}
+	}
+
 	for _, compiled := range compiledTarballs {
 		unCompiledIndex := slices.IndexFunc(boshReleaseTarballs, func(releaseTarball cargo.BOSHReleaseTarball) bool {
 			return releaseTarball.Manifest.Name == compiled.Manifest.Name &&
@@ -94,19 +123,11 @@ func (cmd *CompileBOSHReleaseTarballs) Execute(args []string) error {
 		if unCompiledIndex < 0 {
 			continue
 		}
-		_ = os.Remove(boshReleaseTarballs[unCompiledIndex].FilePath)
-
-		lockIndex := slices.IndexFunc(kilnfileLock.Releases, func(lock cargo.BOSHReleaseTarballLock) bool {
-			return lock.Name == compiled.Manifest.Name &&
-				lock.Version == compiled.Manifest.Version
-		})
-		if lockIndex >= 0 {
-			kilnfileLock.Releases[lockIndex] = cargo.BOSHReleaseTarballLock{
-				Name:    compiled.Manifest.Name,
-				Version: compiled.Manifest.Version,
-				SHA1:    compiled.SHA1,
-			}
+		err = uploadRelease(uploader, kilnfileLock, compiled)
+		if err != nil {
+			return fmt.Errorf("upload to release source with ID %s not possible", cmd.Options.UploadTargetID)
 		}
+		_ = os.Remove(boshReleaseTarballs[unCompiledIndex].FilePath)
 	}
 
 	out, err := yaml.Marshal(kilnfileLock)
@@ -135,4 +156,47 @@ func loadCompileBOSHReleasesParameters(kilnfilePath, releasesDirectory string) (
 
 	kilnfileLock, err = cargo.ReadKilnfileLock(kilnfilePath)
 	return
+}
+
+func uploadRelease(uploader component.ReleaseUploader, kilnfileLock cargo.KilnfileLock, compiled cargo.BOSHReleaseTarball) error {
+	lockIndex := slices.IndexFunc(kilnfileLock.Releases, func(lock cargo.BOSHReleaseTarballLock) bool {
+		return lock.Name == compiled.Manifest.Name &&
+			lock.Version == compiled.Manifest.Version
+	})
+	if lockIndex < 0 {
+		return fmt.Errorf("release %s/%s not found in Kilnfile.lock", compiled.Manifest.Name, compiled.Manifest.Version)
+	}
+	tarballFile, err := os.Open(compiled.FilePath)
+	if err != nil {
+		return fmt.Errorf("failed to open tarball: %w", err)
+	}
+	defer closeAndIgnoreError(tarballFile)
+	releaseLock, err := uploader.UploadRelease(cargo.BOSHReleaseTarballSpecification{
+		Name:            kilnfileLock.Releases[lockIndex].Name,
+		Version:         kilnfileLock.Releases[lockIndex].Version,
+		StemcellOS:      kilnfileLock.Releases[lockIndex].StemcellOS,
+		StemcellVersion: kilnfileLock.Releases[lockIndex].StemcellVersion,
+	}, tarballFile)
+	kilnfileLock.Releases[lockIndex] = releaseLock
+	return nil
+}
+
+type noopUploader struct{}
+
+func (n noopUploader) GetMatchedRelease(specification cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error) {
+	return cargo.BOSHReleaseTarballLock{
+		Name:            specification.Name,
+		Version:         specification.Version,
+		StemcellOS:      specification.StemcellOS,
+		StemcellVersion: specification.StemcellVersion,
+	}, nil
+}
+
+func (n noopUploader) UploadRelease(specification cargo.BOSHReleaseTarballSpecification, file io.Reader) (cargo.BOSHReleaseTarballLock, error) {
+	return cargo.BOSHReleaseTarballLock{
+		Name:            specification.Name,
+		Version:         specification.Version,
+		StemcellOS:      specification.StemcellOS,
+		StemcellVersion: specification.StemcellVersion,
+	}, nil
 }
