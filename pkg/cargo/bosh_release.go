@@ -233,6 +233,7 @@ func CompileBOSHReleaseTarballs(_ context.Context, logger *log.Logger, boshDirec
 	if uploadTries == 0 {
 		uploadTries = 5
 	}
+	downloadTryies := uploadTries
 	err := ensureBOSHDirectorHasStemcell(sc, boshDirector)
 	if err != nil {
 		return nil, err
@@ -244,10 +245,10 @@ func CompileBOSHReleaseTarballs(_ context.Context, logger *log.Logger, boshDirec
 			return nil, fmt.Errorf("%s/%s (%s) has compiled packages", tarball.Manifest.Name, tarball.Manifest.Version, tarball.FilePath)
 		}
 		for try := 1; try <= uploadTries; try++ {
-			logger.Printf("Uploading BOSH Release %s/%s [try %d]", tarball.Manifest.Name, tarball.Manifest.Version, try)
+			logger.Printf("Uploading BOSH Release %s/%s [try %d of %d]", tarball.Manifest.Name, tarball.Manifest.Version, try, uploadTries)
 			err = uploadBOSHReleaseTarballToDirector(boshDirector, sc, tarball)
 			if err != nil {
-				log.Printf("try %d of %d failed with error: %s", try, uploadTries, err)
+				logger.Printf("failed to upload BOSH Release %s/%s [try %d of %d]: %s", tarball.Manifest.Name, tarball.Manifest.Version, try, uploadTries, err)
 				continue
 			}
 			break
@@ -277,13 +278,21 @@ func CompileBOSHReleaseTarballs(_ context.Context, logger *log.Logger, boshDirec
 
 	result := make([]BOSHReleaseTarball, 0, len(releasesToCompile))
 	for _, tarball := range releasesToCompile {
-		logger.Printf("Exporting and Downloading BOSH Release %s/%s", tarball.Manifest.Name, tarball.Manifest.Version)
-		boshReleaseTarball, err := exportAndDownloadBOSHRelease(boshDirector, deployment, tarball, sc)
+		var boshReleaseTarball BOSHReleaseTarball
+		for try := 1; try < downloadTryies; try++ {
+			logger.Printf("Exporting and Downloading BOSH Release %s/%s", tarball.Manifest.Name, tarball.Manifest.Version)
+			boshReleaseTarball, err = exportAndDownloadBOSHRelease(boshDirector, deployment, tarball, sc)
+			if err != nil {
+				logger.Printf("failed to upload BOSH Release %s/%s [try %d of %d]: %s", tarball.Manifest.Name, tarball.Manifest.Version, try, downloadTryies, err)
+				continue
+			}
+		}
 		if err != nil {
 			return nil, err
 		}
 		logger.Printf("finished compiling and exporting %s/%s with stemcell %s/%s", tarball.Manifest.Name, tarball.Manifest.Version, sc.OS, sc.Version)
 		result = append(result, boshReleaseTarball)
+		break
 	}
 	return result, nil
 }
