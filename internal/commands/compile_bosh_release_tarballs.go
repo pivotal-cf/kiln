@@ -129,12 +129,14 @@ func (cmd *CompileBOSHReleaseTarballs) Execute(args []string) error {
 		}
 		_ = os.Remove(boshReleaseTarballs[unCompiledIndex].FilePath)
 	}
-
-	out, err := yaml.Marshal(kilnfileLock)
-	if err != nil {
-		return err
+	if cmd.Options.UploadTargetID != "" {
+		out, err := yaml.Marshal(kilnfileLock)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(cmd.Options.Kilnfile+".lock", out, 0o600)
 	}
-	return os.WriteFile(cmd.Options.Kilnfile+".lock", out, 0o600)
+	return nil
 }
 
 func (cmd *CompileBOSHReleaseTarballs) Usage() jhanda.Usage {
