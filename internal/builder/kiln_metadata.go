@@ -9,8 +9,8 @@ import (
 )
 
 type KilnMetadata struct {
-	MetadataGitSHA string `yaml:"metadata_git_sha,omitempty"`
-	KilnVersion    string `yaml:"kiln_version,omitempty"`
+	MetadataGitSHA string `yaml:"metadata_git_sha"`
+	KilnVersion    string `yaml:"kiln_version"`
 }
 
 func setKilnMetadata(in []byte, kilnMetadata KilnMetadata) ([]byte, error) {

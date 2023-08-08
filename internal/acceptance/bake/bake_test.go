@@ -12,14 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pivotal-cf/kiln/internal/builder"
-
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
+
+	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
 const (
@@ -42,7 +42,7 @@ var _ = BeforeSuite(func() {
 	pathToMain, err = gexec.Build("github.com/pivotal-cf/kiln",
 		"--ldflags", fmt.Sprintf("-X main.version=%s", buildVersion))
 	Expect(err).NotTo(HaveOccurred())
-	tileSourceRevision, err = builder.GitMetadataSHA(".", true)()
+	tileSourceRevision, err = builder.GitMetadataSHA(".", true)
 	Expect(err).NotTo(HaveOccurred())
 })
 

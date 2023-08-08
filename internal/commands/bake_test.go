@@ -258,11 +258,14 @@ var _ = Describe("Bake", func() {
 
 			Expect(fakeInterpolator.InterpolateCallCount()).To(Equal(1))
 
+			metadataGitSHA, err := builder.GitMetadataSHA(".", true)
+			Expect(err).NotTo(HaveOccurred())
+
 			input, interpolateName, metadata := fakeInterpolator.InterpolateArgsForCall(0)
-			Expect(input.MetadataGitSHA).NotTo(BeNil())
-			input.MetadataGitSHA = nil // func pointers are not comparable unless they are both nil
+			Expect(input.MetadataGitSHA).NotTo(BeEmpty())
 			Expect(input).To(Equal(builder.InterpolateInput{
-				Version: "1.2.3",
+				MetadataGitSHA: metadataGitSHA,
+				Version:        "1.2.3",
 				BOSHVariables: map[string]any{
 					"some-secret": builder.Metadata{
 						"name": "some-secret",

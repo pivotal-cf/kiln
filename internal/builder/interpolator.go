@@ -48,7 +48,7 @@ type InterpolateInput struct {
 	PropertyBlueprints map[string]any
 	RuntimeConfigs     map[string]any
 	StubReleases       bool
-	MetadataGitSHA     func() (string, error)
+	MetadataGitSHA     string
 }
 
 func NewInterpolator() Interpolator {
@@ -56,15 +56,6 @@ func NewInterpolator() Interpolator {
 }
 
 func (i Interpolator) Interpolate(input InterpolateInput, name string, templateYAML []byte) ([]byte, error) {
-	var gitMetadataSHA string
-	if input.MetadataGitSHA != nil {
-		sha, err := input.MetadataGitSHA()
-		if err != nil {
-			return nil, err
-		}
-		gitMetadataSHA = sha
-	}
-
 	interpolatedYAML, err := i.interpolate(input, name, templateYAML)
 	if err != nil {
 		return nil, err
@@ -77,7 +68,7 @@ func (i Interpolator) Interpolate(input InterpolateInput, name string, templateY
 
 	return setKilnMetadata(prettyMetadata, KilnMetadata{
 		KilnVersion:    input.KilnVersion,
-		MetadataGitSHA: gitMetadataSHA,
+		MetadataGitSHA: input.MetadataGitSHA,
 	})
 }
 
@@ -184,9 +175,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 			if !ok {
 				switch key {
 				case MetadataGitSHAVariable:
-					if input.MetadataGitSHA != nil {
-						return input.MetadataGitSHA()
-					}
+					return input.MetadataGitSHA, nil
 				case BuildVersionVariable:
 					return versionFunc()
 				}

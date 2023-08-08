@@ -456,6 +456,11 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to read metadata: %s", err)
 	}
 
+	gitMetadataSHA, err := builder.GitMetadataSHA(filepath.Dir(b.Options.Kilnfile), b.Options.MetadataOnly || b.Options.StubReleases)
+	if err != nil {
+		return fmt.Errorf("failed to read metadata: %s", err)
+	}
+
 	input := builder.InterpolateInput{
 		KilnVersion:        b.KilnVersion,
 		Version:            b.Options.Version,
@@ -471,7 +476,7 @@ func (b Bake) Execute(args []string) error {
 		PropertyBlueprints: propertyBlueprints,
 		RuntimeConfigs:     runtimeConfigs,
 		StubReleases:       b.Options.StubReleases,
-		MetadataGitSHA:     builder.GitMetadataSHA(filepath.Dir(b.Options.Kilnfile), b.Options.MetadataOnly || b.Options.StubReleases),
+		MetadataGitSHA:     gitMetadataSHA,
 	}
 	interpolatedMetadata, err := b.interpolator.Interpolate(input, b.Options.Metadata, metadata)
 	if err != nil {
