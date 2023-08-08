@@ -1,10 +1,11 @@
 package gh_test
 
 import (
+	"testing"
+
 	"github.com/pivotal-cf/kiln/internal/gh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func Test_RepositoryOwnerAndNameFromPath(t *testing.T) {

@@ -7,11 +7,11 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"testing"
 
 	"github.com/cucumber/godog"
-	"golang.org/x/exp/slices"
 )
 
 const testTilePath = "../hello-tile"

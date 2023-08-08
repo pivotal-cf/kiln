@@ -1,6 +1,6 @@
 module github.com/pivotal-cf/kiln
 
-go 1.18
+go 1.21
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
@@ -35,7 +35,6 @@ require (
 	github.com/pivotal-cf/om v0.0.0-20211027143906-30b10602e528
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/crypto v0.7.0
-	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
 	golang.org/x/oauth2 v0.6.0
 	golang.org/x/sync v0.1.0
 	golang.org/x/term v0.6.0
@@ -64,7 +63,6 @@ require (
 	github.com/containerd/containerd v1.6.18 // indirect
 	github.com/containerd/typeurl v1.0.2 // indirect
 	github.com/cppforlife/go-semi-semantic v0.0.0-20160921010311-576b6af77ae4 // indirect
-	github.com/crhntr/bijection v0.0.0-20230628013949-46b5c800bc70 // indirect
 	github.com/cucumber/gherkin-go/v19 v19.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect

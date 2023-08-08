@@ -12,11 +12,11 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/pivotal-cf/kiln/pkg/tile"
 
-	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/pkg/proofing"

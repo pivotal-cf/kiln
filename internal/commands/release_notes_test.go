@@ -134,7 +134,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		please.Expect(issuesQuery.IssueIDs).To(Equal([]string{"54000", "54321"}))
 		please.Expect(issuesQuery.IssueLabels).To(Equal([]string{"tropical", "20000"}))
 
-		//t.Log(out.String())
+		// t.Log(out.String())
 		please.Expect(out.String()).To(Equal(releaseNotesExpectedOutput))
 	})
 }

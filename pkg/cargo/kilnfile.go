@@ -3,8 +3,9 @@ package cargo
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/Masterminds/semver/v3"
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
