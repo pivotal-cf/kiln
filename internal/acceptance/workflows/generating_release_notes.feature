@@ -1,6 +1,7 @@
 Feature: As a robot, I want to generate release notes
   Scenario: Update exising release notes document
-    Given I have a "hello-tile" repository checked out at v0.1.4
+    Given I have a valid "hello-tile" repository
+    And GitHub repository "crhntr/hello-release" has release with tag "v0.1.3"
     And GitHub repository "crhntr/hello-release" has release with tag "v0.1.5"
     And the environment variable "GITHUB_TOKEN" is set
 

@@ -1,0 +1,14 @@
+---
+slug: crhntr-hello
+release_sources:
+  - type: github
+    org: crhntr
+    github_token: $(variable "github_token")
+  - type: bosh.io
+releases:
+  - name: bpm
+  - name: hello-release
+    github_repository: https://github.com/crhntr/hello-release
+stemcell_criteria:
+    os: ubuntu-xenial
+    version: "~621"

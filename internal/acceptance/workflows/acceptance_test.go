@@ -27,7 +27,6 @@ import (
 
 func TestMain(m *testing.M) {
 	code := m.Run()
-	_ = exec.Command("git", "submodule", "update", "--init", "--recursive", "hello-tile").Run()
 	os.Exit(code)
 }
 

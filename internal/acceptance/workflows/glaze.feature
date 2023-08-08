@@ -1,6 +1,6 @@
 Feature: As a maintainer, I want to pin all BOSH Releases
   Scenario: Kilnfile releases are floating
-    Given I have a "hello-tile" repository checked out at v0.1.1
+    Given I have a valid "hello-tile" repository
     When I invoke kiln
       | glaze |
     Then the Kilnfile version for release "hello-release" is "v0.1.3"

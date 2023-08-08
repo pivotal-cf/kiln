@@ -1,6 +1,6 @@
 Feature: As a robot, I want to cache compiled releases
   Scenario: it stores compiled releases in an S3 bucket
-    Given I have a "hello-tile" repository checked out at v0.1.2
+    Given I have a valid "hello-tile" repository
     And the environment variable "GITHUB_TOKEN" is set
     And the environment variable "OM_USERNAME" is set
     And the environment variable "OM_PASSWORD" is set

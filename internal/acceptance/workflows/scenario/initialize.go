@@ -137,7 +137,7 @@ func initializeTileSourceCode(ctx scenarioContext) {
 
 	ctx.Step(regexp.MustCompile(`^kiln validate succeeds$`), kilnValidateSucceeds)
 
-	ctx.Step(regexp.MustCompile(`^I have a "([^"]*)" repository checked out at (.*)$`), iHaveARepositoryCheckedOutAtRevision)
+	ctx.Step(regexp.MustCompile(`^I have a valid "([^"]*)" repository$`), iHaveAValidTileDirectory)
 
 	ctx.Step(regexp.MustCompile(`^the repository has no fetched releases$`), theRepositoryHasNoFetchedReleases)
 

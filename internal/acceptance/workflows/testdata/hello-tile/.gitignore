@@ -1,0 +1,6 @@
+!releases/.gitkeep
+releases/
+*.pivotal
+vendor
+
+test/manifest/fixtures/tas_*

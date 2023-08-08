@@ -37,16 +37,16 @@ func theTileContains(ctx context.Context, table *godog.Table) error {
 	if err != nil {
 		return err
 	}
-	tile, err := zip.OpenReader(tilePath)
+	tileFile, err := zip.OpenReader(tilePath)
 	if err != nil {
 		return err
 	}
 	for _, row := range table.Rows {
 		for _, cell := range row.Cells {
-			_, err := tile.Open(cell.Value)
+			_, err := tileFile.Open(cell.Value)
 			if err != nil {
 				var contents []string
-				err2 := fs.WalkDir(tile, ".", func(path string, _ fs.DirEntry, err error) error {
+				err2 := fs.WalkDir(tileFile, ".", func(path string, _ fs.DirEntry, err error) error {
 					contents = append(contents, path)
 					return err
 				})

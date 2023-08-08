@@ -1,6 +1,6 @@
 Feature: As a developer, I want to bake a tile
   Scenario: it fetches components and bakes a tile
-    Given I have a "hello-tile" repository checked out at v0.1.7
+    Given I have a valid "hello-tile" repository
     And the repository has no fetched releases
     When I invoke kiln
       | bake                                      |

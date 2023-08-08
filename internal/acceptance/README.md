@@ -56,7 +56,7 @@ export OM_PRIVATE_KEY="$(cat $(echo "${BOSH_ALL_PROXY}" | awk -F= '{print $2}'))
 export AWS_ACCESS_KEY_ID="$(vault read --field=aws_access_key_id runway_concourse/ppe-ci/kiln-acceptance-tests-s3)"
 export AWS_SECRET_ACCESS_KEY="$(vault read --field=aws_secret_access_key runway_concourse/ppe-ci/kiln-acceptance-tests-s3)"
 
-export GITHUB_TOKEN="$(gh auth status --show-token 2>&1 | grep Token | awk '{print $NF}')"
+export GITHUB_TOKEN="$(gh auth token)"
 
 # optional
 export CGO_ENABLED=0

@@ -1,0 +1,22 @@
+product-name: hello
+network-properties:
+  network:
+    name: jade-management-subnet
+  other_availability_zones:
+    - name: us-central1-f
+  singleton_availability_zone:
+    name: us-central1-f
+resource-config:
+  hello-server:
+    max_in_flight: 1
+    additional_networks: []
+    additional_vm_extensions: []
+    elb_names: []
+    instance_type:
+      id: automatic
+    instances: automatic
+    internet_connected: true
+    persistent_disk:
+      size_mb: automatic
+    swap_as_percent_of_memory_size: automatic
+product-properties: {}

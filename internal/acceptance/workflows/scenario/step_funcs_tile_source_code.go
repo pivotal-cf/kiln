@@ -3,14 +3,15 @@ package scenario
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/cucumber/godog"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -23,21 +24,7 @@ func resetTileRepository(ctx context.Context, _ *godog.Scenario, _ error) (conte
 		return ctx, err
 	}
 
-	clean := exec.CommandContext(ctx, "git", "clean", "-ffd")
-	clean.Dir = tileRepo
-	_, err = runAndLogOnError(ctx, clean, false)
-	if err != nil {
-		return ctx, err
-	}
-
-	reset := exec.CommandContext(ctx, "git", "reset", "--hard", "HEAD")
-	reset.Dir = tileRepo
-	_, err = runAndLogOnError(ctx, reset, false)
-	if err != nil {
-		return ctx, err
-	}
-
-	return ctx, nil
+	return ctx, os.RemoveAll(tileRepo)
 }
 
 func theLockSpecifiesVersionForRelease(ctx context.Context, releaseVersion, releaseName string) error {
@@ -82,33 +69,63 @@ func iSetAVersionConstraintForRelease(ctx context.Context, versionConstraint, re
 
 // iHaveARepositoryCheckedOutAtRevision checks out a repository at the filepath to a given revision
 // Importantly, it also sets tilePath and tileVersion on kilnBakeScenario.
-func iHaveARepositoryCheckedOutAtRevision(ctx context.Context, filePath, revision string) (context.Context, error) {
-	repo, err := git.PlainOpen(filePath)
+func iHaveAValidTileDirectory(ctx context.Context, repoName string) (context.Context, error) {
+	tempDir, err := os.MkdirTemp("", "temp-tile-*")
 	if err != nil {
-		return ctx, fmt.Errorf("opening the repository failed: %w", err)
+		return ctx, err
 	}
+	ctx = setTileRepoPath(ctx, tempDir)
 
-	wt, err := repo.Worktree()
-	if err != nil {
-		return ctx, fmt.Errorf("loading the worktree failed: %w", err)
-	}
-
-	revisionHash, err := repo.ResolveRevision(plumbing.Revision(revision))
-	if err != nil {
-		return ctx, fmt.Errorf("resolving the given revision %q failed: %w", revision, err)
-	}
-
-	err = wt.Checkout(&git.CheckoutOptions{
-		Hash:  *revisionHash,
-		Force: true,
+	fixtureDir := filepath.Join("testdata", repoName)
+	walkErr := filepath.Walk(fixtureDir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		fixturePath, err := filepath.Rel(fixtureDir, path)
+		if err != nil {
+			return err
+		}
+		newPath := filepath.Join(tempDir, fixturePath)
+		if info.IsDir() {
+			return os.MkdirAll(newPath, 0700)
+		}
+		src, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer closeAndIgnoreErr(src)
+		dst, err := os.Create(newPath)
+		if err != nil {
+			return err
+		}
+		defer closeAndIgnoreErr(dst)
+		_, err = io.Copy(dst, src)
+		if err != nil {
+			return err
+		}
+		return nil
 	})
+
+	gitInit := exec.Command("git", "init")
+	gitInit.Dir = tempDir
+	ctx, err = runAndLogOnError(ctx, gitInit, true)
 	if err != nil {
-		return ctx, fmt.Errorf("checking out the revision %q at %q failed: %w", revision, revisionHash, err)
+		return ctx, fmt.Errorf("git init failed: %w", err)
+	}
+	gitAdd := exec.Command("git", "add", ".")
+	gitAdd.Dir = tempDir
+	ctx, err = runAndLogOnError(ctx, gitAdd, true)
+	if err != nil {
+		return ctx, fmt.Errorf("git init failed: %w", err)
+	}
+	gitCommit := exec.Command("git", "commit", "-a", "-m", "initial commit")
+	gitCommit.Dir = tempDir
+	ctx, err = runAndLogOnError(ctx, gitCommit, true)
+	if err != nil {
+		return ctx, fmt.Errorf("git init failed: %w", err)
 	}
 
-	ctx = setTileVersion(ctx, strings.TrimPrefix(revision, "v"))
-
-	return ctx, nil
+	return ctx, walkErr
 }
 
 // theRepositoryHasNoFetchedReleases deletes fetched releases, if any.
