@@ -253,7 +253,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 			})
 		})
 		It("returns ErrNotFound", func() {
-			_, err := source.FindReleaseVersion(component.Spec{
+			_, err := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
 				Name:            "missing-release",
 				Version:         "1.2.3",
 				StemcellOS:      "ubuntu-jammy",
