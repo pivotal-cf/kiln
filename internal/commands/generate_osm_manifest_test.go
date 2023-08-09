@@ -29,7 +29,7 @@ func TestOSM_Execute(t *testing.T) {
 
 		tmp := t.TempDir()
 		kfp := filepath.Join(tmp, "Kilnfile")
-		writeYAML(t, kfp, cargo.Kilnfile{
+		writeYAMLHelper(t, kfp, cargo.Kilnfile{
 			Releases: []cargo.BOSHReleaseTarballSpecification{
 				{
 					Name:             "banana",
@@ -42,7 +42,7 @@ func TestOSM_Execute(t *testing.T) {
 		})
 
 		klp := filepath.Join(tmp, "Kilnfile.lock")
-		writeYAML(t, klp, cargo.KilnfileLock{
+		writeYAMLHelper(t, klp, cargo.KilnfileLock{
 			Releases: []cargo.BOSHReleaseTarballLock{
 				{Name: "banana", Version: "1.2.3"},
 			},
@@ -80,7 +80,7 @@ func TestOSM_Execute(t *testing.T) {
 
 		tmp := t.TempDir()
 		kfp := filepath.Join(tmp, "Kilnfile")
-		writeYAML(t, kfp, cargo.Kilnfile{
+		writeYAMLHelper(t, kfp, cargo.Kilnfile{
 			Releases: []cargo.BOSHReleaseTarballSpecification{
 				{
 					Name:             "banana",
@@ -97,7 +97,7 @@ func TestOSM_Execute(t *testing.T) {
 		})
 
 		klp := filepath.Join(tmp, "Kilnfile.lock")
-		writeYAML(t, klp, cargo.KilnfileLock{
+		writeYAMLHelper(t, klp, cargo.KilnfileLock{
 			Releases: []cargo.BOSHReleaseTarballLock{
 				{Name: "banana", Version: "1.2.3"},
 				{Name: "apple", Version: "1.2.4"},
@@ -134,7 +134,7 @@ func TestOSM_Execute(t *testing.T) {
 
 		tmp := t.TempDir()
 		kfp := filepath.Join(tmp, "Kilnfile")
-		writeYAML(t, kfp, cargo.Kilnfile{
+		writeYAMLHelper(t, kfp, cargo.Kilnfile{
 			Releases: []cargo.BOSHReleaseTarballSpecification{
 				{
 					Name: "lemon-offline-buildpack",
@@ -150,7 +150,7 @@ func TestOSM_Execute(t *testing.T) {
 		})
 
 		klp := filepath.Join(tmp, "Kilnfile.lock")
-		writeYAML(t, klp, cargo.KilnfileLock{
+		writeYAMLHelper(t, klp, cargo.KilnfileLock{
 			Releases: []cargo.BOSHReleaseTarballLock{
 				{Name: "lemon-offline-buildpack", Version: "1.2.3"},
 				{Name: "banana", Version: "1.2.3"},
@@ -334,7 +334,7 @@ func TestOSM_Execute(t *testing.T) {
 	})
 }
 
-func writeYAML(t *testing.T, path string, data any) {
+func writeYAMLHelper(t *testing.T, path string, data any) {
 	t.Helper()
 	buf, err := yaml.Marshal(data)
 	if err != nil {
@@ -351,4 +351,12 @@ func writeYAML(t *testing.T, path string, data any) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func writeYAML(path string, data any) error {
+	buf, err := yaml.Marshal(data)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, buf, 0666)
 }

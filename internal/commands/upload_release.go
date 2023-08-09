@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -32,7 +33,7 @@ type UploadRelease struct {
 type ReleaseUploaderFinder func(cargo.Kilnfile, string) (component.ReleaseUploader, error)
 
 func (command UploadRelease) Execute(args []string) error {
-	_, err := flags.LoadFlagsWithDefaults(&command.Options, args, command.FS.Stat)
+	_, err := flags.LoadFlagsWithDefaults(&command.Options, args, os.Stat)
 	if err != nil {
 		return err
 	}
@@ -47,7 +48,7 @@ func (command UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("error finding release source: %w", err)
 	}
 
-	file, err := command.FS.Open(command.Options.LocalPath)
+	file, err := os.Open(command.Options.LocalPath)
 	if err != nil {
 		return fmt.Errorf("could not open release: %w", err)
 	}
