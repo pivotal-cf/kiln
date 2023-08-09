@@ -98,12 +98,10 @@ var _ = Describe("UploadRelease", func() {
 		})
 
 		When("the release tarball is invalid", func() {
-			var (
-				invalidFilePath string
-			)
+			var invalidFilePath string
 			BeforeEach(func() {
 				invalidFilePath = filepath.Join(tileDirectory, "invalid-release.tgz")
-				err := os.WriteFile(invalidFilePath, []byte("invalid"), 0600)
+				err := os.WriteFile(invalidFilePath, []byte("invalid"), 0o600)
 				Expect(err).NotTo(HaveOccurred())
 			})
 

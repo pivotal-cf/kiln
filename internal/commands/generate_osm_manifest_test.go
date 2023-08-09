@@ -358,5 +358,5 @@ func writeYAML(path string, data any) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, buf, 0666)
+	return os.WriteFile(path, buf, 0o666)
 }

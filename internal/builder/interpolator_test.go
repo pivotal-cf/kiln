@@ -2,9 +2,10 @@ package builder_test
 
 import (
 	"bytes"
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"io"
 	"testing"
+
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

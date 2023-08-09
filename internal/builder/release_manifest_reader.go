@@ -1,8 +1,9 @@
 package builder
 
 import (
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"path/filepath"
+
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -12,7 +13,7 @@ type ReleaseManifestReader struct{}
 func NewReleaseManifestReader() (_ ReleaseManifestReader) { return }
 
 func (r ReleaseManifestReader) Read(releaseTarballFilepath string) (Part, error) {
-	releaseTarball, err := cargo.ReadBOSHReleaseTarball(releaseTarballFilepath)
+	releaseTarball, err := cargo.OpenBOSHReleaseTarball(releaseTarballFilepath)
 	if err != nil {
 		return Part{}, err
 	}

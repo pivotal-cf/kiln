@@ -35,7 +35,7 @@ func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]Local, er
 
 	var outputReleases []Local
 	for _, releaseFilepath := range releaseFilePaths {
-		releaseTarball, err := cargo.ReadBOSHReleaseTarball(releaseFilepath)
+		releaseTarball, err := cargo.OpenBOSHReleaseTarball(releaseFilepath)
 		if err != nil {
 			return nil, err
 		}
