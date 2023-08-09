@@ -2,6 +2,7 @@ package builder_test
 
 import (
 	"bytes"
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"io"
 	"testing"
 
@@ -59,7 +60,7 @@ selected_value: $( release "some-release" | select "version" )
 				"some-variable": "some-value",
 			},
 			ReleaseManifests: map[string]any{
-				"some-release": builder.ReleaseManifest{
+				"some-release": proofing.Release{
 					Name:    "some-release",
 					Version: "1.2.3",
 					File:    "some-release-1.2.3.tgz",
@@ -224,7 +225,7 @@ some_form_types:
 		BeforeEach(func() {
 			input = builder.InterpolateInput{
 				ReleaseManifests: map[string]any{
-					"some-release": builder.ReleaseManifest{
+					"some-release": proofing.Release{
 						Name:    "some-release",
 						Version: "1.2.3",
 						File:    "some-release-1.2.3.tgz",
@@ -289,7 +290,7 @@ stemcell_criteria: $( stemcell )`
 
 			input = builder.InterpolateInput{
 				ReleaseManifests: map[string]any{
-					"some-release": builder.ReleaseManifest{
+					"some-release": proofing.Release{
 						Name:    "some-release",
 						Version: "1.2.3",
 						File:    "some-release-1.2.3.tgz",
@@ -329,7 +330,7 @@ some_runtime_configs:
 
 			input = builder.InterpolateInput{
 				ReleaseManifests: map[string]any{
-					"some-release": builder.ReleaseManifest{
+					"some-release": proofing.Release{
 						Name:    "some-release",
 						Version: "1.2.3",
 						File:    "some-release-1.2.3.tgz",

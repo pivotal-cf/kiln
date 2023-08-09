@@ -9,11 +9,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
+
 	"github.com/pivotal-cf/jhanda"
+	"gopkg.in/yaml.v2"
+
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
-	"gopkg.in/yaml.v2"
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 var _ = Describe("Bake", func() {
@@ -101,12 +104,12 @@ var _ = Describe("Bake", func() {
 		}, nil)
 
 		fakeReleasesService.FromDirectoriesReturns(map[string]any{
-			"some-release-1": builder.ReleaseManifest{
+			"some-release-1": proofing.Release{
 				Name:    "some-release-1",
 				Version: "1.2.3",
 				File:    "release1.tgz",
 			},
-			"some-release-2": builder.ReleaseManifest{
+			"some-release-2": proofing.Release{
 				Name:    "some-release-2",
 				Version: "2.3.4",
 				File:    "release2.tar.gz",
@@ -277,12 +280,12 @@ var _ = Describe("Bake", func() {
 					"some-variable":           "some-variable-value",
 				},
 				ReleaseManifests: map[string]any{
-					"some-release-1": builder.ReleaseManifest{
+					"some-release-1": proofing.Release{
 						Name:    "some-release-1",
 						Version: "1.2.3",
 						File:    "release1.tgz",
 					},
-					"some-release-2": builder.ReleaseManifest{
+					"some-release-2": proofing.Release{
 						Name:    "some-release-2",
 						Version: "2.3.4",
 						File:    "release2.tar.gz",

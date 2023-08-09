@@ -7,46 +7,52 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"sort"
 
 	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/osfs"
-
-	"github.com/pivotal-cf/kiln/internal/baking"
-	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type LocalReleaseDirectory struct {
-	logger          *log.Logger
-	releasesService baking.ReleasesService
+	logger *log.Logger
 }
 
-func NewLocalReleaseDirectory(logger *log.Logger, releasesService baking.ReleasesService) LocalReleaseDirectory {
+func NewLocalReleaseDirectory(logger *log.Logger) LocalReleaseDirectory {
 	return LocalReleaseDirectory{
-		logger:          logger,
-		releasesService: releasesService,
+		logger: logger,
 	}
 }
 
 func (l LocalReleaseDirectory) GetLocalReleases(releasesDir string) ([]Local, error) {
-	var outputReleases []Local
-
-	rawReleases, err := l.releasesService.ReleasesInDirectory(releasesDir)
+	if _, err := os.Stat(releasesDir); err != nil {
+		return nil, fmt.Errorf("could not find releases in %s: %w", releasesDir, err)
+	}
+	releaseFilePaths, err := filepath.Glob(filepath.Join(releasesDir, "*.tgz"))
 	if err != nil {
 		return nil, err
 	}
 
-	for _, rel := range rawReleases {
-		rm := rel.Metadata.(builder.ReleaseManifest)
-		lock := cargo.BOSHReleaseTarballLock{Name: rm.Name, Version: rm.Version, StemcellOS: rm.StemcellOS, StemcellVersion: rm.StemcellVersion}
-
-		lock.SHA1, err = CalculateSum(rel.File, osfs.New(""))
+	var outputReleases []Local
+	for _, releaseFilepath := range releaseFilePaths {
+		releaseTarball, err := cargo.ReadBOSHReleaseTarball(releaseFilepath)
 		if err != nil {
-			return nil, fmt.Errorf("couldn't calculate SHA1 sum of %q: %w", rel.File, err) // untested
+			return nil, err
 		}
 
-		outputReleases = append(outputReleases, Local{Lock: lock, LocalPath: rel.File})
+		lock := cargo.BOSHReleaseTarballLock{
+			Name:    releaseTarball.Manifest.Name,
+			Version: releaseTarball.Manifest.Version,
+			SHA1:    releaseTarball.SHA1,
+		}
+
+		stemcellOS, stemcellVersion, ok := releaseTarball.Manifest.Stemcell()
+		if ok {
+			lock.StemcellOS = stemcellOS
+			lock.StemcellVersion = stemcellVersion
+		}
+
+		outputReleases = append(outputReleases, Local{Lock: lock, LocalPath: releaseFilepath})
 	}
 	return outputReleases, nil
 }

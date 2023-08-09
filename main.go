@@ -55,10 +55,10 @@ func main() {
 
 	fs := osfs.New("")
 
-	releaseManifestReader := builder.NewReleaseManifestReader(fs)
+	releaseManifestReader := builder.NewReleaseManifestReader()
 	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
 	pivnetService := new(pivnet.Service)
-	localReleaseDirectory := component.NewLocalReleaseDirectory(outLogger, releasesService)
+	localReleaseDirectory := component.NewLocalReleaseDirectory(outLogger)
 	mrsProvider := commands.MultiReleaseSourceProvider(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
 		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
 		return repo.Filter(allowOnlyPublishable)
