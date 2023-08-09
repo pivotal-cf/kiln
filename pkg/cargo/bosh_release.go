@@ -121,25 +121,41 @@ type BOSHReleaseTarball struct {
 	FilePath string
 }
 
-func ReadBOSHReleaseManifestsFromTarballs(dir fs.FS, tarballPaths ...string) ([]BOSHReleaseTarball, error) {
+func ReadBOSHReleaseManifestsFromTarballs(tarballPaths ...string) ([]BOSHReleaseTarball, error) {
 	results := make([]BOSHReleaseTarball, 0, len(tarballPaths))
 	for _, tarballPath := range tarballPaths {
-		mf, err := openAndProcessFile(dir, tarballPath, ReadProductTemplatePartFromBOSHReleaseTarball)
+		tb, err := ReadBOSHReleaseTarball(tarballPath)
 		if err != nil {
 			return nil, err
 		}
-		sha1Checksum, err := openAndProcessFile(dir, tarballPath, calculateChecksum(sha1.New()))
-		if err != nil {
-			return nil, err
-		}
-
-		results = append(results, BOSHReleaseTarball{
-			Manifest: mf,
-			SHA1:     sha1Checksum,
-			FilePath: tarballPath,
-		})
+		results = append(results, tb)
 	}
 	return slices.Clip(results), nil
+}
+
+func ReadBOSHReleaseTarball(tarballPath string) (BOSHReleaseTarball, error) {
+	file, err := os.Open(tarballPath)
+	if err != nil {
+		return BOSHReleaseTarball{}, err
+	}
+	defer closeAndIgnoreError(file)
+	m, err := ReadProductTemplatePartFromBOSHReleaseTarball(file)
+	if err != nil {
+		return BOSHReleaseTarball{}, err
+	}
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return BOSHReleaseTarball{}, err
+	}
+	s, err := calculateChecksum(sha1.New())(file)
+	if err != nil {
+		return BOSHReleaseTarball{}, err
+	}
+	return BOSHReleaseTarball{
+		Manifest: m,
+		SHA1:     s,
+		FilePath: tarballPath,
+	}, nil
 }
 
 func openAndProcessFile[T any](dir fs.FS, fileName string, process func(io.Reader) (T, error)) (T, error) {
