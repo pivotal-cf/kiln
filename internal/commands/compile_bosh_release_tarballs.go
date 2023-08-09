@@ -179,6 +179,9 @@ func uploadRelease(uploader component.ReleaseUploader, kilnfileLock cargo.Kilnfi
 		StemcellOS:      kilnfileLock.Releases[lockIndex].StemcellOS,
 		StemcellVersion: kilnfileLock.Releases[lockIndex].StemcellVersion,
 	}, tarballFile)
+	if err != nil {
+		return err
+	}
 	kilnfileLock.Releases[lockIndex] = releaseLock
 	return nil
 }
