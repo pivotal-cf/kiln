@@ -6,14 +6,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/pivotal-cf/kiln/internal/baking"
-	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -39,10 +36,7 @@ var _ = Describe("LocalReleaseDirectory", func() {
 		logBuf = gbytes.NewBuffer()
 		fakeLogger = log.New(logBuf, "", 0)
 
-		releaseManifestReader := builder.NewReleaseManifestReader(osfs.New(""))
-		releasesService := baking.NewReleasesService(fakeLogger, releaseManifestReader)
-
-		localReleaseDirectory = component.NewLocalReleaseDirectory(fakeLogger, releasesService)
+		localReleaseDirectory = component.NewLocalReleaseDirectory(fakeLogger)
 	})
 
 	AfterEach(func() {

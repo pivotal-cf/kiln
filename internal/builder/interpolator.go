@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"io"
 	"regexp"
 	"strings"
@@ -128,11 +129,11 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 
 			if !ok {
 				if input.StubReleases {
-					val = map[string]any{
-						"name":    name,
-						"version": "UNKNOWN",
-						"file":    fmt.Sprintf("%s-UNKNOWN.tgz", name),
-						"sha1":    "dead8e1ea5e00dead8e1ea5ed00ead8e1ea5e000",
+					val = proofing.Release{
+						Name:    name,
+						Version: "UNKNOWN",
+						File:    fmt.Sprintf("%s-UNKNOWN.tgz", name),
+						SHA1:    "dead8e1ea5e00dead8e1ea5ed00ead8e1ea5e000",
 					}
 				} else {
 					return "", fmt.Errorf("could not find release with name '%s'", name)
