@@ -12,8 +12,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/go-git/go-billy/v5/osfs"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -76,7 +74,7 @@ var _ = Describe("ReleaseManifestReader", func() {
 	)
 
 	BeforeEach(func() {
-		reader = builder.NewReleaseManifestReader(osfs.New(""))
+		reader = builder.NewReleaseManifestReader()
 		tarball, releaseSHA1 = createReleaseTarball(`
 name: release
 version: 1.2.3

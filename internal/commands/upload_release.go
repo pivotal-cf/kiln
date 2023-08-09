@@ -10,7 +10,6 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
 
-	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -48,45 +47,38 @@ func (command UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("error finding release source: %w", err)
 	}
 
-	file, err := os.Open(command.Options.LocalPath)
-	if err != nil {
-		return fmt.Errorf("could not open release: %w", err)
-	}
-
-	manifestReader := builder.NewReleaseManifestReader(command.FS)
-	part, err := manifestReader.Read(command.Options.LocalPath)
+	releaseTarball, err := cargo.ReadBOSHReleaseTarball(command.Options.LocalPath)
 	if err != nil {
 		return fmt.Errorf("error reading the release manifest: %w", err)
 	}
 
-	manifest := part.Metadata.(builder.ReleaseManifest)
-	if manifest.StemcellOS != "" {
-		return fmt.Errorf("cannot upload compiled release %q - only uncompiled releases are allowed", command.Options.LocalPath)
-	}
-
-	version, err := semver.NewVersion(manifest.Version)
+	version, err := semver.NewVersion(releaseTarball.Manifest.Version)
 	if err != nil {
-		return fmt.Errorf("error parsing release version %q - release version is not valid semver", manifest.Version)
+		return fmt.Errorf("error parsing release version %q: release version is not valid semver: %w", releaseTarball.Manifest.Version, err)
 	}
 	if version.Prerelease() != "" {
-		return fmt.Errorf("cannot upload development release %q - only finalized releases are allowed", manifest.Version)
+		return fmt.Errorf("cannot upload development release %q - only finalized releases are allowed", releaseTarball.Manifest.Version)
 	}
 
-	requirement := cargo.BOSHReleaseTarballSpecification{Name: manifest.Name, Version: manifest.Version}
+	requirement := cargo.BOSHReleaseTarballSpecification{Name: releaseTarball.Manifest.Name, Version: releaseTarball.Manifest.Version}
 	_, err = releaseUploader.GetMatchedRelease(requirement)
-
 	if err != nil {
 		if !component.IsErrNotFound(err) {
 			return fmt.Errorf("couldn't query release source: %w", err)
 		}
 	} else {
 		return fmt.Errorf("a release with name %q and version %q already exists on %s",
-			manifest.Name, manifest.Version, command.Options.UploadTargetID)
+			releaseTarball.Manifest.Name, releaseTarball.Manifest.Version, command.Options.UploadTargetID)
 	}
 
+	file, err := os.Open(releaseTarball.FilePath)
+	if err != nil {
+		return err
+	}
+	defer closeAndIgnoreError(file)
 	_, err = releaseUploader.UploadRelease(cargo.BOSHReleaseTarballSpecification{
-		Name:    manifest.Name,
-		Version: manifest.Version,
+		Name:    releaseTarball.Manifest.Name,
+		Version: releaseTarball.Manifest.Version,
 	}, file)
 	if err != nil {
 		return fmt.Errorf("error uploading the release: %w", err)

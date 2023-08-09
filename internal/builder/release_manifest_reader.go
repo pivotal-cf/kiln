@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-
-	"github.com/go-git/go-billy/v5"
 )
 
 type ReleaseManifest struct {
@@ -18,13 +16,9 @@ type ReleaseManifest struct {
 	StemcellVersion string `yaml:"-"`
 }
 
-type ReleaseManifestReader struct {
-	fs billy.Filesystem
-}
+type ReleaseManifestReader struct{}
 
-func NewReleaseManifestReader(fs billy.Filesystem) ReleaseManifestReader {
-	return ReleaseManifestReader{fs: fs}
-}
+func NewReleaseManifestReader() (_ ReleaseManifestReader) { return }
 
 func (r ReleaseManifestReader) Read(releaseTarballFilepath string) (Part, error) {
 	releaseTarball, err := cargo.ReadBOSHReleaseTarball(releaseTarballFilepath)
