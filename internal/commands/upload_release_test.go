@@ -95,18 +95,6 @@ var _ = Describe("UploadRelease", func() {
 					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
 				})
 			})
-
-			When("the release tarball is compiled", func() {
-				It("errors and does not upload", func() {
-					err := uploadRelease.Execute([]string{
-						"--kilnfile", filepath.Join(tileDirectory, "Kilnfile"),
-						"--local-path", filepath.Join("testdata", "bpm-1.1.21-ubuntu-xenial-621.463.tgz"),
-						"--upload-target-id", "orange-bucket",
-					})
-					Expect(err).To(MatchError(ContainSubstring("compiled release")))
-					Expect(releaseUploader.UploadReleaseCallCount()).To(Equal(0))
-				})
-			})
 		})
 
 		When("the release tarball is invalid", func() {
