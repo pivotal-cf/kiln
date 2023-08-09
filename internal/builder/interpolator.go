@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"io"
 	"regexp"
 	"strings"
 	"text/template"
+
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 
 	yamlConverter "github.com/ghodss/yaml"
 	"gopkg.in/yaml.v2"

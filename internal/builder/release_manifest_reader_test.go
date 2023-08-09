@@ -1,10 +1,11 @@
 package builder_test
 
 import (
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
-	"path/filepath"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
 )

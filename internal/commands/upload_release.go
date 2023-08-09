@@ -47,7 +47,7 @@ func (command UploadRelease) Execute(args []string) error {
 		return fmt.Errorf("error finding release source: %w", err)
 	}
 
-	releaseTarball, err := cargo.ReadBOSHReleaseTarball(command.Options.LocalPath)
+	releaseTarball, err := cargo.OpenBOSHReleaseTarball(command.Options.LocalPath)
 	if err != nil {
 		return fmt.Errorf("error reading the release manifest: %w", err)
 	}

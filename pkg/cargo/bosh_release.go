@@ -7,19 +7,17 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"hash"
 	"io"
 	"io/fs"
 	"os"
 	"path"
 	"strings"
 
-	"github.com/pivotal-cf/kiln/pkg/tile"
-
 	"golang.org/x/exp/slices"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/pivotal-cf/kiln/pkg/proofing"
+	"github.com/pivotal-cf/kiln/pkg/tile"
 )
 
 func ReadBOSHReleaseFromFile(tilePath, releaseName, releaseVersion string, releaseTarball io.Writer) (proofing.Release, error) {
@@ -121,10 +119,10 @@ type BOSHReleaseTarball struct {
 	FilePath string
 }
 
-func ReadBOSHReleaseManifestsFromTarballs(tarballPaths ...string) ([]BOSHReleaseTarball, error) {
+func OpenBOSHReleaseManifestsFromTarballs(tarballPaths ...string) ([]BOSHReleaseTarball, error) {
 	results := make([]BOSHReleaseTarball, 0, len(tarballPaths))
 	for _, tarballPath := range tarballPaths {
-		tb, err := ReadBOSHReleaseTarball(tarballPath)
+		tb, err := OpenBOSHReleaseTarball(tarballPath)
 		if err != nil {
 			return nil, err
 		}
@@ -133,39 +131,28 @@ func ReadBOSHReleaseManifestsFromTarballs(tarballPaths ...string) ([]BOSHRelease
 	return slices.Clip(results), nil
 }
 
-func ReadBOSHReleaseTarball(tarballPath string) (BOSHReleaseTarball, error) {
+func OpenBOSHReleaseTarball(tarballPath string) (BOSHReleaseTarball, error) {
 	file, err := os.Open(tarballPath)
 	if err != nil {
 		return BOSHReleaseTarball{}, err
 	}
 	defer closeAndIgnoreError(file)
-	m, err := ReadProductTemplatePartFromBOSHReleaseTarball(file)
-	if err != nil {
-		return BOSHReleaseTarball{}, err
-	}
-	_, err = file.Seek(0, 0)
-	if err != nil {
-		return BOSHReleaseTarball{}, err
-	}
-	s, err := calculateChecksum(sha1.New())(file)
-	if err != nil {
-		return BOSHReleaseTarball{}, err
-	}
-	return BOSHReleaseTarball{
-		Manifest: m,
-		SHA1:     s,
-		FilePath: tarballPath,
-	}, nil
+	return ReadBOSHReleaseTarball(tarballPath, file)
 }
 
-func openAndProcessFile[T any](dir fs.FS, fileName string, process func(io.Reader) (T, error)) (T, error) {
-	file, err := dir.Open(fileName)
+func ReadBOSHReleaseTarball(tarballPath string, r io.Reader) (BOSHReleaseTarball, error) {
+	sum := sha1.New()
+	r = io.TeeReader(r, sum)
+	m, err := ReadProductTemplatePartFromBOSHReleaseTarball(r)
 	if err != nil {
-		var zero T
-		return zero, err
+		return BOSHReleaseTarball{}, err
 	}
-	defer closeAndIgnoreError(file)
-	return process(file)
+	_, err = io.ReadAll(r)
+	return BOSHReleaseTarball{
+		Manifest: m,
+		SHA1:     hex.EncodeToString(sum.Sum(nil)),
+		FilePath: tarballPath,
+	}, err
 }
 
 func ReadProductTemplatePartFromBOSHReleaseTarball(r io.Reader) (BOSHReleaseManifest, error) {
@@ -200,14 +187,4 @@ func ReadProductTemplatePartFromBOSHReleaseTarball(r io.Reader) (BOSHReleaseMani
 		return releaseMF, nil
 	}
 	return BOSHReleaseManifest{}, fmt.Errorf("failed to find release.MF in tarball")
-}
-
-func calculateChecksum(h hash.Hash) func(r io.Reader) (string, error) {
-	return func(r io.Reader) (string, error) {
-		_, err := io.Copy(h, r)
-		if err != nil {
-			return "", err
-		}
-		return hex.EncodeToString(h.Sum(nil)), nil
-	}
 }

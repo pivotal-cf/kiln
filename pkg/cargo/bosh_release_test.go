@@ -36,7 +36,7 @@ func TestReadReleaseFromFile(t *testing.T) {
 }
 
 func TestReadBOSHReleaseManifestsFromTarballs(t *testing.T) {
-	boshReleases, err := cargo.ReadBOSHReleaseManifestsFromTarballs(filepath.Join("testdata", "bpm-1.1.21-ubuntu-xenial-621.463.tgz"), filepath.Join("testdata", "bpm-1.1.21.tgz"))
+	boshReleases, err := cargo.OpenBOSHReleaseManifestsFromTarballs(filepath.Join("testdata", "bpm-1.1.21-ubuntu-xenial-621.463.tgz"), filepath.Join("testdata", "bpm-1.1.21.tgz"))
 	require.NoError(t, err)
 	require.Len(t, boshReleases, 2)
 	assert.Equal(t, "be5b1710f33128f6c864eae1d97effddb94dd3ac", boshReleases[0].SHA1)
