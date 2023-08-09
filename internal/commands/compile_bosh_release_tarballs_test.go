@@ -124,7 +124,7 @@ var _ = Describe("compile-bosh-release-tarballs", func() {
 				{
 					Name:    "bpm",
 					Version: "1.1.21",
-					SHA1:    "d260e4a628087f030dbc4d66bd6f688ec979b5bb",
+					// note the sha and release source/path have not been modified
 				},
 			}))
 		})
