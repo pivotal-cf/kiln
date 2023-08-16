@@ -16,6 +16,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -32,7 +33,6 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
-	"golang.org/x/exp/slices"
 	"golang.org/x/term"
 )
 

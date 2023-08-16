@@ -247,7 +247,6 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 	When("a bosh release is not found", func() {
 		BeforeEach(func() {
 			artifactoryRouter.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 				w.WriteHeader(http.StatusNotFound)
 				_, _ = fmt.Fprintln(w, `{"errors":[{"status":404,"message":"File not found."}]}`)
 			})
