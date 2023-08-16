@@ -16,10 +16,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
-
-	"golang.org/x/exp/slices"
 
 	"github.com/cucumber/godog"
 

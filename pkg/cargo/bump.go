@@ -2,13 +2,13 @@ package cargo
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-github/v40/github"
-	"golang.org/x/exp/slices"
 
 	"github.com/pivotal-cf/kiln/internal/gh"
 )

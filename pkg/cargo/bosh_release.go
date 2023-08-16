@@ -11,9 +11,9 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"slices"
 	"strings"
 
-	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 
 	"github.com/pivotal-cf/kiln/pkg/proofing"
