@@ -27,7 +27,7 @@ func setKilnMetadata(in []byte, kilnMetadata KilnMetadata) ([]byte, error) {
 
 	kilnMetadataValueNode, fieldExists := yamlnode.LookupKey(&productTemplate, "kiln_metadata")
 	if fieldExists {
-		fmt.Println("WARNING: kiln_metadata is not set by kiln please remove it from your product template")
+		fmt.Println(`WARNING: the metadata field "kiln_metadata" is owned by Kiln. You are setting it in your "base.yml". You should not set it anymore.`)
 		if err := kilnMetadataValueNode.Encode(kilnMetadata); err != nil {
 			return nil, err
 		}
