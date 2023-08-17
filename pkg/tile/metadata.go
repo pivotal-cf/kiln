@@ -2,7 +2,6 @@ package tile
 
 import (
 	"archive/zip"
-	"context"
 	"fmt"
 	"io"
 	"io/fs"
@@ -61,13 +60,7 @@ const (
 )
 
 // ReadMetadataFromProductFile can download the metadata from a product file on TanzuNet.
-func ReadMetadataFromProductFile(ctx context.Context, client *http.Client, downloadURL, authorizationHeader string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", authorizationHeader)
-	req.Header.Set("User-Agent", "kiln")
+func ReadMetadataFromProductFile(client *http.Client, req *http.Request) ([]byte, error) {
 	ra, err := httpreaderat.New(client, req, nil)
 	if err != nil {
 		return nil, err

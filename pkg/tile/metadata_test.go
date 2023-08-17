@@ -39,13 +39,18 @@ func TestNonStandardMetadataFilename(t *testing.T) {
 }
 
 func TestReadMetadataFromProductFile(t *testing.T) {
-	var authHeader string
-	client, downloadLink, authorizationHeader := setupReadMetadataFromProductFile(t, &authHeader)
-	ctx := context.Background()
+	httpClient, productFile := setupReadMetadataFromProductFile(t)
 
-	metadataBytes, err := tile.ReadMetadataFromProductFile(ctx, client, downloadLink, authorizationHeader)
+	// create http.Request from pivnet.ProductFile
+	downloadLink, err := productFile.DownloadLink()
 	require.NoError(t, err)
-	assert.Equal(t, authHeader, "Token some-token")
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadLink, nil)
+	require.NoError(t, err)
+	// on a real request you need to set Authorization and User-Agent headers
+
+	metadataBytes, err := tile.ReadMetadataFromProductFile(httpClient, req)
+	require.NoError(t, err)
 
 	var metadata struct {
 		Name string `yaml:"name"`
@@ -56,27 +61,11 @@ func TestReadMetadataFromProductFile(t *testing.T) {
 	assert.Equal(t, "hello", metadata.Name)
 }
 
-func setupReadMetadataFromProductFile(t *testing.T, authHeaderFromRequest *string) (*http.Client, string, string) {
+func setupReadMetadataFromProductFile(t *testing.T) (*http.Client, pivnet.ProductFile) {
 	t.Helper()
 	fileServer := http.FileServer(http.Dir("testdata"))
-	server := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		*authHeaderFromRequest = req.Header.Get("authorization")
-		fileServer.ServeHTTP(res, req)
-	}))
+	server := httptest.NewServer(fileServer)
 	t.Cleanup(server.Close)
-
-	//// This is rough untested example code for how one might configure a real pivnet client.
-	// config := pivnet.ClientConfig{
-	//	Host:      pivnet.DefaultHost,
-	//	UserAgent: "kiln-test",
-	// }
-	// pivnetToken := os.Getenv("PIVNET_TOKEN")
-	// tanzuNetClient := pivnet.NewAccessTokenOrLegacyToken(pivnetToken, server.URL, config.SkipSSLValidation)
-	// accessToken, err := tanzuNetClient.AccessToken()
-	// require.NoError(err)
-	accessToken := "some-token"
-	authorizationHeader, err := pivnet.AuthorizationHeader(accessToken)
-	require.NoError(t, err)
 
 	// productFile should come from an API request:
 	// _ = pivnet.ProductFilesService.ListForRelease
@@ -86,8 +75,5 @@ func setupReadMetadataFromProductFile(t *testing.T, authHeaderFromRequest *strin
 		},
 	}
 
-	downloadLink, err := productFile.DownloadLink()
-	require.NoError(t, err)
-
-	return server.Client(), downloadLink, authorizationHeader
+	return server.Client(), productFile
 }
