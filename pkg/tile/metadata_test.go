@@ -38,8 +38,8 @@ func TestNonStandardMetadataFilename(t *testing.T) {
 	assert.Equal(t, string(buf), "{name: \"banana\"}")
 }
 
-func TestReadMetadataFromProductFile(t *testing.T) {
-	httpClient, productFile := setupReadMetadataFromProductFile(t)
+func TestReadMetadataFromServer(t *testing.T) {
+	httpClient, productFile := setupReadMetadataFromServer(t)
 
 	// create http.Request from pivnet.ProductFile
 	downloadLink, err := productFile.DownloadLink()
@@ -49,7 +49,7 @@ func TestReadMetadataFromProductFile(t *testing.T) {
 	require.NoError(t, err)
 	// on a real request you need to set Authorization and User-Agent headers
 
-	metadataBytes, err := tile.ReadMetadataFromProductFile(httpClient, req)
+	metadataBytes, err := tile.ReadMetadataFromServer(httpClient, req)
 	require.NoError(t, err)
 
 	var metadata struct {
@@ -61,7 +61,7 @@ func TestReadMetadataFromProductFile(t *testing.T) {
 	assert.Equal(t, "hello", metadata.Name)
 }
 
-func setupReadMetadataFromProductFile(t *testing.T) (*http.Client, pivnet.ProductFile) {
+func setupReadMetadataFromServer(t *testing.T) (*http.Client, pivnet.ProductFile) {
 	t.Helper()
 	fileServer := http.FileServer(http.Dir("testdata"))
 	server := httptest.NewServer(fileServer)
