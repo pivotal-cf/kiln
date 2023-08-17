@@ -2,10 +2,15 @@ package tile
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
 	"os"
+
+	bufferReaderAt "github.com/avvmoto/buf-readerat"
+	"github.com/snabb/httpreaderat"
 )
 
 func ReadMetadataFromFile(tilePath string) ([]byte, error) {
@@ -48,6 +53,27 @@ func ReadMetadataFromFS(dir fs.FS) ([]byte, error) {
 		return nil, fmt.Errorf("failed read metadata: %w", err)
 	}
 	return buf, nil
+}
+
+const (
+	// readerAtCacheSize is 1mb
+	readerAtCacheSize = 1 << 20
+)
+
+// ReadMetadataFromProductFile can download the metadata from a product file on TanzuNet.
+func ReadMetadataFromProductFile(ctx context.Context, client *http.Client, downloadURL, authorizationHeader string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", authorizationHeader)
+	req.Header.Set("User-Agent", "kiln")
+	ra, err := httpreaderat.New(client, req, nil)
+	if err != nil {
+		return nil, err
+	}
+	bufRa := bufferReaderAt.NewBufReaderAt(ra, readerAtCacheSize)
+	return ReadMetadataFromZip(bufRa, ra.Size())
 }
 
 func closeAndIgnoreError(c io.Closer) {
