@@ -59,8 +59,8 @@ const (
 	readerAtCacheSize = 1 << 20
 )
 
-// ReadMetadataFromProductFile can download the metadata from a product file on TanzuNet.
-func ReadMetadataFromProductFile(client *http.Client, req *http.Request) ([]byte, error) {
+// ReadMetadataFromServer can download the metadata from a product file on TanzuNet.
+func ReadMetadataFromServer(client *http.Client, req *http.Request) ([]byte, error) {
 	ra, err := httpreaderat.New(client, req, nil)
 	if err != nil {
 		return nil, err
