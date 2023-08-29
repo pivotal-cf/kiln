@@ -109,9 +109,10 @@ releases:
 						Expect(args.StemcellOS).To(Equal("some-os"))
 						Expect(args.Version).To(Equal(""))
 						Expect((&writer).String()).To(ContainSubstring("\"74.12.5\""))
+						Expect((&writer).String()).To(ContainSubstring("\"name\":\"has-no-constraint\""))
 						Expect((&writer).String()).To(ContainSubstring("\"remote_path\":\"remote_url\""))
-						Expect((&writer).String()).To(ContainSubstring("\"source\":\"bosh.io\""))
-						Expect((&writer).String()).To(ContainSubstring("\"sha\":\"some-sha\""))
+						Expect((&writer).String()).To(ContainSubstring("\"remote_source\":\"bosh.io\""))
+						Expect((&writer).String()).To(ContainSubstring("\"sha1\":\"some-sha\""))
 					})
 				})
 			})
@@ -179,6 +180,37 @@ releases:
 				Expect(executeErr).NotTo(HaveOccurred())
 				_, noDownload := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
 				Expect(noDownload).To(BeFalse())
+			})
+		})
+
+		When("--output yaml is specified", func() {
+			BeforeEach(func() {
+				releaseName = "has-no-constraint"
+				fakeReleasesSource.FindReleaseVersionReturns(cargo.BOSHReleaseTarballLock{
+					Name: releaseName, Version: "74.12.5",
+					RemotePath:   "remote_url",
+					RemoteSource: "bosh.io",
+					SHA1:         "some-sha",
+				}, nil)
+				fetchExecuteArgs = []string{
+					"--kilnfile", someKilnfilePath,
+					"--release", releaseName,
+					"--output", "yaml",
+				}
+			})
+
+			It("returns the latest release version", func() {
+				Expect(executeErr).NotTo(HaveOccurred())
+				args, _ := fakeReleasesSource.FindReleaseVersionArgsForCall(0)
+				Expect(args.StemcellVersion).To(Equal("4.5.6"))
+				Expect(args.StemcellOS).To(Equal("some-os"))
+				Expect(args.Version).To(Equal(""))
+				logger.Printf("output is: %s", (&writer).String())
+				Expect((&writer).String()).To(ContainSubstring("version: 74.12.5"))
+				Expect((&writer).String()).To(ContainSubstring("name: has-no-constraint"))
+				Expect((&writer).String()).To(ContainSubstring("remote_path: remote_url"))
+				Expect((&writer).String()).To(ContainSubstring("remote_source: bosh.io"))
+				Expect((&writer).String()).To(ContainSubstring("sha1: some-sha"))
 			})
 		})
 	})

@@ -24,13 +24,6 @@ type FindReleaseVersion struct {
 	}
 }
 
-type releaseVersionOutput struct {
-	Version    string `json:"version"`
-	RemotePath string `json:"remote_path"`
-	Source     string `json:"source"`
-	SHA        string `json:"sha"`
-}
-
 func NewFindReleaseVersion(outLogger *log.Logger, multiReleaseSourceProvider MultiReleaseSourceProvider) *FindReleaseVersion {
 	return &FindReleaseVersion{
 		outLogger:   outLogger,
@@ -64,11 +57,12 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 		return err
 	}
 
-	releaseVersionJson, _ := json.Marshal(releaseVersionOutput{
-		Version:    releaseRemote.Version,
-		RemotePath: releaseRemote.RemotePath,
-		Source:     releaseRemote.RemoteSource,
-		SHA:        releaseRemote.SHA1,
+	releaseVersionJson, _ := json.Marshal(cargo.BOSHReleaseTarballLock{
+		Name:         releaseRemote.Name,
+		Version:      releaseRemote.Version,
+		RemotePath:   releaseRemote.RemotePath,
+		RemoteSource: releaseRemote.RemoteSource,
+		SHA1:         releaseRemote.SHA1,
 	})
 	cmd.outLogger.Println(string(releaseVersionJson))
 	return err
