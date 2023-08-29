@@ -7,9 +7,9 @@ import (
 	"log"
 
 	"github.com/pivotal-cf/jhanda"
-
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"gopkg.in/yaml.v3"
 )
 
 type FindReleaseVersion struct {
@@ -20,6 +20,7 @@ type FindReleaseVersion struct {
 		flags.Standard
 		Release    string `short:"r" long:"release" description:"release name"`
 		NoDownload bool   `long:"no-download" description:"do not download any files"`
+		Format     string `short:"o" long:"output" description:"output format json/yaml"`
 	}
 }
 
@@ -54,6 +55,12 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 
 	releaseRemote, err := releaseSource.FindReleaseVersion(spec, cmd.Options.NoDownload)
 	if err != nil {
+		return err
+	}
+
+	if cmd.Options.Format == `yaml` {
+		releaseVersionYaml, err := yaml.Marshal(releaseRemote)
+		cmd.outLogger.Println(string(releaseVersionYaml))
 		return err
 	}
 
