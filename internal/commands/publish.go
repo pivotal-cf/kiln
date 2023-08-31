@@ -13,8 +13,8 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-billy/v5"
-	"github.com/pivotal-cf/go-pivnet/v2"
-	"github.com/pivotal-cf/go-pivnet/v2/logshim"
+	"github.com/pivotal-cf/go-pivnet/v7"
+	"github.com/pivotal-cf/go-pivnet/v7/logshim"
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/yaml.v2"
 
@@ -28,7 +28,7 @@ const (
 
 //counterfeiter:generate -o ./fakes/pivnet_releases_service.go --fake-name PivnetReleasesService . PivnetReleasesService
 type PivnetReleasesService interface {
-	List(productSlug string) ([]pivnet.Release, error)
+	List(productSlug string, _ ...pivnet.QueryParameter) ([]pivnet.Release, error)
 	Update(productSlug string, release pivnet.Release) (pivnet.Release, error)
 }
 

@@ -4,15 +4,16 @@ package fakes
 import (
 	"sync"
 
-	pivnet "github.com/pivotal-cf/go-pivnet/v2"
+	pivnet "github.com/pivotal-cf/go-pivnet/v7"
 	"github.com/pivotal-cf/kiln/internal/commands"
 )
 
 type PivnetReleasesService struct {
-	ListStub        func(string) ([]pivnet.Release, error)
+	ListStub        func(string, ...pivnet.QueryParameter) ([]pivnet.Release, error)
 	listMutex       sync.RWMutex
 	listArgsForCall []struct {
 		arg1 string
+		arg2 []pivnet.QueryParameter
 	}
 	listReturns struct {
 		result1 []pivnet.Release
@@ -40,18 +41,19 @@ type PivnetReleasesService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *PivnetReleasesService) List(arg1 string) ([]pivnet.Release, error) {
+func (fake *PivnetReleasesService) List(arg1 string, arg2 ...pivnet.QueryParameter) ([]pivnet.Release, error) {
 	fake.listMutex.Lock()
 	ret, specificReturn := fake.listReturnsOnCall[len(fake.listArgsForCall)]
 	fake.listArgsForCall = append(fake.listArgsForCall, struct {
 		arg1 string
-	}{arg1})
+		arg2 []pivnet.QueryParameter
+	}{arg1, arg2})
 	stub := fake.ListStub
 	fakeReturns := fake.listReturns
-	fake.recordInvocation("List", []interface{}{arg1})
+	fake.recordInvocation("List", []interface{}{arg1, arg2})
 	fake.listMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2...)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -65,17 +67,17 @@ func (fake *PivnetReleasesService) ListCallCount() int {
 	return len(fake.listArgsForCall)
 }
 
-func (fake *PivnetReleasesService) ListCalls(stub func(string) ([]pivnet.Release, error)) {
+func (fake *PivnetReleasesService) ListCalls(stub func(string, ...pivnet.QueryParameter) ([]pivnet.Release, error)) {
 	fake.listMutex.Lock()
 	defer fake.listMutex.Unlock()
 	fake.ListStub = stub
 }
 
-func (fake *PivnetReleasesService) ListArgsForCall(i int) string {
+func (fake *PivnetReleasesService) ListArgsForCall(i int) (string, []pivnet.QueryParameter) {
 	fake.listMutex.RLock()
 	defer fake.listMutex.RUnlock()
 	argsForCall := fake.listArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *PivnetReleasesService) ListReturns(result1 []pivnet.Release, result2 error) {
