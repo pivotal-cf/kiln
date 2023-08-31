@@ -27,7 +27,7 @@ type MilestoneLister struct {
 		result2 *github.Response
 		result3 error
 	}
-	invocations      map[string][][]any
+	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
@@ -42,7 +42,7 @@ func (fake *MilestoneLister) ListMilestones(arg1 context.Context, arg2 string, a
 	}{arg1, arg2, arg3, arg4})
 	stub := fake.ListMilestonesStub
 	fakeReturns := fake.listMilestonesReturns
-	fake.recordInvocation("ListMilestones", []any{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("ListMilestones", []interface{}{arg1, arg2, arg3, arg4})
 	fake.listMilestonesMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3, arg4)
@@ -101,26 +101,26 @@ func (fake *MilestoneLister) ListMilestonesReturnsOnCall(i int, result1 []*githu
 	}{result1, result2, result3}
 }
 
-func (fake *MilestoneLister) Invocations() map[string][][]any {
+func (fake *MilestoneLister) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.listMilestonesMutex.RLock()
 	defer fake.listMilestonesMutex.RUnlock()
-	copiedInvocations := map[string][][]any{}
+	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
 	return copiedInvocations
 }
 
-func (fake *MilestoneLister) recordInvocation(key string, args []any) {
+func (fake *MilestoneLister) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
-		fake.invocations = map[string][][]any{}
+		fake.invocations = map[string][][]interface{}{}
 	}
 	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]any{}
+		fake.invocations[key] = [][]interface{}{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }

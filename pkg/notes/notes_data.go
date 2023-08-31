@@ -269,15 +269,15 @@ func (r fetchNotesData) kilnfileFromWorktree(kilnfilePath string) (cargo.Kilnfil
 	return wtKf, nil
 }
 
-//counterfeiter:generate -o ./fakes/historic_version.go --fake-name HistoricVersion . historicVersion
+//counterfeiter:generate -o ./internal/fakes/historic_version.go --fake-name HistoricVersion . historicVersion
 
 type historicVersion func(repo storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (string, error)
 
-//counterfeiter:generate -o ./fakes/historic_kilnfile.go --fake-name HistoricKilnfile . historicKilnfile
+//counterfeiter:generate -o ./internal/fakes/historic_kilnfile.go --fake-name HistoricKilnfile . historicKilnfile
 
 type historicKilnfile func(repo storer.EncodedObjectStorer, commitHash plumbing.Hash, kilnfilePath string) (cargo.Kilnfile, cargo.KilnfileLock, error)
 
-//counterfeiter:generate -o ./fakes/revision_resolver.go --fake-name RevisionResolver . revisionResolver
+//counterfeiter:generate -o ./internal/fakes/revision_resolver.go --fake-name RevisionResolver . revisionResolver
 
 type revisionResolver interface {
 	ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, error)
@@ -314,8 +314,8 @@ func (r fetchNotesData) fetchHistoricFiles(kilnfilePath, start, end string) (klI
 	return klInitial, klFinal, kfFinal, v, nil
 }
 
-//counterfeiter:generate -o ./fakes/releases_service.go --fake-name ReleaseService github.com/pivotal-cf/kiln/pkg/cargo.RepositoryReleaseLister
-//counterfeiter:generate -o ./fakes/issues_service.go --fake-name IssuesService . issuesService
+//counterfeiter:generate -o ./internal/fakes/releases_service.go --fake-name ReleaseService github.com/pivotal-cf/kiln/pkg/cargo.RepositoryReleaseLister
+//counterfeiter:generate -o ./internal/fakes/issues_service.go --fake-name IssuesService . issuesService
 
 type issuesService interface {
 	issueGetter
@@ -355,7 +355,7 @@ func (r fetchNotesData) fetchIssuesAndReleaseNotes(ctx context.Context, finalKF,
 	return appendFilterAndSortIssues(issues, additionalIssues, issuesQuery.IssueTitleExp), bumpList, nil
 }
 
-//counterfeiter:generate -o ./fakes/issue_getter.go --fake-name IssueGetter . issueGetter
+//counterfeiter:generate -o ./internal/fakes/issue_getter.go --fake-name IssueGetter . issueGetter
 
 type issueGetter interface {
 	Get(ctx context.Context, owner string, repo string, number int) (*github.Issue, *github.Response, error)
@@ -380,7 +380,7 @@ func issuesFromIssueIDs(ctx context.Context, issuesService issueGetter, repoOwne
 	return issues, nil
 }
 
-//counterfeiter:generate -o ./fakes/milestone_lister.go --fake-name MilestoneLister . milestoneLister
+//counterfeiter:generate -o ./internal/fakes/milestone_lister.go --fake-name MilestoneLister . milestoneLister
 
 type milestoneLister interface {
 	ListMilestones(ctx context.Context, owner string, repo string, opts *github.MilestoneListOptions) ([]*github.Milestone, *github.Response, error)
@@ -418,7 +418,7 @@ func resolveMilestoneNumber(ctx context.Context, issuesService milestoneLister, 
 	}
 }
 
-//counterfeiter:generate -o ./fakes/issues_by_repo_lister.go --fake-name IssuesByRepoLister . issuesByRepoLister
+//counterfeiter:generate -o ./internal/fakes/issues_by_repo_lister.go --fake-name IssuesByRepoLister . issuesByRepoLister
 
 type issuesByRepoLister interface {
 	ListByRepo(ctx context.Context, owner string, repo string, opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error)
