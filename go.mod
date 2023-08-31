@@ -31,7 +31,6 @@ require (
 	github.com/onsi/gomega v1.27.10
 	github.com/opencontainers/image-spec v1.1.0-rc4
 	github.com/pivotal-cf-experimental/gomegamatchers v0.0.0-20180326192815-e36bfcc98c3a
-	github.com/pivotal-cf/go-pivnet/v2 v2.0.11
 	github.com/pivotal-cf/go-pivnet/v7 v7.0.2
 	github.com/pivotal-cf/jhanda v0.0.0-20200619200912-8de8eb943a43
 	github.com/pivotal-cf/om v0.0.0-20230707145702-e2ef8fd451b1
