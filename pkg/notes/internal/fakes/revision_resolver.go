@@ -21,7 +21,7 @@ type RevisionResolver struct {
 		result1 *plumbing.Hash
 		result2 error
 	}
-	invocations      map[string][][]any
+	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
@@ -33,7 +33,7 @@ func (fake *RevisionResolver) ResolveRevision(arg1 plumbing.Revision) (*plumbing
 	}{arg1})
 	stub := fake.ResolveRevisionStub
 	fakeReturns := fake.resolveRevisionReturns
-	fake.recordInvocation("ResolveRevision", []any{arg1})
+	fake.recordInvocation("ResolveRevision", []interface{}{arg1})
 	fake.resolveRevisionMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
@@ -89,26 +89,26 @@ func (fake *RevisionResolver) ResolveRevisionReturnsOnCall(i int, result1 *plumb
 	}{result1, result2}
 }
 
-func (fake *RevisionResolver) Invocations() map[string][][]any {
+func (fake *RevisionResolver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.resolveRevisionMutex.RLock()
 	defer fake.resolveRevisionMutex.RUnlock()
-	copiedInvocations := map[string][][]any{}
+	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
 	return copiedInvocations
 }
 
-func (fake *RevisionResolver) recordInvocation(key string, args []any) {
+func (fake *RevisionResolver) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
-		fake.invocations = map[string][][]any{}
+		fake.invocations = map[string][][]interface{}{}
 	}
 	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]any{}
+		fake.invocations[key] = [][]interface{}{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }

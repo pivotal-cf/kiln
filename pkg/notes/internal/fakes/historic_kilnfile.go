@@ -27,7 +27,7 @@ type HistoricKilnfile struct {
 		result2 cargo.KilnfileLock
 		result3 error
 	}
-	invocations      map[string][][]any
+	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
@@ -41,7 +41,7 @@ func (fake *HistoricKilnfile) Spy(arg1 storer.EncodedObjectStorer, arg2 plumbing
 	}{arg1, arg2, arg3})
 	stub := fake.Stub
 	returns := fake.returns
-	fake.recordInvocation("historicKilnfile", []any{arg1, arg2, arg3})
+	fake.recordInvocation("historicKilnfile", []interface{}{arg1, arg2, arg3})
 	fake.mutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3)
@@ -99,26 +99,26 @@ func (fake *HistoricKilnfile) ReturnsOnCall(i int, result1 cargo.Kilnfile, resul
 	}{result1, result2, result3}
 }
 
-func (fake *HistoricKilnfile) Invocations() map[string][][]any {
+func (fake *HistoricKilnfile) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.mutex.RLock()
 	defer fake.mutex.RUnlock()
-	copiedInvocations := map[string][][]any{}
+	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
 	return copiedInvocations
 }
 
-func (fake *HistoricKilnfile) recordInvocation(key string, args []any) {
+func (fake *HistoricKilnfile) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
-		fake.invocations = map[string][][]any{}
+		fake.invocations = map[string][][]interface{}{}
 	}
 	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]any{}
+		fake.invocations[key] = [][]interface{}{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }

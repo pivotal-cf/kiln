@@ -28,7 +28,7 @@ type ReleaseService struct {
 		result2 *github.Response
 		result3 error
 	}
-	invocations      map[string][][]any
+	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
@@ -43,7 +43,7 @@ func (fake *ReleaseService) ListReleases(arg1 context.Context, arg2 string, arg3
 	}{arg1, arg2, arg3, arg4})
 	stub := fake.ListReleasesStub
 	fakeReturns := fake.listReleasesReturns
-	fake.recordInvocation("ListReleases", []any{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("ListReleases", []interface{}{arg1, arg2, arg3, arg4})
 	fake.listReleasesMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3, arg4)
@@ -102,26 +102,26 @@ func (fake *ReleaseService) ListReleasesReturnsOnCall(i int, result1 []*github.R
 	}{result1, result2, result3}
 }
 
-func (fake *ReleaseService) Invocations() map[string][][]any {
+func (fake *ReleaseService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.listReleasesMutex.RLock()
 	defer fake.listReleasesMutex.RUnlock()
-	copiedInvocations := map[string][][]any{}
+	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
 	}
 	return copiedInvocations
 }
 
-func (fake *ReleaseService) recordInvocation(key string, args []any) {
+func (fake *ReleaseService) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
-		fake.invocations = map[string][][]any{}
+		fake.invocations = map[string][][]interface{}{}
 	}
 	if fake.invocations[key] == nil {
-		fake.invocations[key] = [][]any{}
+		fake.invocations[key] = [][]interface{}{}
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
