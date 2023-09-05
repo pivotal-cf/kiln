@@ -39,6 +39,10 @@ import (
 const (
 	authSockEnvVarName    = "SSH_AUTH_SOCK"
 	sshPasswordEnvVarName = "SSH_PASSWORD"
+
+	// MinimumDockerServerVersion the test was failing with an older version this may be a bit conservative.
+	// If the integration tests pass on your machine with an older version, feel free to PR a less conservative value.
+	MinimumDockerServerVersion = "> 24.0.0"
 )
 
 func Run(ctx context.Context, w io.Writer, configuration Configuration) error {
