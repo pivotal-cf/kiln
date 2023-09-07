@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
@@ -211,12 +212,7 @@ func configurePathDefaults(v reflect.Value, pathPrefix string, args []string, st
 
 			fieldValue.Set(reflect.ValueOf(value))
 		case reflect.Slice:
-			flagValues, ok := v.Field(i).Interface().([]string)
-			if !ok {
-				// this might occur if we add non string slice params
-				// notice the fieldType Kind check above was not super specific
-				continue
-			}
+			flagValues := v.Field(i).Interface().([]string)
 
 			defaultValue, ok := fieldType.Tag.Lookup("default")
 			if !ok {
@@ -224,18 +220,19 @@ func configurePathDefaults(v reflect.Value, pathPrefix string, args []string, st
 			}
 			defaultValues := strings.Split(defaultValue, ",")
 
-			if IsSet(fieldType.Tag.Get("short"), fieldType.Tag.Get("long"), args) {
+			if len(flagValues) > len(defaultValues) && slices.Equal(flagValues[:len(defaultValues)], defaultValues) {
 				fieldValue.Set(reflect.ValueOf(flagValues[len(defaultValues):]))
-				continue
+				return
 			}
 
 			filteredDefaults := defaultValues[:0]
 			for _, p := range defaultValues {
+				p = strings.TrimSpace(p)
 				if pathPrefix != "" {
 					p = filepath.Join(pathPrefix, p)
 				}
 				_, err := stat(p)
-				if os.IsNotExist(err) {
+				if err != nil {
 					continue
 				}
 				filteredDefaults = append(filteredDefaults, p)
