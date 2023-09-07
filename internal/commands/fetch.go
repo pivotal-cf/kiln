@@ -76,7 +76,7 @@ func (f Fetch) Execute(args []string) error {
 
 func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []component.Local, error) {
 	if f.Options.ReleasesDir == "" {
-		_, err := flags.LoadWithDefaults(&f.Options, args, nil)
+		_, err := flags.LoadWithDefaultFilePaths(&f.Options, args, nil)
 		if err != nil {
 			return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 		}

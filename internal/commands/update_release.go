@@ -36,7 +36,7 @@ func NewUpdateRelease(logger *log.Logger, filesystem billy.Filesystem, multiRele
 }
 
 func (u UpdateRelease) Execute(args []string) error {
-	_, err := flags.LoadWithDefaults(&u.Options, args, u.filesystem.Stat)
+	_, err := flags.LoadWithDefaultFilePaths(&u.Options, args, u.filesystem.Stat)
 	if err != nil {
 		return err
 	}

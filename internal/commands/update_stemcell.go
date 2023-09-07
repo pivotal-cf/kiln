@@ -27,7 +27,7 @@ type UpdateStemcell struct {
 }
 
 func (update UpdateStemcell) Execute(args []string) error {
-	_, err := flags.LoadWithDefaults(&update.Options, args, update.FS.Stat)
+	_, err := flags.LoadWithDefaultFilePaths(&update.Options, args, update.FS.Stat)
 	if err != nil {
 		return err
 	}

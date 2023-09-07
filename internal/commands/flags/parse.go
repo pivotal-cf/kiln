@@ -143,10 +143,10 @@ func (options Standard) TileDirectory() string {
 	return currentWorkingDirectory
 }
 
-// LoadWithDefaults only sets default values if the flag is not set
+// LoadWithDefaultFilePaths only sets default values if the flag is not set
 // this permits explicitly setting "zero values" for in arguments without them being
 // overwritten.
-func LoadWithDefaults(options TileDirectory, args []string, stat StatFunc) ([]string, error) {
+func LoadWithDefaultFilePaths(options TileDirectory, args []string, stat StatFunc) ([]string, error) {
 	if stat == nil {
 		stat = os.Stat
 	}
