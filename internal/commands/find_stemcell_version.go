@@ -96,7 +96,7 @@ func (cmd *FindStemcellVersion) setup(args []string) (cargo.Kilnfile, error) {
 		return cargo.Kilnfile{}, err
 	}
 
-	_, err = flags.LoadFlagsWithDefaults(&cmd.Options, args, cmd.FS.Stat)
+	_, err = flags.LoadWithDefaults(&cmd.Options, args, cmd.FS.Stat)
 	if err != nil {
 		return cargo.Kilnfile{}, err
 	}

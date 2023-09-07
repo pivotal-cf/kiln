@@ -26,8 +26,8 @@ type (
 		billy.Dir
 	}
 
-	KilnfileOptions interface {
-		KilnfilePathPrefix() string
+	TileDirectory interface {
+		TileDirectory() string
 	}
 
 	VariablesService interface {
@@ -95,7 +95,7 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 	return kilnfile, lock, nil
 }
 
-func (options *Standard) SaveKilnfileLock(fsOverride billy.Basic, kilnfileLock cargo.KilnfileLock) error {
+func (options Standard) SaveKilnfileLock(fsOverride billy.Basic, kilnfileLock cargo.KilnfileLock) error {
 	fs := fsOverride
 	if fs == nil {
 		fs = osfs.New("")
@@ -131,10 +131,21 @@ func (options Standard) KilnfileLockPath() string {
 	return options.Kilnfile + ".lock"
 }
 
-// LoadFlagsWithDefaults only sets default values if the flag is not set
+func (options Standard) TileDirectory() string {
+	if options.Kilnfile != "" {
+		if filepath.Base(options.Kilnfile) == "Kilnfile" {
+			return filepath.Dir(options.Kilnfile)
+		}
+		return options.Kilnfile
+	}
+	currentWorkingDirectory, _ := os.Getwd()
+	return currentWorkingDirectory
+}
+
+// LoadWithDefaults only sets default values if the flag is not set
 // this permits explicitly setting "zero values" for in arguments without them being
 // overwritten.
-func LoadFlagsWithDefaults(options KilnfileOptions, args []string, stat StatFunc) ([]string, error) {
+func LoadWithDefaults(options TileDirectory, args []string, stat StatFunc) ([]string, error) {
 	if stat == nil {
 		stat = os.Stat
 	}
@@ -145,10 +156,10 @@ func LoadFlagsWithDefaults(options KilnfileOptions, args []string, stat StatFunc
 
 	v := reflect.ValueOf(options).Elem()
 
-	pathPrefix := options.KilnfilePathPrefix()
+	tileDir := options.TileDirectory()
 
 	// handle simple case first
-	configurePathDefaults(v, pathPrefix, args, stat)
+	configurePathDefaults(v, tileDir, args, stat)
 
 	return argsAfterFlags, nil
 }
@@ -179,18 +190,7 @@ func configurePathDefaults(v reflect.Value, pathPrefix string, args []string, st
 				continue
 			}
 
-			if !fieldValue.IsZero() {
-				continue
-			}
-
-			if IsSet(fieldType.Tag.Get("short"), fieldType.Tag.Get("long"), args) {
-				continue
-			}
-
-			value, ok := v.Field(i).Interface().(string)
-			if !ok {
-				continue // this should not occur
-			}
+			value := v.Field(i).Interface().(string)
 
 			isDefaultValue := defaultValue == value
 

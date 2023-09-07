@@ -89,7 +89,7 @@ func (cmd *CacheCompiledReleases) WithLogger(logger *log.Logger) *CacheCompiledR
 }
 
 func (cmd *CacheCompiledReleases) Execute(args []string) error {
-	_, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, cmd.FS.Stat)
+	_, err := flags.LoadWithDefaults(&cmd.Options, args, cmd.FS.Stat)
 	if err != nil {
 		return err
 	}

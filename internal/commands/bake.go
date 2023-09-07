@@ -243,7 +243,7 @@ func getVariablesFilePaths(fs flags.FileSystem) ([]string, error) {
 }
 
 func (b *Bake) loadFlags(args []string) error {
-	_, err := flags.LoadFlagsWithDefaults(&b.Options, args, b.fs.Stat)
+	_, err := flags.LoadWithDefaults(&b.Options, args, b.fs.Stat)
 	if err != nil {
 		return err
 	}
