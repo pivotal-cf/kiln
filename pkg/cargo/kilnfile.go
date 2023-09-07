@@ -25,7 +25,7 @@ type Kilnfile struct {
 	Stemcell        Stemcell                          `yaml:"stemcell_criteria,omitempty"`
 }
 
-func (kf Kilnfile) BOSHReleaseTarballSpecification(name string) (BOSHReleaseTarballSpecification, error) {
+func (kf *Kilnfile) BOSHReleaseTarballSpecification(name string) (BOSHReleaseTarballSpecification, error) {
 	for _, s := range kf.Releases {
 		if s.Name == name {
 			return s, nil
