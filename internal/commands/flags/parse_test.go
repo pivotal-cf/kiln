@@ -297,6 +297,32 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			_, _ = flags.LoadWithDefaultFilePaths(&options, nil, nil)
 		}, "jhana panics")
 	})
+
+	t.Run("when defaults are over-written for multiple fields", func(t *testing.T) {
+		type Embedded struct {
+			Configurations []string `long:"configuration" default:"c.yml"`
+		}
+		var options struct {
+			testTileDir
+			Embedded
+			Directories []string `long:"directory"  default:"someplace"`
+			Files       []string `long:"file"       default:"f1.yml, f2.yml"`
+			FinalField  []string `long:"final"       default:"final.txt, end.txt"`
+		}
+		dir := t.TempDir()
+		options.testTileDir.filePath = dir
+
+		for _, defaultFileName := range []string{"final.txt", "end.txt"} {
+			f, err := os.Create(filepath.Join(dir, defaultFileName))
+			require.NoError(t, err)
+			require.NoError(t, f.Close())
+		}
+
+		_, err := flags.LoadWithDefaultFilePaths(&options, []string{"--directory=dir1", "--directory=dir2", "--file=phil"}, os.Stat)
+		assert.NoError(t, err)
+
+		assert.Equal(t, []string{"phil"}, options.Files, "it removes defaults from other fields")
+	})
 }
 
 type testTileDir struct {

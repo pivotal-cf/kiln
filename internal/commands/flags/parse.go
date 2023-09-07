@@ -219,7 +219,7 @@ func configurePathDefaults(v reflect.Value, pathPrefix string, args []string, st
 
 			if len(flagValues) > len(defaultValues) && slices.Equal(flagValues[:len(defaultValues)], defaultValues) {
 				fieldValue.Set(reflect.ValueOf(flagValues[len(defaultValues):]))
-				return
+				continue
 			}
 
 			filteredDefaults := defaultValues[:0]
