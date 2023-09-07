@@ -3,7 +3,7 @@ package baking
 import (
 	"os"
 	"path/filepath"
-	"regexp"
+	"strings"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
 )
@@ -49,7 +49,7 @@ func (s ReleasesService) ReleasesInDirectory(directoryPath string) ([]builder.Pa
 			return err
 		}
 
-		if match, _ := regexp.MatchString("tgz$|tar.gz$", path); match {
+		if strings.HasSuffix(path, ".tgz") || strings.HasSuffix(path, ".tar.gz") {
 			tarballPaths = append(tarballPaths, path)
 		}
 
