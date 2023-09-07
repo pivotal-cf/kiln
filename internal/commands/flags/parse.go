@@ -2,7 +2,6 @@ package flags
 
 import (
 	"fmt"
-	"go/ast"
 	"io"
 	"os"
 	"path/filepath"
@@ -149,117 +148,104 @@ func LoadFlagsWithDefaults(options KilnfileOptions, args []string, stat StatFunc
 	pathPrefix := options.KilnfilePathPrefix()
 
 	// handle simple case first
-	configureArrayDefaults(v, pathPrefix, args, stat)
 	configurePathDefaults(v, pathPrefix, args, stat)
 
 	return argsAfterFlags, nil
-}
-
-func configureArrayDefaults(v reflect.Value, pathPrefix string, args []string, stat StatFunc) {
-	t := v.Type()
-
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-
-		switch field.Type.Kind() {
-		default:
-			continue
-		case reflect.Struct:
-			embeddedValue := v.Field(i)
-			if field.Anonymous && ast.IsExported(embeddedValue.Type().Name()) {
-				configurePathDefaults(embeddedValue, pathPrefix, args, stat)
-			}
-			continue
-		case reflect.Slice:
-		}
-
-		defaultValueStr, ok := field.Tag.Lookup("default")
-		if !ok {
-			continue
-		}
-		defaultValues := strings.Split(defaultValueStr, ",")
-
-		flagValues, ok := v.Field(i).Interface().([]string)
-		if !ok {
-			// this might occur if we add non string slice params
-			// notice the field Kind check above was not super specific
-			continue
-		}
-
-		if IsSet(field.Tag.Get("short"), field.Tag.Get("long"), args) {
-			v.Field(i).Set(reflect.ValueOf(flagValues[len(defaultValues):]))
-			continue
-		}
-
-		filteredDefaults := defaultValues[:0]
-		for _, p := range defaultValues {
-			if pathPrefix != "" {
-				p = filepath.Join(pathPrefix, p)
-			}
-			_, err := stat(p)
-			if os.IsNotExist(err) {
-				continue
-			}
-			filteredDefaults = append(filteredDefaults, p)
-		}
-
-		// if default values were found, use them,
-		// else filteredDefaults will be an empty slice
-		//   and the Bake command will continue as if they were not set
-		v.Field(i).Set(reflect.ValueOf(filteredDefaults))
-	}
 }
 
 func configurePathDefaults(v reflect.Value, pathPrefix string, args []string, stat StatFunc) {
 	t := v.Type()
 
 	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
+		fieldType := t.Field(i)
+		if !fieldType.IsExported() {
+			continue
+		}
 
-		switch field.Type.Kind() {
+		fieldValue := v.Field(i)
+
+		switch fieldType.Type.Kind() {
 		default:
 			continue
 		case reflect.Struct:
 			embeddedValue := v.Field(i)
-			if field.Anonymous && ast.IsExported(embeddedValue.Type().Name()) {
+			if fieldType.IsExported() {
 				configurePathDefaults(embeddedValue, pathPrefix, args, stat)
 			}
 			continue
 		case reflect.String:
+			defaultValue, ok := fieldType.Tag.Lookup("default")
+			if !ok {
+				continue
+			}
+
+			if !fieldValue.IsZero() {
+				continue
+			}
+
+			if IsSet(fieldType.Tag.Get("short"), fieldType.Tag.Get("long"), args) {
+				continue
+			}
+
+			value, ok := v.Field(i).Interface().(string)
+			if !ok {
+				continue // this should not occur
+			}
+
+			isDefaultValue := defaultValue == value
+
+			if !isDefaultValue {
+				continue
+			}
+
+			if pathPrefix != "" {
+				value = filepath.Join(pathPrefix, value)
+			}
+
+			_, err := stat(value)
+			if err != nil {
+				// set to zero value
+				v.Field(i).Set(reflect.Zero(v.Field(i).Type()))
+				continue
+			}
+
+			fieldValue.Set(reflect.ValueOf(value))
+		case reflect.Slice:
+			flagValues, ok := v.Field(i).Interface().([]string)
+			if !ok {
+				// this might occur if we add non string slice params
+				// notice the fieldType Kind check above was not super specific
+				continue
+			}
+
+			defaultValue, ok := fieldType.Tag.Lookup("default")
+			if !ok {
+				continue
+			}
+			defaultValues := strings.Split(defaultValue, ",")
+
+			if IsSet(fieldType.Tag.Get("short"), fieldType.Tag.Get("long"), args) {
+				fieldValue.Set(reflect.ValueOf(flagValues[len(defaultValues):]))
+				continue
+			}
+
+			filteredDefaults := defaultValues[:0]
+			for _, p := range defaultValues {
+				if pathPrefix != "" {
+					p = filepath.Join(pathPrefix, p)
+				}
+				_, err := stat(p)
+				if os.IsNotExist(err) {
+					continue
+				}
+				filteredDefaults = append(filteredDefaults, p)
+			}
+
+			// if default values were found, use them,
+			// else filteredDefaults will be an empty slice
+			//   and the Bake command will continue as if they were not set
+			fieldValue.Set(reflect.ValueOf(filteredDefaults))
 		}
-
-		if IsSet(field.Tag.Get("short"), field.Tag.Get("long"), args) {
-			continue
-		}
-
-		defaultValue, ok := field.Tag.Lookup("default")
-		if !ok {
-			continue
-		}
-
-		value, ok := v.Field(i).Interface().(string)
-		if !ok {
-			continue // this should not occur
-		}
-
-		isDefaultValue := defaultValue == value
-
-		if !isDefaultValue {
-			continue
-		}
-
-		if pathPrefix != "" {
-			value = filepath.Join(pathPrefix, value)
-		}
-
-		_, err := stat(value)
-		if err != nil {
-			// set to zero value
-			v.Field(i).Set(reflect.Zero(v.Field(i).Type()))
-			continue
-		}
-
-		v.Field(i).Set(reflect.ValueOf(value))
 	}
 }
 
@@ -287,16 +273,16 @@ func IsSet(short, long string, args []string) bool {
 }
 
 func ToStrings[t any](v t) []string {
-	return _encode(reflect.ValueOf(v))
+	return encodeFlags(reflect.ValueOf(v))
 }
 
-func _encode(v reflect.Value) []string {
+func encodeFlags(v reflect.Value) []string {
 	var result []string
 	switch v.Kind() {
 	case reflect.Slice:
 		for i := 0; i < v.Len(); i++ {
 			sv := v.Index(i)
-			encode := _encode(sv)
+			encode := encodeFlags(sv)
 			result = append(result, encode...)
 		}
 	case reflect.Struct:
@@ -308,7 +294,7 @@ func _encode(v reflect.Value) []string {
 				fieldAnnotation = fieldType.Tag.Get("short")
 			}
 
-			encode := _encode(fieldVal)
+			encode := encodeFlags(fieldVal)
 			// TODO: make sure that valueless flags are passed correctly
 			if fieldAnnotation != "" && fieldVal.Kind() == reflect.Bool {
 				isSet := fieldVal.Bool()
