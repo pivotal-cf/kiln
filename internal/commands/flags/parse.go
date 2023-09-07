@@ -272,7 +272,7 @@ func IsSet(short, long string, args []string) bool {
 	return false
 }
 
-func ToStrings[t any](v t) []string {
+func Args[t any](v t) []string {
 	return encodeFlags(reflect.ValueOf(v))
 }
 
