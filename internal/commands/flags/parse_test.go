@@ -250,6 +250,23 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 				_, _ = flags.LoadWithDefaults(&options, nil, os.Stat)
 			}, "it panics because jhanda does not permit non-string slice fields")
 		})
+
+		t.Run("and there are additional options and args are passed", func(t *testing.T) {
+			// this is in response to a regression
+			type AdditionalOptions struct {
+				BOSHVariableDirectories []string `short:"vd"  long:"bosh-variables-directory"   default:"bosh_variables"   description:"path to a directory containing BOSH variables"`
+			}
+			var options struct {
+				testTileDir
+				AdditionalOptions
+			}
+			dir := t.TempDir()
+			options.testTileDir.filePath = dir
+
+			_, err := flags.LoadWithDefaults(&options, []string{"--bosh-variables-directory", "some-dir", "--bosh-variables-directory", "other-dir"}, os.Stat)
+			require.NoError(t, err)
+			assert.Equal(t, []string{"some-dir", "other-dir"}, options.AdditionalOptions.BOSHVariableDirectories, "it sets the field without string modification")
+		})
 	})
 
 	t.Run("when a field is not tagged with a default value", func(t *testing.T) {
