@@ -180,10 +180,7 @@ func configurePathDefaults(v reflect.Value, pathPrefix string, args []string, st
 		default:
 			continue
 		case reflect.Struct:
-			embeddedValue := v.Field(i)
-			if fieldType.IsExported() {
-				configurePathDefaults(embeddedValue, pathPrefix, args, stat)
-			}
+			configurePathDefaults(fieldValue, pathPrefix, args, stat)
 			continue
 		case reflect.String:
 			defaultValue, ok := fieldType.Tag.Lookup("default")
