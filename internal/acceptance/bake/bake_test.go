@@ -2,6 +2,7 @@ package acceptance_test
 
 import (
 	"archive/zip"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -9,8 +10,12 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/pkg/tile"
 
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
@@ -18,8 +23,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
-
-	"github.com/pivotal-cf/kiln/internal/builder"
 )
 
 const (
@@ -41,8 +44,6 @@ var _ = BeforeSuite(func() {
 	var err error
 	pathToMain, err = gexec.Build("github.com/pivotal-cf/kiln",
 		"--ldflags", fmt.Sprintf("-X main.version=%s", buildVersion))
-	Expect(err).NotTo(HaveOccurred())
-	tileSourceRevision, err = builder.GitMetadataSHA(".", true)
 	Expect(err).NotTo(HaveOccurred())
 })
 
@@ -116,6 +117,9 @@ var _ = Describe("bake command", func() {
 			"--version", "1.2.3",
 			"--skip-fetch-directories",
 		}
+
+		tileSourceRevision, err = builder.GitMetadataSHA(".", true)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
@@ -207,20 +211,7 @@ var _ = Describe("bake command", func() {
 
 			Eventually(session).Should(gexec.Exit(0))
 
-			archive, err := os.Open(outputFile)
-			Expect(err).NotTo(HaveOccurred())
-
-			archiveInfo, err := archive.Stat()
-			Expect(err).NotTo(HaveOccurred())
-
-			zr, err := zip.NewReader(archive, archiveInfo.Size())
-			Expect(err).NotTo(HaveOccurred())
-
-			file, err := zr.Open("metadata/metadata.yml")
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := io.ReadAll(file)
+			metadataContents, err := tile.ReadMetadataFromFile(outputFile)
 			Expect(err).NotTo(HaveOccurred())
 
 			renderedYAML := fmt.Sprintf(expectedMetadataWithMultipleStemcells, cfSHA1, tileSourceRevision)
@@ -250,20 +241,7 @@ var _ = Describe("bake command", func() {
 
 			Eventually(session).Should(gexec.Exit(0))
 
-			archive, err := os.Open(outputFile)
-			Expect(err).NotTo(HaveOccurred())
-
-			archiveInfo, err := archive.Stat()
-			Expect(err).NotTo(HaveOccurred())
-
-			zr, err := zip.NewReader(archive, archiveInfo.Size())
-			Expect(err).NotTo(HaveOccurred())
-
-			file, err := zr.Open("metadata/metadata.yml")
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := io.ReadAll(file)
+			metadataContents, err := tile.ReadMetadataFromFile(outputFile)
 			Expect(err).NotTo(HaveOccurred())
 
 			renderedYAML := fmt.Sprintf(expectedMetadataWithStemcellTarball, cfSHA1, tileSourceRevision)
@@ -663,16 +641,41 @@ var _ = Describe("bake command", func() {
 		It("generates a tile with unchanged stemcell criteria", func() {
 			commandWithArgs = []string{
 				"bake",
-				"--releases-directory", otherReleasesDirectory,
-				"--releases-directory", someReleasesDirectory,
-				"--icon", someIconPath,
-				"--metadata", metadataWithStemcellCriteria,
+				"--releases-directory", filepath.Base(otherReleasesDirectory),
+				"--releases-directory", filepath.Base(someReleasesDirectory),
+				"--icon", filepath.Base(someIconPath),
+				"--metadata", filepath.Base(metadataWithStemcellCriteria),
 				"--output-file", outputFile,
 				"--version", "1.2.3",
 				"--skip-fetch-directories",
 			}
 
+			err := copyRecursively(tmpDir, otherReleasesDirectory, someReleasesDirectory, someIconPath, metadataWithStemcellCriteria)
+			Expect(err).NotTo(HaveOccurred())
+			for _, args := range [][]string{
+				{"init"},
+				{"add", "."},
+				{"commit", "-m", "test commit"},
+			} {
+				var output bytes.Buffer
+				gitCommand := exec.Command("git", args...)
+				gitCommand.Dir = tmpDir
+				gitCommand.Stdout = &output
+				gitCommand.Stderr = &output
+				err := gitCommand.Run()
+				Expect(err).NotTo(HaveOccurred(), output.String())
+			}
+
+			var gitRevParseHeadStdout bytes.Buffer
+			gitRevParseHead := exec.Command("git", "rev-parse", "HEAD")
+			gitRevParseHead.Dir = tmpDir
+			gitRevParseHead.Stdout = &gitRevParseHeadStdout
+			err = gitRevParseHead.Run()
+			Expect(err).NotTo(HaveOccurred())
+			tileSourceRevision = strings.TrimSpace(gitRevParseHeadStdout.String())
+
 			command := exec.Command(pathToMain, commandWithArgs...)
+			command.Dir = tmpDir
 			fmt.Println(commandWithArgs)
 
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -680,26 +683,7 @@ var _ = Describe("bake command", func() {
 
 			Eventually(session).Should(gexec.Exit(0))
 
-			archive, err := os.Open(outputFile)
-			Expect(err).NotTo(HaveOccurred())
-
-			archiveInfo, err := archive.Stat()
-			Expect(err).NotTo(HaveOccurred())
-
-			zr, err := zip.NewReader(archive, archiveInfo.Size())
-			Expect(err).NotTo(HaveOccurred())
-
-			var file io.ReadCloser
-			for _, f := range zr.File {
-				if f.Name == "metadata/metadata.yml" {
-					file, err = f.Open()
-					Expect(err).NotTo(HaveOccurred())
-					break
-				}
-			}
-
-			Expect(file).NotTo(BeNil(), "metadata was not found in built tile")
-			metadataContents, err := io.ReadAll(file)
+			metadataContents, err := tile.ReadMetadataFromFile(outputFile)
 			Expect(err).NotTo(HaveOccurred())
 
 			renderedYAML := fmt.Sprintf(expectedMetadataWithStemcellCriteria, diegoSHA1, cfSHA1, tileSourceRevision)
@@ -943,3 +927,52 @@ kiln_metadata:
   kiln_version: 0.0.0-dev.0+acceptance
   metadata_git_sha: %s
 `
+
+func copyRecursively(dst string, src ...string) error {
+	for _, src := range src {
+		err := copySrcRecursively(dst, src)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func copySrcRecursively(dst string, src string) error {
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	dstName := filepath.Join(dst, srcInfo.Name())
+	if srcInfo.IsDir() {
+		if err := os.MkdirAll(dstName, srcInfo.Mode().Perm()); err != nil {
+			return err
+		}
+		entrees, err := os.ReadDir(src)
+		if err != nil {
+			return err
+		}
+		for _, entree := range entrees {
+			if err := copySrcRecursively(dstName, filepath.Join(src, entree.Name())); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer closeAndIgnoreError(srcFile)
+	dstFile, err := os.OpenFile(dstName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, srcInfo.Mode().Perm())
+	if err != nil {
+		return err
+	}
+	defer closeAndIgnoreError(dstFile)
+	_, err = io.Copy(dstFile, srcFile)
+	return err
+}
+
+func closeAndIgnoreError(c io.Closer) {
+	_ = c.Close()
+}
