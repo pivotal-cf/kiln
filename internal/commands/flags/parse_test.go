@@ -24,7 +24,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 		require.NoError(t, err)
 
 		var statParam string
-		_, err = flags.LoadWithDefaults(&options, nil, func(s string) (os.FileInfo, error) {
+		_, err = flags.LoadWithDefaultFilePaths(&options, nil, func(s string) (os.FileInfo, error) {
 			statParam = s
 			return os.Stat(s)
 		})
@@ -46,7 +46,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 		require.NoError(t, f.Close())
 
 		var statParam string
-		_, err = flags.LoadWithDefaults(&options, nil, func(s string) (os.FileInfo, error) {
+		_, err = flags.LoadWithDefaultFilePaths(&options, nil, func(s string) (os.FileInfo, error) {
 			statParam = s
 			return os.Stat(s)
 		})
@@ -65,7 +65,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 		someDirPath := filepath.Join(options.testTileDir.filePath, "basket")
 
 		var statParam string
-		_, err := flags.LoadWithDefaults(&options, nil, func(s string) (os.FileInfo, error) {
+		_, err := flags.LoadWithDefaultFilePaths(&options, nil, func(s string) (os.FileInfo, error) {
 			statParam = s
 			return os.Stat(s)
 		})
@@ -84,7 +84,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 		someConfigPath := filepath.Join(options.testTileDir.filePath, "config.txt")
 
 		var statParam string
-		_, err := flags.LoadWithDefaults(&options, nil, func(s string) (os.FileInfo, error) {
+		_, err := flags.LoadWithDefaultFilePaths(&options, nil, func(s string) (os.FileInfo, error) {
 			statParam = s
 			return os.Stat(s)
 		})
@@ -104,7 +104,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 		optionsFilePath := filepath.Join(otherDir, "options.xml")
 
 		var statCallCount int
-		_, err := flags.LoadWithDefaults(&options, []string{"--some-config", optionsFilePath}, func(s string) (os.FileInfo, error) {
+		_, err := flags.LoadWithDefaultFilePaths(&options, []string{"--some-config", optionsFilePath}, func(s string) (os.FileInfo, error) {
 			statCallCount++
 			return os.Stat(s)
 		})
@@ -119,7 +119,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			Count int `long:"some-count" default:"8"`
 		}
 		options.testTileDir.filePath = t.TempDir()
-		_, err := flags.LoadWithDefaults(&options, nil, nil)
+		_, err := flags.LoadWithDefaultFilePaths(&options, nil, nil)
 		assert.NoError(t, err)
 	})
 
@@ -139,7 +139,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 		require.NoError(t, f.Close())
 
 		var statParam string
-		_, err = flags.LoadWithDefaults(&options, nil, func(s string) (os.FileInfo, error) {
+		_, err = flags.LoadWithDefaultFilePaths(&options, nil, func(s string) (os.FileInfo, error) {
 			statParam = s
 			return os.Stat(s)
 		})
@@ -164,7 +164,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			}
 
 			var statParams []string
-			_, err := flags.LoadWithDefaults(&options, nil, func(s string) (os.FileInfo, error) {
+			_, err := flags.LoadWithDefaultFilePaths(&options, nil, func(s string) (os.FileInfo, error) {
 				statParams = append(statParams, s)
 				return os.Stat(s)
 			})
@@ -187,7 +187,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 				require.NoError(t, f.Close())
 			}
 
-			_, err := flags.LoadWithDefaults(&options, nil, os.Stat)
+			_, err := flags.LoadWithDefaultFilePaths(&options, nil, os.Stat)
 			require.NoError(t, err)
 			assert.Equal(t, []string{filepath.Join(dir, "server.yml"), filepath.Join(dir, "database.yml")}, options.Configurations, "it only sets the defaults that exist")
 		})
@@ -204,7 +204,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, f.Close())
 
-			_, err = flags.LoadWithDefaults(&options, nil, os.Stat)
+			_, err = flags.LoadWithDefaultFilePaths(&options, nil, os.Stat)
 			require.NoError(t, err)
 			assert.Equal(t, []string{filepath.Join(dir, "config.yml")}, options.Configurations, "it only sets the defaults if it exist")
 		})
@@ -221,7 +221,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, f.Close())
 
-			_, err = flags.LoadWithDefaults(&options, []string{"--configuration", "some-config.yml"}, os.Stat)
+			_, err = flags.LoadWithDefaultFilePaths(&options, []string{"--configuration", "some-config.yml"}, os.Stat)
 			require.NoError(t, err)
 			assert.Equal(t, []string{"some-config.yml"}, options.Configurations, "it sets the field without string modification")
 		})
@@ -234,7 +234,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			dir := t.TempDir()
 			options.testTileDir.filePath = dir
 
-			_, err := flags.LoadWithDefaults(&options, nil, os.Stat)
+			_, err := flags.LoadWithDefaultFilePaths(&options, nil, os.Stat)
 			require.NoError(t, err)
 		})
 
@@ -247,7 +247,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			options.testTileDir.filePath = dir
 
 			require.Panics(t, func() {
-				_, _ = flags.LoadWithDefaults(&options, nil, os.Stat)
+				_, _ = flags.LoadWithDefaultFilePaths(&options, nil, os.Stat)
 			}, "it panics because jhanda does not permit non-string slice fields")
 		})
 
@@ -263,7 +263,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			dir := t.TempDir()
 			options.testTileDir.filePath = dir
 
-			_, err := flags.LoadWithDefaults(&options, []string{"--bosh-variables-directory", "some-dir", "--bosh-variables-directory", "other-dir"}, os.Stat)
+			_, err := flags.LoadWithDefaultFilePaths(&options, []string{"--bosh-variables-directory", "some-dir", "--bosh-variables-directory", "other-dir"}, os.Stat)
 			require.NoError(t, err)
 			assert.Equal(t, []string{"some-dir", "other-dir"}, options.AdditionalOptions.BOSHVariableDirectories, "it sets the field without string modification")
 		})
@@ -278,7 +278,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 
 		var statCallCount int
 
-		_, err := flags.LoadWithDefaults(&options, nil, func(s string) (os.FileInfo, error) {
+		_, err := flags.LoadWithDefaultFilePaths(&options, nil, func(s string) (os.FileInfo, error) {
 			statCallCount++
 			return os.Stat(s)
 		})
@@ -294,7 +294,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 		}
 		options.testTileDir.filePath = t.TempDir()
 		assert.Panics(t, func() {
-			_, _ = flags.LoadWithDefaults(&options, nil, nil)
+			_, _ = flags.LoadWithDefaultFilePaths(&options, nil, nil)
 		}, "jhana panics")
 	})
 }
