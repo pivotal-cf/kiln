@@ -1,70 +1,67 @@
 package flags_test
 
 import (
-	"strings"
+	"github.com/stretchr/testify/assert"
+	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 )
 
-var _ = Describe("ToStrings", func() {
-	Context("when booleans are true", func() {
-		It("encodes an options struct into a string slice with jhanda formatting", func() {
-			options := struct {
-				flags.Standard
-				flags.FetchBakeOptions
-				commands.FetchReleaseDir
-			}{
-				flags.Standard{Kilnfile: "kilnfile1", VariableFiles: []string{"variables-files-1", "variables-files-2"}, Variables: []string{"variables-1", "variables-2"}},
-				flags.FetchBakeOptions{
-					DownloadThreads:              0,
-					NoConfirm:                    true,
-					AllowOnlyPublishableReleases: false,
-				},
-				commands.FetchReleaseDir{ReleasesDir: "releases-dir"},
-			}
+func TestToStrings(t *testing.T) {
+	t.Run("when booleans are true", func(t *testing.T) {
+		options := struct {
+			flags.Standard
+			flags.FetchBakeOptions
+			commands.FetchReleaseDir
+		}{
+			flags.Standard{Kilnfile: "kilnfile1", VariableFiles: []string{"variables-files-1", "variables-files-2"}, Variables: []string{"variables-1", "variables-2"}},
+			flags.FetchBakeOptions{
+				DownloadThreads:              0,
+				NoConfirm:                    true,
+				AllowOnlyPublishableReleases: false,
+			},
+			commands.FetchReleaseDir{ReleasesDir: "releases-dir"},
+		}
 
-			jhandaArguments := flags.ToStrings(options)
+		got := flags.ToStrings(options)
 
-			expectedJhandaArguments := "--kilnfile kilnfile1 " +
-				"--variables-file variables-files-1 " +
-				"--variables-file variables-files-2 " +
-				"--variable variables-1 --variable variables-2 " +
-				"--download-threads 0 " +
-				"--no-confirm " +
-				"--releases-directory releases-dir"
-
-			Expect(jhandaArguments).To(Equal(strings.Split(expectedJhandaArguments, " ")))
-		})
+		assert.Equal(t, got, []string{"--kilnfile", "kilnfile1",
+			"--variables-file", "variables-files-1",
+			"--variables-file", "variables-files-2",
+			"--variable", "variables-1",
+			"--variable", "variables-2",
+			"--download-threads", "0",
+			"--no-confirm",
+			"--releases-directory", "releases-dir",
+		}, "it encodes an options struct into a string slice with jhanda formatting")
 	})
-	Context("when booleans are false", func() {
-		It("encodes an options struct into a string slice with jhanda formatting", func() {
-			options := struct {
-				flags.Standard
-				flags.FetchBakeOptions
-				commands.FetchReleaseDir
-			}{
-				flags.Standard{Kilnfile: "kilnfile1", VariableFiles: []string{"variables-files-1", "variables-files-2"}, Variables: []string{"variables-1", "variables-2"}},
-				flags.FetchBakeOptions{
-					DownloadThreads:              0,
-					NoConfirm:                    false,
-					AllowOnlyPublishableReleases: false,
-				},
-				commands.FetchReleaseDir{ReleasesDir: "releases-dir"},
-			}
 
-			jhandaArguments := flags.ToStrings(options)
+	t.Run("when booleans are false", func(t *testing.T) {
+		options := struct {
+			flags.Standard
+			flags.FetchBakeOptions
+			commands.FetchReleaseDir
+		}{
+			flags.Standard{Kilnfile: "kilnfile1", VariableFiles: []string{"variables-files-1", "variables-files-2"}, Variables: []string{"variables-1", "variables-2"}},
+			flags.FetchBakeOptions{
+				DownloadThreads:              0,
+				NoConfirm:                    false,
+				AllowOnlyPublishableReleases: false,
+			},
+			commands.FetchReleaseDir{ReleasesDir: "releases-dir"},
+		}
 
-			expectedJhandaArguments := "--kilnfile kilnfile1 " +
-				"--variables-file variables-files-1 " +
-				"--variables-file variables-files-2 " +
-				"--variable variables-1 --variable variables-2 " +
-				"--download-threads 0 " +
-				"--releases-directory releases-dir"
+		args := flags.ToStrings(options)
 
-			Expect(jhandaArguments).To(Equal(strings.Split(expectedJhandaArguments, " ")))
-		})
+		assert.Equal(t, args, []string{
+			"--kilnfile", "kilnfile1",
+			"--variables-file", "variables-files-1",
+			"--variables-file", "variables-files-2",
+			"--variable", "variables-1",
+			"--variable", "variables-2",
+			"--download-threads", "0",
+			"--releases-directory", "releases-dir",
+		}, "it encodes an options struct into a string slice with jhanda formatting")
 	})
-})
+}
