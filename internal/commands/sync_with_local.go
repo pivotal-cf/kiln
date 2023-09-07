@@ -40,7 +40,7 @@ func NewSyncWithLocal(fs billy.Filesystem, localReleaseDirectory LocalReleaseDir
 type RemotePatherFinder func(cargo.Kilnfile, string) (component.RemotePather, error)
 
 func (command SyncWithLocal) Execute(args []string) error {
-	_, err := flags.LoadFlagsWithDefaults(&command.Options, args, command.fs.Stat)
+	_, err := flags.LoadWithDefaults(&command.Options, args, command.fs.Stat)
 	if err != nil {
 		return err
 	}

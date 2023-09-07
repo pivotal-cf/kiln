@@ -68,7 +68,7 @@ func (cmd *FindReleaseVersion) Execute(args []string) error {
 }
 
 func (cmd *FindReleaseVersion) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, error) {
-	argsAfterFlags, err := flags.LoadFlagsWithDefaults(&cmd.Options, args, nil)
+	argsAfterFlags, err := flags.LoadWithDefaults(&cmd.Options, args, nil)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
