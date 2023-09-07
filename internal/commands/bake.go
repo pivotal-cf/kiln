@@ -355,7 +355,7 @@ func (b Bake) Execute(args []string) error {
 				b.Options.FetchBakeOptions,
 				FetchReleaseDir{releaseDir},
 			}
-			fetchArgs := flags.ToStrings(fetchOptions)
+			fetchArgs := flags.Args(fetchOptions)
 			err = b.fetcher.Execute(fetchArgs)
 			if err != nil {
 				return err
