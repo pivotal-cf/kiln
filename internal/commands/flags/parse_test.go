@@ -1,11 +1,12 @@
 package flags_test
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
@@ -20,7 +21,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 		options.testTileDir.filePath = t.TempDir()
 
 		someDirPath := filepath.Join(options.testTileDir.filePath, "basket")
-		err := os.MkdirAll(someDirPath, 0777)
+		err := os.MkdirAll(someDirPath, 0o777)
 		require.NoError(t, err)
 
 		var statParam string
@@ -351,7 +352,8 @@ func TestArgs(t *testing.T) {
 
 		got := flags.Args(options)
 
-		assert.Equal(t, got, []string{"--kilnfile", "kilnfile1",
+		assert.Equal(t, got, []string{
+			"--kilnfile", "kilnfile1",
 			"--variables-file", "variables-files-1",
 			"--variables-file", "variables-files-2",
 			"--variable", "variables-1",
