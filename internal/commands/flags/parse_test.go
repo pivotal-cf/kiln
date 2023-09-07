@@ -123,6 +123,135 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("when options has a nested struct", func(t *testing.T) {
+		type SubOptions struct {
+			SomeConfig string `long:"some-config" default:"config.txt"`
+		}
+		var options struct {
+			testTileDir
+			SubOptions
+		}
+		options.testTileDir.filePath = t.TempDir()
+
+		someConfigPath := filepath.Join(options.testTileDir.filePath, "config.txt")
+		f, err := os.Create(someConfigPath)
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+
+		var statParam string
+		_, err = flags.LoadWithDefaults(&options, nil, func(s string) (os.FileInfo, error) {
+			statParam = s
+			return os.Stat(s)
+		})
+		require.NoError(t, err)
+		assert.Equal(t, someConfigPath, statParam, "it checks that the directory exists")
+		assert.Equal(t, someConfigPath, options.SomeConfig, "it sets the struct field")
+	})
+
+	t.Run("when the field is a slice", func(t *testing.T) {
+		t.Run("and the default files exist", func(t *testing.T) {
+			var options struct {
+				testTileDir
+				Configurations []string `long:"configuration" default:"server.yml,client.yml,database.yml"`
+			}
+			dir := t.TempDir()
+			options.testTileDir.filePath = dir
+
+			for _, defaultFileName := range []string{"server.yml", "client.yml", "database.yml"} {
+				f, err := os.Create(filepath.Join(dir, defaultFileName))
+				require.NoError(t, err)
+				require.NoError(t, f.Close())
+			}
+
+			var statParams []string
+			_, err := flags.LoadWithDefaults(&options, nil, func(s string) (os.FileInfo, error) {
+				statParams = append(statParams, s)
+				return os.Stat(s)
+			})
+			require.NoError(t, err)
+			assert.Equal(t, statParams, options.Configurations, "it checks if the files exist")
+			assert.Equal(t, []string{filepath.Join(dir, "server.yml"), filepath.Join(dir, "client.yml"), filepath.Join(dir, "database.yml")}, options.Configurations, "it sets the struct field")
+		})
+
+		t.Run("and a default file does not exist", func(t *testing.T) {
+			var options struct {
+				testTileDir
+				Configurations []string `long:"configuration" default:"server.yml, MISSING.yml, database.yml"`
+			}
+			dir := t.TempDir()
+			options.testTileDir.filePath = dir
+
+			for _, defaultFileName := range []string{"server.yml", "database.yml"} {
+				f, err := os.Create(filepath.Join(dir, defaultFileName))
+				require.NoError(t, err)
+				require.NoError(t, f.Close())
+			}
+
+			_, err := flags.LoadWithDefaults(&options, nil, os.Stat)
+			require.NoError(t, err)
+			assert.Equal(t, []string{filepath.Join(dir, "server.yml"), filepath.Join(dir, "database.yml")}, options.Configurations, "it only sets the defaults that exist")
+		})
+
+		t.Run("and there is exactly one default", func(t *testing.T) {
+			var options struct {
+				testTileDir
+				Configurations []string `long:"configuration" default:"config.yml"`
+			}
+			dir := t.TempDir()
+			options.testTileDir.filePath = dir
+
+			f, err := os.Create(filepath.Join(dir, "config.yml"))
+			require.NoError(t, err)
+			require.NoError(t, f.Close())
+
+			_, err = flags.LoadWithDefaults(&options, nil, os.Stat)
+			require.NoError(t, err)
+			assert.Equal(t, []string{filepath.Join(dir, "config.yml")}, options.Configurations, "it only sets the defaults if it exist")
+		})
+
+		t.Run("and arguments are passed", func(t *testing.T) {
+			var options struct {
+				testTileDir
+				Configurations []string `long:"configuration" default:"config.yml"`
+			}
+			dir := t.TempDir()
+			options.testTileDir.filePath = dir
+
+			f, err := os.Create(filepath.Join(dir, "config.yml"))
+			require.NoError(t, err)
+			require.NoError(t, f.Close())
+
+			_, err = flags.LoadWithDefaults(&options, []string{"--configuration", "some-config.yml"}, os.Stat)
+			require.NoError(t, err)
+			assert.Equal(t, []string{"some-config.yml"}, options.Configurations, "it sets the field without string modification")
+		})
+
+		t.Run("and the default tag is not added", func(t *testing.T) {
+			var options struct {
+				testTileDir
+				Configurations []string `long:"configuration"`
+			}
+			dir := t.TempDir()
+			options.testTileDir.filePath = dir
+
+			_, err := flags.LoadWithDefaults(&options, nil, os.Stat)
+			require.NoError(t, err)
+		})
+
+		t.Run("and the field type is not a string", func(t *testing.T) {
+			var options struct {
+				testTileDir
+				N []int `long:"n"`
+			}
+			dir := t.TempDir()
+			options.testTileDir.filePath = dir
+
+			require.Panics(t, func() {
+				_, _ = flags.LoadWithDefaults(&options, nil, os.Stat)
+			}, "it panics because jhanda does not permit non-string slice fields")
+		})
+	})
+
 	t.Run("when a field is not tagged with a default value", func(t *testing.T) {
 		var options struct {
 			testTileDir
