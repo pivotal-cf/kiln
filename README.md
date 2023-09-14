@@ -35,7 +35,6 @@ To install the `kiln` CLI
   ```shell
   git clone git@github.com:pivotal-cf/kiln.git
   cd kiln
-  git checkout 0.60.2
   ./install.sh
   ```
 
