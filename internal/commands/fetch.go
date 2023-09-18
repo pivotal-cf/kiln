@@ -164,9 +164,9 @@ nextRelease:
 				missing = append(missing[:j], missing[j+1:]...)
 				continue nextRelease
 			} else if rel.Lock.Name == lock.Name && rel.Lock.Version == lock.Version {
-				fmt.Printf("release: [ %s ] sha mismatch: [ %s ]\n", lock.Name, rel.Lock.SHA1)
+				fmt.Printf("Local release: [ %s ] sha mismatch: [ %s ]\n", lock.Name, rel.Lock.SHA1)
 			} else if rel.Lock.Name == lock.Name && rel.Lock.SHA1 == lock.SHA1 {
-				fmt.Printf("release: [ %s ] version mismatch: [ %s ]\n", lock.Name, rel.Lock.Version)
+				fmt.Printf("Local release: [ %s ] version mismatch: [ %s ]\n", lock.Name, rel.Lock.Version)
 			}
 		}
 
