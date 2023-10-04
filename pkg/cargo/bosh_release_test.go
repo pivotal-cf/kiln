@@ -160,6 +160,32 @@ func TestReadProductTemplatePartFromBOSHReleaseTarball(t *testing.T) {
 	})
 }
 
+func TestOpenBOSHReleaseTarball(t *testing.T) {
+	t.Run("release tarball does not exist", func(t *testing.T) {
+		temporaryTestDirectory := t.TempDir()
+
+		releaseFilepath := filepath.Join(temporaryTestDirectory, "release.tgz")
+
+		_, err := cargo.OpenBOSHReleaseTarball(releaseFilepath)
+
+		require.Error(t, err)
+	})
+
+	t.Run("release tarball is empty not exist", func(t *testing.T) {
+		temporaryTestDirectory := t.TempDir()
+
+		releaseFilepath := filepath.Join(temporaryTestDirectory, "release.tgz")
+		{
+			f, err := os.Create(releaseFilepath)
+			require.NoError(t, err)
+			require.NoError(t, f.Close())
+		}
+
+		_, err := cargo.OpenBOSHReleaseTarball(releaseFilepath)
+		require.EqualError(t, err, "BOSH release tarball release.tgz is an empty file")
+	})
+}
+
 func closeAndIgnoreError(c io.Closer) {
 	_ = c.Close()
 }
