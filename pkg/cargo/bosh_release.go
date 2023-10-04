@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -135,6 +136,13 @@ func OpenBOSHReleaseTarball(tarballPath string) (BOSHReleaseTarball, error) {
 	file, err := os.Open(tarballPath)
 	if err != nil {
 		return BOSHReleaseTarball{}, err
+	}
+	info, err := file.Stat()
+	if err != nil {
+		return BOSHReleaseTarball{}, err
+	}
+	if info.Size() == 0 {
+		return BOSHReleaseTarball{}, fmt.Errorf("BOSH release tarball %s is an empty file", filepath.Base(tarballPath))
 	}
 	defer closeAndIgnoreError(file)
 	return ReadBOSHReleaseTarball(tarballPath, file)
