@@ -14,7 +14,7 @@ require (
 	github.com/crhntr/yamlutil v0.0.0-20230524174859-4e4388958875
 	github.com/cucumber/godog v0.12.6
 	github.com/cucumber/messages-go/v16 v16.0.1
-	github.com/docker/docker v24.0.5+incompatible
+	github.com/docker/docker v24.0.7+incompatible
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-git/go-billy/v5 v5.4.1
 	github.com/go-git/go-git/v5 v5.8.1
