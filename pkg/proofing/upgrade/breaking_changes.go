@@ -97,6 +97,9 @@ func detectNewPropertyWithoutDefault(stable, candidate proofing.ProductTemplate)
 		if pb.HasDefault() {
 			continue
 		}
+		if pb.IsOptional() {
+			continue
+		}
 		breakingChanges = append(breakingChanges, PropertyBlueprintBreakingChange{
 			Type:         BreakingChangeAddedConfigurablePropertyWithoutDefault,
 			PropertyName: pb.PropertyName(),
