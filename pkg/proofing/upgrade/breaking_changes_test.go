@@ -90,6 +90,13 @@ func TestListBreakingChanges(t *testing.T) {
 			assert.Len(t, breakingChanges, 1)
 			assert.EqualError(t, breakingChanges[0], `breaking change for property with name "added_property": added configurable property without default`)
 		})
+		t.Run("added configurable optional property without default", func(t *testing.T) {
+			initialMetadata, patchMetadata := loadMetadataProperties(t)
+
+			breakingChanges := upgrade.ListBreakingChanges(initialMetadata, patchMetadata)
+
+			assert.Empty(t, breakingChanges)
+		})
 		t.Run("added configurable property with default", func(t *testing.T) {
 			initialMetadata, patchMetadata := loadMetadataProperties(t)
 

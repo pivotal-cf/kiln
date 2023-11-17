@@ -21,6 +21,7 @@ func (blueprint SimplePropertyBlueprint) PropertyName() string { return blueprin
 func (blueprint SimplePropertyBlueprint) PropertyType() string { return blueprint.Type }
 func (blueprint SimplePropertyBlueprint) HasDefault() bool     { return blueprint.Default != nil }
 func (blueprint SimplePropertyBlueprint) IsConfigurable() bool { return blueprint.Configurable }
+func (blueprint SimplePropertyBlueprint) IsOptional() bool     { return blueprint.Optional }
 
 type PropertyBlueprintOption struct {
 	Label string `yaml:"label"`

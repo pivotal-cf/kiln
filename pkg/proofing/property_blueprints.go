@@ -12,6 +12,7 @@ type PropertyBlueprint interface {
 	PropertyType() string
 	HasDefault() bool
 	IsConfigurable() bool
+	IsOptional() bool
 }
 
 type PropertyBlueprints []PropertyBlueprint
