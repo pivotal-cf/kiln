@@ -103,10 +103,6 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 					{Body: strPtr("labeled"), TagName: strPtr("1.0.1")},
 					{Body: strPtr("chopped"), TagName: strPtr("0.2.2")},
 					{Body: strPtr("preserved"), TagName: strPtr("1.0.0")},
-				}, githubResponse(t, 200), nil
-			case 1:
-				ltsCallCount++
-				return []*github.RepositoryRelease{
 					{Body: strPtr("cleaned"), TagName: strPtr("0.2.1")},
 					{Body: strPtr("ripe"), TagName: strPtr("0.1.3")},
 					{Body: strPtr("unripe"), TagName: strPtr("0.1.2")},
@@ -151,7 +147,7 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 	please.Expect(err).NotTo(HaveOccurred())
 	please.Expect(result).To(HaveLen(2))
 
-	please.Expect(ltsCallCount).To(Equal(3))
+	please.Expect(ltsCallCount).To(Equal(1))
 
 	please.Expect(result[0].ReleaseNotes()).To(Equal("served\nplated\nstored\nlabeled\npreserved\nchopped\ncleaned"))
 }
