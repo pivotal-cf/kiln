@@ -173,20 +173,14 @@ func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLis
 	var result []*github.RepositoryRelease
 
 	ops := github.ListOptions{}
-	for {
-		releases, _, _ := repoService.ListReleases(ctx, owner, repo, &ops)
-		if len(releases) == 0 {
-			break
-		}
+	releases, _, _ := repoService.ListReleases(ctx, owner, repo, &ops)
 
-		for _, rel := range releases {
-			rv, err := semver.NewVersion(strings.TrimPrefix(rel.GetTagName(), "v"))
-			if err != nil || rv.LessThan(from) || rv.Equal(from) || rv.GreaterThan(to) {
-				continue
-			}
-			result = append(result, rel)
+	for _, rel := range releases {
+		rv, err := semver.NewVersion(strings.TrimPrefix(rel.GetTagName(), "v"))
+		if err != nil || rv.LessThan(from) || rv.Equal(from) || rv.GreaterThan(to) {
+			continue
 		}
-		ops.Page++
+		result = append(result, rel)
 	}
 
 	return result

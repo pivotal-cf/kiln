@@ -129,7 +129,7 @@ func Test_fetch(t *testing.T) {
 	please.Expect(historicVersion.CallCount()).To(Equal(1))
 	_, historicVersionHashArg, _ := historicVersion.ArgsForCall(0)
 	please.Expect(historicVersionHashArg).To(Equal(finalHash))
-	please.Expect(fakeReleaseService.ListReleasesCallCount()).To(Equal(2))
+	please.Expect(fakeReleaseService.ListReleasesCallCount()).To(Equal(1))
 	please.Expect(fakeIssuesService.GetCallCount()).To(Equal(2))
 
 	_, orgName, repoName, n := fakeIssuesService.GetArgsForCall(0)
