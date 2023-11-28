@@ -52,6 +52,7 @@ type Data struct {
 	TrainstatNotes []string
 
 	Stemcell cargo.Stemcell
+	Window   string
 }
 
 //func (notes Data) Strings() string {
@@ -64,11 +65,15 @@ func (notes Data) WriteVersionNotes() (TileRelease, error) {
 	if err != nil {
 		return TileRelease{}, err
 	}
-	v, err := notes.Version.SetPrerelease("")
-	if err != nil {
-		return TileRelease{}, err
+
+	if notes.Window == "ga" {
+		v, err := notes.Version.SetPrerelease("")
+		if err != nil {
+			return TileRelease{}, err
+		}
+		notes.Version = &v
 	}
-	notes.Version = &v
+
 	var buf bytes.Buffer
 	err = noteTemplate.Execute(&buf, notes)
 	if err != nil {
