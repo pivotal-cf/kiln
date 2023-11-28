@@ -440,6 +440,7 @@ func TestData_WriteVersionNotes(t *testing.T) {
 		please := NewWithT(t)
 		data := Data{
 			Version: semver.MustParse("4.0.0+LTS-T"),
+			Window:  "ga",
 		}
 
 		releaseNotes, err := data.WriteVersionNotes()
@@ -450,10 +451,11 @@ func TestData_WriteVersionNotes(t *testing.T) {
 		please.Expect(releaseNotes.Notes).To(ContainSubstring("### <a id='4.0.0'></a> 4.0.0+LTS-T"))
 	})
 
-	t.Run("version has a build pre-release suffix", func(t *testing.T) {
+	t.Run("version has a build pre-release suffix and window is ga", func(t *testing.T) {
 		please := NewWithT(t)
 		data := Data{
 			Version: semver.MustParse("4.0.0-build.3"),
+			Window:  "ga",
 		}
 
 		releaseNotes, err := data.WriteVersionNotes()
@@ -462,10 +464,24 @@ func TestData_WriteVersionNotes(t *testing.T) {
 		please.Expect(releaseNotes.Notes).To(ContainSubstring("### <a id='4.0.0'></a> 4.0.0"))
 	})
 
+	t.Run("version has a build pre-release suffix and window is not ga", func(t *testing.T) {
+		please := NewWithT(t)
+		data := Data{
+			Version: semver.MustParse("4.0.0-build.3"),
+			Window:  "alpha",
+		}
+
+		releaseNotes, err := data.WriteVersionNotes()
+		please.Expect(err).NotTo(HaveOccurred())
+
+		please.Expect(releaseNotes.Notes).To(ContainSubstring("### <a id='4.0.0-build.3'></a> 4.0.0-build.3"))
+	})
+
 	t.Run("version has a build pre-release and build metadata", func(t *testing.T) {
 		please := NewWithT(t)
 		data := Data{
 			Version: semver.MustParse("4.0.0-build.3+LTS-T"),
+			Window:  "ga",
 		}
 
 		releaseNotes, err := data.WriteVersionNotes()

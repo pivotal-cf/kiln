@@ -32,6 +32,7 @@ type ReleaseNotes struct {
 		GithubToken  string `long:"github-token" short:"g" description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
 		Kilnfile     string `long:"kilnfile"     short:"k" description:"path to Kilnfile"`
 		DocsFile     string `long:"update-docs"  short:"u" description:"path to docs file to update"`
+		Window       string `long:"window"       short:"w" description:"GA window for release notes" default:"ga"`
 		notes.IssuesQuery
 		notes.TrainstatQuery
 	}
@@ -101,6 +102,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 		return err
 	}
 	data.ReleaseDate, _ = r.parseReleaseDate()
+	data.Window = r.Options.Window
 
 	if r.Options.DocsFile == "" {
 		return r.writeNotes(r.Writer, data)
