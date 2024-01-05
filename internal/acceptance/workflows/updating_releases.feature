@@ -6,7 +6,7 @@ Feature: As a dependabot, I want to update a BOSH Release
       | find-release-version                      |
       | --release=hello-release                   |
       | --variable=github_token="${GITHUB_TOKEN}" |
-    Then stdout contains substring: "0.2.1"
+    Then stdout contains substring: "0.2.3"
 
   Scenario: Find a version on bosh.io
     Given I set the version constraint to "1.1.18" for release "bpm"
