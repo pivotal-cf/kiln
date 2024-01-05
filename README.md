@@ -610,8 +610,10 @@ aws_secret_access_key: SOME_REALLY_SECRET_KEY
 
 Interpolating this file in kiln would look something like this.
 
+1. Get your credentials from Lastpass by running: `lpass show --notes 'pas-releng-fetch-releases' > vars.yml`
+
 ```bash
-kiln bake --kilnfile random-Kilnfile --variables-file <(lpass show --notes 'pas-releng-fetch-releases')
+kiln bake --kilnfile random-Kilnfile --variables-file vars.yml
 ```
 
 <a id="kilnfile-lock"></a>
