@@ -246,6 +246,29 @@ func (r fetchNotesData) fetch(ctx context.Context) (Data, error) {
 		})
 	}
 
+	if strings.Contains(r.kilnfilePath, "tasw") {
+		data, err = r.fetchWinfsReleaseNotes(ctx, data, majorMinor)
+		if err != nil {
+			return Data{}, err
+		}
+	}
+
+	return data, nil
+}
+
+func (r fetchNotesData) fetchWinfsReleaseNotes(ctx context.Context, data Data, majorMinor string) (Data, error) {
+	bumped, winfsVersion, err := r.trainstatClient.FetchTrainstatWinfsVersionInfo(ctx, r.issuesQuery.IssueMilestone, majorMinor)
+	if err != nil {
+		return Data{}, err
+	}
+	data.Bumps = cargo.WinfsVersionBump(bumped, winfsVersion, data.Bumps)
+	data.Components = append(data.Components, BOSHReleaseData{
+		BOSHReleaseTarballLock: cargo.BOSHReleaseTarballLock{
+			Name:    "windowsfs-release",
+			Version: winfsVersion,
+		},
+	})
+
 	return data, nil
 }
 
@@ -544,6 +567,7 @@ func closeAndIgnoreError(c io.Closer) { _ = c.Close() }
 
 type TrainstatNotesFetcher interface {
 	FetchTrainstatNotes(ctx context.Context, milestone string, version string, tile string) ([]string, error)
+	FetchTrainstatWinfsVersionInfo(ctx context.Context, milestone string, version string) (bool, string, error)
 }
 
 type TrainstatClient struct {
@@ -600,6 +624,46 @@ func (t *TrainstatClient) FetchTrainstatNotes(ctx context.Context, milestone str
 		return notes, err
 	}
 	return
+}
+
+func (t *TrainstatClient) FetchTrainstatWinfsVersionInfo(ctx context.Context, milestone string, version string) (bumped bool, winfsVersion string, err error) {
+	baseURL := fmt.Sprintf("%s/%s", t.host, "api/v1/get_winfs_version_bump")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL, nil)
+
+	if err != nil {
+		return false, "", err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	q := req.URL.Query()
+	q.Set("milestone", milestone)
+	q.Set("version", version)
+	req.URL.RawQuery = q.Encode()
+
+	res, err := t.httpClient.Do(req)
+	if err != nil {
+		return false, "", err
+	}
+	if res.StatusCode != http.StatusOK {
+		return false, "", fmt.Errorf("request status code is not okkkk: got %d", res.StatusCode)
+	}
+	defer closeAndIgnoreError(res.Body)
+
+	responseData, err := io.ReadAll(res.Body)
+	if err != nil {
+		return false, "", err
+	}
+
+	winfsVersionInfo := struct {
+		Bumped  bool   `json:"bumped"`
+		Version string `json:"version"`
+	}{}
+
+	err = json.Unmarshal(responseData, &winfsVersionInfo)
+	if err != nil {
+		return false, "", err
+	}
+	return winfsVersionInfo.Bumped, winfsVersionInfo.Version, err
 }
 
 func (t *TrainstatClient) tileSupported(tile string) bool {

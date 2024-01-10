@@ -84,6 +84,28 @@ func TestCalculateBumps(t *testing.T) {
 	})
 }
 
+func TestWinfsVersionBump(t *testing.T) {
+	t.Parallel()
+	please := NewWithT(t)
+
+	t.Run("when the winfs version is not bumped", func(t *testing.T) {
+		please.Expect(WinfsVersionBump(false, "2.61.0", []Bump{
+			{Name: "b", FromVersion: "1", ToVersion: "2"},
+		})).To(Equal([]Bump{
+			{Name: "b", FromVersion: "1", ToVersion: "2"},
+		}))
+	})
+
+	t.Run("when the winfs version is bumped", func(t *testing.T) {
+		please.Expect(WinfsVersionBump(true, "2.61.0", []Bump{
+			{Name: "b", FromVersion: "1", ToVersion: "2"},
+		})).To(Equal([]Bump{
+			{Name: "b", FromVersion: "1", ToVersion: "2"},
+			{Name: "windowsfs-release", FromVersion: "", ToVersion: "2.61.0"},
+		}))
+	})
+}
+
 func TestInternal_addReleaseNotes(t *testing.T) {
 	please := NewWithT(t)
 

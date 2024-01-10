@@ -22,7 +22,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/notes/internal/fakes"
 )
 
-func Test_fetch(t *testing.T) {
+func Test_fetch_for_ist_tas(t *testing.T) {
 	please := NewWithT(t)
 
 	t.Setenv("GITHUB_TOKEN", "")
@@ -147,6 +147,141 @@ func Test_fetch(t *testing.T) {
 	please.Expect(version).To(Equal("4.0"))
 	please.Expect(tile).To(Equal("elastic-runtime"))
 	please.Expect(fakeTrainstatClient.GetCallCount()).To(Equal(1))
+
+	please.Expect(fakeTrainstatClient.GetCallCountForWinfs()).To(Equal(0))
+}
+
+func Test_fetch_for_tasw(t *testing.T) {
+	please := NewWithT(t)
+
+	t.Setenv("GITHUB_TOKEN", "")
+
+	repo, _ := git.Init(memory.NewStorage(), memfs.New())
+
+	revisionResolver := new(fakes.RevisionResolver)
+	var initialHash, finalHash plumbing.Hash
+	fill(initialHash[:], '1')
+	fill(finalHash[:], '9')
+	revisionResolver.ResolveRevisionReturnsOnCall(0, &initialHash, nil)
+	revisionResolver.ResolveRevisionReturnsOnCall(1, &finalHash, nil)
+
+	historicKilnfile := new(fakes.HistoricKilnfile)
+	historicKilnfile.ReturnsOnCall(0, cargo.Kilnfile{}, cargo.KilnfileLock{
+		Stemcell: cargo.Stemcell{
+			OS:      "fruit-tree",
+			Version: "40000.1",
+		},
+		Releases: []cargo.BOSHReleaseTarballLock{
+			{Name: "banana", Version: "1.1.0"},
+			{Name: "lemon", Version: "1.1.0"},
+		},
+	}, nil)
+	historicKilnfile.ReturnsOnCall(1, cargo.Kilnfile{
+		Stemcell: cargo.Stemcell{
+			OS:      "fruit-tree",
+			Version: "40000.2",
+		},
+		Releases: []cargo.BOSHReleaseTarballSpecification{
+			{Name: "banana", GitHubRepository: "https://github.com/pivotal-cf/lts-banana-release"},
+			{Name: "lemon"},
+		},
+		Slug: "pas-windows",
+	}, cargo.KilnfileLock{
+		Releases: []cargo.BOSHReleaseTarballLock{
+			{Name: "banana", Version: "1.2.0"},
+			{Name: "lemon", Version: "1.1.0"},
+		},
+	}, nil)
+
+	historicVersion := new(fakes.HistoricVersion)
+	historicVersion.Returns("4.0.0-build.50000", nil)
+
+	fakeIssuesService := new(fakes.IssuesService)
+	fakeIssuesService.GetReturnsOnCall(0, &github.Issue{
+		Title: strPtr("**[Feature Improvement]** Reduce default log-cache max per source"),
+	}, githubResponse(t, 200), nil)
+	fakeIssuesService.ListByRepoReturnsOnCall(1, []*github.Issue{}, githubResponse(t, 404), nil)
+	fakeIssuesService.GetReturnsOnCall(0, &github.Issue{
+		ID:    int64Ptr(1),
+		Title: strPtr("**[Bug Fix]** banana metadata migration does not fail on upgrade from previous LTS"),
+	}, githubResponse(t, 200), nil)
+	fakeIssuesService.GetReturnsOnCall(1, &github.Issue{
+		ID:    int64Ptr(2),
+		Title: strPtr("**[Feature Improvement]** Reduce default log-cache max per source"),
+	}, githubResponse(t, 200), nil)
+
+	fakeReleaseService := new(fakes.ReleaseService)
+	fakeReleaseService.ListReleasesReturnsOnCall(0, []*github.RepositoryRelease{
+		{TagName: strPtr("1.1.0"), Body: strPtr("   peal is green\n")},
+		{TagName: strPtr("1.1.1"), Body: strPtr("remove from bunch\n\n")},
+	}, githubResponse(t, 200), nil)
+	fakeReleaseService.ListReleasesReturnsOnCall(2, []*github.RepositoryRelease{
+		{TagName: strPtr("1.1.2"), Body: strPtr("")},
+		{TagName: strPtr("1.2.0"), Body: strPtr("peal is yellow")},
+	}, githubResponse(t, 200), nil)
+	fakeReleaseService.ListReleasesReturnsOnCall(3, []*github.RepositoryRelease{}, githubResponse(t, 400), nil)
+
+	fakeTrainstatClient := new(fakes.TrainstatClient)
+	fakeTrainstatClient.FetchReturnsOnCall(0, []string{
+		"* **[Feature]** this is a feature.",
+		"* **[Bug Fix]** this is a bug fix.",
+	}, nil)
+	fakeTrainstatClient.FetchReturnsOnCallForWinfs(0, true, "2.61.0", nil)
+
+	rn := fetchNotesData{
+		repoOwner:       "pivotal-cf",
+		repoName:        "fake-tile-repo",
+		kilnfilePath:    "tasw",
+		initialRevision: "tile/1.1.0",
+		finalRevision:   "tile/1.2.0",
+		issuesQuery: IssuesQuery{
+			IssueIDs: []string{"54000", "54321"},
+		},
+
+		repository:       repo,
+		Storer:           repo.Storer,
+		revisionResolver: revisionResolver,
+		historicKilnfile: historicKilnfile.Spy,
+		historicVersion:  historicVersion.Spy,
+
+		issuesService:   fakeIssuesService,
+		releasesService: fakeReleaseService,
+		trainstatClient: fakeTrainstatClient,
+	}
+
+	_, err := rn.fetch(context.Background())
+	please.Expect(err).NotTo(HaveOccurred())
+
+	please.Expect(revisionResolver.ResolveRevisionCallCount()).To(Equal(2))
+	please.Expect(revisionResolver.ResolveRevisionArgsForCall(0)).To(Equal(plumbing.Revision("tile/1.1.0")))
+	please.Expect(revisionResolver.ResolveRevisionArgsForCall(1)).To(Equal(plumbing.Revision("tile/1.2.0")))
+
+	please.Expect(historicVersion.CallCount()).To(Equal(1))
+	_, historicVersionHashArg, _ := historicVersion.ArgsForCall(0)
+	please.Expect(historicVersionHashArg).To(Equal(finalHash))
+	please.Expect(fakeReleaseService.ListReleasesCallCount()).To(Equal(1))
+	please.Expect(fakeIssuesService.GetCallCount()).To(Equal(2))
+
+	_, orgName, repoName, n := fakeIssuesService.GetArgsForCall(0)
+	please.Expect(orgName).To(Equal("pivotal-cf"))
+	please.Expect(repoName).To(Equal("fake-tile-repo"))
+	please.Expect(n).To(Equal(54000))
+
+	_, orgName, repoName, n = fakeIssuesService.GetArgsForCall(1)
+	please.Expect(orgName).To(Equal("pivotal-cf"))
+	please.Expect(repoName).To(Equal("fake-tile-repo"))
+	please.Expect(n).To(Equal(54321))
+
+	milestone, version, tile := fakeTrainstatClient.GetArgsForCall(0)
+	please.Expect(milestone).To(Equal(rn.issuesQuery.IssueMilestone))
+	please.Expect(version).To(Equal("4.0"))
+	please.Expect(tile).To(Equal("pas-windows"))
+	please.Expect(fakeTrainstatClient.GetCallCount()).To(Equal(1))
+
+	milestone, version = fakeTrainstatClient.GetArgsForCallForWinfs(0)
+	please.Expect(milestone).To(Equal(rn.issuesQuery.IssueMilestone))
+	please.Expect(version).To(Equal("4.0"))
+	please.Expect(fakeTrainstatClient.GetCallCountForWinfs()).To(Equal(1))
 }
 
 func Test_issuesFromIssueIDs(t *testing.T) {
