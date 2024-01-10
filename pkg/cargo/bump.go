@@ -75,6 +75,16 @@ func CalculateBumps(current, previous []BOSHReleaseTarballLock) []Bump {
 	return bumps
 }
 
+func WinfsVersionBump(bumped bool, version string, bumps []Bump) []Bump {
+	if bumped {
+		bumps = append(bumps, Bump{
+			Name:      "windowsfs-release",
+			ToVersion: version,
+		})
+	}
+	return bumps
+}
+
 func (bump Bump) toFrom() (to, from *semver.Version, _ error) {
 	var err error
 	from, err = semver.NewVersion(bump.FromVersion)
