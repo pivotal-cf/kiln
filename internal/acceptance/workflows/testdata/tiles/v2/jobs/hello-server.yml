@@ -1,0 +1,4 @@
+name: hello-server
+release: hello-release
+manifest: |
+  port: (( .properties.port.value ))

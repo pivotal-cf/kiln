@@ -8,10 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -26,21 +25,14 @@ func kilnCommand(ctx context.Context, args ...string) *exec.Cmd {
 	return exec.CommandContext(ctx, kilnBuildPath(ctx), args...)
 }
 
-func checkoutMain(repoPath string) error {
-	repo, err := git.PlainOpen(repoPath)
-	if err != nil {
-		return err
-	}
-	wt, err := repo.Worktree()
-	if err != nil {
-		return err
-	}
-	err = wt.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.NewBranchReferenceName("main"),
-		Force:  true,
-	})
-	if err != nil {
-		return err
+func executeAndWrapError(wd, command string, args ...string) error {
+	var output bytes.Buffer
+	cmd := exec.Command(command, args...)
+	cmd.Dir = wd
+	cmd.Stderr = &output
+	cmd.Stdout = &output
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("executing `%s` failed with error %w\n%s", strings.Join(cmd.Args, " "), err, output.String())
 	}
 	return nil
 }

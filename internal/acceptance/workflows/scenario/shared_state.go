@@ -135,11 +135,15 @@ func output(ctx context.Context, name string) (*bytes.Buffer, error) {
 	case "stderr":
 		return v[stderrFD], nil
 	default:
+		tileDir, err := tileRepoPath(ctx)
+		if err != nil {
+			return nil, err
+		}
 		name, err = strconv.Unquote(name)
 		if err != nil {
 			return nil, err
 		}
-		buf, err := os.ReadFile(name)
+		buf, err := os.ReadFile(filepath.Join(tileDir, name))
 		if err != nil {
 			return nil, err
 		}

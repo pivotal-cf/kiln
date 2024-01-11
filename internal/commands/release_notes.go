@@ -67,14 +67,14 @@ func (r ReleaseNotes) Usage() jhanda.Usage {
 }
 
 func (r ReleaseNotes) Execute(args []string) error {
-	ctx := context.Background()
-
-	if err := r.initRepo(); err != nil {
+	nonFlagArgs, err := jhanda.Parse(&r.Options, args)
+	if err != nil {
 		return err
 	}
 
-	nonFlagArgs, err := jhanda.Parse(&r.Options, args)
-	if err != nil {
+	ctx := context.Background()
+
+	if err := r.initRepo(); err != nil {
 		return err
 	}
 

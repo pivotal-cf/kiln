@@ -3,7 +3,7 @@
 ## Philosophy
 
 We believe a good acceptance test suite has the following properties:
-1. The tests are comphrehendable to new team members
+1. The tests are comprehensible to new team members
 1. The tests are extendable by non-team members
 1. The tests describe the intended functioning of the source under test
 1. The test coverage is discoverable

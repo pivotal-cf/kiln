@@ -2,7 +2,6 @@ package scenario
 
 import (
 	"context"
-	"os/exec"
 	"regexp"
 
 	"github.com/cucumber/godog"
@@ -37,8 +36,10 @@ func initializeExec(ctx scenarioContext) {
 	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		return configureStandardFileDescriptors(ctx), nil
 	})
+	ctx.Step(regexp.MustCompile("^I execute (.*)$"), iExecute)
 	ctx.Step(regexp.MustCompile(`^(stdout|stderr|"[^"]*") contains substring: (.*)`), outputContainsSubstring)
 	ctx.Step(regexp.MustCompile(`^the exit code is (\d+)$`), theExitCodeIs)
+	ctx.Step(regexp.MustCompile(`^I write file ("[^"]*")$`), iWriteFileWith)
 }
 
 func InitializeGitHub(ctx *godog.ScenarioContext) { initializeGitHub(ctx) }
@@ -78,15 +79,11 @@ func initializeTile(ctx scenarioContext) {
 
 func InitializeTileSourceCode(ctx *godog.ScenarioContext) { initializeTileSourceCode(ctx) }
 func initializeTileSourceCode(ctx scenarioContext) {
-	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
-		err := exec.CommandContext(ctx, "git", "submodule", "update", "--init", "--recursive").Run()
-		return setTileRepoPath(ctx, "hello-tile"), err
-	})
 	ctx.After(resetTileRepository)
 
 	ctx.Step(regexp.MustCompile(`^kiln validate succeeds$`), kilnValidateSucceeds)
 
-	ctx.Step(regexp.MustCompile(`^I have a "([^"]*)" repository checked out at (.*)$`), iHaveARepositoryCheckedOutAtRevision)
+	ctx.Step(regexp.MustCompile(`^I have a tile source directory "([^"]*)"$`), iHaveATileDirectory)
 
 	ctx.Step(regexp.MustCompile(`^the repository has no fetched releases$`), theRepositoryHasNoFetchedReleases)
 
