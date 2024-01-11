@@ -1,2 +1,4 @@
 run:
   timeout: 10m
+build-tags:
+  - acceptance

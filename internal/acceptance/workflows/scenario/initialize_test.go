@@ -14,8 +14,6 @@ import (
 	"github.com/cucumber/godog"
 )
 
-const testTilePath = "../hello-tile"
-
 func TestInitialize(t *testing.T) {
 	t.Run("AWS", func(t *testing.T) {
 		initializeAWS(newFakeScenarioContext(t))

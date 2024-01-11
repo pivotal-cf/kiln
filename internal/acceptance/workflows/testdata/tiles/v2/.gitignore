@@ -1,0 +1,4 @@
+releases/*.tgz
+*.pivotal
+
+test/manifest/fixtures/tas_*

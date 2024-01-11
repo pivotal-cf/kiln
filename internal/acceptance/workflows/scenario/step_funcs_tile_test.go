@@ -2,6 +2,7 @@ package scenario
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -9,12 +10,15 @@ import (
 
 func Test_theLockSpecifiesVersionForRelease(t *testing.T) {
 	setup := func(t *testing.T) (context.Context, Gomega) {
-		please := NewWithT(t)
 		ctx := context.Background()
-		err := checkoutMain(testTilePath)
-		please.Expect(err).NotTo(HaveOccurred())
-		ctx = setTileRepoPath(ctx, testTilePath)
-		return ctx, please
+
+		dir, err := copyTileDirectory(t.TempDir(), filepath.Join("..", "testdata", "tiles", "v2"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		ctx = setTileRepoPath(ctx, dir)
+		return ctx, NewWithT(t)
 	}
 
 	t.Run("it matches the release version", func(t *testing.T) {

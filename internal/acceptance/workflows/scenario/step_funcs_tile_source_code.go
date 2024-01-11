@@ -2,15 +2,16 @@ package scenario
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/cucumber/godog"
+	"io"
+	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
-
-	"github.com/cucumber/godog"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -81,33 +82,84 @@ func iSetAVersionConstraintForRelease(ctx context.Context, versionConstraint, re
 
 // iHaveARepositoryCheckedOutAtRevision checks out a repository at the filepath to a given revision
 // Importantly, it also sets tilePath and tileVersion on kilnBakeScenario.
-func iHaveARepositoryCheckedOutAtRevision(ctx context.Context, filePath, revision string) (context.Context, error) {
-	repo, err := git.PlainOpen(filePath)
+func iHaveATileDirectory(ctx context.Context, tileDirectory string) (context.Context, error) {
+	if err := os.RemoveAll(filepath.Join(tileDirectory, ".git")); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return ctx, fmt.Errorf("failed to remove .git directory: %w", err)
+	}
+	tmpDir, err := os.MkdirTemp("", "")
 	if err != nil {
-		return ctx, fmt.Errorf("opening the repository failed: %w", err)
+		return ctx, fmt.Errorf("failed to create new copy of tile directory: %w", err)
 	}
 
-	wt, err := repo.Worktree()
+	dir, err := copyTileDirectory(tmpDir, tileDirectory)
 	if err != nil {
-		return ctx, fmt.Errorf("loading the worktree failed: %w", err)
+		return ctx, err
 	}
 
-	revisionHash, err := repo.ResolveRevision(plumbing.Revision(revision))
+	version, err := os.ReadFile(filepath.Join(dir, "version"))
 	if err != nil {
-		return ctx, fmt.Errorf("resolving the given revision %q failed: %w", revision, err)
+		version = []byte("0.1.0")
 	}
 
-	err = wt.Checkout(&git.CheckoutOptions{
-		Hash:  *revisionHash,
-		Force: true,
-	})
-	if err != nil {
-		return ctx, fmt.Errorf("checking out the revision %q at %q failed: %w", revision, revisionHash, err)
-	}
-
-	ctx = setTileVersion(ctx, strings.TrimPrefix(revision, "v"))
+	ctx = setTileVersion(ctx, strings.TrimSpace(string(version)))
+	ctx = setTileRepoPath(ctx, dir)
 
 	return ctx, nil
+}
+
+func copyTileDirectory(dir, tileDirectory string) (string, error) {
+	testTileDir := filepath.Join(dir, filepath.Base(tileDirectory))
+	if err := filepath.Walk(tileDirectory, copyDir(testTileDir, tileDirectory)); err != nil {
+		return "", fmt.Errorf("failed to copy tile directory: %w", err)
+	}
+	if err := executeAndWrapError(testTileDir, "git", "init"); err != nil {
+		return "", fmt.Errorf("tile path is not a repository: initalizing failed: %w", err)
+	}
+	if err := executeAndWrapError(testTileDir, "git", "config", "user.email", "test-git-user@example.com"); err != nil {
+		return "", err
+	}
+	if err := executeAndWrapError(testTileDir, "git", "config", "user.name", "test-git-user"); err != nil {
+		return "", err
+	}
+	if err := executeAndWrapError(testTileDir, "git", "add", "."); err != nil {
+		return "", fmt.Errorf("tile path is not a repository: adding initial files failed: %w", err)
+	}
+	if err := executeAndWrapError(testTileDir, "git", "commit", "-m", "initial commit"); err != nil {
+		return "", fmt.Errorf("tile path is not a repository: adding initial files failed: %w", err)
+	}
+	return testTileDir, nil
+}
+
+func copyDir(dstDir, srcDir string) filepath.WalkFunc {
+	return func(srcPath string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rp, err := filepath.Rel(srcDir, srcPath)
+		if err != nil {
+			return err
+		}
+		createPath := filepath.Join(dstDir, rp)
+		if info.IsDir() {
+			_, err := os.Stat(createPath)
+			if err != nil {
+				return os.Mkdir(createPath, info.Mode().Perm())
+			}
+			return nil
+		}
+		dst, err := os.Create(createPath)
+		if err != nil {
+			return err
+		}
+		defer closeAndIgnoreErr(dst)
+		src, err := os.Open(srcPath)
+		if err != nil {
+			return err
+		}
+		defer closeAndIgnoreErr(src)
+		_, err = io.Copy(dst, src)
+		return err
+	}
 }
 
 // theRepositoryHasNoFetchedReleases deletes fetched releases, if any.

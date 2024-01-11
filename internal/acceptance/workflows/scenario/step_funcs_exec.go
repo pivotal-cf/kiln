@@ -1,8 +1,12 @@
 package scenario
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"github.com/cucumber/godog"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -37,4 +41,40 @@ func theExitCodeIs(ctx context.Context, expectedCode int) error {
 		return fmt.Errorf("expected status code %d but got %d", expectedCode, state.ExitCode())
 	}
 	return nil
+}
+
+func iExecute(ctx context.Context, command string) error {
+	args := strings.Fields(command)
+	if len(args) < 1 {
+		return nil
+	}
+	dir, err := tileRepoPath(ctx)
+	if err != nil {
+		return err
+	}
+	return executeAndWrapError(dir, args[0], args[1:]...)
+}
+
+func iWriteFileWith(ctx context.Context, fileName string, lines *godog.Table) error {
+	tileDir, err := tileRepoPath(ctx)
+	if err != nil {
+		return err
+	}
+	fileName, err = strconv.Unquote(fileName)
+	if err != nil {
+		return err
+	}
+
+	out := bytes.NewBuffer(nil)
+	for i, line := range lines.Rows {
+		for _, cell := range line.Cells {
+			out.WriteString(cell.Value)
+		}
+		if i < len(lines.Rows)-1 {
+			out.WriteByte('\n')
+		}
+	}
+
+	fileName = filepath.Join(tileDir, fileName)
+	return os.WriteFile(fileName, out.Bytes(), 0644)
 }

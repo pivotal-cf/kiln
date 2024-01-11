@@ -1,0 +1,5 @@
+name: hello-server
+release: hello-release
+manifest: |
+  job-properties:
+    port: 8080
