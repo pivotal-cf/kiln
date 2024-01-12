@@ -35,6 +35,13 @@ type OSM struct {
 	}
 }
 
+//counterfeiter:generate -o ./fakes/release_storage.go --fake-name ReleaseStorage . ReleaseStorage
+
+type ReleaseStorage interface {
+	component.ReleaseSource
+	UploadRelease(spec cargo.BOSHReleaseTarballSpecification, file io.Reader) (cargo.BOSHReleaseTarballLock, error)
+}
+
 func NewOSM(outLogger *log.Logger, rs component.ReleaseSource) *OSM {
 	if rs == nil {
 		rs = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{}, "", outLogger)

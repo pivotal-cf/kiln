@@ -49,17 +49,6 @@ func closeAndIgnoreErr(c io.Closer) {
 	_ = c.Close()
 }
 
-func loadEnvironmentVariable(variableName, errorHelpMessage string) (string, error) {
-	v := os.Getenv(variableName)
-	if v == "" {
-		if errorHelpMessage == "" {
-			return "", fmt.Errorf("%s is not set", variableName)
-		}
-		return "", fmt.Errorf("%s is not set (%s)", variableName, errorHelpMessage)
-	}
-	return v, nil
-}
-
 func loadFileAsYAML(filePath string, v any) error {
 	kfBuf, err := os.ReadFile(filePath)
 	if err != nil {
@@ -86,18 +75,6 @@ func saveAsYAML(filePath string, v any) error {
 
 	_, err = f.Write(kfBuf)
 	return err
-}
-
-func loadS3Credentials() (keyID, accessKey string, err error) {
-	keyID, err = loadEnvironmentVariable("AWS_ACCESS_KEY_ID", "required for s3 release source to cache releases")
-	if err != nil {
-		return
-	}
-	accessKey, err = loadEnvironmentVariable("AWS_SECRET_ACCESS_KEY", "required for s3 release source to cache releases")
-	if err != nil {
-		return
-	}
-	return
 }
 
 func getGithubTokenFromCLI() (string, error) {

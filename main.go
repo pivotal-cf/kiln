@@ -107,8 +107,6 @@ func main() {
 
 	commandSet["find-stemcell-version"] = commands.NewFindStemcellVersion(outLogger, pivnetService)
 
-	commandSet["cache-compiled-releases"] = commands.NewCacheCompiledReleases().WithLogger(outLogger)
-
 	commandSet["validate"] = commands.NewValidate(osfs.New(""))
 	commandSet["release-notes"], err = commands.NewReleaseNotesCommand()
 	if err != nil {

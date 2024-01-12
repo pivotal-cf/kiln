@@ -36,12 +36,6 @@ func Test_baking_a_tile(t *testing.T) {
 	setupAndRunFeatureTest(t)
 }
 
-func Test_caching_compiled_releases(t *testing.T) {
-	setupAndRunFeatureTest(t,
-		scenario.InitializeCacheCompiledReleases,
-	)
-}
-
 func Test_generating_release_notes(t *testing.T) {
 	setupAndRunFeatureTest(t, scenario.InitializeGitHub)
 }

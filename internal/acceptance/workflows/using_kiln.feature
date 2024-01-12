@@ -29,7 +29,6 @@ Feature: As a developer, I want the Kiln CLI to be usable
     Examples:
       | command                 |
       | bake                    |
-      | cache-compiled-releases |
       | fetch                   |
       | find-release-version    |
       | find-stemcell-version   |
