@@ -57,9 +57,7 @@ jobs:
           export GITHUB_TOKEN="${RELEEN_GITHUB_TOKEN}"
 
           set -x
-          go test --run '(using_kiln|baking_a_tile|generating_release_notes|updating_)' \
-            -v --timeout 24h --tags acceptance \
-            github.com/pivotal-cf/kiln/internal/acceptance/workflows
+          go test -v --timeout 24h --tags acceptance github.com/pivotal-cf/kiln/internal/acceptance/workflows
           
           git reset --hard HEAD
 

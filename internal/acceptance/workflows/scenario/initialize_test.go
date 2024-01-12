@@ -20,9 +20,6 @@ func TestInitialize(t *testing.T) {
 	t.Run("AWS", func(t *testing.T) {
 		initializeAWS(newFakeScenarioContext(t))
 	})
-	t.Run("CacheCompiledReleases", func(t *testing.T) {
-		initializeCacheCompiledReleases(newFakeScenarioContext(t))
-	})
 	t.Run("Env", func(t *testing.T) {
 		initializeEnv(newFakeScenarioContext(t))
 	})

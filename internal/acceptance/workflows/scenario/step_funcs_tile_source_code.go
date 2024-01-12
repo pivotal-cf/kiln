@@ -12,7 +12,6 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 
-	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -148,41 +147,6 @@ func theRepositoryHasNoFetchedReleases(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func iAddACompiledSReleaseSourceToTheKilnfile(ctx context.Context, bucketName string) error {
-	keyID, accessKey, err := loadS3Credentials()
-	if err != nil {
-		return err
-	}
-	kfPath, err := kilnfilePath(ctx)
-	if err != nil {
-		return err
-	}
-
-	var kf cargo.Kilnfile
-	err = loadFileAsYAML(kfPath, &kf)
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range kf.ReleaseSources {
-		if rs.Bucket == bucketName {
-			return nil
-		}
-	}
-
-	kf.ReleaseSources = append(kf.ReleaseSources, cargo.ReleaseSourceConfig{
-		Type:            component.ReleaseSourceTypeS3,
-		Bucket:          bucketName,
-		PathTemplate:    "{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz",
-		Region:          "us-west-1",
-		Publishable:     true,
-		AccessKeyId:     keyID,
-		SecretAccessKey: accessKey,
-	})
-
-	return saveAsYAML(kfPath, kf)
 }
 
 func iSetTheKilnfileStemcellVersionConstraint(ctx context.Context, versionConstraint string) error {

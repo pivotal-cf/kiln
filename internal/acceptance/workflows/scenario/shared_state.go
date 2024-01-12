@@ -9,8 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-
-	"gopkg.in/yaml.v2"
 )
 
 // key represents the type of the context key for shared values between steps
@@ -119,29 +117,6 @@ func loadGithubToken(ctx context.Context) (context.Context, error) {
 	return context.WithValue(ctx, githubTokenKey, token), nil
 }
 
-func environment(ctx context.Context) (opsManagerEnvironment, error) {
-	return contextValue[opsManagerEnvironment](ctx, environmentKey, "ops manager environment")
-}
-
-func loadEnvironment(ctx context.Context) (context.Context, error) {
-	_, err := environment(ctx)
-	if err == nil {
-		return ctx, nil
-	}
-
-	var omEnv opsManagerEnvironment
-	err = omEnv.loadFromEnvironmentVariables()
-	if err != nil {
-		return ctx, err
-	}
-	ctx, err = omEnv.fetchNetworksAndAvailabilityZones(ctx)
-	if err != nil {
-		return ctx, err
-	}
-
-	return context.WithValue(ctx, environmentKey, omEnv), nil
-}
-
 type standardFileDescriptors [3]*bytes.Buffer
 
 const (
@@ -201,25 +176,6 @@ func runAndLogOnError(ctx context.Context, cmd *exec.Cmd, requireSuccess bool) (
 			_, _ = io.Copy(os.Stdout, &buf)
 		}
 		return ctx, runErr
-	}
-	return ctx, nil
-}
-
-func runAndParseStdoutAsYAML(ctx context.Context, cmd *exec.Cmd, d any) (context.Context, error) {
-	var stdout, stderr bytes.Buffer
-	fds := ctx.Value(standardFileDescriptorsKey).(standardFileDescriptors)
-	cmd.Stdout = io.MultiWriter(&stdout, fds[1])
-	cmd.Stderr = io.MultiWriter(&stderr, fds[2])
-	runErr := cmd.Run()
-	ctx = setLastCommandStatus(ctx, cmd.ProcessState)
-	if runErr != nil {
-		_, _ = io.Copy(os.Stdout, &stdout)
-		_, _ = io.Copy(os.Stdout, &stderr)
-		return ctx, runErr
-	}
-	err := yaml.Unmarshal(stdout.Bytes(), d)
-	if err != nil {
-		return ctx, err
 	}
 	return ctx, nil
 }
