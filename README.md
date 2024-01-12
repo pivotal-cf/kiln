@@ -430,7 +430,12 @@ provides_product_versions:
 
 The `test` command exercises to ginkgo tests under the `/<tile>/test/manifest` and `/<tile>/migrations` paths of the `pivotal/tas` repos (where `<tile>` is tas, ist, or tasw). 
 
-Running these tests require a docker daemon and ssh-agent to be running. If no ssh identity is added (check with `ssh-add -l`) , then `kiln test`
+Running these tests require a docker daemon and ssh-agent to be running. 
+
+If you run into this docker error `could not execute "test": failed to connect to Docker daemon: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running`, 
+then create a symlink `sudo ln -s ~/.docker/run/docker.sock /var/run/docker.sock`
+
+If no ssh identity is added (check with `ssh-add -l`) , then `kiln test`
 will add a ssh key in the following order, prompting for a passphrase if required:
 ```
 	~/.ssh/id_rs
