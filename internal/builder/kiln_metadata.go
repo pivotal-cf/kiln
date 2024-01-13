@@ -38,11 +38,6 @@ func setKilnMetadata(in []byte, kilnMetadata KilnMetadata) ([]byte, error) {
 		return nil, fmt.Errorf("failed to parse product template: %w", err)
 	}
 
-	_, hasMetadataVersionKey := yamlnode.LookupKey(&productTemplate, "metadata_version")
-	if !hasMetadataVersionKey {
-		return in, nil
-	}
-
 	kilnMetadataValueNode, fieldExists := yamlnode.LookupKey(&productTemplate, "kiln_metadata")
 	if fieldExists {
 		fmt.Println(`WARNING: the metadata field "kiln_metadata" is owned by Kiln. You are setting it in your "base.yml". You should not set it anymore.`)

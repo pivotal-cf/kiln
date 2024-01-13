@@ -51,6 +51,7 @@ type InterpolateInput struct {
 	RuntimeConfigs     map[string]any
 	StubReleases       bool
 	MetadataGitSHA     string
+	SkipKilnMetadata   bool
 }
 
 func NewInterpolator() Interpolator {
@@ -68,8 +69,10 @@ func (i Interpolator) Interpolate(input InterpolateInput, name string, templateY
 		return nil, err // un-tested
 	}
 
+	if input.SkipKilnMetadata {
+		return prettyMetadata, nil
+	}
 	km := newKilnMetadata(input)
-
 	return setKilnMetadata(prettyMetadata, km)
 }
 
