@@ -50,7 +50,8 @@ selected_value: $( release "some-release" | select "version" )
 		interpolator = builder.NewInterpolator()
 
 		input = builder.InterpolateInput{
-			Version: "3.4.5",
+			SkipKilnMetadata: true,
+			Version:          "3.4.5",
 			BOSHVariables: map[string]any{
 				"some-bosh-variable": builder.Metadata{
 					"name": "some-bosh-variable",
@@ -188,7 +189,7 @@ some_bosh_variables:
 some_regex_replace:
 - https://some-link/3-4-5/index.html
 
-selected_value: 1.2.3	
+selected_value: 1.2.3
 `))
 		Expect(string(interpolatedYAML)).To(ContainSubstring("file: some-release-1.2.3.tgz\n"))
 	})
@@ -200,6 +201,7 @@ some_form_types:
 - $( form "some-form" )`
 
 		input = builder.InterpolateInput{
+			SkipKilnMetadata: true,
 			Variables: map[string]any{
 				"some-form-variable": "variable-form-label",
 			},
@@ -225,6 +227,7 @@ some_form_types:
 
 		BeforeEach(func() {
 			input = builder.InterpolateInput{
+				SkipKilnMetadata: true,
 				ReleaseManifests: map[string]any{
 					"some-release": proofing.Release{
 						Name:    "some-release",
@@ -290,6 +293,7 @@ additional_stemcells_criteria:
 stemcell_criteria: $( stemcell )`
 
 			input = builder.InterpolateInput{
+				SkipKilnMetadata: true,
 				ReleaseManifests: map[string]any{
 					"some-release": proofing.Release{
 						Name:    "some-release",
@@ -330,6 +334,7 @@ some_runtime_configs:
 - $( runtime_config "some-runtime-config" )`
 
 			input = builder.InterpolateInput{
+				SkipKilnMetadata: true,
 				ReleaseManifests: map[string]any{
 					"some-release": proofing.Release{
 						Name:    "some-release",
