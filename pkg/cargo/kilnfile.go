@@ -40,6 +40,9 @@ func (kf *Kilnfile) Glaze(kl KilnfileLock) error {
 		if spec.FloatAlways {
 			continue
 		}
+		if strings.Contains(spec.Name, "cflinux") || strings.Contains(spec.Name, "buildpack") {
+			continue
+		}
 		lock, err := kl.FindBOSHReleaseWithName(spec.Name)
 		if err != nil {
 			return fmt.Errorf("release with name %q not found in Kilnfile.lock: %w", spec.Name, err)

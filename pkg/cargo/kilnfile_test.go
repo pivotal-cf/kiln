@@ -123,7 +123,7 @@ func TestStemcell_ProductSlug(t *testing.T) {
 }
 
 func TestKilnfile_Glaze(t *testing.T) {
-	t.Run("locks versions to the value in the lock", func(t *testing.T) {
+	t.Run("locks versions to the value in the lock for all except for buildpacks and stacks", func(t *testing.T) {
 		kf := Kilnfile{
 			Releases: []BOSHReleaseTarballSpecification{
 				{Name: "banana"},
@@ -150,6 +150,41 @@ func TestKilnfile_Glaze(t *testing.T) {
 			Releases: []BOSHReleaseTarballSpecification{
 				{Name: "banana", Version: "1.2.3"},
 				{Name: "orange", Version: "8.0.8"},
+			},
+			Stemcell: Stemcell{
+				OS:      "alpine",
+				Version: "42.0",
+			},
+		}, kf)
+	})
+
+	t.Run("retails the value in the lock for buildpacks and stacks", func(t *testing.T) {
+		kf := Kilnfile{
+			Releases: []BOSHReleaseTarballSpecification{
+				{Name: "xyz-buildpack", Version: "~ 8.0"},
+				{Name: "cflinuxxyz", Version: "*"},
+			},
+			Stemcell: Stemcell{
+				OS: "alpine",
+			},
+		}
+		kl := KilnfileLock{
+			Releases: []BOSHReleaseTarballLock{
+				{Name: "xyz-buildpack", Version: "~ 8.0"},
+				{Name: "cflinuxxyz", Version: "*"},
+			},
+			Stemcell: Stemcell{
+				OS:      "alpine",
+				Version: "42.0",
+			},
+		}
+
+		require.NoError(t, kf.Glaze(kl))
+
+		assert.Equal(t, Kilnfile{
+			Releases: []BOSHReleaseTarballSpecification{
+				{Name: "xyz-buildpack", Version: "~ 8.0"},
+				{Name: "cflinuxxyz", Version: "*"},
 			},
 			Stemcell: Stemcell{
 				OS:      "alpine",

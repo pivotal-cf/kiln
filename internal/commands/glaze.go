@@ -49,5 +49,6 @@ func (cmd *Glaze) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "This command locks all the components.",
 		ShortDescription: "Pin versions in Kilnfile to match lock.",
+		//Flags:            cmd.Options,
 	}
 }
