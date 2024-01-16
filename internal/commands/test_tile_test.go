@@ -59,7 +59,7 @@ var _ = Describe("kiln test", func() {
 
 			Expect(configuration.AbsoluteTileDirectory).To(BeADirectory())
 			Expect(configuration.RunAll).To(BeTrue())
-			Expect(output.String()).To(BeEmpty())
+			Expect(output.String()).To(ContainSubstring("hello"))
 		})
 	})
 	AfterEach(func() {
@@ -94,7 +94,7 @@ var _ = Describe("kiln test", func() {
 		})
 	})
 
-	When("when the verbose flag argument is passed", func() {
+	When("when the verbose flag argument is passed or the silent flag argument is not passed", func() {
 		It("runs all the tests with initalized collaborators", func() {
 			verboseFlagArgument := []string{"--verbose"}
 
@@ -115,6 +115,30 @@ var _ = Describe("kiln test", func() {
 			Expect(w).NotTo(BeNil())
 
 			Expect(output.String()).To(ContainSubstring("hello"))
+		})
+	})
+
+	When("when the silent flag argument is passed", func() {
+		It("runs all the tests without initalized collaborators", func() {
+			silentFlagArgument := []string{"--silent"}
+
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
+			fakeTestFunc.Stub = func(_ context.Context, w io.Writer, _ test.Configuration) error {
+				_, _ = io.WriteString(w, "hello")
+				return nil
+			}
+
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(silentFlagArgument)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeTestFunc.CallCount()).To(Equal(1))
+
+			ctx, w, _ := fakeTestFunc.ArgsForCall(0)
+			Expect(ctx).NotTo(BeNil())
+			Expect(w).NotTo(BeNil())
+
+			Expect(output.String()).To(BeEmpty())
 		})
 	})
 
