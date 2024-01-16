@@ -17,7 +17,8 @@ type TileTestFunction func(ctx context.Context, w io.Writer, configuration test.
 type TileTest struct {
 	Options struct {
 		TilePath   string `             long:"tile-path"                default:"."                             description:"Path to the Tile directory (e.g., ~/workspace/tas/ist)."`
-		Verbose    bool   `short:"v"    long:"verbose"                  default:"false"                         description:"Print info lines. This doesn't affect Ginkgo output."`
+		Verbose    bool   `short:"v"    long:"verbose"                  default:"true"                          description:"Print info lines. This doesn't affect Ginkgo output."`
+		Silent     bool   `short:"s"    long:"silent"                   default:"false"                         description:"Hide info lines. This doesn't affect Ginkgo output."`
 		Manifest   bool   `             long:"manifest"                 default:"false"                         description:"Focus the Manifest tests."`
 		Migrations bool   `             long:"migrations"               default:"false"                         description:"Focus the Migration tests."`
 		Stability  bool   `             long:"stability"                default:"false"                         description:"Focus the Stability tests."`
@@ -50,7 +51,7 @@ func (cmd TileTest) Execute(args []string) error {
 	}
 
 	w := cmd.output
-	if !cmd.Options.Verbose {
+	if cmd.Options.Silent {
 		w = io.Discard
 	}
 
