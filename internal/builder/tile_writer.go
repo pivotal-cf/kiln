@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -72,7 +73,7 @@ func (w TileWriter) Write(generatedMetadataContents []byte, input WriteInput) er
 
 	w.zipper.SetWriter(f)
 
-	err = w.addToZipper(filepath.Join("metadata", "metadata.yml"), bytes.NewBuffer(generatedMetadataContents), input.OutputFile)
+	err = w.addToZipper(path.Join("metadata", "metadata.yml"), bytes.NewBuffer(generatedMetadataContents), input.OutputFile)
 	if err != nil {
 		w.removeOutputFile(input.OutputFile)
 		return err
@@ -127,9 +128,9 @@ func (w TileWriter) addStubReleases(generatedMetadataContents []byte, outputFile
 		return err
 	}
 	for _, release := range metadata.Releases {
-		path := filepath.Join("releases", release.File)
+		rp := path.Join("releases", release.File)
 		contents := io.NopCloser(strings.NewReader(""))
-		err = w.addToZipper(path, contents, outputFile)
+		err = w.addToZipper(rp, contents, outputFile)
 		if err != nil {
 			return err
 		}
@@ -158,7 +159,7 @@ func (w TileWriter) addReleaseTarballs(releasesDir string, outputFile string) er
 		}
 		defer closeAndIgnoreError(file)
 
-		return w.addToZipper(filepath.Join("releases", filepath.Base(filePath)), file, outputFile)
+		return w.addToZipper(path.Join("releases", filepath.Base(filePath)), file, outputFile)
 	})
 }
 
@@ -194,7 +195,7 @@ func (w TileWriter) addEmbeddedPath(pathToEmbed, outputFile string) error {
 			return err // not tested
 		}
 
-		entryPath := filepath.Join("embed", filepath.Join(filepath.Base(pathToEmbed), relativePath))
+		entryPath := path.Join("embed", filepath.Join(filepath.Base(pathToEmbed), relativePath))
 		return w.addToZipperWithMode(entryPath, file, info.Mode(), outputFile)
 	})
 }
@@ -228,7 +229,7 @@ func (w TileWriter) addMigrations(migrationsDir []string, outputFile string) err
 			}
 			defer closeAndIgnoreError(file)
 
-			return w.addToZipper(filepath.Join("migrations", "v1", filepath.Base(filePath)), file, outputFile)
+			return w.addToZipper(path.Join("migrations", "v1", filepath.Base(filePath)), file, outputFile)
 		})
 		if err != nil {
 			return err
@@ -256,7 +257,7 @@ func (w TileWriter) addToZipperWithMode(path string, contents io.Reader, mode os
 
 func (w TileWriter) addEmptyMigrationsDirectory(outputFile string) error {
 	w.logger.Printf("Creating empty migrations folder in %s...", outputFile)
-	err := w.zipper.CreateFolder(filepath.Join("migrations", "v1"))
+	err := w.zipper.CreateFolder(path.Join("migrations", "v1"))
 	if err != nil {
 		return err
 	}
