@@ -36,8 +36,10 @@ func (kf *Kilnfile) BOSHReleaseTarballSpecification(name string) (BOSHReleaseTar
 
 func (kf *Kilnfile) Glaze(kl KilnfileLock) error {
 	kf.Stemcell.Version = kl.Stemcell.Version
+	var SkipGlazeReleases []string
 	for index, spec := range kf.Releases {
 		if spec.FloatAlways {
+			SkipGlazeReleases = append(SkipGlazeReleases, spec.Name)
 			continue
 		}
 		lock, err := kl.FindBOSHReleaseWithName(spec.Name)
@@ -46,6 +48,15 @@ func (kf *Kilnfile) Glaze(kl KilnfileLock) error {
 		}
 		kf.Releases[index].Version = lock.Version
 	}
+	if len(SkipGlazeReleases) > 0 {
+		fmt.Println("Skipping glaze for the following releases:")
+		for _, release := range SkipGlazeReleases {
+			fmt.Println(release)
+		}
+	} else {
+		fmt.Println("All releases in the Kilnfile are glazed")
+	}
+
 	return nil
 }
 
@@ -111,11 +122,11 @@ type BOSHReleaseTarballSpecification struct {
 	GitHubRepository string `yaml:"github_repository,omitempty"`
 
 	// DeGlazeBehavior changes how version filed changes when de-glaze is run.
-	DeGlazeBehavior DeGlazeBehavior `yaml:"maintenance_version_bump_policy"`
+	DeGlazeBehavior DeGlazeBehavior `yaml:"maintenance_version_bump_policy,omitempty"`
 
 	// FloatAlways when does not override version constraint.
 	// It skips locking it during Kilnfile.Glaze.
-	FloatAlways bool `yaml:"float_always,omitempty"`
+	FloatAlways bool `yaml:"skip_glaze,omitempty"`
 
 	// TeamSlackChannel slack channel for team that maintains this bosh release
 	TeamSlackChannel string `yaml:"slack,omitempty"`
