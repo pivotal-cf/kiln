@@ -11,6 +11,24 @@ import (
 type KilnMetadata struct {
 	MetadataGitSHA string `yaml:"metadata_git_sha"`
 	KilnVersion    string `yaml:"kiln_version"`
+
+	TileName string `yaml:"tile_name,omitempty"`
+}
+
+func newKilnMetadata(input InterpolateInput) KilnMetadata {
+	m := KilnMetadata{
+		KilnVersion:    input.KilnVersion,
+		MetadataGitSHA: input.MetadataGitSHA,
+	}
+
+	if input.Variables != nil {
+		tnv, ok := input.Variables[TileNameVariable]
+		if ok {
+			m.TileName, _ = tnv.(string)
+		}
+	}
+
+	return m
 }
 
 func setKilnMetadata(in []byte, kilnMetadata KilnMetadata) ([]byte, error) {

@@ -11,3 +11,6 @@ Feature: As a developer, I want to bake a tile
       | migrations/v1                     |
       | releases/bpm-1.2.12.tgz           |
       | releases/hello-release-0.2.3.tgz |
+    And "bake_records/0.2.0-dev.json" contains substring: "version": "0.2.0-dev"
+    And "bake_records/0.2.0-dev.json" contains substring: "source_revision":
+    And "bake_records/0.2.0-dev.json" contains substring: "kiln_version": "0.0.0+acceptance-tests"

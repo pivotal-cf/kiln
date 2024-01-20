@@ -87,6 +87,8 @@ var _ = Describe("bake command", func() {
 	BeforeEach(func() {
 		var err error
 
+		Expect(os.RemoveAll(filepath.Join("fixtures", "bake_records"))).NotTo(HaveOccurred())
+
 		tmpDir, err = os.MkdirTemp("", "kiln-main-test")
 		Expect(err).NotTo(HaveOccurred())
 

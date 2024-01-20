@@ -49,6 +49,8 @@ var _ = Describe("Bake", func() {
 		someReleasesDirectory  string
 		tmpDir                 string
 
+		fakeBakeRecordFunc *fakeWriteBakeRecordFunc
+
 		bake commands.Bake
 	)
 
@@ -71,6 +73,7 @@ var _ = Describe("Bake", func() {
 		fakeChecksummer = &fakes.Checksummer{}
 		fakeIconService = &fakes.IconService{}
 		fakeInterpolator = &fakes.Interpolator{}
+		fakeBakeRecordFunc = new(fakeWriteBakeRecordFunc)
 
 		fakeLogger = log.New(GinkgoWriter, "", 0)
 
@@ -176,7 +179,7 @@ var _ = Describe("Bake", func() {
 
 		fakeFetcher = &fakes.Fetch{}
 		fakeFetcher.ExecuteReturns(nil)
-		bake = commands.NewBakeWithInterfaces(fakeInterpolator, fakeTileWriter, fakeLogger, fakeLogger, fakeTemplateVariablesService, fakeBOSHVariablesService, fakeReleasesService, fakeStemcellService, fakeFormsService, fakeInstanceGroupsService, fakeJobsService, fakePropertiesService, fakeRuntimeConfigsService, fakeIconService, fakeMetadataService, fakeChecksummer, fakeFetcher, fakeFilesystem, fakeHomeDirFunc)
+		bake = commands.NewBakeWithInterfaces(fakeInterpolator, fakeTileWriter, fakeLogger, fakeLogger, fakeTemplateVariablesService, fakeBOSHVariablesService, fakeReleasesService, fakeStemcellService, fakeFormsService, fakeInstanceGroupsService, fakeJobsService, fakePropertiesService, fakeRuntimeConfigsService, fakeIconService, fakeMetadataService, fakeChecksummer, fakeFetcher, fakeFilesystem, fakeHomeDirFunc, fakeBakeRecordFunc.call)
 	})
 
 	AfterEach(func() {
@@ -375,6 +378,9 @@ var _ = Describe("Bake", func() {
 				"--releases-directory",
 				someReleasesDirectory,
 			}))
+
+			Expect(fakeBakeRecordFunc.filePath).To(Equal("some-metadata"), "it informs the bake recorder the path to the metadata template")
+			Expect(string(fakeBakeRecordFunc.productTemplate)).To(Equal("some-interpolated-metadata"), "it gives the bake recorder the product template")
 		})
 
 		Context("when --stub-releases is specified", func() {
@@ -923,3 +929,16 @@ var _ = Describe("Bake", func() {
 		})
 	})
 })
+
+type fakeWriteBakeRecordFunc struct {
+	filePath        string
+	productTemplate []byte
+
+	err error
+}
+
+func (f *fakeWriteBakeRecordFunc) call(filePath string, productTemplate []byte) error {
+	f.filePath = filePath
+	f.productTemplate = productTemplate
+	return f.err
+}

@@ -68,10 +68,9 @@ func (i Interpolator) Interpolate(input InterpolateInput, name string, templateY
 		return nil, err // un-tested
 	}
 
-	return setKilnMetadata(prettyMetadata, KilnMetadata{
-		KilnVersion:    input.KilnVersion,
-		MetadataGitSHA: input.MetadataGitSHA,
-	})
+	km := newKilnMetadata(input)
+
+	return setKilnMetadata(prettyMetadata, km)
 }
 
 func (i Interpolator) functions(input InterpolateInput) template.FuncMap {

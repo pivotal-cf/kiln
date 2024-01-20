@@ -18,7 +18,7 @@ function main() {
     GITHUB_TOKEN="$(gh auth token)"
     set -x
 
-    go test -tags acceptance --timeout=25m ./internal/acceptance/workflows
+    go test -v -count=1 -tags acceptance --timeout=25m ./internal/acceptance/workflows
   popd > /dev/null
 }
 
