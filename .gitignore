@@ -18,3 +18,5 @@ env.yml
 .vscode
 
 vendor
+
+internal/acceptance/bake/fixtures/bake_records/*.json

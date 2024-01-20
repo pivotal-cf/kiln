@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const dirtyStateSHAValue = "DEVELOPMENT"
+const DirtyWorktreeSHAValue = "DEVELOPMENT"
 
 func GitMetadataSHA(repositoryDirectory string, isDev bool) (string, error) {
 	if err := ensureGitExecutableIsFound(); err != nil {
@@ -19,8 +19,8 @@ func GitMetadataSHA(repositoryDirectory string, isDev bool) (string, error) {
 	err := gitStatus.Run()
 	if err != nil {
 		if gitStatus.ProcessState.ExitCode() == 1 && isDev {
-			_, _ = fmt.Fprintf(os.Stderr, "WARNING: git working directory has un-commited changes: the variable %q has has development only value %q", MetadataGitSHAVariable, dirtyStateSHAValue)
-			return dirtyStateSHAValue, nil
+			_, _ = fmt.Fprintf(os.Stderr, "WARNING: git working directory has un-commited changes: the variable %q has has development only value %q", MetadataGitSHAVariable, DirtyWorktreeSHAValue)
+			return DirtyWorktreeSHAValue, nil
 		}
 		return "", fmt.Errorf("failed to run `%s %s`: %w", gitStatus.Path, strings.Join(gitStatus.Args, " "), err)
 	}

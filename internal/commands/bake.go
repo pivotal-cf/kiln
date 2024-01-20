@@ -12,10 +12,12 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
+
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/helper"
+	"github.com/pivotal-cf/kiln/pkg/source"
 )
 
 //counterfeiter:generate -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
@@ -115,6 +117,8 @@ func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLog
 		stemcell:          stemcellService,
 		icon:              iconService,
 
+		writeBakeRecord: writeBakeRecord,
+
 		metadata: metadataService,
 
 		boshVariables:  builder.MetadataPartsDirectoryReader{},
@@ -131,6 +135,8 @@ func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLog
 	}
 }
 
+type writeBakeRecordSignature func(string, []byte) error
+
 type Bake struct {
 	interpolator      interpolator
 	checksummer       checksummer
@@ -140,6 +146,8 @@ type Bake struct {
 	templateVariables templateVariablesService
 	stemcell          stemcellService
 	releases          fromDirectories
+
+	writeBakeRecord writeBakeRecordSignature
 
 	KilnVersion string
 
@@ -182,7 +190,7 @@ type Bake struct {
 	}
 }
 
-func NewBakeWithInterfaces(interpolator interpolator, tileWriter tileWriter, outLogger *log.Logger, errLogger *log.Logger, templateVariablesService templateVariablesService, boshVariablesService metadataTemplatesParser, releasesService fromDirectories, stemcellService stemcellService, formsService metadataTemplatesParser, instanceGroupsService metadataTemplatesParser, jobsService metadataTemplatesParser, propertiesService metadataTemplatesParser, runtimeConfigsService metadataTemplatesParser, iconService iconService, metadataService metadataService, checksummer checksummer, fetcher jhanda.Command, fs FileSystem, homeDir flags.HomeDirFunc) Bake {
+func NewBakeWithInterfaces(interpolator interpolator, tileWriter tileWriter, outLogger *log.Logger, errLogger *log.Logger, templateVariablesService templateVariablesService, boshVariablesService metadataTemplatesParser, releasesService fromDirectories, stemcellService stemcellService, formsService metadataTemplatesParser, instanceGroupsService metadataTemplatesParser, jobsService metadataTemplatesParser, propertiesService metadataTemplatesParser, runtimeConfigsService metadataTemplatesParser, iconService iconService, metadataService metadataService, checksummer checksummer, fetcher jhanda.Command, fs FileSystem, homeDir flags.HomeDirFunc, writeBakeRecordFn writeBakeRecordSignature) Bake {
 	return Bake{
 		interpolator:      interpolator,
 		tileWriter:        tileWriter,
@@ -194,6 +202,7 @@ func NewBakeWithInterfaces(interpolator interpolator, tileWriter tileWriter, out
 		stemcell:          stemcellService,
 		icon:              iconService,
 		metadata:          metadataService,
+		writeBakeRecord:   writeBakeRecordFn,
 
 		boshVariables:  boshVariablesService,
 		forms:          formsService,
@@ -206,6 +215,24 @@ func NewBakeWithInterfaces(interpolator interpolator, tileWriter tileWriter, out
 		fs:      fs,
 		homeDir: homeDir,
 	}
+}
+
+var _ writeBakeRecordSignature = writeBakeRecord
+
+func writeBakeRecord(metadataFilepath string, productTemplate []byte) error {
+	b, err := source.NewBakeRecord(productTemplate)
+	if err != nil {
+		return fmt.Errorf("failed to create bake record: %w", err)
+	}
+	abs, err := filepath.Abs(metadataFilepath)
+	if err != nil {
+		return fmt.Errorf("failed to find tile root for bake records: %w", err)
+	}
+	dir := filepath.Dir(abs)
+	if err := b.WriteFile(dir); err != nil {
+		return fmt.Errorf("failed to write bake record: %w", err)
+	}
+	return nil
 }
 
 func shouldGenerateTileFileName(b *Bake, args []string) bool {
@@ -486,6 +513,10 @@ func (b Bake) Execute(args []string) error {
 	if b.Options.MetadataOnly {
 		b.outLogger.Printf("%s", interpolatedMetadata)
 		return nil
+	}
+
+	if err := b.writeBakeRecord(b.Options.Metadata, interpolatedMetadata); err != nil {
+		return err
 	}
 
 	err = b.tileWriter.Write(interpolatedMetadata, builder.WriteInput{

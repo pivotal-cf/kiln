@@ -29,3 +29,57 @@ func Test_setKilnMetadata(t *testing.T) {
 		})
 	}
 }
+
+func Test_newKilnMetadata(t *testing.T) {
+	t.Run("when tile name is set", func(t *testing.T) {
+		input := InterpolateInput{
+			KilnVersion:    "some-version",
+			MetadataGitSHA: "some-sha",
+			Variables: map[string]any{
+				TileNameVariable: "some-tile",
+			},
+		}
+
+		km := newKilnMetadata(input)
+
+		require.Equal(t, KilnMetadata{
+			KilnVersion:    "some-version",
+			MetadataGitSHA: "some-sha",
+			TileName:       "some-tile",
+		}, km)
+	})
+
+	t.Run("when no tile name is set", func(t *testing.T) {
+		input := InterpolateInput{
+			KilnVersion:    "some-version",
+			MetadataGitSHA: "some-sha",
+			Variables:      nil,
+		}
+
+		km := newKilnMetadata(input)
+
+		require.Equal(t, KilnMetadata{
+			KilnVersion:    "some-version",
+			MetadataGitSHA: "some-sha",
+			TileName:       "",
+		}, km)
+	})
+
+	t.Run("when no tile name is the wrong type", func(t *testing.T) {
+		input := InterpolateInput{
+			KilnVersion:    "some-version",
+			MetadataGitSHA: "some-sha",
+			Variables: map[string]any{
+				TileNameVariable: 11,
+			},
+		}
+
+		km := newKilnMetadata(input)
+
+		require.Equal(t, KilnMetadata{
+			KilnVersion:    "some-version",
+			MetadataGitSHA: "some-sha",
+			TileName:       "",
+		}, km)
+	})
+}
