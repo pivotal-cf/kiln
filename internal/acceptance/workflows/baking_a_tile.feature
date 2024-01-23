@@ -14,3 +14,10 @@ Feature: As a developer, I want to bake a tile
     And "bake_records/0.2.0-dev.json" contains substring: "version": "0.2.0-dev"
     And "bake_records/0.2.0-dev.json" contains substring: "source_revision":
     And "bake_records/0.2.0-dev.json" contains substring: "kiln_version": "0.0.0+acceptance-tests"
+
+  Scenario: it reads directory configuration from Kilnfile
+    Given I have a tile source directory "testdata/tiles/non-standard-paths"
+    When I invoke kiln
+      | bake            |
+      | --stub-releases |
+    Then a Tile is created

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
@@ -17,6 +19,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/helper"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/source"
 )
 
@@ -164,30 +167,32 @@ type Bake struct {
 	metadata metadataService
 
 	fetcher jhanda.Command
-	Options struct {
-		flags.Standard
-		flags.FetchBakeOptions
+	Options BakeOptions
+}
 
-		Metadata                 string   `short:"m"   long:"metadata"                   default:"base.yml"         description:"path to the metadata file"`
-		ReleaseDirectories       []string `short:"rd"  long:"releases-directory"         default:"releases"         description:"path to a directory containing release tarballs"`
-		FormDirectories          []string `short:"f"   long:"forms-directory"            default:"forms"            description:"path to a directory containing forms"`
-		IconPath                 string   `short:"i"   long:"icon"                       default:"icon.png"         description:"path to icon file"`
-		InstanceGroupDirectories []string `short:"ig"  long:"instance-groups-directory"  default:"instance_groups"  description:"path to a directory containing instance groups"`
-		JobDirectories           []string `short:"j"   long:"jobs-directory"             default:"jobs"             description:"path to a directory containing jobs"`
-		MigrationDirectories     []string `short:"md"  long:"migrations-directory"       default:"migrations"       description:"path to a directory containing migrations"`
-		PropertyDirectories      []string `short:"pd"  long:"properties-directory"       default:"properties"       description:"path to a directory containing property blueprints"`
-		RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory"  default:"runtime_configs"  description:"path to a directory containing runtime configs"`
-		BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"   default:"bosh_variables"   description:"path to a directory containing BOSH variables"`
-		StemcellTarball          string   `short:"st"  long:"stemcell-tarball"                                      description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)"`
-		StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"                                   description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)"`
-		EmbedPaths               []string `short:"e"   long:"embed"                                                 description:"path to files to include in the tile /embed directory"`
-		OutputFile               string   `short:"o"   long:"output-file"                                           description:"path to where the tile will be output"`
-		MetadataOnly             bool     `short:"mo"  long:"metadata-only"                                         description:"don't build a tile, output the metadata to stdout"`
-		Sha256                   bool     `            long:"sha256"                                                description:"calculates a SHA256 checksum of the output file"`
-		StubReleases             bool     `short:"sr"  long:"stub-releases"                                         description:"skips importing release tarballs into the tile"`
-		Version                  string   `short:"v"   long:"version"                                               description:"version of the tile"`
-		SkipFetchReleases        bool     `short:"sfr" long:"skip-fetch"                                            description:"skips the automatic release fetch for all release directories"             alias:"skip-fetch-directories"`
-	}
+type BakeOptions struct {
+	flags.Standard
+	flags.FetchBakeOptions
+
+	Metadata                 string   `short:"m"   long:"metadata"                   default:"base.yml"         description:"path to the metadata file"`
+	ReleaseDirectories       []string `short:"rd"  long:"releases-directory"         default:"releases"         description:"path to a directory containing release tarballs"`
+	FormDirectories          []string `short:"f"   long:"forms-directory"            default:"forms"            description:"path to a directory containing forms"`
+	IconPath                 string   `short:"i"   long:"icon"                       default:"icon.png"         description:"path to icon file"`
+	InstanceGroupDirectories []string `short:"ig"  long:"instance-groups-directory"  default:"instance_groups"  description:"path to a directory containing instance groups"`
+	JobDirectories           []string `short:"j"   long:"jobs-directory"             default:"jobs"             description:"path to a directory containing jobs"`
+	MigrationDirectories     []string `short:"md"  long:"migrations-directory"       default:"migrations"       description:"path to a directory containing migrations"`
+	PropertyDirectories      []string `short:"pd"  long:"properties-directory"       default:"properties"       description:"path to a directory containing property blueprints"`
+	RuntimeConfigDirectories []string `short:"rcd" long:"runtime-configs-directory"  default:"runtime_configs"  description:"path to a directory containing runtime configs"`
+	BOSHVariableDirectories  []string `short:"vd"  long:"bosh-variables-directory"   default:"bosh_variables"   description:"path to a directory containing BOSH variables"`
+	StemcellTarball          string   `short:"st"  long:"stemcell-tarball"                                      description:"deprecated -- path to a stemcell tarball  (NOTE: mutually exclusive with --kilnfile)"`
+	StemcellsDirectories     []string `short:"sd"  long:"stemcells-directory"                                   description:"path to a directory containing stemcells  (NOTE: mutually exclusive with --kilnfile or --stemcell-tarball)"`
+	EmbedPaths               []string `short:"e"   long:"embed"                                                 description:"path to files to include in the tile /embed directory"`
+	OutputFile               string   `short:"o"   long:"output-file"                                           description:"path to where the tile will be output"`
+	MetadataOnly             bool     `short:"mo"  long:"metadata-only"                                         description:"don't build a tile, output the metadata to stdout"`
+	Sha256                   bool     `            long:"sha256"                                                description:"calculates a SHA256 checksum of the output file"`
+	StubReleases             bool     `short:"sr"  long:"stub-releases"                                         description:"skips importing release tarballs into the tile"`
+	Version                  string   `short:"v"   long:"version"                                               description:"version of the tile"`
+	SkipFetchReleases        bool     `short:"sfr" long:"skip-fetch"                                            description:"skips the automatic release fetch for all release directories"             alias:"skip-fetch-directories"`
 }
 
 func NewBakeWithInterfaces(interpolator interpolator, tileWriter tileWriter, outLogger *log.Logger, errLogger *log.Logger, templateVariablesService templateVariablesService, boshVariablesService metadataTemplatesParser, releasesService fromDirectories, stemcellService stemcellService, formsService metadataTemplatesParser, instanceGroupsService metadataTemplatesParser, jobsService metadataTemplatesParser, propertiesService metadataTemplatesParser, runtimeConfigsService metadataTemplatesParser, iconService iconService, metadataService metadataService, checksummer checksummer, fetcher jhanda.Command, fs FileSystem, homeDir flags.HomeDirFunc, writeBakeRecordFn writeBakeRecordSignature) Bake {
@@ -390,6 +395,43 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
+	// TODO: Remove check after deprecation of --stemcell-tarball
+	if b.Options.StemcellTarball != "" {
+		b.errLogger.Println("warning: --stemcell-tarball is being deprecated in favor of --stemcells-directory")
+	}
+
+	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
+	if err != nil {
+		return fmt.Errorf("failed to parse template variables: %s", err)
+	}
+
+	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
+	if err != nil {
+		return fmt.Errorf("failed to parse releases: %s", err)
+	}
+
+	var stemcellManifests map[string]any
+	var stemcellManifest any
+	if b.Options.StemcellTarball != "" {
+		// TODO remove when stemcell tarball is deprecated
+		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
+	} else if b.Options.Kilnfile != "" {
+		if err := bakeArgumentsFromKilnfileConfiguration(&b.Options, templateVariables); err != nil {
+			return fmt.Errorf("failed to parse releases: %s", err)
+		}
+		templateVariables, err = b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
+		if err != nil {
+			return fmt.Errorf("failed to parse template variables: %s", err)
+		}
+
+		stemcellManifests, err = b.stemcell.FromKilnfile(b.Options.Kilnfile)
+	} else if len(b.Options.StemcellsDirectories) > 0 {
+		stemcellManifests, err = b.stemcell.FromDirectories(b.Options.StemcellsDirectories)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to parse stemcell: %s", err)
+	}
+
 	if b.Options.Metadata == "" {
 		return errors.New("missing required flag \"--metadata\"")
 	}
@@ -412,35 +454,6 @@ func (b Bake) Execute(args []string) error {
 
 	if b.Options.OutputFile != "" && b.Options.MetadataOnly {
 		return errors.New("--output-file cannot be provided when using --metadata-only")
-	}
-
-	// TODO: Remove check after deprecation of --stemcell-tarball
-	if b.Options.StemcellTarball != "" {
-		b.errLogger.Println("warning: --stemcell-tarball is being deprecated in favor of --stemcells-directory")
-	}
-
-	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
-	if err != nil {
-		return fmt.Errorf("failed to parse template variables: %s", err)
-	}
-
-	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
-	if err != nil {
-		return fmt.Errorf("failed to parse releases: %s", err)
-	}
-
-	var stemcellManifests map[string]any
-	var stemcellManifest any
-	if b.Options.StemcellTarball != "" {
-		// TODO remove when stemcell tarball is deprecated
-		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
-	} else if b.Options.Kilnfile != "" {
-		stemcellManifests, err = b.stemcell.FromKilnfile(b.Options.Kilnfile)
-	} else if len(b.Options.StemcellsDirectories) > 0 {
-		stemcellManifests, err = b.stemcell.FromDirectories(b.Options.StemcellsDirectories)
-	}
-	if err != nil {
-		return fmt.Errorf("failed to parse stemcell: %s", err)
 	}
 
 	boshVariables, err := b.boshVariables.ParseMetadataTemplates(b.Options.BOSHVariableDirectories, templateVariables)
@@ -545,5 +558,86 @@ func (b Bake) Usage() jhanda.Usage {
 		Description:      "Bakes tile metadata, stemcell, releases, and migrations into a format that can be consumed by OpsManager.",
 		ShortDescription: "bakes a tile",
 		Flags:            b.Options,
+	}
+}
+
+func bakeArgumentsFromKilnfileConfiguration(options *BakeOptions, variables map[string]any) error {
+	if options.Kilnfile == "" {
+		return nil
+	}
+	if variables == nil {
+		variables = make(map[string]any)
+	}
+	buf, err := os.ReadFile(options.Kilnfile)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	kf, err := cargo.InterpolateAndParseKilnfile(bytes.NewReader(buf), variables)
+	if err != nil {
+		return err
+	}
+	if tileName, ok := variables[builder.TileNameVariable]; ok {
+		name, ok := tileName.(string)
+		if ok {
+			return fmt.Errorf("%s value must be a string got value %#[2]v with type %[2]T", builder.TileNameVariable, tileName)
+		}
+		if index := slices.IndexFunc(kf.BakeConfigurations, func(configuration cargo.BakeConfiguration) bool {
+			return configuration.TileName == name
+		}); index >= 0 {
+			fromConfiguration(options, kf.BakeConfigurations[index])
+		}
+	} else if len(kf.BakeConfigurations) == 1 {
+		configuration := kf.BakeConfigurations[0]
+		fromConfiguration(options, configuration)
+		if configuration.TileName != "" {
+			variables[builder.TileNameVariable] = configuration.TileName
+		}
+	}
+	return nil
+}
+
+func fromConfiguration(b *BakeOptions, configuration cargo.BakeConfiguration) {
+	if len(configuration.Metadata) > 0 {
+		b.Metadata = configuration.Metadata
+	}
+	if len(configuration.FormDirectories) > 0 {
+		b.FormDirectories = configuration.FormDirectories
+	}
+	if len(configuration.IconPath) > 0 {
+		b.IconPath = configuration.IconPath
+	}
+	if len(configuration.InstanceGroupDirectories) > 0 {
+		b.InstanceGroupDirectories = configuration.InstanceGroupDirectories
+	}
+	if len(configuration.JobDirectories) > 0 {
+		b.JobDirectories = configuration.JobDirectories
+	}
+	if len(configuration.MigrationDirectories) > 0 {
+		b.MigrationDirectories = configuration.MigrationDirectories
+	}
+	if len(configuration.PropertyDirectories) > 0 {
+		b.PropertyDirectories = configuration.PropertyDirectories
+	}
+	if len(configuration.RuntimeConfigDirectories) > 0 {
+		b.RuntimeConfigDirectories = configuration.RuntimeConfigDirectories
+	}
+	if len(configuration.BOSHVariableDirectories) > 0 {
+		b.BOSHVariableDirectories = configuration.BOSHVariableDirectories
+	}
+	if len(configuration.EmbedPaths) > 0 {
+		b.EmbedPaths = configuration.EmbedPaths
+	}
+	if len(configuration.VariableFiles) > 0 {
+		// simplify when go1.22 comes out https://pkg.go.dev/slices@master#Concat
+		variableFiles := make([]string, 0, len(configuration.VariableFiles)+len(b.VariableFiles))
+		variableFiles = append(variableFiles, configuration.VariableFiles...)
+		variableFiles = append(variableFiles, b.VariableFiles...)
+
+		slices.Sort(variableFiles)
+		variableFiles = slices.Compact(variableFiles)
+		b.VariableFiles = variableFiles
 	}
 }

@@ -76,6 +76,9 @@ func TestDockerIntegration(t *testing.T) {
 
 func checkDaemonVersion(t *testing.T) {
 	t.Helper()
+	if testing.Short() {
+		t.Skip()
+	}
 
 	constraints, err := semver.NewConstraint(test.MinimumDockerServerVersion)
 	require.NoError(t, err)
