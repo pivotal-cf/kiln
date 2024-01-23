@@ -7,6 +7,9 @@ function main() {
   cwd="${1}"
 
   pushd "${cwd}" > /dev/null
+    export CGO_ENABLED
+    CGO_ENABLED=0
+
     go test -cover -short ./...
     go vet ./...
 
