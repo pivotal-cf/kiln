@@ -1,0 +1,29 @@
+---
+name: hello
+label: "some label"
+description: "some description"
+icon_image: $( icon )
+
+metadata_version: "2.7.0"
+minimum_version_for_upgrade: 0.1.0
+product_version: $( version )
+provides_product_versions:
+  - name: hello
+    version: $( version )
+
+rank: 90
+serial: false
+
+releases: []
+
+stemcell_criteria: $( stemcell )
+
+job_types:
+  - $( instance_group "hello-server" )
+
+runtime_configs: []
+
+property_blueprints:
+  - $( property "port" )
+
+form_types: []

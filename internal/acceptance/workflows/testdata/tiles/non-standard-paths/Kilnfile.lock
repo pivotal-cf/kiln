@@ -1,0 +1,3 @@
+stemcell_criteria:
+  os: ubuntu-jammy
+  version: "1.329"

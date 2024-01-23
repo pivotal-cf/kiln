@@ -17,12 +17,13 @@ const (
 )
 
 type Kilnfile struct {
-	ReleaseSources  []ReleaseSourceConfig             `yaml:"release_sources,omitempty"`
-	Slug            string                            `yaml:"slug,omitempty"`
-	PreGaUserGroups []string                          `yaml:"pre_ga_user_groups,omitempty"`
-	Releases        []BOSHReleaseTarballSpecification `yaml:"releases,omitempty"`
-	TileNames       []string                          `yaml:"tile_names,omitempty"`
-	Stemcell        Stemcell                          `yaml:"stemcell_criteria,omitempty"`
+	ReleaseSources     []ReleaseSourceConfig             `yaml:"release_sources,omitempty"`
+	Slug               string                            `yaml:"slug,omitempty"`
+	PreGaUserGroups    []string                          `yaml:"pre_ga_user_groups,omitempty"`
+	Releases           []BOSHReleaseTarballSpecification `yaml:"releases,omitempty"`
+	TileNames          []string                          `yaml:"tile_names,omitempty"`
+	Stemcell           Stemcell                          `yaml:"stemcell_criteria,omitempty"`
+	BakeConfigurations []BakeConfiguration               `yaml:"bake_configurations"`
 }
 
 func (kf *Kilnfile) BOSHReleaseTarballSpecification(name string) (BOSHReleaseTarballSpecification, error) {
@@ -354,4 +355,19 @@ func deGlazeBOSHReleaseTarballSpecification(spec BOSHReleaseTarballSpecification
 	var err error
 	spec.Version, err = spec.DeGlazeBehavior.createConstraint(lock.Version)
 	return spec, err
+}
+
+type BakeConfiguration struct {
+	TileName                 string   `yaml:"tile_name,omitempty"                          json:"tile_name,omitempty"`
+	Metadata                 string   `yaml:"metadata_filepath,omitempty"                  json:"metadata_filepath,omitempty"`
+	FormDirectories          []string `yaml:"forms_directories,omitempty"                  json:"forms_directories,omitempty"`
+	IconPath                 string   `yaml:"icon_filepath,omitempty"                      json:"icon_filepath,omitempty"`
+	InstanceGroupDirectories []string `yaml:"instance_groups_directories,omitempty"        json:"instance_groups_directories,omitempty"`
+	JobDirectories           []string `yaml:"jobs_directories,omitempty"                   json:"jobs_directories,omitempty"`
+	MigrationDirectories     []string `yaml:"migrations_directories,omitempty"             json:"migrations_directories,omitempty"`
+	PropertyDirectories      []string `yaml:"properties_directories,omitempty"             json:"properties_directories,omitempty"`
+	RuntimeConfigDirectories []string `yaml:"runtime_configurations_directories,omitempty" json:"runtime_configurations_directories,omitempty"`
+	BOSHVariableDirectories  []string `yaml:"bosh_variables_directories,omitempty"         json:"bosh_variables_directories,omitempty"`
+	EmbedPaths               []string `yaml:"embed_paths_directories,omitempty"            json:"embed_paths_directories,omitempty"`
+	VariableFiles            []string `yaml:"variable_files,omitempty"                     json:"variable_files,omitempty"`
 }
