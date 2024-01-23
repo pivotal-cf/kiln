@@ -138,6 +138,30 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				Expect(resultErr).NotTo(HaveOccurred())
 				Expect(local.LocalPath).To(BeAnExistingFile())
 			})
+			When("the server URL ends in /artifactory", func() {
+				JustBeforeEach(func() {
+					config.ArtifactoryHost = server.URL + "/artifactory"
+					source = component.NewArtifactoryReleaseSource(config)
+					source.Client = server.Client()
+				})
+				server = httptest.NewServer(artifactoryRouter)
+				config.ArtifactoryHost = server.URL
+				source = component.NewArtifactoryReleaseSource(config)
+				source.Client = server.Client()
+
+				It("downloads the release", func() { // teesting DownloadRelease
+					By("calling FindReleaseVersion")
+					local, resultErr := source.DownloadRelease(releasesDirectory, cargo.BOSHReleaseTarballLock{
+						Name:         "mango",
+						Version:      "2.3.4",
+						RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
+						RemoteSource: "some-mango-tree",
+					})
+
+					Expect(resultErr).NotTo(HaveOccurred())
+					Expect(local.LocalPath).To(BeAnExistingFile())
+				})
+			})
 		})
 	})
 	When("uploading releases", func() { // testing UploadRelease

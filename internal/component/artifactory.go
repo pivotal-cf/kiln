@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -68,7 +69,13 @@ func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig) *ArtifactoryReleas
 }
 
 func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRelease cargo.BOSHReleaseTarballLock) (Local, error) {
-	downloadURL := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + remoteRelease.RemotePath
+	u, err := url.Parse(ars.ArtifactoryHost)
+	downloadURL := ars.ArtifactoryHost
+	if path.Base(u.Path) != "artifactory" {
+		downloadURL += "/artifactory"
+	}
+	downloadURL += "/" + ars.Repo + "/" + remoteRelease.RemotePath
+
 	ars.logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeArtifactory, ars.ID)
 	resp, err := ars.Client.Get(downloadURL)
 	if err != nil {
