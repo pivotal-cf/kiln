@@ -144,10 +144,6 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					source = component.NewArtifactoryReleaseSource(config)
 					source.Client = server.Client()
 				})
-				server = httptest.NewServer(artifactoryRouter)
-				config.ArtifactoryHost = server.URL
-				source = component.NewArtifactoryReleaseSource(config)
-				source.Client = server.Client()
 
 				It("downloads the release", func() { // teesting DownloadRelease
 					By("calling FindReleaseVersion")
