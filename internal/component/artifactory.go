@@ -70,6 +70,9 @@ func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig) *ArtifactoryReleas
 
 func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRelease cargo.BOSHReleaseTarballLock) (Local, error) {
 	u, err := url.Parse(ars.ArtifactoryHost)
+	if err != nil {
+		return Local{}, fmt.Errorf("error parsing artifactory host: %w", err)
+	}
 	downloadURL := ars.ArtifactoryHost
 	if path.Base(u.Path) != "artifactory" {
 		downloadURL += "/artifactory"
