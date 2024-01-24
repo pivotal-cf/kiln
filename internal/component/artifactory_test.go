@@ -158,6 +158,24 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					Expect(local.LocalPath).To(BeAnExistingFile())
 				})
 			})
+			When("the server URL is malformed", func() {
+				JustBeforeEach(func() {
+					config.ArtifactoryHost = ":improper-url/formatting"
+					source = component.NewArtifactoryReleaseSource(config)
+					source.Client = server.Client()
+				})
+				It("returns an error", func() { // teesting DownloadRelease
+					local, resultErr := source.DownloadRelease(releasesDirectory, cargo.BOSHReleaseTarballLock{
+						Name:         "mango",
+						Version:      "2.3.4",
+						RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
+						RemoteSource: "some-mango-tree",
+					})
+
+					Expect(resultErr).To(HaveOccurred())
+					Expect(local).To(Equal(component.Local{}))
+				})
+			})
 		})
 	})
 	When("uploading releases", func() { // testing UploadRelease
