@@ -145,7 +145,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					source.Client = server.Client()
 				})
 
-				It("downloads the release", func() { // teesting DownloadRelease
+				It("downloads the release", func() {
 					By("calling FindReleaseVersion")
 					local, resultErr := source.DownloadRelease(releasesDirectory, cargo.BOSHReleaseTarballLock{
 						Name:         "mango",
@@ -164,7 +164,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					source = component.NewArtifactoryReleaseSource(config)
 					source.Client = server.Client()
 				})
-				It("returns an error", func() { // teesting DownloadRelease
+				It("returns an error", func() {
 					local, resultErr := source.DownloadRelease(releasesDirectory, cargo.BOSHReleaseTarballLock{
 						Name:         "mango",
 						Version:      "2.3.4",
