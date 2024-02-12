@@ -5,6 +5,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
+	"testing"
+
+	"github.com/pivotal-cf/kiln/pkg/source"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -189,6 +194,7 @@ var _ = Describe("Bake", func() {
 	Describe("Execute", func() {
 		It("builds the tile", func() {
 			err := bake.Execute([]string{
+				"--final",
 				"--embed", "some-embed-path",
 				"--forms-directory", "some-forms-directory",
 				"--icon", "some-icon-path",
@@ -941,4 +947,17 @@ func (f *fakeWriteBakeRecordFunc) call(filePath string, productTemplate []byte) 
 	f.filePath = filePath
 	f.productTemplate = productTemplate
 	return f.err
+}
+
+func TestBakeDescription(t *testing.T) {
+	o := reflect.ValueOf(commands.Bake{}.Options).Type()
+	const fieldName = "IsFinal"
+	field, ok := o.FieldByName(fieldName)
+	if !ok {
+		t.Fatalf("expected Options struct field %s", fieldName)
+	}
+	description := field.Tag.Get("description")
+	if !strings.Contains(description, source.BakeRecordsDirectory) {
+		t.Errorf("expected description to mention bake records directory %q", source.BakeRecordsDirectory)
+	}
 }

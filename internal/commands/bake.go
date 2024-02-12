@@ -168,6 +168,8 @@ type Bake struct {
 		flags.Standard
 		flags.FetchBakeOptions
 
+		IsFinal bool `long:"final" description:"this flag causes build metadata to be written to bake_records"`
+
 		Metadata                 string   `short:"m"   long:"metadata"                   default:"base.yml"         description:"path to the metadata file"`
 		ReleaseDirectories       []string `short:"rd"  long:"releases-directory"         default:"releases"         description:"path to a directory containing release tarballs"`
 		FormDirectories          []string `short:"f"   long:"forms-directory"            default:"forms"            description:"path to a directory containing forms"`
@@ -515,8 +517,10 @@ func (b Bake) Execute(args []string) error {
 		return nil
 	}
 
-	if err := b.writeBakeRecord(b.Options.Metadata, interpolatedMetadata); err != nil {
-		return err
+	if b.Options.IsFinal {
+		if err := b.writeBakeRecord(b.Options.Metadata, interpolatedMetadata); err != nil {
+			return err
+		}
 	}
 
 	err = b.tileWriter.Write(interpolatedMetadata, builder.WriteInput{
