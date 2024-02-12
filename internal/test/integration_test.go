@@ -21,14 +21,14 @@ import (
 var _ commands.TileTestFunction = test.Run
 
 func TestDockerIntegration(t *testing.T) {
+	_, githubWorkspaceEnvVarFound := os.LookupEnv("GITHUB_WORKSPACE")
+	if testing.Short() || githubWorkspaceEnvVarFound {
+		t.Skip("integration test is slow")
+	}
+
 	checkDaemonVersion(t)
 
 	t.Run("the test succeeds", func(t *testing.T) {
-		_, githubWorkspaceEnvVarFound := os.LookupEnv("GITHUB_WORKSPACE")
-		if testing.Short() || githubWorkspaceEnvVarFound {
-			t.Skip("integration test is slow")
-		}
-
 		wd, err := os.Getwd()
 		require.NoError(t, err)
 
@@ -47,11 +47,6 @@ func TestDockerIntegration(t *testing.T) {
 	})
 
 	t.Run("the test fails", func(t *testing.T) {
-		_, githubWorkspaceEnvVarFound := os.LookupEnv("GITHUB_WORKSPACE")
-		if testing.Short() || githubWorkspaceEnvVarFound {
-			t.Skip("integration test is slow")
-		}
-
 		wd, err := os.Getwd()
 		require.NoError(t, err)
 
