@@ -629,7 +629,6 @@ func (t *TrainstatClient) FetchTrainstatNotes(ctx context.Context, milestone str
 func (t *TrainstatClient) FetchTrainstatWinfsVersionInfo(ctx context.Context, milestone string, version string) (bumped bool, winfsVersion string, err error) {
 	baseURL := fmt.Sprintf("%s/%s", t.host, "api/v1/get_winfs_version_bump")
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL, nil)
-
 	if err != nil {
 		return false, "", err
 	}

@@ -1,10 +1,11 @@
 package source_test
 
 import (
-	"github.com/pivotal-cf/kiln/internal/builder"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/pivotal-cf/kiln/internal/builder"
 
 	"github.com/stretchr/testify/require"
 
@@ -12,7 +13,6 @@ import (
 )
 
 func TestBuild(t *testing.T) {
-
 	t.Run("when creating a bake record from a product template", func(t *testing.T) {
 		// language=yaml
 		b, err := source.NewBakeRecord([]byte(`
