@@ -193,6 +193,8 @@ type BakeOptions struct {
 	StubReleases             bool     `short:"sr"  long:"stub-releases"                                         description:"skips importing release tarballs into the tile"`
 	Version                  string   `short:"v"   long:"version"                                               description:"version of the tile"`
 	SkipFetchReleases        bool     `short:"sfr" long:"skip-fetch"                                            description:"skips the automatic release fetch for all release directories"             alias:"skip-fetch-directories"`
+
+	IsFinal bool `long:"final" description:"this flag causes build metadata to be written to bake_records"`
 }
 
 func NewBakeWithInterfaces(interpolator interpolator, tileWriter tileWriter, outLogger *log.Logger, errLogger *log.Logger, templateVariablesService templateVariablesService, boshVariablesService metadataTemplatesParser, releasesService fromDirectories, stemcellService stemcellService, formsService metadataTemplatesParser, instanceGroupsService metadataTemplatesParser, jobsService metadataTemplatesParser, propertiesService metadataTemplatesParser, runtimeConfigsService metadataTemplatesParser, iconService iconService, metadataService metadataService, checksummer checksummer, fetcher jhanda.Command, fs FileSystem, homeDir flags.HomeDirFunc, writeBakeRecordFn writeBakeRecordSignature) Bake {
@@ -528,8 +530,10 @@ func (b Bake) Execute(args []string) error {
 		return nil
 	}
 
-	if err := b.writeBakeRecord(b.Options.Metadata, interpolatedMetadata); err != nil {
-		return err
+	if b.Options.IsFinal {
+		if err := b.writeBakeRecord(b.Options.Metadata, interpolatedMetadata); err != nil {
+			return err
+		}
 	}
 
 	err = b.tileWriter.Write(interpolatedMetadata, builder.WriteInput{

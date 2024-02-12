@@ -4,6 +4,7 @@ Feature: As a developer, I want to bake a tile
     And the repository has no fetched releases
     When I invoke kiln
       | bake                                      |
+      | --final                                   |
       | --variable=github_token="${GITHUB_TOKEN}" |
     Then a Tile is created
     And the Tile contains
