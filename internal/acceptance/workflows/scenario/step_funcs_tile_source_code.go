@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cucumber/godog"
 	"io"
 	"io/fs"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/cucumber/godog"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
