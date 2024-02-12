@@ -3,13 +3,14 @@ package source
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
 
@@ -90,7 +91,7 @@ func (b BakeRecord) WriteFile(tileSourceDirectory string) error {
 	if b.IsDevBuild() {
 		return fmt.Errorf("will not write development builds to %s directory", BakeRecordsDirectory)
 	}
-	if err := os.MkdirAll(filepath.Join(tileSourceDirectory, BakeRecordsDirectory), 0766); err != nil {
+	if err := os.MkdirAll(filepath.Join(tileSourceDirectory, BakeRecordsDirectory), 0o766); err != nil {
 		return err
 	}
 	buf, err := json.MarshalIndent(b, "", "  ")
@@ -105,7 +106,7 @@ func (b BakeRecord) WriteFile(tileSourceDirectory string) error {
 	if _, err := os.Stat(outputFilepath); err == nil {
 		return fmt.Errorf("tile bake record already exists for %s", b.Name())
 	}
-	return os.WriteFile(outputFilepath, buf, 0644)
+	return os.WriteFile(outputFilepath, buf, 0o644)
 }
 
 func ReadBakeRecords(dir fs.FS) ([]BakeRecord, error) {

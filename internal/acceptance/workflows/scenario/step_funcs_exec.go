@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/cucumber/godog"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/cucumber/godog"
 )
 
 func outputContainsSubstring(ctx context.Context, outputName, substring string) error {
@@ -76,5 +77,5 @@ func iWriteFileWith(ctx context.Context, fileName string, lines *godog.Table) er
 	}
 
 	fileName = filepath.Join(tileDir, fileName)
-	return os.WriteFile(fileName, out.Bytes(), 0644)
+	return os.WriteFile(fileName, out.Bytes(), 0o644)
 }
