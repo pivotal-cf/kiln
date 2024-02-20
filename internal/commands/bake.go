@@ -2,6 +2,8 @@ package commands
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -138,7 +140,7 @@ func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLog
 	}
 }
 
-type writeBakeRecordSignature func(string, []byte) error
+type writeBakeRecordSignature func(string, string, []byte) error
 
 type Bake struct {
 	interpolator      interpolator
@@ -226,8 +228,12 @@ func NewBakeWithInterfaces(interpolator interpolator, tileWriter tileWriter, out
 
 var _ writeBakeRecordSignature = writeBakeRecord
 
-func writeBakeRecord(metadataFilepath string, productTemplate []byte) error {
-	b, err := source.NewBakeRecord(productTemplate)
+func writeBakeRecord(tileFilepath, metadataFilepath string, productTemplate []byte) error {
+	tileSum, err := tileChecksum(tileFilepath)
+	if err != nil {
+		return fmt.Errorf("failed to calculate checksum: %w", err)
+	}
+	b, err := source.NewBakeRecord(tileSum, productTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to create bake record: %w", err)
 	}
@@ -240,6 +246,19 @@ func writeBakeRecord(metadataFilepath string, productTemplate []byte) error {
 		return fmt.Errorf("failed to write bake record: %w", err)
 	}
 	return nil
+}
+
+func tileChecksum(tileFilepath string) (string, error) {
+	f, err := os.Open(tileFilepath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open tile file: %w", err)
+	}
+	defer closeAndIgnoreError(f)
+	s := sha256.New()
+	if _, err := io.Copy(s, f); err != nil {
+		return "", fmt.Errorf("failed to calculate checksum: %w", err)
+	}
+	return hex.EncodeToString(s.Sum(nil)), nil
 }
 
 func shouldGenerateTileFileName(b *Bake, args []string) bool {
@@ -536,12 +555,6 @@ func (b Bake) Execute(args []string) error {
 		return nil
 	}
 
-	if b.Options.IsFinal {
-		if err := b.writeBakeRecord(b.Options.Metadata, interpolatedMetadata); err != nil {
-			return err
-		}
-	}
-
 	err = b.tileWriter.Write(interpolatedMetadata, builder.WriteInput{
 		OutputFile:           b.Options.OutputFile,
 		StubReleases:         b.Options.StubReleases,
@@ -561,6 +574,11 @@ func (b Bake) Execute(args []string) error {
 		}
 	}
 
+	if b.Options.IsFinal {
+		if err := b.writeBakeRecord(b.Options.OutputFile, b.Options.Metadata, interpolatedMetadata); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
