@@ -28,4 +28,4 @@ function main() {
   popd > /dev/null
 }
 
-main "$(cd "$(dirname "${0}")" && pwd)"
+main "$(cd "$(dirname "$(dirname "${0}")")" && pwd)"
