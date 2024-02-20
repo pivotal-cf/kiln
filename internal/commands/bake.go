@@ -498,9 +498,15 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to read metadata: %s", err)
 	}
 
-	gitMetadataSHA, err := builder.GitMetadataSHA(filepath.Dir(b.Options.Kilnfile), b.Options.MetadataOnly || b.Options.StubReleases)
+	isDevBuild := b.Options.MetadataOnly || b.Options.StubReleases
+	gitMetadataSHA, err := builder.GitMetadataSHA(filepath.Dir(b.Options.Kilnfile), isDevBuild)
 	if err != nil {
 		return fmt.Errorf("failed to read metadata: %s", err)
+	}
+
+	modTime, err := builder.ModifiedTime(filepath.Dir(b.Options.Kilnfile), isDevBuild)
+	if err != nil {
+		return fmt.Errorf("failed to read modified date from commit: %s", err)
 	}
 
 	input := builder.InterpolateInput{
@@ -542,6 +548,7 @@ func (b Bake) Execute(args []string) error {
 		MigrationDirectories: b.Options.MigrationDirectories,
 		ReleaseDirectories:   b.Options.ReleaseDirectories,
 		EmbedPaths:           b.Options.EmbedPaths,
+		ModTime:              modTime,
 	})
 	if err != nil {
 		return err

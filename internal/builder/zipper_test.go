@@ -46,6 +46,7 @@ var _ = Describe("Zipper", func() {
 		It("creates the given path", func() {
 			zipper := builder.NewZipper()
 			zipper.SetWriter(tileFile)
+			zipper.SetModified(someDate)
 
 			err := zipper.CreateFolder("some/path/to/folder")
 			Expect(err).NotTo(HaveOccurred())
@@ -59,12 +60,13 @@ var _ = Describe("Zipper", func() {
 			Expect(reader.File).To(HaveLen(1))
 			Expect(reader.File[0].Name).To(Equal("some/path/to/folder/"))
 			Expect(reader.File[0].Mode().IsDir()).To(BeTrue())
-			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", builder.ZipHeaderModifiedDate(), time.Minute))
+			Expect(reader.File[0].FileHeader.Modified.Equal(someDate)).To(BeTrue())
 		})
 
 		It("does not append separator if already given to the input", func() {
 			zipper := builder.NewZipper()
 			zipper.SetWriter(tileFile)
+			zipper.SetModified(someDate)
 
 			err := zipper.CreateFolder("some/path/to/folder/")
 			Expect(err).NotTo(HaveOccurred())
@@ -78,6 +80,7 @@ var _ = Describe("Zipper", func() {
 			Expect(reader.File).To(HaveLen(1))
 			Expect(reader.File[0].Name).To(Equal("some/path/to/folder/"))
 			Expect(reader.File[0].Mode().IsDir()).To(BeTrue())
+			Expect(reader.File[0].FileHeader.Modified.Equal(someDate)).To(BeTrue())
 		})
 
 		Context("failure cases", func() {
@@ -96,6 +99,7 @@ var _ = Describe("Zipper", func() {
 		It("writes the given file into the path", func() {
 			zipper := builder.NewZipper()
 			zipper.SetWriter(tileFile)
+			zipper.SetModified(someDate)
 
 			err := zipper.Add("some/path/to/file.txt", strings.NewReader("file contents"))
 			Expect(err).NotTo(HaveOccurred())
@@ -117,7 +121,7 @@ var _ = Describe("Zipper", func() {
 
 			Expect(contents).To(Equal([]byte("file contents")))
 			Expect(reader.File[0].FileHeader.Mode()).To(Equal(os.FileMode(0o666)))
-			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", someDate, time.Minute))
+			Expect(reader.File[0].FileHeader.Modified.Equal(someDate)).To(BeTrue())
 		})
 
 		Context("failure cases", func() {
@@ -149,6 +153,7 @@ var _ = Describe("Zipper", func() {
 		It("writes the given file into the path", func() {
 			zipper := builder.NewZipper()
 			zipper.SetWriter(tileFile)
+			zipper.SetModified(someDate)
 
 			err := zipper.AddWithMode("some/path/to/file.txt", strings.NewReader("file contents"), 0o644)
 			Expect(err).NotTo(HaveOccurred())
@@ -170,7 +175,7 @@ var _ = Describe("Zipper", func() {
 
 			Expect(contents).To(Equal([]byte("file contents")))
 			Expect(reader.File[0].FileHeader.Mode()).To(Equal(os.FileMode(0o644)))
-			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", someDate, time.Minute))
+			Expect(reader.File[0].FileHeader.Modified.Equal(someDate)).To(BeTrue())
 		})
 
 		Context("failure cases", func() {

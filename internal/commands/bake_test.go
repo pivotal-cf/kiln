@@ -8,8 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/pivotal-cf/kiln/pkg/source"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,6 +21,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
+	"github.com/pivotal-cf/kiln/pkg/source"
 )
 
 var _ = Describe("Bake", func() {
@@ -347,6 +347,10 @@ var _ = Describe("Bake", func() {
 			Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
 			metadata, writeInput := fakeTileWriter.WriteArgsForCall(0)
 			Expect(string(metadata)).To(Equal("some-interpolated-metadata"))
+
+			Expect(writeInput.ModTime).NotTo(BeZero())
+			writeInput.ModTime = time.Time{}
+
 			Expect(writeInput).To(Equal(builder.WriteInput{
 				OutputFile:           filepath.Join("some-output-dir", "some-product-file-1.2.3-build.4"),
 				StubReleases:         false,
