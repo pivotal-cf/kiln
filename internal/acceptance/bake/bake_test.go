@@ -532,7 +532,7 @@ var _ = Describe("bake command", func() {
 			}
 
 			Expect(emptyMigrationsFolderMode.IsDir()).To(BeTrue())
-			Expect(emptyMigrationsFolderModified).To(BeTemporally("~", builder.ZipHeaderModifiedDate(), time.Minute))
+			Expect(emptyMigrationsFolderModified).NotTo(BeZero())
 
 			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Creating empty migrations folder in %s...", outputFile)))
 		})

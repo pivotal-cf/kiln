@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -30,6 +31,7 @@ type filesystem interface {
 
 type zipper interface {
 	SetWriter(writer io.Writer)
+	SetModified(t time.Time)
 	Add(path string, file io.Reader) error
 	AddWithMode(path string, file io.Reader, mode os.FileMode) error
 	CreateFolder(path string) error
@@ -52,6 +54,7 @@ type WriteInput struct {
 	MigrationDirectories []string
 	ReleaseDirectories   []string
 	EmbedPaths           []string
+	ModTime              time.Time
 }
 
 type tileMetadata struct {
@@ -72,6 +75,7 @@ func (w TileWriter) Write(generatedMetadataContents []byte, input WriteInput) er
 	defer closeAndIgnoreError(f)
 
 	w.zipper.SetWriter(f)
+	w.zipper.SetModified(input.ModTime)
 
 	err = w.addToZipper(path.Join("metadata", "metadata.yml"), bytes.NewBuffer(generatedMetadataContents), input.OutputFile)
 	if err != nil {
