@@ -126,11 +126,18 @@ func copyTileDirectory(dir, tileDirectory string) (string, error) {
 	if err := executeAndWrapError(testTileDir, env, "git", "add", "."); err != nil {
 		return "", fmt.Errorf("tile path is not a repository: adding initial files failed: %w", err)
 	}
-	env = updateEnvVar(env, "GIT_AUTHOR_DATE", "Thu, 07 Apr 2005 22:13:13")
-	env = updateEnvVar(env, "GIT_COMMITTER_DATE", "Thu, 07 Apr 2005 22:13:13")
+	env = updateEnvVar(env, "GIT_AUTHOR_DATE", "1112937193 -0700")
+	env = updateEnvVar(env, "GIT_COMMITTER_DATE", "1112937193 -0700")
 	if err := executeAndWrapError(testTileDir, env, "git", "commit", "-m", "initial commit"); err != nil {
 		return "", fmt.Errorf("tile path is not a repository: adding initial files failed: %w", err)
 	}
+	//catFile := exec.Command("git", "cat-file", "-p", "HEAD")
+	//catFile.Dir = testTileDir
+	//catFile.Stdout = os.Stdout
+	//catFile.Stderr = os.Stdout
+	//if err := catFile.Run(); err != nil {
+	//	return "", fmt.Errorf("tile path is not a repository: adding initial files failed: %w", err)
+	//}
 	return testTileDir, nil
 }
 

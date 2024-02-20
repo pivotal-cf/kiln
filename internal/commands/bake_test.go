@@ -389,7 +389,7 @@ var _ = Describe("Bake", func() {
 				someReleasesDirectory,
 			}))
 
-			Expect(fakeBakeRecordFunc.filePath).To(Equal("some-metadata"), "it informs the bake recorder the path to the metadata template")
+			Expect(fakeBakeRecordFunc.recordPath).To(Equal("some-metadata"), "it informs the bake recorder the path to the metadata template")
 			Expect(string(fakeBakeRecordFunc.productTemplate)).To(Equal("some-interpolated-metadata"), "it gives the bake recorder the product template")
 		})
 
@@ -941,14 +941,15 @@ var _ = Describe("Bake", func() {
 })
 
 type fakeWriteBakeRecordFunc struct {
-	filePath        string
-	productTemplate []byte
+	tilePath, recordPath string
+	productTemplate      []byte
 
 	err error
 }
 
-func (f *fakeWriteBakeRecordFunc) call(filePath string, productTemplate []byte) error {
-	f.filePath = filePath
+func (f *fakeWriteBakeRecordFunc) call(tilePath, recordPath string, productTemplate []byte) error {
+	f.tilePath = tilePath
+	f.recordPath = recordPath
 	f.productTemplate = productTemplate
 	return f.err
 }
