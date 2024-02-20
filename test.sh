@@ -2,6 +2,9 @@
 
 set -euxo pipefail
 
+export CGO_ENABLED
+CGO_ENABLED=0
+
 function main() {
   local cwd
   cwd="${1}"
