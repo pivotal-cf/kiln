@@ -1,5 +1,8 @@
 #!/bin/bash -exu
 
+export CGO_ENABLED
+CGO_ENABLED=0
+
 function main() {
   local cwd
   cwd="${1}"
