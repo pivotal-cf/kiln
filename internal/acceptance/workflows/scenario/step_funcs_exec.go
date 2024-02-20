@@ -3,7 +3,10 @@ package scenario
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -25,10 +28,26 @@ func outputContainsSubstring(ctx context.Context, outputName, substring string) 
 		if len(outStr) == 0 {
 			return fmt.Errorf("expected substring %q not found: %s was empty", substring, outputName)
 		}
-		if len(outStr) < 500 {
+		if len(outStr) < 5000 {
 			return fmt.Errorf("expected substring %q not found in: %q", substring, outStr)
 		}
 		return fmt.Errorf("expected substring \n\n%s\n\n not found in:\n\n%s\n\n", substring, outStr)
+	}
+	return nil
+}
+
+func outputHasSHA256Sum(ctx context.Context, outputName, checksum string) error {
+	out, err := output(ctx, outputName)
+	if err != nil {
+		return fmt.Errorf("failed to get output %q: %w", outputName, err)
+	}
+	summer := sha256.New()
+	_, err = io.Copy(summer, out)
+	if err != nil {
+		return fmt.Errorf("failed to calculate checksum: %w", err)
+	}
+	if sum := hex.EncodeToString(summer.Sum(nil)); sum != checksum {
+		return fmt.Errorf("expected checksum %q but got %q", checksum, sum)
 	}
 	return nil
 }
@@ -53,7 +72,7 @@ func iExecute(ctx context.Context, command string) error {
 	if err != nil {
 		return err
 	}
-	return executeAndWrapError(dir, args[0], args[1:]...)
+	return executeAndWrapError(dir, nil, args[0], args[1:]...)
 }
 
 func iWriteFileWith(ctx context.Context, fileName string, lines *godog.Table) error {

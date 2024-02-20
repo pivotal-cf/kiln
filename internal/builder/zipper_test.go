@@ -21,6 +21,8 @@ var _ = Describe("Zipper", func() {
 		tmpDir     string
 		pathToTile string
 		tileFile   *os.File
+
+		someDate time.Time
 	)
 
 	BeforeEach(func() {
@@ -31,6 +33,8 @@ var _ = Describe("Zipper", func() {
 		pathToTile = filepath.Join(tmpDir, "tile.zip")
 		tileFile, err = os.Create(pathToTile)
 		Expect(err).ToNot(HaveOccurred())
+
+		someDate = time.Date(2018, 4, 20, 0, 0, 0, 0, time.UTC)
 	})
 
 	AfterEach(func() {
@@ -55,7 +59,7 @@ var _ = Describe("Zipper", func() {
 			Expect(reader.File).To(HaveLen(1))
 			Expect(reader.File[0].Name).To(Equal("some/path/to/folder/"))
 			Expect(reader.File[0].Mode().IsDir()).To(BeTrue())
-			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", time.Now(), time.Minute))
+			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", builder.ZipHeaderModifiedDate(), time.Minute))
 		})
 
 		It("does not append separator if already given to the input", func() {
@@ -113,7 +117,7 @@ var _ = Describe("Zipper", func() {
 
 			Expect(contents).To(Equal([]byte("file contents")))
 			Expect(reader.File[0].FileHeader.Mode()).To(Equal(os.FileMode(0o666)))
-			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", time.Now(), time.Minute))
+			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", someDate, time.Minute))
 		})
 
 		Context("failure cases", func() {
@@ -166,7 +170,7 @@ var _ = Describe("Zipper", func() {
 
 			Expect(contents).To(Equal([]byte("file contents")))
 			Expect(reader.File[0].FileHeader.Mode()).To(Equal(os.FileMode(0o644)))
-			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", time.Now(), time.Minute))
+			Expect(reader.File[0].FileHeader.Modified).To(BeTemporally("~", someDate, time.Minute))
 		})
 
 		Context("failure cases", func() {

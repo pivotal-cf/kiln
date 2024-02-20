@@ -113,22 +113,35 @@ func copyTileDirectory(dir, tileDirectory string) (string, error) {
 	if err := filepath.Walk(tileDirectory, copyDir(testTileDir, tileDirectory)); err != nil {
 		return "", fmt.Errorf("failed to copy tile directory: %w", err)
 	}
-	if err := executeAndWrapError(testTileDir, "git", "init"); err != nil {
+	env := os.Environ()
+	if err := executeAndWrapError(testTileDir, env, "git", "init"); err != nil {
 		return "", fmt.Errorf("tile path is not a repository: initalizing failed: %w", err)
 	}
-	if err := executeAndWrapError(testTileDir, "git", "config", "user.email", "test-git-user@example.com"); err != nil {
+	if err := executeAndWrapError(testTileDir, env, "git", "config", "user.email", "test-git-user@example.com"); err != nil {
 		return "", err
 	}
-	if err := executeAndWrapError(testTileDir, "git", "config", "user.name", "test-git-user"); err != nil {
+	if err := executeAndWrapError(testTileDir, env, "git", "config", "user.name", "test-git-user"); err != nil {
 		return "", err
 	}
-	if err := executeAndWrapError(testTileDir, "git", "add", "."); err != nil {
+	if err := executeAndWrapError(testTileDir, env, "git", "add", "."); err != nil {
 		return "", fmt.Errorf("tile path is not a repository: adding initial files failed: %w", err)
 	}
-	if err := executeAndWrapError(testTileDir, "git", "commit", "-m", "initial commit"); err != nil {
+	env = updateEnvVar(env, "GIT_AUTHOR_DATE", "Thu, 07 Apr 2005 22:13:13")
+	env = updateEnvVar(env, "GIT_COMMITTER_DATE", "Thu, 07 Apr 2005 22:13:13")
+	if err := executeAndWrapError(testTileDir, env, "git", "commit", "-m", "initial commit"); err != nil {
 		return "", fmt.Errorf("tile path is not a repository: adding initial files failed: %w", err)
 	}
 	return testTileDir, nil
+}
+
+func updateEnvVar(in []string, key, value string) []string {
+	for i, envVar := range in {
+		if strings.HasPrefix(envVar, key+"=") {
+			in[i] = key + "=" + value
+			return in
+		}
+	}
+	return append(in, key+"="+value)
 }
 
 func copyDir(dstDir, srcDir string) filepath.WalkFunc {
