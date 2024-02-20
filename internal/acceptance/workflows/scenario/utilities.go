@@ -25,10 +25,16 @@ func kilnCommand(ctx context.Context, args ...string) *exec.Cmd {
 	return exec.CommandContext(ctx, kilnBuildPath(ctx), args...)
 }
 
-func executeAndWrapError(wd, command string, args ...string) error {
+func executeAndWrapError(wd string, env []string, command string, args ...string) error {
 	var output bytes.Buffer
 	cmd := exec.Command(command, args...)
+
+	if env == nil {
+		env = cmd.Environ()
+	}
+
 	cmd.Dir = wd
+	cmd.Env = env
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 	if err := cmd.Run(); err != nil {

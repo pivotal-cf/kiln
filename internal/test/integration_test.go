@@ -75,6 +75,11 @@ func checkDaemonVersion(t *testing.T) {
 		t.Skip()
 	}
 
+	_, githubWorkspaceEnvVarFound := os.LookupEnv("GITHUB_WORKSPACE")
+	if testing.Short() || githubWorkspaceEnvVarFound {
+		t.Skip("integration test is slow")
+	}
+
 	constraints, err := semver.NewConstraint(test.MinimumDockerServerVersion)
 	require.NoError(t, err)
 
