@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -26,6 +27,8 @@ var _ = Describe("TileWriter", func() {
 		outputFile string
 
 		expectedFile *os.File
+
+		someTime time.Time
 	)
 
 	BeforeEach(func() {
@@ -34,6 +37,7 @@ var _ = Describe("TileWriter", func() {
 		logger = &fakes.Logger{}
 		tileWriter = builder.NewTileWriter(filesystem, zipper, logger)
 		outputFile = "some-output-dir/cool-product-file-1.2.3-build.4.pivotal"
+		someTime = time.Date(2018, 4, 20, 0, 0, 0, 0, time.UTC)
 	})
 
 	Describe("Write", func() {
@@ -48,6 +52,7 @@ var _ = Describe("TileWriter", func() {
 				MigrationDirectories: []string{"/some/path/migrations", "/some/other/path/migrations"},
 				OutputFile:           outputFile,
 				StubReleases:         stubbed,
+				ModTime:              someTime,
 			}
 
 			dirInfo := &fakes.FileInfo{}
@@ -217,11 +222,14 @@ releases:
 					ReleaseDirectories: []string{"/some/path/releases"},
 					OutputFile:         "some-output-dir/cool-product-file-1.2.3-build.4.pivotal",
 					StubReleases:       true,
+					ModTime:            someTime,
 				}
 
 				err := tileWriter.Write([]byte("releases:\n- file: release-1.tgz"), input)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(zipper.AddCallCount()).To(Equal(2))
+				Expect(zipper.SetModifiedCallCount()).To(Equal(1))
+				Expect(zipper.SetModifiedArgsForCall(0).Equal(someTime)).To(BeTrue())
 				path, _ := zipper.AddArgsForCall(1)
 				Expect(path).To(Equal(filepath.Join("releases", "release-1.tgz")))
 			})

@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/fs"
 	"sync"
+	"time"
 )
 
 type Zipper struct {
@@ -53,6 +54,11 @@ type Zipper struct {
 	}
 	createFolderReturnsOnCall map[int]struct {
 		result1 error
+	}
+	SetModifiedStub        func(time.Time)
+	setModifiedMutex       sync.RWMutex
+	setModifiedArgsForCall []struct {
+		arg1 time.Time
 	}
 	SetWriterStub        func(io.Writer)
 	setWriterMutex       sync.RWMutex
@@ -302,6 +308,38 @@ func (fake *Zipper) CreateFolderReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *Zipper) SetModified(arg1 time.Time) {
+	fake.setModifiedMutex.Lock()
+	fake.setModifiedArgsForCall = append(fake.setModifiedArgsForCall, struct {
+		arg1 time.Time
+	}{arg1})
+	stub := fake.SetModifiedStub
+	fake.recordInvocation("SetModified", []interface{}{arg1})
+	fake.setModifiedMutex.Unlock()
+	if stub != nil {
+		fake.SetModifiedStub(arg1)
+	}
+}
+
+func (fake *Zipper) SetModifiedCallCount() int {
+	fake.setModifiedMutex.RLock()
+	defer fake.setModifiedMutex.RUnlock()
+	return len(fake.setModifiedArgsForCall)
+}
+
+func (fake *Zipper) SetModifiedCalls(stub func(time.Time)) {
+	fake.setModifiedMutex.Lock()
+	defer fake.setModifiedMutex.Unlock()
+	fake.SetModifiedStub = stub
+}
+
+func (fake *Zipper) SetModifiedArgsForCall(i int) time.Time {
+	fake.setModifiedMutex.RLock()
+	defer fake.setModifiedMutex.RUnlock()
+	argsForCall := fake.setModifiedArgsForCall[i]
+	return argsForCall.arg1
+}
+
 func (fake *Zipper) SetWriter(arg1 io.Writer) {
 	fake.setWriterMutex.Lock()
 	fake.setWriterArgsForCall = append(fake.setWriterArgsForCall, struct {
@@ -345,6 +383,8 @@ func (fake *Zipper) Invocations() map[string][][]interface{} {
 	defer fake.closeMutex.RUnlock()
 	fake.createFolderMutex.RLock()
 	defer fake.createFolderMutex.RUnlock()
+	fake.setModifiedMutex.RLock()
+	defer fake.setModifiedMutex.RUnlock()
 	fake.setWriterMutex.RLock()
 	defer fake.setWriterMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

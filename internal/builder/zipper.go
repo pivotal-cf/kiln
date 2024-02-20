@@ -12,6 +12,7 @@ import (
 
 type Zipper struct {
 	writer *zip.Writer
+	mod    time.Time
 }
 
 func NewZipper() Zipper {
@@ -22,8 +23,8 @@ func (z *Zipper) SetWriter(writer io.Writer) {
 	z.writer = zip.NewWriter(writer)
 }
 
-func ZipHeaderModifiedDate() time.Time {
-	return time.Date(2018, 4, 20, 0, 0, 0, 0, time.UTC)
+func (z *Zipper) SetModified(mod time.Time) {
+	z.mod = mod
 }
 
 func (z Zipper) Add(path string, file io.Reader) error {
@@ -34,7 +35,7 @@ func (z Zipper) Add(path string, file io.Reader) error {
 	return z.add(&zip.FileHeader{
 		Name:     path,
 		Method:   zip.Store,
-		Modified: ZipHeaderModifiedDate(),
+		Modified: z.mod,
 	}, file)
 }
 
@@ -46,7 +47,7 @@ func (z Zipper) AddWithMode(path string, file io.Reader, mode os.FileMode) error
 	fh := &zip.FileHeader{
 		Name:     path,
 		Method:   zip.Store,
-		Modified: ZipHeaderModifiedDate(),
+		Modified: z.mod,
 	}
 	fh.SetMode(mode)
 
@@ -80,7 +81,7 @@ func (z Zipper) CreateFolder(path string) error {
 
 	fh := &zip.FileHeader{
 		Name:     path,
-		Modified: ZipHeaderModifiedDate(),
+		Modified: z.mod,
 	}
 	_, err := z.writer.CreateHeader(fh)
 	if err != nil {
