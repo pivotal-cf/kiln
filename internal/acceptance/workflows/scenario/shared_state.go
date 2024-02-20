@@ -127,7 +127,7 @@ const (
 func output(ctx context.Context, name string) (*bytes.Buffer, error) {
 	v, err := contextValue[standardFileDescriptors](ctx, standardFileDescriptorsKey, name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get output from standard file descriptor %q: %w", name, err)
 	}
 	switch name {
 	case "stdout":
@@ -137,15 +137,17 @@ func output(ctx context.Context, name string) (*bytes.Buffer, error) {
 	default:
 		tileDir, err := tileRepoPath(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get tile repo path: %w", err)
 		}
-		name, err = strconv.Unquote(name)
-		if err != nil {
-			return nil, err
+		if len(name) > 0 && name[0] == '"' {
+			name, err = strconv.Unquote(name)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unquote file name %q: %w", name, err)
+			}
 		}
 		buf, err := os.ReadFile(filepath.Join(tileDir, name))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read file %q: %w", name, err)
 		}
 		return bytes.NewBuffer(buf), nil
 	}

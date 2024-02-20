@@ -532,7 +532,7 @@ var _ = Describe("bake command", func() {
 			}
 
 			Expect(emptyMigrationsFolderMode.IsDir()).To(BeTrue())
-			Expect(emptyMigrationsFolderModified).To(BeTemporally("~", time.Now(), time.Minute))
+			Expect(emptyMigrationsFolderModified).To(BeTemporally("~", builder.ZipHeaderModifiedDate(), time.Minute))
 
 			Eventually(session.Err).Should(gbytes.Say(fmt.Sprintf("Creating empty migrations folder in %s...", outputFile)))
 		})
@@ -600,8 +600,6 @@ var _ = Describe("bake command", func() {
 
 						Expect(content).To(Equal([]byte("content-of-other-file")))
 					}
-
-					Expect(f.FileHeader.Modified).To(BeTemporally("~", time.Now(), time.Minute))
 				}
 
 				Expect(seenSomeFile).To(BeTrue())

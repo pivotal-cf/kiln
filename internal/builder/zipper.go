@@ -22,6 +22,10 @@ func (z *Zipper) SetWriter(writer io.Writer) {
 	z.writer = zip.NewWriter(writer)
 }
 
+func ZipHeaderModifiedDate() time.Time {
+	return time.Date(2018, 4, 20, 0, 0, 0, 0, time.UTC)
+}
+
 func (z Zipper) Add(path string, file io.Reader) error {
 	if z.writer == nil {
 		return errors.New("zipper path must be set")
@@ -30,7 +34,7 @@ func (z Zipper) Add(path string, file io.Reader) error {
 	return z.add(&zip.FileHeader{
 		Name:     path,
 		Method:   zip.Store,
-		Modified: time.Now(),
+		Modified: ZipHeaderModifiedDate(),
 	}, file)
 }
 
@@ -42,7 +46,7 @@ func (z Zipper) AddWithMode(path string, file io.Reader, mode os.FileMode) error
 	fh := &zip.FileHeader{
 		Name:     path,
 		Method:   zip.Store,
-		Modified: time.Now(),
+		Modified: ZipHeaderModifiedDate(),
 	}
 	fh.SetMode(mode)
 
@@ -76,7 +80,7 @@ func (z Zipper) CreateFolder(path string) error {
 
 	fh := &zip.FileHeader{
 		Name:     path,
-		Modified: time.Now(),
+		Modified: ZipHeaderModifiedDate(),
 	}
 	_, err := z.writer.CreateHeader(fh)
 	if err != nil {
