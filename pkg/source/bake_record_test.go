@@ -15,7 +15,7 @@ import (
 func TestBuild(t *testing.T) {
 	t.Run("when creating a bake record from a product template", func(t *testing.T) {
 		// language=yaml
-		b, err := source.NewBakeRecord([]byte(`
+		b, err := source.NewBakeRecord("some-peach-jam", []byte(`
 product_name: p-each
 product_version: some-product-version
 kiln_metadata:
@@ -29,12 +29,13 @@ kiln_metadata:
 			KilnVersion:    "some-kiln-version",
 			SourceRevision: "some-tile-source-revision",
 			TileName:       "srt",
+			FileChecksum:   "some-peach-jam",
 		}, b)
 	})
 
 	t.Run("when the product template is missing kiln_metadata", func(t *testing.T) {
 		// language=yaml
-		_, err := source.NewBakeRecord([]byte(`
+		_, err := source.NewBakeRecord("some-peach-jam", []byte(`
 product_name: p-each
 product_version: some-product-version
 `))
@@ -116,42 +117,49 @@ product_version: some-product-version
 				SourceRevision: "some-hash-000",
 				KilnVersion:    "some-kiln-version",
 				Version:        "0.1.0.0",
+				FileChecksum:   "some-hash-browns",
 			},
 			{
 				TileName:       "p-each",
 				SourceRevision: "some-hash-000",
 				KilnVersion:    "some-kiln-version",
 				Version:        "0.1.0.2",
+				FileChecksum:   "some-hash-browns",
 			},
 			{
 				TileName:       "p-each",
 				SourceRevision: "some-hash-000",
 				KilnVersion:    "some-kiln-version",
 				Version:        "1.1.0",
+				FileChecksum:   "some-hash-browns",
 			},
 			{
 				TileName:       "p-each",
 				SourceRevision: "some-hash-002",
 				KilnVersion:    "some-kiln-version",
 				Version:        "1.2.0",
+				FileChecksum:   "some-hash-browns",
 			},
 			{
 				TileName:       "p-each",
 				SourceRevision: "some-hash-003",
 				KilnVersion:    "some-kiln-version",
 				Version:        "2.0.0",
+				FileChecksum:   "some-hash-browns",
 			},
 			{
 				TileName:       "p-ear",
 				SourceRevision: "some-hash-004",
 				KilnVersion:    "some-kiln-version",
 				Version:        "2.0.0",
+				FileChecksum:   "some-hash-browns",
 			},
 			{
 				TileName:       "p-each",
 				SourceRevision: "some-hash-005",
 				KilnVersion:    "some-kiln-version",
 				Version:        "2.2.0",
+				FileChecksum:   "some-hash-browns",
 			},
 		}
 

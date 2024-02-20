@@ -34,10 +34,13 @@ type BakeRecord struct {
 	// TileName might record the tile name used in baking because sometimes multiple tiles can be generated from the same tile source directory
 	// An example of this is the two Tanzu Application Service tiles with different topologies listed on TanzuNetwork.
 	TileName string `yaml:"tile_name,omitempty" json:"tile_name,omitempty"`
+
+	// FileChecksum is the SHA256 checksum of the baked tile.
+	FileChecksum string `yaml:"file_checksum,omitempty" json:"file_checksum,omitempty"`
 }
 
 // NewBakeRecord parses build information from an OpsManger Product Template (aka metadata/metadata.yml)
-func NewBakeRecord(productTemplateBytes []byte) (BakeRecord, error) {
+func NewBakeRecord(fileChecksum string, productTemplateBytes []byte) (BakeRecord, error) {
 	var productTemplate struct {
 		ProductVersion string               `yaml:"product_version"`
 		KilnMetadata   builder.KilnMetadata `yaml:"kiln_metadata"`
@@ -54,6 +57,7 @@ func NewBakeRecord(productTemplateBytes []byte) (BakeRecord, error) {
 		Version:        productTemplate.ProductVersion,
 		KilnVersion:    productTemplate.KilnMetadata.KilnVersion,
 		TileName:       productTemplate.KilnMetadata.TileName,
+		FileChecksum:   fileChecksum,
 	}, err
 }
 
