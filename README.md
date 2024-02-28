@@ -51,6 +51,101 @@ To install the `kiln` CLI
   COPY --from=kiln /kiln /usr/bin/kiln
   CMD /usr/bin/bash
    ```
+## Kilnfile
+
+Each tile must have a Kilnfile and Kilnfile.lock. Both are YAML files. Kiln won't generate them for you.
+
+The code for parsing the Kilnfile and Kilnfile.lock exists in this package: [`"github.com/pivotal-cf/kiln/pkg/cargo"`](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg/cargo#Kilnfile).
+Although the package interface is not yet stable, we have found importing it directly to be useful in CI or one-off scripts.   
+
+### The Specification [(source)](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg/cargo#KilnfileLock)
+
+This file contains a range of configuration in support of kiln commands.
+
+#### "slug"
+
+This field must be a string.
+
+This field should be populated with the TanzuNet product slug where this tile is published.
+
+It is used by kiln publish.
+
+#### "pre_ga_user_groups"
+
+This field must be a list of strings.
+
+This should be populated with the names of TanzuNet User Groups to attach to a pre-release on TanzuNet.
+
+It is used by kiln publish.
+
+#### "release_sources"
+
+This field must be a list of objects with keys from [`ReleaseSourceConfig`](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg/cargo#ReleaseSourceConfig).
+All elements must have a `type` field. 
+
+The values for the `type` (string) field are `"bosh.io"`, `"s3"`, `"github"`, or `"artifactory"`
+
+See `fetch` documentation for more details.
+
+#### "stemcell_critera"
+
+#### "releases"
+
+Each release you want to add to your tile must have an element in this array.
+The "name" field with the BOSH Release Name as the value must be set here.
+The BOSH Release Name must be identical to the name of the release.
+
+You must set a **"name"** field with the BOSH Release Name as the value must be set here.
+The BOSH Release Name must be identical to the name of the release.
+
+You may set a **"version"** field. The value must match the [constraints specification](https://github.com/Masterminds/semver?tab=readme-ov-file#checking-version-constraints) for this library.
+
+You may set a **"github_repository"** field. This should be where the BOSH Release source is maintained. It is used for generating Release Notes for your tile.
+
+You may set a **"float_always"** field. When you set this, `kiln glaze` will not lock this release's version.
+
+You may set a **"maintenance_version_bump_policy"** field. When you run `kiln deglaze` this field specifies how to reset the version constraint after `kiln glaze` locked it.
+- "LockNone": Given a glazed version value "1.2.3", this setting resets the version constraint to `"*"`
+- "LockPatch": Given a glazed version value "1.2.3", this setting resets the version constraint to `"1.2.3"`
+- "LockMinor": Given a glazed version value "1.2.3", this setting resets the version constraint to `"1.2.*"`
+- "LockMajor": (default) Given a glazed version value "1.2.3", this setting resets the version constraint to `"1.*"`
+
+You may set a **"slack"** field. Kiln does not use this field. It can be useful for product tile Authors to know who to reach out to when something goes wrong.
+
+#### "bake_configurations"
+
+You may add a list of `kiln bake` flags in the Kilnfile to keep a record of how your tile was baked and to keep CI scripts simpler.
+
+If you set add more than one element to the bake_configurations list, you need to select one by adding a `kiln bake --variables=tile_name=big-footprint-topology` flag corresponding to a bake configuration with a `- tile_name: big-footprint-topology` element
+
+These are the mappings from bake flag to each field in a bake_configurations element:
+
+| bake_configurations element field      | bake flag                      | documentation                                                                         |
+|----------------------------------------|--------------------------------|---------------------------------------------------------------------------------------|
+| `"tile_name"`                          | `--variables=tile_name=`       | This field is used when selecting a configuration from a list of bake_configurations. |
+| `"metadata_filepath"`                  | `--metadata=`                  | This should be the path to the product template entrypoint. Usually called `base.yml` |
+| `"icon_filepath"`                      | `--icon=`                      | This may be a path to a png file.                                                     |
+| `"forms_directories"`                  | `--forms-directory=`           | This may be a list of directories.                                                    |
+| `"instance_groups_directories"`        | `--instance-groups-directory=` | This may be a list of directories.                                                    |
+| `"jobs_directories"`                   | `--jobs-directory=`            | This may be a list of directories.                                                    |
+| `"migrations_directories"`             | `--migrations-directory=`      | This may be a list of directories.                                                    |
+| `"properties_directories"`             | `--properties-directory=`      | This may be a list of directories.                                                    |
+| `"runtime_configurations_directories"` | `--runtime-configs-directory=` | This may be a list of directories.                                                    |
+| `"bosh_variables_directories"`         | `--bosh-variables-directory=`  | This may be a list of directories.                                                    |
+| `"embed_paths_directories"`            | `--embed=`                     | This may be a list of directories.                                                    |
+| `"variable_files"`                     | `--variables-file=`            | This may be a list of filepaths.                                                      |
+
+### The Lock File [(source)](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg/cargo#Kilnfile)
+
+This file specifies the exact BOSH Release tarballs to package in a tile.
+
+#### `releases`
+
+This is an array of [BOSH Release locks](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg/cargo#BOSHReleaseTarballLock).
+Elements will be modified by running `kiln update-release`.
+Each element in the releases array in the Kilnfile will have a corresponding element in the Kilnfile.lock releases array.
+
+The release name, release version, sha1 checksum, remote_source, remote_path are fields on each element. 
 
 ## Subcommands
 
