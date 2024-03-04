@@ -21,8 +21,8 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/helper"
+	"github.com/pivotal-cf/kiln/pkg/bake"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/source"
 )
 
 //counterfeiter:generate -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
@@ -233,7 +233,7 @@ func writeBakeRecord(tileFilepath, metadataFilepath string, productTemplate []by
 	if err != nil {
 		return fmt.Errorf("failed to calculate checksum: %w", err)
 	}
-	b, err := source.NewBakeRecord(tileSum, productTemplate)
+	b, err := bake.NewRecord(tileSum, productTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to create bake record: %w", err)
 	}
