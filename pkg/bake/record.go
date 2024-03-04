@@ -1,8 +1,11 @@
 package bake
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -12,9 +15,10 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/pivotal-cf/kiln/internal/builder"
-
 	"github.com/Masterminds/semver/v3"
+
+	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/pkg/tile"
 )
 
 // RecordsDirectory should be a sibling to Kilnfile or base.yml
@@ -59,6 +63,31 @@ func NewRecord(fileChecksum string, productTemplateBytes []byte) (Record, error)
 		TileName:       productTemplate.KilnMetadata.TileName,
 		FileChecksum:   fileChecksum,
 	}, err
+}
+
+// NewRecordFromFile parses the product template and pulls the kiln metadata out.
+// The SHA256 sum is also calculated for the file.
+func NewRecordFromFile(tileFilepath string) (Record, error) {
+	metadata, err := tile.ReadMetadataFromFile(tileFilepath)
+	if err != nil {
+		return Record{}, err
+	}
+	checksum, err := fileChecksum(tileFilepath)
+	if err != nil {
+		return Record{}, err
+	}
+	return NewRecord(checksum, metadata)
+}
+
+func fileChecksum(name string) (string, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return "", err
+	}
+	defer closeAndIgnoreError(f)
+	sum := sha256.New()
+	_, err = io.Copy(sum, f)
+	return hex.EncodeToString(sum.Sum(nil)), err
 }
 
 func ReadRecords(dir fs.FS) ([]Record, error) {
@@ -145,4 +174,8 @@ func compareMultiple[T any](cmp ...func(a, b T) int) func(a, b T) int {
 		}
 		return result
 	}
+}
+
+func closeAndIgnoreError(closer io.Closer) {
+	_ = closer.Close()
 }
