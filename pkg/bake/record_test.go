@@ -2,6 +2,7 @@ package bake_test
 
 import (
 	"github.com/pivotal-cf/kiln/pkg/bake"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +12,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBuild(t *testing.T) {
+func TestNewRecordFromFile(t *testing.T) {
+	tilePath := filepath.Join("testdata", "tile.pivotal")
+	record, err := bake.NewRecordFromFile(tilePath)
+	require.NoError(t, err)
+	assert.Equal(t, bake.Record{
+		Version:        "0.2.0-dev",
+		SourceRevision: "5874e0f81d0af47922716a7c69a08bcdead13348",
+		KilnVersion:    "70092ce5ce6c0fd6b2434add95774e2612af5a51",
+		FileChecksum:   "7490ba0b736c262ee7dc433c423c4f95ad838b014769d8465c50e445967d2735",
+	}, record)
+}
+
+func TestNewRecord(t *testing.T) {
 	t.Run("when creating a bake record from a product template", func(t *testing.T) {
 		// language=yaml
 		b, err := bake.NewRecord("some-peach-jam", []byte(`
