@@ -1,6 +1,7 @@
-package source_test
+package bake_test
 
 import (
+	"github.com/pivotal-cf/kiln/pkg/bake"
 	"os"
 	"path/filepath"
 	"testing"
@@ -8,14 +9,12 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/pivotal-cf/kiln/pkg/source"
 )
 
 func TestBuild(t *testing.T) {
 	t.Run("when creating a bake record from a product template", func(t *testing.T) {
 		// language=yaml
-		b, err := source.NewBakeRecord("some-peach-jam", []byte(`
+		b, err := bake.NewRecord("some-peach-jam", []byte(`
 product_name: p-each
 product_version: some-product-version
 kiln_metadata:
@@ -24,7 +23,7 @@ kiln_metadata:
   tile_name: srt
 `))
 		require.NoError(t, err)
-		require.Equal(t, source.BakeRecord{
+		require.Equal(t, bake.Record{
 			Version:        "some-product-version",
 			KilnVersion:    "some-kiln-version",
 			SourceRevision: "some-tile-source-revision",
@@ -35,7 +34,7 @@ kiln_metadata:
 
 	t.Run("when the product template is missing kiln_metadata", func(t *testing.T) {
 		// language=yaml
-		_, err := source.NewBakeRecord("some-peach-jam", []byte(`
+		_, err := bake.NewRecord("some-peach-jam", []byte(`
 product_name: p-each
 product_version: some-product-version
 `))
@@ -45,7 +44,7 @@ product_version: some-product-version
 	t.Run("write one file", func(t *testing.T) {
 		dir := t.TempDir()
 
-		b := source.BakeRecord{
+		b := bake.Record{
 			TileName:       "p-each",
 			SourceRevision: "some-revision",
 			Version:        "1.2.3",
@@ -54,7 +53,7 @@ product_version: some-product-version
 
 		require.NoError(t, b.WriteFile(dir))
 
-		buf, err := os.ReadFile(filepath.Join(dir, source.BakeRecordsDirectory, "p-each-1.2.3.json"))
+		buf, err := os.ReadFile(filepath.Join(dir, bake.RecordsDirectory, "p-each-1.2.3.json"))
 		require.NoError(t, err)
 
 		require.JSONEq(t, `{"source_revision":"some-revision", "tile_name":"p-each", "version":"1.2.3", "kiln_version": "some-version"}`, string(buf))
@@ -63,7 +62,7 @@ product_version: some-product-version
 	t.Run("when the record is missing the version field", func(t *testing.T) {
 		dir := t.TempDir()
 
-		b := source.BakeRecord{
+		b := bake.Record{
 			Version: "",
 		}
 
@@ -73,7 +72,7 @@ product_version: some-product-version
 	t.Run("when a record is marked as developement", func(t *testing.T) {
 		dir := t.TempDir()
 
-		b := source.BakeRecord{
+		b := bake.Record{
 			Version:        "1.2.3",
 			SourceRevision: builder.DirtyWorktreeSHAValue,
 		}
@@ -84,13 +83,13 @@ product_version: some-product-version
 	t.Run("write only required some fields", func(t *testing.T) {
 		dir := t.TempDir()
 
-		b := source.BakeRecord{
+		b := bake.Record{
 			Version: "some-version",
 		}
 
 		require.NoError(t, b.WriteFile(dir))
 
-		buf, err := os.ReadFile(filepath.Join(dir, source.BakeRecordsDirectory, "some-version.json"))
+		buf, err := os.ReadFile(filepath.Join(dir, bake.RecordsDirectory, "some-version.json"))
 		require.NoError(t, err)
 
 		require.JSONEq(t, `{"source_revision":"", "version":"some-version", "kiln_version": ""}`, string(buf))
@@ -99,7 +98,7 @@ product_version: some-product-version
 	t.Run("when a build record with the same version already exists", func(t *testing.T) {
 		dir := t.TempDir()
 
-		b := source.BakeRecord{
+		b := bake.Record{
 			TileName: "some-tile",
 			Version:  "some-version",
 		}
@@ -111,7 +110,7 @@ product_version: some-product-version
 	t.Run("when read builds", func(t *testing.T) {
 		dir := t.TempDir()
 
-		bs := []source.BakeRecord{
+		bs := []bake.Record{
 			{ // non standard semver
 				TileName:       "p-each",
 				SourceRevision: "some-hash-000",
@@ -167,7 +166,7 @@ product_version: some-product-version
 			require.NoError(t, b.WriteFile(dir))
 		}
 
-		result, err := source.ReadBakeRecords(os.DirFS(dir))
+		result, err := bake.ReadRecords(os.DirFS(dir))
 		require.NoError(t, err)
 
 		require.Equal(t, bs, result, "the builds are in order and contain all the info")

@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"errors"
+	"github.com/pivotal-cf/kiln/pkg/bake"
 	"log"
 	"os"
 	"path/filepath"
@@ -21,7 +22,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
-	"github.com/pivotal-cf/kiln/pkg/source"
 )
 
 var _ = Describe("Bake", func() {
@@ -962,7 +962,7 @@ func TestBakeDescription(t *testing.T) {
 		t.Fatalf("expected Options struct field %s", fieldName)
 	}
 	description := field.Tag.Get("description")
-	if !strings.Contains(description, source.BakeRecordsDirectory) {
-		t.Errorf("expected description to mention bake records directory %q", source.BakeRecordsDirectory)
+	if !strings.Contains(description, bake.RecordsDirectory) {
+		t.Errorf("expected description to mention bake records directory %q", bake.RecordsDirectory)
 	}
 }
