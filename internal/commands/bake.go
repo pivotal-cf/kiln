@@ -140,7 +140,7 @@ func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLog
 	}
 }
 
-type writeBakeRecordSignature func(string, string, []byte) error
+type writeBakeRecordSignature func(string, string, string, []byte) error
 
 type Bake struct {
 	interpolator      interpolator
@@ -228,7 +228,7 @@ func NewBakeWithInterfaces(interpolator interpolator, tileWriter tileWriter, out
 
 var _ writeBakeRecordSignature = writeBakeRecord
 
-func writeBakeRecord(tileFilepath, metadataFilepath string, productTemplate []byte) error {
+func writeBakeRecord(kilnVersion, tileFilepath, metadataFilepath string, productTemplate []byte) error {
 	tileSum, err := tileChecksum(tileFilepath)
 	if err != nil {
 		return fmt.Errorf("failed to calculate checksum: %w", err)
@@ -237,6 +237,7 @@ func writeBakeRecord(tileFilepath, metadataFilepath string, productTemplate []by
 	if err != nil {
 		return fmt.Errorf("failed to create bake record: %w", err)
 	}
+	b.KilnVersion = kilnVersion
 	abs, err := filepath.Abs(metadataFilepath)
 	if err != nil {
 		return fmt.Errorf("failed to find tile root for bake records: %w", err)
@@ -529,7 +530,6 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	input := builder.InterpolateInput{
-		KilnVersion:        b.KilnVersion,
 		Version:            b.Options.Version,
 		Variables:          templateVariables,
 		BOSHVariables:      boshVariables,
@@ -575,7 +575,7 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	if b.Options.IsFinal {
-		if err := b.writeBakeRecord(b.Options.OutputFile, b.Options.Metadata, interpolatedMetadata); err != nil {
+		if err := b.writeBakeRecord(b.KilnVersion, b.Options.OutputFile, b.Options.Metadata, interpolatedMetadata); err != nil {
 			return err
 		}
 	}

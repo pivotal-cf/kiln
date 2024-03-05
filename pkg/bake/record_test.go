@@ -19,7 +19,6 @@ func TestNewRecordFromFile(t *testing.T) {
 	assert.Equal(t, bake.Record{
 		Version:        "0.2.0-dev",
 		SourceRevision: "5874e0f81d0af47922716a7c69a08bcdead13348",
-		KilnVersion:    "70092ce5ce6c0fd6b2434add95774e2612af5a51",
 		FileChecksum:   "7490ba0b736c262ee7dc433c423c4f95ad838b014769d8465c50e445967d2735",
 	}, record)
 }
@@ -38,7 +37,6 @@ kiln_metadata:
 		require.NoError(t, err)
 		require.Equal(t, bake.Record{
 			Version:        "some-product-version",
-			KilnVersion:    "some-kiln-version",
 			SourceRevision: "some-tile-source-revision",
 			TileName:       "srt",
 			FileChecksum:   "some-peach-jam",
@@ -105,7 +103,7 @@ product_version: some-product-version
 		buf, err := os.ReadFile(filepath.Join(dir, bake.RecordsDirectory, "some-version.json"))
 		require.NoError(t, err)
 
-		require.JSONEq(t, `{"source_revision":"", "version":"some-version", "kiln_version": ""}`, string(buf))
+		require.JSONEq(t, `{"source_revision":"", "version":"some-version"}`, string(buf))
 	})
 
 	t.Run("when a build record with the same version already exists", func(t *testing.T) {
