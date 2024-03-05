@@ -1013,13 +1013,14 @@ release_sources:
 })
 
 type fakeWriteBakeRecordFunc struct {
-	tilePath, recordPath string
-	productTemplate      []byte
+	kilnVersion, tilePath, recordPath string
+	productTemplate                   []byte
 
 	err error
 }
 
-func (f *fakeWriteBakeRecordFunc) call(tilePath, recordPath string, productTemplate []byte) error {
+func (f *fakeWriteBakeRecordFunc) call(kilnVersion, tilePath, recordPath string, productTemplate []byte) error {
+	f.kilnVersion = kilnVersion
 	f.tilePath = tilePath
 	f.recordPath = recordPath
 	f.productTemplate = productTemplate

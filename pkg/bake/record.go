@@ -33,7 +33,7 @@ type Record struct {
 	Version string `yaml:"version" json:"version"`
 
 	// KilnVersion is the Kiln CLI version
-	KilnVersion string `yaml:"kiln_version" json:"kiln_version"`
+	KilnVersion string `yaml:"kiln_version,omitempty" json:"kiln_version,omitempty"`
 
 	// TileName might record the tile name used in baking because sometimes multiple tiles can be generated from the same tile source directory
 	// An example of this is the two Tanzu Application Service tiles with different topologies listed on TanzuNetwork.
@@ -51,18 +51,20 @@ func NewRecord(fileChecksum string, productTemplateBytes []byte) (Record, error)
 	}
 
 	err := yaml.Unmarshal(productTemplateBytes, &productTemplate)
+	if err != nil {
+		return Record{}, err
+	}
 
-	if productTemplate.KilnMetadata.KilnVersion == "" {
-		return Record{}, fmt.Errorf("failed to parse build information from product template: kiln_metadata.kiln_version not found")
+	if productTemplate.KilnMetadata.MetadataGitSHA == "" {
+		return Record{}, fmt.Errorf("failed to parse build information from product template: kiln_metadata.metadata_git_sha not found")
 	}
 
 	return Record{
 		SourceRevision: productTemplate.KilnMetadata.MetadataGitSHA,
 		Version:        productTemplate.ProductVersion,
-		KilnVersion:    productTemplate.KilnMetadata.KilnVersion,
 		TileName:       productTemplate.KilnMetadata.TileName,
 		FileChecksum:   fileChecksum,
-	}, err
+	}, nil
 }
 
 // NewRecordFromFile parses the product template and pulls the kiln metadata out.
@@ -111,54 +113,54 @@ func ReadRecords(dir fs.FS) ([]Record, error) {
 	return builds, nil
 }
 
-func (b Record) Name() string {
-	if b.TileName != "" {
-		return path.Join(b.TileName, b.Version)
+func (record Record) Name() string {
+	if record.TileName != "" {
+		return path.Join(record.TileName, record.Version)
 	}
-	return b.Version
+	return record.Version
 }
 
-func (b Record) CompareVersion(o Record) int {
-	bv, err := semver.NewVersion(b.Version)
+func (record Record) CompareVersion(o Record) int {
+	bv, err := semver.NewVersion(record.Version)
 	if err != nil {
-		return strings.Compare(b.Version, o.Version)
+		return strings.Compare(record.Version, o.Version)
 	}
 	ov, err := semver.NewVersion(o.Version)
 	if err != nil {
-		return strings.Compare(b.Version, o.Version)
+		return strings.Compare(record.Version, o.Version)
 	}
 	return bv.Compare(ov)
 }
 
-func (b Record) CompareTileName(o Record) int {
-	return strings.Compare(b.TileName, o.TileName)
+func (record Record) CompareTileName(o Record) int {
+	return strings.Compare(record.TileName, o.TileName)
 }
 
-func (b Record) IsDevBuild() bool {
-	return b.SourceRevision == builder.DirtyWorktreeSHAValue
+func (record Record) IsDevBuild() bool {
+	return record.SourceRevision == builder.DirtyWorktreeSHAValue
 }
 
-func (b Record) WriteFile(tileSourceDirectory string) error {
-	if b.Version == "" {
+func (record Record) WriteFile(tileSourceDirectory string) error {
+	if record.Version == "" {
 		return fmt.Errorf("missing required version field")
 	}
-	if b.IsDevBuild() {
+	if record.IsDevBuild() {
 		return fmt.Errorf("will not write development builds to %s directory", RecordsDirectory)
 	}
 	if err := os.MkdirAll(filepath.Join(tileSourceDirectory, RecordsDirectory), 0o766); err != nil {
 		return err
 	}
-	buf, err := json.MarshalIndent(b, "", "  ")
+	buf, err := json.MarshalIndent(record, "", "  ")
 	if err != nil {
 		return err
 	}
-	fileName := b.Version + ".json"
-	if b.TileName != "" {
-		fileName = b.TileName + "-" + fileName
+	fileName := record.Version + ".json"
+	if record.TileName != "" {
+		fileName = record.TileName + "-" + fileName
 	}
 	outputFilepath := filepath.Join(tileSourceDirectory, RecordsDirectory, fileName)
 	if _, err := os.Stat(outputFilepath); err == nil {
-		return fmt.Errorf("tile bake record already exists for %s", b.Name())
+		return fmt.Errorf("tile bake record already exists for %s", record.Name())
 	}
 	return os.WriteFile(outputFilepath, buf, 0o644)
 }

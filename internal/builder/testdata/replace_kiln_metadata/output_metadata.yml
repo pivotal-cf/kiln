@@ -59,7 +59,6 @@ job_types:
         release: bpm
 kiln_metadata:
   metadata_git_sha: some-commit-sha
-  kiln_version: some-kiln-version
 label: Hello
 metadata_version: 2.7.0
 minimum_version_for_upgrade: 0.1.0

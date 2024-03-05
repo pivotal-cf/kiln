@@ -874,7 +874,6 @@ some_runtime_configs:
 serial: false
 selected_value: "235"
 kiln_metadata:
-  kiln_version: 0.0.0-dev.0+acceptance
   metadata_git_sha: %s
 `
 
@@ -899,7 +898,6 @@ stemcell_criteria:
   requires_cpi: false
   enable_patch_security_updates: true
 kiln_metadata:
-  kiln_version: 0.0.0-dev.0+acceptance
   metadata_git_sha: %s
 `
 
@@ -921,7 +919,6 @@ additional_stemcells_criteria:
 - os: windows
   version: "2019.4"
 kiln_metadata:
-  kiln_version: 0.0.0-dev.0+acceptance
   metadata_git_sha: %s
 `
 
@@ -940,6 +937,5 @@ stemcell_criteria:
   os: ubuntu-trusty
   version: "3215.4"
 kiln_metadata:
-  kiln_version: 0.0.0-dev.0+acceptance
   metadata_git_sha: %s
 `
