@@ -4,6 +4,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/bake"
 	"github.com/stretchr/testify/assert"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -182,4 +183,105 @@ product_version: some-product-version
 
 		require.Equal(t, bs, result, "the builds are in order and contain all the info")
 	})
+}
+
+func TestBakeRecord_SetTileDirectory(t *testing.T) {
+	t.Run("when run in a subdirectory", func(t *testing.T) {
+		// this test makes use of the go test characteristic that tests are run in the repository root
+
+		repoRoot := createAndMoveToTemporaryTileDirectory(t, "peach", "pear")
+		createGitRepository(t, repoRoot)
+
+		record, err := bake.Record{}.SetTileDirectory(".")
+		require.NoError(t, err)
+
+		assert.Equal(t, "peach/pear", record.TileDirectory)
+	})
+
+	t.Run("when run in  the root", func(t *testing.T) {
+		// this test makes use of the go test characteristic that tests are run in the repository root
+
+		repoRoot := createAndMoveToTemporaryTileDirectory(t)
+		createGitRepository(t, repoRoot)
+
+		record, err := bake.Record{}.SetTileDirectory(".")
+		require.NoError(t, err)
+
+		assert.Equal(t, ".", record.TileDirectory)
+	})
+
+	t.Run("when passed a directory not in the repository", func(t *testing.T) {
+		// this test makes use of the go test characteristic that tests are run in the repository root
+
+		repoRoot := createAndMoveToTemporaryTileDirectory(t)
+		createGitRepository(t, repoRoot)
+
+		someOtherDir := t.TempDir()
+
+		_, err := bake.Record{}.SetTileDirectory(someOtherDir)
+		require.Error(t, err, "either be or be a child of the repository root directory")
+	})
+
+	t.Run("when passed a sub directory", func(t *testing.T) {
+		// this test makes use of the go test characteristic that tests are run in the repository root
+
+		repoRoot := createAndMoveToTemporaryTileDirectory(t)
+		createGitRepository(t, repoRoot)
+		subDir := filepath.Join("peach", "pear")
+		require.NoError(t, os.MkdirAll(subDir, 0766))
+
+		record, err := bake.Record{}.SetTileDirectory(subDir)
+		require.NoError(t, err)
+
+		assert.Equal(t, "peach/pear", record.TileDirectory)
+	})
+
+	t.Run("when executed from a non repository child directory", func(t *testing.T) {
+		// this test makes use of the go test characteristic that tests are run in the repository root
+
+		repoDir, err := filepath.EvalSymlinks(t.TempDir())
+		require.NoError(t, err)
+		createGitRepository(t, repoDir)
+
+		record, err := bake.Record{}.SetTileDirectory(repoDir)
+		require.NoError(t, err)
+
+		assert.Equal(t, ".", record.TileDirectory)
+	})
+}
+
+func createAndMoveToTemporaryTileDirectory(t *testing.T, subDirectory ...string) string {
+	t.Helper()
+	testDir, err := os.Getwd()
+	require.NoError(t, err)
+	repoDir := t.TempDir()
+
+	require.NoError(t, os.Chdir(repoDir))
+
+	if len(subDirectory) > 0 {
+		subDir := filepath.Join(subDirectory...)
+		require.NoError(t, os.MkdirAll(subDir, 0766))
+		require.NoError(t, os.Chdir(subDir))
+	}
+
+	t.Cleanup(func() {
+		if err := os.Chdir(testDir); err != nil {
+			t.Fatalf("failed to go back to test dir: %s", err)
+		}
+	})
+
+	// EvalSymlinks is required on GOOS=darwin because /var (an ancestor of the returned value from t.TempDir) is a
+	// symbolic link to /private/var. `git rev-parse --show-toplevel` returns a path with symbolic links resolved.
+	// To simplify test assertions and the implementation, we resolve thos symbolic links here in the helper.
+	resolved, err := filepath.EvalSymlinks(repoDir)
+	require.NoError(t, err)
+
+	return resolved
+}
+
+func createGitRepository(t *testing.T, dir string) {
+	t.Helper()
+	gitInit := exec.Command("git", "init")
+	gitInit.Dir = dir
+	require.NoError(t, gitInit.Run())
 }
