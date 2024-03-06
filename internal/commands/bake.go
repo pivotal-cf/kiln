@@ -237,13 +237,21 @@ func writeBakeRecord(kilnVersion, tileFilepath, metadataFilepath string, product
 	if err != nil {
 		return fmt.Errorf("failed to create bake record: %w", err)
 	}
+
 	b.KilnVersion = kilnVersion
+
 	abs, err := filepath.Abs(metadataFilepath)
 	if err != nil {
 		return fmt.Errorf("failed to find tile root for bake records: %w", err)
 	}
-	dir := filepath.Dir(abs)
-	if err := b.WriteFile(dir); err != nil {
+	tileDir := filepath.Dir(abs)
+
+	b, err = b.SetTileDirectory(tileDir)
+	if err != nil {
+		return err
+	}
+
+	if err := b.WriteFile(tileDir); err != nil {
 		return fmt.Errorf("failed to write bake record: %w", err)
 	}
 	return nil

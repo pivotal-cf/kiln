@@ -92,7 +92,12 @@ func iHaveATileDirectory(ctx context.Context, tileDirectory string) (context.Con
 		return ctx, fmt.Errorf("failed to create new copy of tile directory: %w", err)
 	}
 
-	dir, err := copyTileDirectory(tmpDir, tileDirectory)
+	resolvedDir, err := filepath.EvalSymlinks(tmpDir)
+	if err != nil {
+		return ctx, fmt.Errorf("failed to resolve symlinks for test tile directory: %w", err)
+	}
+
+	dir, err := copyTileDirectory(resolvedDir, tileDirectory)
 	if err != nil {
 		return ctx, err
 	}

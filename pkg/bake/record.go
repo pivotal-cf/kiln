@@ -1,6 +1,7 @@
 package bake
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"slices"
@@ -39,8 +41,11 @@ type Record struct {
 	// An example of this is the two Tanzu Application Service tiles with different topologies listed on TanzuNetwork.
 	TileName string `yaml:"tile_name,omitempty" json:"tile_name,omitempty"`
 
-	// FileChecksum is the SHA256 checksum of the baked tile.
+	// FileChecksum may be the SHA256 checksum of the baked tile.
 	FileChecksum string `yaml:"file_checksum,omitempty" json:"file_checksum,omitempty"`
+
+	// TileDirectory may be the directory containing tile source.
+	TileDirectory string `yaml:"tile_directory,omitempty" json:"tile_directory,omitempty"`
 }
 
 // NewRecord parses build information from an OpsManger Product Template (aka metadata/metadata.yml)
@@ -163,6 +168,37 @@ func (record Record) WriteFile(tileSourceDirectory string) error {
 		return fmt.Errorf("tile bake record already exists for %s", record.Name())
 	}
 	return os.WriteFile(outputFilepath, buf, 0o644)
+}
+
+func (record Record) SetTileDirectory(tileSourceDirectory string) (Record, error) {
+	absoluteTileSourceDirectory, err := filepath.Abs(tileSourceDirectory)
+	if err != nil {
+		return record, err
+	}
+	repoRoot, err := repositoryRoot(tileSourceDirectory)
+	if err != nil {
+		return record, err
+	}
+	repoRoot += string(filepath.Separator)
+	absoluteTileSourceDirectory += string(filepath.Separator)
+	if !strings.HasPrefix(absoluteTileSourceDirectory, repoRoot) {
+		return record, fmt.Errorf("expected tile directory %q to either be or be a child of the repository root directory %q", absoluteTileSourceDirectory, repoRoot)
+	}
+	relativeTilePath := strings.TrimPrefix(absoluteTileSourceDirectory, repoRoot)
+	record.TileDirectory = filepath.ToSlash(filepath.Clean(relativeTilePath))
+	return record, nil
+}
+
+func repositoryRoot(dir string) (string, error) {
+	var out bytes.Buffer
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	cmd.Dir = dir
+	cmd.Stdout = &out
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to get HEAD revision hash: %w", err)
+	}
+	return strings.TrimSpace(out.String()), nil
 }
 
 func compareMultiple[T any](cmp ...func(a, b T) int) func(a, b T) int {
