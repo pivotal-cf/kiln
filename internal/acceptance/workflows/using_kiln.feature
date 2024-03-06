@@ -33,6 +33,7 @@ Feature: As a developer, I want the Kiln CLI to be usable
     Examples:
       | command                 |
       | bake                    |
+      | re-bake                 |
       | fetch                   |
       | find-release-version    |
       | find-stemcell-version   |
