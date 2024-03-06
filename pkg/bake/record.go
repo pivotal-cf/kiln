@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -143,6 +144,34 @@ func (record Record) CompareTileName(o Record) int {
 
 func (record Record) IsDevBuild() bool {
 	return record.SourceRevision == builder.DirtyWorktreeSHAValue
+}
+
+func (record Record) IsEquivalent(other Record, logger *log.Logger) bool {
+	if logger == nil {
+		logger = log.New(io.Discard, "", 0)
+	}
+
+	// if tile records differ on the following fields the tiles are still close enough
+	record.KilnVersion = ""
+	other.KilnVersion = ""
+	record.TileDirectory = ""
+	other.TileDirectory = ""
+	record.TileName = ""
+	other.TileName = ""
+
+	if exp, got := record.Version, other.Version; exp != got {
+		logger.Printf("tile versions are not the same: expected %q but got %q", exp, got)
+	}
+
+	if exp, got := record.SourceRevision, other.SourceRevision; exp != got {
+		logger.Printf("tile source revisions are not the same: expected %q but got %q", exp, got)
+	}
+
+	if exp, got := record.FileChecksum, other.FileChecksum; exp != got {
+		logger.Printf("tile file checksums are not the same: expected %q but got %q", exp, got)
+	}
+
+	return record == other
 }
 
 func (record Record) WriteFile(tileSourceDirectory string) error {

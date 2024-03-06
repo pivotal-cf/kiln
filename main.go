@@ -79,6 +79,7 @@ func main() {
 	bakeCommand := commands.NewBake(fs, releasesService, outLogger, errLogger, fetch)
 	bakeCommand.KilnVersion = version
 	commandSet["bake"] = bakeCommand
+	commandSet["re-bake"] = commands.NewReBake(bakeCommand)
 
 	commandSet["test"] = commands.NewTileTest()
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)

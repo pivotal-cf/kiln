@@ -1,0 +1,9 @@
+releases:
+  - name: bpm
+    sha1: e8abe19ec186962828de843f8f281cddb6141904
+    version: 1.1.21
+    remote_source: bosh.io
+    remote_path: https://bosh.io/d/github.com/cloudfoundry/bpm-release?v=1.1.21
+stemcell_criteria:
+  os: ubuntu-xenial
+  version: "621.0"
