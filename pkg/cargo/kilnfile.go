@@ -368,6 +368,6 @@ type BakeConfiguration struct {
 	PropertyDirectories      []string `yaml:"properties_directories,omitempty"             json:"properties_directories,omitempty"`
 	RuntimeConfigDirectories []string `yaml:"runtime_configurations_directories,omitempty" json:"runtime_configurations_directories,omitempty"`
 	BOSHVariableDirectories  []string `yaml:"bosh_variables_directories,omitempty"         json:"bosh_variables_directories,omitempty"`
-	EmbedPaths               []string `yaml:"embed_paths_directories,omitempty"            json:"embed_paths_directories,omitempty"`
+	EmbedPaths               []string `yaml:"embed_paths,omitempty"                        json:"embed_paths,omitempty"`
 	VariableFiles            []string `yaml:"variable_files,omitempty"                     json:"variable_files,omitempty"`
 }

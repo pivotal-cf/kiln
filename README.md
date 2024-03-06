@@ -132,7 +132,7 @@ These are the mappings from bake flag to each field in a bake_configurations ele
 | `"properties_directories"`             | `--properties-directory=`      | This may be a list of directories.                                                    |
 | `"runtime_configurations_directories"` | `--runtime-configs-directory=` | This may be a list of directories.                                                    |
 | `"bosh_variables_directories"`         | `--bosh-variables-directory=`  | This may be a list of directories.                                                    |
-| `"embed_paths_directories"`            | `--embed=`                     | This may be a list of directories.                                                    |
+| `"embed_files"`                        | `--embed=`                     | This may be a list of filepaths.                                                      |
 | `"variable_files"`                     | `--variables-file=`            | This may be a list of filepaths.                                                      |
 
 ### The Lock File [(source)](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg/cargo#Kilnfile)
