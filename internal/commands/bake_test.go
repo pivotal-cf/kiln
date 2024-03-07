@@ -20,6 +20,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"github.com/pivotal-cf/kiln/pkg/source"
 )
@@ -936,6 +937,77 @@ var _ = Describe("Bake", func() {
 				ShortDescription: "bakes a tile",
 				Flags:            bake.Options,
 			}))
+		})
+	})
+})
+
+var _ = Describe("BakeArgumentsFromKilnfileConfiguration", func() {
+	It("handles empty options and variables", func() {
+		opts := &commands.BakeOptions{}
+		variables := map[string]any{}
+
+		err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("handles a Kilnfile that does not exist", func() {
+		opts := &commands.BakeOptions{
+			Standard: flags.Standard{
+				Kilnfile: "/does/not/exist",
+			},
+		}
+		variables := map[string]any{}
+
+		err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	const validKilnfile = `---
+release_sources:
+  - type: s3
+    compiled: true
+    bucket: bucket
+    region: region
+    access_key_id: access_key_id
+    secret_access_key: secret_access_key
+    path_template: path_template
+`
+	When("passing a valid Kilnfile", func() {
+		var opts *commands.BakeOptions
+
+		BeforeEach(func() {
+			tempDir, err := os.MkdirTemp("", "bake_")
+			Expect(err).NotTo(HaveOccurred())
+
+			path := filepath.Join(tempDir, "Kilnfile")
+			Expect(os.WriteFile(path, []byte(validKilnfile), 0o644)).ToNot(HaveOccurred())
+
+			opts = &commands.BakeOptions{
+				Standard: flags.Standard{
+					Kilnfile: path,
+				},
+			}
+		})
+
+		It("handles empty variables", func() {
+			variables := map[string]any{}
+
+			err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("handles a valid tile_name variable", func() {
+			variables := map[string]any{"tile_name": "SRT"}
+
+			err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns an error for unexpected tile_name type", func() {
+			variables := map[string]any{"tile_name": 8675309}
+
+			err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables)
+			Expect(err).To(MatchError("tile_name value must be a string got value 8675309 with type int"))
 		})
 	})
 })

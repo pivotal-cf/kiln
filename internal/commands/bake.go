@@ -437,7 +437,7 @@ func (b Bake) Execute(args []string) error {
 		// TODO remove when stemcell tarball is deprecated
 		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
 	} else if b.Options.Kilnfile != "" {
-		if err := bakeArgumentsFromKilnfileConfiguration(&b.Options, templateVariables); err != nil {
+		if err := BakeArgumentsFromKilnfileConfiguration(&b.Options, templateVariables); err != nil {
 			return fmt.Errorf("failed to parse releases: %s", err)
 		}
 		templateVariables, err = b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
@@ -590,7 +590,7 @@ func (b Bake) Usage() jhanda.Usage {
 	}
 }
 
-func bakeArgumentsFromKilnfileConfiguration(options *BakeOptions, variables map[string]any) error {
+func BakeArgumentsFromKilnfileConfiguration(options *BakeOptions, variables map[string]any) error {
 	if options.Kilnfile == "" {
 		return nil
 	}
@@ -610,7 +610,7 @@ func bakeArgumentsFromKilnfileConfiguration(options *BakeOptions, variables map[
 	}
 	if tileName, ok := variables[builder.TileNameVariable]; ok {
 		name, ok := tileName.(string)
-		if ok {
+		if !ok {
 			return fmt.Errorf("%s value must be a string got value %#[2]v with type %[2]T", builder.TileNameVariable, tileName)
 		}
 		if index := slices.IndexFunc(kf.BakeConfigurations, func(configuration cargo.BakeConfiguration) bool {
