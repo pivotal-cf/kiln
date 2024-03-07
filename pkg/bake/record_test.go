@@ -1,16 +1,16 @@
 package bake_test
 
 import (
-	"github.com/pivotal-cf/kiln/pkg/bake"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 
-	"github.com/pivotal-cf/kiln/internal/builder"
-
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/pkg/bake"
 )
 
 func TestNewRecordFromFile(t *testing.T) {
@@ -228,7 +228,7 @@ func TestBakeRecord_SetTileDirectory(t *testing.T) {
 		repoRoot := createAndMoveToTemporaryTileDirectory(t)
 		createGitRepository(t, repoRoot)
 		subDir := filepath.Join("peach", "pear")
-		require.NoError(t, os.MkdirAll(subDir, 0766))
+		require.NoError(t, os.MkdirAll(subDir, 0o766))
 
 		record, err := bake.Record{}.SetTileDirectory(subDir)
 		require.NoError(t, err)
@@ -260,7 +260,7 @@ func createAndMoveToTemporaryTileDirectory(t *testing.T, subDirectory ...string)
 
 	if len(subDirectory) > 0 {
 		subDir := filepath.Join(subDirectory...)
-		require.NoError(t, os.MkdirAll(subDir, 0766))
+		require.NoError(t, os.MkdirAll(subDir, 0o766))
 		require.NoError(t, os.Chdir(subDir))
 	}
 

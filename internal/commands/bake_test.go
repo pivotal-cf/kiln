@@ -2,7 +2,6 @@ package commands_test
 
 import (
 	"errors"
-	"github.com/pivotal-cf/kiln/pkg/bake"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/pivotal-cf/kiln/pkg/bake"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
