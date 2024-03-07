@@ -3,13 +3,15 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pivotal-cf/jhanda"
-	"github.com/pivotal-cf/kiln/internal/builder"
-	"github.com/pivotal-cf/kiln/pkg/bake"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pivotal-cf/jhanda"
+
+	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/pkg/bake"
 )
 
 type ReBake struct {
