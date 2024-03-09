@@ -25,12 +25,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/acceptance/workflows/scenario"
 )
 
-func TestMain(m *testing.M) {
-	code := m.Run()
-	_ = exec.Command("git", "submodule", "update", "--init", "--recursive", "hello-tile").Run()
-	os.Exit(code)
-}
-
 func Test_baking_a_tile(t *testing.T) {
 	// t.SkipNow()
 	setupAndRunFeatureTest(t)
