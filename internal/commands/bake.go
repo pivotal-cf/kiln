@@ -22,8 +22,8 @@ import (
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/helper"
+	"github.com/pivotal-cf/kiln/pkg/bake"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
-	"github.com/pivotal-cf/kiln/pkg/source"
 )
 
 //counterfeiter:generate -o ./fakes/interpolator.go --fake-name Interpolator . interpolator
@@ -141,7 +141,7 @@ func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLog
 	}
 }
 
-type writeBakeRecordSignature func(string, string, []byte) error
+type writeBakeRecordSignature func(string, string, string, []byte) error
 
 type Bake struct {
 	interpolator      interpolator
@@ -229,21 +229,30 @@ func NewBakeWithInterfaces(interpolator interpolator, tileWriter tileWriter, out
 
 var _ writeBakeRecordSignature = writeBakeRecord
 
-func writeBakeRecord(tileFilepath, metadataFilepath string, productTemplate []byte) error {
+func writeBakeRecord(kilnVersion, tileFilepath, metadataFilepath string, productTemplate []byte) error {
 	tileSum, err := tileChecksum(tileFilepath)
 	if err != nil {
 		return fmt.Errorf("failed to calculate checksum: %w", err)
 	}
-	b, err := source.NewBakeRecord(tileSum, productTemplate)
+	b, err := bake.NewRecord(tileSum, productTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to create bake record: %w", err)
 	}
+
+	b.KilnVersion = kilnVersion
+
 	abs, err := filepath.Abs(metadataFilepath)
 	if err != nil {
 		return fmt.Errorf("failed to find tile root for bake records: %w", err)
 	}
-	dir := filepath.Dir(abs)
-	if err := b.WriteFile(dir); err != nil {
+	tileDir := filepath.Dir(abs)
+
+	b, err = b.SetTileDirectory(tileDir)
+	if err != nil {
+		return err
+	}
+
+	if err := b.WriteFile(tileDir); err != nil {
 		return fmt.Errorf("failed to write bake record: %w", err)
 	}
 	return nil
@@ -527,7 +536,6 @@ func (b Bake) Execute(args []string) error {
 	modTime := time.Unix(0, 0).In(time.UTC)
 
 	input := builder.InterpolateInput{
-		KilnVersion:        b.KilnVersion,
 		Version:            b.Options.Version,
 		Variables:          templateVariables,
 		BOSHVariables:      boshVariables,
@@ -573,7 +581,7 @@ func (b Bake) Execute(args []string) error {
 	}
 
 	if b.Options.IsFinal {
-		if err := b.writeBakeRecord(b.Options.OutputFile, b.Options.Metadata, interpolatedMetadata); err != nil {
+		if err := b.writeBakeRecord(b.KilnVersion, b.Options.OutputFile, b.Options.Metadata, interpolatedMetadata); err != nil {
 			return err
 		}
 	}

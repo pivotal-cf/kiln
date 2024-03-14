@@ -37,7 +37,6 @@ type Interpolator struct{}
 
 type InterpolateInput struct {
 	Version            string
-	KilnVersion        string
 	BOSHVariables      map[string]any
 	Variables          map[string]any
 	ReleaseManifests   map[string]any

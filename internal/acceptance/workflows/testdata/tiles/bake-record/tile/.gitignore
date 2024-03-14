@@ -1,0 +1,3 @@
+releases/*.tgz
+*.pivotal
+bake_records/*.json

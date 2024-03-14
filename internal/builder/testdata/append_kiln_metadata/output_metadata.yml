@@ -83,4 +83,3 @@ stemcell_criteria:
   version: "621.256"
 kiln_metadata:
   metadata_git_sha: some-commit-sha
-  kiln_version: some-kiln-version

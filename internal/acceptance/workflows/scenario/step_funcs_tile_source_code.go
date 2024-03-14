@@ -92,7 +92,12 @@ func iHaveATileDirectory(ctx context.Context, tileDirectory string) (context.Con
 		return ctx, fmt.Errorf("failed to create new copy of tile directory: %w", err)
 	}
 
-	dir, err := copyTileDirectory(tmpDir, tileDirectory)
+	resolvedDir, err := filepath.EvalSymlinks(tmpDir)
+	if err != nil {
+		return ctx, fmt.Errorf("failed to resolve symlinks for test tile directory: %w", err)
+	}
+
+	dir, err := copyTileDirectory(resolvedDir, tileDirectory)
 	if err != nil {
 		return ctx, err
 	}
@@ -126,8 +131,8 @@ func copyTileDirectory(dir, tileDirectory string) (string, error) {
 	if err := executeAndWrapError(testTileDir, env, "git", "add", "."); err != nil {
 		return "", fmt.Errorf("tile path is not a repository: adding initial files failed: %w", err)
 	}
-	env = updateEnvVar(env, "GIT_AUTHOR_DATE", "1112937193 -0700")
-	env = updateEnvVar(env, "GIT_COMMITTER_DATE", "1112937193 -0700")
+	env = updateEnvVar(env, "GIT_AUTHOR_DATE", "Thu, 07 Apr 2005 22:13:13")
+	env = updateEnvVar(env, "GIT_COMMITTER_DATE", "Thu, 07 Apr 2005 22:13:13")
 	if err := executeAndWrapError(testTileDir, env, "git", "commit", "-m", "initial commit"); err != nil {
 		return "", fmt.Errorf("tile path is not a repository: adding initial files failed: %w", err)
 	}
