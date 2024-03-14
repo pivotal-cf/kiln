@@ -15,8 +15,8 @@ Feature: As a developer, I want to bake a tile
     And "bake_records/0.2.0-dev.json" contains substring: "version": "0.2.0-dev"
     And "bake_records/0.2.0-dev.json" contains substring: "source_revision": "bc3ac24e192ba06a2eca19381ad785ec7069e0d0"
     And "bake_records/0.2.0-dev.json" contains substring: "kiln_version": "0.0.0+acceptance-tests"
-    And "bake_records/0.2.0-dev.json" contains substring: "file_checksum": "342fd94f1f3ccaaa1b964977067a1d89915b2c6957242d18bd1ef39babcda915"
-    And "tile-0.2.0-dev.pivotal" has sha256 sum "342fd94f1f3ccaaa1b964977067a1d89915b2c6957242d18bd1ef39babcda915"
+    And "bake_records/0.2.0-dev.json" contains substring: "file_checksum": "98239fa2fad3132c4cc12407f0f6c77bdcae1faec00fb4ef4c2b420637522db4"
+    And "tile-0.2.0-dev.pivotal" has sha256 sum "98239fa2fad3132c4cc12407f0f6c77bdcae1faec00fb4ef4c2b420637522db4"
 
   Scenario: it reads directory configuration from Kilnfile
     Given I have a tile source directory "testdata/tiles/non-standard-paths"

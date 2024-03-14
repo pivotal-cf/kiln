@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
-	"time"
 )
 
 const DirtyWorktreeSHAValue = "DEVELOPMENT"
@@ -25,21 +23,6 @@ func GitMetadataSHA(repositoryDirectory string, isDev bool) (string, error) {
 	return gitHeadRevision(repositoryDirectory)
 }
 
-func ModifiedTime(repositoryDirectory string, isDev bool) (time.Time, error) {
-	if isDev {
-		return time.Now(), nil
-	}
-	if err := ensureGitExecutableIsFound(); err != nil {
-		return time.Time{}, err
-	}
-	if dirty, err := GitStateIsDirty(repositoryDirectory); err != nil {
-		return time.Time{}, err
-	} else if dirty && isDev {
-		return time.Now(), nil
-	}
-	return GitCommitterCommitDate(repositoryDirectory)
-}
-
 func GitStateIsDirty(repositoryDirectory string) (bool, error) {
 	gitStatus := exec.Command("git", "status", "--porcelain")
 	gitStatus.Dir = repositoryDirectory
@@ -51,20 +34,6 @@ func GitStateIsDirty(repositoryDirectory string) (bool, error) {
 		return true, fmt.Errorf("failed to run `%s %s`: %w", gitStatus.Path, strings.Join(gitStatus.Args, " "), err)
 	}
 	return false, nil
-}
-
-func GitCommitterCommitDate(repositoryDirectory string) (time.Time, error) {
-	cmd := exec.Command("git", "show", "-s", "--format=%ct")
-	cmd.Dir = repositoryDirectory
-	output, err := cmd.Output()
-	if err != nil {
-		return time.Time{}, err
-	}
-	commitTime, err := strconv.ParseInt(strings.TrimSpace(string(output)), 10, 64)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return time.Unix(commitTime, 0), nil
 }
 
 func gitHeadRevision(repositoryDirectory string) (string, error) {
