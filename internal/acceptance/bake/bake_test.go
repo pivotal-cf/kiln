@@ -151,6 +151,10 @@ var _ = Describe("bake command", func() {
 		file, err := bakedTile.Open("metadata/metadata.yml")
 		Expect(err).NotTo(HaveOccurred())
 
+		info, err := file.Stat()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.ModTime()).To(Equal(time.Unix(0, 0).In(time.UTC)))
+
 		metadataContents, err := io.ReadAll(file)
 		Expect(err).NotTo(HaveOccurred())
 

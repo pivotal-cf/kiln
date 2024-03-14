@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/pivotal-cf/jhanda"
@@ -532,10 +533,7 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to read metadata: %s", err)
 	}
 
-	modTime, err := builder.ModifiedTime(filepath.Dir(b.Options.Kilnfile), isDevBuild)
-	if err != nil {
-		return fmt.Errorf("failed to read modified date from commit: %s", err)
-	}
+	modTime := time.Unix(0, 0).In(time.UTC)
 
 	input := builder.InterpolateInput{
 		Version:            b.Options.Version,
