@@ -447,8 +447,10 @@ func (b Bake) Execute(args []string) error {
 		// TODO remove when stemcell tarball is deprecated
 		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
 	} else if b.Options.Kilnfile != "" {
-		if err := BakeArgumentsFromKilnfileConfiguration(&b.Options, templateVariables); err != nil {
-			return fmt.Errorf("failed to parse releases: %s", err)
+		if !b.Options.StubReleases {
+			if err := BakeArgumentsFromKilnfileConfiguration(&b.Options, templateVariables); err != nil {
+				return fmt.Errorf("failed to parse releases: %s", err)
+			}
 		}
 		templateVariables, err = b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
 		if err != nil {
