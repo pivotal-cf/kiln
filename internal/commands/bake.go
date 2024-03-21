@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -125,6 +124,8 @@ func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLog
 
 		writeBakeRecord: writeBakeRecord,
 
+		loadKilnfile: cargo.ReadKilnfile,
+
 		metadata: metadataService,
 
 		boshVariables:  builder.MetadataPartsDirectoryReader{},
@@ -141,6 +142,11 @@ func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLog
 	}
 }
 
+func (bake Bake) WithKilnfileFunc(fn func(string) (cargo.Kilnfile, error)) Bake {
+	bake.loadKilnfile = fn
+	return bake
+}
+
 type writeBakeRecordSignature func(string, string, string, []byte) error
 
 type Bake struct {
@@ -152,6 +158,8 @@ type Bake struct {
 	templateVariables templateVariablesService
 	stemcell          stemcellService
 	releases          fromDirectories
+
+	loadKilnfile func(string) (cargo.Kilnfile, error)
 
 	writeBakeRecord writeBakeRecordSignature
 
@@ -213,6 +221,7 @@ func NewBakeWithInterfaces(interpolator interpolator, tileWriter tileWriter, out
 		icon:              iconService,
 		metadata:          metadataService,
 		writeBakeRecord:   writeBakeRecordFn,
+		loadKilnfile:      cargo.ReadKilnfile,
 
 		boshVariables:  boshVariablesService,
 		forms:          formsService,
@@ -436,6 +445,10 @@ func (b Bake) Execute(args []string) error {
 		return fmt.Errorf("failed to parse template variables: %s", err)
 	}
 
+	if err := BakeArgumentsFromKilnfileConfiguration(&b.Options, templateVariables, b.loadKilnfile); err != nil {
+		return fmt.Errorf("failed to load bake configuration from Kilnfile: %w", err)
+	}
+
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
 	if err != nil {
 		return fmt.Errorf("failed to parse releases: %s", err)
@@ -447,16 +460,6 @@ func (b Bake) Execute(args []string) error {
 		// TODO remove when stemcell tarball is deprecated
 		stemcellManifest, err = b.stemcell.FromTarball(b.Options.StemcellTarball)
 	} else if b.Options.Kilnfile != "" {
-		if !b.Options.StubReleases {
-			if err := BakeArgumentsFromKilnfileConfiguration(&b.Options, templateVariables); err != nil {
-				return fmt.Errorf("failed to parse releases: %s", err)
-			}
-		}
-		templateVariables, err = b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
-		if err != nil {
-			return fmt.Errorf("failed to parse template variables: %s", err)
-		}
-
 		stemcellManifests, err = b.stemcell.FromKilnfile(b.Options.Kilnfile)
 	} else if len(b.Options.StemcellsDirectories) > 0 {
 		stemcellManifests, err = b.stemcell.FromDirectories(b.Options.StemcellsDirectories)
@@ -598,23 +601,16 @@ func (b Bake) Usage() jhanda.Usage {
 	}
 }
 
-func BakeArgumentsFromKilnfileConfiguration(options *BakeOptions, variables map[string]any) error {
-	if options.Kilnfile == "" {
+func BakeArgumentsFromKilnfileConfiguration(options *BakeOptions, variables map[string]any, loadKilnfile func(string) (cargo.Kilnfile, error)) error {
+	if options.Kilnfile == "" || options.StemcellTarball != "" || len(options.StemcellsDirectories) > 0 {
 		return nil
 	}
-	if variables == nil {
-		variables = make(map[string]any)
-	}
-	buf, err := os.ReadFile(options.Kilnfile)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		return err
-	}
-	kf, err := cargo.InterpolateAndParseKilnfile(bytes.NewReader(buf), variables)
+	kf, err := loadKilnfile(options.Kilnfile)
 	if err != nil {
 		return err
+	}
+	if len(kf.BakeConfigurations) == 0 {
+		return nil
 	}
 	if tileName, ok := variables[builder.TileNameVariable]; ok {
 		name, ok := tileName.(string)

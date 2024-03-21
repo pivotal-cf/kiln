@@ -407,7 +407,7 @@ var _ = Describe("bake command", func() {
 				command := exec.Command(pathToMain, commandWithArgs...)
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(session.Err).Should(gbytes.Say("non-existent-kilnfile.lock: no such file or directory"))
+				Eventually(session.Err).Should(gbytes.Say("no such file or directory"))
 			})
 		})
 		It("errors out when Kilnfile.lock cannot be unmarshalled", func() {
