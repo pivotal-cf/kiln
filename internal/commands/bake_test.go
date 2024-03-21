@@ -402,7 +402,7 @@ var _ = Describe("Bake", func() {
 				bake = bake.WithKilnfileFunc(func(s string) (cargo.Kilnfile, error) {
 					return cargo.Kilnfile{
 						BakeConfigurations: []cargo.BakeConfiguration{
-							{Metadata: "peach.yml"},
+							{TileName: "p-each", Metadata: "peach.yml"},
 						},
 					}, nil
 				})
@@ -412,6 +412,14 @@ var _ = Describe("Bake", func() {
 					err := bake.Execute([]string{})
 					Expect(err).To(Not(HaveOccurred()))
 					Expect(fakeMetadataService.ReadArgsForCall(0)).To(Equal("peach.yml"))
+				})
+			})
+			When("generating metadata", func() {
+				It("it uses the value from the bake configuration", func() {
+					err := bake.Execute([]string{})
+					Expect(err).To(Not(HaveOccurred()))
+					input, _, _ := fakeInterpolator.InterpolateArgsForCall(0)
+					Expect(input.Variables).To(HaveKeyWithValue("tile_name", "p-each"))
 				})
 			})
 		})
@@ -995,13 +1003,10 @@ var _ = Describe("Bake", func() {
 
 var _ = Describe("BakeArgumentsFromKilnfileConfiguration", func() {
 	It("handles empty options and variables", func() {
-		opts := &commands.BakeOptions{}
-		variables := map[string]any{}
 		loadKilnfile := func(s string) (cargo.Kilnfile, error) {
 			return cargo.Kilnfile{}, nil
 		}
-
-		err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables, loadKilnfile)
+		err := commands.BakeArgumentsFromKilnfileConfiguration(new(commands.BakeOptions), loadKilnfile)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -1011,13 +1016,12 @@ var _ = Describe("BakeArgumentsFromKilnfileConfiguration", func() {
 				Kilnfile: "non-empty-path/Kilnfile",
 			},
 		}
-		variables := map[string]any{}
 
 		loadKilnfile := func(s string) (cargo.Kilnfile, error) {
 			return cargo.Kilnfile{}, os.ErrNotExist
 		}
 
-		err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables, loadKilnfile)
+		err := commands.BakeArgumentsFromKilnfileConfiguration(opts, loadKilnfile)
 		Expect(err).To(HaveOccurred())
 	})
 
@@ -1034,16 +1038,14 @@ var _ = Describe("BakeArgumentsFromKilnfileConfiguration", func() {
 			}
 		})
 
-		It("handles empty variables", func() {
+		It("handles empty TileName", func() {
 			var kilnfilePathArg string
 			loadKilnfile := func(s string) (cargo.Kilnfile, error) {
 				kilnfilePathArg = s
 				return cargo.Kilnfile{}, nil
 			}
-
-			variables := map[string]any{}
-
-			err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables, loadKilnfile)
+			opts.TileName = ""
+			err := commands.BakeArgumentsFromKilnfileConfiguration(opts, loadKilnfile)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kilnfilePathArg).To(Equal(kilnfilePath))
 		})
@@ -1061,16 +1063,15 @@ var _ = Describe("BakeArgumentsFromKilnfileConfiguration", func() {
 			})
 			When("tile_name is unset", func() {
 				It("handles getting the first configuration", func() {
-					variables := make(map[string]any)
-					err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables, loadKilnfile)
+					err := commands.BakeArgumentsFromKilnfileConfiguration(opts, loadKilnfile)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(opts.Metadata).To(Equal("peach.yml"))
 				})
 			})
 			When("a tile_name is a variable and does not match the bake configuration", func() {
 				It("handles getting the first configuration", func() {
-					variables := map[string]any{builder.TileNameVariable: "banana"}
-					err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables, loadKilnfile)
+					opts.TileName = "banana"
+					err := commands.BakeArgumentsFromKilnfileConfiguration(opts, loadKilnfile)
 					Expect(err).To(HaveOccurred())
 				})
 			})
@@ -1095,14 +1096,14 @@ var _ = Describe("BakeArgumentsFromKilnfileConfiguration", func() {
 				}
 			})
 			It("handles getting the first configuration by name", func() {
-				variables := map[string]any{"tile_name": "pair"}
-				err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables, loadKilnfile)
+				opts.TileName = "pair"
+				err := commands.BakeArgumentsFromKilnfileConfiguration(opts, loadKilnfile)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(opts.Metadata).To(Equal("pair.yml"))
 			})
 			It("handles getting the second configuration by name", func() {
-				variables := map[string]any{"tile_name": "peach"}
-				err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables, loadKilnfile)
+				opts.TileName = "peach"
+				err := commands.BakeArgumentsFromKilnfileConfiguration(opts, loadKilnfile)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(opts.Metadata).To(Equal("peach.yml"))
 			})
@@ -1112,28 +1113,6 @@ var _ = Describe("BakeArgumentsFromKilnfileConfiguration", func() {
 			//	Expect(err).NotTo(HaveOccurred())
 			//	Expect(opts.Metadata).To(Equal("peach.yml"))
 			//})
-		})
-
-		It("returns an error for unexpected tile_name type", func() {
-			variables := map[string]any{"tile_name": 8675309}
-
-			err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables, func(s string) (cargo.Kilnfile, error) {
-				return cargo.Kilnfile{
-					BakeConfigurations: []cargo.BakeConfiguration{{TileName: "apple"}},
-				}, nil
-			})
-			Expect(err).To(MatchError("tile_name value must be a string got value 8675309 with type int"))
-		})
-
-		It("returns an error for unexpected tile_name type", func() {
-			variables := map[string]any{"tile_name": 8675309}
-
-			err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables, func(s string) (cargo.Kilnfile, error) {
-				return cargo.Kilnfile{
-					BakeConfigurations: []cargo.BakeConfiguration{{TileName: "apple"}},
-				}, nil
-			})
-			Expect(err).To(MatchError("tile_name value must be a string got value 8675309 with type int"))
 		})
 	})
 

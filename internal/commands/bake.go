@@ -444,21 +444,20 @@ func (b Bake) Execute(args []string) error {
 		b.errLogger.Println("warning: --stemcell-tarball is being deprecated in favor of --stemcells-directory")
 	}
 
-	var templateVariables map[string]any
-	if b.Options.TileName != "" {
-		if templateVariables == nil {
-			templateVariables = make(map[string]any)
-		}
-		templateVariables[builder.TileNameVariable] = b.Options.TileName
-	}
-
-	if err := BakeArgumentsFromKilnfileConfiguration(&b.Options, templateVariables, b.loadKilnfile); err != nil {
+	if err := BakeArgumentsFromKilnfileConfiguration(&b.Options, b.loadKilnfile); err != nil {
 		return fmt.Errorf("failed to load bake configuration from Kilnfile: %w", err)
 	}
 
-	templateVariables, err = b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
+	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
 	if err != nil {
 		return fmt.Errorf("failed to parse template variables: %s", err)
+	}
+
+	if b.Options.TileName != "" {
+		if tileNameVariable, ok := templateVariables[builder.TileNameVariable]; ok && tileNameVariable != b.Options.TileName {
+			return fmt.Errorf("tile-name flag value %q does not match tile_name variable %q", b.Options.TileName, tileNameVariable)
+		}
+		templateVariables[builder.TileNameVariable] = b.Options.TileName
 	}
 
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
@@ -613,21 +612,13 @@ func (b Bake) Usage() jhanda.Usage {
 	}
 }
 
-func BakeArgumentsFromKilnfileConfiguration(options *BakeOptions, variables map[string]any, loadKilnfile func(string) (cargo.Kilnfile, error)) error {
+func BakeArgumentsFromKilnfileConfiguration(options *BakeOptions, loadKilnfile func(string) (cargo.Kilnfile, error)) error {
 	if options.Kilnfile == "" || options.StemcellTarball != "" || len(options.StemcellsDirectories) > 0 {
 		return nil
 	}
 	kf, err := loadKilnfile(options.Kilnfile)
 	if err != nil {
 		return err
-	}
-
-	if variableValue, ok := variables[builder.TileNameVariable]; ok {
-		variableString, ok := variableValue.(string)
-		if !ok {
-			return fmt.Errorf("%s value must be a string got value %#[2]v with type %[2]T", builder.TileNameVariable, variableValue)
-		}
-		options.TileName = variableString
 	}
 
 	if len(kf.BakeConfigurations) == 0 {
@@ -638,7 +629,8 @@ func BakeArgumentsFromKilnfileConfiguration(options *BakeOptions, variables map[
 			return fmt.Errorf("the provided tile_name %q does not match the configuration %q", options.TileName, configuration.TileName)
 		}
 		fromConfiguration(options, configuration)
-	} else if _, ok := variables[builder.TileNameVariable]; ok {
+		options.TileName = configuration.TileName
+	} else {
 		index := slices.IndexFunc(kf.BakeConfigurations, func(configuration cargo.BakeConfiguration) bool {
 			return configuration.TileName == options.TileName
 		})
