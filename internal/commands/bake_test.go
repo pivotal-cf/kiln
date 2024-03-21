@@ -415,6 +415,37 @@ var _ = Describe("Bake", func() {
 				})
 			})
 		})
+		Context("when bake configuration has multiple options", func() {
+			BeforeEach(func() {
+				bake = bake.WithKilnfileFunc(func(s string) (cargo.Kilnfile, error) {
+					return cargo.Kilnfile{
+						BakeConfigurations: []cargo.BakeConfiguration{
+							{
+								TileName: "p-each",
+								Metadata: "peach.yml",
+							},
+							{
+								TileName: "p-air",
+								Metadata: "pair.yml",
+							},
+							{
+								TileName: "p-lum",
+								Metadata: "plum.yml",
+							},
+						},
+					}, nil
+				})
+			})
+			When("a the tile flag is passed", func() {
+				It("it uses the value from the bake configuration with the correct name", func() {
+					err := bake.Execute([]string{
+						"--tile-name=p-each",
+					})
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(fakeMetadataService.ReadArgsForCall(0)).To(Equal("peach.yml"))
+				})
+			})
+		})
 		Context("when --stub-releases is specified", func() {
 			It("doesn't fetch releases", func() {
 				err := bake.Execute([]string{
@@ -1017,6 +1048,34 @@ var _ = Describe("BakeArgumentsFromKilnfileConfiguration", func() {
 			Expect(kilnfilePathArg).To(Equal(kilnfilePath))
 		})
 
+		When("there is one tile configuration", func() {
+			var loadKilnfile func(string) (cargo.Kilnfile, error)
+			BeforeEach(func() {
+				loadKilnfile = func(s string) (cargo.Kilnfile, error) {
+					return cargo.Kilnfile{
+						BakeConfigurations: []cargo.BakeConfiguration{
+							{TileName: "peach", Metadata: "peach.yml"},
+						},
+					}, nil
+				}
+			})
+			When("tile_name is unset", func() {
+				It("handles getting the first configuration", func() {
+					variables := make(map[string]any)
+					err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables, loadKilnfile)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(opts.Metadata).To(Equal("peach.yml"))
+				})
+			})
+			When("a tile_name is a variable and does not match the bake configuration", func() {
+				It("handles getting the first configuration", func() {
+					variables := map[string]any{builder.TileNameVariable: "banana"}
+					err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables, loadKilnfile)
+					Expect(err).To(HaveOccurred())
+				})
+			})
+		})
+
 		When("there are multiple tile configurations", func() {
 			var loadKilnfile func(string) (cargo.Kilnfile, error)
 			BeforeEach(func() {
@@ -1053,6 +1112,17 @@ var _ = Describe("BakeArgumentsFromKilnfileConfiguration", func() {
 			//	Expect(err).NotTo(HaveOccurred())
 			//	Expect(opts.Metadata).To(Equal("peach.yml"))
 			//})
+		})
+
+		It("returns an error for unexpected tile_name type", func() {
+			variables := map[string]any{"tile_name": 8675309}
+
+			err := commands.BakeArgumentsFromKilnfileConfiguration(opts, variables, func(s string) (cargo.Kilnfile, error) {
+				return cargo.Kilnfile{
+					BakeConfigurations: []cargo.BakeConfiguration{{TileName: "apple"}},
+				}, nil
+			})
+			Expect(err).To(MatchError("tile_name value must be a string got value 8675309 with type int"))
 		})
 
 		It("returns an error for unexpected tile_name type", func() {
