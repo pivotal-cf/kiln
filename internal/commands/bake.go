@@ -142,6 +142,8 @@ func NewBake(fs billy.Filesystem, releasesService baking.ReleasesService, outLog
 	}
 }
 
+// WithKilnfileFunc overrides the funcion used to parse the Kilnfile.
+// It is for setting up tests.
 func (bake Bake) WithKilnfileFunc(fn func(string) (cargo.Kilnfile, error)) Bake {
 	bake.loadKilnfile = fn
 	return bake
@@ -204,6 +206,8 @@ type BakeOptions struct {
 	StubReleases             bool     `short:"sr"  long:"stub-releases"                                         description:"skips importing release tarballs into the tile"`
 	Version                  string   `short:"v"   long:"version"                                               description:"version of the tile"`
 	SkipFetchReleases        bool     `short:"sfr" long:"skip-fetch"                                            description:"skips the automatic release fetch for all release directories"             alias:"skip-fetch-directories"`
+
+	TileName string `short:"t" long:"tile-name" description:"select the bake_configuration matching the tile-name from the Kilnfile"`
 
 	IsFinal bool `long:"final" description:"this flag causes build metadata to be written to bake_records"`
 }
@@ -440,13 +444,21 @@ func (b Bake) Execute(args []string) error {
 		b.errLogger.Println("warning: --stemcell-tarball is being deprecated in favor of --stemcells-directory")
 	}
 
-	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
-	if err != nil {
-		return fmt.Errorf("failed to parse template variables: %s", err)
+	var templateVariables map[string]any
+	if b.Options.TileName != "" {
+		if templateVariables == nil {
+			templateVariables = make(map[string]any)
+		}
+		templateVariables[builder.TileNameVariable] = b.Options.TileName
 	}
 
 	if err := BakeArgumentsFromKilnfileConfiguration(&b.Options, templateVariables, b.loadKilnfile); err != nil {
 		return fmt.Errorf("failed to load bake configuration from Kilnfile: %w", err)
+	}
+
+	templateVariables, err = b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
+	if err != nil {
+		return fmt.Errorf("failed to parse template variables: %s", err)
 	}
 
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
@@ -609,27 +621,43 @@ func BakeArgumentsFromKilnfileConfiguration(options *BakeOptions, variables map[
 	if err != nil {
 		return err
 	}
+
+	if variableValue, ok := variables[builder.TileNameVariable]; ok {
+		variableString, ok := variableValue.(string)
+		if !ok {
+			return fmt.Errorf("%s value must be a string got value %#[2]v with type %[2]T", builder.TileNameVariable, variableValue)
+		}
+		options.TileName = variableString
+	}
+
 	if len(kf.BakeConfigurations) == 0 {
 		return nil
-	}
-	if tileName, ok := variables[builder.TileNameVariable]; ok {
-		name, ok := tileName.(string)
-		if !ok {
-			return fmt.Errorf("%s value must be a string got value %#[2]v with type %[2]T", builder.TileNameVariable, tileName)
-		}
-		if index := slices.IndexFunc(kf.BakeConfigurations, func(configuration cargo.BakeConfiguration) bool {
-			return configuration.TileName == name
-		}); index >= 0 {
-			fromConfiguration(options, kf.BakeConfigurations[index])
-		}
 	} else if len(kf.BakeConfigurations) == 1 {
 		configuration := kf.BakeConfigurations[0]
-		fromConfiguration(options, configuration)
-		if configuration.TileName != "" {
-			variables[builder.TileNameVariable] = configuration.TileName
+		if options.TileName != "" && options.TileName != configuration.TileName {
+			return fmt.Errorf("the provided tile_name %q does not match the configuration %q", options.TileName, configuration.TileName)
 		}
+		fromConfiguration(options, configuration)
+	} else if _, ok := variables[builder.TileNameVariable]; ok {
+		index := slices.IndexFunc(kf.BakeConfigurations, func(configuration cargo.BakeConfiguration) bool {
+			return configuration.TileName == options.TileName
+		})
+		if index < 0 {
+			return errorBakeConfigurationNotFound(options, kf)
+		}
+		fromConfiguration(options, kf.BakeConfigurations[index])
 	}
 	return nil
+}
+
+func errorBakeConfigurationNotFound(options *BakeOptions, kf cargo.Kilnfile) error {
+	names := make([]string, 0, len(kf.BakeConfigurations))
+	for _, config := range kf.BakeConfigurations {
+		names = append(names, config.TileName)
+	}
+	slices.Sort(names)
+	names = slices.Compact(names)
+	return fmt.Errorf("the provided tile_name %q does not match any configuration. The available names are: %v", options.TileName, names)
 }
 
 func fromConfiguration(b *BakeOptions, configuration cargo.BakeConfiguration) {

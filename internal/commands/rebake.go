@@ -74,7 +74,7 @@ func (cmd ReBake) Execute(args []string) error {
 	}
 
 	if !record.IsEquivalent(newRecord, log.New(os.Stderr, "bake record diff: ", 0)) {
-		return fmt.Errorf("expected tile bake records to be equivilant")
+		return fmt.Errorf("expected tile bake records to be equivalent")
 	}
 
 	return nil
