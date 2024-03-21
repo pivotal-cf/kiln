@@ -26,6 +26,13 @@ Feature: As a developer, I want to bake a tile
       | --stub-releases |
     Then a Tile is created
 
+  Scenario: it handles tiles with multiple tile names
+    Given I have a tile source directory "testdata/tiles/multiple-tile-names"
+    When I invoke kiln
+      | bake                |
+      | --tile-name=goodbye |
+    Then a Tile is created
+
   Scenario: it bakes a tile from a bake record
     Given I have a tile source directory "testdata/tiles/bake-record"
     When I invoke kiln

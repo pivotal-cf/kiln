@@ -1,0 +1,19 @@
+bake_configurations:
+  - tile_name: hello
+    metadata_filepath: product_template.yml
+    variables_filepaths:
+      - variables/hello.yml
+    icon_filepath: "gopher.png"
+    instance_groups_directories:
+      - job_types
+    properties_directories:
+      - configuration
+  - tile_name: goodbye
+    metadata_filepath: product_template.yml
+    variables_filepaths:
+      - variables/goodbye.yml
+    icon_filepath: "gopher.png"
+    instance_groups_directories:
+      - job_types
+    properties_directories:
+      - configuration
