@@ -84,6 +84,6 @@ func (cmd ReBake) Usage() jhanda.Usage {
 	return jhanda.Usage{
 		Description:      "re-bake (aka record bake) builds a tile from a bake record. You must check out the repository to the revision of the source_revision in the bake record before running this command.",
 		ShortDescription: "re-bake constructs a tile from a bake record",
-		Flags:            &cmd.Options,
+		Flags:            cmd.Options,
 	}
 }
