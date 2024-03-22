@@ -166,6 +166,7 @@ Commands:
   glaze                    Pin versions in Kilnfile to match lock.
   help                     prints this usage information
   publish                  publish tile on Pivnet
+  re-bake                  re-bake constructs a tile from a bake record
   release-notes            generates release notes from bosh-release release notes
   sync-with-local          update the Kilnfile.lock based on local releases
   test                     Test manifest for a product
@@ -223,6 +224,13 @@ The `--embed` flag is for embedding any extra files or directories into the
 tile. There are very few reasons a tile developer should want to do this, but if
 you do, you can include these extra files here. The flag can be specified
 multiple times to embed multiple files or directories.
+
+##### `--final`
+
+The `--final` flag is to bake a final release tile. When passing the --final flag, 
+Kiln creates a baked record file with metadata like source revision SHA, tile version, kiln version and 
+file checksums. This bake record file will be created under bake_records folder. This 
+bake record file can later be used to re-bake the tile. 
 
 ##### `--forms-directory`
 
@@ -519,7 +527,16 @@ provides_product_versions:
 ```
 </details>
 
+### `re-bake`
+It constructs a tile from a given bake record file. 
 
+To run the command, you simply need to be within a tile directory and execute the following command:
+```
+$ kiln re-bake --output-file tile.pivotal bake_records/1.0.0.json
+```
+
+Any variables that Kilnfile needs for the kiln re-bake command should be set in 
+~/.kiln/credentials.yml file
 
 ### `test`
 
