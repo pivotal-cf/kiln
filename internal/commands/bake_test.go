@@ -2,7 +2,6 @@ package commands_test
 
 import (
 	"errors"
-	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	"github.com/pivotal-cf/kiln/pkg/bake"
 
@@ -1115,7 +1116,6 @@ var _ = Describe("BakeArgumentsFromKilnfileConfiguration", func() {
 			//})
 		})
 	})
-
 })
 
 type fakeWriteBakeRecordFunc struct {
