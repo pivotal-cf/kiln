@@ -247,3 +247,134 @@ func TestValidate_checkComponentVersionsAndConstraint(t *testing.T) {
 		))
 	})
 }
+
+func Test_checkStemcell_valid(t *testing.T) {
+	t.Parallel()
+	please := NewWithT(t)
+	results := checkStemcell(Kilnfile{
+		Releases: []ComponentSpec{
+			{Name: "banana", Version: "1.2.3"},
+			{Name: "lemon", Version: "2.2.2"},
+		},
+		Stemcell: Stemcell{
+			OS:      "fruit",
+			Version: "500.*",
+		},
+	}, KilnfileLock{
+		Releases: []ComponentLock{
+			{Name: "banana", Version: "1.2.3", StemcellOS: "fruit", StemcellVersion: "500.4"},
+			{Name: "lemon", Version: "2.2.2"},
+		},
+		Stemcell: Stemcell{
+			OS:      "fruit",
+			Version: "500.4",
+		},
+	})
+	please.Expect(results).To(HaveLen(0))
+}
+
+func Test_checkStemcell_wrong_version(t *testing.T) {
+	t.Parallel()
+	please := NewWithT(t)
+	results := checkStemcell(Kilnfile{
+		Releases: []ComponentSpec{
+			{Name: "banana", Version: "1.2.3"},
+			{Name: "lemon", Version: "2.2.2"},
+		},
+		Stemcell: Stemcell{
+			OS:      "fruit",
+			Version: "500.*",
+		},
+	}, KilnfileLock{
+		Releases: []ComponentLock{
+			{Name: "banana", Version: "1.2.3", StemcellOS: "fruit", StemcellVersion: "400"},
+			{Name: "lemon", Version: "2.2.2"},
+		},
+		Stemcell: Stemcell{
+			OS:      "fruit",
+			Version: "500.4",
+		},
+	})
+	please.Expect(results).To(HaveLen(1))
+	please.Expect(results[0]).To(MatchError(ContainSubstring("has stemcell version that does not match the stemcell lock")))
+}
+
+func Test_checkStemcell_wrong_os_name(t *testing.T) {
+	t.Parallel()
+	please := NewWithT(t)
+	results := checkStemcell(Kilnfile{
+		Releases: []ComponentSpec{
+			{Name: "banana", Version: "1.2.3"},
+			{Name: "lemon", Version: "2.2.2"},
+		},
+		Stemcell: Stemcell{
+			OS:      "fruit",
+			Version: "500.*",
+		},
+	}, KilnfileLock{
+		Releases: []ComponentLock{
+			{Name: "banana", Version: "1.2.3", StemcellOS: "soap", StemcellVersion: "500.4"},
+			{Name: "lemon", Version: "2.2.2"},
+		},
+		Stemcell: Stemcell{
+			OS:      "fruit",
+			Version: "500.4",
+		},
+	})
+	please.Expect(results).To(HaveLen(1))
+	please.Expect(results[0]).To(MatchError(ContainSubstring("stemcell os that does not match the stemcell lock os")))
+}
+
+func Test_checkStemcell_invalid_version_lock(t *testing.T) {
+	t.Parallel()
+	please := NewWithT(t)
+	results := checkStemcell(Kilnfile{
+		Stemcell: Stemcell{
+			OS:      "fruit",
+			Version: "500.0",
+		},
+	}, KilnfileLock{
+		Stemcell: Stemcell{
+			OS:      "fruit",
+			Version: "FAIL",
+		},
+	})
+	please.Expect(results).To(HaveLen(1))
+	please.Expect(results[0]).To(MatchError(ContainSubstring("invalid lock version")))
+}
+
+func Test_checkStemcell_invalid_version_constraint(t *testing.T) {
+	t.Parallel()
+	please := NewWithT(t)
+	results := checkStemcell(Kilnfile{
+		Stemcell: Stemcell{
+			OS:      "fruit",
+			Version: "FAIL",
+		},
+	}, KilnfileLock{
+		Stemcell: Stemcell{
+			OS:      "fruit",
+			Version: "2.0.0",
+		},
+	})
+	please.Expect(results).To(HaveLen(1))
+	please.Expect(results[0]).To(MatchError(ContainSubstring("invalid version constraint")))
+}
+
+func Test_checkStemcell_lock_version_does_not_match_constraint(t *testing.T) {
+	t.Parallel()
+	please := NewWithT(t)
+	results := checkStemcell(Kilnfile{
+		Stemcell: Stemcell{
+			OS:      "fruit",
+			Version: "400.*",
+		},
+	}, KilnfileLock{
+		Stemcell: Stemcell{
+			OS:      "fruit",
+			Version: "111.222",
+		},
+	})
+	please.Expect(results).To(HaveLen(1))
+	please.Expect(results[0]).To(MatchError(ContainSubstring("does not match constraint")))
+}
