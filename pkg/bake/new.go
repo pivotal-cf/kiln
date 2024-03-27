@@ -104,11 +104,18 @@ func newKilnfiles(outputDirectory string, spec cargo.Kilnfile, releaseTarballs [
 			FloatAlways:     false,
 		})
 	}
-	kilnfileLock, err := yaml.Marshal(lock)
+	lockBuf, err := yaml.Marshal(lock)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(outputDirectory, DefaultFilepathKilnfileLock), kilnfileLock, fileMode)
+	specBuf, err := yaml.Marshal(spec)
+	if err != nil {
+		return err
+	}
+	return errors.Join(
+		os.WriteFile(filepath.Join(outputDirectory, DefaultFilepathKilnfileLock), lockBuf, fileMode),
+		os.WriteFile(filepath.Join(outputDirectory, DefaultFilepathKilnfile), specBuf, fileMode),
+	)
 }
 
 func newFromProductTemplate(outputDirectory string, productTemplate []byte) (*yaml.Node, error) {
@@ -164,7 +171,7 @@ func extractReleases(outputDirectory string, productTemplate *yaml.Node, dir fs.
 	}
 	var releasesList []string
 	for _, tarball := range tarballs {
-		releasesList = append(releasesList, fmt.Sprintf("{{ release %q }}", tarball.Manifest.Name))
+		releasesList = append(releasesList, fmt.Sprintf("$( release %q )", tarball.Manifest.Name))
 	}
 	return tarballs, releasesNode.Encode(&releasesList)
 }
@@ -195,6 +202,6 @@ func writeIconPNG(outputDirectory string, productTemplate *yaml.Node) error {
 	if err != nil {
 		return fmt.Errorf("failed to decode icon_image: %w", err)
 	}
-	iconImageNode.Value = `{{ icon }}`
+	iconImageNode.Value = `$( icon )`
 	return os.WriteFile(filepath.Join(outputDirectory, DefaultFilepathIconImage), iconImage, fileMode)
 }
