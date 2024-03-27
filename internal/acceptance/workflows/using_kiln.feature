@@ -31,17 +31,18 @@ Feature: As a developer, I want the Kiln CLI to be usable
     And stderr contains substring: flag provided but not defined
 
     Examples:
-      | command                 |
-      | bake                    |
-      | re-bake                 |
-      | fetch                   |
-      | find-release-version    |
-      | find-stemcell-version   |
-      | glaze                   |
-      | publish                 |
-      | release-notes           |
-      | sync-with-local         |
-      | update-release          |
-      | update-stemcell         |
-      | upload-release          |
-      | validate                |
+      | command               |
+      | bake                  |
+      | re-bake               |
+      | fetch                 |
+      | find-release-version  |
+      | find-stemcell-version |
+      | glaze                 |
+      | new                   |
+      | publish               |
+      | release-notes         |
+      | sync-with-local       |
+      | update-release        |
+      | update-stemcell       |
+      | upload-release        |
+      | validate              |
