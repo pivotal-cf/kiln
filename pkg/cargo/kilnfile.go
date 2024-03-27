@@ -371,3 +371,47 @@ type BakeConfiguration struct {
 	EmbedPaths               []string `yaml:"embed_paths,omitempty"                        json:"embed_paths,omitempty"`
 	VariableFiles            []string `yaml:"variable_files,omitempty"                     json:"variable_files,omitempty"`
 }
+
+func KilnfileTemplate(name string) (Kilnfile, error) {
+	const (
+		artifactory = BOSHReleaseTarballSourceTypeArtifactory
+		boshIO      = BOSHReleaseTarballSourceTypeBOSHIO
+	)
+	switch name {
+	default:
+		return Kilnfile{}, fmt.Errorf("unknown Kilnfile template please use one of %s", strings.Join([]string{
+			artifactory, boshIO,
+		}, ", "))
+	case artifactory:
+		return Kilnfile{
+			ReleaseSources: []ReleaseSourceConfig{
+				{
+					Type:            BOSHReleaseTarballSourceTypeArtifactory,
+					ID:              "compiled-releases",
+					Publishable:     true,
+					ArtifactoryHost: `{{ variable "artifactory_host" }}`,
+					Repo:            `{{ variable "artifactory_repository" }}`,
+					Username:        `{{ variable "artifactory_username" }}`,
+					Password:        `{{ variable "artifactory_password" }}`,
+					PathTemplate:    `compiled-releases/{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
+				},
+				{
+					Type:            BOSHReleaseTarballSourceTypeArtifactory,
+					ID:              "ingested-releases",
+					Publishable:     true,
+					ArtifactoryHost: `{{ variable "artifactory_host" }}`,
+					Repo:            `{{ variable "artifactory_repository" }}`,
+					Username:        `{{ variable "artifactory_username" }}`,
+					Password:        `{{ variable "artifactory_password" }}`,
+					PathTemplate:    `bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
+				},
+			},
+		}, nil
+	case boshIO:
+		return Kilnfile{
+			ReleaseSources: []ReleaseSourceConfig{
+				{Type: BOSHReleaseTarballSourceTypeBOSHIO},
+			},
+		}, nil
+	}
+}
