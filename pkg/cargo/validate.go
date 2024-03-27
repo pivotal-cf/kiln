@@ -12,19 +12,33 @@ func Validate(spec Kilnfile, lock KilnfileLock) []error {
 
 	for index, componentSpec := range spec.Releases {
 		if componentSpec.Name == "" {
-			result = append(result, fmt.Errorf("spec at index %d missing name", index))
+			result = append(result, fmt.Errorf("release at index %d missing name in spec", index))
 			continue
 		}
 
 		componentLock, err := lock.FindBOSHReleaseWithName(componentSpec.Name)
 		if err != nil {
 			result = append(result,
-				fmt.Errorf("component spec for release %q not found in lock", componentSpec.Name))
+				fmt.Errorf("release %q not found in lock", componentSpec.Name))
 			continue
 		}
 
 		if err := checkComponentVersionsAndConstraint(componentSpec, componentLock, index); err != nil {
 			result = append(result, err)
+		}
+	}
+
+	for index, componentLock := range lock.Releases {
+		if componentLock.Name == "" {
+			result = append(result, fmt.Errorf("release at index %d missing name in lock", index))
+			continue
+		}
+
+		_, err := spec.BOSHReleaseTarballSpecification(componentLock.Name)
+		if err != nil {
+			result = append(result,
+				fmt.Errorf("release %q not found in spec", componentLock.Name))
+			continue
 		}
 	}
 
