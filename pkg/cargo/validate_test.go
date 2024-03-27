@@ -10,7 +10,7 @@ const (
 	someReleaseSourceID = "some-release-source-id"
 )
 
-func TestValidate_MissingName(t *testing.T) {
+func TestValidate_MissingNameInSpec(t *testing.T) {
 	t.Parallel()
 	please := NewWithT(t)
 	results := Validate(Kilnfile{
@@ -18,14 +18,36 @@ func TestValidate_MissingName(t *testing.T) {
 			{ID: someReleaseSourceID},
 		},
 		Releases: []BOSHReleaseTarballSpecification{
-			{},
+			{Name: ""},
+			{Name: "banana"},
 		},
 	}, KilnfileLock{
 		Releases: []BOSHReleaseTarballLock{
+			{Name: "apple", Version: "1.2.3", RemoteSource: someReleaseSourceID},
 			{Name: "banana", Version: "1.2.3", RemoteSource: someReleaseSourceID},
 		},
 	})
-	please.Expect(results).To(HaveLen(1))
+	please.Expect(results).To(HaveLen(2))
+}
+
+func TestValidate_MissingNameInLock(t *testing.T) {
+	t.Parallel()
+	please := NewWithT(t)
+	results := Validate(Kilnfile{
+		ReleaseSources: []ReleaseSourceConfig{
+			{ID: someReleaseSourceID},
+		},
+		Releases: []BOSHReleaseTarballSpecification{
+			{Name: "apple"},
+			{Name: "banana"},
+		},
+	}, KilnfileLock{
+		Releases: []BOSHReleaseTarballLock{
+			{Name: "", Version: "1.2.3", RemoteSource: someReleaseSourceID},
+			{Name: "banana", Version: "1.2.3", RemoteSource: someReleaseSourceID},
+		},
+	})
+	please.Expect(results).To(HaveLen(2))
 }
 
 func TestValidate_FloatingRelease(t *testing.T) {
@@ -46,14 +68,41 @@ func TestValidate_FloatingRelease(t *testing.T) {
 	please.Expect(results).To(HaveLen(0))
 }
 
+func TestValidate_MissingSpec(t *testing.T) {
+	t.Parallel()
+	please := NewWithT(t)
+	results := Validate(Kilnfile{
+		ReleaseSources: []ReleaseSourceConfig{
+			{ID: someReleaseSourceID},
+		},
+		Releases: []BOSHReleaseTarballSpecification{
+			{Name: "banana"},
+		},
+	}, KilnfileLock{
+		Releases: []BOSHReleaseTarballLock{
+			{Name: "apple", Version: "1.2.3", RemoteSource: someReleaseSourceID},
+			{Name: "banana", Version: "1.2.3", RemoteSource: someReleaseSourceID},
+		},
+	})
+	please.Expect(results).To(HaveLen(1))
+}
+
 func TestValidate_MissingLock(t *testing.T) {
 	t.Parallel()
 	please := NewWithT(t)
 	results := Validate(Kilnfile{
+		ReleaseSources: []ReleaseSourceConfig{
+			{ID: someReleaseSourceID},
+		},
 		Releases: []BOSHReleaseTarballSpecification{
 			{Name: "banana", Version: "1.1.*"},
+			{Name: "apple", Version: "1.1.*"},
 		},
-	}, KilnfileLock{})
+	}, KilnfileLock{
+		Releases: []BOSHReleaseTarballLock{
+			{Name: "banana", Version: "1.1.3", RemoteSource: someReleaseSourceID},
+		},
+	})
 	please.Expect(results).To(HaveLen(1))
 }
 
