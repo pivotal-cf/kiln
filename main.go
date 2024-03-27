@@ -81,6 +81,8 @@ func main() {
 	commandSet["bake"] = bakeCommand
 	commandSet["re-bake"] = commands.NewReBake(bakeCommand)
 
+	commandSet["new"] = new(commands.New)
+
 	commandSet["test"] = commands.NewTileTest()
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
