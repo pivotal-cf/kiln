@@ -40,5 +40,7 @@ WORKDIR /tmp/ops-manager/gems/ops-manifest
 RUN bundle install && \
   rm -rf *.gem && \
   bundle exec gem build ops-manifest.gemspec && \
-  gem install ops-manifest-*.gem --no-document
+  gem install ops-manifest-*.gem --no-document && \
+  gem uninstall json && \
+  gem install json --version 2.7.1
 RUN which ops-manifest
