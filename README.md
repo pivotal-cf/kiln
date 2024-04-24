@@ -35,7 +35,7 @@ To install the `kiln` CLI
   ```shell
   git clone git@github.com:pivotal-cf/kiln.git
   cd kiln
-  ./install.sh
+  ./scripts/install.sh
   ```
 
 - copy from a Docker image (to another image)
