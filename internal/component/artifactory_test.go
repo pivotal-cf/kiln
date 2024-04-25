@@ -66,16 +66,18 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 
 	Describe("read operations", func() {
 		BeforeEach(func() {
+			requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
+
 			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 				res.WriteHeader(http.StatusOK)
 				// language=json
 				_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
-			})))
+			}), requireAuth))
 			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 				res.WriteHeader(http.StatusOK)
 				// language=json
 				_, _ = io.WriteString(res, `{"children": [{"uri": "/mango-2.3.4-smoothie-9.9.tgz", "folder": false}]}`)
-			})))
+			}), requireAuth))
 			artifactoryRouter.Handler(http.MethodGet, "/artifactory/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 				res.WriteHeader(http.StatusOK)
 				f, err := os.Open(filepath.Join("testdata", "some-release.tgz"))
@@ -84,7 +86,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				}
 				defer closeAndIgnoreError(f)
 				_, _ = io.Copy(res, f)
-			}) /* put middleware here */))
+			}), requireAuth))
 		})
 		When("the server has the a file at the expected path", func() {
 			It("resolves the lock from the spec", func() { // testing GetMatchedRelease
