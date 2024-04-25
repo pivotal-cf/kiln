@@ -80,9 +80,9 @@ func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRe
 	downloadURL += "/" + ars.Repo + "/" + remoteRelease.RemotePath
 
 	ars.logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeArtifactory, ars.ID)
-	resp, err := ars.Client.Get(downloadURL)
+	resp, err := ars.getWithAuth(downloadURL)
 	if err != nil {
-		return Local{}, wrapVPNError(err)
+		return Local{}, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -122,9 +122,10 @@ func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRe
 func (ars *ArtifactoryReleaseSource) getFileSHA1(release cargo.BOSHReleaseTarballLock) (string, error) {
 	fullURL := ars.ArtifactoryHost + "/api/storage/" + ars.Repo + "/" + release.RemotePath
 	ars.logger.Printf("Getting %s file info from artifactory", release.Name)
-	resp, err := ars.Client.Get(fullURL)
+
+	resp, err := ars.getWithAuth(fullURL)
 	if err != nil {
-		return "", wrapVPNError(err)
+		return "", err
 	}
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("failed to get %s release info from artifactory with error code %d", release.Name, resp.StatusCode)
@@ -157,14 +158,9 @@ func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseTar
 	}
 
 	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, remotePath)
-	request, err := http.NewRequest(http.MethodGet, fullUrl, nil)
+	response, err := ars.getWithAuth(fullUrl)
 	if err != nil {
 		return cargo.BOSHReleaseTarballLock{}, err
-	}
-
-	response, err := ars.Client.Do(request)
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, wrapVPNError(err)
 	}
 	defer func() {
 		_ = response.Body.Close()
@@ -196,15 +192,11 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 
 	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, path.Dir(remotePath))
 
-	request, err := http.NewRequest(http.MethodGet, fullUrl, nil)
+	response, err := ars.getWithAuth(fullUrl)
 	if err != nil {
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
-	response, err := ars.Client.Do(request)
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, wrapVPNError(err)
-	}
 	defer func() {
 		_ = response.Body.Close()
 	}()
@@ -226,7 +218,7 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 	}
 
 	if err := json.Unmarshal(responseBody, &artifactoryFolderInfo); err != nil {
-		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("json from %s is malformed: %s", request.URL.Host, err)
+		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("json from %s is malformed: %s", response.Request.URL.Host, err)
 	}
 
 	semverPattern, err := regexp.Compile(`([-v])\d+(.\d+)*`)
@@ -346,6 +338,18 @@ func (ars *ArtifactoryReleaseSource) pathTemplate() *template.Template {
 		template.New("remote-path").
 			Funcs(template.FuncMap{"trimSuffix": strings.TrimSuffix}).
 			Parse(ars.ReleaseSourceConfig.PathTemplate))
+}
+
+func (ars *ArtifactoryReleaseSource) getWithAuth(url string) (*http.Response, error) {
+	request, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	if ars.Username != "" {
+		request.SetBasicAuth(ars.Username, ars.Password)
+	}
+	response, err := ars.Client.Do(request)
+	return response, wrapVPNError(err)
 }
 
 type vpnError struct {
