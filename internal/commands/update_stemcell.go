@@ -18,8 +18,9 @@ type UpdateStemcell struct {
 	Options struct {
 		flags.Standard
 
-		Version     string `short:"v"  long:"version"            required:"true"    description:"desired version of stemcell"`
-		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+		Version         string `short:"v"  long:"version"            required:"true"    description:"desired version of stemcell"`
+		ReleasesDir     string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+		WithoutDownload bool   `long:"without-download" description:"updates stemcell releases without downloading releases"`
 	}
 	FS                         billy.Filesystem
 	MultiReleaseSourceProvider MultiReleaseSourceProvider
@@ -90,14 +91,17 @@ func (update UpdateStemcell) Execute(args []string) error {
 			update.Logger.Printf("No change for release %q\n", rel.Name)
 			continue
 		}
-
-		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
-		if err != nil {
-			return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
-		}
-
 		lock := &kilnfileLock.Releases[i]
-		lock.SHA1 = local.Lock.SHA1
+
+		if update.Options.WithoutDownload {
+			lock.SHA1 = remote.SHA1
+		} else {
+			local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
+			if err != nil {
+				return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
+			}
+			lock.SHA1 = local.Lock.SHA1
+		}
 		lock.RemotePath = remote.RemotePath
 		lock.RemoteSource = remote.RemoteSource
 	}
