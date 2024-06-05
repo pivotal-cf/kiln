@@ -17,13 +17,13 @@ type TileTestFunction func(ctx context.Context, w io.Writer, configuration test.
 
 type TileTest struct {
 	Options struct {
-		TilePath   string `             long:"tile-path"                default:"."                             description:"Path to the Tile directory (e.g., ~/workspace/tas/ist)."`
-		Verbose    bool   `short:"v"    long:"verbose"                  default:"true"                          description:"Print info lines. This doesn't affect Ginkgo output."`
-		Silent     bool   `short:"s"    long:"silent"                   default:"false"                         description:"Hide info lines. This doesn't affect Ginkgo output."`
-		Manifest   bool   `             long:"manifest"                 default:"false"                         description:"Focus the Manifest tests."`
-		Migrations bool   `             long:"migrations"               default:"false"                         description:"Focus the Migration tests."`
-		Stability  bool   `             long:"stability"                default:"false"                         description:"Focus the Stability tests."`
-
+		TilePath        string   `             long:"tile-path"                default:"."                             description:"Path to the Tile directory (e.g., ~/workspace/tas/ist)."`
+		Verbose         bool     `short:"v"    long:"verbose"                  default:"true"                          description:"Print info lines. This doesn't affect Ginkgo output."`
+		Silent          bool     `short:"s"    long:"silent"                   default:"false"                         description:"Hide info lines. This doesn't affect Ginkgo output."`
+		Manifest        bool     `             long:"manifest"                 default:"false"                         description:"Focus the Manifest tests."`
+		Migrations      bool     `             long:"migrations"               default:"false"                         description:"Focus the Migration tests."`
+		Stability       bool     `             long:"stability"                default:"false"                         description:"Focus the Stability tests."`
+		ImagePath       string   "             long:\"image-path\"               "
 		EnvironmentVars []string `short:"e"    long:"environment-variable"                                             description:"Pass environment variable to the test suites. For example --stability -e 'PRODUCT=srt'."`
 		GingkoFlags     string   `             long:"ginkgo-flags"             default:"-r -p -slowSpecThreshold 15"   description:"Flags to pass to the Ginkgo Manifest and Stability test suites."`
 	}
@@ -71,6 +71,7 @@ func (cmd TileTest) configuration() (test.Configuration, error) {
 		RunManifest:   cmd.Options.Manifest,
 		RunMetadata:   cmd.Options.Stability,
 		RunMigrations: cmd.Options.Migrations,
+		ImagePath:     cmd.Options.ImagePath,
 
 		GinkgoFlags: cmd.Options.GingkoFlags,
 		Environment: cmd.Options.EnvironmentVars,

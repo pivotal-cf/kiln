@@ -89,6 +89,7 @@ type Configuration struct {
 	RunMigrations,
 	RunManifest,
 	RunMetadata bool
+	ImagePath string
 
 	GinkgoFlags string
 	Environment []string
