@@ -132,7 +132,7 @@ func Test_loadImage(t *testing.T) {
 
 		configuration := Configuration{
 			AbsoluteTileDirectory: absoluteTileDirectory,
-			ImagePath:             `assets/alpine.tgz`,
+			ImagePath:             "assets/alpine.tgz",
 		}
 
 		client := runTestWithSessionHelper(t, "", container.WaitResponse{
