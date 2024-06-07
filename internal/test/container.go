@@ -174,9 +174,8 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 			if err != nil {
 				return fmt.Errorf("failed to import image: %w", err)
 			}
-
+			defer closeAndIgnoreError(loadResponse.Body)
 			respBytes, err := io.ReadAll(loadResponse.Body)
-			defer loadResponse.Body.Close()
 			if err != nil {
 				return fmt.Errorf(`failed to parse load image response: %w`, err)
 			}

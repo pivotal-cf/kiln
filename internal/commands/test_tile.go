@@ -23,7 +23,7 @@ type TileTest struct {
 		Manifest        bool     `             long:"manifest"                 default:"false"                         description:"Focus the Manifest tests."`
 		Migrations      bool     `             long:"migrations"               default:"false"                         description:"Focus the Migration tests."`
 		Stability       bool     `             long:"stability"                default:"false"                         description:"Focus the Stability tests."`
-		ImagePath       string   "             long:\"image-path\"               "
+		ImagePath       string   `             long:"image-path"               `
 		EnvironmentVars []string `short:"e"    long:"environment-variable"                                             description:"Pass environment variable to the test suites. For example --stability -e 'PRODUCT=srt'."`
 		GingkoFlags     string   `             long:"ginkgo-flags"             default:"-r -p -slowSpecThreshold 15"   description:"Flags to pass to the Ginkgo Manifest and Stability test suites."`
 	}
