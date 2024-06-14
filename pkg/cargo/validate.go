@@ -87,3 +87,42 @@ func checkComponentVersionsAndConstraint(spec BOSHReleaseTarballSpecification, l
 
 	return nil
 }
+
+func checkStemcell(spec Kilnfile, lock KilnfileLock) []error {
+	v, err := semver.NewVersion(lock.Stemcell.Version)
+	if err != nil {
+		return []error{fmt.Errorf("invalid lock version %q in Kilnfile.lock: %w",
+			lock.Stemcell.Version, err)}
+	}
+
+	if spec.Stemcell.Version != "" {
+		c, err := semver.NewConstraint(spec.Stemcell.Version)
+		if err != nil {
+			return []error{fmt.Errorf("invalid version constraint %q in Kilnfile: %w",
+				lock.Stemcell.Version, err)}
+		}
+
+		matches, errs := c.Validate(v)
+		if !matches {
+			return []error{fmt.Errorf("stemcell version %s in Kilnfile.lock does not match constraint %q: %v",
+				lock.Stemcell.Version, spec.Stemcell.Version, errs)}
+		}
+	}
+
+	var result []error
+	for index, componentLock := range lock.Releases {
+		if componentLock.StemcellOS == "" {
+			continue
+		}
+		if componentLock.StemcellOS != lock.Stemcell.OS {
+			result = append(result, fmt.Errorf("spec %s (index %d in Kilnfile) has stemcell os that does not match the stemcell lock os",
+				componentLock.Name, index))
+		}
+		if componentLock.StemcellVersion != lock.Stemcell.Version {
+			result = append(result, fmt.Errorf("spec %s (index %d in Kilnfile) has stemcell version that does not match the stemcell lock (expected %s but got %s)",
+				componentLock.Name, index, lock.Stemcell.Version, componentLock.StemcellVersion))
+		}
+	}
+
+	return result
+}
