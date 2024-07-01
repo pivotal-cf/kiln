@@ -90,14 +90,18 @@ func (update UpdateStemcell) Execute(args []string) error {
 			update.Logger.Printf("No change for release %q\n", rel.Name)
 			continue
 		}
-
-		local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
-		if err != nil {
-			return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
-		}
-
 		lock := &kilnfileLock.Releases[i]
-		lock.SHA1 = local.Lock.SHA1
+
+		if remote.SHA1 == "" || remote.SHA1 == "not-calculated" {
+			// release source needs to download.
+			local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
+			if err != nil {
+				return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
+			}
+			lock.SHA1 = local.Lock.SHA1
+		} else {
+			lock.SHA1 = remote.SHA1
+		}
 		lock.RemotePath = remote.RemotePath
 		lock.RemoteSource = remote.RemoteSource
 	}
