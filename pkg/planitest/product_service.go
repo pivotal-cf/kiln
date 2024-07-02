@@ -54,6 +54,8 @@ func NewProductService(config ProductConfig) (*ProductService, error) {
 func opsManifestAdditionalArgs() []string {
 	tasMetadataPath := os.Getenv("TAS_METADATA_PATH")
 	tasConfigFile := os.Getenv("TAS_CONFIG_FILE")
+	dollarOverridesFile := os.Getenv("DOLLAR_OVERRIDES_FILE")
+
 	var args []string
 
 	if tasMetadataPath != "" {
@@ -62,6 +64,10 @@ func opsManifestAdditionalArgs() []string {
 
 	if tasConfigFile != "" {
 		args = append(args, "--tas-config-file", tasConfigFile)
+	}
+
+	if dollarOverridesFile != "" {
+		args = append(args, "--dollar-accessor-values-file", dollarOverridesFile)
 	}
 
 	return args
