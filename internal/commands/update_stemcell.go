@@ -91,6 +91,9 @@ func (update UpdateStemcell) Execute(args []string) error {
 		}
 		lock := &kilnfileLock.Releases[i]
 
+		lock.RemotePath = remote.RemotePath
+		lock.RemoteSource = remote.RemoteSource
+		lock.SHA1 = remote.SHA1
 		if remote.SHA1 == "" || remote.SHA1 == "not-calculated" {
 			// release source needs to download.
 			local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
@@ -98,11 +101,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 				return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
 			}
 			lock.SHA1 = local.Lock.SHA1
-		} else {
-			lock.SHA1 = remote.SHA1
 		}
-		lock.RemotePath = remote.RemotePath
-		lock.RemoteSource = remote.RemoteSource
 	}
 
 	kilnfileLock.Stemcell.Version = trimmedInputVersion
