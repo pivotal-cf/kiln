@@ -4187,7 +4187,7 @@ Overview tab in Apps Manager results in an `Unexpected error occurence` message.
 
 In <%= vars.app_runtime_abbr %> v2.7.17 and earlier, the `/v2/app_usage_events/destructively_purge_all_and_reseed_started_apps` endpoint may generate app events without valid GUIDs. These invalid GUIDs can cause errors with components that consume them when parsing and correlating events. This issue affects Cloud Controller and App Usage Service.
 
-For more information about the API endpoint, see [Purge and reseed App Usage Events](https://apidocs.cloudfoundry.org/13.6.0/app_usage_events/purge_and_reseed_app_usage_events.html) in the _App Usage Events API_ documentation. For more information about the issue, see [App Usage Service startup errors and data inconsistency](https://community.pivotal.io/s/article/App-Usage-Service-startup-errors-and-data-inconsistency) in the knowledge base.
+For more information about the API endpoint, see [Purge and reseed App Usage Events](https://v2-apidocs.cloudfoundry.org/app_usage_events/purge_and_reseed_app_usage_events.html) in the _App Usage Events API_ documentation. For more information about the issue, see [App Usage Service startup errors and data inconsistency](https://community.pivotal.io/s/article/App-Usage-Service-startup-errors-and-data-inconsistency) in the knowledge base.
 
 This issue is resolved in <%= vars.app_runtime_abbr %> v2.7.18.
 
