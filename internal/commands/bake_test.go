@@ -398,6 +398,18 @@ var _ = Describe("Bake", func() {
 			Expect(string(fakeBakeRecordFunc.productTemplate)).To(Equal("some-interpolated-metadata"), "it gives the bake recorder the product template")
 		})
 
+		FContext("when the output flag is not set", func() {
+			When("the tile-name flag is not provided", func() {
+				It("uses the tile as the filename prefix", func() {
+					err := bake.Execute([]string{})
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
+					_, input := fakeTileWriter.WriteArgsForCall(0)
+					Expect(input.OutputFile).To(Equal(filepath.Join("tile-v1.2.3.pivotal")))
+				})
+			})
+		})
+
 		Context("when bake configuration is in the Kilnfile", func() {
 			BeforeEach(func() {
 				bake = bake.WithKilnfileFunc(func(s string) (cargo.Kilnfile, error) {
@@ -448,6 +460,7 @@ var _ = Describe("Bake", func() {
 			When("a the tile flag is passed", func() {
 				It("it uses the value from the bake configuration with the correct name", func() {
 					err := bake.Execute([]string{
+						"bake",
 						"--tile-name=p-each",
 					})
 					Expect(err).To(Not(HaveOccurred()))
