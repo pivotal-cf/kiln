@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -23,12 +23,18 @@ import (
 
 // aTileIsCreated asserts the output tile exists
 func aTileIsCreated(ctx context.Context) error {
-	tilePath, err := defaultFilePathForTile(ctx)
+	p, err := tileRepoPath(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = os.Stat(tilePath)
-	return err
+	matches, err := filepath.Glob(filepath.Join(p, "*.pivotal"))
+	if err != nil {
+		return err
+	}
+	if len(matches) == 0 {
+		return errors.New("no tile found")
+	}
+	return nil
 }
 
 // theTileContains checks that the filePaths exist in the tile
