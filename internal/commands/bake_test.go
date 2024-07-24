@@ -10,6 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/memfs"
+
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	"github.com/pivotal-cf/kiln/pkg/bake"
@@ -51,7 +54,8 @@ var _ = Describe("Bake", func() {
 		fakeTileWriter  *fakes.TileWriter
 		fakeChecksummer *fakes.Checksummer
 
-		fakeFilesystem  *fakes.FileSystem
+		fakeFilesystem billy.Filesystem
+
 		fakeHomeDirFunc func() (string, error)
 
 		otherReleasesDirectory string
@@ -97,15 +101,14 @@ var _ = Describe("Bake", func() {
 		fakeJobsService = &fakes.MetadataTemplatesParser{}
 		fakePropertiesService = &fakes.MetadataTemplatesParser{}
 		fakeRuntimeConfigsService = &fakes.MetadataTemplatesParser{}
-		fakeFilesystem = &fakes.FileSystem{}
-		fakeVersionInfo := &fakes.FileInfo{}
-		fileVersion := "some-version"
-		fakeVersionInfo.SizeReturns(int64(len(fileVersion)))
-		fakeVersionInfo.NameReturns("version")
-		fakeFilesystem.StatReturns(fakeVersionInfo, nil)
-		result1 := &fakes.File{}
-		result1.ReadReturns(0, nil)
-		fakeFilesystem.OpenReturns(result1, nil)
+
+		{
+			fakeFilesystem = memfs.New()
+			file, _ := fakeFilesystem.Create("version")
+			_, _ = file.Write([]byte("1.2.3"))
+			_ = file.Close()
+		}
+
 		fakeHomeDirFunc = func() (string, error) {
 			return "/home/", nil
 		}
@@ -398,14 +401,41 @@ var _ = Describe("Bake", func() {
 			Expect(string(fakeBakeRecordFunc.productTemplate)).To(Equal("some-interpolated-metadata"), "it gives the bake recorder the product template")
 		})
 
-		FContext("when the output flag is not set", func() {
-			When("the tile-name flag is not provided", func() {
+		Context("when the output flag is not set", func() {
+			When("no version is provided", func() {
 				It("uses the tile as the filename prefix", func() {
-					err := bake.Execute([]string{})
+					_ = fakeFilesystem.Remove("version")
+					err := bake.Execute([]string{
+						"--metadata", "some-metadata",
+					})
 					Expect(err).To(Not(HaveOccurred()))
 					Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
 					_, input := fakeTileWriter.WriteArgsForCall(0)
-					Expect(input.OutputFile).To(Equal(filepath.Join("tile-v1.2.3.pivotal")))
+					Expect(input.OutputFile).To(Equal(filepath.Join("tile.pivotal")))
+				})
+			})
+			When("the version flag is provided", func() {
+				It("uses the tile as the filename prefix", func() {
+					err := bake.Execute([]string{
+						"--metadata", "some-metadata",
+						"--version", "some-version",
+					})
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
+					_, input := fakeTileWriter.WriteArgsForCall(0)
+					Expect(input.OutputFile).To(Equal(filepath.Join("tile-some-version.pivotal")))
+				})
+			})
+			When("the tile name is provided", func() {
+				It("uses the tile as the filename prefix", func() {
+					err := bake.Execute([]string{
+						"--metadata", "some-metadata",
+						"--tile-name", "p-rune",
+					})
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
+					_, input := fakeTileWriter.WriteArgsForCall(0)
+					Expect(input.OutputFile).To(Equal(filepath.Join("p-rune-1.2.3.pivotal")))
 				})
 			})
 		})
@@ -460,7 +490,6 @@ var _ = Describe("Bake", func() {
 			When("a the tile flag is passed", func() {
 				It("it uses the value from the bake configuration with the correct name", func() {
 					err := bake.Execute([]string{
-						"bake",
 						"--tile-name=p-each",
 					})
 					Expect(err).To(Not(HaveOccurred()))
