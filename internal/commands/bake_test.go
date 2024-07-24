@@ -104,9 +104,15 @@ var _ = Describe("Bake", func() {
 
 		{
 			fakeFilesystem = memfs.New()
-			file, _ := fakeFilesystem.Create("version")
-			_, _ = file.Write([]byte("1.2.3"))
-			_ = file.Close()
+
+			for name, contents := range map[string]string{
+				"version":                     "1.2.3",
+				"/home/.kiln/credentials.yml": "",
+			} {
+				file, _ := fakeFilesystem.Create(name)
+				_, _ = file.Write([]byte(contents))
+				_ = file.Close()
+			}
 		}
 
 		fakeHomeDirFunc = func() (string, error) {
@@ -229,9 +235,7 @@ var _ = Describe("Bake", func() {
 
 			Expect(fakeTemplateVariablesService.FromPathsAndPairsCallCount()).To(Equal(1))
 			varFiles, variables := fakeTemplateVariablesService.FromPathsAndPairsArgsForCall(0)
-			Expect(len(varFiles)).To(Equal(2))
-			Expect(varFiles[0]).To(Equal("some-variables-file"))
-			Expect(varFiles[1]).To(Equal("/home/.kiln/credentials.yml"))
+			Expect(varFiles).To(ConsistOf("some-variables-file", "/home/.kiln/credentials.yml"))
 			Expect(variables).To(Equal([]string{"some-variable=some-variable-value"}))
 
 			Expect(fakeBOSHVariablesService.ParseMetadataTemplatesCallCount()).To(Equal(1))
@@ -442,6 +446,8 @@ var _ = Describe("Bake", func() {
 
 		Context("when bake configuration is in the Kilnfile", func() {
 			BeforeEach(func() {
+				kf, _ := fakeFilesystem.Create("Kilnfile")
+				_ = kf.Close()
 				bake = bake.WithKilnfileFunc(func(s string) (cargo.Kilnfile, error) {
 					return cargo.Kilnfile{
 						BakeConfigurations: []cargo.BakeConfiguration{
@@ -468,6 +474,8 @@ var _ = Describe("Bake", func() {
 		})
 		Context("when bake configuration has multiple options", func() {
 			BeforeEach(func() {
+				kf, _ := fakeFilesystem.Create("Kilnfile")
+				_ = kf.Close()
 				bake = bake.WithKilnfileFunc(func(s string) (cargo.Kilnfile, error) {
 					return cargo.Kilnfile{
 						BakeConfigurations: []cargo.BakeConfiguration{
@@ -628,6 +636,10 @@ var _ = Describe("Bake", func() {
 		})
 
 		Context("when Kilnfile is specified", func() {
+			BeforeEach(func() {
+				kf, _ := fakeFilesystem.Create("Kilnfile")
+				_ = kf.Close()
+			})
 			It("renders the stemcell criteria in tile metadata from that specified the Kilnfile.lock", func() {
 				outputFile := "some-output-dir/some-product-file-1.2.3-build.4"
 				err := bake.Execute([]string{
@@ -914,6 +926,10 @@ var _ = Describe("Bake", func() {
 			})
 
 			Context("when both the --kilnfile and --stemcells-directory are provided", func() {
+				BeforeEach(func() {
+					kf, _ := fakeFilesystem.Create("Kilnfile")
+					_ = kf.Close()
+				})
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--metadata", "some-metadata",
@@ -927,6 +943,10 @@ var _ = Describe("Bake", func() {
 
 			// todo: When --stemcell-tarball is removed, delete this test
 			Context("when both the --stemcell-tarball and --kilnfile are provided", func() {
+				BeforeEach(func() {
+					kf, _ := fakeFilesystem.Create("Kilnfile")
+					_ = kf.Close()
+				})
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--metadata", "some-metadata",
