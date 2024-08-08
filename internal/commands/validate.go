@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
@@ -14,6 +15,7 @@ import (
 type Validate struct {
 	Options struct {
 		flags.Standard
+		ReleaseSourceTypeAllowList []string `long:"allow-release-source-type"`
 	}
 
 	FS billy.Filesystem
@@ -36,6 +38,14 @@ func (v Validate) Execute(args []string) error {
 	kf, lock, err := v.Options.Standard.LoadKilnfiles(v.FS, nil)
 	if err != nil {
 		return fmt.Errorf("failed to load kilnfiles: %w", err)
+	}
+
+	if len(v.Options.ReleaseSourceTypeAllowList) > 0 {
+		for _, s := range kf.ReleaseSources {
+			if !slices.Contains(v.Options.ReleaseSourceTypeAllowList, s.Type) {
+				return fmt.Errorf("release source type not allowed: %s", s.Type)
+			}
+		}
 	}
 
 	errs := cargo.Validate(kf, lock)
