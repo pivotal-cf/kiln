@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -294,5 +296,34 @@ func TestValidate_checkComponentVersionsAndConstraint(t *testing.T) {
 			HaveOccurred(),
 			MatchError(ContainSubstring("invalid lock version")),
 		))
+	})
+}
+
+func TestValidateWithOptions(t *testing.T) {
+	t.Run("resource type allow list", func(t *testing.T) {
+		t.Run("when the types are permitted", func(t *testing.T) {
+			kf := Kilnfile{
+				ReleaseSources: []ReleaseSourceConfig{
+					{Type: "farm"},
+					{Type: "orchard"},
+				},
+			}
+			kl := KilnfileLock{}
+			errs := Validate(kf, kl, ValidateResourceTypeAllowList("orchard", "farm"))
+			assert.Zero(t, errs)
+		})
+		t.Run("when one of the types is not in the allow list", func(t *testing.T) {
+			kf := Kilnfile{
+				ReleaseSources: []ReleaseSourceConfig{
+					{Type: "farm"},
+					{Type: "orchard"},
+				},
+			}
+			kl := KilnfileLock{}
+			errs := Validate(kf, kl, ValidateResourceTypeAllowList("orchard"))
+			if assert.Len(t, errs, 1) {
+				assert.ErrorContains(t, errs[0], "release source type not allowed: farm")
+			}
+		})
 	})
 }
