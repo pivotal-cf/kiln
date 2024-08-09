@@ -30,6 +30,7 @@ var _ = Describe("validate", func() {
 		BeforeEach(func() {
 			f, err := directory.Create("Kilnfile")
 			Expect(err).NotTo(HaveOccurred())
+			// language=yaml
 			_, _ = io.WriteString(f, `---
 release_sources:
   - type: "bosh.io"
