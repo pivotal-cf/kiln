@@ -12,7 +12,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 )
 
-var _ = Describe("validate", func() {
+var _ = FDescribe("validate", func() {
 	var (
 		validate  commands.Validate
 		directory billy.Filesystem
@@ -62,6 +62,11 @@ release_sources:
 				Expect(err).To(MatchError(ContainSubstring("release source type not allowed: github")))
 			})
 		})
+		When("the allow list is empty", func() {
+			It("it does not fail", func() {
+				err := validate.Execute([]string{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
-
 })
