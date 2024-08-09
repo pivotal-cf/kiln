@@ -7,8 +7,40 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
-func Validate(spec Kilnfile, lock KilnfileLock) []error {
+type ValidationOptions struct {
+	resourceTypeAllowList []string
+}
+
+func ValidateResourceTypeAllowList(allowList ...string) ValidationOptions {
+	return ValidationOptions{}.SetValidateResourceTypeAllowList(allowList)
+}
+
+func (o ValidationOptions) SetValidateResourceTypeAllowList(allowList []string) ValidationOptions {
+	o.resourceTypeAllowList = allowList
+	return o
+}
+
+func mergeOptions(options []ValidationOptions) ValidationOptions {
+	var opt ValidationOptions
+	for _, o := range options {
+		if o.resourceTypeAllowList != nil {
+			opt.resourceTypeAllowList = o.resourceTypeAllowList
+		}
+	}
+	return opt
+}
+
+func Validate(spec Kilnfile, lock KilnfileLock, options ...ValidationOptions) []error {
+	opt := mergeOptions(options)
 	var result []error
+
+	if len(opt.resourceTypeAllowList) > 0 {
+		for _, s := range spec.ReleaseSources {
+			if !slices.Contains(opt.resourceTypeAllowList, s.Type) {
+				result = append(result, fmt.Errorf("release source type not allowed: %s", s.Type))
+			}
+		}
+	}
 
 	for index, componentSpec := range spec.Releases {
 		if componentSpec.Name == "" {
