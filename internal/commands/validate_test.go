@@ -12,7 +12,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 )
 
-var _ = FDescribe("validate", func() {
+var _ = Describe("validate", func() {
 	var (
 		validate  commands.Validate
 		directory billy.Filesystem
