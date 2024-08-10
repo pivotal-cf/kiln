@@ -2,9 +2,9 @@ package cargo
 
 import (
 	"fmt"
-	"slices"
-
 	"github.com/Masterminds/semver/v3"
+	"slices"
+	"text/template/parse"
 )
 
 type ValidationOptions struct {
@@ -75,12 +75,71 @@ func Validate(spec Kilnfile, lock KilnfileLock, options ...ValidationOptions) []
 	}
 
 	result = append(result, ensureRemoteSourceExistsForEachReleaseLock(spec, lock)...)
+	result = append(result, ensureReleaseSourceConfiguration(spec.ReleaseSources)...)
 
 	if len(result) > 0 {
 		return result
 	}
 
 	return nil
+}
+
+func ensureReleaseSourceConfiguration(sources []ReleaseSourceConfig) []error {
+	var errs []error
+	for _, source := range sources {
+		switch source.Type {
+		case BOSHReleaseTarballSourceTypeArtifactory:
+			if source.ArtifactoryHost == "" {
+				errs = append(errs, fmt.Errorf("missing required field artifactory_host"))
+			}
+			if source.Username == "" {
+				errs = append(errs, fmt.Errorf("missing required field username"))
+			}
+			if source.Password == "" {
+				errs = append(errs, fmt.Errorf("missing required field password"))
+			}
+			if source.Repo == "" {
+				errs = append(errs, fmt.Errorf("missing required field repo"))
+			}
+			if source.PathTemplate == "" {
+				errs = append(errs, fmt.Errorf("missing required field path_template"))
+			} else {
+				p := parse.New("path_template")
+				p.Mode |= parse.SkipFuncCheck
+				if _, err := p.Parse(source.PathTemplate, "", "", make(map[string]*parse.Tree)); err != nil {
+					errs = append(errs, fmt.Errorf("failed to parse path_template: %w", err))
+				}
+			}
+			if source.Bucket != "" {
+				errs = append(errs, fmt.Errorf("artifactory has unexpected field bucket"))
+			}
+			if source.Region != "" {
+				errs = append(errs, fmt.Errorf("artifactory has unexpected field region"))
+			}
+			if source.AccessKeyId != "" {
+				errs = append(errs, fmt.Errorf("artifactory has unexpected field access_key_id"))
+			}
+			if source.SecretAccessKey != "" {
+				errs = append(errs, fmt.Errorf("artifactory has unexpected field secret_access_key"))
+			}
+			if source.RoleARN != "" {
+				errs = append(errs, fmt.Errorf("artifactory has unexpected field role_arn"))
+			}
+			if source.Endpoint != "" {
+				errs = append(errs, fmt.Errorf("artifactory has unexpected field endpoint"))
+			}
+			if source.Org != "" {
+				errs = append(errs, fmt.Errorf("artifactory has unexpected field org"))
+			}
+			if source.GithubToken != "" {
+				errs = append(errs, fmt.Errorf("artifactory has unexpected field github_token"))
+			}
+		case BOSHReleaseTarballSourceTypeBOSHIO:
+		case BOSHReleaseTarballSourceTypeS3:
+		case BOSHReleaseTarballSourceTypeGithub:
+		}
+	}
+	return errs
 }
 
 func ensureRemoteSourceExistsForEachReleaseLock(spec Kilnfile, lock KilnfileLock) []error {
