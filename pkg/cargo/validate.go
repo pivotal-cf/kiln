@@ -11,8 +11,13 @@ type ValidationOptions struct {
 	resourceTypeAllowList []string
 }
 
+func NewValidateOptions() ValidationOptions {
+	return ValidationOptions{}
+}
+
+// ValidateResourceTypeAllowList calls ValidationOptions.SetValidateResourceTypeAllowList on the result of NewValidateOptions
 func ValidateResourceTypeAllowList(allowList ...string) ValidationOptions {
-	return ValidationOptions{}.SetValidateResourceTypeAllowList(allowList)
+	return NewValidateOptions().SetValidateResourceTypeAllowList(allowList)
 }
 
 func (o ValidationOptions) SetValidateResourceTypeAllowList(allowList []string) ValidationOptions {
