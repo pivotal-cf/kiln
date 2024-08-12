@@ -1,6 +1,6 @@
 module github.com/pivotal-cf/kiln/internal/commands/testdata/tas_fake/tas
 
-go 1.20
+go 1.22.6
 
 require (
 	github.com/onsi/ginkgo v1.16.4
