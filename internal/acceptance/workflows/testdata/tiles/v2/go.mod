@@ -1,6 +1,6 @@
 module github.com/crhntr/hello-tile
 
-go 1.20
+go 1.22.6
 
 require (
 	github.com/cppforlife/go-patch v0.2.0 // indirect
