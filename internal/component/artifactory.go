@@ -311,7 +311,7 @@ func (ars *ArtifactoryReleaseSource) UploadRelease(spec cargo.BOSHReleaseTarball
 	switch response.StatusCode {
 	case http.StatusCreated:
 	default:
-		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf(response.Status)
+		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("response contained errror status code: %d %s", response.StatusCode, response.Status)
 	}
 
 	return cargo.BOSHReleaseTarballLock{
