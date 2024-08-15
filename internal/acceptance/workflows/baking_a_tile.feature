@@ -13,11 +13,11 @@ Feature: As a developer, I want to bake a tile
       | releases/bpm-1.2.12.tgz           |
       | releases/hello-release-0.2.3.tgz |
     And "bake_records/0.2.0-dev.json" contains substring: "version": "0.2.0-dev"
-    And "bake_records/0.2.0-dev.json" contains substring: "source_revision": "bc3ac24e192ba06a2eca19381ad785ec7069e0d0"
+    And "bake_records/0.2.0-dev.json" contains substring: "source_revision": "6d5069f9dfb954ff77bb16c5aee670b9909f154a"
     And "bake_records/0.2.0-dev.json" contains substring: "tile_directory": "."
     And "bake_records/0.2.0-dev.json" contains substring: "kiln_version": "0.0.0+acceptance-tests"
-    And "bake_records/0.2.0-dev.json" contains substring: "file_checksum": "5f8abc7a3272a70fa716cdf120f6976f6b78e16a01a4b3e085ced7f51d6c7691"
-    And "tile-0.2.0-dev.pivotal" has sha256 sum "5f8abc7a3272a70fa716cdf120f6976f6b78e16a01a4b3e085ced7f51d6c7691"
+    And "bake_records/0.2.0-dev.json" contains substring: "file_checksum": "c94e5749bf676f03ff10539956e9445d309647c5299b16dfe71cb522e9258f0d"
+    And "tile-0.2.0-dev.pivotal" has sha256 sum "c94e5749bf676f03ff10539956e9445d309647c5299b16dfe71cb522e9258f0d"
 
   Scenario: it reads directory configuration from Kilnfile
     Given I have a tile source directory "testdata/tiles/non-standard-paths"
