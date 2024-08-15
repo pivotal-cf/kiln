@@ -44,11 +44,19 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 	if c.Org == "" {
 		panic("no github org passed for github release source")
 	}
-
 	ctx := context.TODO()
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: c.GithubToken})
 	tokenClient := oauth2.NewClient(ctx, tokenSource)
-	githubClient := github.NewClient(tokenClient)
+	var githubClient *github.Client
+	if c.Endpoint != "" {
+		var err error
+		githubClient, err = github.NewEnterpriseClient(c.Endpoint, c.Endpoint, tokenClient)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		githubClient = github.NewClient(tokenClient)
+	}
 
 	return &GithubReleaseSource{
 		ReleaseSourceConfig: c,

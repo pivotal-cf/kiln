@@ -7,6 +7,10 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func Client(ctx context.Context, accessToken string) *github.Client {
-	return github.NewClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})))
+func Client(ctx context.Context, host, accessToken string) (*github.Client, error) {
+	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken}))
+	if host == "" {
+		return github.NewClient(client), nil
+	}
+	return github.NewEnterpriseClient(host, host, client)
 }
