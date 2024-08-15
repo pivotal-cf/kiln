@@ -30,6 +30,7 @@ type ReleaseNotes struct {
 		ReleaseDate  string `long:"release-date" short:"d" description:"release date of the tile"`
 		TemplateName string `long:"template"     short:"t" description:"path to template"`
 		GithubToken  string `long:"github-token" short:"g" description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
+		GithubHost   string `long:"github-host"            description:"set this when you are using GitHub enterprise" env:"GITHUB_HOST"`
 		Kilnfile     string `long:"kilnfile"     short:"k" description:"path to Kilnfile"`
 		DocsFile     string `long:"update-docs"  short:"u" description:"path to docs file to update"`
 		Window       string `long:"window"       short:"w" description:"GA window for release notes" default:"ga"`
@@ -85,7 +86,10 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	var client *github.Client
 	if r.Options.GithubToken != "" {
-		client = gh.Client(ctx, r.Options.GithubToken)
+		client, err = gh.Client(ctx, r.Options.GithubHost, r.Options.GithubToken)
+		if err != nil {
+			return fmt.Errorf("failed to setup github client: %w", err)
+		}
 	}
 
 	trainstatClient := notes.NewTrainstatClient(r.Options.TrainstatQuery.TrainstatURL)
