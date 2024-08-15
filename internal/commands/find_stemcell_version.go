@@ -2,6 +2,7 @@ package commands
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
@@ -57,7 +58,7 @@ func (cmd FindStemcellVersion) Execute(args []string) error {
 	}
 
 	if kilnfile.Stemcell.Version == "" {
-		return fmt.Errorf(ErrStemcellMajorVersionMustBeValid)
+		return errors.New(ErrStemcellMajorVersionMustBeValid)
 	}
 
 	// Get stemcell version from pivnet
