@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v50/github"
 
 	"github.com/pivotal-cf/kiln/internal/gh"
 )

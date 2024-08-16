@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v50/github"
 	"github.com/pivotal-cf/kiln/internal/component"
 )
 

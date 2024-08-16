@@ -21,7 +21,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/storer"
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v50/github"
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
