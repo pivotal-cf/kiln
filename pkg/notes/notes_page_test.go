@@ -121,22 +121,22 @@ func TestParseNotesPage(t *testing.T) {
 			{BOSHReleaseTarballLock: cargo.BOSHReleaseTarballLock{Name: "uaa", Version: "73.4.32"}},
 		},
 		Bumps: cargo.BumpList{
-			{Name: "backup-and-restore-sdk", ToVersion: "1.18.26"},
-			{Name: "bpm", ToVersion: "1.1.15"},
-			{Name: "capi", ToVersion: "1.84.20"},
-			{Name: "cf-autoscaling", ToVersion: "241"},
-			{Name: "cf-networking", ToVersion: "2.40.0"},
-			{Name: "cflinuxfs3", ToVersion: "0.264.0"},
-			{Name: "dotnet-core-offline-buildpack", ToVersion: "2.3.36"},
-			{Name: "go-offline-buildpack", ToVersion: "1.9.37"},
-			{Name: "nodejs-offline-buildpack", ToVersion: "1.7.63"},
-			{Name: "php-offline-buildpack", ToVersion: "4.4.48"},
-			{Name: "python-offline-buildpack", ToVersion: "1.7.47"},
-			{Name: "r-offline-buildpack", ToVersion: "1.1.23"},
-			{Name: "routing", ToVersion: "0.226.0"},
-			{Name: "ruby-offline-buildpack", ToVersion: "1.8.48"},
-			{Name: "silk", ToVersion: "2.40.0"},
-			{Name: "staticfile-offline-buildpack", ToVersion: "1.5.26"},
+			{Name: "backup-and-restore-sdk", To: cargo.BOSHReleaseTarballLock{Name: "backup-and-restore-sdk", Version: "1.18.26"}},
+			{Name: "bpm", To: cargo.BOSHReleaseTarballLock{Name: "bpm", Version: "1.1.15"}},
+			{Name: "capi", To: cargo.BOSHReleaseTarballLock{Name: "capi", Version: "1.84.20"}},
+			{Name: "cf-autoscaling", To: cargo.BOSHReleaseTarballLock{Name: "cf-autoscaling", Version: "241"}},
+			{Name: "cf-networking", To: cargo.BOSHReleaseTarballLock{Name: "cf-networking", Version: "2.40.0"}},
+			{Name: "cflinuxfs3", To: cargo.BOSHReleaseTarballLock{Name: "cflinuxfs3", Version: "0.264.0"}},
+			{Name: "dotnet-core-offline-buildpack", To: cargo.BOSHReleaseTarballLock{Name: "dotnet-core-offline-buildpack", Version: "2.3.36"}},
+			{Name: "go-offline-buildpack", To: cargo.BOSHReleaseTarballLock{Name: "go-offline-buildpack", Version: "1.9.37"}},
+			{Name: "nodejs-offline-buildpack", To: cargo.BOSHReleaseTarballLock{Name: "nodejs-offline-buildpack", Version: "1.7.63"}},
+			{Name: "php-offline-buildpack", To: cargo.BOSHReleaseTarballLock{Name: "php-offline-buildpack", Version: "4.4.48"}},
+			{Name: "python-offline-buildpack", To: cargo.BOSHReleaseTarballLock{Name: "python-offline-buildpack", Version: "1.7.47"}},
+			{Name: "r-offline-buildpack", To: cargo.BOSHReleaseTarballLock{Name: "r-offline-buildpack", Version: "1.1.23"}},
+			{Name: "routing", To: cargo.BOSHReleaseTarballLock{Name: "routing", Version: "0.226.0"}},
+			{Name: "ruby-offline-buildpack", To: cargo.BOSHReleaseTarballLock{Name: "ruby-offline-buildpack", Version: "1.8.48"}},
+			{Name: "silk", To: cargo.BOSHReleaseTarballLock{Name: "silk", Version: "2.40.0"}},
+			{Name: "staticfile-offline-buildpack", To: cargo.BOSHReleaseTarballLock{Name: "staticfile-offline-buildpack", Version: "1.5.26"}},
 		},
 	}
 
@@ -208,7 +208,7 @@ func Test_newFetchNotesData(t *testing.T) {
 			IssueMilestone: "BLA",
 		}, &TrainstatClient{
 			host: "test",
-		})
+		}, make(map[string]any))
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(f.repoOwner).To(Equal("o"))
 		please.Expect(f.repoName).To(Equal("r"))
@@ -226,14 +226,14 @@ func Test_newFetchNotesData(t *testing.T) {
 	})
 	t.Run("when repo is nil", func(t *testing.T) {
 		please := NewWithT(t)
-		_, err := newFetchNotesData(nil, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{}, &TrainstatClient{})
+		_, err := newFetchNotesData(nil, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{}, &TrainstatClient{}, make(map[string]any))
 		please.Expect(err).To(HaveOccurred())
 	})
 	t.Run("when repo is not nil", func(t *testing.T) {
 		please := NewWithT(t)
 		f, err := newFetchNotesData(&git.Repository{
 			Storer: &memory.Storage{},
-		}, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{}, &TrainstatClient{})
+		}, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{}, &TrainstatClient{}, make(map[string]any))
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(f.repository).NotTo(BeNil())
 		please.Expect(f.revisionResolver).NotTo(BeNil())
@@ -244,17 +244,15 @@ func Test_newFetchNotesData(t *testing.T) {
 		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", &github.Client{
 			Issues:       &github.IssuesService{},
 			Repositories: &github.RepositoriesService{},
-		}, IssuesQuery{}, &TrainstatClient{})
+		}, IssuesQuery{}, &TrainstatClient{}, make(map[string]any))
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(f.issuesService).NotTo(BeNil())
-		please.Expect(f.releasesService).NotTo(BeNil())
 	})
 	t.Run("when github client is nil", func(t *testing.T) {
 		please := NewWithT(t)
-		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{}, &TrainstatClient{})
+		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{}, &TrainstatClient{}, make(map[string]any))
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(f.issuesService).To(BeNil())
-		please.Expect(f.releasesService).To(BeNil())
 	})
 }
 

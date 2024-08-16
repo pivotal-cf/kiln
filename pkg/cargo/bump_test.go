@@ -33,7 +33,7 @@ func TestCalculateBumps(t *testing.T) {
 			{Name: "a", Version: "1"},
 			{Name: "b", Version: "1"},
 		})).To(Equal([]Bump{
-			{Name: "b", FromVersion: "1", ToVersion: "2"},
+			{Name: "b", From: BOSHReleaseTarballLock{Name: "b", Version: "1"}, To: BOSHReleaseTarballLock{Name: "b", Version: "2"}},
 		}),
 			"it returns the changed lock",
 		)
@@ -49,8 +49,8 @@ func TestCalculateBumps(t *testing.T) {
 			{Name: "b", Version: "1"},
 			{Name: "c", Version: "1"},
 		})).To(Equal([]Bump{
-			{Name: "a", FromVersion: "1", ToVersion: "2"},
-			{Name: "c", FromVersion: "1", ToVersion: "2"},
+			{Name: "a", From: BOSHReleaseTarballLock{Name: "a", Version: "1"}, To: BOSHReleaseTarballLock{Name: "a", Version: "2"}},
+			{Name: "c", From: BOSHReleaseTarballLock{Name: "c", Version: "1"}, To: BOSHReleaseTarballLock{Name: "c", Version: "2"}},
 		}),
 			"it returns all the bumps",
 		)
@@ -77,7 +77,7 @@ func TestCalculateBumps(t *testing.T) {
 		}, []BOSHReleaseTarballLock{
 			{Name: "a", Version: "1"},
 		})).To(Equal([]Bump{
-			{Name: "b", FromVersion: "", ToVersion: "1"},
+			{Name: "b", From: BOSHReleaseTarballLock{}, To: BOSHReleaseTarballLock{Name: "b", Version: "1"}},
 		}),
 			"it returns the component as a bump",
 		)
@@ -90,18 +90,18 @@ func TestWinfsVersionBump(t *testing.T) {
 
 	t.Run("when the winfs version is not bumped", func(t *testing.T) {
 		please.Expect(WinfsVersionBump(false, "2.61.0", []Bump{
-			{Name: "b", FromVersion: "1", ToVersion: "2"},
+			{Name: "b", From: BOSHReleaseTarballLock{Version: "1"}, To: BOSHReleaseTarballLock{Version: "2"}},
 		})).To(Equal([]Bump{
-			{Name: "b", FromVersion: "1", ToVersion: "2"},
+			{Name: "b", From: BOSHReleaseTarballLock{Version: "1"}, To: BOSHReleaseTarballLock{Version: "2"}},
 		}))
 	})
 
 	t.Run("when the winfs version is bumped", func(t *testing.T) {
 		please.Expect(WinfsVersionBump(true, "2.61.0", []Bump{
-			{Name: "b", FromVersion: "1", ToVersion: "2"},
+			{Name: "b", From: BOSHReleaseTarballLock{Version: "1"}, To: BOSHReleaseTarballLock{Version: "2"}},
 		})).To(Equal([]Bump{
-			{Name: "b", FromVersion: "1", ToVersion: "2"},
-			{Name: "windowsfs-release", FromVersion: "", ToVersion: "2.61.0"},
+			{Name: "b", From: BOSHReleaseTarballLock{Version: "1"}, To: BOSHReleaseTarballLock{Version: "2"}},
+			{Name: "windowsfs-release", From: BOSHReleaseTarballLock{Version: ""}, To: BOSHReleaseTarballLock{Version: "2.61.0"}},
 		}))
 	})
 }
@@ -140,9 +140,8 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 		return nil, nil, nil
 	}
 
-	result, err := ReleaseNotes(
+	result, err := releaseNotes(
 		context.Background(),
-		releaseLister,
 		Kilnfile{
 			Releases: []BOSHReleaseTarballSpecification{
 				{
@@ -156,15 +155,17 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 		},
 		BumpList{
 			{
-				Name:        "peach",
-				ToVersion:   "2.0.1", // served
-				FromVersion: "0.1.3", // ripe
+				Name: "peach",
+				To:   BOSHReleaseTarballLock{Version: "2.0.1"}, // served
+				From: BOSHReleaseTarballLock{Version: "0.1.3"}, // ripe
 			},
 			{
-				Name:        "mango",
-				ToVersion:   "10",
-				FromVersion: "9",
+				Name: "mango",
+				To:   BOSHReleaseTarballLock{Version: "10"},
+				From: BOSHReleaseTarballLock{Version: "9"},
 			},
+		}, func(kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
+			return releaseLister, nil
 		})
 	please.Expect(err).NotTo(HaveOccurred())
 	please.Expect(result).To(HaveLen(2))
@@ -172,6 +173,37 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 	please.Expect(ltsCallCount).To(Equal(1))
 
 	please.Expect(result[0].ReleaseNotes()).To(Equal("served\nplated\nstored\nlabeled\npreserved\nchopped\ncleaned"))
+}
+
+func Test_deduplicateReleasesWithTheSameTagName(t *testing.T) {
+	please := NewWithT(t)
+	b := Bump{
+		Releases: []*github.RepositoryRelease{
+			{TagName: ptr("Y")},
+			{TagName: ptr("1")},
+			{TagName: ptr("2")},
+			{TagName: ptr("3")},
+			{TagName: ptr("3")},
+			{TagName: ptr("3")},
+			{TagName: ptr("X")},
+			{TagName: ptr("2")},
+			{TagName: ptr("4")},
+			{TagName: ptr("4")},
+		},
+	}
+	b = deduplicateReleasesWithTheSameTagName(b)
+	tags := make([]string, 0, len(b.Releases))
+	for _, r := range b.Releases {
+		tags = append(tags, r.GetTagName())
+	}
+	please.Expect(tags).To(Equal([]string{
+		"Y",
+		"1",
+		"2",
+		"3",
+		"X",
+		"4",
+	}))
 }
 
 func githubResponse(t *testing.T, status int) *github.Response {
