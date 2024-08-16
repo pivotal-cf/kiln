@@ -2,6 +2,7 @@ package cargo
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"sort"
 	"strings"
@@ -14,7 +15,8 @@ import (
 )
 
 type Bump struct {
-	Name, FromVersion, ToVersion string
+	Name     string
+	From, To BOSHReleaseTarballLock
 
 	Releases []*github.RepositoryRelease
 }
@@ -33,6 +35,9 @@ func (bump Bump) ReleaseNotes() string {
 
 	return strings.TrimSpace(s.String())
 }
+
+func (bump Bump) ToVersion() string   { return bump.To.Version }
+func (bump Bump) FromVersion() string { return bump.From.Version }
 
 func deduplicateReleasesWithTheSameTagName(bump Bump) Bump {
 	updated := bump
@@ -67,9 +72,9 @@ func CalculateBumps(current, previous []BOSHReleaseTarballLock) []Bump {
 			continue
 		}
 		bumps = append(bumps, Bump{
-			Name:        c.Name,
-			FromVersion: p.Version,
-			ToVersion:   c.Version,
+			Name: c.Name,
+			From: p,
+			To:   c,
 		})
 	}
 	return bumps
@@ -78,8 +83,8 @@ func CalculateBumps(current, previous []BOSHReleaseTarballLock) []Bump {
 func WinfsVersionBump(bumped bool, version string, bumps []Bump) []Bump {
 	if bumped {
 		bumps = append(bumps, Bump{
-			Name:      "windowsfs-release",
-			ToVersion: version,
+			Name: "windowsfs-release",
+			To:   BOSHReleaseTarballLock{Version: version},
 		})
 	}
 	return bumps
@@ -87,11 +92,11 @@ func WinfsVersionBump(bumped bool, version string, bumps []Bump) []Bump {
 
 func (bump Bump) toFrom() (to, from *semver.Version, _ error) {
 	var err error
-	from, err = semver.NewVersion(bump.FromVersion)
+	from, err = semver.NewVersion(bump.From.Version)
 	if err != nil {
 		return nil, nil, err
 	}
-	to, err = semver.NewVersion(bump.ToVersion)
+	to, err = semver.NewVersion(bump.To.Version)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -107,9 +112,9 @@ func (list BumpList) ForLock(lock BOSHReleaseTarballLock) Bump {
 		}
 	}
 	return Bump{
-		Name:        lock.Name,
-		FromVersion: lock.Version,
-		ToVersion:   lock.Version,
+		Name: lock.Name,
+		From: lock,
+		To:   lock,
 	}
 }
 
@@ -121,9 +126,12 @@ type repositoryReleaseLister interface {
 	ListReleases(ctx context.Context, owner, repo string, opts *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error)
 }
 
-type RepositoryReleaseLister = repositoryReleaseLister
+type (
+	RepositoryReleaseLister = repositoryReleaseLister
+	githubClientFunc        func(Kilnfile, BOSHReleaseTarballLock) (repositoryReleaseLister, error)
+)
 
-func ReleaseNotes(ctx context.Context, repoService RepositoryReleaseLister, kf Kilnfile, list BumpList) (BumpList, error) {
+func releaseNotes(ctx context.Context, kf Kilnfile, list BumpList, client githubClientFunc) (BumpList, error) {
 	const workerCount = 10
 
 	type fetchReleaseNotesForBump struct {
@@ -143,7 +151,7 @@ func ReleaseNotes(ctx context.Context, repoService RepositoryReleaseLister, kf K
 				go func() {
 					defer wg.Done()
 					for j := range in {
-						j.bump = fetchReleasesForBump(ctx, repoService, kf, j.bump)
+						j.bump = fetchReleasesForBump(ctx, kf, j.bump, client)
 						results <- j
 					}
 				}()
@@ -174,6 +182,23 @@ func ReleaseNotes(ctx context.Context, repoService RepositoryReleaseLister, kf K
 	return list, nil
 }
 
+func ReleaseNotes(ctx context.Context, kf Kilnfile, list BumpList) (BumpList, error) {
+	return releaseNotes(ctx, kf, list, func(kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
+		i := slices.IndexFunc(kf.ReleaseSources, func(config ReleaseSourceConfig) bool {
+			return BOSHReleaseTarballSourceID(config) == lock.RemoteSource
+		})
+		if i < 0 {
+			return nil, fmt.Errorf("release source with id %s not found", lock.RemoteSource)
+		}
+		source := kf.ReleaseSources[i]
+		client, err := source.GitHubClient(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return client.Repositories, err
+	})
+}
+
 func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLister, repository string, from, to *semver.Version) []*github.RepositoryRelease {
 	owner, repo, err := gh.RepositoryOwnerAndNameFromPath(repository)
 	if err != nil {
@@ -196,7 +221,11 @@ func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLis
 	return result
 }
 
-func fetchReleasesForBump(ctx context.Context, repoService RepositoryReleaseLister, kf Kilnfile, bump Bump) Bump {
+func fetchReleasesForBump(ctx context.Context, kf Kilnfile, bump Bump, client githubClientFunc) Bump {
+	lister, err := client(kf, bump.To)
+	if err != nil {
+		return bump
+	}
 	spec, err := kf.BOSHReleaseTarballSpecification(bump.Name)
 	if err != nil {
 		return bump
@@ -208,7 +237,7 @@ func fetchReleasesForBump(ctx context.Context, repoService RepositoryReleaseList
 	}
 
 	if spec.GitHubRepository != "" {
-		releases := fetchReleasesFromRepo(ctx, repoService, spec.GitHubRepository, from, to)
+		releases := fetchReleasesFromRepo(ctx, lister, spec.GitHubRepository, from, to)
 		bump.Releases = append(bump.Releases, releases...)
 	}
 

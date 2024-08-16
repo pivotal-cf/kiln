@@ -15,10 +15,12 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/google/go-github/v50/github"
 	"github.com/pivotal-cf/jhanda"
 
+	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/gh"
 	"github.com/pivotal-cf/kiln/pkg/notes"
 )
@@ -27,13 +29,15 @@ const releaseDateFormat = "2006-01-02"
 
 type ReleaseNotes struct {
 	Options struct {
-		ReleaseDate  string `long:"release-date" short:"d" description:"release date of the tile"`
-		TemplateName string `long:"template"     short:"t" description:"path to template"`
-		GithubToken  string `long:"github-token" short:"g" description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
-		GithubHost   string `long:"github-host"            description:"set this when you are using GitHub enterprise" env:"GITHUB_HOST"`
-		Kilnfile     string `long:"kilnfile"     short:"k" description:"path to Kilnfile"`
-		DocsFile     string `long:"update-docs"  short:"u" description:"path to docs file to update"`
-		Window       string `long:"window"       short:"w" description:"GA window for release notes" default:"ga"`
+		ReleaseDate   string   `long:"release-date"   short:"d"  description:"release date of the tile"`
+		TemplateName  string   `long:"template"       short:"t"  description:"path to template"`
+		GithubToken   string   `long:"github-token"   short:"g"  description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
+		GithubHost    string   `long:"github-host"               description:"set this when you are using GitHub enterprise" env:"GITHUB_HOST"`
+		Kilnfile      string   `long:"kilnfile"       short:"k"  description:"path to Kilnfile"`
+		DocsFile      string   `long:"update-docs"    short:"u"  description:"path to docs file to update"`
+		Window        string   `long:"window"         short:"w"  description:"GA window for release notes" default:"ga"`
+		VariableFiles []string `long:"variables-file" short:"vf" description:"path to a file containing variables to interpolate"`
+		Variables     []string `long:"variable"       short:"vr" description:"key value pairs of variables to interpolate"`
 		notes.IssuesQuery
 		notes.TrainstatQuery
 	}
@@ -43,19 +47,21 @@ type ReleaseNotes struct {
 	stat       func(name string) (fs.FileInfo, error)
 	io.Writer
 
-	fetchNotesData FetchNotesData
+	fetchNotesData   FetchNotesData
+	variablesService baking.TemplateVariablesService
 
 	repoOwner, repoName string
 }
 
-type FetchNotesData func(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery notes.IssuesQuery, trainstatClient notes.TrainstatNotesFetcher) (notes.Data, error)
+type FetchNotesData func(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery notes.IssuesQuery, trainstatClient notes.TrainstatNotesFetcher, variables map[string]any) (notes.Data, error)
 
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	return ReleaseNotes{
-		fetchNotesData: notes.FetchData,
-		readFile:       os.ReadFile,
-		Writer:         os.Stdout,
-		stat:           os.Stat,
+		variablesService: baking.NewTemplateVariablesService(osfs.New(".")),
+		fetchNotesData:   notes.FetchData,
+		readFile:         os.ReadFile,
+		Writer:           os.Stdout,
+		stat:             os.Stat,
 	}, nil
 }
 
@@ -71,6 +77,16 @@ func (r ReleaseNotes) Execute(args []string) error {
 	nonFlagArgs, err := jhanda.Parse(&r.Options, args)
 	if err != nil {
 		return err
+	}
+
+	templateVariables, err := r.variablesService.FromPathsAndPairs(r.Options.VariableFiles, r.Options.Variables)
+	if err != nil {
+		return fmt.Errorf("failed to parse template variables: %s", err)
+	}
+	if varValue, ok := templateVariables["github_token"]; !ok && r.Options.GithubToken != "" {
+		templateVariables["github_token"] = r.Options.GithubToken
+	} else if ok && r.Options.GithubToken == "" {
+		r.Options.GithubToken = varValue.(string)
 	}
 
 	ctx := context.Background()
@@ -101,6 +117,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 		nonFlagArgs[0], nonFlagArgs[1],
 		r.Options.IssuesQuery,
 		&trainstatClient,
+		templateVariables,
 	)
 	if err != nil {
 		return err

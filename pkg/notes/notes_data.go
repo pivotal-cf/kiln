@@ -127,8 +127,8 @@ func (q IssuesQuery) Exp() (*regexp.Regexp, error) {
 	return regexp.Compile(str)
 }
 
-func FetchData(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery IssuesQuery, trainstatClient TrainstatNotesFetcher) (Data, error) {
-	f, err := newFetchNotesData(repo, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision, client, issuesQuery, trainstatClient)
+func FetchData(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery IssuesQuery, trainstatClient TrainstatNotesFetcher, variables map[string]any) (Data, error) {
+	f, err := newFetchNotesData(repo, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision, client, issuesQuery, trainstatClient, variables)
 	if err != nil {
 		return Data{}, err
 	}
@@ -138,11 +138,10 @@ func FetchData(ctx context.Context, repo *git.Repository, client *github.Client,
 // FetchDataWithoutRepo can be used to generate release notes from tile metadata
 func FetchDataWithoutRepo(ctx context.Context, client *github.Client, tileRepoOwner, tileRepoName string, kilnfile cargo.Kilnfile, kilnfileLockInitial, kilnfileLockFinal cargo.KilnfileLock, issuesQuery IssuesQuery) (Data, error) {
 	r := fetchNotesData{
-		repoOwner:       tileRepoOwner,
-		repoName:        tileRepoName,
-		issuesQuery:     issuesQuery,
-		issuesService:   client.Issues,
-		releasesService: client.Repositories,
+		repoOwner:     tileRepoOwner,
+		repoName:      tileRepoName,
+		issuesQuery:   issuesQuery,
+		issuesService: client.Issues,
 	}
 	data := Data{
 		Bumps:    cargo.CalculateBumps(kilnfileLockFinal.Releases, kilnfileLockInitial.Releases),
@@ -164,7 +163,7 @@ func FetchDataWithoutRepo(ctx context.Context, client *github.Client, tileRepoOw
 	return data, nil
 }
 
-func newFetchNotesData(repo *git.Repository, tileRepoOwner string, tileRepoName string, kilnfilePath string, initialRevision string, finalRevision string, client *github.Client, issuesQuery IssuesQuery, trainstatClient TrainstatNotesFetcher) (fetchNotesData, error) {
+func newFetchNotesData(repo *git.Repository, tileRepoOwner string, tileRepoName string, kilnfilePath string, initialRevision string, finalRevision string, client *github.Client, issuesQuery IssuesQuery, trainstatClient TrainstatNotesFetcher, variables map[string]any) (fetchNotesData, error) {
 	if repo == nil {
 		return fetchNotesData{}, errors.New("git repository required to generate release notes")
 	}
@@ -184,11 +183,12 @@ func newFetchNotesData(repo *git.Repository, tileRepoOwner string, tileRepoName 
 
 		issuesQuery:     issuesQuery,
 		trainstatClient: trainstatClient,
+
+		variables: variables,
 	}
 
 	if client != nil {
 		f.issuesService = client.Issues
-		f.releasesService = client.Repositories
 	}
 	return f, nil
 }
@@ -201,7 +201,6 @@ type fetchNotesData struct {
 	repository *git.Repository
 
 	issuesService
-	releasesService cargo.RepositoryReleaseLister
 
 	repoOwner, repoName,
 	kilnfilePath,
@@ -209,6 +208,8 @@ type fetchNotesData struct {
 
 	issuesQuery     IssuesQuery
 	trainstatClient TrainstatNotesFetcher
+
+	variables map[string]any
 }
 
 func (r fetchNotesData) fetch(ctx context.Context) (Data, error) {
@@ -359,10 +360,20 @@ type issuesService interface {
 // test for Execute does not set GithubToken intentionally so this code is not triggered and Execute does not actually
 // reach out to GitHub.
 func (r fetchNotesData) fetchIssuesAndReleaseNotes(ctx context.Context, finalKF, wtKF cargo.Kilnfile, bumpList cargo.BumpList, issuesQuery IssuesQuery) ([]*github.Issue, cargo.BumpList, error) {
-	if r.releasesService == nil || r.issuesService == nil {
+	if r.issuesService == nil {
 		return nil, bumpList, nil
 	}
-	bumpList, err := cargo.ReleaseNotes(ctx, r.releasesService, setEmptyComponentGitHubRepositoryFromOtherKilnfile(finalKF, wtKF), bumpList)
+
+	buf, err := yaml.Marshal(finalKF)
+	if err != nil {
+		return nil, nil, err
+	}
+	finalKF, err = cargo.InterpolateAndParseKilnfile(bytes.NewReader(buf), r.variables)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	bumpList, err = cargo.ReleaseNotes(ctx, setEmptyComponentGitHubRepositoryFromOtherKilnfile(finalKF, wtKF), bumpList)
 	if err != nil {
 		return nil, nil, err
 	}
