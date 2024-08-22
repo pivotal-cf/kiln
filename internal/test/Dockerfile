@@ -3,11 +3,11 @@
 FROM golang as go-image
 FROM pivotalcfreleng/kiln:v0.77.0 as kiln
 
-FROM ruby:3.2.0 as builder
+FROM ruby:3.2.5 as builder
 RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 ADD git@github.com:pivotal-cf/ops-manager.git#v2.10.66 /tmp/ops-manager
 
-FROM ruby:3.2.0
+FROM ruby:3.2.5
 
 # Install Go
 COPY --from=go-image /usr/local/go/ /usr/local/go/
