@@ -20,8 +20,6 @@ func InterpolateAndParseKilnfile(in io.Reader, templateVariables map[string]any)
 		return Kilnfile{}, fmt.Errorf("unable to read Kilnfile: %w", err)
 	}
 
-	fmt.Println(string(kilnfileYAML))
-
 	kilnfileTemplate, err := template.New("Kilnfile").
 		Funcs(template.FuncMap{
 			"variable": variableTemplateFunction(templateVariables),
