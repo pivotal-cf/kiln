@@ -2,9 +2,10 @@ package cargo
 
 import (
 	"fmt"
-	"github.com/Masterminds/semver/v3"
 	"slices"
 	"text/template/parse"
+
+	"github.com/Masterminds/semver/v3"
 )
 
 type ValidationOptions struct {
