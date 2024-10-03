@@ -5,7 +5,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v65/github"
 )
 
 func TestInternal_deduplicateReleasesWithTheSameTagName(t *testing.T) {

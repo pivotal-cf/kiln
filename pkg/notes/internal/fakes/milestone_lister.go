@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v65/github"
 )
 
 type MilestoneLister struct {

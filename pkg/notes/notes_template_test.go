@@ -6,7 +6,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v65/github"
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"

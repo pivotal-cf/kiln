@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v65/github"
 	"github.com/migueleliasweb/go-github-mock/src/mock"
 
 	"github.com/pivotal-cf/kiln/internal/commands"

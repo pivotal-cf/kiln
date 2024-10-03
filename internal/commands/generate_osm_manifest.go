@@ -14,7 +14,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v65/github"
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/component"

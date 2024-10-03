@@ -17,7 +17,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v65/github"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )

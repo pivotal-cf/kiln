@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v65/github"
 
 	. "github.com/onsi/gomega"
 

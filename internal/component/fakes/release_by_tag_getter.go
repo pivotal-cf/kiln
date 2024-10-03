@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v65/github"
 	"github.com/pivotal-cf/kiln/internal/component"
 )
 
