@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -13,7 +14,13 @@ func RepositoryOwnerAndNameFromPath(urlStr string) (owner, repo string, err erro
 	wrapError := func(urlStr string, err error) error {
 		return fmt.Errorf("failed to parse owner and repo name from URI %q: %w", urlStr, err)
 	}
-	urlStr = strings.TrimPrefix(urlStr, "git@github.com:")
+
+	sshReg := regexp.MustCompile(`(?m)git@(?P<host>.*):(?P<owner>[^/]+)/(?P<name>.*)\.git`)
+	if m := sshReg.FindStringSubmatch(urlStr); m != nil {
+		owner = m[sshReg.SubexpIndex("owner")]
+		repo = m[sshReg.SubexpIndex("name")]
+		return owner, repo, nil
+	}
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return "", "", wrapError(urlStr, err)

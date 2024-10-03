@@ -3,6 +3,7 @@ package cargo
 import (
 	"context"
 	"fmt"
+	"log"
 	"slices"
 	"sort"
 	"strings"
@@ -208,7 +209,10 @@ func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLis
 	var result []*github.RepositoryRelease
 
 	ops := github.ListOptions{}
-	releases, _, _ := repoService.ListReleases(ctx, owner, repo, &ops)
+	releases, _, err := repoService.ListReleases(ctx, owner, repo, &ops)
+	if err != nil {
+		log.Println(err)
+	}
 
 	for _, rel := range releases {
 		rv, err := semver.NewVersion(strings.TrimPrefix(rel.GetTagName(), "v"))

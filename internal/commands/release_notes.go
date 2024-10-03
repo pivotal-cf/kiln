@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"text/template"
 	"time"
 
@@ -282,9 +281,6 @@ func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, erro
 	}
 	config := remote.Config()
 	for _, u := range config.URLs {
-		if !strings.Contains(u, "github.com") {
-			continue
-		}
 		remoteURL = u
 		break
 	}
