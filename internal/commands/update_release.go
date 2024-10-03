@@ -78,7 +78,6 @@ func (u UpdateRelease) Execute(args []string) error {
 			StemcellOS:       kilnfileLock.Stemcell.OS,
 			GitHubRepository: releaseSpec.GitHubRepository,
 		}, false)
-
 		if err != nil {
 			if component.IsErrNotFound(err) {
 				return fmt.Errorf("error finding the release: %w", err)
@@ -99,7 +98,6 @@ func (u UpdateRelease) Execute(args []string) error {
 			StemcellVersion:  kilnfileLock.Stemcell.Version,
 			GitHubRepository: releaseSpec.GitHubRepository,
 		})
-
 		if err != nil {
 			if component.IsErrNotFound(err) {
 				return fmt.Errorf("error finding the release: %w", err)

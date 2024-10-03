@@ -48,7 +48,6 @@ func (update UpdateStemcell) Execute(args []string) error {
 
 	kilnStemcellVersion := kilnfile.Stemcell.Version
 	releaseVersionConstraint, err = semver.NewConstraint(kilnStemcellVersion)
-
 	if err != nil {
 		return fmt.Errorf("invalid stemcell constraint in kilnfile: %w", err)
 	}
