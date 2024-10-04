@@ -13,22 +13,28 @@ func Test_RepositoryOwnerAndNameFromPath(t *testing.T) {
 		Name,
 		URI,
 		RepositoryOwner, RepositoryName,
+		RepositoryHost,
 		ErrorSubstring string
 	}{
 		{
 			Name:            "valid url",
 			URI:             "https://github.com/crhntr/hello-release",
-			RepositoryOwner: "crhntr", RepositoryName: "hello-release",
+			RepositoryOwner: "crhntr", RepositoryName: "hello-release", RepositoryHost: "github.com",
 		},
 		{
 			Name:            "ssh url",
 			URI:             "git@github.com:crhntr/hello-release.git",
-			RepositoryOwner: "crhntr", RepositoryName: "hello-release",
+			RepositoryOwner: "crhntr", RepositoryName: "hello-release", RepositoryHost: "github.com",
 		},
 		{
 			Name:           "empty ssh path",
 			URI:            "git@github.com:",
 			ErrorSubstring: "path missing expected parts",
+		},
+		{
+			Name:            "github enterprise",
+			URI:             "git@example.com:x/y.git",
+			RepositoryOwner: "x", RepositoryName: "y", RepositoryHost: "example.com",
 		},
 		{
 			Name:           "not a valid ssh path",
@@ -52,13 +58,24 @@ func Test_RepositoryOwnerAndNameFromPath(t *testing.T) {
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
-			repoOwner, repoName, err := gh.RepositoryOwnerAndNameFromPath(tt.URI)
+			repoHost, repoOwner, repoName, err := gh.RepositoryHostOwnerAndNameFromPath(tt.URI)
 			if tt.ErrorSubstring != "" {
 				require.ErrorContains(t, err, tt.ErrorSubstring)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.RepositoryOwner, repoOwner)
 				assert.Equal(t, tt.RepositoryName, repoName)
+				assert.Equal(t, tt.RepositoryHost, repoHost)
+			}
+
+			repoOwner, repoName, err = gh.RepositoryOwnerAndNameFromPath(tt.URI)
+			if tt.ErrorSubstring != "" {
+				require.ErrorContains(t, err, tt.ErrorSubstring)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.RepositoryOwner, repoOwner)
+				assert.Equal(t, tt.RepositoryName, repoName)
+				assert.Equal(t, tt.RepositoryHost, repoHost)
 			}
 		})
 	}
