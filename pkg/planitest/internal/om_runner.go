@@ -89,7 +89,6 @@ func (o OMRunner) ResetAndConfigure(productName string, productVersion string, c
 		"--product-name", productName,
 		"--product-version", productVersion,
 	)
-
 	if err != nil {
 		return fmt.Errorf("Unable to stage product %q, version %q: %s: %s",
 			productName, productVersion, err, errOutput)
@@ -114,7 +113,6 @@ func (o OMRunner) ResetAndConfigure(productName string, productVersion string, c
 		"configure-product",
 		"--config", configFile.Name(),
 	)
-
 	if err != nil {
 		return fmt.Errorf("Unable to configure product %q: %s: %s", productName, err, errOutput)
 	}

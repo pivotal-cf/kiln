@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/google/go-github/v50/github"
 	"golang.org/x/oauth2"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 

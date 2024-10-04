@@ -20,14 +20,14 @@ func RepositoryHostOwnerAndNameFromPath(urlStr string) (string, string, string, 
 		return fmt.Errorf("failed to parse owner and repo name from URI %q: %w", urlStr, err)
 	}
 	if strings.HasPrefix(urlStr, "git@") {
-		exp := regexp.MustCompile(`git@(?P<host>.*):(?P<owner>[^/]+)/(?P<name>.+)\.git`)
+		exp := regexp.MustCompile(`git@(?P<host>.+):(?P<owner>[^/]+)/(?P<name>.+)(\.git)?`)
 		m := exp.FindStringSubmatch(urlStr)
 		if m == nil {
 			return "", "", "", fmt.Errorf("path missing expected parts")
 		}
 		host := m[exp.SubexpIndex("host")]
 		owner := m[exp.SubexpIndex("owner")]
-		repo := m[exp.SubexpIndex("name")]
+		repo := strings.TrimSuffix(m[exp.SubexpIndex("name")], ".git")
 		return host, owner, repo, nil
 	}
 	u, err := url.Parse(urlStr)
