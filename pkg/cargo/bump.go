@@ -129,7 +129,7 @@ type repositoryReleaseLister interface {
 
 type (
 	RepositoryReleaseLister = repositoryReleaseLister
-	githubClientFunc        func(Kilnfile, BOSHReleaseTarballLock) (repositoryReleaseLister, error)
+	githubClientFunc        func(ctx context.Context, kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error)
 )
 
 func releaseNotes(ctx context.Context, kf Kilnfile, list BumpList, client githubClientFunc) (BumpList, error) {
@@ -184,9 +184,23 @@ func releaseNotes(ctx context.Context, kf Kilnfile, list BumpList, client github
 }
 
 func ReleaseNotes(ctx context.Context, kf Kilnfile, list BumpList) (BumpList, error) {
-	return releaseNotes(ctx, kf, list, func(kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
+	return releaseNotes(ctx, kf, list, listerForRelease(kf))
+}
+
+func listerForRelease(kf Kilnfile) func(ctx context.Context, _ Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
+	return func(ctx context.Context, kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
+		spec, err := kf.BOSHReleaseTarballSpecification(lock.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		_, owner, _, err := gh.RepositoryHostOwnerAndNameFromPath(spec.GitHubRepository)
+		if err != nil {
+			return nil, err
+		}
+
 		i := slices.IndexFunc(kf.ReleaseSources, func(config ReleaseSourceConfig) bool {
-			return BOSHReleaseTarballSourceID(config) == lock.RemoteSource
+			return config.Type == BOSHReleaseTarballSourceTypeGithub && config.Org == owner
 		})
 		if i < 0 {
 			return nil, fmt.Errorf("release source with id %s not found", lock.RemoteSource)
@@ -197,7 +211,7 @@ func ReleaseNotes(ctx context.Context, kf Kilnfile, list BumpList) (BumpList, er
 			return nil, err
 		}
 		return client.Repositories, err
-	})
+	}
 }
 
 func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLister, repository string, from, to *semver.Version) []*github.RepositoryRelease {
@@ -226,8 +240,9 @@ func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLis
 }
 
 func fetchReleasesForBump(ctx context.Context, kf Kilnfile, bump Bump, client githubClientFunc) Bump {
-	lister, err := client(kf, bump.To)
+	lister, err := client(ctx, kf, bump.To)
 	if err != nil {
+		log.Println(err)
 		return bump
 	}
 	spec, err := kf.BOSHReleaseTarballSpecification(bump.Name)

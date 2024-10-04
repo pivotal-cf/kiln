@@ -164,7 +164,7 @@ func TestInternal_addReleaseNotes(t *testing.T) {
 				To:   BOSHReleaseTarballLock{Version: "10"},
 				From: BOSHReleaseTarballLock{Version: "9"},
 			},
-		}, func(kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
+		}, func(ctx context.Context, kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
 			return releaseLister, nil
 		})
 	please.Expect(err).NotTo(HaveOccurred())
