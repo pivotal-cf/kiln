@@ -240,13 +240,19 @@ func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLis
 }
 
 func fetchReleasesForBump(ctx context.Context, kf Kilnfile, bump Bump, client githubClientFunc) Bump {
+	spec, err := kf.BOSHReleaseTarballSpecification(bump.Name)
+	if err != nil {
+		return bump
+	}
+
+	// Ignores release notes for Bosh releases with empty Github repository
+	if spec.GitHubRepository == "" {
+		return bump
+	}
+
 	lister, err := client(ctx, kf, bump.To)
 	if err != nil {
 		log.Println(err)
-		return bump
-	}
-	spec, err := kf.BOSHReleaseTarballSpecification(bump.Name)
-	if err != nil {
 		return bump
 	}
 
