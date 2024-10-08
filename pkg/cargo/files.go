@@ -28,7 +28,7 @@ func InterpolateAndParseKilnfile(in io.Reader, templateVariables map[string]any)
 		Option("missingkey=error").
 		Parse(string(kilnfileYAML))
 	if err != nil {
-		return Kilnfile{}, err
+		return Kilnfile{}, fmt.Errorf("failed to interpolate kilnfile using text/template: %w", err)
 	}
 
 	var buf bytes.Buffer

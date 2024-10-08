@@ -14,7 +14,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/storage/memory"
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v50/github"
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -72,7 +72,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 			repoOwner:  "bunch",
 			repoName:   "banana",
 			readFile:   readFileFunc,
-			fetchNotesData: func(c context.Context, repo *git.Repository, ghc *github.Client, tro, trn, kfp, ir, fr string, iq notes.IssuesQuery, _ notes.TrainstatNotesFetcher) (notes.Data, error) {
+			fetchNotesData: func(c context.Context, repo *git.Repository, ghc *github.Client, tro, trn, kfp, ir, fr string, iq notes.IssuesQuery, _ notes.TrainstatNotesFetcher, __ map[string]any) (notes.Data, error) {
 				ctx, repository, client = c, repo, ghc
 				tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision = tro, trn, kfp, ir, fr
 				issuesQuery = iq
@@ -94,7 +94,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 						{BOSHReleaseTarballLock: cargo.BOSHReleaseTarballLock{Name: "lemon", Version: "1.1.0"}},
 					},
 					Bumps: cargo.BumpList{
-						{Name: "banana", FromVersion: "1.1.0", ToVersion: "1.2.0"},
+						{Name: "banana", From: cargo.BOSHReleaseTarballLock{Version: "1.1.0"}, To: cargo.BOSHReleaseTarballLock{Version: "1.2.0"}},
 					},
 					TrainstatNotes: []string{
 						"* **[Feature]** this is a feature.",

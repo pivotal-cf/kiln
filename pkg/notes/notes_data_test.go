@@ -16,7 +16,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v50/github"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/notes/internal/fakes"
@@ -115,7 +115,6 @@ func Test_fetch_for_ist_tas(t *testing.T) {
 		historicVersion:  historicVersion.Spy,
 
 		issuesService:   fakeIssuesService,
-		releasesService: fakeReleaseService,
 		trainstatClient: fakeTrainstatClient,
 	}
 
@@ -129,7 +128,6 @@ func Test_fetch_for_ist_tas(t *testing.T) {
 	please.Expect(historicVersion.CallCount()).To(Equal(1))
 	_, historicVersionHashArg, _ := historicVersion.ArgsForCall(0)
 	please.Expect(historicVersionHashArg).To(Equal(finalHash))
-	please.Expect(fakeReleaseService.ListReleasesCallCount()).To(Equal(1))
 	please.Expect(fakeIssuesService.GetCallCount()).To(Equal(2))
 
 	_, orgName, repoName, n := fakeIssuesService.GetArgsForCall(0)
@@ -245,7 +243,6 @@ func Test_fetch_for_tasw(t *testing.T) {
 		historicVersion:  historicVersion.Spy,
 
 		issuesService:   fakeIssuesService,
-		releasesService: fakeReleaseService,
 		trainstatClient: fakeTrainstatClient,
 	}
 
@@ -259,7 +256,6 @@ func Test_fetch_for_tasw(t *testing.T) {
 	please.Expect(historicVersion.CallCount()).To(Equal(1))
 	_, historicVersionHashArg, _ := historicVersion.ArgsForCall(0)
 	please.Expect(historicVersionHashArg).To(Equal(finalHash))
-	please.Expect(fakeReleaseService.ListReleasesCallCount()).To(Equal(1))
 	please.Expect(fakeIssuesService.GetCallCount()).To(Equal(2))
 
 	_, orgName, repoName, n := fakeIssuesService.GetArgsForCall(0)
