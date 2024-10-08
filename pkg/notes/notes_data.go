@@ -102,7 +102,7 @@ type IssuesQuery struct {
 }
 
 type TrainstatQuery struct {
-	TrainstatURL string `long:"trainstat-url" short:"tu" description:"trainstat url to fetch the release notes for component bumps" default:"https://trainstat.sc2-04-pcf1-apps.oc.vmware.com"`
+	TrainstatURL string `long:"trainstat-url" short:"tu" description:"trainstat url to fetch the release notes for component bumps" default:"https://tas-trainstat.eng.tanzu.broadcom.com"`
 }
 
 func TrainstatURL() string {
