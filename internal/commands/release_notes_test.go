@@ -104,7 +104,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 			},
 		}
 
-		rn.Options.GithubToken = "secret"
+		rn.Options.GithubIssuesServiceToken = "secret"
 
 		err := rn.Execute([]string{
 			"--kilnfile=tile/Kilnfile",
