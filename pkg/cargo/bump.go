@@ -129,10 +129,11 @@ type repositoryReleaseLister interface {
 
 type (
 	RepositoryReleaseLister = repositoryReleaseLister
-	githubClientFunc        func(ctx context.Context, kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error)
+	githubReleasesClient    func(ctx context.Context, kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error)
 )
 
-func releaseNotes(ctx context.Context, kf Kilnfile, list BumpList, client githubClientFunc) (BumpList, error) {
+// Fetch release notes for each of the release bumps in the Kilnfile
+func releaseNotes(ctx context.Context, kf Kilnfile, list BumpList, getGithubRepositoryClientForRelease githubReleasesClient) (BumpList, error) {
 	const workerCount = 10
 
 	type fetchReleaseNotesForBump struct {
@@ -152,7 +153,7 @@ func releaseNotes(ctx context.Context, kf Kilnfile, list BumpList, client github
 				go func() {
 					defer wg.Done()
 					for j := range in {
-						j.bump = fetchReleasesForBump(ctx, kf, j.bump, client)
+						j.bump = fetchReleasesForBump(ctx, kf, j.bump, getGithubRepositoryClientForRelease)
 						results <- j
 					}
 				}()
@@ -184,10 +185,10 @@ func releaseNotes(ctx context.Context, kf Kilnfile, list BumpList, client github
 }
 
 func ReleaseNotes(ctx context.Context, kf Kilnfile, list BumpList) (BumpList, error) {
-	return releaseNotes(ctx, kf, list, listerForRelease(kf))
+	return releaseNotes(ctx, kf, list, getGithubRepositoryClientForRelease(kf))
 }
 
-func listerForRelease(kf Kilnfile) func(ctx context.Context, _ Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
+func getGithubRepositoryClientForRelease(kf Kilnfile) func(ctx context.Context, _ Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
 	return func(ctx context.Context, kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
 		spec, err := kf.BOSHReleaseTarballSpecification(lock.Name)
 		if err != nil {
@@ -214,7 +215,8 @@ func listerForRelease(kf Kilnfile) func(ctx context.Context, _ Kilnfile, lock BO
 	}
 }
 
-func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLister, repository string, from, to *semver.Version) []*github.RepositoryRelease {
+// Fetch all the releases from GitHub repository between from and to versions
+func fetchReleasesFromRepo(ctx context.Context, releaseLister RepositoryReleaseLister, repository string, from, to *semver.Version) []*github.RepositoryRelease {
 	owner, repo, err := gh.RepositoryOwnerAndNameFromPath(repository)
 	if err != nil {
 		return nil
@@ -223,7 +225,7 @@ func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLis
 	var result []*github.RepositoryRelease
 
 	ops := github.ListOptions{}
-	releases, _, err := repoService.ListReleases(ctx, owner, repo, &ops)
+	releases, _, err := releaseLister.ListReleases(ctx, owner, repo, &ops)
 	if err != nil {
 		log.Println(err)
 	}
@@ -239,7 +241,7 @@ func fetchReleasesFromRepo(ctx context.Context, repoService RepositoryReleaseLis
 	return result
 }
 
-func fetchReleasesForBump(ctx context.Context, kf Kilnfile, bump Bump, client githubClientFunc) Bump {
+func fetchReleasesForBump(ctx context.Context, kf Kilnfile, bump Bump, getGithubRepositoryClientForRelease githubReleasesClient) Bump {
 	spec, err := kf.BOSHReleaseTarballSpecification(bump.Name)
 	if err != nil {
 		return bump
@@ -250,7 +252,8 @@ func fetchReleasesForBump(ctx context.Context, kf Kilnfile, bump Bump, client gi
 		return bump
 	}
 
-	lister, err := client(ctx, kf, bump.To)
+	// Fetch the GitHub releases client for a single release (bump) in the Kilnfile
+	releaseLister, err := getGithubRepositoryClientForRelease(ctx, kf, bump.To)
 	if err != nil {
 		log.Println(err)
 		return bump
@@ -262,7 +265,7 @@ func fetchReleasesForBump(ctx context.Context, kf Kilnfile, bump Bump, client gi
 	}
 
 	if spec.GitHubRepository != "" {
-		releases := fetchReleasesFromRepo(ctx, lister, spec.GitHubRepository, from, to)
+		releases := fetchReleasesFromRepo(ctx, releaseLister, spec.GitHubRepository, from, to)
 		bump.Releases = append(bump.Releases, releases...)
 	}
 

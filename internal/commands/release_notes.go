@@ -28,15 +28,15 @@ const releaseDateFormat = "2006-01-02"
 
 type ReleaseNotes struct {
 	Options struct {
-		ReleaseDate   string   `long:"release-date"   short:"d"  description:"release date of the tile"`
-		TemplateName  string   `long:"template"       short:"t"  description:"path to template"`
-		GithubToken   string   `long:"github-token"   short:"g"  description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
-		GithubHost    string   `long:"github-host"               description:"set this when you are using GitHub enterprise" env:"GITHUB_HOST"`
-		Kilnfile      string   `long:"kilnfile"       short:"k"  description:"path to Kilnfile"`
-		DocsFile      string   `long:"update-docs"    short:"u"  description:"path to docs file to update"`
-		Window        string   `long:"window"         short:"w"  description:"GA window for release notes" default:"ga"`
-		VariableFiles []string `long:"variables-file" short:"vf" description:"path to a file containing variables to interpolate"`
-		Variables     []string `long:"variable"       short:"vr" description:"key value pairs of variables to interpolate"`
+		ReleaseDate              string   `long:"release-date"   short:"d"  description:"release date of the tile"`
+		TemplateName             string   `long:"template"       short:"t"  description:"path to template"`
+		GithubIssuesServiceToken string   `long:"github-token"   short:"g"  description:"auth token for fetching issues and milestones with labels" env:"GITHUB_TOKEN"`
+		GithubHost               string   `long:"github-host"               description:"set this when you are using GitHub enterprise to fetch issues, milestones or notes for bosh releases" env:"GITHUB_HOST"`
+		Kilnfile                 string   `long:"kilnfile"       short:"k"  description:"path to Kilnfile"`
+		DocsFile                 string   `long:"update-docs"    short:"u"  description:"path to docs file to update"`
+		Window                   string   `long:"window"         short:"w"  description:"GA window for release notes" default:"ga"`
+		VariableFiles            []string `long:"variables-file" short:"vf" description:"path to a file containing variables to interpolate"`
+		Variables                []string `long:"variable"       short:"vr" description:"key value pairs of variables to interpolate"`
 		notes.IssuesQuery
 		notes.TrainstatQuery
 	}
@@ -82,10 +82,16 @@ func (r ReleaseNotes) Execute(args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse template variables: %s", err)
 	}
-	if varValue, ok := templateVariables["github_token"]; !ok && r.Options.GithubToken != "" {
-		templateVariables["github_token"] = r.Options.GithubToken
-	} else if ok && r.Options.GithubToken == "" {
-		r.Options.GithubToken = varValue.(string)
+	if varValue, ok := templateVariables["github_token"]; !ok && r.Options.GithubIssuesServiceToken != "" {
+		templateVariables["github_token"] = r.Options.GithubIssuesServiceToken
+	} else if ok && r.Options.GithubIssuesServiceToken == "" {
+		r.Options.GithubIssuesServiceToken = varValue.(string)
+	}
+
+	if varValue, ok := templateVariables["github_host"]; !ok && r.Options.GithubHost != "" {
+		templateVariables["github_host"] = r.Options.GithubHost
+	} else if ok && r.Options.GithubHost == "" {
+		r.Options.GithubHost = varValue.(string)
 	}
 
 	ctx := context.Background()
@@ -100,8 +106,8 @@ func (r ReleaseNotes) Execute(args []string) error {
 	}
 
 	var client *github.Client
-	if r.Options.GithubToken != "" {
-		client, err = gh.Client(ctx, r.Options.GithubHost, r.Options.GithubToken)
+	if r.Options.GithubIssuesServiceToken != "" {
+		client, err = gh.Client(ctx, r.Options.GithubHost, r.Options.GithubIssuesServiceToken)
 		if err != nil {
 			return fmt.Errorf("failed to setup github client: %w", err)
 		}
@@ -237,7 +243,7 @@ func (r ReleaseNotes) checkInputs(nonFlagArgs []string) error {
 		}
 	}
 
-	if r.Options.GithubToken == "" &&
+	if r.Options.GithubIssuesServiceToken == "" &&
 		(r.Options.IssueMilestone != "" ||
 			len(r.Options.IssueIDs) > 0 ||
 			len(r.Options.IssueLabels) > 0) {
