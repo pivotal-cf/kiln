@@ -2,6 +2,7 @@ package baking
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
@@ -21,7 +22,7 @@ func (s TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []stri
 	variables := map[string]any{}
 
 	for _, path := range paths {
-		err := parseVariablesFromFile(s.filesystem, path, variables)
+		err := parseVariablesFromFile(path, variables)
 		if err != nil {
 			return nil, err
 		}
@@ -40,8 +41,8 @@ func (s TemplateVariablesService) FromPathsAndPairs(paths []string, pairs []stri
 	return variables, nil
 }
 
-func parseVariablesFromFile(fs billy.Basic, path string, variables map[string]any) error {
-	file, err := fs.Open(path)
+func parseVariablesFromFile(path string, variables map[string]any) error {
+	file, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("unable to open file %q: %w", path, err)
 	}
