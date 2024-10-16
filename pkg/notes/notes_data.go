@@ -135,34 +135,6 @@ func FetchData(ctx context.Context, repo *git.Repository, client *github.Client,
 	return f.fetch(ctx)
 }
 
-// FetchDataWithoutRepo can be used to generate release notes from tile metadata
-func FetchDataWithoutRepo(ctx context.Context, client *github.Client, tileRepoOwner, tileRepoName string, kilnfile cargo.Kilnfile, kilnfileLockInitial, kilnfileLockFinal cargo.KilnfileLock, issuesQuery IssuesQuery) (Data, error) {
-	r := fetchNotesData{
-		repoOwner:     tileRepoOwner,
-		repoName:      tileRepoName,
-		issuesQuery:   issuesQuery,
-		issuesService: client.Issues,
-	}
-	data := Data{
-		Bumps:    cargo.CalculateBumps(kilnfileLockFinal.Releases, kilnfileLockInitial.Releases),
-		Stemcell: kilnfileLockFinal.Stemcell,
-	}
-	var err error
-	data.Issues, data.Bumps, err = r.fetchIssuesAndReleaseNotes(ctx, kilnfile, kilnfile, data.Bumps, issuesQuery)
-	if err != nil {
-		return Data{}, err
-	}
-
-	for _, c := range kilnfileLockFinal.Releases {
-		data.Components = append(data.Components, BOSHReleaseData{
-			BOSHReleaseTarballLock: c,
-			Releases:               data.Bumps.ForLock(c).Releases,
-		})
-	}
-
-	return data, nil
-}
-
 func newFetchNotesData(repo *git.Repository, tileRepoOwner string, tileRepoName string, kilnfilePath string, initialRevision string, finalRevision string, client *github.Client, issuesQuery IssuesQuery, trainstatClient TrainstatNotesFetcher, variables map[string]any) (fetchNotesData, error) {
 	if repo == nil {
 		return fetchNotesData{}, errors.New("git repository required to generate release notes")

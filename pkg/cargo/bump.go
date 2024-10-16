@@ -189,13 +189,14 @@ func ReleaseNotes(ctx context.Context, kf Kilnfile, list BumpList) (BumpList, er
 }
 
 func getGithubRepositoryClientForRelease(kf Kilnfile) func(ctx context.Context, _ Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
+	// todo: []repositoryReleaseLister
 	return func(ctx context.Context, kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
 		spec, err := kf.BOSHReleaseTarballSpecification(lock.Name)
 		if err != nil {
 			return nil, err
 		}
 
-		_, owner, _, err := gh.RepositoryHostOwnerAndNameFromPath(spec.GitHubRepository)
+		host, owner, _, err := gh.RepositoryHostOwnerAndNameFromPath(spec.GitHubRepository)
 		if err != nil {
 			return nil, err
 		}
@@ -207,7 +208,8 @@ func getGithubRepositoryClientForRelease(kf Kilnfile) func(ctx context.Context, 
 			return nil, fmt.Errorf("release source with id %s not found", lock.RemoteSource)
 		}
 		source := kf.ReleaseSources[i]
-		client, err := source.GitHubClient(ctx)
+
+		client, err := source.GitHubClient(ctx, host)
 		if err != nil {
 			return nil, err
 		}
