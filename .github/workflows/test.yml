@@ -51,6 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           export GITHUB_TOKEN="${RELEEN_GITHUB_TOKEN}"
+          export GITHUB_ACCESS_TOKEN="${RELEEN_GITHUB_TOKEN}"
 
           set -x
           go test -v --timeout 15m --tags acceptance github.com/pivotal-cf/kiln/internal/acceptance/workflows

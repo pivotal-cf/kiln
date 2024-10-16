@@ -2,7 +2,6 @@ package cargo
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"slices"
 	"sort"
@@ -129,7 +128,7 @@ type repositoryReleaseLister interface {
 
 type (
 	RepositoryReleaseLister = repositoryReleaseLister
-	githubReleasesClient    func(ctx context.Context, kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error)
+	githubReleasesClient    func(ctx context.Context, kilnfile Kilnfile, lock BOSHReleaseTarballLock) ([]repositoryReleaseLister, error)
 )
 
 // Fetch release notes for each of the release bumps in the Kilnfile
@@ -188,9 +187,8 @@ func ReleaseNotes(ctx context.Context, kf Kilnfile, list BumpList) (BumpList, er
 	return releaseNotes(ctx, kf, list, getGithubRepositoryClientForRelease(kf))
 }
 
-func getGithubRepositoryClientForRelease(kf Kilnfile) func(ctx context.Context, _ Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
-	// todo: []repositoryReleaseLister
-	return func(ctx context.Context, kilnfile Kilnfile, lock BOSHReleaseTarballLock) (repositoryReleaseLister, error) {
+func getGithubRepositoryClientForRelease(kf Kilnfile) func(ctx context.Context, _ Kilnfile, lock BOSHReleaseTarballLock) ([]repositoryReleaseLister, error) {
+	return func(ctx context.Context, kilnfile Kilnfile, lock BOSHReleaseTarballLock) ([]repositoryReleaseLister, error) {
 		spec, err := kf.BOSHReleaseTarballSpecification(lock.Name)
 		if err != nil {
 			return nil, err
@@ -201,24 +199,26 @@ func getGithubRepositoryClientForRelease(kf Kilnfile) func(ctx context.Context, 
 			return nil, err
 		}
 
-		i := slices.IndexFunc(kf.ReleaseSources, func(config ReleaseSourceConfig) bool {
-			return config.Type == BOSHReleaseTarballSourceTypeGithub && config.Org == owner
-		})
-		if i < 0 {
-			return nil, fmt.Errorf("release source with id %s not found", lock.RemoteSource)
-		}
-		source := kf.ReleaseSources[i]
+		var repoReleaseLister []repositoryReleaseLister
+		// Create GitHub clients for all the release sources that have same org as the bosh release. Map the client to
+		// client.Repositories
+		for _, releaseSourceConfig := range kf.ReleaseSources {
+			if releaseSourceConfig.Type == BOSHReleaseTarballSourceTypeGithub && releaseSourceConfig.Org == owner {
+				client, err := gh.Client(ctx, host, releaseSourceConfig.GithubToken, releaseSourceConfig.GithubToken)
+				if err != nil {
+					return nil, err
+				}
+				repoReleaseLister = append(repoReleaseLister, client.Repositories)
 
-		client, err := source.GitHubClient(ctx, host)
-		if err != nil {
-			return nil, err
+			}
 		}
-		return client.Repositories, err
+
+		return repoReleaseLister, err
 	}
 }
 
 // Fetch all the releases from GitHub repository between from and to versions
-func fetchReleasesFromRepo(ctx context.Context, releaseLister RepositoryReleaseLister, repository string, from, to *semver.Version) []*github.RepositoryRelease {
+func fetchReleasesFromRepo(ctx context.Context, releaseListers []RepositoryReleaseLister, repository string, from, to *semver.Version) []*github.RepositoryRelease {
 	owner, repo, err := gh.RepositoryOwnerAndNameFromPath(repository)
 	if err != nil {
 		return nil
@@ -227,9 +227,18 @@ func fetchReleasesFromRepo(ctx context.Context, releaseLister RepositoryReleaseL
 	var result []*github.RepositoryRelease
 
 	ops := github.ListOptions{}
-	releases, _, err := releaseLister.ListReleases(ctx, owner, repo, &ops)
-	if err != nil {
-		log.Println(err)
+	var releases []*github.RepositoryRelease
+	for _, releaseLister := range releaseListers {
+		releases, _, err = releaseLister.ListReleases(ctx, owner, repo, &ops)
+		if err != nil {
+			log.Println(err)
+			// We have multiple releaseListers because there can be different release sources in Kilnfile with the same org but diff access token.
+			// If we are unable to fetch the releases due to Bad Credentials using one lister, we can try another with different access token.
+			if releases != nil {
+				break
+			}
+		}
+
 	}
 
 	for _, rel := range releases {
@@ -254,8 +263,10 @@ func fetchReleasesForBump(ctx context.Context, kf Kilnfile, bump Bump, getGithub
 		return bump
 	}
 
-	// Fetch the GitHub releases client for a single release (bump) in the Kilnfile
-	releaseLister, err := getGithubRepositoryClientForRelease(ctx, kf, bump.To)
+	// Fetch the GitHub releases clients for a single release (bump) in the Kilnfile.
+	// There can be multiple clients present for a release because Kilnfile can have different release sources matching the release's org
+	// Need to try out different clients to figure out the right one based on the access token
+	releaseListers, err := getGithubRepositoryClientForRelease(ctx, kf, bump.To)
 	if err != nil {
 		log.Println(err)
 		return bump
@@ -267,7 +278,7 @@ func fetchReleasesForBump(ctx context.Context, kf Kilnfile, bump Bump, getGithub
 	}
 
 	if spec.GitHubRepository != "" {
-		releases := fetchReleasesFromRepo(ctx, releaseLister, spec.GitHubRepository, from, to)
+		releases := fetchReleasesFromRepo(ctx, releaseListers, spec.GitHubRepository, from, to)
 		bump.Releases = append(bump.Releases, releases...)
 	}
 
