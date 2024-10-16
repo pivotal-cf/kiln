@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/pivotal-cf/kiln/internal/gh"
 	"strings"
 
 	"github.com/google/go-github/v50/github"
-	"golang.org/x/oauth2"
-
 	"gopkg.in/yaml.v3"
 
 	"github.com/Masterminds/semver/v3"
@@ -173,18 +172,20 @@ type ReleaseSourceConfig struct {
 	Password        string `yaml:"password,omitempty"`
 }
 
-func (c ReleaseSourceConfig) GitHubClient(ctx context.Context) (*github.Client, error) {
+func (c ReleaseSourceConfig) GitHubClient(ctx context.Context, githubHost string) (*github.Client, error) {
 	if c.GithubToken == "" {
 		return nil, errors.New("no token passed for github release source")
 	}
-	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: c.GithubToken})
-	tokenClient := oauth2.NewClient(ctx, tokenSource)
-	var githubClient *github.Client
-	if c.Endpoint != "" {
-		return github.NewEnterpriseClient(c.Endpoint, c.Endpoint, tokenClient)
-	}
-	githubClient = github.NewClient(tokenClient)
-	return githubClient, nil
+	//tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: c.GithubToken})
+	//tokenClient := oauth2.NewClient(ctx, tokenSource)
+	//var githubClient *github.Client
+	//gh.Client(ctx) todo use gh.Client not github.NewClient or github.NewEnterpriseClient
+	return gh.Client(ctx, host, c.GithubToken, c.GithubEnterpriseToken)
+	//if strings.HasSuffix(githubHost, "broadcom.net") {
+	//	return github.NewEnterpriseClient(c.Endpoint, c.Endpoint, tokenClient)
+	//}
+	//githubClient = github.NewClient(tokenClient)
+	//return githubClient, nil
 }
 
 // BOSHReleaseTarballLock represents an exact build of a bosh release
