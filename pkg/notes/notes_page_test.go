@@ -204,7 +204,7 @@ func TestParseNotesPageWithExpressionAndReleasesSentinel(t *testing.T) {
 func Test_newFetchNotesData(t *testing.T) {
 	t.Run("when called", func(t *testing.T) {
 		please := NewWithT(t)
-		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{
+		f, err := newFetchNotesData(&git.Repository{}, "h", "o", "r", "k", "ri", "rf", nil, IssuesQuery{
 			IssueMilestone: "BLA",
 		}, &TrainstatClient{
 			host: "test",
@@ -226,14 +226,14 @@ func Test_newFetchNotesData(t *testing.T) {
 	})
 	t.Run("when repo is nil", func(t *testing.T) {
 		please := NewWithT(t)
-		_, err := newFetchNotesData(nil, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{}, &TrainstatClient{}, make(map[string]any))
+		_, err := newFetchNotesData(nil, "h", "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{}, &TrainstatClient{}, make(map[string]any))
 		please.Expect(err).To(HaveOccurred())
 	})
 	t.Run("when repo is not nil", func(t *testing.T) {
 		please := NewWithT(t)
 		f, err := newFetchNotesData(&git.Repository{
 			Storer: &memory.Storage{},
-		}, "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{}, &TrainstatClient{}, make(map[string]any))
+		}, "h", "o", "r", "k", "ri", "rf", &github.Client{}, IssuesQuery{}, &TrainstatClient{}, make(map[string]any))
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(f.repository).NotTo(BeNil())
 		please.Expect(f.revisionResolver).NotTo(BeNil())
@@ -241,7 +241,7 @@ func Test_newFetchNotesData(t *testing.T) {
 	})
 	t.Run("when github client is not nil", func(t *testing.T) {
 		please := NewWithT(t)
-		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", &github.Client{
+		f, err := newFetchNotesData(&git.Repository{}, "h", "o", "r", "k", "ri", "rf", &github.Client{
 			Issues:       &github.IssuesService{},
 			Repositories: &github.RepositoriesService{},
 		}, IssuesQuery{}, &TrainstatClient{}, make(map[string]any))
@@ -250,7 +250,7 @@ func Test_newFetchNotesData(t *testing.T) {
 	})
 	t.Run("when github client is nil", func(t *testing.T) {
 		please := NewWithT(t)
-		f, err := newFetchNotesData(&git.Repository{}, "o", "r", "k", "ri", "rf", nil, IssuesQuery{}, &TrainstatClient{}, make(map[string]any))
+		f, err := newFetchNotesData(&git.Repository{}, "h", "o", "r", "k", "ri", "rf", nil, IssuesQuery{}, &TrainstatClient{}, make(map[string]any))
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(f.issuesService).To(BeNil())
 	})

@@ -57,7 +57,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		}
 
 		var (
-			tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string
+			tileRepoHost, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string
 
 			issuesQuery notes.IssuesQuery
 			repository  *git.Repository
@@ -69,12 +69,13 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		rn := ReleaseNotes{
 			Writer:     &out,
 			repository: nonNilRepo,
+			repoHost:   "github.com",
 			repoOwner:  "bunch",
 			repoName:   "banana",
 			readFile:   readFileFunc,
-			fetchNotesData: func(c context.Context, repo *git.Repository, ghc *github.Client, tro, trn, kfp, ir, fr string, iq notes.IssuesQuery, _ notes.TrainstatNotesFetcher, __ map[string]any) (notes.Data, error) {
+			fetchNotesData: func(c context.Context, repo *git.Repository, ghc *github.Client, trh, tro, trn, kfp, ir, fr string, iq notes.IssuesQuery, _ notes.TrainstatNotesFetcher, __ map[string]any) (notes.Data, error) {
 				ctx, repository, client = c, repo, ghc
-				tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision = tro, trn, kfp, ir, fr
+				tileRepoHost, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision = trh, tro, trn, kfp, ir, fr
 				issuesQuery = iq
 				return notes.Data{
 					ReleaseDate: mustParseTime(time.Parse(releaseDateFormat, "2021-11-04")),
@@ -104,12 +105,12 @@ func TestReleaseNotes_Execute(t *testing.T) {
 			},
 		}
 
-		rn.Options.GithubIssuesServiceToken = "secret"
+		rn.Options.GithubAccessToken = "secret"
 
 		err := rn.Execute([]string{
 			"--kilnfile=tile/Kilnfile",
 			"--release-date=2021-11-04",
-			"--github-token=lemon",
+			"--github_access_token=lemon",
 			"--github-issue-milestone=smoothie",
 			"--github-issue-label=tropical",
 			"--github-issue=54000",
@@ -124,6 +125,7 @@ func TestReleaseNotes_Execute(t *testing.T) {
 		please.Expect(repository).NotTo(BeNil())
 		please.Expect(client).NotTo(BeNil())
 
+		please.Expect(tileRepoHost).To(Equal("github.com"))
 		please.Expect(tileRepoOwner).To(Equal("bunch"))
 		please.Expect(tileRepoName).To(Equal("banana"))
 		please.Expect(kilnfilePath).To(Equal("tile/Kilnfile"))
@@ -188,6 +190,7 @@ func TestReleaseNotes_checkInputs(t *testing.T) {
 
 		rn := ReleaseNotes{}
 		rn.Options.ReleaseDate = `some-date`
+		rn.Options.GithubAccessToken = "test-token"
 		err := rn.checkInputs([]string{"a", "b"})
 		please.Expect(err).To(MatchError(ContainSubstring("cannot parse")))
 	})
@@ -197,27 +200,9 @@ func TestReleaseNotes_checkInputs(t *testing.T) {
 			please := NewWithT(t)
 
 			rn := ReleaseNotes{}
-			rn.Options.IssueMilestone = "s"
 			err := rn.checkInputs([]string{"a", "b"})
-			please.Expect(err).To(MatchError(ContainSubstring("github-token")))
-		})
-
-		t.Run("ids", func(t *testing.T) {
-			please := NewWithT(t)
-
-			rn := ReleaseNotes{}
-			rn.Options.IssueIDs = []string{"s"}
-			err := rn.checkInputs([]string{"a", "b"})
-			please.Expect(err).To(MatchError(ContainSubstring("github-token")))
-		})
-
-		t.Run("labels", func(t *testing.T) {
-			please := NewWithT(t)
-
-			rn := ReleaseNotes{}
-			rn.Options.IssueLabels = []string{"s"}
-			err := rn.checkInputs([]string{"a", "b"})
-			please.Expect(err).To(MatchError(ContainSubstring("github-token")))
+			please.Expect(err).To(MatchError(ContainSubstring("github_access_token")))
+			please.Expect(err).To(MatchError(ContainSubstring("github_enterprise_access_token")))
 		})
 
 		t.Run("exp", func(t *testing.T) {
@@ -225,6 +210,7 @@ func TestReleaseNotes_checkInputs(t *testing.T) {
 
 			rn := ReleaseNotes{}
 			rn.Options.IssueTitleExp = "s"
+			rn.Options.GithubEnterpriseAccessToken = "test-token"
 			err := rn.checkInputs([]string{"a", "b"})
 			please.Expect(err).NotTo(HaveOccurred())
 		})
@@ -243,8 +229,9 @@ func Test_getGithubRemoteRepoOwnerAndName(t *testing.T) {
 				"https://github.com/pivotal-cf/kiln",
 			},
 		})
-		o, r, err := getGithubRemoteRepoOwnerAndName(repo)
+		h, o, r, err := getGithubRemoteHostRepoOwnerAndName(repo)
 		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(h).To(Equal("github.com"))
 		please.Expect(o).To(Equal("pivotal-cf"))
 		please.Expect(r).To(Equal("kiln"))
 	})
@@ -259,8 +246,9 @@ func Test_getGithubRemoteRepoOwnerAndName(t *testing.T) {
 				"git@github.com:pivotal-cf/kiln.git",
 			},
 		})
-		o, r, err := getGithubRemoteRepoOwnerAndName(repo)
+		h, o, r, err := getGithubRemoteHostRepoOwnerAndName(repo)
 		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(h).To(Equal("github.com"))
 		please.Expect(o).To(Equal("pivotal-cf"))
 		please.Expect(r).To(Equal("kiln"))
 	})
@@ -269,7 +257,7 @@ func Test_getGithubRemoteRepoOwnerAndName(t *testing.T) {
 		please := NewWithT(t)
 
 		repo, _ := git.Init(memory.NewStorage(), memfs.New())
-		_, _, err := getGithubRemoteRepoOwnerAndName(repo)
+		_, _, _, err := getGithubRemoteHostRepoOwnerAndName(repo)
 		please.Expect(err).To(MatchError(ContainSubstring("not found")))
 	})
 
@@ -289,8 +277,9 @@ func Test_getGithubRemoteRepoOwnerAndName(t *testing.T) {
 				"git@github.com:pivotal-cf/kiln.git",
 			},
 		})
-		o, _, err := getGithubRemoteRepoOwnerAndName(repo)
+		h, o, _, err := getGithubRemoteHostRepoOwnerAndName(repo)
 		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(h).To(Equal("github.com"))
 		please.Expect(o).To(Equal("pivotal-cf"), "it uses the remote with name 'origin'")
 	})
 }

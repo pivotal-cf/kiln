@@ -41,6 +41,7 @@ jobs:
           RELEEN_GITHUB_TOKEN: ${{ secrets.RELEEN_GITHUB_TOKEN }}
         run: |
           export GITHUB_TOKEN="${RELEEN_GITHUB_TOKEN}"
+          export GITHUB_ACCESS_TOKEN="${RELEEN_GITHUB_TOKEN}"
           go test ./...
 
       - name: Acceptance Tests
