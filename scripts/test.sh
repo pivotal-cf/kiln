@@ -19,9 +19,9 @@ function main() {
     golangci-lint run ./...
 
     set +x
-    echo "Setting GITHUB_TOKEN with 'gh auth token'"
-    export GITHUB_TOKEN
-    GITHUB_TOKEN="$(gh auth token)"
+    echo "Setting GITHUB_ACCESS_TOKEN with 'gh auth token'"
+    export GITHUB_ACCESS_TOKEN
+    GITHUB_ACCESS_TOKEN="$(gh auth token)"
     set -x
 
     go test -v -count=1 -tags acceptance --timeout=25m ./internal/acceptance/workflows

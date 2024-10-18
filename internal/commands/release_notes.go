@@ -107,7 +107,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	var client *github.Client
 
-	client, err = gh.Client(ctx, r.repoHost, r.Options.GithubAccessToken, r.Options.GithubEnterpriseAccessToken)
+	client, err = gh.GitClient(ctx, r.repoHost, r.Options.GithubAccessToken, r.Options.GithubEnterpriseAccessToken)
 	if err != nil {
 		return fmt.Errorf("failed to setup github client: %w", err)
 	}

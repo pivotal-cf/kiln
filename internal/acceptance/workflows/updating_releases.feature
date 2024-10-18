@@ -6,7 +6,7 @@ Feature: As a dependabot, I want to update a BOSH Release
     When I invoke kiln
       | find-release-version                      |
       | --release=hello-release                   |
-      | --variable=github_token="${GITHUB_TOKEN}" |
+      | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     Then stdout contains substring: "0.2.3"
 
   Scenario: Find a version on bosh.io
@@ -15,7 +15,7 @@ Feature: As a dependabot, I want to update a BOSH Release
     When I invoke kiln
       | find-release-version                      |
       | --release=bpm                             |
-      | --variable=github_token="${GITHUB_TOKEN}" |
+      | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     Then stdout contains substring: "1.1.18"
 
   Scenario: Update a component to a new release
@@ -27,6 +27,6 @@ Feature: As a dependabot, I want to update a BOSH Release
       | --name=hello-release                      |
       | --version=v0.2.3                          |
       | --without-download                        |
-      | --variable=github_token="${GITHUB_TOKEN}" |
+      | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     Then the Kilnfile.lock specifies version "0.2.3" for release "hello-release"
     And kiln validate succeeds

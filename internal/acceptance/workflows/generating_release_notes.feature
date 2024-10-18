@@ -10,7 +10,7 @@ Feature: As a robot, I want to generate release notes
       | --name=hello-release                      |
       | --version=v0.1.5                          |
       | --without-download                        |
-      | --variable=github_access_token="${GITHUB_TOKEN}" |
+      | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     And I write file "version"
       | 0.1.4 |
     And I execute git add Kilnfile.lock version
@@ -25,7 +25,7 @@ Feature: As a robot, I want to generate release notes
       | version |
       | 0.1.3   |
 
-    And the environment variable "GITHUB_TOKEN" is set
+    And the environment variable "GITHUB_ACCESS_TOKEN" is set
 
     When I invoke kiln
       | release-notes                             |

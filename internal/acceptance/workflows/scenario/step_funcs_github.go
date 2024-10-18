@@ -13,7 +13,7 @@ func githubRepoHasReleaseWithTag(ctx context.Context, repoOrg, repoName, tag str
 	if err != nil {
 		return err
 	}
-	ghAPI, err := gh.Client(ctx, "", accessToken, accessToken)
+	ghAPI, err := gh.Client(ctx, accessToken)
 	if err != nil {
 		return fmt.Errorf("failed to setup github client: %w", err)
 	}

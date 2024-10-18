@@ -204,7 +204,7 @@ func getGithubRepositoryClientForRelease(kf Kilnfile) func(ctx context.Context, 
 		// client.Repositories
 		for _, releaseSourceConfig := range kf.ReleaseSources {
 			if releaseSourceConfig.Type == BOSHReleaseTarballSourceTypeGithub && releaseSourceConfig.Org == owner {
-				client, err := gh.Client(ctx, host, releaseSourceConfig.GithubToken, releaseSourceConfig.GithubToken)
+				client, err := gh.GitClient(ctx, host, releaseSourceConfig.GithubToken, releaseSourceConfig.GithubToken)
 				if err != nil {
 					return nil, err
 				}

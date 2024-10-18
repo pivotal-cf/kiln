@@ -10,10 +10,10 @@ import (
 )
 
 func TestClient(t *testing.T) {
-	t.Run("when the host is empty", func(t *testing.T) {
+	t.Run("when the host is empty - backward compatibility", func(t *testing.T) {
 		ctx := context.Background()
 		token := "xxx"
-		ghClient, err := gh.Client(ctx, "", token, token)
+		ghClient, err := gh.Client(ctx, token)
 		require.NoError(t, err)
 		require.NotNil(t, ghClient.Client())
 		assert.Contains(t, ghClient.BaseURL.String(), "https://api.github.com")
@@ -22,7 +22,7 @@ func TestClient(t *testing.T) {
 	t.Run("when the host point to enterprise github", func(t *testing.T) {
 		ctx := context.Background()
 		token := "xxx"
-		ghClient, err := gh.Client(ctx, "https://broadcom.net", token, token)
+		ghClient, err := gh.GitClient(ctx, "https://broadcom.net", token, token)
 		require.NoError(t, err)
 		require.NotNil(t, ghClient.Client())
 		assert.Contains(t, ghClient.BaseURL.String(), "https://broadcom.net")
@@ -31,7 +31,7 @@ func TestClient(t *testing.T) {
 	t.Run("when the host point to non-enterprise random github", func(t *testing.T) {
 		ctx := context.Background()
 		token := "xxx"
-		ghClient, err := gh.Client(ctx, "https://example.com", token, token)
+		ghClient, err := gh.GitClient(ctx, "https://example.com", token, token)
 		require.Error(t, err, "github host not recognized")
 		require.Nil(t, ghClient)
 	})
