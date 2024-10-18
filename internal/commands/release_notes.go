@@ -11,14 +11,15 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"text/template"
 	"time"
 
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v50/github"
 	"github.com/pivotal-cf/jhanda"
 
+	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/gh"
 	"github.com/pivotal-cf/kiln/pkg/notes"
 )
@@ -27,12 +28,15 @@ const releaseDateFormat = "2006-01-02"
 
 type ReleaseNotes struct {
 	Options struct {
-		ReleaseDate  string `long:"release-date" short:"d" description:"release date of the tile"`
-		TemplateName string `long:"template"     short:"t" description:"path to template"`
-		GithubToken  string `long:"github-token" short:"g" description:"auth token for fetching issues merged between releases" env:"GITHUB_TOKEN"`
-		Kilnfile     string `long:"kilnfile"     short:"k" description:"path to Kilnfile"`
-		DocsFile     string `long:"update-docs"  short:"u" description:"path to docs file to update"`
-		Window       string `long:"window"       short:"w" description:"GA window for release notes" default:"ga"`
+		ReleaseDate                 string   `long:"release-date"   short:"d"  description:"release date of the tile"`
+		TemplateName                string   `long:"template"       short:"t"  description:"path to template"`
+		GithubAccessToken           string   `long:"github_access_token"   short:"g"  description:"auth token for github.com" env:"GITHUB_ACCESS_TOKEN"`
+		GithubEnterpriseAccessToken string   `long:"github_enterprise_access_token"  short:"ge"   description:"auth token for github enterprise" env:"GITHUB_ENTERPRISE_ACCESS_TOKEN"`
+		Kilnfile                    string   `long:"kilnfile"       short:"k"  description:"path to Kilnfile"`
+		DocsFile                    string   `long:"update-docs"    short:"u"  description:"path to docs file to update"`
+		Window                      string   `long:"window"         short:"w"  description:"GA window for release notes" default:"ga"`
+		VariableFiles               []string `long:"variables-file" short:"vf" description:"path to a file containing variables to interpolate"`
+		Variables                   []string `long:"variable"       short:"vr" description:"key value pairs of variables to interpolate"`
 		notes.IssuesQuery
 		notes.TrainstatQuery
 	}
@@ -42,19 +46,21 @@ type ReleaseNotes struct {
 	stat       func(name string) (fs.FileInfo, error)
 	io.Writer
 
-	fetchNotesData FetchNotesData
+	fetchNotesData   FetchNotesData
+	variablesService baking.TemplateVariablesService
 
-	repoOwner, repoName string
+	repoHost, repoOwner, repoName string
 }
 
-type FetchNotesData func(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery notes.IssuesQuery, trainstatClient notes.TrainstatNotesFetcher) (notes.Data, error)
+type FetchNotesData func(ctx context.Context, repo *git.Repository, client *github.Client, tileRepoHost, tileRepoOwner, tileRepoName, kilnfilePath, initialRevision, finalRevision string, issuesQuery notes.IssuesQuery, trainstatClient notes.TrainstatNotesFetcher, variables map[string]any) (notes.Data, error)
 
 func NewReleaseNotesCommand() (ReleaseNotes, error) {
 	return ReleaseNotes{
-		fetchNotesData: notes.FetchData,
-		readFile:       os.ReadFile,
-		Writer:         os.Stdout,
-		stat:           os.Stat,
+		variablesService: baking.NewTemplateVariablesService(osfs.New(".")),
+		fetchNotesData:   notes.FetchData,
+		readFile:         os.ReadFile,
+		Writer:           os.Stdout,
+		stat:             os.Stat,
 	}, nil
 }
 
@@ -72,6 +78,22 @@ func (r ReleaseNotes) Execute(args []string) error {
 		return err
 	}
 
+	templateVariables, err := r.variablesService.FromPathsAndPairs(r.Options.VariableFiles, r.Options.Variables)
+	if err != nil {
+		return fmt.Errorf("failed to parse template variables: %s", err)
+	}
+	if varValue, ok := templateVariables["github_access_token"]; !ok && r.Options.GithubAccessToken != "" {
+		templateVariables["github_access_token"] = r.Options.GithubAccessToken
+	} else if ok && r.Options.GithubAccessToken == "" {
+		r.Options.GithubAccessToken = varValue.(string)
+	}
+
+	if varValue, ok := templateVariables["github_enterprise_access_token"]; !ok && r.Options.GithubAccessToken != "" {
+		templateVariables["github_enterprise_access_token"] = r.Options.GithubEnterpriseAccessToken
+	} else if ok && r.Options.GithubEnterpriseAccessToken == "" {
+		r.Options.GithubEnterpriseAccessToken = varValue.(string)
+	}
+
 	ctx := context.Background()
 
 	if err := r.initRepo(); err != nil {
@@ -84,19 +106,22 @@ func (r ReleaseNotes) Execute(args []string) error {
 	}
 
 	var client *github.Client
-	if r.Options.GithubToken != "" {
-		client = gh.Client(ctx, r.Options.GithubToken)
+
+	client, err = gh.Client(ctx, r.repoHost, r.Options.GithubAccessToken, r.Options.GithubEnterpriseAccessToken)
+	if err != nil {
+		return fmt.Errorf("failed to setup github client: %w", err)
 	}
 
 	trainstatClient := notes.NewTrainstatClient(r.Options.TrainstatQuery.TrainstatURL)
 
 	_ = notes.FetchData // fetchNotesData is github.com/pivotal/kiln/internal/notes.FetchData
 	data, err := r.fetchNotesData(ctx,
-		r.repository, client, r.repoOwner, r.repoName,
+		r.repository, client, r.repoHost, r.repoOwner, r.repoName,
 		r.Options.Kilnfile,
 		nonFlagArgs[0], nonFlagArgs[1],
 		r.Options.IssuesQuery,
 		&trainstatClient,
+		templateVariables,
 	)
 	if err != nil {
 		return err
@@ -170,12 +195,13 @@ func (r *ReleaseNotes) initRepo() error {
 		return fmt.Errorf("release-notes must be run from the root of the repository (use --kilnfile flag to specify which tile to build)")
 	}
 
-	repoOwner, repoName, err := getGithubRemoteRepoOwnerAndName(repo)
+	repoHost, repoOwner, repoName, err := getGithubRemoteHostRepoOwnerAndName(repo)
 	if err != nil {
 		return err
 	}
 
 	r.repository = repo
+	r.repoHost = repoHost
 	r.repoName = repoName
 	r.repoOwner = repoOwner
 
@@ -217,11 +243,8 @@ func (r ReleaseNotes) checkInputs(nonFlagArgs []string) error {
 		}
 	}
 
-	if r.Options.GithubToken == "" &&
-		(r.Options.IssueMilestone != "" ||
-			len(r.Options.IssueIDs) > 0 ||
-			len(r.Options.IssueLabels) > 0) {
-		return errors.New("github-token (env: GITHUB_TOKEN) must be set to interact with the github api")
+	if r.Options.GithubEnterpriseAccessToken == "" && r.Options.GithubAccessToken == "" {
+		return errors.New("github_access_token(env: GITHUB_ACCESS_TOKEN) and/or github_enterprise_access_token(env: GITHUB_ENTERPRISE_ACCESS_TOKEN) must be set to interact with the github api")
 	}
 
 	if r.Options.DocsFile != "" {
@@ -253,28 +276,25 @@ func (r ReleaseNotes) parseReleaseDate() (time.Time, error) {
 	return releaseDate, nil
 }
 
-func getGithubRemoteRepoOwnerAndName(repo *git.Repository) (string, string, error) {
+func getGithubRemoteHostRepoOwnerAndName(repo *git.Repository) (string, string, string, error) {
 	var remoteURL string
 	remote, err := repo.Remote("origin")
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	config := remote.Config()
 	for _, u := range config.URLs {
-		if !strings.Contains(u, "github.com") {
-			continue
-		}
 		remoteURL = u
 		break
 	}
 	if remoteURL == "" {
-		return "", "", fmt.Errorf("remote github URL not found for repo")
+		return "", "", "", fmt.Errorf("remote github URL not found for repo")
 	}
 
-	repoOwner, repoName, err := gh.RepositoryOwnerAndNameFromPath(remoteURL)
+	repoHost, repoOwner, repoName, err := gh.RepositoryHostOwnerAndNameFromPath(remoteURL)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
-	return repoOwner, repoName, nil
+	return repoHost, repoOwner, repoName, nil
 }

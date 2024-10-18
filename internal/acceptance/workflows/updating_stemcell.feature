@@ -10,7 +10,7 @@ Feature: As a dependabot, I want to update a stemcell
     And I set the Kilnfile stemcell version constraint to "=< 1.341"
     When I invoke kiln
       | find-stemcell-version                     |
-      | --variable=github_token="${GITHUB_TOKEN}" |
+      | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     Then stdout contains substring: "1.340"
 
   Scenario: Update the stemcell
@@ -20,5 +20,5 @@ Feature: As a dependabot, I want to update a stemcell
     When I invoke kiln
       | update-stemcell                           |
       | --version=1.340                         |
-      | --variable=github_token="${GITHUB_TOKEN}" |
+      | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     Then "Kilnfile.lock" contains substring: version: "1.340"

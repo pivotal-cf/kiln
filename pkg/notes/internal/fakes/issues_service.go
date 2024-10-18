@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/google/go-github/v40/github"
+	"github.com/google/go-github/v50/github"
 )
 
 type IssuesService struct {

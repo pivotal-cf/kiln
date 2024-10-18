@@ -658,6 +658,7 @@ stemcell_criteria:
   - type: github
     id: optional-unique-name-defaults-to-github-org-name
     org: the-github-org
+    endpoint: $(variable "github_host")
     github_token: $(variable "github_token")
 ```
 
