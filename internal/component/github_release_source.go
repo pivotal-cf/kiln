@@ -43,7 +43,7 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 	if c.Org == "" {
 		panic("no github org passed for github release source")
 	}
-	githubClient, err := gh.Client(context.TODO(), "", c.GithubToken, c.GithubToken) // host is github.com by default
+	githubClient, err := gh.Client(context.TODO(), c.GithubToken)
 	if err != nil {
 		panic(err)
 	}

@@ -358,7 +358,7 @@ release_sources:
   - type: "github"
     id: crhntr # (optional) the default ID in this case is the value of org
     org: "crhntr"
-    github_token: $(variable "github_token")
+    github_token: $(variable "github_access_token")
 ```
 
 **`github_token` is always required even for public repositories because we make API requests**
@@ -371,10 +371,10 @@ You will need to add the following flag to most commands:
 
 ```
 # Optional helper
-export GITHUB_TOKEN="$(gh auth status --show-token 2>&1 | grep 'Token:' | awk '{print $NF}')"
+export GITHUB_ACCESS_TOKEN="$(gh auth status --show-token 2>&1 | grep 'Token:' | awk '{print $NF}')"
 
 # Example Kiln variable flag
-kiln fetch --variable="github_token=${GITHUB_TOKEN}"
+kiln fetch --variable="github_access_token=${GITHUB_ACCESS_TOKEN}"
 ```
 
 The value of `remote_path` in the BOSH release tarball lock is a URL.

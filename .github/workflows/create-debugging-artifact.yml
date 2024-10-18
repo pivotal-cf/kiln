@@ -40,7 +40,6 @@ jobs:
         env:
           RELEEN_GITHUB_TOKEN: ${{ secrets.RELEEN_GITHUB_TOKEN }}
         run: |
-          export GITHUB_TOKEN="${RELEEN_GITHUB_TOKEN}"
           export GITHUB_ACCESS_TOKEN="${RELEEN_GITHUB_TOKEN}"
           go test ./...
 
@@ -50,7 +49,7 @@ jobs:
           RELEEN_GITHUB_TOKEN: ${{ secrets.RELEEN_GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          export GITHUB_TOKEN="${RELEEN_GITHUB_TOKEN}"
+          export GITHUB_ACCESS_TOKEN="${RELEEN_GITHUB_TOKEN}"
               
           set -x
           go test --run '(using_kiln|baking_a_tile|generating_release_notes|updating_)' \

@@ -50,7 +50,6 @@ jobs:
           RELEEN_GITHUB_TOKEN: ${{ secrets.RELEEN_GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          export GITHUB_TOKEN="${RELEEN_GITHUB_TOKEN}"
           export GITHUB_ACCESS_TOKEN="${RELEEN_GITHUB_TOKEN}"
 
           set -x

@@ -330,7 +330,7 @@ type issuesService interface {
 // manual test to ensure it continues to behave as expected during refactors.
 //
 // The function can be tested by generating release notes for a tile with issue ids and a milestone set. The happy path
-// test for Execute does not set GithubToken intentionally so this code is not triggered and Execute does not actually
+// test for Execute does not set GithubAccessToken/GithubEnterprisesAccessToken intentionally so this code is not triggered and Execute does not actually
 // reach out to GitHub.
 func (r fetchNotesData) fetchIssuesAndReleaseNotes(ctx context.Context, finalKF, wtKF cargo.Kilnfile, bumpList cargo.BumpList, issuesQuery IssuesQuery) ([]*github.Issue, cargo.BumpList, error) {
 	if r.issuesService == nil {
