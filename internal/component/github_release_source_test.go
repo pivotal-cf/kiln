@@ -24,7 +24,7 @@ func TestListAllOfTheCrap(t *testing.T) {
 
 	grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{
 		Type:        component.ReleaseSourceTypeGithub,
-		GithubToken: os.Getenv("GITHUB_TOKEN"),
+		GithubToken: os.Getenv("GITHUB_ACCESS_TOKEN"),
 		Org:         "cloudfoundry",
 	})
 	// grs.ListAllOfTheCrap(context.TODO(), "cloudfoundry")
@@ -535,7 +535,7 @@ func TestDownloadReleaseAsset(t *testing.T) {
 
 	grs := component.NewGithubReleaseSource(cargo.ReleaseSourceConfig{
 		Type:        component.ReleaseSourceTypeGithub,
-		GithubToken: os.Getenv("GITHUB_TOKEN"),
+		GithubToken: os.Getenv("GITHUB_ACCESS_TOKEN"),
 		Org:         "cloudfoundry",
 	})
 	testLock, err := grs.GetMatchedRelease(cargo.BOSHReleaseTarballSpecification{Name: "routing", Version: "0.226.0", GitHubRepository: "https://github.com/cloudfoundry/routing-release"})

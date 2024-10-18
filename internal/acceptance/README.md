@@ -25,11 +25,11 @@ go run github.com/onsi/ginkgo/ginkgo
 ### Workflows
 These are written in Go and use [godog](https://github.com/cucumber/godog) (a Cucumber test framework).
 
-> PS: Export GITHUB_TOKEN as an env var before running the acceptance tests
+> PS: Export GITHUB_ACCESS_TOKEN as an env var before running the acceptance tests
 
 ```bash
 # from anywhere in the repo you can run:
-export GITHUB_TOKEN="$(gh auth token)"
+export GITHUB_ACCESS_TOKEN="$(gh auth token)"
 go test -v --tags acceptance --timeout=1h github.com/pivotal-cf/kiln/internal/acceptance/workflows
 ```
 

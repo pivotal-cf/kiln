@@ -107,7 +107,7 @@ func loadGithubToken(ctx context.Context) (context.Context, error) {
 		return ctx, nil
 	}
 
-	token := os.Getenv("GITHUB_TOKEN")
+	token := os.Getenv("GITHUB_ACCESS_TOKEN")
 	if token == "" {
 		token, err = getGithubTokenFromCLI()
 		if err != nil {

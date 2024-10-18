@@ -5,7 +5,7 @@ Feature: As a developer, I want to bake a tile
     When I invoke kiln
       | bake                                      |
       | --final                                   |
-      | --variable=github_token="${GITHUB_TOKEN}" |
+      | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     Then a Tile is created
     And the Tile contains
       | metadata/metadata.yml             |

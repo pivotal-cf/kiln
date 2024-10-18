@@ -25,7 +25,7 @@ import (
 func Test_fetch_for_ist_tas(t *testing.T) {
 	please := NewWithT(t)
 
-	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("GITHUB_ACCESS_TOKEN", "")
 
 	repo, _ := git.Init(memory.NewStorage(), memfs.New())
 
@@ -152,7 +152,7 @@ func Test_fetch_for_ist_tas(t *testing.T) {
 func Test_fetch_for_tasw(t *testing.T) {
 	please := NewWithT(t)
 
-	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("GITHUB_ACCESS_TOKEN", "")
 
 	repo, _ := git.Init(memory.NewStorage(), memfs.New())
 
