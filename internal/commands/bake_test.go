@@ -10,6 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/memfs"
+
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	"github.com/pivotal-cf/kiln/pkg/bake"
@@ -51,7 +54,8 @@ var _ = Describe("Bake", func() {
 		fakeTileWriter  *fakes.TileWriter
 		fakeChecksummer *fakes.Checksummer
 
-		fakeFilesystem  *fakes.FileSystem
+		fakeFilesystem billy.Filesystem
+
 		fakeHomeDirFunc func() (string, error)
 
 		otherReleasesDirectory string
@@ -97,15 +101,20 @@ var _ = Describe("Bake", func() {
 		fakeJobsService = &fakes.MetadataTemplatesParser{}
 		fakePropertiesService = &fakes.MetadataTemplatesParser{}
 		fakeRuntimeConfigsService = &fakes.MetadataTemplatesParser{}
-		fakeFilesystem = &fakes.FileSystem{}
-		fakeVersionInfo := &fakes.FileInfo{}
-		fileVersion := "some-version"
-		fakeVersionInfo.SizeReturns(int64(len(fileVersion)))
-		fakeVersionInfo.NameReturns("version")
-		fakeFilesystem.StatReturns(fakeVersionInfo, nil)
-		result1 := &fakes.File{}
-		result1.ReadReturns(0, nil)
-		fakeFilesystem.OpenReturns(result1, nil)
+
+		{
+			fakeFilesystem = memfs.New()
+
+			for name, contents := range map[string]string{
+				"version":                     "1.2.3",
+				"/home/.kiln/credentials.yml": "",
+			} {
+				file, _ := fakeFilesystem.Create(name)
+				_, _ = file.Write([]byte(contents))
+				_ = file.Close()
+			}
+		}
+
 		fakeHomeDirFunc = func() (string, error) {
 			return "/home/", nil
 		}
@@ -226,9 +235,7 @@ var _ = Describe("Bake", func() {
 
 			Expect(fakeTemplateVariablesService.FromPathsAndPairsCallCount()).To(Equal(1))
 			varFiles, variables := fakeTemplateVariablesService.FromPathsAndPairsArgsForCall(0)
-			Expect(len(varFiles)).To(Equal(2))
-			Expect(varFiles[0]).To(Equal("some-variables-file"))
-			Expect(varFiles[1]).To(Equal("/home/.kiln/credentials.yml"))
+			Expect(varFiles).To(ConsistOf("some-variables-file", "/home/.kiln/credentials.yml"))
 			Expect(variables).To(Equal([]string{"some-variable=some-variable-value"}))
 
 			Expect(fakeBOSHVariablesService.ParseMetadataTemplatesCallCount()).To(Equal(1))
@@ -398,8 +405,49 @@ var _ = Describe("Bake", func() {
 			Expect(string(fakeBakeRecordFunc.productTemplate)).To(Equal("some-interpolated-metadata"), "it gives the bake recorder the product template")
 		})
 
+		Context("when the output flag is not set", func() {
+			When("no version is provided", func() {
+				It("uses the tile as the filename prefix", func() {
+					_ = fakeFilesystem.Remove("version")
+					err := bake.Execute([]string{
+						"--metadata", "some-metadata",
+					})
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
+					_, input := fakeTileWriter.WriteArgsForCall(0)
+					Expect(input.OutputFile).To(Equal(filepath.Join("tile.pivotal")))
+				})
+			})
+			When("the version flag is provided", func() {
+				It("uses the tile as the filename prefix", func() {
+					err := bake.Execute([]string{
+						"--metadata", "some-metadata",
+						"--version", "some-version",
+					})
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
+					_, input := fakeTileWriter.WriteArgsForCall(0)
+					Expect(input.OutputFile).To(Equal(filepath.Join("tile-some-version.pivotal")))
+				})
+			})
+			When("the tile name is provided", func() {
+				It("uses the tile as the filename prefix", func() {
+					err := bake.Execute([]string{
+						"--metadata", "some-metadata",
+						"--tile-name", "p-rune",
+					})
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(fakeTileWriter.WriteCallCount()).To(Equal(1))
+					_, input := fakeTileWriter.WriteArgsForCall(0)
+					Expect(input.OutputFile).To(Equal(filepath.Join("p-rune-1.2.3.pivotal")))
+				})
+			})
+		})
+
 		Context("when bake configuration is in the Kilnfile", func() {
 			BeforeEach(func() {
+				kf, _ := fakeFilesystem.Create("Kilnfile")
+				_ = kf.Close()
 				bake = bake.WithKilnfileFunc(func(s string) (cargo.Kilnfile, error) {
 					return cargo.Kilnfile{
 						BakeConfigurations: []cargo.BakeConfiguration{
@@ -426,6 +474,8 @@ var _ = Describe("Bake", func() {
 		})
 		Context("when bake configuration has multiple options", func() {
 			BeforeEach(func() {
+				kf, _ := fakeFilesystem.Create("Kilnfile")
+				_ = kf.Close()
 				bake = bake.WithKilnfileFunc(func(s string) (cargo.Kilnfile, error) {
 					return cargo.Kilnfile{
 						BakeConfigurations: []cargo.BakeConfiguration{
@@ -586,6 +636,10 @@ var _ = Describe("Bake", func() {
 		})
 
 		Context("when Kilnfile is specified", func() {
+			BeforeEach(func() {
+				kf, _ := fakeFilesystem.Create("Kilnfile")
+				_ = kf.Close()
+			})
 			It("renders the stemcell criteria in tile metadata from that specified the Kilnfile.lock", func() {
 				outputFile := "some-output-dir/some-product-file-1.2.3-build.4"
 				err := bake.Execute([]string{
@@ -872,6 +926,10 @@ var _ = Describe("Bake", func() {
 			})
 
 			Context("when both the --kilnfile and --stemcells-directory are provided", func() {
+				BeforeEach(func() {
+					kf, _ := fakeFilesystem.Create("Kilnfile")
+					_ = kf.Close()
+				})
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--metadata", "some-metadata",
@@ -885,6 +943,10 @@ var _ = Describe("Bake", func() {
 
 			// todo: When --stemcell-tarball is removed, delete this test
 			Context("when both the --stemcell-tarball and --kilnfile are provided", func() {
+				BeforeEach(func() {
+					kf, _ := fakeFilesystem.Create("Kilnfile")
+					_ = kf.Close()
+				})
 				It("returns an error", func() {
 					err := bake.Execute([]string{
 						"--metadata", "some-metadata",

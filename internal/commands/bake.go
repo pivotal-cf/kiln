@@ -348,27 +348,23 @@ func (b *Bake) loadFlags(args []string) error {
 	}
 
 	if shouldReadVersionFile(b, args) {
-		fileInfo, err := b.fs.Stat("version")
-		// TODO: test this
-		if fileInfo != nil && err == nil {
-			var file File
-			file, err = b.fs.Open(fileInfo.Name())
-			if err != nil && file == nil {
-				return err
-			}
+		file, err := b.fs.Open("version")
+		if err == nil {
 			defer closeAndIgnoreError(file)
-
-			versionBuf := make([]byte, fileInfo.Size())
-			_, _ = file.Read(versionBuf)
+			versionBuf, _ := io.ReadAll(file)
 			b.Options.Version = strings.TrimSpace(string(versionBuf))
 		}
 	}
 
 	if shouldGenerateTileFileName(b, args) {
-		b.Options.OutputFile = "tile.pivotal"
-		if b.Options.Version != "" {
-			b.Options.OutputFile = "tile-" + b.Options.Version + ".pivotal"
+		prefix := "tile"
+		if b.Options.TileName != "" {
+			prefix = b.Options.TileName
 		}
+		if b.Options.Version != "" {
+			prefix += "-" + b.Options.Version
+		}
+		b.Options.OutputFile = prefix + ".pivotal"
 	}
 
 	if shouldNotUseDefaultKilnfileFlag(args) {
