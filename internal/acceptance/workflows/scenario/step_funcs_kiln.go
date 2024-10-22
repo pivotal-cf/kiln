@@ -19,7 +19,7 @@ func iTryToInvokeKiln(ctx context.Context, table *godog.Table) (context.Context,
 }
 
 func kilnValidateSucceeds(ctx context.Context) (context.Context, error) {
-	return invokeKiln(ctx, true, "validate", "--variable=github_token=banana")
+	return invokeKiln(ctx, true, "validate", "--variable=github_access_token=banana")
 }
 
 func invokeKiln(ctx context.Context, requireSuccess bool, args ...string) (context.Context, error) {

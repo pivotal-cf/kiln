@@ -20,7 +20,7 @@ jobs:
       - name: Bake Tile
         env:
           KILN_VERSION: 0.68.3
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TILE_VERSION: ${{ steps.vars.outputs.tag_name }}
         run: |          
           cd "${GITHUB_WORKSPACE}" || exit 1
@@ -36,8 +36,8 @@ jobs:
           
           echo "${TILE_VERSION}" > version
 
-          kiln fetch --variable github_token="${GITHUB_TOKEN}"
-          kiln validate --variable github_token="${GITHUB_TOKEN}"
+          kiln fetch --variable github_access_token="${GITHUB_ACCESS_TOKEN}"
+          kiln validate --variable github_access_token="${GITHUB_ACCESS_TOKEN}"
           kiln bake
 
       - name: Create GitHub Release

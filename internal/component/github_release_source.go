@@ -15,8 +15,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/google/go-github/v40/github"
-	"golang.org/x/oauth2"
+	"github.com/google/go-github/v50/github"
 
 	"github.com/pivotal-cf/kiln/internal/gh"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
@@ -38,18 +37,16 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 	if c.Type != "" && c.Type != ReleaseSourceTypeGithub {
 		panic(panicMessageWrongReleaseSourceType)
 	}
-	if c.GithubToken == "" {
+	if c.GithubToken == "" { // TODO remove this
 		panic("no token passed for github release source")
 	}
 	if c.Org == "" {
 		panic("no github org passed for github release source")
 	}
-
-	ctx := context.TODO()
-	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: c.GithubToken})
-	tokenClient := oauth2.NewClient(ctx, tokenSource)
-	githubClient := github.NewClient(tokenClient)
-
+	githubClient, err := gh.Client(context.TODO(), c.GithubToken)
+	if err != nil {
+		panic(err)
+	}
 	return &GithubReleaseSource{
 		ReleaseSourceConfig: c,
 		Token:               c.GithubToken,

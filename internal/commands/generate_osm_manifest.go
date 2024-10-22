@@ -29,7 +29,7 @@ type OSM struct {
 	Options struct {
 		flags.Standard
 		NoDownload  bool   `short:"nd" long:"no-download" default:"false" description:"Do not download & zip the packages"`
-		GithubToken string `short:"g" long:"github-token" description:"Auth token for fetching specified Github packages" env:"GITHUB_TOKEN"`
+		GithubToken string `short:"g" long:"github_access_token" description:"Auth token for fetching specified Github packages" env:"GITHUB_ACCESS_TOKEN"`
 		Only        string `short:"o" long:"only" default:"" description:"Only download the specified package name, must be used with --url to specify package Github URL"`
 		Url         string `short:"u" long:"url" default:"" description:"Github URL for package specified by --only"`
 	}

@@ -37,7 +37,7 @@ jobs:
         env:
           RELEEN_GITHUB_TOKEN: ${{ secrets.RELEEN_GITHUB_TOKEN }}
         run: |
-          export GITHUB_TOKEN="${RELEEN_GITHUB_TOKEN}"
+          export GITHUB_ACCESS_TOKEN="${RELEEN_GITHUB_TOKEN}"
           go test --covermode=atomic --coverprofile=kiln-${{github.sha}}-unit-test-code-coverage.out ./...
 
       - name: Archive Unit Test Code Coverage Output
@@ -52,7 +52,7 @@ jobs:
           RELEEN_GITHUB_TOKEN: ${{ secrets.RELEEN_GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          export GITHUB_TOKEN="${RELEEN_GITHUB_TOKEN}"
+          export GITHUB_ACCESS_TOKEN="${RELEEN_GITHUB_TOKEN}"
 
           set -x
           go test -v --timeout 24h --tags acceptance github.com/pivotal-cf/kiln/internal/acceptance/workflows
@@ -79,4 +79,5 @@ jobs:
           version: "~> v1"
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_ACCESS_TOKEN }}
+

@@ -81,11 +81,11 @@ func getGithubTokenFromCLI() (string, error) {
 	cmd.Stderr = &out
 	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("login to github using the CLI or set GITHUB_TOKEN")
+		return "", fmt.Errorf("login to github using the CLI or set GITHUB_ACCESS_TOKEN")
 	}
 	matches := regexp.MustCompile("(?m)^.*Token: (gho_.*)$").FindStringSubmatch(out.String())
 	if len(matches) == 0 {
-		return "", fmt.Errorf("login to github using the CLI or set GITHUB_TOKEN")
+		return "", fmt.Errorf("login to github using the CLI or set GITHUB_ACCESS_TOKEN")
 	}
 	return matches[1], nil
 }

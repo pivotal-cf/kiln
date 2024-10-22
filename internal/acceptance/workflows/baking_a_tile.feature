@@ -5,7 +5,7 @@ Feature: As a developer, I want to bake a tile
     When I invoke kiln
       | bake                                      |
       | --final                                   |
-      | --variable=github_token="${GITHUB_TOKEN}" |
+      | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     Then a Tile is created
     And the Tile contains
       | metadata/metadata.yml             |
@@ -13,11 +13,11 @@ Feature: As a developer, I want to bake a tile
       | releases/bpm-1.2.12.tgz           |
       | releases/hello-release-0.2.3.tgz |
     And "bake_records/0.2.0-dev.json" contains substring: "version": "0.2.0-dev"
-    And "bake_records/0.2.0-dev.json" contains substring: "source_revision": "6d5069f9dfb954ff77bb16c5aee670b9909f154a"
+    And "bake_records/0.2.0-dev.json" contains substring: "source_revision": "896c44a006a24d8601ed09fd871b1a4423636d77"
     And "bake_records/0.2.0-dev.json" contains substring: "tile_directory": "."
     And "bake_records/0.2.0-dev.json" contains substring: "kiln_version": "0.0.0+acceptance-tests"
-    And "bake_records/0.2.0-dev.json" contains substring: "file_checksum": "c94e5749bf676f03ff10539956e9445d309647c5299b16dfe71cb522e9258f0d"
-    And "tile-0.2.0-dev.pivotal" has sha256 sum "c94e5749bf676f03ff10539956e9445d309647c5299b16dfe71cb522e9258f0d"
+    And "bake_records/0.2.0-dev.json" contains substring: "file_checksum": "6754bb95193e42cd5706f810c3fdb1beead88e2a01601bb222e3e98818f90e8a"
+    And "tile-0.2.0-dev.pivotal" has sha256 sum "6754bb95193e42cd5706f810c3fdb1beead88e2a01601bb222e3e98818f90e8a"
 
   Scenario: it reads directory configuration from Kilnfile
     Given I have a tile source directory "testdata/tiles/non-standard-paths"
