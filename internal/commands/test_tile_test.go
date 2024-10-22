@@ -208,6 +208,27 @@ var _ = Describe("kiln test", func() {
 		})
 	})
 
+	When("when the a test image is provided via --image-path", func() {
+		It("it sets the path to be loaded in the configuration", func() {
+			args := []string{"--image-path", "/tmp/test.file"}
+
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
+
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeTestFunc.CallCount()).To(Equal(1))
+
+			ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
+			Expect(ctx).NotTo(BeNil())
+			Expect(w).NotTo(BeNil())
+			Expect(configuration.ImagePath).To(Equal("/tmp/test.file"))
+			Expect(configuration.RunManifest).To(BeFalse())
+			Expect(configuration.RunMetadata).To(BeFalse())
+			Expect(configuration.RunMigrations).To(BeFalse())
+		})
+	})
 	When("when the stability test is enabled", func() {
 		It("it sets the metadata configuration flag", func() {
 			args := []string{"--stability"}
