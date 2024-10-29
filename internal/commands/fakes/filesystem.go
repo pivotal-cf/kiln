@@ -2,7 +2,7 @@
 package fakes
 
 import (
-	"io/fs"
+	"os"
 	"sync"
 
 	billy "github.com/go-git/go-billy/v5"
@@ -34,11 +34,11 @@ type FileSystem struct {
 	joinReturnsOnCall map[int]struct {
 		result1 string
 	}
-	MkdirAllStub        func(string, fs.FileMode) error
+	MkdirAllStub        func(string, os.FileMode) error
 	mkdirAllMutex       sync.RWMutex
 	mkdirAllArgsForCall []struct {
 		arg1 string
-		arg2 fs.FileMode
+		arg2 os.FileMode
 	}
 	mkdirAllReturns struct {
 		result1 error
@@ -59,12 +59,12 @@ type FileSystem struct {
 		result1 billy.File
 		result2 error
 	}
-	OpenFileStub        func(string, int, fs.FileMode) (billy.File, error)
+	OpenFileStub        func(string, int, os.FileMode) (billy.File, error)
 	openFileMutex       sync.RWMutex
 	openFileArgsForCall []struct {
 		arg1 string
 		arg2 int
-		arg3 fs.FileMode
+		arg3 os.FileMode
 	}
 	openFileReturns struct {
 		result1 billy.File
@@ -74,17 +74,17 @@ type FileSystem struct {
 		result1 billy.File
 		result2 error
 	}
-	ReadDirStub        func(string) ([]fs.FileInfo, error)
+	ReadDirStub        func(string) ([]os.FileInfo, error)
 	readDirMutex       sync.RWMutex
 	readDirArgsForCall []struct {
 		arg1 string
 	}
 	readDirReturns struct {
-		result1 []fs.FileInfo
+		result1 []os.FileInfo
 		result2 error
 	}
 	readDirReturnsOnCall map[int]struct {
-		result1 []fs.FileInfo
+		result1 []os.FileInfo
 		result2 error
 	}
 	RemoveStub        func(string) error
@@ -110,17 +110,17 @@ type FileSystem struct {
 	renameReturnsOnCall map[int]struct {
 		result1 error
 	}
-	StatStub        func(string) (fs.FileInfo, error)
+	StatStub        func(string) (os.FileInfo, error)
 	statMutex       sync.RWMutex
 	statArgsForCall []struct {
 		arg1 string
 	}
 	statReturns struct {
-		result1 fs.FileInfo
+		result1 os.FileInfo
 		result2 error
 	}
 	statReturnsOnCall map[int]struct {
-		result1 fs.FileInfo
+		result1 os.FileInfo
 		result2 error
 	}
 	invocations      map[string][][]interface{}
@@ -252,12 +252,12 @@ func (fake *FileSystem) JoinReturnsOnCall(i int, result1 string) {
 	}{result1}
 }
 
-func (fake *FileSystem) MkdirAll(arg1 string, arg2 fs.FileMode) error {
+func (fake *FileSystem) MkdirAll(arg1 string, arg2 os.FileMode) error {
 	fake.mkdirAllMutex.Lock()
 	ret, specificReturn := fake.mkdirAllReturnsOnCall[len(fake.mkdirAllArgsForCall)]
 	fake.mkdirAllArgsForCall = append(fake.mkdirAllArgsForCall, struct {
 		arg1 string
-		arg2 fs.FileMode
+		arg2 os.FileMode
 	}{arg1, arg2})
 	stub := fake.MkdirAllStub
 	fakeReturns := fake.mkdirAllReturns
@@ -278,13 +278,13 @@ func (fake *FileSystem) MkdirAllCallCount() int {
 	return len(fake.mkdirAllArgsForCall)
 }
 
-func (fake *FileSystem) MkdirAllCalls(stub func(string, fs.FileMode) error) {
+func (fake *FileSystem) MkdirAllCalls(stub func(string, os.FileMode) error) {
 	fake.mkdirAllMutex.Lock()
 	defer fake.mkdirAllMutex.Unlock()
 	fake.MkdirAllStub = stub
 }
 
-func (fake *FileSystem) MkdirAllArgsForCall(i int) (string, fs.FileMode) {
+func (fake *FileSystem) MkdirAllArgsForCall(i int) (string, os.FileMode) {
 	fake.mkdirAllMutex.RLock()
 	defer fake.mkdirAllMutex.RUnlock()
 	argsForCall := fake.mkdirAllArgsForCall[i]
@@ -378,13 +378,13 @@ func (fake *FileSystem) OpenReturnsOnCall(i int, result1 billy.File, result2 err
 	}{result1, result2}
 }
 
-func (fake *FileSystem) OpenFile(arg1 string, arg2 int, arg3 fs.FileMode) (billy.File, error) {
+func (fake *FileSystem) OpenFile(arg1 string, arg2 int, arg3 os.FileMode) (billy.File, error) {
 	fake.openFileMutex.Lock()
 	ret, specificReturn := fake.openFileReturnsOnCall[len(fake.openFileArgsForCall)]
 	fake.openFileArgsForCall = append(fake.openFileArgsForCall, struct {
 		arg1 string
 		arg2 int
-		arg3 fs.FileMode
+		arg3 os.FileMode
 	}{arg1, arg2, arg3})
 	stub := fake.OpenFileStub
 	fakeReturns := fake.openFileReturns
@@ -405,13 +405,13 @@ func (fake *FileSystem) OpenFileCallCount() int {
 	return len(fake.openFileArgsForCall)
 }
 
-func (fake *FileSystem) OpenFileCalls(stub func(string, int, fs.FileMode) (billy.File, error)) {
+func (fake *FileSystem) OpenFileCalls(stub func(string, int, os.FileMode) (billy.File, error)) {
 	fake.openFileMutex.Lock()
 	defer fake.openFileMutex.Unlock()
 	fake.OpenFileStub = stub
 }
 
-func (fake *FileSystem) OpenFileArgsForCall(i int) (string, int, fs.FileMode) {
+func (fake *FileSystem) OpenFileArgsForCall(i int) (string, int, os.FileMode) {
 	fake.openFileMutex.RLock()
 	defer fake.openFileMutex.RUnlock()
 	argsForCall := fake.openFileArgsForCall[i]
@@ -444,7 +444,7 @@ func (fake *FileSystem) OpenFileReturnsOnCall(i int, result1 billy.File, result2
 	}{result1, result2}
 }
 
-func (fake *FileSystem) ReadDir(arg1 string) ([]fs.FileInfo, error) {
+func (fake *FileSystem) ReadDir(arg1 string) ([]os.FileInfo, error) {
 	fake.readDirMutex.Lock()
 	ret, specificReturn := fake.readDirReturnsOnCall[len(fake.readDirArgsForCall)]
 	fake.readDirArgsForCall = append(fake.readDirArgsForCall, struct {
@@ -469,7 +469,7 @@ func (fake *FileSystem) ReadDirCallCount() int {
 	return len(fake.readDirArgsForCall)
 }
 
-func (fake *FileSystem) ReadDirCalls(stub func(string) ([]fs.FileInfo, error)) {
+func (fake *FileSystem) ReadDirCalls(stub func(string) ([]os.FileInfo, error)) {
 	fake.readDirMutex.Lock()
 	defer fake.readDirMutex.Unlock()
 	fake.ReadDirStub = stub
@@ -482,28 +482,28 @@ func (fake *FileSystem) ReadDirArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FileSystem) ReadDirReturns(result1 []fs.FileInfo, result2 error) {
+func (fake *FileSystem) ReadDirReturns(result1 []os.FileInfo, result2 error) {
 	fake.readDirMutex.Lock()
 	defer fake.readDirMutex.Unlock()
 	fake.ReadDirStub = nil
 	fake.readDirReturns = struct {
-		result1 []fs.FileInfo
+		result1 []os.FileInfo
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FileSystem) ReadDirReturnsOnCall(i int, result1 []fs.FileInfo, result2 error) {
+func (fake *FileSystem) ReadDirReturnsOnCall(i int, result1 []os.FileInfo, result2 error) {
 	fake.readDirMutex.Lock()
 	defer fake.readDirMutex.Unlock()
 	fake.ReadDirStub = nil
 	if fake.readDirReturnsOnCall == nil {
 		fake.readDirReturnsOnCall = make(map[int]struct {
-			result1 []fs.FileInfo
+			result1 []os.FileInfo
 			result2 error
 		})
 	}
 	fake.readDirReturnsOnCall[i] = struct {
-		result1 []fs.FileInfo
+		result1 []os.FileInfo
 		result2 error
 	}{result1, result2}
 }
@@ -631,7 +631,7 @@ func (fake *FileSystem) RenameReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FileSystem) Stat(arg1 string) (fs.FileInfo, error) {
+func (fake *FileSystem) Stat(arg1 string) (os.FileInfo, error) {
 	fake.statMutex.Lock()
 	ret, specificReturn := fake.statReturnsOnCall[len(fake.statArgsForCall)]
 	fake.statArgsForCall = append(fake.statArgsForCall, struct {
@@ -656,7 +656,7 @@ func (fake *FileSystem) StatCallCount() int {
 	return len(fake.statArgsForCall)
 }
 
-func (fake *FileSystem) StatCalls(stub func(string) (fs.FileInfo, error)) {
+func (fake *FileSystem) StatCalls(stub func(string) (os.FileInfo, error)) {
 	fake.statMutex.Lock()
 	defer fake.statMutex.Unlock()
 	fake.StatStub = stub
@@ -669,28 +669,28 @@ func (fake *FileSystem) StatArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FileSystem) StatReturns(result1 fs.FileInfo, result2 error) {
+func (fake *FileSystem) StatReturns(result1 os.FileInfo, result2 error) {
 	fake.statMutex.Lock()
 	defer fake.statMutex.Unlock()
 	fake.StatStub = nil
 	fake.statReturns = struct {
-		result1 fs.FileInfo
+		result1 os.FileInfo
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FileSystem) StatReturnsOnCall(i int, result1 fs.FileInfo, result2 error) {
+func (fake *FileSystem) StatReturnsOnCall(i int, result1 os.FileInfo, result2 error) {
 	fake.statMutex.Lock()
 	defer fake.statMutex.Unlock()
 	fake.StatStub = nil
 	if fake.statReturnsOnCall == nil {
 		fake.statReturnsOnCall = make(map[int]struct {
-			result1 fs.FileInfo
+			result1 os.FileInfo
 			result2 error
 		})
 	}
 	fake.statReturnsOnCall[i] = struct {
-		result1 fs.FileInfo
+		result1 os.FileInfo
 		result2 error
 	}{result1, result2}
 }

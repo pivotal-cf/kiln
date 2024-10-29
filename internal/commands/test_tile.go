@@ -12,6 +12,7 @@ import (
 	"github.com/pivotal-cf/kiln/internal/test"
 )
 
+//counterfeiter:generate -o ./fakes/test_tile_function.go --fake-name TestTileFunction . TileTestFunction
 type TileTestFunction func(ctx context.Context, w io.Writer, configuration test.Configuration) error
 
 type TileTest struct {

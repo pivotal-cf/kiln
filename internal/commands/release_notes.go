@@ -114,7 +114,6 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	trainstatClient := notes.NewTrainstatClient(r.Options.TrainstatQuery.TrainstatURL)
 
-	_ = notes.FetchData // fetchNotesData is github.com/pivotal/kiln/internal/notes.FetchData
 	data, err := r.fetchNotesData(ctx,
 		r.repository, client, r.repoHost, r.repoOwner, r.repoName,
 		r.Options.Kilnfile,

@@ -6,6 +6,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/test"
 )
 
@@ -37,7 +38,7 @@ func (fake *TestTileFunction) Spy(arg1 context.Context, arg2 io.Writer, arg3 tes
 	}{arg1, arg2, arg3})
 	stub := fake.Stub
 	returns := fake.returns
-	fake.recordInvocation("tileTestFunction", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("TileTestFunction", []interface{}{arg1, arg2, arg3})
 	fake.mutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3)
@@ -112,3 +113,5 @@ func (fake *TestTileFunction) recordInvocation(key string, args []interface{}) {
 	}
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
+
+var _ commands.TileTestFunction = new(TestTileFunction).Spy
