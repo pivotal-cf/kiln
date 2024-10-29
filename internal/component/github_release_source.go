@@ -43,7 +43,17 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 	if c.Org == "" {
 		panic("no github org passed for github release source")
 	}
-	githubClient, err := gh.Client(context.TODO(), c.GithubToken)
+
+	// The GitClient should be initialized with the proper host according to
+	// the release repository URL instead. This function doesn't have access
+	// to each release, so this will do for now.
+	//
+	host := ""
+	if c.Org == "TNZ" {
+		host = "https://github.gwd.broadcom.net"
+	}
+
+	githubClient, err := gh.GitClient(context.TODO(), host, c.GithubToken, c.GithubToken)
 	if err != nil {
 		panic(err)
 	}
