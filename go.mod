@@ -1,6 +1,6 @@
 module github.com/pivotal-cf/kiln
 
-go 1.22.6
+go 1.23
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
@@ -17,7 +17,6 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-git/go-billy/v5 v5.5.0
 	github.com/go-git/go-git/v5 v5.11.0
-	github.com/google/go-github/v40 v40.0.0
 	github.com/google/go-github/v50 v50.2.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/masterminds/sprig v2.22.0+incompatible
