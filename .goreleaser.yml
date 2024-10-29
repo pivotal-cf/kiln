@@ -33,7 +33,7 @@ brews:
     tap:
       owner: pivotal-cf
       name: kiln
-      token: "{{ .Env.GITHUB_ACCESS_TOKEN }}"
+      token: "{{ .Env.GITHUB_TOKEN }}"
     folder: HomebrewFormula
     ids:
       - homebrew
