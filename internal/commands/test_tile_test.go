@@ -26,12 +26,11 @@ func init() {
 // counterfeiter does not handle publicly exported type function spy generation super well.
 // So I am telling it to generate the spy off of a private type alias. This works but is a bit confusing.
 //
-//counterfeiter:generate -o ./fakes/test_tile_function.go --fake-name TestTileFunction . tileTestFunction
 
 // nolint:unused
 //
 //goland:noinspection GoUnusedType
-type tileTestFunction = commands.TileTestFunction
+// type tileTestFunction = commands.TileTestFunction
 
 var _ = Describe("kiln test", func() {
 	var output bytes.Buffer

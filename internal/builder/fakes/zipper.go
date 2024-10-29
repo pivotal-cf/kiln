@@ -3,7 +3,7 @@ package fakes
 
 import (
 	"io"
-	"io/fs"
+	"os"
 	"sync"
 	"time"
 )
@@ -21,12 +21,12 @@ type Zipper struct {
 	addReturnsOnCall map[int]struct {
 		result1 error
 	}
-	AddWithModeStub        func(string, io.Reader, fs.FileMode) error
+	AddWithModeStub        func(string, io.Reader, os.FileMode) error
 	addWithModeMutex       sync.RWMutex
 	addWithModeArgsForCall []struct {
 		arg1 string
 		arg2 io.Reader
-		arg3 fs.FileMode
+		arg3 os.FileMode
 	}
 	addWithModeReturns struct {
 		result1 error
@@ -131,13 +131,13 @@ func (fake *Zipper) AddReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *Zipper) AddWithMode(arg1 string, arg2 io.Reader, arg3 fs.FileMode) error {
+func (fake *Zipper) AddWithMode(arg1 string, arg2 io.Reader, arg3 os.FileMode) error {
 	fake.addWithModeMutex.Lock()
 	ret, specificReturn := fake.addWithModeReturnsOnCall[len(fake.addWithModeArgsForCall)]
 	fake.addWithModeArgsForCall = append(fake.addWithModeArgsForCall, struct {
 		arg1 string
 		arg2 io.Reader
-		arg3 fs.FileMode
+		arg3 os.FileMode
 	}{arg1, arg2, arg3})
 	stub := fake.AddWithModeStub
 	fakeReturns := fake.addWithModeReturns
@@ -158,13 +158,13 @@ func (fake *Zipper) AddWithModeCallCount() int {
 	return len(fake.addWithModeArgsForCall)
 }
 
-func (fake *Zipper) AddWithModeCalls(stub func(string, io.Reader, fs.FileMode) error) {
+func (fake *Zipper) AddWithModeCalls(stub func(string, io.Reader, os.FileMode) error) {
 	fake.addWithModeMutex.Lock()
 	defer fake.addWithModeMutex.Unlock()
 	fake.AddWithModeStub = stub
 }
 
-func (fake *Zipper) AddWithModeArgsForCall(i int) (string, io.Reader, fs.FileMode) {
+func (fake *Zipper) AddWithModeArgsForCall(i int) (string, io.Reader, os.FileMode) {
 	fake.addWithModeMutex.RLock()
 	defer fake.addWithModeMutex.RUnlock()
 	argsForCall := fake.addWithModeArgsForCall[i]
