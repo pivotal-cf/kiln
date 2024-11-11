@@ -155,7 +155,7 @@ func ReadBOSHReleaseTarball(tarballPath string, r io.Reader) (BOSHReleaseTarball
 	if err != nil {
 		return BOSHReleaseTarball{}, err
 	}
-	_, err = io.ReadAll(r)
+	_, err = io.CopyBuffer(io.Discard, r, make([]byte, 1024 * 64))
 	return BOSHReleaseTarball{
 		Manifest: m,
 		SHA1:     hex.EncodeToString(sum.Sum(nil)),
