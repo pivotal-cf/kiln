@@ -33,13 +33,15 @@ type GithubReleaseSource struct {
 
 // NewGithubReleaseSource will provision a new GithubReleaseSource Project
 // from the Kilnfile (ReleaseSourceConfig). If type is incorrect it will PANIC
-func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
+func NewGithubReleaseSource(c cargo.ReleaseSourceConfig, logger *log.Logger) *GithubReleaseSource {
 	if c.Type != "" && c.Type != ReleaseSourceTypeGithub {
 		panic(panicMessageWrongReleaseSourceType)
 	}
+
 	if c.GithubToken == "" { // TODO remove this
 		panic("no token passed for github release source")
 	}
+
 	if c.Org == "" {
 		panic("no github org passed for github release source")
 	}
@@ -53,6 +55,10 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 		host = "https://github.gwd.broadcom.net"
 	}
 
+	if logger == nil {
+		logger = log.New(os.Stderr, "[Github release source] ", log.Default().Flags())
+	}
+
 	githubClient, err := gh.GitClient(context.TODO(), host, c.GithubToken, c.GithubToken)
 	if err != nil {
 		panic(err)
@@ -60,7 +66,7 @@ func NewGithubReleaseSource(c cargo.ReleaseSourceConfig) *GithubReleaseSource {
 	return &GithubReleaseSource{
 		ReleaseSourceConfig: c,
 		Token:               c.GithubToken,
-		Logger:              log.New(os.Stderr, "[Github release source] ", log.Default().Flags()),
+		Logger:              logger,
 
 		ReleaseAssetDownloader: githubClient.Repositories,
 		ReleaseByTagGetter:     githubClient.Repositories,

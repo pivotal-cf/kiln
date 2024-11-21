@@ -20,6 +20,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/semver/v3"
+
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -53,18 +54,22 @@ type ArtifactoryFileInfo struct {
 
 // NewArtifactoryReleaseSource will provision a new ArtifactoryReleaseSource Project
 // from the Kilnfile (ReleaseSourceConfig). If type is incorrect it will PANIC
-func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig) *ArtifactoryReleaseSource {
+func NewArtifactoryReleaseSource(c cargo.ReleaseSourceConfig, logger *log.Logger) *ArtifactoryReleaseSource {
 	if c.Type != "" && c.Type != ReleaseSourceTypeArtifactory {
 		panic(panicMessageWrongReleaseSourceType)
 	}
 
 	// ctx := context.TODO()
 
+	if logger == nil {
+		logger = log.New(os.Stderr, "[Artifactory release source] ", log.Default().Flags())
+	}
+
 	return &ArtifactoryReleaseSource{
 		Client:              http.DefaultClient,
 		ReleaseSourceConfig: c,
 		ID:                  c.ID,
-		logger:              log.New(os.Stderr, "[Artifactory release source] ", log.Default().Flags()),
+		logger:              logger,
 	}
 }
 

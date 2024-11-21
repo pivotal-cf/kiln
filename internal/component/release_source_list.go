@@ -3,7 +3,6 @@ package component
 import (
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -12,11 +11,11 @@ import (
 
 type ReleaseSourceList []ReleaseSource
 
-func NewReleaseSourceRepo(kilnfile cargo.Kilnfile, logger *log.Logger) ReleaseSourceList {
+func NewReleaseSourceRepo(kilnfile cargo.Kilnfile) ReleaseSourceList {
 	var list ReleaseSourceList
 
 	for _, releaseConfig := range kilnfile.ReleaseSources {
-		list = append(list, ReleaseSourceFactory(releaseConfig, logger))
+		list = append(list, ReleaseSourceFactory(releaseConfig))
 	}
 
 	panicIfDuplicateIDs(list)

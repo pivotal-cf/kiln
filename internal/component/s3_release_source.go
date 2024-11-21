@@ -56,6 +56,11 @@ func NewS3ReleaseSource(c cargo.ReleaseSourceConfig, client S3Client, downloader
 	if c.Type != "" && c.Type != ReleaseSourceTypeS3 {
 		panic(panicMessageWrongReleaseSourceType)
 	}
+
+	if logger == nil {
+		logger = log.New(os.Stderr, "[S3 release source] ", log.Default().Flags())
+	}
+
 	return S3ReleaseSource{
 		ReleaseSourceConfig: c,
 		s3Client:            client,

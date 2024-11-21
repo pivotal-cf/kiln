@@ -54,9 +54,10 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 		})
 	})
 	JustBeforeEach(func() {
+		logger := log.New(GinkgoWriter, "", 0)
 		server = httptest.NewServer(artifactoryRouter)
 		config.ArtifactoryHost = server.URL
-		source = component.NewArtifactoryReleaseSource(config)
+		source = component.NewArtifactoryReleaseSource(config, logger)
 		source.Client = server.Client()
 	})
 	AfterEach(func() {
@@ -142,8 +143,9 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 			})
 			When("the server URL ends in /artifactory", func() {
 				JustBeforeEach(func() {
+					logger := log.New(GinkgoWriter, "", 0)
 					config.ArtifactoryHost = server.URL + "/artifactory"
-					source = component.NewArtifactoryReleaseSource(config)
+					source = component.NewArtifactoryReleaseSource(config, logger)
 					source.Client = server.Client()
 				})
 
@@ -162,8 +164,9 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 			})
 			When("the server URL is malformed", func() {
 				JustBeforeEach(func() {
+					logger := log.New(GinkgoWriter, "", 0)
 					config.ArtifactoryHost = ":improper-url/formatting"
-					source = component.NewArtifactoryReleaseSource(config)
+					source = component.NewArtifactoryReleaseSource(config, logger)
 					source.Client = server.Client()
 				})
 				It("returns an error", func() {

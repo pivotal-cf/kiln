@@ -60,15 +60,15 @@ func main() {
 	pivnetService := new(pivnet.Service)
 	localReleaseDirectory := component.NewLocalReleaseDirectory(outLogger)
 	mrsProvider := commands.MultiReleaseSourceProvider(func(kilnfile cargo.Kilnfile, allowOnlyPublishable bool) component.MultiReleaseSource {
-		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
+		repo := component.NewReleaseSourceRepo(kilnfile)
 		return repo.Filter(allowOnlyPublishable)
 	})
 	ruFinder := commands.ReleaseUploaderFinder(func(kilnfile cargo.Kilnfile, sourceID string) (component.ReleaseUploader, error) {
-		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
+		repo := component.NewReleaseSourceRepo(kilnfile)
 		return repo.FindReleaseUploader(sourceID)
 	})
 	rpFinder := commands.RemotePatherFinder(func(kilnfile cargo.Kilnfile, sourceID string) (component.RemotePather, error) {
-		repo := component.NewReleaseSourceRepo(kilnfile, outLogger)
+		repo := component.NewReleaseSourceRepo(kilnfile)
 		return repo.FindRemotePather(sourceID)
 	})
 

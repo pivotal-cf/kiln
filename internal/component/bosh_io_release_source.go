@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/Masterminds/semver/v3"
+
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -61,9 +62,11 @@ func NewBOSHIOReleaseSource(c cargo.ReleaseSourceConfig, customServerURI string,
 	if customServerURI == "" {
 		customServerURI = "https://bosh.io"
 	}
+
 	if logger == nil {
 		logger = log.New(os.Stderr, "[bosh.io release source] ", log.Default().Flags())
 	}
+
 	return &BOSHIOReleaseSource{
 		ReleaseSourceConfig: c,
 		logger:              logger,
