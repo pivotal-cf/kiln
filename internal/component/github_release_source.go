@@ -109,6 +109,11 @@ func (grs *GithubReleaseSource) GetGithubReleaseWithTag(ctx context.Context, s c
 		return nil, ErrNotFound
 	}
 
+	if repoOwner != grs.Org {
+		grs.Logger.Printf("GitHubRepository owner %q does not match configured Org %q, skipping...", repoOwner, grs.Org)
+		return nil, ErrNotFound
+	}
+
 	release, response, err := grs.GetReleaseByTag(ctx, repoOwner, repoName, "v"+s.Version)
 	if err == nil {
 		err = checkStatus(http.StatusOK, response.StatusCode)

@@ -318,8 +318,54 @@ func TestGithubReleaseSource_GetMatchedRelease(t *testing.T) {
 	})
 }
 
-func TestGetGithubReleaseWithTag(t *testing.T) {
-	t.Run("when get release with tag api request fails", func(t *testing.T) {
+func TestGithubReleaseSource_GetGithubReleaseWithTag(t *testing.T) {
+	t.Run("when RepositoryOwnerAndNameFromPath fails", func(t *testing.T) {
+		damnIt := NewWithT(t)
+
+		ctx := context.TODO()
+
+		grsMock := &component.GithubReleaseSource{
+			Logger: log.New(GinkgoWriter, "[test] ", log.Default().Flags()),
+			ReleaseSourceConfig: cargo.ReleaseSourceConfig{
+				Type:        component.ReleaseSourceTypeGithub,
+				Org:         "cloudfoundry",
+				GithubToken: "fake-token",
+			},
+		}
+		s := cargo.BOSHReleaseTarballSpecification{
+			Name:             "routing",
+			Version:          "0.226.0",
+			GitHubRepository: "invalid-uri",
+		}
+
+		_, err := grsMock.GetGithubReleaseWithTag(ctx, s)
+		damnIt.Expect(err).To(MatchError(component.ErrNotFound))
+	})
+
+	t.Run("when the GitHubRepository owner does not match the configured Org", func(t *testing.T) {
+		damnIt := NewWithT(t)
+
+		ctx := context.TODO()
+
+		grsMock := &component.GithubReleaseSource{
+			Logger: log.New(GinkgoWriter, "[test] ", log.Default().Flags()),
+			ReleaseSourceConfig: cargo.ReleaseSourceConfig{
+				Type:        component.ReleaseSourceTypeGithub,
+				Org:         "cloudnotfoundry",
+				GithubToken: "fake-token",
+			},
+		}
+		s := cargo.BOSHReleaseTarballSpecification{
+			Name:             "routing",
+			Version:          "0.226.0",
+			GitHubRepository: "https://github.com/cloudfoundry/routing-release",
+		}
+
+		_, err := grsMock.GetGithubReleaseWithTag(ctx, s)
+		damnIt.Expect(err).To(MatchError(component.ErrNotFound))
+	})
+
+	t.Run("when GetReleaseByTag fails", func(t *testing.T) {
 		damnIt := NewWithT(t)
 
 		releaseGetter := new(fakes.ReleaseByTagGetter)
