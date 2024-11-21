@@ -1,4 +1,6 @@
-#!/bin/bash -exu
+#!/usr/bin/env bash
+
+set -euo pipefail
 
 export CGO_ENABLED
 CGO_ENABLED=0

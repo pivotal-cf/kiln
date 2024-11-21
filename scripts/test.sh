@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -euxo pipefail
+set -euo pipefail
 
 export CGO_ENABLED
 CGO_ENABLED=0
@@ -13,17 +13,20 @@ function main() {
     export CGO_ENABLED
     CGO_ENABLED=0
 
+    >&2 echo "Running unit tests..."
     go test -cover -short ./...
+
+    >&2 echo "Running go vet..."
     go vet ./...
 
+    >&2 echo "Running golangci-lint run..."
     golangci-lint run ./...
 
-    set +x
-    echo "Setting GITHUB_ACCESS_TOKEN with 'gh auth token'"
+    >&2 echo "Setting GITHUB_ACCESS_TOKEN with 'gh auth token'..."
     export GITHUB_ACCESS_TOKEN
     GITHUB_ACCESS_TOKEN="$(gh auth token)"
-    set -x
 
+    >&2 echo "Running acceptance tests..."
     go test -v -count=1 -tags acceptance --timeout=25m ./internal/acceptance/workflows
   popd > /dev/null
 }
