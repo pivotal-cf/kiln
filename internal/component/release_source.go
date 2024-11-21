@@ -3,7 +3,6 @@ package component
 import (
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -81,17 +80,17 @@ const (
 
 // ReleaseSourceFactory returns a configured ReleaseSource based on the Type field on the
 // cargo.ReleaseSourceConfig structure.
-func ReleaseSourceFactory(releaseConfig cargo.ReleaseSourceConfig, outLogger *log.Logger) ReleaseSource {
+func ReleaseSourceFactory(releaseConfig cargo.ReleaseSourceConfig) ReleaseSource {
 	releaseConfig.ID = cargo.BOSHReleaseTarballSourceID(releaseConfig)
 	switch releaseConfig.Type {
 	case ReleaseSourceTypeBOSHIO:
-		return NewBOSHIOReleaseSource(releaseConfig, "", outLogger)
+		return NewBOSHIOReleaseSource(releaseConfig, "", nil)
 	case ReleaseSourceTypeS3:
-		return NewS3ReleaseSourceFromConfig(releaseConfig, outLogger)
+		return NewS3ReleaseSourceFromConfig(releaseConfig, nil)
 	case ReleaseSourceTypeGithub:
-		return NewGithubReleaseSource(releaseConfig)
+		return NewGithubReleaseSource(releaseConfig, nil)
 	case ReleaseSourceTypeArtifactory:
-		return NewArtifactoryReleaseSource(releaseConfig)
+		return NewArtifactoryReleaseSource(releaseConfig, nil)
 	default:
 		panic(fmt.Sprintf("unknown release config: %v", releaseConfig))
 	}
