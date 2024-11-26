@@ -12,14 +12,16 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type UpdateStemcell struct {
 	Options struct {
 		flags.Standard
 
-		Version     string `short:"v"  long:"version"            required:"true"    description:"desired version of stemcell"`
-		ReleasesDir string `short:"rd" long:"releases-directory" default:"releases" description:"path to a directory to download releases into"`
+		Version        string `short:"v"   long:"version"               required:"true"    description:"desired version of stemcell"`
+		ReleasesDir    string `short:"rd"  long:"releases-directory"    default:"releases" description:"path to a directory to download releases into"`
+		UpdateReleases bool   `long:"update-releases"   description:"finds latest matching releases for new stemcell version"`
 	}
 	FS                         billy.Filesystem
 	MultiReleaseSourceProvider MultiReleaseSourceProvider
@@ -75,9 +77,15 @@ func (update UpdateStemcell) Execute(args []string) error {
 		}
 		spec.StemcellOS = kilnfileLock.Stemcell.OS
 		spec.StemcellVersion = trimmedInputVersion
-		spec.Version = rel.Version
 
-		remote, err := releaseSource.GetMatchedRelease(spec)
+		var remote cargo.BOSHReleaseTarballLock
+		if update.Options.UpdateReleases {
+			remote, err = releaseSource.FindReleaseVersion(spec, true)
+		} else {
+			spec.Version = rel.Version
+			remote, err = releaseSource.GetMatchedRelease(spec)
+		}
+
 		if err != nil {
 			return fmt.Errorf("while finding release %q, encountered error: %w", rel.Name, err)
 		}

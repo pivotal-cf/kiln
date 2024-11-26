@@ -66,8 +66,8 @@ var _ = Describe("UpdateStemcell", func() {
 					Version: "^1",
 				},
 				Releases: []cargo.BOSHReleaseTarballSpecification{
-					{Name: release1Name, GitHubRepository: "https://example.com/lemon"},
-					{Name: release2Name, GitHubRepository: "https://example.com/orange"},
+					{Name: release1Name, GitHubRepository: "https://example.com/lemon", Version: "*"}, 
+					{Name: release2Name, GitHubRepository: "https://example.com/orange", Version: "*"},
 				},
 			}
 			kilnfileLock = cargo.KilnfileLock{
@@ -115,6 +115,27 @@ var _ = Describe("UpdateStemcell", func() {
 				}
 			})
 
+			releaseSource.FindReleaseVersionCalls(func(requirement cargo.BOSHReleaseTarballSpecification, download bool) (cargo.BOSHReleaseTarballLock, error) {
+				switch requirement.Name {
+				case release1Name:
+					remote := cargo.BOSHReleaseTarballLock{
+						Name: release1Name, Version: release1Version,
+						RemotePath:   newRelease1RemotePath,
+						RemoteSource: publishableReleaseSourceID,
+					}
+					return remote, nil
+				case release2Name:
+					remote := cargo.BOSHReleaseTarballLock{
+						Name: release2Name, Version: release2Version,
+						RemotePath:   newRelease2RemotePath,
+						RemoteSource: unpublishableReleaseSourceID,
+					}
+					return remote, nil
+				default:
+					panic("unexpected release name")
+				}
+			})
+
 			releaseSource.DownloadReleaseCalls(func(_ string, remote cargo.BOSHReleaseTarballLock) (component.Local, error) {
 				switch remote.Name {
 				case release1Name:
@@ -130,7 +151,7 @@ var _ = Describe("UpdateStemcell", func() {
 					}
 					return local, nil
 				default:
-					panic("unexpected release name")
+					panic("unexpected release name '"+remote.Name +"'")
 				}
 			})
 
@@ -214,6 +235,31 @@ var _ = Describe("UpdateStemcell", func() {
 				GitHubRepository: "https://example.com/orange",
 			}))
 		})
+		It("looks up the correct releases with --update-releases", func() {
+			err := update.Execute([]string{
+				"--kilnfile", kilnfilePath, "--version", "1.100", "--releases-directory", releasesDirPath, "--update-releases",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(releaseSource.FindReleaseVersionCallCount()).To(Equal(2))
+
+			req1, noDownload1 := releaseSource.FindReleaseVersionArgsForCall(0)
+			Expect(req1).To(Equal(cargo.BOSHReleaseTarballSpecification{
+				Name: release1Name, Version: "*",
+				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
+				GitHubRepository: "https://example.com/lemon",
+			}))
+			Expect(noDownload1).To(BeTrue())
+
+			req2, noDownload2 := releaseSource.FindReleaseVersionArgsForCall(1)
+			Expect(req2).To(Equal(cargo.BOSHReleaseTarballSpecification{
+				Name: release2Name, Version: "*",
+				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
+				GitHubRepository: "https://example.com/orange",
+			}))
+			Expect(noDownload2).To(BeTrue())
+		})
+
 
 		It("downloads the correct releases", func() {
 			err := update.Execute([]string{
