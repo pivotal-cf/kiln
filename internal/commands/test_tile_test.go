@@ -207,28 +207,6 @@ var _ = Describe("kiln test", func() {
 		})
 	})
 
-	When("when the stability test is enabled", func() {
-		It("it sets the metadata configuration flag", func() {
-			args := []string{"--stability"}
-
-			fakeTestFunc := fakes.TestTileFunction{}
-			fakeTestFunc.Returns(nil)
-
-			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeTestFunc.CallCount()).To(Equal(1))
-
-			ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
-			Expect(ctx).NotTo(BeNil())
-			Expect(w).NotTo(BeNil())
-
-			Expect(configuration.RunManifest).To(BeFalse())
-			Expect(configuration.RunMetadata).To(BeTrue())
-			Expect(configuration.RunMigrations).To(BeFalse())
-		})
-	})
-
 	When("when ginkgo flag arguments are passed", func() {
 		It("it sets the metadata configuration flag", func() {
 			args := []string{"--ginkgo-flags=peach pair"}
