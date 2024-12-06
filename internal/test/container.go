@@ -23,17 +23,13 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/homedir"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/session/sshforward"
-	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	specV1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"golang.org/x/sync/errgroup"
-
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
-	"golang.org/x/term"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -47,36 +43,36 @@ const (
 
 func Run(ctx context.Context, w io.Writer, configuration Configuration) error {
 	logger := log.New(w, "kiln test: ", log.Default().Flags())
-	if found := configuration.SSHSocketAddress != ""; !found {
-		configuration.SSHSocketAddress, found = os.LookupEnv(authSockEnvVarName)
-		if !found {
-			return fmt.Errorf("neither configuration.SSHSocketAddress nor environment variable %s are set", authSockEnvVarName)
-		}
-	}
+	// if found := configuration.SSHSocketAddress != ""; !found {
+	// 	configuration.SSHSocketAddress, found = os.LookupEnv(authSockEnvVarName)
+	// 	if !found {
+	// 		return fmt.Errorf("neither configuration.SSHSocketAddress nor environment variable %s are set", authSockEnvVarName)
+	// 	}
+	// }
 
 	dockerDaemon, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return err
 	}
 
-	logger.Printf("connecting to ssh socket %q", configuration.SSHSocketAddress)
-	var dialer net.Dialer
-	conn, err := dialer.DialContext(ctx, "unix", configuration.SSHSocketAddress)
-	if err != nil {
-		return fmt.Errorf("failed to dial %s: %w", authSockEnvVarName, err)
-	}
+	// logger.Printf("connecting to ssh socket %q", configuration.SSHSocketAddress)
+	// var dialer net.Dialer
+	// conn, err := dialer.DialContext(ctx, "unix", configuration.SSHSocketAddress)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to dial %s: %w", authSockEnvVarName, err)
+	// }
 
-	home := homedir.Get()
+	// home := homedir.Get()
 
-	logger.Printf("ensuring ssh agent keys are configured")
-	if err := ensureSSHAgentKeys(agent.NewClient(conn), home, keyPasswordService{
-		stdin:        os.Stdin,
-		stdout:       os.Stdout,
-		isTerm:       term.IsTerminal,
-		readPassword: term.ReadPassword,
-	}.password); err != nil {
-		return err
-	}
+	// logger.Printf("ensuring ssh agent keys are configured")
+	// if err := ensureSSHAgentKeys(agent.NewClient(conn), home, keyPasswordService{
+	// 	stdin:        os.Stdin,
+	// 	stdout:       os.Stdout,
+	// 	isTerm:       term.IsTerminal,
+	// 	readPassword: term.ReadPassword,
+	// }.password); err != nil {
+	// 	return err
+	// }
 	return configureSession(ctx, logger, configuration, dockerDaemon, runTestWithSession(ctx, logger, w, dockerDaemon, configuration))
 }
 
@@ -92,6 +88,8 @@ type Configuration struct {
 
 	GinkgoFlags string
 	Environment []string
+
+	GitAuthToken string
 }
 
 func (configuration Configuration) commands() ([]string, error) {
@@ -126,10 +124,11 @@ type mobyClient interface {
 	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
 	Ping(ctx context.Context) (types.Ping, error)
 	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *specV1.Platform, containerName string) (container.CreateResponse, error)
-	ContainerStart(ctx context.Context, containerID string, options types.ContainerStartOptions) error
-	ContainerLogs(ctx context.Context, container string, options types.ContainerLogsOptions) (io.ReadCloser, error)
+	ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error
+	ContainerLogs(ctx context.Context, container string, options container.LogsOptions) (io.ReadCloser, error)
 	ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error)
 	ContainerStop(ctx context.Context, containerID string, options container.StopOptions) error
+	SecretCreate(ctx context.Context, options swarm.SecretSpec) (types.SecretCreateResponse, error)
 }
 
 func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, dockerDaemon mobyClient, configuration Configuration) func(sessionID string) error {
@@ -142,6 +141,17 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 		var dockerfileTarball bytes.Buffer
 		if err := createDockerfileTarball(tar.NewWriter(&dockerfileTarball), dockerfile); err != nil {
 			return err
+		}
+
+		logger.Println("creating GIT_AUTH_TOKEN secret")
+		_, err = dockerDaemon.SecretCreate(ctx, swarm.SecretSpec{
+			Annotations: swarm.Annotations{
+				Name: "GIT_AUTH_TOKEN",
+			},
+			Data: []byte(configuration.GitAuthToken),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create GIT_AUTH_TOKEN secret: %w", err)
 		}
 
 		logger.Println("creating test image")
@@ -210,11 +220,11 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 			return nil
 		})
 
-		if err := dockerDaemon.ContainerStart(ctx, testContainer.ID, types.ContainerStartOptions{}); err != nil {
+		if err := dockerDaemon.ContainerStart(ctx, testContainer.ID, container.StartOptions{}); err != nil {
 			return fmt.Errorf("failed to start test container: %w", err)
 		}
 
-		out, err := dockerDaemon.ContainerLogs(ctx, testContainer.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
+		out, err := dockerDaemon.ContainerLogs(ctx, testContainer.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
 		if err != nil {
 			return fmt.Errorf("container log request failure: %w", err)
 		}
@@ -260,11 +270,11 @@ func configureSession(ctx context.Context, logger *log.Logger, configuration Con
 	}
 	defer closeAndIgnoreError(s)
 
-	sshProvider, err := sshprovider.NewSSHAgentProvider([]sshprovider.AgentConfig{{ID: sshforward.DefaultID, Paths: []string{configuration.SSHSocketAddress}}})
-	if err != nil {
-		return fmt.Errorf("failed to initalize ssh-agent provider: %w", err)
-	}
-	s.Allow(sshProvider)
+	// sshProvider, err := sshprovider.NewSSHAgentProvider([]sshprovider.AgentConfig{{ID: sshforward.DefaultID, Paths: []string{configuration.SSHSocketAddress}}})
+	// if err != nil {
+	// 	return fmt.Errorf("failed to initalize ssh-agent provider: %w", err)
+	// }
+	// s.Allow(sshProvider)
 
 	runErrC := make(chan error)
 	go func() {

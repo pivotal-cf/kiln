@@ -15,10 +15,11 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/pivotal-cf/kiln/internal/test/fakes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh/agent"
+
+	"github.com/pivotal-cf/kiln/internal/test/fakes"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
@@ -117,6 +118,7 @@ func Test_runTestWithSession(t *testing.T) {
 		out := bytes.Buffer{}
 		configuration := Configuration{
 			AbsoluteTileDirectory: absoluteTileDirectory,
+			GitAuthToken:          "some-auth-token",
 		}
 
 		client := runTestWithSessionHelper(t, "", container.WaitResponse{
@@ -127,11 +129,83 @@ func Test_runTestWithSession(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("when building the container image fails", func(t *testing.T) {
+		ctx := context.Background()
+		out := bytes.Buffer{}
+		configuration := Configuration{
+			AbsoluteTileDirectory: absoluteTileDirectory,
+			GitAuthToken:          "some-auth-token",
+		}
+
+		client := runTestWithSessionHelper(t, "", container.WaitResponse{
+			StatusCode: 0,
+		})
+		client.ImageBuildReturns(types.ImageBuildResponse{}, fmt.Errorf("plantain"))
+
+		err := runTestWithSession(ctx, logger, &out, client, configuration)("some-session-id")
+		require.ErrorContains(t, err, "failed to build image: plantain")
+	})
+
+	// t.Run("when a git auth token is not provided", func(t *testing.T) {
+	// 	ctx := context.Background()
+	// 	out := bytes.Buffer{}
+	// 	configuration := Configuration{
+	// 		AbsoluteTileDirectory: absoluteTileDirectory,
+	// 	}
+	//
+	// 	client := runTestWithSessionHelper(t, "", container.WaitResponse{
+	// 		StatusCode: 0,
+	// 	})
+	// 	client.ImageBuildReturns(types.ImageBuildResponse{}, fmt.Errorf("should not be called"))
+	//
+	// 	err := runTestWithSession(ctx, logger, &out, client, configuration)("some-session-id")
+	// 	require.ErrorContains(t, err, "failed to build image: plantain")
+	//
+	// 	require.Zero(t, client.ImageBuildCallCount())
+	// })
+
+	t.Run("when starting the container fails", func(t *testing.T) {
+		ctx := context.Background()
+		out := bytes.Buffer{}
+		configuration := Configuration{
+			AbsoluteTileDirectory: absoluteTileDirectory,
+			GitAuthToken:          "some-auth-token",
+		}
+
+		client := runTestWithSessionHelper(t, "", container.WaitResponse{
+			StatusCode: 0,
+		})
+		client.ContainerStartReturns(fmt.Errorf("banana"))
+
+		err := runTestWithSession(ctx, logger, &out, client, configuration)("some-session-id")
+		require.ErrorContains(t, err, "failed to start test container: ")
+		require.ErrorContains(t, err, "banana")
+	})
+
+	t.Run("when fetching container logs fails", func(t *testing.T) {
+		ctx := context.Background()
+		out := bytes.Buffer{}
+		configuration := Configuration{
+			AbsoluteTileDirectory: absoluteTileDirectory,
+			GitAuthToken:          "some-auth-token",
+		}
+
+		client := runTestWithSessionHelper(t, "", container.WaitResponse{
+			StatusCode: 0,
+		})
+		client.ContainerLogsReturns(nil, fmt.Errorf("banana"))
+
+		err := runTestWithSession(ctx, logger, &out, client, configuration)("some-session-id")
+		require.ErrorContains(t, err, "container log request failure: ")
+		require.ErrorContains(t, err, "banana")
+	})
+
 	t.Run("when the command fails", func(t *testing.T) {
 		ctx := context.Background()
 		out := bytes.Buffer{}
 		configuration := Configuration{
 			AbsoluteTileDirectory: absoluteTileDirectory,
+			GitAuthToken:          "some-auth-token",
 		}
 
 		client := runTestWithSessionHelper(t, "", container.WaitResponse{
@@ -147,6 +221,7 @@ func Test_runTestWithSession(t *testing.T) {
 		out := bytes.Buffer{}
 		configuration := Configuration{
 			AbsoluteTileDirectory: absoluteTileDirectory,
+			GitAuthToken:          "some-auth-token",
 		}
 
 		client := runTestWithSessionHelper(t, "", container.WaitResponse{
@@ -157,40 +232,6 @@ func Test_runTestWithSession(t *testing.T) {
 		})
 		err := runTestWithSession(ctx, logger, &out, client, configuration)("some-session-id")
 		require.ErrorContains(t, err, "test failed with exit code 22: banana")
-	})
-
-	t.Run("when fetching container logs fails", func(t *testing.T) {
-		ctx := context.Background()
-		out := bytes.Buffer{}
-		configuration := Configuration{
-			AbsoluteTileDirectory: absoluteTileDirectory,
-		}
-
-		client := runTestWithSessionHelper(t, "", container.WaitResponse{
-			StatusCode: 0,
-		})
-		client.ContainerLogsReturns(nil, fmt.Errorf("banana"))
-
-		err := runTestWithSession(ctx, logger, &out, client, configuration)("some-session-id")
-		require.ErrorContains(t, err, "container log request failure: ")
-		require.ErrorContains(t, err, "banana")
-	})
-
-	t.Run("when starting the container container fails", func(t *testing.T) {
-		ctx := context.Background()
-		out := bytes.Buffer{}
-		configuration := Configuration{
-			AbsoluteTileDirectory: absoluteTileDirectory,
-		}
-
-		client := runTestWithSessionHelper(t, "", container.WaitResponse{
-			StatusCode: 0,
-		})
-		client.ContainerStartReturns(fmt.Errorf("banana"))
-
-		err := runTestWithSession(ctx, logger, &out, client, configuration)("some-session-id")
-		require.ErrorContains(t, err, "failed to start test container: ")
-		require.ErrorContains(t, err, "banana")
 	})
 }
 
