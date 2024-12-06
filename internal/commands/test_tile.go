@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/pivotal-cf/jhanda"
+
 	"github.com/pivotal-cf/kiln/internal/test"
 )
 
@@ -17,15 +18,15 @@ type TileTestFunction func(ctx context.Context, w io.Writer, configuration test.
 
 type TileTest struct {
 	Options struct {
-		TilePath   string `             long:"tile-path"                default:"."                             description:"Path to the Tile directory (e.g., ~/workspace/tas/ist)."`
-		Verbose    bool   `short:"v"    long:"verbose"                  default:"true"                          description:"Print info lines. This doesn't affect Ginkgo output."`
-		Silent     bool   `short:"s"    long:"silent"                   default:"false"                         description:"Hide info lines. This doesn't affect Ginkgo output."`
-		Manifest   bool   `             long:"manifest"                 default:"false"                         description:"Focus the Manifest tests."`
-		Migrations bool   `             long:"migrations"               default:"false"                         description:"Focus the Migration tests."`
-		Stability  bool   `             long:"stability"                default:"false"                         description:"Focus the Stability tests."`
-
+		TilePath        string   `             long:"tile-path"                default:"."                             description:"Path to the Tile directory (e.g., ~/workspace/tas/ist)."`
+		Verbose         bool     `short:"v"    long:"verbose"                  default:"true"                          description:"Print info lines. This doesn't affect Ginkgo output."`
+		Silent          bool     `short:"s"    long:"silent"                   default:"false"                         description:"Hide info lines. This doesn't affect Ginkgo output."`
+		Manifest        bool     `             long:"manifest"                 default:"false"                         description:"Focus the Manifest tests."`
+		Migrations      bool     `             long:"migrations"               default:"false"                         description:"Focus the Migration tests."`
+		Stability       bool     `             long:"stability"                default:"false"                         description:"Focus the Stability tests."`
 		EnvironmentVars []string `short:"e"    long:"environment-variable"                                             description:"Pass environment variable to the test suites. For example --stability -e 'PRODUCT=srt'."`
 		GingkoFlags     string   `             long:"ginkgo-flags"             default:"-r -p -slowSpecThreshold 15"   description:"Flags to pass to the Ginkgo Manifest and Stability test suites."`
+		SkipImageBuild  bool     `             long:"skip-image-build"         default:"false"                         description:"Skip building the image to run tests."`
 	}
 	function TileTestFunction
 	output   io.Writer
@@ -74,6 +75,8 @@ func (cmd TileTest) configuration() (test.Configuration, error) {
 
 		GinkgoFlags: cmd.Options.GingkoFlags,
 		Environment: cmd.Options.EnvironmentVars,
+
+		SkipImageBuild: cmd.Options.SkipImageBuild,
 	}, absErr
 }
 

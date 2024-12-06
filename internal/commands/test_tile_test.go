@@ -9,14 +9,13 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/kiln/internal/commands/fakes"
-	"github.com/pivotal-cf/kiln/internal/test"
-
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
+	"github.com/pivotal-cf/kiln/internal/commands/fakes"
+	"github.com/pivotal-cf/kiln/internal/test"
 )
 
 func init() {
@@ -34,9 +33,23 @@ func init() {
 
 var _ = Describe("kiln test", func() {
 	var output bytes.Buffer
+
 	AfterEach(func() {
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		vendorDir := filepath.Join(filepath.Dir(filepath.Dir(wd)), "vendor")
+
+		info, err := os.Stat(vendorDir)
+		if err == nil && info.IsDir() { // no error
+			_ = os.RemoveAll(vendorDir)
+		}
+
 		output.Reset()
 	})
+
 	When("when no arguments are passed", func() {
 		It("runs all the tests with initialized collaborators", func() {
 			var emptySlice []string
@@ -60,16 +73,6 @@ var _ = Describe("kiln test", func() {
 			Expect(configuration.RunAll).To(BeTrue())
 			Expect(output.String()).To(ContainSubstring("hello"))
 		})
-	})
-	AfterEach(func() {
-		wd, err := os.Getwd()
-		if err != nil {
-			log.Fatal(err)
-		}
-		vendorDir := filepath.Join(filepath.Dir(filepath.Dir(wd)), "vendor")
-		if info, err := os.Stat(vendorDir); err == nil && info.IsDir() { // no error
-			_ = os.RemoveAll(vendorDir)
-		}
 	})
 
 	When("when the tile directory does not exist", func() {
@@ -266,6 +269,26 @@ var _ = Describe("kiln test", func() {
 
 				Expect(configuration.Environment).To(Equal([]string{"PEAR=on-pizza"}))
 			})
+		})
+	})
+
+	When("when the skip-image-build flag is enabled", func() {
+		It("it sets the SkipImageBuild configuration flag", func() {
+			args := []string{"--skip-image-build"}
+
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
+
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeTestFunc.CallCount()).To(Equal(1))
+
+			ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
+			Expect(ctx).NotTo(BeNil())
+			Expect(w).NotTo(BeNil())
+
+			Expect(configuration.SkipImageBuild).To(BeTrue())
 		})
 	})
 })

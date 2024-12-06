@@ -29,10 +29,9 @@ import (
 	"github.com/moby/buildkit/session/sshforward"
 	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	specV1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"golang.org/x/sync/errgroup"
-
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/term"
 )
 
@@ -92,6 +91,8 @@ type Configuration struct {
 
 	GinkgoFlags string
 	Environment []string
+
+	SkipImageBuild bool
 }
 
 func (configuration Configuration) commands() ([]string, error) {
@@ -139,23 +140,27 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 			return err
 		}
 
-		var dockerfileTarball bytes.Buffer
-		if err := createDockerfileTarball(tar.NewWriter(&dockerfileTarball), dockerfile); err != nil {
-			return err
-		}
+		if !configuration.SkipImageBuild {
+			var dockerfileTarball bytes.Buffer
+			if err := createDockerfileTarball(tar.NewWriter(&dockerfileTarball), dockerfile); err != nil {
+				return err
+			}
 
-		logger.Println("creating test image")
-		imageBuildResult, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
-			Tags:      []string{"kiln_test_dependencies:vmware"},
-			Version:   types.BuilderBuildKit,
-			SessionID: sessionID,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to build image: %w", err)
-		}
+			logger.Println("creating test image")
+			imageBuildResult, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
+				Tags:      []string{"kiln_test_dependencies:vmware"},
+				Version:   types.BuilderBuildKit,
+				SessionID: sessionID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to build image: %w", err)
+			}
 
-		if err := checkSSHPrivateKeyError(imageBuildResult.Body); err != nil {
-			return err
+			if err := checkSSHPrivateKeyError(imageBuildResult.Body); err != nil {
+				return err
+			}
+		} else {
+			logger.Println("skipping image build")
 		}
 
 		parentDir := path.Dir(configuration.AbsoluteTileDirectory)
