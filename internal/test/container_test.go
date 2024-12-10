@@ -108,6 +108,43 @@ func Test_configureSession(t *testing.T) {
 	})
 }
 
+func Test_loadImage(t *testing.T) {
+	absoluteTileDirectory := filepath.Join(t.TempDir(), "test")
+	logger := log.New(io.Discard, "", 0)
+	t.Run("when loading a provided test image with a wrong path", func(t *testing.T) {
+		ctx := context.Background()
+		out := bytes.Buffer{}
+		configuration := Configuration{
+			AbsoluteTileDirectory: absoluteTileDirectory,
+			ImagePath:             "non-existing",
+		}
+		client := runTestWithSessionHelper(t, "", container.WaitResponse{
+			StatusCode: 0,
+		})
+
+		err := runTestWithSession(ctx, logger, &out, client, configuration)("some-session-id")
+		require.ErrorContains(t, err, "failed to read image 'non-existing': open non-existing: no such file or directory")
+
+	})
+	t.Run(`when loading a provided test image with an existing path`, func(t *testing.T) {
+		ctx := context.Background()
+		out := bytes.Buffer{}
+
+		configuration := Configuration{
+			AbsoluteTileDirectory: absoluteTileDirectory,
+			ImagePath:             "assets/alpine.tgz",
+		}
+
+		client := runTestWithSessionHelper(t, "", container.WaitResponse{
+			StatusCode: 0,
+		})
+
+		err := runTestWithSession(ctx, logger, &out, client, configuration)("some-session-id")
+		require.NoError(t, err)
+
+	})
+}
+
 func Test_runTestWithSession(t *testing.T) {
 	absoluteTileDirectory := filepath.Join(t.TempDir(), "test")
 	logger := log.New(io.Discard, "", 0)
@@ -200,6 +237,10 @@ func runTestWithSessionHelper(t *testing.T, logs string, response container.Wait
 	client.ImageBuildReturns(types.ImageBuildResponse{
 		Body: io.NopCloser(strings.NewReader("")),
 	}, nil)
+	client.ImageLoadReturns(types.ImageLoadResponse{
+		Body: io.NopCloser(strings.NewReader("")),
+	}, nil)
+
 	client.ContainerStartReturns(nil)
 	client.ContainerLogsReturns(io.NopCloser(strings.NewReader(logs)), nil)
 
