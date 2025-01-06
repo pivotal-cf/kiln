@@ -161,21 +161,13 @@ func (src BOSHIOReleaseSource) DownloadRelease(releaseDir string, remoteRelease 
 	}
 	defer closeAndIgnoreError(out)
 
-	_, err = io.Copy(out, resp.Body)
+	hash := sha1.New()
+
+	mw := io.MultiWriter(out,hash)
+	_, err = io.Copy(mw, resp.Body)
 	_ = resp.Body.Close()
 	if err != nil {
 		return Local{}, err
-	}
-
-	_, err = out.Seek(0, 0)
-	if err != nil {
-		return Local{}, fmt.Errorf("error reseting file cursor: %w", err) // untested
-	}
-
-	hash := sha1.New()
-	_, err = io.Copy(hash, out)
-	if err != nil {
-		return Local{}, fmt.Errorf("error hashing file contents: %w", err) // untested
 	}
 
 	remoteRelease.SHA1 = hex.EncodeToString(hash.Sum(nil))
