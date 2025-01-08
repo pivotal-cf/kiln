@@ -74,6 +74,16 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				// language=json
 				_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
 			}), requireAuth))
+			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.3-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+				res.WriteHeader(http.StatusOK)
+				// language=json
+				_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha3"}}`)
+			}), requireAuth))
+			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-notices.zip", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+				res.WriteHeader(http.StatusOK)
+				// language=json
+				_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha-zip"}}`)
+			}), requireAuth))
 			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 				res.WriteHeader(http.StatusOK)
 				// language=json
