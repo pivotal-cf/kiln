@@ -47,7 +47,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `null`))
 
 				path, _ = regexp.Compile(`/api/v1/releases/github.com/\S+/uaa.*`)
-				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "73.3.0", "sha1":"b6e8a9cbc8724edcecb8658fa9459ee6c8fc259e"}]`))
+				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "73.3.0"}]`))
 
 				path, _ = regexp.Compile(`/api/v1/releases/github.com/\S+/metrics.*`)
 				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"version": "2.3.0"}]`))
@@ -74,7 +74,6 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 					Version:      "73.3.0",
 					RemotePath:   uaaURL,
 					RemoteSource: component.ReleaseSourceTypeBOSHIO,
-					SHA1:         "b6e8a9cbc8724edcecb8658fa9459ee6c8fc259e",
 				}))
 
 				foundRelease, err = releaseSource.GetMatchedRelease(rabbitmqRequirement)
@@ -300,7 +299,7 @@ var _ = Describe("BOSHIOReleaseSource", func() {
 				testServer = ghttp.NewServer()
 
 				path, _ := regexp.Compile(`/api/v1/releases/github.com/\S+/cf-rabbitmq.*`)
-				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"309.0.5","url":"https://bosh.io/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.0","sha1":"5df538657c2cc830bda679420a9b162682018ded","sha256": "49cad4a9758026cbae7a26f77921300595459dfa6bc0ca5332fc6ba52bd336b8"},{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"308.0.0","url":"https://bosh.io/d/github.com/cloudfoundry/cf-rabbitmq-release?v=308.0.0","sha1":"56202c9a466a8394683ae432ee2dea21ef6ef865","sha256":"5970d4211d236896d9366b150a66e38cbbd757fed31895962e499bb5458e0937"}]`))
+				testServer.RouteToHandler("GET", path, ghttp.RespondWith(http.StatusOK, `[{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"309.0.5","url":"https://bosh.io/d/github.com/cloudfoundry/cf-rabbitmq-release?v=309.0.0","sha1":"5df538657c2cc830bda679420a9b162682018ded"},{"name":"github.com/cloudfoundry/cf-rabbitmq-release","version":"308.0.0","url":"https://bosh.io/d/github.com/cloudfoundry/cf-rabbitmq-release?v=308.0.0","sha1":"56202c9a466a8394683ae432ee2dea21ef6ef865"}]`))
 
 				releaseSource = component.NewBOSHIOReleaseSource(cargo.ReleaseSourceConfig{ID: ID, Publishable: false}, testServer.URL(), logger)
 			})
