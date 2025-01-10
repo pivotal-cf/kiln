@@ -106,6 +106,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					// StemcellVersion: "9.9",
 					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
 					RemoteSource: "some-mango-tree",
+					SHA1:         "some-sha",
 				}))
 			})
 
