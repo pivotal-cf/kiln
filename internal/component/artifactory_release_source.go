@@ -177,13 +177,20 @@ func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseTar
 	default:
 		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("unexpected http status: %s", http.StatusText(response.StatusCode))
 	}
-
-	return cargo.BOSHReleaseTarballLock{
+	
+	matchedRelease := cargo.BOSHReleaseTarballLock{
 		Name:         spec.Name,
 		Version:      spec.Version,
 		RemotePath:   remotePath,
 		RemoteSource: ars.ID,
-	}, nil
+	}
+
+	matchedRelease.SHA1, err = ars.getFileSHA1(matchedRelease)
+	if err != nil {
+		return cargo.BOSHReleaseTarballLock{}, err
+	}
+
+	return matchedRelease, nil
 }
 
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
