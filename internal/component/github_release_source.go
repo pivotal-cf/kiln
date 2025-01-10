@@ -262,7 +262,7 @@ type ReleasesLister interface {
 // It should also calculate and set the SHA1 field on the Local result; it does not need
 // to ensure the sums match, the caller must verify this.
 func (grs *GithubReleaseSource) DownloadRelease(releaseDir string, remoteRelease cargo.BOSHReleaseTarballLock) (Local, error) {
-	grs.Logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeGithub, grs.ID)
+	grs.Logger.Printf(logLineDownload, remoteRelease.Name, remoteRelease.Version, ReleaseSourceTypeGithub, grs.ID)
 	return downloadRelease(context.TODO(), releaseDir, remoteRelease, grs, grs.Logger)
 }
 

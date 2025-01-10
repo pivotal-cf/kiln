@@ -67,7 +67,7 @@ type ReleaseSource interface {
 
 const (
 	panicMessageWrongReleaseSourceType = "wrong constructor for release source configuration"
-	logLineDownload                    = "downloading %s from %s release source %s"
+	logLineDownload                    = "downloading %s %s from %s release source %s"
 )
 
 // TODO: use the constants from "cargo" everywhere
