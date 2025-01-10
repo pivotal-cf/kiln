@@ -34,11 +34,15 @@ var _ = Describe("UpdateStemcell", func() {
 		release1Version = "1"
 		release2Name    = "release2"
 		release2Version = "2"
+		release3Name    = "release3"
+		release3Version = "3"
 
 		newRelease1SHA        = "new-sha1-1"
 		newRelease1RemotePath = "new-remote-path-1"
 		newRelease2SHA        = "new-sha1-2"
 		newRelease2RemotePath = "new-remote-path-2"
+		newRelease3SHA        = "new-sha1-3"
+		newRelease3RemotePath = "new-remote-path-3"
 
 		publishableReleaseSourceID   = "publishable"
 		unpublishableReleaseSourceID = "test-only"
@@ -66,8 +70,9 @@ var _ = Describe("UpdateStemcell", func() {
 					Version: "^1",
 				},
 				Releases: []cargo.BOSHReleaseTarballSpecification{
-					{Name: release1Name, GitHubRepository: "https://example.com/lemon", Version: "*"}, 
+					{Name: release1Name, GitHubRepository: "https://example.com/lemon", Version: "*"},
 					{Name: release2Name, GitHubRepository: "https://example.com/orange", Version: "*"},
+					{Name: release3Name, GitHubRepository: "https://example.com/pomelo", Version: "*"},
 				},
 			}
 			kilnfileLock = cargo.KilnfileLock{
@@ -86,6 +91,13 @@ var _ = Describe("UpdateStemcell", func() {
 						RemoteSource: "old-remote-source-2",
 						RemotePath:   "old-remote-path-2",
 					},
+					{
+						Name:         release3Name,
+						Version:      release3Version,
+						SHA1:         "old-sha-3",
+						RemoteSource: "old-remote-source-3",
+						RemotePath:   "old-remote-path-3",
+					},
 				},
 				Stemcell: cargo.Stemcell{
 					OS:      "old-os",
@@ -101,6 +113,7 @@ var _ = Describe("UpdateStemcell", func() {
 						Name: release1Name, Version: release1Version,
 						RemotePath:   newRelease1RemotePath,
 						RemoteSource: publishableReleaseSourceID,
+						SHA1:         "",
 					}
 					return remote, nil
 				case release2Name:
@@ -108,6 +121,15 @@ var _ = Describe("UpdateStemcell", func() {
 						Name: release2Name, Version: release2Version,
 						RemotePath:   newRelease2RemotePath,
 						RemoteSource: unpublishableReleaseSourceID,
+						SHA1:         "not-calculated",
+					}
+					return remote, nil
+				case release3Name:
+					remote := cargo.BOSHReleaseTarballLock{
+						Name: release3Name, Version: release3Version,
+						RemotePath:   newRelease3RemotePath,
+						RemoteSource: publishableReleaseSourceID,
+						SHA1:         newRelease3SHA,
 					}
 					return remote, nil
 				default:
@@ -122,6 +144,7 @@ var _ = Describe("UpdateStemcell", func() {
 						Name: release1Name, Version: release1Version,
 						RemotePath:   newRelease1RemotePath,
 						RemoteSource: publishableReleaseSourceID,
+						SHA1:         "",
 					}
 					return remote, nil
 				case release2Name:
@@ -129,6 +152,15 @@ var _ = Describe("UpdateStemcell", func() {
 						Name: release2Name, Version: release2Version,
 						RemotePath:   newRelease2RemotePath,
 						RemoteSource: unpublishableReleaseSourceID,
+						SHA1:         "not-calculated",
+					}
+					return remote, nil
+				case release3Name:
+					remote := cargo.BOSHReleaseTarballLock{
+						Name: release3Name, Version: release3Version,
+						RemotePath:   newRelease3RemotePath,
+						RemoteSource: publishableReleaseSourceID,
+						SHA1:         newRelease3SHA,
 					}
 					return remote, nil
 				default:
@@ -151,7 +183,7 @@ var _ = Describe("UpdateStemcell", func() {
 					}
 					return local, nil
 				default:
-					panic("unexpected release name '"+remote.Name +"'")
+					panic("unexpected release name '" + remote.Name + "'")
 				}
 			})
 
@@ -192,7 +224,7 @@ var _ = Describe("UpdateStemcell", func() {
 				OS:      newStemcellOS,
 				Version: newStemcellVersion,
 			}))
-			Expect(updatedLockfile.Releases).To(HaveLen(2))
+			Expect(updatedLockfile.Releases).To(HaveLen(3))
 			Expect(updatedLockfile.Releases).To(ContainElement(
 				cargo.BOSHReleaseTarballLock{
 					Name:         release1Name,
@@ -211,6 +243,15 @@ var _ = Describe("UpdateStemcell", func() {
 					RemotePath:   newRelease2RemotePath,
 				},
 			))
+			Expect(updatedLockfile.Releases).To(ContainElement(
+				cargo.BOSHReleaseTarballLock{
+					Name:         release3Name,
+					Version:      release3Version,
+					SHA1:         newRelease3SHA,
+					RemoteSource: publishableReleaseSourceID,
+					RemotePath:   newRelease3RemotePath,
+				},
+			))
 		})
 
 		It("looks up the correct releases", func() {
@@ -219,7 +260,7 @@ var _ = Describe("UpdateStemcell", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(2))
+			Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(3))
 
 			req1 := releaseSource.GetMatchedReleaseArgsForCall(0)
 			Expect(req1).To(Equal(cargo.BOSHReleaseTarballSpecification{
@@ -234,6 +275,13 @@ var _ = Describe("UpdateStemcell", func() {
 				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
 				GitHubRepository: "https://example.com/orange",
 			}))
+
+			req3 := releaseSource.GetMatchedReleaseArgsForCall(2)
+			Expect(req3).To(Equal(cargo.BOSHReleaseTarballSpecification{
+				Name: release3Name, Version: release3Version,
+				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
+				GitHubRepository: "https://example.com/pomelo",
+			}))
 		})
 		It("looks up the correct releases with --update-releases", func() {
 			err := update.Execute([]string{
@@ -241,7 +289,7 @@ var _ = Describe("UpdateStemcell", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(releaseSource.FindReleaseVersionCallCount()).To(Equal(2))
+			Expect(releaseSource.FindReleaseVersionCallCount()).To(Equal(3))
 
 			req1, noDownload1 := releaseSource.FindReleaseVersionArgsForCall(0)
 			Expect(req1).To(Equal(cargo.BOSHReleaseTarballSpecification{
@@ -260,8 +308,7 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(noDownload2).To(BeTrue())
 		})
 
-
-		It("downloads the correct releases", func() {
+		It("downloads 2 of the 3 correct releases, ", func() {
 			err := update.Execute([]string{
 				"--kilnfile", kilnfilePath, "--version", newStemcellVersion, "--releases-directory", releasesDirPath,
 			})
@@ -276,6 +323,7 @@ var _ = Describe("UpdateStemcell", func() {
 					Name: release1Name, Version: release1Version,
 					RemotePath:   newRelease1RemotePath,
 					RemoteSource: publishableReleaseSourceID,
+					SHA1:         "",
 				},
 			))
 
@@ -286,6 +334,7 @@ var _ = Describe("UpdateStemcell", func() {
 					Name: release2Name, Version: release2Version,
 					RemotePath:   newRelease2RemotePath,
 					RemoteSource: unpublishableReleaseSourceID,
+					SHA1:         "not-calculated",
 				},
 			))
 		})
@@ -390,7 +439,7 @@ var _ = Describe("UpdateStemcell", func() {
 					Version: newStemcellVersion,
 				}))
 
-				Expect(updatedLockfile.Releases).To(HaveLen(2))
+				Expect(updatedLockfile.Releases).To(HaveLen(3))
 				Expect(updatedLockfile.Releases).To(ContainElement(
 					cargo.BOSHReleaseTarballLock{
 						Name:         release1Name,
@@ -407,6 +456,15 @@ var _ = Describe("UpdateStemcell", func() {
 						SHA1:         newRelease2SHA,
 						RemoteSource: unpublishableReleaseSourceID,
 						RemotePath:   newRelease2RemotePath,
+					},
+				))
+				Expect(updatedLockfile.Releases).To(ContainElement(
+					cargo.BOSHReleaseTarballLock{
+						Name:         release3Name,
+						Version:      release3Version,
+						SHA1:         newRelease3SHA,
+						RemoteSource: publishableReleaseSourceID,
+						RemotePath:   newRelease3RemotePath,
 					},
 				))
 			})
