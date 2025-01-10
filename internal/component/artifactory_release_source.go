@@ -84,7 +84,7 @@ func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRe
 	}
 	downloadURL += "/" + ars.Repo + "/" + remoteRelease.RemotePath
 
-	ars.logger.Printf(logLineDownload, remoteRelease.Name, ReleaseSourceTypeArtifactory, ars.ID)
+	ars.logger.Printf(logLineDownload, remoteRelease.Name, remoteRelease.Version, ReleaseSourceTypeArtifactory, ars.ID)
 	resp, err := ars.getWithAuth(downloadURL)
 	if err != nil {
 		return Local{}, err
@@ -282,10 +282,12 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 	if (foundRelease == cargo.BOSHReleaseTarballLock{}) {
 		return cargo.BOSHReleaseTarballLock{}, ErrNotFound
 	}
+
 	foundRelease.SHA1, err = ars.getFileSHA1(foundRelease)
 	if err != nil {
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
+
 	return foundRelease, nil
 }
 
