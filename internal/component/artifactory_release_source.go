@@ -126,7 +126,6 @@ func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRe
 
 func (ars *ArtifactoryReleaseSource) getFileSHA1(release cargo.BOSHReleaseTarballLock) (string, error) {
 	fullURL := ars.ArtifactoryHost + "/api/storage/" + ars.Repo + "/" + release.RemotePath
-	ars.logger.Printf("Getting %s file info from artifactory", release.Name)
 
 	resp, err := ars.getWithAuth(fullURL)
 	if err != nil {
