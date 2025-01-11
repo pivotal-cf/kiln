@@ -19,9 +19,10 @@ type UpdateStemcell struct {
 	Options struct {
 		flags.Standard
 
-		Version        string `short:"v"   long:"version"               required:"true"    description:"desired version of stemcell"`
-		ReleasesDir    string `short:"rd"  long:"releases-directory"    default:"releases" description:"path to a directory to download releases into"`
-		UpdateReleases bool   `short:"ur"  long:"update-releases"                          description:"finds latest matching releases for new stemcell version"`
+		Version         string `short:"v"   long:"version"               required:"true"    description:"desired version of stemcell"`
+		ReleasesDir     string `short:"rd"  long:"releases-directory"    default:"releases" description:"path to a directory to download releases into"`
+		UpdateReleases  bool   `short:"ur"  long:"update-releases"       default:"false"    description:"finds latest matching releases for new stemcell version"`
+		WithoutDownload bool   `short:"wd"  long:"without-download"      default:"false"    description:"updates stemcell releases without downloading releases"`
 	}
 	FS                         billy.Filesystem
 	MultiReleaseSourceProvider MultiReleaseSourceProvider
@@ -75,10 +76,12 @@ func (update UpdateStemcell) Execute(args []string) error {
 		if err != nil {
 			return err
 		}
+
 		spec.StemcellOS = kilnfileLock.Stemcell.OS
 		spec.StemcellVersion = trimmedInputVersion
 
 		var remote cargo.BOSHReleaseTarballLock
+
 		if update.Options.UpdateReleases {
 			remote, err = releaseSource.FindReleaseVersion(spec, true)
 		} else {
@@ -89,25 +92,35 @@ func (update UpdateStemcell) Execute(args []string) error {
 		if err != nil {
 			return fmt.Errorf("while finding release %q, encountered error: %w", rel.Name, err)
 		}
+
 		if component.IsErrNotFound(err) {
 			return fmt.Errorf("couldn't find release %q", rel.Name)
 		}
 
 		if remote.RemotePath == rel.RemotePath && remote.RemoteSource == rel.RemoteSource {
 			update.Logger.Printf("No change for release %q\n", rel.Name)
-			continue
-		}
-		lock := &kilnfileLock.Releases[i]
 
+			if update.Options.WithoutDownload {
+				continue
+			}
+		}
+
+		lock := &kilnfileLock.Releases[i]
 		lock.RemotePath = remote.RemotePath
 		lock.RemoteSource = remote.RemoteSource
 		lock.SHA1 = remote.SHA1
-		if remote.SHA1 == "" || remote.SHA1 == "not-calculated" {
+
+		if update.Options.UpdateReleases {
+			lock.Version = remote.Version
+		}
+
+		if !update.Options.WithoutDownload || lock.SHA1 == "" || lock.SHA1 == "not-calculated" {
 			// release source needs to download.
 			local, err := releaseSource.DownloadRelease(update.Options.ReleasesDir, remote)
 			if err != nil {
-				return fmt.Errorf("while downloading release %q, encountered error: %w", rel.Name, err)
+				return fmt.Errorf("while downloading release %s %s, encountered error: %w", lock.Name, lock.Version, err)
 			}
+
 			lock.SHA1 = local.Lock.SHA1
 		}
 	}

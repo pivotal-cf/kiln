@@ -177,7 +177,7 @@ func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseTar
 	default:
 		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("unexpected http status: %s", http.StatusText(response.StatusCode))
 	}
-	
+
 	matchedRelease := cargo.BOSHReleaseTarballLock{
 		Name:         spec.Name,
 		Version:      spec.Version,
