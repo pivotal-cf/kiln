@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -110,7 +111,8 @@ var _ = Describe("UpdateStemcell", func() {
 				switch requirement.Name {
 				case release1Name:
 					remote := cargo.BOSHReleaseTarballLock{
-						Name: release1Name, Version: release1Version,
+						Name:         release1Name,
+						Version:      release1Version,
 						RemotePath:   newRelease1RemotePath,
 						RemoteSource: publishableReleaseSourceID,
 						SHA1:         "",
@@ -118,7 +120,8 @@ var _ = Describe("UpdateStemcell", func() {
 					return remote, nil
 				case release2Name:
 					remote := cargo.BOSHReleaseTarballLock{
-						Name: release2Name, Version: release2Version,
+						Name:         release2Name,
+						Version:      release2Version,
 						RemotePath:   newRelease2RemotePath,
 						RemoteSource: unpublishableReleaseSourceID,
 						SHA1:         "not-calculated",
@@ -126,7 +129,8 @@ var _ = Describe("UpdateStemcell", func() {
 					return remote, nil
 				case release3Name:
 					remote := cargo.BOSHReleaseTarballLock{
-						Name: release3Name, Version: release3Version,
+						Name:         release3Name,
+						Version:      release3Version,
 						RemotePath:   newRelease3RemotePath,
 						RemoteSource: publishableReleaseSourceID,
 						SHA1:         newRelease3SHA,
@@ -141,7 +145,8 @@ var _ = Describe("UpdateStemcell", func() {
 				switch requirement.Name {
 				case release1Name:
 					remote := cargo.BOSHReleaseTarballLock{
-						Name: release1Name, Version: release1Version,
+						Name:         release1Name,
+						Version:      release1Version,
 						RemotePath:   newRelease1RemotePath,
 						RemoteSource: publishableReleaseSourceID,
 						SHA1:         "",
@@ -149,7 +154,8 @@ var _ = Describe("UpdateStemcell", func() {
 					return remote, nil
 				case release2Name:
 					remote := cargo.BOSHReleaseTarballLock{
-						Name: release2Name, Version: release2Version,
+						Name:         release2Name,
+						Version:      release2Version,
 						RemotePath:   newRelease2RemotePath,
 						RemoteSource: unpublishableReleaseSourceID,
 						SHA1:         "not-calculated",
@@ -157,7 +163,8 @@ var _ = Describe("UpdateStemcell", func() {
 					return remote, nil
 				case release3Name:
 					remote := cargo.BOSHReleaseTarballLock{
-						Name: release3Name, Version: release3Version,
+						Name:         release3Name,
+						Version:      release3Version,
 						RemotePath:   newRelease3RemotePath,
 						RemoteSource: publishableReleaseSourceID,
 						SHA1:         newRelease3SHA,
@@ -172,13 +179,31 @@ var _ = Describe("UpdateStemcell", func() {
 				switch remote.Name {
 				case release1Name:
 					local := component.Local{
-						Lock:      cargo.BOSHReleaseTarballLock{Name: release1Name, Version: release1Version, SHA1: newRelease1SHA},
+						Lock: cargo.BOSHReleaseTarballLock{
+							Name:    release1Name,
+							Version: release1Version,
+							SHA1:    newRelease1SHA,
+						},
 						LocalPath: "not-used",
 					}
 					return local, nil
 				case release2Name:
 					local := component.Local{
-						Lock:      cargo.BOSHReleaseTarballLock{Name: release2Name, Version: release2Version, SHA1: newRelease2SHA},
+						Lock: cargo.BOSHReleaseTarballLock{
+							Name:    release2Name,
+							Version: release2Version,
+							SHA1:    newRelease2SHA,
+						},
+						LocalPath: "not-used",
+					}
+					return local, nil
+				case release3Name:
+					local := component.Local{
+						Lock: cargo.BOSHReleaseTarballLock{
+							Name:    release3Name,
+							Version: release3Version,
+							SHA1:    newRelease3SHA,
+						},
 						LocalPath: "not-used",
 					}
 					return local, nil
@@ -260,26 +285,33 @@ var _ = Describe("UpdateStemcell", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
+			Expect(releaseSource.FindReleaseVersionCallCount()).To(Equal(0))
 			Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(3))
 
 			req1 := releaseSource.GetMatchedReleaseArgsForCall(0)
 			Expect(req1).To(Equal(cargo.BOSHReleaseTarballSpecification{
-				Name: release1Name, Version: release1Version,
-				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
+				Name:             release1Name,
+				Version:          release1Version,
+				StemcellOS:       newStemcellOS,
+				StemcellVersion:  newStemcellVersion,
 				GitHubRepository: "https://example.com/lemon",
 			}))
 
 			req2 := releaseSource.GetMatchedReleaseArgsForCall(1)
 			Expect(req2).To(Equal(cargo.BOSHReleaseTarballSpecification{
-				Name: release2Name, Version: release2Version,
-				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
+				Name:             release2Name,
+				Version:          release2Version,
+				StemcellOS:       newStemcellOS,
+				StemcellVersion:  newStemcellVersion,
 				GitHubRepository: "https://example.com/orange",
 			}))
 
 			req3 := releaseSource.GetMatchedReleaseArgsForCall(2)
 			Expect(req3).To(Equal(cargo.BOSHReleaseTarballSpecification{
-				Name: release3Name, Version: release3Version,
-				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
+				Name:             release3Name,
+				Version:          release3Version,
+				StemcellOS:       newStemcellOS,
+				StemcellVersion:  newStemcellVersion,
 				GitHubRepository: "https://example.com/pomelo",
 			}))
 		})
@@ -290,37 +322,45 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(releaseSource.FindReleaseVersionCallCount()).To(Equal(3))
+			Expect(releaseSource.GetMatchedReleaseCallCount()).To(Equal(0))
 
 			req1, noDownload1 := releaseSource.FindReleaseVersionArgsForCall(0)
 			Expect(req1).To(Equal(cargo.BOSHReleaseTarballSpecification{
-				Name: release1Name, Version: "*",
-				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
+				Name:             release1Name,
+				Version:          "*",
+				StemcellOS:       newStemcellOS,
+				StemcellVersion:  newStemcellVersion,
 				GitHubRepository: "https://example.com/lemon",
 			}))
 			Expect(noDownload1).To(BeTrue())
 
 			req2, noDownload2 := releaseSource.FindReleaseVersionArgsForCall(1)
 			Expect(req2).To(Equal(cargo.BOSHReleaseTarballSpecification{
-				Name: release2Name, Version: "*",
-				StemcellOS: newStemcellOS, StemcellVersion: newStemcellVersion,
+				Name:             release2Name,
+				Version:          "*",
+				StemcellOS:       newStemcellOS,
+				StemcellVersion:  newStemcellVersion,
 				GitHubRepository: "https://example.com/orange",
 			}))
 			Expect(noDownload2).To(BeTrue())
 		})
 
-		It("downloads 2 of the 3 correct releases, ", func() {
+		It("downloads all of the releases", func() {
 			err := update.Execute([]string{
-				"--kilnfile", kilnfilePath, "--version", newStemcellVersion, "--releases-directory", releasesDirPath,
+				"--kilnfile", kilnfilePath,
+				"--version", newStemcellVersion,
+				"--releases-directory", releasesDirPath,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(2))
+			Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(3))
 
 			actualDir, remote1 := releaseSource.DownloadReleaseArgsForCall(0)
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote1).To(Equal(
 				cargo.BOSHReleaseTarballLock{
-					Name: release1Name, Version: release1Version,
+					Name:         release1Name,
+					Version:      release1Version,
 					RemotePath:   newRelease1RemotePath,
 					RemoteSource: publishableReleaseSourceID,
 					SHA1:         "",
@@ -331,12 +371,114 @@ var _ = Describe("UpdateStemcell", func() {
 			Expect(actualDir).To(Equal(releasesDirPath))
 			Expect(remote2).To(Equal(
 				cargo.BOSHReleaseTarballLock{
-					Name: release2Name, Version: release2Version,
+					Name:         release2Name,
+					Version:      release2Version,
 					RemotePath:   newRelease2RemotePath,
 					RemoteSource: unpublishableReleaseSourceID,
 					SHA1:         "not-calculated",
 				},
 			))
+
+			actualDir, remote3 := releaseSource.DownloadReleaseArgsForCall(2)
+			Expect(actualDir).To(Equal(releasesDirPath))
+			Expect(remote3).To(Equal(
+				cargo.BOSHReleaseTarballLock{
+					Name:         release3Name,
+					Version:      release3Version,
+					RemotePath:   newRelease3RemotePath,
+					RemoteSource: publishableReleaseSourceID,
+					SHA1:         "new-sha1-3",
+				},
+			))
+		})
+
+		When("the remote information for a release doesn't change", func() {
+			BeforeEach(func() {
+				kilnfileLock.Releases[1].RemoteSource = unpublishableReleaseSourceID
+				kilnfileLock.Releases[1].RemotePath = newRelease2RemotePath
+			})
+
+			It("still downloads the release", func() {
+				err := update.Execute([]string{
+					"--kilnfile", kilnfilePath,
+					"--version", newStemcellVersion,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(3))
+
+				_, remote := releaseSource.DownloadReleaseArgsForCall(0)
+				Expect(remote.Name).To(Equal(release1Name))
+
+				_, remote = releaseSource.DownloadReleaseArgsForCall(1)
+				Expect(remote.Name).To(Equal(release2Name))
+
+				_, remote = releaseSource.DownloadReleaseArgsForCall(2)
+				Expect(remote.Name).To(Equal(release3Name))
+
+				Expect(string(outputBuffer.Contents())).To(ContainSubstring(fmt.Sprintf("No change for release %q", release2Name)))
+			})
+		})
+
+		When("when the --without-download flag is specified", func() {
+			It("downloads 2 of the 3 correct releases", func() {
+				err := update.Execute([]string{
+					"--kilnfile", kilnfilePath,
+					"--version", newStemcellVersion,
+					"--releases-directory", releasesDirPath,
+					"--without-download",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(2))
+
+				actualDir, remote1 := releaseSource.DownloadReleaseArgsForCall(0)
+				Expect(actualDir).To(Equal(releasesDirPath))
+				Expect(remote1).To(Equal(
+					cargo.BOSHReleaseTarballLock{
+						Name:         release1Name,
+						Version:      release1Version,
+						RemotePath:   newRelease1RemotePath,
+						RemoteSource: publishableReleaseSourceID,
+						SHA1:         "",
+					},
+				))
+
+				actualDir, remote2 := releaseSource.DownloadReleaseArgsForCall(1)
+				Expect(actualDir).To(Equal(releasesDirPath))
+				Expect(remote2).To(Equal(
+					cargo.BOSHReleaseTarballLock{
+						Name:         release2Name,
+						Version:      release2Version,
+						RemotePath:   newRelease2RemotePath,
+						RemoteSource: unpublishableReleaseSourceID,
+						SHA1:         "not-calculated",
+					},
+				))
+			})
+
+			When("the remote information for a release doesn't change", func() {
+				BeforeEach(func() {
+					kilnfileLock.Releases[1].RemoteSource = unpublishableReleaseSourceID
+					kilnfileLock.Releases[1].RemotePath = newRelease2RemotePath
+				})
+
+				It("doesn't download the release", func() {
+					err := update.Execute([]string{
+						"--kilnfile", kilnfilePath,
+						"--version", newStemcellVersion,
+						"--without-download",
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(1))
+
+					_, remote := releaseSource.DownloadReleaseArgsForCall(0)
+					Expect(remote.Name).To(Equal(release1Name))
+
+					Expect(string(outputBuffer.Contents())).To(ContainSubstring(fmt.Sprintf("No change for release %q", release2Name)))
+				})
+			})
 		})
 
 		When("the version input is invalid", func() {
@@ -467,25 +609,6 @@ var _ = Describe("UpdateStemcell", func() {
 						RemotePath:   newRelease3RemotePath,
 					},
 				))
-			})
-		})
-
-		When("the remote information for a release doesn't change", func() {
-			BeforeEach(func() {
-				kilnfileLock.Releases[1].RemoteSource = unpublishableReleaseSourceID
-				kilnfileLock.Releases[1].RemotePath = newRelease2RemotePath
-			})
-
-			It("doesn't download the release", func() {
-				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(releaseSource.DownloadReleaseCallCount()).To(Equal(1))
-				_, remote := releaseSource.DownloadReleaseArgsForCall(0)
-				Expect(remote.Name).To(Equal(release1Name))
-
-				Expect(string(outputBuffer.Contents())).To(ContainSubstring("No change"))
-				Expect(string(outputBuffer.Contents())).To(ContainSubstring(release2Name))
 			})
 		})
 
