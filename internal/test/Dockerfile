@@ -42,5 +42,7 @@ RUN bundle install && \
   bundle exec gem build ops-manifest.gemspec && \
   gem install ops-manifest-*.gem --no-document && \
   gem uninstall json && \
-  gem install json --version 2.7.1
+  gem install json --version 2.7.1 && \
+  gem uninstall concurrent-ruby --force && \
+  gem install concurrent-ruby --version 1.3.4 
 RUN which ops-manifest
