@@ -92,13 +92,14 @@ func (src BOSHIOReleaseSource) GetMatchedRelease(requirement cargo.BOSHReleaseTa
 	for _, repo := range repos {
 		for _, suf := range suffixes {
 			fullName := repo + "/" + requirement.Name + suf
-			exists, err := src.releaseExistOnBoshio(fullName, requirement.Version)
+			exists, remoteSha, err := src.releaseExistOnBoshio(fullName, requirement.Version)
 			if err != nil {
 				return cargo.BOSHReleaseTarballLock{}, err
 			}
 
 			if exists {
 				builtRelease := src.createReleaseRemote(requirement, fullName)
+				builtRelease.SHA1 = remoteSha
 				return builtRelease, nil
 			}
 		}
@@ -135,7 +136,7 @@ func (src BOSHIOReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTarballS
 			}
 			spec.Version = validReleases[0].Version
 			lock := src.createReleaseRemote(spec, fullName)
-			lock.SHA1 = validReleases[0].SHA
+			lock.SHA1 = validReleases[0].SHA1
 			return lock, nil
 		}
 	}
@@ -232,18 +233,18 @@ func (src BOSHIOReleaseSource) getReleases(name string) ([]releaseResponse, erro
 
 type releaseResponse struct {
 	Version string `json:"version"`
-	SHA     string `json:"sha1"`
+	SHA1    string `json:"sha1"`
 }
 
-func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, error) {
+func (src BOSHIOReleaseSource) releaseExistOnBoshio(name, version string) (bool, string, error) {
 	releaseResponses, err := src.getReleases(name)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	for _, rel := range releaseResponses {
 		if rel.Version == version {
-			return true, nil
+			return true, rel.SHA1, nil
 		}
 	}
-	return false, nil
+	return false, "", nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -16,6 +17,36 @@ func iInvokeKiln(ctx context.Context, table *godog.Table) (context.Context, erro
 
 func iTryToInvokeKiln(ctx context.Context, table *godog.Table) (context.Context, error) {
 	return invokeKiln(ctx, false, argsFromTable(table)...)
+}
+
+func theReleaseTarballExists(ctx context.Context, tarballName string) error {
+	tileDir, err := tileRepoPath(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tile repo path: %w", err)
+	}
+
+	releasePath := filepath.Join(tileDir, "releases", tarballName)
+	_, err = os.Stat(releasePath)
+	return err
+}
+
+func theReleaseTarballDoesNotExist(ctx context.Context, tarballName string) error {
+	tileDir, err := tileRepoPath(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tile repo path: %w", err)
+	}
+
+	releasePath := filepath.Join(tileDir, "releases", tarballName)
+	_, err = os.Stat(releasePath)
+	if err == nil {
+		return fmt.Errorf("release tarball %q exists", tarballName)
+	}
+
+	if !os.IsNotExist(err) {
+		return err
+	}
+
+	return nil
 }
 
 func kilnValidateSucceeds(ctx context.Context) (context.Context, error) {

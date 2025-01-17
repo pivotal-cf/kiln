@@ -13,12 +13,45 @@ Feature: As a dependabot, I want to update a stemcell
       | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     Then stdout contains substring: "1.340"
 
-  Scenario: Update the stemcell
+  Scenario: Update the stemcell with download
     Given I have a tile source directory "testdata/tiles/v2"
+    And the repository has no fetched releases
     And TanzuNetwork has product "stemcells-ubuntu-jammy" with version "1.340"
     And "Kilnfile.lock" contains substring: version: "1.329"
     When I invoke kiln
       | update-stemcell                           |
-      | --version=1.340                         |
+      | --version=1.340                           |
       | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     Then "Kilnfile.lock" contains substring: version: "1.340"
+    And the Kilnfile.lock specifies version "0.2.3" for release "hello-release"
+    And the "bpm-1.2.12.tgz" release tarball exists
+    And the "hello-release-0.2.3.tgz" release tarball exists
+
+  Scenario: Update the stemcell without download
+    Given I have a tile source directory "testdata/tiles/v2"
+    And the repository has no fetched releases
+    And TanzuNetwork has product "stemcells-ubuntu-jammy" with version "1.340"
+    And "Kilnfile.lock" contains substring: version: "1.329"
+    When I invoke kiln
+      | update-stemcell                           |
+      | --version=1.340                           |
+      | --without-download                        |
+      | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
+    Then "Kilnfile.lock" contains substring: version: "1.340"
+    And the Kilnfile.lock specifies version "0.2.3" for release "hello-release"
+    And the "bpm-1.2.12.tgz" release tarball does not exist
+    And the "hello-release-0.2.3.tgz" release tarball does not exist
+
+  Scenario: Update the stemcell with release updates
+    Given I have a tile source directory "testdata/tiles/v2"
+    And the repository has no fetched releases
+    And TanzuNetwork has product "stemcells-ubuntu-jammy" with version "1.340"
+    And "Kilnfile.lock" contains substring: version: "1.329"
+    When I invoke kiln
+      | update-stemcell                           |
+      | --version=1.340                           |
+      | --update-releases                         |
+      | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
+    Then "Kilnfile.lock" contains substring: version: "1.340"
+    And the Kilnfile.lock specifies version "0.3.0" for release "hello-release"
+    And the "hello-release-0.3.0.tgz" release tarball exists

@@ -55,6 +55,8 @@ func InitializeKiln(ctx *godog.ScenarioContext) { initializeKiln(ctx) }
 func initializeKiln(ctx scenarioContext) {
 	ctx.Step(regexp.MustCompile(`^I invoke kiln$`), iInvokeKiln)
 	ctx.Step(regexp.MustCompile(`^I try to invoke kiln$`), iTryToInvokeKiln)
+	ctx.Step(regexp.MustCompile(`^the "([^"]*)" release tarball exists$`), theReleaseTarballExists)
+	ctx.Step(regexp.MustCompile(`^the "([^"]*)" release tarball does not exist$`), theReleaseTarballDoesNotExist)
 }
 
 func InitializeRegex(ctx *godog.ScenarioContext) { initializeRegex(ctx) }

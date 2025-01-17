@@ -286,7 +286,7 @@ func downloadRelease(ctx context.Context, releaseDir string, remoteRelease cargo
 
 	rTag, _, err := client.GetReleaseByTag(ctx, org, repo, "v"+remoteRelease.Version)
 	if err != nil {
-		logger.Println("warning: failed to find release tag of ", "v"+remoteRelease.Version)
+		logger.Println("warning: failed to find release tag of", "v"+remoteRelease.Version)
 		rTag, _, err = client.GetReleaseByTag(ctx, org, repo, remoteRelease.Version)
 		if err != nil {
 			return Local{}, fmt.Errorf("cant find release tag: %+v", err.Error())
