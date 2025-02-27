@@ -221,14 +221,14 @@ func TestValidate_release_sources(t *testing.T) {
 		please := NewWithT(t)
 		results := Validate(Kilnfile{
 			ReleaseSources: []ReleaseSourceConfig{
-				{Org: "crhntr", Type: BOSHReleaseTarballSourceTypeGithub},
+				{Org: "releen", Type: BOSHReleaseTarballSourceTypeGithub},
 			},
 			Releases: []BOSHReleaseTarballSpecification{
-				{Name: "hello-tile", GitHubRepository: "https://github.com/crhntr/hello-tile"},
+				{Name: "hello-tile", GitHubRepository: "https://github.com/releen/hello-tile"},
 			},
 		}, KilnfileLock{
 			Releases: []BOSHReleaseTarballLock{
-				{Name: "hello-tile", Version: "1.2.3", RemoteSource: "crhntr"},
+				{Name: "hello-tile", Version: "1.2.3", RemoteSource: "releen"},
 			},
 		})
 		please.Expect(results).To(HaveLen(0))

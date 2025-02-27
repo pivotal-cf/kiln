@@ -23,7 +23,7 @@ func Test_theLockSpecifiesVersionForRelease(t *testing.T) {
 
 	t.Run("it matches the release version", func(t *testing.T) {
 		ctx, please := setup(t)
-		err := theLockSpecifiesVersionForRelease(ctx, "0.2.3", "hello-release")
+		err := theLockSpecifiesVersionForRelease(ctx, "0.4.0", "hello-release")
 		please.Expect(err).NotTo(HaveOccurred())
 	})
 

@@ -268,7 +268,7 @@ func Test_getGithubRemoteRepoOwnerAndName(t *testing.T) {
 		_, _ = repo.CreateRemote(&config.RemoteConfig{
 			Name: "fork",
 			URLs: []string{
-				"git@github.com:crhntr/kiln.git",
+				"git@github.com:releen/kiln.git",
 			},
 		})
 		_, _ = repo.CreateRemote(&config.RemoteConfig{

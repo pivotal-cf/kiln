@@ -4,11 +4,11 @@ Feature: As a robot, I want to generate release notes
 
     And I execute git tag v0.1.3
 
-    And GitHub repository "crhntr/hello-release" has release with tag "v0.1.5"
+    And GitHub repository "releen/hello-release" has release with tag "0.5.0"
     And I invoke kiln
       | update-release                            |
       | --name=hello-release                      |
-      | --version=v0.1.5                          |
+      | --version=0.5.0                           |
       | --without-download                        |
       | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     And I write file "version"
@@ -18,7 +18,7 @@ Feature: As a robot, I want to generate release notes
     And I execute git show
     And I execute git tag v0.1.4
 
-    And I execute git remote add origin git@github.com:crhntr/hello-tile
+    And I execute git remote add origin git@github.com:releen/hello-tile
 
     # it does not contain 0.1.4 release header only 0.1.3
     And "notes/release_notes.md.erb" has regex matches: id='(?P<version>[\d\.]+)'
@@ -46,14 +46,14 @@ Feature: As a robot, I want to generate release notes
     And "notes/release_notes.md.erb" contains substring: **[Bug Fix]** Index page has inconsistent whitespace
 
     # it contains the component release note
-    And "notes/release_notes.md.erb" contains substring: "**[Fix]**\n  The HTML had  inconsistent	 spacing"
+    And "notes/release_notes.md.erb" contains substring: "**[Fix]**: The HTML had inconsistent spacing"
 
     # the table contains the name/versions
     And "notes/release_notes.md.erb" has regex matches: (?mU)<tr><td>(?P<release_name>.*)</td><td>(?P<release_version>.*)</td>
       | release_name           | release_version |
       | ubuntu-xenial stemcell | 621.0           |
       | bpm                    | 1.1.18          |
-      | hello-release          | 0.1.5           |
+      | hello-release          | 0.5.0           |
       | ubuntu-xenial stemcell | 621.0           |
       | bpm                    | 1.1.18          |
-      | hello-release          | v0.1.4          |
+      | hello-release          | 0.4.5           |

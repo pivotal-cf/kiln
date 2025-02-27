@@ -1,4 +1,4 @@
-# A [Ops Manager Tile](https://docs.pivotal.io/tiledev/2-10/index.html) wrapping [Hello Release](https://github.com/crhntr/hello-release) [![Release](https://github.com/crhntr/hello-tile/actions/workflows/release.yml/badge.svg)](https://github.com/crhntr/hello-tile/actions/workflows/release.yml)
+# A [Ops Manager Tile](https://docs.pivotal.io/tiledev/2-10/index.html) wrapping [Hello Release](https://github.com/releen/hello-release) [![Release](https://github.com/releen/hello-tile/actions/workflows/release.yml/badge.svg)](https://github.com/releen/hello-tile/actions/workflows/release.yml)
 
 This is an example for [Kiln](https://github.com/pivotal-cf/kiln).
 

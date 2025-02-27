@@ -20,7 +20,7 @@ jobs:
           go-version-file: go.mod
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v6.3.0
 
       - name: Ensure Generate Succeeds and Does Not Make Changes
         run: |
@@ -39,7 +39,7 @@ jobs:
         run: go test --covermode=atomic --coverprofile=kiln-${{ github.sha }}-unit-test-code-coverage.out ./...
 
       - name: Archive Unit Test Code Coverage Output
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Unit Test Code Coverage Output
           path: kiln-${{ github.sha }}-unit-test-code-coverage.out
