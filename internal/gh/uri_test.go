@@ -18,13 +18,13 @@ func Test_RepositoryOwnerAndNameFromPath(t *testing.T) {
 	}{
 		{
 			Name:            "valid url",
-			URI:             "https://github.com/crhntr/hello-release",
-			RepositoryOwner: "crhntr", RepositoryName: "hello-release", RepositoryHost: "github.com",
+			URI:             "https://github.com/releen/hello-release",
+			RepositoryOwner: "releen", RepositoryName: "hello-release", RepositoryHost: "github.com",
 		},
 		{
 			Name:            "ssh url",
-			URI:             "git@github.com:crhntr/hello-release.git",
-			RepositoryOwner: "crhntr", RepositoryName: "hello-release", RepositoryHost: "github.com",
+			URI:             "git@github.com:releen/hello-release.git",
+			RepositoryOwner: "releen", RepositoryName: "hello-release", RepositoryHost: "github.com",
 		},
 		{
 			Name:           "empty ssh path",
@@ -43,12 +43,12 @@ func Test_RepositoryOwnerAndNameFromPath(t *testing.T) {
 		},
 		{
 			Name:           "missing repo name",
-			URI:            "https://github.com/crhntr",
+			URI:            "https://github.com/releen",
 			ErrorSubstring: "path missing expected parts",
 		},
 		{
 			Name:           "missing repo owner",
-			URI:            "https://github.com//crhntr",
+			URI:            "https://github.com//releen",
 			ErrorSubstring: "path missing expected parts",
 		},
 		{

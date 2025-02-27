@@ -23,9 +23,9 @@ This guide intends to be more opinionated while the README.me is more general.
 - [TanzuNet Release Publication](#kiln-publish)
 - [Importing Go Source Code](#go-import-kiln)
 #### Helpful external links
-- [Metadata Testing Example](https://github.com/crhntr/hello-tile/blob/main/test/manifest/manifest_test.go)
+- [Metadata Testing Example](https://github.com/releen/hello-tile/blob/main/test/manifest/manifest_test.go)
 
-Again, see [hello-tile](https://github.com/crhntr/hello-tile) (non-VMware employees) or the TAS repo (VMware employees) for tile source code that kiln "just works" with.
+Again, see [hello-tile](https://github.com/releen/hello-tile) (non-VMware employees) or the TAS repo (VMware employees) for tile source code that kiln "just works" with.
 
 ## Bootstrapping a tile repository
 
@@ -37,7 +37,7 @@ mkdir -p bosh_variables forms instance_groups jobs migrations properties release
 touch {bosh_variables,forms,instance_groups,jobs,migrations,properties,releases,runtime_configs}/.gitkeep
 
 # Add a tile image
-curl -L -o icon.png "https://github.com/crhntr/hello-tile/blob/main/icon.png?raw=true"
+curl -L -o icon.png "https://github.com/releen/hello-tile/blob/main/icon.png?raw=true"
 
 # Add a version file (this is the default location Kiln reads from)
 echo '0.1.0' > 'version'
@@ -125,8 +125,8 @@ Other functions:
 - `select`  _TODO function documentation_
 - `regexReplaceAll`  _TODO function documentation_
 
-See the [crhntr/hello-tile/base.yml](https://github.com/pivotal/hello-tile/blob/c6b59dcb1118c9b2f5d4fbf836842ce4033baa80/base.yml#L29C1-L30C1) for some use of the above functions.
-The property definition in [crhntr/hello-tile/properties/hello.yml](https://github.com/pivotal/hello-tile/blob/c6b59dcb1118c9b2f5d4fbf836842ce4033baa80/properties/hello.yml#L2-L5)
+See the [releen/hello-tile/base.yml](https://github.com/releen/hello-tile/blob/main/base.yml) for some use of the above functions.
+The property definition in [releen/hello-tile/properties/hello.yml](https://github.com/releen/hello-tile/blob/main/properties/hello.yml)
 in referenced in `base.yml` using `$( property "port" )`.
 Most other product template part functions behave similarly.
 
@@ -149,8 +149,8 @@ The Kiln way is to
 
 While the following examples start from empty directories and mostly use S3 and BOSH.io.
 There are similar simple scripts for a small test tile illustrating similar usage patterns to the follwoing example.
-See [hello-tile](https://github.com/crhntr/hello-tile).
-Hello Tile consumes a single custom BOSH Release, [hello-release](https://github.com/crhntr/hello-release), from a GitHub release.
+See [hello-tile](https://github.com/releen/hello-tile).
+Hello Tile consumes a single custom BOSH Release, [hello-release](https://github.com/releen/hello-release), from a GitHub release.
 It does not upload the release to TanzuNet but adds the built tile to a GitHub Release.
 
 #### <a id="kiln-fetch-example"></a> **EXAMPLE** Using Kiln to Download BOSH Release Tarballs
@@ -356,8 +356,8 @@ To download BOSH Release Tarballs from GitHub Releases, add the following
 ```yaml
 release_sources:
   - type: "github"
-    id: crhntr # (optional) the default ID in this case is the value of org
-    org: "crhntr"
+    id: releen # (optional) the default ID in this case is the value of org
+    org: "releen"
     github_token: $(variable "github_access_token")
 ```
 

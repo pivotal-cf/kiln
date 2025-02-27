@@ -23,9 +23,9 @@ Feature: As a dependabot, I want to update a stemcell
       | --version=1.340                           |
       | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     Then "Kilnfile.lock" contains substring: version: "1.340"
-    And the Kilnfile.lock specifies version "0.2.3" for release "hello-release"
+    And the Kilnfile.lock specifies version "0.4.0" for release "hello-release"
     And the "bpm-1.2.12.tgz" release tarball exists
-    And the "hello-release-0.2.3.tgz" release tarball exists
+    And the "hello-release-0.4.0.tgz" release tarball exists
 
   Scenario: Update the stemcell without download
     Given I have a tile source directory "testdata/tiles/v2"
@@ -38,9 +38,9 @@ Feature: As a dependabot, I want to update a stemcell
       | --without-download                        |
       | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     Then "Kilnfile.lock" contains substring: version: "1.340"
-    And the Kilnfile.lock specifies version "0.2.3" for release "hello-release"
+    And the Kilnfile.lock specifies version "0.4.0" for release "hello-release"
     And the "bpm-1.2.12.tgz" release tarball does not exist
-    And the "hello-release-0.2.3.tgz" release tarball does not exist
+    And the "hello-release-0.4.0.tgz" release tarball does not exist
 
   Scenario: Update the stemcell with release updates
     Given I have a tile source directory "testdata/tiles/v2"
@@ -53,5 +53,5 @@ Feature: As a dependabot, I want to update a stemcell
       | --update-releases                         |
       | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
     Then "Kilnfile.lock" contains substring: version: "1.340"
-    And the Kilnfile.lock specifies version "0.3.0" for release "hello-release"
-    And the "hello-release-0.3.0.tgz" release tarball exists
+    And the Kilnfile.lock specifies version "0.5.0" for release "hello-release"
+    And the "hello-release-0.5.0.tgz" release tarball exists

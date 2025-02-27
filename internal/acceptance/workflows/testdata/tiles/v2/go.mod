@@ -1,4 +1,4 @@
-module github.com/crhntr/hello-tile
+module github.com/releen/hello-tile
 
 go 1.22.6
 

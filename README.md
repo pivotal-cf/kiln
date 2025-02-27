@@ -7,7 +7,7 @@ an opinionated folder structure and templating capabilities. It is designed to b
 both in CI environments and in command-line to produce a tile.
 
 More information for those just getting started can be found in the [Ops Manager Tile Developer Guide](https://docs.vmware.com/en/Tile-Developer-Guide/3.0/tile-dev-guide/index.html) .
-Looking at an [example kiln tile](https://github.com/crhntr/hello-tile/tree/main) may also be helpful
+Looking at an [example kiln tile](https://github.com/releen/hello-tile/tree/main) may also be helpful
 
 ## Installation
 
@@ -770,10 +770,10 @@ releases:
   remote_source: unique-name # this could be artifactory or s3
   remote_path: bosh-releases/compiled/backup-and-restore-sdk-1.18.84-ubuntu-jammy-1.179.tgz
 - name: hello-release
-  sha1: 06500a2002f6e14f6c258b7ee7044761a28d3d5a
-  version: 0.1.5
+  sha1: d7de88ab98d7d61d0a4e660c8fff76727817c059
+  version: 0.4.0
   remote_source: the-github-org 
-  remote_path: https://github.com/crhntr/hello-release/releases/download/v0.1.5/hello-release-v0.1.5.tgz
+  remote_path: https://github.com/releen/hello-release/releases/download/0.4.0/hello-release-0.4.0.tgz
 stemcell_criteria:
   os: ubuntu-xenial
   version: "621.0"

@@ -58,6 +58,6 @@ jobs:
           
           git reset --hard HEAD
           
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: ./kiln

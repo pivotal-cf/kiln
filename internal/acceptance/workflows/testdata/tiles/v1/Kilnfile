@@ -1,11 +1,11 @@
 ---
-slug: crhntr-hello
+slug: releen-hello
 release_sources:
   - type: github
-    org: crhntr
+    org: releen
     github_token: $(variable "github_access_token")
   - type: bosh.io
 releases:
   - name: bpm
   - name: hello-release
-    github_repository: https://github.com/crhntr/hello-release
+    github_repository: https://github.com/releen/hello-release

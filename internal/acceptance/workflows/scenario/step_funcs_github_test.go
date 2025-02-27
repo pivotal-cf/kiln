@@ -11,7 +11,7 @@ import (
 func Test_githubRepoHasReleaseWithTag(t *testing.T) {
 	t.Skip("skipping this test because it requires a github token to run. ")
 	if isRunningInCI() {
-		t.Skip("skip this step in CI. GitHub action credentials do not have access to crhntr/hello-release")
+		t.Skip("skip this step in CI. GitHub action credentials do not have access to releen/hello-release")
 	}
 	setup := func(t *testing.T) (context.Context, Gomega) {
 		ctx := context.Background()
@@ -31,13 +31,13 @@ func Test_githubRepoHasReleaseWithTag(t *testing.T) {
 
 	t.Run("release exists", func(t *testing.T) {
 		ctx, please := setup(t)
-		err := githubRepoHasReleaseWithTag(ctx, "crhntr", "hello-release", "v0.1.5")
+		err := githubRepoHasReleaseWithTag(ctx, "releen", "hello-release", "0.4.5")
 		please.Expect(err).NotTo(HaveOccurred())
 	})
 
 	t.Run("release does not exist", func(t *testing.T) {
 		ctx, please := setup(t)
-		err := githubRepoHasReleaseWithTag(ctx, "crhntr", "hello-release", "v99.99.99-banana")
+		err := githubRepoHasReleaseWithTag(ctx, "releen", "hello-release", "v99.99.99-banana")
 		please.Expect(err).To(HaveOccurred())
 	})
 }
