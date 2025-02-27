@@ -4,8 +4,9 @@ FROM golang as go-image
 FROM pivotalcfreleng/kiln:v0.77.0 as kiln
 
 FROM ruby:3.2.0 as builder
-RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
-ADD git@github.com:pivotal-cf/ops-manager.git#v2.10.66 /tmp/ops-manager
+RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts && ssh-keyscan github.gwd.broadcom.net >> ~/.ssh/known_hosts
+ADD git@github.gwd.broadcom.net:TNZ/ops-manager.git#v2.10.66 /tmp/ops-manager
+
 
 FROM ruby:3.2.0
 
