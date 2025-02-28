@@ -70,14 +70,6 @@ This field should be populated with the TanzuNet product slug where this tile is
 
 It is used by kiln publish.
 
-#### "pre_ga_user_groups"
-
-This field must be a list of strings.
-
-This should be populated with the names of TanzuNet User Groups to attach to a pre-release on TanzuNet.
-
-It is used by kiln publish.
-
 #### "release_sources"
 
 This field must be a list of objects with keys from [`ReleaseSourceConfig`](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg/cargo#ReleaseSourceConfig).
@@ -163,7 +155,6 @@ Commands:
   find-stemcell-version    prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile
   glaze                    Pin versions in Kilnfile to match lock.
   help                     prints this usage information
-  publish                  publish tile on Pivnet
   re-bake                  re-bake constructs a tile from a bake record
   release-notes            generates release notes from bosh-release release notes
   sync-with-local          update the Kilnfile.lock based on local releases

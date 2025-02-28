@@ -16,7 +16,6 @@ const (
 type Kilnfile struct {
 	ReleaseSources     []ReleaseSourceConfig             `yaml:"release_sources,omitempty"`
 	Slug               string                            `yaml:"slug,omitempty"`
-	PreGaUserGroups    []string                          `yaml:"pre_ga_user_groups,omitempty"`
 	Releases           []BOSHReleaseTarballSpecification `yaml:"releases,omitempty"`
 	TileNames          []string                          `yaml:"tile_names,omitempty"`
 	Stemcell           Stemcell                          `yaml:"stemcell_criteria,omitempty"`
