@@ -297,44 +297,6 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 	return foundRelease, nil
 }
 
-func (ars *ArtifactoryReleaseSource) UploadRelease(spec cargo.BOSHReleaseTarballSpecification, file io.Reader) (cargo.BOSHReleaseTarballLock, error) {
-	remotePath, err := ars.RemotePath(spec)
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, err
-	}
-
-	ars.logger.Printf("uploading release %q to %s at %q...\n", spec.Name, ars.ID, remotePath)
-
-	fullUrl := ars.ArtifactoryHost + "/artifactory/" + ars.Repo + "/" + remotePath
-
-	request, err := http.NewRequest(http.MethodPut, fullUrl, file)
-	if err != nil {
-		fmt.Println(err)
-		return cargo.BOSHReleaseTarballLock{}, err
-	}
-	request.SetBasicAuth(ars.Username, ars.Password)
-	// TODO: check Sha1/2
-	// request.Header.Set("X-Checksum-Sha1", spec.??? )
-
-	response, err := ars.Client.Do(request)
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, wrapVPNError(err)
-	}
-
-	switch response.StatusCode {
-	case http.StatusCreated:
-	default:
-		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("response contained errror status code: %d %s", response.StatusCode, response.Status)
-	}
-
-	return cargo.BOSHReleaseTarballLock{
-		Name:         spec.Name,
-		Version:      spec.Version,
-		RemotePath:   remotePath,
-		RemoteSource: ars.ReleaseSourceConfig.ID,
-	}, nil
-}
-
 func (ars *ArtifactoryReleaseSource) RemotePath(spec cargo.BOSHReleaseTarballSpecification) (string, error) {
 	pathBuf := new(bytes.Buffer)
 
