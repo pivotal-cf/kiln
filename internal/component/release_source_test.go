@@ -207,80 +207,6 @@ var _ = Describe("ReleaseSourceList", func() {
 		})
 	})
 
-	Describe("FindReleaseUploader", func() {
-		var (
-			repo     component.ReleaseSourceList
-			kilnfile cargo.Kilnfile
-		)
-
-		JustBeforeEach(func() {
-			repo = component.NewReleaseSourceRepo(kilnfile)
-		})
-
-		BeforeEach(func() {
-			kilnfile = cargo.Kilnfile{
-				ReleaseSources: []cargo.ReleaseSourceConfig{
-					{
-						Type: "s3", Bucket: "bucket-1", Region: "us-west-1", AccessKeyId: "ak1", SecretAccessKey: "shhhh!",
-						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
-					},
-					{
-						Type: "s3", Bucket: "bucket-2", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
-						PathTemplate: `2.8/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}.tgz`,
-					},
-					{Type: "bosh.io"},
-					{
-						Type: "s3", Bucket: "bucket-3", Region: "us-west-2", AccessKeyId: "aki", SecretAccessKey: "shhhh!",
-						PathTemplate: `{{.Name}}-{{.Version}}.tgz`,
-					},
-				},
-			}
-		})
-
-		Context("when the named source exists and accepts uploads", func() {
-			It("returns a valid release uploader", func() {
-				uploader, err := repo.FindReleaseUploader("bucket-2")
-				Expect(err).NotTo(HaveOccurred())
-
-				var s3ReleaseSource component.S3ReleaseSource
-				Expect(uploader).To(BeAssignableToTypeOf(s3ReleaseSource))
-			})
-		})
-
-		Context("when no sources accept uploads", func() {
-			BeforeEach(func() {
-				kilnfile = cargo.Kilnfile{
-					ReleaseSources: []cargo.ReleaseSourceConfig{{Type: "bosh.io"}},
-				}
-			})
-
-			It("errors", func() {
-				_, err := repo.FindReleaseUploader("bosh.io")
-				Expect(err).To(MatchError(ContainSubstring("no upload-capable release sources were found")))
-			})
-		})
-
-		Context("when the named source doesn't accept uploads", func() {
-			It("errors with a list of valid sources", func() {
-				_, err := repo.FindReleaseUploader("bosh.io")
-				Expect(err).To(MatchError(ContainSubstring("could not find a valid matching release source")))
-				Expect(err).To(MatchError(ContainSubstring("bucket-1")))
-				Expect(err).To(MatchError(ContainSubstring("bucket-2")))
-				Expect(err).To(MatchError(ContainSubstring("bucket-3")))
-			})
-		})
-
-		Context("when the named source doesn't exist", func() {
-			It("errors with a list of valid sources", func() {
-				_, err := repo.FindReleaseUploader("bucket-42")
-				Expect(err).To(MatchError(ContainSubstring("could not find a valid matching release source")))
-				Expect(err).To(MatchError(ContainSubstring("bucket-1")))
-				Expect(err).To(MatchError(ContainSubstring("bucket-2")))
-				Expect(err).To(MatchError(ContainSubstring("bucket-3")))
-			})
-		})
-	})
-
 	Describe("RemotePather", func() {
 		var (
 			list     component.ReleaseSourceList
@@ -309,16 +235,6 @@ var _ = Describe("ReleaseSourceList", func() {
 					},
 				},
 			}
-		})
-
-		Context("when the named source exists and implements RemotePath", func() {
-			It("returns a valid release uploader", func() {
-				uploader, err := list.FindRemotePather("bucket-2")
-				Expect(err).NotTo(HaveOccurred())
-
-				var s3ReleaseSource component.S3ReleaseSource
-				Expect(uploader).To(BeAssignableToTypeOf(s3ReleaseSource))
-			})
 		})
 
 		Context("when no sources implement RemotePath", func() {
