@@ -158,7 +158,6 @@ Usage: kiln [options] <command> [<args>]
 
 Commands:
   bake                     bakes a tile
-  cache-compiled-releases  Cache compiled releases
   fetch                    fetches releases
   find-release-version     prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints
   find-stemcell-version    prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile
@@ -171,7 +170,6 @@ Commands:
   test                     Test manifest for a product
   update-release           bumps a release to a new version
   update-stemcell          updates stemcell and release information in Kilnfile.lock
-  upload-release           uploads a BOSH release to an s3 release_source
   validate                 validate Kilnfile and Kilnfile.lock
   version                  prints the kiln release version
 ```

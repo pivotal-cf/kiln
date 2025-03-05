@@ -403,7 +403,7 @@ Please see [Path Templates](#path-templates). The value of `remote_path` in the 
 
 #### <a id='release-source-s3'></a> AWS S3
 
-Kiln can fetch and upload releases to/from AWS S3.
+Kiln can fetch releases from AWS S3.
 
 ```yaml
 release_sources:
@@ -463,9 +463,6 @@ export OM_PRIVATE_KEY="$(cat $(echo "${BOSH_ALL_PROXY}" | awk -F= '{print $2}'))
 om upload-product --product=tile.pivotal
 om configure-product --config=simple_config.yml
 om apply-changes --product-name=my-tile-name
-
-# Download Compiled BOSH Releases from the BOSH Director and Upload them to the S3 Bucket or Artifactory
-kiln cache-compiled-releases --upload-target-id=my_compiled_release_bucket --name=hello
 
 # Commit and push the changes to Kilnfile.lock
 git add -p Kilnfile.lock

@@ -63,10 +63,6 @@ func main() {
 		repo := component.NewReleaseSourceRepo(kilnfile)
 		return repo.Filter(allowOnlyPublishable)
 	})
-	ruFinder := commands.ReleaseUploaderFinder(func(kilnfile cargo.Kilnfile, sourceID string) (component.ReleaseUploader, error) {
-		repo := component.NewReleaseSourceRepo(kilnfile)
-		return repo.FindReleaseUploader(sourceID)
-	})
 	rpFinder := commands.RemotePatherFinder(func(kilnfile cargo.Kilnfile, sourceID string) (component.RemotePather, error) {
 		repo := component.NewReleaseSourceRepo(kilnfile)
 		return repo.FindRemotePather(sourceID)
@@ -85,11 +81,6 @@ func main() {
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)
-	commandSet["upload-release"] = commands.UploadRelease{
-		FS:                    fs,
-		Logger:                outLogger,
-		ReleaseUploaderFinder: ruFinder,
-	}
 	commandSet["sync-with-local"] = commands.NewSyncWithLocal(fs, localReleaseDirectory, rpFinder, outLogger)
 	commandSet["publish"] = commands.NewPublish(outLogger, errLogger, osfs.New(""))
 
