@@ -1,7 +1,6 @@
 package component_test
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -9,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
@@ -184,55 +182,6 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 			})
 		})
 	})
-	When("uploading releases", func() { // testing UploadRelease
-		var serverReleasesDirectory string
-		BeforeEach(func() {
-			serverReleasesDirectory = must(os.MkdirTemp("", "artifactory_server"))
-
-			requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
-
-			artifactoryRouter.Handler(http.MethodPut, "/artifactory/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-				fileName := path.Base(req.URL.Path)
-				filePath := filepath.Join(serverReleasesDirectory, fileName)
-				f, err := os.Create(filePath)
-				if err != nil {
-					log.Fatal("failed to create file in", filePath)
-				}
-				defer closeAndIgnoreError(f)
-				defer closeAndIgnoreError(req.Body)
-				_, _ = io.Copy(f, req.Body)
-				res.WriteHeader(http.StatusCreated)
-			}), requireAuth))
-		})
-		AfterEach(func() {
-			_ = os.RemoveAll(serverReleasesDirectory)
-		})
-
-		It("it uploads the file to the server", func() { // testing UploadRelease
-			f, err := os.Open(filepath.Join("testdata", "some-release.tgz"))
-			Expect(err).NotTo(HaveOccurred())
-			defer closeAndIgnoreError(f)
-
-			resultLock, resultErr := source.UploadRelease(cargo.BOSHReleaseTarballSpecification{
-				Name:            "mango",
-				Version:         "2.3.4",
-				StemcellOS:      "smoothie",
-				StemcellVersion: "9.9",
-			}, f)
-
-			Expect(resultErr).NotTo(HaveOccurred())
-			Expect(resultLock).To(Equal(cargo.BOSHReleaseTarballLock{
-				Name:    "mango",
-				Version: "2.3.4",
-				// StemcellOS:      "smoothie",
-				// StemcellVersion: "9.9",
-				// SHA1:         "some-sha",
-				RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
-				RemoteSource: "some-mango-tree",
-			}))
-			Expect(filepath.Join(serverReleasesDirectory, "mango-2.3.4-smoothie-9.9.tgz")).To(BeAnExistingFile())
-		})
-	})
 
 	When("not behind the corporate firewall", func() {
 		JustBeforeEach(func() {
@@ -270,18 +219,6 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
 					RemoteSource: "some-mango-tree",
 				})
-				Expect(resultErr).To(HaveOccurred())
-				Expect(resultErr.Error()).To(ContainSubstring("vpn"))
-			})
-		})
-		Describe("UploadRelease", func() {
-			It("returns a helpful message", func() {
-				_, resultErr := source.UploadRelease(cargo.BOSHReleaseTarballSpecification{
-					Name:            "mango",
-					Version:         "2.3.4",
-					StemcellOS:      "smoothie",
-					StemcellVersion: "9.9",
-				}, bytes.NewBuffer(nil))
 				Expect(resultErr).To(HaveOccurred())
 				Expect(resultErr.Error()).To(ContainSubstring("vpn"))
 			})
