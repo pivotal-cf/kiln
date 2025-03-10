@@ -361,3 +361,20 @@ func Test_deGlazeBOSHReleaseTarballSpecification(t *testing.T) {
 		})
 	}
 }
+
+func TestKilnfileTemplate(t *testing.T) {
+	for _, name := range []string{
+		"artifactory",
+		"bosh.io",
+	} {
+		t.Run(name, func(t *testing.T) {
+			k, err := KilnfileTemplate(name)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, k.ReleaseSources)
+		})
+	}
+	t.Run("banana", func(t *testing.T) {
+		_, err := KilnfileTemplate("banana")
+		assert.Error(t, err)
+	})
+}
