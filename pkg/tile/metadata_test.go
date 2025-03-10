@@ -27,6 +27,10 @@ func TestReadMetadataFromFile(t *testing.T) {
 
 	assert.Equal(t, metadata.Name, "hello")
 }
+func TestReadMetadataFromFile_NonExistingFile(t *testing.T) {
+	_, err := tile.ReadMetadataFromFile("testdata/no-tile.pivotal")
+	require.Error(t, err)
+}
 
 func TestNonStandardMetadataFilename(t *testing.T) {
 	fileFS := fstest.MapFS{
@@ -36,6 +40,15 @@ func TestNonStandardMetadataFilename(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, string(buf), "{name: \"banana\"}")
+}
+
+func TestReadMetadataFromFS_NonExistingMetadataFile(t *testing.T) {
+	fileFS := fstest.MapFS{
+		"metadata/banana.json": &fstest.MapFile{Data: []byte(`{name: "banana"}`)},
+	}
+	_, err := tile.ReadMetadataFromFS(fileFS)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "metadata file not found in the tile: expected a file matching glob")
 }
 
 func TestReadMetadataFromServer(t *testing.T) {

@@ -126,6 +126,16 @@ product_version: 1.2.3
 					Expect(err).To(MatchError("some error"))
 				})
 			})
+
+			When("unable to reset and configure", func() {
+				It("errors", func() {
+					omRunner.ResetAndConfigureReturns(errors.New("reset and configure error"))
+
+					_, err := omService.RenderManifest(tileConfig, tileMetadata)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError("reset and configure error"))
+				})
+			})
 		})
 	})
 })
