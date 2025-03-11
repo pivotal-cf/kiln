@@ -1,6 +1,7 @@
 package flags_test
 
 import (
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"os"
 	"path/filepath"
 	"testing"
@@ -323,6 +324,122 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, []string{"phil"}, options.Files, "it removes defaults from other fields")
+	})
+}
+func TestLoadKilnfiles(t *testing.T) {
+	t.Run("Test Load Kilnfiles ", func(t *testing.T) {
+		t.Run("when there is no Kilnfile", func(t *testing.T) {
+
+			options := struct {
+				flags.Standard
+			}{
+				flags.Standard{},
+			}
+			_, _, err := options.LoadKilnfiles(nil, nil)
+
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "failed to open Kilnfile")
+		})
+
+		t.Run("when template variables files does not exist", func(t *testing.T) {
+
+			options := struct {
+				flags.Standard
+			}{
+				flags.Standard{Kilnfile: "kilnfile1", VariableFiles: []string{"variables-files-1", "variables-files-2"}},
+			}
+			_, _, err := options.LoadKilnfiles(nil, nil)
+
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "unable to open file")
+			assert.Contains(t, err.Error(), "failed to parse template variables")
+		})
+
+		t.Run("when valid Kilnfile is available", func(t *testing.T) {
+			tmpDir, err := os.MkdirTemp("", "load-kilnfile")
+			assert.NoError(t, err)
+			lockContents := `
+---
+releases:
+- name: some-release
+  version: "1.2.3"
+  remote_source:
+  remote_path: my-remote-path
+stemcell_criteria:
+  os: some-os
+  version: "4.5.6"
+`
+
+			kilnContents := `
+---
+releases:
+- name: has-constraint
+  version: ~74.16.0
+  source: bosh.io
+- name: has-no-constraint
+  source: bosh.io`
+
+			someKilnfilePath := filepath.Join(tmpDir, "Kilnfile")
+			err = os.WriteFile(someKilnfilePath, []byte(kilnContents), 0o644)
+			assert.NoError(t, err)
+			someKilnfileLockPath := filepath.Join(tmpDir, "Kilnfile.lock")
+			err = os.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
+			assert.NoError(t, err)
+
+			options := struct {
+				flags.Standard
+			}{
+				flags.Standard{Kilnfile: someKilnfilePath},
+			}
+			kilnFile, kilnfileLock, err := options.LoadKilnfiles(nil, nil)
+
+			assert.NoError(t, err)
+			assert.Equal(t, "has-constraint", kilnFile.Releases[0].Name)
+			assert.Equal(t, "some-release", kilnfileLock.Releases[0].Name)
+		})
+	})
+}
+
+func TestSaveKilnfileLock(t *testing.T) {
+	t.Run("Test Save KilnfileLock", func(t *testing.T) {
+		t.Run("when the Kilnfile.lock is valid", func(t *testing.T) {
+
+			tmpDir, err := os.MkdirTemp("", "save-kilnfilelock")
+			assert.NoError(t, err)
+			lockContents := `
+---
+releases:
+- name: some-release
+  version: "1.2.3"
+  remote_source:
+  remote_path: my-remote-path
+stemcell_criteria:
+  os: some-os
+  version: "4.5.6"
+`
+			someKilnfilePath := filepath.Join(tmpDir, "Kilnfile")
+			someKilnfileLockPath := filepath.Join(tmpDir, "Kilnfile.lock")
+			err = os.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
+			assert.NoError(t, err)
+
+			options := struct {
+				flags.Standard
+			}{
+				flags.Standard{Kilnfile: someKilnfilePath},
+			}
+
+			kilnfileLock := cargo.KilnfileLock{
+				Releases: []cargo.BOSHReleaseTarballLock{
+					{Name: "lemon", Version: "1.2.3", RemoteSource: "SOME_TREE"},
+					{Name: "orange", Version: "1.2.3", RemoteSource: "SOME_TREE"},
+				},
+			}
+
+			err = options.SaveKilnfileLock(nil, kilnfileLock)
+
+			assert.NoError(t, err)
+
+		})
 	})
 }
 
