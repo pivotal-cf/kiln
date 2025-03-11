@@ -269,11 +269,13 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 			continue
 		}
 
-		stemcellVersion := versionFormatter.Replace(versions[len(versions)-1])
 		// if the format matches, then we continue by verifying the stemcells are the same
 		// since this isn't under consideration for being bumped
-		if len(versions) > 1 && stemcellVersion != spec.StemcellVersion {
-			continue
+		if len(versions) > 1 {
+			stemcellVersion := versionFormatter.Replace(versions[len(versions)-1])
+			if stemcellVersion != spec.StemcellVersion {
+				continue
+			}
 		}
 
 		// then we select the highest matching version found
