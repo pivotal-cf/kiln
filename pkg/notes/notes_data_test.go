@@ -625,6 +625,10 @@ func TestData_WriteVersionNotes(t *testing.T) {
 func Test_trainstatURLFieldName_shouldNotChange(t *testing.T) {
 	please := NewWithT(t)
 	_, found := reflect.ValueOf(TrainstatQuery{}).Type().FieldByName("TrainstatURL")
-
 	please.Expect(found).To(BeTrue())
+}
+
+func Test_TrainstatURL_withoutHost(t *testing.T) {
+	please := NewWithT(t)
+	please.Expect(TrainstatURL()).To(Equal("https://tas-trainstat.eng.tanzu.broadcom.com"))
 }

@@ -1,6 +1,7 @@
 package history
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -67,6 +68,14 @@ func TestKilnfile(t *testing.T) {
 	// START setup
 	tileDir := "tile"
 	repo, _ := git.Init(memory.NewStorage(), memfs.New())
+	initialHashWithoutKilnfile := commit(t, repo, "initial", func(wt *git.Worktree) error {
+		p := wt.Filesystem.Join(tileDir, "test")
+		f, _ := wt.Filesystem.Create(p)
+		_, _ = f.Write([]byte(initialKilnfileLock))
+		_ = f.Close()
+		_, _ = wt.Add(p)
+		return nil
+	})
 	initialHash := commit(t, repo, "initial", func(wt *git.Worktree) error {
 		p := wt.Filesystem.Join(tileDir, "assets.lock")
 		f, _ := wt.Filesystem.Create(p)
@@ -163,6 +172,14 @@ func TestKilnfile(t *testing.T) {
 
 		please.Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
 	})
+
+	t.Run("missing kilnfile", func(t *testing.T) {
+		please := NewWithT(t)
+
+		_, _, err := Kilnfile(repo.Storer, initialHashWithoutKilnfile, "tile")
+
+		please.Expect(err).To(MatchError(ContainSubstring("file not found")))
+	})
 }
 
 const (
@@ -227,7 +244,39 @@ func TestWalk(t *testing.T) {
 		please.Expect(err).NotTo(HaveOccurred())
 		please.Expect(callCount).To(Equal(3))
 	})
+	t.Run("walk with invalid commits", func(t *testing.T) {
+		// START setup
+		repo, _ := git.Init(memory.NewStorage(), memfs.New())
 
+		please := NewWithT(t)
+
+		err := Walk(repo.Storer, plumbing.NewHash("some-invalid-hash"), func(*object.Commit) error {
+			return nil
+		})
+		please.Expect(err).To(HaveOccurred())
+	})
+	t.Run("walk with input function throwing error", func(t *testing.T) {
+		// START setup
+		tileDir := "tile"
+		repo, _ := git.Init(memory.NewStorage(), memfs.New())
+
+		h0 := commit(t, repo, "alpha release", func(wt *git.Worktree) error {
+			p := wt.Filesystem.Join(tileDir, "version")
+			kf, _ := wt.Filesystem.Create(p)
+			_, _ = kf.Write([]byte("1.0.0-alpha.1\n"))
+			_ = kf.Close()
+			_, _ = wt.Add(p)
+			return nil
+		})
+		// END setup
+
+		please := NewWithT(t)
+
+		err := Walk(repo.Storer, h0, func(*object.Commit) error {
+			return errors.New("some-error")
+		})
+		please.Expect(err).To(HaveOccurred())
+	})
 	t.Run("with branch", func(t *testing.T) {
 		// START setup
 		tileDir := "tile"

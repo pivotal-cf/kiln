@@ -1,6 +1,7 @@
 package bake_test
 
 import (
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -81,7 +82,7 @@ product_version: some-product-version
 		require.ErrorContains(t, b.WriteFile(dir), "version")
 	})
 
-	t.Run("when a record is marked as developement", func(t *testing.T) {
+	t.Run("when a record is marked as development", func(t *testing.T) {
 		dir := t.TempDir()
 
 		b := bake.Record{
@@ -284,4 +285,48 @@ func createGitRepository(t *testing.T, dir string) {
 	gitInit := exec.Command("git", "init")
 	gitInit.Dir = dir
 	require.NoError(t, gitInit.Run())
+}
+
+func TestIsEquivalent(t *testing.T) {
+	t.Run("when comparing two equal bake records", func(t *testing.T) {
+		// language=yaml
+		b, err := bake.NewRecord("some-peach-jam", []byte(`
+product_name: p-each
+product_version: some-product-version
+kiln_metadata:
+  kiln_version: some-kiln-version
+  metadata_git_sha: some-tile-source-revision
+  tile_name: srt
+`))
+		var logger *log.Logger
+		require.NoError(t, err)
+		require.Equal(t, b.IsEquivalent(bake.Record{
+			Version:        "some-product-version",
+			SourceRevision: "some-tile-source-revision",
+			TileName:       "srt",
+			FileChecksum:   "some-peach-jam",
+		}, logger), true, "is equivalent function returns true")
+
+	})
+
+	t.Run("when comparing two unequal bake records", func(t *testing.T) {
+		// language=yaml
+		b, err := bake.NewRecord("some-not-equal-peach-jam", []byte(`
+product_name: p-each
+product_version: some-product-version
+kiln_metadata:
+  kiln_version: some-kiln-version
+  metadata_git_sha: some-tile-source-revision
+  tile_name: srt
+`))
+		var logger *log.Logger
+		require.NoError(t, err)
+		require.Equal(t, b.IsEquivalent(bake.Record{
+			Version:        "some-product-version",
+			SourceRevision: "some-tile-source-revision",
+			TileName:       "srt",
+			FileChecksum:   "some-peach-jam",
+		}, logger), false, "is equivalent function returns true")
+
+	})
 }

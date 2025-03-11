@@ -1,6 +1,7 @@
 package cargo
 
 import (
+	"github.com/Masterminds/semver/v3"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -69,6 +70,118 @@ func TestKilnfileLock_UpdateBOSHReleaseTarballLockWithName(t *testing.T) {
 				assert.NoError(t, err)
 			}
 			assert.Equal(t, tt.KilnfileResult, tt.KilnfileLock)
+		})
+	}
+}
+
+func TestBoshReleaseTarballSpecification_VersionConstraints(t *testing.T) {
+
+	tests := []struct {
+		name                                string
+		boshReleaseTarball                  BOSHReleaseTarballSpecification
+		constraintsResult, constraintsEmpty semver.Constraints
+		version                             string
+		wantErr                             bool
+	}{
+		{
+			name:               "empty version",
+			boshReleaseTarball: BOSHReleaseTarballSpecification{},
+			version:            "*",
+			wantErr:            false,
+		},
+		{
+			name: "with valid semver version",
+			boshReleaseTarball: BOSHReleaseTarballSpecification{
+				Version: "~>1.2.3",
+			},
+			version: "~>1.2.3",
+			wantErr: false,
+		},
+		{
+			name: "with valid semver version",
+			boshReleaseTarball: BOSHReleaseTarballSpecification{
+				Version: "fdkjdfj",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			constraint, err := tt.boshReleaseTarball.VersionConstraints()
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				constraintsResult, _ := semver.NewConstraint(tt.version)
+				assert.NoError(t, err)
+				assert.Equal(t, constraint, constraintsResult)
+			}
+		})
+	}
+}
+func TestBoshReleaseTarballLock_ParseVersion(t *testing.T) {
+	tests := []struct {
+		name               string
+		boshReleaseTarball BOSHReleaseTarballLock
+		wantErr            bool
+		version            string
+	}{
+		{
+			name:               "empty version",
+			boshReleaseTarball: BOSHReleaseTarballLock{},
+			wantErr:            true,
+		},
+		{
+			name: "with valid semver version",
+			boshReleaseTarball: BOSHReleaseTarballLock{
+				Version: "3.0.0",
+			},
+			version: "3.0.0",
+			wantErr: false,
+		},
+		{
+			name: "with invalid semver version",
+			boshReleaseTarball: BOSHReleaseTarballLock{
+				Version: "fdkjdfj",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			constraint, err := tt.boshReleaseTarball.ParseVersion()
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				constraintsResult, _ := semver.NewVersion(tt.version)
+				assert.NoError(t, err)
+				assert.Equal(t, constraint, constraintsResult)
+			}
+		})
+	}
+}
+func TestBoshReleaseTarballLock_String(t *testing.T) {
+	tests := []struct {
+		name               string
+		boshReleaseTarball BOSHReleaseTarballLock
+	}{
+		{
+			name: "with valid Bosh Release tarball lock",
+			boshReleaseTarball: BOSHReleaseTarballLock{
+				Version:         "3.0.0",
+				Name:            "some-name",
+				SHA1:            "some-sha",
+				StemcellOS:      "some-stemcell",
+				StemcellVersion: "some-version",
+				RemoteSource:    "some-remote-source",
+				RemotePath:      "some-remote-path",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.boshReleaseTarball.String()
+			expected := "some-name 3.0.0  some-stemcell some-version some-remote-source some-remote-path "
+			assert.Equal(t, expected, result)
 		})
 	}
 }
