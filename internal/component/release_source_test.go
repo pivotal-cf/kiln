@@ -20,13 +20,14 @@ var _ = Describe("ReleaseSourceList", func() {
 						{Type: "s3", Bucket: "built-releases", Region: "us-west-1", Publishable: false, PathTemplate: "template"},
 						{Type: "bosh.io", Publishable: false},
 						{Type: "github", Org: "cloudfoundry", GithubToken: "banana"},
+						{Type: "artifactory", ID: "releases", ArtifactoryHost: "localhost", Username: "username", Password: "password", Repo: "example-repo-local", PathTemplate: "template"},
 					},
 				}
 			})
 
 			It("constructs all the release sources", func() {
 				releaseSources := component.NewReleaseSourceRepo(kilnfile)
-				Expect(len(releaseSources)).To(Equal(4)) // not using HaveLen because S3 struct is so huge
+				Expect(len(releaseSources)).To(Equal(5)) // not using HaveLen because S3 struct is so huge
 			})
 
 			It("constructs the compiled release source properly", func() {
@@ -53,6 +54,13 @@ var _ = Describe("ReleaseSourceList", func() {
 
 				Expect(releaseSources[3]).To(BeAssignableToTypeOf(&component.GithubReleaseSource{}))
 				Expect(releaseSources[3].Configuration().ID).To(Equal(kilnfile.ReleaseSources[3].Org))
+			})
+
+			It("constructs the artifactory release source properly", func() {
+				releaseSources := component.NewReleaseSourceRepo(kilnfile)
+
+				Expect(releaseSources[4]).To(BeAssignableToTypeOf(&component.ArtifactoryReleaseSource{}))
+				Expect(releaseSources[4].Configuration().ID).To(Equal("releases"))
 			})
 		})
 
