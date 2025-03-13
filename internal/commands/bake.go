@@ -352,8 +352,9 @@ func (b *Bake) loadFlags(args []string) error {
 	}
 
 	// setup default tile variables
-	if variablesDirPresent(b.fs, b.Options.Standard.Kilnfile) {
-		variablesFilePaths, err := getVariablesFilePaths(b.fs, b.Options.Standard.Kilnfile)
+	kilnfilePath := b.Options.Standard.Kilnfile
+	if variablesDirPresent(b.fs, kilnfilePath) {
+		variablesFilePaths, err := getVariablesFilePaths(b.fs, kilnfilePath)
 		if err == nil {
 			if noTileVariablesFileAlreadySet(b, variablesFilePaths) {
 				setADefaultTileVariablesFile(b, variablesFilePaths)
