@@ -299,23 +299,37 @@ func shouldNotUseDefaultKilnfileFlag(args []string) bool {
 		!flags.IsSet("kf", "kilnfile", args)
 }
 
-func variablesDirPresent(fs flags.FileSystem) bool {
-	file, err := fs.Stat("variables")
+func variablesDirPresent(fs flags.FileSystem, kilnfilePath string) bool {
+	variablesDirPath := getVariablesDir(fs, kilnfilePath)
+	file, err := fs.Stat(variablesDirPath)
 	return err == nil && file != nil
 }
 
-func getVariablesFilePaths(fs flags.FileSystem) ([]string, error) {
-	files, err := fs.ReadDir("variables")
+func getVariablesFilePaths(fs flags.FileSystem, kilnfilePath string) ([]string, error) {
+	variablesDirPath := getVariablesDir(fs, kilnfilePath)
+	files, err := fs.ReadDir(variablesDirPath)
 	if err != nil {
 		return nil, err
 	}
 	var varFiles []string
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), ".yml") {
-			varFiles = append(varFiles, "variables/"+file.Name())
+			varFiles = append(varFiles, filepath.Join(variablesDirPath, file.Name()))
 		}
 	}
 	return varFiles, nil
+}
+
+func getVariablesDir(fs flags.FileSystem, kilnfilePath string) string {
+	variablesDirPath := "variables"
+	if kilnfilePath != "" {
+		_, err := fs.Stat(kilnfilePath)
+		if err == nil {
+			kilnfileParentDir := filepath.Dir(kilnfilePath)
+			variablesDirPath = filepath.Join(kilnfileParentDir, variablesDirPath)
+		}
+	}
+	return variablesDirPath
 }
 
 func (b *Bake) loadFlags(args []string) error {
@@ -338,8 +352,9 @@ func (b *Bake) loadFlags(args []string) error {
 	}
 
 	// setup default tile variables
-	if variablesDirPresent(b.fs) {
-		variablesFilePaths, err := getVariablesFilePaths(b.fs)
+	kilnfilePath := b.Options.Kilnfile
+	if variablesDirPresent(b.fs, kilnfilePath) {
+		variablesFilePaths, err := getVariablesFilePaths(b.fs, kilnfilePath)
 		if err == nil {
 			if noTileVariablesFileAlreadySet(b, variablesFilePaths) {
 				setADefaultTileVariablesFile(b, variablesFilePaths)
