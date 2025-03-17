@@ -89,6 +89,7 @@ type Configuration struct {
 	RunMigrations,
 	RunManifest,
 	RunMetadata bool
+	ImagePath string
 
 	GinkgoFlags string
 	Environment []string
@@ -123,6 +124,7 @@ func (configuration Configuration) commands() ([]string, error) {
 //counterfeiter:generate -o ./fakes/moby_client.go --fake-name MobyClient . mobyClient
 type mobyClient interface {
 	DialHijack(ctx context.Context, url, proto string, meta map[string][]string) (net.Conn, error)
+	ImageLoad(ctx context.Context, input io.Reader, quiet bool) (types.ImageLoadResponse, error)
 	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
 	Ping(ctx context.Context) (types.Ping, error)
 	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *specV1.Platform, containerName string) (container.CreateResponse, error)
@@ -140,22 +142,44 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 		}
 
 		var dockerfileTarball bytes.Buffer
-		if err := createDockerfileTarball(tar.NewWriter(&dockerfileTarball), dockerfile); err != nil {
+		if err = createDockerfileTarball(tar.NewWriter(&dockerfileTarball), dockerfile); err != nil {
 			return err
 		}
 
-		logger.Println("creating test image")
-		imageBuildResult, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
-			Tags:      []string{"kiln_test_dependencies:vmware"},
-			Version:   types.BuilderBuildKit,
-			SessionID: sessionID,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to build image: %w", err)
-		}
+		if configuration.ImagePath == "" {
+			logger.Println("creating test image")
+			imageBuildResult, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
+				Tags:      []string{"kiln_test_dependencies:vmware"},
+				Version:   types.BuilderBuildKit,
+				SessionID: sessionID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to build image: %w", err)
+			}
+			if err = checkSSHPrivateKeyError(imageBuildResult.Body); err != nil {
+				return err
+			}
+		} else {
+			logger.Println("loading test image")
+			imageReader, err := os.Open(configuration.ImagePath)
+			if err != nil {
+				return fmt.Errorf("failed to read image '%s': %w", configuration.ImagePath, err)
+			}
 
-		if err := checkSSHPrivateKeyError(imageBuildResult.Body); err != nil {
-			return err
+			loadResponse, err := dockerDaemon.ImageLoad(
+				ctx,
+				imageReader,
+				true,
+			)
+			if err != nil {
+				return fmt.Errorf("failed to import image: %w", err)
+			}
+			defer closeAndIgnoreError(loadResponse.Body)
+			respBytes, err := io.ReadAll(loadResponse.Body)
+			if err != nil {
+				return fmt.Errorf(`failed to parse load image response: %w`, err)
+			}
+			logger.Printf("loaded image %s: \n%s\n", configuration.ImagePath, string(respBytes))
 		}
 
 		parentDir := path.Dir(configuration.AbsoluteTileDirectory)

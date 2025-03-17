@@ -119,6 +119,37 @@ type MobyClient struct {
 		result1 types.ImageBuildResponse
 		result2 error
 	}
+	ImageImportStub        func(context.Context, types.ImageImportSource, string, types.ImageImportOptions) (io.ReadCloser, error)
+	imageImportMutex       sync.RWMutex
+	imageImportArgsForCall []struct {
+		arg1 context.Context
+		arg2 types.ImageImportSource
+		arg3 string
+		arg4 types.ImageImportOptions
+	}
+	imageImportReturns struct {
+		result1 io.ReadCloser
+		result2 error
+	}
+	imageImportReturnsOnCall map[int]struct {
+		result1 io.ReadCloser
+		result2 error
+	}
+	ImageLoadStub        func(context.Context, io.Reader, bool) (types.ImageLoadResponse, error)
+	imageLoadMutex       sync.RWMutex
+	imageLoadArgsForCall []struct {
+		arg1 context.Context
+		arg2 io.Reader
+		arg3 bool
+	}
+	imageLoadReturns struct {
+		result1 types.ImageLoadResponse
+		result2 error
+	}
+	imageLoadReturnsOnCall map[int]struct {
+		result1 types.ImageLoadResponse
+		result2 error
+	}
 	PingStub        func(context.Context) (types.Ping, error)
 	pingMutex       sync.RWMutex
 	pingArgsForCall []struct {
@@ -596,6 +627,139 @@ func (fake *MobyClient) ImageBuildReturnsOnCall(i int, result1 types.ImageBuildR
 	}{result1, result2}
 }
 
+func (fake *MobyClient) ImageImport(arg1 context.Context, arg2 types.ImageImportSource, arg3 string, arg4 types.ImageImportOptions) (io.ReadCloser, error) {
+	fake.imageImportMutex.Lock()
+	ret, specificReturn := fake.imageImportReturnsOnCall[len(fake.imageImportArgsForCall)]
+	fake.imageImportArgsForCall = append(fake.imageImportArgsForCall, struct {
+		arg1 context.Context
+		arg2 types.ImageImportSource
+		arg3 string
+		arg4 types.ImageImportOptions
+	}{arg1, arg2, arg3, arg4})
+	stub := fake.ImageImportStub
+	fakeReturns := fake.imageImportReturns
+	fake.recordInvocation("ImageImport", []interface{}{arg1, arg2, arg3, arg4})
+	fake.imageImportMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *MobyClient) ImageImportCallCount() int {
+	fake.imageImportMutex.RLock()
+	defer fake.imageImportMutex.RUnlock()
+	return len(fake.imageImportArgsForCall)
+}
+
+func (fake *MobyClient) ImageImportCalls(stub func(context.Context, types.ImageImportSource, string, types.ImageImportOptions) (io.ReadCloser, error)) {
+	fake.imageImportMutex.Lock()
+	defer fake.imageImportMutex.Unlock()
+	fake.ImageImportStub = stub
+}
+
+func (fake *MobyClient) ImageImportArgsForCall(i int) (context.Context, types.ImageImportSource, string, types.ImageImportOptions) {
+	fake.imageImportMutex.RLock()
+	defer fake.imageImportMutex.RUnlock()
+	argsForCall := fake.imageImportArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+}
+
+func (fake *MobyClient) ImageImportReturns(result1 io.ReadCloser, result2 error) {
+	fake.imageImportMutex.Lock()
+	defer fake.imageImportMutex.Unlock()
+	fake.ImageImportStub = nil
+	fake.imageImportReturns = struct {
+		result1 io.ReadCloser
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *MobyClient) ImageImportReturnsOnCall(i int, result1 io.ReadCloser, result2 error) {
+	fake.imageImportMutex.Lock()
+	defer fake.imageImportMutex.Unlock()
+	fake.ImageImportStub = nil
+	if fake.imageImportReturnsOnCall == nil {
+		fake.imageImportReturnsOnCall = make(map[int]struct {
+			result1 io.ReadCloser
+			result2 error
+		})
+	}
+	fake.imageImportReturnsOnCall[i] = struct {
+		result1 io.ReadCloser
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *MobyClient) ImageLoad(arg1 context.Context, arg2 io.Reader, arg3 bool) (types.ImageLoadResponse, error) {
+	fake.imageLoadMutex.Lock()
+	ret, specificReturn := fake.imageLoadReturnsOnCall[len(fake.imageLoadArgsForCall)]
+	fake.imageLoadArgsForCall = append(fake.imageLoadArgsForCall, struct {
+		arg1 context.Context
+		arg2 io.Reader
+		arg3 bool
+	}{arg1, arg2, arg3})
+	stub := fake.ImageLoadStub
+	fakeReturns := fake.imageLoadReturns
+	fake.recordInvocation("ImageLoad", []interface{}{arg1, arg2, arg3})
+	fake.imageLoadMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *MobyClient) ImageLoadCallCount() int {
+	fake.imageLoadMutex.RLock()
+	defer fake.imageLoadMutex.RUnlock()
+	return len(fake.imageLoadArgsForCall)
+}
+
+func (fake *MobyClient) ImageLoadCalls(stub func(context.Context, io.Reader, bool) (types.ImageLoadResponse, error)) {
+	fake.imageLoadMutex.Lock()
+	defer fake.imageLoadMutex.Unlock()
+	fake.ImageLoadStub = stub
+}
+
+func (fake *MobyClient) ImageLoadArgsForCall(i int) (context.Context, io.Reader, bool) {
+	fake.imageLoadMutex.RLock()
+	defer fake.imageLoadMutex.RUnlock()
+	argsForCall := fake.imageLoadArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *MobyClient) ImageLoadReturns(result1 types.ImageLoadResponse, result2 error) {
+	fake.imageLoadMutex.Lock()
+	defer fake.imageLoadMutex.Unlock()
+	fake.ImageLoadStub = nil
+	fake.imageLoadReturns = struct {
+		result1 types.ImageLoadResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *MobyClient) ImageLoadReturnsOnCall(i int, result1 types.ImageLoadResponse, result2 error) {
+	fake.imageLoadMutex.Lock()
+	defer fake.imageLoadMutex.Unlock()
+	fake.ImageLoadStub = nil
+	if fake.imageLoadReturnsOnCall == nil {
+		fake.imageLoadReturnsOnCall = make(map[int]struct {
+			result1 types.ImageLoadResponse
+			result2 error
+		})
+	}
+	fake.imageLoadReturnsOnCall[i] = struct {
+		result1 types.ImageLoadResponse
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *MobyClient) Ping(arg1 context.Context) (types.Ping, error) {
 	fake.pingMutex.Lock()
 	ret, specificReturn := fake.pingReturnsOnCall[len(fake.pingArgsForCall)]
@@ -677,6 +841,10 @@ func (fake *MobyClient) Invocations() map[string][][]interface{} {
 	defer fake.dialHijackMutex.RUnlock()
 	fake.imageBuildMutex.RLock()
 	defer fake.imageBuildMutex.RUnlock()
+	fake.imageImportMutex.RLock()
+	defer fake.imageImportMutex.RUnlock()
+	fake.imageLoadMutex.RLock()
+	defer fake.imageLoadMutex.RUnlock()
 	fake.pingMutex.RLock()
 	defer fake.pingMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
