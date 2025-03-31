@@ -168,7 +168,7 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 				return err
 			}
 		} else {
-			logger.Println("test image exist, using: kiln_test_dependencies:vmware")
+			logger.Println("test image exists, using: kiln_test_dependencies:vmware")
 		}
 
 		parentDir := path.Dir(configuration.AbsoluteTileDirectory)
