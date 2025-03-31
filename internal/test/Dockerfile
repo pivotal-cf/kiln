@@ -1,13 +1,12 @@
 # syntax=docker/dockerfile:1.10
 
-FROM golang as go-image
-FROM pivotalcfreleng/kiln:v0.77.0 as kiln
+FROM golang AS go-image
+FROM pivotalcfreleng/kiln:v0.103.0 AS kiln
 
-FROM ruby:3.2.0 as builder
-RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
-ADD git@github.com:pivotal-cf/ops-manager.git#v2.10.66 /tmp/ops-manager
-
-FROM ruby:3.2.0
+FROM ruby:3.4
+RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.gwd.broadcom.net >> ~/.ssh/known_hosts
+RUN --mount=type=ssh git clone git@github.gwd.broadcom.net:TNZ/ops-manifest.git /tmp/ops-manifest \
+    && cd /tmp/ops-manifest && git submodule update --init --recursive
 
 # Install Go
 COPY --from=go-image /usr/local/go/ /usr/local/go/
@@ -32,10 +31,8 @@ RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}
 RUN . "$NVM_DIR/nvm.sh" && nvm alias default v${NODE_VERSION}
 ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin:${PATH}"
 
-# Install ops-manifest
-#   assumes ops-manifest repo was cloned into ./vendor/ops-manager/gems/ops-manifest
-COPY --from=builder /tmp/ops-manager /tmp/ops-manager
-WORKDIR /tmp/ops-manager/gems/ops-manifest
+# Install Ops Manifest
+WORKDIR /tmp/ops-manifest
 
 RUN bundle install && \
   rm -rf *.gem && \
