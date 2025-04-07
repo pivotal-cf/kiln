@@ -54,5 +54,32 @@ var _ = Describe("PivNet (network.pivotal.io)", func() {
 				Expect(serverMock.Params.Req.Header.Get("Authorization")).To(Equal("Bearer some-token"))
 			})
 		})
+
+		When("to fetch releases", func() {
+			BeforeEach(func() {
+				pivnetService = pivnet.Service{}
+				pivnetService.UAAAPIToken = "some-token"
+
+				serverMock = &fakes.RoundTripper{}
+				serverMock.Results.Res = &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       fakes.NewReadCloser(`{"releases":[{"version": "456.98"},{"version": "456.99"},{"version": "456.100"}]}`),
+				}
+				pivnetService.Client = &http.Client{
+					Transport: serverMock,
+				}
+
+			})
+
+			It("returns all releases for the given product slug", func() {
+				Expect(serverMock.Params.Req.Header.Get("Authorization")).To(Equal("Bearer some-token"))
+				releases, err := pivnetService.Releases("some-product")
+				Expect(len(releases)).To(Equal(3))
+				Expect(releases[0].Version).To(Equal("456.98"))
+				Expect(releases[1].Version).To(Equal("456.99"))
+				Expect(releases[2].Version).To(Equal("456.100"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
 })

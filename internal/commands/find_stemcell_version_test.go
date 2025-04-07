@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"github.com/pivotal-cf/jhanda"
 	"log"
 	"net/http"
 	"os"
@@ -28,6 +29,7 @@ var _ = Describe("Find the stemcell version", func() {
 		someKilnfileLockPath string
 		kilnfileContents     string
 		lockContents         string
+		badkilnfile          string
 		pivnetService        *pivnet.Service
 		serverMock           *fakes.RoundTripper
 		simpleRequest        *http.Request
@@ -87,6 +89,10 @@ stemcell_criteria:
 
 			someKilnfileLockPath = filepath.Join(tmpDir, "Kilnfile.lock")
 			err = os.WriteFile(someKilnfileLockPath, []byte(lockContents), 0o644)
+			Expect(err).NotTo(HaveOccurred())
+
+			badkilnfile = filepath.Join(tmpDir, "badKilnfile")
+			err = os.WriteFile(badkilnfile, []byte(""), 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			findStemcellVersion = commands.NewFindStemcellVersion(logger, pivnetService)
@@ -179,6 +185,28 @@ stemcell_criteria:
 					Expect((&writer).String()).To(ContainSubstring("\"remote_path\":\"network.pivotal.io\""))
 					Expect((&writer).String()).To(ContainSubstring("\"source\":\"Tanzunet\""))
 				})
+			})
+		})
+
+		When("pivnet service cannot find stemcell info", func() {
+			BeforeEach(func() {
+				serverMock.Results.Res.StatusCode = http.StatusNotFound
+			})
+			It("returns error", func() {
+				Expect(executeErr).To(HaveOccurred())
+				Expect(executeErr).To(MatchError(ContainSubstring("unexpected end of JSON input")))
+			})
+		})
+	})
+
+	Describe("Execute with ", func() {
+		Describe("Usage", func() {
+			It("returns usage information for the command", func() {
+				Expect(findStemcellVersion.Usage()).To(Equal(jhanda.Usage{
+					Description:      "Prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile",
+					ShortDescription: "prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile",
+					Flags:            findStemcellVersion.Options,
+				}))
 			})
 		})
 	})
