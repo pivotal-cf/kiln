@@ -222,6 +222,56 @@ some_form_types:
 `))
 	})
 
+	It("interpolates version into a complex string", func() {
+		const templateYAML = `some_field: version-$( version )`
+
+		input.Version = "1.2.3"
+
+		interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(interpolatedYAML).To(HelpfullyMatchYAML(`some_field: version-1.2.3`))
+	})
+
+	It("interpolates version into a complex, multi-line string", func() {
+		const templateYAML = `some_field: |
+  Release v$( version ) was one of the greatest ever.
+  Happy end.`
+
+		input.Version = "1.2.3"
+
+		interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(interpolatedYAML).To(HelpfullyMatchYAML(`some_field: "Release v1.2.3 was one of the greatest ever.\nHappy end."`))
+	})
+
+	It("interpolates variable into a complex string within a form", func() {
+		templateYAML := `
+---
+some_form_types:
+- $( form "some-form" )`
+
+		input = builder.InterpolateInput{
+			SkipKilnMetadata: true,
+			Variables: map[string]any{
+				"some-form-variable": "custom-form-label",
+			},
+			FormTypes: map[string]any{
+				"some-form": builder.Metadata{
+					"name":  "some-form",
+					"label": `variable-$( variable "some-form-variable" )`,
+				},
+			},
+		}
+
+		interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(interpolatedYAML).To(HelpfullyMatchYAML(`
+some_form_types:
+- name: some-form
+  label: variable-custom-form-label
+`))
+	})
+
 	Context("when multiple stemcells are specified", func() {
 		var templateYAML string
 

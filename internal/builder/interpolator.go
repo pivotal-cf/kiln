@@ -274,6 +274,10 @@ func (i Interpolator) interpolateValueIntoYAML(input InterpolateInput, name stri
 		return "", err // should never happen
 	}
 
+	if stringScalar, ok := val.(string); ok {
+		return stringScalar, nil
+	}
+
 	interpolatedYAML, err := i.interpolate(input, name, initialYAML)
 	if err != nil {
 		return "", fmt.Errorf("unable to interpolate value: %s", err)
