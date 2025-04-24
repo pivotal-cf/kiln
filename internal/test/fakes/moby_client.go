@@ -119,6 +119,20 @@ type MobyClient struct {
 		result1 types.ImageBuildResponse
 		result2 error
 	}
+	ImageListStub        func(context.Context, types.ImageListOptions) ([]types.ImageSummary, error)
+	imageListMutex       sync.RWMutex
+	imageListArgsForCall []struct {
+		arg1 context.Context
+		arg2 types.ImageListOptions
+	}
+	imageListReturns struct {
+		result1 []types.ImageSummary
+		result2 error
+	}
+	imageListReturnsOnCall map[int]struct {
+		result1 []types.ImageSummary
+		result2 error
+	}
 	PingStub        func(context.Context) (types.Ping, error)
 	pingMutex       sync.RWMutex
 	pingArgsForCall []struct {
@@ -596,6 +610,71 @@ func (fake *MobyClient) ImageBuildReturnsOnCall(i int, result1 types.ImageBuildR
 	}{result1, result2}
 }
 
+func (fake *MobyClient) ImageList(arg1 context.Context, arg2 types.ImageListOptions) ([]types.ImageSummary, error) {
+	fake.imageListMutex.Lock()
+	ret, specificReturn := fake.imageListReturnsOnCall[len(fake.imageListArgsForCall)]
+	fake.imageListArgsForCall = append(fake.imageListArgsForCall, struct {
+		arg1 context.Context
+		arg2 types.ImageListOptions
+	}{arg1, arg2})
+	stub := fake.ImageListStub
+	fakeReturns := fake.imageListReturns
+	fake.recordInvocation("ImageList", []interface{}{arg1, arg2})
+	fake.imageListMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *MobyClient) ImageListCallCount() int {
+	fake.imageListMutex.RLock()
+	defer fake.imageListMutex.RUnlock()
+	return len(fake.imageListArgsForCall)
+}
+
+func (fake *MobyClient) ImageListCalls(stub func(context.Context, types.ImageListOptions) ([]types.ImageSummary, error)) {
+	fake.imageListMutex.Lock()
+	defer fake.imageListMutex.Unlock()
+	fake.ImageListStub = stub
+}
+
+func (fake *MobyClient) ImageListArgsForCall(i int) (context.Context, types.ImageListOptions) {
+	fake.imageListMutex.RLock()
+	defer fake.imageListMutex.RUnlock()
+	argsForCall := fake.imageListArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *MobyClient) ImageListReturns(result1 []types.ImageSummary, result2 error) {
+	fake.imageListMutex.Lock()
+	defer fake.imageListMutex.Unlock()
+	fake.ImageListStub = nil
+	fake.imageListReturns = struct {
+		result1 []types.ImageSummary
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *MobyClient) ImageListReturnsOnCall(i int, result1 []types.ImageSummary, result2 error) {
+	fake.imageListMutex.Lock()
+	defer fake.imageListMutex.Unlock()
+	fake.ImageListStub = nil
+	if fake.imageListReturnsOnCall == nil {
+		fake.imageListReturnsOnCall = make(map[int]struct {
+			result1 []types.ImageSummary
+			result2 error
+		})
+	}
+	fake.imageListReturnsOnCall[i] = struct {
+		result1 []types.ImageSummary
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *MobyClient) Ping(arg1 context.Context) (types.Ping, error) {
 	fake.pingMutex.Lock()
 	ret, specificReturn := fake.pingReturnsOnCall[len(fake.pingArgsForCall)]
@@ -677,6 +756,8 @@ func (fake *MobyClient) Invocations() map[string][][]interface{} {
 	defer fake.dialHijackMutex.RUnlock()
 	fake.imageBuildMutex.RLock()
 	defer fake.imageBuildMutex.RUnlock()
+	fake.imageListMutex.RLock()
+	defer fake.imageListMutex.RUnlock()
 	fake.pingMutex.RLock()
 	defer fake.pingMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

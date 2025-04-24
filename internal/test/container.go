@@ -23,6 +23,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/homedir"
 	"github.com/moby/buildkit/session"
@@ -124,6 +125,7 @@ func (configuration Configuration) commands() ([]string, error) {
 type mobyClient interface {
 	DialHijack(ctx context.Context, url, proto string, meta map[string][]string) (net.Conn, error)
 	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
+	ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error)
 	Ping(ctx context.Context) (types.Ping, error)
 	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *specV1.Platform, containerName string) (container.CreateResponse, error)
 	ContainerStart(ctx context.Context, containerID string, options types.ContainerStartOptions) error
@@ -139,23 +141,34 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 			return err
 		}
 
-		var dockerfileTarball bytes.Buffer
-		if err := createDockerfileTarball(tar.NewWriter(&dockerfileTarball), dockerfile); err != nil {
-			return err
-		}
-
-		logger.Println("creating test image")
-		imageBuildResult, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
-			Tags:      []string{"kiln_test_dependencies:vmware"},
-			Version:   types.BuilderBuildKit,
-			SessionID: sessionID,
+		images, err := dockerDaemon.ImageList(ctx, types.ImageListOptions{
+			Filters: filters.NewArgs(filters.Arg("reference", "kiln_test_dependencies:vmware")),
 		})
 		if err != nil {
-			return fmt.Errorf("failed to build image: %w", err)
+			return err
 		}
 
-		if err := checkSSHPrivateKeyError(imageBuildResult.Body); err != nil {
-			return err
+		if len(images) == 0 {
+			var dockerfileTarball bytes.Buffer
+			if err := createDockerfileTarball(tar.NewWriter(&dockerfileTarball), dockerfile); err != nil {
+				return err
+			}
+
+			logger.Println("creating test image")
+			imageBuildResult, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
+				Tags:      []string{"kiln_test_dependencies:vmware"},
+				Version:   types.BuilderBuildKit,
+				SessionID: sessionID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to build image: %w", err)
+			}
+
+			if err := checkSSHPrivateKeyError(imageBuildResult.Body); err != nil {
+				return err
+			}
+		} else {
+			logger.Println("test image exists, using: kiln_test_dependencies:vmware")
 		}
 
 		parentDir := path.Dir(configuration.AbsoluteTileDirectory)
