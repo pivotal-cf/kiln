@@ -247,38 +247,15 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		if releases.Folder {
 			continue
 		}
-
-		artifactoryFilename := filepath.Base(releases.URI)
-		versions := semverPattern.FindAllString(artifactoryFilename, -1)
-
-		versionFormatter := strings.NewReplacer("-", "", "v", "")
-
-		replacements := make([]string, 0)
-		for _, ver := range versions {
-			ver = versionFormatter.Replace(ver)
-			replacements = append(replacements, ver)
-			replacements = append(replacements, "")
-		}
-		removeVersions := strings.NewReplacer(replacements...)
-		remotePathFilename := filepath.Base(remotePath)
-
-		// we want to ensure that the path template and the artifactory file being considered
-		// having matching formats. we strip the versions out because those aren't material
-		// to this check
-		if removeVersions.Replace(remotePathFilename) != removeVersions.Replace(artifactoryFilename) {
-			continue
-		}
-
-		stemcellVersion := versionFormatter.Replace(versions[len(versions)-1])
-		// if the format matches, then we continue by verifying the stemcells are the same
-		// since this isn't under consideration for being bumped
+		versions := semverPattern.FindAllString(filepath.Base(releases.URI), -1)
+		version := versions[0]
+		stemcellVersion := versions[len(versions)-1]
+		version = strings.Replace(version, "-", "", -1)
+		version = strings.Replace(version, "v", "", -1)
+		stemcellVersion = strings.Replace(stemcellVersion, "-", "", -1)
 		if len(versions) > 1 && stemcellVersion != spec.StemcellVersion {
 			continue
 		}
-
-		// then we select the highest matching version found
-		version := versions[0]
-		version = versionFormatter.Replace(version)
 		if version != "" {
 			newVersion, _ := semver.NewVersion(version)
 			if !constraint.Check(newVersion) {
