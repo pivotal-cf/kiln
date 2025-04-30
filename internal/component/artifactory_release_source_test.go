@@ -88,16 +88,6 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				defer closeAndIgnoreError(f)
 				_, _ = io.Copy(res, f)
 			}), requireAuth))
-			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-notices.zip", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-				res.WriteHeader(http.StatusOK)
-				// language=json
-				_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha-zip"}}`)
-			}), requireAuth))
-			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9-notices.zip", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-				res.WriteHeader(http.StatusOK)
-				// language=json
-				_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha-zip"}}`)
-			}), requireAuth))
 		})
 		When("the server has the a file at the expected path", func() {
 			It("resolves the lock from the spec", func() { // testing GetMatchedRelease
