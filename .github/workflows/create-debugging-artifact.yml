@@ -9,7 +9,7 @@ on:
         required: false
         default: true
         type: boolean
-        
+
 permissions:
   contents: write
 
@@ -35,7 +35,7 @@ jobs:
         run: |
           go build ./...
           ls -alth
-          
+
       - name: Unit Test
         env:
           RELEEN_GITHUB_TOKEN: ${{ secrets.RELEEN_GITHUB_TOKEN }}
@@ -50,14 +50,13 @@ jobs:
         run: |
           set -euo pipefail
           export GITHUB_ACCESS_TOKEN="${RELEEN_GITHUB_TOKEN}"
-              
-          set -x
+
           go test --run '(using_kiln|baking_a_tile|generating_release_notes|updating_)' \
             -v --timeout 24h --tags acceptance \
             github.com/pivotal-cf/kiln/internal/acceptance/workflows
-          
+
           git reset --hard HEAD
-          
+
       - uses: actions/upload-artifact@v4
         with:
           path: ./kiln

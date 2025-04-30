@@ -144,11 +144,23 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 			return err
 		}
 
+		envMap, err := decodeEnvironment(configuration.Environment)
+		if err != nil {
+			return fmt.Errorf("failed to parse environment: %s", err)
+		}
+
+		artifactoryUsername := envMap["ARTIFACTORY_USERNAME"]
+		artifactoryPassword := envMap["ARTIFACTORY_PASSWORD"]
+
 		logger.Println("creating test image")
 		imageBuildResult, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
 			Tags:      []string{"kiln_test_dependencies:vmware"},
 			Version:   types.BuilderBuildKit,
 			SessionID: sessionID,
+			BuildArgs: map[string]*string{
+				"ARTIFACTORY_USERNAME": &artifactoryUsername,
+				"ARTIFACTORY_PASSWORD": &artifactoryPassword,
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to build image: %w", err)
@@ -160,11 +172,6 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 
 		parentDir := path.Dir(configuration.AbsoluteTileDirectory)
 		tileDir := path.Base(configuration.AbsoluteTileDirectory)
-
-		envMap, err := decodeEnvironment(configuration.Environment)
-		if err != nil {
-			return fmt.Errorf("failed to parse environment: %s", err)
-		}
 
 		dockerCmd := strings.Join(commands, " && ")
 
@@ -249,8 +256,8 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 // testing it is non-trivial, so I isolated it. Testing it properly would require a daemon connection.
 func configureSession(ctx context.Context, logger *log.Logger, configuration Configuration, dockerDaemon mobyClient, function func(sessionID string) error) error {
 	logger.Printf("pinging docker daemon")
-
-	if _, err := dockerDaemon.Ping(ctx); err != nil {
+	_, err := dockerDaemon.Ping(ctx)
+	if err != nil {
 		return fmt.Errorf("failed to connect to Docker daemon: %w", err)
 	}
 
@@ -467,7 +474,6 @@ func getTileTestEnvVars(dir, productDir string, envMap environmentVars) environm
 	for k, v := range envMap {
 		envVarsMap[k] = v
 	}
-
 	return envVarsMap
 }
 

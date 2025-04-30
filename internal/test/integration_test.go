@@ -28,6 +28,16 @@ func TestDockerIntegration(t *testing.T) {
 
 	checkDaemonVersion(t)
 
+	artifactoryUsername, usernameFound := os.LookupEnv("ARTIFACTORY_USERNAME")
+	if !usernameFound {
+		t.Fatal("Missing ARTIFACTORY_USERNAME environment variable")
+	}
+
+	artifactoryPassword, passwordFound := os.LookupEnv("ARTIFACTORY_PASSWORD")
+	if !passwordFound {
+		t.Fatal("Missing ARTIFACTORY_PASSWORD environment variable")
+	}
+
 	t.Run("the test succeeds", func(t *testing.T) {
 		wd, err := os.Getwd()
 		require.NoError(t, err)
@@ -36,6 +46,7 @@ func TestDockerIntegration(t *testing.T) {
 		configuration := test.Configuration{
 			AbsoluteTileDirectory: filepath.Join(wd, "testdata", "happy-tile"),
 			RunAll:                true,
+			Environment:           []string{"ARTIFACTORY_USERNAME=" + artifactoryUsername, "ARTIFACTORY_PASSWORD=" + artifactoryPassword},
 		}
 		out := io.Discard
 		if testing.Verbose() {
@@ -54,7 +65,7 @@ func TestDockerIntegration(t *testing.T) {
 		configuration := test.Configuration{
 			AbsoluteTileDirectory: filepath.Join(wd, "testdata", "happy-tile"),
 			RunManifest:           true,
-			Environment:           []string{"FAIL_TEST=true"},
+			Environment:           []string{"FAIL_TEST=true", "ARTIFACTORY_USERNAME=" + artifactoryUsername, "ARTIFACTORY_PASSWORD=" + artifactoryPassword},
 		}
 
 		outBuffer := new(bytes.Buffer)

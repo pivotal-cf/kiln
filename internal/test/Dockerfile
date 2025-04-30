@@ -5,7 +5,6 @@ FROM pivotalcfreleng/kiln:v0.77.0 as kiln
 
 FROM ruby:3.2.0 as builder
 RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
-ADD git@github.com:pivotal-cf/ops-manager.git#v2.10.66 /tmp/ops-manager
 
 FROM ruby:3.2.0
 
@@ -32,17 +31,14 @@ RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}
 RUN . "$NVM_DIR/nvm.sh" && nvm alias default v${NODE_VERSION}
 ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin:${PATH}"
 
-# Install ops-manifest
-#   assumes ops-manifest repo was cloned into ./vendor/ops-manager/gems/ops-manifest
-COPY --from=builder /tmp/ops-manager /tmp/ops-manager
-WORKDIR /tmp/ops-manager/gems/ops-manifest
+# Install OpsManifest from Artifactory
+ARG ARTIFACTORY_USERNAME
+ARG ARTIFACTORY_PASSWORD
 
-RUN bundle install && \
-  rm -rf *.gem && \
-  bundle exec gem build ops-manifest.gemspec && \
-  gem install ops-manifest-*.gem --no-document && \
-  gem uninstall json && \
-  gem install json --version 2.7.1 && \
-  gem uninstall concurrent-ruby --force && \
-  gem install concurrent-ruby --version 1.3.4 
+ENV ARTIFACTORY_USERNAME=${ARTIFACTORY_USERNAME}
+ENV ARTIFACTORY_PASSWORD=${ARTIFACTORY_PASSWORD}
+
+RUN gem source -a https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}@usw1.packages.broadcom.com/artifactory/api/gems/tas-rel-eng-gem-dev-local/
+RUN gem install --verbose ops-manifest -v 0.0.3.pre
+
 RUN which ops-manifest
