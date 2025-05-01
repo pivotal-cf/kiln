@@ -232,8 +232,23 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("json from %s is malformed: %s", response.Request.URL.Host, err)
 	}
 
-	semverPattern, err := regexp.Compile(`([-v])\d+(.\d+)*`)
+	semverRegex := `v?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?(?:\.(0|[1-9]\d*))?` +
+		`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
+		`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?`
+
+	regexSpec := spec
+	regexSpec.Version = fmt.Sprintf(`(?P<bosh_version>(%s))`, semverRegex)
+	regexSpec.StemcellVersion = fmt.Sprintf(`(?P<bosh_stemcell_version>(%s))`, semverRegex)
+	semverFilepathRegex, err := ars.RemotePath(regexSpec)
 	if err != nil {
+		return cargo.BOSHReleaseTarballLock{}, err
+	}
+	semverFilepathRegex = filepath.Base(semverFilepathRegex)
+	fmt.Println(semverFilepathRegex)
+
+	re, err := regexp.Compile(semverFilepathRegex)
+	if err != nil {
+		fmt.Println("failed TO COMPILE SEMVER PATTERN:", re)
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
@@ -247,18 +262,38 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		if releases.Folder {
 			continue
 		}
-		versions := semverPattern.FindAllString(filepath.Base(releases.URI), -1)
-		version := versions[0]
-		stemcellVersion := versions[len(versions)-1]
-		version = strings.Replace(version, "-", "", -1)
-		version = strings.Replace(version, "v", "", -1)
-		stemcellVersion = strings.Replace(stemcellVersion, "-", "", -1)
-		if len(versions) > 1 && stemcellVersion != spec.StemcellVersion {
+		// mango-2.3.4-build.1-smoothie-9.9.tgz
+		// mango-?P<version>(v?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?(?:\.(0|[1-9]\d*))?(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)-smoothie-9.9.tgz
+		m := re.FindStringSubmatch(filepath.Base(releases.URI))
+		if m == nil {
 			continue
 		}
+		names := re.SubexpNames()
+		data := map[string]string{}
+		for i, n := range names {
+			if i == 0 || n == "" {
+				continue
+			}
+			data[n] = m[i]
+		}
+
+		version := data["bosh_version"]
+		stemcellVersion := data["bosh_stemcell_version"]
+		if stemcellVersion != spec.StemcellVersion {
+			continue
+		}
+
+		//stemcellVersion := versions[len(versions)-1]
+		//version = strings.Replace(version, "-", "", -1)
+		//version = strings.Replace(version, "v", "", -1)
+		//stemcellVersion = strings.Replace(stemcellVersion, "-", "", -1)
+		//if len(versions) > 1 && stemcellVersion != spec.StemcellVersion {
+		//	continue
+		//}
 		if version != "" {
 			newVersion, _ := semver.NewVersion(version)
-			if !constraint.Check(newVersion) {
+			check := constraint.Check(newVersion)
+			if !check {
 				continue
 			}
 
