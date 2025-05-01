@@ -238,7 +238,13 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 
 	regexSpec := spec
 	regexSpec.Version = fmt.Sprintf(`(?P<bosh_version>(%s))`, semverRegex)
-	regexSpec.StemcellVersion = fmt.Sprintf(`(?P<bosh_stemcell_version>(%s))`, semverRegex)
+	if spec.StemcellOS != "" {
+		if spec.StemcellVersion == "" {
+			panic("TODO: test this: this shouldn't happen.")
+		}
+		regexSpec.StemcellVersion = fmt.Sprintf(`(?P<bosh_stemcell_version>(%s))`, semverRegex)
+	}
+
 	semverFilepathRegex, err := ars.RemotePath(regexSpec)
 	if err != nil {
 		return cargo.BOSHReleaseTarballLock{}, err
@@ -293,6 +299,7 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		if version != "" {
 			newVersion, _ := semver.NewVersion(version)
 			check := constraint.Check(newVersion)
+			fmt.Println("comparing", constraint.String(), "to", newVersion)
 			if !check {
 				continue
 			}
