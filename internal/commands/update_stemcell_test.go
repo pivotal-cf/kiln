@@ -615,13 +615,13 @@ var _ = Describe("UpdateStemcell", func() {
 				releaseSource.GetMatchedReleaseReturns(cargo.BOSHReleaseTarballLock{}, component.ErrNotFound)
 			})
 
-			It("errors", func() {
+			It("returns a user-friendly not-found message", func() {
 				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
 
-				Expect(err).To(MatchError(And(
-					ContainSubstring(component.ErrNotFound.Error()),
-					ContainSubstring(release1Name),
-				)))
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("couldn't find release"))
+				Expect(err.Error()).To(ContainSubstring(release1Name))
+				Expect(err.Error()).NotTo(ContainSubstring("while finding release"))
 			})
 		})
 

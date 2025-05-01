@@ -90,11 +90,10 @@ func (update UpdateStemcell) Execute(args []string) error {
 		}
 
 		if err != nil {
+			if component.IsErrNotFound(err) {
+				return fmt.Errorf("couldn't find release %q", rel.Name)
+			}
 			return fmt.Errorf("while finding release %q, encountered error: %w", rel.Name, err)
-		}
-
-		if component.IsErrNotFound(err) {
-			return fmt.Errorf("couldn't find release %q", rel.Name)
 		}
 
 		if remote.RemotePath == rel.RemotePath && remote.RemoteSource == rel.RemoteSource {
