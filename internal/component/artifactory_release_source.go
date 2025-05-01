@@ -240,7 +240,7 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 	regexSpec.Version = fmt.Sprintf(`(?P<bosh_version>(%s))`, semverRegex)
 	if spec.StemcellOS != "" {
 		if spec.StemcellVersion == "" {
-			panic("TODO: test this: this shouldn't happen.")
+			return cargo.BOSHReleaseTarballLock{}, errors.New("stemcell version is required when stemcell os is set")
 		}
 		regexSpec.StemcellVersion = fmt.Sprintf(`(?P<bosh_stemcell_version>(%s))`, semverRegex)
 	}
@@ -254,7 +254,6 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 
 	re, err := regexp.Compile(semverFilepathRegex)
 	if err != nil {
-		fmt.Println("failed TO COMPILE SEMVER PATTERN:", re)
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
@@ -269,7 +268,8 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 			continue
 		}
 		// mango-2.3.4-build.1-smoothie-9.9.tgz
-		// mango-?P<version>(v?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?(?:\.(0|[1-9]\d*))?(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)-smoothie-9.9.tgz
+		// mango-(?P<version>{regex pattern})-smoothie-(?P<stemcell_version>{regex_pattern}).tgz
+		// {Name}-(?P<version>{regex pattern})-{StemcellOS}-(?P<stemcell_version>{regex_pattern}).tgz
 		m := re.FindStringSubmatch(filepath.Base(releases.URI))
 		if m == nil {
 			continue
@@ -285,21 +285,14 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 
 		version := data["bosh_version"]
 		stemcellVersion := data["bosh_stemcell_version"]
+		// we aren't updating stemcell version
 		if stemcellVersion != spec.StemcellVersion {
 			continue
 		}
 
-		//stemcellVersion := versions[len(versions)-1]
-		//version = strings.Replace(version, "-", "", -1)
-		//version = strings.Replace(version, "v", "", -1)
-		//stemcellVersion = strings.Replace(stemcellVersion, "-", "", -1)
-		//if len(versions) > 1 && stemcellVersion != spec.StemcellVersion {
-		//	continue
-		//}
 		if version != "" {
 			newVersion, _ := semver.NewVersion(version)
 			check := constraint.Check(newVersion)
-			fmt.Println("comparing", constraint.String(), "to", newVersion)
 			if !check {
 				continue
 			}
