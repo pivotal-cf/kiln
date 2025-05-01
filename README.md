@@ -102,16 +102,6 @@ You may set a **"version"** field. The value must match the [constraints specifi
 
 You may set a **"github_repository"** field. This should be where the BOSH Release source is maintained. It is used for generating Release Notes for your tile.
 
-You may set a **"float_always"** field. When you set this, `kiln glaze` will not lock this release's version.
-
-You may set a **"maintenance_version_bump_policy"** field. When you run `kiln deglaze` this field specifies how to reset the version constraint after `kiln glaze` locked it.
-- "LockNone": Given a glazed version value "1.2.3", this setting resets the version constraint to `"*"`
-- "LockPatch": Given a glazed version value "1.2.3", this setting resets the version constraint to `"1.2.3"`
-- "LockMinor": Given a glazed version value "1.2.3", this setting resets the version constraint to `"1.2.*"`
-- "LockMajor": (default) Given a glazed version value "1.2.3", this setting resets the version constraint to `"1.*"`
-
-You may set a **"slack"** field. Kiln does not use this field. It can be useful for product tile Authors to know who to reach out to when something goes wrong.
-
 #### "bake_configurations"
 
 You may add a list of `kiln bake` flags in the Kilnfile to keep a record of how your tile was baked and to keep CI scripts simpler.
@@ -163,7 +153,6 @@ Commands:
   find-release-version     prints a json string of a remote release satisfying the Kilnfile version and stemcell constraints
   find-stemcell-version    prints the latest stemcell version from Pivnet using the stemcell type listed in the Kilnfile
   generate-osm-manifest    Print an OSM-format manifest.
-  glaze                    Pin versions in Kilnfile to match lock.
   help                     prints this usage information
   publish                  publish tile on Pivnet
   re-bake                  re-bake constructs a tile from a bake record
