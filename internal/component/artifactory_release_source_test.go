@@ -67,7 +67,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 	})
 
 	Describe("read operations", func() {
-		When("there are pre-releases", func() {
+		When("there are pre-releases and full releases", func() {
 			BeforeEach(func() {
 				requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
 
@@ -128,7 +128,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				//}
 				resultLock, resultErr := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
 					Name:            "mango",
-					Version:         "2.3.4-build.2",
+					Version:         ">=0.0.0-build.0",
 					StemcellOS:      "smoothie",
 					StemcellVersion: "9.9",
 				}, false)
@@ -136,11 +136,11 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				Expect(resultErr).NotTo(HaveOccurred())
 				Expect(resultLock).To(Equal(cargo.BOSHReleaseTarballLock{
 					Name:    "mango",
-					Version: "2.3.4-build.2",
+					Version: "2.3.4",
 					// StemcellOS:      "smoothie",
 					// StemcellVersion: "9.9",
 					SHA1:         "some-sha",
-					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-build.2-smoothie-9.9.tgz",
+					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
 					RemoteSource: "some-mango-tree",
 				}))
 			})
