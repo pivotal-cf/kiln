@@ -67,7 +67,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 	})
 
 	Describe("read operations", func() {
-		When("there is pre-release", func() {
+		When("there are pre-releases", func() {
 			BeforeEach(func() {
 				requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
 
@@ -120,7 +120,12 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					_, _ = io.WriteString(res, string(apiStorageListingBytes))
 				}), requireAuth))
 			})
-			It("finds the latest bosh pre release", func() { // testing FindReleaseVersion
+			FIt("finds the latest bosh pre release", func() { // testing FindReleaseVersion
+				//s := cargo.BOSHReleaseTarballSpecification{
+				//	Name:             "test",
+				//	Version:          "~2.0",
+				//	GitHubRepository: "git@github.com:test-org/test.git",
+				//}
 				resultLock, resultErr := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
 					Name:            "mango",
 					Version:         "2.3.4-build.2",
