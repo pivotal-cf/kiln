@@ -146,8 +146,8 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 						}))
 					})
 				})
-				When("it finds the latest version", func() {
-					It("finds the latest bosh pre release", func() { // testing FindReleaseVersion
+				When("we disallow pre-releases", func() {
+					It("finds the latest bosh version", func() { // testing FindReleaseVersion
 						//s := cargo.BOSHReleaseTarballSpecification{
 						//	Name:             "test",
 						//	Version:          "~2.0",
