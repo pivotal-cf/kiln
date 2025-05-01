@@ -9,14 +9,13 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/onsi/gomega"
+	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/internal/test"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
-
-	"github.com/pivotal-cf/kiln/internal/commands"
 )
 
 func init() {
@@ -34,9 +33,11 @@ func init() {
 
 var _ = Describe("kiln test", func() {
 	var output bytes.Buffer
+
 	AfterEach(func() {
 		output.Reset()
 	})
+
 	When("when no arguments are passed", func() {
 		It("runs all the tests with initialized collaborators", func() {
 			var emptySlice []string
@@ -61,11 +62,13 @@ var _ = Describe("kiln test", func() {
 			Expect(output.String()).To(ContainSubstring("hello"))
 		})
 	})
+
 	AfterEach(func() {
 		wd, err := os.Getwd()
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		vendorDir := filepath.Join(filepath.Dir(filepath.Dir(wd)), "vendor")
 		if info, err := os.Stat(vendorDir); err == nil && info.IsDir() { // no error
 			_ = os.RemoveAll(vendorDir)
@@ -142,7 +145,7 @@ var _ = Describe("kiln test", func() {
 	})
 
 	When("when the manifest test is enabled", func() {
-		It("it sets the manifest configuration flag", func() {
+		It("it sets the RunManifest configuration flag", func() {
 			args := []string{"--manifest"}
 
 			fakeTestFunc := fakes.TestTileFunction{}
@@ -164,7 +167,7 @@ var _ = Describe("kiln test", func() {
 	})
 
 	When("when the migrations test is enabled", func() {
-		It("it sets the migrations configuration flag", func() {
+		It("it sets the RunMigrations configuration flag", func() {
 			args := []string{"--migrations"}
 
 			fakeTestFunc := fakes.TestTileFunction{}
@@ -186,7 +189,7 @@ var _ = Describe("kiln test", func() {
 	})
 
 	When("when the stability test is enabled", func() {
-		It("it sets the metadata configuration flag", func() {
+		It("it sets the RunMetadata configuration flag", func() {
 			args := []string{"--stability"}
 
 			fakeTestFunc := fakes.TestTileFunction{}
@@ -208,7 +211,7 @@ var _ = Describe("kiln test", func() {
 	})
 
 	When("when the stability test is enabled", func() {
-		It("it sets the metadata configuration flag", func() {
+		It("it sets the RunMetadata configuration flag", func() {
 			args := []string{"--stability"}
 
 			fakeTestFunc := fakes.TestTileFunction{}
@@ -230,7 +233,7 @@ var _ = Describe("kiln test", func() {
 	})
 
 	When("when ginkgo flag arguments are passed", func() {
-		It("it sets the metadata configuration flag", func() {
+		It("it sets the GinkgoFlags comfiguration", func() {
 			args := []string{"--ginkgo-flags=peach pair"}
 
 			fakeTestFunc := fakes.TestTileFunction{}
@@ -251,7 +254,7 @@ var _ = Describe("kiln test", func() {
 
 	When("when environment variables flags arguments are passed", func() {
 		When("the using the short environment variable flag", func() {
-			It("it sets the metadata configuration flag", func() {
+			It("it sets the Environment configuration", func() {
 				args := []string{"-e=PEAR=on-pizza"}
 
 				fakeTestFunc := fakes.TestTileFunction{}
@@ -271,7 +274,7 @@ var _ = Describe("kiln test", func() {
 		})
 
 		When("the using the long environment variable flag", func() {
-			It("it sets the metadata configuration flag", func() {
+			It("it sets the Environment configuration", func() {
 				args := []string{"--environment-variable=PEAR=on-pizza"}
 
 				fakeTestFunc := fakes.TestTileFunction{}

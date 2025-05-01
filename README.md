@@ -11,7 +11,7 @@ Looking at an [example kiln tile](https://github.com/releen/hello-tile/tree/main
 
 ## Installation
 
-To install the `kiln` CLI 
+To install the `kiln` CLI
 - install with Homebrew
 
   ```shell
@@ -31,7 +31,7 @@ To install the `kiln` CLI
   ```
 
 - build from source
-  
+
   ```shell
   git clone git@github.com:pivotal-cf/kiln.git
   cd kiln
@@ -56,7 +56,7 @@ To install the `kiln` CLI
 Each tile must have a Kilnfile and Kilnfile.lock. Both are YAML files. Kiln won't generate them for you.
 
 The code for parsing the Kilnfile and Kilnfile.lock exists in this package: [`"github.com/pivotal-cf/kiln/pkg/cargo"`](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg/cargo#Kilnfile).
-Although the package interface is not yet stable, we have found importing it directly to be useful in CI or one-off scripts.   
+Although the package interface is not yet stable, we have found importing it directly to be useful in CI or one-off scripts.
 
 ### The Specification [(source)](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg/cargo#KilnfileLock)
 
@@ -81,7 +81,7 @@ It is used by kiln publish.
 #### "release_sources"
 
 This field must be a list of objects with keys from [`ReleaseSourceConfig`](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg/cargo#ReleaseSourceConfig).
-All elements must have a `type` field. 
+All elements must have a `type` field.
 
 The values for the `type` (string) field are `"bosh.io"`, `"s3"`, `"github"`, or `"artifactory"`
 
@@ -145,7 +145,7 @@ This is an array of [BOSH Release locks](https://pkg.go.dev/github.com/pivotal-c
 Elements will be modified by running `kiln update-release`.
 Each element in the releases array in the Kilnfile will have a corresponding element in the Kilnfile.lock releases array.
 
-The release name, release version, sha1 checksum, remote_source, remote_path are fields on each element. 
+The release name, release version, sha1 checksum, remote_source, remote_path are fields on each element.
 
 ## Subcommands
 
@@ -184,7 +184,7 @@ as inputs and produces an OpsMan-compatible tile as its output.
 
 The produce a tile, you simply need to be within a tile directory and execute the following command:
 ```
-$ kiln bake 
+$ kiln bake
 ```
 
 This will ensure that you have the necessary releases by first calling `kiln fetch`.
@@ -198,7 +198,7 @@ different features kiln supports.
 ##### `--allow-only-publishable-releases`
 
 The `--allow-only-publishable-releases` flag should be used for development only
-and allows additional releases other than those specified in the kilnfile.lock to 
+and allows additional releases other than those specified in the kilnfile.lock to
 be included in the tile
 
 ##### `--bosh-variables-directory`
@@ -227,10 +227,10 @@ multiple times to embed multiple files or directories.
 
 ##### `--final`
 
-The `--final` flag is to bake a final release tile. When passing the --final flag, 
-Kiln creates a baked record file with metadata like source revision SHA, tile version, kiln version and 
-file checksums. This bake record file will be created under bake_records folder. This 
-bake record file can later be used to re-bake the tile. 
+The `--final` flag is to bake a final release tile. When passing the --final flag,
+Kiln creates a baked record file with metadata like source revision SHA, tile version, kiln version and
+file checksums. This bake record file will be created under bake_records folder. This
+bake record file can later be used to re-bake the tile.
 
 ##### `--forms-directory`
 
@@ -319,8 +319,8 @@ See the [Kilnfile](#kilnfile) section for more information on Kilnfile formattin
 
 
 
-Tile authors will also need to include a Kilnfile.lock in the same directory 
-as the Kilnfile. 
+Tile authors will also need to include a Kilnfile.lock in the same directory
+as the Kilnfile.
 
 See the [Kilnfile.lock](#kilnfile-lock) section for more information on Kilnfile.lock formatting
 
@@ -332,7 +332,7 @@ in the OpsManager tile development documentation.
 
 ##### `--metadata-only`
 
-The `--metadata-only` flag outputs the generated metadata to stdout. 
+The `--metadata-only` flag outputs the generated metadata to stdout.
 This flag cannot be used with `--output-file`.
 
 ##### `--migrations-directory`
@@ -435,7 +435,7 @@ The `--sha256` flag calculates the sha256 checksum of the output file
 
 ##### `--skip-fetch-directories`
 
-The `--skip-fetch-directories` skips the automatic release fetching of 
+The `--skip-fetch-directories` skips the automatic release fetching of
 the specified release directories
 
 
@@ -528,46 +528,38 @@ provides_product_versions:
 </details>
 
 ### `re-bake`
-It constructs a tile from a given bake record file. 
+It constructs a tile from a given bake record file.
 
 To run the command, you simply need to be within a tile directory and execute the following command:
 ```
 $ kiln re-bake --output-file tile.pivotal bake_records/1.0.0.json
 ```
 
-Any variables that Kilnfile needs for the kiln re-bake command should be set in 
+Any variables that Kilnfile needs for the kiln re-bake command should be set in
 ~/.kiln/credentials.yml file
 
 ### `test`
 
-The `test` command exercises to ginkgo tests under the `/<tile>/test/manifest` and `/<tile>/migrations` paths of the `pivotal/tas` repos (where `<tile>` is tas, ist, or tasw). 
+The `test` command exercises to ginkgo tests under the `/<tile>/test/manifest` and `/<tile>/migrations` paths of the `pivotal/tas` repos (where `<tile>` is tas, ist, or tasw).
 
-Running these tests require a docker daemon and ssh-agent to be running. 
+Running these tests requires a docker daemon. It also requires the user to
+provide Artifactory credentials via the ARTIFACTORY_USERNAME and
+ARTIFACTORY_PASSWORD environment variables to allow the ops-manifest gem to
+be installed. The credentials must have access to the tas-rel-eng-gem-dev-local
+repository.
 
-If you run into this docker error `could not execute "test": failed to connect to Docker daemon: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running`, 
+If you run into this docker error `could not execute "test": failed to connect to Docker daemon: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running`,
 then create a symlink `sudo ln -s ~/.docker/run/docker.sock /var/run/docker.sock`
-
-If no ssh identity is added (check with `ssh-add -l`) , then `kiln test`
-will add a ssh key in the following order, prompting for a passphrase if required:
-```
-	~/.ssh/id_rs
-	~/.ssh/id_dsa
-	~/.ssh/d_ecdsa
-	~/.ssh/d_ed25519
-	~/.ssh/dentity
-```
-
-The identity must have access to github.com/pivotal/ops-manager.
 
 Here are command line examples:
 ```
 $ cd ~/workspace/tas/ist
-$ kiln test
+$ kiln test -e ARTIFACTORY_USERNAME=myuser -e ARTIFACTORY_PASSWORD=secretpassword
 ```
 
 ```
 cd ~
-$ kiln test --verbose -tp ~/workspace/tas/ist --ginkgo-manifest-flags "-p -nodes 8 -v" 
+$ kiln test --verbose -tp ~/workspace/tas/ist --ginkgo-manifest-flags "-p -nodes 8 -v"
 ```
 
 <details>
@@ -582,7 +574,7 @@ The `--ginkgo-manifest-flags` flag can be used to pass through Ginkgo test flags
 The `--manifest-only` flag can be used to run only Manifest tests. If not passed, `kiln test` will run both Manifest and Migration tests by default.
 
 #### `--migrations-only`
-	
+
 The `--migrations-only` flag can be used to run only Migration tests. If not passed, `kiln test` will run both Manifest and Migration tests by default.
 
 ##### `--tile-path`
@@ -600,8 +592,8 @@ The `--verbose` (`-v`) flag will log additional debugging info.
 
 ### `fetch`
 
-The `fetch` command downloads bosh release tarballs specified in the Kilnfile and 
-Kilnfile.lock files to a local directory specified by the `--releases-directory` flag. 
+The `fetch` command downloads bosh release tarballs specified in the Kilnfile and
+Kilnfile.lock files to a local directory specified by the `--releases-directory` flag.
 
 
 Kiln verifies that the checksum (SHA1) of the downloaded release matches
@@ -617,7 +609,7 @@ release version and checksum.
 
 <a id="kilnfile"></a>
 ## Kilnfile
-A Kilnfile contains information about the bosh releases and stemcell used by 
+A Kilnfile contains information about the bosh releases and stemcell used by
 a particular tile
 
 Example Kilnfile:
@@ -667,7 +659,7 @@ stemcell_criteria:
   - type: artifactory
     id: unique-name
     artifactory_host: https://build-artifactory.your-artifactory-url.com
-    repo: some-artifactory-repo 
+    repo: some-artifactory-repo
     publishable: true # if this repo contains releases that are suitable to ship to customers
     username: $(variable "artifactory_username")
     password: $(variable "artifactory_password")
@@ -678,10 +670,10 @@ stemcell_criteria:
 #### Options
 Kilnfile files support the following templating options:
 
-- `{{.Name}}` for release name 
-- `{{.Version}}` for release version 
-- `{{.StemcellOS}}` for stemcell OS 
-- `{{.StemcellVersion}}` for stemcell version 
+- `{{.Name}}` for release name
+- `{{.Version}}` for release version
+- `{{.StemcellOS}}` for stemcell OS
+- `{{.StemcellVersion}}` for stemcell version
 
 - There's also access to a `trimSuffix` helper (e.g. `{{trimSuffix .Name "-release"}}`)
 
@@ -740,7 +732,7 @@ kiln bake --kilnfile random-Kilnfile --variables-file vars.yml
 The Kilnfile.lock file name is expected to be a file in the same directory as the
 Kilnfile with `lock` as as the filename extension.
 
-This file contains the full list of specific versions of all releases, shas, and sources for 
+This file contains the full list of specific versions of all releases, shas, and sources for
 bosh releases that will go into the tile as well as the target stemcell.
 
 The file has two top level members `releases` and `stemcell_criteria`.
@@ -772,7 +764,7 @@ releases:
 - name: hello-release
   sha1: d7de88ab98d7d61d0a4e660c8fff76727817c059
   version: 0.4.0
-  remote_source: the-github-org 
+  remote_source: the-github-org
   remote_path: https://github.com/releen/hello-release/releases/download/0.4.0/hello-release-0.4.0.tgz
 stemcell_criteria:
   os: ubuntu-xenial

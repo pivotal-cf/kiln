@@ -2,11 +2,9 @@ package test
 
 import (
 	"archive/tar"
-	"bufio"
 	"bytes"
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,7 +14,6 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -24,16 +21,9 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/homedir"
 	"github.com/moby/buildkit/session"
-	"github.com/moby/buildkit/session/sshforward"
-	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	specV1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
-
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
-	"golang.org/x/term"
 )
 
 const (
@@ -47,36 +37,12 @@ const (
 
 func Run(ctx context.Context, w io.Writer, configuration Configuration) error {
 	logger := log.New(w, "kiln test: ", log.Default().Flags())
-	if found := configuration.SSHSocketAddress != ""; !found {
-		configuration.SSHSocketAddress, found = os.LookupEnv(authSockEnvVarName)
-		if !found {
-			return fmt.Errorf("neither configuration.SSHSocketAddress nor environment variable %s are set", authSockEnvVarName)
-		}
-	}
 
 	dockerDaemon, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return err
 	}
 
-	logger.Printf("connecting to ssh socket %q", configuration.SSHSocketAddress)
-	var dialer net.Dialer
-	conn, err := dialer.DialContext(ctx, "unix", configuration.SSHSocketAddress)
-	if err != nil {
-		return fmt.Errorf("failed to dial %s: %w", authSockEnvVarName, err)
-	}
-
-	home := homedir.Get()
-
-	logger.Printf("ensuring ssh agent keys are configured")
-	if err := ensureSSHAgentKeys(agent.NewClient(conn), home, keyPasswordService{
-		stdin:        os.Stdin,
-		stdout:       os.Stdout,
-		isTerm:       term.IsTerminal,
-		readPassword: term.ReadPassword,
-	}.password); err != nil {
-		return err
-	}
 	return configureSession(ctx, logger, configuration, dockerDaemon, runTestWithSession(ctx, logger, w, dockerDaemon, configuration))
 }
 
@@ -153,7 +119,7 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 		artifactoryPassword := envMap["ARTIFACTORY_PASSWORD"]
 
 		logger.Println("creating test image")
-		imageBuildResult, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
+		_, err = dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
 			Tags:      []string{"kiln_test_dependencies:vmware"},
 			Version:   types.BuilderBuildKit,
 			SessionID: sessionID,
@@ -164,10 +130,6 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 		})
 		if err != nil {
 			return fmt.Errorf("failed to build image: %w", err)
-		}
-
-		if err := checkSSHPrivateKeyError(imageBuildResult.Body); err != nil {
-			return err
 		}
 
 		parentDir := path.Dir(configuration.AbsoluteTileDirectory)
@@ -267,12 +229,6 @@ func configureSession(ctx context.Context, logger *log.Logger, configuration Con
 	}
 	defer closeAndIgnoreError(s)
 
-	sshProvider, err := sshprovider.NewSSHAgentProvider([]sshprovider.AgentConfig{{ID: sshforward.DefaultID, Paths: []string{configuration.SSHSocketAddress}}})
-	if err != nil {
-		return fmt.Errorf("failed to initalize ssh-agent provider: %w", err)
-	}
-	s.Allow(sshProvider)
-
 	runErrC := make(chan error)
 	go func() {
 		defer close(runErrC)
@@ -293,128 +249,6 @@ func configureSession(ctx context.Context, logger *log.Logger, configuration Con
 		err = errors.Join(err, e)
 	}
 	return err
-}
-
-func checkSSHPrivateKeyError(buildResult io.Reader) error {
-	type errorLine struct {
-		Error string `json:"error"`
-	}
-
-	scanner := bufio.NewScanner(buildResult)
-	for scanner.Scan() {
-		text := scanner.Text()
-		var line errorLine
-		err := json.Unmarshal([]byte(text), &line)
-		if err != nil {
-			return fmt.Errorf("error unmarshalling json: %s", text)
-		}
-		if line.Error != "" {
-			if strings.Contains(line.Error, "exit code: 128") {
-				format := `does your private key have access to the ops-manifest repo?\n error: %s
-				automatically looking in %s for ssh keys. SSH_AUTH_SOCK needs to be set.`
-				return fmt.Errorf(format, line.Error, strings.Join(standardSSHKeyFileBases(), ", "))
-			}
-			return errors.New(line.Error)
-		}
-	}
-	return nil
-}
-
-//counterfeiter:generate -o ./fakes/ssh_agent.go --fake-name SSHAgent . sshAgent
-type sshAgent interface {
-	Add(key agent.AddedKey) error
-	List() ([]*agent.Key, error)
-}
-
-func ensureSSHAgentKeys(agent sshAgent, homeDirectory string, password func() ([]byte, error)) error {
-	keys, err := agent.List()
-	if err != nil {
-		return fmt.Errorf("failed to list keys: %w", err)
-	}
-	if len(keys) > 0 {
-		return nil
-	}
-	return loadDefaultKeys(agent, homeDirectory, password)
-}
-
-func standardSSHKeyFileBases() []string {
-	return slices.Clone([]string{
-		"id_rsa",
-		"id_dsa",
-		"id_ecdsa",
-		"id_ed25519",
-		"identity",
-	})
-}
-
-func loadDefaultKeys(agent sshAgent, home string, password func() ([]byte, error)) error {
-	for _, keyName := range standardSSHKeyFileBases() {
-		keyFilePath := filepath.Join(home, ".ssh", keyName)
-		_, err := os.Stat(keyFilePath)
-		if err != nil {
-			continue
-		}
-		err = addKey(agent, keyFilePath, password)
-		if err != nil {
-			return fmt.Errorf("failed to read key %s: %w", filepath.Base(keyFilePath), err)
-		}
-		break
-	}
-	return nil
-}
-
-func addKey(a sshAgent, keyFilePath string, password func() ([]byte, error)) error {
-	keyFileContents, err := os.ReadFile(keyFilePath)
-	if err != nil {
-		return err
-	}
-	decryptedKey, err := ssh.ParseRawPrivateKey(keyFileContents)
-	if err != nil {
-		passphraseMissingError := new(ssh.PassphraseMissingError)
-		if !errors.As(err, &passphraseMissingError) {
-			return err
-		}
-		ps, err := password()
-		if err != nil {
-			return fmt.Errorf("failed to get password: %w", err)
-		}
-		decryptedKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyFileContents, ps)
-		if err != nil {
-			return err
-		}
-	}
-	return a.Add(agent.AddedKey{PrivateKey: decryptedKey})
-}
-
-type keyPasswordService struct {
-	stdout       io.Writer
-	stdin        *os.File
-	isTerm       func(int) bool
-	readPassword func(int) ([]byte, error)
-}
-
-func (in keyPasswordService) password() ([]byte, error) {
-	if password, found := os.LookupEnv(sshPasswordEnvVarName); found {
-		return []byte(password), nil
-	}
-	return in.readPasswordFromStdin()
-}
-
-func (in keyPasswordService) readPasswordFromStdin() ([]byte, error) {
-	if in.isTerm(int(in.stdin.Fd())) {
-		_, _ = io.WriteString(in.stdout, "Enter password: ")
-		buf, err := in.readPassword(int(in.stdin.Fd()))
-		if err != nil {
-			return nil, fmt.Errorf("failed to read password: %w", err)
-		}
-		return buf, nil
-	}
-	buf, err := bufio.NewReader(in.stdin).ReadBytes('\n')
-	if err != nil {
-		return nil, fmt.Errorf("failed to read from standard input: %w", err)
-	}
-	buf = bytes.TrimRight(buf, "\n")
-	return buf, nil
 }
 
 type environmentVars = map[string]string
