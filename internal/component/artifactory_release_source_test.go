@@ -120,7 +120,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					_, _ = io.WriteString(res, string(apiStorageListingBytes))
 				}), requireAuth))
 			})
-			FIt("finds the latest bosh pre release", func() { // testing FindReleaseVersion
+			It("finds the latest bosh pre release", func() { // testing FindReleaseVersion
 				//s := cargo.BOSHReleaseTarballSpecification{
 				//	Name:             "test",
 				//	Version:          "~2.0",
