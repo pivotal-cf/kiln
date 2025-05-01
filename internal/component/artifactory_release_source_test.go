@@ -2,6 +2,7 @@ package component_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -66,30 +67,22 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 	})
 
 	Describe("read operations", func() {
-		BeforeEach(func() {
-			requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
 
-			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-				res.WriteHeader(http.StatusOK)
-				// language=json
-				_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
-			}), requireAuth))
-			artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-				res.WriteHeader(http.StatusOK)
-				// language=json
-				_, _ = io.WriteString(res, `{"children": [{"uri": "/mango-2.3.4-smoothie-9.9.tgz", "folder": false}]}`)
-			}), requireAuth))
-			artifactoryRouter.Handler(http.MethodGet, "/artifactory/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-				res.WriteHeader(http.StatusOK)
-				f, err := os.Open(filepath.Join("testdata", "some-release.tgz"))
-				if err != nil {
-					log.Fatal("failed to open some release test artifact")
-				}
-				defer closeAndIgnoreError(f)
-				_, _ = io.Copy(res, f)
-			}), requireAuth))
-		})
 		When("the server has the a file at the expected path", func() {
+			BeforeEach(func() {
+				setupFakeArtifactory([]string{
+					"",
+					"invalid",
+					"2.3.3",
+					"2.3.4-build.1",
+					"2.3.4",
+					"2.3.4-build.2",
+				},
+					artifactoryRouter,
+					correctUsername,
+					correctPassword,
+				)
+			})
 			It("resolves the lock from the spec", func() { // testing GetMatchedRelease
 				resultLock, resultErr := source.GetMatchedRelease(cargo.BOSHReleaseTarballSpecification{
 					Name:            "mango",
@@ -307,6 +300,55 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 		})
 	})
 })
+
+func setupFakeArtifactory(versions []string, artifactoryRouter *httprouter.Router, correctUsername string, correctPassword string) {
+	requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
+
+	type ApiStorageChildren struct {
+		Uri    string `json:"uri"`
+		Folder bool   `json:"folder"`
+	}
+	type ApiStorageListing struct {
+		Children []ApiStorageChildren `json:"children"`
+	}
+
+	apiStorageListing := ApiStorageListing{}
+	for _, version := range versions {
+		filename := fmt.Sprintf("mango-%s-smoothie-9.9.tgz", version)
+		apiStoragePath := fmt.Sprintf("/api/storage/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
+		artifactoryRouter.Handler(http.MethodGet, apiStoragePath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+			res.WriteHeader(http.StatusOK)
+			// language=json
+			_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
+		}), requireAuth))
+
+		downloadPath := fmt.Sprintf("/artifactory/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
+		artifactoryRouter.Handler(http.MethodGet, downloadPath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+			res.WriteHeader(http.StatusOK)
+			f, err := os.Open(filepath.Join("testdata", "some-release.tgz"))
+			if err != nil {
+				log.Fatal("failed to open some release test artifact")
+			}
+			defer closeAndIgnoreError(f)
+			_, _ = io.Copy(res, f)
+		}), requireAuth))
+
+		apiStorageListing.Children = append(apiStorageListing.Children, ApiStorageChildren{
+			Uri:    fmt.Sprintf("/%s", filename),
+			Folder: false,
+		})
+	}
+
+	apiStorageListingBytes, err := json.Marshal(apiStorageListing)
+	Expect(err).NotTo(HaveOccurred())
+	fmt.Printf("%+v\n", string(apiStorageListingBytes))
+
+	artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+		res.WriteHeader(http.StatusOK)
+		// language=json
+		_, _ = io.WriteString(res, string(apiStorageListingBytes))
+	}), requireAuth))
+}
 
 func closeAndIgnoreError(c io.Closer) {
 	_ = c.Close()
