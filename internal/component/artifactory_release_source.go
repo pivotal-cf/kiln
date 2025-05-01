@@ -232,6 +232,7 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("json from %s is malformed: %s", response.Request.URL.Host, err)
 	}
 
+	// https://github.com/Masterminds/semver/blob/master/version.go
 	semverRegex := `v?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?(?:\.(0|[1-9]\d*))?` +
 		`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
 		`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?`
