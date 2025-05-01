@@ -67,201 +67,297 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 	})
 
 	Describe("read operations", func() {
-		When("there are pre-releases and full releases", func() {
-			BeforeEach(func() {
-				requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
+		When("release files exist", func() {
+			When("there are pre-releases and full releases", func() {
+				BeforeEach(func() {
+					requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
 
-				type ApiStorageChildren struct {
-					Uri    string `json:"uri"`
-					Folder bool   `json:"folder"`
-				}
-				type ApiStorageListing struct {
-					Children []ApiStorageChildren `json:"children"`
-				}
+					type ApiStorageChildren struct {
+						Uri    string `json:"uri"`
+						Folder bool   `json:"folder"`
+					}
+					type ApiStorageListing struct {
+						Children []ApiStorageChildren `json:"children"`
+					}
 
-				apiStorageListing := ApiStorageListing{}
-				for _, version := range []string{
-					"2.3.4-build.1",
-					"2.3.4",
-					"2.3.4-build.2",
-				} {
-					filename := fmt.Sprintf("mango-%s-smoothie-9.9.tgz", version)
-					apiStoragePath := fmt.Sprintf("/api/storage/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
-					artifactoryRouter.Handler(http.MethodGet, apiStoragePath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+					apiStorageListing := ApiStorageListing{}
+					for _, version := range []string{
+						"2.3.4-build.1",
+						"2.3.4",
+						"2.3.4-build.2",
+					} {
+						filename := fmt.Sprintf("mango-%s-smoothie-9.9.tgz", version)
+						apiStoragePath := fmt.Sprintf("/api/storage/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
+						artifactoryRouter.Handler(http.MethodGet, apiStoragePath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+							res.WriteHeader(http.StatusOK)
+							// language=json
+							_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
+						}), requireAuth))
+
+						downloadPath := fmt.Sprintf("/artifactory/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
+						artifactoryRouter.Handler(http.MethodGet, downloadPath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+							res.WriteHeader(http.StatusOK)
+							f, err := os.Open(filepath.Join("testdata", "some-release.tgz"))
+							if err != nil {
+								log.Fatal("failed to open some release test artifact")
+							}
+							defer closeAndIgnoreError(f)
+							_, _ = io.Copy(res, f)
+						}), requireAuth))
+
+						apiStorageListing.Children = append(apiStorageListing.Children, ApiStorageChildren{
+							Uri:    fmt.Sprintf("/%s", filename),
+							Folder: false,
+						})
+					}
+
+					apiStorageListingBytes, err := json.Marshal(apiStorageListing)
+					Expect(err).NotTo(HaveOccurred())
+					fmt.Printf("%+v\n", string(apiStorageListingBytes))
+
+					artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 						res.WriteHeader(http.StatusOK)
 						// language=json
-						_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
+						_, _ = io.WriteString(res, string(apiStorageListingBytes))
 					}), requireAuth))
+				})
+				When("we allow pre-releases", func() {
+					It("finds the latest version", func() { // testing FindReleaseVersion
+						//s := cargo.BOSHReleaseTarballSpecification{
+						//	Name:             "test",
+						//	Version:          "~2.0",
+						//	GitHubRepository: "git@github.com:test-org/test.git",
+						//}
+						resultLock, resultErr := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
+							Name:            "mango",
+							Version:         ">=0.0.0-build.0",
+							StemcellOS:      "smoothie",
+							StemcellVersion: "9.9",
+						}, false)
 
-					downloadPath := fmt.Sprintf("/artifactory/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
-					artifactoryRouter.Handler(http.MethodGet, downloadPath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-						res.WriteHeader(http.StatusOK)
-						f, err := os.Open(filepath.Join("testdata", "some-release.tgz"))
-						if err != nil {
-							log.Fatal("failed to open some release test artifact")
-						}
-						defer closeAndIgnoreError(f)
-						_, _ = io.Copy(res, f)
-					}), requireAuth))
-
-					apiStorageListing.Children = append(apiStorageListing.Children, ApiStorageChildren{
-						Uri:    fmt.Sprintf("/%s", filename),
-						Folder: false,
+						Expect(resultErr).NotTo(HaveOccurred())
+						Expect(resultLock).To(Equal(cargo.BOSHReleaseTarballLock{
+							Name:    "mango",
+							Version: "2.3.4",
+							// StemcellOS:      "smoothie",
+							// StemcellVersion: "9.9",
+							SHA1:         "some-sha",
+							RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
+							RemoteSource: "some-mango-tree",
+						}))
 					})
-				}
+				})
+				When("it finds the latest version", func() {
+					It("finds the latest bosh pre release", func() { // testing FindReleaseVersion
+						//s := cargo.BOSHReleaseTarballSpecification{
+						//	Name:             "test",
+						//	Version:          "~2.0",
+						//	GitHubRepository: "git@github.com:test-org/test.git",
+						//}
+						resultLock, resultErr := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
+							Name:            "mango",
+							Version:         "*",
+							StemcellOS:      "smoothie",
+							StemcellVersion: "9.9",
+						}, false)
 
-				apiStorageListingBytes, err := json.Marshal(apiStorageListing)
-				Expect(err).NotTo(HaveOccurred())
-				fmt.Printf("%+v\n", string(apiStorageListingBytes))
+						Expect(resultErr).NotTo(HaveOccurred())
+						Expect(resultLock).To(Equal(cargo.BOSHReleaseTarballLock{
+							Name:    "mango",
+							Version: "2.3.4",
+							// StemcellOS:      "smoothie",
+							// StemcellVersion: "9.9",
+							SHA1:         "some-sha",
+							RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
+							RemoteSource: "some-mango-tree",
+						}))
+					})
 
-				artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-					res.WriteHeader(http.StatusOK)
-					// language=json
-					_, _ = io.WriteString(res, string(apiStorageListingBytes))
-				}), requireAuth))
+				})
 			})
-			It("finds the latest bosh pre release", func() { // testing FindReleaseVersion
-				//s := cargo.BOSHReleaseTarballSpecification{
-				//	Name:             "test",
-				//	Version:          "~2.0",
-				//	GitHubRepository: "git@github.com:test-org/test.git",
-				//}
-				resultLock, resultErr := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
-					Name:            "mango",
-					Version:         ">=0.0.0-build.0",
-					StemcellOS:      "smoothie",
-					StemcellVersion: "9.9",
-				}, false)
+			When("there are only pre-releases", func() {
+				BeforeEach(func() {
+					requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
 
-				Expect(resultErr).NotTo(HaveOccurred())
-				Expect(resultLock).To(Equal(cargo.BOSHReleaseTarballLock{
-					Name:    "mango",
-					Version: "2.3.4",
-					// StemcellOS:      "smoothie",
-					// StemcellVersion: "9.9",
-					SHA1:         "some-sha",
-					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
-					RemoteSource: "some-mango-tree",
-				}))
-			})
-		})
-		When("the server has the a file at the expected path", func() {
-			BeforeEach(func() {
-				requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
+					type ApiStorageChildren struct {
+						Uri    string `json:"uri"`
+						Folder bool   `json:"folder"`
+					}
+					type ApiStorageListing struct {
+						Children []ApiStorageChildren `json:"children"`
+					}
 
-				type ApiStorageChildren struct {
-					Uri    string `json:"uri"`
-					Folder bool   `json:"folder"`
-				}
-				type ApiStorageListing struct {
-					Children []ApiStorageChildren `json:"children"`
-				}
+					apiStorageListing := ApiStorageListing{}
+					for _, version := range []string{
+						"2.3.4-build.1",
+						"2.3.4-build.3",
+						"2.3.4-build.2",
+					} {
+						filename := fmt.Sprintf("mango-%s-smoothie-9.9.tgz", version)
+						apiStoragePath := fmt.Sprintf("/api/storage/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
+						artifactoryRouter.Handler(http.MethodGet, apiStoragePath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+							res.WriteHeader(http.StatusOK)
+							// language=json
+							_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
+						}), requireAuth))
 
-				apiStorageListing := ApiStorageListing{}
-				for _, version := range []string{
-					"",
-					"invalid",
-					"2.3.3",
-					"2.3.4-build.1",
-					"2.3.4",
-					"2.3.4-build.2",
-				} {
-					filename := fmt.Sprintf("mango-%s-smoothie-9.9.tgz", version)
-					apiStoragePath := fmt.Sprintf("/api/storage/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
-					artifactoryRouter.Handler(http.MethodGet, apiStoragePath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+						downloadPath := fmt.Sprintf("/artifactory/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
+						artifactoryRouter.Handler(http.MethodGet, downloadPath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+							res.WriteHeader(http.StatusOK)
+							f, err := os.Open(filepath.Join("testdata", "some-release.tgz"))
+							if err != nil {
+								log.Fatal("failed to open some release test artifact")
+							}
+							defer closeAndIgnoreError(f)
+							_, _ = io.Copy(res, f)
+						}), requireAuth))
+
+						apiStorageListing.Children = append(apiStorageListing.Children, ApiStorageChildren{
+							Uri:    fmt.Sprintf("/%s", filename),
+							Folder: false,
+						})
+					}
+
+					apiStorageListingBytes, err := json.Marshal(apiStorageListing)
+					Expect(err).NotTo(HaveOccurred())
+					fmt.Printf("%+v\n", string(apiStorageListingBytes))
+
+					artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 						res.WriteHeader(http.StatusOK)
 						// language=json
-						_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
+						_, _ = io.WriteString(res, string(apiStorageListingBytes))
 					}), requireAuth))
+				})
+				When("we allow pre-releases", func() {
+					It("finds the latest version", func() { // testing FindReleaseVersion
+						resultLock, resultErr := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
+							Name:            "mango",
+							Version:         ">=0.0.0-build.0",
+							StemcellOS:      "smoothie",
+							StemcellVersion: "9.9",
+						}, false)
 
-					downloadPath := fmt.Sprintf("/artifactory/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
-					artifactoryRouter.Handler(http.MethodGet, downloadPath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-						res.WriteHeader(http.StatusOK)
-						f, err := os.Open(filepath.Join("testdata", "some-release.tgz"))
-						if err != nil {
-							log.Fatal("failed to open some release test artifact")
-						}
-						defer closeAndIgnoreError(f)
-						_, _ = io.Copy(res, f)
-					}), requireAuth))
-
-					apiStorageListing.Children = append(apiStorageListing.Children, ApiStorageChildren{
-						Uri:    fmt.Sprintf("/%s", filename),
-						Folder: false,
+						Expect(resultErr).NotTo(HaveOccurred())
+						Expect(resultLock).To(Equal(cargo.BOSHReleaseTarballLock{
+							Name:         "mango",
+							Version:      "2.3.4-build.3",
+							SHA1:         "some-sha",
+							RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-build.3-smoothie-9.9.tgz",
+							RemoteSource: "some-mango-tree",
+						}))
 					})
-				}
+				})
+				When("dont allow pre-releases", func() {
+					It("returns ErrNotFound", func() {
+						_, resultErr := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
+							Name:            "mango",
+							Version:         "*",
+							StemcellOS:      "smoothie",
+							StemcellVersion: "9.9",
+						}, false)
 
-				apiStorageListingBytes, err := json.Marshal(apiStorageListing)
-				Expect(err).NotTo(HaveOccurred())
-				fmt.Printf("%+v\n", string(apiStorageListingBytes))
+						Expect(resultErr).To(HaveOccurred())
+					})
 
-				artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-					res.WriteHeader(http.StatusOK)
-					// language=json
-					_, _ = io.WriteString(res, string(apiStorageListingBytes))
-				}), requireAuth))
+				})
 			})
-			It("resolves the lock from the spec", func() { // testing GetMatchedRelease
-				resultLock, resultErr := source.GetMatchedRelease(cargo.BOSHReleaseTarballSpecification{
-					Name:            "mango",
-					Version:         "2.3.4",
-					StemcellOS:      "smoothie",
-					StemcellVersion: "9.9",
+			When("there is a mix of potential releases", func() {
+				BeforeEach(func() {
+					requireAuth := requireBasicAuthMiddleware(correctUsername, correctPassword)
+
+					type ApiStorageChildren struct {
+						Uri    string `json:"uri"`
+						Folder bool   `json:"folder"`
+					}
+					type ApiStorageListing struct {
+						Children []ApiStorageChildren `json:"children"`
+					}
+
+					apiStorageListing := ApiStorageListing{}
+					for _, version := range []string{
+						"",
+						"invalid",
+						"2.3.3",
+						"2.3.4-build.1",
+						"2.3.4",
+						"2.3.4-build.2",
+					} {
+						filename := fmt.Sprintf("mango-%s-smoothie-9.9.tgz", version)
+						apiStoragePath := fmt.Sprintf("/api/storage/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
+						artifactoryRouter.Handler(http.MethodGet, apiStoragePath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+							res.WriteHeader(http.StatusOK)
+							// language=json
+							_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
+						}), requireAuth))
+
+						downloadPath := fmt.Sprintf("/artifactory/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
+						artifactoryRouter.Handler(http.MethodGet, downloadPath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+							res.WriteHeader(http.StatusOK)
+							f, err := os.Open(filepath.Join("testdata", "some-release.tgz"))
+							if err != nil {
+								log.Fatal("failed to open some release test artifact")
+							}
+							defer closeAndIgnoreError(f)
+							_, _ = io.Copy(res, f)
+						}), requireAuth))
+
+						apiStorageListing.Children = append(apiStorageListing.Children, ApiStorageChildren{
+							Uri:    fmt.Sprintf("/%s", filename),
+							Folder: false,
+						})
+					}
+
+					apiStorageListingBytes, err := json.Marshal(apiStorageListing)
+					Expect(err).NotTo(HaveOccurred())
+					fmt.Printf("%+v\n", string(apiStorageListingBytes))
+
+					artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+						res.WriteHeader(http.StatusOK)
+						// language=json
+						_, _ = io.WriteString(res, string(apiStorageListingBytes))
+					}), requireAuth))
+				})
+				It("resolves the lock from the spec", func() { // testing GetMatchedRelease
+					resultLock, resultErr := source.GetMatchedRelease(cargo.BOSHReleaseTarballSpecification{
+						Name:            "mango",
+						Version:         "2.3.4",
+						StemcellOS:      "smoothie",
+						StemcellVersion: "9.9",
+					})
+
+					Expect(resultErr).NotTo(HaveOccurred())
+					Expect(resultLock).To(Equal(cargo.BOSHReleaseTarballLock{
+						Name:    "mango",
+						Version: "2.3.4",
+						// StemcellOS:      "smoothie",
+						// StemcellVersion: "9.9",
+						RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
+						RemoteSource: "some-mango-tree",
+						SHA1:         "some-sha",
+					}))
 				})
 
-				Expect(resultErr).NotTo(HaveOccurred())
-				Expect(resultLock).To(Equal(cargo.BOSHReleaseTarballLock{
-					Name:    "mango",
-					Version: "2.3.4",
-					// StemcellOS:      "smoothie",
-					// StemcellVersion: "9.9",
-					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
-					RemoteSource: "some-mango-tree",
-					SHA1:         "some-sha",
-				}))
-			})
+				It("finds the bosh release", func() { // testing FindReleaseVersion
+					resultLock, resultErr := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
+						Name:            "mango",
+						Version:         "2.3.4",
+						StemcellOS:      "smoothie",
+						StemcellVersion: "9.9",
+					}, false)
 
-			It("finds the bosh release", func() { // testing FindReleaseVersion
-				resultLock, resultErr := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
-					Name:            "mango",
-					Version:         "2.3.4",
-					StemcellOS:      "smoothie",
-					StemcellVersion: "9.9",
-				}, false)
-
-				Expect(resultErr).NotTo(HaveOccurred())
-				Expect(resultLock).To(Equal(cargo.BOSHReleaseTarballLock{
-					Name:    "mango",
-					Version: "2.3.4",
-					// StemcellOS:      "smoothie",
-					// StemcellVersion: "9.9",
-					SHA1:         "some-sha",
-					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
-					RemoteSource: "some-mango-tree",
-				}))
-			})
-
-			It("downloads the release", func() { // teesting DownloadRelease
-				By("calling FindReleaseVersion")
-				local, resultErr := source.DownloadRelease(releasesDirectory, cargo.BOSHReleaseTarballLock{
-					Name:         "mango",
-					Version:      "2.3.4",
-					RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
-					RemoteSource: "some-mango-tree",
+					Expect(resultErr).NotTo(HaveOccurred())
+					Expect(resultLock).To(Equal(cargo.BOSHReleaseTarballLock{
+						Name:    "mango",
+						Version: "2.3.4",
+						// StemcellOS:      "smoothie",
+						// StemcellVersion: "9.9",
+						SHA1:         "some-sha",
+						RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
+						RemoteSource: "some-mango-tree",
+					}))
 				})
 
-				Expect(resultErr).NotTo(HaveOccurred())
-				Expect(local.LocalPath).To(BeAnExistingFile())
-			})
-			When("the server URL ends in /artifactory", func() {
-				JustBeforeEach(func() {
-					logger := log.New(GinkgoWriter, "", 0)
-					config.ArtifactoryHost = server.URL + "/artifactory"
-					source = component.NewArtifactoryReleaseSource(config, logger)
-					source.Client = server.Client()
-				})
-
-				It("downloads the release", func() {
+				It("downloads the release", func() { // teesting DownloadRelease
 					By("calling FindReleaseVersion")
 					local, resultErr := source.DownloadRelease(releasesDirectory, cargo.BOSHReleaseTarballLock{
 						Name:         "mango",
@@ -273,24 +369,45 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					Expect(resultErr).NotTo(HaveOccurred())
 					Expect(local.LocalPath).To(BeAnExistingFile())
 				})
-			})
-			When("the server URL is malformed", func() {
-				JustBeforeEach(func() {
-					logger := log.New(GinkgoWriter, "", 0)
-					config.ArtifactoryHost = ":improper-url/formatting"
-					source = component.NewArtifactoryReleaseSource(config, logger)
-					source.Client = server.Client()
-				})
-				It("returns an error", func() {
-					local, resultErr := source.DownloadRelease(releasesDirectory, cargo.BOSHReleaseTarballLock{
-						Name:         "mango",
-						Version:      "2.3.4",
-						RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
-						RemoteSource: "some-mango-tree",
+				When("the server URL ends in /artifactory", func() {
+					JustBeforeEach(func() {
+						logger := log.New(GinkgoWriter, "", 0)
+						config.ArtifactoryHost = server.URL + "/artifactory"
+						source = component.NewArtifactoryReleaseSource(config, logger)
+						source.Client = server.Client()
 					})
 
-					Expect(resultErr).To(HaveOccurred())
-					Expect(local).To(Equal(component.Local{}))
+					It("downloads the release", func() {
+						By("calling FindReleaseVersion")
+						local, resultErr := source.DownloadRelease(releasesDirectory, cargo.BOSHReleaseTarballLock{
+							Name:         "mango",
+							Version:      "2.3.4",
+							RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
+							RemoteSource: "some-mango-tree",
+						})
+
+						Expect(resultErr).NotTo(HaveOccurred())
+						Expect(local.LocalPath).To(BeAnExistingFile())
+					})
+				})
+				When("the server URL is malformed", func() {
+					JustBeforeEach(func() {
+						logger := log.New(GinkgoWriter, "", 0)
+						config.ArtifactoryHost = ":improper-url/formatting"
+						source = component.NewArtifactoryReleaseSource(config, logger)
+						source.Client = server.Client()
+					})
+					It("returns an error", func() {
+						local, resultErr := source.DownloadRelease(releasesDirectory, cargo.BOSHReleaseTarballLock{
+							Name:         "mango",
+							Version:      "2.3.4",
+							RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
+							RemoteSource: "some-mango-tree",
+						})
+
+						Expect(resultErr).To(HaveOccurred())
+						Expect(local).To(Equal(component.Local{}))
+					})
 				})
 			})
 		})
