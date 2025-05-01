@@ -81,12 +81,11 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					}
 
 					apiStorageListing := ApiStorageListing{}
-					for _, version := range []string{
-						"2.3.4-build.1",
-						"2.3.4",
-						"2.3.4-build.2",
+					for _, filename := range []string{
+						"mango-2.3.4-build.1-smoothie-9.9.tgz",
+						"mango-2.3.4-smoothie-9.9.tgz",
+						"mango-2.3.4-build.2-smoothie-9.9.tgz",
 					} {
-						filename := fmt.Sprintf("mango-%s-smoothie-9.9.tgz", version)
 						apiStoragePath := fmt.Sprintf("/api/storage/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
 						artifactoryRouter.Handler(http.MethodGet, apiStoragePath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 							res.WriteHeader(http.StatusOK)
@@ -188,12 +187,11 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					}
 
 					apiStorageListing := ApiStorageListing{}
-					for _, version := range []string{
-						"2.3.4-build.1",
-						"2.3.4-build.3",
-						"2.3.4-build.2",
+					for _, filename := range []string{
+						"mango-2.3.4-build.1-smoothie-9.9.tgz",
+						"mango-2.3.4-build.3-smoothie-9.9.tgz",
+						"mango-2.3.4-build.2-smoothie-9.9.tgz",
 					} {
-						filename := fmt.Sprintf("mango-%s-smoothie-9.9.tgz", version)
 						apiStoragePath := fmt.Sprintf("/api/storage/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
 						artifactoryRouter.Handler(http.MethodGet, apiStoragePath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 							res.WriteHeader(http.StatusOK)
@@ -274,11 +272,10 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					}
 
 					apiStorageListing := ApiStorageListing{}
-					for _, version := range []string{
+					for _, filename := range []string{
 						"",
 						"invalid",
 					} {
-						filename := fmt.Sprintf("mango-%s-smoothie-9.9.tgz", version)
 						apiStoragePath := fmt.Sprintf("/api/storage/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
 						artifactoryRouter.Handler(http.MethodGet, apiStoragePath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 							res.WriteHeader(http.StatusOK)
@@ -359,15 +356,17 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					}
 
 					apiStorageListing := ApiStorageListing{}
-					for _, version := range []string{
+					for _, filename := range []string{
 						"",
 						"invalid",
-						"2.3.3",
-						"2.3.4-build.1",
-						"2.3.4",
-						"2.3.4-build.2",
+						"mango-2.3.3-smoothie-9.9.tgz",
+						"mango-2.3.4-build.1-smoothie-9.9.tgz",
+						"mango-2.3.4-smoothie-9.9.tgz",
+						"mango-2.3.4-build.2-smoothie-9.9.tgz",
+						"mango-2.3.5-notices.zip",
+						"notices-mango-2.3.5.zip",
+						"orange-10.0.0-smoothie-9.9.tgz",
 					} {
-						filename := fmt.Sprintf("mango-%s-smoothie-9.9.tgz", version)
 						apiStoragePath := fmt.Sprintf("/api/storage/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
 						artifactoryRouter.Handler(http.MethodGet, apiStoragePath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 							res.WriteHeader(http.StatusOK)
@@ -392,20 +391,8 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 						})
 					}
 
-					apiStorageListing.Children = append(apiStorageListing.Children, ApiStorageChildren{
-						Uri:    "/mango-2.3.4-notices.zip",
-						Folder: false,
-					})
-					apiStoragePath := "/api/storage/basket/bosh-releases/smoothie/9.9/mango/mango-2.3.4-notices.zip"
-					artifactoryRouter.Handler(http.MethodGet, apiStoragePath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
-						res.WriteHeader(http.StatusOK)
-						// language=json
-						_, _ = io.WriteString(res, `{"checksums": {"sha1":  "some-sha"}}`)
-					}), requireAuth))
-
 					apiStorageListingBytes, err := json.Marshal(apiStorageListing)
 					Expect(err).NotTo(HaveOccurred())
-					fmt.Printf("%+v\n", string(apiStorageListingBytes))
 
 					artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 						res.WriteHeader(http.StatusOK)
