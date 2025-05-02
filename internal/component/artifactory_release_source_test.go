@@ -116,7 +116,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 						res.WriteHeader(http.StatusOK)
 						// language=json
-						_, _ = io.WriteString(res, string(apiStorageListingBytes))
+						_, _ = io.Writer.Write(res, apiStorageListingBytes)
 					}), requireAuth))
 				})
 				When("we allow pre-releases", func() {
@@ -221,7 +221,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 						res.WriteHeader(http.StatusOK)
 						// language=json
-						_, _ = io.WriteString(res, string(apiStorageListingBytes))
+						_, _ = io.Writer.Write(res, apiStorageListingBytes)
 					}), requireAuth))
 				})
 				When("we allow pre-releases", func() {
@@ -308,7 +308,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 						res.WriteHeader(http.StatusOK)
 						// language=json
-						_, _ = io.WriteString(res, string(apiStorageListingBytes))
+						_, _ = io.Writer.Write(res, apiStorageListingBytes)
 					}), requireAuth))
 				})
 				It("finds doesnt find anything", func() { // testing FindReleaseVersion
@@ -377,7 +377,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					artifactoryRouter.Handler(http.MethodGet, "/api/storage/basket/bosh-releases/smoothie/9.9/mango", applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 						res.WriteHeader(http.StatusOK)
 						// language=json
-						_, _ = io.WriteString(res, string(apiStorageListingBytes))
+						_, _ = io.Writer.Write(res, apiStorageListingBytes)
 					}), requireAuth))
 				})
 				It("resolves the lock from the spec", func() { // testing GetMatchedRelease
