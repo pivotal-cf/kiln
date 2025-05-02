@@ -79,7 +79,7 @@ func (cmd TileTest) configuration() (test.Configuration, error) {
 
 func (cmd TileTest) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Run the Manifest, Migrations, and Stability tests for a Tile in a Docker container. Requires a Docker daemon to be running and ssh keys with access to Ops Manager's Git repository. For non-interactive use, either set the environment variable SSH_PASSWORD, or `ssh add` your identity before running.",
+		Description:      "Run the Manifest, Migrations, and Stability tests for a Tile in a Docker container. Requires a Docker daemon to be running and Artifactory credentials to be provided via the ARTIFACTORY_USERNAME and ARTIFACTORY_PASSWORD environment variables to install the ops-manifest gem.",
 		ShortDescription: "Runs unit tests for a Tile.",
 		Flags:            cmd.Options,
 	}
