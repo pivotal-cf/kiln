@@ -253,6 +253,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 						}, false)
 
 						Expect(resultErr).To(HaveOccurred())
+						Expect(component.IsErrNotFound(resultErr)).To(BeTrue())
 					})
 
 				})
@@ -523,14 +524,14 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				})
 			})
 			It("returns ErrNotFound", func() {
-				_, err := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
+				_, resultErr := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
 					Name:            "missing-release",
 					Version:         "1.2.3",
 					StemcellOS:      "ubuntu-jammy",
 					StemcellVersion: "1.234",
 				}, false)
 
-				Expect(component.IsErrNotFound(err)).To(BeTrue())
+				Expect(component.IsErrNotFound(resultErr)).To(BeTrue())
 			})
 		})
 		When("there are invalid files", func() {
@@ -596,7 +597,7 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 				}, false)
 
 				Expect(resultErr).To(HaveOccurred())
-				Expect(resultErr).To(BeEquivalentTo(component.ErrNotFound))
+				Expect(component.IsErrNotFound(resultErr)).To(BeTrue())
 			})
 		})
 	})
