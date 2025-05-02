@@ -12,6 +12,7 @@ Looking at an [example kiln tile](https://github.com/releen/hello-tile/tree/main
 ## Installation
 
 To install the `kiln` CLI
+
 - install with Homebrew
 
   ```shell
@@ -44,13 +45,14 @@ To install the `kiln` CLI
   docker pull pivotalcfreleng/kiln:latest
   ```
 
-   ```Dockerfile
+  ```Dockerfile
   FROM pivotalcfreleng/kiln:latest as kiln
 
   FROM ubuntu
   COPY --from=kiln /kiln /usr/bin/kiln
   CMD /usr/bin/bash
-   ```
+  ```
+
 ## Kilnfile
 
 Each tile must have a Kilnfile and Kilnfile.lock. Both are YAML files. Kiln won't generate them for you.
@@ -105,6 +107,7 @@ You may set a **"github_repository"** field. This should be where the BOSH Relea
 You may set a **"float_always"** field. When you set this, `kiln glaze` will not lock this release's version.
 
 You may set a **"maintenance_version_bump_policy"** field. When you run `kiln deglaze` this field specifies how to reset the version constraint after `kiln glaze` locked it.
+
 - "LockNone": Given a glazed version value "1.2.3", this setting resets the version constraint to `"*"`
 - "LockPatch": Given a glazed version value "1.2.3", this setting resets the version constraint to `"1.2.3"`
 - "LockMinor": Given a glazed version value "1.2.3", this setting resets the version constraint to `"1.2.*"`
@@ -121,7 +124,7 @@ If you set add more than one element to the bake_configurations list, you need t
 These are the mappings from bake flag to each field in a bake_configurations element:
 
 | bake_configurations element field      | bake flag                      | documentation                                                                         |
-|----------------------------------------|--------------------------------|---------------------------------------------------------------------------------------|
+| -------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------- |
 | `"tile_name"`                          | `--variables=tile_name=`       | This field is used when selecting a configuration from a list of bake_configurations. |
 | `"metadata_filepath"`                  | `--metadata=`                  | This should be the path to the product template entrypoint. Usually called `base.yml` |
 | `"icon_filepath"`                      | `--icon=`                      | This may be a path to a png file.                                                     |
@@ -183,6 +186,7 @@ It takes release and stemcell tarballs, metadata YAML, and JavaScript migrations
 as inputs and produces an OpsMan-compatible tile as its output.
 
 The produce a tile, you simply need to be within a tile directory and execute the following command:
+
 ```
 $ kiln bake
 ```
@@ -317,8 +321,6 @@ file contain links to all the bosh sources used to build a tile
 
 See the [Kilnfile](#kilnfile) section for more information on Kilnfile formatting
 
-
-
 Tile authors will also need to include a Kilnfile.lock in the same directory
 as the Kilnfile.
 
@@ -438,11 +440,10 @@ The `--sha256` flag calculates the sha256 checksum of the output file
 The `--skip-fetch-directories` skips the automatic release fetching of
 the specified release directories
 
-
 ##### `--stemcell-tarball` (Deprecated)
 
-*Warning: `--stemcell-tarball` will be removed in a future version of kiln.
-Use `--stemcells-directory` in the future.*
+_Warning: `--stemcell-tarball` will be removed in a future version of kiln.
+Use `--stemcells-directory` in the future._
 
 The `--stemcell-tarball` flag takes a path to a stemcell.
 
@@ -525,12 +526,15 @@ provides_product_versions:
 - name: example
   version: $( version )
 ```
+
 </details>
 
 ### `re-bake`
+
 It constructs a tile from a given bake record file.
 
 To run the command, you simply need to be within a tile directory and execute the following command:
+
 ```
 $ kiln re-bake --output-file tile.pivotal bake_records/1.0.0.json
 ```
@@ -545,13 +549,14 @@ The `test` command exercises to ginkgo tests under the `/<tile>/test/manifest` a
 Running these tests requires a docker daemon. It also requires the user to
 provide Artifactory credentials via the ARTIFACTORY_USERNAME and
 ARTIFACTORY_PASSWORD environment variables to allow the ops-manifest gem to
-be installed. The credentials must have access to the tas-rel-eng-gem-dev-local
-repository.
+be installed. The credentials must have access to the `tas-rel-eng-gem-dev-local`
+repository within Broadcom's Artifactory.
 
 If you run into this docker error `could not execute "test": failed to connect to Docker daemon: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running`,
 then create a symlink `sudo ln -s ~/.docker/run/docker.sock /var/run/docker.sock`
 
 Here are command line examples:
+
 ```
 $ cd ~/workspace/tas/ist
 $ kiln test -e ARTIFACTORY_USERNAME=myuser -e ARTIFACTORY_PASSWORD=secretpassword
@@ -580,6 +585,7 @@ The `--migrations-only` flag can be used to run only Migration tests. If not pas
 ##### `--tile-path`
 
 The `--tile-path` (`-tp`) flag can be set the path the directory you wish to test. It defaults to the current working directory. For example
+
 ```
 $ kiln test -tp ~/workspace/tas/ist
 ```
@@ -595,46 +601,52 @@ The `--verbose` (`-v`) flag will log additional debugging info.
 The `fetch` command downloads bosh release tarballs specified in the Kilnfile and
 Kilnfile.lock files to a local directory specified by the `--releases-directory` flag.
 
-
 Kiln verifies that the checksum (SHA1) of the downloaded release matches
 checksum specified for the release in the Kilnfile.lock file. If the checksums do
-not match, then the releases that don't match will be deleted from disk. *Since
+not match, then the releases that don't match will be deleted from disk. _Since
 BOSH releases from different directors with the same packages result in complied
 releases with different hashes this may result in some problems where if you
 download a release that was compiled with a different director those releases
-will be deleted.*
+will be deleted._
 
 Kiln will not download releases if an existing release exists with the correct
 release version and checksum.
 
 <a id="kilnfile"></a>
+
 ## Kilnfile
+
 A Kilnfile contains information about the bosh releases and stemcell used by
 a particular tile
 
 Example Kilnfile:
+
 ```yaml
 ---
 slug: some-slug #optional but if included should match network.pivotal.io
 release_sources:
-- type: bosh.io
-  releases:
-- name: bpm
-  version: '*'
+  - type: bosh.io
+    releases:
+  - name: bpm
+    version: "*"
 stemcell_criteria:
   os: ubuntu-xenial
   version: "~621"
 ```
 
 #### Supported release sources
+
 ##### Bosh.io
-  ```yaml
-  release_sources:
-  - type: bosh.io
-  ```
-##### s3
+
 ```yaml
-  release_sources:
+release_sources:
+  - type: bosh.io
+```
+
+##### s3
+
+```yaml
+release_sources:
   - type: s3
     id: unique-name
     publishable: true # if this bucket contains releases that are suitable to ship to customers
@@ -646,28 +658,34 @@ stemcell_criteria:
 ```
 
 ##### github
+
 ```yaml
-  - type: github
-    id: optional-unique-name-defaults-to-github-org-name
-    org: the-github-org
-    endpoint: $(variable "github_host")
-    github_token: $(variable "github_token")
+- type: github
+  id: optional-unique-name-defaults-to-github-org-name
+  org: the-github-org
+  endpoint: $(variable "github_host")
+  github_token: $(variable "github_token")
 ```
 
 ##### artifactory
+
 ```yaml
-  - type: artifactory
-    id: unique-name
-    artifactory_host: https://build-artifactory.your-artifactory-url.com
-    repo: some-artifactory-repo
-    publishable: true # if this repo contains releases that are suitable to ship to customers
-    username: $(variable "artifactory_username")
-    password: $(variable "artifactory_password")
-    path_template: shared-releases/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz # See Templating
+- type: artifactory
+  id: unique-name
+  artifactory_host: https://build-artifactory.your-artifactory-url.com
+  repo: some-artifactory-repo
+  publishable: true # if this repo contains releases that are suitable to ship to customers
+  username: $(variable "artifactory_username")
+  password: $(variable "artifactory_password")
+  path_template: shared-releases/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz # See Templating
 ```
+
 <a id="kilnfile-templating"></a>
+
 ### Templating
+
 #### Options
+
 Kilnfile files support the following templating options:
 
 - `{{.Name}}` for release name
@@ -678,6 +696,7 @@ Kilnfile files support the following templating options:
 - There's also access to a `trimSuffix` helper (e.g. `{{trimSuffix .Name "-release"}}`)
 
 #### Functions
+
 ##### `select`
 
 The `select` function allows you to pluck values for nested fields from a
@@ -708,9 +727,9 @@ release_sources:
     path_template: 2.6/{{trimSuffix .Name "-release"}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz
 ```
 
-*Credentials like S3 keys are not stored in git repos. To support separating
+_Credentials like S3 keys are not stored in git repos. To support separating
 that information from non-sensitive configuration, you can reference variables
-like you do in tile config.*
+like you do in tile config._
 
 ```yaml
 ---
@@ -727,6 +746,7 @@ kiln bake --kilnfile random-Kilnfile --variables-file vars.yml
 ```
 
 <a id="kilnfile-lock"></a>
+
 ### Kilnfile.lock
 
 The Kilnfile.lock file name is expected to be a file in the same directory as the
@@ -738,6 +758,7 @@ bosh releases that will go into the tile as well as the target stemcell.
 The file has two top level members `releases` and `stemcell_criteria`.
 
 The `releases` member is an array of members with each element having the following members.
+
 - `name`: bosh release name
 - `sha1`: checksum of the tarball
 - `version`: semantic version of the release
@@ -745,27 +766,29 @@ The `releases` member is an array of members with each element having the follow
 - `remote_path`: the path that where the bosh release is stored
 
 The `stemcell_criteria ` member is defines the stemcell used to generate the tile
+
 - `os`: the stemcell os used (e.g. ubuntu-xenial)
 - `version`: semantic version of the stemcell
 
 Example Kilnfile.lock :
+
 ```yaml
 releases:
-- name: bpm
-  sha1: 86675f90d66f7018c57f4ae0312f1b3834dd58c9
-  version: 1.1.18
-  remote_source: bosh.io
-  remote_path: https://bosh.io/d/github.com/cloudfoundry/bpm-release?v=1.1.18
-- name: backup-and-restore-sdk
-  sha1: 0f48faa2f85297043e5201e2200567c2fe5a9f9a
-  version: 1.18.84
-  remote_source: unique-name # this could be artifactory or s3
-  remote_path: bosh-releases/compiled/backup-and-restore-sdk-1.18.84-ubuntu-jammy-1.179.tgz
-- name: hello-release
-  sha1: d7de88ab98d7d61d0a4e660c8fff76727817c059
-  version: 0.4.0
-  remote_source: the-github-org
-  remote_path: https://github.com/releen/hello-release/releases/download/0.4.0/hello-release-0.4.0.tgz
+  - name: bpm
+    sha1: 86675f90d66f7018c57f4ae0312f1b3834dd58c9
+    version: 1.1.18
+    remote_source: bosh.io
+    remote_path: https://bosh.io/d/github.com/cloudfoundry/bpm-release?v=1.1.18
+  - name: backup-and-restore-sdk
+    sha1: 0f48faa2f85297043e5201e2200567c2fe5a9f9a
+    version: 1.18.84
+    remote_source: unique-name # this could be artifactory or s3
+    remote_path: bosh-releases/compiled/backup-and-restore-sdk-1.18.84-ubuntu-jammy-1.179.tgz
+  - name: hello-release
+    sha1: d7de88ab98d7d61d0a4e660c8fff76727817c059
+    version: 0.4.0
+    remote_source: the-github-org
+    remote_path: https://github.com/releen/hello-release/releases/download/0.4.0/hello-release-0.4.0.tgz
 stemcell_criteria:
   os: ubuntu-xenial
   version: "621.0"

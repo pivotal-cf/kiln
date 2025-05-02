@@ -233,7 +233,7 @@ var _ = Describe("kiln test", func() {
 	})
 
 	When("when ginkgo flag arguments are passed", func() {
-		It("it sets the GinkgoFlags comfiguration", func() {
+		It("it sets the GinkgoFlags configuration", func() {
 			args := []string{"--ginkgo-flags=peach pair"}
 
 			fakeTestFunc := fakes.TestTileFunction{}
