@@ -251,7 +251,6 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
 	semverFilepathRegex = filepath.Base(semverFilepathRegex)
-	fmt.Println(semverFilepathRegex)
 
 	re, err := regexp.Compile(semverFilepathRegex)
 	if err != nil {
@@ -345,7 +344,6 @@ func (ars *ArtifactoryReleaseSource) UploadRelease(spec cargo.BOSHReleaseTarball
 
 	request, err := http.NewRequest(http.MethodPut, fullUrl, file)
 	if err != nil {
-		fmt.Println(err)
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
 	request.SetBasicAuth(ars.Username, ars.Password)
