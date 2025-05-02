@@ -10,7 +10,7 @@ import (
 )
 
 func Test_wrapFirewallError(t *testing.T) {
-	t.Run("dns error", func(t *testing.T) {
+	t.Run("dns error (rename)", func(t *testing.T) {
 		someErr := &url.Error{
 			Err: &net.DNSError{
 				Err: "some message",

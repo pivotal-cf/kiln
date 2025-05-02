@@ -11,6 +11,7 @@ type Version struct {
 	version string
 }
 
+// a comment
 func NewVersion(logger *log.Logger, version string) Version {
 	return Version{
 		logger:  logger,
