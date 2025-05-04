@@ -20,7 +20,6 @@ This guide intends to be more opinionated while the README.me is more general.
   - [BOSH release compilation](#bosh-release-compilation)
 - [Stemcell Version Management](#stemcell-version-management)
 - [Tile release note Generation](#release-notes)
-- [TanzuNet Release Publication](#kiln-publish)
 - [Importing Go Source Code](#go-import-kiln)
 #### Helpful external links
 - [Metadata Testing Example](https://github.com/releen/hello-tile/blob/main/test/manifest/manifest_test.go)
@@ -499,12 +498,6 @@ I recommend you use the defaults.
 `kiln release-notes --update-docs=path-to-release-notes-file/notes.md "${PREVIOUS_RELEASE_SHA}" "${NEXT_RELEASE_SHA}"`
 
 If you omit `--update-docs` the notes will be written to standard out.
-
-## <a id="kiln-publish"></a> TanzuNet Release Publication
-
-`kiln publish` does not in-fact publish a tile.
-It changes some of the configuration on a previously created TanzuNet release.
-While we use it for TAS, it is not ready/intended to be used by other tiles quite yet.
 
 ## <a id="go-import-kiln"></a> Importing Go Source Code [![Go Reference](https://pkg.go.dev/badge/github.com/pivotal-cf/kiln.svg)](https://pkg.go.dev/github.com/pivotal-cf/kiln/pkg).
 
