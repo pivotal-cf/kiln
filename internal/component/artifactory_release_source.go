@@ -270,21 +270,21 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		// mango-2.3.4-build.1-smoothie-9.9.tgz
 		// mango-(?P<version>{regex pattern})-smoothie-(?P<stemcell_version>{regex_pattern}).tgz
 		// {Name}-(?P<version>{regex pattern})-{StemcellOS}-(?P<stemcell_version>{regex_pattern}).tgz
-		m := re.FindStringSubmatch(filepath.Base(releases.URI))
-		if m == nil {
+		matches := re.FindStringSubmatch(filepath.Base(releases.URI))
+		if matches == nil {
 			continue
 		}
 		names := re.SubexpNames()
-		data := map[string]string{}
+		semvers := map[string]string{}
 		for i, n := range names {
 			if i == 0 || n == "" {
 				continue
 			}
-			data[n] = m[i]
+			semvers[n] = matches[i]
 		}
 
-		version := data["bosh_version"]
-		stemcellVersion := data["bosh_stemcell_version"]
+		version := semvers["bosh_version"]
+		stemcellVersion := semvers["bosh_stemcell_version"]
 		// we aren't updating stemcell version
 		if stemcellVersion != spec.StemcellVersion {
 			continue
