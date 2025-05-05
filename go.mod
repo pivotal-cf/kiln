@@ -1,8 +1,7 @@
 module github.com/pivotal-cf/kiln
 
 go 1.23
-
-toolchain go1.23.2
+toolchain go1.24.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
@@ -34,10 +33,9 @@ require (
 	github.com/pivotal-cf/om v0.0.0-20230707145702-e2ef8fd451b1
 	github.com/snabb/httpreaderat v1.0.1
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/crypto v0.28.0
+	golang.org/x/crypto v0.38.0
 	golang.org/x/oauth2 v0.16.0
-	golang.org/x/sync v0.8.0
-	golang.org/x/term v0.25.0
+	golang.org/x/sync v0.14.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -56,7 +54,6 @@ require (
 	github.com/cloudfoundry/go-socks5 v0.0.0-20180221174514-54f73bdb8a8e // indirect
 	github.com/cloudfoundry/socks5-proxy v0.2.96 // indirect
 	github.com/containerd/containerd v1.7.13 // indirect
-	github.com/containerd/continuity v0.4.3 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/typeurl/v2 v2.1.1 // indirect
 	github.com/cppforlife/go-semi-semantic v0.0.0-20160921010311-576b6af77ae4 // indirect
@@ -118,16 +115,13 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0 // indirect
 	go.opentelemetry.io/otel v1.24.0 // indirect
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.21.0 // indirect
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/tools v0.26.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto v0.0.0-20240221002015-b0ce06bbee7c // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240213162025-012b6fc9bca9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240221002015-b0ce06bbee7c // indirect
 	google.golang.org/grpc v1.62.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
