@@ -13,7 +13,7 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/proofing"
 
 	yamlConverter "github.com/ghodss/yaml"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -274,8 +274,8 @@ func (i Interpolator) interpolateValueIntoYAML(input InterpolateInput, name stri
 		return "", err // should never happen
 	}
 
-	if stringScalar, ok := val.(string); ok {
-		return stringScalar, nil
+	if stringVal, ok := val.(string); ok {
+		return i.yamlMarshalString(stringVal)
 	}
 
 	interpolatedYAML, err := i.interpolate(input, name, initialYAML)
@@ -289,6 +289,39 @@ func (i Interpolator) interpolateValueIntoYAML(input InterpolateInput, name stri
 	}
 
 	return string(inlinedYAML), nil
+}
+
+// yamlMarshalString escapes a string so it can be embedded into a YAML document literally
+//
+// For example:
+//   - "hello" → "hello"
+//   - "true" → "true"
+//   - "[one, 2]" → "\"[one, 2]\""
+func (i Interpolator) yamlMarshalString(val string) (string, error) {
+	var node yaml.Node
+	err := yaml.Unmarshal([]byte(val), &node)
+	if err != nil {
+		return "", err
+	}
+
+	// when it's a document node jump to the content node
+	contentNode := &node
+	if len(node.Content) > 0 {
+		contentNode = node.Content[0]
+	}
+
+	// when the node is a scalar, e.g. string, int, double, etc., no escaping is needed
+	if contentNode.Kind == yaml.ScalarNode {
+		return val, nil
+	}
+
+	// escape objects and arrays
+	var escaped []byte
+	escaped, err = yaml.Marshal(val)
+	if err != nil {
+		return "", err
+	}
+	return string(escaped), nil
 }
 
 // Workaround to avoid YAML indentation being incorrect when value is interpolated into the metadata

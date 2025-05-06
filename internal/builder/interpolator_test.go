@@ -272,6 +272,29 @@ some_form_types:
 `))
 	})
 
+	It("interpolates literal variables", func() {
+		templateYAML := `
+---
+literal_object: $(variable "variable-literal-object")
+literal_array: $(variable "variable-literal-array")
+`
+
+		input = builder.InterpolateInput{
+			SkipKilnMetadata: true,
+			Variables: map[string]any{
+				"variable-literal-object": `{"some": "value"}`,
+				"variable-literal-array": `[some, "things"]`,
+			},
+		}
+
+		interpolatedYAML, err := interpolator.Interpolate(input, "", []byte(templateYAML))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(interpolatedYAML).To(HelpfullyMatchYAML(`
+literal_object: "{\"some\": \"value\"}"
+literal_array: "[some, \"things\"]"
+`))
+	})
+
 	Context("when multiple stemcells are specified", func() {
 		var templateYAML string
 
