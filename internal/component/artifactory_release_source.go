@@ -332,7 +332,7 @@ func (ars ArtifactoryReleaseSource) regexPatternFromSpec(spec cargo.BOSHReleaseT
 	}
 
 	re, err := regexp.Compile(semverFilepathRegex)
-	return re, nil
+	return re, err
 }
 
 func (ars *ArtifactoryReleaseSource) UploadRelease(spec cargo.BOSHReleaseTarballSpecification, file io.Reader) (cargo.BOSHReleaseTarballLock, error) {
