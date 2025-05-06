@@ -44,6 +44,7 @@ type ArtifactoryFolderInfo struct {
 		URI    string `json:"uri"`
 		Folder bool   `json:"folder"`
 	} `json:"children"`
+	Path string `json:"path"`
 }
 
 type ArtifactoryFileInfo struct {
@@ -51,6 +52,11 @@ type ArtifactoryFileInfo struct {
 		SHA1 string `json:"sha1"`
 	} `json:"checksums"`
 }
+
+// https://github.com/Masterminds/semver/blob/1558ca3488226e3490894a145e831ad58a5ff958/version.go#L44
+const semverRegex = `v?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?(?:\.(0|[1-9]\d*))?` +
+	`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
+	`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?`
 
 // NewArtifactoryReleaseSource will provision a new ArtifactoryReleaseSource Project
 // from the Kilnfile (ReleaseSourceConfig). If type is incorrect it will PANIC
@@ -232,27 +238,13 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("json from %s is malformed: %s", response.Request.URL.Host, err)
 	}
 
-	// https://github.com/Masterminds/semver/blob/master/version.go
-	semverRegex := `v?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?(?:\.(0|[1-9]\d*))?` +
-		`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
-		`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?`
-
-	regexSpec := spec
-	regexSpec.Version = fmt.Sprintf(`(?P<bosh_version>(%s))`, semverRegex)
-	regexSpec.StemcellVersion = fmt.Sprintf(`(?P<bosh_stemcell_version>(%s))`, semverRegex)
 	if spec.StemcellOS != "" {
 		if spec.StemcellVersion == "" {
 			return cargo.BOSHReleaseTarballLock{}, errors.New("stemcell version is required when stemcell os is set")
 		}
 	}
 
-	semverFilepathRegex, err := ars.RemotePath(regexSpec)
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, err
-	}
-	semverFilepathRegex = filepath.Base(semverFilepathRegex)
-
-	re, err := regexp.Compile(semverFilepathRegex)
+	re, err := regexPatternFromSpec(spec, ars)
 	if err != nil {
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
@@ -263,14 +255,12 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
-	for _, releases := range artifactoryFolderInfo.Children {
-		if releases.Folder {
+	for _, artifactoryFile := range artifactoryFolderInfo.Children {
+		if artifactoryFile.Folder {
 			continue
 		}
-		// mango-2.3.4-build.1-smoothie-9.9.tgz
-		// mango-(?P<version>{regex pattern})-smoothie-(?P<stemcell_version>{regex_pattern}).tgz
-		// {Name}-(?P<version>{regex pattern})-{StemcellOS}-(?P<stemcell_version>{regex_pattern}).tgz
-		matches := re.FindStringSubmatch(filepath.Base(releases.URI))
+		fullpath := path.Join(artifactoryFolderInfo.Path, artifactoryFile.URI)
+		matches := re.FindStringSubmatch(fullpath)
 		if matches == nil {
 			continue
 		}
@@ -297,8 +287,7 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 				continue
 			}
 
-			remotePathToUpdate := path.Dir(remotePath) + releases.URI
-
+			remotePathToUpdate := path.Dir(remotePath) + artifactoryFile.URI
 			if (foundRelease == cargo.BOSHReleaseTarballLock{}) {
 				foundRelease = cargo.BOSHReleaseTarballLock{
 					Name:         spec.Name,
@@ -330,6 +319,26 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 	}
 
 	return foundRelease, nil
+}
+
+func regexPatternFromSpec(spec cargo.BOSHReleaseTarballSpecification, ars *ArtifactoryReleaseSource) (*regexp.Regexp, error) {
+	regexSpec := spec
+	regexSpec.Version = fmt.Sprintf(`(?P<bosh_version>(%s))`, semverRegex)
+	regexSpec.StemcellVersion = fmt.Sprintf(`(?P<bosh_stemcell_version>(%s))`, semverRegex)
+
+	// interpolates the regex into the kilnfile template
+	semverFilepathRegex, err := ars.RemotePath(regexSpec)
+	if err != nil {
+		return nil, err
+	}
+	// we are only interested in the file TODO: WOW there, not true!
+	// TODO Fix this right now
+	//semverFilepathRegex = filepath.Base(semverFilepathRegex)
+	//fmt.Println(semverFilepathRegex)
+	//fmt.Println(filepath.Base(semverFilepathRegex))
+
+	re, err := regexp.Compile(semverFilepathRegex)
+	return re, nil
 }
 
 func (ars *ArtifactoryReleaseSource) UploadRelease(spec cargo.BOSHReleaseTarballSpecification, file io.Reader) (cargo.BOSHReleaseTarballLock, error) {
