@@ -116,7 +116,7 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 		artifactoryPassword := envMap["ARTIFACTORY_PASSWORD"]
 
 		logger.Println("creating test image")
-		_, err = dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
+		resp, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
 			Tags:      []string{"kiln_test_dependencies:vmware"},
 			Version:   types.BuilderBuildKit,
 			SessionID: sessionID,
@@ -125,8 +125,15 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 				"ARTIFACTORY_PASSWORD": &artifactoryPassword,
 			},
 		})
+
 		if err != nil {
 			return fmt.Errorf("failed to build image: %w", err)
+		}
+
+		logger.Println("reading image build response")
+		_, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read image build response: %w", err)
 		}
 
 		parentDir := path.Dir(configuration.AbsoluteTileDirectory)
