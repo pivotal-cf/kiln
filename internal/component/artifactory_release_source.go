@@ -54,9 +54,14 @@ type ArtifactoryFileInfo struct {
 }
 
 // https://github.com/Masterminds/semver/blob/1558ca3488226e3490894a145e831ad58a5ff958/version.go#L44
-const semverRegex = `v?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?(?:\.(0|[1-9]\d*))?` +
-	`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
-	`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?`
+const (
+	semverRegex = `v?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?(?:\.(0|[1-9]\d*))?` +
+		`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
+		`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?`
+
+	reReleaseVersionGroup  = "bosh_version"
+	reStemcellVersionGroup = "bosh_stemcell_version"
+)
 
 // NewArtifactoryReleaseSource will provision a new ArtifactoryReleaseSource Project
 // from the Kilnfile (ReleaseSourceConfig). If type is incorrect it will PANIC
@@ -273,8 +278,8 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 			matchedGroups[n] = matches[i]
 		}
 
-		version := matchedGroups["bosh_version"]
-		stemcellVersion := matchedGroups["bosh_stemcell_version"]
+		version := matchedGroups[reReleaseVersionGroup]
+		stemcellVersion := matchedGroups[reStemcellVersionGroup]
 		// we aren't updating stemcell version
 		if stemcellVersion != spec.StemcellVersion {
 			continue
@@ -323,8 +328,8 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 
 func (ars ArtifactoryReleaseSource) regexPatternFromSpec(spec cargo.BOSHReleaseTarballSpecification) (*regexp.Regexp, error) {
 	regexSpec := spec
-	regexSpec.Version = fmt.Sprintf(`(?P<bosh_version>(%s))`, semverRegex)
-	regexSpec.StemcellVersion = fmt.Sprintf(`(?P<bosh_stemcell_version>(%s))`, semverRegex)
+	regexSpec.Version = fmt.Sprintf(`(?P<%s>(%s))`, reReleaseVersionGroup, semverRegex)
+	regexSpec.StemcellVersion = fmt.Sprintf(`(?P<%s>(%s))`, reStemcellVersionGroup, semverRegex)
 
 	semverFilepathRegex, err := ars.RemotePath(regexSpec)
 	if err != nil {
