@@ -244,7 +244,7 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		}
 	}
 
-	re, err := regexPatternFromSpec(spec, ars)
+	re, err := ars.regexPatternFromSpec(spec)
 	if err != nil {
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
@@ -265,16 +265,16 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 			continue
 		}
 		names := re.SubexpNames()
-		semvers := map[string]string{}
+		matchedGroups := map[string]string{}
 		for i, n := range names {
 			if i == 0 || n == "" {
 				continue
 			}
-			semvers[n] = matches[i]
+			matchedGroups[n] = matches[i]
 		}
 
-		version := semvers["bosh_version"]
-		stemcellVersion := semvers["bosh_stemcell_version"]
+		version := matchedGroups["bosh_version"]
+		stemcellVersion := matchedGroups["bosh_stemcell_version"]
 		// we aren't updating stemcell version
 		if stemcellVersion != spec.StemcellVersion {
 			continue
@@ -321,21 +321,15 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 	return foundRelease, nil
 }
 
-func regexPatternFromSpec(spec cargo.BOSHReleaseTarballSpecification, ars *ArtifactoryReleaseSource) (*regexp.Regexp, error) {
+func (ars ArtifactoryReleaseSource) regexPatternFromSpec(spec cargo.BOSHReleaseTarballSpecification) (*regexp.Regexp, error) {
 	regexSpec := spec
 	regexSpec.Version = fmt.Sprintf(`(?P<bosh_version>(%s))`, semverRegex)
 	regexSpec.StemcellVersion = fmt.Sprintf(`(?P<bosh_stemcell_version>(%s))`, semverRegex)
 
-	// interpolates the regex into the kilnfile template
 	semverFilepathRegex, err := ars.RemotePath(regexSpec)
 	if err != nil {
 		return nil, err
 	}
-	// we are only interested in the file TODO: WOW there, not true!
-	// TODO Fix this right now
-	//semverFilepathRegex = filepath.Base(semverFilepathRegex)
-	//fmt.Println(semverFilepathRegex)
-	//fmt.Println(filepath.Base(semverFilepathRegex))
 
 	re, err := regexp.Compile(semverFilepathRegex)
 	return re, nil

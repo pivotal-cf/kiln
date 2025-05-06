@@ -383,6 +383,8 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 						"mango-2.3.4-build.1-smoothie-9.9.tgz",
 						"mango-2.3.4-smoothie-9.9.tgz",
 						"mango-2.3.4-build.2-smoothie-9.9.tgz",
+						"mango-3.0.0-build.1-smoothie-9.9.tgz",
+						"mango-4.0.0-build.1.tgz",
 					} {
 						apiStoragePath := fmt.Sprintf("/api/storage/basket/bosh-releases/smoothie/9.9/mango/%s", filename)
 						artifactoryRouter.Handler(http.MethodGet, apiStoragePath, applyMiddleware(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
@@ -418,15 +420,10 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 					}), requireAuth))
 				})
 				When("we allow pre-releases", func() {
-					It("finds the latest version", func() { // testing FindReleaseVersion
-						//s := cargo.BOSHReleaseTarballSpecification{
-						//	Name:             "test",
-						//	Version:          "~2.0",
-						//	GitHubRepository: "git@github.com:test-org/test.git",
-						//}
+					It("finds the latest version", func() {
 						resultLock, resultErr := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
 							Name:            "mango",
-							Version:         ">=0.0.0-build.0",
+							Version:         ">0.0.0-0",
 							StemcellOS:      "smoothie",
 							StemcellVersion: "9.9",
 						}, false)
@@ -434,22 +431,17 @@ var _ = Describe("interacting with BOSH releases on Artifactory", func() {
 						Expect(resultErr).NotTo(HaveOccurred())
 						Expect(resultLock).To(Equal(cargo.BOSHReleaseTarballLock{
 							Name:    "mango",
-							Version: "2.3.4",
+							Version: "3.0.0-build.1",
 							// StemcellOS:      "smoothie",
 							// StemcellVersion: "9.9",
 							SHA1:         "some-sha",
-							RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-2.3.4-smoothie-9.9.tgz",
+							RemotePath:   "bosh-releases/smoothie/9.9/mango/mango-3.0.0-build.1-smoothie-9.9.tgz",
 							RemoteSource: "some-mango-tree",
 						}))
 					})
 				})
 				When("we disallow pre-releases", func() {
 					It("finds the latest bosh version", func() { // testing FindReleaseVersion
-						//s := cargo.BOSHReleaseTarballSpecification{
-						//	Name:             "test",
-						//	Version:          "~2.0",
-						//	GitHubRepository: "git@github.com:test-org/test.git",
-						//}
 						resultLock, resultErr := source.FindReleaseVersion(cargo.BOSHReleaseTarballSpecification{
 							Name:            "mango",
 							Version:         "*",
