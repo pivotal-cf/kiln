@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
+	auth "github.com/jfrog/jfrog-client-go/artifactory/auth"
+	"github.com/jfrog/jfrog-client-go/artifactory/services"
+	"github.com/jfrog/jfrog-client-go/artifactory/services/utils"
+	"github.com/jfrog/jfrog-client-go/config"
+	"github.com/jfrog/jfrog-client-go/http/jfroghttpclient"
 	"io"
 	"log"
 	"net"
@@ -18,11 +22,108 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/jfrog/jfrog-client-go/artifactory"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
+
+type SearchResponseFile struct {
+	Repo     string    `json:"repo"`
+	Path     string    `json:"path"`
+	Name     string    `json:"name"`
+	Type     string    `json:"type"`
+	Size     int       `json:"size"`
+	Created  time.Time `json:"created"`
+	Modified time.Time `json:"modified"`
+	SHA256   string    `json:"sha256"`
+	SHA1     string    `json:"actual_sha1"`
+}
+
+func aqlQuery(repo, pathPattern string) string {
+	pathMatcher := path.Dir(pathPattern)
+	fileMatcher := path.Base(pathPattern)
+	return fmt.Sprintf(`{"repo": %[1]q, "$and": [
+            { "path": { "$match": %[2]q } },
+            { "name": { "$match": %[3]q } }
+          ]}`, repo,
+		pathMatcher,
+		fileMatcher)
+}
+
+func (ars *ArtifactoryReleaseSource) searchAql(pathPattern string) ([]ArtifactoryFile, error) {
+	am, err := ars.buildArtifactoryServiceManager()
+	if err != nil {
+		return nil, err
+	}
+
+	aql := utils.Aql{ItemsFind: aqlQuery(ars.Repo, pathPattern)}
+	cr, err := am.SearchFiles(services.SearchParams{
+		CommonParams: &utils.CommonParams{
+			Aql: aql,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var files []SearchResponseFile
+	for {
+		var file SearchResponseFile
+		err = cr.NextRecord(&file)
+		if err != nil {
+			break
+		}
+		files = append(files, file)
+	}
+
+	var arFiles []ArtifactoryFile
+	for _, result := range files {
+		arFiles = append(arFiles, ArtifactoryFile{
+			URI:    path.Join(result.Path, result.Name),
+			Folder: false,
+			SHA1:   result.SHA1,
+		})
+	}
+	return arFiles, nil
+}
+
+func (ars *ArtifactoryReleaseSource) getFileInfo(filepath string) (*utils.FileInfo, error) {
+	am, err := ars.buildArtifactoryServiceManager()
+	if err != nil {
+		return nil, err
+	}
+	fullPath, err := url.JoinPath(ars.Repo, filepath)
+	if err != nil {
+		return nil, err
+	}
+	fi, err := am.FileInfo(fullPath)
+	return fi, err
+}
+
+func (ars *ArtifactoryReleaseSource) buildArtifactoryServiceManager() (artifactory.ArtifactoryServicesManager, error) {
+	rtDetails := auth.NewArtifactoryDetails()
+	rtDetails.SetUser(ars.Username)
+	rtDetails.SetPassword(ars.Password)
+	rtDetails.SetUrl(ars.ArtifactoryHost)
+	builder := jfroghttpclient.JfrogClientBuilder()
+	builder.SetHttpClient(ars.Client)
+	jfHttpClient, err := builder.Build()
+	if err != nil {
+		return nil, err
+	}
+	rtDetails.SetClient(jfHttpClient)
+
+	configBuilder := config.NewConfigBuilder()
+	configuration, err := configBuilder.SetServiceDetails(rtDetails).SetHttpRetries(3).SetHttpRetryWaitMilliSecs(100).Build()
+	if err != nil {
+		return nil, err
+	}
+	am, _ := artifactory.New(configuration)
+	return am, nil
+}
 
 type ArtifactoryReleaseSource struct {
 	cargo.ReleaseSourceConfig
@@ -47,10 +148,13 @@ type ArtifactoryFolderInfo struct {
 	Path string `json:"path"`
 }
 
-type ArtifactoryFileInfo struct {
-	Checksums struct {
-		SHA1 string `json:"sha1"`
-	} `json:"checksums"`
+type ArtifactoryFile struct {
+	URI    string `json:"uri"`
+	Folder bool   `json:"folder"`
+	SHA1   string
+}
+type ArtifactoryListInfo struct {
+	Files []ArtifactoryFile `json:"files"`
 }
 
 // https://github.com/Masterminds/semver/blob/1558ca3488226e3490894a145e831ad58a5ff958/version.go#L44
@@ -136,28 +240,11 @@ func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRe
 }
 
 func (ars *ArtifactoryReleaseSource) getFileSHA1(release cargo.BOSHReleaseTarballLock) (string, error) {
-	fullURL := ars.ArtifactoryHost + "/api/storage/" + ars.Repo + "/" + release.RemotePath
-
-	resp, err := ars.getWithAuth(fullURL)
+	info, err := ars.getFileInfo(release.RemotePath)
 	if err != nil {
 		return "", err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to get %s release info from artifactory with error code %d", release.Name, resp.StatusCode)
-	}
-
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var artifactoryFileInfo ArtifactoryFileInfo
-
-	if err := json.Unmarshal(responseBody, &artifactoryFileInfo); err != nil {
-		return "", fmt.Errorf("json is malformed: %s", err)
-	}
-
-	return artifactoryFileInfo.Checksums.SHA1, nil
+	return info.Checksums.Sha1, nil
 }
 
 func (ars *ArtifactoryReleaseSource) Configuration() cargo.ReleaseSourceConfig {
@@ -167,36 +254,7 @@ func (ars *ArtifactoryReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 // GetMatchedRelease uses the Name and Version and if supported StemcellOS and StemcellVersion
 // fields on Requirement to download a specific release.
 func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error) {
-	remotePath, err := ars.RemotePath(spec)
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, err
-	}
-
-	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, remotePath)
-	response, err := ars.getWithAuth(fullUrl)
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, err
-	}
-	defer func() {
-		_ = response.Body.Close()
-	}()
-
-	switch response.StatusCode {
-	case http.StatusOK:
-	case http.StatusNotFound:
-		return cargo.BOSHReleaseTarballLock{}, ErrNotFound
-	default:
-		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("unexpected http status: %s", http.StatusText(response.StatusCode))
-	}
-
-	matchedRelease := cargo.BOSHReleaseTarballLock{
-		Name:         spec.Name,
-		Version:      spec.Version,
-		RemotePath:   remotePath,
-		RemoteSource: ars.ID,
-	}
-
-	matchedRelease.SHA1, err = ars.getFileSHA1(matchedRelease)
+	matchedRelease, err := ars.findReleaseVersion(spec, spec)
 	if err != nil {
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
@@ -207,42 +265,13 @@ func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseTar
 // FindReleaseVersion may use any of the fields on Requirement to return the best matching
 // release.
 func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTarballSpecification, _ bool) (cargo.BOSHReleaseTarballLock, error) {
-	remotePath, err := ars.RemotePath(spec)
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, err
-	}
+	searchSpec := spec
+	searchSpec.Version = "*" // we need to look at all available versions before deciding on the best match
+	foundRelease, err := ars.findReleaseVersion(spec, searchSpec)
+	return foundRelease, wrapVPNError(err)
+}
 
-	fullUrl := fmt.Sprintf("%s/%s/%s/%s", ars.ArtifactoryHost, "api/storage", ars.Repo, path.Dir(remotePath))
-
-	response, err := ars.getWithAuth(fullUrl)
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, err
-	}
-
-	defer func() {
-		_ = response.Body.Close()
-	}()
-
-	switch response.StatusCode {
-	case http.StatusOK:
-	case http.StatusNotFound:
-		return cargo.BOSHReleaseTarballLock{}, ErrNotFound
-	default:
-		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("unexpected http status: %s", http.StatusText(response.StatusCode))
-	}
-
-	var artifactoryFolderInfo ArtifactoryFolderInfo
-	var _ *semver.Constraints
-
-	responseBody, err := io.ReadAll(response.Body)
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, err
-	}
-
-	if err := json.Unmarshal(responseBody, &artifactoryFolderInfo); err != nil {
-		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("json from %s is malformed: %s", response.Request.URL.Host, err)
-	}
-
+func (ars *ArtifactoryReleaseSource) findReleaseVersion(spec, searchSpec cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error) {
 	if spec.StemcellOS != "" {
 		if spec.StemcellVersion == "" {
 			return cargo.BOSHReleaseTarballLock{}, errors.New("stemcell version is required when stemcell os is set")
@@ -254,18 +283,22 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
-	foundRelease := cargo.BOSHReleaseTarballLock{}
 	constraint, err := spec.VersionConstraints()
 	if err != nil {
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
+	remoteSearchPath, err := ars.RemotePath(searchSpec)
+	artifactoryFiles, err := ars.searchAql(remoteSearchPath)
+	if err != nil {
+		return cargo.BOSHReleaseTarballLock{}, wrapVPNError(err)
+	}
 
-	for _, artifactoryFile := range artifactoryFolderInfo.Children {
+	foundRelease := cargo.BOSHReleaseTarballLock{}
+	for _, artifactoryFile := range artifactoryFiles {
 		if artifactoryFile.Folder {
 			continue
 		}
-		fullpath := path.Join(artifactoryFolderInfo.Path, artifactoryFile.URI)
-		matches := re.FindStringSubmatch(fullpath)
+		matches := re.FindStringSubmatch(artifactoryFile.URI)
 		if matches == nil {
 			continue
 		}
@@ -292,13 +325,13 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 				continue
 			}
 
-			remotePathToUpdate := path.Dir(remotePath) + artifactoryFile.URI
 			if (foundRelease == cargo.BOSHReleaseTarballLock{}) {
 				foundRelease = cargo.BOSHReleaseTarballLock{
 					Name:         spec.Name,
 					Version:      version,
-					RemotePath:   remotePathToUpdate,
+					RemotePath:   artifactoryFile.URI,
 					RemoteSource: ars.ReleaseSourceConfig.ID,
+					SHA1:         artifactoryFile.SHA1,
 				}
 			} else {
 				foundVersion, _ := semver.NewVersion(foundRelease.Version)
@@ -306,8 +339,9 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 					foundRelease = cargo.BOSHReleaseTarballLock{
 						Name:         spec.Name,
 						Version:      version,
-						RemotePath:   remotePathToUpdate,
+						RemotePath:   artifactoryFile.URI,
 						RemoteSource: ars.ReleaseSourceConfig.ID,
+						SHA1:         artifactoryFile.SHA1,
 					}
 				}
 			}
@@ -318,15 +352,10 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		return cargo.BOSHReleaseTarballLock{}, ErrNotFound
 	}
 
-	foundRelease.SHA1, err = ars.getFileSHA1(foundRelease)
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, err
-	}
-
 	return foundRelease, nil
 }
 
-func (ars ArtifactoryReleaseSource) regexPatternFromSpec(spec cargo.BOSHReleaseTarballSpecification) (*regexp.Regexp, error) {
+func (ars *ArtifactoryReleaseSource) regexPatternFromSpec(spec cargo.BOSHReleaseTarballSpecification) (*regexp.Regexp, error) {
 	regexSpec := spec
 	regexSpec.Version = fmt.Sprintf(`(?P<%s>(%s))`, reReleaseVersionGroup, semverRegex)
 	regexSpec.StemcellVersion = fmt.Sprintf(`(?P<%s>(%s))`, reStemcellVersionGroup, semverRegex)
@@ -422,6 +451,10 @@ func (fe *vpnError) Error() string {
 func wrapVPNError(err error) error {
 	x := new(net.DNSError)
 	if errors.As(err, &x) {
+		return &vpnError{wrapped: err}
+	}
+	// the jfrog api seems to discard type info
+	if err != nil && strings.Contains(err.Error(), "lookup :") {
 		return &vpnError{wrapped: err}
 	}
 	return err
