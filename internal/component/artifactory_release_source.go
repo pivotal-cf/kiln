@@ -6,7 +6,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	auth "github.com/jfrog/jfrog-client-go/artifactory/auth"
+	"github.com/jfrog/jfrog-client-go/artifactory"
+	"github.com/jfrog/jfrog-client-go/artifactory/auth"
 	"github.com/jfrog/jfrog-client-go/artifactory/services"
 	"github.com/jfrog/jfrog-client-go/artifactory/services/utils"
 	"github.com/jfrog/jfrog-client-go/config"
@@ -25,9 +26,17 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/jfrog/jfrog-client-go/artifactory"
-
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+)
+
+const (
+	// https://github.com/Masterminds/semver/blob/1558ca3488226e3490894a145e831ad58a5ff958/version.go#L44
+	semverRegex = `v?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?(?:\.(0|[1-9]\d*))?` +
+		`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
+		`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?`
+
+	reReleaseVersionGroup  = "bosh_version"
+	reStemcellVersionGroup = "bosh_stemcell_version"
 )
 
 type SearchResponseFile struct {
@@ -40,89 +49,6 @@ type SearchResponseFile struct {
 	Modified time.Time `json:"modified"`
 	SHA256   string    `json:"sha256"`
 	SHA1     string    `json:"actual_sha1"`
-}
-
-func aqlQuery(repo, pathPattern string) string {
-	pathMatcher := path.Dir(pathPattern)
-	fileMatcher := path.Base(pathPattern)
-	return fmt.Sprintf(`{"repo": %[1]q, "$and": [
-            { "path": { "$match": %[2]q } },
-            { "name": { "$match": %[3]q } }
-          ]}`, repo,
-		pathMatcher,
-		fileMatcher)
-}
-
-func (ars *ArtifactoryReleaseSource) searchAql(pathPattern string) ([]ArtifactoryFile, error) {
-	am, err := ars.buildArtifactoryServiceManager()
-	if err != nil {
-		return nil, err
-	}
-
-	aql := utils.Aql{ItemsFind: aqlQuery(ars.Repo, pathPattern)}
-	cr, err := am.SearchFiles(services.SearchParams{
-		CommonParams: &utils.CommonParams{
-			Aql: aql,
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var files []SearchResponseFile
-	for {
-		var file SearchResponseFile
-		err = cr.NextRecord(&file)
-		if err != nil {
-			break
-		}
-		files = append(files, file)
-	}
-
-	var arFiles []ArtifactoryFile
-	for _, result := range files {
-		arFiles = append(arFiles, ArtifactoryFile{
-			URI:    path.Join(result.Path, result.Name),
-			Folder: false,
-			SHA1:   result.SHA1,
-		})
-	}
-	return arFiles, nil
-}
-
-func (ars *ArtifactoryReleaseSource) getFileInfo(filepath string) (*utils.FileInfo, error) {
-	am, err := ars.buildArtifactoryServiceManager()
-	if err != nil {
-		return nil, err
-	}
-	fullPath, err := url.JoinPath(ars.Repo, filepath)
-	if err != nil {
-		return nil, err
-	}
-	fi, err := am.FileInfo(fullPath)
-	return fi, err
-}
-
-func (ars *ArtifactoryReleaseSource) buildArtifactoryServiceManager() (artifactory.ArtifactoryServicesManager, error) {
-	rtDetails := auth.NewArtifactoryDetails()
-	rtDetails.SetUser(ars.Username)
-	rtDetails.SetPassword(ars.Password)
-	rtDetails.SetUrl(ars.ArtifactoryHost)
-	builder := jfroghttpclient.JfrogClientBuilder()
-	builder.SetHttpClient(ars.Client)
-	jfHttpClient, err := builder.Build()
-	if err != nil {
-		return nil, err
-	}
-	rtDetails.SetClient(jfHttpClient)
-
-	configBuilder := config.NewConfigBuilder()
-	configuration, err := configBuilder.SetServiceDetails(rtDetails).SetHttpRetries(3).SetHttpRetryWaitMilliSecs(100).Build()
-	if err != nil {
-		return nil, err
-	}
-	am, _ := artifactory.New(configuration)
-	return am, nil
 }
 
 type ArtifactoryReleaseSource struct {
@@ -156,16 +82,6 @@ type ArtifactoryFile struct {
 type ArtifactoryListInfo struct {
 	Files []ArtifactoryFile `json:"files"`
 }
-
-// https://github.com/Masterminds/semver/blob/1558ca3488226e3490894a145e831ad58a5ff958/version.go#L44
-const (
-	semverRegex = `v?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?(?:\.(0|[1-9]\d*))?` +
-		`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
-		`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?`
-
-	reReleaseVersionGroup  = "bosh_version"
-	reStemcellVersionGroup = "bosh_stemcell_version"
-)
 
 // NewArtifactoryReleaseSource will provision a new ArtifactoryReleaseSource Project
 // from the Kilnfile (ReleaseSourceConfig). If type is incorrect it will PANIC
@@ -434,6 +350,89 @@ func (ars *ArtifactoryReleaseSource) getWithAuth(url string) (*http.Response, er
 	}
 	response, err := ars.Client.Do(request)
 	return response, wrapVPNError(err)
+}
+
+func aqlQuery(repo, pathPattern string) string {
+	pathMatcher := path.Dir(pathPattern)
+	fileMatcher := path.Base(pathPattern)
+	return fmt.Sprintf(`{"repo": %[1]q, "$and": [
+            { "path": { "$match": %[2]q } },
+            { "name": { "$match": %[3]q } }
+          ]}`, repo,
+		pathMatcher,
+		fileMatcher)
+}
+
+func (ars *ArtifactoryReleaseSource) searchAql(pathPattern string) ([]ArtifactoryFile, error) {
+	am, err := ars.buildArtifactoryServiceManager()
+	if err != nil {
+		return nil, err
+	}
+
+	aql := utils.Aql{ItemsFind: aqlQuery(ars.Repo, pathPattern)}
+	cr, err := am.SearchFiles(services.SearchParams{
+		CommonParams: &utils.CommonParams{
+			Aql: aql,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var files []SearchResponseFile
+	for {
+		var file SearchResponseFile
+		err = cr.NextRecord(&file)
+		if err != nil {
+			break
+		}
+		files = append(files, file)
+	}
+
+	var arFiles []ArtifactoryFile
+	for _, result := range files {
+		arFiles = append(arFiles, ArtifactoryFile{
+			URI:    path.Join(result.Path, result.Name),
+			Folder: false,
+			SHA1:   result.SHA1,
+		})
+	}
+	return arFiles, nil
+}
+
+func (ars *ArtifactoryReleaseSource) getFileInfo(filepath string) (*utils.FileInfo, error) {
+	am, err := ars.buildArtifactoryServiceManager()
+	if err != nil {
+		return nil, err
+	}
+	fullPath, err := url.JoinPath(ars.Repo, filepath)
+	if err != nil {
+		return nil, err
+	}
+	fi, err := am.FileInfo(fullPath)
+	return fi, err
+}
+
+func (ars *ArtifactoryReleaseSource) buildArtifactoryServiceManager() (artifactory.ArtifactoryServicesManager, error) {
+	rtDetails := auth.NewArtifactoryDetails()
+	rtDetails.SetUser(ars.Username)
+	rtDetails.SetPassword(ars.Password)
+	rtDetails.SetUrl(ars.ArtifactoryHost)
+	builder := jfroghttpclient.JfrogClientBuilder()
+	builder.SetHttpClient(ars.Client)
+	jfHttpClient, err := builder.Build()
+	if err != nil {
+		return nil, err
+	}
+	rtDetails.SetClient(jfHttpClient)
+
+	configBuilder := config.NewConfigBuilder()
+	configuration, err := configBuilder.SetServiceDetails(rtDetails).SetHttpRetries(3).SetHttpRetryWaitMilliSecs(100).Build()
+	if err != nil {
+		return nil, err
+	}
+	am, _ := artifactory.New(configuration)
+	return am, nil
 }
 
 type vpnError struct {
