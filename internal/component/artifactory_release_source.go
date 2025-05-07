@@ -256,7 +256,7 @@ func (ars *ArtifactoryReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 func (ars *ArtifactoryReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error) {
 	matchedRelease, err := ars.findReleaseVersion(spec, spec)
 	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, err
+		return cargo.BOSHReleaseTarballLock{}, wrapVPNError(err)
 	}
 
 	return matchedRelease, nil
