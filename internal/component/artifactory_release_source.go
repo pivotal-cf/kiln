@@ -155,14 +155,6 @@ func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRe
 	return Local{Lock: remoteRelease, LocalPath: filePath}, nil
 }
 
-func (ars *ArtifactoryReleaseSource) getFileSHA1(release cargo.BOSHReleaseTarballLock) (string, error) {
-	info, err := ars.getFileInfo(release.RemotePath)
-	if err != nil {
-		return "", err
-	}
-	return info.Checksums.Sha1, nil
-}
-
 func (ars *ArtifactoryReleaseSource) Configuration() cargo.ReleaseSourceConfig {
 	return ars.ReleaseSourceConfig
 }
@@ -204,9 +196,12 @@ func (ars *ArtifactoryReleaseSource) findReleaseVersion(spec, searchSpec cargo.B
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
 	remoteSearchPath, err := ars.RemotePath(searchSpec)
+	if err != nil {
+		return cargo.BOSHReleaseTarballLock{}, err
+	}
 	artifactoryFiles, err := ars.searchAql(remoteSearchPath)
 	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, wrapVPNError(err)
+		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
 	foundRelease := cargo.BOSHReleaseTarballLock{}
@@ -398,19 +393,6 @@ func (ars *ArtifactoryReleaseSource) searchAql(pathPattern string) ([]Artifactor
 		})
 	}
 	return arFiles, nil
-}
-
-func (ars *ArtifactoryReleaseSource) getFileInfo(filepath string) (*utils.FileInfo, error) {
-	am, err := ars.buildArtifactoryServiceManager()
-	if err != nil {
-		return nil, err
-	}
-	fullPath, err := url.JoinPath(ars.Repo, filepath)
-	if err != nil {
-		return nil, err
-	}
-	fi, err := am.FileInfo(fullPath)
-	return fi, err
 }
 
 func (ars *ArtifactoryReleaseSource) buildArtifactoryServiceManager() (artifactory.ArtifactoryServicesManager, error) {
