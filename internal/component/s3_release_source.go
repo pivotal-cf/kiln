@@ -29,11 +29,6 @@ type S3Downloader interface {
 	Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
 }
 
-//counterfeiter:generate -o ./fakes/s3_uploader.go --fake-name S3Uploader . S3Uploader
-type S3Uploader interface {
-	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
-}
-
 //counterfeiter:generate -o ./fakes/s3_client.go --fake-name S3Client . S3Client
 type S3Client interface {
 	HeadObject(input *s3.HeadObjectInput) (*s3.HeadObjectOutput, error)
@@ -45,14 +40,13 @@ type S3ReleaseSource struct {
 
 	s3Client     S3Client
 	s3Downloader S3Downloader
-	s3Uploader   S3Uploader
 
 	DownloadThreads int
 
 	logger *log.Logger
 }
 
-func NewS3ReleaseSource(c cargo.ReleaseSourceConfig, client S3Client, downloader S3Downloader, uploader S3Uploader, logger *log.Logger) S3ReleaseSource {
+func NewS3ReleaseSource(c cargo.ReleaseSourceConfig, client S3Client, downloader S3Downloader, logger *log.Logger) S3ReleaseSource {
 	if c.Type != "" && c.Type != ReleaseSourceTypeS3 {
 		panic(panicMessageWrongReleaseSourceType)
 	}
@@ -65,7 +59,6 @@ func NewS3ReleaseSource(c cargo.ReleaseSourceConfig, client S3Client, downloader
 		ReleaseSourceConfig: c,
 		s3Client:            client,
 		s3Downloader:        downloader,
-		s3Uploader:          uploader,
 		logger:              logger,
 	}
 }
@@ -96,7 +89,6 @@ func NewS3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.
 		config,
 		client,
 		s3manager.NewDownloaderWithClient(client),
-		s3manager.NewUploaderWithClient(client),
 		logger,
 	)
 }
@@ -277,31 +269,6 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock cargo.BOSHRel
 	lock.SHA1 = hex.EncodeToString(hash.Sum(nil))
 
 	return Local{Lock: lock, LocalPath: outputFile}, nil
-}
-
-func (src S3ReleaseSource) UploadRelease(spec cargo.BOSHReleaseTarballSpecification, file io.Reader) (cargo.BOSHReleaseTarballLock, error) {
-	remotePath, err := src.RemotePath(spec)
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, err
-	}
-
-	src.logger.Printf("uploading release %q to %s at %q...\n", spec.Name, src.ReleaseSourceConfig.Bucket, remotePath)
-
-	_, err = src.s3Uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(src.ReleaseSourceConfig.Bucket),
-		Key:    aws.String(remotePath),
-		Body:   file,
-	})
-	if err != nil {
-		return cargo.BOSHReleaseTarballLock{}, err
-	}
-
-	return cargo.BOSHReleaseTarballLock{
-		Name:         spec.Name,
-		Version:      spec.Version,
-		RemotePath:   remotePath,
-		RemoteSource: src.ReleaseSourceConfig.Bucket,
-	}, nil
 }
 
 func (src S3ReleaseSource) RemotePath(spec cargo.BOSHReleaseTarballSpecification) (string, error) {

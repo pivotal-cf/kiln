@@ -352,11 +352,3 @@ func writeYAMLHelper(t *testing.T, path string, data any) {
 		t.Fatal(err)
 	}
 }
-
-func writeYAML(path string, data any) error {
-	buf, err := yaml.Marshal(data)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, buf, 0o666)
-}
