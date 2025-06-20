@@ -99,7 +99,6 @@ func main() {
 	}
 
 	// commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
-	commandSet["glaze"] = commands.NewGlaze()
 
 	commandSet["find-release-version"] = commands.NewFindReleaseVersion(outLogger, mrsProvider)
 
