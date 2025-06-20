@@ -3,16 +3,14 @@ package component_test
 import (
 	"errors"
 	"fmt"
-	"io"
-	"log"
-	"os"
-	"path/filepath"
-	"strings"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -119,7 +117,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				Bucket:       bucket,
 				PathTemplate: "",
 				Publishable:  false,
-			}, nil, fakeS3Downloader, nil, logger)
+			}, nil, fakeS3Downloader, logger)
 		})
 
 		AfterEach(func() {
@@ -220,7 +218,6 @@ var _ = Describe("S3ReleaseSource", func() {
 				},
 				fakeS3Client,
 				nil,
-				nil,
 				logger,
 			)
 			bpmKey = "2.5/bpm/bpm-release-1.2.3-ubuntu-xenial-190.0.0.tgz"
@@ -267,7 +264,6 @@ var _ = Describe("S3ReleaseSource", func() {
 						Publishable:  false,
 					},
 					fakeS3Client,
-					nil,
 					nil,
 					logger,
 				)
@@ -332,7 +328,6 @@ var _ = Describe("S3ReleaseSource", func() {
 					},
 					fakeS3Client,
 					fakeS3Downloader,
-					nil,
 					logger,
 				)
 				uaaKey = "uaa/uaa-1.1.1.tgz"
@@ -394,7 +389,6 @@ var _ = Describe("S3ReleaseSource", func() {
 					},
 					fakeS3Client,
 					fakeS3Downloader,
-					nil,
 					logger,
 				)
 				uaaKey = "uaa/uaa-123.tgz"
@@ -456,7 +450,6 @@ var _ = Describe("S3ReleaseSource", func() {
 					},
 					fakeS3Client,
 					fakeS3Downloader,
-					nil,
 					logger,
 				)
 				uaaKey = "uaa/uaa-123.tgz"
@@ -531,7 +524,6 @@ var _ = Describe("S3ReleaseSource", func() {
 					},
 					fakeS3Client,
 					fakeS3Downloader,
-					nil,
 					logger,
 				)
 				uaaKey = "2.11/uaa/uaa-1.2.3-ubuntu-xenial-621.71.tgz"
@@ -550,92 +542,6 @@ var _ = Describe("S3ReleaseSource", func() {
 		})
 	})
 
-	Describe("UploadRelease", func() {
-		var (
-			s3Uploader    *fetcherFakes.S3Uploader
-			releaseSource component.S3ReleaseSource
-			file          io.Reader
-		)
-
-		BeforeEach(func() {
-			s3Uploader = new(fetcherFakes.S3Uploader)
-			releaseSource = component.NewS3ReleaseSource(
-				cargo.ReleaseSourceConfig{
-					ID:           sourceID,
-					Bucket:       "orange-bucket",
-					PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}.tgz`,
-					Publishable:  false,
-				},
-				nil,
-				nil,
-				s3Uploader,
-				log.New(GinkgoWriter, "", 0),
-			)
-			file = strings.NewReader("banana banana")
-		})
-
-		Context("happy path", func() {
-			It("uploads the file to the correct location", func() {
-				_, err := releaseSource.UploadRelease(cargo.BOSHReleaseTarballSpecification{
-					Name:    "banana",
-					Version: "1.2.3",
-				}, file)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(s3Uploader.UploadCallCount()).To(Equal(1))
-
-				opts, fns := s3Uploader.UploadArgsForCall(0)
-
-				Expect(fns).To(HaveLen(0))
-
-				Expect(opts.Bucket).To(PointTo(Equal("orange-bucket")))
-				Expect(opts.Key).To(PointTo(Equal("banana/banana-1.2.3.tgz")))
-				Expect(opts.Body).To(Equal(file))
-			})
-
-			It("returns the remote release", func() {
-				remoteRelease, err := releaseSource.UploadRelease(cargo.BOSHReleaseTarballSpecification{
-					Name:    "banana",
-					Version: "1.2.3",
-				}, file)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(remoteRelease).To(Equal(cargo.BOSHReleaseTarballLock{
-					Name:         "banana",
-					Version:      "1.2.3",
-					RemotePath:   "banana/banana-1.2.3.tgz",
-					RemoteSource: "orange-bucket",
-				}))
-			})
-		})
-
-		When("there is an error evaluating the path template", func() {
-			BeforeEach(func() {
-				releaseSource = component.NewS3ReleaseSource(
-					cargo.ReleaseSourceConfig{
-						ID:           sourceID,
-						Bucket:       "orange-bucket",
-						PathTemplate: `{{.NoSuchField}}`,
-						Publishable:  false,
-					},
-					nil,
-					nil,
-					s3Uploader,
-					log.New(GinkgoWriter, "", 0),
-				)
-			})
-
-			It("returns a descriptive error", func() {
-				_, err := releaseSource.UploadRelease(cargo.BOSHReleaseTarballSpecification{
-					Name:    "banana",
-					Version: "1.2.3",
-				}, file)
-
-				Expect(err).To(MatchError(ContainSubstring(`unable to evaluate path_template`)))
-			})
-		})
-	})
-
 	Describe("RemotePath", func() {
 		var (
 			releaseSource component.S3ReleaseSource
@@ -650,7 +556,6 @@ var _ = Describe("S3ReleaseSource", func() {
 					PathTemplate: `{{.Name}}/{{.Name}}-{{.Version}}-{{.StemcellOS}}-{{.StemcellVersion}}.tgz`,
 					Publishable:  false,
 				},
-				nil,
 				nil,
 				nil,
 				log.New(GinkgoWriter, "", 0),
@@ -678,7 +583,6 @@ var _ = Describe("S3ReleaseSource", func() {
 						PathTemplate: `{{.NoSuchField}}`,
 						Publishable:  false,
 					},
-					nil,
 					nil,
 					nil,
 					log.New(GinkgoWriter, "", 0),
