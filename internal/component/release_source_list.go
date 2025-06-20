@@ -34,37 +34,6 @@ func (list ReleaseSourceList) Filter(allowOnlyPublishable bool) ReleaseSourceLis
 	return sources
 }
 
-func (list ReleaseSourceList) FindReleaseUploader(sourceID string) (ReleaseUploader, error) {
-	var (
-		uploader     ReleaseUploader
-		availableIDs []string
-	)
-	for _, src := range list {
-		u, ok := src.(ReleaseUploader)
-		if !ok {
-			continue
-		}
-		availableIDs = append(availableIDs, src.Configuration().ID)
-		if src.Configuration().ID == sourceID {
-			uploader = u
-			break
-		}
-	}
-
-	if len(availableIDs) == 0 {
-		return nil, errors.New("no upload-capable release sources were found in the Kilnfile")
-	}
-
-	if uploader == nil {
-		return nil, fmt.Errorf(
-			"could not find a valid matching release source in the Kilnfile, available upload-compatible sources are: %q",
-			availableIDs,
-		)
-	}
-
-	return uploader, nil
-}
-
 func (list ReleaseSourceList) FindRemotePather(sourceID string) (RemotePather, error) {
 	var (
 		pather       RemotePather

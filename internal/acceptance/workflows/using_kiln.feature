@@ -41,5 +41,4 @@ Feature: As a developer, I want the Kiln CLI to be usable
       | sync-with-local         |
       | update-release          |
       | update-stemcell         |
-      | upload-release          |
       | validate                |

@@ -2,8 +2,6 @@ package component
 
 import (
 	"fmt"
-	"io"
-
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -21,16 +19,6 @@ type MultiReleaseSource interface {
 }
 
 //counterfeiter:generate -o ./fakes/multi_release_source.go --fake-name MultiReleaseSource . MultiReleaseSource
-
-// ReleaseUploader represents a place to put releases. Some implementations of ReleaseSource
-// should implement this interface. Credentials for this should come from an interpolated
-// cargo.ReleaseSourceConfig.
-type ReleaseUploader interface {
-	GetMatchedRelease(cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error)
-	UploadRelease(spec cargo.BOSHReleaseTarballSpecification, file io.Reader) (cargo.BOSHReleaseTarballLock, error)
-}
-
-//counterfeiter:generate -o ./fakes/release_uploader.go --fake-name ReleaseUploader . ReleaseUploader
 
 // RemotePather is used to get the remote path for a remote release. For example
 // the complete s3 uri.
