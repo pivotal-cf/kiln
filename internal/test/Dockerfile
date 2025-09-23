@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install jq -y
 RUN go install github.com/onsi/ginkgo/ginkgo@latest && touch $HOME/.ack-ginkgo-rc
 
 # Install NodeJS
-RUN apt-get update && apt-get install nodejs -y
+RUN apt-get update && apt-get install nodejs npm -y
 
 # Install OpsManifest from Artifactory
 ARG ARTIFACTORY_USERNAME
