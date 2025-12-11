@@ -17,6 +17,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/cloudfoundry/bosh-utils/fileutil"
+	"github.com/cloudfoundry/bosh-utils/logger"
+	"github.com/cloudfoundry/bosh-utils/system"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"github.com/pivotal-cf/kiln/pkg/tile"
 )
@@ -151,7 +154,9 @@ func OpenBOSHReleaseTarball(tarballPath string) (BOSHReleaseTarball, error) {
 func ReadBOSHReleaseTarball(tarballPath string, r io.Reader) (BOSHReleaseTarball, error) {
 	sum := sha1.New()
 	r = io.TeeReader(r, sum)
-	m, err := ReadProductTemplatePartFromBOSHReleaseTarball(r)
+	compressor := fileutil.NewTarballCompressor(nil, system.NewOsFileSystem(logger.NewLogger(logger.LevelNone)))
+	isNonCompressed := compressor.IsNonCompressedTarball(tarballPath)
+	m, err := ReadProductTemplatePartFromBOSHReleaseTarball(r, isNonCompressed)
 	if err != nil {
 		return BOSHReleaseTarball{}, err
 	}
@@ -163,12 +168,17 @@ func ReadBOSHReleaseTarball(tarballPath string, r io.Reader) (BOSHReleaseTarball
 	}, err
 }
 
-func ReadProductTemplatePartFromBOSHReleaseTarball(r io.Reader) (BOSHReleaseManifest, error) {
-	gzipReader, err := gzip.NewReader(r)
-	if err != nil {
-		return BOSHReleaseManifest{}, err
+func ReadProductTemplatePartFromBOSHReleaseTarball(r io.Reader, isNonCompressed bool) (BOSHReleaseManifest, error) {
+	var tarReader *tar.Reader
+	if isNonCompressed {
+		tarReader = tar.NewReader(r)
+	} else {
+		gzipReader, err := gzip.NewReader(r)
+		if err != nil {
+			return BOSHReleaseManifest{}, err
+		}
+		tarReader = tar.NewReader(gzipReader)
 	}
-	tarReader := tar.NewReader(gzipReader)
 
 	for {
 		header, err := tarReader.Next()

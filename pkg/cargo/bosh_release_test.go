@@ -53,7 +53,7 @@ func TestReadProductTemplatePartFromBOSHReleaseTarball(t *testing.T) {
 			closeAndIgnoreError(f)
 		})
 
-		result, err := cargo.ReadProductTemplatePartFromBOSHReleaseTarball(f)
+		result, err := cargo.ReadProductTemplatePartFromBOSHReleaseTarball(f, false)
 		require.NoError(t, err)
 
 		require.Equal(t, cargo.BOSHReleaseManifest{
@@ -111,7 +111,7 @@ func TestReadProductTemplatePartFromBOSHReleaseTarball(t *testing.T) {
 			closeAndIgnoreError(f)
 		})
 
-		result, err := cargo.ReadProductTemplatePartFromBOSHReleaseTarball(f)
+		result, err := cargo.ReadProductTemplatePartFromBOSHReleaseTarball(f, false)
 		require.NoError(t, err)
 
 		require.Equal(t, cargo.BOSHReleaseManifest{
