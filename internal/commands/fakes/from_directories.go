@@ -95,8 +95,6 @@ func (fake *FromDirectories) FromDirectoriesReturnsOnCall(i int, result1 map[str
 func (fake *FromDirectories) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.fromDirectoriesMutex.RLock()
-	defer fake.fromDirectoriesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

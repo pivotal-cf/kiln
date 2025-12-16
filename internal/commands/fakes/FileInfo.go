@@ -395,18 +395,6 @@ func (fake *FileInfo) SysReturnsOnCall(i int, result1 any) {
 func (fake *FileInfo) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.isDirMutex.RLock()
-	defer fake.isDirMutex.RUnlock()
-	fake.modTimeMutex.RLock()
-	defer fake.modTimeMutex.RUnlock()
-	fake.modeMutex.RLock()
-	defer fake.modeMutex.RUnlock()
-	fake.nameMutex.RLock()
-	defer fake.nameMutex.RUnlock()
-	fake.sizeMutex.RLock()
-	defer fake.sizeMutex.RUnlock()
-	fake.sysMutex.RLock()
-	defer fake.sysMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -32,12 +32,12 @@ type MobyClient struct {
 		result1 container.CreateResponse
 		result2 error
 	}
-	ContainerLogsStub        func(context.Context, string, types.ContainerLogsOptions) (io.ReadCloser, error)
+	ContainerLogsStub        func(context.Context, string, container.LogsOptions) (io.ReadCloser, error)
 	containerLogsMutex       sync.RWMutex
 	containerLogsArgsForCall []struct {
 		arg1 context.Context
 		arg2 string
-		arg3 types.ContainerLogsOptions
+		arg3 container.LogsOptions
 	}
 	containerLogsReturns struct {
 		result1 io.ReadCloser
@@ -47,12 +47,12 @@ type MobyClient struct {
 		result1 io.ReadCloser
 		result2 error
 	}
-	ContainerStartStub        func(context.Context, string, types.ContainerStartOptions) error
+	ContainerStartStub        func(context.Context, string, container.StartOptions) error
 	containerStartMutex       sync.RWMutex
 	containerStartArgsForCall []struct {
 		arg1 context.Context
 		arg2 string
-		arg3 types.ContainerStartOptions
+		arg3 container.StartOptions
 	}
 	containerStartReturns struct {
 		result1 error
@@ -205,13 +205,13 @@ func (fake *MobyClient) ContainerCreateReturnsOnCall(i int, result1 container.Cr
 	}{result1, result2}
 }
 
-func (fake *MobyClient) ContainerLogs(arg1 context.Context, arg2 string, arg3 types.ContainerLogsOptions) (io.ReadCloser, error) {
+func (fake *MobyClient) ContainerLogs(arg1 context.Context, arg2 string, arg3 container.LogsOptions) (io.ReadCloser, error) {
 	fake.containerLogsMutex.Lock()
 	ret, specificReturn := fake.containerLogsReturnsOnCall[len(fake.containerLogsArgsForCall)]
 	fake.containerLogsArgsForCall = append(fake.containerLogsArgsForCall, struct {
 		arg1 context.Context
 		arg2 string
-		arg3 types.ContainerLogsOptions
+		arg3 container.LogsOptions
 	}{arg1, arg2, arg3})
 	stub := fake.ContainerLogsStub
 	fakeReturns := fake.containerLogsReturns
@@ -232,13 +232,13 @@ func (fake *MobyClient) ContainerLogsCallCount() int {
 	return len(fake.containerLogsArgsForCall)
 }
 
-func (fake *MobyClient) ContainerLogsCalls(stub func(context.Context, string, types.ContainerLogsOptions) (io.ReadCloser, error)) {
+func (fake *MobyClient) ContainerLogsCalls(stub func(context.Context, string, container.LogsOptions) (io.ReadCloser, error)) {
 	fake.containerLogsMutex.Lock()
 	defer fake.containerLogsMutex.Unlock()
 	fake.ContainerLogsStub = stub
 }
 
-func (fake *MobyClient) ContainerLogsArgsForCall(i int) (context.Context, string, types.ContainerLogsOptions) {
+func (fake *MobyClient) ContainerLogsArgsForCall(i int) (context.Context, string, container.LogsOptions) {
 	fake.containerLogsMutex.RLock()
 	defer fake.containerLogsMutex.RUnlock()
 	argsForCall := fake.containerLogsArgsForCall[i]
@@ -271,13 +271,13 @@ func (fake *MobyClient) ContainerLogsReturnsOnCall(i int, result1 io.ReadCloser,
 	}{result1, result2}
 }
 
-func (fake *MobyClient) ContainerStart(arg1 context.Context, arg2 string, arg3 types.ContainerStartOptions) error {
+func (fake *MobyClient) ContainerStart(arg1 context.Context, arg2 string, arg3 container.StartOptions) error {
 	fake.containerStartMutex.Lock()
 	ret, specificReturn := fake.containerStartReturnsOnCall[len(fake.containerStartArgsForCall)]
 	fake.containerStartArgsForCall = append(fake.containerStartArgsForCall, struct {
 		arg1 context.Context
 		arg2 string
-		arg3 types.ContainerStartOptions
+		arg3 container.StartOptions
 	}{arg1, arg2, arg3})
 	stub := fake.ContainerStartStub
 	fakeReturns := fake.containerStartReturns
@@ -298,13 +298,13 @@ func (fake *MobyClient) ContainerStartCallCount() int {
 	return len(fake.containerStartArgsForCall)
 }
 
-func (fake *MobyClient) ContainerStartCalls(stub func(context.Context, string, types.ContainerStartOptions) error) {
+func (fake *MobyClient) ContainerStartCalls(stub func(context.Context, string, container.StartOptions) error) {
 	fake.containerStartMutex.Lock()
 	defer fake.containerStartMutex.Unlock()
 	fake.ContainerStartStub = stub
 }
 
-func (fake *MobyClient) ContainerStartArgsForCall(i int) (context.Context, string, types.ContainerStartOptions) {
+func (fake *MobyClient) ContainerStartArgsForCall(i int) (context.Context, string, container.StartOptions) {
 	fake.containerStartMutex.RLock()
 	defer fake.containerStartMutex.RUnlock()
 	argsForCall := fake.containerStartArgsForCall[i]
@@ -663,22 +663,6 @@ func (fake *MobyClient) PingReturnsOnCall(i int, result1 types.Ping, result2 err
 func (fake *MobyClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.containerCreateMutex.RLock()
-	defer fake.containerCreateMutex.RUnlock()
-	fake.containerLogsMutex.RLock()
-	defer fake.containerLogsMutex.RUnlock()
-	fake.containerStartMutex.RLock()
-	defer fake.containerStartMutex.RUnlock()
-	fake.containerStopMutex.RLock()
-	defer fake.containerStopMutex.RUnlock()
-	fake.containerWaitMutex.RLock()
-	defer fake.containerWaitMutex.RUnlock()
-	fake.dialHijackMutex.RLock()
-	defer fake.dialHijackMutex.RUnlock()
-	fake.imageBuildMutex.RLock()
-	defer fake.imageBuildMutex.RUnlock()
-	fake.pingMutex.RLock()
-	defer fake.pingMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

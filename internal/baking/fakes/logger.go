@@ -50,8 +50,6 @@ func (fake *Logger) PrintlnArgsForCall(i int) []any {
 func (fake *Logger) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.printlnMutex.RLock()
-	defer fake.printlnMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

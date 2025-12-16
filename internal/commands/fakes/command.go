@@ -155,10 +155,6 @@ func (fake *Command) UsageReturnsOnCall(i int, result1 jhanda.Usage) {
 func (fake *Command) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.executeMutex.RLock()
-	defer fake.executeMutex.RUnlock()
-	fake.usageMutex.RLock()
-	defer fake.usageMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -93,8 +93,6 @@ func (fake *RemotePather) RemotePathReturnsOnCall(i int, result1 string, result2
 func (fake *RemotePather) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.remotePathMutex.RLock()
-	defer fake.remotePathMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

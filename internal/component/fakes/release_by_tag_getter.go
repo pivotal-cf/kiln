@@ -105,8 +105,6 @@ func (fake *ReleaseByTagGetter) GetReleaseByTagReturnsOnCall(i int, result1 *git
 func (fake *ReleaseByTagGetter) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getReleaseByTagMutex.RLock()
-	defer fake.getReleaseByTagMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

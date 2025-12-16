@@ -698,24 +698,6 @@ func (fake *FileSystem) StatReturnsOnCall(i int, result1 os.FileInfo, result2 er
 func (fake *FileSystem) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.createMutex.RLock()
-	defer fake.createMutex.RUnlock()
-	fake.joinMutex.RLock()
-	defer fake.joinMutex.RUnlock()
-	fake.mkdirAllMutex.RLock()
-	defer fake.mkdirAllMutex.RUnlock()
-	fake.openMutex.RLock()
-	defer fake.openMutex.RUnlock()
-	fake.openFileMutex.RLock()
-	defer fake.openFileMutex.RUnlock()
-	fake.readDirMutex.RLock()
-	defer fake.readDirMutex.RUnlock()
-	fake.removeMutex.RLock()
-	defer fake.removeMutex.RUnlock()
-	fake.renameMutex.RLock()
-	defer fake.renameMutex.RUnlock()
-	fake.statMutex.RLock()
-	defer fake.statMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

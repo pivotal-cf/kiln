@@ -97,8 +97,6 @@ func (fake *MetadataTemplatesParser) ParseMetadataTemplatesReturnsOnCall(i int, 
 func (fake *MetadataTemplatesParser) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.parseMetadataTemplatesMutex.RLock()
-	defer fake.parseMetadataTemplatesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
