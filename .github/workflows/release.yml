@@ -10,38 +10,44 @@ permissions:
   contents: write
 
 jobs:
-  release_kiln:
+  release:
     name: "Release Kiln"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEEN_GITHUB_TOKEN }}
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+
+      - name: Ensure Generate Succeeds and Does Not Make Changes
+        run: |
+          go generate ./...
+          git status --porcelain # When this fails, things have changed.
+
       - name: Build
         run: |
-          go build ./...
+          go build -v ./...
 
       - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.7.0
+        uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.RELENG_CI_BOT_KEY }}
 
-      - name: Unit Test
-        env:
-          GITHUB_ACCESS_TOKEN: ${{ secrets.RELEEN_GITHUB_TOKEN }}
+      - name: Unit Tests
         run: |
           go test --covermode=atomic --coverprofile=kiln-${{ github.sha }}-unit-test-code-coverage.out -skip 'TestDockerIntegration|TestAcceptance' ./...
 
       - name: Archive Unit Test Code Coverage Output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Unit Test Code Coverage Output
           path: kiln-${{github.sha}}-unit-test-code-coverage.out
@@ -53,22 +59,21 @@ jobs:
         run: |
           set -euo pipefail
 
-          go test -v --timeout 24h --tags acceptance github.com/pivotal-cf/kiln/internal/acceptance/workflows
+          go test -v --timeout 15m --tags acceptance github.com/pivotal-cf/kiln/internal/acceptance/workflows
 
           git reset --hard HEAD
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ github.token }}
-

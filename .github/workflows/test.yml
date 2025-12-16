@@ -7,22 +7,22 @@ on:
 
 jobs:
   test:
-    name: test
+    name: "Test Kiln"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEEN_GITHUB_TOKEN }}
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6.3.0
+        uses: golangci/golangci-lint-action@v9
 
       - name: Ensure Generate Succeeds and Does Not Make Changes
         run: |
@@ -34,7 +34,7 @@ jobs:
           go build -v ./...
 
       - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.7.0
+        uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.RELENG_CI_BOT_KEY }}
 
@@ -43,17 +43,16 @@ jobs:
           go test --covermode=atomic --coverprofile=kiln-${{ github.sha }}-unit-test-code-coverage.out -skip 'TestDockerIntegration|TestAcceptance' ./...
 
       - name: Archive Unit Test Code Coverage Output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Unit Test Code Coverage Output
-          path: kiln-${{ github.sha }}-unit-test-code-coverage.out
+          path: kiln-${{github.sha}}-unit-test-code-coverage.out
 
       - name: Acceptance Tests
         env:
           CGO_ENABLED: '0'
-          RELEEN_GITHUB_TOKEN: ${{ secrets.RELEEN_GITHUB_TOKEN }}
+          GITHUB_ACCESS_TOKEN: ${{ secrets.RELEEN_GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          export GITHUB_ACCESS_TOKEN="${RELEEN_GITHUB_TOKEN}"
 
           go test -v --timeout 15m --tags acceptance github.com/pivotal-cf/kiln/internal/acceptance/workflows
