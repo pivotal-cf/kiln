@@ -101,8 +101,6 @@ func (fake *Interpolator) InterpolateReturnsOnCall(i int, result1 []byte, result
 func (fake *Interpolator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.interpolateMutex.RLock()
-	defer fake.interpolateMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

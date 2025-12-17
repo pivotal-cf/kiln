@@ -666,24 +666,6 @@ func (fake *File) WriteReturnsOnCall(i int, result1 int, result2 error) {
 func (fake *File) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.closeMutex.RLock()
-	defer fake.closeMutex.RUnlock()
-	fake.lockMutex.RLock()
-	defer fake.lockMutex.RUnlock()
-	fake.nameMutex.RLock()
-	defer fake.nameMutex.RUnlock()
-	fake.readMutex.RLock()
-	defer fake.readMutex.RUnlock()
-	fake.readAtMutex.RLock()
-	defer fake.readAtMutex.RUnlock()
-	fake.seekMutex.RLock()
-	defer fake.seekMutex.RUnlock()
-	fake.truncateMutex.RLock()
-	defer fake.truncateMutex.RUnlock()
-	fake.unlockMutex.RLock()
-	defer fake.unlockMutex.RUnlock()
-	fake.writeMutex.RLock()
-	defer fake.writeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

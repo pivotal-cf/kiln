@@ -280,12 +280,6 @@ func (fake *IssuesService) ListMilestonesReturnsOnCall(i int, result1 []*github.
 func (fake *IssuesService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getMutex.RLock()
-	defer fake.getMutex.RUnlock()
-	fake.listByRepoMutex.RLock()
-	defer fake.listByRepoMutex.RUnlock()
-	fake.listMilestonesMutex.RLock()
-	defer fake.listMilestonesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

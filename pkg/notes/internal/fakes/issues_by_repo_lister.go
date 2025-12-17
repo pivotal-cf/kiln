@@ -104,8 +104,6 @@ func (fake *IssuesByRepoLister) ListByRepoReturnsOnCall(i int, result1 []*github
 func (fake *IssuesByRepoLister) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.listByRepoMutex.RLock()
-	defer fake.listByRepoMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

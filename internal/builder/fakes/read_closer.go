@@ -159,10 +159,6 @@ func (fake *ReadCloser) ReadReturnsOnCall(i int, result1 int, result2 error) {
 func (fake *ReadCloser) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.closeMutex.RLock()
-	defer fake.closeMutex.RUnlock()
-	fake.readMutex.RLock()
-	defer fake.readMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -456,20 +456,6 @@ func (fake *S3RequestFailure) StatusCodeReturnsOnCall(i int, result1 int) {
 func (fake *S3RequestFailure) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.codeMutex.RLock()
-	defer fake.codeMutex.RUnlock()
-	fake.errorMutex.RLock()
-	defer fake.errorMutex.RUnlock()
-	fake.hostIDMutex.RLock()
-	defer fake.hostIDMutex.RUnlock()
-	fake.messageMutex.RLock()
-	defer fake.messageMutex.RUnlock()
-	fake.origErrMutex.RLock()
-	defer fake.origErrMutex.RUnlock()
-	fake.requestIDMutex.RLock()
-	defer fake.requestIDMutex.RUnlock()
-	fake.statusCodeMutex.RLock()
-	defer fake.statusCodeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

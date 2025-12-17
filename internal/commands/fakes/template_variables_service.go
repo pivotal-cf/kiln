@@ -102,8 +102,6 @@ func (fake *TemplateVariablesService) FromPathsAndPairsReturnsOnCall(i int, resu
 func (fake *TemplateVariablesService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.fromPathsAndPairsMutex.RLock()
-	defer fake.fromPathsAndPairsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

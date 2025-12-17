@@ -172,10 +172,6 @@ func (fake *LocalReleaseDirectory) GetLocalReleasesReturnsOnCall(i int, result1 
 func (fake *LocalReleaseDirectory) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.deleteExtraReleasesMutex.RLock()
-	defer fake.deleteExtraReleasesMutex.RUnlock()
-	fake.getLocalReleasesMutex.RLock()
-	defer fake.getLocalReleasesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

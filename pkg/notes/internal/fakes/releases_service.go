@@ -105,8 +105,6 @@ func (fake *ReleaseService) ListReleasesReturnsOnCall(i int, result1 []*github.R
 func (fake *ReleaseService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.listReleasesMutex.RLock()
-	defer fake.listReleasesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

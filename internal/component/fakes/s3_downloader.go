@@ -99,8 +99,6 @@ func (fake *S3Downloader) DownloadReturnsOnCall(i int, result1 int64, result2 er
 func (fake *S3Downloader) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.downloadMutex.RLock()
-	defer fake.downloadMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

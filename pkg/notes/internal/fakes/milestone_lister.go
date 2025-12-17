@@ -104,8 +104,6 @@ func (fake *MilestoneLister) ListMilestonesReturnsOnCall(i int, result1 []*githu
 func (fake *MilestoneLister) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.listMilestonesMutex.RLock()
-	defer fake.listMilestonesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
