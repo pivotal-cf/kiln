@@ -104,8 +104,6 @@ func (fake *IssueGetter) GetReturnsOnCall(i int, result1 *github.Issue, result2 
 func (fake *IssueGetter) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getMutex.RLock()
-	defer fake.getMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

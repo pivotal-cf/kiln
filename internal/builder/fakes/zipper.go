@@ -375,18 +375,6 @@ func (fake *Zipper) SetWriterArgsForCall(i int) io.Writer {
 func (fake *Zipper) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.addMutex.RLock()
-	defer fake.addMutex.RUnlock()
-	fake.addWithModeMutex.RLock()
-	defer fake.addWithModeMutex.RUnlock()
-	fake.closeMutex.RLock()
-	defer fake.closeMutex.RUnlock()
-	fake.createFolderMutex.RLock()
-	defer fake.createFolderMutex.RUnlock()
-	fake.setModifiedMutex.RLock()
-	defer fake.setModifiedMutex.RUnlock()
-	fake.setWriterMutex.RLock()
-	defer fake.setWriterMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

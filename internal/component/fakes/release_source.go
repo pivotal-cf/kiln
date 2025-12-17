@@ -314,14 +314,6 @@ func (fake *ReleaseSource) GetMatchedReleaseReturnsOnCall(i int, result1 cargo.B
 func (fake *ReleaseSource) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.configurationMutex.RLock()
-	defer fake.configurationMutex.RUnlock()
-	fake.downloadReleaseMutex.RLock()
-	defer fake.downloadReleaseMutex.RUnlock()
-	fake.findReleaseVersionMutex.RLock()
-	defer fake.findReleaseVersionMutex.RUnlock()
-	fake.getMatchedReleaseMutex.RLock()
-	defer fake.getMatchedReleaseMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

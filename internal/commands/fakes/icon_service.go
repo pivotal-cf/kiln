@@ -90,8 +90,6 @@ func (fake *IconService) EncodeReturnsOnCall(i int, result1 string, result2 erro
 func (fake *IconService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.encodeMutex.RLock()
-	defer fake.encodeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

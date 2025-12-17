@@ -170,10 +170,6 @@ func (fake *S3Client) ListObjectsV2ReturnsOnCall(i int, result1 *s3.ListObjectsV
 func (fake *S3Client) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.headObjectMutex.RLock()
-	defer fake.headObjectMutex.RUnlock()
-	fake.listObjectsV2Mutex.RLock()
-	defer fake.listObjectsV2Mutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

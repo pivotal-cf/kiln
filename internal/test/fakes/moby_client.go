@@ -663,22 +663,6 @@ func (fake *MobyClient) PingReturnsOnCall(i int, result1 types.Ping, result2 err
 func (fake *MobyClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.containerCreateMutex.RLock()
-	defer fake.containerCreateMutex.RUnlock()
-	fake.containerLogsMutex.RLock()
-	defer fake.containerLogsMutex.RUnlock()
-	fake.containerStartMutex.RLock()
-	defer fake.containerStartMutex.RUnlock()
-	fake.containerStopMutex.RLock()
-	defer fake.containerStopMutex.RUnlock()
-	fake.containerWaitMutex.RLock()
-	defer fake.containerWaitMutex.RUnlock()
-	fake.dialHijackMutex.RLock()
-	defer fake.dialHijackMutex.RUnlock()
-	fake.imageBuildMutex.RLock()
-	defer fake.imageBuildMutex.RUnlock()
-	fake.pingMutex.RLock()
-	defer fake.pingMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

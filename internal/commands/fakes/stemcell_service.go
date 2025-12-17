@@ -249,12 +249,6 @@ func (fake *StemcellService) FromTarballReturnsOnCall(i int, result1 any, result
 func (fake *StemcellService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.fromDirectoriesMutex.RLock()
-	defer fake.fromDirectoriesMutex.RUnlock()
-	fake.fromKilnfileMutex.RLock()
-	defer fake.fromKilnfileMutex.RUnlock()
-	fake.fromTarballMutex.RLock()
-	defer fake.fromTarballMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -197,10 +197,6 @@ func (fake *ReleaseByTagGetterAssetDownloader) GetReleaseByTagReturnsOnCall(i in
 func (fake *ReleaseByTagGetterAssetDownloader) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.downloadReleaseAssetMutex.RLock()
-	defer fake.downloadReleaseAssetMutex.RUnlock()
-	fake.getReleaseByTagMutex.RLock()
-	defer fake.getReleaseByTagMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

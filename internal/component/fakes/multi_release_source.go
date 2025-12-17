@@ -365,16 +365,6 @@ func (fake *MultiReleaseSource) SetDownloadThreadsArgsForCall(i int) int {
 func (fake *MultiReleaseSource) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.downloadReleaseMutex.RLock()
-	defer fake.downloadReleaseMutex.RUnlock()
-	fake.findByIDMutex.RLock()
-	defer fake.findByIDMutex.RUnlock()
-	fake.findReleaseVersionMutex.RLock()
-	defer fake.findReleaseVersionMutex.RUnlock()
-	fake.getMatchedReleaseMutex.RLock()
-	defer fake.getMatchedReleaseMutex.RUnlock()
-	fake.setDownloadThreadsMutex.RLock()
-	defer fake.setDownloadThreadsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
