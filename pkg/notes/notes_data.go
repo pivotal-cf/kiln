@@ -415,8 +415,8 @@ func resolveMilestoneNumber(ctx context.Context, issuesService milestoneLister, 
 		if err != nil {
 			return "", err
 		}
-		if res.Response.StatusCode != http.StatusOK {
-			return "", fmt.Errorf("unexpedted status code %d", res.Response.StatusCode)
+		if res.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("unexpedted status code %d", res.StatusCode)
 		}
 		if len(ms) == 0 {
 			return "", fmt.Errorf("failed to find milestone with title %q", milestone)

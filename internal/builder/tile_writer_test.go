@@ -337,11 +337,12 @@ releases:
 				embedFileInfo.ModeReturns(12345678)
 
 				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
-					if root == "/some/path/releases" {
+					switch root {
+					case "/some/path/releases":
 						_ = walkFn(root, dirInfo, nil)
 						_ = walkFn(filepath.Join(root, "release-1.tgz"), releaseInfo, nil)
 						_ = walkFn(filepath.Join(root, "release-2.tgz"), releaseInfo, nil)
-					} else if root == "/some/path/to-embed/my-file.txt" {
+					case "/some/path/to-embed/my-file.txt":
 						_ = walkFn(root, embedFileInfo, nil)
 					}
 					return nil
@@ -398,11 +399,12 @@ releases:
 				embedFileInfo.ModeReturns(87654)
 
 				filesystem.WalkStub = func(root string, walkFn filepath.WalkFunc) error {
-					if root == "/some/path/releases" {
+					switch root {
+					case "/some/path/releases":
 						_ = walkFn(root, dirInfo, nil)
 						_ = walkFn(filepath.Join(root, "release-1.tgz"), releaseInfo, nil)
 						_ = walkFn(filepath.Join(root, "release-2.tgz"), releaseInfo, nil)
-					} else if root == "/some/path/to-embed" {
+					case "/some/path/to-embed":
 						_ = walkFn(root, dirInfo, nil)
 						_ = walkFn(filepath.Join(root, "my-file-1.txt"), embedFileInfo, nil)
 						_ = walkFn(filepath.Join(root, "my-file-2.txt"), embedFileInfo, nil)
@@ -411,9 +413,10 @@ releases:
 				}
 
 				filesystem.OpenStub = func(path string) (io.ReadCloser, error) {
-					if path == "/some/path/to-embed/my-file-1.txt" {
+					switch path {
+					case "/some/path/to-embed/my-file-1.txt":
 						return NewBuffer(bytes.NewBufferString("contents-of-embedded-file-1")), nil
-					} else if path == "/some/path/to-embed/my-file-2.txt" {
+					case "/some/path/to-embed/my-file-2.txt":
 						return NewBuffer(bytes.NewBufferString("contents-of-embedded-file-2")), nil
 					}
 

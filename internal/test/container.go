@@ -109,7 +109,7 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 
 		envMap, err := decodeEnvironment(configuration.Environment)
 		if err != nil {
-			return fmt.Errorf("failed to parse environment: %s", err)
+			return fmt.Errorf("failed to parse environment: %w", err)
 		}
 
 		artifactoryUsername := envMap["ARTIFACTORY_USERNAME"]

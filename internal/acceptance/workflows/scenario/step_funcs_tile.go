@@ -110,8 +110,8 @@ func validateAllPackagesAreCompiled(manifestBuf []byte, release proofing.Release
 		return err
 	}
 	if len(manifest.Packages) > 0 {
-		sb := new(strings.Builder)
-		sb.WriteString(fmt.Sprintf("release %s/%s contains un-compiled packages: ", release.Name, release.Version))
+		var sb strings.Builder
+		fmt.Fprintf(&sb, "release %s/%s contains un-compiled packages: ", release.Name, release.Version)
 		for i, p := range manifest.Packages {
 			sb.WriteString(p.Name)
 			if i < len(manifest.Packages)-1 {

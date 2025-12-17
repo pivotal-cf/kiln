@@ -41,7 +41,7 @@ func (u UpdateRelease) Execute(args []string) error {
 		return err
 	}
 
-	kilnfile, kilnfileLock, err := u.Options.Standard.LoadKilnfiles(u.filesystem, nil)
+	kilnfile, kilnfileLock, err := u.Options.LoadKilnfiles(u.filesystem, nil)
 	if err != nil {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
@@ -126,7 +126,7 @@ func (u UpdateRelease) Execute(args []string) error {
 
 	_ = kilnfileLock.UpdateBOSHReleaseTarballLockWithName(u.Options.Name, releaseLock)
 
-	err = u.Options.Standard.SaveKilnfileLock(u.filesystem, kilnfileLock)
+	err = u.Options.SaveKilnfileLock(u.filesystem, kilnfileLock)
 	if err != nil {
 		return err
 	}

@@ -80,7 +80,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 
 	templateVariables, err := r.variablesService.FromPathsAndPairs(r.Options.VariableFiles, r.Options.Variables)
 	if err != nil {
-		return fmt.Errorf("failed to parse template variables: %s", err)
+		return fmt.Errorf("failed to parse template variables: %w", err)
 	}
 	if varValue, ok := templateVariables["github_access_token"]; !ok && r.Options.GithubAccessToken != "" {
 		templateVariables["github_access_token"] = r.Options.GithubAccessToken
@@ -112,7 +112,7 @@ func (r ReleaseNotes) Execute(args []string) error {
 		return fmt.Errorf("failed to setup github client: %w", err)
 	}
 
-	trainstatClient := notes.NewTrainstatClient(r.Options.TrainstatQuery.TrainstatURL)
+	trainstatClient := notes.NewTrainstatClient(r.Options.TrainstatURL)
 
 	data, err := r.fetchNotesData(ctx,
 		r.repository, client, r.repoHost, r.repoOwner, r.repoName,

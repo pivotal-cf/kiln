@@ -242,7 +242,7 @@ func (grs *GithubReleaseSource) getLockFromRelease(ctx context.Context, r *githu
 func (grs *GithubReleaseSource) getReleaseSHA1(ctx context.Context, s cargo.BOSHReleaseTarballSpecification, id int64) (string, error) {
 	repoOwner, repoName, err := gh.RepositoryOwnerAndNameFromPath(s.GitHubRepository)
 	if err != nil {
-		return "", fmt.Errorf("could not parse repository name: %v", err)
+		return "", fmt.Errorf("could not parse repository name: %w", err)
 	}
 
 	rc, _, err := grs.DownloadReleaseAsset(ctx, repoOwner, repoName, id, http.DefaultClient)
@@ -289,7 +289,7 @@ func downloadRelease(ctx context.Context, releaseDir string, remoteRelease cargo
 		logger.Println("warning: failed to find release tag of", "v"+remoteRelease.Version)
 		rTag, _, err = client.GetReleaseByTag(ctx, org, repo, remoteRelease.Version)
 		if err != nil {
-			return Local{}, fmt.Errorf("cant find release tag: %+v", err.Error())
+			return Local{}, fmt.Errorf("cant find release tag: %w", err)
 		}
 	}
 
@@ -317,7 +317,7 @@ func downloadRelease(ctx context.Context, releaseDir string, remoteRelease cargo
 	mw := io.MultiWriter(file, hash)
 	_, err = io.Copy(mw, rc)
 	if err != nil {
-		return Local{}, fmt.Errorf("failed to calculate checksum for downloaded file: %+v: ", err)
+		return Local{}, fmt.Errorf("failed to calculate checksum for downloaded file: %w: ", err)
 	}
 
 	remoteRelease.SHA1 = hex.EncodeToString(hash.Sum(nil))

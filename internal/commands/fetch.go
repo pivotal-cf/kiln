@@ -93,7 +93,7 @@ func (f *Fetch) setup(args []string) (cargo.Kilnfile, cargo.KilnfileLock, []comp
 				return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, err
 			}
 		} else {
-			return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, fmt.Errorf("error with releases directory %s: %s", f.Options.ReleasesDir, err)
+			return cargo.Kilnfile{}, cargo.KilnfileLock{}, nil, fmt.Errorf("error with releases directory %s: %w", f.Options.ReleasesDir, err)
 		}
 	}
 

@@ -7,5 +7,5 @@ type CollectionPropertyInput struct {
 }
 
 func (input CollectionPropertyInput) Ref() string {
-	return input.SimplePropertyInput.Reference
+	return input.Reference
 }

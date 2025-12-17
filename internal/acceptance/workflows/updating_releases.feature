@@ -1,13 +1,13 @@
 Feature: As a dependabot, I want to update a BOSH Release
   Scenario: Find a version on GitHub
     Given I have a tile source directory "testdata/tiles/v2"
-    And GitHub repository "releen/hello-release" has release with tag "0.4.0"
-    And I set the version constraint to "0.4.0" for release "hello-release"
+    And GitHub repository "releen/hello-release" has release with tag "0.5.0"
+    And I set the version constraint to "0.5.0" for release "hello-release"
     When I invoke kiln
       | find-release-version                      |
       | --release=hello-release                   |
       | --variable=github_access_token="${GITHUB_ACCESS_TOKEN}" |
-    Then stdout contains substring: "0.4.0"
+    Then stdout contains substring: "0.5.0"
 
   Scenario: Find a version on bosh.io
     Given I have a tile source directory "testdata/tiles/v2"

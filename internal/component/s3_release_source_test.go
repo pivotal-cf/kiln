@@ -3,14 +3,15 @@ package component_test
 import (
 	"errors"
 	"fmt"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -178,7 +179,7 @@ var _ = Describe("S3ReleaseSource", func() {
 				It("returns an error", func() {
 					_, err := releaseSource.DownloadRelease(releaseDir, remoteRelease)
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("failed to download file: 503 Service Unavailable\n"))
+					Expect(err).To(MatchError("failed to download file: 503 Service Unavailable"))
 				})
 			})
 		})
