@@ -127,7 +127,7 @@ func (src S3ReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseTarballSpecif
 	}
 
 	headRequest := new(s3.HeadObjectInput)
-	headRequest.SetBucket(src.ReleaseSourceConfig.Bucket)
+	headRequest.SetBucket(src.Bucket)
 	headRequest.SetKey(remotePath)
 
 	_, err = src.s3Client.HeadObject(headRequest)
@@ -149,7 +149,7 @@ func (src S3ReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseTarballSpecif
 
 func (src S3ReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTarballSpecification, noDownload bool) (cargo.BOSHReleaseTarballLock, error) {
 	pathTemplatePattern, _ := regexp.Compile(`^\d+\.\d+`)
-	tasVersion := pathTemplatePattern.FindString(src.ReleaseSourceConfig.PathTemplate)
+	tasVersion := pathTemplatePattern.FindString(src.PathTemplate)
 	var prefix string
 	if tasVersion != "" {
 		prefix = tasVersion + "/"
@@ -157,7 +157,7 @@ func (src S3ReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTarballSpeci
 	prefix += spec.Name + "/"
 
 	releaseResults, err := src.s3Client.ListObjectsV2(&s3.ListObjectsV2Input{
-		Bucket: &src.ReleaseSourceConfig.Bucket,
+		Bucket: &src.Bucket,
 		Prefix: &prefix,
 	})
 	if err != nil {
@@ -179,9 +179,9 @@ func (src S3ReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTarballSpeci
 		versions := semverPattern.FindAllString(*result.Key, -1)
 		version := versions[0]
 		stemcellVersion := versions[len(versions)-1]
-		version = strings.Replace(version, "-", "", -1)
-		version = strings.Replace(version, "v", "", -1)
-		stemcellVersion = strings.Replace(stemcellVersion, "-", "", -1)
+		version = strings.ReplaceAll(version, "-", "")
+		version = strings.ReplaceAll(version, "v", "")
+		stemcellVersion = strings.ReplaceAll(stemcellVersion, "-", "")
 		if len(versions) > 1 && stemcellVersion != spec.StemcellVersion {
 			continue
 		}
@@ -248,11 +248,11 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock cargo.BOSHRel
 	defer closeAndIgnoreError(file)
 
 	_, err = src.s3Downloader.Download(file, &s3.GetObjectInput{
-		Bucket: aws.String(src.ReleaseSourceConfig.Bucket),
+		Bucket: aws.String(src.Bucket),
 		Key:    aws.String(lock.RemotePath),
 	}, setConcurrency)
 	if err != nil {
-		return Local{}, fmt.Errorf("failed to download file: %w\n", err)
+		return Local{}, fmt.Errorf("failed to download file: %w", err)
 	}
 
 	_, err = file.Seek(0, 0)
@@ -286,5 +286,5 @@ func (src S3ReleaseSource) pathTemplate() *template.Template {
 	return template.Must(
 		template.New("remote-path").
 			Funcs(template.FuncMap{"trimSuffix": strings.TrimSuffix}).
-			Parse(src.ReleaseSourceConfig.PathTemplate))
+			Parse(src.PathTemplate))
 }

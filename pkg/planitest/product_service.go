@@ -20,11 +20,11 @@ type ProductService struct {
 
 func NewProductService(config ProductConfig) (*ProductService, error) {
 	if config.TileFile == nil {
-		return nil, errors.New("Tile file must be provided")
+		return nil, errors.New("tile file must be provided")
 	}
 
 	if config.ConfigFile == nil {
-		return nil, errors.New("Config file must be provided")
+		return nil, errors.New("config file must be provided")
 	}
 
 	executor := internal.NewEnvironmentSharingCommandRunner(os.Environ())
@@ -42,7 +42,7 @@ func NewProductService(config ProductConfig) (*ProductService, error) {
 	case "ops-manifest":
 		renderService, err = internal.NewOpsManifestServiceWithRunner(opsManifestRunner, internal.RealIO)
 	default:
-		err = errors.New("RENDERER must be set to om or ops-manifest")
+		err = errors.New("env var RENDERER must be set to om or ops-manifest")
 	}
 	if err != nil {
 		return nil, err

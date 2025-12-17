@@ -116,7 +116,7 @@ var _ = Describe("OMRunner", func() {
 					cmdRunner.RunReturns("", "stderr output", errors.New("some error"))
 
 					_, err := opsManifestRunner.GetManifest("", "")
-					Expect(err).To(MatchError(`Unable to retrieve manifest: some error: stderr output`))
+					Expect(err).To(MatchError(`unable to retrieve manifest: some error: stderr output`))
 				})
 			})
 
@@ -125,7 +125,7 @@ var _ = Describe("OMRunner", func() {
 					cmdRunner.RunReturns("not-well-formed-yaml", "", nil)
 
 					_, err := opsManifestRunner.GetManifest("", "")
-					Expect(err).To(MatchError(HavePrefix("Unable to unmarshal yaml")))
+					Expect(err).To(MatchError(HavePrefix("unable to unmarshal yaml")))
 				})
 			})
 		})

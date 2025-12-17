@@ -230,7 +230,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 
 			err := json.Unmarshal([]byte(input), &object)
 			if err != nil {
-				return "", fmt.Errorf("could not JSON unmarshal %q: %s", input, err)
+				return "", fmt.Errorf("could not JSON unmarshal %q: %w", input, err)
 			}
 
 			value, ok := object[field]
@@ -240,7 +240,7 @@ func (i Interpolator) functions(input InterpolateInput) template.FuncMap {
 
 			output, err := json.Marshal(value)
 			if err != nil {
-				return "", fmt.Errorf("could not JSON marshal %q: %s", input, err) // NOTE: this cannot happen because value was unmarshalled from JSON
+				return "", fmt.Errorf("could not JSON marshal %q: %w", input, err) // NOTE: this cannot happen because value was unmarshalled from JSON
 			}
 
 			return string(output), nil
@@ -280,7 +280,7 @@ func (i Interpolator) interpolateValueIntoYAML(input InterpolateInput, name stri
 
 	interpolatedYAML, err := i.interpolate(input, name, initialYAML)
 	if err != nil {
-		return "", fmt.Errorf("unable to interpolate value: %s", err)
+		return "", fmt.Errorf("unable to interpolate value: %w", err)
 	}
 
 	inlinedYAML, err := i.yamlMarshalOneLine(interpolatedYAML)

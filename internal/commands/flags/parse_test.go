@@ -18,9 +18,9 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			testTileDir
 			SomeDirectory string `long:"some-directory" default:"basket"`
 		}
-		options.testTileDir.filePath = t.TempDir()
+		options.filePath = t.TempDir()
 
-		someDirPath := filepath.Join(options.testTileDir.filePath, "basket")
+		someDirPath := filepath.Join(options.filePath, "basket")
 		err := os.MkdirAll(someDirPath, 0o777)
 		require.NoError(t, err)
 
@@ -39,9 +39,9 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			testTileDir
 			SomeConfig string `long:"some-config" default:"config.txt"`
 		}
-		options.testTileDir.filePath = t.TempDir()
+		options.filePath = t.TempDir()
 
-		someConfigPath := filepath.Join(options.testTileDir.filePath, "config.txt")
+		someConfigPath := filepath.Join(options.filePath, "config.txt")
 		f, err := os.Create(someConfigPath)
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
@@ -61,9 +61,9 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			testTileDir
 			SomeDirectory string `long:"some-directory" default:"basket"`
 		}
-		options.testTileDir.filePath = t.TempDir()
+		options.filePath = t.TempDir()
 
-		someDirPath := filepath.Join(options.testTileDir.filePath, "basket")
+		someDirPath := filepath.Join(options.filePath, "basket")
 
 		var statParam string
 		_, err := flags.LoadWithDefaultFilePaths(&options, nil, func(s string) (os.FileInfo, error) {
@@ -80,9 +80,9 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			testTileDir
 			SomeConfig string `long:"some-config" default:"config.txt"`
 		}
-		options.testTileDir.filePath = t.TempDir()
+		options.filePath = t.TempDir()
 
-		someConfigPath := filepath.Join(options.testTileDir.filePath, "config.txt")
+		someConfigPath := filepath.Join(options.filePath, "config.txt")
 
 		var statParam string
 		_, err := flags.LoadWithDefaultFilePaths(&options, nil, func(s string) (os.FileInfo, error) {
@@ -99,7 +99,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			testTileDir
 			SomeConfig string `long:"some-config" default:"config.txt"`
 		}
-		options.testTileDir.filePath = t.TempDir()
+		options.filePath = t.TempDir()
 
 		otherDir := t.TempDir()
 		optionsFilePath := filepath.Join(otherDir, "options.xml")
@@ -119,7 +119,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			testTileDir
 			Count int `long:"some-count" default:"8"`
 		}
-		options.testTileDir.filePath = t.TempDir()
+		options.filePath = t.TempDir()
 		_, err := flags.LoadWithDefaultFilePaths(&options, nil, nil)
 		assert.NoError(t, err)
 	})
@@ -132,9 +132,9 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			testTileDir
 			SubOptions
 		}
-		options.testTileDir.filePath = t.TempDir()
+		options.filePath = t.TempDir()
 
-		someConfigPath := filepath.Join(options.testTileDir.filePath, "config.txt")
+		someConfigPath := filepath.Join(options.filePath, "config.txt")
 		f, err := os.Create(someConfigPath)
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
@@ -156,7 +156,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 				Configurations []string `long:"configuration" default:"server.yml,client.yml,database.yml"`
 			}
 			dir := t.TempDir()
-			options.testTileDir.filePath = dir
+			options.filePath = dir
 
 			for _, defaultFileName := range []string{"server.yml", "client.yml", "database.yml"} {
 				f, err := os.Create(filepath.Join(dir, defaultFileName))
@@ -180,7 +180,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 				Configurations []string `long:"configuration" default:"server.yml, MISSING.yml, database.yml"`
 			}
 			dir := t.TempDir()
-			options.testTileDir.filePath = dir
+			options.filePath = dir
 
 			for _, defaultFileName := range []string{"server.yml", "database.yml"} {
 				f, err := os.Create(filepath.Join(dir, defaultFileName))
@@ -199,7 +199,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 				Configurations []string `long:"configuration" default:"config.yml"`
 			}
 			dir := t.TempDir()
-			options.testTileDir.filePath = dir
+			options.filePath = dir
 
 			f, err := os.Create(filepath.Join(dir, "config.yml"))
 			require.NoError(t, err)
@@ -216,7 +216,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 				Configurations []string `long:"configuration" default:"config.yml"`
 			}
 			dir := t.TempDir()
-			options.testTileDir.filePath = dir
+			options.filePath = dir
 
 			f, err := os.Create(filepath.Join(dir, "config.yml"))
 			require.NoError(t, err)
@@ -233,7 +233,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 				Configurations []string `long:"configuration"`
 			}
 			dir := t.TempDir()
-			options.testTileDir.filePath = dir
+			options.filePath = dir
 
 			_, err := flags.LoadWithDefaultFilePaths(&options, nil, os.Stat)
 			require.NoError(t, err)
@@ -245,7 +245,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 				N []int `long:"n"`
 			}
 			dir := t.TempDir()
-			options.testTileDir.filePath = dir
+			options.filePath = dir
 
 			require.Panics(t, func() {
 				_, _ = flags.LoadWithDefaultFilePaths(&options, nil, os.Stat)
@@ -262,11 +262,11 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 				AdditionalOptions
 			}
 			dir := t.TempDir()
-			options.testTileDir.filePath = dir
+			options.filePath = dir
 
 			_, err := flags.LoadWithDefaultFilePaths(&options, []string{"--bosh-variables-directory", "some-dir", "--bosh-variables-directory", "other-dir"}, os.Stat)
 			require.NoError(t, err)
-			assert.Equal(t, []string{"some-dir", "other-dir"}, options.AdditionalOptions.BOSHVariableDirectories, "it sets the field without string modification")
+			assert.Equal(t, []string{"some-dir", "other-dir"}, options.BOSHVariableDirectories, "it sets the field without string modification")
 		})
 	})
 
@@ -275,7 +275,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			testTileDir
 			SomeConfig string `long:"some-config"`
 		}
-		options.testTileDir.filePath = t.TempDir()
+		options.filePath = t.TempDir()
 
 		var statCallCount int
 
@@ -293,7 +293,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			testTileDir
 			Lifeline Rope `long:"some-help" default:"polypropylene"`
 		}
-		options.testTileDir.filePath = t.TempDir()
+		options.filePath = t.TempDir()
 		assert.Panics(t, func() {
 			_, _ = flags.LoadWithDefaultFilePaths(&options, nil, nil)
 		}, "jhana panics")
@@ -311,7 +311,7 @@ func TestLoadFlagsWithDefaults(t *testing.T) {
 			FinalField  []string `long:"final"       default:"final.txt, end.txt"`
 		}
 		dir := t.TempDir()
-		options.testTileDir.filePath = dir
+		options.filePath = dir
 
 		for _, defaultFileName := range []string{"final.txt", "end.txt"} {
 			f, err := os.Create(filepath.Join(dir, defaultFileName))

@@ -530,7 +530,7 @@ var _ = Describe("bake command", func() {
 			for _, f := range zr.File {
 				if f.Name == "migrations/v1/" {
 					emptyMigrationsFolderMode = f.Mode()
-					emptyMigrationsFolderModified = f.FileHeader.Modified
+					emptyMigrationsFolderModified = f.Modified
 					break
 				}
 			}
@@ -599,7 +599,7 @@ var _ = Describe("bake command", func() {
 						content, err := io.ReadAll(r)
 						Expect(err).NotTo(HaveOccurred())
 
-						mode := f.FileHeader.Mode()
+						mode := f.Mode()
 						Expect(mode).To(Equal(os.FileMode(0o755)))
 
 						Expect(content).To(Equal([]byte("content-of-other-file")))

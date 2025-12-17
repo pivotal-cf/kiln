@@ -97,11 +97,11 @@ func (service Service) Releases(productSlug string) ([]Release, error) {
 
 	responseBody, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, fmt.Errorf("reading the network.pivotal.io response body failed: %s", err)
+		return nil, fmt.Errorf("reading the network.pivotal.io response body failed: %w", err)
 	}
 
 	if err := json.Unmarshal(responseBody, &body); err != nil {
-		return nil, fmt.Errorf("json from %s is malformed: %s", req.URL.Host, err)
+		return nil, fmt.Errorf("json from %s is malformed: %w", req.URL.Host, err)
 	}
 
 	return body.Releases, nil

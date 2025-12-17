@@ -143,7 +143,7 @@ func (ars *ArtifactoryReleaseSource) getFileSHA1(release cargo.BOSHReleaseTarbal
 	var artifactoryFileInfo ArtifactoryFileInfo
 
 	if err := json.Unmarshal(responseBody, &artifactoryFileInfo); err != nil {
-		return "", fmt.Errorf("json is malformed: %s", err)
+		return "", fmt.Errorf("json is malformed: %w", err)
 	}
 
 	return artifactoryFileInfo.Checksums.SHA1, nil
@@ -229,7 +229,7 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 	}
 
 	if err := json.Unmarshal(responseBody, &artifactoryFolderInfo); err != nil {
-		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("json from %s is malformed: %s", response.Request.URL.Host, err)
+		return cargo.BOSHReleaseTarballLock{}, fmt.Errorf("json from %s is malformed: %w", response.Request.URL.Host, err)
 	}
 
 	semverPattern, err := regexp.Compile(`([-v])\d+(.\d+)*`)
@@ -250,9 +250,9 @@ func (ars *ArtifactoryReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTa
 		versions := semverPattern.FindAllString(filepath.Base(releases.URI), -1)
 		version := versions[0]
 		stemcellVersion := versions[len(versions)-1]
-		version = strings.Replace(version, "-", "", -1)
-		version = strings.Replace(version, "v", "", -1)
-		stemcellVersion = strings.Replace(stemcellVersion, "-", "", -1)
+		version = strings.ReplaceAll(version, "-", "")
+		version = strings.ReplaceAll(version, "v", "")
+		stemcellVersion = strings.ReplaceAll(stemcellVersion, "-", "")
 		if len(versions) > 1 && stemcellVersion != spec.StemcellVersion {
 			continue
 		}
@@ -312,7 +312,7 @@ func (ars *ArtifactoryReleaseSource) pathTemplate() *template.Template {
 	return template.Must(
 		template.New("remote-path").
 			Funcs(template.FuncMap{"trimSuffix": strings.TrimSuffix}).
-			Parse(ars.ReleaseSourceConfig.PathTemplate))
+			Parse(ars.PathTemplate))
 }
 
 func (ars *ArtifactoryReleaseSource) getWithAuth(url string) (*http.Response, error) {

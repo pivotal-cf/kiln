@@ -38,7 +38,7 @@ func (o OpsManifestService) RenderManifest(tileConfig io.Reader, tileMetadata io
 
 	manifest, err := o.opsManifestRunner.GetManifest(string(configInput), f.Name())
 	if err != nil {
-		return "", fmt.Errorf("Unable to retrieve bosh manifest: %s", err)
+		return "", fmt.Errorf("unable to retrieve bosh manifest: %w", err)
 	}
 
 	y, err := yaml.Marshal(manifest)

@@ -113,7 +113,7 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(p string, v
 			var fileVars map[string]any
 			err = yaml.Unmarshal(data, &fileVars)
 			if err != nil {
-				return fmt.Errorf("cannot unmarshal '%s': %s", filePath, err)
+				return fmt.Errorf("cannot unmarshal '%s': %w", filePath, err)
 			}
 
 			var ok bool
@@ -124,13 +124,13 @@ func (r MetadataPartsDirectoryReader) readMetadataRecursivelyFromDir(p string, v
 		} else {
 			err = yaml.Unmarshal(data, &vars)
 			if err != nil {
-				return fmt.Errorf("cannot unmarshal '%s': %s", filePath, err)
+				return fmt.Errorf("cannot unmarshal '%s': %w", filePath, err)
 			}
 		}
 
 		parts, err = r.readMetadataIntoParts(path.Base(filePath), vars, parts)
 		if err != nil {
-			return fmt.Errorf("file '%s' with top-level key '%s' has an invalid format: %s", filePath, r.topLevelKey, err)
+			return fmt.Errorf("file '%s' with top-level key '%s' has an invalid format: %w", filePath, r.topLevelKey, err)
 		}
 
 		return nil

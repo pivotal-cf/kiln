@@ -42,13 +42,13 @@ func (o OMRunner) StagedProducts() ([]StagedProduct, error) {
 		"--path", "/api/v0/staged/products",
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to retrieve staged products: %s: %s", err, errOutput)
+		return nil, fmt.Errorf("unable to retrieve staged products: %w: %s", err, errOutput)
 	}
 
 	var stagedProducts []StagedProduct
 	err = json.Unmarshal([]byte(response), &stagedProducts)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to retrieve staged products: %s", err)
+		return nil, fmt.Errorf("unable to retrieve staged products: %w", err)
 	}
 
 	return stagedProducts, nil
@@ -66,7 +66,7 @@ func (o OMRunner) FindStagedProduct(productName string) (StagedProduct, error) {
 		}
 	}
 
-	return StagedProduct{}, fmt.Errorf("Product %q has not been staged. Staged products: %q",
+	return StagedProduct{}, fmt.Errorf("product %q has not been staged. Staged products: %q",
 		productName, strings.Join(stagedTypes, ", "))
 }
 
@@ -79,7 +79,7 @@ func (o OMRunner) ResetAndConfigure(productName string, productVersion string, c
 		"--path", "/api/v0/staged",
 	)
 	if err != nil {
-		return fmt.Errorf("Unable to revert staged changes: %s: %s", err, errOutput)
+		return fmt.Errorf("unable to revert staged changes: %w: %s", err, errOutput)
 	}
 
 	_, errOutput, err = o.cmdRunner.Run(
@@ -90,13 +90,13 @@ func (o OMRunner) ResetAndConfigure(productName string, productVersion string, c
 		"--product-version", productVersion,
 	)
 	if err != nil {
-		return fmt.Errorf("Unable to stage product %q, version %q: %s: %s",
+		return fmt.Errorf("unable to stage product %q, version %q: %w: %s",
 			productName, productVersion, err, errOutput)
 	}
 
 	configFile, err := o.FileIO.TempFile("", "")
 	if err != nil {
-		return fmt.Errorf("Unable to ResetAndConfigure: %s", err)
+		return fmt.Errorf("unable to ResetAndConfigure: %w", err)
 	}
 	defer func() {
 		_ = o.FileIO.Remove(configFile.Name())
@@ -114,7 +114,7 @@ func (o OMRunner) ResetAndConfigure(productName string, productVersion string, c
 		"--config", configFile.Name(),
 	)
 	if err != nil {
-		return fmt.Errorf("Unable to configure product %q: %s: %s", productName, err, errOutput)
+		return fmt.Errorf("unable to configure product %q: %w: %s", productName, err, errOutput)
 	}
 
 	return nil
@@ -128,15 +128,15 @@ func (o OMRunner) GetManifest(productGUID string) (map[string]any, error) {
 		"--path", fmt.Sprintf("/api/v0/staged/products/%s/manifest", productGUID),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to retrieve staged manifest for product guid %q: %s: %s", productGUID, err, errOutput)
+		return nil, fmt.Errorf("unable to retrieve staged manifest for product guid %q: %w: %s", productGUID, err, errOutput)
 	}
 	var smr stagedManifestResponse
 	err = json.Unmarshal([]byte(response), &smr)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to retrieve staged manifest for product guid %q: %s", productGUID, err)
+		return nil, fmt.Errorf("unable to retrieve staged manifest for product guid %q: %w", productGUID, err)
 	}
 	if len(smr.Errors.Messages) > 0 {
-		return nil, fmt.Errorf("Unable to retrieve staged manifest for product guid %q: %s",
+		return nil, fmt.Errorf("unable to retrieve staged manifest for product guid %q: %s",
 			productGUID,
 			smr.Errors.Messages[0])
 	}

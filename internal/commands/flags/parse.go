@@ -63,7 +63,7 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 
 	templateVariables, err := variablesService.FromPathsAndPairs(options.VariableFiles, options.Variables)
 	if err != nil {
-		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to parse template variables: %s", err)
+		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to parse template variables: %w", err)
 	}
 
 	kilnfileFP, err := fs.Open(options.Kilnfile)

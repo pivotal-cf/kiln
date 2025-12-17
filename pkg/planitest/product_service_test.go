@@ -53,7 +53,7 @@ var _ = Describe("Product Service", func() {
 				rendererEnvironmentVariable = ""
 			})
 
-			It("errors", func() { Expect(err).To(MatchError("RENDERER must be set to om or ops-manifest")) })
+			It("errors", func() { Expect(err).To(MatchError("env var RENDERER must be set to om or ops-manifest")) })
 		})
 	})
 
@@ -63,7 +63,7 @@ var _ = Describe("Product Service", func() {
 				It("errors", func() {
 					config.ConfigFile = nil
 					_, err := NewProductService(config)
-					Expect(err).To(MatchError("Config file must be provided"))
+					Expect(err).To(MatchError("config file must be provided"))
 				})
 			})
 
@@ -71,7 +71,7 @@ var _ = Describe("Product Service", func() {
 				It("errors", func() {
 					config.TileFile = nil
 					_, err := NewProductService(config)
-					Expect(err).To(MatchError("Tile file must be provided"))
+					Expect(err).To(MatchError("tile file must be provided"))
 				})
 			})
 		})

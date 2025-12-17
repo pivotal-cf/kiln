@@ -372,7 +372,7 @@ func (b *Bake) loadFlags(args []string) error {
 	}
 
 	if shouldNotUseDefaultKilnfileFlag(args) {
-		b.Options.Standard.Kilnfile = ""
+		b.Options.Kilnfile = ""
 	}
 
 	return nil
@@ -450,7 +450,7 @@ func (b Bake) Execute(args []string) error {
 
 	templateVariables, err := b.templateVariables.FromPathsAndPairs(b.Options.VariableFiles, b.Options.Variables)
 	if err != nil {
-		return fmt.Errorf("failed to parse template variables: %s", err)
+		return fmt.Errorf("failed to parse template variables: %w", err)
 	}
 
 	if b.Options.TileName != "" {
@@ -462,7 +462,7 @@ func (b Bake) Execute(args []string) error {
 
 	releaseManifests, err := b.releases.FromDirectories(b.Options.ReleaseDirectories)
 	if err != nil {
-		return fmt.Errorf("failed to parse releases: %s", err)
+		return fmt.Errorf("failed to parse releases: %w", err)
 	}
 
 	var stemcellManifests map[string]any
@@ -476,7 +476,7 @@ func (b Bake) Execute(args []string) error {
 		stemcellManifests, err = b.stemcell.FromDirectories(b.Options.StemcellsDirectories)
 	}
 	if err != nil {
-		return fmt.Errorf("failed to parse stemcell: %s", err)
+		return fmt.Errorf("failed to parse stemcell: %w", err)
 	}
 
 	if b.Options.Metadata == "" {
@@ -505,48 +505,48 @@ func (b Bake) Execute(args []string) error {
 
 	boshVariables, err := b.boshVariables.ParseMetadataTemplates(b.Options.BOSHVariableDirectories, templateVariables)
 	if err != nil {
-		return fmt.Errorf("failed to parse bosh variables: %s", err)
+		return fmt.Errorf("failed to parse bosh variables: %w", err)
 	}
 
 	forms, err := b.forms.ParseMetadataTemplates(b.Options.FormDirectories, templateVariables)
 	if err != nil {
-		return fmt.Errorf("failed to parse forms: %s", err)
+		return fmt.Errorf("failed to parse forms: %w", err)
 	}
 
 	instanceGroups, err := b.instanceGroups.ParseMetadataTemplates(b.Options.InstanceGroupDirectories, templateVariables)
 	if err != nil {
-		return fmt.Errorf("failed to parse instance groups: %s", err)
+		return fmt.Errorf("failed to parse instance groups: %w", err)
 	}
 
 	jobs, err := b.jobs.ParseMetadataTemplates(b.Options.JobDirectories, templateVariables)
 	if err != nil {
-		return fmt.Errorf("failed to parse jobs: %s", err)
+		return fmt.Errorf("failed to parse jobs: %w", err)
 	}
 
 	propertyBlueprints, err := b.properties.ParseMetadataTemplates(b.Options.PropertyDirectories, templateVariables)
 	if err != nil {
-		return fmt.Errorf("failed to parse properties: %s", err)
+		return fmt.Errorf("failed to parse properties: %w", err)
 	}
 
 	runtimeConfigs, err := b.runtimeConfigs.ParseMetadataTemplates(b.Options.RuntimeConfigDirectories, templateVariables)
 	if err != nil {
-		return fmt.Errorf("failed to parse runtime configs: %s", err)
+		return fmt.Errorf("failed to parse runtime configs: %w", err)
 	}
 
 	icon, err := b.icon.Encode(b.Options.IconPath)
 	if err != nil {
-		return fmt.Errorf("failed to encode icon: %s", err)
+		return fmt.Errorf("failed to encode icon: %w", err)
 	}
 
 	metadata, err := b.metadata.Read(b.Options.Metadata)
 	if err != nil {
-		return fmt.Errorf("failed to read metadata: %s", err)
+		return fmt.Errorf("failed to read metadata: %w", err)
 	}
 
 	isDevBuild := b.Options.MetadataOnly || b.Options.StubReleases
 	gitMetadataSHA, err := builder.GitMetadataSHA(filepath.Dir(b.Options.Kilnfile), isDevBuild)
 	if err != nil {
-		return fmt.Errorf("failed to read metadata: %s", err)
+		return fmt.Errorf("failed to read metadata: %w", err)
 	}
 
 	modTime := time.Unix(0, 0).In(time.UTC)
@@ -592,7 +592,7 @@ func (b Bake) Execute(args []string) error {
 	if b.Options.Sha256 {
 		err = b.checksummer.Sum(b.Options.OutputFile)
 		if err != nil {
-			return fmt.Errorf("failed to calculate checksum: %s", err)
+			return fmt.Errorf("failed to calculate checksum: %w", err)
 		}
 	}
 

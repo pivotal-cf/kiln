@@ -35,7 +35,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 		return err
 	}
 
-	kilnfile, kilnfileLock, err := update.Options.Standard.LoadKilnfiles(update.FS, nil)
+	kilnfile, kilnfileLock, err := update.Options.LoadKilnfiles(update.FS, nil)
 	if err != nil {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}
@@ -127,7 +127,7 @@ func (update UpdateStemcell) Execute(args []string) error {
 
 	kilnfileLock.Stemcell.Version = trimmedInputVersion
 
-	err = update.Options.Standard.SaveKilnfileLock(update.FS, kilnfileLock)
+	err = update.Options.SaveKilnfileLock(update.FS, kilnfileLock)
 	if err != nil {
 		return err
 	}

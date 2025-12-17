@@ -60,7 +60,7 @@ func (r StemcellManifestReader) Read(stemcellTarball string) (Part, error) {
 				return Part{}, fmt.Errorf("could not find stemcell.MF in %q", stemcellTarball)
 			}
 
-			return Part{}, fmt.Errorf("error while reading %q: %s", stemcellTarball, err)
+			return Part{}, fmt.Errorf("error while reading %q: %w", stemcellTarball, err)
 		}
 
 		if filepath.Base(header.Name) == "stemcell.MF" {

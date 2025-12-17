@@ -36,7 +36,7 @@ func (m Manifest) interpolate(path string) (any, error) {
 	var content any
 	err := yaml.Unmarshal([]byte(m), &content)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse manifest: %s", err)
+		return "", fmt.Errorf("failed to parse manifest: %w", err)
 	}
 
 	res, err := patch.FindOp{Path: patch.MustNewPointerFromString(path)}.Apply(content)

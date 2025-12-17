@@ -57,7 +57,7 @@ var _ = Describe("OMRunner", func() {
 				cmdRunner.RunReturns("", "stderr output", errors.New("some error"))
 
 				_, err := omRunner.StagedProducts()
-				Expect(err).To(MatchError("Unable to retrieve staged products: some error: stderr output"))
+				Expect(err).To(MatchError("unable to retrieve staged products: some error: stderr output"))
 			})
 		})
 
@@ -66,7 +66,7 @@ var _ = Describe("OMRunner", func() {
 				cmdRunner.RunReturns("not-well-formed-json", "", nil)
 
 				_, err := omRunner.StagedProducts()
-				Expect(err).To(MatchError(HavePrefix("Unable to retrieve staged products")))
+				Expect(err).To(MatchError(HavePrefix("unable to retrieve staged products")))
 			})
 		})
 	})
@@ -106,7 +106,7 @@ var _ = Describe("OMRunner", func() {
 
 			It("returns an error with current staged products", func() {
 				_, err := omRunner.FindStagedProduct("cf")
-				Expect(err).To(MatchError(`Product "cf" has not been staged. Staged products: "not-cf, also-not-cf"`))
+				Expect(err).To(MatchError(`product "cf" has not been staged. Staged products: "not-cf, also-not-cf"`))
 			})
 		})
 	})
@@ -200,7 +200,7 @@ network-properties:
 					cmdRunner.RunReturnsOnCall(0, "", "stderr output", errors.New("some error"))
 
 					err := omRunnerWithFileIO.ResetAndConfigure("cf", "1.2.3", "{}")
-					Expect(err).To(MatchError(`Unable to revert staged changes: some error: stderr output`))
+					Expect(err).To(MatchError(`unable to revert staged changes: some error: stderr output`))
 				})
 			})
 
@@ -209,7 +209,7 @@ network-properties:
 					cmdRunner.RunReturnsOnCall(1, "", "stderr output", errors.New("some error"))
 
 					err := omRunnerWithFileIO.ResetAndConfigure("cf", "1.2.3", "{}")
-					Expect(err).To(MatchError(`Unable to stage product "cf", version "1.2.3": some error: stderr output`))
+					Expect(err).To(MatchError(`unable to stage product "cf", version "1.2.3": some error: stderr output`))
 				})
 			})
 
@@ -218,7 +218,7 @@ network-properties:
 					cmdRunner.RunReturnsOnCall(2, "", "stderr output", errors.New("some error"))
 
 					err := omRunnerWithFileIO.ResetAndConfigure("cf", "1.2.3", "{}")
-					Expect(err).To(MatchError(`Unable to configure product "cf": some error: stderr output`))
+					Expect(err).To(MatchError(`unable to configure product "cf": some error: stderr output`))
 				})
 			})
 
@@ -275,7 +275,7 @@ network-properties:
 					cmdRunner.RunReturns("", "stderr output", errors.New("some error"))
 
 					_, err := omRunner.GetManifest("some-guid")
-					Expect(err).To(MatchError(`Unable to retrieve staged manifest for product guid "some-guid": some error: stderr output`))
+					Expect(err).To(MatchError(`unable to retrieve staged manifest for product guid "some-guid": some error: stderr output`))
 				})
 			})
 
@@ -284,7 +284,7 @@ network-properties:
 					cmdRunner.RunReturns("not-well-formed-json", "", nil)
 
 					_, err := omRunner.GetManifest("some-guid")
-					Expect(err).To(MatchError(HavePrefix(`Unable to retrieve staged manifest for product guid "some-guid"`)))
+					Expect(err).To(MatchError(HavePrefix(`unable to retrieve staged manifest for product guid "some-guid"`)))
 				})
 			})
 
@@ -293,7 +293,7 @@ network-properties:
 					cmdRunner.RunReturns(`{"errors": {"base": ["Product configuration is incomplete; cannot generate manifest"]}}`, "", nil)
 
 					_, err := omRunner.GetManifest("some-guid")
-					Expect(err).To(MatchError(`Unable to retrieve staged manifest for product guid "some-guid": Product configuration is incomplete; cannot generate manifest`))
+					Expect(err).To(MatchError(`unable to retrieve staged manifest for product guid "some-guid": Product configuration is incomplete; cannot generate manifest`))
 				})
 			})
 		})

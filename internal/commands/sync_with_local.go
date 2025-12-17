@@ -45,7 +45,7 @@ func (command SyncWithLocal) Execute(args []string) error {
 		return err
 	}
 
-	kilnfile, kilnfileLock, err := command.Options.Standard.LoadKilnfiles(command.fs, nil)
+	kilnfile, kilnfileLock, err := command.Options.LoadKilnfiles(command.fs, nil)
 	if err != nil {
 		return fmt.Errorf("error loading Kilnfiles: %w", err)
 	}

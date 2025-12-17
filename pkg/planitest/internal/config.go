@@ -44,7 +44,7 @@ func MergeAdditionalProductProperties(configFile io.Reader, additionalProperties
 	var inputConfig ProductConfiguration
 	err = yaml.Unmarshal(yamlInput, &inputConfig)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse config file: %s", err)
+		return nil, fmt.Errorf("could not parse config file: %w", err)
 	}
 
 	if inputConfig.NetworkProperties == nil {

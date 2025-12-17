@@ -40,13 +40,13 @@ func (o OpsManifestRunner) GetManifest(productProperties, metadataFilePath strin
 
 	response, errOutput, err := o.cmdRunner.Run("ops-manifest", args...)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to retrieve manifest: %s: %s", err, errOutput)
+		return nil, fmt.Errorf("unable to retrieve manifest: %w: %s", err, errOutput)
 	}
 
 	var manifest map[string]any
 	err = yaml.Unmarshal([]byte(response), &manifest)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to unmarshal yaml: %s", err)
+		return nil, fmt.Errorf("unable to unmarshal yaml: %w", err)
 	}
 
 	return manifest, nil
