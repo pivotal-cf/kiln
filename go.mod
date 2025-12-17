@@ -30,7 +30,7 @@ require (
 	github.com/pivotal-cf/om v0.0.0-20230707145702-e2ef8fd451b1
 	github.com/snabb/httpreaderat v1.0.1
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/crypto v0.44.0
+	golang.org/x/crypto v0.45.0
 	golang.org/x/oauth2 v0.34.0
 	golang.org/x/sync v0.18.0
 	gopkg.in/yaml.v2 v2.4.0
