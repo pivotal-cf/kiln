@@ -2,8 +2,10 @@ package component
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -14,25 +16,27 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	s3manager "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 //counterfeiter:generate -o ./fakes/s3_downloader.go --fake-name S3Downloader . S3Downloader
 type S3Downloader interface {
-	Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
+	Download(ctx context.Context, w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
 }
 
 //counterfeiter:generate -o ./fakes/s3_client.go --fake-name S3Client . S3Client
 type S3Client interface {
-	HeadObject(input *s3.HeadObjectInput) (*s3.HeadObjectOutput, error)
-	ListObjectsV2(input *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error)
+	HeadObject(ctx context.Context, input *s3.HeadObjectInput, options ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
+	ListObjectsV2(ctx context.Context, input *s3.ListObjectsV2Input, options ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
 }
 
 type S3ReleaseSource struct {
@@ -46,8 +50,8 @@ type S3ReleaseSource struct {
 	logger *log.Logger
 }
 
-func NewS3ReleaseSource(c cargo.ReleaseSourceConfig, client S3Client, downloader S3Downloader, logger *log.Logger) S3ReleaseSource {
-	if c.Type != "" && c.Type != ReleaseSourceTypeS3 {
+func NewS3ReleaseSource(rsConfig cargo.ReleaseSourceConfig, client S3Client, downloader S3Downloader, logger *log.Logger) S3ReleaseSource {
+	if rsConfig.Type != "" && rsConfig.Type != ReleaseSourceTypeS3 {
 		panic(panicMessageWrongReleaseSourceType)
 	}
 
@@ -56,62 +60,57 @@ func NewS3ReleaseSource(c cargo.ReleaseSourceConfig, client S3Client, downloader
 	}
 
 	return S3ReleaseSource{
-		ReleaseSourceConfig: c,
+		ReleaseSourceConfig: rsConfig,
 		s3Client:            client,
 		s3Downloader:        downloader,
 		logger:              logger,
 	}
 }
 
-func NewS3ReleaseSourceFromConfig(config cargo.ReleaseSourceConfig, logger *log.Logger) S3ReleaseSource {
-	validateConfig(config)
+func NewS3ReleaseSourceFromConfig(rsConfig cargo.ReleaseSourceConfig, logger *log.Logger) S3ReleaseSource {
+	validateConfig(rsConfig)
 
-	awsConfig := awsRegionAndEndpointConfiguration(config).WithCredentials(credentials.NewStaticCredentials(config.AccessKeyId, config.SecretAccessKey, ""))
-	sess, err := session.NewSession(awsConfig)
+	awsConfig, err := config.LoadDefaultConfig(
+		context.Background(),
+		config.WithRegion(rsConfig.Region),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(rsConfig.AccessKeyId, rsConfig.SecretAccessKey, "")),
+	)
 	if err != nil {
 		// TODO: add test coverage for this block
 		panic(err)
 	}
 
-	if config.RoleARN != "" {
+	if rsConfig.RoleARN != "" {
 		// TODO: add test coverage for this block
-		awsConfigWithARN := awsRegionAndEndpointConfiguration(config).WithCredentials(stscreds.NewCredentials(sess, config.RoleARN))
-		sess, err = session.NewSession(awsConfigWithARN)
+		stsClient := sts.NewFromConfig(awsConfig)
+
+		awsConfig, err = config.LoadDefaultConfig(
+			context.Background(),
+			config.WithRegion(rsConfig.Region),
+			config.WithCredentialsProvider(stscreds.NewAssumeRoleProvider(stsClient, rsConfig.RoleARN)),
+		)
 		if err != nil {
 			// TODO: add test coverage for this block
 			panic(err)
 		}
 	}
 
-	client := s3.New(sess)
+	client := s3.NewFromConfig(awsConfig)
 
 	return NewS3ReleaseSource(
-		config,
+		rsConfig,
 		client,
-		s3manager.NewDownloaderWithClient(client),
+		s3manager.NewDownloader(client),
 		logger,
 	)
 }
 
-func awsRegionAndEndpointConfiguration(config cargo.ReleaseSourceConfig) *aws.Config {
-	awsConfig := &aws.Config{
-		Region: aws.String(config.Region),
-	}
-
-	if config.Endpoint != "" { // for acceptance testing
-		awsConfig = awsConfig.WithEndpoint(config.Endpoint)
-		awsConfig = awsConfig.WithS3ForcePathStyle(true)
-	}
-
-	return awsConfig
-}
-
-func validateConfig(config cargo.ReleaseSourceConfig) {
-	if config.PathTemplate == "" {
+func validateConfig(rsConfig cargo.ReleaseSourceConfig) {
+	if rsConfig.PathTemplate == "" {
 		panic(`Missing required field "path_template" in release source config. Is your Kilnfile out of date?`)
 	}
-	if config.Bucket == "" {
-		panic(`Missing required field "bucket" in release source config. Is your Kilnfile out of date?`)
+	if rsConfig.Bucket == "" {
+		panic(`Missing required field "bucket" in release source rsConfig. Is your Kilnfile out of date?`)
 	}
 }
 
@@ -119,21 +118,21 @@ func (src S3ReleaseSource) ID() string                               { return sr
 func (src S3ReleaseSource) Publishable() bool                        { return src.ReleaseSourceConfig.Publishable }
 func (src S3ReleaseSource) Configuration() cargo.ReleaseSourceConfig { return src.ReleaseSourceConfig }
 
-//counterfeiter:generate -o ./fakes/s3_request_failure.go --fake-name S3RequestFailure github.com/aws/aws-sdk-go/service/s3.RequestFailure
 func (src S3ReleaseSource) GetMatchedRelease(spec cargo.BOSHReleaseTarballSpecification) (cargo.BOSHReleaseTarballLock, error) {
 	remotePath, err := src.RemotePath(spec)
 	if err != nil {
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
 
-	headRequest := new(s3.HeadObjectInput)
-	headRequest.SetBucket(src.Bucket)
-	headRequest.SetKey(remotePath)
-
-	_, err = src.s3Client.HeadObject(headRequest)
+	_, err = src.s3Client.HeadObject(context.Background(),
+		&s3.HeadObjectInput{
+			Bucket: aws.String(src.Bucket),
+			Key:    aws.String(remotePath),
+		})
 	if err != nil {
-		requestFailure, ok := err.(s3.RequestFailure)
-		if ok && requestFailure.StatusCode() == 404 {
+		var nfErr *s3types.NotFound
+
+		if errors.As(err, &nfErr) {
 			return cargo.BOSHReleaseTarballLock{}, ErrNotFound
 		}
 		return cargo.BOSHReleaseTarballLock{}, err
@@ -156,10 +155,11 @@ func (src S3ReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTarballSpeci
 	}
 	prefix += spec.Name + "/"
 
-	releaseResults, err := src.s3Client.ListObjectsV2(&s3.ListObjectsV2Input{
-		Bucket: &src.Bucket,
-		Prefix: &prefix,
-	})
+	releaseResults, err := src.s3Client.ListObjectsV2(context.Background(),
+		&s3.ListObjectsV2Input{
+			Bucket: &src.Bucket,
+			Prefix: &prefix,
+		})
 	if err != nil {
 		return cargo.BOSHReleaseTarballLock{}, err
 	}
@@ -247,10 +247,11 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock cargo.BOSHRel
 	}
 	defer closeAndIgnoreError(file)
 
-	_, err = src.s3Downloader.Download(file, &s3.GetObjectInput{
-		Bucket: aws.String(src.Bucket),
-		Key:    aws.String(lock.RemotePath),
-	}, setConcurrency)
+	_, err = src.s3Downloader.Download(context.Background(),
+		file, &s3.GetObjectInput{
+			Bucket: aws.String(src.Bucket),
+			Key:    aws.String(lock.RemotePath),
+		}, setConcurrency)
 	if err != nil {
 		return Local{}, fmt.Errorf("failed to download file: %w", err)
 	}

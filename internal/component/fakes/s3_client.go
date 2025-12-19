@@ -2,17 +2,20 @@
 package fakes
 
 import (
+	"context"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/pivotal-cf/kiln/internal/component"
 )
 
 type S3Client struct {
-	HeadObjectStub        func(*s3.HeadObjectInput) (*s3.HeadObjectOutput, error)
+	HeadObjectStub        func(context.Context, *s3.HeadObjectInput, ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
 	headObjectMutex       sync.RWMutex
 	headObjectArgsForCall []struct {
-		arg1 *s3.HeadObjectInput
+		arg1 context.Context
+		arg2 *s3.HeadObjectInput
+		arg3 []func(*s3.Options)
 	}
 	headObjectReturns struct {
 		result1 *s3.HeadObjectOutput
@@ -22,10 +25,12 @@ type S3Client struct {
 		result1 *s3.HeadObjectOutput
 		result2 error
 	}
-	ListObjectsV2Stub        func(*s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error)
+	ListObjectsV2Stub        func(context.Context, *s3.ListObjectsV2Input, ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
 	listObjectsV2Mutex       sync.RWMutex
 	listObjectsV2ArgsForCall []struct {
-		arg1 *s3.ListObjectsV2Input
+		arg1 context.Context
+		arg2 *s3.ListObjectsV2Input
+		arg3 []func(*s3.Options)
 	}
 	listObjectsV2Returns struct {
 		result1 *s3.ListObjectsV2Output
@@ -39,18 +44,20 @@ type S3Client struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *S3Client) HeadObject(arg1 *s3.HeadObjectInput) (*s3.HeadObjectOutput, error) {
+func (fake *S3Client) HeadObject(arg1 context.Context, arg2 *s3.HeadObjectInput, arg3 ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
 	fake.headObjectMutex.Lock()
 	ret, specificReturn := fake.headObjectReturnsOnCall[len(fake.headObjectArgsForCall)]
 	fake.headObjectArgsForCall = append(fake.headObjectArgsForCall, struct {
-		arg1 *s3.HeadObjectInput
-	}{arg1})
+		arg1 context.Context
+		arg2 *s3.HeadObjectInput
+		arg3 []func(*s3.Options)
+	}{arg1, arg2, arg3})
 	stub := fake.HeadObjectStub
 	fakeReturns := fake.headObjectReturns
-	fake.recordInvocation("HeadObject", []interface{}{arg1})
+	fake.recordInvocation("HeadObject", []interface{}{arg1, arg2, arg3})
 	fake.headObjectMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2, arg3...)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -64,17 +71,17 @@ func (fake *S3Client) HeadObjectCallCount() int {
 	return len(fake.headObjectArgsForCall)
 }
 
-func (fake *S3Client) HeadObjectCalls(stub func(*s3.HeadObjectInput) (*s3.HeadObjectOutput, error)) {
+func (fake *S3Client) HeadObjectCalls(stub func(context.Context, *s3.HeadObjectInput, ...func(*s3.Options)) (*s3.HeadObjectOutput, error)) {
 	fake.headObjectMutex.Lock()
 	defer fake.headObjectMutex.Unlock()
 	fake.HeadObjectStub = stub
 }
 
-func (fake *S3Client) HeadObjectArgsForCall(i int) *s3.HeadObjectInput {
+func (fake *S3Client) HeadObjectArgsForCall(i int) (context.Context, *s3.HeadObjectInput, []func(*s3.Options)) {
 	fake.headObjectMutex.RLock()
 	defer fake.headObjectMutex.RUnlock()
 	argsForCall := fake.headObjectArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *S3Client) HeadObjectReturns(result1 *s3.HeadObjectOutput, result2 error) {
@@ -103,18 +110,20 @@ func (fake *S3Client) HeadObjectReturnsOnCall(i int, result1 *s3.HeadObjectOutpu
 	}{result1, result2}
 }
 
-func (fake *S3Client) ListObjectsV2(arg1 *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error) {
+func (fake *S3Client) ListObjectsV2(arg1 context.Context, arg2 *s3.ListObjectsV2Input, arg3 ...func(*s3.Options)) (*s3.ListObjectsV2Output, error) {
 	fake.listObjectsV2Mutex.Lock()
 	ret, specificReturn := fake.listObjectsV2ReturnsOnCall[len(fake.listObjectsV2ArgsForCall)]
 	fake.listObjectsV2ArgsForCall = append(fake.listObjectsV2ArgsForCall, struct {
-		arg1 *s3.ListObjectsV2Input
-	}{arg1})
+		arg1 context.Context
+		arg2 *s3.ListObjectsV2Input
+		arg3 []func(*s3.Options)
+	}{arg1, arg2, arg3})
 	stub := fake.ListObjectsV2Stub
 	fakeReturns := fake.listObjectsV2Returns
-	fake.recordInvocation("ListObjectsV2", []interface{}{arg1})
+	fake.recordInvocation("ListObjectsV2", []interface{}{arg1, arg2, arg3})
 	fake.listObjectsV2Mutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2, arg3...)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -128,17 +137,17 @@ func (fake *S3Client) ListObjectsV2CallCount() int {
 	return len(fake.listObjectsV2ArgsForCall)
 }
 
-func (fake *S3Client) ListObjectsV2Calls(stub func(*s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error)) {
+func (fake *S3Client) ListObjectsV2Calls(stub func(context.Context, *s3.ListObjectsV2Input, ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)) {
 	fake.listObjectsV2Mutex.Lock()
 	defer fake.listObjectsV2Mutex.Unlock()
 	fake.ListObjectsV2Stub = stub
 }
 
-func (fake *S3Client) ListObjectsV2ArgsForCall(i int) *s3.ListObjectsV2Input {
+func (fake *S3Client) ListObjectsV2ArgsForCall(i int) (context.Context, *s3.ListObjectsV2Input, []func(*s3.Options)) {
 	fake.listObjectsV2Mutex.RLock()
 	defer fake.listObjectsV2Mutex.RUnlock()
 	argsForCall := fake.listObjectsV2ArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *S3Client) ListObjectsV2Returns(result1 *s3.ListObjectsV2Output, result2 error) {
