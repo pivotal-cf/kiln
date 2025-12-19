@@ -7,12 +7,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/onsi/gomega/gbytes"
-
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"

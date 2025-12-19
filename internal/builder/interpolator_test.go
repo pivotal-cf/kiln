@@ -5,15 +5,13 @@ import (
 	"io"
 	"testing"
 
-	"github.com/pivotal-cf/kiln/pkg/proofing"
-
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
-
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/internal/builder"
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 var _ = Describe("interpolator", func() {
@@ -283,7 +281,7 @@ literal_array: $(variable "variable-literal-array")
 			SkipKilnMetadata: true,
 			Variables: map[string]any{
 				"variable-literal-object": `{"some": "value"}`,
-				"variable-literal-array": `[some, "things"]`,
+				"variable-literal-array":  `[some, "things"]`,
 			},
 		}
 

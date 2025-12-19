@@ -12,16 +12,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/pivotal-cf/kiln/pkg/cargo"
-
-	. "github.com/onsi/ginkgo/extensions/table"
-
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 var _ = Describe("BOSHIOReleaseSource", func() {

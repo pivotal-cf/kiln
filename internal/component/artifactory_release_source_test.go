@@ -10,10 +10,9 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"github.com/julienschmidt/httprouter"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"

@@ -4,11 +4,10 @@ import (
 	"os"
 
 	"github.com/go-git/go-billy/v5/osfs"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
 	. "github.com/pivotal-cf/kiln/internal/baking"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("TemplateVariablesService", func() {

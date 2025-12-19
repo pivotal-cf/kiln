@@ -4,8 +4,9 @@ import (
 	"os"
 	"strings"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/pivotal-cf/kiln/pkg/planitest/internal"
 	"github.com/pivotal-cf/kiln/pkg/planitest/internal/fakes"
 )

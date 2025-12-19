@@ -19,7 +19,7 @@ These are written in Go and use [Gingko+Gomega](https://onsi.github.io/ginkgo/).
 
 ```bash
 # change directory into the "bake" acceptance test directory then run:
-go run github.com/onsi/ginkgo/ginkgo
+go run github.com/onsi/ginkgo/v2/ginkgo
 ```
 
 ### Workflows

@@ -28,7 +28,7 @@ require (
 	github.com/masterminds/sprig v2.22.0+incompatible
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.12.1
 	github.com/moby/buildkit v0.26.2
-	github.com/onsi/ginkgo v1.16.5
+	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/pivotal-cf-experimental/gomegamatchers v0.0.0-20180326192815-e36bfcc98c3a
@@ -86,17 +86,18 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
+	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/pprof v0.0.0-20251114195745-4902fdda35c8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-memdb v1.3.5 // indirect
@@ -154,7 +155,6 @@ require (
 	google.golang.org/grpc v1.77.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
-	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gotest.tools/v3 v3.4.0 // indirect
 )

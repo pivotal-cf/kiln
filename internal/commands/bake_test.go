@@ -10,14 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pivotal-cf/kiln/pkg/cargo"
-
-	"github.com/pivotal-cf/kiln/pkg/bake"
-
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/gomegamatchers"
-
 	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/yaml.v2"
 
@@ -25,6 +20,8 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/pkg/bake"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
