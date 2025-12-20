@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/api/types/container"
 	"github.com/pivotal-cf/kiln/internal/test/fakes"
 	"github.com/stretchr/testify/require"
@@ -194,7 +195,7 @@ func Test_runTestWithSession(t *testing.T) {
 func runTestWithSessionHelper(t *testing.T, logs string, response container.WaitResponse) *fakes.MobyClient {
 	t.Helper()
 	client := new(fakes.MobyClient)
-	client.ImageBuildReturns(types.ImageBuildResponse{
+	client.ImageBuildReturns(build.ImageBuildResponse{
 		Body: io.NopCloser(strings.NewReader("")),
 	}, nil)
 	client.ContainerStartReturns(nil)

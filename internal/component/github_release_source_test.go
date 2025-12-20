@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v50/github"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/pivotal-cf/kiln/internal/component"

@@ -20,7 +20,7 @@ COPY --from=kiln /kiln /usr/local/bin/kiln
 RUN apt-get update && apt-get install jq -y
 
 # Install Ginkgo
-RUN go install github.com/onsi/ginkgo/ginkgo@latest && touch $HOME/.ack-ginkgo-rc
+RUN go install github.com/onsi/ginkgo/v2/ginkgo@latest
 
 # Install NodeJS
 RUN apt-get update && apt-get install nodejs npm -y

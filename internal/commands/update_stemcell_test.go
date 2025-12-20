@@ -7,14 +7,12 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"github.com/onsi/gomega/gbytes"
-	"github.com/pivotal-cf/jhanda"
-
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
+	"github.com/pivotal-cf/jhanda"
 	"gopkg.in/yaml.v2"
 
 	"github.com/pivotal-cf/kiln/internal/commands"

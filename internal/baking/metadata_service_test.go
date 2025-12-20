@@ -3,10 +3,10 @@ package baking_test
 import (
 	"os"
 
-	. "github.com/pivotal-cf/kiln/internal/baking"
-
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	. "github.com/pivotal-cf/kiln/internal/baking"
 )
 
 var _ = Describe("MetadataService", func() {

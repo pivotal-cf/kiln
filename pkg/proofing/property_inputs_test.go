@@ -3,10 +3,10 @@ package proofing_test
 import (
 	"os"
 
-	"github.com/pivotal-cf/kiln/pkg/proofing"
-
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
 
 var _ = Describe("PropertyInputs", func() {

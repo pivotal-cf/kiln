@@ -9,13 +9,13 @@ import (
 	"os"
 	"path/filepath"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
+
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/commands/fakes"
 	"github.com/pivotal-cf/kiln/internal/test"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/format"
 )
 
 func init() {
@@ -232,7 +232,7 @@ var _ = Describe("kiln test", func() {
 		})
 	})
 
-	When("when ginkgo flag arguments are passed", func() {
+	When("when ginkgo/v2 flag arguments are passed", func() {
 		It("it sets the GinkgoFlags configuration", func() {
 			args := []string{"--ginkgo-flags=peach pair"}
 

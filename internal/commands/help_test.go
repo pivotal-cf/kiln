@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/pivotal-cf/jhanda"
-
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	commandsFakes "github.com/pivotal-cf/kiln/internal/commands/fakes"
