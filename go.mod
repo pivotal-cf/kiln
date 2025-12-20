@@ -27,7 +27,7 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/masterminds/sprig v2.22.0+incompatible
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.12.1
-	github.com/moby/buildkit v0.26.2
+	github.com/moby/buildkit v0.26.3
 	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
 	github.com/opencontainers/image-spec v1.1.1
