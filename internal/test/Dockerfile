@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.10
 
 FROM golang AS go-image
-FROM pivotalcfreleng/kiln:v0.108.0 AS kiln
+FROM pivotalcfreleng/kiln:v1.0.0 AS kiln
 
 FROM ruby:3.4.0 AS builder
 RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
