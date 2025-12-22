@@ -5,10 +5,12 @@
 
 version: 2
 updates:
-  # Enable version updates for go
   - package-ecosystem: "gomod"
-    # Look for go.mod file in the `root` directory
     directory: "/"
-    # Check for updates every day (weekdays)
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "docker"
+    directory: "internal/test/"
     schedule:
       interval: "daily"
