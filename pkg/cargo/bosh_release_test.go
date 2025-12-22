@@ -45,6 +45,24 @@ func TestReadBOSHReleaseManifestsFromTarballs(t *testing.T) {
 	assert.Equal(t, filepath.Join("testdata", "bpm-1.1.21.tgz"), boshReleases[1].FilePath)
 }
 
+func TestReadBOSHReleaseManifestsFromNonCompressedTarball(t *testing.T) {
+	boshReleases, err := cargo.OpenBOSHReleaseManifestsFromTarballs(filepath.Join("testdata", "bpm-1.1.21-non-compressed.tgz"))
+	require.NoError(t, err)
+	require.Len(t, boshReleases, 1)
+
+	release := boshReleases[0]
+	assert.Equal(t, "21f7d3899dbb996844d6a6e1a3cd046cac821aa2", release.SHA1)
+	assert.Equal(t, filepath.Join("testdata", "bpm-1.1.21-non-compressed.tgz"), release.FilePath)
+
+	manifest := release.Manifest
+	assert.Equal(t, "bpm", manifest.Name)
+	assert.Equal(t, "1.1.21", manifest.Version)
+	assert.Equal(t, "fd88358", manifest.CommitHash)
+	assert.False(t, manifest.UncommittedChanges)
+	assert.NotEmpty(t, manifest.Packages)
+	assert.Empty(t, manifest.CompiledPackages)
+}
+
 func TestReadProductTemplatePartFromBOSHReleaseTarball(t *testing.T) {
 	t.Run("when the release is compiled", func(t *testing.T) {
 		f, err := os.Open(filepath.Join("testdata", "bpm-1.1.21-ubuntu-xenial-621.463.tgz"))
@@ -53,7 +71,7 @@ func TestReadProductTemplatePartFromBOSHReleaseTarball(t *testing.T) {
 			closeAndIgnoreError(f)
 		})
 
-		result, err := cargo.ReadProductTemplatePartFromBOSHReleaseTarball(f)
+		result, err := cargo.ReadProductTemplatePartFromBOSHReleaseTarball(f, false)
 		require.NoError(t, err)
 
 		require.Equal(t, cargo.BOSHReleaseManifest{
@@ -111,7 +129,7 @@ func TestReadProductTemplatePartFromBOSHReleaseTarball(t *testing.T) {
 			closeAndIgnoreError(f)
 		})
 
-		result, err := cargo.ReadProductTemplatePartFromBOSHReleaseTarball(f)
+		result, err := cargo.ReadProductTemplatePartFromBOSHReleaseTarball(f, false)
 		require.NoError(t, err)
 
 		require.Equal(t, cargo.BOSHReleaseManifest{
