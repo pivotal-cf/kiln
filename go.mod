@@ -15,7 +15,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.5
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cloudfoundry/bosh-cli v6.4.1+incompatible
-	github.com/cloudfoundry/bosh-utils v0.0.577
+	github.com/cloudfoundry/bosh-utils v0.0.578
 	github.com/cppforlife/go-patch v0.2.0
 	github.com/crhntr/yamlutil v0.2.0
 	github.com/cucumber/godog v0.15.1
@@ -46,7 +46,7 @@ require (
 )
 
 require (
-	code.cloudfoundry.org/tlsconfig v0.41.0 // indirect
+	code.cloudfoundry.org/tlsconfig v0.42.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
