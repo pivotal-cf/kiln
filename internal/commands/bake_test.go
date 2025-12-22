@@ -583,6 +583,59 @@ var _ = Describe("Bake", func() {
 		})
 
 		Context("when Kilnfile is specified", func() {
+			Context("when variable files can be auto discovered", func() {
+				It("renders with the discovered variables file", func() {
+					f1 := &fakes.FileInfo{}
+					f1.NameReturns("variables-file-1.yml")
+					f1.SizeReturns(100)
+					f1.ModeReturns(os.ModePerm)
+					f1.ModTimeReturns(time.Now())
+					f1.IsDirReturns(false)
+
+					f2 := &fakes.FileInfo{}
+					f2.NameReturns("variables-file-2.yml")
+					f2.SizeReturns(100)
+					f2.ModeReturns(os.ModePerm)
+					f2.ModTimeReturns(time.Now())
+					f2.IsDirReturns(false)
+
+					fakeFilesystem.ReadDirReturns([]os.FileInfo{f1, f2}, nil)
+
+					outputFile := "some-output-dir/some-product-file-1.2.3-build.4"
+					err := bake.Execute([]string{
+						"--forms-directory", "some-forms-directory",
+						"--instance-groups-directory", "some-instance-groups-directory",
+						"--jobs-directory", "some-jobs-directory",
+						"--metadata", "some-metadata",
+						"--output-file", outputFile,
+						"--properties-directory", "some-properties-directory",
+						"--releases-directory", someReleasesDirectory,
+						"--runtime-configs-directory", "some-other-runtime-configs-directory",
+						"--kilnfile", "Kilnfile",
+						"--bosh-variables-directory", "some-variables-directory",
+						"--version", "1.2.3", "--migrations-directory", "some-migrations-directory",
+						"--migrations-directory", "some-other-migrations-directory",
+						"--variables-file", "variables/variables-file-1.yml",
+						"--variables-file", "variables/variables-file-2.yml",
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(fakeStemcellService.FromKilnfileCallCount()).To(Equal(1))
+					Expect(fakeStemcellService.FromKilnfileArgsForCall(0)).To(Equal("Kilnfile"))
+					Expect(fakeFetcher.ExecuteCallCount()).To(Equal(1))
+					executeArgsForFetch := fakeFetcher.ExecuteArgsForCall(0)
+					Expect(executeArgsForFetch).To(Equal([]string{
+						"--kilnfile", "Kilnfile",
+						"--variables-file", "variables/variables-file-1.yml",
+						"--variables-file", "variables/variables-file-2.yml",
+						"--variables-file", "/home/.kiln/credentials.yml",
+						"--download-threads", "0",
+						"--no-confirm",
+						"--releases-directory",
+						someReleasesDirectory,
+					}))
+				})
+			})
+
 			It("renders the stemcell criteria in tile metadata from that specified the Kilnfile.lock", func() {
 				outputFile := "some-output-dir/some-product-file-1.2.3-build.4"
 				err := bake.Execute([]string{
@@ -606,8 +659,7 @@ var _ = Describe("Bake", func() {
 				executeArgsForFetch := fakeFetcher.ExecuteArgsForCall(0)
 				Expect(executeArgsForFetch).To(Equal([]string{
 					"--kilnfile", "Kilnfile",
-					"--variables-file",
-					"/home/.kiln/credentials.yml",
+					"--variables-file", "/home/.kiln/credentials.yml",
 					"--download-threads", "0",
 					"--no-confirm",
 					"--releases-directory",
