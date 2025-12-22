@@ -3,6 +3,7 @@ package test_test
 import (
 	"bytes"
 	"context"
+	"github.com/docker/docker/api/types"
 	"io"
 	"os"
 	"path/filepath"
@@ -91,9 +92,6 @@ func checkDaemonVersion(t *testing.T) {
 		t.Skip("integration test is slow")
 	}
 
-	constraints, err := semver.NewConstraint(test.MinimumDockerServerVersion)
-	require.NoError(t, err)
-
 	dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	require.NoError(t, err)
 	ctx := context.Background()
@@ -101,11 +99,25 @@ func checkDaemonVersion(t *testing.T) {
 	info, err := dockerClient.ServerVersion(ctx)
 	require.NoError(t, err)
 
-	v := semver.MustParse(info.Version)
+	minimumServerVersion := getConstraint(t, info.Components)
+	require.NoError(t, err)
 
-	ok, reasons := constraints.Validate(v)
+	serverVersion := semver.MustParse(info.Version)
+	ok, reasons := minimumServerVersion.Validate(serverVersion)
 	for _, reason := range reasons {
 		t.Log(reason.Error())
 	}
-	require.True(t, ok, "kiln test requires a newer version of Docker")
+	require.True(t, ok, "kiln test requires a newer version of Docker/Podman")
+}
+
+func getConstraint(t *testing.T, components []types.ComponentVersion) *semver.Constraints {
+	version := test.MinimumDockerServerVersion
+	for _, component := range components {
+		if component.Name == "Podman Engine" {
+			version = test.MinimumPodmanServerVersion
+		}
+	}
+	constraints, err := semver.NewConstraint(version)
+	require.NoError(t, err)
+	return constraints
 }
