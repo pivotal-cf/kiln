@@ -28,7 +28,7 @@ require (
 	github.com/masterminds/sprig v2.22.0+incompatible
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.12.1
 	github.com/moby/buildkit v0.26.3
-	github.com/onsi/ginkgo/v2 v2.27.2
+	github.com/onsi/ginkgo/v2 v2.27.3
 	github.com/onsi/gomega v1.38.3
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/pivotal-cf-experimental/gomegamatchers v0.0.0-20180326192815-e36bfcc98c3a
