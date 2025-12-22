@@ -215,6 +215,8 @@ func (stemcell Stemcell) ProductSlug() (string, error) {
 		return "stemcells-ubuntu-xenial", nil
 	case "ubuntu-jammy":
 		return "stemcells-ubuntu-jammy", nil
+	case "ubuntu-noble":
+		return "stemcells-ubuntu-noble", nil
 	case "windows2019":
 		return "stemcells-windows-server", nil
 	default:

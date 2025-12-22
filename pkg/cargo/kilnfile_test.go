@@ -90,6 +90,11 @@ func TestStemcell_ProductSlug(t *testing.T) {
 			ExpSlug:  "stemcells-ubuntu-jammy",
 		},
 		{
+			Name:     "when using known os ubuntu-noble",
+			Stemcell: Stemcell{OS: "ubuntu-noble"},
+			ExpSlug:  "stemcells-ubuntu-noble",
+		},
+		{
 			Name:     "when using known os windows2019",
 			Stemcell: Stemcell{OS: "windows2019"},
 			ExpSlug:  "stemcells-windows-server",
