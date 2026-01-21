@@ -1,0 +1,9 @@
+- name: admin_password
+  type: secret
+  configurable: false
+  optional: false
+- name: database_name
+  type: string
+  configurable: true
+  optional: false
+  default: my-db
