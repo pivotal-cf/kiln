@@ -58,12 +58,12 @@ var _ = Describe("Carvel Baker", func() {
 				subject = NewBaker()
 				subject.SetWriter(GinkgoWriter)
 			})
-			AfterEach(func() {
-				// Clean up the temp directory
-				if inputPath != "" {
-					os.RemoveAll(filepath.Dir(inputPath))
-				}
-			})
+		AfterEach(func() {
+			// Clean up the temp directory
+			if inputPath != "" {
+				_ = os.RemoveAll(filepath.Dir(inputPath))
+			}
+		})
 			JustBeforeEach(func() {
 				err = subject.Bake(inputPath)
 			})

@@ -73,7 +73,7 @@ var _ = Describe("CarvelBake", func() {
 
 		AfterEach(func() {
 			if inputPath != "" {
-				os.RemoveAll(filepath.Dir(inputPath))
+				_ = os.RemoveAll(filepath.Dir(inputPath))
 			}
 		})
 
