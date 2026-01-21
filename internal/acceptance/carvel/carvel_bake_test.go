@@ -97,7 +97,7 @@ var _ = Describe("carvel bake command", func() {
 
 		archive, err := os.Open(outputFile)
 		Expect(err).NotTo(HaveOccurred())
-		defer archive.Close()
+		defer func() { _ = archive.Close() }()
 
 		archiveInfo, err := archive.Stat()
 		Expect(err).NotTo(HaveOccurred())

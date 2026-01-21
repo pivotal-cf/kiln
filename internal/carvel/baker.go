@@ -123,7 +123,7 @@ func (b *baker) SetWriter(w io.Writer) {
 }
 
 func (b *baker) log(message string) {
-	fmt.Fprintln(b.writer, message)
+	_, _ = fmt.Fprintln(b.writer, message)
 }
 
 func (b *baker) generateBoshReleaseDir() error {
@@ -224,7 +224,9 @@ packages:
     values:
       description: "values.yml contents"
 `
-		os.MkdirAll(path.Join(dirName, "jobs", "package-install", "templates", "packageinstalls", entry), 0755)
+		if err = os.MkdirAll(path.Join(dirName, "jobs", "package-install", "templates", "packageinstalls", entry), 0755); err != nil {
+			return err
+		}
 		templates := map[string]string{
 			"name.erb":       `<%= p("` + entry + `.name") %>`,
 			"version.erb":    `<%= p("` + entry + `.version") %>`,
@@ -358,9 +360,11 @@ func (b *baker) copyFiles() error {
 	}
 
 	for _, fn := range []string{"icon.png", "version"} {
-		info, err := os.Stat(path.Join(b.source, fn))
-		if err == nil && !info.IsDir() {
-			err = copyFileContents(path.Join(b.source, fn), path.Join(b.destination, fn))
+		info, statErr := os.Stat(path.Join(b.source, fn))
+		if statErr == nil && !info.IsDir() {
+			if err := copyFileContents(path.Join(b.source, fn), path.Join(b.destination, fn)); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -526,7 +530,7 @@ func copyFileContents(src, dst string) (err error) {
 	if err != nil {
 		return
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	out, err := os.Create(dst)
 	if err != nil {
 		return
