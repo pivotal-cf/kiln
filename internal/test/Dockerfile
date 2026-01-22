@@ -3,10 +3,10 @@
 FROM golang AS go-image
 FROM pivotalcfreleng/kiln:v0.108.0 AS kiln
 
-FROM ruby:3.4.8 AS builder
+FROM ruby:4.0.1 AS builder
 RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-FROM ruby:3.4.8
+FROM ruby:4.0.1
 
 # Install Go
 COPY --from=go-image /usr/local/go/ /usr/local/go/
