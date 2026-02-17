@@ -22,8 +22,8 @@ require (
 	github.com/cucumber/messages/go/v21 v21.0.1
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/go-git/go-billy/v5 v5.6.2
-	github.com/go-git/go-git/v5 v5.14.0
+	github.com/go-git/go-billy/v5 v5.7.0
+	github.com/go-git/go-git/v5 v5.16.4
 	github.com/google/go-github/v50 v50.2.0
 	github.com/jfrog/jfrog-client-go v1.52.0
 	github.com/julienschmidt/httprouter v1.3.0
@@ -40,7 +40,7 @@ require (
 	github.com/snabb/httpreaderat v1.0.1
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.46.0
-	golang.org/x/oauth2 v0.30.0
+	golang.org/x/oauth2 v0.34.0
 	golang.org/x/sync v0.19.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -71,7 +71,7 @@ require (
 	github.com/aws/smithy-go v1.24.0 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
 	github.com/charlievieth/fs v0.0.3 // indirect
-	github.com/cloudflare/circl v1.6.0 // indirect
+	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cloudfoundry/go-socks5 v0.0.0-20250423223041-4ad5fea42851 // indirect
 	github.com/cloudfoundry/socks5-proxy v0.2.162 // indirect
 	github.com/containerd/containerd/v2 v2.2.0 // indirect
