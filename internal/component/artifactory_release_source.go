@@ -312,7 +312,7 @@ func (ars *ArtifactoryReleaseSource) searchAql(pathPattern string) ([]Artifactor
 	if err != nil {
 		return nil, err
 	}
-	defer cr.Close()
+	defer func() { _ = cr.Close() }()
 
 	var files []SearchResponseFile
 	for {
