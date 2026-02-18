@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
-	messages "github.com/cucumber/messages/go/v21"
+	"github.com/cucumber/messages-go/v16"
 )
 
 func Test_hasRegexMatches(t *testing.T) {

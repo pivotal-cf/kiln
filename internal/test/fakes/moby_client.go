@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -33,12 +32,12 @@ type MobyClient struct {
 		result1 container.CreateResponse
 		result2 error
 	}
-	ContainerLogsStub        func(context.Context, string, container.LogsOptions) (io.ReadCloser, error)
+	ContainerLogsStub        func(context.Context, string, types.ContainerLogsOptions) (io.ReadCloser, error)
 	containerLogsMutex       sync.RWMutex
 	containerLogsArgsForCall []struct {
 		arg1 context.Context
 		arg2 string
-		arg3 container.LogsOptions
+		arg3 types.ContainerLogsOptions
 	}
 	containerLogsReturns struct {
 		result1 io.ReadCloser
@@ -48,12 +47,12 @@ type MobyClient struct {
 		result1 io.ReadCloser
 		result2 error
 	}
-	ContainerStartStub        func(context.Context, string, container.StartOptions) error
+	ContainerStartStub        func(context.Context, string, types.ContainerStartOptions) error
 	containerStartMutex       sync.RWMutex
 	containerStartArgsForCall []struct {
 		arg1 context.Context
 		arg2 string
-		arg3 container.StartOptions
+		arg3 types.ContainerStartOptions
 	}
 	containerStartReturns struct {
 		result1 error
@@ -105,19 +104,19 @@ type MobyClient struct {
 		result1 net.Conn
 		result2 error
 	}
-	ImageBuildStub        func(context.Context, io.Reader, build.ImageBuildOptions) (build.ImageBuildResponse, error)
+	ImageBuildStub        func(context.Context, io.Reader, types.ImageBuildOptions) (types.ImageBuildResponse, error)
 	imageBuildMutex       sync.RWMutex
 	imageBuildArgsForCall []struct {
 		arg1 context.Context
 		arg2 io.Reader
-		arg3 build.ImageBuildOptions
+		arg3 types.ImageBuildOptions
 	}
 	imageBuildReturns struct {
-		result1 build.ImageBuildResponse
+		result1 types.ImageBuildResponse
 		result2 error
 	}
 	imageBuildReturnsOnCall map[int]struct {
-		result1 build.ImageBuildResponse
+		result1 types.ImageBuildResponse
 		result2 error
 	}
 	PingStub        func(context.Context) (types.Ping, error)
@@ -206,13 +205,13 @@ func (fake *MobyClient) ContainerCreateReturnsOnCall(i int, result1 container.Cr
 	}{result1, result2}
 }
 
-func (fake *MobyClient) ContainerLogs(arg1 context.Context, arg2 string, arg3 container.LogsOptions) (io.ReadCloser, error) {
+func (fake *MobyClient) ContainerLogs(arg1 context.Context, arg2 string, arg3 types.ContainerLogsOptions) (io.ReadCloser, error) {
 	fake.containerLogsMutex.Lock()
 	ret, specificReturn := fake.containerLogsReturnsOnCall[len(fake.containerLogsArgsForCall)]
 	fake.containerLogsArgsForCall = append(fake.containerLogsArgsForCall, struct {
 		arg1 context.Context
 		arg2 string
-		arg3 container.LogsOptions
+		arg3 types.ContainerLogsOptions
 	}{arg1, arg2, arg3})
 	stub := fake.ContainerLogsStub
 	fakeReturns := fake.containerLogsReturns
@@ -233,13 +232,13 @@ func (fake *MobyClient) ContainerLogsCallCount() int {
 	return len(fake.containerLogsArgsForCall)
 }
 
-func (fake *MobyClient) ContainerLogsCalls(stub func(context.Context, string, container.LogsOptions) (io.ReadCloser, error)) {
+func (fake *MobyClient) ContainerLogsCalls(stub func(context.Context, string, types.ContainerLogsOptions) (io.ReadCloser, error)) {
 	fake.containerLogsMutex.Lock()
 	defer fake.containerLogsMutex.Unlock()
 	fake.ContainerLogsStub = stub
 }
 
-func (fake *MobyClient) ContainerLogsArgsForCall(i int) (context.Context, string, container.LogsOptions) {
+func (fake *MobyClient) ContainerLogsArgsForCall(i int) (context.Context, string, types.ContainerLogsOptions) {
 	fake.containerLogsMutex.RLock()
 	defer fake.containerLogsMutex.RUnlock()
 	argsForCall := fake.containerLogsArgsForCall[i]
@@ -272,13 +271,13 @@ func (fake *MobyClient) ContainerLogsReturnsOnCall(i int, result1 io.ReadCloser,
 	}{result1, result2}
 }
 
-func (fake *MobyClient) ContainerStart(arg1 context.Context, arg2 string, arg3 container.StartOptions) error {
+func (fake *MobyClient) ContainerStart(arg1 context.Context, arg2 string, arg3 types.ContainerStartOptions) error {
 	fake.containerStartMutex.Lock()
 	ret, specificReturn := fake.containerStartReturnsOnCall[len(fake.containerStartArgsForCall)]
 	fake.containerStartArgsForCall = append(fake.containerStartArgsForCall, struct {
 		arg1 context.Context
 		arg2 string
-		arg3 container.StartOptions
+		arg3 types.ContainerStartOptions
 	}{arg1, arg2, arg3})
 	stub := fake.ContainerStartStub
 	fakeReturns := fake.containerStartReturns
@@ -299,13 +298,13 @@ func (fake *MobyClient) ContainerStartCallCount() int {
 	return len(fake.containerStartArgsForCall)
 }
 
-func (fake *MobyClient) ContainerStartCalls(stub func(context.Context, string, container.StartOptions) error) {
+func (fake *MobyClient) ContainerStartCalls(stub func(context.Context, string, types.ContainerStartOptions) error) {
 	fake.containerStartMutex.Lock()
 	defer fake.containerStartMutex.Unlock()
 	fake.ContainerStartStub = stub
 }
 
-func (fake *MobyClient) ContainerStartArgsForCall(i int) (context.Context, string, container.StartOptions) {
+func (fake *MobyClient) ContainerStartArgsForCall(i int) (context.Context, string, types.ContainerStartOptions) {
 	fake.containerStartMutex.RLock()
 	defer fake.containerStartMutex.RUnlock()
 	argsForCall := fake.containerStartArgsForCall[i]
@@ -531,13 +530,13 @@ func (fake *MobyClient) DialHijackReturnsOnCall(i int, result1 net.Conn, result2
 	}{result1, result2}
 }
 
-func (fake *MobyClient) ImageBuild(arg1 context.Context, arg2 io.Reader, arg3 build.ImageBuildOptions) (build.ImageBuildResponse, error) {
+func (fake *MobyClient) ImageBuild(arg1 context.Context, arg2 io.Reader, arg3 types.ImageBuildOptions) (types.ImageBuildResponse, error) {
 	fake.imageBuildMutex.Lock()
 	ret, specificReturn := fake.imageBuildReturnsOnCall[len(fake.imageBuildArgsForCall)]
 	fake.imageBuildArgsForCall = append(fake.imageBuildArgsForCall, struct {
 		arg1 context.Context
 		arg2 io.Reader
-		arg3 build.ImageBuildOptions
+		arg3 types.ImageBuildOptions
 	}{arg1, arg2, arg3})
 	stub := fake.ImageBuildStub
 	fakeReturns := fake.imageBuildReturns
@@ -558,41 +557,41 @@ func (fake *MobyClient) ImageBuildCallCount() int {
 	return len(fake.imageBuildArgsForCall)
 }
 
-func (fake *MobyClient) ImageBuildCalls(stub func(context.Context, io.Reader, build.ImageBuildOptions) (build.ImageBuildResponse, error)) {
+func (fake *MobyClient) ImageBuildCalls(stub func(context.Context, io.Reader, types.ImageBuildOptions) (types.ImageBuildResponse, error)) {
 	fake.imageBuildMutex.Lock()
 	defer fake.imageBuildMutex.Unlock()
 	fake.ImageBuildStub = stub
 }
 
-func (fake *MobyClient) ImageBuildArgsForCall(i int) (context.Context, io.Reader, build.ImageBuildOptions) {
+func (fake *MobyClient) ImageBuildArgsForCall(i int) (context.Context, io.Reader, types.ImageBuildOptions) {
 	fake.imageBuildMutex.RLock()
 	defer fake.imageBuildMutex.RUnlock()
 	argsForCall := fake.imageBuildArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *MobyClient) ImageBuildReturns(result1 build.ImageBuildResponse, result2 error) {
+func (fake *MobyClient) ImageBuildReturns(result1 types.ImageBuildResponse, result2 error) {
 	fake.imageBuildMutex.Lock()
 	defer fake.imageBuildMutex.Unlock()
 	fake.ImageBuildStub = nil
 	fake.imageBuildReturns = struct {
-		result1 build.ImageBuildResponse
+		result1 types.ImageBuildResponse
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *MobyClient) ImageBuildReturnsOnCall(i int, result1 build.ImageBuildResponse, result2 error) {
+func (fake *MobyClient) ImageBuildReturnsOnCall(i int, result1 types.ImageBuildResponse, result2 error) {
 	fake.imageBuildMutex.Lock()
 	defer fake.imageBuildMutex.Unlock()
 	fake.ImageBuildStub = nil
 	if fake.imageBuildReturnsOnCall == nil {
 		fake.imageBuildReturnsOnCall = make(map[int]struct {
-			result1 build.ImageBuildResponse
+			result1 types.ImageBuildResponse
 			result2 error
 		})
 	}
 	fake.imageBuildReturnsOnCall[i] = struct {
-		result1 build.ImageBuildResponse
+		result1 types.ImageBuildResponse
 		result2 error
 	}{result1, result2}
 }
