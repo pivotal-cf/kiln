@@ -43,7 +43,7 @@ func TestConfiguration_commands(t *testing.T) {
 			Configuration: Configuration{
 				AbsoluteTileDirectory: absoluteTileDirectory,
 			},
-			Result: nil,
+			Result: []string{"git config --global --add safe.directory '*'"},
 		},
 		{
 			Name: "when running migrations tests",
@@ -51,7 +51,7 @@ func TestConfiguration_commands(t *testing.T) {
 				AbsoluteTileDirectory: absoluteTileDirectory,
 				RunMigrations:         true,
 			},
-			Result: []string{"cd /tas/test/migrations", "npm install", "npm test"},
+			Result: []string{"git config --global --add safe.directory '*'", "cd /tas/test/migrations", "npm install", "npm test"},
 		},
 		{
 			Name: "when running manifest tests",
@@ -59,7 +59,7 @@ func TestConfiguration_commands(t *testing.T) {
 				AbsoluteTileDirectory: absoluteTileDirectory,
 				RunManifest:           true,
 			},
-			Result: []string{"cd /tas/test && ginkgo  /tas/test/test/manifest"},
+			Result: []string{"git config --global --add safe.directory '*'", "cd /tas/test && ginkgo  /tas/test/test/manifest"},
 		},
 		{
 			Name: "when running metadata tests",
@@ -67,7 +67,7 @@ func TestConfiguration_commands(t *testing.T) {
 				AbsoluteTileDirectory: absoluteTileDirectory,
 				RunMetadata:           true,
 			},
-			Result: []string{"cd /tas/test && ginkgo  /tas/test/test/stability"},
+			Result: []string{"git config --global --add safe.directory '*'", "cd /tas/test && ginkgo  /tas/test/test/stability"},
 		},
 		{
 			Name: "when running all tests",
@@ -75,7 +75,7 @@ func TestConfiguration_commands(t *testing.T) {
 				AbsoluteTileDirectory: absoluteTileDirectory,
 				RunAll:                true,
 			},
-			Result: []string{"cd /tas/test/migrations", "npm install", "npm test", "cd /tas/test && ginkgo  /tas/test/test/stability /tas/test/test/manifest"},
+			Result: []string{"git config --global --add safe.directory '*'", "cd /tas/test/migrations", "npm install", "npm test", "cd /tas/test && ginkgo  /tas/test/test/stability /tas/test/test/manifest"},
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
