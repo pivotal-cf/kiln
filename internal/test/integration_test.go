@@ -3,6 +3,9 @@ package test_test
 import (
 	"bytes"
 	"context"
+	"github.com/docker/docker/api/types"
+	"github.com/moby/go-archive"
+	"github.com/moby/go-archive/compression"
 	"io"
 	"os"
 	"os/exec"
@@ -10,10 +13,7 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/moby/go-archive"
-	"github.com/moby/go-archive/compression"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
