@@ -64,7 +64,7 @@ func (configuration Configuration) commands() ([]string, error) {
 	}
 	tileDirName := filepath.Base(configuration.AbsoluteTileDirectory)
 
-	commands := []string{"git config --global --add safe.directory '*'"}
+	var commands []string
 	if configuration.RunMigrations || configuration.RunAll {
 		commands = append(commands, fmt.Sprintf("cd /tas/%s/migrations", tileDirName))
 		commands = append(commands, "npm install")
