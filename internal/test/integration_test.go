@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"github.com/docker/docker/api/types"
+	"github.com/moby/go-archive"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -40,12 +42,11 @@ func TestDockerIntegration(t *testing.T) {
 	}
 
 	t.Run("the test succeeds", func(t *testing.T) {
-		wd, err := os.Getwd()
-		require.NoError(t, err)
+		tmpDir := setupTestRepo(t)
 
 		ctx := context.Background()
 		configuration := test.Configuration{
-			AbsoluteTileDirectory: filepath.Join(wd, "testdata", "happy-tile"),
+			AbsoluteTileDirectory: tmpDir,
 			RunAll:                true,
 			Environment:           []string{"ARTIFACTORY_USERNAME=" + artifactoryUsername, "ARTIFACTORY_PASSWORD=" + artifactoryPassword},
 		}
@@ -54,17 +55,16 @@ func TestDockerIntegration(t *testing.T) {
 			out = os.Stdout
 		}
 
-		err = test.Run(ctx, out, configuration)
+		err := test.Run(ctx, out, configuration)
 		assert.NoError(t, err)
 	})
 
 	t.Run("the test fails", func(t *testing.T) {
-		wd, err := os.Getwd()
-		require.NoError(t, err)
+		tmpDir := setupTestRepo(t)
 
 		ctx := context.Background()
 		configuration := test.Configuration{
-			AbsoluteTileDirectory: filepath.Join(wd, "testdata", "happy-tile"),
+			AbsoluteTileDirectory: tmpDir,
 			RunManifest:           true,
 			Environment:           []string{"FAIL_TEST=true", "ARTIFACTORY_USERNAME=" + artifactoryUsername, "ARTIFACTORY_PASSWORD=" + artifactoryPassword},
 		}
@@ -75,7 +75,7 @@ func TestDockerIntegration(t *testing.T) {
 			out = io.MultiWriter(outBuffer, os.Stdout)
 		}
 
-		err = test.Run(ctx, out, configuration)
+		err := test.Run(ctx, out, configuration)
 		assert.Error(t, err)
 		assert.Contains(t, outBuffer.String(), "FAIL_TEST is true")
 	})
@@ -120,4 +120,36 @@ func getConstraint(t *testing.T, components []types.ComponentVersion) *semver.Co
 	constraints, err := semver.NewConstraint(version)
 	require.NoError(t, err)
 	return constraints
+}
+
+func setupTestRepo(t *testing.T) string {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+
+	tmpDir := t.TempDir()
+	happyTilePath := filepath.Join(wd, "testdata", "happy-tile")
+	tar, err := archive.Tar(happyTilePath, archive.Uncompressed)
+	assert.NoError(t, err)
+	err = archive.Untar(tar, tmpDir, nil)
+	assert.NoError(t, err)
+	t.Cleanup(func() {
+		err = os.RemoveAll(tmpDir)
+		assert.NoError(t, err)
+		_ = tar.Close()
+	})
+
+	cmds := [][]string{
+		{"git", "init"},
+		{"git", "config", "user.email", "test@example.com"},
+		{"git", "config", "user.name", "test@example.com"},
+		{"git", "add", "."},
+		{"git", "commit", "-m", "init"},
+	}
+	for _, cmdSlice := range cmds {
+		cmd := exec.Command(cmdSlice[0], cmdSlice[1:]...)
+		cmd.Dir = tmpDir
+		_ = cmd.Run()
+	}
+
+	return tmpDir
 }
