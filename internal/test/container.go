@@ -79,7 +79,7 @@ func (configuration Configuration) commands() ([]string, error) {
 		ginkgo = append(ginkgo, fmt.Sprintf("/tas/%s/test/manifest", tileDirName))
 	}
 	if configuration.RunMetadata || configuration.RunManifest || configuration.RunAll {
-		ginkgoCommand := fmt.Sprintf("cd /tas/%s && go run github.com/onsi/ginkgo/v2/ginkgo %s %s", tileDirName, configuration.GinkgoFlags, strings.Join(ginkgo, " "))
+		ginkgoCommand := fmt.Sprintf("cd /tas && go install github.com/onsi/ginkgo/ginkgo@latest && cd %s && ginkgo -timeout=1h %s %s", tileDirName, configuration.GinkgoFlags, strings.Join(ginkgo, " "))
 		commands = append(commands, ginkgoCommand)
 	}
 	return commands, nil
@@ -133,10 +133,11 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 		}
 
 		logger.Println("reading image build response")
-		_, err = io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return fmt.Errorf("failed to read image build response: %w", err)
 		}
+		fmt.Println(string(body))
 
 		parentDir := path.Dir(configuration.AbsoluteTileDirectory)
 		tileDir := path.Base(configuration.AbsoluteTileDirectory)
