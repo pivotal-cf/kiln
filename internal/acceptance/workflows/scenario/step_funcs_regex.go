@@ -59,7 +59,6 @@ func hasRegexMatches(ctx context.Context, outputName, expression string, table *
 			if gotString != expString {
 				fmt.Fprintf(&errBuilder, "expected match %d submatch named %s to equal %q but got %q\n", rowIndex, matchName, expString, gotString)
 			}
-
 		}
 	}
 
