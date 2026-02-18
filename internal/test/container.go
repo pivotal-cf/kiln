@@ -79,7 +79,7 @@ func (configuration Configuration) commands() ([]string, error) {
 		ginkgo = append(ginkgo, fmt.Sprintf("/tas/%s/test/manifest", tileDirName))
 	}
 	if configuration.RunMetadata || configuration.RunManifest || configuration.RunAll {
-		ginkgoCommand := fmt.Sprintf("cd /tas/%s && ginkgo %s %s", tileDirName, configuration.GinkgoFlags, strings.Join(ginkgo, " "))
+		ginkgoCommand := fmt.Sprintf("cd /tas/%s && go run github.com/onsi/ginkgo/v2/ginkgo %s %s", tileDirName, configuration.GinkgoFlags, strings.Join(ginkgo, " "))
 		commands = append(commands, ginkgoCommand)
 	}
 	return commands, nil
