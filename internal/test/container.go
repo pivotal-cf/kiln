@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
@@ -87,11 +88,11 @@ func (configuration Configuration) commands() ([]string, error) {
 //counterfeiter:generate -o ./fakes/moby_client.go --fake-name MobyClient . mobyClient
 type mobyClient interface {
 	DialHijack(ctx context.Context, url, proto string, meta map[string][]string) (net.Conn, error)
-	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
+	ImageBuild(ctx context.Context, buildContext io.Reader, options build.ImageBuildOptions) (build.ImageBuildResponse, error)
 	Ping(ctx context.Context) (types.Ping, error)
 	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *specV1.Platform, containerName string) (container.CreateResponse, error)
-	ContainerStart(ctx context.Context, containerID string, options types.ContainerStartOptions) error
-	ContainerLogs(ctx context.Context, container string, options types.ContainerLogsOptions) (io.ReadCloser, error)
+	ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error
+	ContainerLogs(ctx context.Context, container string, options container.LogsOptions) (io.ReadCloser, error)
 	ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error)
 	ContainerStop(ctx context.Context, containerID string, options container.StopOptions) error
 }
@@ -117,9 +118,9 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 		artifactoryPassword := envMap["ARTIFACTORY_PASSWORD"]
 
 		logger.Println("creating test image")
-		resp, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, types.ImageBuildOptions{
+		resp, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, build.ImageBuildOptions{
 			Tags:      []string{"kiln_test_dependencies:vmware"},
-			Version:   types.BuilderBuildKit,
+			Version:   build.BuilderBuildKit,
 			SessionID: sessionID,
 			BuildArgs: map[string]*string{
 				"ARTIFACTORY_USERNAME": &artifactoryUsername,
@@ -184,11 +185,11 @@ func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, do
 			return nil
 		})
 
-		if err := dockerDaemon.ContainerStart(ctx, testContainer.ID, types.ContainerStartOptions{}); err != nil {
+		if err := dockerDaemon.ContainerStart(ctx, testContainer.ID, container.StartOptions{}); err != nil {
 			return fmt.Errorf("failed to start test container: %w", err)
 		}
 
-		out, err := dockerDaemon.ContainerLogs(ctx, testContainer.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
+		out, err := dockerDaemon.ContainerLogs(ctx, testContainer.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
 		if err != nil {
 			return fmt.Errorf("container log request failure: %w", err)
 		}
@@ -228,7 +229,7 @@ func configureSession(ctx context.Context, logger *log.Logger, configuration Con
 		return fmt.Errorf("failed to connect to Docker daemon: %w", err)
 	}
 
-	s, err := session.NewSession(ctx, "waypoint", "")
+	s, err := session.NewSession(ctx, "waypoint")
 	if err != nil {
 		return fmt.Errorf("failed to create docker daemon session: %w", err)
 	}
