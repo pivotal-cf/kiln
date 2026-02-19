@@ -1,0 +1,19 @@
+name: k8s-tile-test
+label: "test tile"
+icon_image: $( icon )
+metadata_version: "3.2.0"
+minimum_version_for_upgrade: 0.0.0
+product_version: $( version )
+rank: 1
+serial: false
+property_blueprints:
+- $( property "database_name" )
+- $( property "admin_password" )
+form_types:
+- $( form "db_props" )
+variables: []
+package_installs:
+- $( package "test-install" )
+compatible_kubernetes_distributions:
+- name: k0s
+  version: '>0.0.0'

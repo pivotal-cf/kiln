@@ -1,0 +1,6 @@
+name: test-install
+packageName: something-test.tanzu.vmware.com
+packageVersion: "0.1.5"
+values:
+  db_name: (( .properties.database_name.value ))
+  password: (( .properties.admin_password.value ))

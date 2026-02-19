@@ -101,6 +101,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	commandSet["carvel"] = commands.NewCarvel(outLogger, errLogger)
+
 	err = commandSet.Execute(command, args)
 	if err != nil {
 		log.Fatal(err)
