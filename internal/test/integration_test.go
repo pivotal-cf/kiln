@@ -3,19 +3,19 @@ package test_test
 import (
 	"bytes"
 	"context"
-	"github.com/docker/docker/api/types"
-	"github.com/moby/go-archive"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	"github.com/moby/go-archive"
+	"github.com/moby/go-archive/compression"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/Masterminds/semver/v3"
-	"github.com/docker/docker/client"
 
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/test"
@@ -128,7 +128,7 @@ func setupTestRepo(t *testing.T) string {
 
 	tmpDir := t.TempDir()
 	happyTilePath := filepath.Join(wd, "testdata", "happy-tile")
-	tar, err := archive.Tar(happyTilePath, archive.Uncompressed)
+	tar, err := archive.Tar(happyTilePath, compression.None)
 	assert.NoError(t, err)
 	err = archive.Untar(tar, tmpDir, nil)
 	assert.NoError(t, err)
