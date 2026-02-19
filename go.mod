@@ -16,6 +16,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cloudfoundry/bosh-cli v6.4.1+incompatible
 	github.com/cloudfoundry/bosh-utils v0.0.579
+	github.com/containerd/errdefs v1.0.0
 	github.com/cppforlife/go-patch v0.2.0
 	github.com/crhntr/yamlutil v0.2.0
 	github.com/cucumber/godog v0.15.1
@@ -74,7 +75,6 @@ require (
 	github.com/cloudfoundry/go-socks5 v0.0.0-20250423223041-4ad5fea42851 // indirect
 	github.com/cloudfoundry/socks5-proxy v0.2.163 // indirect
 	github.com/containerd/containerd/v2 v2.2.1 // indirect
-	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect

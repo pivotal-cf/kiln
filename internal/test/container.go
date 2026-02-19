@@ -16,13 +16,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"github.com/moby/buildkit/session"
 	specV1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
 )
@@ -42,7 +42,7 @@ func Run(ctx context.Context, w io.Writer, configuration Configuration) error {
 		return err
 	}
 
-	return configureSession(ctx, logger, configuration, dockerDaemon, runTestWithSession(ctx, logger, w, dockerDaemon, configuration))
+	return runTest(ctx, logger, w, dockerDaemon, configuration)
 }
 
 type Configuration struct {
@@ -97,164 +97,138 @@ type mobyClient interface {
 	ContainerStop(ctx context.Context, containerID string, options container.StopOptions) error
 }
 
-func runTestWithSession(ctx context.Context, logger *log.Logger, w io.Writer, dockerDaemon mobyClient, configuration Configuration) func(sessionID string) error {
-	return func(sessionID string) error {
-		commands, err := configuration.commands()
-		if err != nil {
-			return err
-		}
-
-		var dockerfileTarball bytes.Buffer
-		if err := createDockerfileTarball(tar.NewWriter(&dockerfileTarball), dockerfile); err != nil {
-			return err
-		}
-
-		envMap, err := decodeEnvironment(configuration.Environment)
-		if err != nil {
-			return fmt.Errorf("failed to parse environment: %w", err)
-		}
-
-		artifactoryUsername := envMap["ARTIFACTORY_USERNAME"]
-		artifactoryPassword := envMap["ARTIFACTORY_PASSWORD"]
-
-		logger.Println("creating test image")
-		resp, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, build.ImageBuildOptions{
-			Tags:      []string{"kiln_test_dependencies:vmware"},
-			Version:   build.BuilderBuildKit,
-			SessionID: sessionID,
-			BuildArgs: map[string]*string{
-				"ARTIFACTORY_USERNAME": &artifactoryUsername,
-				"ARTIFACTORY_PASSWORD": &artifactoryPassword,
-			},
-		})
-
-		if err != nil {
-			return fmt.Errorf("failed to build image: %w", err)
-		}
-
-		logger.Println("reading image build response")
-		_, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("failed to read image build response: %w", err)
-		}
-
-		parentDir := path.Dir(configuration.AbsoluteTileDirectory)
-		tileDir := path.Base(configuration.AbsoluteTileDirectory)
-
-		dockerCmd := strings.Join(commands, " && ")
-
-		envVars := getTileTestEnvVars(configuration.AbsoluteTileDirectory, tileDir, envMap)
-		logger.Println("creating test container")
-		testContainer, err := dockerDaemon.ContainerCreate(ctx, &container.Config{
-			Image: "kiln_test_dependencies:vmware",
-			Cmd:   []string{"/bin/bash", "-c", dockerCmd},
-			Env:   encodeEnvironment(envVars),
-			Tty:   true,
-		}, &container.HostConfig{
-			LogConfig: container.LogConfig{
-				Config: map[string]string{
-					"mode": string(container.LogModeNonBlock),
-				},
-			},
-			Mounts: []mount.Mount{
-				{
-					Type:   mount.TypeBind,
-					Source: parentDir,
-					Target: "/tas",
-				},
-			},
-			AutoRemove: true,
-		}, nil, nil, "")
-		if err != nil {
-			return fmt.Errorf("failed to create container: %w", err)
-		}
-		logger.Printf("created test container with id %s", testContainer.ID)
-
-		errG := errgroup.Group{}
-
-		sigInt := make(chan os.Signal, 1)
-		signal.Notify(sigInt, os.Interrupt)
-		errG.Go(func() error {
-			<-sigInt
-			err := dockerDaemon.ContainerStop(ctx, testContainer.ID, container.StopOptions{
-				Signal: "SIGKILL",
-			})
-			if err != nil {
-				return fmt.Errorf("failed to stop container: %w", err)
-			}
-			return nil
-		})
-
-		if err := dockerDaemon.ContainerStart(ctx, testContainer.ID, container.StartOptions{}); err != nil {
-			return fmt.Errorf("failed to start test container: %w", err)
-		}
-
-		out, err := dockerDaemon.ContainerLogs(ctx, testContainer.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
-		if err != nil {
-			return fmt.Errorf("container log request failure: %w", err)
-		}
-		if _, err := io.Copy(w, out); err != nil {
-			return err
-		}
-
-		// Although the fan-in loop pattern seems like the right solution here, ContainerWait
-		// does not properly close channels, so it won't work.
-		var resultErr error
-		statusCh, containerWaitError := dockerDaemon.ContainerWait(ctx, testContainer.ID, container.WaitConditionNotRunning)
-		select {
-		case err := <-containerWaitError:
-			resultErr = err
-		case status := <-statusCh:
-			if status.StatusCode != 0 {
-				if status.Error != nil {
-					resultErr = fmt.Errorf("test failed with exit code %d: %s", status.StatusCode, status.Error.Message)
-				} else {
-					resultErr = fmt.Errorf("test failed with exit code %d", status.StatusCode)
-				}
-			}
-		}
-		signal.Stop(sigInt)
-		close(sigInt)
-
-		return errors.Join(resultErr, errG.Wait())
-	}
-}
-
-// configureSession is the part of the code that sets up socket connections and interacts with the daemon
-// testing it is non-trivial, so I isolated it. Testing it properly would require a daemon connection.
-func configureSession(ctx context.Context, logger *log.Logger, configuration Configuration, dockerDaemon mobyClient, function func(sessionID string) error) error {
+func runTest(ctx context.Context, logger *log.Logger, w io.Writer, dockerDaemon mobyClient, configuration Configuration) error {
 	logger.Printf("pinging docker daemon")
 	_, err := dockerDaemon.Ping(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to connect to Docker daemon: %w", err)
 	}
 
-	s, err := session.NewSession(ctx, "waypoint")
+	commands, err := configuration.commands()
 	if err != nil {
-		return fmt.Errorf("failed to create docker daemon session: %w", err)
+		return err
 	}
-	defer closeAndIgnoreError(s)
 
-	runErrC := make(chan error)
-	go func() {
-		defer close(runErrC)
-		runErrC <- s.Run(ctx, func(ctx context.Context, proto string, meta map[string][]string) (net.Conn, error) {
-			conn, err := dockerDaemon.DialHijack(ctx, "/session", proto, meta)
-			if err != nil {
-				return nil, fmt.Errorf("session hijack error: %w", err)
-			}
-			return conn, nil
+	var dockerfileTarball bytes.Buffer
+	if err := createDockerfileTarball(tar.NewWriter(&dockerfileTarball), dockerfile); err != nil {
+		return err
+	}
+
+	envMap, err := decodeEnvironment(configuration.Environment)
+	if err != nil {
+		return fmt.Errorf("failed to parse environment: %w", err)
+	}
+
+	artifactoryUsername := envMap["ARTIFACTORY_USERNAME"]
+	artifactoryPassword := envMap["ARTIFACTORY_PASSWORD"]
+
+	logger.Println("creating test image")
+	resp, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, build.ImageBuildOptions{
+		Tags:    []string{"kiln_test_dependencies:vmware"},
+		Version: build.BuilderBuildKit,
+		BuildArgs: map[string]*string{
+			"ARTIFACTORY_USERNAME": &artifactoryUsername,
+			"ARTIFACTORY_PASSWORD": &artifactoryPassword,
+		},
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to build image: %w", err)
+	}
+
+	logger.Println("reading image build response")
+	_, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read image build response: %w", err)
+	}
+
+	parentDir := path.Dir(configuration.AbsoluteTileDirectory)
+	tileDir := path.Base(configuration.AbsoluteTileDirectory)
+
+	dockerCmd := strings.Join(commands, " && ")
+
+	envVars := getTileTestEnvVars(configuration.AbsoluteTileDirectory, tileDir, envMap)
+	logger.Println("creating test container")
+	testContainer, err := dockerDaemon.ContainerCreate(ctx, &container.Config{
+		Image: "kiln_test_dependencies:vmware",
+		Cmd:   []string{"/bin/bash", "-c", dockerCmd},
+		Env:   encodeEnvironment(envVars),
+		Tty:   true,
+	}, &container.HostConfig{
+		LogConfig: container.LogConfig{
+			Config: map[string]string{
+				"mode": string(container.LogModeNonBlock),
+			},
+		},
+		Mounts: []mount.Mount{
+			{
+				Type:   mount.TypeBind,
+				Source: parentDir,
+				Target: "/tas",
+			},
+		},
+		AutoRemove: true,
+	}, nil, nil, "")
+	if err != nil {
+		return fmt.Errorf("failed to create container: %w", err)
+	}
+	logger.Printf("created test container with id %s", testContainer.ID)
+
+	errG := errgroup.Group{}
+
+	sigInt := make(chan os.Signal, 1)
+	signal.Notify(sigInt, os.Interrupt)
+	errG.Go(func() error {
+		<-sigInt
+		err := dockerDaemon.ContainerStop(ctx, testContainer.ID, container.StopOptions{
+			Signal: "SIGKILL",
 		})
-	}()
+		if err != nil {
+			if cerrdefs.IsNotFound(err) {
+				return nil
+			}
+			if strings.Contains(err.Error(), "no such container") {
+				return nil
+			}
+			return fmt.Errorf("failed to stop container: %w", err)
+		}
+		return nil
+	})
 
-	logger.Println("completed session setup")
-
-	err = function(s.ID())
-	_ = s.Close()
-	for e := range runErrC {
-		err = errors.Join(err, e)
+	if err := dockerDaemon.ContainerStart(ctx, testContainer.ID, container.StartOptions{}); err != nil {
+		return fmt.Errorf("failed to start test container: %w", err)
 	}
-	return err
+
+	out, err := dockerDaemon.ContainerLogs(ctx, testContainer.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
+	if err != nil {
+		return fmt.Errorf("container log request failure: %w", err)
+	}
+	if _, err := io.Copy(w, out); err != nil {
+		return err
+	}
+
+	//Although the fan-in loop pattern seems like the right solution here, ContainerWait
+	//does not properly close channels, so it won't work.
+	var resultErr error
+	statusCh, containerWaitError := dockerDaemon.ContainerWait(ctx, testContainer.ID, container.WaitConditionNotRunning)
+	select {
+	case err := <-containerWaitError:
+		if !cerrdefs.IsNotFound(err) {
+			resultErr = nil
+		}
+	case status := <-statusCh:
+		if status.StatusCode != 0 {
+			if status.Error != nil {
+				resultErr = fmt.Errorf("test failed with exit code %d: %s", status.StatusCode, status.Error.Message)
+			} else {
+				resultErr = fmt.Errorf("test failed with exit code %d", status.StatusCode)
+			}
+		}
+	}
+	signal.Stop(sigInt)
+	close(sigInt)
+
+	return errors.Join(resultErr, errG.Wait())
 }
 
 type environmentVars = map[string]string
