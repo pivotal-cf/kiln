@@ -210,12 +210,10 @@ func runTest(ctx context.Context, logger *log.Logger, w io.Writer, dockerDaemon 
 	//Although the fan-in loop pattern seems like the right solution here, ContainerWait
 	//does not properly close channels, so it won't work.
 	var resultErr error
-	statusCh, containerWaitError := dockerDaemon.ContainerWait(ctx, testContainer.ID, container.WaitConditionNotRunning)
+	statusCh, containerWaitError := dockerDaemon.ContainerWait(ctx, testContainer.ID, container.WaitConditionRemoved)
 	select {
 	case err := <-containerWaitError:
-		if !cerrdefs.IsNotFound(err) {
-			resultErr = nil
-		}
+		resultErr = err
 	case status := <-statusCh:
 		if status.StatusCode != 0 {
 			if status.Error != nil {
