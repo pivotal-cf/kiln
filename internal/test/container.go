@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"path"
@@ -87,7 +86,6 @@ func (configuration Configuration) commands() ([]string, error) {
 
 //counterfeiter:generate -o ./fakes/moby_client.go --fake-name MobyClient . mobyClient
 type mobyClient interface {
-	DialHijack(ctx context.Context, url, proto string, meta map[string][]string) (net.Conn, error)
 	ImageBuild(ctx context.Context, buildContext io.Reader, options build.ImageBuildOptions) (build.ImageBuildResponse, error)
 	Ping(ctx context.Context) (types.Ping, error)
 	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *specV1.Platform, containerName string) (container.CreateResponse, error)
@@ -309,8 +307,4 @@ func createDockerfileTarball(tw tarWriter, fileContents string) error {
 		return err
 	}
 	return tw.Close()
-}
-
-func closeAndIgnoreError(c io.Closer) {
-	_ = c.Close()
 }

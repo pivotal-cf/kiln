@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.9
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.9
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.2
+	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.1.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.6
 	github.com/blang/semver/v4 v4.0.0
