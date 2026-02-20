@@ -20,7 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
-	s3manager "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
@@ -30,7 +30,7 @@ import (
 
 //counterfeiter:generate -o ./fakes/s3_downloader.go --fake-name S3Downloader . S3Downloader
 type S3Downloader interface {
-	Download(ctx context.Context, w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error)
+	DownloadObject(ctx context.Context, input *transfermanager.DownloadObjectInput, opts ...func(*transfermanager.Options)) (*transfermanager.DownloadObjectOutput, error)
 }
 
 //counterfeiter:generate -o ./fakes/s3_client.go --fake-name S3Client . S3Client
@@ -100,7 +100,7 @@ func NewS3ReleaseSourceFromConfig(rsConfig cargo.ReleaseSourceConfig, logger *lo
 	return NewS3ReleaseSource(
 		rsConfig,
 		client,
-		s3manager.NewDownloader(client),
+		transfermanager.New(client),
 		logger,
 	)
 }
@@ -229,11 +229,9 @@ func (src S3ReleaseSource) FindReleaseVersion(spec cargo.BOSHReleaseTarballSpeci
 }
 
 func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock cargo.BOSHReleaseTarballLock) (Local, error) {
-	setConcurrency := func(dl *s3manager.Downloader) {
+	setConcurrency := func(opts *transfermanager.Options) {
 		if src.DownloadThreads > 0 {
-			dl.Concurrency = src.DownloadThreads
-		} else {
-			dl.Concurrency = s3manager.DefaultDownloadConcurrency
+			opts.Concurrency = src.DownloadThreads
 		}
 	}
 
@@ -247,10 +245,11 @@ func (src S3ReleaseSource) DownloadRelease(releaseDir string, lock cargo.BOSHRel
 	}
 	defer closeAndIgnoreError(file)
 
-	_, err = src.s3Downloader.Download(context.Background(),
-		file, &s3.GetObjectInput{
-			Bucket: aws.String(src.Bucket),
-			Key:    aws.String(lock.RemotePath),
+	_, err = src.s3Downloader.DownloadObject(context.Background(),
+		&transfermanager.DownloadObjectInput{
+			Bucket:   aws.String(src.Bucket),
+			Key:      aws.String(lock.RemotePath),
+			WriterAt: file,
 		}, setConcurrency)
 	if err != nil {
 		return Local{}, fmt.Errorf("failed to download file: %w", err)
