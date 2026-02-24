@@ -102,7 +102,7 @@ func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRe
 	if err != nil {
 		return Local{}, err
 	}
-	defer resp.Body.Close()
+	defer closeAndIgnoreError(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return Local{}, fmt.Errorf("failed to download %s release from artifactory with error code %d", remoteRelease.Name, resp.StatusCode)
