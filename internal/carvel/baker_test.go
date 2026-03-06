@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -23,6 +24,57 @@ func kilnInstalled() bool {
 }
 
 var _ = Describe("Carvel Baker", func() {
+	Context("generateManifestTemplate", func() {
+		var template string
+
+		BeforeEach(func() {
+			template = generateManifestTemplate("test-install")
+		})
+
+		It("generates a ServiceAccount", func() {
+			Expect(template).To(ContainSubstring("kind: ServiceAccount"))
+			Expect(template).To(ContainSubstring(`name: <%= p("test-install.name") %>-sa`))
+		})
+
+		It("generates a ClusterRole (not a namespaced Role)", func() {
+			Expect(template).To(ContainSubstring("kind: ClusterRole"))
+			Expect(template).NotTo(ContainSubstring("kind: Role\n"))
+			Expect(template).To(ContainSubstring(`name: <%= p("test-install.name") %>-sa-cluster-role`))
+		})
+
+		It("generates a ClusterRoleBinding (not a namespaced RoleBinding)", func() {
+			Expect(template).To(ContainSubstring("kind: ClusterRoleBinding"))
+			Expect(template).NotTo(ContainSubstring("kind: RoleBinding\n"))
+			Expect(template).To(ContainSubstring(`name: <%= p("test-install.name") %>-sa-cluster-role-binding`))
+		})
+
+		It("generates a Secret for values", func() {
+			Expect(template).To(ContainSubstring("kind: Secret"))
+			Expect(template).To(ContainSubstring(`name: <%= p("test-install.name") %>-values`))
+			Expect(template).To(ContainSubstring("stringData:"))
+			Expect(template).To(ContainSubstring("values.yaml: |"))
+		})
+
+		It("generates a PackageInstall resource", func() {
+			Expect(template).To(ContainSubstring("kind: PackageInstall"))
+			Expect(template).To(ContainSubstring("apiVersion: packaging.carvel.dev/v1alpha1"))
+			Expect(template).To(ContainSubstring(`name: <%= p("test-install.name") %>`))
+			Expect(template).To(ContainSubstring(`serviceAccountName: <%= p("test-install.name") %>-sa`))
+		})
+
+		It("uses BOSH link for content-namespace with fallback to default", func() {
+			Expect(template).To(ContainSubstring(`<%= link("cluster").p("content-namespace") rescue "default" %>`))
+		})
+
+		It("injects content-namespace from BOSH link into values context", func() {
+			Expect(template).To(ContainSubstring(`values["context"]["namespace"] = link("cluster").p("content-namespace") rescue "default"`))
+		})
+
+		It("handles YAML conversion for string values", func() {
+			Expect(template).To(ContainSubstring(`values = YAML.load(values) if values.is_a?(String)`))
+		})
+	})
+
 	Context("Bake", func() {
 		When("the input directory contains k8s tile data", func() {
 			BeforeEach(func() {
@@ -31,9 +83,9 @@ var _ = Describe("Carvel Baker", func() {
 				}
 			})
 			var (
-				inputPath, outputPath string
-				subject               Baker
-				err                   error
+				inputPath, outputPath, boshReleasePath string
+				subject                                Baker
+				err                                    error
 			)
 			BeforeEach(func() {
 				var err error
@@ -41,6 +93,7 @@ var _ = Describe("Carvel Baker", func() {
 				Expect(err).NotTo(HaveOccurred())
 				inputPath += "/tile"
 				outputPath = path.Join(inputPath, ".ezbake")
+				boshReleasePath = path.Join(inputPath, ".boshrelease")
 				err = os.CopyFS(inputPath, os.DirFS("testdata/sample-tile"))
 				Expect(err).NotTo(HaveOccurred())
 				// create an initial git commit in the input directory
@@ -115,6 +168,74 @@ var _ = Describe("Carvel Baker", func() {
 				It("Generates a bosh release tarball", func() {
 					Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-0.1.1.tgz")).To(BeAnExistingFile())
 				})
+				It("does not generate a separate package-install job", func() {
+					Expect(filepath.Join(boshReleasePath, "jobs", "package-install")).NotTo(BeADirectory())
+				})
+				It("generates manifest templates under registry-data job", func() {
+					templatePath := filepath.Join(boshReleasePath, "jobs", "registry-data", "templates", "packageinstalls", "test-install.yml.erb")
+					Expect(templatePath).To(BeAnExistingFile())
+
+					contents, err := os.ReadFile(templatePath)
+					Expect(err).NotTo(HaveOccurred())
+					templateStr := string(contents)
+
+					Expect(templateStr).To(ContainSubstring("kind: ServiceAccount"))
+					Expect(templateStr).To(ContainSubstring("kind: ClusterRole"))
+					Expect(templateStr).To(ContainSubstring("kind: ClusterRoleBinding"))
+					Expect(templateStr).To(ContainSubstring("kind: Secret"))
+					Expect(templateStr).To(ContainSubstring("kind: PackageInstall"))
+					Expect(templateStr).To(ContainSubstring(`link("cluster").p("content-namespace")`))
+				})
+				It("generates registry-data job spec with BOSH link consumer and templates", func() {
+					specPath := filepath.Join(boshReleasePath, "jobs", "registry-data", "spec")
+					Expect(specPath).To(BeAnExistingFile())
+
+					contents, err := os.ReadFile(specPath)
+					Expect(err).NotTo(HaveOccurred())
+					specStr := string(contents)
+
+					Expect(specStr).To(ContainSubstring("name: registry-data"))
+					Expect(specStr).To(ContainSubstring("packageinstalls/test-install.yml.erb: packageinstalls/test-install.yml"))
+					Expect(specStr).To(ContainSubstring("packages:\n- registry-data"))
+					Expect(specStr).To(ContainSubstring("consumes:"))
+					Expect(specStr).To(ContainSubstring("name: cluster"))
+					Expect(specStr).To(ContainSubstring("type: cluster-info"))
+					Expect(specStr).To(ContainSubstring("optional: true"))
+				})
+				It("generates runtime config referencing tanzu-content release", func() {
+					rcPath := filepath.Join(outputPath, "runtime_configs", "k8s-tile-test-pkgr.yml")
+					rcData, err := os.ReadFile(rcPath)
+					Expect(err).NotTo(HaveOccurred())
+
+					var rc models.RuntimeConfigOuter
+					err = yaml.Unmarshal(rcData, &rc)
+					Expect(err).NotTo(HaveOccurred())
+
+					var inner models.RuntimeConfigInner
+					err = yaml.Unmarshal([]byte(rc.RuntimeConfig), &inner)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(inner.Addons).To(HaveLen(1))
+					addon := inner.Addons[0]
+
+					By("referencing tanzu-content release instead of registry")
+					Expect(addon.Include.Jobs).To(HaveLen(2))
+					Expect(addon.Include.Jobs[0].Name).To(Equal("install-package-repository"))
+					Expect(addon.Include.Jobs[0].Release).To(Equal("tanzu-content"))
+					Expect(addon.Include.Jobs[1].Name).To(Equal("install-packages"))
+					Expect(addon.Include.Jobs[1].Release).To(Equal("tanzu-content"))
+
+					By("having only the registry-data job (no separate package-install job)")
+					Expect(addon.Jobs).To(HaveLen(1))
+					Expect(addon.Jobs[0].Name).To(Equal("registry-data"))
+					Expect(addon.Jobs[0].Release).To(Equal("k8s-tile-test"))
+
+					By("carrying package install properties on the registry-data job")
+					Expect(addon.Jobs[0].Properties).To(HaveKey("test-install"))
+					props := addon.Jobs[0].Properties["test-install"]
+					Expect(props.Name).To(Equal("something-test.tanzu.vmware.com"))
+					Expect(props.Version).To(Equal("0.1.5"))
+				})
 				It("can be kiln baked", func() {
 					if !kilnInstalled() {
 						Skip("kiln CLI not installed - skipping integration test")
@@ -154,6 +275,29 @@ var _ = Describe("Carvel Baker", func() {
 					Expect(err.Error()).To(ContainSubstring("tile metadata_version too old"))
 				})
 			})
+		})
+	})
+
+	Context("generateManifestTemplate with different entry names", func() {
+		It("parameterizes the entry name throughout the template", func() {
+			template := generateManifestTemplate("my-custom-pkg")
+
+			Expect(template).To(ContainSubstring(`p("my-custom-pkg.name")`))
+			Expect(template).To(ContainSubstring(`p("my-custom-pkg.version")`))
+			Expect(template).To(ContainSubstring(`p("my-custom-pkg.values")`))
+			Expect(template).NotTo(ContainSubstring("test-install"))
+		})
+
+		It("contains exactly 6 K8s resource documents", func() {
+			template := generateManifestTemplate("pkg")
+			docs := strings.Split(template, "---")
+			nonEmpty := 0
+			for _, doc := range docs {
+				if strings.TrimSpace(doc) != "" {
+					nonEmpty++
+				}
+			}
+			Expect(nonEmpty).To(Equal(5))
 		})
 	})
 })

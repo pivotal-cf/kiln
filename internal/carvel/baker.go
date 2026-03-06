@@ -139,7 +139,6 @@ func (b *baker) generateBoshReleaseDir() error {
 		exec.Command("bosh", "add-blob", "--dir="+dirName, path.Join(b.source, "bundle.tar"), "imgpkg/bundle.tar"),
 		exec.Command("bosh", "generate-package", "--dir="+dirName, "registry-data"),
 		exec.Command("bosh", "generate-job", "--dir="+dirName, "registry-data"),
-		exec.Command("bosh", "generate-job", "--dir="+dirName, "package-install"),
 	}
 	for _, cmd := range commands {
 		b.log("executing " + cmd.String())
@@ -163,12 +162,6 @@ dependencies: []
 files:
 - imgpkg/bundle.tar
 `,
-		"jobs/registry-data/spec": `---
-name: registry-data
-templates: {}
-packages:
-- registry-data
-`,
 	}
 	for outpath, contents := range fileContents {
 		err = os.WriteFile(path.Join(dirName, outpath), []byte(contents), 0644)
@@ -177,9 +170,10 @@ packages:
 		}
 	}
 
-	jobTemplates := ""
-	jobProperties := ""
-	// we need one PackageInstall for each entry in the metadata.
+	registryDataTemplates := ""
+	registryDataProperties := ""
+
+	// we need one PackageInstall YAML manifest for each entry in the metadata.
 	for _, entry := range b.metadata.PackageInstalls {
 		entry = strings.Trim(entry, "$() ")
 		entry = strings.TrimPrefix(entry, "package")
@@ -211,50 +205,118 @@ packages:
 			b.log("found " + pi.Name + " at " + match)
 		}
 
-		// accumulate templates
-		jobTemplates += fmt.Sprintf("  packageinstalls/%s/name.erb: packageinstalls/%s/name\n", entry, entry)
-		jobTemplates += fmt.Sprintf("  packageinstalls/%s/version.erb: packageinstalls/%s/version\n", entry, entry)
-		jobTemplates += fmt.Sprintf("  packageinstalls/%s/values.yml.erb: packageinstalls/%s/values.yml\n", entry, entry)
-		// accumulate properties
-		jobProperties += "  " + entry + ":\n"
-		jobProperties += `    name:
+		registryDataTemplates += fmt.Sprintf("  packageinstalls/%s.yml.erb: packageinstalls/%s.yml\n", entry, entry)
+
+		registryDataProperties += "  " + entry + ":\n"
+		registryDataProperties += `    name:
       description: "package name"
     version:
       description: "package version"
     values:
       description: "values.yml contents"
 `
-		if err = os.MkdirAll(path.Join(dirName, "jobs", "package-install", "templates", "packageinstalls", entry), 0755); err != nil {
+
+		if err = os.MkdirAll(path.Join(dirName, "jobs", "registry-data", "templates", "packageinstalls"), 0755); err != nil {
 			return err
 		}
-		templates := map[string]string{
-			"name.erb":       `<%= p("` + entry + `.name") %>`,
-			"version.erb":    `<%= p("` + entry + `.version") %>`,
-			"values.yml.erb": `<% require 'yaml' %>` + "\n" + `<%= p("` + entry + `.values").is_a?(String) ? p("` + entry + `.values") : YAML.dump(p("` + entry + `.values")) %>`,
-		}
-		for fileName, contents := range templates {
-			err = os.WriteFile(path.Join(dirName, "jobs", "package-install", "templates", "packageinstalls", entry, fileName), []byte(contents), 0644)
-			if err != nil {
-				return err
-			}
+
+		manifestTemplate := generateManifestTemplate(entry)
+
+		err = os.WriteFile(
+			path.Join(dirName, "jobs", "registry-data", "templates", "packageinstalls", entry+".yml.erb"),
+			[]byte(manifestTemplate),
+			0644,
+		)
+		if err != nil {
+			return err
 		}
 	}
 
-	// now that we've collected all the templates and properties, write out the spec file for the
-	// package-install job.
-	contents := `---
-name: package-install
+	registryDataSpec := `---
+name: registry-data
 templates:
-` + jobTemplates +
-		`packages: []
+` + registryDataTemplates +
+		`packages:
+- registry-data
+consumes:
+- name: cluster
+  type: cluster-info
+  optional: true
 properties:
-` + jobProperties
-	err = os.WriteFile(path.Join(dirName, "jobs", "package-install", "spec"), []byte(contents), 0644)
+` + registryDataProperties
+
+	err = os.WriteFile(path.Join(dirName, "jobs", "registry-data", "spec"), []byte(registryDataSpec), 0644)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func generateManifestTemplate(entry string) string {
+	return `---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: <%= p("` + entry + `.name") %>-sa
+  namespace: <%= link("cluster").p("content-namespace") rescue "default" %>
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: <%= p("` + entry + `.name") %>-sa-cluster-role
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: <%= p("` + entry + `.name") %>-sa-cluster-role-binding
+subjects:
+- kind: ServiceAccount
+  name: <%= p("` + entry + `.name") %>-sa
+  namespace: <%= link("cluster").p("content-namespace") rescue "default" %>
+roleRef:
+  kind: ClusterRole
+  name: <%= p("` + entry + `.name") %>-sa-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <%= p("` + entry + `.name") %>-values
+  namespace: <%= link("cluster").p("content-namespace") rescue "default" %>
+type: Opaque
+stringData:
+  values.yaml: |
+<% require 'yaml' %>
+<%
+  values = p("` + entry + `.values")
+  values = YAML.load(values) if values.is_a?(String)
+  # Inject namespace from BOSH link into context
+  if values.is_a?(Hash) && values["context"].is_a?(Hash)
+    values["context"]["namespace"] = link("cluster").p("content-namespace") rescue "default"
+  end
+%>
+<%= YAML.dump(values).split("\n").map { |line| "    " + line }.join("\n") %>
+---
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageInstall
+metadata:
+  name: <%= p("` + entry + `.name") %>
+  namespace: <%= link("cluster").p("content-namespace") rescue "default" %>
+spec:
+  serviceAccountName: <%= p("` + entry + `.name") %>-sa
+  packageRef:
+    refName: <%= p("` + entry + `.name") %>
+    versionSelection:
+      constraints: <%= p("` + entry + `.version") %>
+  values:
+  - secretRef:
+      name: <%= p("` + entry + `.name") %>-values
+`
 }
 
 func (b *baker) generateOutputTile() error {
@@ -371,21 +433,14 @@ func (b *baker) copyFiles() error {
 	return nil
 }
 
-// generateRuntimeConfigs creates a runtime config that colocates registry-data and package-install jobs onto the
-// registry VM (or whatever instance has the corresponding errands that will ingest the data)
 func (b *baker) generateRuntimeConfigs() error {
 	err := os.MkdirAll(path.Join(b.destination, "runtime_configs"), 0755)
 	if err != nil {
 		return err
 	}
 
-	registryDataJob := models.Job{
-		Name:    "registry-data",
-		Release: b.metadata.Name,
-	}
+	registryDataProps := map[string]models.PackageInstallProps{}
 
-	// create the "package-install" job
-	props := map[string]models.PackageInstallProps{}
 	// we need one PackageInstall for each entry in the metadata.
 	for _, entry := range b.metadata.PackageInstalls {
 		entry = strings.Trim(entry, "$() ")
@@ -415,7 +470,7 @@ func (b *baker) generateRuntimeConfigs() error {
 			}
 
 			found = true
-			props[entry] = models.PackageInstallProps{
+			registryDataProps[entry] = models.PackageInstallProps{
 				Name:    pi.PackageName,
 				Version: pi.PackageVersion,
 				Values:  pi.Values,
@@ -426,10 +481,10 @@ func (b *baker) generateRuntimeConfigs() error {
 		}
 	}
 
-	packageInstallJob := models.Job{
-		Name:       "package-install",
+	registryDataJob := models.Job{
+		Name:       "registry-data",
 		Release:    b.metadata.Name,
-		Properties: props,
+		Properties: registryDataProps,
 	}
 
 	inner := models.RuntimeConfigInner{
@@ -444,13 +499,12 @@ func (b *baker) generateRuntimeConfigs() error {
 						`(( ..` + b.metadata.Name + `.deployment_name ))`,
 					},
 					Jobs: []models.Job{
-						{Name: "apply-packagerepos", Release: "registry"},
-						{Name: "install-packages", Release: "registry"},
+						{Name: "install-package-repository", Release: "tanzu-content"},
+						{Name: "install-packages", Release: "tanzu-content"},
 					},
 				},
 				Jobs: []models.Job{
 					registryDataJob,
-					packageInstallJob,
 				},
 			},
 		},
