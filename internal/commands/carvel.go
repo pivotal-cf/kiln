@@ -25,6 +25,9 @@ func NewCarvel(outLogger, errLogger *log.Logger) Carvel {
 
 	// Register subcommands
 	c.commands["bake"] = NewCarvelBake(outLogger, errLogger)
+	c.commands["upload"] = NewCarvelUpload(outLogger, errLogger)
+	c.commands["publish"] = NewCarvelPublish(outLogger, errLogger)
+	c.commands["rebake"] = NewCarvelReBake(outLogger, errLogger)
 
 	return c
 }

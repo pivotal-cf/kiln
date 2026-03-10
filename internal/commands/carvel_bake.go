@@ -19,6 +19,7 @@ type CarvelBake struct {
 type CarvelBakeOptions struct {
 	SourceDirectory string `short:"s" long:"source-directory" description:"path to the Carvel tile source directory (defaults to current directory)"`
 	OutputFile      string `short:"o" long:"output-file"      description:"path to where the tile will be output" required:"true"`
+	Lockfile        string `short:"l" long:"lockfile"          description:"path to Kilnfile.lock for using a cached BOSH release"`
 	Verbose         bool   `short:"v" long:"verbose"          description:"enable verbose output"`
 }
 
@@ -54,14 +55,25 @@ func (c CarvelBake) Execute(args []string) error {
 	}
 
 	baker := carvel.NewBaker()
+	baker.SetProgressWriter(os.Stdout)
 	if c.Options.Verbose {
 		baker.SetWriter(os.Stdout)
 	}
 
-	c.outLogger.Printf("Baking Carvel tile from %s into %s/.ezbake", sourcePath, sourcePath)
-	err = baker.Bake(sourcePath)
-	if err != nil {
-		return fmt.Errorf("failed to prepare Carvel tile: %w", err)
+	if c.Options.Lockfile != "" {
+		lockfilePath, err := filepath.Abs(c.Options.Lockfile)
+		if err != nil {
+			return fmt.Errorf("failed to resolve lockfile path: %w", err)
+		}
+		err = baker.BakeFromLockfile(sourcePath, lockfilePath)
+		if err != nil {
+			return fmt.Errorf("failed to prepare Carvel tile from lockfile: %w", err)
+		}
+	} else {
+		err = baker.Bake(sourcePath)
+		if err != nil {
+			return fmt.Errorf("failed to prepare Carvel tile: %w", err)
+		}
 	}
 
 	v, err := baker.GetVersion()
@@ -74,7 +86,7 @@ func (c CarvelBake) Execute(args []string) error {
 		return fmt.Errorf("failed to bake tile: %w", err)
 	}
 
-	c.outLogger.Printf("Baked %s version %s to %s", baker.GetName(), v, targetPath)
+	c.outLogger.Printf("Done! Baked %s version %s to %s", baker.GetName(), v, targetPath)
 	return nil
 }
 

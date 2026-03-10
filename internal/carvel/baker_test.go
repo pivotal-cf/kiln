@@ -1,6 +1,7 @@
 package carvel
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -12,6 +13,21 @@ import (
 	"github.com/pivotal-cf/kiln/internal/carvel/models"
 	"gopkg.in/yaml.v3"
 )
+
+func copyTestFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = in.Close() }()
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = out.Close() }()
+	_, err = io.Copy(out, in)
+	return err
+}
 
 func boshInstalled() bool {
 	_, err := exec.LookPath("bosh")
@@ -92,7 +108,7 @@ var _ = Describe("Carvel Baker", func() {
 				inputPath, err = os.MkdirTemp("", "testinput-*")
 				Expect(err).NotTo(HaveOccurred())
 				inputPath += "/tile"
-				outputPath = path.Join(inputPath, ".ezbake")
+				outputPath = path.Join(inputPath, ".carvel-tile")
 				boshReleasePath = path.Join(inputPath, ".boshrelease")
 				err = os.CopyFS(inputPath, os.DirFS("testdata/sample-tile"))
 				Expect(err).NotTo(HaveOccurred())
@@ -274,6 +290,112 @@ var _ = Describe("Carvel Baker", func() {
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("tile metadata_version too old"))
 				})
+			})
+		})
+	})
+
+	Context("BakeFromLockfile", func() {
+		When("a valid lockfile references a pre-built release", func() {
+			BeforeEach(func() {
+				if !boshInstalled() {
+					Skip("bosh CLI not installed - skipping integration test")
+				}
+			})
+
+			It("produces tile output without regenerating the BOSH release", func() {
+				inputPath, err := os.MkdirTemp("", "lockfile-test-*")
+				Expect(err).NotTo(HaveOccurred())
+				inputPath += "/tile"
+				defer func() { _ = os.RemoveAll(filepath.Dir(inputPath)) }()
+
+				err = os.CopyFS(inputPath, os.DirFS("testdata/sample-tile"))
+				Expect(err).NotTo(HaveOccurred())
+
+				commands := []*exec.Cmd{
+					exec.Command("git", "init"),
+					exec.Command("git", "add", "."),
+					exec.Command("git", "commit", "-m", "initial commit"),
+				}
+				for _, cmd := range commands {
+					cmd.Dir = inputPath
+					out, err := cmd.CombinedOutput()
+					Expect(err).NotTo(HaveOccurred(), "error invoking git: "+string(out))
+				}
+
+				// First do a normal bake to produce a real BOSH release tarball
+				subject := NewBaker()
+				subject.SetWriter(GinkgoWriter)
+				err = subject.Bake(inputPath)
+				Expect(err).NotTo(HaveOccurred())
+
+				tarball, err := subject.GetReleaseTarball()
+				Expect(err).NotTo(HaveOccurred())
+
+				// Copy the tarball to a temp location (simulating Artifactory cache)
+				cachedTarball := filepath.Join(filepath.Dir(inputPath), "cached-release.tgz")
+				err = copyTestFile(tarball, cachedTarball)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Write a lockfile pointing to the cached tarball
+				lf := models.CarvelLockfile{
+					Release: models.CarvelReleaseLock{
+						Name:       "k8s-tile-test",
+						Version:    "0.1.1",
+						RemotePath: cachedTarball,
+						SHA256:     "test-sha",
+					},
+				}
+				lockfilePath := filepath.Join(filepath.Dir(inputPath), "Kilnfile.lock")
+				err = lf.WriteFile(lockfilePath)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Now bake from lockfile
+				subject2 := NewBaker()
+				subject2.SetWriter(GinkgoWriter)
+				err = subject2.BakeFromLockfile(inputPath, lockfilePath)
+				Expect(err).NotTo(HaveOccurred())
+
+				outputPath := path.Join(inputPath, ".carvel-tile")
+				Expect(filepath.Join(outputPath, "base.yml")).To(BeAnExistingFile())
+				Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-0.1.1.tgz")).To(BeAnExistingFile())
+				Expect(filepath.Join(outputPath, "runtime_configs")).To(BeADirectory())
+			})
+		})
+
+		When("the lockfile release name does not match", func() {
+			It("returns an error", func() {
+				inputPath, err := os.MkdirTemp("", "lockfile-mismatch-*")
+				Expect(err).NotTo(HaveOccurred())
+				inputPath += "/tile"
+				defer func() { _ = os.RemoveAll(filepath.Dir(inputPath)) }()
+
+				err = os.CopyFS(inputPath, os.DirFS("testdata/sample-tile"))
+				Expect(err).NotTo(HaveOccurred())
+
+				lf := models.CarvelLockfile{
+					Release: models.CarvelReleaseLock{
+						Name:    "wrong-name",
+						Version: "0.1.1",
+					},
+				}
+				lockfilePath := filepath.Join(filepath.Dir(inputPath), "Kilnfile.lock")
+				err = lf.WriteFile(lockfilePath)
+				Expect(err).NotTo(HaveOccurred())
+
+				subject := NewBaker()
+				err = subject.BakeFromLockfile(inputPath, lockfilePath)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("does not match tile name"))
+			})
+		})
+	})
+
+	Context("GetReleaseTarball", func() {
+		When("called before bake", func() {
+			It("returns an error", func() {
+				subject := NewBaker()
+				_, err := subject.GetReleaseTarball()
+				Expect(err).To(HaveOccurred())
 			})
 		})
 	})

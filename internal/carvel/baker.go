@@ -21,16 +21,20 @@ import (
 // and kiln-compatible tile structure that can be baked into a .pivotal file.
 type Baker interface {
 	Bake(source string) error
+	BakeFromLockfile(source string, lockfilePath string) error
 	KilnBake(destination string) error
 	GetName() string
 	GetVersion() (string, error)
+	GetReleaseTarball() (string, error)
 	SetWriter(w io.Writer)
+	SetProgressWriter(w io.Writer)
 }
 
 // NewBaker creates a new Baker for transforming imgpkg bundles into BOSH releases.
 func NewBaker() Baker {
 	return &baker{
-		writer: io.Discard,
+		writer:         io.Discard,
+		progressWriter: io.Discard,
 	}
 }
 
@@ -38,9 +42,15 @@ type baker struct {
 	metadata            models.Metadata
 	source, destination string
 	writer              io.Writer
+	progressWriter      io.Writer
 }
 
 func (b *baker) KilnBake(destination string) error {
+	if err := b.ensureGitRepo(); err != nil {
+		return fmt.Errorf("failed to initialize git repo for kiln bake: %w", err)
+	}
+
+	b.progress("Assembling final .pivotal file...")
 	cmd := exec.Command("kiln",
 		"bake",
 		"--skip-fetch",
@@ -48,6 +58,7 @@ func (b *baker) KilnBake(destination string) error {
 	)
 	cmd.Dir = b.destination
 	out, err := cmd.CombinedOutput()
+	b.log(string(out))
 	if err != nil {
 		b.log("failed to invoke kiln: " + string(out))
 		return err
@@ -56,10 +67,29 @@ func (b *baker) KilnBake(destination string) error {
 	return nil
 }
 
+// ensureGitRepo initializes a git repo with an empty commit in the
+// generated tile directory so that `kiln bake` (which runs git status
+// and git rev-parse HEAD) can operate on it without failing.
+func (b *baker) ensureGitRepo() error {
+	commands := []*exec.Cmd{
+		exec.Command("git", "init"),
+		exec.Command("git", "commit", "--allow-empty", "-m", "carvel tile build"),
+	}
+	for _, cmd := range commands {
+		cmd.Dir = b.destination
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("command %q failed: %s: %w", cmd.String(), string(out), err)
+		}
+	}
+	return nil
+}
+
 func (b *baker) Bake(source string) error {
 	b.source = source
-	b.destination = path.Join(source, ".ezbake")
+	b.destination = path.Join(source, ".carvel-tile")
 
+	b.progress("Reading tile metadata from " + path.Join(source, "base.yml"))
 	yamlPath := path.Join(source, "base.yml")
 	yamlData, err := os.ReadFile(yamlPath)
 	if err != nil {
@@ -71,10 +101,11 @@ func (b *baker) Bake(source string) error {
 		return err
 	}
 
-	_, err = b.GetVersion()
+	ver, err := b.GetVersion()
 	if err != nil {
 		return err
 	}
+	b.progress(fmt.Sprintf("Tile: %s version %s (metadata_version %s)", b.metadata.Name, ver, b.metadata.MetadataVersion))
 
 	metadataVersion, err := version.NewVersion(b.metadata.MetadataVersion)
 	if err != nil {
@@ -85,12 +116,14 @@ func (b *baker) Bake(source string) error {
 		return errors.New("tile metadata_version too old for kubernetes support (must be >=3.2.0)")
 	}
 
+	b.progress("Generating BOSH release structure...")
 	err = b.generateBoshReleaseDir()
 	if err != nil {
 		b.log(err.Error())
 		return err
 	}
 
+	b.progress("Generating tile layout in " + b.destination)
 	err = b.generateOutputTile()
 	if err != nil {
 		b.log(err.Error())
@@ -98,6 +131,100 @@ func (b *baker) Bake(source string) error {
 	}
 
 	return nil
+}
+
+func (b *baker) BakeFromLockfile(source string, lockfilePath string) error {
+	b.source = source
+	b.destination = path.Join(source, ".carvel-tile")
+
+	b.progress("Reading tile metadata from " + path.Join(source, "base.yml"))
+	yamlPath := path.Join(source, "base.yml")
+	yamlData, err := os.ReadFile(yamlPath)
+	if err != nil {
+		return err
+	}
+
+	err = yaml.Unmarshal(yamlData, &b.metadata)
+	if err != nil {
+		return err
+	}
+
+	ver, err := b.GetVersion()
+	if err != nil {
+		return err
+	}
+	b.progress(fmt.Sprintf("Tile: %s version %s (metadata_version %s)", b.metadata.Name, ver, b.metadata.MetadataVersion))
+
+	b.progress("Reading lockfile from " + lockfilePath)
+	lf, err := models.ReadCarvelLockfile(lockfilePath)
+	if err != nil {
+		return fmt.Errorf("failed to read lockfile: %w", err)
+	}
+
+	if lf.Release.Name != b.metadata.Name {
+		return fmt.Errorf("lockfile release name %q does not match tile name %q", lf.Release.Name, b.metadata.Name)
+	}
+
+	err = os.RemoveAll(b.destination)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(b.destination, 0755)
+	if err != nil {
+		return err
+	}
+
+	b.progress("Generating tile layout in " + b.destination)
+	err = b.generateBaseYaml()
+	if err != nil {
+		return err
+	}
+	err = b.copyFiles()
+	if err != nil {
+		return err
+	}
+	err = b.generateJobFiles()
+	if err != nil {
+		return err
+	}
+	err = b.generateInstanceGroupFiles()
+	if err != nil {
+		return err
+	}
+	err = b.generateRuntimeConfigs()
+	if err != nil {
+		return err
+	}
+
+	releasesDir := path.Join(b.destination, "releases")
+	err = os.MkdirAll(releasesDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	cachedTarball := lf.Release.RemotePath
+	destTarball := path.Join(releasesDir, b.metadata.Name+"-"+ver+".tgz")
+
+	b.progress("Copying cached BOSH release from " + cachedTarball)
+	b.log("copying cached BOSH release from " + cachedTarball)
+	err = copyFileContents(cachedTarball, destTarball)
+	if err != nil {
+		return fmt.Errorf("failed to copy cached release tarball: %w", err)
+	}
+
+	return nil
+}
+
+func (b *baker) GetReleaseTarball() (string, error) {
+	ver, err := b.GetVersion()
+	if err != nil {
+		return "", err
+	}
+	tarball := path.Join(b.destination, "releases", b.metadata.Name+"-"+ver+".tgz")
+	if _, err := os.Stat(tarball); err != nil {
+		return "", fmt.Errorf("release tarball not found at %s: %w", tarball, err)
+	}
+	return tarball, nil
 }
 
 func (b *baker) GetName() string {
@@ -122,18 +249,26 @@ func (b *baker) SetWriter(w io.Writer) {
 	b.writer = w
 }
 
+func (b *baker) SetProgressWriter(w io.Writer) {
+	b.progressWriter = w
+}
+
 func (b *baker) log(message string) {
 	_, _ = fmt.Fprintln(b.writer, message)
 }
 
+func (b *baker) progress(message string) {
+	_, _ = fmt.Fprintln(b.progressWriter, message)
+}
+
 func (b *baker) generateBoshReleaseDir() error {
 	dirName := path.Join(b.source, ".boshrelease")
-	// first clean out any previous bosh release directory
 	err := os.RemoveAll(dirName)
 	if err != nil {
 		return err
 	}
 
+	b.progress("  Initializing BOSH release")
 	commands := []*exec.Cmd{
 		exec.Command("bosh", "init-release", "--dir="+dirName),
 		exec.Command("bosh", "add-blob", "--dir="+dirName, path.Join(b.source, "bundle.tar"), "imgpkg/bundle.tar"),
@@ -173,12 +308,13 @@ files:
 	registryDataTemplates := ""
 	registryDataProperties := ""
 
-	// we need one PackageInstall YAML manifest for each entry in the metadata.
+	b.progress("  Configuring package installs")
 	for _, entry := range b.metadata.PackageInstalls {
 		entry = strings.Trim(entry, "$() ")
 		entry = strings.TrimPrefix(entry, "package")
 		entry = strings.Trim(entry, `"' `)
 
+		b.progress("    - " + entry)
 		b.log("looking for package install: " + entry)
 
 		// find this entry in the packageinstalls directory
@@ -320,8 +456,6 @@ spec:
 }
 
 func (b *baker) generateOutputTile() error {
-	// first clean out any previous tile directory
-	// Note: this directory should only ever contain generated files, which we are about to regenerate.
 	err := os.RemoveAll(b.destination)
 	if err != nil {
 		return err
@@ -332,11 +466,13 @@ func (b *baker) generateOutputTile() error {
 		return err
 	}
 
+	b.progress("  Generating base.yml")
 	err = b.generateBaseYaml()
 	if err != nil {
 		return err
 	}
 
+	b.progress("  Copying forms, properties, and static assets")
 	err = b.copyFiles()
 	if err != nil {
 		return err
@@ -352,11 +488,13 @@ func (b *baker) generateOutputTile() error {
 		return err
 	}
 
+	b.progress("  Generating runtime configs")
 	err = b.generateRuntimeConfigs()
 	if err != nil {
 		return err
 	}
 
+	b.progress("  Creating BOSH release tarball (this may take a while)...")
 	err = b.createBoshRelease()
 	if err != nil {
 		return err
