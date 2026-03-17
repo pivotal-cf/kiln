@@ -9,6 +9,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-cf/kiln/internal/carvel"
+	"github.com/pivotal-cf/kiln/internal/carvel/models"
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/pkg/bake"
 )
@@ -43,7 +45,23 @@ var _ = Describe("CarvelPublish", func() {
 			})
 		})
 
-		When("--final flag is used", func() {
+		When("no Kilnfile.lock exists", func() {
+			It("returns an error telling the user to run upload first", func() {
+				tmpDir, err := os.MkdirTemp("", "publish-no-lock-*")
+				Expect(err).NotTo(HaveOccurred())
+				defer func() { _ = os.RemoveAll(tmpDir) }()
+
+				err = command.Execute([]string{
+					"--source-directory", tmpDir,
+					"--output-file", filepath.Join(tmpDir, "out.pivotal"),
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Kilnfile.lock not found"))
+				Expect(err.Error()).To(ContainSubstring("kiln carvel upload"))
+			})
+		})
+
+		When("--final flag is used with a lockfile", func() {
 			var (
 				inputPath  string
 				outputPath string
@@ -75,6 +93,29 @@ var _ = Describe("CarvelPublish", func() {
 					Expect(err).NotTo(HaveOccurred(), "error invoking git: "+string(out))
 				}
 
+				// Simulate `kiln carvel upload`: bake to produce a BOSH release,
+				// then create a Kilnfile.lock pointing to the cached tarball.
+				baker := carvel.NewBaker()
+				baker.SetWriter(GinkgoWriter)
+				err = baker.Bake(inputPath)
+				Expect(err).NotTo(HaveOccurred())
+
+				tarball, err := baker.GetReleaseTarball()
+				Expect(err).NotTo(HaveOccurred())
+
+				cachedTarball := filepath.Join(filepath.Dir(inputPath), "cached-release.tgz")
+				copyFile(tarball, cachedTarball)
+
+				lf := models.CarvelLockfile{
+					Release: models.CarvelReleaseLock{
+						Name:       "k8s-tile-test",
+						Version:    "0.1.1",
+						RemotePath: cachedTarball,
+						SHA256:     "test-sha",
+					},
+				}
+				Expect(lf.WriteFile(filepath.Join(inputPath, "Kilnfile.lock"))).To(Succeed())
+
 				outputPath = filepath.Join(filepath.Dir(inputPath), "output.pivotal")
 			})
 
@@ -94,7 +135,6 @@ var _ = Describe("CarvelPublish", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(outputPath).To(BeAnExistingFile())
 
-				// Resolve symlinks (macOS /var -> /private/var)
 				resolvedInput, resolveErr := filepath.EvalSymlinks(inputPath)
 				if resolveErr != nil {
 					resolvedInput = inputPath

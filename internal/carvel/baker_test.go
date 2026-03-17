@@ -1,6 +1,8 @@
 package carvel
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"io"
 	"os"
 	"os/exec"
@@ -27,6 +29,16 @@ func copyTestFile(src, dst string) error {
 	defer func() { _ = out.Close() }()
 	_, err = io.Copy(out, in)
 	return err
+}
+
+func fileChecksum(path string) string {
+	f, err := os.Open(path)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	defer func() { _ = f.Close() }()
+	h := sha256.New()
+	_, err = io.Copy(h, f)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func boshInstalled() bool {
@@ -397,6 +409,88 @@ var _ = Describe("Carvel Baker", func() {
 				_, err := subject.GetReleaseTarball()
 				Expect(err).To(HaveOccurred())
 			})
+		})
+	})
+
+	Context("rebake reproducibility", func() {
+		// Both publish and rebake now use BakeFromLockfile with the same
+		// cached BOSH release tarball. This test verifies the resulting
+		// .pivotal files are byte-for-byte identical.
+		It("publish and rebake produce identical tiles when using the same lockfile", func() {
+			if !boshInstalled() {
+				Skip("bosh CLI not installed")
+			}
+			if !kilnInstalled() {
+				Skip("kiln CLI not installed")
+			}
+
+			tmpRoot, err := os.MkdirTemp("", "rebake-repro-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = os.RemoveAll(tmpRoot) }()
+
+			inputPath := filepath.Join(tmpRoot, "tile")
+			err = os.CopyFS(inputPath, os.DirFS("testdata/sample-tile"))
+			Expect(err).NotTo(HaveOccurred())
+
+			for _, cmd := range []*exec.Cmd{
+				exec.Command("git", "init"),
+				exec.Command("git", "add", "."),
+				exec.Command("git", "commit", "-m", "initial commit"),
+			} {
+				cmd.Dir = inputPath
+				out, err := cmd.CombinedOutput()
+				Expect(err).NotTo(HaveOccurred(), "git setup: "+string(out))
+			}
+
+			// Simulate `kiln carvel upload`: Bake() to produce a BOSH release,
+			// then cache the tarball and write a Kilnfile.lock.
+			uploadBaker := NewBaker()
+			uploadBaker.SetWriter(GinkgoWriter)
+			err = uploadBaker.Bake(inputPath)
+			Expect(err).NotTo(HaveOccurred())
+
+			uploadTarball, err := uploadBaker.GetReleaseTarball()
+			Expect(err).NotTo(HaveOccurred())
+			cachedTarball := filepath.Join(tmpRoot, "cached-release.tgz")
+			Expect(copyTestFile(uploadTarball, cachedTarball)).To(Succeed())
+
+			lf := models.CarvelLockfile{
+				Release: models.CarvelReleaseLock{
+					Name:       "k8s-tile-test",
+					Version:    "0.1.1",
+					RemotePath: cachedTarball,
+					SHA256:     "unused",
+				},
+			}
+			lockfilePath := filepath.Join(tmpRoot, "Kilnfile.lock")
+			Expect(lf.WriteFile(lockfilePath)).To(Succeed())
+
+			// Simulate `kiln carvel publish --final`: BakeFromLockfile + KilnBake
+			publishBaker := NewBaker()
+			publishBaker.SetWriter(GinkgoWriter)
+			err = publishBaker.BakeFromLockfile(inputPath, lockfilePath)
+			Expect(err).NotTo(HaveOccurred())
+
+			publishTile := filepath.Join(tmpRoot, "publish.pivotal")
+			err = publishBaker.KilnBake(publishTile)
+			Expect(err).NotTo(HaveOccurred())
+
+			publishChecksum := fileChecksum(publishTile)
+
+			// Simulate `kiln carvel rebake`: BakeFromLockfile + KilnBake
+			rebakeBaker := NewBaker()
+			rebakeBaker.SetWriter(GinkgoWriter)
+			err = rebakeBaker.BakeFromLockfile(inputPath, lockfilePath)
+			Expect(err).NotTo(HaveOccurred())
+
+			rebakeTile := filepath.Join(tmpRoot, "rebake.pivotal")
+			err = rebakeBaker.KilnBake(rebakeTile)
+			Expect(err).NotTo(HaveOccurred())
+
+			rebakeChecksum := fileChecksum(rebakeTile)
+
+			Expect(rebakeChecksum).To(Equal(publishChecksum),
+				"publish and rebake should produce identical tiles when using the same cached BOSH release tarball")
 		})
 	})
 

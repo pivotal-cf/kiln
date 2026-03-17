@@ -46,10 +46,6 @@ type baker struct {
 }
 
 func (b *baker) KilnBake(destination string) error {
-	if err := b.ensureGitRepo(); err != nil {
-		return fmt.Errorf("failed to initialize git repo for kiln bake: %w", err)
-	}
-
 	b.progress("Assembling final .pivotal file...")
 	cmd := exec.Command("kiln",
 		"bake",
@@ -64,24 +60,6 @@ func (b *baker) KilnBake(destination string) error {
 		return err
 	}
 
-	return nil
-}
-
-// ensureGitRepo initializes a git repo with an empty commit in the
-// generated tile directory so that `kiln bake` (which runs git status
-// and git rev-parse HEAD) can operate on it without failing.
-func (b *baker) ensureGitRepo() error {
-	commands := []*exec.Cmd{
-		exec.Command("git", "init"),
-		exec.Command("git", "commit", "--allow-empty", "-m", "carvel tile build"),
-	}
-	for _, cmd := range commands {
-		cmd.Dir = b.destination
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("command %q failed: %s: %w", cmd.String(), string(out), err)
-		}
-	}
 	return nil
 }
 

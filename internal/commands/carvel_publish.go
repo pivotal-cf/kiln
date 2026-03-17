@@ -26,7 +26,7 @@ type CarvelPublishOptions struct {
 	SourceDirectory string `short:"s" long:"source-directory" description:"path to the Carvel tile source directory (defaults to current directory)"`
 	OutputFile      string `short:"o" long:"output-file"      description:"path to where the tile will be output" required:"true"`
 	Version         string `          long:"version"           description:"tile version for the final release"`
-	Lockfile        string `short:"l" long:"lockfile"          description:"path to Kilnfile.lock for using a cached BOSH release"`
+	Lockfile        string `short:"l" long:"lockfile"          description:"path to Kilnfile.lock (auto-detected in source directory if not specified)"`
 	Verbose         bool   `short:"v" long:"verbose"           description:"enable verbose output"`
 	IsFinal         bool   `          long:"final"             description:"create a bake record for this build"`
 }
@@ -62,27 +62,29 @@ func (c CarvelPublish) Execute(args []string) error {
 		return fmt.Errorf("failed to resolve output file path: %w", err)
 	}
 
+	lockfilePath := c.Options.Lockfile
+	if lockfilePath == "" {
+		lockfilePath = filepath.Join(sourcePath, "Kilnfile.lock")
+	} else {
+		lockfilePath, err = filepath.Abs(lockfilePath)
+		if err != nil {
+			return fmt.Errorf("failed to resolve lockfile path: %w", err)
+		}
+	}
+
+	if _, statErr := os.Stat(lockfilePath); statErr != nil {
+		return fmt.Errorf("Kilnfile.lock not found at %s: run 'kiln carvel upload' first to create the BOSH release and lockfile", lockfilePath)
+	}
+
 	b := carvel.NewBaker()
 	if c.Options.Verbose {
 		b.SetWriter(os.Stdout)
 	}
 
-	if c.Options.Lockfile != "" {
-		lockfilePath, err := filepath.Abs(c.Options.Lockfile)
-		if err != nil {
-			return fmt.Errorf("failed to resolve lockfile path: %w", err)
-		}
-		c.outLogger.Printf("Publishing Carvel tile from %s using lockfile %s", sourcePath, lockfilePath)
-		err = b.BakeFromLockfile(sourcePath, lockfilePath)
-		if err != nil {
-			return fmt.Errorf("failed to prepare Carvel tile from lockfile: %w", err)
-		}
-	} else {
-		c.outLogger.Printf("Publishing Carvel tile from %s", sourcePath)
-		err = b.Bake(sourcePath)
-		if err != nil {
-			return fmt.Errorf("failed to prepare Carvel tile: %w", err)
-		}
+	c.outLogger.Printf("Publishing Carvel tile from %s using lockfile %s", sourcePath, lockfilePath)
+	err = b.BakeFromLockfile(sourcePath, lockfilePath)
+	if err != nil {
+		return fmt.Errorf("failed to prepare Carvel tile from lockfile: %w", err)
 	}
 
 	ver, err := b.GetVersion()
@@ -142,7 +144,7 @@ func (c CarvelPublish) Execute(args []string) error {
 
 func (c CarvelPublish) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Publishes a Carvel/Kubernetes tile as a .pivotal file. When --final is specified, creates a bake record that can be used with 'kiln carvel rebake' for reproducible builds.",
+		Description:      "Publishes a Carvel/Kubernetes tile as a .pivotal file using the cached BOSH release from Kilnfile.lock. Run 'kiln carvel upload' first to build and cache the release. When --final is specified, creates a bake record that can be used with 'kiln carvel rebake' for reproducible builds.",
 		ShortDescription: "publishes a Carvel/Kubernetes tile",
 		Flags:            c.Options,
 	}

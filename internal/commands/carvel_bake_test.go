@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -19,6 +20,17 @@ func boshInstalled() bool {
 func kilnInstalled() bool {
 	_, err := exec.LookPath("kiln")
 	return err == nil
+}
+
+func copyFile(src, dst string) {
+	in, err := os.Open(src)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	defer func() { _ = in.Close() }()
+	out, err := os.Create(dst)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	defer func() { _ = out.Close() }()
+	_, err = io.Copy(out, in)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 }
 
 var _ = Describe("CarvelBake", func() {
