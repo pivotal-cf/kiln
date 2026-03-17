@@ -117,7 +117,7 @@ func (c CarvelReBake) Execute(args []string) error {
 
 func (c CarvelReBake) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Re-bakes a Carvel tile from a bake record for reproducible builds. The repository must be checked out at the source_revision specified in the bake record.",
+		Description:      "Re-bakes a Carvel tile from a bake record for reproducible builds.\nThe repository must be checked out at the source_revision specified in the bake record.\n\nThe <bake-record> argument is the path to a JSON bake record file produced by 'kiln carvel publish --final'.",
 		ShortDescription: "re-bakes a Carvel tile from a bake record",
 		Flags:            c.Options,
 	}

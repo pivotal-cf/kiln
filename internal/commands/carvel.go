@@ -15,6 +15,7 @@ type Carvel struct {
 	errLogger *log.Logger
 	commands  jhanda.CommandSet
 	aliases   map[string]bool
+	synopses  map[string]string
 }
 
 func NewCarvel(outLogger, errLogger *log.Logger) Carvel {
@@ -23,6 +24,7 @@ func NewCarvel(outLogger, errLogger *log.Logger) Carvel {
 		errLogger: errLogger,
 		commands:  jhanda.CommandSet{},
 		aliases:   map[string]bool{},
+		synopses:  map[string]string{},
 	}
 
 	// Register subcommands
@@ -31,9 +33,13 @@ func NewCarvel(outLogger, errLogger *log.Logger) Carvel {
 	c.commands["publish"] = NewCarvelPublish(outLogger, errLogger)
 	c.commands["re-bake"] = NewCarvelReBake(outLogger, errLogger)
 
+	// Positional argument synopses for usage lines
+	c.synopses["re-bake"] = "<bake-record>"
+
 	// Aliases (hidden from help output)
 	c.commands["rebake"] = c.commands["re-bake"]
 	c.aliases["rebake"] = true
+	c.synopses["rebake"] = c.synopses["re-bake"]
 
 	return c
 }
@@ -142,7 +148,13 @@ func (c Carvel) printSubcommandHelp(subcommand string) error {
 	fmt.Println()
 	fmt.Println(usage.Description)
 	fmt.Println()
-	fmt.Printf("Usage: kiln carvel %s [<args>]\n", subcommand)
+
+	synopsis := c.synopses[subcommand]
+	if synopsis != "" {
+		fmt.Printf("Usage: kiln carvel %s %s [<args>]\n", subcommand, synopsis)
+	} else {
+		fmt.Printf("Usage: kiln carvel %s [<args>]\n", subcommand)
+	}
 
 	if usage.Flags != nil {
 		flagUsage, err := jhanda.PrintUsage(usage.Flags)
