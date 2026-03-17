@@ -14,6 +14,7 @@ type Carvel struct {
 	outLogger *log.Logger
 	errLogger *log.Logger
 	commands  jhanda.CommandSet
+	aliases   map[string]bool
 }
 
 func NewCarvel(outLogger, errLogger *log.Logger) Carvel {
@@ -21,13 +22,18 @@ func NewCarvel(outLogger, errLogger *log.Logger) Carvel {
 		outLogger: outLogger,
 		errLogger: errLogger,
 		commands:  jhanda.CommandSet{},
+		aliases:   map[string]bool{},
 	}
 
 	// Register subcommands
 	c.commands["bake"] = NewCarvelBake(outLogger, errLogger)
 	c.commands["upload"] = NewCarvelUpload(outLogger, errLogger)
 	c.commands["publish"] = NewCarvelPublish(outLogger, errLogger)
-	c.commands["rebake"] = NewCarvelReBake(outLogger, errLogger)
+	c.commands["re-bake"] = NewCarvelReBake(outLogger, errLogger)
+
+	// Aliases (hidden from help output)
+	c.commands["rebake"] = c.commands["re-bake"]
+	c.aliases["rebake"] = true
 
 	return c
 }
@@ -59,7 +65,6 @@ func (c Carvel) Execute(args []string) error {
 }
 
 func (c Carvel) Usage() jhanda.Usage {
-	// Build subcommand list for the description
 	var subcommandList strings.Builder
 	subcommandList.WriteString("Commands for working with Carvel/Kubernetes tiles.\n\n")
 	subcommandList.WriteString("Subcommands:\n")
@@ -67,6 +72,9 @@ func (c Carvel) Usage() jhanda.Usage {
 	var names []string
 	var length int
 	for name := range c.commands {
+		if c.aliases[name] {
+			continue
+		}
 		names = append(names, name)
 		if len(name) > length {
 			length = len(name)
@@ -95,6 +103,9 @@ func (c Carvel) printHelp() error {
 	)
 
 	for name := range c.commands {
+		if c.aliases[name] {
+			continue
+		}
 		names = append(names, name)
 		if len(name) > length {
 			length = len(name)

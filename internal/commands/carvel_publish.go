@@ -144,7 +144,7 @@ func (c CarvelPublish) Execute(args []string) error {
 
 func (c CarvelPublish) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Publishes a Carvel/Kubernetes tile as a .pivotal file using the cached BOSH release from Kilnfile.lock. Run 'kiln carvel upload' first to build and cache the release. When --final is specified, creates a bake record that can be used with 'kiln carvel rebake' for reproducible builds.",
+		Description:      "Publishes a Carvel/Kubernetes tile as a .pivotal file using the cached BOSH release from Kilnfile.lock. Run 'kiln carvel upload' first to build and cache the release. When --final is specified, creates a bake record that can be used with 'kiln carvel re-bake' for reproducible builds.",
 		ShortDescription: "publishes a Carvel/Kubernetes tile",
 		Flags:            c.Options,
 	}

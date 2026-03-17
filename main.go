@@ -76,6 +76,7 @@ func main() {
 	bakeCommand.KilnVersion = version
 	commandSet["bake"] = bakeCommand
 	commandSet["re-bake"] = commands.NewReBake(bakeCommand)
+	commandSet["rebake"] = commandSet["re-bake"]
 
 	commandSet["test"] = commands.NewTileTest()
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)

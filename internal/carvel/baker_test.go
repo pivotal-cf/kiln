@@ -477,7 +477,7 @@ var _ = Describe("Carvel Baker", func() {
 
 			publishChecksum := fileChecksum(publishTile)
 
-			// Simulate `kiln carvel rebake`: BakeFromLockfile + KilnBake
+			// Simulate `kiln carvel re-bake`: BakeFromLockfile + KilnBake
 			rebakeBaker := NewBaker()
 			rebakeBaker.SetWriter(GinkgoWriter)
 			err = rebakeBaker.BakeFromLockfile(inputPath, lockfilePath)
