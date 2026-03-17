@@ -46,7 +46,11 @@ func main() {
 	}
 
 	if global.Help {
-		command = "help"
+		if command == "carvel" && len(args) > 0 {
+			args = append(args, "--help")
+		} else {
+			command = "help"
+		}
 	}
 
 	if command == "" {
@@ -102,9 +106,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	commandSet["carvel"] = commands.NewCarvel(outLogger, errLogger)
+	carvelCommand := commands.NewCarvel(outLogger, errLogger)
+	commandSet["carvel"] = carvelCommand
 
-	err = commandSet.Execute(command, args)
+	if command == "carvel" {
+		err = carvelCommand.Execute(args)
+	} else {
+		err = commandSet.Execute(command, args)
+	}
 	if err != nil {
 		log.Fatal(err)
 	}

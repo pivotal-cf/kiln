@@ -53,8 +53,9 @@ func (c Carvel) Execute(args []string) error {
 		return c.printHelp()
 	}
 
-	// Check if subargs contains help flags - this handles cases like
-	// "kiln carvel bake --help" where --help was passed through from main
+	// Must intercept help flags here before delegating to CommandSet.Execute,
+	// which would otherwise look for a nonexistent "help" command in the
+	// carvel command set.
 	for _, arg := range subargs {
 		if arg == "-h" || arg == "--help" || arg == "help" {
 			return c.printSubcommandHelp(subcommand)
