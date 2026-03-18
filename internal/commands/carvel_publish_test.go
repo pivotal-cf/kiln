@@ -3,6 +3,8 @@ package commands_test
 import (
 	"encoding/json"
 	"log"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,9 +12,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/internal/carvel"
-	"github.com/pivotal-cf/kiln/internal/carvel/models"
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/pkg/bake"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"gopkg.in/yaml.v3"
 )
 
 var _ = Describe("CarvelPublish", func() {
@@ -45,9 +48,9 @@ var _ = Describe("CarvelPublish", func() {
 			})
 		})
 
-		When("no Kilnfile.lock exists", func() {
+		When("no Kilnfile exists", func() {
 			It("returns an error telling the user to run upload first", func() {
-				tmpDir, err := os.MkdirTemp("", "publish-no-lock-*")
+				tmpDir, err := os.MkdirTemp("", "publish-no-kilnfile-*")
 				Expect(err).NotTo(HaveOccurred())
 				defer func() { _ = os.RemoveAll(tmpDir) }()
 
@@ -56,15 +59,16 @@ var _ = Describe("CarvelPublish", func() {
 					"--output-file", filepath.Join(tmpDir, "out.pivotal"),
 				})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Kilnfile.lock not found"))
+				Expect(err.Error()).To(ContainSubstring("Kilnfile not found"))
 				Expect(err.Error()).To(ContainSubstring("kiln carvel upload"))
 			})
 		})
 
-		When("--final flag is used with a lockfile", func() {
+		When("--final flag is used with a Kilnfile and lockfile", func() {
 			var (
 				inputPath  string
 				outputPath string
+				server     *httptest.Server
 			)
 
 			BeforeEach(func() {
@@ -93,8 +97,6 @@ var _ = Describe("CarvelPublish", func() {
 					Expect(err).NotTo(HaveOccurred(), "error invoking git: "+string(out))
 				}
 
-				// Simulate `kiln carvel upload`: bake to produce a BOSH release,
-				// then create a Kilnfile.lock pointing to the cached tarball.
 				baker := carvel.NewBaker()
 				baker.SetWriter(GinkgoWriter)
 				err = baker.Bake(inputPath)
@@ -103,18 +105,60 @@ var _ = Describe("CarvelPublish", func() {
 				tarball, err := baker.GetReleaseTarball()
 				Expect(err).NotTo(HaveOccurred())
 
-				cachedTarball := filepath.Join(filepath.Dir(inputPath), "cached-release.tgz")
-				copyFile(tarball, cachedTarball)
+				tarballData, err := os.ReadFile(tarball)
+				Expect(err).NotTo(HaveOccurred())
 
-				lf := models.CarvelLockfile{
-					Release: models.CarvelReleaseLock{
-						Name:       "k8s-tile-test",
-						Version:    "0.1.1",
-						RemotePath: cachedTarball,
-						SHA256:     "test-sha",
+				server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Content-Type", "application/gzip")
+					_, _ = w.Write(tarballData)
+				}))
+
+				kf := cargo.Kilnfile{
+					ReleaseSources: []cargo.ReleaseSourceConfig{
+						{
+							Type:            "artifactory",
+							ArtifactoryHost: server.URL,
+							Repo:            "test-repo",
+							Username:        "user",
+							Password:        "pass",
+							PathTemplate:    "bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz",
+						},
 					},
 				}
-				Expect(lf.WriteFile(filepath.Join(inputPath, "Kilnfile.lock"))).To(Succeed())
+				kfData, err := yaml.Marshal(&kf)
+				Expect(err).NotTo(HaveOccurred())
+				err = os.WriteFile(filepath.Join(inputPath, "Kilnfile"), kfData, 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				lock := cargo.KilnfileLock{
+					Releases: []cargo.BOSHReleaseTarballLock{
+						{
+							Name:         "k8s-tile-test",
+							Version:      "0.1.1",
+							RemotePath:   "bosh-releases/k8s-tile-test/k8s-tile-test-0.1.1.tgz",
+							RemoteSource: "artifactory",
+							SHA1:         "",
+						},
+					},
+					Stemcell: cargo.Stemcell{
+						OS:      "ubuntu-jammy",
+						Version: "1.446",
+					},
+				}
+				lockData, err := yaml.Marshal(&lock)
+				Expect(err).NotTo(HaveOccurred())
+				err = os.WriteFile(filepath.Join(inputPath, "Kilnfile.lock"), lockData, 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Re-commit with the Kilnfile and Kilnfile.lock
+				for _, cmd := range []*exec.Cmd{
+					exec.Command("git", "add", "."),
+					exec.Command("git", "commit", "-m", "add kilnfiles"),
+				} {
+					cmd.Dir = inputPath
+					out, err := cmd.CombinedOutput()
+					Expect(err).NotTo(HaveOccurred(), "error invoking git: "+string(out))
+				}
 
 				outputPath = filepath.Join(filepath.Dir(inputPath), "output.pivotal")
 			})
@@ -122,6 +166,9 @@ var _ = Describe("CarvelPublish", func() {
 			AfterEach(func() {
 				if inputPath != "" {
 					_ = os.RemoveAll(filepath.Dir(inputPath))
+				}
+				if server != nil {
+					server.Close()
 				}
 			})
 

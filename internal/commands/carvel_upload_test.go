@@ -10,8 +10,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf/kiln/internal/carvel/models"
 	"github.com/pivotal-cf/kiln/internal/commands"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"gopkg.in/yaml.v3"
 )
 
 var _ = Describe("CarvelUpload", func() {
@@ -36,19 +37,21 @@ var _ = Describe("CarvelUpload", func() {
 	})
 
 	Describe("Execute", func() {
-		When("required arguments are missing", func() {
-			It("returns an error when artifactory-host is not provided", func() {
-				err := command.Execute([]string{
-					"--artifactory-repo", "some-repo",
-					"--artifactory-username", "user",
-					"--artifactory-password", "pass",
+		When("Kilnfile is missing", func() {
+			It("returns an error", func() {
+				tmpDir, err := os.MkdirTemp("", "upload-no-kilnfile-*")
+				Expect(err).NotTo(HaveOccurred())
+				defer func() { _ = os.RemoveAll(tmpDir) }()
+
+				err = command.Execute([]string{
+					"--source-directory", tmpDir,
 				})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("artifactory-host"))
+				Expect(err.Error()).To(ContainSubstring("Kilnfile not found"))
 			})
 		})
 
-		When("valid arguments are provided with a mock Artifactory", func() {
+		When("valid Kilnfile is provided with a mock Artifactory", func() {
 			var (
 				inputPath string
 				server    *httptest.Server
@@ -66,6 +69,27 @@ var _ = Describe("CarvelUpload", func() {
 				err = os.CopyFS(inputPath, os.DirFS("../carvel/testdata/sample-tile"))
 				Expect(err).NotTo(HaveOccurred())
 
+				server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusCreated)
+				}))
+
+				kf := cargo.Kilnfile{
+					ReleaseSources: []cargo.ReleaseSourceConfig{
+						{
+							Type:            "artifactory",
+							ArtifactoryHost: server.URL,
+							Repo:            "test-repo",
+							Username:        "user",
+							Password:        "pass",
+							PathTemplate:    "bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz",
+						},
+					},
+				}
+				kfData, err := yaml.Marshal(&kf)
+				Expect(err).NotTo(HaveOccurred())
+				err = os.WriteFile(filepath.Join(inputPath, "Kilnfile"), kfData, 0644)
+				Expect(err).NotTo(HaveOccurred())
+
 				cmds := []*exec.Cmd{
 					exec.Command("git", "init"),
 					exec.Command("git", "add", "."),
@@ -76,10 +100,6 @@ var _ = Describe("CarvelUpload", func() {
 					out, err := cmd.CombinedOutput()
 					Expect(err).NotTo(HaveOccurred(), "error invoking git: "+string(out))
 				}
-
-				server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusCreated)
-				}))
 			})
 
 			AfterEach(func() {
@@ -91,13 +111,9 @@ var _ = Describe("CarvelUpload", func() {
 				}
 			})
 
-			It("uploads the BOSH release and writes a lockfile", func() {
+			It("uploads the BOSH release and writes a standard Kilnfile.lock", func() {
 				err := command.Execute([]string{
 					"--source-directory", inputPath,
-					"--artifactory-host", server.URL,
-					"--artifactory-repo", "test-repo",
-					"--artifactory-username", "user",
-					"--artifactory-password", "pass",
 					"--verbose",
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -105,12 +121,18 @@ var _ = Describe("CarvelUpload", func() {
 				lockfilePath := filepath.Join(inputPath, "Kilnfile.lock")
 				Expect(lockfilePath).To(BeAnExistingFile())
 
-				lf, err := models.ReadCarvelLockfile(lockfilePath)
+				lockData, err := os.ReadFile(lockfilePath)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(lf.Release.Name).To(Equal("k8s-tile-test"))
-				Expect(lf.Release.Version).To(Equal("0.1.1"))
-				Expect(lf.Release.SHA256).NotTo(BeEmpty())
-				Expect(lf.Release.RemotePath).To(ContainSubstring("k8s-tile-test"))
+
+				var lock cargo.KilnfileLock
+				err = yaml.Unmarshal(lockData, &lock)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(lock.Releases).To(HaveLen(1))
+				Expect(lock.Releases[0].Name).To(Equal("k8s-tile-test"))
+				Expect(lock.Releases[0].Version).To(Equal("0.1.1"))
+				Expect(lock.Releases[0].SHA1).NotTo(BeEmpty())
+				Expect(lock.Releases[0].RemotePath).To(ContainSubstring("k8s-tile-test"))
+				Expect(lock.Releases[0].RemoteSource).To(Equal("artifactory"))
 			})
 		})
 	})

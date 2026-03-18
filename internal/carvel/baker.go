@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/pivotal-cf/kiln/internal/carvel/models"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 
 	"github.com/hashicorp/go-version"
 	"gopkg.in/yaml.v3"
@@ -21,7 +22,7 @@ import (
 // and kiln-compatible tile structure that can be baked into a .pivotal file.
 type Baker interface {
 	Bake(source string) error
-	BakeFromLockfile(source string, lockfilePath string) error
+	BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTarballLock, localTarball string) error
 	KilnBake(destination string) error
 	GetName() string
 	GetVersion() (string, error)
@@ -111,7 +112,7 @@ func (b *baker) Bake(source string) error {
 	return nil
 }
 
-func (b *baker) BakeFromLockfile(source string, lockfilePath string) error {
+func (b *baker) BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTarballLock, localTarball string) error {
 	b.source = source
 	b.destination = path.Join(source, ".carvel-tile")
 
@@ -133,14 +134,8 @@ func (b *baker) BakeFromLockfile(source string, lockfilePath string) error {
 	}
 	b.progress(fmt.Sprintf("Tile: %s version %s (metadata_version %s)", b.metadata.Name, ver, b.metadata.MetadataVersion))
 
-	b.progress("Reading lockfile from " + lockfilePath)
-	lf, err := models.ReadCarvelLockfile(lockfilePath)
-	if err != nil {
-		return fmt.Errorf("failed to read lockfile: %w", err)
-	}
-
-	if lf.Release.Name != b.metadata.Name {
-		return fmt.Errorf("lockfile release name %q does not match tile name %q", lf.Release.Name, b.metadata.Name)
+	if releaseLock.Name != b.metadata.Name {
+		return fmt.Errorf("lockfile release name %q does not match tile name %q", releaseLock.Name, b.metadata.Name)
 	}
 
 	err = os.RemoveAll(b.destination)
@@ -180,12 +175,11 @@ func (b *baker) BakeFromLockfile(source string, lockfilePath string) error {
 		return err
 	}
 
-	cachedTarball := lf.Release.RemotePath
 	destTarball := path.Join(releasesDir, b.metadata.Name+"-"+ver+".tgz")
 
-	b.progress("Copying cached BOSH release from " + cachedTarball)
-	b.log("copying cached BOSH release from " + cachedTarball)
-	err = copyFileContents(cachedTarball, destTarball)
+	b.progress("Copying cached BOSH release from " + localTarball)
+	b.log("copying cached BOSH release from " + localTarball)
+	err = copyFileContents(localTarball, destTarball)
 	if err != nil {
 		return fmt.Errorf("failed to copy cached release tarball: %w", err)
 	}

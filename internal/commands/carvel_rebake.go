@@ -13,6 +13,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/carvel"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/pkg/bake"
 )
 
@@ -23,6 +24,7 @@ type CarvelReBake struct {
 }
 
 type CarvelReBakeOptions struct {
+	flags.Standard
 	OutputFile string `short:"o" long:"output-file" description:"path to where the tile will be output" required:"true"`
 	Verbose    bool   `short:"v" long:"verbose"     description:"enable verbose output"`
 }
@@ -83,10 +85,33 @@ func (c CarvelReBake) Execute(args []string) error {
 		b.SetWriter(os.Stdout)
 	}
 
-	lockfilePath := filepath.Join(sourcePath, "Kilnfile.lock")
+	kilnfilePath := resolveKilnfilePath(c.Options.Kilnfile, sourcePath)
+	lockfilePath := kilnfilePath + ".lock"
 	if _, statErr := os.Stat(lockfilePath); statErr == nil {
+		c.Options.Kilnfile = kilnfilePath
+		kilnfile, kilnfileLock, loadErr := c.Options.Standard.LoadKilnfiles(nil, nil)
+		if loadErr != nil {
+			return fmt.Errorf("failed to load Kilnfiles: %w", loadErr)
+		}
+
+		if len(kilnfileLock.Releases) == 0 {
+			return fmt.Errorf("Kilnfile.lock has no releases")
+		}
+		releaseLock := kilnfileLock.Releases[0]
+
+		tmpDir, tmpErr := os.MkdirTemp("", "carvel-rebake-*")
+		if tmpErr != nil {
+			return fmt.Errorf("failed to create temp directory: %w", tmpErr)
+		}
+		defer func() { _ = os.RemoveAll(tmpDir) }()
+
 		c.outLogger.Printf("Re-baking Carvel tile from %s using lockfile", sourcePath)
-		err = b.BakeFromLockfile(sourcePath, lockfilePath)
+		localTarball, dlErr := downloadCarvelRelease(c.outLogger, kilnfile, kilnfileLock, tmpDir)
+		if dlErr != nil {
+			return fmt.Errorf("failed to download release from Artifactory: %w", dlErr)
+		}
+
+		err = b.BakeFromLockfile(sourcePath, releaseLock, localTarball)
 	} else {
 		c.outLogger.Printf("Re-baking Carvel tile from %s", sourcePath)
 		err = b.Bake(sourcePath)
@@ -117,7 +142,7 @@ func (c CarvelReBake) Execute(args []string) error {
 
 func (c CarvelReBake) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Re-bakes a Carvel tile from a bake record for reproducible builds.\nThe repository must be checked out at the source_revision specified in the bake record.\n\nThe <bake-record> argument is the path to a JSON bake record file produced by 'kiln carvel publish --final'.",
+		Description:      "Re-bakes a Carvel tile from a bake record for reproducible builds.\nThe repository must be checked out at the source_revision specified in the bake record.\nWhen a Kilnfile.lock is present, downloads the cached BOSH release from Artifactory.\n\nThe <bake-record> argument is the path to a JSON bake record file produced by 'kiln carvel publish --final'.",
 		ShortDescription: "re-bakes a Carvel tile from a bake record",
 		Flags:            c.Options,
 	}

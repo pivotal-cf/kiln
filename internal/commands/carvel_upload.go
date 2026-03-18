@@ -1,7 +1,8 @@
 package commands
 
 import (
-	"crypto/sha256"
+	"bytes"
+	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -9,10 +10,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/carvel"
-	"github.com/pivotal-cf/kiln/internal/carvel/models"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type CarvelUpload struct {
@@ -22,14 +25,11 @@ type CarvelUpload struct {
 }
 
 type CarvelUploadOptions struct {
-	SourceDirectory string `short:"s" long:"source-directory"     description:"path to the Carvel tile source directory (defaults to current directory)"`
-	ArtifactoryHost string `          long:"artifactory-host"     description:"Artifactory server URL" required:"true"`
-	ArtifactoryRepo string `          long:"artifactory-repo"     description:"Artifactory repository name" required:"true"`
-	Username        string `short:"u" long:"artifactory-username" description:"Artifactory username" required:"true"`
-	Password        string `short:"p" long:"artifactory-password" description:"Artifactory password or API key" required:"true"`
-	PathTemplate    string `          long:"path-template"        description:"remote path template" default:"bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz"`
-	OutputFile      string `short:"o" long:"output-file"          description:"also bake the tile to this path"`
-	Verbose         bool   `short:"v" long:"verbose"              description:"enable verbose output"`
+	flags.Standard
+	SourceDirectory string `short:"s" long:"source-directory" description:"path to the Carvel tile source directory (defaults to current directory)"`
+	OutputFile      string `short:"o" long:"output-file"      description:"also bake the tile to this path"`
+	PathTemplate    string `          long:"path-template"     description:"remote path template override" default:"bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz"`
+	Verbose         bool   `short:"v" long:"verbose"           description:"enable verbose output"`
 }
 
 func NewCarvelUpload(outLogger, errLogger *log.Logger) CarvelUpload {
@@ -45,17 +45,26 @@ func (c CarvelUpload) Execute(args []string) error {
 		return err
 	}
 
-	sourcePath := c.Options.SourceDirectory
-	if sourcePath == "" {
-		sourcePath, err = os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get current directory: %w", err)
-		}
-	} else {
-		sourcePath, err = filepath.Abs(sourcePath)
-		if err != nil {
-			return fmt.Errorf("failed to resolve source directory: %w", err)
-		}
+	sourcePath, err := resolveSourcePath(c.Options.SourceDirectory)
+	if err != nil {
+		return err
+	}
+
+	kilnfilePath := resolveKilnfilePath(c.Options.Kilnfile, sourcePath)
+
+	if _, statErr := os.Stat(kilnfilePath); statErr != nil {
+		return fmt.Errorf("Kilnfile not found at %s: create a Kilnfile with an artifactory release_source", kilnfilePath)
+	}
+
+	c.Options.Kilnfile = kilnfilePath
+	kilnfile, err := loadKilnfileOnly(c.Options.Standard)
+	if err != nil {
+		return fmt.Errorf("failed to load Kilnfile: %w", err)
+	}
+
+	artConfig, err := findArtifactorySource(kilnfile)
+	if err != nil {
+		return err
 	}
 
 	baker := carvel.NewBaker()
@@ -79,31 +88,31 @@ func (c CarvelUpload) Execute(args []string) error {
 		return fmt.Errorf("failed to get tile version: %w", err)
 	}
 
-	remotePath := fmt.Sprintf("bosh-releases/%s/%s-%s.tgz", baker.GetName(), baker.GetName(), ver)
+	pathTmpl := c.Options.PathTemplate
+	if artConfig.PathTemplate != "" {
+		pathTmpl = artConfig.PathTemplate
+	}
+	remotePath, err := evaluatePathTemplate(pathTmpl, baker.GetName(), ver)
+	if err != nil {
+		return fmt.Errorf("failed to evaluate path template: %w", err)
+	}
 
-	checksum, err := fileSHA256(tarball)
+	sha1sum, err := fileSHA1(tarball)
 	if err != nil {
 		return fmt.Errorf("failed to checksum release tarball: %w", err)
 	}
 
-	c.outLogger.Printf("Uploading %s to %s/%s/%s", filepath.Base(tarball), c.Options.ArtifactoryHost, c.Options.ArtifactoryRepo, remotePath)
-	err = uploadToArtifactory(tarball, c.Options.ArtifactoryHost, c.Options.ArtifactoryRepo, remotePath, c.Options.Username, c.Options.Password)
+	c.outLogger.Printf("Uploading %s to %s/%s/%s", filepath.Base(tarball), artConfig.ArtifactoryHost, artConfig.Repo, remotePath)
+	err = uploadToArtifactory(tarball, artConfig.ArtifactoryHost, artConfig.Repo, remotePath, artConfig.Username, artConfig.Password)
 	if err != nil {
 		return fmt.Errorf("failed to upload to Artifactory: %w", err)
 	}
 
-	lockfilePath := filepath.Join(sourcePath, "Kilnfile.lock")
-	lf := models.CarvelLockfile{
-		Release: models.CarvelReleaseLock{
-			Name:       baker.GetName(),
-			Version:    ver,
-			RemotePath: remotePath,
-			SHA256:     checksum,
-		},
-	}
-	err = lf.WriteFile(lockfilePath)
+	sourceID := cargo.BOSHReleaseTarballSourceID(artConfig)
+	lockfilePath := kilnfilePath + ".lock"
+	err = writeStandardKilnfileLock(lockfilePath, baker.GetName(), ver, remotePath, sourceID, sha1sum)
 	if err != nil {
-		return fmt.Errorf("failed to write lockfile: %w", err)
+		return fmt.Errorf("failed to write Kilnfile.lock: %w", err)
 	}
 	c.outLogger.Printf("Updated %s", lockfilePath)
 
@@ -124,23 +133,36 @@ func (c CarvelUpload) Execute(args []string) error {
 
 func (c CarvelUpload) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Generates a BOSH release from a Carvel tile source, uploads the release tarball to Artifactory, and updates Kilnfile.lock with the remote location and checksum.",
+		Description:      "Generates a BOSH release from a Carvel tile source, uploads the release tarball to Artifactory, and updates Kilnfile.lock with the remote location and checksum. Artifactory credentials are read from the Kilnfile's release_sources (typically interpolated from ~/.kiln/credentials.yml).",
 		ShortDescription: "uploads a Carvel BOSH release to Artifactory",
 		Flags:            c.Options,
 	}
 }
 
-func fileSHA256(path string) (string, error) {
+func fileSHA1(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
 	defer func() { _ = f.Close() }()
-	h := sha256.New()
+	h := sha1.New()
 	if _, err := io.Copy(h, f); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func evaluatePathTemplate(tmpl, name, version string) (string, error) {
+	t, err := template.New("path").Parse(tmpl)
+	if err != nil {
+		return "", err
+	}
+	var buf bytes.Buffer
+	err = t.Execute(&buf, cargo.BOSHReleaseTarballSpecification{Name: name, Version: version})
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 func uploadToArtifactory(localPath, host, repo, remotePath, username, password string) error {

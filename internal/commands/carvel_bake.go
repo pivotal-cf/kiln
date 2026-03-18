@@ -8,6 +8,7 @@ import (
 
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/carvel"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 )
 
 type CarvelBake struct {
@@ -17,10 +18,10 @@ type CarvelBake struct {
 }
 
 type CarvelBakeOptions struct {
+	flags.Standard
 	SourceDirectory string `short:"s" long:"source-directory" description:"path to the Carvel tile source directory (defaults to current directory)"`
 	OutputFile      string `short:"o" long:"output-file"      description:"path to where the tile will be output" required:"true"`
-	Lockfile        string `short:"l" long:"lockfile"          description:"path to Kilnfile.lock for using a cached BOSH release"`
-	Verbose         bool   `short:"v" long:"verbose"          description:"enable verbose output"`
+	Verbose         bool   `short:"v" long:"verbose"           description:"enable verbose output"`
 }
 
 func NewCarvelBake(outLogger, errLogger *log.Logger) CarvelBake {
@@ -36,17 +37,9 @@ func (c CarvelBake) Execute(args []string) error {
 		return err
 	}
 
-	sourcePath := c.Options.SourceDirectory
-	if sourcePath == "" {
-		sourcePath, err = os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get current directory: %w", err)
-		}
-	} else {
-		sourcePath, err = filepath.Abs(sourcePath)
-		if err != nil {
-			return fmt.Errorf("failed to resolve source directory: %w", err)
-		}
+	sourcePath, err := resolveSourcePath(c.Options.SourceDirectory)
+	if err != nil {
+		return err
 	}
 
 	targetPath, err := filepath.Abs(c.Options.OutputFile)
@@ -60,12 +53,32 @@ func (c CarvelBake) Execute(args []string) error {
 		baker.SetWriter(os.Stdout)
 	}
 
-	if c.Options.Lockfile != "" {
-		lockfilePath, err := filepath.Abs(c.Options.Lockfile)
-		if err != nil {
-			return fmt.Errorf("failed to resolve lockfile path: %w", err)
+	kilnfilePath := resolveKilnfilePath(c.Options.Kilnfile, sourcePath)
+	lockfilePath := kilnfilePath + ".lock"
+	if _, statErr := os.Stat(lockfilePath); statErr == nil {
+		c.Options.Kilnfile = kilnfilePath
+		kilnfile, kilnfileLock, loadErr := c.Options.Standard.LoadKilnfiles(nil, nil)
+		if loadErr != nil {
+			return fmt.Errorf("failed to load Kilnfiles: %w", loadErr)
 		}
-		err = baker.BakeFromLockfile(sourcePath, lockfilePath)
+
+		if len(kilnfileLock.Releases) == 0 {
+			return fmt.Errorf("Kilnfile.lock has no releases")
+		}
+		releaseLock := kilnfileLock.Releases[0]
+
+		tmpDir, tmpErr := os.MkdirTemp("", "carvel-bake-*")
+		if tmpErr != nil {
+			return fmt.Errorf("failed to create temp directory: %w", tmpErr)
+		}
+		defer func() { _ = os.RemoveAll(tmpDir) }()
+
+		localTarball, dlErr := downloadCarvelRelease(c.outLogger, kilnfile, kilnfileLock, tmpDir)
+		if dlErr != nil {
+			return fmt.Errorf("failed to download release from Artifactory: %w", dlErr)
+		}
+
+		err = baker.BakeFromLockfile(sourcePath, releaseLock, localTarball)
 		if err != nil {
 			return fmt.Errorf("failed to prepare Carvel tile from lockfile: %w", err)
 		}
@@ -92,7 +105,7 @@ func (c CarvelBake) Execute(args []string) error {
 
 func (c CarvelBake) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Bakes a Carvel/Kubernetes tile into a .pivotal file. This command transforms a Kubernetes tile (using imgpkg bundles and Carvel packages) into a BOSH-compatible format, then bakes it into a .pivotal file that can be consumed by Operations Manager.",
+		Description:      "Bakes a Carvel/Kubernetes tile into a .pivotal file. This command transforms a Kubernetes tile (using imgpkg bundles and Carvel packages) into a BOSH-compatible format, then bakes it into a .pivotal file that can be consumed by Operations Manager. When a Kilnfile.lock is present, it downloads the cached BOSH release from Artifactory instead of regenerating it locally.",
 		ShortDescription: "bakes a Carvel/Kubernetes tile",
 		Flags:            c.Options,
 	}

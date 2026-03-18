@@ -12,6 +12,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/carvel"
+	"github.com/pivotal-cf/kiln/internal/commands/flags"
 	"github.com/pivotal-cf/kiln/pkg/bake"
 )
 
@@ -23,12 +24,12 @@ type CarvelPublish struct {
 }
 
 type CarvelPublishOptions struct {
+	flags.Standard
 	SourceDirectory string `short:"s" long:"source-directory" description:"path to the Carvel tile source directory (defaults to current directory)"`
 	OutputFile      string `short:"o" long:"output-file"      description:"path to where the tile will be output" required:"true"`
 	Version         string `          long:"version"           description:"tile version for the final release"`
-	Lockfile        string `short:"l" long:"lockfile"          description:"path to Kilnfile.lock (auto-detected in source directory if not specified)"`
-	Verbose         bool   `short:"v" long:"verbose"           description:"enable verbose output"`
 	IsFinal         bool   `          long:"final"             description:"create a bake record for this build"`
+	Verbose         bool   `short:"v" long:"verbose"           description:"enable verbose output"`
 }
 
 func NewCarvelPublish(outLogger, errLogger *log.Logger) CarvelPublish {
@@ -44,17 +45,9 @@ func (c CarvelPublish) Execute(args []string) error {
 		return err
 	}
 
-	sourcePath := c.Options.SourceDirectory
-	if sourcePath == "" {
-		sourcePath, err = os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get current directory: %w", err)
-		}
-	} else {
-		sourcePath, err = filepath.Abs(sourcePath)
-		if err != nil {
-			return fmt.Errorf("failed to resolve source directory: %w", err)
-		}
+	sourcePath, err := resolveSourcePath(c.Options.SourceDirectory)
+	if err != nil {
+		return err
 	}
 
 	targetPath, err := filepath.Abs(c.Options.OutputFile)
@@ -62,18 +55,38 @@ func (c CarvelPublish) Execute(args []string) error {
 		return fmt.Errorf("failed to resolve output file path: %w", err)
 	}
 
-	lockfilePath := c.Options.Lockfile
-	if lockfilePath == "" {
-		lockfilePath = filepath.Join(sourcePath, "Kilnfile.lock")
-	} else {
-		lockfilePath, err = filepath.Abs(lockfilePath)
-		if err != nil {
-			return fmt.Errorf("failed to resolve lockfile path: %w", err)
-		}
+	kilnfilePath := resolveKilnfilePath(c.Options.Kilnfile, sourcePath)
+
+	if _, statErr := os.Stat(kilnfilePath); statErr != nil {
+		return fmt.Errorf("Kilnfile not found at %s: run 'kiln carvel upload' first to create the BOSH release, Kilnfile, and Kilnfile.lock", kilnfilePath)
 	}
 
+	lockfilePath := kilnfilePath + ".lock"
 	if _, statErr := os.Stat(lockfilePath); statErr != nil {
 		return fmt.Errorf("Kilnfile.lock not found at %s: run 'kiln carvel upload' first to create the BOSH release and lockfile", lockfilePath)
+	}
+
+	c.Options.Kilnfile = kilnfilePath
+	kilnfile, kilnfileLock, err := c.Options.Standard.LoadKilnfiles(nil, nil)
+	if err != nil {
+		return fmt.Errorf("failed to load Kilnfiles: %w", err)
+	}
+
+	if len(kilnfileLock.Releases) == 0 {
+		return fmt.Errorf("Kilnfile.lock has no releases: run 'kiln carvel upload' first")
+	}
+	releaseLock := kilnfileLock.Releases[0]
+
+	tmpDir, err := os.MkdirTemp("", "carvel-publish-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	c.outLogger.Printf("Publishing Carvel tile from %s", sourcePath)
+	localTarball, err := downloadCarvelRelease(c.outLogger, kilnfile, kilnfileLock, tmpDir)
+	if err != nil {
+		return fmt.Errorf("failed to download release from Artifactory: %w", err)
 	}
 
 	b := carvel.NewBaker()
@@ -81,8 +94,7 @@ func (c CarvelPublish) Execute(args []string) error {
 		b.SetWriter(os.Stdout)
 	}
 
-	c.outLogger.Printf("Publishing Carvel tile from %s using lockfile %s", sourcePath, lockfilePath)
-	err = b.BakeFromLockfile(sourcePath, lockfilePath)
+	err = b.BakeFromLockfile(sourcePath, releaseLock, localTarball)
 	if err != nil {
 		return fmt.Errorf("failed to prepare Carvel tile from lockfile: %w", err)
 	}
@@ -103,7 +115,6 @@ func (c CarvelPublish) Execute(args []string) error {
 	c.outLogger.Printf("Baked %s version %s to %s", b.GetName(), ver, targetPath)
 
 	if c.Options.IsFinal {
-		// Resolve symlinks so git's toplevel and our absolute path match (macOS /var -> /private/var)
 		resolvedSourcePath, err := filepath.EvalSymlinks(sourcePath)
 		if err != nil {
 			resolvedSourcePath = sourcePath
@@ -144,7 +155,7 @@ func (c CarvelPublish) Execute(args []string) error {
 
 func (c CarvelPublish) Usage() jhanda.Usage {
 	return jhanda.Usage{
-		Description:      "Publishes a Carvel/Kubernetes tile as a .pivotal file using the cached BOSH release from Kilnfile.lock. Run 'kiln carvel upload' first to build and cache the release. When --final is specified, creates a bake record that can be used with 'kiln carvel re-bake' for reproducible builds.",
+		Description:      "Downloads the cached BOSH release from Artifactory (using credentials from the Kilnfile) and bakes a Carvel/Kubernetes tile as a .pivotal file. Run 'kiln carvel upload' first to build and cache the release. When --final is specified, creates a bake record that can be used with 'kiln carvel re-bake' for reproducible builds.",
 		ShortDescription: "publishes a Carvel/Kubernetes tile",
 		Flags:            c.Options,
 	}

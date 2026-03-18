@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/internal/carvel/models"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"gopkg.in/yaml.v3"
 )
 
@@ -307,7 +308,7 @@ var _ = Describe("Carvel Baker", func() {
 	})
 
 	Context("BakeFromLockfile", func() {
-		When("a valid lockfile references a pre-built release", func() {
+		When("a valid release lock references a pre-built release", func() {
 			BeforeEach(func() {
 				if !boshInstalled() {
 					Skip("bosh CLI not installed - skipping integration test")
@@ -334,7 +335,6 @@ var _ = Describe("Carvel Baker", func() {
 					Expect(err).NotTo(HaveOccurred(), "error invoking git: "+string(out))
 				}
 
-				// First do a normal bake to produce a real BOSH release tarball
 				subject := NewBaker()
 				subject.SetWriter(GinkgoWriter)
 				err = subject.Bake(inputPath)
@@ -343,28 +343,18 @@ var _ = Describe("Carvel Baker", func() {
 				tarball, err := subject.GetReleaseTarball()
 				Expect(err).NotTo(HaveOccurred())
 
-				// Copy the tarball to a temp location (simulating Artifactory cache)
 				cachedTarball := filepath.Join(filepath.Dir(inputPath), "cached-release.tgz")
 				err = copyTestFile(tarball, cachedTarball)
 				Expect(err).NotTo(HaveOccurred())
 
-				// Write a lockfile pointing to the cached tarball
-				lf := models.CarvelLockfile{
-					Release: models.CarvelReleaseLock{
-						Name:       "k8s-tile-test",
-						Version:    "0.1.1",
-						RemotePath: cachedTarball,
-						SHA256:     "test-sha",
-					},
+				releaseLock := cargo.BOSHReleaseTarballLock{
+					Name:    "k8s-tile-test",
+					Version: "0.1.1",
 				}
-				lockfilePath := filepath.Join(filepath.Dir(inputPath), "Kilnfile.lock")
-				err = lf.WriteFile(lockfilePath)
-				Expect(err).NotTo(HaveOccurred())
 
-				// Now bake from lockfile
 				subject2 := NewBaker()
 				subject2.SetWriter(GinkgoWriter)
-				err = subject2.BakeFromLockfile(inputPath, lockfilePath)
+				err = subject2.BakeFromLockfile(inputPath, releaseLock, cachedTarball)
 				Expect(err).NotTo(HaveOccurred())
 
 				outputPath := path.Join(inputPath, ".carvel-tile")
@@ -374,7 +364,7 @@ var _ = Describe("Carvel Baker", func() {
 			})
 		})
 
-		When("the lockfile release name does not match", func() {
+		When("the release lock name does not match", func() {
 			It("returns an error", func() {
 				inputPath, err := os.MkdirTemp("", "lockfile-mismatch-*")
 				Expect(err).NotTo(HaveOccurred())
@@ -384,18 +374,13 @@ var _ = Describe("Carvel Baker", func() {
 				err = os.CopyFS(inputPath, os.DirFS("testdata/sample-tile"))
 				Expect(err).NotTo(HaveOccurred())
 
-				lf := models.CarvelLockfile{
-					Release: models.CarvelReleaseLock{
-						Name:    "wrong-name",
-						Version: "0.1.1",
-					},
+				releaseLock := cargo.BOSHReleaseTarballLock{
+					Name:    "wrong-name",
+					Version: "0.1.1",
 				}
-				lockfilePath := filepath.Join(filepath.Dir(inputPath), "Kilnfile.lock")
-				err = lf.WriteFile(lockfilePath)
-				Expect(err).NotTo(HaveOccurred())
 
 				subject := NewBaker()
-				err = subject.BakeFromLockfile(inputPath, lockfilePath)
+				err = subject.BakeFromLockfile(inputPath, releaseLock, "/nonexistent/tarball.tgz")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("does not match tile name"))
 			})
@@ -413,10 +398,7 @@ var _ = Describe("Carvel Baker", func() {
 	})
 
 	Context("rebake reproducibility", func() {
-		// Both publish and rebake now use BakeFromLockfile with the same
-		// cached BOSH release tarball. This test verifies the resulting
-		// .pivotal files are byte-for-byte identical.
-		It("publish and rebake produce identical tiles when using the same lockfile", func() {
+		It("publish and rebake produce identical tiles when using the same cached release", func() {
 			if !boshInstalled() {
 				Skip("bosh CLI not installed")
 			}
@@ -442,8 +424,6 @@ var _ = Describe("Carvel Baker", func() {
 				Expect(err).NotTo(HaveOccurred(), "git setup: "+string(out))
 			}
 
-			// Simulate `kiln carvel upload`: Bake() to produce a BOSH release,
-			// then cache the tarball and write a Kilnfile.lock.
 			uploadBaker := NewBaker()
 			uploadBaker.SetWriter(GinkgoWriter)
 			err = uploadBaker.Bake(inputPath)
@@ -454,21 +434,14 @@ var _ = Describe("Carvel Baker", func() {
 			cachedTarball := filepath.Join(tmpRoot, "cached-release.tgz")
 			Expect(copyTestFile(uploadTarball, cachedTarball)).To(Succeed())
 
-			lf := models.CarvelLockfile{
-				Release: models.CarvelReleaseLock{
-					Name:       "k8s-tile-test",
-					Version:    "0.1.1",
-					RemotePath: cachedTarball,
-					SHA256:     "unused",
-				},
+			releaseLock := cargo.BOSHReleaseTarballLock{
+				Name:    "k8s-tile-test",
+				Version: "0.1.1",
 			}
-			lockfilePath := filepath.Join(tmpRoot, "Kilnfile.lock")
-			Expect(lf.WriteFile(lockfilePath)).To(Succeed())
 
-			// Simulate `kiln carvel publish --final`: BakeFromLockfile + KilnBake
 			publishBaker := NewBaker()
 			publishBaker.SetWriter(GinkgoWriter)
-			err = publishBaker.BakeFromLockfile(inputPath, lockfilePath)
+			err = publishBaker.BakeFromLockfile(inputPath, releaseLock, cachedTarball)
 			Expect(err).NotTo(HaveOccurred())
 
 			publishTile := filepath.Join(tmpRoot, "publish.pivotal")
@@ -477,10 +450,9 @@ var _ = Describe("Carvel Baker", func() {
 
 			publishChecksum := fileChecksum(publishTile)
 
-			// Simulate `kiln carvel re-bake`: BakeFromLockfile + KilnBake
 			rebakeBaker := NewBaker()
 			rebakeBaker.SetWriter(GinkgoWriter)
-			err = rebakeBaker.BakeFromLockfile(inputPath, lockfilePath)
+			err = rebakeBaker.BakeFromLockfile(inputPath, releaseLock, cachedTarball)
 			Expect(err).NotTo(HaveOccurred())
 
 			rebakeTile := filepath.Join(tmpRoot, "rebake.pivotal")
