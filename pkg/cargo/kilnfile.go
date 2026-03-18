@@ -219,6 +219,8 @@ func (stemcell Stemcell) ProductSlug() (string, error) {
 		return "stemcells-ubuntu-noble", nil
 	case "windows2019":
 		return "stemcells-windows-server", nil
+	case "windows2022":
+		return "stemcells-windows-server", nil
 	default:
 		return "", fmt.Errorf("stemcell slug not set for os %s", stemcell.OS)
 	}

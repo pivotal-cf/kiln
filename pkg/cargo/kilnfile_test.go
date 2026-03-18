@@ -100,6 +100,11 @@ func TestStemcell_ProductSlug(t *testing.T) {
 			ExpSlug:  "stemcells-windows-server",
 		},
 		{
+			Name:     "when using known os windows2022",
+			Stemcell: Stemcell{OS: "windows2022"},
+			ExpSlug:  "stemcells-windows-server",
+		},
+		{
 			Name:            "when slug is not set",
 			Stemcell:        Stemcell{OS: "orange"},
 			ExpErrSubstring: "stemcell slug not set",
