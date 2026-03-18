@@ -1,232 +1,462 @@
-This playbook provides instructions for Carvel/Kubernetes tile teams to onboard their tiles onto the Golden Path to publish workflow.
+# Onboarding Carvel/Kubernetes Tiles to Golden Path to Publish
 
-For Carvel-based tiles, intermediary BOSH releases are generated automatically from imgpkg bundles (via ezbake) and do not need to be managed directly by your team. GPP handles BOSH release ingest and compilation behind the scenes. Your team only needs to manage final tile releases.
+This playbook walks Kubernetes tile teams through onboarding their tiles onto the Golden Path to Publish (GPP) workflow using **`kiln carvel`** commands.
 
-The result of this work will give you a re-bakable tile in [Artifactory](https://usw1.packages.broadcom.com/ui/repos/tree/General/tas-ecosystem-generic-prod-local/tile-releases) with compiled BOSH releases that is scanned by BlackDuck. For TVS integration please notify the Slingshots team when you're ready for it along with a link to your config please.
+> [!NOTE]
+> For Carvel-based tiles, intermediary BOSH releases are generated automatically from your imgpkg bundle. You do **not** need to manage BOSH releases directly -- Kiln handles that behind the scenes.
 
-You may also optionally configure your Tile to generate RMT releases, and Open Source License Disclosure files from Blackduck.
+The result of this work will give you a **re-bakable tile** in [Artifactory](https://usw1.packages.broadcom.com/ui/repos/tree/General/tas-ecosystem-generic-prod-local/tile-releases) that is scanned by BlackDuck. You may also optionally configure RMT releases and Open Source License Disclosure files.
 
-## Pre-requisites for onboarding
+---
 
-### Your tile is built with Kiln
+## Tile directory structure
 
-The Golden Path does not currently support tiles built with [tile-generator](https://github.com/cf-platform-eng/tile-generator).
+Your Kubernetes tile repository must contain the following structure:
 
-Please consider using [kiln](https://github.com/pivotal-cf/kiln/blob/main/TILE_AUTHOR_GUIDE.md). Carvel tile workflows use the `kiln carvel` subcommand group (`bake`, `upload`, `publish`, `rebake`).
+```
+my-tile/
+├── base.yml                   # Tile metadata (name, version, package_installs, etc.)
+├── bundle.tar                 # imgpkg bundle containing Carvel packages
+├── version                    # Tile version (e.g. "1.0.0")
+├── Kilnfile                   # Artifactory release source config (for upload/publish/rebake)
+├── packageinstalls/           # Package install definitions
+│   └── <name>.yml
+├── properties/                # Property blueprints (optional)
+│   └── *.yml
+├── forms/                     # Form definitions (optional)
+│   └── *.yml
+├── icon.png                   # Tile icon (optional but recommended)
+└── .gitignore                 # Should ignore .boshrelease/ and .carvel-tile/
+```
 
-### Github repo access: tiles
+> [!IMPORTANT]
+> - `base.yml` must have `metadata_version >= 3.2.0` (required for Kubernetes tile support).
+> - `base.yml` must include a `package_installs` array and a `compatible_kubernetes_distributions` array.
 
-Please provide write access to your private tile repositories to our bot account. Because BOSH releases are generated from the tile source (imgpkg bundles), separate BOSH release repositories are not required.
+---
 
-- For github enterprise (github.gwd.broadcom.com): [tanzu-tas-ecosystem](https://github.gwd.broadcom.net/tanzu-tas-ecosystem)
-- for github.com: [tas-ecosystem-bot](https://github.com/tas-ecosystem-bot)
+## Prerequisites
+
+### Required tools
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| **Kiln** | Tile building and publishing | [github.com/pivotal-cf/kiln](https://github.com/pivotal-cf/kiln) |
+| **BOSH CLI** | BOSH release generation from imgpkg bundle | [bosh.io/docs/cli-v2-install](https://bosh.io/docs/cli-v2-install/) |
+
+### GitHub repo access
+
+Provide **write** access to your tile repository to our bot account. Since BOSH releases are generated from your tile source, separate BOSH release repos are not required.
+
+- GitHub Enterprise (`github.gwd.broadcom.com`): [tanzu-tas-ecosystem](https://github.gwd.broadcom.net/tanzu-tas-ecosystem)
+- GitHub.com: [tas-ecosystem-bot](https://github.com/tas-ecosystem-bot)
 
 ### TNZ team membership
 
-To create PRs against our configuration repo you need to be a member of the [`all`](https://github.gwd.broadcom.net/orgs/TNZ/teams/all) team in the [TNZ org](https://github.gwd.broadcom.net/orgs/TNZ).
+To create PRs against the configuration repo, you need to be a member of the [`all`](https://github.gwd.broadcom.net/orgs/TNZ/teams/all) team in the [TNZ org](https://github.gwd.broadcom.net/orgs/TNZ).
 
-### Broadcom artifactory access
+---
 
-Authentication is required for accessing repos and artifacts on the Broadcom Jfrog Artifactory service.  To get access for your team to our artifact repos containing: bosh-releases, compiled-releases, tile-releases and tile-candidates, create a  [1.Support Ticket](https://broadcomitsm.wolkenservicedesk.com/wolken-support/item_details?itemId=2422).  
-Specify:
+## Artifactory access and credentials
 
-- Artifactory Server Name / URL:  `https://usw1.packages.broadcom.com/ui`
-- Sample Business Justification:
+### Getting access
+
+Authentication is required for Broadcom JFrog Artifactory. Create a [Support Ticket](https://broadcomitsm.wolkenservicedesk.com/wolken-support/item_details?itemId=2422) with:
+
+- **Artifactory Server Name / URL**: `https://usw1.packages.broadcom.com/ui`
+- **Business Justification**:
 
   ```text
-  Need read access to tas-ecosystem-* artifactory projects on https://usw1.packages.broadcom.com
+  Need read/write access to tas-ecosystem-* artifactory projects
+  on https://usw1.packages.broadcom.com
 
   For the following teammates / service accounts:
   - memberX
   - memberY
-  - memberZ
   - bot / service account
   ```
 
-#### Credentials
+### Creating an API key or identity token
 
-Since artifactory is authenticated with Okta SSO, password authentication to the service it not allowed.  Artifactory have `api_keys` and `identity_tokens` that are used as passwords.
+Since Artifactory uses Okta SSO, password authentication is not available. You need an `api_key` or `identity_token`:
 
-Once access is granted and you are able to login to the artifactory ui via SSO, an `api_key` or `identity token` needs to be created for use with Kiln
+1. Log in to the [Artifactory UI](https://usw1.packages.broadcom.com/ui) via SSO.
+2. Click the dropdown **Welcome, your_username** in the upper right.
+3. Click **Edit Profile**.
+4. Create an `api_key` or `identity_token` -- this value is used as the password for all `kiln` commands.
 
-1. Upper right click dropdown of: `Welcome, your_username`
-2. Click `Edit Profile`
-3. Create an `api_key` or `identity_token` here and use it as the password for `kiln` commands or the artifactory cli.
+> [!WARNING]
+> `usw1.packages.broadcom.com` is only accessible on the Broadcom network. If accessing remotely, **full tunnel VPN is required**.
+>
+> If your CI is on the VMware / Broadcom network and is blocked, reach out to [#VMW-harbor-jfrog-migration](https://chat.google.com/room/AAAAcWIWWOA?cls=7).
 
-#### Network access
+---
 
-The `usw1.packages.broadcom.com` artifactory is also only available on the Broadcom network. If accessing remotely, full tunnel VPN is required.
+## Providing credentials to Kiln
 
-If you CI is on the VMware / Broadcom Network and is blocked from accessing the artifactory, reach out to Google Chat Space: [#VMW-harbor-jfrog-migration](https://chat.google.com/room/AAAAcWIWWOA?cls=7)
+The `kiln carvel` commands that interact with Artifactory (`upload`, `publish`, `rebake`, and `bake` with a Kilnfile.lock) need credentials. These are configured in the **Kilnfile** using variable interpolation and resolved at runtime.
 
-## Golden Path Configuration
+### Step 1: Set up your Kilnfile
 
-Configuration for the TAS Golden Path is stored in this repo and used as inputs to generate concourse pipelines.
+Create a `Kilnfile` in your tile directory with variable placeholders:
 
-For Carvel-based tiles, the onboarding is simpler than for traditional BOSH tiles because GPP manages BOSH release ingest and compilation behind the scenes. You do not need to add BOSH release config files to the `bosh/` folder. The existing [bosh-ingest](https://tpe-concourse-rock.acc.broadcom.net/teams/tas-ecosystem/pipelines/bosh-releases?group=ingest-releases) and [bosh-compile](https://tpe-concourse-rock.acc.broadcom.net/teams/tas-ecosystem/pipelines/bosh-releases?group=compile-releases) pipelines are available for inspection if needed but do not require configuration from your team.
+```yaml
+release_sources:
+  - type: artifactory
+    artifactory_host: $( variable "artifactory_host" )
+    repo: $( variable "artifactory_repo" )
+    username: $( variable "artifactory_username" )
+    password: $( variable "artifactory_password" )
+    path_template: "bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz"
+```
 
-Overall the following steps to complete are:
+### Step 2: Choose how to provide the variable values
 
-- Updating the `Kilnfile` in the git repository to use artifactory as a source for generated BOSH releases.
-- (optional) Creating a branch in the git repository of your tile for a pipeline to push Kilnfile.lock updates for your review.
-- Creating config files for your tile(s) in `tiles/` folder to generate pipeline that will:
-  - Bake tile candidates with `kiln carvel bake`. Dev builds of tiles on your main / feature branch
-  - [`kiln carvel rebake`](https://github.com/pivotal-cf/kiln) for versioned release tiles
-  - Associate the BOSH releases consumed by the tile to the Blackduck tile project
-  - (optional) Automatically creates RMT releases that are included in the next-available TPM managed Release Train to assist with publishing
-    - If RMT is enabled, then your RMT release is eligible for automatic Open Source License Notice inclusion. Please see [creating open source license disclosures](./creating_open_source_license_disclosures.md).
-  - (optional) TVS integration (notify the #tas-slingshots team with your tile config requesting this when ready)
+There are three ways to supply credentials, in order of precedence (highest first):
 
-### Tile repository updates
+#### Option A: `--variable` flags (best for CI)
 
-Set up your tile repository so that `kiln carvel` commands can fetch generated BOSH releases from Artifactory.
+Pass each value directly on the command line:
 
-1. In the main / feature branch, update the `Kilnfile` to include artifactory as the remote source for BOSH releases.
+```bash
+kiln carvel upload \
+  --source-directory . \
+  --variable artifactory_host=https://usw1.packages.broadcom.com \
+  --variable artifactory_repo=tas-ecosystem-generic-prod-local \
+  --variable artifactory_username=my-bot-account \
+  --variable artifactory_password=cmVmdGtuOj...
+```
 
-   ```yaml
-   release_sources:
-   - type: artifactory
-     id: artifactory_bosh_releases
-     artifactory_host: $(variable "artifactory_host")
-     repo: $(variable "artifactory_repo")
-     username: $(variable "artifactory_username")
-     password: $(variable "artifactory_password") # api_key or identity token
-     publishable: true # if this repo contains releases that are suitable to ship to customers
-     path_template: bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz
-   ```
+> [!TIP]
+> Use `-vr` as the short form for `--variable`.
 
-2. Use `kiln carvel upload` to generate the BOSH release from your imgpkg bundle, upload it to Artifactory, and update the `Kilnfile.lock` with the remote location and checksum.
+#### Option B: `--variables-file` flag
 
-   Example `kiln carvel upload` command:
+Point to a YAML file containing the values:
 
-   ```bash
-   $ kiln carvel upload \
-      --artifactory-host https://usw1.packages.broadcom.com \
-      --artifactory-repo tas-ecosystem-generic-prod-local \
-      --artifactory-username <your_user_or_bot_account> \
-      --artifactory-password <api_key-or-identity_token> \
-      --output-file my-tile-1.0.0-dev.pivotal
-   ```
+```bash
+kiln carvel upload \
+  --source-directory . \
+  --variables-file path/to/credentials.yml
+```
 
-   This uploads the generated BOSH release and writes a `Kilnfile.lock` referencing the remote artifact. Commit the updated `Kilnfile.lock` to your repository.
+Where `credentials.yml` contains:
 
-3. (Optional) Create a new update branch from the main / feature branch in your tile repository (eg: `autobump`). Our CI will force push commits to this branch.  
-   While this provides an auto update functionality, you are welcome to continue using your existing auto update tools (eg: dependabot).  
-   You can also specify your feature branch if you want our CI to push the `Kilnfile.lock` updates directly to your feature branch.  
-   If `branch` and `update_branch` are same, force push functionality is disabled. Ensure the branch specified in `update_branch` has [push access to our bot account](#github-repo-access-tiles).
+```yaml
+artifactory_host: https://usw1.packages.broadcom.com
+artifactory_repo: tas-ecosystem-generic-prod-local
+artifactory_username: my-bot-account
+artifactory_password: cmVmdGtuOj...
+```
+
+> [!TIP]
+> Use `-vf` as the short form for `--variables-file`.
+
+#### Option C: `~/.kiln/credentials.yml` (best for local development)
+
+When the internal `kiln bake` step runs (inside `upload`, `publish`, `rebake`, and `bake`), Kiln automatically loads `~/.kiln/credentials.yml` as a default variables file. Place your credentials there for a seamless local experience:
+
+```yaml
+# ~/.kiln/credentials.yml
+artifactory_host: https://usw1.packages.broadcom.com
+artifactory_repo: tas-ecosystem-generic-prod-local
+artifactory_username: your_username
+artifactory_password: your_api_key_or_identity_token
+```
+
+> [!IMPORTANT]
+> The `~/.kiln/credentials.yml` auto-loading only applies to the internal `kiln bake` step. The outer `kiln carvel` commands (which parse the Kilnfile for Artifactory config) still need credentials via `--variable` or `--variables-file` -- **unless** you hardcode the values directly in the Kilnfile (not recommended for secrets).
+>
+> For the simplest local workflow, use both: put credentials in `~/.kiln/credentials.yml` **and** pass `--variables-file ~/.kiln/credentials.yml` to the outer command.
+
+> [!CAUTION]
+> Never commit credentials to your repository. Add `credentials.yml` and `~/.kiln/` to your `.gitignore`.
+
+### Artifactory variable values
+
+| Variable | Value |
+|----------|-------|
+| `artifactory_host` | `https://usw1.packages.broadcom.com` |
+| `artifactory_repo` | `tas-ecosystem-generic-prod-local` |
+| `artifactory_username` | Your account or service account |
+| `artifactory_password` | Your `api_key` or `identity_token` |
+
+---
+
+## Developer workflow
+
+The `kiln carvel` commands cover the full tile development lifecycle. Each step builds on the previous one:
+
+```
+  Local dev             CI integration            Final release           CI publish
+┌──────────────┐   ┌──────────────────┐   ┌──────────────────────┐   ┌──────────────────┐
+│ carvel bake  │──▶│  carvel upload   │──▶│ carvel publish       │──▶│  carvel rebake   │
+│ (local only) │   │ (uploads + lock) │   │ --final (bake record)│   │ (reproducible)   │
+└──────────────┘   └──────────────────┘   └──────────────────────┘   └──────────────────┘
+                          │                          │                         │
+                    git commit              git commit bake record       checksum verified
+                    Kilnfile.lock                                       .pivotal uploaded
+```
+
+### Step 1: Local bake (no Artifactory needed)
+
+Bake a tile locally to test your tile structure. No Kilnfile or credentials required.
+
+```bash
+kiln carvel bake \
+  --source-directory . \
+  --output-file my-tile-0.1.0.pivotal
+```
+
+This generates a BOSH release from your `bundle.tar`, assembles the tile, and produces a `.pivotal` file. Nothing is uploaded; no lockfile is created.
+
+### Step 2: Upload to Artifactory
+
+Once your local bake works, upload the generated BOSH release to Artifactory so CI can reuse it:
+
+```bash
+kiln carvel upload \
+  --source-directory . \
+  --variables-file ~/.kiln/credentials.yml
+```
+
+This command:
+
+1. Generates a BOSH release from your imgpkg bundle.
+2. Uploads the tarball to Artifactory using the Kilnfile's release source config.
+3. Writes a `Kilnfile.lock` with the release name, version, SHA1, and remote path.
+
+Then commit the lockfile:
+
+```bash
+git add Kilnfile.lock
+git commit -m "Add Kilnfile.lock from carvel upload"
+```
+
+> [!NOTE]
+> You can also pass `--output-file my-tile.pivotal` to upload to bake a `.pivotal` in the same step.
+
+### Step 3: CI bake (automatic, via Kilnfile.lock)
+
+When Kilnfile.lock is present, `kiln carvel bake` downloads the cached BOSH release from Artifactory instead of regenerating it locally. This is faster and reproducible.
+
+```bash
+kiln carvel bake \
+  --source-directory . \
+  --output-file my-tile-dev.pivotal \
+  --variables-file ~/.kiln/credentials.yml
+```
+
+This is what your CI pipeline should run for development/candidate tile builds.
+
+### Step 4: Publish a final release
+
+Create a final, versioned tile with a bake record for reproducible builds:
+
+```bash
+kiln carvel publish --final \
+  --source-directory . \
+  --output-file my-tile-1.0.0.pivotal \
+  --variables-file ~/.kiln/credentials.yml
+```
+
+This command:
+
+1. Downloads the BOSH release from Artifactory (using the Kilnfile.lock).
+2. Bakes the tile.
+3. Computes a SHA-256 checksum of the `.pivotal` file.
+4. Writes a bake record to `bake_records/<version>.json` containing the source revision, version, and file checksum.
+
+Then commit the bake record:
+
+```bash
+git add bake_records/
+git commit -m "Release version 1.0.0"
+```
+
+> [!TIP]
+> Use `--version` to override the tile version from the `version` file. For example, `--version 2.1.41` produces `bake_records/2.1.41.json`.
+
+**Example bake record** (`bake_records/1.0.0.json`):
+
+```json
+{
+  "source_revision": "1b19d8cb80e6cfdddd7be1c7a26c8210cbd4e4c5",
+  "version": "1.0.0",
+  "kiln_version": "0.97.0",
+  "file_checksum": "7622143c54dc53087a6c2401f5030170515e14f466857564a980092d4c87a094",
+  "tile_directory": "."
+}
+```
+
+> [!WARNING]
+> Your `bake_records/` directory must **only** contain bake record JSON files.
+
+> [!NOTE]
+> Pre-release versions (e.g. `2.4.41-dev.0`) will not trigger a publish. This is useful for verifying OSL triage status before creating a final version like `2.4.41`.
+
+### Step 5: Rebake (CI, automated by GPP)
+
+GPP automatically runs rebake when it detects a new bake record. The rebake command reproduces the tile from the bake record and verifies the checksum matches:
+
+```bash
+kiln carvel rebake \
+  --output-file my-tile-1.0.0.pivotal \
+  --variables-file ~/.kiln/credentials.yml \
+  bake_records/1.0.0.json
+```
+
+> [!IMPORTANT]
+> The repository must be checked out at the **exact commit** recorded in `source_revision`. The rebake will fail if HEAD does not match. In CI, the Concourse resource handles this automatically.
+
+The rebake:
+
+1. Reads the bake record to determine the source revision, version, and expected checksum.
+2. Downloads the BOSH release from Artifactory (if Kilnfile.lock is present).
+3. Bakes the tile.
+4. Verifies the output checksum matches the bake record -- **byte-for-byte reproducibility**.
+
+---
+
+## Command reference
+
+| Command | Description | Requires Kilnfile? | Requires Kilnfile.lock? | Writes Kilnfile.lock? |
+|---------|-------------|:-------------------:|:-----------------------:|:---------------------:|
+| `kiln carvel bake` | Local bake from bundle | No | No (uses if present) | No |
+| `kiln carvel upload` | Upload BOSH release to Artifactory | **Yes** | No | **Yes** |
+| `kiln carvel publish --final` | Bake + create bake record | **Yes** | **Yes** | No |
+| `kiln carvel rebake <record>` | Reproduce tile from bake record | **Yes** (if lock present) | **Yes** (if present) | No |
+
+### Common flags
+
+| Flag | Short | Description | Used by |
+|------|-------|-------------|---------|
+| `--source-directory` | `-s` | Path to tile source directory (defaults to `.`) | `bake`, `upload`, `publish` |
+| `--output-file` | `-o` | Path for the output `.pivotal` file | `bake`, `upload` (optional), `publish`, `rebake` |
+| `--variable` | `-vr` | Key-value pair for Kilnfile interpolation | All commands |
+| `--variables-file` | `-vf` | Path to YAML file with variable values | All commands |
+| `--kilnfile` | `-kf` | Path to Kilnfile (default: `Kilnfile` in source dir) | All commands |
+| `--verbose` | `-v` | Enable verbose output | All commands |
+| `--final` | | Create a bake record | `publish` only |
+| `--version` | | Override tile version | `publish` only |
+
+---
+
+## Golden Path configuration
+
+Configuration for the TAS Golden Path is stored in the [tas-ecosystem-configuration](https://github.gwd.broadcom.net/TNZ/tas-ecosystem-configuration) repo and used as inputs to generate Concourse pipelines.
+
+> [!NOTE]
+> For Carvel-based tiles, you do **not** need to add BOSH release config files to the `bosh/` folder. GPP manages BOSH release ingest and compilation automatically.
 
 ### Tile config onboard
 
-1. Clone [this](https://github.gwd.broadcom.net/TNZ/tas-ecosystem-configuration) git repository if you have not already and create a branch locally for your changes. You should have write access to the repo and not need to create a fork to create a PR. If not, please review [this pre-requisite](#tnz-team-membership)
+1. Clone the [tas-ecosystem-configuration](https://github.gwd.broadcom.net/TNZ/tas-ecosystem-configuration) repo and create a branch.
 
-2. Create a new file for each of your tiles under the [tiles](https://github.gwd.broadcom.net/TNZ/tas-ecosystem-configuration/tree/main/tiles) directory. Please note that `artifact_name` is especially significant because it determines the file name prefix in `artifactory`, project names prefixes in `blackduck`, and is the prefix used by the published release file in RMT / Broadcom Portal (when enabled).   
-     Hello Tile - `hello-tile.yml`
+2. Create a new file for your tile under the `tiles/` directory.
 
-     ```yaml
-     #@data/values
-     ---
-     repo: https://github.gwd.broadcom.net/TNZ/hello-tile.git
-     branch: main
-     update_branch: auto-bump
-     subpath: .
-     artifact_name: crhntr-hello  #! this is the prefix for the built tiles and must be consistent with blackduck too
-     prerelease_format: build_increment_sha #! "sha" or "build_increment_sha" for versioning tile candidate builds. we recommend build_increment_sha
-     team_members:
-     - a@vmware.com
-     - b@vmware.com
-     team_google_chat_group: some-group #! required - google space / chat group for your team
-     team_slack_channel: some-channel   #! If your team has slack channel
-     ```
+   > [!IMPORTANT]
+   > `artifact_name` determines file name prefixes in Artifactory, project name prefixes in BlackDuck, and the prefix for published releases in RMT.
 
-    Scheduler Tile - `p-scheduler.yml`  (auto update directly on feature branch)
+   **Example** -- `my-k8s-tile.yml`:
 
-     ```yaml
-     #@data/values
-     ---
-     repo: https://github.com/pivotal-cf/p-scheduler.git
-     branch: master
-     update_branch: master
-     subpath: .
-     artifact_name: p-scheduler  #! this is the prefix for the built tiles and must be consistent with blackduck too
-     prerelease_format: build_increment_sha #! "sha" or "build_increment_sha" for versioning tile candidate builds
-     team_members:
-     - a@vmware.com
-     - b@vmware.com
-     team_google_chat_group: some-group #! required - google space / chat group for your team
-     team_slack_channel: some-channel   #! If your team has slack channel
-     ```
+   ```yaml
+   #@data/values
+   ---
+   repo: https://github.gwd.broadcom.net/TNZ/my-k8s-tile.git
+   branch: main
+   update_branch: auto-bump
+   subpath: .
+   artifact_name: my-k8s-tile
+   prerelease_format: build_increment_sha
+   team_members:
+   - alice@broadcom.com
+   - bob@broadcom.com
+   team_google_chat_group: my-team-chat
+   team_slack_channel: my-team-slack     #! optional
+   ```
 
-3. (optional) Add fields for automatic RMT _**draft**_-release creation
+3. **(Optional)** Add fields for automatic RMT draft-release creation.
 
-     >**Warning:** You will need to add upgrade specifiers (else Upgrade Planner will break!) and double check your release is ready to be set to GA. It defaults to a draft.
+   > [!WARNING]
+   > You will need to add upgrade specifiers (else Upgrade Planner will break!) and verify the release is ready for GA. It defaults to a draft.
 
-      Release tiles can be used as the basis for automatic `RMT` draft release creation. As a draft this means further steps are required prior to publishing. These include manually setting your upgrade specifiers, double checking the version, GA/EOGs dates, and release type, etc we inferred for you or read from your tile configuration's `rmt` entry.
+   See [tile RMT release](https://github.gwd.broadcom.net/TNZ/tas-ecosystem-configuration/tree/main/docs/tile_rmt_release.md) for details.
 
-      See [tile rmt release](https://github.gwd.broadcom.net/TNZ/tas-ecosystem-configuration/tree/main/docs/tile_rmt_release.md) for details.
+4. **(Optional)** Add BlackDuck tile project associations.
 
-4. (optional) Add a field to enable automatic Black Duck tile project associations. In order to begin updating your Black Duck tile project:
-   >**Prerequisites:** 
-   > Follow the [BlackDuck Onboarding section](./creating_open_source_license_disclosures.md#blackduck-onboarding) for
-   > your tile. BOSH release projects are managed by GPP for Carvel-based tiles.
+   Confirm your project exists at https://broadcom-vmw.app.blackduck.com/ with the format `TNZ-CF-<artifact_name>-tile`. If not, submit a ticket via the [BlackDuck Onboarding section](./creating_open_source_license_disclosures.md#blackduck-onboarding).
 
-   1) Confirm your project exists @ https://broadcom-vmw.app.blackduck.com/ with the format `TNZ-CF-<artifact_name>-tile`, as `<artifact_name>` is found in your tile config.
-   2) If not, submit a ticket to request it ([BlackDuck Onboarding section](./creating_open_source_license_disclosures.md#blackduck-onboarding)) or rename it yourself.
-   > **Note:** Scanning is enabled by default. However, you may disable it by adding the following to your `./tiles/<tile>.yml` config:
+   Scanning is enabled by default. To disable:
+
    ```yaml
    blackduck:
-        enabled: false
+     enabled: false
    ```
 
-5. Create a PR to [this](https://github.gwd.broadcom.net/TNZ/tas-ecosystem-configuration) repository to add the newly created files that contain the tile information.  
-An extensive PR Check job will verify your change and add a comment if anything needs to be addressed.  When the job passes you can merge the PR.  
-On merge, the respective golden path jobs will be created / updated for your tile.  Please reach out to [#tas-slingshots on Google Chat](https://chat.google.com/room/AAAAZuDvKe0?cls=7) with any questions or issues getting your PR merged.
+5. Create a PR. An automated check will verify your config. On merge, GPP jobs will be created for your tile.
 
-## Updating CI for your tile and automatic RMT _draft_ releases
+   Reach out to [#tas-slingshots on Google Chat](https://chat.google.com/room/AAAAZuDvKe0?cls=7) with questions.
 
-### Use `kiln carvel publish --final`
+### Optional: auto-bump branch
 
-If you are using CI to create new versions of tiles, the following updates can be made to take advantage of reproducible builds via `kiln carvel rebake`.
+Create an `update_branch` (e.g. `autobump`) for GPP to push Kilnfile.lock updates for your review. If `branch` and `update_branch` are the same, force push is disabled. Ensure the bot account has [push access](#github-repo-access) to the specified branch.
 
-Update your CI to output final tile builds using `kiln carvel publish --final`. When passing the **_--final_** flag, Kiln creates a bake record file under the **_bake_records_** folder. As part of the final tile build CI job, the bake records file needs to be committed and pushed to the tile repository.
+---
 
-Golden Path to publish will then use this bake record to trigger `kiln carvel rebake`, producing a final tile from our [CI](https://runway-ci-srp.eng.vmware.com/teams/tas-ecosystem/) and upload it to [artifactory](https://build-artifactory.eng.vmware.com/ui/repos/tree/General/tas-ecosystem-generic-local/) repo under the sub-path: tile-releases.
+## End-to-end example
 
-In the case of a pre-release version the build will not result in a publish. This is useful to verify OSL triage status and test your candidate build. For example, you may create a
-bake record with version `2.4.41-dev.0`, rerun the OSL generation multiple times, then finally create a `2.41.1` to trigger the full publish.
+Here is the complete workflow from first local bake to published tile:
 
-   Example `kiln carvel publish --final` command:
+```bash
+# 1. Local bake -- verify your tile structure works
+kiln carvel bake -s . -o my-tile-dev.pivotal
 
-   ```bash
-   $ kiln carvel publish --final --version 2.1.41 \
-      --output-file my-tile-2.1.41.pivotal \
-      --source-directory .
-   ```
+# 2. Upload BOSH release to Artifactory, write lockfile
+kiln carvel upload -s . -vf ~/.kiln/credentials.yml
 
-   _Example:_ Bake record that should be committed to the tile repo that is created by `kiln carvel publish --final` as file: `bake_records/2.1.41.json`:
+# 3. Commit the lockfile
+git add Kilnfile.lock
+git commit -m "Add Kilnfile.lock"
 
-   ```json
-   {
-     "source_revision": "1b19d8cb80e6cfdddd7be1c7a26c8210cbd4e4c5",
-     "version": "2.1.41",
-     "kiln_version": "0.90.0",
-     "file_checksum": "7622143c54dc53087a6c2401f5030170515e14f466857564a980092d4c87a094",
-     "tile_directory": "."
-   }
-   ```
+# 4. CI bake (downloads cached release from Artifactory)
+kiln carvel bake -s . -o my-tile-dev.pivotal -vf ~/.kiln/credentials.yml
 
-When executing `kiln carvel publish --final`, use the values for artifactory variables in your Kilnfile:
+# 5. Final release with bake record
+kiln carvel publish --final -s . -o my-tile-1.0.0.pivotal -vf ~/.kiln/credentials.yml
 
-- artifactory_host: `https://usw1.packages.broadcom.com`
-- artifactory_repo: `tas-ecosystem-generic-prod-local`
-- artifactory_username: **_your account or service account for broadcom artifactory_**
-- artifactory_password: **_respective api_key or identity token_**
+# 6. Commit the bake record
+git add bake_records/
+git commit -m "Release 1.0.0"
+git push
 
-**_NOTE: https://usw1.packages.broadcom.com is accessible via Broadcom VPN with full tunnel gateway and TPE concourse workers_**
+# 7. GPP automatically runs rebake, verifies checksum, and publishes to Artifactory
+```
 
-**_Commit the new bake record to the git repository of the tile_**
+---
 
-**_Warning: Your bake_records directory must only contain bake records_**
+## Troubleshooting
 
-GPP will then automatically run `kiln carvel rebake` against the bake record to produce the final `.pivotal` file, validate the checksum, and upload it to Artifactory and optionally RMT.
+### `Kilnfile not found`
 
-Please refer to [Tile RMT Release](Publish-Tiles-to-RMT) to configure publishing your tile to RMT via Golden Path to Publish.
+The `upload`, `publish`, and `rebake` commands require a `Kilnfile` with an `artifactory` release source. Make sure the file exists in your tile's source directory (or pass `--kilnfile path/to/Kilnfile`).
+
+### `Kilnfile.lock not found` or `no releases`
+
+Run `kiln carvel upload` first to generate the BOSH release and create the lockfile.
+
+### `source revision mismatch` during rebake
+
+The repo must be at the exact commit from the bake record's `source_revision`. Check out that commit before running rebake.
+
+### `upload failed with status 401`
+
+Your Artifactory credentials are incorrect or expired. Regenerate your API key or identity token from the [Artifactory UI](https://usw1.packages.broadcom.com/ui).
+
+### `tile checksum mismatch` during rebake
+
+The tile produced by rebake does not match the original publish. This can happen if the source tree has been modified after the bake record was created. Ensure no uncommitted changes exist and that HEAD matches `source_revision`.
+
+### Network errors connecting to Artifactory
+
+`usw1.packages.broadcom.com` requires Broadcom full-tunnel VPN. Verify you are connected.
