@@ -92,7 +92,7 @@ func (c Carvel) Usage() jhanda.Usage {
 	for _, name := range names {
 		cmd := c.commands[name]
 		paddedName := c.pad(name, " ", length)
-		subcommandList.WriteString(fmt.Sprintf("  %s  %s\n", paddedName, cmd.Usage().ShortDescription))
+		fmt.Fprintf(&subcommandList, "  %s  %s\n", paddedName, cmd.Usage().ShortDescription)
 	}
 	subcommandList.WriteString("\nUse 'kiln carvel help <subcommand>' for more information about a subcommand.")
 

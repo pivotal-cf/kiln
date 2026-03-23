@@ -53,7 +53,7 @@ func (c CarvelUpload) Execute(args []string) error {
 	kilnfilePath := resolveKilnfilePath(c.Options.Kilnfile, sourcePath)
 
 	if _, statErr := os.Stat(kilnfilePath); statErr != nil {
-		return fmt.Errorf("Kilnfile not found at %s: create a Kilnfile with an artifactory release_source", kilnfilePath)
+		return fmt.Errorf("could not find Kilnfile at %s: create a Kilnfile with an artifactory release_source", kilnfilePath)
 	}
 
 	c.Options.Kilnfile = kilnfilePath

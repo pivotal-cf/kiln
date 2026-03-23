@@ -2,7 +2,6 @@ package commands_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -194,7 +193,7 @@ var _ = Describe("CarvelReBake", func() {
 				}))
 
 				// Pre-load the mock with the tarball at the expected path
-				remotePath := fmt.Sprintf("/test-repo/bosh-releases/k8s-tile-test/k8s-tile-test-0.1.1.tgz")
+				remotePath := "/test-repo/bosh-releases/k8s-tile-test/k8s-tile-test-0.1.1.tgz"
 				blobs[remotePath] = tarballData
 
 				kf := cargo.Kilnfile{

@@ -43,7 +43,7 @@ func findArtifactorySource(kilnfile cargo.Kilnfile) (cargo.ReleaseSourceConfig, 
 
 func downloadCarvelRelease(logger *log.Logger, kilnfile cargo.Kilnfile, lock cargo.KilnfileLock, destDir string) (string, error) {
 	if len(lock.Releases) == 0 {
-		return "", fmt.Errorf("Kilnfile.lock has no releases")
+		return "", fmt.Errorf("no releases found in Kilnfile.lock")
 	}
 
 	releaseLock := lock.Releases[0]
@@ -87,41 +87,6 @@ func writeStandardKilnfileLock(lockfilePath string, releaseName, releaseVersion,
 	return os.WriteFile(lockfilePath, data, 0644)
 }
 
-func readStandardKilnfileLock(lockfilePath string) (cargo.KilnfileLock, error) {
-	data, err := os.ReadFile(lockfilePath)
-	if err != nil {
-		return cargo.KilnfileLock{}, fmt.Errorf("failed to read Kilnfile.lock: %w", err)
-	}
-	var lock cargo.KilnfileLock
-	if err := yaml.Unmarshal(data, &lock); err != nil {
-		return cargo.KilnfileLock{}, fmt.Errorf("failed to parse Kilnfile.lock: %w", err)
-	}
-	return lock, nil
-}
-
-func generateKilnfile(kilnfilePath, artifactoryHost, repo, username, password, pathTemplate string) error {
-	if pathTemplate == "" {
-		pathTemplate = "bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz"
-	}
-	kf := cargo.Kilnfile{
-		ReleaseSources: []cargo.ReleaseSourceConfig{
-			{
-				Type:            cargo.BOSHReleaseTarballSourceTypeArtifactory,
-				ArtifactoryHost: artifactoryHost,
-				Repo:            repo,
-				Username:        username,
-				Password:        password,
-				PathTemplate:    pathTemplate,
-			},
-		},
-	}
-
-	data, err := yaml.Marshal(&kf)
-	if err != nil {
-		return fmt.Errorf("failed to marshal Kilnfile: %w", err)
-	}
-	return os.WriteFile(kilnfilePath, data, 0644)
-}
 
 func resolveKilnfilePath(kilnfilePath, sourcePath string) string {
 	if kilnfilePath == "" || kilnfilePath == "Kilnfile" {

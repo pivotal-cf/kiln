@@ -58,22 +58,22 @@ func (c CarvelPublish) Execute(args []string) error {
 	kilnfilePath := resolveKilnfilePath(c.Options.Kilnfile, sourcePath)
 
 	if _, statErr := os.Stat(kilnfilePath); statErr != nil {
-		return fmt.Errorf("Kilnfile not found at %s: run 'kiln carvel upload' first to create the BOSH release, Kilnfile, and Kilnfile.lock", kilnfilePath)
+		return fmt.Errorf("could not find Kilnfile at %s: run 'kiln carvel upload' first to create the BOSH release, Kilnfile, and Kilnfile.lock", kilnfilePath)
 	}
 
 	lockfilePath := kilnfilePath + ".lock"
 	if _, statErr := os.Stat(lockfilePath); statErr != nil {
-		return fmt.Errorf("Kilnfile.lock not found at %s: run 'kiln carvel upload' first to create the BOSH release and lockfile", lockfilePath)
+		return fmt.Errorf("could not find Kilnfile.lock at %s: run 'kiln carvel upload' first to create the BOSH release and lockfile", lockfilePath)
 	}
 
 	c.Options.Kilnfile = kilnfilePath
-	kilnfile, kilnfileLock, err := c.Options.Standard.LoadKilnfiles(nil, nil)
+	kilnfile, kilnfileLock, err := c.Options.LoadKilnfiles(nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to load Kilnfiles: %w", err)
 	}
 
 	if len(kilnfileLock.Releases) == 0 {
-		return fmt.Errorf("Kilnfile.lock has no releases: run 'kiln carvel upload' first")
+		return fmt.Errorf("no releases found in Kilnfile.lock: run 'kiln carvel upload' first")
 	}
 	releaseLock := kilnfileLock.Releases[0]
 

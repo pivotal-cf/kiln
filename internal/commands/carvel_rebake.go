@@ -89,13 +89,13 @@ func (c CarvelReBake) Execute(args []string) error {
 	lockfilePath := kilnfilePath + ".lock"
 	if _, statErr := os.Stat(lockfilePath); statErr == nil {
 		c.Options.Kilnfile = kilnfilePath
-		kilnfile, kilnfileLock, loadErr := c.Options.Standard.LoadKilnfiles(nil, nil)
+		kilnfile, kilnfileLock, loadErr := c.Options.LoadKilnfiles(nil, nil)
 		if loadErr != nil {
 			return fmt.Errorf("failed to load Kilnfiles: %w", loadErr)
 		}
 
 		if len(kilnfileLock.Releases) == 0 {
-			return fmt.Errorf("Kilnfile.lock has no releases")
+			return fmt.Errorf("no releases found in Kilnfile.lock")
 		}
 		releaseLock := kilnfileLock.Releases[0]
 
