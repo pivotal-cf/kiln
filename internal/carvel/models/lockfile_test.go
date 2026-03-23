@@ -17,11 +17,13 @@ func TestCarvelLockfileRoundTrip(t *testing.T) {
 	lockPath := filepath.Join(dir, "Kilnfile.lock")
 
 	original := models.CarvelLockfile{
-		Release: models.CarvelReleaseLock{
-			Name:       "my-tile",
-			Version:    "1.2.3",
-			RemotePath: "bosh-releases/my-tile/my-tile-1.2.3.tgz",
-			SHA256:     "abc123def456",
+		Releases: []models.CarvelReleaseLock{
+			{
+				Name:       "my-tile",
+				Version:    "1.2.3",
+				RemotePath: "bosh-releases/my-tile/my-tile-1.2.3.tgz",
+				SHA256:     "abc123def456",
+			},
 		},
 	}
 
@@ -47,7 +49,7 @@ func TestReadCarvelLockfileInvalidYAML(t *testing.T) {
 
 	dir := t.TempDir()
 	lockPath := filepath.Join(dir, "Kilnfile.lock")
-	err := os.WriteFile(lockPath, []byte("release:\n  name: [unterminated"), 0644)
+	err := os.WriteFile(lockPath, []byte("releases:\n  - name: [unterminated"), 0644)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	_, err = models.ReadCarvelLockfile(lockPath)

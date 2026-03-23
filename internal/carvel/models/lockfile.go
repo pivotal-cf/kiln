@@ -8,7 +8,7 @@ import (
 )
 
 type CarvelLockfile struct {
-	Release CarvelReleaseLock `yaml:"release"`
+	Releases []CarvelReleaseLock `yaml:"releases"`
 }
 
 type CarvelReleaseLock struct {
