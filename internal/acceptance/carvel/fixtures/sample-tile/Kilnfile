@@ -1,0 +1,8 @@
+---
+release_sources:
+  - type: artifactory
+    artifactory_host: $( variable "artifactory_host" )
+    repo: $( variable "artifactory_repo" )
+    username: $( variable "artifactory_username" )
+    password: $( variable "artifactory_password" )
+    path_template: "bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz"

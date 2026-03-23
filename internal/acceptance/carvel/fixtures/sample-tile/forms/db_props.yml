@@ -1,0 +1,8 @@
+---
+name: "db_props"
+label: "Postgres Database Properties"
+description: "Postgres Database Properties"
+markdown: 'Postgres Database Properties'
+property_inputs:
+- reference: ".properties.database_name"
+  label: "Database name"

@@ -1,0 +1,8 @@
+---
+release_sources:
+  - type: artifactory
+    artifactory_host: http://localhost:8080
+    repo: test-repo
+    username: test-user
+    password: test-pass
+    path_template: "bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz"

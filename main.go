@@ -46,7 +46,11 @@ func main() {
 	}
 
 	if global.Help {
-		command = "help"
+		if command == "carvel" && len(args) > 0 {
+			args = append(args, "--help")
+		} else {
+			command = "help"
+		}
 	}
 
 	if command == "" {
@@ -76,6 +80,7 @@ func main() {
 	bakeCommand.KilnVersion = version
 	commandSet["bake"] = bakeCommand
 	commandSet["re-bake"] = commands.NewReBake(bakeCommand)
+	commandSet["rebake"] = commandSet["re-bake"]
 
 	commandSet["test"] = commands.NewTileTest()
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
@@ -101,7 +106,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = commandSet.Execute(command, args)
+	carvelCommand := commands.NewCarvel(outLogger, errLogger)
+	commandSet["carvel"] = carvelCommand
+
+	if command == "carvel" {
+		err = carvelCommand.Execute(args)
+	} else {
+		err = commandSet.Execute(command, args)
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
