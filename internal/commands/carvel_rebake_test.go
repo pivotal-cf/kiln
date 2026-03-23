@@ -87,7 +87,7 @@ var _ = Describe("CarvelReBake", func() {
 				cmds := []*exec.Cmd{
 					exec.Command("git", "init"),
 					exec.Command("git", "add", "."),
-					exec.Command("git", "commit", "-m", "initial commit"),
+					exec.Command("git", "-c", "user.name=test", "-c", "user.email=test@test.com", "commit", "-m", "initial commit"),
 				}
 				for _, cmd := range cmds {
 					cmd.Dir = inputPath
