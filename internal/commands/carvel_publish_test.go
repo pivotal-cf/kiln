@@ -62,7 +62,7 @@ var _ = Describe("CarvelPublish", func() {
 					"--output-file", filepath.Join(tmpDir, "out.pivotal"),
 				})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Kilnfile not found"))
+				Expect(err.Error()).To(ContainSubstring("could not find Kilnfile"))
 				Expect(err.Error()).To(ContainSubstring("kiln carvel upload"))
 			})
 		})

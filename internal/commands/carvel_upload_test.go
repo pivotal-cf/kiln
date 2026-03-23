@@ -50,7 +50,7 @@ var _ = Describe("CarvelUpload", func() {
 					"--source-directory", tmpDir,
 				})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Kilnfile not found"))
+				Expect(err.Error()).To(ContainSubstring("could not find Kilnfile"))
 			})
 		})
 
