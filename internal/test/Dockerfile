@@ -31,6 +31,6 @@ ENV ARTIFACTORY_USERNAME=${ARTIFACTORY_USERNAME}
 ENV ARTIFACTORY_PASSWORD=${ARTIFACTORY_PASSWORD}
 
 RUN gem source -a https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}@usw1.packages.broadcom.com/artifactory/api/gems/tas-rel-eng-gem-dev-local/
-RUN gem install --verbose ops-manifest -v 0.0.3.pre
+RUN gem install --verbose ops-manifest -v 0.0.4.pre
 
 RUN which ops-manifest
