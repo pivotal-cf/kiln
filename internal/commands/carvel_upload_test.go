@@ -158,9 +158,11 @@ var _ = Describe("CarvelUpload", func() {
 				Expect(yaml.Unmarshal(lockData, &lock)).To(Succeed())
 				Expect(lock.Releases).To(HaveLen(1))
 				Expect(lock.Releases[0].Name).To(Equal("k8s-tile-test"))
-				Expect(lock.Releases[0].Version).To(Equal("0.1.1"))
+				Expect(lock.Releases[0].Version).To(HavePrefix("0.1.1+"))
+				Expect(lock.Releases[0].Version).To(MatchRegexp(`^0\.1\.1\+[0-9a-f]{12}$`))
 				Expect(lock.Releases[0].SHA1).NotTo(BeEmpty())
 				Expect(lock.Releases[0].RemotePath).To(ContainSubstring("k8s-tile-test"))
+				Expect(lock.Releases[0].RemotePath).To(ContainSubstring(lock.Releases[0].Version))
 				Expect(lock.Releases[0].RemoteSource).To(Equal("artifactory"))
 
 				By("verifying mock Artifactory received the PUT with Basic Auth")

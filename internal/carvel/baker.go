@@ -1,14 +1,18 @@
 package carvel
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/pivotal-cf/kiln/internal/carvel/models"
@@ -25,7 +29,12 @@ type Baker interface {
 	BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTarballLock, localTarball string) error
 	KilnBake(destination string) error
 	GetName() string
+	// GetVersion returns the product version from base.yml or the version file.
 	GetVersion() (string, error)
+	// GetReleaseVersion returns the BOSH release version, which includes a
+	// content fingerprint suffix (e.g., "10.4.0+a1b2c3d4e5f6"). Only valid
+	// after Bake() or BakeFromLockfile() has been called.
+	GetReleaseVersion() string
 	GetReleaseTarball() (string, error)
 	SetWriter(w io.Writer)
 	SetProgressWriter(w io.Writer)
@@ -42,6 +51,7 @@ func NewBaker() Baker {
 type baker struct {
 	metadata            models.Metadata
 	source, destination string
+	releaseVersion      string
 	writer              io.Writer
 	progressWriter      io.Writer
 }
@@ -138,6 +148,8 @@ func (b *baker) BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTar
 		return fmt.Errorf("lockfile release name %q does not match tile name %q", releaseLock.Name, b.metadata.Name)
 	}
 
+	b.releaseVersion = releaseLock.Version
+
 	err = os.RemoveAll(b.destination)
 	if err != nil {
 		return err
@@ -175,7 +187,7 @@ func (b *baker) BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTar
 		return err
 	}
 
-	destTarball := path.Join(releasesDir, b.metadata.Name+"-"+ver+".tgz")
+	destTarball := path.Join(releasesDir, b.metadata.Name+"-"+releaseLock.Version+".tgz")
 
 	b.progress("Copying cached BOSH release from " + localTarball)
 	b.log("copying cached BOSH release from " + localTarball)
@@ -188,11 +200,10 @@ func (b *baker) BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTar
 }
 
 func (b *baker) GetReleaseTarball() (string, error) {
-	ver, err := b.GetVersion()
-	if err != nil {
-		return "", err
+	if b.releaseVersion == "" {
+		return "", fmt.Errorf("release version not set -- call Bake() or BakeFromLockfile() first")
 	}
-	tarball := path.Join(b.destination, "releases", b.metadata.Name+"-"+ver+".tgz")
+	tarball := path.Join(b.destination, "releases", b.metadata.Name+"-"+b.releaseVersion+".tgz")
 	if _, err := os.Stat(tarball); err != nil {
 		return "", fmt.Errorf("release tarball not found at %s: %w", tarball, err)
 	}
@@ -201,6 +212,10 @@ func (b *baker) GetReleaseTarball() (string, error) {
 
 func (b *baker) GetName() string {
 	return b.metadata.Name
+}
+
+func (b *baker) GetReleaseVersion() string {
+	return b.releaseVersion
 }
 
 func (b *baker) GetVersion() (string, error) {
@@ -666,19 +681,29 @@ func (b *baker) createBoshRelease() error {
 		return err
 	}
 
-	version, err := b.GetVersion()
+	productVersion, err := b.GetVersion()
 	if err != nil {
 		return err
 	}
 
 	dirName := path.Join(b.source, ".boshrelease")
+
+	fingerprint, err := hashBoshReleaseInputs(dirName)
+	if err != nil {
+		return err
+	}
+
+	releaseVersion := buildReleaseVersion(productVersion, fingerprint)
+	b.releaseVersion = releaseVersion
+
+	finalTarball := path.Join(b.destination, "releases", b.metadata.Name+"-"+releaseVersion+".tgz")
 	cmd := exec.Command("bosh",
 		"create-release",
 		"--dir="+dirName,
 		"--force",
 		"--name", b.metadata.Name,
-		"--version", version,
-		"--tarball", path.Join(b.destination, "releases", b.metadata.Name+"-"+version+".tgz"))
+		"--version", releaseVersion,
+		"--tarball", finalTarball)
 	b.log("executing " + cmd.String())
 	out, err := cmd.CombinedOutput()
 	b.log("output: " + string(out))
@@ -686,7 +711,59 @@ func (b *baker) createBoshRelease() error {
 		return err
 	}
 
+	b.progress(fmt.Sprintf("  BOSH release version: %s", releaseVersion))
 	return nil
+}
+
+func hashBoshReleaseInputs(boshReleaseDir string) (string, error) {
+	h := sha256.New()
+
+	var paths []string
+	err := filepath.WalkDir(boshReleaseDir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		rel, err := filepath.Rel(boshReleaseDir, p)
+		if err != nil {
+			return err
+		}
+		paths = append(paths, rel)
+		return nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to walk .boshrelease directory: %w", err)
+	}
+
+	sort.Strings(paths)
+
+	for _, rel := range paths {
+		_, _ = fmt.Fprintf(h, "path:%s\n", rel)
+
+		f, err := os.Open(filepath.Join(boshReleaseDir, rel))
+		if err != nil {
+			return "", err
+		}
+		if _, err := io.Copy(h, f); err != nil {
+			_ = f.Close()
+			return "", err
+		}
+		_ = f.Close()
+	}
+
+	return hex.EncodeToString(h.Sum(nil))[:12], nil
+}
+
+func buildReleaseVersion(productVersion, fingerprint string) string {
+	if strings.Contains(productVersion, "+") {
+		return productVersion + "." + fingerprint
+	}
+	return productVersion + "+" + fingerprint
 }
 
 func copyFileContents(src, dst string) (err error) {
