@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/pivotal-cf/jhanda"
@@ -174,7 +175,7 @@ func uploadToArtifactory(localPath, host, repo, remotePath, username, password s
 	}
 	defer func() { _ = f.Close() }()
 
-	uploadURL := host + "/" + repo + "/" + remotePath
+	uploadURL := host + "/" + repo + "/" + strings.ReplaceAll(remotePath, "+", "%2B")
 
 	req, err := http.NewRequest(http.MethodPut, uploadURL, f)
 	if err != nil {
