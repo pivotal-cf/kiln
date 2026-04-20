@@ -95,7 +95,7 @@ func (ars *ArtifactoryReleaseSource) DownloadRelease(releaseDir string, remoteRe
 	if path.Base(u.Path) != "artifactory" {
 		downloadURL += "/artifactory"
 	}
-	downloadURL += "/" + ars.Repo + "/" + remoteRelease.RemotePath
+	downloadURL += "/" + ars.Repo + "/" + strings.ReplaceAll(remoteRelease.RemotePath, "+", "%2B")
 
 	ars.logger.Printf(logLineDownload, remoteRelease.Name, remoteRelease.Version, ReleaseSourceTypeArtifactory, ars.ID)
 	resp, err := ars.getWithAuth(downloadURL)

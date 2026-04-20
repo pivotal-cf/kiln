@@ -194,8 +194,15 @@ var _ = Describe("Carvel Baker", func() {
 					Expect(filepath.Join(outputPath, "icon.png")).To(BeAnExistingFile())
 					Expect(filepath.Join(outputPath, "version")).To(BeAnExistingFile())
 				})
-				It("Generates a bosh release tarball", func() {
-					Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-0.1.1.tgz")).To(BeAnExistingFile())
+				It("generates a bosh release tarball with fingerprinted version", func() {
+					releaseVersion := subject.GetReleaseVersion()
+					Expect(releaseVersion).To(HavePrefix("0.1.1+"))
+					Expect(releaseVersion).To(MatchRegexp(`^0\.1\.1\+[0-9a-f]{12}$`))
+					Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-"+releaseVersion+".tgz")).To(BeAnExistingFile())
+
+					tarball, err := subject.GetReleaseTarball()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(tarball).To(ContainSubstring(releaseVersion))
 				})
 				It("does not generate a separate package-install job", func() {
 					Expect(filepath.Join(boshReleasePath, "jobs", "package-install")).NotTo(BeADirectory())
@@ -347,9 +354,11 @@ var _ = Describe("Carvel Baker", func() {
 				err = copyTestFile(tarball, cachedTarball)
 				Expect(err).NotTo(HaveOccurred())
 
+				uploadReleaseVersion := subject.GetReleaseVersion()
+
 				releaseLock := cargo.BOSHReleaseTarballLock{
 					Name:    "k8s-tile-test",
-					Version: "0.1.1",
+					Version: uploadReleaseVersion,
 				}
 
 				subject2 := NewBaker()
@@ -359,8 +368,9 @@ var _ = Describe("Carvel Baker", func() {
 
 				outputPath := path.Join(inputPath, ".carvel-tile")
 				Expect(filepath.Join(outputPath, "base.yml")).To(BeAnExistingFile())
-				Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-0.1.1.tgz")).To(BeAnExistingFile())
+				Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-"+uploadReleaseVersion+".tgz")).To(BeAnExistingFile())
 				Expect(filepath.Join(outputPath, "runtime_configs")).To(BeADirectory())
+				Expect(subject2.GetReleaseVersion()).To(Equal(uploadReleaseVersion))
 			})
 		})
 
@@ -436,7 +446,7 @@ var _ = Describe("Carvel Baker", func() {
 
 			releaseLock := cargo.BOSHReleaseTarballLock{
 				Name:    "k8s-tile-test",
-				Version: "0.1.1",
+				Version: uploadBaker.GetReleaseVersion(),
 			}
 
 			publishBaker := NewBaker()
@@ -463,6 +473,99 @@ var _ = Describe("Carvel Baker", func() {
 
 			Expect(rebakeChecksum).To(Equal(publishChecksum),
 				"publish and rebake should produce identical tiles when using the same cached BOSH release tarball")
+		})
+	})
+
+	Context("hashBoshReleaseInputs", func() {
+		It("is deterministic", func() {
+			dir, err := os.MkdirTemp("", "hash-test-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = os.RemoveAll(dir) }()
+
+			Expect(os.WriteFile(filepath.Join(dir, "a.txt"), []byte("hello"), 0644)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(dir, "sub"), 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(dir, "sub", "b.txt"), []byte("world"), 0644)).To(Succeed())
+
+			h1, err := hashBoshReleaseInputs(dir)
+			Expect(err).NotTo(HaveOccurred())
+			h2, err := hashBoshReleaseInputs(dir)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(h1).To(Equal(h2))
+			Expect(h1).To(HaveLen(12))
+		})
+
+		It("changes when file contents change", func() {
+			dir, err := os.MkdirTemp("", "hash-test-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = os.RemoveAll(dir) }()
+
+			Expect(os.WriteFile(filepath.Join(dir, "a.txt"), []byte("hello"), 0644)).To(Succeed())
+
+			h1, err := hashBoshReleaseInputs(dir)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(os.WriteFile(filepath.Join(dir, "a.txt"), []byte("changed"), 0644)).To(Succeed())
+
+			h2, err := hashBoshReleaseInputs(dir)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(h1).NotTo(Equal(h2))
+		})
+
+		It("changes when a file is renamed", func() {
+			dir, err := os.MkdirTemp("", "hash-test-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = os.RemoveAll(dir) }()
+
+			Expect(os.WriteFile(filepath.Join(dir, "a.txt"), []byte("hello"), 0644)).To(Succeed())
+
+			h1, err := hashBoshReleaseInputs(dir)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(os.Rename(filepath.Join(dir, "a.txt"), filepath.Join(dir, "b.txt"))).To(Succeed())
+
+			h2, err := hashBoshReleaseInputs(dir)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(h1).NotTo(Equal(h2))
+		})
+
+		It("excludes .git directory", func() {
+			dir, err := os.MkdirTemp("", "hash-test-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = os.RemoveAll(dir) }()
+
+			Expect(os.WriteFile(filepath.Join(dir, "a.txt"), []byte("hello"), 0644)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(dir, ".git", "objects"), 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(dir, ".git", "HEAD"), []byte("ref: refs/heads/main"), 0644)).To(Succeed())
+
+			h1, err := hashBoshReleaseInputs(dir)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(os.WriteFile(filepath.Join(dir, ".git", "HEAD"), []byte("ref: refs/heads/other"), 0644)).To(Succeed())
+
+			h2, err := hashBoshReleaseInputs(dir)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(h1).To(Equal(h2))
+		})
+	})
+
+	Context("buildReleaseVersion", func() {
+		It("appends fingerprint with + separator", func() {
+			Expect(buildReleaseVersion("10.4.0", "a1b2c3d4e5f6")).To(Equal("10.4.0+a1b2c3d4e5f6"))
+		})
+
+		It("appends fingerprint with . separator when version already contains +", func() {
+			Expect(buildReleaseVersion("10.4.0+beta.1", "a1b2c3d4e5f6")).To(Equal("10.4.0+beta.1.a1b2c3d4e5f6"))
+		})
+	})
+
+	Context("GetReleaseVersion", func() {
+		It("returns empty string before Bake is called", func() {
+			subject := NewBaker()
+			Expect(subject.GetReleaseVersion()).To(BeEmpty())
 		})
 	})
 

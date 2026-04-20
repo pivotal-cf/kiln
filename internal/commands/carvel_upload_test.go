@@ -56,11 +56,12 @@ var _ = Describe("CarvelUpload", func() {
 
 		When("valid Kilnfile is provided with a round-trip mock Artifactory", func() {
 			var (
-				inputPath string
-				server    *httptest.Server
-				mu        sync.Mutex
-				blobs     map[string][]byte
-				authOK    bool
+				inputPath      string
+				server         *httptest.Server
+				mu             sync.Mutex
+				blobs          map[string][]byte
+				authOK         bool
+				putRequestURIs []string
 			)
 
 			BeforeEach(func() {
@@ -70,6 +71,7 @@ var _ = Describe("CarvelUpload", func() {
 
 				blobs = make(map[string][]byte)
 				authOK = false
+				putRequestURIs = nil
 
 				server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					u, p, ok := r.BasicAuth()
@@ -84,6 +86,7 @@ var _ = Describe("CarvelUpload", func() {
 						mu.Lock()
 						blobs[key] = body
 						authOK = true
+						putRequestURIs = append(putRequestURIs, r.RequestURI)
 						mu.Unlock()
 						w.WriteHeader(http.StatusCreated)
 					case http.MethodGet:
@@ -158,9 +161,11 @@ var _ = Describe("CarvelUpload", func() {
 				Expect(yaml.Unmarshal(lockData, &lock)).To(Succeed())
 				Expect(lock.Releases).To(HaveLen(1))
 				Expect(lock.Releases[0].Name).To(Equal("k8s-tile-test"))
-				Expect(lock.Releases[0].Version).To(Equal("0.1.1"))
+				Expect(lock.Releases[0].Version).To(HavePrefix("0.1.1+"))
+				Expect(lock.Releases[0].Version).To(MatchRegexp(`^0\.1\.1\+[0-9a-f]{12}$`))
 				Expect(lock.Releases[0].SHA1).NotTo(BeEmpty())
 				Expect(lock.Releases[0].RemotePath).To(ContainSubstring("k8s-tile-test"))
+				Expect(lock.Releases[0].RemotePath).To(ContainSubstring(lock.Releases[0].Version))
 				Expect(lock.Releases[0].RemoteSource).To(Equal("artifactory"))
 
 				By("verifying mock Artifactory received the PUT with Basic Auth")
@@ -170,6 +175,11 @@ var _ = Describe("CarvelUpload", func() {
 				for _, data := range blobs {
 					Expect(len(data)).To(BeNumerically(">", 0), "uploaded tarball must not be empty")
 				}
+				Expect(putRequestURIs).To(HaveLen(1))
+				Expect(putRequestURIs[0]).To(ContainSubstring("%2B"),
+					"PUT request URI must contain %2B for + characters")
+				Expect(putRequestURIs[0]).NotTo(ContainSubstring("+"),
+					"PUT request URI must not contain + characters")
 				mu.Unlock()
 			})
 		})

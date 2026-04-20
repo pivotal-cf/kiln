@@ -165,6 +165,7 @@ var _ = Describe("CarvelReBake", func() {
 				Expect(err).NotTo(HaveOccurred())
 				tarballData, err := os.ReadFile(tarball)
 				Expect(err).NotTo(HaveOccurred())
+				releaseVersion := b.GetReleaseVersion()
 
 				var (
 					mu    sync.Mutex
@@ -193,7 +194,7 @@ var _ = Describe("CarvelReBake", func() {
 				}))
 
 				// Pre-load the mock with the tarball at the expected path
-				remotePath := "/test-repo/bosh-releases/k8s-tile-test/k8s-tile-test-0.1.1.tgz"
+				remotePath := "/test-repo/bosh-releases/k8s-tile-test/k8s-tile-test-" + releaseVersion + ".tgz"
 				blobs[remotePath] = tarballData
 
 				kf := cargo.Kilnfile{
@@ -213,8 +214,8 @@ var _ = Describe("CarvelReBake", func() {
 				lock := cargo.KilnfileLock{
 					Releases: []cargo.BOSHReleaseTarballLock{{
 						Name:         "k8s-tile-test",
-						Version:      "0.1.1",
-						RemotePath:   "bosh-releases/k8s-tile-test/k8s-tile-test-0.1.1.tgz",
+						Version:      releaseVersion,
+						RemotePath:   "bosh-releases/k8s-tile-test/k8s-tile-test-" + releaseVersion + ".tgz",
 						RemoteSource: "artifactory",
 					}},
 					Stemcell: cargo.Stemcell{OS: "ubuntu-jammy", Version: "1.446"},
