@@ -22,6 +22,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/client"
 	specV1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
@@ -32,6 +33,10 @@ const (
 	// If the integration tests pass on your machine with an older version, feel free to PR a less conservative value.
 	MinimumDockerServerVersion = "> 24.0.0"
 	MinimumPodmanServerVersion = "> 5.3.0"
+
+	// DockerVirtualRegistryHost is the docker-virtual registry used in Dockerfile FROM lines
+	// and in ImageBuild AuthConfigs. Keep in sync with internal/test/Dockerfile.
+	DockerVirtualRegistryHost = "tas-rel-eng-docker-virtual.usw1.packages.broadcom.com"
 )
 
 func Run(ctx context.Context, w io.Writer, configuration Configuration) error {
@@ -119,24 +124,36 @@ func runTest(ctx context.Context, logger *log.Logger, w io.Writer, dockerDaemon 
 		return fmt.Errorf("failed to parse environment: %w", err)
 	}
 
-	artifactoryUsername := envMap["ARTIFACTORY_USERNAME"]
-	artifactoryPassword := envMap["ARTIFACTORY_PASSWORD"]
+	username, password, err := RequiredArtifactoryCredentials(configuration.Environment)
+	if err != nil {
+		return err
+	}
+	envMap["ARTIFACTORY_USERNAME"] = username
+	envMap["ARTIFACTORY_PASSWORD"] = password
+
+	artifactoryUsername := username
+	artifactoryPassword := password
+
+	authConfigs := registryAuthForDockerVirtual(envMap)
 
 	logger.Println("creating test image")
+	buildArgs := map[string]*string{
+		"ARTIFACTORY_USERNAME": &artifactoryUsername,
+		"ARTIFACTORY_PASSWORD": &artifactoryPassword,
+	}
+
 	resp, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, build.ImageBuildOptions{
-		Tags: []string{"kiln_test_dependencies:vmware"},
-		BuildArgs: map[string]*string{
-			"ARTIFACTORY_USERNAME": &artifactoryUsername,
-			"ARTIFACTORY_PASSWORD": &artifactoryPassword,
-		},
+		Tags:           []string{"kiln_test_dependencies:vmware"},
+		BuildArgs:      buildArgs,
+		AuthConfigs:    authConfigs,
+		SuppressOutput: true,
 	})
 
 	if err != nil {
 		return fmt.Errorf("failed to build image: %w", err)
 	}
 
-	logger.Println("reading image build response")
-	if err := checkImageBuildResponse(resp.Body); err != nil {
+	if err := checkImageBuildResponse(resp.Body, nil); err != nil {
 		return fmt.Errorf("image build failed: %w", err)
 	}
 
@@ -197,6 +214,12 @@ func runTest(ctx context.Context, logger *log.Logger, w io.Writer, dockerDaemon 
 		return fmt.Errorf("failed to start test container: %w", err)
 	}
 
+	// Subscribe for exit before draining logs. With AutoRemove, the engine may delete the
+	// container as soon as it stops; waiting for removal after io.Copy can race and
+	// return "no such container" (often under Podman). next-exit records the exit while
+	// the ID still exists.
+	statusCh, containerWaitError := dockerDaemon.ContainerWait(ctx, testContainer.ID, container.WaitConditionNextExit)
+
 	out, err := dockerDaemon.ContainerLogs(ctx, testContainer.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
 	if err != nil {
 		return fmt.Errorf("container log request failure: %w", err)
@@ -205,10 +228,7 @@ func runTest(ctx context.Context, logger *log.Logger, w io.Writer, dockerDaemon 
 		return err
 	}
 
-	//Although the fan-in loop pattern seems like the right solution here, ContainerWait
-	//does not properly close channels, so it won't work.
 	var resultErr error
-	statusCh, containerWaitError := dockerDaemon.ContainerWait(ctx, testContainer.ID, container.WaitConditionRemoved)
 	select {
 	case err := <-containerWaitError:
 		resultErr = err
@@ -235,6 +255,48 @@ func encodeEnvironment(m environmentVars) []string {
 		result = append(result, strings.Join([]string{k, v}, "="))
 	}
 	return result
+}
+
+// RequiredArtifactoryCredentials resolves ARTIFACTORY_USERNAME and ARTIFACTORY_PASSWORD
+// from -e flags and os.Getenv for kiln test.
+func RequiredArtifactoryCredentials(envVarArgs []string) (username, password string, err error) {
+	m, err := decodeEnvironment(envVarArgs)
+	if err != nil {
+		return "", "", err
+	}
+	user := strings.TrimSpace(m["ARTIFACTORY_USERNAME"])
+	if user == "" {
+		user = strings.TrimSpace(os.Getenv("ARTIFACTORY_USERNAME"))
+	}
+	pass := strings.TrimSpace(m["ARTIFACTORY_PASSWORD"])
+	if pass == "" {
+		pass = strings.TrimSpace(os.Getenv("ARTIFACTORY_PASSWORD"))
+	}
+	if user == "" {
+		return "", "", fmt.Errorf("kiln test requires ARTIFACTORY_USERNAME: set it using -e or export it in your environment")
+	}
+	if pass == "" {
+		return "", "", fmt.Errorf("kiln test requires ARTIFACTORY_PASSWORD: set it using -e or export it in your environment")
+	}
+	return user, pass, nil
+}
+
+// registryAuthForDockerVirtual supplies credentials for pulling FROM images on
+// DockerVirtualRegistryHost during docker build (X-Registry-Config).
+func registryAuthForDockerVirtual(env environmentVars) map[string]registry.AuthConfig {
+	user := strings.TrimSpace(env["ARTIFACTORY_USERNAME"])
+	pass := strings.TrimSpace(env["ARTIFACTORY_PASSWORD"])
+	if user == "" || pass == "" {
+		return nil
+	}
+	host := DockerVirtualRegistryHost
+	return map[string]registry.AuthConfig{
+		host: {
+			Username:      user,
+			Password:      pass,
+			ServerAddress: host,
+		},
+	}
 }
 
 func decodeEnvironment(environmentVarArgs []string) (environmentVars, error) {
@@ -296,13 +358,17 @@ type tarWriter interface {
 }
 
 type imageBuildMessage struct {
+	Stream      string `json:"stream"`
 	Error       string `json:"error"`
 	ErrorDetail struct {
 		Message string `json:"message"`
 	} `json:"errorDetail"`
 }
 
-func checkImageBuildResponse(body io.ReadCloser) error {
+// checkImageBuildResponse reads the Docker/Podman image-build JSON stream. If
+// logOutput is non-nil, "stream" lines are copied there; otherwise they are
+// discarded. Build failures are still returned from daemon "error" messages.
+func checkImageBuildResponse(body io.ReadCloser, logOutput io.Writer) error {
 	defer func() {
 		_ = body.Close()
 	}()
@@ -315,8 +381,15 @@ func checkImageBuildResponse(body io.ReadCloser) error {
 			}
 			return fmt.Errorf("failed to read image build response: %w", err)
 		}
+		if logOutput != nil && msg.Stream != "" {
+			_, _ = io.WriteString(logOutput, msg.Stream)
+		}
 		if msg.Error != "" {
-			return fmt.Errorf("%s", msg.Error)
+			detail := msg.Error
+			if msg.ErrorDetail.Message != "" {
+				detail = msg.ErrorDetail.Message
+			}
+			return fmt.Errorf("%s", detail)
 		}
 	}
 	return nil

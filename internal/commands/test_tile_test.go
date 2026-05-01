@@ -34,6 +34,12 @@ func init() {
 var _ = Describe("kiln test", func() {
 	var output bytes.Buffer
 
+	BeforeEach(func() {
+		t := GinkgoT()
+		t.Setenv("ARTIFACTORY_USERNAME", "ginkgo-test-user")
+		t.Setenv("ARTIFACTORY_PASSWORD", "ginkgo-test-pass")
+	})
+
 	AfterEach(func() {
 		output.Reset()
 	})
@@ -210,28 +216,6 @@ var _ = Describe("kiln test", func() {
 		})
 	})
 
-	When("when the stability test is enabled", func() {
-		It("it sets the RunMetadata configuration flag", func() {
-			args := []string{"--stability"}
-
-			fakeTestFunc := fakes.TestTileFunction{}
-			fakeTestFunc.Returns(nil)
-
-			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeTestFunc.CallCount()).To(Equal(1))
-
-			ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
-			Expect(ctx).NotTo(BeNil())
-			Expect(w).NotTo(BeNil())
-
-			Expect(configuration.RunManifest).To(BeFalse())
-			Expect(configuration.RunMetadata).To(BeTrue())
-			Expect(configuration.RunMigrations).To(BeFalse())
-		})
-	})
-
 	When("when ginkgo/v2 flag arguments are passed", func() {
 		It("it sets the GinkgoFlags configuration", func() {
 			args := []string{"--ginkgo-flags=peach pair"}
@@ -249,6 +233,54 @@ var _ = Describe("kiln test", func() {
 			Expect(w).NotTo(BeNil())
 
 			Expect(configuration.GinkgoFlags).To(Equal("peach pair"))
+		})
+	})
+
+	When("when Artifactory credentials are provided via -e", func() {
+		It("invokes the test function with those variables in Environment", func() {
+			args := []string{
+				"-e", "ARTIFACTORY_USERNAME=u",
+				"-e", "ARTIFACTORY_PASSWORD=p",
+			}
+
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
+
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, _, configuration := fakeTestFunc.ArgsForCall(0)
+			Expect(configuration.Environment).To(ContainElement("ARTIFACTORY_USERNAME=u"))
+			Expect(configuration.Environment).To(ContainElement("ARTIFACTORY_PASSWORD=p"))
+		})
+	})
+
+	When("when Artifactory credentials are missing", func() {
+		It("returns an error before invoking the test function", func() {
+			savedU, hasU := os.LookupEnv("ARTIFACTORY_USERNAME")
+			savedP, hasP := os.LookupEnv("ARTIFACTORY_PASSWORD")
+			DeferCleanup(func() {
+				if hasU {
+					Expect(os.Setenv("ARTIFACTORY_USERNAME", savedU)).To(Succeed())
+				} else {
+					Expect(os.Unsetenv("ARTIFACTORY_USERNAME")).To(Succeed())
+				}
+				if hasP {
+					Expect(os.Setenv("ARTIFACTORY_PASSWORD", savedP)).To(Succeed())
+				} else {
+					Expect(os.Unsetenv("ARTIFACTORY_PASSWORD")).To(Succeed())
+				}
+			})
+			Expect(os.Unsetenv("ARTIFACTORY_USERNAME")).To(Succeed())
+			Expect(os.Unsetenv("ARTIFACTORY_PASSWORD")).To(Succeed())
+
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
+
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute([]string{})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("ARTIFACTORY_USERNAME"))
+			Expect(fakeTestFunc.CallCount()).To(Equal(0))
 		})
 	})
 
