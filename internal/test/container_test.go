@@ -160,7 +160,7 @@ func TestTestPlan_script_includesSummaryForMultipleSuites(t *testing.T) {
 		},
 	}
 
-	script := plan.script()
+	script := plan.script(false)
 
 	// Each suite runs in a subshell with captured exit code.
 	require.Contains(t, script, "); _exit0=$?")
@@ -199,7 +199,7 @@ func TestTestPlan_script_omitsSummaryForSingleSuite(t *testing.T) {
 		},
 	}
 
-	script := plan.script()
+	script := plan.script(false)
 
 	// No summary text for single suite.
 	require.NotContains(t, script, "Passed")
@@ -213,7 +213,7 @@ func TestTestPlan_script_emptyWithNoSuites(t *testing.T) {
 	plan := testPlan{
 		setup: []string{"git config --global --add safe.directory '*'"},
 	}
-	script := plan.script()
+	script := plan.script(false)
 	require.Contains(t, script, "git config")
 	require.NotContains(t, script, "_exit0")
 	require.NotContains(t, script, "_overall")
@@ -294,15 +294,14 @@ func TestConfiguration_commands_usesNpmInstallWithoutLockfile(t *testing.T) {
 
 func TestTestPlan_script_verbose_addsStartAndEndTimestamps(t *testing.T) {
 	plan := testPlan{
-		setup:   []string{"setup cmd"},
-		verbose: true,
+		setup: []string{"setup cmd"},
 		suites: []suiteStep{
 			{name: "Migration Tests", cmds: []string{"npm test"}},
 			{name: "Stability Tests", cmds: []string{"ginkgo stability"}},
 		},
 	}
 
-	script := plan.script()
+	script := plan.script(true)
 
 	// Start and end echo lines present for each suite.
 	require.Contains(t, script, "Starting: Migration Tests")
@@ -313,12 +312,11 @@ func TestTestPlan_script_verbose_addsStartAndEndTimestamps(t *testing.T) {
 
 func TestTestPlan_script_noStartEndEchoWhenNotVerbose(t *testing.T) {
 	plan := testPlan{
-		setup:   []string{"setup cmd"},
-		verbose: false,
-		suites:  []suiteStep{{name: "Migration Tests", cmds: []string{"npm test"}}},
+		setup:  []string{"setup cmd"},
+		suites: []suiteStep{{name: "Migration Tests", cmds: []string{"npm test"}}},
 	}
 
-	script := plan.script()
+	script := plan.script(false)
 
 	// No verbose echo lines; end-time variable is still captured for potential summary use.
 	require.NotContains(t, script, "Starting:")

@@ -67,9 +67,8 @@ type Configuration struct {
 // setup that must succeed before any suite, and an ordered list of named
 // suites each of which is run as an independent unit.
 type testPlan struct {
-	setup   []string // fail-fast preamble (git config, etc.)
-	suites  []suiteStep
-	verbose bool // when true: timestamps before each suite; npm output visible
+	setup  []string // fail-fast preamble (git config, etc.)
+	suites []suiteStep
 }
 
 // suiteStep is one test suite — migrations, stability, or manifest.
@@ -93,8 +92,7 @@ func (configuration Configuration) commands() (testPlan, error) {
 	tileDirName := filepath.Base(configuration.AbsoluteTileDirectory)
 
 	plan := testPlan{
-		setup:   []string{"git config --global --add safe.directory '*'"},
-		verbose: configuration.Verbose,
+		setup: []string{"git config --global --add safe.directory '*'"},
 	}
 
 	if configuration.RunMigrations || configuration.RunAll {
@@ -144,8 +142,9 @@ func (configuration Configuration) commands() (testPlan, error) {
 // Each suite runs in a subshell so cd calls don't leak between suites. Exit
 // codes are captured individually. When more than one suite is selected a
 // colored pass/fail summary is printed at the end. The script always exits
-// non-zero if any suite failed.
-func (p testPlan) script() string {
+// non-zero if any suite failed. When verbose is true, start/end timestamps
+// are echoed before and after each suite.
+func (p testPlan) script(verbose bool) string {
 	var b strings.Builder
 
 	// Global setup — fail fast on any error.
@@ -160,12 +159,12 @@ func (p testPlan) script() string {
 
 	// One subshell per suite; exit code and end-time stored in _exitN / _timeN.
 	for i, s := range p.suites {
-		if p.verbose {
+		if verbose {
 			fmt.Fprintf(&b, "\necho \"[$(date '+%%H:%%M:%%S')] Starting: %s\"\n", s.name)
 		}
 		fmt.Fprintf(&b, "\n(%s); _exit%d=$?\n", strings.Join(s.cmds, " && "), i)
 		fmt.Fprintf(&b, "_time%d=$(date '+%%H:%%M:%%S')\n", i)
-		if p.verbose {
+		if verbose {
 			fmt.Fprintf(&b, "echo \"[$_time%d] Completed: %s\"\n", i, s.name)
 		}
 	}
@@ -233,7 +232,7 @@ func runTest(ctx context.Context, w io.Writer, dockerDaemon mobyClient, configur
 	tileDir := filepath.Base(configuration.AbsoluteTileDirectory)
 	envVars := getTileTestEnvVars(configuration.AbsoluteTileDirectory, tileDir, envMap)
 
-	return startAndWaitContainer(ctx, w, dockerDaemon, plan.script(), envVars, parentDir, configuration.Verbose)
+	return startAndWaitContainer(ctx, w, dockerDaemon, plan.script(configuration.Verbose), envVars, parentDir, configuration.Verbose)
 }
 
 // buildTestImage builds the kiln test Docker image, forwarding Artifactory
