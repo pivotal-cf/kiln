@@ -243,7 +243,7 @@ func buildTestImage(ctx context.Context, w io.Writer, dockerDaemon mobyClient, u
 		return err
 	}
 
-	fmt.Fprintln(w, "Preparing test image...")
+	_, _ = fmt.Fprintln(w, "Preparing test image...")
 	resp, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, build.ImageBuildOptions{
 		Tags: []string{"kiln_test_dependencies:vmware"},
 		BuildArgs: map[string]*string{
@@ -289,7 +289,7 @@ func startAndWaitContainer(ctx context.Context, w io.Writer, dockerDaemon mobyCl
 		return fmt.Errorf("failed to create container: %w", err)
 	}
 	if verbose {
-		fmt.Fprintf(w, "Container: %s\n", testContainer.ID)
+		_, _ = fmt.Fprintf(w, "Container: %s\n", testContainer.ID)
 	}
 
 	errG := errgroup.Group{}
@@ -327,7 +327,7 @@ func startAndWaitContainer(ctx context.Context, w io.Writer, dockerDaemon mobyCl
 	if err != nil {
 		return fmt.Errorf("container log request failure: %w", err)
 	}
-	fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "")
 	if _, err := io.Copy(w, out); err != nil {
 		return err
 	}
