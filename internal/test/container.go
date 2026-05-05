@@ -64,44 +64,124 @@ type Configuration struct {
 	Verbose     bool
 }
 
+// testPlan holds the complete set of shell work for a kiln test run: global
+// setup that must succeed before any suite, and an ordered list of named
+// suites each of which is run as an independent unit.
+type testPlan struct {
+	setup  []string // fail-fast preamble (git config, etc.)
+	suites []suiteStep
+}
+
+// suiteStep is one test suite — migrations, stability, or manifest.
+// cmds are chained with && inside a subshell so their exit code is captured
+// as a single unit.
+type suiteStep struct {
+	name string   // human label used in header and summary
+	cmds []string // shell commands; first entry is typically the header printf
+}
+
 // suiteHeader builds the "Running Suite: …\n…\n" printf command for a suite.
 func suiteHeader(title string) string {
 	label := "Running Suite: " + title
 	return fmt.Sprintf(`printf '\n%s\n%s\n'`, label, strings.Repeat("=", len(label)))
 }
 
-func (configuration Configuration) commands() ([]string, error) {
+func (configuration Configuration) commands() (testPlan, error) {
 	if !filepath.IsAbs(configuration.AbsoluteTileDirectory) {
-		return nil, fmt.Errorf("tile path must be absolute")
+		return testPlan{}, fmt.Errorf("tile path must be absolute")
 	}
 	tileDirName := filepath.Base(configuration.AbsoluteTileDirectory)
 
-	commands := []string{"git config --global --add safe.directory '*'"}
-	if configuration.RunMigrations || configuration.RunAll {
-		commands = append(commands, fmt.Sprintf("cd /tas/%s/migrations", tileDirName))
-		commands = append(commands, npmInstallCommand(configuration.AbsoluteTileDirectory))
-		commands = append(commands, suiteHeader("Migration Tests"))
-		commands = append(commands, "npm test")
+	plan := testPlan{
+		setup: []string{"git config --global --add safe.directory '*'"},
 	}
 
-	// Each suite gets its own invocation so output is never interleaved.
+	if configuration.RunMigrations || configuration.RunAll {
+		plan.suites = append(plan.suites, suiteStep{
+			name: "Migration Tests",
+			cmds: []string{
+				fmt.Sprintf("cd /tas/%s/migrations", tileDirName),
+				npmInstallCommand(configuration.AbsoluteTileDirectory),
+				suiteHeader("Migration Tests"),
+				"npm test",
+			},
+		})
+	}
+
+	// Each ginkgo suite gets its own invocation so output is never interleaved.
 	// Stability tests use Go's standard testing package (no ginkgo bootstrap), so
 	// ginkgo does not print "Running Suite: ..."; we add the header ourselves.
 	// Manifest suites use ginkgo specs and print their own header — we only add a
 	// blank line. Note: not compatible with tiles that use ginkgo v2.
 	if configuration.RunMetadata || configuration.RunAll {
 		stabilityPath := fmt.Sprintf("/tas/%s/test/stability", tileDirName)
-		commands = append(commands, suiteHeader("Stability Tests"))
-		commands = append(commands, fmt.Sprintf("cd /tas/%s && ginkgo %s %s", tileDirName, configuration.GinkgoFlags, stabilityPath))
+		plan.suites = append(plan.suites, suiteStep{
+			name: "Stability Tests",
+			cmds: []string{
+				suiteHeader("Stability Tests"),
+				fmt.Sprintf("cd /tas/%s && ginkgo %s %s", tileDirName, configuration.GinkgoFlags, stabilityPath),
+			},
+		})
 	}
 
 	if configuration.RunManifest || configuration.RunAll {
 		manifestPath := fmt.Sprintf("/tas/%s/test/manifest", tileDirName)
-		commands = append(commands, `printf '\n'`)
-		commands = append(commands, fmt.Sprintf("cd /tas/%s && ginkgo %s %s", tileDirName, configuration.GinkgoFlags, manifestPath))
+		plan.suites = append(plan.suites, suiteStep{
+			name: "Manifest Tests",
+			cmds: []string{
+				`printf '\n'`,
+				fmt.Sprintf("cd /tas/%s && ginkgo %s %s", tileDirName, configuration.GinkgoFlags, manifestPath),
+			},
+		})
 	}
 
-	return commands, nil
+	return plan, nil
+}
+
+// script produces the complete bash command for the test container.
+//
+// Each suite runs in a subshell so cd calls don't leak between suites. Exit
+// codes are captured individually. When more than one suite is selected a
+// colored pass/fail summary is printed at the end. The script always exits
+// non-zero if any suite failed.
+func (p testPlan) script() string {
+	var b strings.Builder
+
+	// Global setup — fail fast on any error.
+	if len(p.setup) > 0 {
+		b.WriteString(strings.Join(p.setup, " && "))
+		b.WriteString("\n")
+	}
+
+	if len(p.suites) == 0 {
+		return b.String()
+	}
+
+	// One subshell per suite; exit code and end-time stored in _exitN / _timeN.
+	for i, s := range p.suites {
+		fmt.Fprintf(&b, "\n(%s); _exit%d=$?\n", strings.Join(s.cmds, " && "), i)
+		fmt.Fprintf(&b, "_time%d=$(date '+%%H:%%M:%%S')\n", i)
+	}
+
+	// Summary — only when running more than one suite.
+	if len(p.suites) > 1 {
+		b.WriteString("\nprintf '\\n'\n")
+		for i, s := range p.suites {
+			fmt.Fprintf(&b,
+				"[ $_exit%d -eq 0 ] && printf '[%%s] \\033[32m✓\\033[0m %s Passed\\n' \"$_time%d\" || printf '[%%s] \\033[31m✗\\033[0m %s Failed\\n' \"$_time%d\"\n",
+				i, s.name, i, s.name, i,
+			)
+		}
+	}
+
+	// Overall exit — non-zero if any suite failed.
+	b.WriteString("\n_overall=0\n")
+	for i := range p.suites {
+		fmt.Fprintf(&b, "[ $_exit%d -ne 0 ] && _overall=1\n", i)
+	}
+	b.WriteString("exit $_overall\n")
+
+	return b.String()
 }
 
 //counterfeiter:generate -o ./fakes/moby_client.go --fake-name MobyClient . mobyClient
@@ -121,7 +201,7 @@ func runTest(ctx context.Context, w io.Writer, dockerDaemon mobyClient, configur
 		return fmt.Errorf("failed to connect to Docker daemon: %w", err)
 	}
 
-	commands, err := configuration.commands()
+	plan, err := configuration.commands()
 	if err != nil {
 		return err
 	}
@@ -172,7 +252,7 @@ func runTest(ctx context.Context, w io.Writer, dockerDaemon mobyClient, configur
 	parentDir := path.Dir(configuration.AbsoluteTileDirectory)
 	tileDir := path.Base(configuration.AbsoluteTileDirectory)
 
-	dockerCmd := strings.Join(commands, " && ")
+	dockerCmd := plan.script()
 
 	envVars := getTileTestEnvVars(configuration.AbsoluteTileDirectory, tileDir, envMap)
 	fmt.Fprintln(w, "Starting tests...")

@@ -20,7 +20,7 @@ func TestConfiguration_commands(t *testing.T) {
 	for _, tt := range []struct {
 		Name            string
 		Configuration   Configuration
-		ExpCmds         []string
+		ExpPlan         testPlan
 		ExpErrSubstring string
 	}{
 		{
@@ -35,7 +35,9 @@ func TestConfiguration_commands(t *testing.T) {
 			Configuration: Configuration{
 				AbsoluteTileDirectory: absoluteTileDirectory,
 			},
-			ExpCmds: []string{"git config --global --add safe.directory '*'"},
+			ExpPlan: testPlan{
+				setup: []string{"git config --global --add safe.directory '*'"},
+			},
 		},
 		{
 			Name: "when running migrations tests",
@@ -43,12 +45,19 @@ func TestConfiguration_commands(t *testing.T) {
 				AbsoluteTileDirectory: absoluteTileDirectory,
 				RunMigrations:         true,
 			},
-			ExpCmds: []string{
-				"git config --global --add safe.directory '*'",
-				"cd /tas/test/migrations",
-				"npm install --no-audit --no-fund",
-				`printf '\nRunning Suite: Migration Tests\n==============================\n'`,
-				"npm test",
+			ExpPlan: testPlan{
+				setup: []string{"git config --global --add safe.directory '*'"},
+				suites: []suiteStep{
+					{
+						name: "Migration Tests",
+						cmds: []string{
+							"cd /tas/test/migrations",
+							"npm install --no-audit --no-fund",
+							`printf '\nRunning Suite: Migration Tests\n==============================\n'`,
+							"npm test",
+						},
+					},
+				},
 			},
 		},
 		{
@@ -57,10 +66,17 @@ func TestConfiguration_commands(t *testing.T) {
 				AbsoluteTileDirectory: absoluteTileDirectory,
 				RunManifest:           true,
 			},
-			ExpCmds: []string{
-				"git config --global --add safe.directory '*'",
-				`printf '\n'`,
-				"cd /tas/test && ginkgo  /tas/test/test/manifest",
+			ExpPlan: testPlan{
+				setup: []string{"git config --global --add safe.directory '*'"},
+				suites: []suiteStep{
+					{
+						name: "Manifest Tests",
+						cmds: []string{
+							`printf '\n'`,
+							"cd /tas/test && ginkgo  /tas/test/test/manifest",
+						},
+					},
+				},
 			},
 		},
 		{
@@ -69,10 +85,17 @@ func TestConfiguration_commands(t *testing.T) {
 				AbsoluteTileDirectory: absoluteTileDirectory,
 				RunMetadata:           true,
 			},
-			ExpCmds: []string{
-				"git config --global --add safe.directory '*'",
-				`printf '\nRunning Suite: Stability Tests\n==============================\n'`,
-				"cd /tas/test && ginkgo  /tas/test/test/stability",
+			ExpPlan: testPlan{
+				setup: []string{"git config --global --add safe.directory '*'"},
+				suites: []suiteStep{
+					{
+						name: "Stability Tests",
+						cmds: []string{
+							`printf '\nRunning Suite: Stability Tests\n==============================\n'`,
+							"cd /tas/test && ginkgo  /tas/test/test/stability",
+						},
+					},
+				},
 			},
 		},
 		{
@@ -81,29 +104,119 @@ func TestConfiguration_commands(t *testing.T) {
 				AbsoluteTileDirectory: absoluteTileDirectory,
 				RunAll:                true,
 			},
-			ExpCmds: []string{
-				"git config --global --add safe.directory '*'",
-				"cd /tas/test/migrations",
-				"npm install --no-audit --no-fund",
-				`printf '\nRunning Suite: Migration Tests\n==============================\n'`,
-				"npm test",
-				`printf '\nRunning Suite: Stability Tests\n==============================\n'`,
-				"cd /tas/test && ginkgo  /tas/test/test/stability",
-				`printf '\n'`,
-				"cd /tas/test && ginkgo  /tas/test/test/manifest",
+			ExpPlan: testPlan{
+				setup: []string{"git config --global --add safe.directory '*'"},
+				suites: []suiteStep{
+					{
+						name: "Migration Tests",
+						cmds: []string{
+							"cd /tas/test/migrations",
+							"npm install --no-audit --no-fund",
+							`printf '\nRunning Suite: Migration Tests\n==============================\n'`,
+							"npm test",
+						},
+					},
+					{
+						name: "Stability Tests",
+						cmds: []string{
+							`printf '\nRunning Suite: Stability Tests\n==============================\n'`,
+							"cd /tas/test && ginkgo  /tas/test/test/stability",
+						},
+					},
+					{
+						name: "Manifest Tests",
+						cmds: []string{
+							`printf '\n'`,
+							"cd /tas/test && ginkgo  /tas/test/test/manifest",
+						},
+					},
+				},
 			},
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
-			cmds, err := tt.Configuration.commands()
+			plan, err := tt.Configuration.commands()
 			if tt.ExpErrSubstring != "" {
 				require.ErrorContains(t, err, tt.ExpErrSubstring)
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tt.ExpCmds, cmds)
+			require.Equal(t, tt.ExpPlan.setup, plan.setup)
+			require.Len(t, plan.suites, len(tt.ExpPlan.suites))
+			for i, expSuite := range tt.ExpPlan.suites {
+				require.Equal(t, expSuite.name, plan.suites[i].name)
+				require.Equal(t, expSuite.cmds, plan.suites[i].cmds)
+			}
 		})
 	}
+}
+
+func TestTestPlan_script_includesSummaryForMultipleSuites(t *testing.T) {
+	plan := testPlan{
+		setup: []string{"setup cmd"},
+		suites: []suiteStep{
+			{name: "Migration Tests", cmds: []string{"npm test"}},
+			{name: "Stability Tests", cmds: []string{"ginkgo stability"}},
+		},
+	}
+
+	script := plan.script()
+
+	// Each suite runs in a subshell with captured exit code.
+	require.Contains(t, script, "); _exit0=$?")
+	require.Contains(t, script, "); _exit1=$?")
+
+	// End time captured right after each suite.
+	require.Contains(t, script, "_time0=$(date")
+	require.Contains(t, script, "_time1=$(date")
+
+	// Summary lines present for both suites with captured timestamps.
+	require.Contains(t, script, "Migration Tests Passed")
+	require.Contains(t, script, "Migration Tests Failed")
+	require.Contains(t, script, "Stability Tests Passed")
+	require.Contains(t, script, "Stability Tests Failed")
+	require.Contains(t, script, "$_time0")
+	require.Contains(t, script, "$_time1")
+
+	// ANSI green and red codes present.
+	require.Contains(t, script, "\\033[32m")
+	require.Contains(t, script, "\\033[31m")
+
+	// Pass/fail symbols present.
+	require.Contains(t, script, "✓")
+	require.Contains(t, script, "✗")
+
+	// Overall exit present.
+	require.Contains(t, script, "_overall")
+	require.Contains(t, script, "exit $_overall")
+}
+
+func TestTestPlan_script_omitsSummaryForSingleSuite(t *testing.T) {
+	plan := testPlan{
+		setup: []string{"setup cmd"},
+		suites: []suiteStep{
+			{name: "Manifest Tests", cmds: []string{"ginkgo manifest"}},
+		},
+	}
+
+	script := plan.script()
+
+	// No summary text for single suite.
+	require.NotContains(t, script, "Passed")
+	require.NotContains(t, script, "Failed")
+
+	// Still exits with the suite's exit code.
+	require.Contains(t, script, "exit $_overall")
+}
+
+func TestTestPlan_script_emptyWithNoSuites(t *testing.T) {
+	plan := testPlan{
+		setup: []string{"git config --global --add safe.directory '*'"},
+	}
+	script := plan.script()
+	require.Contains(t, script, "git config")
+	require.NotContains(t, script, "_exit0")
+	require.NotContains(t, script, "_overall")
 }
 
 func Test_checkImageBuildResponse(t *testing.T) {
@@ -152,18 +265,19 @@ func TestConfiguration_commands_usesNpmCiWhenLockfilePresent(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(tileDir, "migrations"), 0o700))
 	require.NoError(t, os.WriteFile(filepath.Join(tileDir, "migrations", "package-lock.json"), []byte("{}"), 0o600))
 
-	cmds, err := Configuration{AbsoluteTileDirectory: tileDir, RunMigrations: true}.commands()
+	plan, err := Configuration{AbsoluteTileDirectory: tileDir, RunMigrations: true}.commands()
 	require.NoError(t, err)
-	require.Contains(t, cmds, "npm ci")
+	require.Len(t, plan.suites, 1)
+	require.Contains(t, plan.suites[0].cmds, "npm ci")
 }
 
 func TestConfiguration_commands_usesNpmInstallWithoutLockfile(t *testing.T) {
 	tileDir := filepath.Join(t.TempDir(), "ist")
 	require.NoError(t, os.MkdirAll(filepath.Join(tileDir, "migrations"), 0o700))
 
-	cmds, err := Configuration{AbsoluteTileDirectory: tileDir, RunMigrations: true}.commands()
+	plan, err := Configuration{AbsoluteTileDirectory: tileDir, RunMigrations: true}.commands()
 	require.NoError(t, err)
-	require.Contains(t, cmds, "npm install --no-audit --no-fund")
+	require.Contains(t, plan.suites[0].cmds, "npm install --no-audit --no-fund")
 }
 
 func TestGetTileTestEnvVars_setsGOMAXPROCS(t *testing.T) {
