@@ -167,7 +167,7 @@ var _ = Describe("kiln test", func() {
 			Expect(w).NotTo(BeNil())
 
 			Expect(configuration.RunManifest).To(BeTrue())
-			Expect(configuration.RunMetadata).To(BeFalse())
+			Expect(configuration.RunStability).To(BeFalse())
 			Expect(configuration.RunMigrations).To(BeFalse())
 		})
 	})
@@ -189,13 +189,13 @@ var _ = Describe("kiln test", func() {
 			Expect(w).NotTo(BeNil())
 
 			Expect(configuration.RunManifest).To(BeFalse())
-			Expect(configuration.RunMetadata).To(BeFalse())
+			Expect(configuration.RunStability).To(BeFalse())
 			Expect(configuration.RunMigrations).To(BeTrue())
 		})
 	})
 
 	When("when the stability test is enabled", func() {
-		It("it sets the RunMetadata configuration flag", func() {
+		It("it sets the RunStability configuration flag", func() {
 			args := []string{"--stability"}
 
 			fakeTestFunc := fakes.TestTileFunction{}
@@ -211,7 +211,7 @@ var _ = Describe("kiln test", func() {
 			Expect(w).NotTo(BeNil())
 
 			Expect(configuration.RunManifest).To(BeFalse())
-			Expect(configuration.RunMetadata).To(BeTrue())
+			Expect(configuration.RunStability).To(BeTrue())
 			Expect(configuration.RunMigrations).To(BeFalse())
 		})
 	})

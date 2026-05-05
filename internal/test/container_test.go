@@ -83,7 +83,7 @@ func TestConfiguration_commands(t *testing.T) {
 			Name: "when running metadata tests",
 			Configuration: Configuration{
 				AbsoluteTileDirectory: absoluteTileDirectory,
-				RunMetadata:           true,
+				RunStability:          true,
 			},
 			ExpPlan: testPlan{
 				setup: []string{"git config --global --add safe.directory '*'"},

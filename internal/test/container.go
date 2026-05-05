@@ -57,7 +57,7 @@ type Configuration struct {
 	RunAll,
 	RunMigrations,
 	RunManifest,
-	RunMetadata bool
+	RunStability bool
 
 	GinkgoFlags string
 	Environment []string
@@ -115,7 +115,7 @@ func (configuration Configuration) commands() (testPlan, error) {
 	// ginkgo does not print "Running Suite: ..."; we add the header ourselves.
 	// Manifest suites use ginkgo specs and print their own header — we only add a
 	// blank line. Note: not compatible with tiles that use ginkgo v2.
-	if configuration.RunMetadata || configuration.RunAll {
+	if configuration.RunStability || configuration.RunAll {
 		stabilityPath := fmt.Sprintf("/tas/%s/test/stability", tileDirName)
 		plan.suites = append(plan.suites, suiteStep{
 			name: "Stability Tests",

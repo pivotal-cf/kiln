@@ -71,7 +71,7 @@ func (cmd TileTest) configuration() (test.Configuration, error) {
 
 		RunAll:        !cmd.Options.Migrations && !cmd.Options.Manifest && !cmd.Options.Stability,
 		RunManifest:   cmd.Options.Manifest,
-		RunMetadata:   cmd.Options.Stability,
+		RunStability:  cmd.Options.Stability,
 		RunMigrations: cmd.Options.Migrations,
 
 		GinkgoFlags: cmd.Options.GingkoFlags,
