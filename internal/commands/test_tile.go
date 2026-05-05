@@ -17,7 +17,7 @@ type TileTestFunction func(ctx context.Context, w io.Writer, configuration test.
 type TileTest struct {
 	Options struct {
 		TilePath   string `             long:"tile-path"                default:"."                             description:"Path to the Tile directory (e.g. ~/workspace/tas/ist)."`
-		Verbose    bool   `short:"v"    long:"verbose"                  default:"false"                         description:"Print extra details such as the container ID. This doesn't affect Ginkgo output."`
+		Verbose    bool   `short:"v"    long:"verbose"                  default:"false"                         description:"Print container ID, per-suite start/end timestamps, and timestamped pass/fail summary. Also enables npm install output. Does not affect Ginkgo or npm test output."`
 		Silent     bool   `short:"s"    long:"silent"                   default:"false"                         description:"Hide info lines. This doesn't affect Ginkgo output."`
 		Manifest   bool   `             long:"manifest"                 default:"false"                         description:"Focus the Manifest tests."`
 		Migrations bool   `             long:"migrations"               default:"false"                         description:"Focus the Migration tests."`
