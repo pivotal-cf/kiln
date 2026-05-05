@@ -24,7 +24,7 @@ type TileTest struct {
 		Stability  bool   `             long:"stability"                default:"false"                         description:"Focus the Stability tests."`
 
 		EnvironmentVars []string `short:"e"    long:"environment-variable"                                             description:"Pass environment variables to the test suites (e.g. -e 'PRODUCT=srt'). Include -e ARTIFACTORY_USERNAME=... and -e ARTIFACTORY_PASSWORD=... unless they are exported."`
-		GingkoFlags     string   `             long:"ginkgo-flags"             default:"-r -p -slowSpecThreshold 15"   description:"Flags to pass to the Ginkgo Manifest and Stability test suites."`
+		GinkgoFlags     string   `             long:"ginkgo-flags"             default:"-r -p -slowSpecThreshold 15"   description:"Flags to pass to the Ginkgo Manifest and Stability test suites."`
 	}
 	function TileTestFunction
 	output   io.Writer
@@ -74,7 +74,7 @@ func (cmd TileTest) configuration() (test.Configuration, error) {
 		RunStability:  cmd.Options.Stability,
 		RunMigrations: cmd.Options.Migrations,
 
-		GinkgoFlags: cmd.Options.GingkoFlags,
+		GinkgoFlags: cmd.Options.GinkgoFlags,
 		Environment: cmd.Options.EnvironmentVars,
 		Verbose:     cmd.Options.Verbose,
 	}
