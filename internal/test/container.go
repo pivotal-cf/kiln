@@ -518,7 +518,7 @@ func checkImageBuildResponse(body io.ReadCloser, logOutput io.Writer) error {
 			if msg.ErrorDetail.Message != "" {
 				detail = msg.ErrorDetail.Message
 			}
-			return fmt.Errorf("%s", detail)
+			return errors.New(detail)
 		}
 	}
 	return nil
