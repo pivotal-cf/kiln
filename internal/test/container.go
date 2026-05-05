@@ -68,8 +68,9 @@ type Configuration struct {
 // setup that must succeed before any suite, and an ordered list of named
 // suites each of which is run as an independent unit.
 type testPlan struct {
-	setup  []string // fail-fast preamble (git config, etc.)
-	suites []suiteStep
+	setup   []string // fail-fast preamble (git config, etc.)
+	suites  []suiteStep
+	verbose bool // when true: timestamps before each suite; npm output visible
 }
 
 // suiteStep is one test suite — migrations, stability, or manifest.
@@ -93,7 +94,8 @@ func (configuration Configuration) commands() (testPlan, error) {
 	tileDirName := filepath.Base(configuration.AbsoluteTileDirectory)
 
 	plan := testPlan{
-		setup: []string{"git config --global --add safe.directory '*'"},
+		setup:   []string{"git config --global --add safe.directory '*'"},
+		verbose: configuration.Verbose,
 	}
 
 	if configuration.RunMigrations || configuration.RunAll {
@@ -101,7 +103,7 @@ func (configuration Configuration) commands() (testPlan, error) {
 			name: "Migration Tests",
 			cmds: []string{
 				fmt.Sprintf("cd /tas/%s/migrations", tileDirName),
-				npmInstallCommand(configuration.AbsoluteTileDirectory),
+				npmInstallCommand(configuration.AbsoluteTileDirectory, configuration.Verbose),
 				suiteHeader("Migration Tests"),
 				"npm test",
 			},
@@ -159,8 +161,14 @@ func (p testPlan) script() string {
 
 	// One subshell per suite; exit code and end-time stored in _exitN / _timeN.
 	for i, s := range p.suites {
+		if p.verbose {
+			fmt.Fprintf(&b, "\necho \"[$(date '+%%H:%%M:%%S')] Starting: %s\"\n", s.name)
+		}
 		fmt.Fprintf(&b, "\n(%s); _exit%d=$?\n", strings.Join(s.cmds, " && "), i)
 		fmt.Fprintf(&b, "_time%d=$(date '+%%H:%%M:%%S')\n", i)
+		if p.verbose {
+			fmt.Fprintf(&b, "echo \"[$_time%d] Completed: %s\"\n", i, s.name)
+		}
 	}
 
 	// Summary — only when running more than one suite.
@@ -417,14 +425,22 @@ func toProduct(dir string) string {
 	}
 }
 
-// npmInstallCommand returns "npm ci" when a package-lock.json is present in the
-// tile's migrations directory (faster, strict), otherwise "npm install --no-audit --no-fund".
-func npmInstallCommand(absoluteTileDir string) string {
+// npmInstallCommand returns the appropriate npm install command.
+// When not verbose, --silent suppresses all progress output; errors still cause
+// a non-zero exit. When verbose, output is unrestricted so the user can see
+// what npm is doing.
+func npmInstallCommand(absoluteTileDir string, verbose bool) string {
 	lockFile := filepath.Join(absoluteTileDir, "migrations", "package-lock.json")
 	if _, err := os.Stat(lockFile); err == nil {
-		return "npm ci"
+		if verbose {
+			return "npm ci"
+		}
+		return "npm ci --silent"
 	}
-	return "npm install --no-audit --no-fund"
+	if verbose {
+		return "npm install --no-audit --no-fund"
+	}
+	return "npm install --no-audit --no-fund --silent"
 }
 
 func getTileTestEnvVars(dir, productDir string, envMap environmentVars) environmentVars {

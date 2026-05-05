@@ -52,7 +52,7 @@ func TestConfiguration_commands(t *testing.T) {
 						name: "Migration Tests",
 						cmds: []string{
 							"cd /tas/test/migrations",
-							"npm install --no-audit --no-fund",
+							"npm install --no-audit --no-fund --silent",
 							`printf '\nRunning Suite: Migration Tests\n==============================\n'`,
 							"npm test",
 						},
@@ -111,7 +111,7 @@ func TestConfiguration_commands(t *testing.T) {
 						name: "Migration Tests",
 						cmds: []string{
 							"cd /tas/test/migrations",
-							"npm install --no-audit --no-fund",
+							"npm install --no-audit --no-fund --silent",
 							`printf '\nRunning Suite: Migration Tests\n==============================\n'`,
 							"npm test",
 						},
@@ -268,7 +268,19 @@ func TestConfiguration_commands_usesNpmCiWhenLockfilePresent(t *testing.T) {
 	plan, err := Configuration{AbsoluteTileDirectory: tileDir, RunMigrations: true}.commands()
 	require.NoError(t, err)
 	require.Len(t, plan.suites, 1)
+	// verbose=false (default): npm output silenced
+	require.Contains(t, plan.suites[0].cmds, "npm ci --silent")
+}
+
+func TestConfiguration_commands_verboseUsesNpmCiWithoutSilent(t *testing.T) {
+	tileDir := filepath.Join(t.TempDir(), "ist")
+	require.NoError(t, os.MkdirAll(filepath.Join(tileDir, "migrations"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(tileDir, "migrations", "package-lock.json"), []byte("{}"), 0o600))
+
+	plan, err := Configuration{AbsoluteTileDirectory: tileDir, RunMigrations: true, Verbose: true}.commands()
+	require.NoError(t, err)
 	require.Contains(t, plan.suites[0].cmds, "npm ci")
+	require.NotContains(t, plan.suites[0].cmds, "npm ci --silent")
 }
 
 func TestConfiguration_commands_usesNpmInstallWithoutLockfile(t *testing.T) {
@@ -277,7 +289,41 @@ func TestConfiguration_commands_usesNpmInstallWithoutLockfile(t *testing.T) {
 
 	plan, err := Configuration{AbsoluteTileDirectory: tileDir, RunMigrations: true}.commands()
 	require.NoError(t, err)
-	require.Contains(t, plan.suites[0].cmds, "npm install --no-audit --no-fund")
+	require.Contains(t, plan.suites[0].cmds, "npm install --no-audit --no-fund --silent")
+}
+
+func TestTestPlan_script_verbose_addsStartAndEndTimestamps(t *testing.T) {
+	plan := testPlan{
+		setup:   []string{"setup cmd"},
+		verbose: true,
+		suites: []suiteStep{
+			{name: "Migration Tests", cmds: []string{"npm test"}},
+			{name: "Stability Tests", cmds: []string{"ginkgo stability"}},
+		},
+	}
+
+	script := plan.script()
+
+	// Start and end echo lines present for each suite.
+	require.Contains(t, script, "Starting: Migration Tests")
+	require.Contains(t, script, "Completed: Migration Tests")
+	require.Contains(t, script, "Starting: Stability Tests")
+	require.Contains(t, script, "Completed: Stability Tests")
+}
+
+func TestTestPlan_script_noStartEndEchoWhenNotVerbose(t *testing.T) {
+	plan := testPlan{
+		setup:   []string{"setup cmd"},
+		verbose: false,
+		suites:  []suiteStep{{name: "Migration Tests", cmds: []string{"npm test"}}},
+	}
+
+	script := plan.script()
+
+	// No verbose echo lines; end-time variable is still captured for potential summary use.
+	require.NotContains(t, script, "Starting:")
+	require.NotContains(t, script, "Completed:")
+	require.Contains(t, script, "_time0=$(date")
 }
 
 func TestGetTileTestEnvVars_setsGOMAXPROCS(t *testing.T) {
