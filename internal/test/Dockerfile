@@ -7,34 +7,40 @@ RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 FROM tas-rel-eng-docker-virtual.usw1.packages.broadcom.com/ruby:3.4.8
 
-# Install Go
+# ── Stable tools — no credentials; these layers cache across credential rotation ──
+
+# Go runtime
 COPY --from=go-image /usr/local/go/ /usr/local/go/
 ENV GOROOT=/usr/local/go/
 ENV PATH="$GOROOT/bin:/root/go/bin:$PATH"
 
-# Install Kiln
+# Kiln binary (used by ops-manifest during manifest tests)
 COPY --from=kiln /kiln /usr/local/bin/kiln
 
-# Install JQ
-RUN apt-get update && apt-get install jq -y
+# System packages (consolidated to one layer; before credentials so they stay cached)
+RUN apt-get update \
+ && apt-get install --no-install-recommends -y jq nodejs npm \
+ && rm -rf /var/lib/apt/lists/*
+
+# Go toolchain settings — must appear before any `go install`
+# CGO_ENABLED=0: pure-Go build avoids gcc issues on arm64 (e.g. Podman on Apple Silicon).
+ENV GOTOOLCHAIN=local
+ENV CGO_ENABLED=0
+
+# ── Ginkgo — credentials scoped to this RUN only so layers above stay cached ──
+# Pinned to v1.16.5 for reproducibility (last stable v1; tiles using ginkgo v2 use their own binary).
 
 ARG ARTIFACTORY_USERNAME
 ARG ARTIFACTORY_PASSWORD
+
+RUN GOPROXY=https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}@usw1.packages.broadcom.com/artifactory/api/go/tas-rel-eng-go-virtual \
+    GOSUMDB=off \
+    go install github.com/onsi/ginkgo/ginkgo@v1.16.5
+
+# ── ops-manifest gem — credentials exported for gem source registration at build time ──
+
 ENV ARTIFACTORY_USERNAME=${ARTIFACTORY_USERNAME}
 ENV ARTIFACTORY_PASSWORD=${ARTIFACTORY_PASSWORD}
-
-# Install Ginkgo (module download via Artifactory Go virtual; credentials from build args).
-ARG GOTOOLCHAIN=local
-ENV GOTOOLCHAIN=${GOTOOLCHAIN}
-ENV GOPROXY=https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}@usw1.packages.broadcom.com/artifactory/api/go/tas-rel-eng-go-virtual
-ENV GOSUMDB=off
-# Pure-Go install; avoid invoking gcc. On linux/arm64 (e.g. Podman on Apple Silicon),
-# cgo can fail with: gcc: error: unrecognized command-line option '-m64'.
-ENV CGO_ENABLED=0
-RUN go install github.com/onsi/ginkgo/ginkgo@latest
-
-# Install NodeJS
-RUN apt-get update && apt-get install nodejs npm -y
 
 RUN gem source -a https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}@usw1.packages.broadcom.com/artifactory/api/gems/tas-rel-eng-gem-dev-local/
 RUN gem install --verbose ops-manifest -v 0.0.4.pre

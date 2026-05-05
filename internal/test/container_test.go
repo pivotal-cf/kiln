@@ -20,7 +20,7 @@ func TestConfiguration_commands(t *testing.T) {
 	for _, tt := range []struct {
 		Name            string
 		Configuration   Configuration
-		Result          []string
+		ExpCmds         []string
 		ExpErrSubstring string
 	}{
 		{
@@ -35,7 +35,7 @@ func TestConfiguration_commands(t *testing.T) {
 			Configuration: Configuration{
 				AbsoluteTileDirectory: absoluteTileDirectory,
 			},
-			Result: []string{"git config --global --add safe.directory '*'"},
+			ExpCmds: []string{"git config --global --add safe.directory '*'"},
 		},
 		{
 			Name: "when running migrations tests",
@@ -43,7 +43,13 @@ func TestConfiguration_commands(t *testing.T) {
 				AbsoluteTileDirectory: absoluteTileDirectory,
 				RunMigrations:         true,
 			},
-			Result: []string{"git config --global --add safe.directory '*'", "cd /tas/test/migrations", "npm install", "npm test"},
+			ExpCmds: []string{
+				"git config --global --add safe.directory '*'",
+				"cd /tas/test/migrations",
+				"npm install --no-audit --no-fund",
+				`printf '\nRunning Suite: Migration Tests\n==============================\n'`,
+				"npm test",
+			},
 		},
 		{
 			Name: "when running manifest tests",
@@ -51,7 +57,11 @@ func TestConfiguration_commands(t *testing.T) {
 				AbsoluteTileDirectory: absoluteTileDirectory,
 				RunManifest:           true,
 			},
-			Result: []string{"git config --global --add safe.directory '*'", "cd /tas/test && ginkgo  /tas/test/test/manifest"},
+			ExpCmds: []string{
+				"git config --global --add safe.directory '*'",
+				`printf '\n'`,
+				"cd /tas/test && ginkgo  /tas/test/test/manifest",
+			},
 		},
 		{
 			Name: "when running metadata tests",
@@ -59,7 +69,11 @@ func TestConfiguration_commands(t *testing.T) {
 				AbsoluteTileDirectory: absoluteTileDirectory,
 				RunMetadata:           true,
 			},
-			Result: []string{"git config --global --add safe.directory '*'", "cd /tas/test && ginkgo  /tas/test/test/stability"},
+			ExpCmds: []string{
+				"git config --global --add safe.directory '*'",
+				`printf '\nRunning Suite: Stability Tests\n==============================\n'`,
+				"cd /tas/test && ginkgo  /tas/test/test/stability",
+			},
 		},
 		{
 			Name: "when running all tests",
@@ -67,17 +81,27 @@ func TestConfiguration_commands(t *testing.T) {
 				AbsoluteTileDirectory: absoluteTileDirectory,
 				RunAll:                true,
 			},
-			Result: []string{"git config --global --add safe.directory '*'", "cd /tas/test/migrations", "npm install", "npm test", "cd /tas/test && ginkgo  /tas/test/test/stability /tas/test/test/manifest"},
+			ExpCmds: []string{
+				"git config --global --add safe.directory '*'",
+				"cd /tas/test/migrations",
+				"npm install --no-audit --no-fund",
+				`printf '\nRunning Suite: Migration Tests\n==============================\n'`,
+				"npm test",
+				`printf '\nRunning Suite: Stability Tests\n==============================\n'`,
+				"cd /tas/test && ginkgo  /tas/test/test/stability",
+				`printf '\n'`,
+				"cd /tas/test && ginkgo  /tas/test/test/manifest",
+			},
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
-			result, err := tt.Configuration.commands()
+			cmds, err := tt.Configuration.commands()
 			if tt.ExpErrSubstring != "" {
 				require.ErrorContains(t, err, tt.ExpErrSubstring)
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tt.Result, result)
+				return
 			}
+			require.NoError(t, err)
+			require.Equal(t, tt.ExpCmds, cmds)
 		})
 	}
 }
@@ -97,12 +121,57 @@ func Test_checkImageBuildResponse(t *testing.T) {
 	})
 }
 
-func TestEmbeddedDockerfile_usesDockerVirtualRegistry(t *testing.T) {
+func TestEmbeddedDockerfile_structure(t *testing.T) {
+	// Base image FROM lines must use the internal docker-virtual registry.
 	require.Contains(t, dockerfile, "FROM "+DockerVirtualRegistryHost+"/golang")
 	require.Contains(t, dockerfile, "FROM "+DockerVirtualRegistryHost+"/ruby:3.4.8")
 	require.NotContains(t, dockerfile, "REGISTRY_PREFIX")
-	require.Contains(t, dockerfile, "ENV GOPROXY=https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}@usw1.packages.broadcom.com/artifactory/api/go/tas-rel-eng-go-virtual")
-	require.Contains(t, dockerfile, "ENV GOSUMDB=off")
+
+	// ginkgo must be pinned to a specific version (not @latest) so builds are reproducible
+	// and the cache layer is stable.
+	require.Contains(t, dockerfile, "go install github.com/onsi/ginkgo/ginkgo@v1.16.5")
+	require.NotContains(t, dockerfile, "ginkgo@latest")
+
+	// GOPROXY credentials must be scoped to the ginkgo RUN step only — not exported
+	// as an ENV layer — so the ginkgo install layer is not busted by credential rotation.
+	require.NotContains(t, dockerfile, "ENV GOPROXY=https://${ARTIFACTORY_USERNAME}")
+
+	// Credentials ARG declaration must come AFTER stable system package installs
+	// (jq, nodejs, npm) so those layers stay cached when credentials rotate.
+	argIdx := strings.Index(dockerfile, "ARG ARTIFACTORY_USERNAME")
+	jqIdx := strings.Index(dockerfile, "apt-get")
+	require.Greater(t, argIdx, jqIdx, "ARTIFACTORY_USERNAME ARG should appear after apt-get installs")
+
+	// Credentials must be exported to ENV for ops-manifest gem at container runtime.
+	require.Contains(t, dockerfile, "ENV ARTIFACTORY_USERNAME=${ARTIFACTORY_USERNAME}")
+	require.Contains(t, dockerfile, "ENV ARTIFACTORY_PASSWORD=${ARTIFACTORY_PASSWORD}")
+}
+
+func TestConfiguration_commands_usesNpmCiWhenLockfilePresent(t *testing.T) {
+	tileDir := filepath.Join(t.TempDir(), "ist")
+	require.NoError(t, os.MkdirAll(filepath.Join(tileDir, "migrations"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(tileDir, "migrations", "package-lock.json"), []byte("{}"), 0o600))
+
+	cmds, err := Configuration{AbsoluteTileDirectory: tileDir, RunMigrations: true}.commands()
+	require.NoError(t, err)
+	require.Contains(t, cmds, "npm ci")
+}
+
+func TestConfiguration_commands_usesNpmInstallWithoutLockfile(t *testing.T) {
+	tileDir := filepath.Join(t.TempDir(), "ist")
+	require.NoError(t, os.MkdirAll(filepath.Join(tileDir, "migrations"), 0o700))
+
+	cmds, err := Configuration{AbsoluteTileDirectory: tileDir, RunMigrations: true}.commands()
+	require.NoError(t, err)
+	require.Contains(t, cmds, "npm install --no-audit --no-fund")
+}
+
+func TestGetTileTestEnvVars_setsGOMAXPROCS(t *testing.T) {
+	tileDir := filepath.Join(t.TempDir(), "ist")
+	envVars := getTileTestEnvVars(tileDir, "ist", environmentVars{})
+	gomaxprocs, ok := envVars["GOMAXPROCS"]
+	require.True(t, ok, "GOMAXPROCS should be set in container env")
+	require.NotEmpty(t, gomaxprocs)
 }
 
 func Test_registryAuthForDockerVirtual(t *testing.T) {

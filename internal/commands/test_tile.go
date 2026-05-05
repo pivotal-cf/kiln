@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -18,7 +17,7 @@ type TileTestFunction func(ctx context.Context, w io.Writer, configuration test.
 type TileTest struct {
 	Options struct {
 		TilePath   string `             long:"tile-path"                default:"."                             description:"Path to the Tile directory (e.g. ~/workspace/tas/ist)."`
-		Verbose    bool   `short:"v"    long:"verbose"                  default:"true"                          description:"Print info lines. This doesn't affect Ginkgo output."`
+		Verbose    bool   `short:"v"    long:"verbose"                  default:"true"                          description:"Print extra details such as the container ID. This doesn't affect Ginkgo output."`
 		Silent     bool   `short:"s"    long:"silent"                   default:"false"                         description:"Hide info lines. This doesn't affect Ginkgo output."`
 		Manifest   bool   `             long:"manifest"                 default:"false"                         description:"Focus the Manifest tests."`
 		Migrations bool   `             long:"migrations"               default:"false"                         description:"Focus the Migration tests."`
@@ -77,6 +76,7 @@ func (cmd TileTest) configuration() (test.Configuration, error) {
 
 		GinkgoFlags: cmd.Options.GingkoFlags,
 		Environment: cmd.Options.EnvironmentVars,
+		Verbose:     cmd.Options.Verbose,
 	}
 	return cfg, absErr
 }

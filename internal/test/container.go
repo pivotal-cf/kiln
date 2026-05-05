@@ -9,11 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/signal"
 	"path"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
 
 	cerrdefs "github.com/containerd/errdefs"
@@ -40,14 +41,12 @@ const (
 )
 
 func Run(ctx context.Context, w io.Writer, configuration Configuration) error {
-	logger := log.New(w, "kiln test: ", log.Default().Flags())
-
 	dockerDaemon, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return err
 	}
 
-	return runTest(ctx, logger, w, dockerDaemon, configuration)
+	return runTest(ctx, w, dockerDaemon, configuration)
 }
 
 type Configuration struct {
@@ -62,6 +61,13 @@ type Configuration struct {
 
 	GinkgoFlags string
 	Environment []string
+	Verbose     bool
+}
+
+// suiteHeader builds the "Running Suite: …\n…\n" printf command for a suite.
+func suiteHeader(title string) string {
+	label := "Running Suite: " + title
+	return fmt.Sprintf(`printf '\n%s\n%s\n'`, label, strings.Repeat("=", len(label)))
 }
 
 func (configuration Configuration) commands() ([]string, error) {
@@ -73,21 +79,28 @@ func (configuration Configuration) commands() ([]string, error) {
 	commands := []string{"git config --global --add safe.directory '*'"}
 	if configuration.RunMigrations || configuration.RunAll {
 		commands = append(commands, fmt.Sprintf("cd /tas/%s/migrations", tileDirName))
-		commands = append(commands, "npm install")
+		commands = append(commands, npmInstallCommand(configuration.AbsoluteTileDirectory))
+		commands = append(commands, suiteHeader("Migration Tests"))
 		commands = append(commands, "npm test")
 	}
-	var ginkgo []string
+
+	// Each suite gets its own invocation so output is never interleaved.
+	// Stability tests use Go's standard testing package (no ginkgo bootstrap), so
+	// ginkgo does not print "Running Suite: ..."; we add the header ourselves.
+	// Manifest suites use ginkgo specs and print their own header — we only add a
+	// blank line. Note: not compatible with tiles that use ginkgo v2.
 	if configuration.RunMetadata || configuration.RunAll {
-		ginkgo = append(ginkgo, fmt.Sprintf("/tas/%s/test/stability", tileDirName))
+		stabilityPath := fmt.Sprintf("/tas/%s/test/stability", tileDirName)
+		commands = append(commands, suiteHeader("Stability Tests"))
+		commands = append(commands, fmt.Sprintf("cd /tas/%s && ginkgo %s %s", tileDirName, configuration.GinkgoFlags, stabilityPath))
 	}
+
 	if configuration.RunManifest || configuration.RunAll {
-		ginkgo = append(ginkgo, fmt.Sprintf("/tas/%s/test/manifest", tileDirName))
+		manifestPath := fmt.Sprintf("/tas/%s/test/manifest", tileDirName)
+		commands = append(commands, `printf '\n'`)
+		commands = append(commands, fmt.Sprintf("cd /tas/%s && ginkgo %s %s", tileDirName, configuration.GinkgoFlags, manifestPath))
 	}
-	// Note: this isn't compatible with tiles that use ginkgo v2 for their manifest tests
-	if configuration.RunMetadata || configuration.RunManifest || configuration.RunAll {
-		ginkgoCommand := fmt.Sprintf("cd /tas/%s && ginkgo %s %s", tileDirName, configuration.GinkgoFlags, strings.Join(ginkgo, " "))
-		commands = append(commands, ginkgoCommand)
-	}
+
 	return commands, nil
 }
 
@@ -102,8 +115,7 @@ type mobyClient interface {
 	ContainerStop(ctx context.Context, containerID string, options container.StopOptions) error
 }
 
-func runTest(ctx context.Context, logger *log.Logger, w io.Writer, dockerDaemon mobyClient, configuration Configuration) error {
-	logger.Printf("pinging docker daemon")
+func runTest(ctx context.Context, w io.Writer, dockerDaemon mobyClient, configuration Configuration) error {
 	_, err := dockerDaemon.Ping(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to connect to Docker daemon: %w", err)
@@ -136,7 +148,7 @@ func runTest(ctx context.Context, logger *log.Logger, w io.Writer, dockerDaemon 
 
 	authConfigs := registryAuthForDockerVirtual(envMap)
 
-	logger.Println("creating test image")
+	fmt.Fprintln(w, "Preparing test image...")
 	buildArgs := map[string]*string{
 		"ARTIFACTORY_USERNAME": &artifactoryUsername,
 		"ARTIFACTORY_PASSWORD": &artifactoryPassword,
@@ -163,7 +175,7 @@ func runTest(ctx context.Context, logger *log.Logger, w io.Writer, dockerDaemon 
 	dockerCmd := strings.Join(commands, " && ")
 
 	envVars := getTileTestEnvVars(configuration.AbsoluteTileDirectory, tileDir, envMap)
-	logger.Println("creating test container")
+	fmt.Fprintln(w, "Starting tests...")
 	testContainer, err := dockerDaemon.ContainerCreate(ctx, &container.Config{
 		Image: "kiln_test_dependencies:vmware",
 		Cmd:   []string{"/bin/bash", "-c", dockerCmd},
@@ -187,7 +199,9 @@ func runTest(ctx context.Context, logger *log.Logger, w io.Writer, dockerDaemon 
 	if err != nil {
 		return fmt.Errorf("failed to create container: %w", err)
 	}
-	logger.Printf("created test container with id %s", testContainer.ID)
+	if configuration.Verbose {
+		fmt.Fprintf(w, "Container: %s\n", testContainer.ID)
+	}
 
 	errG := errgroup.Group{}
 
@@ -224,6 +238,7 @@ func runTest(ctx context.Context, logger *log.Logger, w io.Writer, dockerDaemon 
 	if err != nil {
 		return fmt.Errorf("container log request failure: %w", err)
 	}
+	fmt.Fprintln(w, "")
 	if _, err := io.Copy(w, out); err != nil {
 		return err
 	}
@@ -322,6 +337,16 @@ func toProduct(dir string) string {
 	}
 }
 
+// npmInstallCommand returns "npm ci" when a package-lock.json is present in the
+// tile's migrations directory (faster, strict), otherwise "npm install --no-audit --no-fund".
+func npmInstallCommand(absoluteTileDir string) string {
+	lockFile := filepath.Join(absoluteTileDir, "migrations", "package-lock.json")
+	if _, err := os.Stat(lockFile); err == nil {
+		return "npm ci"
+	}
+	return "npm install --no-audit --no-fund"
+}
+
 func getTileTestEnvVars(dir, productDir string, envMap environmentVars) environmentVars {
 	const fixturesFormat = "%s/test/manifest/fixtures"
 	metadataPath := fmt.Sprintf(fixturesFormat+"/tas_metadata.yml", dir)
@@ -341,6 +366,7 @@ func getTileTestEnvVars(dir, productDir string, envMap environmentVars) environm
 		envVarsMap["PRODUCT"] = toProduct(productDir)
 	}
 	envVarsMap["RENDERER"] = "ops-manifest"
+	envVarsMap["GOMAXPROCS"] = strconv.Itoa(runtime.NumCPU())
 
 	// overwrite with / include optional env vars
 	for k, v := range envMap {
