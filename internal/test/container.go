@@ -11,7 +11,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -214,11 +213,6 @@ func runTest(ctx context.Context, w io.Writer, dockerDaemon mobyClient, configur
 		return err
 	}
 
-	var dockerfileTarball bytes.Buffer
-	if err := createDockerfileTarball(tar.NewWriter(&dockerfileTarball), dockerfile); err != nil {
-		return err
-	}
-
 	envMap, err := decodeEnvironment(configuration.Environment)
 	if err != nil {
 		return fmt.Errorf("failed to parse environment: %w", err)
@@ -231,39 +225,50 @@ func runTest(ctx context.Context, w io.Writer, dockerDaemon mobyClient, configur
 	envMap["ARTIFACTORY_USERNAME"] = username
 	envMap["ARTIFACTORY_PASSWORD"] = password
 
-	authConfigs := registryAuthForDockerVirtual(envMap)
-
-	fmt.Fprintln(w, "Preparing test image...")
-	buildArgs := map[string]*string{
-		"ARTIFACTORY_USERNAME": &username,
-		"ARTIFACTORY_PASSWORD": &password,
+	if err := buildTestImage(ctx, w, dockerDaemon, username, password, envMap); err != nil {
+		return err
 	}
 
+	parentDir := filepath.Dir(configuration.AbsoluteTileDirectory)
+	tileDir := filepath.Base(configuration.AbsoluteTileDirectory)
+	envVars := getTileTestEnvVars(configuration.AbsoluteTileDirectory, tileDir, envMap)
+
+	return startAndWaitContainer(ctx, w, dockerDaemon, plan.script(), envVars, parentDir, configuration.Verbose)
+}
+
+// buildTestImage builds the kiln test Docker image, forwarding Artifactory
+// credentials as build args and registry auth for pulling base images.
+func buildTestImage(ctx context.Context, w io.Writer, dockerDaemon mobyClient, username, password string, envMap environmentVars) error {
+	var dockerfileTarball bytes.Buffer
+	if err := createDockerfileTarball(tar.NewWriter(&dockerfileTarball), dockerfile); err != nil {
+		return err
+	}
+
+	fmt.Fprintln(w, "Preparing test image...")
 	resp, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, build.ImageBuildOptions{
-		Tags:           []string{"kiln_test_dependencies:vmware"},
-		BuildArgs:      buildArgs,
-		AuthConfigs:    authConfigs,
+		Tags: []string{"kiln_test_dependencies:vmware"},
+		BuildArgs: map[string]*string{
+			"ARTIFACTORY_USERNAME": &username,
+			"ARTIFACTORY_PASSWORD": &password,
+		},
+		AuthConfigs:    registryAuthForDockerVirtual(envMap),
 		SuppressOutput: true,
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to build image: %w", err)
 	}
-
 	if err := checkImageBuildResponse(resp.Body, nil); err != nil {
 		return fmt.Errorf("image build failed: %w", err)
 	}
+	return nil
+}
 
-	parentDir := path.Dir(configuration.AbsoluteTileDirectory)
-	tileDir := path.Base(configuration.AbsoluteTileDirectory)
-
-	dockerCmd := plan.script()
-
-	envVars := getTileTestEnvVars(configuration.AbsoluteTileDirectory, tileDir, envMap)
-	fmt.Fprintln(w, "Starting tests...")
+// startAndWaitContainer creates, starts, and waits for the test container to
+// exit, streaming its logs to w. It stops the container on SIGINT.
+func startAndWaitContainer(ctx context.Context, w io.Writer, dockerDaemon mobyClient, script string, envVars environmentVars, parentDir string, verbose bool) error {
 	testContainer, err := dockerDaemon.ContainerCreate(ctx, &container.Config{
 		Image: "kiln_test_dependencies:vmware",
-		Cmd:   []string{"/bin/bash", "-c", dockerCmd},
+		Cmd:   []string{"/bin/bash", "-c", script},
 		Env:   encodeEnvironment(envVars),
 		Tty:   true,
 	}, &container.HostConfig{
@@ -284,7 +289,7 @@ func runTest(ctx context.Context, w io.Writer, dockerDaemon mobyClient, configur
 	if err != nil {
 		return fmt.Errorf("failed to create container: %w", err)
 	}
-	if configuration.Verbose {
+	if verbose {
 		fmt.Fprintf(w, "Container: %s\n", testContainer.ID)
 	}
 
