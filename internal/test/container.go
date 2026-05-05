@@ -224,22 +224,19 @@ func runTest(ctx context.Context, w io.Writer, dockerDaemon mobyClient, configur
 		return fmt.Errorf("failed to parse environment: %w", err)
 	}
 
-	username, password, err := RequiredArtifactoryCredentials(configuration.Environment)
+	username, password, err := requiredArtifactoryCredentialsFromMap(envMap)
 	if err != nil {
 		return err
 	}
 	envMap["ARTIFACTORY_USERNAME"] = username
 	envMap["ARTIFACTORY_PASSWORD"] = password
 
-	artifactoryUsername := username
-	artifactoryPassword := password
-
 	authConfigs := registryAuthForDockerVirtual(envMap)
 
 	fmt.Fprintln(w, "Preparing test image...")
 	buildArgs := map[string]*string{
-		"ARTIFACTORY_USERNAME": &artifactoryUsername,
-		"ARTIFACTORY_PASSWORD": &artifactoryPassword,
+		"ARTIFACTORY_USERNAME": &username,
+		"ARTIFACTORY_PASSWORD": &password,
 	}
 
 	resp, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, build.ImageBuildOptions{
@@ -367,6 +364,12 @@ func RequiredArtifactoryCredentials(envVarArgs []string) (username, password str
 	if err != nil {
 		return "", "", err
 	}
+	return requiredArtifactoryCredentialsFromMap(m)
+}
+
+// requiredArtifactoryCredentialsFromMap resolves credentials from an already-decoded
+// environment map, falling back to os.Getenv when a value is absent.
+func requiredArtifactoryCredentialsFromMap(m environmentVars) (username, password string, err error) {
 	user := strings.TrimSpace(m["ARTIFACTORY_USERNAME"])
 	if user == "" {
 		user = strings.TrimSpace(os.Getenv("ARTIFACTORY_USERNAME"))
