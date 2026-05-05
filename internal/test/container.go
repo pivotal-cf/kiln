@@ -157,14 +157,15 @@ func (p testPlan) script(verbose bool) string {
 		return b.String()
 	}
 
-	// One subshell per suite; exit code and end-time stored in _exitN / _timeN.
+	// One subshell per suite; exit code in _exitN. End-time (_timeN) only
+	// captured when verbose — it is only used in the verbose summary format.
 	for i, s := range p.suites {
 		if verbose {
 			fmt.Fprintf(&b, "\necho \"[$(date '+%%H:%%M:%%S')] Starting: %s\"\n", s.name)
 		}
 		fmt.Fprintf(&b, "\n(%s); _exit%d=$?\n", strings.Join(s.cmds, " && "), i)
-		fmt.Fprintf(&b, "_time%d=$(date '+%%H:%%M:%%S')\n", i)
 		if verbose {
+			fmt.Fprintf(&b, "_time%d=$(date '+%%H:%%M:%%S')\n", i)
 			fmt.Fprintf(&b, "echo \"[$_time%d] Completed: %s\"\n", i, s.name)
 		}
 	}
@@ -173,10 +174,17 @@ func (p testPlan) script(verbose bool) string {
 	if len(p.suites) > 1 {
 		b.WriteString("\nprintf '\\n'\n")
 		for i, s := range p.suites {
-			fmt.Fprintf(&b,
-				"[ $_exit%d -eq 0 ] && printf '[%%s] \\033[32m✓\\033[0m %s Passed\\n' \"$_time%d\" || printf '[%%s] \\033[31m✗\\033[0m %s Failed\\n' \"$_time%d\"\n",
-				i, s.name, i, s.name, i,
-			)
+			if verbose {
+				fmt.Fprintf(&b,
+					"[ $_exit%d -eq 0 ] && printf '[%%s] \\033[32m✓\\033[0m %s Passed\\n' \"$_time%d\" || printf '[%%s] \\033[31m✗\\033[0m %s Failed\\n' \"$_time%d\"\n",
+					i, s.name, i, s.name, i,
+				)
+			} else {
+				fmt.Fprintf(&b,
+					"[ $_exit%d -eq 0 ] && printf '\\033[32m✓\\033[0m %s Passed\\n' || printf '\\033[31m✗\\033[0m %s Failed\\n'\n",
+					i, s.name, s.name,
+				)
+			}
 		}
 	}
 

@@ -166,17 +166,17 @@ func TestTestPlan_script_includesSummaryForMultipleSuites(t *testing.T) {
 	require.Contains(t, script, "); _exit0=$?")
 	require.Contains(t, script, "); _exit1=$?")
 
-	// End time captured right after each suite.
-	require.Contains(t, script, "_time0=$(date")
-	require.Contains(t, script, "_time1=$(date")
+	// End time NOT captured without verbose — not needed for plain summary.
+	require.NotContains(t, script, "_time0=$(date")
+	require.NotContains(t, script, "_time1=$(date")
 
-	// Summary lines present for both suites with captured timestamps.
+	// Summary lines present for both suites without timestamps.
 	require.Contains(t, script, "Migration Tests Passed")
 	require.Contains(t, script, "Migration Tests Failed")
 	require.Contains(t, script, "Stability Tests Passed")
 	require.Contains(t, script, "Stability Tests Failed")
-	require.Contains(t, script, "$_time0")
-	require.Contains(t, script, "$_time1")
+	require.NotContains(t, script, "$_time0")
+	require.NotContains(t, script, "$_time1")
 
 	// ANSI green and red codes present.
 	require.Contains(t, script, "\\033[32m")
@@ -292,7 +292,7 @@ func TestConfiguration_commands_usesNpmInstallWithoutLockfile(t *testing.T) {
 	require.Contains(t, plan.suites[0].cmds, "npm install --no-audit --no-fund --silent")
 }
 
-func TestTestPlan_script_verbose_addsStartAndEndTimestamps(t *testing.T) {
+func TestTestPlan_script_verbose_addsTimestampsAndUsesThemInSummary(t *testing.T) {
 	plan := testPlan{
 		setup: []string{"setup cmd"},
 		suites: []suiteStep{
@@ -308,6 +308,12 @@ func TestTestPlan_script_verbose_addsStartAndEndTimestamps(t *testing.T) {
 	require.Contains(t, script, "Completed: Migration Tests")
 	require.Contains(t, script, "Starting: Stability Tests")
 	require.Contains(t, script, "Completed: Stability Tests")
+
+	// End time captured and used in summary with timestamp prefix.
+	require.Contains(t, script, "_time0=$(date")
+	require.Contains(t, script, "_time1=$(date")
+	require.Contains(t, script, "$_time0")
+	require.Contains(t, script, "$_time1")
 }
 
 func TestTestPlan_script_noStartEndEchoWhenNotVerbose(t *testing.T) {
@@ -318,10 +324,10 @@ func TestTestPlan_script_noStartEndEchoWhenNotVerbose(t *testing.T) {
 
 	script := plan.script(false)
 
-	// No verbose echo lines; end-time variable is still captured for potential summary use.
+	// No verbose echo lines and no timestamp capture without verbose.
 	require.NotContains(t, script, "Starting:")
 	require.NotContains(t, script, "Completed:")
-	require.Contains(t, script, "_time0=$(date")
+	require.NotContains(t, script, "_time0=$(date")
 }
 
 func TestGetTileTestEnvVars_setsGOMAXPROCS(t *testing.T) {
