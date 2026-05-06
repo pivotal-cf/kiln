@@ -1,7 +1,6 @@
 package test
 
 import (
-	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -220,17 +219,14 @@ func TestTestPlan_script_emptyWithNoSuites(t *testing.T) {
 }
 
 func Test_checkImageBuildResponse(t *testing.T) {
-	t.Run("streams build log then error", func(t *testing.T) {
+	t.Run("returns error from daemon error message", func(t *testing.T) {
 		body := io.NopCloser(strings.NewReader(
 			`{"stream":"Step 1\n"}` + "\n" +
 				`{"stream":"go: downloading\n"}` + "\n" +
 				`{"error":"failed","errorDetail":{"message":"go install: nope"}}` + "\n",
 		))
-		var buf bytes.Buffer
-		err := checkImageBuildResponse(body, &buf)
+		err := checkImageBuildResponse(body)
 		require.ErrorContains(t, err, "go install: nope")
-		require.Contains(t, buf.String(), "Step 1")
-		require.Contains(t, buf.String(), "go: downloading")
 	})
 }
 

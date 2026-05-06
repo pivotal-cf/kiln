@@ -264,7 +264,7 @@ func buildTestImage(ctx context.Context, w io.Writer, dockerDaemon mobyClient, u
 	if err != nil {
 		return fmt.Errorf("failed to build image: %w", err)
 	}
-	if err := checkImageBuildResponse(resp.Body, nil); err != nil {
+	if err := checkImageBuildResponse(resp.Body); err != nil {
 		return fmt.Errorf("image build failed: %w", err)
 	}
 	return nil
@@ -502,10 +502,9 @@ type imageBuildMessage struct {
 	} `json:"errorDetail"`
 }
 
-// checkImageBuildResponse reads the Docker/Podman image-build JSON stream. If
-// logOutput is non-nil, "stream" lines are copied there; otherwise they are
-// discarded. Build failures are still returned from daemon "error" messages.
-func checkImageBuildResponse(body io.ReadCloser, logOutput io.Writer) error {
+// checkImageBuildResponse reads the Docker/Podman image-build JSON stream and
+// returns any build error reported by the daemon.
+func checkImageBuildResponse(body io.ReadCloser) error {
 	defer func() {
 		_ = body.Close()
 	}()
@@ -517,9 +516,6 @@ func checkImageBuildResponse(body io.ReadCloser, logOutput io.Writer) error {
 				break
 			}
 			return fmt.Errorf("failed to read image build response: %w", err)
-		}
-		if logOutput != nil && msg.Stream != "" {
-			_, _ = io.WriteString(logOutput, msg.Stream)
 		}
 		if msg.Error != "" {
 			detail := msg.Error
