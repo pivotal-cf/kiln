@@ -46,3 +46,7 @@ RUN gem source -a https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}@usw1.p
 RUN gem install --verbose ops-manifest -v 0.0.4.pre
 
 RUN which ops-manifest
+
+RUN printf '%s\n%s\n' \
+    'registry=https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}@usw1.packages.broadcom.com/artifactory/api/npm/tis-npm-virtual/' \
+    'always-auth=true' > /root/.npmrc
