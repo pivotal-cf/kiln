@@ -23,8 +23,8 @@ require (
 	github.com/cucumber/messages/go/v21 v21.0.1
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/go-git/go-billy/v5 v5.7.0
-	github.com/go-git/go-git/v5 v5.16.5
+	github.com/go-git/go-billy/v5 v5.8.0
+	github.com/go-git/go-git/v5 v5.18.0
 	github.com/google/go-github/v50 v50.2.0
 	github.com/hashicorp/go-version v1.8.0
 	github.com/jfrog/jfrog-client-go v1.52.0
