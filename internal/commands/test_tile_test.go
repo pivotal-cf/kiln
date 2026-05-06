@@ -257,22 +257,9 @@ var _ = Describe("kiln test", func() {
 
 	When("when Artifactory credentials are missing", func() {
 		It("returns an error before invoking the test function", func() {
-			savedU, hasU := os.LookupEnv("ARTIFACTORY_USERNAME")
-			savedP, hasP := os.LookupEnv("ARTIFACTORY_PASSWORD")
-			DeferCleanup(func() {
-				if hasU {
-					Expect(os.Setenv("ARTIFACTORY_USERNAME", savedU)).To(Succeed())
-				} else {
-					Expect(os.Unsetenv("ARTIFACTORY_USERNAME")).To(Succeed())
-				}
-				if hasP {
-					Expect(os.Setenv("ARTIFACTORY_PASSWORD", savedP)).To(Succeed())
-				} else {
-					Expect(os.Unsetenv("ARTIFACTORY_PASSWORD")).To(Succeed())
-				}
-			})
-			Expect(os.Unsetenv("ARTIFACTORY_USERNAME")).To(Succeed())
-			Expect(os.Unsetenv("ARTIFACTORY_PASSWORD")).To(Succeed())
+			t := GinkgoT()
+			t.Setenv("ARTIFACTORY_USERNAME", "")
+			t.Setenv("ARTIFACTORY_PASSWORD", "")
 
 			fakeTestFunc := fakes.TestTileFunction{}
 			fakeTestFunc.Returns(nil)
