@@ -342,6 +342,39 @@ var _ = Describe("UpdateRelease", func() {
 			})
 		})
 
+		When("a release source returns an unexpected error (e.g. auth failure) during GetMatchedRelease", func() {
+			BeforeEach(func() {
+				releaseSource.GetMatchedReleaseReturns(cargo.BOSHReleaseTarballLock{}, errors.New("401 Unauthorized"))
+			})
+
+			It("includes the underlying error in the returned error", func() {
+				err := updateReleaseCommand.Execute([]string{
+					"--kilnfile", "Kilnfile",
+					"--name", releaseName,
+					"--version", newReleaseVersion,
+					"--releases-directory", releasesDir,
+				})
+				Expect(err).To(MatchError(ContainSubstring("401 Unauthorized")))
+			})
+		})
+
+		When("a release source returns an unexpected error (e.g. auth failure) during FindReleaseVersion", func() {
+			BeforeEach(func() {
+				releaseSource.FindReleaseVersionReturns(cargo.BOSHReleaseTarballLock{}, errors.New("401 Unauthorized"))
+			})
+
+			It("includes the underlying error in the returned error", func() {
+				err := updateReleaseCommand.Execute([]string{
+					"--kilnfile", "Kilnfile",
+					"--name", releaseName,
+					"--version", newReleaseVersion,
+					"--releases-directory", releasesDir,
+					"--without-download",
+				})
+				Expect(err).To(MatchError(ContainSubstring("401 Unauthorized")))
+			})
+		})
+
 		When("downloading the release fails", func() {
 			BeforeEach(func() {
 				releaseSource.DownloadReleaseReturns(component.Local{}, errors.New("bad stuff"))
