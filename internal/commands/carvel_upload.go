@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/pivotal-cf/jhanda"
@@ -83,7 +84,9 @@ func (c CarvelUpload) Execute(args []string) error {
 		return fmt.Errorf("failed to locate release tarball: %w", err)
 	}
 
-	ver, err := baker.GetVersion()
+	releaseVersion := baker.GetReleaseVersion()
+
+	productVersion, err := baker.GetVersion()
 	if err != nil {
 		return fmt.Errorf("failed to get tile version: %w", err)
 	}
@@ -92,7 +95,7 @@ func (c CarvelUpload) Execute(args []string) error {
 	if artConfig.PathTemplate != "" {
 		pathTmpl = artConfig.PathTemplate
 	}
-	remotePath, err := evaluatePathTemplate(pathTmpl, baker.GetName(), ver)
+	remotePath, err := evaluatePathTemplate(pathTmpl, baker.GetName(), releaseVersion)
 	if err != nil {
 		return fmt.Errorf("failed to evaluate path template: %w", err)
 	}
@@ -110,7 +113,7 @@ func (c CarvelUpload) Execute(args []string) error {
 
 	sourceID := cargo.BOSHReleaseTarballSourceID(artConfig)
 	lockfilePath := kilnfilePath + ".lock"
-	err = writeStandardKilnfileLock(lockfilePath, baker.GetName(), ver, remotePath, sourceID, sha1sum)
+	err = writeStandardKilnfileLock(lockfilePath, baker.GetName(), releaseVersion, remotePath, sourceID, sha1sum)
 	if err != nil {
 		return fmt.Errorf("failed to write Kilnfile.lock: %w", err)
 	}
@@ -125,7 +128,7 @@ func (c CarvelUpload) Execute(args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to bake tile: %w", err)
 		}
-		c.outLogger.Printf("Baked %s version %s to %s", baker.GetName(), ver, targetPath)
+		c.outLogger.Printf("Baked %s version %s to %s", baker.GetName(), productVersion, targetPath)
 	}
 
 	return nil
@@ -172,7 +175,7 @@ func uploadToArtifactory(localPath, host, repo, remotePath, username, password s
 	}
 	defer func() { _ = f.Close() }()
 
-	uploadURL := host + "/" + repo + "/" + remotePath
+	uploadURL := host + "/" + repo + "/" + strings.ReplaceAll(remotePath, "+", "%2B")
 
 	req, err := http.NewRequest(http.MethodPut, uploadURL, f)
 	if err != nil {
