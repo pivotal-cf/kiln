@@ -520,18 +520,18 @@ Any variables that Kilnfile needs for the kiln re-bake command should be set in
 
 ### `test`
 
-The `test` command exercises to ginkgo tests under the `/<tile>/test/manifest` and `/<tile>/migrations` paths of the `pivotal/tas` repos (where `<tile>` is tas, ist, or tasw).
+The `test` command exercises the Ginkgo tests under the `/<tile>/test/manifest` and `/<tile>/migrations` paths of the `pivotal/tas` repos (where `<tile>` is tas, ist, or tasw).
 
-Running these tests requires a docker daemon. It also requires the user to
-provide Artifactory credentials via the ARTIFACTORY_USERNAME and
-ARTIFACTORY_PASSWORD environment variables to allow the ops-manifest gem to
-be installed. The credentials must have access to the `tas-rel-eng-gem-dev-local`
-repository within Broadcom's Artifactory.
+Running these tests requires a Docker daemon (or Podman API-compatible socket). You must provide **ARTIFACTORY_USERNAME** and **ARTIFACTORY_PASSWORD** using **`-e`** and/or **exported** environment variables. They are used for the **ops-manifest** gem (`tas-rel-eng-gem-dev-local`), for **Go module** downloads during **`go install ginkgo`** (via **`GOPROXY`** / **`GOSUMDB=off`** in the embedded Dockerfile), and Kiln sends the same credentials to the daemon as **registry auth** so base images can be pulled from **docker-virtual** (`tas-rel-eng-docker-virtual.usw1.packages.broadcom.com`) **without a separate `docker login`** for `kiln test`.
+
+The embedded Dockerfile pins **`FROM`** paths on that registry. The registry hostname in Kiln’s **`AuthConfigs`** must stay aligned with those **`FROM`** lines (see **`DockerVirtualRegistryHost`** in `internal/test/container.go`). Passwords with characters that are special in URLs may not behave the same as URL-encoded credentials when interpolated into **`GOPROXY`** inside the Dockerfile.
+
+If either credential is missing, `kiln test` exits with an error before talking to Docker.
 
 If you run into this docker error `could not execute "test": failed to connect to Docker daemon: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running`,
 then create a symlink `sudo ln -s ~/.docker/run/docker.sock /var/run/docker.sock`
 
-Here are command line examples:
+Examples:
 
 ```
 $ cd ~/workspace/tas/ist
@@ -539,36 +539,45 @@ $ kiln test -e ARTIFACTORY_USERNAME=myuser -e ARTIFACTORY_PASSWORD=secretpasswor
 ```
 
 ```
-cd ~
-$ kiln test --verbose -tp ~/workspace/tas/ist --ginkgo-manifest-flags "-p -nodes 8 -v"
+$ export ARTIFACTORY_USERNAME=myuser
+$ export ARTIFACTORY_PASSWORD=secretpassword
+$ kiln test --verbose -tp ~/workspace/tas/ist --ginkgo-flags "-p -nodes 8 -v"
 ```
 
 <details>
   <summary>Additional test options</summary>
 
-##### `--ginkgo-manifest-flags`
+##### `--ginkgo-flags`
 
-The `--ginkgo-manifest-flags` flag can be used to pass through Ginkgo test flags. The defaults being passed through are `-r -p -slowSpecThreshold 15`. Pass `help` as a flag to retrieve the available options for the embeded version of ginkgo.
+The `--ginkgo-flags` flag can be used to pass through Ginkgo test flags. The defaults being passed through are `-r -p -slowSpecThreshold 15`. Pass `help` as a flag to retrieve the available options for the embedded version of ginkgo.
 
-#### `--manifest-only`
+#### `--manifest`
 
-The `--manifest-only` flag can be used to run only Manifest tests. If not passed, `kiln test` will run both Manifest and Migration tests by default.
+The `--manifest` flag can be used to run only Manifest tests.
 
-#### `--migrations-only`
+#### `--migrations`
 
-The `--migrations-only` flag can be used to run only Migration tests. If not passed, `kiln test` will run both Manifest and Migration tests by default.
+The `--migrations` flag can be used to run only Migration tests.
+
+#### `--stability`
+
+The `--stability` flag can be used to run only Stability tests.
 
 ##### `--tile-path`
 
-The `--tile-path` (`-tp`) flag can be set the path the directory you wish to test. It defaults to the current working directory. For example
+The `--tile-path` (`-tp`) flag can be set to the directory you wish to test. It defaults to the current working directory. For example:
 
 ```
-$ kiln test -tp ~/workspace/tas/ist
+$ kiln test -e ARTIFACTORY_USERNAME=myuser -e ARTIFACTORY_PASSWORD=secret -tp ~/workspace/tas/ist
 ```
 
 ##### `--verbose`
 
 The `--verbose` (`-v`) flag will log additional debugging info.
+
+##### `--silent`
+
+The `--silent` (`-s`) flag hides Kiln info lines (not Ginkgo output).
 
 </details>
 

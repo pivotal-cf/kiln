@@ -34,6 +34,12 @@ func init() {
 var _ = Describe("kiln test", func() {
 	var output bytes.Buffer
 
+	BeforeEach(func() {
+		t := GinkgoT()
+		t.Setenv("ARTIFACTORY_USERNAME", "ginkgo-test-user")
+		t.Setenv("ARTIFACTORY_PASSWORD", "ginkgo-test-pass")
+	})
+
 	AfterEach(func() {
 		output.Reset()
 	})
@@ -161,7 +167,7 @@ var _ = Describe("kiln test", func() {
 			Expect(w).NotTo(BeNil())
 
 			Expect(configuration.RunManifest).To(BeTrue())
-			Expect(configuration.RunMetadata).To(BeFalse())
+			Expect(configuration.RunStability).To(BeFalse())
 			Expect(configuration.RunMigrations).To(BeFalse())
 		})
 	})
@@ -183,13 +189,13 @@ var _ = Describe("kiln test", func() {
 			Expect(w).NotTo(BeNil())
 
 			Expect(configuration.RunManifest).To(BeFalse())
-			Expect(configuration.RunMetadata).To(BeFalse())
+			Expect(configuration.RunStability).To(BeFalse())
 			Expect(configuration.RunMigrations).To(BeTrue())
 		})
 	})
 
 	When("when the stability test is enabled", func() {
-		It("it sets the RunMetadata configuration flag", func() {
+		It("it sets the RunStability configuration flag", func() {
 			args := []string{"--stability"}
 
 			fakeTestFunc := fakes.TestTileFunction{}
@@ -205,29 +211,7 @@ var _ = Describe("kiln test", func() {
 			Expect(w).NotTo(BeNil())
 
 			Expect(configuration.RunManifest).To(BeFalse())
-			Expect(configuration.RunMetadata).To(BeTrue())
-			Expect(configuration.RunMigrations).To(BeFalse())
-		})
-	})
-
-	When("when the stability test is enabled", func() {
-		It("it sets the RunMetadata configuration flag", func() {
-			args := []string{"--stability"}
-
-			fakeTestFunc := fakes.TestTileFunction{}
-			fakeTestFunc.Returns(nil)
-
-			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeTestFunc.CallCount()).To(Equal(1))
-
-			ctx, w, configuration := fakeTestFunc.ArgsForCall(0)
-			Expect(ctx).NotTo(BeNil())
-			Expect(w).NotTo(BeNil())
-
-			Expect(configuration.RunManifest).To(BeFalse())
-			Expect(configuration.RunMetadata).To(BeTrue())
+			Expect(configuration.RunStability).To(BeTrue())
 			Expect(configuration.RunMigrations).To(BeFalse())
 		})
 	})
@@ -249,6 +233,41 @@ var _ = Describe("kiln test", func() {
 			Expect(w).NotTo(BeNil())
 
 			Expect(configuration.GinkgoFlags).To(Equal("peach pair"))
+		})
+	})
+
+	When("when Artifactory credentials are provided via -e", func() {
+		It("invokes the test function with those variables in Environment", func() {
+			args := []string{
+				"-e", "ARTIFACTORY_USERNAME=u",
+				"-e", "ARTIFACTORY_PASSWORD=p",
+			}
+
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
+
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute(args)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, _, configuration := fakeTestFunc.ArgsForCall(0)
+			Expect(configuration.Environment).To(ContainElement("ARTIFACTORY_USERNAME=u"))
+			Expect(configuration.Environment).To(ContainElement("ARTIFACTORY_PASSWORD=p"))
+		})
+	})
+
+	When("when Artifactory credentials are missing", func() {
+		It("returns an error before invoking the test function", func() {
+			t := GinkgoT()
+			t.Setenv("ARTIFACTORY_USERNAME", "")
+			t.Setenv("ARTIFACTORY_PASSWORD", "")
+
+			fakeTestFunc := fakes.TestTileFunction{}
+			fakeTestFunc.Returns(nil)
+
+			err := commands.NewTileTestWithCollaborators(&output, fakeTestFunc.Spy).Execute([]string{})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("ARTIFACTORY_USERNAME"))
+			Expect(fakeTestFunc.CallCount()).To(Equal(0))
 		})
 	})
 

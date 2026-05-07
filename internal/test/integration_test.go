@@ -49,6 +49,7 @@ func TestDockerIntegration(t *testing.T) {
 			AbsoluteTileDirectory: tmpDir,
 			RunAll:                true,
 			Environment:           []string{"ARTIFACTORY_USERNAME=" + artifactoryUsername, "ARTIFACTORY_PASSWORD=" + artifactoryPassword},
+			Verbose:               testing.Verbose(),
 		}
 		out := io.Discard
 		if testing.Verbose() {
@@ -129,14 +130,10 @@ func setupTestRepo(t *testing.T) string {
 	tmpDir := t.TempDir()
 	happyTilePath := filepath.Join(wd, "testdata", "happy-tile")
 	tar, err := archive.Tar(happyTilePath, compression.None)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = archive.Untar(tar, tmpDir, nil)
-	assert.NoError(t, err)
-	t.Cleanup(func() {
-		err = os.RemoveAll(tmpDir)
-		assert.NoError(t, err)
-		_ = tar.Close()
-	})
+	require.NoError(t, err)
+	_ = tar.Close()
 
 	cmds := [][]string{
 		{"git", "init"},
