@@ -2,10 +2,10 @@
 FROM tas-rel-eng-docker-virtual.usw1.packages.broadcom.com/golang AS go-image
 FROM tas-rel-eng-docker-virtual.usw1.packages.broadcom.com/pivotalcfreleng/kiln:v0.110.0-rc2 AS kiln
 
-FROM tas-rel-eng-docker-virtual.usw1.packages.broadcom.com/ruby:3.4.8 AS builder
+FROM tas-rel-eng-docker-virtual.usw1.packages.broadcom.com/ruby:4.0.3 AS builder
 RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-FROM tas-rel-eng-docker-virtual.usw1.packages.broadcom.com/ruby:3.4.8
+FROM tas-rel-eng-docker-virtual.usw1.packages.broadcom.com/ruby:4.0.3
 
 # ── Stable tools — no credentials; these layers cache across credential rotation ──
 

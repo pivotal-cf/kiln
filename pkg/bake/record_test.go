@@ -119,6 +119,24 @@ product_version: some-product-version
 		require.ErrorContains(t, b.WriteFile(dir), "tile bake record already exists for some-tile/some-version")
 	})
 
+	t.Run("when non-bake files like .gitkeep are present in the records directory", func(t *testing.T) {
+		dir := t.TempDir()
+
+		record := bake.Record{
+			TileName:       "p-each",
+			SourceRevision: "some-revision",
+			Version:        "1.2.3",
+		}
+		require.NoError(t, record.WriteFile(dir))
+
+		require.NoError(t, os.WriteFile(filepath.Join(dir, bake.RecordsDirectory, ".gitkeep"), []byte{}, 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, bake.RecordsDirectory, ".gitignore"), []byte("*.tmp\n"), 0o644))
+
+		result, err := bake.ReadRecords(os.DirFS(dir))
+		require.NoError(t, err)
+		require.Equal(t, []bake.Record{record}, result)
+	})
+
 	t.Run("when read builds", func(t *testing.T) {
 		dir := t.TempDir()
 

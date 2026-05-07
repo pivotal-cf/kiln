@@ -105,6 +105,9 @@ func ReadRecords(dir fs.FS) ([]Record, error) {
 	}
 	builds := make([]Record, 0, len(infos))
 	for _, info := range infos {
+		if path.Ext(info.Name()) != ".json" {
+			continue
+		}
 		buf, err := fs.ReadFile(dir, path.Join(RecordsDirectory, info.Name()))
 		if err != nil {
 			return nil, err

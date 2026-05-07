@@ -233,7 +233,7 @@ func Test_checkImageBuildResponse(t *testing.T) {
 func TestEmbeddedDockerfile_structure(t *testing.T) {
 	// Base image FROM lines must use the internal docker-virtual registry.
 	require.Contains(t, dockerfile, "FROM "+DockerVirtualRegistryHost+"/golang")
-	require.Contains(t, dockerfile, "FROM "+DockerVirtualRegistryHost+"/ruby:3.4.8")
+	require.Contains(t, dockerfile, "FROM "+DockerVirtualRegistryHost+"/ruby:4.0.3")
 	require.NotContains(t, dockerfile, "REGISTRY_PREFIX")
 
 	// ginkgo must be pinned to a specific version (not @latest) so builds are reproducible

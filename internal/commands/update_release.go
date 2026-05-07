@@ -79,10 +79,7 @@ func (u UpdateRelease) Execute(args []string) error {
 			GitHubRepository: releaseSpec.GitHubRepository,
 		}, false)
 		if err != nil {
-			if component.IsErrNotFound(err) {
-				return fmt.Errorf("error finding the release: %w", err)
-			}
-			return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
+			return fmt.Errorf("couldn't find %q %s in any release source: %w", u.Options.Name, u.Options.Version, err)
 		}
 
 		newVersion = remoteRelease.Version
@@ -98,10 +95,7 @@ func (u UpdateRelease) Execute(args []string) error {
 			GitHubRepository: releaseSpec.GitHubRepository,
 		})
 		if err != nil {
-			if component.IsErrNotFound(err) {
-				return fmt.Errorf("error finding the release: %w", err)
-			}
-			return fmt.Errorf("couldn't find %q %s in any release source", u.Options.Name, u.Options.Version)
+			return fmt.Errorf("couldn't find %q %s in any release source: %w", u.Options.Name, u.Options.Version, err)
 		}
 
 		localRelease, err = releaseSource.DownloadRelease(u.Options.ReleasesDir, remoteRelease)
