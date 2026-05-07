@@ -232,7 +232,7 @@ func runTest(ctx context.Context, w io.Writer, dockerDaemon mobyClient, configur
 	envMap["ARTIFACTORY_USERNAME"] = username
 	envMap["ARTIFACTORY_PASSWORD"] = password
 
-	if err := buildTestImage(ctx, w, dockerDaemon, username, password, envMap); err != nil {
+	if err := buildTestImage(ctx, w, dockerDaemon, username, password, envMap, configuration.Verbose); err != nil {
 		return err
 	}
 
@@ -245,13 +245,17 @@ func runTest(ctx context.Context, w io.Writer, dockerDaemon mobyClient, configur
 
 // buildTestImage builds the kiln test Docker image, forwarding Artifactory
 // credentials as build args and registry auth for pulling base images.
-func buildTestImage(ctx context.Context, w io.Writer, dockerDaemon mobyClient, username, password string, envMap environmentVars) error {
+func buildTestImage(ctx context.Context, w io.Writer, dockerDaemon mobyClient, username, password string, envMap environmentVars, verbose bool) error {
 	var dockerfileTarball bytes.Buffer
 	if err := createDockerfileTarball(tar.NewWriter(&dockerfileTarball), dockerfile); err != nil {
 		return err
 	}
 
 	_, _ = fmt.Fprintln(w, "Preparing test image...")
+	var logOutput io.Writer
+	if verbose {
+		logOutput = w
+	}
 	resp, err := dockerDaemon.ImageBuild(ctx, &dockerfileTarball, build.ImageBuildOptions{
 		Tags: []string{"kiln_test_dependencies:vmware"},
 		BuildArgs: map[string]*string{
@@ -259,12 +263,12 @@ func buildTestImage(ctx context.Context, w io.Writer, dockerDaemon mobyClient, u
 			"ARTIFACTORY_PASSWORD": &password,
 		},
 		AuthConfigs:    registryAuthForDockerVirtual(envMap),
-		SuppressOutput: true,
+		SuppressOutput: !verbose,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to build image: %w", err)
 	}
-	if err := checkImageBuildResponse(resp.Body); err != nil {
+	if err := checkImageBuildResponse(resp.Body, logOutput); err != nil {
 		return fmt.Errorf("image build failed: %w", err)
 	}
 	return nil
@@ -502,9 +506,10 @@ type imageBuildMessage struct {
 	} `json:"errorDetail"`
 }
 
-// checkImageBuildResponse reads the Docker/Podman image-build JSON stream and
-// returns any build error reported by the daemon.
-func checkImageBuildResponse(body io.ReadCloser) error {
+// checkImageBuildResponse reads the Docker/Podman image-build JSON stream. If
+// logOutput is non-nil, "stream" lines are written there. Build errors are
+// always returned.
+func checkImageBuildResponse(body io.ReadCloser, logOutput io.Writer) error {
 	defer func() {
 		_ = body.Close()
 	}()
@@ -516,6 +521,9 @@ func checkImageBuildResponse(body io.ReadCloser) error {
 				break
 			}
 			return fmt.Errorf("failed to read image build response: %w", err)
+		}
+		if logOutput != nil && msg.Stream != "" {
+			_, _ = io.WriteString(logOutput, msg.Stream)
 		}
 		if msg.Error != "" {
 			detail := msg.Error

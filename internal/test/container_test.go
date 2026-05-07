@@ -225,7 +225,7 @@ func Test_checkImageBuildResponse(t *testing.T) {
 				`{"stream":"go: downloading\n"}` + "\n" +
 				`{"error":"failed","errorDetail":{"message":"go install: nope"}}` + "\n",
 		))
-		err := checkImageBuildResponse(body)
+		err := checkImageBuildResponse(body, nil)
 		require.ErrorContains(t, err, "go install: nope")
 	})
 }
