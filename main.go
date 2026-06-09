@@ -67,11 +67,6 @@ func main() {
 		repo := component.NewReleaseSourceRepo(kilnfile)
 		return repo.Filter(allowOnlyPublishable)
 	})
-	rpFinder := commands.RemotePatherFinder(func(kilnfile cargo.Kilnfile, sourceID string) (component.RemotePather, error) {
-		repo := component.NewReleaseSourceRepo(kilnfile)
-		return repo.FindRemotePather(sourceID)
-	})
-
 	commandSet := jhanda.CommandSet{}
 	fetch := commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
 	commandSet["fetch"] = fetch
@@ -86,7 +81,6 @@ func main() {
 	commandSet["help"] = commands.NewHelp(os.Stdout, globalFlagsUsage, commandSet)
 	commandSet["version"] = commands.NewVersion(outLogger, version)
 	commandSet["update-release"] = commands.NewUpdateRelease(outLogger, fs, mrsProvider)
-	commandSet["sync-with-local"] = commands.NewSyncWithLocal(fs, localReleaseDirectory, rpFinder, outLogger)
 
 	commandSet["update-stemcell"] = commands.UpdateStemcell{
 		Logger:                     outLogger,

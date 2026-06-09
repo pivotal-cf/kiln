@@ -38,7 +38,6 @@ Feature: As a developer, I want the Kiln CLI to be usable
       | find-release-version    |
       | find-stemcell-version   |
       | release-notes           |
-      | sync-with-local         |
       | update-release          |
       | update-stemcell         |
       | validate                |

@@ -148,7 +148,6 @@ Commands:
   help                     prints this usage information
   re-bake                  re-bake constructs a tile from a bake record
   release-notes            generates release notes from bosh-release release notes
-  sync-with-local          update the Kilnfile.lock based on local releases
   test                     Test manifest for a product
   update-release           bumps a release to a new version
   update-stemcell          updates stemcell and release information in Kilnfile.lock
