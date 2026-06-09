@@ -60,11 +60,15 @@ func (update UpdateStemcell) Execute(args []string) error {
 		return nil
 	}
 
-	currentStemcellVersion, _ := semver.NewVersion(kilnfileLock.Stemcell.Version)
-
-	if currentStemcellVersion.Equal(latestStemcellVersion) {
-		update.Logger.Println("Stemcell is up-to-date. Nothing to update for product")
-		return nil
+	if kilnfileLock.Stemcell.Version != "" {
+		currentStemcellVersion, err := semver.NewVersion(kilnfileLock.Stemcell.Version)
+		if err != nil {
+			return fmt.Errorf("invalid stemcell version in Kilnfile.lock: %w", err)
+		}
+		if currentStemcellVersion.Equal(latestStemcellVersion) {
+			update.Logger.Println("Stemcell is up-to-date. Nothing to update for product")
+			return nil
+		}
 	}
 
 	releaseSource := update.MultiReleaseSourceProvider(kilnfile, false)

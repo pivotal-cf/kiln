@@ -652,6 +652,42 @@ var _ = Describe("UpdateStemcell", func() {
 				Expect(err).To(MatchError(ContainSubstring("big badda boom")))
 			})
 		})
+
+		When("the kilnlockfile stemcell version is missing", func() {
+			BeforeEach(func() {
+				kilnfileLock.Stemcell = cargo.Stemcell{
+					OS:      newStemcellOS,
+					Version: "",
+				}
+			})
+
+			It("updates the Kilnfile.lock stemcell version without panicking", func() {
+				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
+				Expect(err).NotTo(HaveOccurred())
+
+				var updatedLockfile cargo.KilnfileLock
+				Expect(fsReadYAML(fs, kilnfileLockPath, &updatedLockfile)).NotTo(HaveOccurred())
+				Expect(updatedLockfile.Stemcell).To(Equal(cargo.Stemcell{
+					OS:      newStemcellOS,
+					Version: newStemcellVersion,
+				}))
+			})
+		})
+
+		When("the kilnlockfile stemcell version is malformed", func() {
+			BeforeEach(func() {
+				kilnfileLock.Stemcell = cargo.Stemcell{
+					OS:      newStemcellOS,
+					Version: "not-a-valid-semver$$",
+				}
+			})
+
+			It("returns an error", func() {
+				err := update.Execute([]string{"--kilnfile", kilnfilePath, "--version", newStemcellVersion})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("invalid stemcell version in Kilnfile.lock"))
+			})
+		})
 	})
 })
 
