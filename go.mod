@@ -25,11 +25,11 @@ require (
 	github.com/go-git/go-git/v5 v5.19.0
 	github.com/google/go-github/v50 v50.2.0
 	github.com/hashicorp/go-version v1.9.0
-	github.com/jfrog/jfrog-client-go v1.52.0
+	github.com/jfrog/jfrog-client-go v1.55.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/masterminds/sprig v2.22.0+incompatible
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.12.2
-	github.com/moby/buildkit v0.28.1
+	github.com/moby/buildkit v0.29.0
 	github.com/moby/go-archive v0.2.0
 	github.com/onsi/ginkgo/v2 v2.28.3
 	github.com/onsi/gomega v1.40.0
@@ -38,10 +38,10 @@ require (
 	github.com/pivotal-cf/go-pivnet/v7 v7.0.3-0.20251210214834-422885a2f23e
 	github.com/pivotal-cf/jhanda v0.0.0-20200619200912-8de8eb943a43
 	github.com/pivotal-cf/om v0.0.0-20251215210555-e86ddeb670b9
-	github.com/snabb/httpreaderat v1.0.1
+	github.com/snabb/httpreaderat v1.0.3
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.50.0
-	golang.org/x/oauth2 v0.35.0
+	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.20.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -74,7 +74,7 @@ require (
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cloudfoundry/go-socks5 v0.0.0-20250423223041-4ad5fea42851 // indirect
 	github.com/cloudfoundry/socks5-proxy v0.2.173 // indirect
-	github.com/containerd/containerd/v2 v2.2.1 // indirect
+	github.com/containerd/containerd/v2 v2.2.4 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
@@ -119,11 +119,11 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jfrog/archiver/v3 v3.6.1 // indirect
-	github.com/jfrog/build-info-go v1.10.10 // indirect
+	github.com/jfrog/build-info-go v1.11.0 // indirect
 	github.com/jfrog/gofrog v1.7.6 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/kevinburke/ssh_config v1.4.0 // indirect
-	github.com/klauspost/compress v1.18.4 // indirect
+	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
@@ -173,7 +173,7 @@ require (
 	golang.org/x/term v0.42.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/tools v0.44.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251222181119-0a764e51fe1b // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/grpc v1.79.3 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
