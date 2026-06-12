@@ -25,7 +25,7 @@ require (
 	github.com/go-git/go-git/v5 v5.18.0
 	github.com/google/go-github/v50 v50.2.0
 	github.com/hashicorp/go-version v1.9.0
-	github.com/jfrog/jfrog-client-go v1.52.0
+	github.com/jfrog/jfrog-client-go v1.55.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/masterminds/sprig v2.22.0+incompatible
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.12.2
@@ -74,7 +74,7 @@ require (
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cloudfoundry/go-socks5 v0.0.0-20250423223041-4ad5fea42851 // indirect
 	github.com/cloudfoundry/socks5-proxy v0.2.173 // indirect
-	github.com/containerd/containerd/v2 v2.2.2 // indirect
+	github.com/containerd/containerd/v2 v2.2.4 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
@@ -119,7 +119,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jfrog/archiver/v3 v3.6.1 // indirect
-	github.com/jfrog/build-info-go v1.10.10 // indirect
+	github.com/jfrog/build-info-go v1.11.0 // indirect
 	github.com/jfrog/gofrog v1.7.6 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/kevinburke/ssh_config v1.4.0 // indirect
