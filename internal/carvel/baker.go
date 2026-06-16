@@ -292,6 +292,12 @@ files:
 		}
 	}
 
+	// Read bosh_links from Kilnfile (optional; missing file or missing field is fine).
+	var kilnfileData cargo.Kilnfile
+	if kfData, err := os.ReadFile(path.Join(b.source, "Kilnfile")); err == nil {
+		_ = yaml.Unmarshal(kfData, &kilnfileData)
+	}
+
 	registryDataTemplates := ""
 	registryDataProperties := ""
 
@@ -343,7 +349,13 @@ files:
 			return err
 		}
 
-		manifestTemplate := generateManifestTemplate(entry)
+		// Read optional values-overlay ERB file alongside the packageinstall YAML.
+		overlayContent := ""
+		if overlayData, overlayErr := os.ReadFile(path.Join(b.source, "packageinstalls", entry+".values-overlay.erb")); overlayErr == nil {
+			overlayContent = string(overlayData)
+		}
+
+		manifestTemplate := generateManifestTemplate(entry, overlayContent)
 
 		err = os.WriteFile(
 			path.Join(dirName, "jobs", "registry-data", "templates", "packageinstalls", entry+".yml.erb"),
@@ -355,18 +367,7 @@ files:
 		}
 	}
 
-	registryDataSpec := `---
-name: registry-data
-templates:
-` + registryDataTemplates +
-		`packages:
-- registry-data
-consumes:
-- name: cluster
-  type: cluster-info
-  optional: true
-properties:
-` + registryDataProperties
+	registryDataSpec := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, kilnfileData.BoshLinks.Consumes)
 
 	err = os.WriteFile(path.Join(dirName, "jobs", "registry-data", "spec"), []byte(registryDataSpec), 0644)
 	if err != nil {
@@ -376,7 +377,37 @@ properties:
 	return nil
 }
 
-func generateManifestTemplate(entry string) string {
+// buildRegistryDataSpec constructs the job.MF content for the registry-data BOSH job.
+// It always includes the hardcoded cluster-info link and appends any additional links
+// declared via bosh_links.consumes in the Kilnfile.
+func buildRegistryDataSpec(templates, properties string, additionalLinks []cargo.BOSHLinkConsumer) string {
+	extraLinks := ""
+	for _, link := range additionalLinks {
+		optional := "false"
+		if link.Optional {
+			optional = "true"
+		}
+		extraLinks += fmt.Sprintf("- name: %s\n  type: %s\n  optional: %s\n", link.Name, link.Type, optional)
+	}
+	return `---
+name: registry-data
+templates:
+` + templates +
+		`packages:
+- registry-data
+consumes:
+- name: cluster
+  type: cluster-info
+  optional: true
+` + extraLinks +
+		`properties:
+` + properties
+}
+
+// generateManifestTemplate produces the ERB template for the registry-data BOSH job.
+// overlayContent is optional ERB code injected into the values manipulation block
+// before YAML.dump(values) is called, enabling BOSH link-based value overrides.
+func generateManifestTemplate(entry, overlayContent string) string {
 	return `---
 apiVersion: v1
 kind: ServiceAccount
@@ -423,6 +454,7 @@ stringData:
     values["context"]["namespace"] = link("cluster").p("content-namespace") rescue "default"
   end
 %>
+` + overlayContent + `
 <%= YAML.dump(values).split("\n").map { |line| "    " + line }.join("\n") %>
 ---
 apiVersion: packaging.carvel.dev/v1alpha1

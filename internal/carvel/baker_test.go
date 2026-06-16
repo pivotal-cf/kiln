@@ -57,7 +57,7 @@ var _ = Describe("Carvel Baker", func() {
 		var template string
 
 		BeforeEach(func() {
-			template = generateManifestTemplate("test-install")
+			template = generateManifestTemplate("test-install", "")
 		})
 
 		It("generates a ServiceAccount", func() {
@@ -101,6 +101,50 @@ var _ = Describe("Carvel Baker", func() {
 
 		It("handles YAML conversion for string values", func() {
 			Expect(template).To(ContainSubstring(`values = YAML.load(values) if values.is_a?(String)`))
+		})
+
+		Context("with overlay content", func() {
+			It("includes overlay content before YAML.dump", func() {
+				overlay := `<% values["syslog_agent"]["cache"]["url"] = "https://1.2.3.4:9000" %>`
+				tmpl := generateManifestTemplate("test-install", overlay)
+				Expect(tmpl).To(ContainSubstring(overlay))
+				overlayIdx := strings.Index(tmpl, overlay)
+				dumpIdx := strings.Index(tmpl, "YAML.dump(values)")
+				Expect(overlayIdx).To(BeNumerically("<", dumpIdx), "overlay must appear before YAML.dump")
+			})
+
+			It("produces valid output with empty overlay", func() {
+				tmpl := generateManifestTemplate("test-install", "")
+				Expect(tmpl).To(ContainSubstring("YAML.dump(values)"))
+				Expect(tmpl).NotTo(BeEmpty())
+			})
+		})
+	})
+
+	Context("buildRegistryDataSpec", func() {
+		It("includes user-declared additional links after cluster-info", func() {
+			links := []cargo.BOSHLinkConsumer{
+				{Name: "binding_cache", Type: "binding_cache", Optional: false},
+			}
+			spec := buildRegistryDataSpec("", "", links)
+			Expect(spec).To(ContainSubstring("name: binding_cache"))
+			Expect(spec).To(ContainSubstring("type: binding_cache"))
+			Expect(spec).To(ContainSubstring("optional: false"))
+			Expect(spec).To(ContainSubstring("name: cluster"))
+		})
+
+		It("marks optional links correctly", func() {
+			links := []cargo.BOSHLinkConsumer{
+				{Name: "optional-link", Type: "some-type", Optional: true},
+			}
+			spec := buildRegistryDataSpec("", "", links)
+			Expect(spec).To(ContainSubstring("optional: true"))
+		})
+
+		It("includes only cluster-info when no additional links are declared", func() {
+			spec := buildRegistryDataSpec("", "", nil)
+			Expect(spec).To(ContainSubstring("name: cluster"))
+			Expect(spec).NotTo(ContainSubstring("name: binding_cache"))
 		})
 	})
 
@@ -571,7 +615,7 @@ var _ = Describe("Carvel Baker", func() {
 
 	Context("generateManifestTemplate with different entry names", func() {
 		It("parameterizes the entry name throughout the template", func() {
-			template := generateManifestTemplate("my-custom-pkg")
+			template := generateManifestTemplate("my-custom-pkg", "")
 
 			Expect(template).To(ContainSubstring(`p("my-custom-pkg.name")`))
 			Expect(template).To(ContainSubstring(`p("my-custom-pkg.version")`))
@@ -580,7 +624,7 @@ var _ = Describe("Carvel Baker", func() {
 		})
 
 		It("contains exactly 6 K8s resource documents", func() {
-			template := generateManifestTemplate("pkg")
+			template := generateManifestTemplate("pkg", "")
 			docs := strings.Split(template, "---")
 			nonEmpty := 0
 			for _, doc := range docs {
