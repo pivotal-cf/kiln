@@ -13,6 +13,18 @@ const (
 	unconstrainedVersion = "*"
 )
 
+// BOSHLinkConsumer declares a BOSH link that the carvel tile's errand job should consume.
+type BOSHLinkConsumer struct {
+	Name     string `yaml:"name"`
+	Type     string `yaml:"type"`
+	Optional bool   `yaml:"optional"`
+}
+
+// BOSHLinks holds configurable BOSH link declarations for carvel tiles.
+type BOSHLinks struct {
+	Consumes []BOSHLinkConsumer `yaml:"consumes"`
+}
+
 type Kilnfile struct {
 	ReleaseSources     []ReleaseSourceConfig             `yaml:"release_sources,omitempty"`
 	Slug               string                            `yaml:"slug,omitempty"`
@@ -20,6 +32,7 @@ type Kilnfile struct {
 	TileNames          []string                          `yaml:"tile_names,omitempty"`
 	Stemcell           Stemcell                          `yaml:"stemcell_criteria,omitempty"`
 	BakeConfigurations []BakeConfiguration               `yaml:"bake_configurations"`
+	BoshLinks          BOSHLinks                         `yaml:"bosh_links,omitempty"`
 }
 
 func (kf *Kilnfile) BOSHReleaseTarballSpecification(name string) (BOSHReleaseTarballSpecification, error) {
