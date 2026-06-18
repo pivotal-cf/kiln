@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf/kiln/internal/carvel/models"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"gopkg.in/yaml.v3"
 )
 
@@ -297,7 +298,7 @@ var _ = Describe("Carvel Baker", func() {
 							`$( property "admin_password" )`,
 						},
 						FormTypes:       []string{`$( form "db_props" )`},
-						Variables:       []string{},
+						Variables:       []proofing.Variable{},
 						PackageInstalls: []string{`$( package "test-install" )`},
 					}
 					yamlData, err := yaml.Marshal(&m)
@@ -589,6 +590,44 @@ var _ = Describe("Carvel Baker", func() {
 				}
 			}
 			Expect(nonEmpty).To(Equal(5))
+		})
+	})
+
+	Context("validateVariables", func() {
+		It("passes for an empty list", func() {
+			err := validateVariables([]proofing.Variable{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("passes for a valid certificate variable", func() {
+			err := validateVariables([]proofing.Variable{
+				{
+					Name: "/cf/diego-instance-identity-root-ca-2-6",
+					Type: "certificate",
+					Options: map[string]any{
+						"common_name": "Diego Instance Identity Root CA",
+						"is_ca":       true,
+						"duration":    1095,
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("errors when name is empty", func() {
+			err := validateVariables([]proofing.Variable{
+				{Name: "", Type: "certificate"},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("missing required field 'name'"))
+		})
+
+		It("errors when type is empty", func() {
+			err := validateVariables([]proofing.Variable{
+				{Name: "my-var", Type: ""},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("missing required field 'type'"))
 		})
 	})
 })
