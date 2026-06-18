@@ -11,7 +11,13 @@ property_blueprints:
 - $( property "admin_password" )
 form_types:
 - $( form "db_props" )
-variables: []
+variables:
+- name: sample-tile-ca
+  type: certificate
+  options:
+    common_name: Sample Tile CA
+    is_ca: true
+    duration: 730
 package_installs:
 - $( package "test-install" )
 compatible_kubernetes_distributions:
