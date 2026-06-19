@@ -73,33 +73,6 @@ func TestKilnfileLock_UpdateBOSHReleaseTarballLockWithName(t *testing.T) {
 	}
 }
 
-func TestKilnfile_ParsesBoshLinks(t *testing.T) {
-	content := `
-bosh_links:
-  consumes:
-  - name: binding_cache
-    type: binding_cache
-    optional: false
-`
-	var kf Kilnfile
-	err := yaml.Unmarshal([]byte(content), &kf)
-	require.NoError(t, err)
-	require.Len(t, kf.BoshLinks.Consumes, 1)
-	assert.Equal(t, "binding_cache", kf.BoshLinks.Consumes[0].Name)
-	assert.Equal(t, "binding_cache", kf.BoshLinks.Consumes[0].Type)
-	assert.Equal(t, false, kf.BoshLinks.Consumes[0].Optional)
-}
-
-func TestKilnfile_ParsesBoshLinks_NoBoshLinksSection(t *testing.T) {
-	content := `
-slug: my-tile
-`
-	var kf Kilnfile
-	err := yaml.Unmarshal([]byte(content), &kf)
-	require.NoError(t, err)
-	assert.Empty(t, kf.BoshLinks.Consumes)
-}
-
 func TestStemcell_ProductSlug(t *testing.T) {
 	for _, tt := range []struct {
 		Name                     string

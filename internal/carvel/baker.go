@@ -248,6 +248,21 @@ func (b *baker) progress(message string) {
 	_, _ = fmt.Fprintln(b.progressWriter, message)
 }
 
+// boshLinkConsumer declares a BOSH link the registry-data job should consume.
+// Populated from per-packageinstall *.job-spec-overlay.yml sidecar files.
+type boshLinkConsumer struct {
+	Name     string `yaml:"name"`
+	Type     string `yaml:"type"`
+	Optional bool   `yaml:"optional"`
+}
+
+// jobSpecOverlay is the schema for <entry>.job-spec-overlay.yml sidecar files.
+// kiln reads these from packageinstalls/ and merges the consumes entries into
+// the generated registry-data job.MF alongside the hardcoded cluster-info link.
+type jobSpecOverlay struct {
+	Consumes []boshLinkConsumer `yaml:"consumes"`
+}
+
 func (b *baker) generateBoshReleaseDir() error {
 	dirName := path.Join(b.source, ".boshrelease")
 	err := os.RemoveAll(dirName)
@@ -292,14 +307,9 @@ files:
 		}
 	}
 
-	// Read bosh_links from Kilnfile (optional; missing file or missing field is fine).
-	var kilnfileData cargo.Kilnfile
-	if kfData, err := os.ReadFile(path.Join(b.source, "Kilnfile")); err == nil {
-		_ = yaml.Unmarshal(kfData, &kilnfileData)
-	}
-
 	registryDataTemplates := ""
 	registryDataProperties := ""
+	var allConsumes []boshLinkConsumer
 
 	b.progress("  Configuring package installs")
 	for _, entry := range b.metadata.PackageInstalls {
@@ -355,6 +365,15 @@ files:
 			overlayContent = string(overlayData)
 		}
 
+		// Read optional job-spec-overlay sidecar to discover additional BOSH link consumptions.
+		jobSpecOverlayPath := path.Join(b.source, "packageinstalls", entry+".job-spec-overlay.yml")
+		if overlayData, overlayErr := os.ReadFile(jobSpecOverlayPath); overlayErr == nil {
+			var overlay jobSpecOverlay
+			if parseErr := yaml.Unmarshal(overlayData, &overlay); parseErr == nil {
+				allConsumes = append(allConsumes, overlay.Consumes...)
+			}
+		}
+
 		manifestTemplate := generateManifestTemplate(entry, overlayContent)
 
 		err = os.WriteFile(
@@ -367,7 +386,7 @@ files:
 		}
 	}
 
-	registryDataSpec := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, kilnfileData.BoshLinks.Consumes)
+	registryDataSpec := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, allConsumes)
 
 	err = os.WriteFile(path.Join(dirName, "jobs", "registry-data", "spec"), []byte(registryDataSpec), 0644)
 	if err != nil {
@@ -379,8 +398,8 @@ files:
 
 // buildRegistryDataSpec constructs the job.MF content for the registry-data BOSH job.
 // It always includes the hardcoded cluster-info link and appends any additional links
-// declared via bosh_links.consumes in the Kilnfile.
-func buildRegistryDataSpec(templates, properties string, additionalLinks []cargo.BOSHLinkConsumer) string {
+// collected from *.job-spec-overlay.yml sidecars in the packageinstalls/ directory.
+func buildRegistryDataSpec(templates, properties string, additionalLinks []boshLinkConsumer) string {
 	extraLinks := ""
 	for _, link := range additionalLinks {
 		optional := "false"

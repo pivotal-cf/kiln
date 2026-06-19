@@ -123,7 +123,7 @@ var _ = Describe("Carvel Baker", func() {
 
 	Context("buildRegistryDataSpec", func() {
 		It("includes user-declared additional links after cluster-info", func() {
-			links := []cargo.BOSHLinkConsumer{
+			links := []boshLinkConsumer{
 				{Name: "binding_cache", Type: "binding_cache", Optional: false},
 			}
 			spec := buildRegistryDataSpec("", "", links)
@@ -134,7 +134,7 @@ var _ = Describe("Carvel Baker", func() {
 		})
 
 		It("marks optional links correctly", func() {
-			links := []cargo.BOSHLinkConsumer{
+			links := []boshLinkConsumer{
 				{Name: "optional-link", Type: "some-type", Optional: true},
 			}
 			spec := buildRegistryDataSpec("", "", links)
@@ -145,6 +145,38 @@ var _ = Describe("Carvel Baker", func() {
 			spec := buildRegistryDataSpec("", "", nil)
 			Expect(spec).To(ContainSubstring("name: cluster"))
 			Expect(spec).NotTo(ContainSubstring("name: binding_cache"))
+		})
+	})
+
+	Context("jobSpecOverlay", func() {
+		It("parses a consumes list from YAML", func() {
+			content := `
+consumes:
+- name: binding_cache
+  type: binding_cache
+  optional: false
+`
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte(content), &overlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(overlay.Consumes).To(HaveLen(1))
+			Expect(overlay.Consumes[0].Name).To(Equal("binding_cache"))
+			Expect(overlay.Consumes[0].Type).To(Equal("binding_cache"))
+			Expect(overlay.Consumes[0].Optional).To(BeFalse())
+		})
+
+		It("handles an empty consumes list without error", func() {
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte("consumes: []"), &overlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(overlay.Consumes).To(BeEmpty())
+		})
+
+		It("handles a missing consumes key without error", func() {
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte("{}"), &overlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(overlay.Consumes).To(BeNil())
 		})
 	})
 
@@ -184,12 +216,12 @@ var _ = Describe("Carvel Baker", func() {
 				subject = NewBaker()
 				subject.SetWriter(GinkgoWriter)
 			})
-		AfterEach(func() {
-			// Clean up the temp directory
-			if inputPath != "" {
-				_ = os.RemoveAll(filepath.Dir(inputPath))
-			}
-		})
+			AfterEach(func() {
+				// Clean up the temp directory
+				if inputPath != "" {
+					_ = os.RemoveAll(filepath.Dir(inputPath))
+				}
+			})
 			JustBeforeEach(func() {
 				err = subject.Bake(inputPath)
 			})
