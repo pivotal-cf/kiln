@@ -255,17 +255,16 @@ func (b *baker) progress(message string) {
 	_, _ = fmt.Fprintln(b.progressWriter, message)
 }
 
-// validateVariables checks that each variable declaration has the required name and type fields.
 func validateVariables(vars []proofing.Variable) error {
+	var errs []error
 	for i, v := range vars {
 		if v.Name == "" {
-			return fmt.Errorf("variables[%d]: missing required field 'name'", i)
-		}
-		if v.Type == "" {
-			return fmt.Errorf("variables[%d] (%q): missing required field 'type'", i, v.Name)
+			errs = append(errs, fmt.Errorf("variables[%d]: missing required field 'name'", i))
+		} else if v.Type == "" {
+			errs = append(errs, fmt.Errorf("variables[%d] (%q): missing required field 'type'", i, v.Name))
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func (b *baker) generateBoshReleaseDir() error {

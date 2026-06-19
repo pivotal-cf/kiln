@@ -141,12 +141,12 @@ var _ = Describe("Carvel Baker", func() {
 				subject = NewBaker()
 				subject.SetWriter(GinkgoWriter)
 			})
-		AfterEach(func() {
-			// Clean up the temp directory
-			if inputPath != "" {
-				_ = os.RemoveAll(filepath.Dir(inputPath))
-			}
-		})
+			AfterEach(func() {
+				// Clean up the temp directory
+				if inputPath != "" {
+					_ = os.RemoveAll(filepath.Dir(inputPath))
+				}
+			})
 			JustBeforeEach(func() {
 				err = subject.Bake(inputPath)
 			})
@@ -171,8 +171,10 @@ var _ = Describe("Carvel Baker", func() {
 					Expect(outMeta.PropertyBlueprints).To(HaveLen(2))
 					Expect(outMeta.FormTypes).To(HaveLen(1))
 					Expect(outMeta.Variables).To(HaveLen(1))
-				Expect(outMeta.Variables[0].Name).To(Equal("sample-tile-ca"))
-				Expect(outMeta.Variables[0].Type).To(Equal("certificate"))
+					Expect(outMeta.Variables[0].Name).To(Equal("sample-tile-ca"))
+					Expect(outMeta.Variables[0].Type).To(Equal("certificate"))
+					Expect(outMeta.Variables[0].Options).To(HaveKeyWithValue("common_name", "Sample Tile CA"))
+					Expect(outMeta.Variables[0].Options).To(HaveKeyWithValue("is_ca", true))
 					Expect(outMeta.Releases).To(HaveLen(1))
 					Expect(outMeta.Releases[0]).To(ContainSubstring("k8s-tile-test"))
 					Expect(outMeta.InstanceGroups).To(HaveLen(0))
