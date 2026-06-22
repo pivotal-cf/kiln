@@ -17,6 +17,7 @@ import (
 
 	"github.com/pivotal-cf/kiln/internal/carvel/models"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
+	"github.com/pivotal-cf/kiln/pkg/proofing"
 
 	"github.com/hashicorp/go-version"
 	"gopkg.in/yaml.v3"
@@ -89,6 +90,9 @@ func (b *baker) Bake(source string) error {
 	if err != nil {
 		return err
 	}
+	if err := validateVariables(b.metadata.Variables); err != nil {
+		return err
+	}
 
 	ver, err := b.GetVersion()
 	if err != nil {
@@ -135,6 +139,9 @@ func (b *baker) BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTar
 
 	err = yaml.Unmarshal(yamlData, &b.metadata)
 	if err != nil {
+		return err
+	}
+	if err := validateVariables(b.metadata.Variables); err != nil {
 		return err
 	}
 
@@ -261,6 +268,18 @@ type boshLinkConsumer struct {
 // the generated registry-data job.MF alongside the hardcoded cluster-info link.
 type jobSpecOverlay struct {
 	Consumes []boshLinkConsumer `yaml:"consumes"`
+}
+
+func validateVariables(vars []proofing.Variable) error {
+	var errs []error
+	for i, v := range vars {
+		if v.Name == "" {
+			errs = append(errs, fmt.Errorf("variables[%d]: missing required field 'name'", i))
+		} else if v.Type == "" {
+			errs = append(errs, fmt.Errorf("variables[%d] (%q): missing required field 'type'", i, v.Name))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func (b *baker) generateBoshReleaseDir() error {
