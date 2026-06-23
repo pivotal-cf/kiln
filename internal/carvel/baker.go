@@ -380,17 +380,28 @@ files:
 
 		// Read optional values-overlay ERB file alongside the packageinstall YAML.
 		overlayContent := ""
-		if overlayData, overlayErr := os.ReadFile(path.Join(b.source, "packageinstalls", entry+".values-overlay.erb")); overlayErr == nil {
+		overlayData, overlayErr := os.ReadFile(path.Join(b.source, "packageinstalls", entry+".values-overlay.erb"))
+		if overlayErr != nil {
+			if !errors.Is(overlayErr, os.ErrNotExist) {
+				return overlayErr
+			}
+		} else {
 			overlayContent = string(overlayData)
 		}
 
 		// Read optional job-spec-overlay sidecar to discover additional BOSH link consumptions.
 		jobSpecOverlayPath := path.Join(b.source, "packageinstalls", entry+".job-spec-overlay.yml")
-		if overlayData, overlayErr := os.ReadFile(jobSpecOverlayPath); overlayErr == nil {
-			var overlay jobSpecOverlay
-			if parseErr := yaml.Unmarshal(overlayData, &overlay); parseErr == nil {
-				allConsumes = append(allConsumes, overlay.Consumes...)
+		overlayData, overlayErr = os.ReadFile(jobSpecOverlayPath)
+		if overlayErr != nil {
+			if !errors.Is(overlayErr, os.ErrNotExist) {
+				return overlayErr
 			}
+		} else {
+			var overlay jobSpecOverlay
+			if parseErr := yaml.Unmarshal(overlayData, &overlay); parseErr != nil {
+				return fmt.Errorf("parsing %s: %w", jobSpecOverlayPath, parseErr)
+			}
+			allConsumes = append(allConsumes, overlay.Consumes...)
 		}
 
 		manifestTemplate := generateManifestTemplate(entry, overlayContent)
@@ -405,7 +416,19 @@ files:
 		}
 	}
 
-	registryDataSpec := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, allConsumes)
+	seen := make(map[string]struct{})
+	var deduped []boshLinkConsumer
+	for _, c := range allConsumes {
+		if _, ok := seen[c.Name]; !ok {
+			seen[c.Name] = struct{}{}
+			deduped = append(deduped, c)
+		}
+	}
+
+	registryDataSpec, err := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, deduped)
+	if err != nil {
+		return err
+	}
 
 	err = os.WriteFile(path.Join(dirName, "jobs", "registry-data", "spec"), []byte(registryDataSpec), 0644)
 	if err != nil {
@@ -418,28 +441,26 @@ files:
 // buildRegistryDataSpec constructs the job.MF content for the registry-data BOSH job.
 // It always includes the hardcoded cluster-info link and appends any additional links
 // collected from *.job-spec-overlay.yml sidecars in the packageinstalls/ directory.
-func buildRegistryDataSpec(templates, properties string, additionalLinks []boshLinkConsumer) string {
+func buildRegistryDataSpec(templates, properties string, additionalLinks []boshLinkConsumer) (string, error) {
 	extraLinks := ""
-	for _, link := range additionalLinks {
-		optional := "false"
-		if link.Optional {
-			optional = "true"
+	if len(additionalLinks) > 0 {
+		data, err := yaml.Marshal(additionalLinks)
+		if err != nil {
+			return "", err
 		}
-		extraLinks += fmt.Sprintf("- name: %s\n  type: %s\n  optional: %s\n", link.Name, link.Type, optional)
+		extraLinks = string(data)
 	}
 	return `---
 name: registry-data
 templates:
-` + templates +
-		`packages:
+` + templates + `packages:
 - registry-data
 consumes:
 - name: cluster
   type: cluster-info
   optional: true
-` + extraLinks +
-		`properties:
-` + properties
+` + extraLinks + `properties:
+` + properties, nil
 }
 
 // generateManifestTemplate produces the ERB template for the registry-data BOSH job.

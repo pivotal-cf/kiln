@@ -127,7 +127,8 @@ var _ = Describe("Carvel Baker", func() {
 			links := []boshLinkConsumer{
 				{Name: "binding_cache", Type: "binding_cache", Optional: false},
 			}
-			spec := buildRegistryDataSpec("", "", links)
+			spec, err := buildRegistryDataSpec("", "", links)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(spec).To(ContainSubstring("name: binding_cache"))
 			Expect(spec).To(ContainSubstring("type: binding_cache"))
 			Expect(spec).To(ContainSubstring("optional: false"))
@@ -138,14 +139,36 @@ var _ = Describe("Carvel Baker", func() {
 			links := []boshLinkConsumer{
 				{Name: "optional-link", Type: "some-type", Optional: true},
 			}
-			spec := buildRegistryDataSpec("", "", links)
+			spec, err := buildRegistryDataSpec("", "", links)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(spec).To(ContainSubstring("optional: true"))
 		})
 
 		It("includes only cluster-info when no additional links are declared", func() {
-			spec := buildRegistryDataSpec("", "", nil)
+			spec, err := buildRegistryDataSpec("", "", nil)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(spec).To(ContainSubstring("name: cluster"))
 			Expect(spec).NotTo(ContainSubstring("name: binding_cache"))
+		})
+
+		It("safely encodes link names containing YAML-special characters", func() {
+			// yaml.Marshal quotes/blocks the value so it cannot inject extra YAML keys.
+			// The real type field ("legit-type") must still appear at the correct level.
+			links := []boshLinkConsumer{
+				{Name: "name: injected\ntype: evil", Type: "legit-type", Optional: false},
+			}
+			spec, err := buildRegistryDataSpec("", "", links)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(spec).To(ContainSubstring("type: legit-type"))
+		})
+
+		It("emits each unique link name only once given pre-deduplicated input", func() {
+			links := []boshLinkConsumer{
+				{Name: "binding_cache", Type: "binding_cache", Optional: false},
+			}
+			spec, err := buildRegistryDataSpec("", "", links)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(strings.Count(spec, "name: binding_cache")).To(Equal(1))
 		})
 	})
 
@@ -178,6 +201,12 @@ consumes:
 			err := yaml.Unmarshal([]byte("{}"), &overlay)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(overlay.Consumes).To(BeNil())
+		})
+
+		It("returns an error for malformed YAML", func() {
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte("consumes: [\ninvalid"), &overlay)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 
@@ -318,6 +347,8 @@ consumes:
 					Expect(specStr).To(ContainSubstring("name: cluster"))
 					Expect(specStr).To(ContainSubstring("type: cluster-info"))
 					Expect(specStr).To(ContainSubstring("optional: true"))
+					Expect(specStr).To(ContainSubstring("name: binding_cache"))
+					Expect(specStr).To(ContainSubstring("type: binding_cache"))
 				})
 				It("generates runtime config referencing tanzu-content release", func() {
 					rcPath := filepath.Join(outputPath, "runtime_configs", "k8s-tile-test-pkgr.yml")
