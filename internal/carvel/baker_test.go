@@ -172,6 +172,59 @@ var _ = Describe("Carvel Baker", func() {
 		})
 	})
 
+	Context("deduplicateConsumes", func() {
+		var progressBuf strings.Builder
+		var b *baker
+
+		BeforeEach(func() {
+			progressBuf.Reset()
+			b = &baker{progressWriter: &progressBuf}
+		})
+
+		It("keeps all entries when names are unique", func() {
+			input := []boshLinkConsumer{
+				{Name: "link-a", Type: "type-a"},
+				{Name: "link-b", Type: "type-b"},
+			}
+			result := b.deduplicateConsumes(input)
+			Expect(result).To(HaveLen(2))
+			Expect(progressBuf.String()).To(BeEmpty())
+		})
+
+		It("silently drops exact duplicates without warning", func() {
+			input := []boshLinkConsumer{
+				{Name: "link-a", Type: "type-a", Optional: false},
+				{Name: "link-a", Type: "type-a", Optional: false},
+			}
+			result := b.deduplicateConsumes(input)
+			Expect(result).To(HaveLen(1))
+			Expect(progressBuf.String()).To(BeEmpty())
+		})
+
+		It("warns and keeps first when conflicting type definitions are found", func() {
+			input := []boshLinkConsumer{
+				{Name: "binding_cache", Type: "binding_cache"},
+				{Name: "binding_cache", Type: "binding-cache-v2"},
+			}
+			result := b.deduplicateConsumes(input)
+			Expect(result).To(HaveLen(1))
+			Expect(result[0].Type).To(Equal("binding_cache"))
+			Expect(progressBuf.String()).To(ContainSubstring("WARNING"))
+			Expect(progressBuf.String()).To(ContainSubstring(`"binding_cache"`))
+			Expect(progressBuf.String()).To(ContainSubstring("binding-cache-v2"))
+		})
+
+		It("warns and keeps first when optional flag differs", func() {
+			input := []boshLinkConsumer{
+				{Name: "link-a", Type: "type-a", Optional: false},
+				{Name: "link-a", Type: "type-a", Optional: true},
+			}
+			result := b.deduplicateConsumes(input)
+			Expect(result).To(HaveLen(1))
+			Expect(progressBuf.String()).To(ContainSubstring("WARNING"))
+		})
+	})
+
 	Context("jobSpecOverlay", func() {
 		It("parses a consumes list from YAML", func() {
 			content := `

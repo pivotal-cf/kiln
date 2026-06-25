@@ -255,6 +255,33 @@ func (b *baker) progress(message string) {
 	_, _ = fmt.Fprintln(b.progressWriter, message)
 }
 
+// deduplicateConsumes removes duplicate BOSH link consumer entries by name.
+// Identical duplicates are dropped silently. If two entries share a name but
+// differ in type or optional, the first is kept and a WARNING is emitted —
+// BOSH rejects duplicate link names in job.MF, so the second is always ignored.
+func (b *baker) deduplicateConsumes(consumes []boshLinkConsumer) []boshLinkConsumer {
+	seen := make(map[string]boshLinkConsumer)
+	var deduped []boshLinkConsumer
+	for _, c := range consumes {
+		existing, ok := seen[c.Name]
+		if !ok {
+			seen[c.Name] = c
+			deduped = append(deduped, c)
+			continue
+		}
+		if existing != c {
+			b.progress(fmt.Sprintf(
+				"WARNING: duplicate BOSH link consumer name %q found across packageinstalls.\n"+
+					"  Keeping:  {type: %s, optional: %v}\n"+
+					"  Ignoring: {type: %s, optional: %v}\n"+
+					"  Ensure all packageinstalls agree on the link definition.",
+				c.Name, existing.Type, existing.Optional, c.Type, c.Optional,
+			))
+		}
+	}
+	return deduped
+}
+
 // boshLinkConsumer declares a BOSH link the registry-data job should consume.
 // Populated from per-packageinstall *.job-spec-overlay.yml sidecar files.
 type boshLinkConsumer struct {
@@ -416,14 +443,7 @@ files:
 		}
 	}
 
-	seen := make(map[string]struct{})
-	var deduped []boshLinkConsumer
-	for _, c := range allConsumes {
-		if _, ok := seen[c.Name]; !ok {
-			seen[c.Name] = struct{}{}
-			deduped = append(deduped, c)
-		}
-	}
+	deduped := b.deduplicateConsumes(allConsumes)
 
 	registryDataSpec, err := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, deduped)
 	if err != nil {
