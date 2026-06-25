@@ -221,7 +221,26 @@ var _ = Describe("Carvel Baker", func() {
 			}
 			result := b.deduplicateConsumes(input)
 			Expect(result).To(HaveLen(1))
+			Expect(result[0].Optional).To(BeFalse())
 			Expect(progressBuf.String()).To(ContainSubstring("WARNING"))
+		})
+
+		It("emits one warning per conflict when multiple entries share a name", func() {
+			input := []boshLinkConsumer{
+				{Name: "link-a", Type: "type-a"},
+				{Name: "link-a", Type: "type-b"},
+				{Name: "link-a", Type: "type-c"},
+			}
+			result := b.deduplicateConsumes(input)
+			Expect(result).To(HaveLen(1))
+			Expect(result[0].Type).To(Equal("type-a"))
+			Expect(strings.Count(progressBuf.String(), "WARNING")).To(Equal(2))
+		})
+
+		It("returns nil without panicking when given a nil slice", func() {
+			result := b.deduplicateConsumes(nil)
+			Expect(result).To(BeNil())
+			Expect(progressBuf.String()).To(BeEmpty())
 		})
 	})
 
