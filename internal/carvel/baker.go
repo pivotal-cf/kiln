@@ -255,6 +255,48 @@ func (b *baker) progress(message string) {
 	_, _ = fmt.Fprintln(b.progressWriter, message)
 }
 
+// deduplicateConsumes removes duplicate BOSH link consumer entries by name.
+// Identical duplicates are dropped silently. If two entries share a name but
+// differ in type or optional, the first is kept and a WARNING is emitted —
+// BOSH rejects duplicate link names in job.MF, so the second is always ignored.
+func (b *baker) deduplicateConsumes(consumes []boshLinkConsumer) []boshLinkConsumer {
+	seen := make(map[string]boshLinkConsumer)
+	var deduped []boshLinkConsumer
+	for _, c := range consumes {
+		existing, ok := seen[c.Name]
+		if !ok {
+			seen[c.Name] = c
+			deduped = append(deduped, c)
+			continue
+		}
+		if existing != c {
+			b.progress(fmt.Sprintf(
+				"WARNING: duplicate BOSH link consumer name %q found across packageinstalls.\n"+
+					"  Keeping:  {type: %s, optional: %v}\n"+
+					"  Ignoring: {type: %s, optional: %v}\n"+
+					"  Ensure all packageinstalls agree on the link definition.",
+				c.Name, existing.Type, existing.Optional, c.Type, c.Optional,
+			))
+		}
+	}
+	return deduped
+}
+
+// boshLinkConsumer declares a BOSH link the registry-data job should consume.
+// Populated from per-packageinstall *.job-spec-overlay.yml sidecar files.
+type boshLinkConsumer struct {
+	Name     string `yaml:"name"`
+	Type     string `yaml:"type"`
+	Optional bool   `yaml:"optional"`
+}
+
+// jobSpecOverlay is the schema for <entry>.job-spec-overlay.yml sidecar files.
+// kiln reads these from packageinstalls/ and merges the consumes entries into
+// the generated registry-data job.MF alongside the hardcoded cluster-info link.
+type jobSpecOverlay struct {
+	Consumes []boshLinkConsumer `yaml:"consumes"`
+}
+
 func validateVariables(vars []proofing.Variable) error {
 	var errs []error
 	for i, v := range vars {
@@ -313,6 +355,7 @@ files:
 
 	registryDataTemplates := ""
 	registryDataProperties := ""
+	var allConsumes []boshLinkConsumer
 
 	b.progress("  Configuring package installs")
 	for _, entry := range b.metadata.PackageInstalls {
@@ -362,7 +405,33 @@ files:
 			return err
 		}
 
-		manifestTemplate := generateManifestTemplate(entry)
+		// Read optional values-overlay ERB file alongside the packageinstall YAML.
+		overlayContent := ""
+		overlayData, overlayErr := os.ReadFile(path.Join(b.source, "packageinstalls", entry+".values-overlay.erb"))
+		if overlayErr != nil {
+			if !errors.Is(overlayErr, os.ErrNotExist) {
+				return overlayErr
+			}
+		} else {
+			overlayContent = string(overlayData)
+		}
+
+		// Read optional job-spec-overlay sidecar to discover additional BOSH link consumptions.
+		jobSpecOverlayPath := path.Join(b.source, "packageinstalls", entry+".job-spec-overlay.yml")
+		overlayData, overlayErr = os.ReadFile(jobSpecOverlayPath)
+		if overlayErr != nil {
+			if !errors.Is(overlayErr, os.ErrNotExist) {
+				return overlayErr
+			}
+		} else {
+			var overlay jobSpecOverlay
+			if parseErr := yaml.Unmarshal(overlayData, &overlay); parseErr != nil {
+				return fmt.Errorf("parsing %s: %w", jobSpecOverlayPath, parseErr)
+			}
+			allConsumes = append(allConsumes, overlay.Consumes...)
+		}
+
+		manifestTemplate := generateManifestTemplate(entry, overlayContent)
 
 		err = os.WriteFile(
 			path.Join(dirName, "jobs", "registry-data", "templates", "packageinstalls", entry+".yml.erb"),
@@ -374,18 +443,12 @@ files:
 		}
 	}
 
-	registryDataSpec := `---
-name: registry-data
-templates:
-` + registryDataTemplates +
-		`packages:
-- registry-data
-consumes:
-- name: cluster
-  type: cluster-info
-  optional: true
-properties:
-` + registryDataProperties
+	deduped := b.deduplicateConsumes(allConsumes)
+
+	registryDataSpec, err := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, deduped)
+	if err != nil {
+		return err
+	}
 
 	err = os.WriteFile(path.Join(dirName, "jobs", "registry-data", "spec"), []byte(registryDataSpec), 0644)
 	if err != nil {
@@ -395,7 +458,35 @@ properties:
 	return nil
 }
 
-func generateManifestTemplate(entry string) string {
+// buildRegistryDataSpec constructs the job.MF content for the registry-data BOSH job.
+// It always includes the hardcoded cluster-info link and appends any additional links
+// collected from *.job-spec-overlay.yml sidecars in the packageinstalls/ directory.
+func buildRegistryDataSpec(templates, properties string, additionalLinks []boshLinkConsumer) (string, error) {
+	extraLinks := ""
+	if len(additionalLinks) > 0 {
+		data, err := yaml.Marshal(additionalLinks)
+		if err != nil {
+			return "", err
+		}
+		extraLinks = string(data)
+	}
+	return `---
+name: registry-data
+templates:
+` + templates + `packages:
+- registry-data
+consumes:
+- name: cluster
+  type: cluster-info
+  optional: true
+` + extraLinks + `properties:
+` + properties, nil
+}
+
+// generateManifestTemplate produces the ERB template for the registry-data BOSH job.
+// overlayContent is optional ERB code injected into the values manipulation block
+// before YAML.dump(values) is called, enabling BOSH link-based value overrides.
+func generateManifestTemplate(entry, overlayContent string) string {
 	return `---
 apiVersion: v1
 kind: ServiceAccount
@@ -442,6 +533,7 @@ stringData:
     values["context"]["namespace"] = link("cluster").p("content-namespace") rescue "default"
   end
 %>
+` + overlayContent + `
 <%= YAML.dump(values).split("\n").map { |line| "    " + line }.join("\n") %>
 ---
 apiVersion: packaging.carvel.dev/v1alpha1

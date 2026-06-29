@@ -58,7 +58,7 @@ var _ = Describe("Carvel Baker", func() {
 		var template string
 
 		BeforeEach(func() {
-			template = generateManifestTemplate("test-install")
+			template = generateManifestTemplate("test-install", "")
 		})
 
 		It("generates a ServiceAccount", func() {
@@ -102,6 +102,183 @@ var _ = Describe("Carvel Baker", func() {
 
 		It("handles YAML conversion for string values", func() {
 			Expect(template).To(ContainSubstring(`values = YAML.load(values) if values.is_a?(String)`))
+		})
+
+		Context("with overlay content", func() {
+			It("includes overlay content before YAML.dump", func() {
+				overlay := `<% values["syslog_agent"]["cache"]["url"] = "https://1.2.3.4:9000" %>`
+				tmpl := generateManifestTemplate("test-install", overlay)
+				Expect(tmpl).To(ContainSubstring(overlay))
+				overlayIdx := strings.Index(tmpl, overlay)
+				dumpIdx := strings.Index(tmpl, "YAML.dump(values)")
+				Expect(overlayIdx).To(BeNumerically("<", dumpIdx), "overlay must appear before YAML.dump")
+			})
+
+			It("produces valid output with empty overlay", func() {
+				tmpl := generateManifestTemplate("test-install", "")
+				Expect(tmpl).To(ContainSubstring("YAML.dump(values)"))
+				Expect(tmpl).NotTo(BeEmpty())
+			})
+		})
+	})
+
+	Context("buildRegistryDataSpec", func() {
+		It("includes user-declared additional links after cluster-info", func() {
+			links := []boshLinkConsumer{
+				{Name: "binding_cache", Type: "binding_cache", Optional: false},
+			}
+			spec, err := buildRegistryDataSpec("", "", links)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(spec).To(ContainSubstring("name: binding_cache"))
+			Expect(spec).To(ContainSubstring("type: binding_cache"))
+			Expect(spec).To(ContainSubstring("optional: false"))
+			Expect(spec).To(ContainSubstring("name: cluster"))
+		})
+
+		It("marks optional links correctly", func() {
+			links := []boshLinkConsumer{
+				{Name: "optional-link", Type: "some-type", Optional: true},
+			}
+			spec, err := buildRegistryDataSpec("", "", links)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(spec).To(ContainSubstring("optional: true"))
+		})
+
+		It("includes only cluster-info when no additional links are declared", func() {
+			spec, err := buildRegistryDataSpec("", "", nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(spec).To(ContainSubstring("name: cluster"))
+			Expect(spec).NotTo(ContainSubstring("name: binding_cache"))
+		})
+
+		It("safely encodes link names containing YAML-special characters", func() {
+			// yaml.Marshal quotes/blocks the value so it cannot inject extra YAML keys.
+			// The real type field ("legit-type") must still appear at the correct level.
+			links := []boshLinkConsumer{
+				{Name: "name: injected\ntype: evil", Type: "legit-type", Optional: false},
+			}
+			spec, err := buildRegistryDataSpec("", "", links)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(spec).To(ContainSubstring("type: legit-type"))
+		})
+
+		It("emits each unique link name only once given pre-deduplicated input", func() {
+			links := []boshLinkConsumer{
+				{Name: "binding_cache", Type: "binding_cache", Optional: false},
+			}
+			spec, err := buildRegistryDataSpec("", "", links)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(strings.Count(spec, "name: binding_cache")).To(Equal(1))
+		})
+	})
+
+	Context("deduplicateConsumes", func() {
+		var progressBuf strings.Builder
+		var b *baker
+
+		BeforeEach(func() {
+			progressBuf.Reset()
+			b = &baker{progressWriter: &progressBuf}
+		})
+
+		It("keeps all entries when names are unique", func() {
+			input := []boshLinkConsumer{
+				{Name: "link-a", Type: "type-a"},
+				{Name: "link-b", Type: "type-b"},
+			}
+			result := b.deduplicateConsumes(input)
+			Expect(result).To(HaveLen(2))
+			Expect(progressBuf.String()).To(BeEmpty())
+		})
+
+		It("silently drops exact duplicates without warning", func() {
+			input := []boshLinkConsumer{
+				{Name: "link-a", Type: "type-a", Optional: false},
+				{Name: "link-a", Type: "type-a", Optional: false},
+			}
+			result := b.deduplicateConsumes(input)
+			Expect(result).To(HaveLen(1))
+			Expect(progressBuf.String()).To(BeEmpty())
+		})
+
+		It("warns and keeps first when conflicting type definitions are found", func() {
+			input := []boshLinkConsumer{
+				{Name: "binding_cache", Type: "binding_cache"},
+				{Name: "binding_cache", Type: "binding-cache-v2"},
+			}
+			result := b.deduplicateConsumes(input)
+			Expect(result).To(HaveLen(1))
+			Expect(result[0].Type).To(Equal("binding_cache"))
+			Expect(progressBuf.String()).To(ContainSubstring("WARNING"))
+			Expect(progressBuf.String()).To(ContainSubstring(`"binding_cache"`))
+			Expect(progressBuf.String()).To(ContainSubstring("binding-cache-v2"))
+		})
+
+		It("warns and keeps first when optional flag differs", func() {
+			input := []boshLinkConsumer{
+				{Name: "link-a", Type: "type-a", Optional: false},
+				{Name: "link-a", Type: "type-a", Optional: true},
+			}
+			result := b.deduplicateConsumes(input)
+			Expect(result).To(HaveLen(1))
+			Expect(result[0].Optional).To(BeFalse())
+			Expect(progressBuf.String()).To(ContainSubstring("WARNING"))
+		})
+
+		It("emits one warning per conflict when multiple entries share a name", func() {
+			input := []boshLinkConsumer{
+				{Name: "link-a", Type: "type-a"},
+				{Name: "link-a", Type: "type-b"},
+				{Name: "link-a", Type: "type-c"},
+			}
+			result := b.deduplicateConsumes(input)
+			Expect(result).To(HaveLen(1))
+			Expect(result[0].Type).To(Equal("type-a"))
+			Expect(strings.Count(progressBuf.String(), "WARNING")).To(Equal(2))
+		})
+
+		It("returns nil without panicking when given a nil slice", func() {
+			result := b.deduplicateConsumes(nil)
+			Expect(result).To(BeNil())
+			Expect(progressBuf.String()).To(BeEmpty())
+		})
+	})
+
+	Context("jobSpecOverlay", func() {
+		It("parses a consumes list from YAML", func() {
+			content := `
+consumes:
+- name: binding_cache
+  type: binding_cache
+  optional: false
+`
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte(content), &overlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(overlay.Consumes).To(HaveLen(1))
+			Expect(overlay.Consumes[0].Name).To(Equal("binding_cache"))
+			Expect(overlay.Consumes[0].Type).To(Equal("binding_cache"))
+			Expect(overlay.Consumes[0].Optional).To(BeFalse())
+		})
+
+		It("handles an empty consumes list without error", func() {
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte("consumes: []"), &overlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(overlay.Consumes).To(BeEmpty())
+		})
+
+		It("handles a missing consumes key without error", func() {
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte("{}"), &overlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(overlay.Consumes).To(BeNil())
+		})
+
+		It("returns an error for malformed YAML", func() {
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte("consumes: [\ninvalid"), &overlay)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 
@@ -242,6 +419,8 @@ var _ = Describe("Carvel Baker", func() {
 					Expect(specStr).To(ContainSubstring("name: cluster"))
 					Expect(specStr).To(ContainSubstring("type: cluster-info"))
 					Expect(specStr).To(ContainSubstring("optional: true"))
+					Expect(specStr).To(ContainSubstring("name: binding_cache"))
+					Expect(specStr).To(ContainSubstring("type: binding_cache"))
 				})
 				It("generates runtime config referencing tanzu-content release", func() {
 					rcPath := filepath.Join(outputPath, "runtime_configs", "k8s-tile-test-pkgr.yml")
@@ -576,7 +755,7 @@ var _ = Describe("Carvel Baker", func() {
 
 	Context("generateManifestTemplate with different entry names", func() {
 		It("parameterizes the entry name throughout the template", func() {
-			template := generateManifestTemplate("my-custom-pkg")
+			template := generateManifestTemplate("my-custom-pkg", "")
 
 			Expect(template).To(ContainSubstring(`p("my-custom-pkg.name")`))
 			Expect(template).To(ContainSubstring(`p("my-custom-pkg.version")`))
@@ -585,7 +764,7 @@ var _ = Describe("Carvel Baker", func() {
 		})
 
 		It("contains exactly 6 K8s resource documents", func() {
-			template := generateManifestTemplate("pkg")
+			template := generateManifestTemplate("pkg", "")
 			docs := strings.Split(template, "---")
 			nonEmpty := 0
 			for _, doc := range docs {
