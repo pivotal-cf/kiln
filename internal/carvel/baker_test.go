@@ -450,22 +450,90 @@ consumes:
 					Expect(addon.Jobs[0].Name).To(Equal("registry-data"))
 					Expect(addon.Jobs[0].Release).To(Equal("k8s-tile-test"))
 
-					By("carrying package install properties on the registry-data job")
-					Expect(addon.Jobs[0].Properties).To(HaveKey("test-install"))
-					props := addon.Jobs[0].Properties["test-install"]
-					Expect(props.Name).To(Equal("something-test.tanzu.vmware.com"))
-					Expect(props.Version).To(Equal("0.1.5"))
+				By("carrying package install properties on the registry-data job")
+				Expect(addon.Jobs[0].Properties).To(HaveKey("test-install"))
+				// Properties is map[string]interface{} — YAML unmarshal produces a
+				// nested map[string]interface{} for the PackageInstallProps value.
+				propsRaw := addon.Jobs[0].Properties["test-install"]
+				propsMap, ok := propsRaw.(map[string]interface{})
+				Expect(ok).To(BeTrue(), "expected PackageInstallProps to unmarshal as map[string]interface{}")
+				Expect(propsMap).To(HaveKeyWithValue("name", "something-test.tanzu.vmware.com"))
+				Expect(propsMap).To(HaveKeyWithValue("version", "0.1.5"))
 				})
-				It("can be kiln baked", func() {
-					if !kilnInstalled() {
-						Skip("kiln CLI not installed - skipping integration test")
-					}
-					err := subject.KilnBake(filepath.Join(outputPath, "my-tile.pivotal"))
+			It("can be kiln baked", func() {
+				if !kilnInstalled() {
+					Skip("kiln CLI not installed - skipping integration test")
+				}
+				err := subject.KilnBake(filepath.Join(outputPath, "my-tile.pivotal"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(filepath.Join(outputPath, "my-tile.pivotal")).To(BeAnExistingFile())
+			})
+
+			When("the tile base.yml declares additional_releases", func() {
+				const (
+					extraReleaseName    = "smoke-test-scripts"
+					extraReleaseVersion = "dev"
+					extraJobName        = "smoke-test-scripts"
+				)
+
+				BeforeEach(func() {
+					// Place a stub tarball — copyAdditionalReleases copies bytes
+					// verbatim, so a valid BOSH tgz is not required here.
+					tarballDir := filepath.Join(inputPath, "scripts-release")
+					Expect(os.MkdirAll(tarballDir, 0755)).To(Succeed())
+					stubTarball := filepath.Join(tarballDir, "scripts-release-dev.tgz")
+					Expect(os.WriteFile(stubTarball, []byte("stub bosh release tarball"), 0644)).To(Succeed())
+
+					// Reload the sample-tile base.yml and append additional_releases.
+					baseYMLPath := filepath.Join(inputPath, "base.yml")
+					raw, err := os.ReadFile(baseYMLPath)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(filepath.Join(outputPath, "my-tile.pivotal")).To(BeAnExistingFile())
+					var m models.Metadata
+					Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
+					m.AdditionalReleases = []models.AdditionalRelease{
+						{
+							Name:        extraReleaseName,
+							Version:     extraReleaseVersion,
+							TarballPath: "scripts-release/scripts-release-dev.tgz",
+							Jobs:        []string{extraJobName},
+						},
+					}
+					updated, err := yaml.Marshal(&m)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
+				})
+
+				It("copies the tarball verbatim into .carvel-tile/releases/", func() {
+					dst := filepath.Join(outputPath, "releases", extraReleaseName+"-"+extraReleaseVersion+".tgz")
+					Expect(dst).To(BeAnExistingFile())
+					data, err := os.ReadFile(dst)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(data)).To(Equal("stub bosh release tarball"))
+				})
+
+				It("extends the runtime-config addon with the extra release and job", func() {
+					rcPath := filepath.Join(outputPath, "runtime_configs", "k8s-tile-test-pkgr.yml")
+					rcData, err := os.ReadFile(rcPath)
+					Expect(err).NotTo(HaveOccurred())
+					var rc models.RuntimeConfigOuter
+					Expect(yaml.Unmarshal(rcData, &rc)).To(Succeed())
+					var inner models.RuntimeConfigInner
+					Expect(yaml.Unmarshal([]byte(rc.RuntimeConfig), &inner)).To(Succeed())
+
+					By("adding the release to the releases: list")
+					Expect(inner.Releases).To(ContainElement(`$( release "` + extraReleaseName + `" )`))
+
+					By("appending the job to the addon's jobs: list")
+					addon := inner.Addons[0]
+					Expect(addon.Jobs).To(HaveLen(2))
+					extraJob := addon.Jobs[1]
+					Expect(extraJob.Name).To(Equal(extraJobName))
+					Expect(extraJob.Release).To(Equal(extraReleaseName))
+					Expect(extraJob.Properties).To(BeEmpty())
 				})
 			})
-			When("the tile metadata version is too old", func() {
+		})
+		When("the tile metadata version is too old", func() {
 				BeforeEach(func() {
 					m := models.Metadata{
 						Name:                     "k8s-tile-test",

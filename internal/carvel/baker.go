@@ -592,6 +592,14 @@ func (b *baker) generateOutputTile() error {
 		return err
 	}
 
+	if len(b.metadata.AdditionalReleases) > 0 {
+		b.progress("  Copying additional BOSH releases")
+		err = b.copyAdditionalReleases()
+		if err != nil {
+			return err
+		}
+	}
+
 	b.progress("  Creating BOSH release tarball (this may take a while)...")
 	err = b.createBoshRelease()
 	if err != nil {
@@ -675,7 +683,7 @@ func (b *baker) generateRuntimeConfigs() error {
 		return err
 	}
 
-	registryDataProps := map[string]models.PackageInstallProps{}
+	registryDataProps := map[string]interface{}{}
 
 	// we need one PackageInstall for each entry in the metadata.
 	for _, entry := range b.metadata.PackageInstalls {
@@ -723,10 +731,24 @@ func (b *baker) generateRuntimeConfigs() error {
 		Properties: registryDataProps,
 	}
 
+	// Base release list and addon jobs — always includes the tile's own release
+	// and registry-data job.
+	releases := []string{`$( release "` + b.metadata.Name + `" )`}
+	addonJobs := []models.Job{registryDataJob}
+
+	// Append any additional releases and their jobs declared in base.yml.
+	for _, ar := range b.metadata.AdditionalReleases {
+		releases = append(releases, `$( release "`+ar.Name+`" )`)
+		for _, jobName := range ar.Jobs {
+			addonJobs = append(addonJobs, models.Job{
+				Name:    jobName,
+				Release: ar.Name,
+			})
+		}
+	}
+
 	inner := models.RuntimeConfigInner{
-		Releases: []string{
-			`$( release "` + b.metadata.Name + `" )`,
-		},
+		Releases: releases,
 		Addons: []models.Addon{
 			{
 				Name: b.metadata.Name + "-pkgr",
@@ -739,9 +761,7 @@ func (b *baker) generateRuntimeConfigs() error {
 						{Name: "install-packages", Release: "tanzu-content"},
 					},
 				},
-				Jobs: []models.Job{
-					registryDataJob,
-				},
+				Jobs: addonJobs,
 			},
 		},
 	}
@@ -783,6 +803,26 @@ func (b *baker) generateJobFiles() error {
 		return err
 	}
 
+	return nil
+}
+
+// copyAdditionalReleases copies each locally-built BOSH release tarball
+// declared in base.yml's additional_releases: into .carvel-tile/releases/.
+// The tile's own build.sh must produce the tarballs before kiln carvel bake
+// is invoked — kiln does not build or fetch them.
+func (b *baker) copyAdditionalReleases() error {
+	releasesDir := path.Join(b.destination, "releases")
+	if err := os.MkdirAll(releasesDir, 0755); err != nil {
+		return err
+	}
+	for _, ar := range b.metadata.AdditionalReleases {
+		src := path.Join(b.source, ar.TarballPath)
+		dst := path.Join(releasesDir, ar.Name+"-"+ar.Version+".tgz")
+		b.progress(fmt.Sprintf("    %s-%s.tgz ← %s", ar.Name, ar.Version, ar.TarballPath))
+		if err := copyFileContents(src, dst); err != nil {
+			return fmt.Errorf("copying additional release %q from %q: %w", ar.Name, src, err)
+		}
+	}
 	return nil
 }
 
