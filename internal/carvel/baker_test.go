@@ -511,17 +511,27 @@ consumes:
 					Expect(string(data)).To(Equal("stub bosh release tarball"))
 				})
 
-				It("extends the runtime-config addon with the extra release and job", func() {
-					rcPath := filepath.Join(outputPath, "runtime_configs", "k8s-tile-test-pkgr.yml")
-					rcData, err := os.ReadFile(rcPath)
-					Expect(err).NotTo(HaveOccurred())
-					var rc models.RuntimeConfigOuter
-					Expect(yaml.Unmarshal(rcData, &rc)).To(Succeed())
-					var inner models.RuntimeConfigInner
-					Expect(yaml.Unmarshal([]byte(rc.RuntimeConfig), &inner)).To(Succeed())
+			It("adds the additional release to the top-level tile releases list", func() {
+				baseYMLPath := filepath.Join(outputPath, "base.yml")
+				raw, err := os.ReadFile(baseYMLPath)
+				Expect(err).NotTo(HaveOccurred())
+				var outMeta models.MetadataOut
+				Expect(yaml.Unmarshal(raw, &outMeta)).To(Succeed())
+				Expect(outMeta.Releases).To(HaveLen(2))
+				Expect(outMeta.Releases).To(ContainElement(ContainSubstring(extraReleaseName)))
+			})
 
-					By("adding the release to the releases: list")
-					Expect(inner.Releases).To(ContainElement(`$( release "` + extraReleaseName + `" )`))
+			It("extends the runtime-config addon with the extra release and job", func() {
+				rcPath := filepath.Join(outputPath, "runtime_configs", "k8s-tile-test-pkgr.yml")
+				rcData, err := os.ReadFile(rcPath)
+				Expect(err).NotTo(HaveOccurred())
+				var rc models.RuntimeConfigOuter
+				Expect(yaml.Unmarshal(rcData, &rc)).To(Succeed())
+				var inner models.RuntimeConfigInner
+				Expect(yaml.Unmarshal([]byte(rc.RuntimeConfig), &inner)).To(Succeed())
+
+				By("adding the release to the releases: list")
+				Expect(inner.Releases).To(ContainElement(`$( release "` + extraReleaseName + `" )`))
 
 					By("appending the job to the addon's jobs: list")
 					addon := inner.Addons[0]

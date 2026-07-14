@@ -633,9 +633,17 @@ func (b *baker) generateBaseYaml() error {
 		`$( runtime_config "` + b.metadata.Name + `-pkgr" )`,
 	}
 
-	// we will use the tile name and version as the bosh release name and version.
+	// The tile's own BOSH release plus any additional releases declared in
+	// additional_releases must all appear in the top-level releases: list so
+	// that OpsManager uploads them all to BOSH during "Upload runtime config
+	// releases" (OM calls release_file_path on each release referenced in the
+	// runtime config and returns nil for any release not in this list, causing
+	// "undefined method 'file' for nil").
 	meta.Releases = []string{
 		`$( release "` + b.metadata.Name + `" )`,
+	}
+	for _, ar := range b.metadata.AdditionalReleases {
+		meta.Releases = append(meta.Releases, `$( release "`+ar.Name+`" )`)
 	}
 
 	yamlData, err := yaml.Marshal(&meta)
