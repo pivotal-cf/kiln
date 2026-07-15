@@ -747,10 +747,11 @@ func (b *baker) generateRuntimeConfigs() error {
 	// Append any additional releases and their jobs declared in base.yml.
 	for _, ar := range b.metadata.AdditionalReleases {
 		releases = append(releases, `$( release "`+ar.Name+`" )`)
-		for _, jobName := range ar.Jobs {
+		for _, job := range ar.Jobs {
 			addonJobs = append(addonJobs, models.Job{
-				Name:    jobName,
-				Release: ar.Name,
+				Name:       job.Name,
+				Release:    ar.Name,
+				Properties: job.Properties,
 			})
 		}
 	}

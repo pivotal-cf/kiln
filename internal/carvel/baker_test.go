@@ -490,14 +490,14 @@ consumes:
 					Expect(err).NotTo(HaveOccurred())
 					var m models.Metadata
 					Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
-					m.AdditionalReleases = []models.AdditionalRelease{
-						{
-							Name:        extraReleaseName,
-							Version:     extraReleaseVersion,
-							TarballPath: "scripts-release/scripts-release-dev.tgz",
-							Jobs:        []string{extraJobName},
-						},
-					}
+				m.AdditionalReleases = []models.AdditionalRelease{
+					{
+						Name:        extraReleaseName,
+						Version:     extraReleaseVersion,
+						TarballPath: "scripts-release/scripts-release-dev.tgz",
+						Jobs:        []models.AdditionalJob{{Name: extraJobName}},
+					},
+				}
 					updated, err := yaml.Marshal(&m)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
@@ -537,13 +537,86 @@ consumes:
 					addon := inner.Addons[0]
 					Expect(addon.Jobs).To(HaveLen(2))
 					extraJob := addon.Jobs[1]
-					Expect(extraJob.Name).To(Equal(extraJobName))
-					Expect(extraJob.Release).To(Equal(extraReleaseName))
-					Expect(extraJob.Properties).To(BeEmpty())
-				})
+				Expect(extraJob.Name).To(Equal(extraJobName))
+				Expect(extraJob.Release).To(Equal(extraReleaseName))
+				Expect(extraJob.Properties).To(BeEmpty())
 			})
 		})
-		When("the tile metadata version is too old", func() {
+
+		When("an additional_release job carries a properties block", func() {
+			const (
+				extraReleaseName    = "smoke-tests"
+				extraReleaseVersion = "dev"
+			)
+
+			BeforeEach(func() {
+				tarballDir := filepath.Join(inputPath, "smoke-tests-release")
+				Expect(os.MkdirAll(tarballDir, 0755)).To(Succeed())
+				stubTarball := filepath.Join(tarballDir, "smoke-tests-release-dev.tgz")
+				Expect(os.WriteFile(stubTarball, []byte("stub smoke-tests tarball"), 0644)).To(Succeed())
+
+				baseYMLPath := filepath.Join(inputPath, "base.yml")
+				raw, err := os.ReadFile(baseYMLPath)
+				Expect(err).NotTo(HaveOccurred())
+				var m models.Metadata
+				Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
+				m.AdditionalReleases = []models.AdditionalRelease{
+					{
+						Name:        extraReleaseName,
+						Version:     extraReleaseVersion,
+						TarballPath: "smoke-tests-release/smoke-tests-release-dev.tgz",
+						Jobs: []models.AdditionalJob{
+							{Name: "dummy-smoke-tests"},
+							{
+								Name: "smoke_tests",
+								Properties: map[string]interface{}{
+									"bpm": map[string]interface{}{"enabled": false},
+									"smoke_tests": map[string]interface{}{
+										"api": "(( .properties.smoke_tests_api.value ))",
+									},
+								},
+							},
+						},
+					},
+				}
+				updated, err := yaml.Marshal(&m)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
+			})
+
+			It("marshals per-job properties through to the generated runtime-config", func() {
+				rcPath := filepath.Join(outputPath, "runtime_configs", "k8s-tile-test-pkgr.yml")
+				rcData, err := os.ReadFile(rcPath)
+				Expect(err).NotTo(HaveOccurred())
+				var rc models.RuntimeConfigOuter
+				Expect(yaml.Unmarshal(rcData, &rc)).To(Succeed())
+				var inner models.RuntimeConfigInner
+				Expect(yaml.Unmarshal([]byte(rc.RuntimeConfig), &inner)).To(Succeed())
+
+				addon := inner.Addons[0]
+				// addon.Jobs[0] = registry-data (always first), [1] = dummy-smoke-tests, [2] = smoke_tests
+				Expect(addon.Jobs).To(HaveLen(3))
+
+				By("keeping the no-properties job empty")
+				dummyJob := addon.Jobs[1]
+				Expect(dummyJob.Name).To(Equal("dummy-smoke-tests"))
+				Expect(dummyJob.Release).To(Equal(extraReleaseName))
+				Expect(dummyJob.Properties).To(BeEmpty())
+
+				By("round-tripping the nested properties block intact")
+				smokeJob := addon.Jobs[2]
+				Expect(smokeJob.Name).To(Equal("smoke_tests"))
+				Expect(smokeJob.Release).To(Equal(extraReleaseName))
+				smokeProps, ok := smokeJob.Properties["smoke_tests"].(map[string]interface{})
+				Expect(ok).To(BeTrue(), "smoke_tests key should be a nested map")
+				Expect(smokeProps["api"]).To(Equal("(( .properties.smoke_tests_api.value ))"))
+				bpmProps, ok := smokeJob.Properties["bpm"].(map[string]interface{})
+				Expect(ok).To(BeTrue(), "bpm key should be a nested map")
+				Expect(bpmProps["enabled"]).To(BeFalse())
+			})
+		})
+	})
+	When("the tile metadata version is too old", func() {
 				BeforeEach(func() {
 					m := models.Metadata{
 						Name:                     "k8s-tile-test",

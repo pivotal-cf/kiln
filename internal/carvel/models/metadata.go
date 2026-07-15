@@ -36,6 +36,16 @@ type AdditionalRelease struct {
 	// TarballPath is the path to the pre-built release tarball, relative to
 	// the tile source directory.
 	TarballPath string `yaml:"tarball_path"`
-	// Jobs lists the job names from this release to add to the addon's jobs: list.
-	Jobs []string `yaml:"jobs"`
+	// Jobs lists jobs from this release to add to the addon's jobs: list.
+	// Each entry can carry an optional properties block that is marshaled
+	// verbatim into the generated runtime-config.
+	Jobs []AdditionalJob `yaml:"jobs"`
+}
+
+// AdditionalJob names a job within an AdditionalRelease and carries an
+// optional properties block. It is the input shape (parsed from base.yml);
+// models.Job is the output shape (written into the generated runtime-config).
+type AdditionalJob struct {
+	Name       string                 `yaml:"name"`
+	Properties map[string]interface{} `yaml:"properties,omitempty"`
 }
