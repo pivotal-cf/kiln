@@ -24,6 +24,28 @@ type Metadata struct {
 	// lists. The tile's own build.sh is responsible for producing the tarball
 	// before invoking kiln carvel bake.
 	AdditionalReleases []AdditionalRelease `yaml:"additional_releases,omitempty"`
+	// PreInstallHooks/PostInstallHooks declare adapter jobs kiln should
+	// synthesize directly into the tile's own auto-generated release, each
+	// depositing a single delegating script at the conventional hook path
+	// consumed by a provider tile's generic hook-runner (see
+	// tanzu-vks-provider/docs/2026-07-16-generic-consumer-hook-contract.md).
+	// Job names are auto-prefixed with the tile's own name to avoid collisions
+	// with other consumer tiles' hook jobs on the same shared VM.
+	PreInstallHooks  []HookDeclaration `yaml:"pre_install_hooks,omitempty"`
+	PostInstallHooks []HookDeclaration `yaml:"post_install_hooks,omitempty"`
+}
+
+// HookDeclaration declares one hook adapter job for kiln to synthesize.
+type HookDeclaration struct {
+	// Name becomes the synthesized job name, auto-prefixed with the tile's
+	// own name unless already prefixed — e.g. "smoke-tests-post-install-hook"
+	// on tile "ear-k8s-runtime" becomes job
+	// "ear-k8s-runtime-smoke-tests-post-install-hook".
+	Name string `yaml:"name"`
+	// Command is the single command the synthesized script execs —
+	// typically another already-colocated job's own entrypoint, e.g.
+	// /var/vcap/jobs/smoke_tests/bin/run.
+	Command string `yaml:"command"`
 }
 
 // AdditionalRelease declares a locally-built BOSH release to include alongside

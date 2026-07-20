@@ -455,6 +455,68 @@ files:
 		return err
 	}
 
+	// Synthesize one adapter job per declared pre/post-install hook, into the
+	// same .boshrelease directory as registry-data. createBoshRelease (called
+	// later) auto-discovers every job directory under .boshrelease/jobs/ via
+	// `bosh create-release`, so no further wiring is needed there.
+	type hookModeGroup struct {
+		mode  string
+		hooks []models.HookDeclaration
+	}
+	prefix := b.metadata.Name + "-"
+	for _, group := range []hookModeGroup{
+		{mode: "pre-install", hooks: b.metadata.PreInstallHooks},
+		{mode: "post-install", hooks: b.metadata.PostInstallHooks},
+	} {
+		for _, hook := range group.hooks {
+			if hook.Name == "" || hook.Command == "" {
+				return fmt.Errorf("%s hook declaration missing name or command", group.mode)
+			}
+
+			jobName := hook.Name
+			if !strings.HasPrefix(jobName, prefix) {
+				jobName = prefix + jobName
+			}
+
+			genCmd := exec.Command("bosh", "generate-job", "--dir="+dirName, jobName)
+			b.log("executing " + genCmd.String())
+			out, err := genCmd.CombinedOutput()
+			b.log("output: " + string(out))
+			if err != nil {
+				return err
+			}
+
+			templateName := "hooks-" + group.mode + ".erb"
+			jobSpec := fmt.Sprintf(`---
+name: %s
+templates:
+  %s: bin/hooks/%s
+packages: []
+properties: {}
+`, jobName, templateName, group.mode)
+			if err = os.WriteFile(path.Join(dirName, "jobs", jobName, "spec"), []byte(jobSpec), 0644); err != nil {
+				return err
+			}
+
+			if err = os.MkdirAll(path.Join(dirName, "jobs", jobName, "templates"), 0755); err != nil {
+				return err
+			}
+			templateContent := fmt.Sprintf("#!/bin/bash\nset -euo pipefail\nexec %s\n", hook.Command)
+			err = os.WriteFile(
+				path.Join(dirName, "jobs", jobName, "templates", templateName),
+				[]byte(templateContent),
+				0644,
+			)
+			if err != nil {
+				return err
+			}
+			// monit: deliberately left as bosh generate-job's own default
+			// output — registry-data's own generation doesn't overwrite it
+			// either, so this follows the same established precedent rather
+			// than introducing a special case.
+		}
+	}
+
 	return nil
 }
 
@@ -743,6 +805,20 @@ func (b *baker) generateRuntimeConfigs() error {
 	// and registry-data job.
 	releases := []string{`$( release "` + b.metadata.Name + `" )`}
 	addonJobs := []models.Job{registryDataJob}
+
+	// Append synthesized pre/post-install hook adapter jobs — same release as
+	// registry-data, same auto-prefixed naming as generateBoshReleaseDir uses.
+	prefix := b.metadata.Name + "-"
+	for _, hook := range append(
+		append([]models.HookDeclaration{}, b.metadata.PreInstallHooks...),
+		b.metadata.PostInstallHooks...,
+	) {
+		jobName := hook.Name
+		if !strings.HasPrefix(jobName, prefix) {
+			jobName = prefix + jobName
+		}
+		addonJobs = append(addonJobs, models.Job{Name: jobName, Release: b.metadata.Name})
+	}
 
 	// Append any additional releases and their jobs declared in base.yml.
 	for _, ar := range b.metadata.AdditionalReleases {

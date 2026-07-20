@@ -615,7 +615,87 @@ consumes:
 				Expect(bpmProps["enabled"]).To(BeFalse())
 			})
 		})
+
+		When("the tile base.yml declares post_install_hooks", func() {
+			BeforeEach(func() {
+				baseYMLPath := filepath.Join(inputPath, "base.yml")
+				raw, err := os.ReadFile(baseYMLPath)
+				Expect(err).NotTo(HaveOccurred())
+				var m models.Metadata
+				Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
+				m.PostInstallHooks = []models.HookDeclaration{
+					{
+						Name:    "smoke-tests-post-install-hook",
+						Command: "/var/vcap/jobs/smoke_tests/bin/run",
+					},
+				}
+				updated, err := yaml.Marshal(&m)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
+			})
+
+			It("synthesizes the hook adapter job into the auto-generated release", func() {
+				// The release tarball should contain the synthesized job.
+				releaseVersion := subject.GetReleaseVersion()
+				tarballPath := filepath.Join(outputPath, "releases", "k8s-tile-test-"+releaseVersion+".tgz")
+				Expect(tarballPath).To(BeAnExistingFile())
+
+				// We can check the generated .boshrelease directory.
+				jobDir := filepath.Join(boshReleasePath, "jobs", "k8s-tile-test-smoke-tests-post-install-hook")
+				Expect(jobDir).To(BeADirectory())
+
+				specPath := filepath.Join(jobDir, "spec")
+				Expect(specPath).To(BeAnExistingFile())
+				specData, err := os.ReadFile(specPath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(specData)).To(ContainSubstring("name: k8s-tile-test-smoke-tests-post-install-hook"))
+				Expect(string(specData)).To(ContainSubstring("hooks-post-install.erb: bin/hooks/post-install"))
+
+				templatePath := filepath.Join(jobDir, "templates", "hooks-post-install.erb")
+				Expect(templatePath).To(BeAnExistingFile())
+				templateData, err := os.ReadFile(templatePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(templateData)).To(ContainSubstring("exec /var/vcap/jobs/smoke_tests/bin/run"))
+			})
+
+			It("extends the runtime-config addon with the synthesized job", func() {
+				rcPath := filepath.Join(outputPath, "runtime_configs", "k8s-tile-test-pkgr.yml")
+				rcData, err := os.ReadFile(rcPath)
+				Expect(err).NotTo(HaveOccurred())
+				var rc models.RuntimeConfigOuter
+				Expect(yaml.Unmarshal(rcData, &rc)).To(Succeed())
+				var inner models.RuntimeConfigInner
+				Expect(yaml.Unmarshal([]byte(rc.RuntimeConfig), &inner)).To(Succeed())
+
+				addon := inner.Addons[0]
+				Expect(addon.Jobs).To(HaveLen(2))
+				hookJob := addon.Jobs[1]
+				Expect(hookJob.Name).To(Equal("k8s-tile-test-smoke-tests-post-install-hook"))
+				Expect(hookJob.Release).To(Equal("k8s-tile-test"))
+			})
+		})
 	})
+
+	When("a hook declaration is missing name or command", func() {
+		BeforeEach(func() {
+			baseYMLPath := filepath.Join(inputPath, "base.yml")
+			raw, err := os.ReadFile(baseYMLPath)
+			Expect(err).NotTo(HaveOccurred())
+			var m models.Metadata
+			Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
+			m.PostInstallHooks = []models.HookDeclaration{
+				{Name: "missing-command"},
+			}
+			updated, err := yaml.Marshal(&m)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
+		})
+
+		It("returns a clear error", func() {
+			Expect(err).To(MatchError(ContainSubstring("post-install hook declaration missing name or command")))
+		})
+	})
+
 	When("the tile metadata version is too old", func() {
 				BeforeEach(func() {
 					m := models.Metadata{
