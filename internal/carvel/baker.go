@@ -299,7 +299,7 @@ func (b *baker) readJobSpecOverlays() ([]boshLinkConsumer, error) {
 			continue
 		}
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("reading %s: %w", overlayPath, err)
 		}
 		var overlay jobSpecOverlay
 		if err := yaml.Unmarshal(data, &overlay); err != nil {
@@ -320,6 +320,15 @@ type boshLinkConsumer struct {
 	Optional   bool   `yaml:"optional"`
 	From       string `yaml:"from,omitempty"`
 	Deployment string `yaml:"deployment,omitempty"`
+}
+
+// jobMFConsumes is the subset of boshLinkConsumer fields that are valid in a
+// BOSH job.MF spec consumes list. From/Deployment are runtime-config-only and
+// must not appear in job.MF.
+type jobMFConsumes struct {
+	Name     string `yaml:"name"`
+	Type     string `yaml:"type"`
+	Optional bool   `yaml:"optional"`
 }
 
 // jobSpecOverlay is the schema for <entry>.job-spec-overlay.yml sidecar files.
@@ -467,7 +476,11 @@ files:
 	}
 	deduped := b.deduplicateConsumes(allConsumes)
 
-	registryDataSpec, err := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, deduped)
+	jobMFLinks := make([]jobMFConsumes, len(deduped))
+	for i, c := range deduped {
+		jobMFLinks[i] = jobMFConsumes{Name: c.Name, Type: c.Type, Optional: c.Optional}
+	}
+	registryDataSpec, err := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, jobMFLinks)
 	if err != nil {
 		return err
 	}
@@ -483,7 +496,7 @@ files:
 // buildRegistryDataSpec constructs the job.MF content for the registry-data BOSH job.
 // It always includes the hardcoded cluster-info link and appends any additional links
 // collected from *.job-spec-overlay.yml sidecars in the packageinstalls/ directory.
-func buildRegistryDataSpec(templates, properties string, additionalLinks []boshLinkConsumer) (string, error) {
+func buildRegistryDataSpec(templates, properties string, additionalLinks []jobMFConsumes) (string, error) {
 	extraLinks := ""
 	if len(additionalLinks) > 0 {
 		data, err := yaml.Marshal(additionalLinks)

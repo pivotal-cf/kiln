@@ -124,7 +124,7 @@ var _ = Describe("Carvel Baker", func() {
 
 	Context("buildRegistryDataSpec", func() {
 		It("includes user-declared additional links after cluster-info", func() {
-			links := []boshLinkConsumer{
+			links := []jobMFConsumes{
 				{Name: "binding_cache", Type: "binding_cache", Optional: false},
 			}
 			spec, err := buildRegistryDataSpec("", "", links)
@@ -136,7 +136,7 @@ var _ = Describe("Carvel Baker", func() {
 		})
 
 		It("marks optional links correctly", func() {
-			links := []boshLinkConsumer{
+			links := []jobMFConsumes{
 				{Name: "optional-link", Type: "some-type", Optional: true},
 			}
 			spec, err := buildRegistryDataSpec("", "", links)
@@ -154,7 +154,7 @@ var _ = Describe("Carvel Baker", func() {
 		It("safely encodes link names containing YAML-special characters", func() {
 			// yaml.Marshal quotes/blocks the value so it cannot inject extra YAML keys.
 			// The real type field ("legit-type") must still appear at the correct level.
-			links := []boshLinkConsumer{
+			links := []jobMFConsumes{
 				{Name: "name: injected\ntype: evil", Type: "legit-type", Optional: false},
 			}
 			spec, err := buildRegistryDataSpec("", "", links)
@@ -163,7 +163,7 @@ var _ = Describe("Carvel Baker", func() {
 		})
 
 		It("emits each unique link name only once given pre-deduplicated input", func() {
-			links := []boshLinkConsumer{
+			links := []jobMFConsumes{
 				{Name: "binding_cache", Type: "binding_cache", Optional: false},
 			}
 			spec, err := buildRegistryDataSpec("", "", links)
@@ -281,7 +281,7 @@ consumes:
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("emits a consumes entry when only from is set (no deployment)", func() {
+		It("parses an entry with only from set (no deployment)", func() {
 			content := `
 consumes:
 - name: nats-tls
@@ -296,7 +296,7 @@ consumes:
 			Expect(overlay.Consumes[0].Deployment).To(BeEmpty())
 		})
 
-		It("emits a consumes entry when only deployment is set (no from)", func() {
+		It("parses an entry with only deployment set (no from)", func() {
 			content := `
 consumes:
 - name: nats-tls
