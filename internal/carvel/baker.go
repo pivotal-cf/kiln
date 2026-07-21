@@ -282,17 +282,49 @@ func (b *baker) deduplicateConsumes(consumes []boshLinkConsumer) []boshLinkConsu
 	return deduped
 }
 
+// readJobSpecOverlays reads all *.job-spec-overlay.yml sidecars for the tile's
+// package installs and returns the merged slice of boshLinkConsumer entries.
+func (b *baker) readJobSpecOverlays() ([]boshLinkConsumer, error) {
+	var all []boshLinkConsumer
+	for _, entry := range b.metadata.PackageInstalls {
+		entry = strings.Trim(entry, "$() ")
+		entry = strings.TrimPrefix(entry, "package")
+		entry = strings.Trim(entry, `"' `)
+
+		overlayPath := path.Join(b.source, "packageinstalls", entry+".job-spec-overlay.yml")
+		data, err := os.ReadFile(overlayPath)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		var overlay jobSpecOverlay
+		if err := yaml.Unmarshal(data, &overlay); err != nil {
+			return nil, fmt.Errorf("parsing %s: %w", overlayPath, err)
+		}
+		all = append(all, overlay.Consumes...)
+	}
+	return all, nil
+}
+
 // boshLinkConsumer declares a BOSH link the registry-data job should consume.
 // Populated from per-packageinstall *.job-spec-overlay.yml sidecar files.
+// When RuntimeConfigFrom or RuntimeConfigDeployment is set, kiln also emits
+// a cross-deployment consumes entry for the link in the runtime config addon job.
 type boshLinkConsumer struct {
-	Name     string `yaml:"name"`
-	Type     string `yaml:"type"`
-	Optional bool   `yaml:"optional"`
+	Name                    string `yaml:"name"`
+	Type                    string `yaml:"type"`
+	Optional                bool   `yaml:"optional"`
+	RuntimeConfigFrom       string `yaml:"runtime_config_from,omitempty"`
+	RuntimeConfigDeployment string `yaml:"runtime_config_deployment,omitempty"`
 }
 
 // jobSpecOverlay is the schema for <entry>.job-spec-overlay.yml sidecar files.
 // kiln reads these from packageinstalls/ and merges the consumes entries into
 // the generated registry-data job.MF alongside the hardcoded cluster-info link.
+// Entries that set runtime_config_from or runtime_config_deployment are also
+// emitted as cross-deployment consumes on the runtime config addon job.
 type jobSpecOverlay struct {
 	Consumes []boshLinkConsumer `yaml:"consumes"`
 }
@@ -355,7 +387,6 @@ files:
 
 	registryDataTemplates := ""
 	registryDataProperties := ""
-	var allConsumes []boshLinkConsumer
 
 	b.progress("  Configuring package installs")
 	for _, entry := range b.metadata.PackageInstalls {
@@ -416,21 +447,6 @@ files:
 			overlayContent = string(overlayData)
 		}
 
-		// Read optional job-spec-overlay sidecar to discover additional BOSH link consumptions.
-		jobSpecOverlayPath := path.Join(b.source, "packageinstalls", entry+".job-spec-overlay.yml")
-		overlayData, overlayErr = os.ReadFile(jobSpecOverlayPath)
-		if overlayErr != nil {
-			if !errors.Is(overlayErr, os.ErrNotExist) {
-				return overlayErr
-			}
-		} else {
-			var overlay jobSpecOverlay
-			if parseErr := yaml.Unmarshal(overlayData, &overlay); parseErr != nil {
-				return fmt.Errorf("parsing %s: %w", jobSpecOverlayPath, parseErr)
-			}
-			allConsumes = append(allConsumes, overlay.Consumes...)
-		}
-
 		manifestTemplate := generateManifestTemplate(entry, overlayContent)
 
 		err = os.WriteFile(
@@ -443,6 +459,10 @@ files:
 		}
 	}
 
+	allConsumes, err := b.readJobSpecOverlays()
+	if err != nil {
+		return err
+	}
 	deduped := b.deduplicateConsumes(allConsumes)
 
 	registryDataSpec, err := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, deduped)
@@ -717,10 +737,29 @@ func (b *baker) generateRuntimeConfigs() error {
 		}
 	}
 
+	allConsumes, err := b.readJobSpecOverlays()
+	if err != nil {
+		return err
+	}
+	deduped := b.deduplicateConsumes(allConsumes)
+
+	consumesMap := make(map[string]models.JobConsumes)
+	for _, c := range deduped {
+		if c.RuntimeConfigFrom != "" || c.RuntimeConfigDeployment != "" {
+			consumesMap[c.Name] = models.JobConsumes{
+				From:       c.RuntimeConfigFrom,
+				Deployment: c.RuntimeConfigDeployment,
+			}
+		}
+	}
+
 	registryDataJob := models.Job{
 		Name:       "registry-data",
 		Release:    b.metadata.Name,
 		Properties: registryDataProps,
+	}
+	if len(consumesMap) > 0 {
+		registryDataJob.Consumes = consumesMap
 	}
 
 	inner := models.RuntimeConfigInner{
