@@ -322,10 +322,9 @@ type boshLinkConsumer struct {
 	Deployment string `yaml:"deployment,omitempty"`
 }
 
-// jobMFConsumes is the subset of boshLinkConsumer fields that are valid in a
-// BOSH job.MF spec consumes list. From/Deployment are runtime-config-only and
-// must not appear in job.MF.
-type jobMFConsumes struct {
+// boshConsumes is the BOSH job spec consumes schema: name, type, and optional only.
+// From/Deployment are runtime-config-only and must not appear in the job spec.
+type boshConsumes struct {
 	Name     string `yaml:"name"`
 	Type     string `yaml:"type"`
 	Optional bool   `yaml:"optional"`
@@ -476,11 +475,11 @@ files:
 	}
 	deduped := b.deduplicateConsumes(allConsumes)
 
-	jobMFLinks := make([]jobMFConsumes, len(deduped))
+	boshLinks := make([]boshConsumes, len(deduped))
 	for i, c := range deduped {
-		jobMFLinks[i] = jobMFConsumes{Name: c.Name, Type: c.Type, Optional: c.Optional}
+		boshLinks[i] = boshConsumes{Name: c.Name, Type: c.Type, Optional: c.Optional}
 	}
-	registryDataSpec, err := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, jobMFLinks)
+	registryDataSpec, err := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, boshLinks)
 	if err != nil {
 		return err
 	}
@@ -496,7 +495,7 @@ files:
 // buildRegistryDataSpec constructs the job.MF content for the registry-data BOSH job.
 // It always includes the hardcoded cluster-info link and appends any additional links
 // collected from *.job-spec-overlay.yml sidecars in the packageinstalls/ directory.
-func buildRegistryDataSpec(templates, properties string, additionalLinks []jobMFConsumes) (string, error) {
+func buildRegistryDataSpec(templates, properties string, additionalLinks []boshConsumes) (string, error) {
 	extraLinks := ""
 	if len(additionalLinks) > 0 {
 		data, err := yaml.Marshal(additionalLinks)

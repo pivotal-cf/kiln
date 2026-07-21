@@ -124,7 +124,7 @@ var _ = Describe("Carvel Baker", func() {
 
 	Context("buildRegistryDataSpec", func() {
 		It("includes user-declared additional links after cluster-info", func() {
-			links := []jobMFConsumes{
+			links := []boshConsumes{
 				{Name: "binding_cache", Type: "binding_cache", Optional: false},
 			}
 			spec, err := buildRegistryDataSpec("", "", links)
@@ -136,7 +136,7 @@ var _ = Describe("Carvel Baker", func() {
 		})
 
 		It("marks optional links correctly", func() {
-			links := []jobMFConsumes{
+			links := []boshConsumes{
 				{Name: "optional-link", Type: "some-type", Optional: true},
 			}
 			spec, err := buildRegistryDataSpec("", "", links)
@@ -154,7 +154,7 @@ var _ = Describe("Carvel Baker", func() {
 		It("safely encodes link names containing YAML-special characters", func() {
 			// yaml.Marshal quotes/blocks the value so it cannot inject extra YAML keys.
 			// The real type field ("legit-type") must still appear at the correct level.
-			links := []jobMFConsumes{
+			links := []boshConsumes{
 				{Name: "name: injected\ntype: evil", Type: "legit-type", Optional: false},
 			}
 			spec, err := buildRegistryDataSpec("", "", links)
@@ -163,7 +163,7 @@ var _ = Describe("Carvel Baker", func() {
 		})
 
 		It("emits each unique link name only once given pre-deduplicated input", func() {
-			links := []jobMFConsumes{
+			links := []boshConsumes{
 				{Name: "binding_cache", Type: "binding_cache", Optional: false},
 			}
 			spec, err := buildRegistryDataSpec("", "", links)
