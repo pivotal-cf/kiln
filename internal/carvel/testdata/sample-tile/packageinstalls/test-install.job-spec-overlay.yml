@@ -2,5 +2,5 @@ consumes:
 - name: binding_cache
   type: binding_cache
   optional: false
-  runtime_config_from: binding_cache
-  runtime_config_deployment: "(( ..cf.deployment_name ))"
+  from: binding_cache
+  deployment: "(( ..cf.deployment_name ))"

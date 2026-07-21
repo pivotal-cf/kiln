@@ -281,14 +281,14 @@ consumes:
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("parses runtime_config_from and runtime_config_deployment fields", func() {
+		It("parses from and deployment fields for cross-deployment link resolution", func() {
 			content := `
 consumes:
 - name: nats-tls
   type: nats-tls
   optional: false
-  runtime_config_from: nats-tls
-  runtime_config_deployment: "(( ..cf.deployment_name ))"
+  from: nats-tls
+  deployment: "(( ..cf.deployment_name ))"
 `
 			var overlay jobSpecOverlay
 			err := yaml.Unmarshal([]byte(content), &overlay)
@@ -296,8 +296,8 @@ consumes:
 			Expect(overlay.Consumes).To(HaveLen(1))
 			c := overlay.Consumes[0]
 			Expect(c.Name).To(Equal("nats-tls"))
-			Expect(c.RuntimeConfigFrom).To(Equal("nats-tls"))
-			Expect(c.RuntimeConfigDeployment).To(Equal("(( ..cf.deployment_name ))"))
+			Expect(c.From).To(Equal("nats-tls"))
+			Expect(c.Deployment).To(Equal("(( ..cf.deployment_name ))"))
 		})
 	})
 
@@ -475,7 +475,7 @@ consumes:
 					Expect(props.Name).To(Equal("something-test.tanzu.vmware.com"))
 					Expect(props.Version).To(Equal("0.1.5"))
 
-					By("emitting cross-deployment consumes from job-spec-overlay runtime_config_from/deployment fields")
+					By("emitting cross-deployment consumes from job-spec-overlay from/deployment fields")
 					Expect(addon.Jobs[0].Consumes).To(HaveKey("binding_cache"))
 					bc := addon.Jobs[0].Consumes["binding_cache"]
 					Expect(bc.From).To(Equal("binding_cache"))

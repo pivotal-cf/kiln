@@ -310,21 +310,21 @@ func (b *baker) readJobSpecOverlays() ([]boshLinkConsumer, error) {
 
 // boshLinkConsumer declares a BOSH link the registry-data job should consume.
 // Populated from per-packageinstall *.job-spec-overlay.yml sidecar files.
-// When RuntimeConfigFrom or RuntimeConfigDeployment is set, kiln also emits
-// a cross-deployment consumes entry for the link in the runtime config addon job.
+// When From or Deployment is set, kiln also emits a cross-deployment consumes
+// entry for the link in the runtime config addon job.
 type boshLinkConsumer struct {
-	Name                    string `yaml:"name"`
-	Type                    string `yaml:"type"`
-	Optional                bool   `yaml:"optional"`
-	RuntimeConfigFrom       string `yaml:"runtime_config_from,omitempty"`
-	RuntimeConfigDeployment string `yaml:"runtime_config_deployment,omitempty"`
+	Name       string `yaml:"name"`
+	Type       string `yaml:"type"`
+	Optional   bool   `yaml:"optional"`
+	From       string `yaml:"from,omitempty"`
+	Deployment string `yaml:"deployment,omitempty"`
 }
 
 // jobSpecOverlay is the schema for <entry>.job-spec-overlay.yml sidecar files.
 // kiln reads these from packageinstalls/ and merges the consumes entries into
 // the generated registry-data job.MF alongside the hardcoded cluster-info link.
-// Entries that set runtime_config_from or runtime_config_deployment are also
-// emitted as cross-deployment consumes on the runtime config addon job.
+// Entries that set from or deployment are also emitted as cross-deployment
+// consumes on the runtime config addon job.
 type jobSpecOverlay struct {
 	Consumes []boshLinkConsumer `yaml:"consumes"`
 }
@@ -745,10 +745,10 @@ func (b *baker) generateRuntimeConfigs() error {
 
 	consumesMap := make(map[string]models.JobConsumes)
 	for _, c := range deduped {
-		if c.RuntimeConfigFrom != "" || c.RuntimeConfigDeployment != "" {
+		if c.From != "" || c.Deployment != "" {
 			consumesMap[c.Name] = models.JobConsumes{
-				From:       c.RuntimeConfigFrom,
-				Deployment: c.RuntimeConfigDeployment,
+				From:       c.From,
+				Deployment: c.Deployment,
 			}
 		}
 	}
