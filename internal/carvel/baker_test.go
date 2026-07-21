@@ -281,6 +281,36 @@ consumes:
 			Expect(err).To(HaveOccurred())
 		})
 
+		It("emits a consumes entry when only from is set (no deployment)", func() {
+			content := `
+consumes:
+- name: nats-tls
+  type: nats-tls
+  optional: false
+  from: nats-tls
+`
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte(content), &overlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(overlay.Consumes[0].From).To(Equal("nats-tls"))
+			Expect(overlay.Consumes[0].Deployment).To(BeEmpty())
+		})
+
+		It("emits a consumes entry when only deployment is set (no from)", func() {
+			content := `
+consumes:
+- name: nats-tls
+  type: nats-tls
+  optional: false
+  deployment: "(( ..cf.deployment_name ))"
+`
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte(content), &overlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(overlay.Consumes[0].From).To(BeEmpty())
+			Expect(overlay.Consumes[0].Deployment).To(Equal("(( ..cf.deployment_name ))"))
+		})
+
 		It("parses from and deployment fields for cross-deployment link resolution", func() {
 			content := `
 consumes:

@@ -8,8 +8,8 @@ type Job struct {
 }
 
 // JobConsumes declares cross-deployment link resolution for a runtime config addon job.
-// When a job-spec-overlay declares runtime_config_from or runtime_config_deployment,
-// kiln includes this entry in the addon job's consumes map in the generated metadata.
+// When a job-spec-overlay entry sets from or deployment, kiln includes it in the
+// addon job's consumes map in the generated metadata.
 type JobConsumes struct {
 	From       string `yaml:"from,omitempty"`
 	Deployment string `yaml:"deployment,omitempty"`

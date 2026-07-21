@@ -257,7 +257,7 @@ func (b *baker) progress(message string) {
 
 // deduplicateConsumes removes duplicate BOSH link consumer entries by name.
 // Identical duplicates are dropped silently. If two entries share a name but
-// differ in type or optional, the first is kept and a WARNING is emitted —
+// differ in any field, the first is kept and a WARNING is emitted —
 // BOSH rejects duplicate link names in job.MF, so the second is always ignored.
 func (b *baker) deduplicateConsumes(consumes []boshLinkConsumer) []boshLinkConsumer {
 	seen := make(map[string]boshLinkConsumer)
@@ -272,10 +272,12 @@ func (b *baker) deduplicateConsumes(consumes []boshLinkConsumer) []boshLinkConsu
 		if existing != c {
 			b.progress(fmt.Sprintf(
 				"WARNING: duplicate BOSH link consumer name %q found across packageinstalls.\n"+
-					"  Keeping:  {type: %s, optional: %v}\n"+
-					"  Ignoring: {type: %s, optional: %v}\n"+
+					"  Keeping:  {type: %s, optional: %v, from: %s, deployment: %s}\n"+
+					"  Ignoring: {type: %s, optional: %v, from: %s, deployment: %s}\n"+
 					"  Ensure all packageinstalls agree on the link definition.",
-				c.Name, existing.Type, existing.Optional, c.Type, c.Optional,
+				c.Name,
+				existing.Type, existing.Optional, existing.From, existing.Deployment,
+				c.Type, c.Optional, c.From, c.Deployment,
 			))
 		}
 	}
