@@ -30,6 +30,7 @@ type Baker interface {
 	BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTarballLock, localTarball string) error
 	KilnBake(destination string) error
 	GetName() string
+	GetBoshReleaseName() string
 	// GetVersion returns the product version from base.yml or the version file.
 	GetVersion() (string, error)
 	// GetReleaseVersion returns the BOSH release version, which includes a
@@ -151,8 +152,8 @@ func (b *baker) BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTar
 	}
 	b.progress(fmt.Sprintf("Tile: %s version %s (metadata_version %s)", b.metadata.Name, ver, b.metadata.MetadataVersion))
 
-	if releaseLock.Name != b.metadata.Name {
-		return fmt.Errorf("lockfile release name %q does not match tile name %q", releaseLock.Name, b.metadata.Name)
+	if releaseLock.Name != b.GetBoshReleaseName() {
+		return fmt.Errorf("lockfile release name %q does not match tile name %q", releaseLock.Name, b.GetBoshReleaseName())
 	}
 
 	b.releaseVersion = releaseLock.Version
@@ -194,7 +195,7 @@ func (b *baker) BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTar
 		return err
 	}
 
-	destTarball := path.Join(releasesDir, b.metadata.Name+"-"+releaseLock.Version+".tgz")
+	destTarball := path.Join(releasesDir, b.GetBoshReleaseName()+"-"+releaseLock.Version+".tgz")
 
 	b.progress("Copying cached BOSH release from " + localTarball)
 	b.log("copying cached BOSH release from " + localTarball)
@@ -210,7 +211,7 @@ func (b *baker) GetReleaseTarball() (string, error) {
 	if b.releaseVersion == "" {
 		return "", fmt.Errorf("release version not set -- call Bake() or BakeFromLockfile() first")
 	}
-	tarball := path.Join(b.destination, "releases", b.metadata.Name+"-"+b.releaseVersion+".tgz")
+	tarball := path.Join(b.destination, "releases", b.GetBoshReleaseName()+"-"+b.releaseVersion+".tgz")
 	if _, err := os.Stat(tarball); err != nil {
 		return "", fmt.Errorf("release tarball not found at %s: %w", tarball, err)
 	}
@@ -219,6 +220,13 @@ func (b *baker) GetReleaseTarball() (string, error) {
 
 func (b *baker) GetName() string {
 	return b.metadata.Name
+}
+
+func (b *baker) GetBoshReleaseName() string {
+	if b.metadata.Name == "" {
+		return ""
+	}
+	return b.metadata.Name + "-pkg"
 }
 
 func (b *baker) GetReleaseVersion() string {
@@ -627,7 +635,7 @@ func (b *baker) generateBaseYaml() error {
 
 	// we will use the tile name and version as the bosh release name and version.
 	meta.Releases = []string{
-		`$( release "` + b.metadata.Name + `" )`,
+		`$( release "` + b.GetBoshReleaseName() + `" )`,
 	}
 
 	yamlData, err := yaml.Marshal(&meta)
@@ -719,13 +727,13 @@ func (b *baker) generateRuntimeConfigs() error {
 
 	registryDataJob := models.Job{
 		Name:       "registry-data",
-		Release:    b.metadata.Name,
+		Release:    b.GetBoshReleaseName(),
 		Properties: registryDataProps,
 	}
 
 	inner := models.RuntimeConfigInner{
 		Releases: []string{
-			`$( release "` + b.metadata.Name + `" )`,
+			`$( release "` + b.GetBoshReleaseName() + `" )`,
 		},
 		Addons: []models.Addon{
 			{
@@ -807,12 +815,12 @@ func (b *baker) createBoshRelease() error {
 	releaseVersion := buildReleaseVersion(productVersion, fingerprint)
 	b.releaseVersion = releaseVersion
 
-	finalTarball := path.Join(b.destination, "releases", b.metadata.Name+"-"+releaseVersion+".tgz")
+	finalTarball := path.Join(b.destination, "releases", b.GetBoshReleaseName()+"-"+releaseVersion+".tgz")
 	cmd := exec.Command("bosh",
 		"create-release",
 		"--dir="+dirName,
 		"--force",
-		"--name", b.metadata.Name,
+		"--name", b.GetBoshReleaseName(),
 		"--version", releaseVersion,
 		"--tarball", finalTarball)
 	b.log("executing " + cmd.String())

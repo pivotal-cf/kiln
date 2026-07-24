@@ -95,7 +95,7 @@ func (c CarvelUpload) Execute(args []string) error {
 	if artConfig.PathTemplate != "" {
 		pathTmpl = artConfig.PathTemplate
 	}
-	remotePath, err := evaluatePathTemplate(pathTmpl, baker.GetName(), releaseVersion)
+	remotePath, err := evaluatePathTemplate(pathTmpl, baker.GetBoshReleaseName(), releaseVersion)
 	if err != nil {
 		return fmt.Errorf("failed to evaluate path template: %w", err)
 	}
@@ -113,7 +113,7 @@ func (c CarvelUpload) Execute(args []string) error {
 
 	sourceID := cargo.BOSHReleaseTarballSourceID(artConfig)
 	lockfilePath := kilnfilePath + ".lock"
-	err = writeStandardKilnfileLock(lockfilePath, baker.GetName(), releaseVersion, remotePath, sourceID, sha1sum)
+	err = writeStandardKilnfileLock(lockfilePath, baker.GetBoshReleaseName(), releaseVersion, remotePath, sourceID, sha1sum)
 	if err != nil {
 		return fmt.Errorf("failed to write Kilnfile.lock: %w", err)
 	}

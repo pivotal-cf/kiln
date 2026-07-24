@@ -341,6 +341,8 @@ consumes:
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(outMeta.Name).To(Equal("k8s-tile-test"))
+					Expect(subject.GetName()).To(Equal("k8s-tile-test"))
+					Expect(subject.GetBoshReleaseName()).To(Equal("k8s-tile-test-pkg"))
 					Expect(outMeta.ProductVersion).To(Equal(`$( version )`))
 					Expect(outMeta.MetadataVersion).To(Equal("3.2.0"))
 					Expect(outMeta.Rank).To(Equal(1))
@@ -353,7 +355,7 @@ consumes:
 					Expect(outMeta.Variables[0].Options).To(HaveKeyWithValue("common_name", "Sample Tile CA"))
 					Expect(outMeta.Variables[0].Options).To(HaveKeyWithValue("is_ca", true))
 					Expect(outMeta.Releases).To(HaveLen(1))
-					Expect(outMeta.Releases[0]).To(ContainSubstring("k8s-tile-test"))
+					Expect(outMeta.Releases[0]).To(Equal(`$( release "k8s-tile-test-pkg" )`))
 					Expect(outMeta.InstanceGroups).To(HaveLen(0))
 					Expect(outMeta.RuntimeConfigs).To(HaveLen(1))
 					Expect(outMeta.RuntimeConfigs[0]).To(Equal(`$( runtime_config "k8s-tile-test-pkgr" )`))
@@ -380,7 +382,7 @@ consumes:
 					releaseVersion := subject.GetReleaseVersion()
 					Expect(releaseVersion).To(HavePrefix("0.1.1+"))
 					Expect(releaseVersion).To(MatchRegexp(`^0\.1\.1\+[0-9a-f]{12}$`))
-					Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-"+releaseVersion+".tgz")).To(BeAnExistingFile())
+					Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-pkg-"+releaseVersion+".tgz")).To(BeAnExistingFile())
 
 					tarball, err := subject.GetReleaseTarball()
 					Expect(err).NotTo(HaveOccurred())
@@ -448,7 +450,7 @@ consumes:
 					By("having only the registry-data job (no separate package-install job)")
 					Expect(addon.Jobs).To(HaveLen(1))
 					Expect(addon.Jobs[0].Name).To(Equal("registry-data"))
-					Expect(addon.Jobs[0].Release).To(Equal("k8s-tile-test"))
+					Expect(addon.Jobs[0].Release).To(Equal("k8s-tile-test-pkg"))
 
 					By("carrying package install properties on the registry-data job")
 					Expect(addon.Jobs[0].Properties).To(HaveKey("test-install"))
@@ -541,7 +543,7 @@ consumes:
 				uploadReleaseVersion := subject.GetReleaseVersion()
 
 				releaseLock := cargo.BOSHReleaseTarballLock{
-					Name:    "k8s-tile-test",
+					Name:    "k8s-tile-test-pkg",
 					Version: uploadReleaseVersion,
 				}
 
@@ -552,7 +554,7 @@ consumes:
 
 				outputPath := path.Join(inputPath, ".carvel-tile")
 				Expect(filepath.Join(outputPath, "base.yml")).To(BeAnExistingFile())
-				Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-"+uploadReleaseVersion+".tgz")).To(BeAnExistingFile())
+				Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-pkg-"+uploadReleaseVersion+".tgz")).To(BeAnExistingFile())
 				Expect(filepath.Join(outputPath, "runtime_configs")).To(BeADirectory())
 				Expect(subject2.GetReleaseVersion()).To(Equal(uploadReleaseVersion))
 			})
@@ -629,7 +631,7 @@ consumes:
 			Expect(copyTestFile(uploadTarball, cachedTarball)).To(Succeed())
 
 			releaseLock := cargo.BOSHReleaseTarballLock{
-				Name:    "k8s-tile-test",
+				Name:    "k8s-tile-test-pkg",
 				Version: uploadBaker.GetReleaseVersion(),
 			}
 
@@ -750,6 +752,13 @@ consumes:
 		It("returns empty string before Bake is called", func() {
 			subject := NewBaker()
 			Expect(subject.GetReleaseVersion()).To(BeEmpty())
+		})
+	})
+
+	Context("GetBoshReleaseName", func() {
+		It("returns empty string before Bake is called", func() {
+			b := NewBaker()
+			Expect(b.GetBoshReleaseName()).To(BeEmpty())
 		})
 	})
 

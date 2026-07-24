@@ -287,12 +287,12 @@ var _ = Describe("carvel full workflow", Ordered, func() {
 
 		Expect(lock.Releases).To(HaveLen(1))
 		rel := lock.Releases[0]
-		Expect(rel.Name).To(Equal("k8s-tile-test"))
+		Expect(rel.Name).To(Equal("k8s-tile-test-pkg"))
 		Expect(rel.Version).To(HavePrefix("0.1.1+"))
 		Expect(rel.Version).To(MatchRegexp(`^0\.1\.1\+[0-9a-f]{12}$`))
 		Expect(rel.SHA1).NotTo(BeEmpty(), "lock must contain SHA1 of uploaded tarball")
 		Expect(rel.RemoteSource).To(Equal("artifactory"))
-		Expect(rel.RemotePath).To(Equal("bosh-releases/k8s-tile-test/k8s-tile-test-" + rel.Version + ".tgz"))
+		Expect(rel.RemotePath).To(Equal("bosh-releases/k8s-tile-test-pkg/k8s-tile-test-pkg-" + rel.Version + ".tgz"))
 
 		gitInTile("add", "Kilnfile.lock")
 		gitInTile("commit", "-m", "add Kilnfile.lock from upload")
