@@ -22,6 +22,7 @@ type MetadataOut struct {
 	CompatibleKubernetesDistributions []ProductVersion         `yaml:"compatible_kubernetes_distributions"`
 	SupportsParallelDeploys           bool                     `yaml:"supports_parallel_deploys,omitempty"`
 	RequiresProductVersions           []RequiredProductVersion `yaml:"requires_product_versions,omitempty"`
+	UsesKubernetesFeatures            []KubernetesFeature      `yaml:"uses_kubernetes_features,omitempty"`
 }
 
 type StemcellCriteria struct {
@@ -37,5 +38,10 @@ type ProductVersion struct {
 type RequiredProductVersion struct {
 	Name     string `yaml:"name"`
 	Version  string `yaml:"version"`
+	Optional bool   `yaml:"optional,omitempty"`
+}
+
+type KubernetesFeature struct {
+	Name     string `yaml:"name"`
 	Optional bool   `yaml:"optional,omitempty"`
 }
