@@ -91,6 +91,9 @@ func (b *baker) Bake(source string) error {
 	if err != nil {
 		return err
 	}
+	if b.metadata.Name == "" {
+		return errors.New("missing required field 'name' in tile metadata (base.yml)")
+	}
 	if err := validateVariables(b.metadata.Variables); err != nil {
 		return err
 	}
@@ -142,6 +145,9 @@ func (b *baker) BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTar
 	if err != nil {
 		return err
 	}
+	if b.metadata.Name == "" {
+		return errors.New("missing required field 'name' in tile metadata (base.yml)")
+	}
 	if err := validateVariables(b.metadata.Variables); err != nil {
 		return err
 	}
@@ -153,7 +159,7 @@ func (b *baker) BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTar
 	b.progress(fmt.Sprintf("Tile: %s version %s (metadata_version %s)", b.metadata.Name, ver, b.metadata.MetadataVersion))
 
 	if releaseLock.Name != b.GetBoshReleaseName() {
-		return fmt.Errorf("lockfile release name %q does not match tile name %q", releaseLock.Name, b.GetBoshReleaseName())
+		return fmt.Errorf("lockfile release name %q does not match tile-derived name %q", releaseLock.Name, b.GetBoshReleaseName())
 	}
 
 	b.releaseVersion = releaseLock.Version

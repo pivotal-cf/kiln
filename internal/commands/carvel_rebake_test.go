@@ -70,6 +70,60 @@ var _ = Describe("CarvelReBake", func() {
 			})
 		})
 
+		When("the bake record has a mismatched kiln version", func() {
+			It("returns an error for version mismatch", func() {
+				record := bake.Record{
+					KilnVersion: "0.14.0",
+				}
+				buf, err := json.Marshal(record)
+				Expect(err).NotTo(HaveOccurred())
+
+				tmpDir, err := os.MkdirTemp("", "version-mismatch-*")
+				Expect(err).NotTo(HaveOccurred())
+				defer func() { _ = os.RemoveAll(tmpDir) }()
+
+				recPath := filepath.Join(tmpDir, "record.json")
+				err = os.WriteFile(recPath, buf, 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				cmd := commands.NewCarvelReBake(outLogger, errLogger)
+				cmd.KilnVersion = "0.15.0"
+
+				err = cmd.Execute([]string{
+					"--output-file", "/tmp/out.pivotal",
+					recPath,
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(`kiln version mismatch: bake record was created with kiln "0.14.0", but running kiln is "0.15.0"`))
+			})
+
+			It("returns an error for old bake records missing kiln version", func() {
+				record := bake.Record{
+					SourceRevision: "some-sha",
+				}
+				buf, err := json.Marshal(record)
+				Expect(err).NotTo(HaveOccurred())
+
+				tmpDir, err := os.MkdirTemp("", "old-record-*")
+				Expect(err).NotTo(HaveOccurred())
+				defer func() { _ = os.RemoveAll(tmpDir) }()
+
+				recPath := filepath.Join(tmpDir, "record.json")
+				err = os.WriteFile(recPath, buf, 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				cmd := commands.NewCarvelReBake(outLogger, errLogger)
+				cmd.KilnVersion = "0.15.0"
+
+				err = cmd.Execute([]string{
+					"--output-file", "/tmp/out.pivotal",
+					recPath,
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(`kiln version mismatch: bake record was created with kiln "", but running kiln is "0.15.0"`))
+			})
+		})
+
 		When("the bake record has a mismatched source revision", func() {
 			var (
 				inputPath  string

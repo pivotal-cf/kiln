@@ -18,7 +18,7 @@ type Carvel struct {
 	synopses  map[string]string
 }
 
-func NewCarvel(outLogger, errLogger *log.Logger) Carvel {
+func NewCarvel(outLogger, errLogger *log.Logger, kilnVersion string) Carvel {
 	c := Carvel{
 		outLogger: outLogger,
 		errLogger: errLogger,
@@ -27,11 +27,17 @@ func NewCarvel(outLogger, errLogger *log.Logger) Carvel {
 		synopses:  map[string]string{},
 	}
 
+	publishCmd := NewCarvelPublish(outLogger, errLogger)
+	publishCmd.KilnVersion = kilnVersion
+
+	rebakeCmd := NewCarvelReBake(outLogger, errLogger)
+	rebakeCmd.KilnVersion = kilnVersion
+
 	// Register subcommands
 	c.commands["bake"] = NewCarvelBake(outLogger, errLogger)
 	c.commands["upload"] = NewCarvelUpload(outLogger, errLogger)
-	c.commands["publish"] = NewCarvelPublish(outLogger, errLogger)
-	c.commands["re-bake"] = NewCarvelReBake(outLogger, errLogger)
+	c.commands["publish"] = publishCmd
+	c.commands["re-bake"] = rebakeCmd
 
 	// Positional argument synopses for usage lines
 	c.synopses["re-bake"] = "<bake-record>"

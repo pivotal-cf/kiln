@@ -106,7 +106,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	carvelCommand := commands.NewCarvel(outLogger, errLogger)
+	carvelCommand := commands.NewCarvel(outLogger, errLogger, version)
 	commandSet["carvel"] = carvelCommand
 
 	if command == "carvel" {

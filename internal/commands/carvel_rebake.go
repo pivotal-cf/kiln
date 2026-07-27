@@ -18,9 +18,10 @@ import (
 )
 
 type CarvelReBake struct {
-	outLogger *log.Logger
-	errLogger *log.Logger
-	Options   CarvelReBakeOptions
+	outLogger   *log.Logger
+	errLogger   *log.Logger
+	KilnVersion string
+	Options     CarvelReBakeOptions
 }
 
 type CarvelReBakeOptions struct {
@@ -54,6 +55,10 @@ func (c CarvelReBake) Execute(args []string) error {
 	var record bake.Record
 	if err := json.Unmarshal(recordBuf, &record); err != nil {
 		return fmt.Errorf("failed to parse bake record: %w", err)
+	}
+
+	if record.KilnVersion != c.KilnVersion {
+		return fmt.Errorf("kiln version mismatch: bake record was created with kiln %q, but running kiln is %q", record.KilnVersion, c.KilnVersion)
 	}
 
 	tileDir := filepath.FromSlash(record.TileDirectory)

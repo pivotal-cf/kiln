@@ -311,6 +311,7 @@ consumes:
 				}
 				for _, cmd := range commands {
 					cmd.Dir = inputPath
+					cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@test.com", "GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@test.com")
 					out, err := cmd.CombinedOutput()
 					Expect(err).NotTo(HaveOccurred(), "error invoking git: "+string(out))
 				}
@@ -524,6 +525,7 @@ consumes:
 				}
 				for _, cmd := range commands {
 					cmd.Dir = inputPath
+					cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@test.com", "GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@test.com")
 					out, err := cmd.CombinedOutput()
 					Expect(err).NotTo(HaveOccurred(), "error invoking git: "+string(out))
 				}
@@ -578,7 +580,27 @@ consumes:
 				subject := NewBaker()
 				err = subject.BakeFromLockfile(inputPath, releaseLock, "/nonexistent/tarball.tgz")
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("does not match tile name"))
+				Expect(err.Error()).To(ContainSubstring("does not match tile-derived name"))
+			})
+		})
+
+		When("the tile metadata name is missing", func() {
+			It("returns an error early", func() {
+				inputPath, err := os.MkdirTemp("", "missing-name-*")
+				Expect(err).NotTo(HaveOccurred())
+				defer func() { _ = os.RemoveAll(inputPath) }()
+
+				err = os.WriteFile(filepath.Join(inputPath, "base.yml"), []byte("label: no-name-tile"), 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				subject := NewBaker()
+				err = subject.Bake(inputPath)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("missing required field 'name'"))
+
+				err = subject.BakeFromLockfile(inputPath, cargo.BOSHReleaseTarballLock{}, "/nonexistent/tarball.tgz")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("missing required field 'name'"))
 			})
 		})
 	})
