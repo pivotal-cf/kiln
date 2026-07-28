@@ -30,14 +30,11 @@ func NewCarvel(outLogger, errLogger *log.Logger, kilnVersion string) Carvel {
 	publishCmd := NewCarvelPublish(outLogger, errLogger)
 	publishCmd.KilnVersion = kilnVersion
 
-	rebakeCmd := NewCarvelReBake(outLogger, errLogger)
-	rebakeCmd.KilnVersion = kilnVersion
-
 	// Register subcommands
 	c.commands["bake"] = NewCarvelBake(outLogger, errLogger)
 	c.commands["upload"] = NewCarvelUpload(outLogger, errLogger)
 	c.commands["publish"] = publishCmd
-	c.commands["re-bake"] = rebakeCmd
+	c.commands["re-bake"] = NewCarvelReBake(outLogger, errLogger)
 
 	// Positional argument synopses for usage lines
 	c.synopses["re-bake"] = "<bake-record>"
