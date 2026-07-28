@@ -2,3 +2,5 @@ consumes:
 - name: binding_cache
   type: binding_cache
   optional: false
+  from: binding_cache
+  deployment: "(( ..cf.deployment_name ))"

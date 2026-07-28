@@ -257,7 +257,7 @@ func (b *baker) progress(message string) {
 
 // deduplicateConsumes removes duplicate BOSH link consumer entries by name.
 // Identical duplicates are dropped silently. If two entries share a name but
-// differ in type or optional, the first is kept and a WARNING is emitted —
+// differ in any field, the first is kept and a WARNING is emitted —
 // BOSH rejects duplicate link names in job.MF, so the second is always ignored.
 func (b *baker) deduplicateConsumes(consumes []boshLinkConsumer) []boshLinkConsumer {
 	seen := make(map[string]boshLinkConsumer)
@@ -272,19 +272,59 @@ func (b *baker) deduplicateConsumes(consumes []boshLinkConsumer) []boshLinkConsu
 		if existing != c {
 			b.progress(fmt.Sprintf(
 				"WARNING: duplicate BOSH link consumer name %q found across packageinstalls.\n"+
-					"  Keeping:  {type: %s, optional: %v}\n"+
-					"  Ignoring: {type: %s, optional: %v}\n"+
+					"  Keeping:  {type: %s, optional: %v, from: %s, deployment: %s}\n"+
+					"  Ignoring: {type: %s, optional: %v, from: %s, deployment: %s}\n"+
 					"  Ensure all packageinstalls agree on the link definition.",
-				c.Name, existing.Type, existing.Optional, c.Type, c.Optional,
+				c.Name,
+				existing.Type, existing.Optional, existing.From, existing.Deployment,
+				c.Type, c.Optional, c.From, c.Deployment,
 			))
 		}
 	}
 	return deduped
 }
 
+// readJobSpecOverlays reads all *.job-spec-overlay.yml sidecars for the tile's
+// package installs and returns the merged slice of boshLinkConsumer entries.
+func (b *baker) readJobSpecOverlays() ([]boshLinkConsumer, error) {
+	var all []boshLinkConsumer
+	for _, entry := range b.metadata.PackageInstalls {
+		entry = strings.Trim(entry, "$() ")
+		entry = strings.TrimPrefix(entry, "package")
+		entry = strings.Trim(entry, `"' `)
+
+		overlayPath := path.Join(b.source, "packageinstalls", entry+".job-spec-overlay.yml")
+		data, err := os.ReadFile(overlayPath)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("reading %s: %w", overlayPath, err)
+		}
+		var overlay jobSpecOverlay
+		if err := yaml.Unmarshal(data, &overlay); err != nil {
+			return nil, fmt.Errorf("parsing %s: %w", overlayPath, err)
+		}
+		all = append(all, overlay.Consumes...)
+	}
+	return all, nil
+}
+
 // boshLinkConsumer declares a BOSH link the registry-data job should consume.
 // Populated from per-packageinstall *.job-spec-overlay.yml sidecar files.
+// When From or Deployment is set, kiln also emits a cross-deployment consumes
+// entry for the link in the runtime config addon job.
 type boshLinkConsumer struct {
+	Name       string `yaml:"name"`
+	Type       string `yaml:"type"`
+	Optional   bool   `yaml:"optional"`
+	From       string `yaml:"from,omitempty"`
+	Deployment string `yaml:"deployment,omitempty"`
+}
+
+// boshConsumes is the BOSH job spec consumes schema: name, type, and optional only.
+// From/Deployment are runtime-config-only and must not appear in the job spec.
+type boshConsumes struct {
 	Name     string `yaml:"name"`
 	Type     string `yaml:"type"`
 	Optional bool   `yaml:"optional"`
@@ -293,6 +333,8 @@ type boshLinkConsumer struct {
 // jobSpecOverlay is the schema for <entry>.job-spec-overlay.yml sidecar files.
 // kiln reads these from packageinstalls/ and merges the consumes entries into
 // the generated registry-data job.MF alongside the hardcoded cluster-info link.
+// Entries that set from or deployment are also emitted as cross-deployment
+// consumes on the runtime config addon job.
 type jobSpecOverlay struct {
 	Consumes []boshLinkConsumer `yaml:"consumes"`
 }
@@ -355,7 +397,6 @@ files:
 
 	registryDataTemplates := ""
 	registryDataProperties := ""
-	var allConsumes []boshLinkConsumer
 
 	b.progress("  Configuring package installs")
 	for _, entry := range b.metadata.PackageInstalls {
@@ -416,21 +457,6 @@ files:
 			overlayContent = string(overlayData)
 		}
 
-		// Read optional job-spec-overlay sidecar to discover additional BOSH link consumptions.
-		jobSpecOverlayPath := path.Join(b.source, "packageinstalls", entry+".job-spec-overlay.yml")
-		overlayData, overlayErr = os.ReadFile(jobSpecOverlayPath)
-		if overlayErr != nil {
-			if !errors.Is(overlayErr, os.ErrNotExist) {
-				return overlayErr
-			}
-		} else {
-			var overlay jobSpecOverlay
-			if parseErr := yaml.Unmarshal(overlayData, &overlay); parseErr != nil {
-				return fmt.Errorf("parsing %s: %w", jobSpecOverlayPath, parseErr)
-			}
-			allConsumes = append(allConsumes, overlay.Consumes...)
-		}
-
 		manifestTemplate := generateManifestTemplate(entry, overlayContent)
 
 		err = os.WriteFile(
@@ -443,9 +469,17 @@ files:
 		}
 	}
 
+	allConsumes, err := b.readJobSpecOverlays()
+	if err != nil {
+		return err
+	}
 	deduped := b.deduplicateConsumes(allConsumes)
 
-	registryDataSpec, err := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, deduped)
+	boshLinks := make([]boshConsumes, len(deduped))
+	for i, c := range deduped {
+		boshLinks[i] = boshConsumes{Name: c.Name, Type: c.Type, Optional: c.Optional}
+	}
+	registryDataSpec, err := buildRegistryDataSpec(registryDataTemplates, registryDataProperties, boshLinks)
 	if err != nil {
 		return err
 	}
@@ -461,7 +495,7 @@ files:
 // buildRegistryDataSpec constructs the job.MF content for the registry-data BOSH job.
 // It always includes the hardcoded cluster-info link and appends any additional links
 // collected from *.job-spec-overlay.yml sidecars in the packageinstalls/ directory.
-func buildRegistryDataSpec(templates, properties string, additionalLinks []boshLinkConsumer) (string, error) {
+func buildRegistryDataSpec(templates, properties string, additionalLinks []boshConsumes) (string, error) {
 	extraLinks := ""
 	if len(additionalLinks) > 0 {
 		data, err := yaml.Marshal(additionalLinks)
@@ -717,10 +751,29 @@ func (b *baker) generateRuntimeConfigs() error {
 		}
 	}
 
+	allConsumes, err := b.readJobSpecOverlays()
+	if err != nil {
+		return err
+	}
+	deduped := b.deduplicateConsumes(allConsumes)
+
+	consumesMap := make(map[string]models.JobConsumes)
+	for _, c := range deduped {
+		if c.From != "" || c.Deployment != "" {
+			consumesMap[c.Name] = models.JobConsumes{
+				From:       c.From,
+				Deployment: c.Deployment,
+			}
+		}
+	}
+
 	registryDataJob := models.Job{
 		Name:       "registry-data",
 		Release:    b.metadata.Name,
 		Properties: registryDataProps,
+	}
+	if len(consumesMap) > 0 {
+		registryDataJob.Consumes = consumesMap
 	}
 
 	inner := models.RuntimeConfigInner{

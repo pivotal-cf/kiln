@@ -124,7 +124,7 @@ var _ = Describe("Carvel Baker", func() {
 
 	Context("buildRegistryDataSpec", func() {
 		It("includes user-declared additional links after cluster-info", func() {
-			links := []boshLinkConsumer{
+			links := []boshConsumes{
 				{Name: "binding_cache", Type: "binding_cache", Optional: false},
 			}
 			spec, err := buildRegistryDataSpec("", "", links)
@@ -136,7 +136,7 @@ var _ = Describe("Carvel Baker", func() {
 		})
 
 		It("marks optional links correctly", func() {
-			links := []boshLinkConsumer{
+			links := []boshConsumes{
 				{Name: "optional-link", Type: "some-type", Optional: true},
 			}
 			spec, err := buildRegistryDataSpec("", "", links)
@@ -154,7 +154,7 @@ var _ = Describe("Carvel Baker", func() {
 		It("safely encodes link names containing YAML-special characters", func() {
 			// yaml.Marshal quotes/blocks the value so it cannot inject extra YAML keys.
 			// The real type field ("legit-type") must still appear at the correct level.
-			links := []boshLinkConsumer{
+			links := []boshConsumes{
 				{Name: "name: injected\ntype: evil", Type: "legit-type", Optional: false},
 			}
 			spec, err := buildRegistryDataSpec("", "", links)
@@ -163,7 +163,7 @@ var _ = Describe("Carvel Baker", func() {
 		})
 
 		It("emits each unique link name only once given pre-deduplicated input", func() {
-			links := []boshLinkConsumer{
+			links := []boshConsumes{
 				{Name: "binding_cache", Type: "binding_cache", Optional: false},
 			}
 			spec, err := buildRegistryDataSpec("", "", links)
@@ -279,6 +279,55 @@ consumes:
 			var overlay jobSpecOverlay
 			err := yaml.Unmarshal([]byte("consumes: [\ninvalid"), &overlay)
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("parses an entry with only from set (no deployment)", func() {
+			content := `
+consumes:
+- name: nats-tls
+  type: nats-tls
+  optional: false
+  from: nats-tls
+`
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte(content), &overlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(overlay.Consumes[0].From).To(Equal("nats-tls"))
+			Expect(overlay.Consumes[0].Deployment).To(BeEmpty())
+		})
+
+		It("parses an entry with only deployment set (no from)", func() {
+			content := `
+consumes:
+- name: nats-tls
+  type: nats-tls
+  optional: false
+  deployment: "(( ..cf.deployment_name ))"
+`
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte(content), &overlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(overlay.Consumes[0].From).To(BeEmpty())
+			Expect(overlay.Consumes[0].Deployment).To(Equal("(( ..cf.deployment_name ))"))
+		})
+
+		It("parses from and deployment fields for cross-deployment link resolution", func() {
+			content := `
+consumes:
+- name: nats-tls
+  type: nats-tls
+  optional: false
+  from: nats-tls
+  deployment: "(( ..cf.deployment_name ))"
+`
+			var overlay jobSpecOverlay
+			err := yaml.Unmarshal([]byte(content), &overlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(overlay.Consumes).To(HaveLen(1))
+			c := overlay.Consumes[0]
+			Expect(c.Name).To(Equal("nats-tls"))
+			Expect(c.From).To(Equal("nats-tls"))
+			Expect(c.Deployment).To(Equal("(( ..cf.deployment_name ))"))
 		})
 	})
 
@@ -455,6 +504,12 @@ consumes:
 					props := addon.Jobs[0].Properties["test-install"]
 					Expect(props.Name).To(Equal("something-test.tanzu.vmware.com"))
 					Expect(props.Version).To(Equal("0.1.5"))
+
+					By("emitting cross-deployment consumes from job-spec-overlay from/deployment fields")
+					Expect(addon.Jobs[0].Consumes).To(HaveKey("binding_cache"))
+					bc := addon.Jobs[0].Consumes["binding_cache"]
+					Expect(bc.From).To(Equal("binding_cache"))
+					Expect(bc.Deployment).To(Equal("(( ..cf.deployment_name ))"))
 				})
 				It("can be kiln baked", func() {
 					if !kilnInstalled() {
