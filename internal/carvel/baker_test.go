@@ -413,6 +413,11 @@ consumes:
 					Expect(outMeta.CompatibleKubernetesDistributions[0].Name).To(Equal("k0s"))
 					Expect(outMeta.CompatibleKubernetesDistributions[0].Version).To(Equal(">0.0.0"))
 					Expect(outMeta.RequiresKubernetes).To(BeTrue())
+					Expect(outMeta.SupportsParallelDeploys).To(BeTrue())
+					Expect(outMeta.RequiresProductVersions).To(HaveLen(1))
+					Expect(outMeta.RequiresProductVersions[0].Name).To(Equal("some-other-product"))
+					Expect(outMeta.RequiresProductVersions[0].Version).To(Equal(">=1.0.0"))
+					Expect(outMeta.RequiresProductVersions[0].Optional).To(BeTrue())
 				})
 				It("creates empty instance_group and jobs directories", func() {
 					Expect(filepath.Join(outputPath, "instance_groups")).To(BeADirectory())
