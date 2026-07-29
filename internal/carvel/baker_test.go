@@ -558,6 +558,48 @@ consumes:
 					Expect(err.Error()).To(ContainSubstring("tile metadata_version too old"))
 				})
 			})
+
+			When("the tile does not set parallel deploys or product version requirements", func() {
+				BeforeEach(func() {
+					m := models.Metadata{
+						Name:                     "k8s-tile-test",
+						Label:                    "test tile",
+						IconImage:                "$( icon )",
+						MetadataVersion:          "3.2.0",
+						MinimumVersionForUpgrade: "0.0.0",
+						ProductVersion:           "$( version )",
+						Rank:                     1,
+						Serial:                   false,
+						PropertyBlueprints: []string{
+							`$( property "database_name" )`,
+							`$( property "admin_password" )`,
+						},
+						FormTypes:       []string{`$( form "db_props" )`},
+						Variables:       []proofing.Variable{},
+						PackageInstalls: []string{`$( package "test-install" )`},
+					}
+					yamlData, err := yaml.Marshal(&m)
+					Expect(err).NotTo(HaveOccurred())
+					err = os.WriteFile(path.Join(inputPath, "base.yml"), yamlData, 0644) // 0644 sets file permissions
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("omits both fields from the generated base.yml", func() {
+					Expect(err).NotTo(HaveOccurred())
+
+					yamlPath := path.Join(outputPath, "base.yml")
+					rawYaml, err := os.ReadFile(yamlPath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(rawYaml)).NotTo(ContainSubstring("supports_parallel_deploys"))
+					Expect(string(rawYaml)).NotTo(ContainSubstring("requires_product_versions"))
+
+					outMeta := models.MetadataOut{}
+					err = yaml.Unmarshal(rawYaml, &outMeta)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(outMeta.SupportsParallelDeploys).To(BeFalse())
+					Expect(outMeta.RequiresProductVersions).To(BeEmpty())
+				})
+			})
 		})
 	})
 
