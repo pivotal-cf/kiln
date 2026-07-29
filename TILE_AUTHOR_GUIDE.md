@@ -129,6 +129,43 @@ The property definition in [releen/hello-tile/properties/hello.yml](https://gith
 in referenced in `base.yml` using `$( property "port" )`.
 Most other product template part functions behave similarly.
 
+### Carvel / Kubernetes Tile Metadata (`base.yml`)
+
+When building Carvel/Kubernetes tiles using `kiln carvel bake`, the `base.yml` metadata file supports the following additional top-level fields:
+
+- `supports_parallel_deploys` (boolean): Indicates whether the tile supports parallel deployments in Ops Manager.
+- `requires_product_versions` (list): Specifies product version dependencies required by the tile.
+  - `name`: Product name.
+  - `version`: Version requirement constraint (e.g. `>=1.0.0`).
+  - `optional` (boolean): Whether the dependency is optional.
+- `compatible_kubernetes_distributions` (list): Supported Kubernetes distribution criteria.
+  - `name`: Distribution name (e.g. `k0s`).
+  - `version`: Version requirement constraint (e.g. `>0.0.0`).
+- `package_installs` (list): References to Carvel package install templates.
+
+Example Carvel tile `base.yml`:
+
+```yaml
+name: k8s-tile-name
+label: "My K8s Tile"
+icon_image: $( icon )
+metadata_version: "3.2.0"
+minimum_version_for_upgrade: 0.0.0
+product_version: $( version )
+rank: 1
+serial: false
+supports_parallel_deploys: true
+requires_product_versions:
+  - name: some-other-product
+    version: ">=1.0.0"
+    optional: true
+compatible_kubernetes_distributions:
+  - name: k0s
+    version: ">0.0.0"
+package_installs:
+  - $( package "my-package" )
+```
+
 ## <a id="bosh-release-tarballs"></a> Managing BOSH Release Tarballs
 
 `kiln fetch` downloads BOSH Release Tarballs from any of the following "sources"

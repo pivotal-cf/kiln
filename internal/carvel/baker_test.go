@@ -413,6 +413,11 @@ consumes:
 					Expect(outMeta.CompatibleKubernetesDistributions[0].Name).To(Equal("k0s"))
 					Expect(outMeta.CompatibleKubernetesDistributions[0].Version).To(Equal(">0.0.0"))
 					Expect(outMeta.RequiresKubernetes).To(BeTrue())
+					Expect(outMeta.SupportsParallelDeploys).To(BeTrue())
+					Expect(outMeta.RequiresProductVersions).To(HaveLen(1))
+					Expect(outMeta.RequiresProductVersions[0].Name).To(Equal("some-other-product"))
+					Expect(outMeta.RequiresProductVersions[0].Version).To(Equal(">=1.0.0"))
+					Expect(outMeta.RequiresProductVersions[0].Optional).To(BeTrue())
 				})
 				It("creates empty instance_group and jobs directories", func() {
 					Expect(filepath.Join(outputPath, "instance_groups")).To(BeADirectory())
@@ -551,6 +556,48 @@ consumes:
 				It("fails to bake with an error", func() {
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("tile metadata_version too old"))
+				})
+			})
+
+			When("the tile does not set parallel deploys or product version requirements", func() {
+				BeforeEach(func() {
+					m := models.Metadata{
+						Name:                     "k8s-tile-test",
+						Label:                    "test tile",
+						IconImage:                "$( icon )",
+						MetadataVersion:          "3.2.0",
+						MinimumVersionForUpgrade: "0.0.0",
+						ProductVersion:           "$( version )",
+						Rank:                     1,
+						Serial:                   false,
+						PropertyBlueprints: []string{
+							`$( property "database_name" )`,
+							`$( property "admin_password" )`,
+						},
+						FormTypes:       []string{`$( form "db_props" )`},
+						Variables:       []proofing.Variable{},
+						PackageInstalls: []string{`$( package "test-install" )`},
+					}
+					yamlData, err := yaml.Marshal(&m)
+					Expect(err).NotTo(HaveOccurred())
+					err = os.WriteFile(path.Join(inputPath, "base.yml"), yamlData, 0644) // 0644 sets file permissions
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("omits both fields from the generated base.yml", func() {
+					Expect(err).NotTo(HaveOccurred())
+
+					yamlPath := path.Join(outputPath, "base.yml")
+					rawYaml, err := os.ReadFile(yamlPath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(rawYaml)).NotTo(ContainSubstring("supports_parallel_deploys"))
+					Expect(string(rawYaml)).NotTo(ContainSubstring("requires_product_versions"))
+
+					outMeta := models.MetadataOut{}
+					err = yaml.Unmarshal(rawYaml, &outMeta)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(outMeta.SupportsParallelDeploys).To(BeFalse())
+					Expect(outMeta.RequiresProductVersions).To(BeEmpty())
 				})
 			})
 		})

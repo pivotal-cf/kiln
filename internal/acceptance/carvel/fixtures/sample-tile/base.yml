@@ -17,3 +17,8 @@ package_installs:
 compatible_kubernetes_distributions:
 - name: k0s
   version: '>0.0.0'
+supports_parallel_deploys: true
+requires_product_versions:
+- name: some-other-product
+  version: '>=1.0.0'
+  optional: true
