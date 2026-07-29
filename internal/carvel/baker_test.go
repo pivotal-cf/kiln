@@ -360,6 +360,7 @@ consumes:
 				}
 				for _, cmd := range commands {
 					cmd.Dir = inputPath
+					cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@test.com", "GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@test.com")
 					out, err := cmd.CombinedOutput()
 					Expect(err).NotTo(HaveOccurred(), "error invoking git: "+string(out))
 				}
@@ -390,6 +391,8 @@ consumes:
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(outMeta.Name).To(Equal("k8s-tile-test"))
+					Expect(subject.GetName()).To(Equal("k8s-tile-test"))
+					Expect(subject.GetBoshReleaseName()).To(Equal("k8s-tile-test-pkg"))
 					Expect(outMeta.ProductVersion).To(Equal(`$( version )`))
 					Expect(outMeta.MetadataVersion).To(Equal("3.2.0"))
 					Expect(outMeta.Rank).To(Equal(1))
@@ -402,7 +405,7 @@ consumes:
 					Expect(outMeta.Variables[0].Options).To(HaveKeyWithValue("common_name", "Sample Tile CA"))
 					Expect(outMeta.Variables[0].Options).To(HaveKeyWithValue("is_ca", true))
 					Expect(outMeta.Releases).To(HaveLen(1))
-					Expect(outMeta.Releases[0]).To(ContainSubstring("k8s-tile-test"))
+					Expect(outMeta.Releases[0]).To(Equal(`$( release "k8s-tile-test-pkg" )`))
 					Expect(outMeta.InstanceGroups).To(HaveLen(0))
 					Expect(outMeta.RuntimeConfigs).To(HaveLen(1))
 					Expect(outMeta.RuntimeConfigs[0]).To(Equal(`$( runtime_config "k8s-tile-test-pkgr" )`))
@@ -429,7 +432,7 @@ consumes:
 					releaseVersion := subject.GetReleaseVersion()
 					Expect(releaseVersion).To(HavePrefix("0.1.1+"))
 					Expect(releaseVersion).To(MatchRegexp(`^0\.1\.1\+[0-9a-f]{12}$`))
-					Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-"+releaseVersion+".tgz")).To(BeAnExistingFile())
+					Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-pkg-"+releaseVersion+".tgz")).To(BeAnExistingFile())
 
 					tarball, err := subject.GetReleaseTarball()
 					Expect(err).NotTo(HaveOccurred())
@@ -497,7 +500,7 @@ consumes:
 					By("having only the registry-data job (no separate package-install job)")
 					Expect(addon.Jobs).To(HaveLen(1))
 					Expect(addon.Jobs[0].Name).To(Equal("registry-data"))
-					Expect(addon.Jobs[0].Release).To(Equal("k8s-tile-test"))
+					Expect(addon.Jobs[0].Release).To(Equal("k8s-tile-test-pkg"))
 
 					By("carrying package install properties on the registry-data job")
 					Expect(addon.Jobs[0].Properties).To(HaveKey("test-install"))
@@ -577,6 +580,7 @@ consumes:
 				}
 				for _, cmd := range commands {
 					cmd.Dir = inputPath
+					cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@test.com", "GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@test.com")
 					out, err := cmd.CombinedOutput()
 					Expect(err).NotTo(HaveOccurred(), "error invoking git: "+string(out))
 				}
@@ -596,7 +600,7 @@ consumes:
 				uploadReleaseVersion := subject.GetReleaseVersion()
 
 				releaseLock := cargo.BOSHReleaseTarballLock{
-					Name:    "k8s-tile-test",
+					Name:    "k8s-tile-test-pkg",
 					Version: uploadReleaseVersion,
 				}
 
@@ -607,7 +611,7 @@ consumes:
 
 				outputPath := path.Join(inputPath, ".carvel-tile")
 				Expect(filepath.Join(outputPath, "base.yml")).To(BeAnExistingFile())
-				Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-"+uploadReleaseVersion+".tgz")).To(BeAnExistingFile())
+				Expect(filepath.Join(outputPath, "releases", "k8s-tile-test-pkg-"+uploadReleaseVersion+".tgz")).To(BeAnExistingFile())
 				Expect(filepath.Join(outputPath, "runtime_configs")).To(BeADirectory())
 				Expect(subject2.GetReleaseVersion()).To(Equal(uploadReleaseVersion))
 			})
@@ -631,7 +635,27 @@ consumes:
 				subject := NewBaker()
 				err = subject.BakeFromLockfile(inputPath, releaseLock, "/nonexistent/tarball.tgz")
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("does not match tile name"))
+				Expect(err.Error()).To(ContainSubstring("does not match tile-derived name"))
+			})
+		})
+
+		When("the tile metadata name is missing", func() {
+			It("returns an error early", func() {
+				inputPath, err := os.MkdirTemp("", "missing-name-*")
+				Expect(err).NotTo(HaveOccurred())
+				defer func() { _ = os.RemoveAll(inputPath) }()
+
+				err = os.WriteFile(filepath.Join(inputPath, "base.yml"), []byte("label: no-name-tile"), 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				subject := NewBaker()
+				err = subject.Bake(inputPath)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("missing required field 'name'"))
+
+				err = subject.BakeFromLockfile(inputPath, cargo.BOSHReleaseTarballLock{}, "/nonexistent/tarball.tgz")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("missing required field 'name'"))
 			})
 		})
 	})
@@ -684,7 +708,7 @@ consumes:
 			Expect(copyTestFile(uploadTarball, cachedTarball)).To(Succeed())
 
 			releaseLock := cargo.BOSHReleaseTarballLock{
-				Name:    "k8s-tile-test",
+				Name:    "k8s-tile-test-pkg",
 				Version: uploadBaker.GetReleaseVersion(),
 			}
 
@@ -805,6 +829,13 @@ consumes:
 		It("returns empty string before Bake is called", func() {
 			subject := NewBaker()
 			Expect(subject.GetReleaseVersion()).To(BeEmpty())
+		})
+	})
+
+	Context("GetBoshReleaseName", func() {
+		It("returns empty string before Bake is called", func() {
+			b := NewBaker()
+			Expect(b.GetBoshReleaseName()).To(BeEmpty())
 		})
 	})
 
