@@ -24,11 +24,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// mockArtifactory is a test HTTP server that faithfully simulates Artifactory's
-// upload (PUT) and download (GET) behaviour, including Basic Auth verification.
-// Upload stores the tarball bytes keyed by request path; download serves them
-// back.  The /artifactory prefix that the real download client prepends is
-// handled transparently.
 type mockArtifactory struct {
 	mu       sync.Mutex
 	blobs    map[string][]byte
@@ -57,7 +52,6 @@ func (m *mockArtifactory) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Normalize path: strip the /artifactory prefix the download client adds
 	key := r.URL.Path
 	key = strings.TrimPrefix(key, "/artifactory")
 
@@ -114,23 +108,6 @@ func (m *mockArtifactory) GetCount() int {
 	return m.getCount
 }
 
-// ---------------------------------------------------------------------------
-// End-to-end acceptance test for the full Carvel tile developer workflow.
-//
-// This test exercises every `kiln carvel` subcommand in sequence, chaining
-// their outputs exactly like a real developer and CI pipeline would:
-//
-//   Step 1  kiln carvel bake          (local bake, no Kilnfile.lock)
-//   Step 2  kiln carvel upload        (creates BOSH release, uploads, writes lock)
-//           git add + commit          (Kilnfile.lock)
-//   Step 3  kiln carvel bake          (CI-style: downloads from lock)
-//   Step 4  kiln carvel publish --final (downloads, bakes, writes bake record)
-//           git add + commit          (bake_records/)
-//   Step 5  kiln carvel rebake        (re-bakes from record, verifies checksum)
-//
-// A mock Artifactory server stores the actual uploaded tarball and serves it
-// back on download, proving the full round-trip.
-// ---------------------------------------------------------------------------
 var _ = Describe("carvel full workflow", Ordered, func() {
 	const (
 		sampleTileFixture = "fixtures/sample-tile"
@@ -232,9 +209,6 @@ var _ = Describe("carvel full workflow", Ordered, func() {
 		_ = os.RemoveAll(tmpDir)
 	})
 
-	// -----------------------------------------------------------------------
-	// Step 1: Local bake (no Kilnfile.lock, no Artifactory interaction)
-	// -----------------------------------------------------------------------
 	It("Step 1: bakes a tile locally without Kilnfile.lock", func() {
 		outputFile := filepath.Join(tmpDir, "step1.pivotal")
 
@@ -259,9 +233,6 @@ var _ = Describe("carvel full workflow", Ordered, func() {
 		Expect(os.IsNotExist(err)).To(BeTrue(), "local bake must not create Kilnfile.lock")
 	})
 
-	// -----------------------------------------------------------------------
-	// Step 2: Upload (creates BOSH release, uploads to Artifactory, writes lock)
-	// -----------------------------------------------------------------------
 	It("Step 2: uploads the BOSH release to Artifactory and writes Kilnfile.lock", func() {
 		cmd := exec.Command(pathToMain,
 			append([]string{
@@ -298,9 +269,6 @@ var _ = Describe("carvel full workflow", Ordered, func() {
 		gitInTile("commit", "-m", "add Kilnfile.lock from upload")
 	})
 
-	// -----------------------------------------------------------------------
-	// Step 3: CI-style bake (downloads cached BOSH release via Kilnfile.lock)
-	// -----------------------------------------------------------------------
 	It("Step 3: bakes a tile using Kilnfile.lock (CI path with Artifactory download)", func() {
 		outputFile := filepath.Join(tmpDir, "step3-ci.pivotal")
 
@@ -311,6 +279,7 @@ var _ = Describe("carvel full workflow", Ordered, func() {
 				"carvel", "bake",
 				"--source-directory", inputPath,
 				"--output-file", outputFile,
+				"--from-lockfile",
 				"--verbose",
 			}, variableFlags()...)...,
 		)
@@ -324,9 +293,6 @@ var _ = Describe("carvel full workflow", Ordered, func() {
 			"CI bake must download the cached BOSH release from Artifactory")
 	})
 
-	// -----------------------------------------------------------------------
-	// Step 4: Publish --final (downloads, bakes, creates bake record)
-	// -----------------------------------------------------------------------
 	var publishChecksum string
 
 	It("Step 4: publishes a final tile and writes a bake record", func() {
@@ -372,9 +338,6 @@ var _ = Describe("carvel full workflow", Ordered, func() {
 		// Concourse resource checks out the commit from the record.
 	})
 
-	// -----------------------------------------------------------------------
-	// Step 5: Rebake from bake record (reproducibility verification)
-	// -----------------------------------------------------------------------
 	It("Step 5: re-bakes from the bake record with an identical checksum", func() {
 		outputFile := filepath.Join(tmpDir, "step5-rebake.pivotal")
 		recordPath := filepath.Join(inputPath, "bake_records", "0.1.1.json")
