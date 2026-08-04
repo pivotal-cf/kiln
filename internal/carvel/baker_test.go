@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -374,8 +375,20 @@ consumes:
 					_ = os.RemoveAll(filepath.Dir(inputPath))
 				}
 			})
+			var (
+				kilnfile     cargo.Kilnfile
+				kilnfileLock cargo.KilnfileLock
+				opts         BakeOptions
+			)
+
+			BeforeEach(func() {
+				kilnfile = cargo.Kilnfile{}
+				kilnfileLock = cargo.KilnfileLock{}
+				opts = BakeOptions{}
+			})
+
 			JustBeforeEach(func() {
-				err = subject.Bake(inputPath)
+				err = subject.Bake(inputPath, kilnfile, kilnfileLock, opts)
 			})
 			When("the tile data is valid", func() {
 				JustBeforeEach(func() {
@@ -512,28 +525,381 @@ consumes:
 					Expect(addon.Jobs[0].Name).To(Equal("registry-data"))
 					Expect(addon.Jobs[0].Release).To(Equal("k8s-tile-test-pkg"))
 
-					By("carrying package install properties on the registry-data job")
-					Expect(addon.Jobs[0].Properties).To(HaveKey("test-install"))
-					props := addon.Jobs[0].Properties["test-install"]
-					Expect(props.Name).To(Equal("something-test.tanzu.vmware.com"))
-					Expect(props.Version).To(Equal("0.1.5"))
+				By("carrying package install properties on the registry-data job")
+				Expect(addon.Jobs[0].Properties).To(HaveKey("test-install"))
+				propsRaw := addon.Jobs[0].Properties["test-install"]
+				propsMap, ok := propsRaw.(map[string]interface{})
+				Expect(ok).To(BeTrue(), "expected PackageInstallProps to unmarshal as map[string]interface{}")
+				Expect(propsMap).To(HaveKeyWithValue("name", "something-test.tanzu.vmware.com"))
+				Expect(propsMap).To(HaveKeyWithValue("version", "0.1.5"))
 
-					By("emitting cross-deployment consumes from job-spec-overlay from/deployment fields")
-					Expect(addon.Jobs[0].Consumes).To(HaveKey("binding_cache"))
-					bc := addon.Jobs[0].Consumes["binding_cache"]
-					Expect(bc.From).To(Equal("binding_cache"))
-					Expect(bc.Deployment).To(Equal("(( ..cf.deployment_name ))"))
+				By("emitting cross-deployment consumes from job-spec-overlay from/deployment fields")
+				Expect(addon.Jobs[0].Consumes).To(HaveKey("binding_cache"))
+				bc := addon.Jobs[0].Consumes["binding_cache"]
+				Expect(bc.From).To(Equal("binding_cache"))
+				Expect(bc.Deployment).To(Equal("(( ..cf.deployment_name ))"))
 				})
-				It("can be kiln baked", func() {
-					if !kilnInstalled() {
-						Skip("kiln CLI not installed - skipping integration test")
-					}
-					err := subject.KilnBake(filepath.Join(outputPath, "my-tile.pivotal"))
+			It("can be kiln baked", func() {
+				if !kilnInstalled() {
+					Skip("kiln CLI not installed - skipping integration test")
+				}
+				err := subject.KilnBake(filepath.Join(outputPath, "my-tile.pivotal"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(filepath.Join(outputPath, "my-tile.pivotal")).To(BeAnExistingFile())
+			})
+
+			When("the tile base.yml declares additional_releases", func() {
+				const (
+					extraReleaseName    = "smoke-test-scripts"
+					extraReleaseVersion = "dev"
+					extraJobName        = "smoke-test-scripts"
+				)
+
+				BeforeEach(func() {
+					baseYMLPath := filepath.Join(inputPath, "base.yml")
+					raw, err := os.ReadFile(baseYMLPath)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(filepath.Join(outputPath, "my-tile.pivotal")).To(BeAnExistingFile())
+					var m models.Metadata
+					Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
+					m.AdditionalReleases = []models.AdditionalRelease{
+						{
+							Name: extraReleaseName,
+							Jobs: []models.AdditionalJob{{Name: extraJobName}},
+						},
+					}
+					updated, err := yaml.Marshal(&m)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
+
+				kilnfile = cargo.Kilnfile{
+					ReleaseSources: []cargo.ReleaseSourceConfig{
+						{Type: "s3", Bucket: "fake-bucket", Region: "us-west-1", PathTemplate: "fake-path-template"},
+					},
+				}
+					kilnfileLock = cargo.KilnfileLock{
+						Releases: []cargo.BOSHReleaseTarballLock{
+							{Name: extraReleaseName, Version: extraReleaseVersion, RemoteSource: "fake-bucket"},
+						},
+					}
+					opts = BakeOptions{
+						SkipFetch:         true,
+						ReleasesDirectory: filepath.Join(inputPath, "releases"),
+					}
+
+					Expect(os.MkdirAll(opts.ReleasesDirectory, 0755)).To(Succeed())
+					stubTarball := filepath.Join(opts.ReleasesDirectory, extraReleaseName+"-"+extraReleaseVersion+".tgz")
+					Expect(os.WriteFile(stubTarball, []byte("stub bosh release tarball"), 0644)).To(Succeed())
+				})
+
+				It("copies the tarball verbatim into .carvel-tile/releases/ when skip-fetch is true", func() {
+					dst := filepath.Join(outputPath, "releases", extraReleaseName+"-"+extraReleaseVersion+".tgz")
+					Expect(dst).To(BeAnExistingFile())
+					data, err := os.ReadFile(dst)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(data)).To(Equal("stub bosh release tarball"))
+				})
+
+				It("fails when skip-fetch is false and tarball is not in cache", func() {
+					opts.SkipFetch = false
+					os.Remove(filepath.Join(opts.ReleasesDirectory, extraReleaseName+"-"+extraReleaseVersion+".tgz"))
+					err := subject.Bake(inputPath, kilnfile, kilnfileLock, opts)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("failed to download additional release"))
+				})
+
+				It("adds the additional release to the top-level tile releases list", func() {
+					baseYMLPath := filepath.Join(outputPath, "base.yml")
+					raw, err := os.ReadFile(baseYMLPath)
+					Expect(err).NotTo(HaveOccurred())
+					var outMeta models.MetadataOut
+					Expect(yaml.Unmarshal(raw, &outMeta)).To(Succeed())
+					Expect(outMeta.Releases).To(HaveLen(2))
+					Expect(outMeta.Releases).To(ContainElement(ContainSubstring(extraReleaseName)))
+				})
+
+				It("extends the runtime-config addon with the extra release and job", func() {
+					rcPath := filepath.Join(outputPath, "runtime_configs", "k8s-tile-test-pkgr.yml")
+					rcData, err := os.ReadFile(rcPath)
+					Expect(err).NotTo(HaveOccurred())
+					var rc models.RuntimeConfigOuter
+					Expect(yaml.Unmarshal(rcData, &rc)).To(Succeed())
+					var inner models.RuntimeConfigInner
+					Expect(yaml.Unmarshal([]byte(rc.RuntimeConfig), &inner)).To(Succeed())
+
+					By("adding the release to the releases: list")
+					Expect(inner.Releases).To(ContainElement(`$( release "` + extraReleaseName + `" )`))
+
+					By("appending the job to the addon's jobs: list")
+					addon := inner.Addons[0]
+					Expect(addon.Jobs).To(HaveLen(2))
+					extraJob := addon.Jobs[1]
+					Expect(extraJob.Name).To(Equal(extraJobName))
+					Expect(extraJob.Release).To(Equal(extraReleaseName))
+					Expect(extraJob.Properties).To(BeEmpty())
 				})
 			})
-			When("the tile metadata version is too old", func() {
+
+			When("an additional release's RemotePath basename differs from <name>-<version>.tgz", func() {
+				const (
+					extraReleaseName    = "smoke-test-scripts"
+					extraReleaseVersion = "4.12.14"
+					extraJobName        = "smoke-test-scripts"
+				)
+				realFilename := extraReleaseName + "-" + extraReleaseVersion + "-ubuntu-jammy-1.1298.tgz"
+
+				BeforeEach(func() {
+					baseYMLPath := filepath.Join(inputPath, "base.yml")
+					raw, err := os.ReadFile(baseYMLPath)
+					Expect(err).NotTo(HaveOccurred())
+					var m models.Metadata
+					Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
+					m.AdditionalReleases = []models.AdditionalRelease{
+						{
+							Name: extraReleaseName,
+							Jobs: []models.AdditionalJob{{Name: extraJobName}},
+						},
+					}
+					updated, err := yaml.Marshal(&m)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
+
+					kilnfile = cargo.Kilnfile{
+						ReleaseSources: []cargo.ReleaseSourceConfig{
+							{Type: "s3", Bucket: "fake-bucket", Region: "us-west-1", PathTemplate: "fake-path-template"},
+						},
+					}
+					kilnfileLock = cargo.KilnfileLock{
+						Releases: []cargo.BOSHReleaseTarballLock{
+							{
+								Name:         extraReleaseName,
+								Version:      extraReleaseVersion,
+								RemoteSource: "fake-bucket",
+								RemotePath:   extraReleaseName + "/" + realFilename,
+							},
+						},
+					}
+					opts = BakeOptions{
+						SkipFetch:         true,
+						ReleasesDirectory: filepath.Join(inputPath, "releases"),
+					}
+
+					Expect(os.MkdirAll(opts.ReleasesDirectory, 0755)).To(Succeed())
+					stubTarball := filepath.Join(opts.ReleasesDirectory, realFilename)
+					Expect(os.WriteFile(stubTarball, []byte("stub smoke-tests tarball"), 0644)).To(Succeed())
+				})
+
+				It("finds the tarball under its real filename with --skip-fetch", func() {
+					Expect(err).NotTo(HaveOccurred())
+					dst := filepath.Join(outputPath, "releases", extraReleaseName+"-"+extraReleaseVersion+".tgz")
+					Expect(dst).To(BeAnExistingFile())
+					data, readErr := os.ReadFile(dst)
+					Expect(readErr).NotTo(HaveOccurred())
+					Expect(string(data)).To(Equal("stub smoke-tests tarball"))
+				})
+			})
+
+		When("an additional_release job carries a properties block", func() {
+			const (
+				extraReleaseName    = "smoke-tests"
+				extraReleaseVersion = "dev"
+			)
+
+			BeforeEach(func() {
+				baseYMLPath := filepath.Join(inputPath, "base.yml")
+				raw, err := os.ReadFile(baseYMLPath)
+				Expect(err).NotTo(HaveOccurred())
+				var m models.Metadata
+				Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
+				m.AdditionalReleases = []models.AdditionalRelease{
+					{
+						Name: extraReleaseName,
+						Jobs: []models.AdditionalJob{
+							{Name: "dummy-smoke-tests"},
+							{
+								Name: "smoke_tests",
+								Properties: map[string]interface{}{
+									"bpm": map[string]interface{}{"enabled": false},
+									"smoke_tests": map[string]interface{}{
+										"api": "(( .properties.smoke_tests_api.value ))",
+									},
+								},
+							},
+						},
+					},
+				}
+				updated, err := yaml.Marshal(&m)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
+
+				kilnfile = cargo.Kilnfile{
+					ReleaseSources: []cargo.ReleaseSourceConfig{
+						{Type: "s3", Bucket: "fake-bucket", Region: "us-west-1", PathTemplate: "fake-path-template"},
+					},
+				}
+				kilnfileLock = cargo.KilnfileLock{
+					Releases: []cargo.BOSHReleaseTarballLock{
+						{Name: extraReleaseName, Version: extraReleaseVersion, RemoteSource: "fake-bucket"},
+					},
+				}
+				opts = BakeOptions{
+					SkipFetch:         true,
+					ReleasesDirectory: filepath.Join(inputPath, "releases"),
+				}
+
+				Expect(os.MkdirAll(opts.ReleasesDirectory, 0755)).To(Succeed())
+				stubTarball := filepath.Join(opts.ReleasesDirectory, extraReleaseName+"-"+extraReleaseVersion+".tgz")
+				Expect(os.WriteFile(stubTarball, []byte("stub smoke-tests tarball"), 0644)).To(Succeed())
+			})
+
+			It("marshals per-job properties through to the generated runtime-config", func() {
+				rcPath := filepath.Join(outputPath, "runtime_configs", "k8s-tile-test-pkgr.yml")
+				rcData, err := os.ReadFile(rcPath)
+				Expect(err).NotTo(HaveOccurred())
+				var rc models.RuntimeConfigOuter
+				Expect(yaml.Unmarshal(rcData, &rc)).To(Succeed())
+				var inner models.RuntimeConfigInner
+				Expect(yaml.Unmarshal([]byte(rc.RuntimeConfig), &inner)).To(Succeed())
+
+				addon := inner.Addons[0]
+				Expect(addon.Jobs).To(HaveLen(3))
+
+				By("keeping the no-properties job empty")
+				dummyJob := addon.Jobs[1]
+				Expect(dummyJob.Name).To(Equal("dummy-smoke-tests"))
+				Expect(dummyJob.Release).To(Equal(extraReleaseName))
+				Expect(dummyJob.Properties).To(BeEmpty())
+
+				By("round-tripping the nested properties block intact")
+				smokeJob := addon.Jobs[2]
+				Expect(smokeJob.Name).To(Equal("smoke_tests"))
+				Expect(smokeJob.Release).To(Equal(extraReleaseName))
+				smokeProps, ok := smokeJob.Properties["smoke_tests"].(map[string]interface{})
+				Expect(ok).To(BeTrue(), "smoke_tests key should be a nested map")
+				Expect(smokeProps["api"]).To(Equal("(( .properties.smoke_tests_api.value ))"))
+				bpmProps, ok := smokeJob.Properties["bpm"].(map[string]interface{})
+				Expect(ok).To(BeTrue(), "bpm key should be a nested map")
+				Expect(bpmProps["enabled"]).To(BeFalse())
+			})
+		})
+
+		When("the tile base.yml declares post_install_hooks", func() {
+			BeforeEach(func() {
+				baseYMLPath := filepath.Join(inputPath, "base.yml")
+				raw, err := os.ReadFile(baseYMLPath)
+				Expect(err).NotTo(HaveOccurred())
+				var m models.Metadata
+				Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
+				m.PostInstallHooks = []models.HookDeclaration{
+					{
+						Name:    "smoke-tests-post-install-hook",
+						Command: "/var/vcap/jobs/smoke_tests/bin/run",
+					},
+				}
+				updated, err := yaml.Marshal(&m)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
+			})
+
+			It("synthesizes the hook adapter job into the auto-generated release", func() {
+				releaseVersion := subject.GetReleaseVersion()
+				tarballPath := filepath.Join(outputPath, "releases", "k8s-tile-test-pkg-"+releaseVersion+".tgz")
+				Expect(tarballPath).To(BeAnExistingFile())
+
+				jobDir := filepath.Join(boshReleasePath, "jobs", "k8s-tile-test-smoke-tests-post-install-hook")
+				Expect(jobDir).To(BeADirectory())
+
+				specPath := filepath.Join(jobDir, "spec")
+				Expect(specPath).To(BeAnExistingFile())
+				specData, err := os.ReadFile(specPath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(specData)).To(ContainSubstring("name: k8s-tile-test-smoke-tests-post-install-hook"))
+				Expect(string(specData)).To(ContainSubstring("hooks-post-install.erb: bin/hooks/post-install"))
+
+				templatePath := filepath.Join(jobDir, "templates", "hooks-post-install.erb")
+				Expect(templatePath).To(BeAnExistingFile())
+				templateData, err := os.ReadFile(templatePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(templateData)).To(ContainSubstring("exec '/var/vcap/jobs/smoke_tests/bin/run'"))
+			})
+
+			It("extends the runtime-config addon with the synthesized job", func() {
+				rcPath := filepath.Join(outputPath, "runtime_configs", "k8s-tile-test-pkgr.yml")
+				rcData, err := os.ReadFile(rcPath)
+				Expect(err).NotTo(HaveOccurred())
+				var rc models.RuntimeConfigOuter
+				Expect(yaml.Unmarshal(rcData, &rc)).To(Succeed())
+				var inner models.RuntimeConfigInner
+				Expect(yaml.Unmarshal([]byte(rc.RuntimeConfig), &inner)).To(Succeed())
+
+				addon := inner.Addons[0]
+				Expect(addon.Jobs).To(HaveLen(2))
+				hookJob := addon.Jobs[1]
+				Expect(hookJob.Name).To(Equal("k8s-tile-test-smoke-tests-post-install-hook"))
+				Expect(hookJob.Release).To(Equal("k8s-tile-test-pkg"))
+			})
+		})
+
+		Context("when Kilnfile.lock is present alongside hook declarations", func() {
+			BeforeEach(func() {
+				baseYMLPath := filepath.Join(inputPath, "base.yml")
+				raw, err := os.ReadFile(baseYMLPath)
+				Expect(err).NotTo(HaveOccurred())
+				var m models.Metadata
+				Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
+				m.PostInstallHooks = []models.HookDeclaration{
+					{
+						Name:    "smoke-tests-post-install-hook",
+						Command: "/var/vcap/jobs/smoke_tests/bin/run",
+					},
+				}
+				updated, err := yaml.Marshal(&m)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
+
+				lockData := `---
+releases:
+- name: some-release
+  version: "1.2.3"
+  sha1: some-sha
+`
+				err = os.WriteFile(filepath.Join(inputPath, "Kilnfile.lock"), []byte(lockData), 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("still synthesizes the registry-data and hook adapter jobs into the auto-generated release", func() {
+				jobDir := filepath.Join(boshReleasePath, "jobs", "k8s-tile-test-smoke-tests-post-install-hook")
+				Expect(jobDir).To(BeADirectory())
+
+				specPath := filepath.Join(jobDir, "spec")
+				Expect(specPath).To(BeAnExistingFile())
+				
+				registryDataDir := filepath.Join(boshReleasePath, "jobs", "registry-data")
+				Expect(registryDataDir).To(BeADirectory())
+			})
+		})
+	})
+
+	When("a hook declaration is missing name or command", func() {
+		BeforeEach(func() {
+			baseYMLPath := filepath.Join(inputPath, "base.yml")
+			raw, err := os.ReadFile(baseYMLPath)
+			Expect(err).NotTo(HaveOccurred())
+			var m models.Metadata
+			Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
+			m.PostInstallHooks = []models.HookDeclaration{
+				{Name: "missing-command"},
+			}
+			updated, err := yaml.Marshal(&m)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
+		})
+
+		It("returns a clear error", func() {
+			Expect(err).To(MatchError(ContainSubstring("post-install hook declaration missing name or command")))
+		})
+	})
+
+	When("the tile metadata version is too old", func() {
 				BeforeEach(func() {
 					m := models.Metadata{
 						Name:                     "k8s-tile-test",
@@ -554,7 +920,7 @@ consumes:
 					}
 					yamlData, err := yaml.Marshal(&m)
 					Expect(err).NotTo(HaveOccurred())
-					err = os.WriteFile(path.Join(inputPath, "base.yml"), yamlData, 0644) // 0644 sets file permissions
+					err = os.WriteFile(path.Join(inputPath, "base.yml"), yamlData, 0644)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -585,7 +951,7 @@ consumes:
 					}
 					yamlData, err := yaml.Marshal(&m)
 					Expect(err).NotTo(HaveOccurred())
-					err = os.WriteFile(path.Join(inputPath, "base.yml"), yamlData, 0644) // 0644 sets file permissions
+					err = os.WriteFile(path.Join(inputPath, "base.yml"), yamlData, 0644)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -684,7 +1050,7 @@ consumes:
 
 				subject := NewBaker()
 				subject.SetWriter(GinkgoWriter)
-				err = subject.Bake(inputPath)
+				err = subject.Bake(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, BakeOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				tarball, err := subject.GetReleaseTarball()
@@ -703,7 +1069,7 @@ consumes:
 
 				subject2 := NewBaker()
 				subject2.SetWriter(GinkgoWriter)
-				err = subject2.BakeFromLockfile(inputPath, releaseLock, cachedTarball)
+				err = subject2.BakeFromLockfile(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, releaseLock, cachedTarball, BakeOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				outputPath := path.Join(inputPath, ".carvel-tile")
@@ -730,7 +1096,7 @@ consumes:
 				}
 
 				subject := NewBaker()
-				err = subject.BakeFromLockfile(inputPath, releaseLock, "/nonexistent/tarball.tgz")
+				err = subject.BakeFromLockfile(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, releaseLock, "/nonexistent/tarball.tgz", BakeOptions{})
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("does not match tile-derived name"))
 			})
@@ -746,13 +1112,46 @@ consumes:
 				Expect(err).NotTo(HaveOccurred())
 
 				subject := NewBaker()
-				err = subject.Bake(inputPath)
+				err = subject.Bake(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, BakeOptions{})
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("missing required field 'name'"))
 
-				err = subject.BakeFromLockfile(inputPath, cargo.BOSHReleaseTarballLock{}, "/nonexistent/tarball.tgz")
+				err = subject.BakeFromLockfile(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, cargo.BOSHReleaseTarballLock{}, "/nonexistent/tarball.tgz", BakeOptions{})
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("missing required field 'name'"))
+			})
+		})
+
+		When("a hook declaration is missing name or command", func() {
+			It("returns a clear error instead of generating a broken runtime-config addon job", func() {
+				inputPath, err := os.MkdirTemp("", "lockfile-bad-hook-*")
+				Expect(err).NotTo(HaveOccurred())
+				inputPath += "/tile"
+				defer func() { _ = os.RemoveAll(filepath.Dir(inputPath)) }()
+
+				err = os.CopyFS(inputPath, os.DirFS("testdata/sample-tile"))
+				Expect(err).NotTo(HaveOccurred())
+
+				baseYMLPath := filepath.Join(inputPath, "base.yml")
+				raw, err := os.ReadFile(baseYMLPath)
+				Expect(err).NotTo(HaveOccurred())
+				var m models.Metadata
+				Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
+				m.PostInstallHooks = []models.HookDeclaration{
+					{Name: "missing-command"},
+				}
+				updated, err := yaml.Marshal(&m)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
+
+				releaseLock := cargo.BOSHReleaseTarballLock{
+					Name:    "k8s-tile-test-pkg",
+					Version: "0.1.1",
+				}
+
+				subject := NewBaker()
+				err = subject.BakeFromLockfile(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, releaseLock, "/nonexistent/tarball.tgz", BakeOptions{})
+				Expect(err).To(MatchError(ContainSubstring("post-install hook declaration missing name or command")))
 			})
 		})
 	})
@@ -796,7 +1195,7 @@ consumes:
 
 			uploadBaker := NewBaker()
 			uploadBaker.SetWriter(GinkgoWriter)
-			err = uploadBaker.Bake(inputPath)
+			err = uploadBaker.Bake(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, BakeOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			uploadTarball, err := uploadBaker.GetReleaseTarball()
@@ -811,7 +1210,7 @@ consumes:
 
 			publishBaker := NewBaker()
 			publishBaker.SetWriter(GinkgoWriter)
-			err = publishBaker.BakeFromLockfile(inputPath, releaseLock, cachedTarball)
+			err = publishBaker.BakeFromLockfile(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, releaseLock, cachedTarball, BakeOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			publishTile := filepath.Join(tmpRoot, "publish.pivotal")
@@ -822,7 +1221,7 @@ consumes:
 
 			rebakeBaker := NewBaker()
 			rebakeBaker.SetWriter(GinkgoWriter)
-			err = rebakeBaker.BakeFromLockfile(inputPath, releaseLock, cachedTarball)
+			err = rebakeBaker.BakeFromLockfile(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, releaseLock, cachedTarball, BakeOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			rebakeTile := filepath.Join(tmpRoot, "rebake.pivotal")
@@ -997,3 +1396,44 @@ consumes:
 		})
 	})
 })
+
+func TestShellQuoteCommand(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		command string
+		want    string
+	}{
+		{
+			name:    "single word",
+			command: "/var/vcap/jobs/smoke_tests/bin/run",
+			want:    `'/var/vcap/jobs/smoke_tests/bin/run'`,
+		},
+		{
+			name:    "command with args",
+			command: "/var/vcap/jobs/smoke_tests/bin/run --foo bar",
+			want:    `'/var/vcap/jobs/smoke_tests/bin/run' '--foo' 'bar'`,
+		},
+		{
+			name:    "a hostile command is neutralized, not interpreted",
+			command: "/bin/true; rm -rf /",
+			want: `'/bin/true;' 'rm' '-rf' '/'`,
+		},
+		{
+			name:    "command substitution is neutralized",
+			command: "/bin/true $(whoami) `whoami`",
+			want:    "'/bin/true' '$(whoami)' '`whoami`'",
+		},
+		{
+			name:    "embedded single quote is escaped, not closed early",
+			command: `/bin/echo it's`,
+			want:    `'/bin/echo' 'it'"'"'s'`,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shellQuoteCommand(tt.command)
+			if got != tt.want {
+				t.Errorf("shellQuoteCommand(%q) = %q, want %q", tt.command, got, tt.want)
+			}
+		})
+	}
+}

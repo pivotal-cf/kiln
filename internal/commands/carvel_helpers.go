@@ -41,12 +41,16 @@ func findArtifactorySource(kilnfile cargo.Kilnfile) (cargo.ReleaseSourceConfig, 
 	return cargo.ReleaseSourceConfig{}, fmt.Errorf("no artifactory release source found in Kilnfile")
 }
 
-func downloadCarvelRelease(logger *log.Logger, kilnfile cargo.Kilnfile, lock cargo.KilnfileLock, destDir string) (string, error) {
+func downloadCarvelRelease(logger *log.Logger, kilnfile cargo.Kilnfile, lock cargo.KilnfileLock, destDir string, releaseName string) (string, error) {
 	if len(lock.Releases) == 0 {
 		return "", fmt.Errorf("no releases found in Kilnfile.lock")
 	}
 
-	releaseLock := lock.Releases[0]
+	releaseLock, err := lock.FindBOSHReleaseWithName(releaseName)
+	if err != nil {
+		return "", fmt.Errorf("release %q not found in Kilnfile.lock", releaseName)
+	}
+
 	sources := component.NewReleaseSourceRepo(kilnfile)
 
 	logger.Printf("Downloading %s %s from %s", releaseLock.Name, releaseLock.Version, releaseLock.RemoteSource)
@@ -64,23 +68,42 @@ func downloadCarvelRelease(logger *log.Logger, kilnfile cargo.Kilnfile, lock car
 }
 
 func writeStandardKilnfileLock(lockfilePath string, releaseName, releaseVersion, remotePath, remoteSourceID, sha1 string) error {
-	lock := cargo.KilnfileLock{
-		Releases: []cargo.BOSHReleaseTarballLock{
-			{
-				Name:         releaseName,
-				Version:      releaseVersion,
-				RemotePath:   remotePath,
-				RemoteSource: remoteSourceID,
-				SHA1:         sha1,
-			},
-		},
-		Stemcell: cargo.Stemcell{
-			OS:      "ubuntu-jammy",
-			Version: "1.446",
-		},
+	var lock cargo.KilnfileLock
+
+	data, err := os.ReadFile(lockfilePath)
+	switch {
+	case err == nil:
+		if err := yaml.Unmarshal(data, &lock); err != nil {
+			return fmt.Errorf("failed to parse existing Kilnfile.lock: %w", err)
+		}
+	case os.IsNotExist(err):
+		// No existing lockfile to preserve — fine, we're creating one.
+	default:
+		// A permissions/IO error is not the same as "no lockfile exists yet";
+		// treating it that way would silently overwrite a lockfile we simply
+		// failed to read, losing whatever was in it.
+		return fmt.Errorf("failed to read existing Kilnfile.lock: %w", err)
 	}
 
-	data, err := yaml.Marshal(&lock)
+	newEntry := cargo.BOSHReleaseTarballLock{
+		Name:         releaseName,
+		Version:      releaseVersion,
+		RemotePath:   remotePath,
+		RemoteSource: remoteSourceID,
+		SHA1:         sha1,
+	}
+	if err := (&lock).UpdateBOSHReleaseTarballLockWithName(releaseName, newEntry); err != nil {
+		return fmt.Errorf("failed to update Kilnfile.lock: %w", err)
+	}
+
+	if lock.Stemcell.OS == "" {
+		lock.Stemcell = cargo.Stemcell{
+			OS:      "ubuntu-jammy",
+			Version: "1.446",
+		}
+	}
+
+	data, err = yaml.Marshal(&lock)
 	if err != nil {
 		return fmt.Errorf("failed to marshal Kilnfile.lock: %w", err)
 	}

@@ -20,3 +20,8 @@ env.yml
 vendor
 
 internal/acceptance/bake/fixtures/bake_records/*.json
+
+# Locally-built kiln binaries — accidentally committed in 8a183a0f, must
+# never be tracked (compiled artifacts, not source).
+/kiln
+/.bin/

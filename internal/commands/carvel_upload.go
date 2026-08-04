@@ -27,10 +27,12 @@ type CarvelUpload struct {
 
 type CarvelUploadOptions struct {
 	flags.Standard
-	SourceDirectory string `short:"s" long:"source-directory" description:"path to the Carvel tile source directory (defaults to current directory)"`
-	OutputFile      string `short:"o" long:"output-file"      description:"also bake the tile to this path"`
-	PathTemplate    string `          long:"path-template"     description:"remote path template override" default:"bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz"`
-	Verbose         bool   `short:"v" long:"verbose"           description:"enable verbose output"`
+	SourceDirectory   string `short:"s" long:"source-directory" description:"path to the Carvel tile source directory (defaults to current directory)"`
+	OutputFile        string `short:"o" long:"output-file"      description:"also bake the tile to this path"`
+	PathTemplate      string `          long:"path-template"     description:"remote path template override" default:"bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz"`
+	Verbose           bool   `short:"v" long:"verbose"           description:"enable verbose output"`
+	SkipFetch         bool   `short:"sfr" long:"skip-fetch"        description:"skip fetching additional releases (assumes they are already in the releases directory)"`
+	ReleasesDirectory string `short:"rd"  long:"releases-directory" description:"path to the releases directory" default:"releases"`
 }
 
 func NewCarvelUpload(outLogger, errLogger *log.Logger) CarvelUpload {
@@ -58,9 +60,17 @@ func (c CarvelUpload) Execute(args []string) error {
 	}
 
 	c.Options.Kilnfile = kilnfilePath
-	kilnfile, err := loadKilnfileOnly(c.Options.Standard)
+	kilnfile, kilnfileLock, err := c.Options.LoadKilnfiles(nil, nil)
 	if err != nil {
-		return fmt.Errorf("failed to load Kilnfile: %w", err)
+		kf, kfErr := loadKilnfileOnly(c.Options.Standard)
+		if kfErr != nil {
+			return fmt.Errorf("failed to load Kilnfile: %w", kfErr)
+		}
+		kilnfile = kf
+
+		if _, lockStatErr := os.Stat(c.Options.KilnfileLockPath()); lockStatErr == nil {
+			return fmt.Errorf("failed to load Kilnfile.lock: %w", err)
+		}
 	}
 
 	artConfig, err := findArtifactorySource(kilnfile)
@@ -74,7 +84,10 @@ func (c CarvelUpload) Execute(args []string) error {
 	}
 
 	c.outLogger.Printf("Baking Carvel tile from %s", sourcePath)
-	err = baker.Bake(sourcePath)
+	err = baker.Bake(sourcePath, kilnfile, kilnfileLock, carvel.BakeOptions{
+		SkipFetch:         c.Options.SkipFetch,
+		ReleasesDirectory: c.Options.ReleasesDirectory,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to prepare Carvel tile: %w", err)
 	}

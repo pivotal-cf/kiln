@@ -18,5 +18,23 @@ type Metadata struct {
 	CompatibleKubernetesDistributions []ProductVersion         `yaml:"compatible_kubernetes_distributions,omitempty"`
 	SupportsParallelDeploys           bool                     `yaml:"supports_parallel_deploys,omitempty"`
 	RequiresProductVersions           []RequiredProductVersion `yaml:"requires_product_versions,omitempty"`
-	UsesKubernetesFeatures            []KubernetesFeature      `yaml:"uses_kubernetes_features,omitempty"`
+    UsesKubernetesFeatures            []KubernetesFeature      `yaml:"uses_kubernetes_features,omitempty"`
+	AdditionalReleases []AdditionalRelease `yaml:"additional_releases,omitempty"`
+	PreInstallHooks  []HookDeclaration `yaml:"pre_install_hooks,omitempty"`
+	PostInstallHooks []HookDeclaration `yaml:"post_install_hooks,omitempty"`
+}
+
+type HookDeclaration struct {
+	Name string `yaml:"name"`
+	Command string `yaml:"command"`
+}
+
+type AdditionalRelease struct {
+	Name string `yaml:"name"`
+	Jobs []AdditionalJob `yaml:"jobs"`
+}
+
+type AdditionalJob struct {
+	Name       string                 `yaml:"name"`
+	Properties map[string]interface{} `yaml:"properties,omitempty"`
 }
