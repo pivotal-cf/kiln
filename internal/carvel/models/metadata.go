@@ -18,4 +18,5 @@ type Metadata struct {
 	CompatibleKubernetesDistributions []ProductVersion         `yaml:"compatible_kubernetes_distributions,omitempty"`
 	SupportsParallelDeploys           bool                     `yaml:"supports_parallel_deploys,omitempty"`
 	RequiresProductVersions           []RequiredProductVersion `yaml:"requires_product_versions,omitempty"`
+	UsesKubernetesFeatures            []KubernetesFeature      `yaml:"uses_kubernetes_features,omitempty"`
 }

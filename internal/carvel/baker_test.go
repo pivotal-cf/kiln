@@ -418,6 +418,11 @@ consumes:
 					Expect(outMeta.RequiresProductVersions[0].Name).To(Equal("some-other-product"))
 					Expect(outMeta.RequiresProductVersions[0].Version).To(Equal(">=1.0.0"))
 					Expect(outMeta.RequiresProductVersions[0].Optional).To(BeTrue())
+					Expect(outMeta.UsesKubernetesFeatures).To(HaveLen(2))
+					Expect(outMeta.UsesKubernetesFeatures[0].Name).To(Equal("gpu-scheduling"))
+					Expect(outMeta.UsesKubernetesFeatures[0].Optional).To(BeFalse())
+					Expect(outMeta.UsesKubernetesFeatures[1].Name).To(Equal("node-local-storage"))
+					Expect(outMeta.UsesKubernetesFeatures[1].Optional).To(BeTrue())
 				})
 				It("creates empty instance_group and jobs directories", func() {
 					Expect(filepath.Join(outputPath, "instance_groups")).To(BeADirectory())
@@ -598,6 +603,51 @@ consumes:
 					Expect(err).NotTo(HaveOccurred())
 					Expect(outMeta.SupportsParallelDeploys).To(BeFalse())
 					Expect(outMeta.RequiresProductVersions).To(BeEmpty())
+				})
+			})
+			When("the tile declares no kubernetes features", func() {
+				// Ops Manager rejects uses_kubernetes_features on a tile that is not a
+				// kubernetes consumer, so an absent block must stay absent rather than
+				// baking out as an empty list.
+				BeforeEach(func() {
+					m := models.Metadata{
+						Name:                     "k8s-tile-test",
+						Label:                    "test tile",
+						IconImage:                "$( icon )",
+						MetadataVersion:          "3.2.0",
+						MinimumVersionForUpgrade: "0.0.0",
+						ProductVersion:           "$( version )",
+						Rank:                     1,
+						Serial:                   false,
+						PropertyBlueprints: []string{
+							`$( property "database_name" )`,
+							`$( property "admin_password" )`,
+						},
+						FormTypes:                         []string{`$( form "db_props" )`},
+						Variables:                         []proofing.Variable{},
+						PackageInstalls:                   []string{`$( package "test-install" )`},
+						CompatibleKubernetesDistributions: []models.ProductVersion{{Name: "k0s", Version: ">0.0.0"}},
+					}
+					yamlData, err := yaml.Marshal(&m)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(yamlData)).NotTo(ContainSubstring("uses_kubernetes_features"))
+					err = os.WriteFile(path.Join(inputPath, "base.yml"), yamlData, 0644)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("omits uses_kubernetes_features from the baked metadata", func() {
+					Expect(err).NotTo(HaveOccurred())
+
+					yamlData, readErr := os.ReadFile(path.Join(outputPath, "base.yml"))
+					Expect(readErr).NotTo(HaveOccurred())
+					Expect(string(yamlData)).NotTo(ContainSubstring("uses_kubernetes_features"))
+
+					outMeta := models.MetadataOut{}
+					Expect(yaml.Unmarshal(yamlData, &outMeta)).To(Succeed())
+					Expect(outMeta.UsesKubernetesFeatures).To(BeEmpty())
+					// the rest of the kubernetes metadata is unaffected
+					Expect(outMeta.RequiresKubernetes).To(BeTrue())
+					Expect(outMeta.CompatibleKubernetesDistributions).To(HaveLen(1))
 				})
 			})
 		})
