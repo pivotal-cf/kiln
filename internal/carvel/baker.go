@@ -1,6 +1,7 @@
 package carvel
 
 import (
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -16,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/pivotal-cf/kiln/internal/carvel/models"
+	"github.com/pivotal-cf/kiln/internal/component"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
 
@@ -23,12 +25,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type BakeOptions struct {
+	SkipFetch         bool
+	ReleasesDirectory string
+}
+
 // Baker transforms an imgpkg bundle and tile metadata into a BOSH release
 // and kiln-compatible tile structure that can be baked into a .pivotal file.
 type Baker interface {
-	Bake(source string) error
-	BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTarballLock, localTarball string) error
+	Bake(source string, kilnfile cargo.Kilnfile, kilnfileLock cargo.KilnfileLock, opts BakeOptions) error
+	BakeFromLockfile(source string, kilnfile cargo.Kilnfile, kilnfileLock cargo.KilnfileLock, releaseLock cargo.BOSHReleaseTarballLock, localTarball string, opts BakeOptions) error
 	KilnBake(destination string) error
+	ParseMetadata(source string) error
 	GetName() string
 	GetBoshReleaseName() string
 	// GetVersion returns the product version from base.yml or the version file.
@@ -76,7 +84,7 @@ func (b *baker) KilnBake(destination string) error {
 	return nil
 }
 
-func (b *baker) Bake(source string) error {
+func (b *baker) Bake(source string, kilnfile cargo.Kilnfile, kilnfileLock cargo.KilnfileLock, opts BakeOptions) error {
 	b.source = source
 	b.destination = path.Join(source, ".carvel-tile")
 
@@ -121,7 +129,7 @@ func (b *baker) Bake(source string) error {
 	}
 
 	b.progress("Generating tile layout in " + b.destination)
-	err = b.generateOutputTile()
+	err = b.generateOutputTile(kilnfile, kilnfileLock, opts)
 	if err != nil {
 		b.log(err.Error())
 		return err
@@ -130,7 +138,7 @@ func (b *baker) Bake(source string) error {
 	return nil
 }
 
-func (b *baker) BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTarballLock, localTarball string) error {
+func (b *baker) BakeFromLockfile(source string, kilnfile cargo.Kilnfile, kilnfileLock cargo.KilnfileLock, releaseLock cargo.BOSHReleaseTarballLock, localTarball string, opts BakeOptions) error {
 	b.source = source
 	b.destination = path.Join(source, ".carvel-tile")
 
@@ -210,6 +218,16 @@ func (b *baker) BakeFromLockfile(source string, releaseLock cargo.BOSHReleaseTar
 		return fmt.Errorf("failed to copy cached release tarball: %w", err)
 	}
 
+	// We also need to fetch any additional releases when baking from lockfile,
+	// otherwise the final .pivotal assembly will fail because it looks for them.
+	if len(b.metadata.AdditionalReleases) > 0 {
+		b.progress("  Fetching additional BOSH releases")
+		err = b.fetchAdditionalReleases(kilnfile, kilnfileLock, opts)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -224,8 +242,69 @@ func (b *baker) GetReleaseTarball() (string, error) {
 	return tarball, nil
 }
 
+func (b *baker) ParseMetadata(source string) error {
+	b.source = source
+	baseYMLPath := path.Join(source, "base.yml")
+	raw, err := os.ReadFile(baseYMLPath)
+	if err != nil {
+		return fmt.Errorf("failed to read base.yml: %w", err)
+	}
+	if err := yaml.Unmarshal(raw, &b.metadata); err != nil {
+		return fmt.Errorf("failed to parse base.yml: %w", err)
+	}
+	return nil
+}
+
 func (b *baker) GetName() string {
 	return b.metadata.Name
+}
+
+func (b *baker) hookJobName(hookName string) string {
+	prefix := b.metadata.Name + "-"
+	if strings.HasPrefix(hookName, prefix) {
+		return hookName
+	}
+	return prefix + hookName
+}
+
+// shellQuoteCommand splits a hook's declared command on whitespace and
+// individually single-quotes each word before rejoining them, so the
+// generated hook script's `exec <command>` line safely execs the intended
+// binary/args even if a word contains shell metacharacters (;, $(), `, etc.)
+// — accidental or otherwise. base.yml authors still write one plain string
+// (e.g. "/var/vcap/jobs/smoke_tests/bin/run --foo bar"); the shell just never
+// gets a chance to interpret any of it.
+func shellQuoteCommand(command string) string {
+	words := strings.Fields(command)
+	quoted := make([]string, len(words))
+	for i, w := range words {
+		quoted[i] = shellQuoteWord(w)
+	}
+	return strings.Join(quoted, " ")
+}
+
+// shellQuoteWord wraps a single word in POSIX single quotes, escaping any
+// embedded single quote as '"'"' (end quoting, a literal single quote via a
+// double-quoted segment, then resume quoting).
+func shellQuoteWord(word string) string {
+	return "'" + strings.ReplaceAll(word, "'", `'"'"'`) + "'"
+}
+
+// hookModeGroup pairs a hook mode with its declared hooks. Shared by
+// generateBoshReleaseDir (job synthesis) and generateRuntimeConfigs
+// (validation + addon job references) so both report the same
+// mode-specific error for a malformed hook, regardless of which bake path
+// (Bake vs. BakeFromLockfile) is in use.
+type hookModeGroup struct {
+	mode  string
+	hooks []models.HookDeclaration
+}
+
+func (b *baker) hookModeGroups() []hookModeGroup {
+	return []hookModeGroup{
+		{mode: "pre-install", hooks: b.metadata.PreInstallHooks},
+		{mode: "post-install", hooks: b.metadata.PostInstallHooks},
+	}
 }
 
 func (b *baker) GetBoshReleaseName() string {
@@ -503,6 +582,49 @@ files:
 		return err
 	}
 
+	for _, group := range b.hookModeGroups() {
+		for _, hook := range group.hooks {
+			if hook.Name == "" || hook.Command == "" {
+				return fmt.Errorf("%s hook declaration missing name or command", group.mode)
+			}
+
+			jobName := b.hookJobName(hook.Name)
+
+			genCmd := exec.Command("bosh", "generate-job", "--dir="+dirName, jobName)
+			b.log("executing " + genCmd.String())
+			out, err := genCmd.CombinedOutput()
+			b.log("output: " + string(out))
+			if err != nil {
+				return err
+			}
+
+			templateName := "hooks-" + group.mode + ".erb"
+			jobSpec := fmt.Sprintf(`---
+name: %s
+templates:
+  %s: bin/hooks/%s
+packages: []
+properties: {}
+`, jobName, templateName, group.mode)
+			if err = os.WriteFile(path.Join(dirName, "jobs", jobName, "spec"), []byte(jobSpec), 0644); err != nil {
+				return err
+			}
+
+			if err = os.MkdirAll(path.Join(dirName, "jobs", jobName, "templates"), 0755); err != nil {
+				return err
+			}
+			templateContent := fmt.Sprintf("#!/bin/bash\nset -euo pipefail\nexec %s\n", shellQuoteCommand(hook.Command))
+			err = os.WriteFile(
+				path.Join(dirName, "jobs", jobName, "templates", templateName),
+				[]byte(templateContent),
+				0644,
+			)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -601,7 +723,7 @@ spec:
 `
 }
 
-func (b *baker) generateOutputTile() error {
+func (b *baker) generateOutputTile(kilnfile cargo.Kilnfile, kilnfileLock cargo.KilnfileLock, opts BakeOptions) error {
 	err := os.RemoveAll(b.destination)
 	if err != nil {
 		return err
@@ -640,6 +762,14 @@ func (b *baker) generateOutputTile() error {
 		return err
 	}
 
+	if len(b.metadata.AdditionalReleases) > 0 {
+		b.progress("  Fetching additional BOSH releases")
+		err = b.fetchAdditionalReleases(kilnfile, kilnfileLock, opts)
+		if err != nil {
+			return err
+		}
+	}
+
 	b.progress("  Creating BOSH release tarball (this may take a while)...")
 	err = b.createBoshRelease()
 	if err != nil {
@@ -676,9 +806,11 @@ func (b *baker) generateBaseYaml() error {
 		`$( runtime_config "` + b.metadata.Name + `-pkgr" )`,
 	}
 
-	// we will use the tile name and version as the bosh release name and version.
 	meta.Releases = []string{
 		`$( release "` + b.GetBoshReleaseName() + `" )`,
+	}
+	for _, ar := range b.metadata.AdditionalReleases {
+		meta.Releases = append(meta.Releases, `$( release "`+ar.Name+`" )`)
 	}
 
 	yamlData, err := yaml.Marshal(&meta)
@@ -726,7 +858,7 @@ func (b *baker) generateRuntimeConfigs() error {
 		return err
 	}
 
-	registryDataProps := map[string]models.PackageInstallProps{}
+	registryDataProps := map[string]interface{}{}
 
 	// we need one PackageInstall for each entry in the metadata.
 	for _, entry := range b.metadata.PackageInstalls {
@@ -793,10 +925,31 @@ func (b *baker) generateRuntimeConfigs() error {
 		registryDataJob.Consumes = consumesMap
 	}
 
+	releases := []string{`$( release "` + b.GetBoshReleaseName() + `" )`}
+	addonJobs := []models.Job{registryDataJob}
+
+	for _, group := range b.hookModeGroups() {
+		for _, hook := range group.hooks {
+			if hook.Name == "" || hook.Command == "" {
+				return fmt.Errorf("%s hook declaration missing name or command", group.mode)
+			}
+			addonJobs = append(addonJobs, models.Job{Name: b.hookJobName(hook.Name), Release: b.GetBoshReleaseName()})
+		}
+	}
+
+	for _, ar := range b.metadata.AdditionalReleases {
+		releases = append(releases, `$( release "`+ar.Name+`" )`)
+		for _, job := range ar.Jobs {
+			addonJobs = append(addonJobs, models.Job{
+				Name:       job.Name,
+				Release:    ar.Name,
+				Properties: job.Properties,
+			})
+		}
+	}
+
 	inner := models.RuntimeConfigInner{
-		Releases: []string{
-			`$( release "` + b.GetBoshReleaseName() + `" )`,
-		},
+		Releases: releases,
 		Addons: []models.Addon{
 			{
 				Name: b.metadata.Name + "-pkgr",
@@ -809,9 +962,7 @@ func (b *baker) generateRuntimeConfigs() error {
 						{Name: "install-packages", Release: "tanzu-content"},
 					},
 				},
-				Jobs: []models.Job{
-					registryDataJob,
-				},
+				Jobs: addonJobs,
 			},
 		},
 	}
@@ -854,6 +1005,89 @@ func (b *baker) generateJobFiles() error {
 	}
 
 	return nil
+}
+
+func (b *baker) fetchAdditionalReleases(kilnfile cargo.Kilnfile, kilnfileLock cargo.KilnfileLock, opts BakeOptions) error {
+	releasesDir := path.Join(b.destination, "releases")
+	if err := os.MkdirAll(releasesDir, 0755); err != nil {
+		return err
+	}
+	sources := component.NewReleaseSourceRepo(kilnfile)
+
+	for _, ar := range b.metadata.AdditionalReleases {
+		lockEntry, err := kilnfileLock.FindBOSHReleaseWithName(ar.Name)
+		if err != nil {
+			return fmt.Errorf("additional_releases entry %q not found in Kilnfile.lock — run `kiln fetch` or add it to Kilnfile", ar.Name)
+		}
+
+		dst := path.Join(releasesDir, ar.Name+"-"+lockEntry.Version+".tgz")
+		src := path.Join(opts.ReleasesDirectory, additionalReleaseLocalFilename(sources, ar.Name, lockEntry))
+
+		if opts.SkipFetch {
+			if _, err := os.Stat(src); err != nil {
+				return fmt.Errorf("release %q not found in %s and --skip-fetch was set: %w", ar.Name, opts.ReleasesDirectory, err)
+			}
+			if src != dst {
+				if err := copyFileContents(src, dst); err != nil {
+					return fmt.Errorf("failed to copy additional release %q: %w", ar.Name, err)
+				}
+			}
+			continue
+		}
+
+		if _, err := os.Stat(src); err == nil {
+			f, err := os.Open(src)
+			if err == nil {
+				h := sha1.New()
+				if _, err := io.Copy(h, f); err == nil {
+					actualSHA1 := hex.EncodeToString(h.Sum(nil))
+					if lockEntry.SHA1 == "" || actualSHA1 == lockEntry.SHA1 {
+						b.progress(fmt.Sprintf("  Release %s %s already exists locally with correct SHA1 — skipping fetch", lockEntry.Name, lockEntry.Version))
+						_ = f.Close()
+						if src != dst {
+							if err := copyFileContents(src, dst); err != nil {
+								return fmt.Errorf("failed to copy additional release %q: %w", ar.Name, err)
+							}
+						}
+						continue
+					}
+				}
+				_ = f.Close()
+			}
+		}
+
+		b.progress(fmt.Sprintf("  Fetching %s %s from %s", lockEntry.Name, lockEntry.Version, lockEntry.RemoteSource))
+		local, err := sources.DownloadRelease(opts.ReleasesDirectory, lockEntry)
+		if err != nil {
+			return fmt.Errorf("failed to download additional release %q: %w", ar.Name, err)
+		}
+		if lockEntry.SHA1 != "" && local.Lock.SHA1 != lockEntry.SHA1 {
+			return fmt.Errorf("downloaded release %q had incorrect SHA1 - expected %q, got %q", ar.Name, lockEntry.SHA1, local.Lock.SHA1)
+		}
+		if local.LocalPath != dst {
+			if err := copyFileContents(local.LocalPath, dst); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func additionalReleaseLocalFilename(sources component.ReleaseSourceList, name string, lockEntry cargo.BOSHReleaseTarballLock) string {
+	defaultName := name + "-" + lockEntry.Version + ".tgz"
+	if lockEntry.RemotePath == "" || lockEntry.RemoteSource == "" {
+		return defaultName
+	}
+	source, err := sources.FindByID(lockEntry.RemoteSource)
+	if err != nil {
+		return defaultName
+	}
+	switch source.Configuration().Type {
+	case cargo.BOSHReleaseTarballSourceTypeS3, cargo.BOSHReleaseTarballSourceTypeArtifactory:
+		return filepath.Base(lockEntry.RemotePath)
+	default:
+		return defaultName
+	}
 }
 
 func (b *baker) createBoshRelease() error {

@@ -108,7 +108,7 @@ var _ = Describe("CarvelPublish", func() {
 
 				b := carvel.NewBaker()
 				b.SetWriter(GinkgoWriter)
-				Expect(b.Bake(inputPath)).To(Succeed())
+				Expect(b.Bake(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, carvel.BakeOptions{})).To(Succeed())
 				tarball, err := b.GetReleaseTarball()
 				Expect(err).NotTo(HaveOccurred())
 				tarballData, err := os.ReadFile(tarball)

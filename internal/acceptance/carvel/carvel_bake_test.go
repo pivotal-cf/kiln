@@ -78,6 +78,10 @@ var _ = Describe("carvel bake command", func() {
 			"carvel", "bake",
 			"--source-directory", inputPath,
 			"--output-file", outputFile,
+			"--variable", "artifactory_host=fake-host",
+			"--variable", "artifactory_repo=fake-repo",
+			"--variable", "artifactory_username=fake-user",
+			"--variable", "artifactory_password=fake-pass",
 		}
 	})
 
@@ -193,7 +197,7 @@ var _ = Describe("carvel bake command", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(session).Should(gexec.Exit(1))
-				Eventually(session.Err).Should(gbytes.Say("base.yml"))
+				Eventually(session.Err).Should(gbytes.Say("Kilnfile"))
 			})
 		})
 	})

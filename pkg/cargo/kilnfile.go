@@ -45,14 +45,23 @@ func (k KilnfileLock) FindBOSHReleaseWithName(name string) (BOSHReleaseTarballLo
 	return BOSHReleaseTarballLock{}, errors.New("not found")
 }
 
-func (k KilnfileLock) UpdateBOSHReleaseTarballLockWithName(name string, lock BOSHReleaseTarballLock) error {
+func (k *KilnfileLock) UpdateBOSHReleaseTarballLockWithName(name string, lock BOSHReleaseTarballLock) error {
+	if name == "" {
+		return errors.New("name must not be empty")
+	}
+	// Force the entry's Name to match name, so a caller can't silently
+	// rename/insert a mismatched entry by passing a lock.Name that differs
+	// from the name being updated.
+	lock.Name = name
+
 	for i, r := range k.Releases {
 		if r.Name == name {
 			k.Releases[i] = lock
 			return nil
 		}
 	}
-	return errors.New("not found")
+	k.Releases = append(k.Releases, lock)
+	return nil
 }
 
 type BOSHReleaseTarballSpecification struct {

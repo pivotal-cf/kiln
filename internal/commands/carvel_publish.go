@@ -25,11 +25,13 @@ type CarvelPublish struct {
 
 type CarvelPublishOptions struct {
 	flags.Standard
-	SourceDirectory string `short:"s" long:"source-directory" description:"path to the Carvel tile source directory (defaults to current directory)"`
-	OutputFile      string `short:"o" long:"output-file"      description:"path to where the tile will be output" required:"true"`
-	Version         string `          long:"version"           description:"tile version for the final release"`
-	IsFinal         bool   `          long:"final"             description:"create a bake record for this build"`
-	Verbose         bool   `short:"v" long:"verbose"           description:"enable verbose output"`
+	SourceDirectory   string `short:"s" long:"source-directory" description:"path to the Carvel tile source directory (defaults to current directory)"`
+	OutputFile        string `short:"o" long:"output-file"      description:"path to where the tile will be output" required:"true"`
+	Version           string `          long:"version"           description:"tile version for the final release"`
+	IsFinal           bool   `          long:"final"             description:"create a bake record for this build"`
+	Verbose           bool   `short:"v" long:"verbose"           description:"enable verbose output"`
+	SkipFetch         bool   `short:"sfr" long:"skip-fetch"        description:"skip fetching additional releases (assumes they are already in the releases directory)"`
+	ReleasesDirectory string `short:"rd"  long:"releases-directory" description:"path to the releases directory" default:"releases"`
 }
 
 func NewCarvelPublish(outLogger, errLogger *log.Logger) CarvelPublish {
@@ -72,10 +74,21 @@ func (c CarvelPublish) Execute(args []string) error {
 		return fmt.Errorf("failed to load Kilnfiles: %w", err)
 	}
 
+	b := carvel.NewBaker()
+	if c.Options.Verbose {
+		b.SetWriter(os.Stdout)
+	}
+	if err := b.ParseMetadata(sourcePath); err != nil {
+		return fmt.Errorf("failed to parse metadata: %w", err)
+	}
+
 	if len(kilnfileLock.Releases) == 0 {
 		return fmt.Errorf("no releases found in Kilnfile.lock: run 'kiln carvel upload' first")
 	}
-	releaseLock := kilnfileLock.Releases[0]
+	releaseLock, err := kilnfileLock.FindBOSHReleaseWithName(b.GetBoshReleaseName())
+	if err != nil {
+		return fmt.Errorf("release %q not found in Kilnfile.lock", b.GetBoshReleaseName())
+	}
 
 	tmpDir, err := os.MkdirTemp("", "carvel-publish-*")
 	if err != nil {
@@ -84,17 +97,15 @@ func (c CarvelPublish) Execute(args []string) error {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	c.outLogger.Printf("Publishing Carvel tile from %s", sourcePath)
-	localTarball, err := downloadCarvelRelease(c.outLogger, kilnfile, kilnfileLock, tmpDir)
+	localTarball, err := downloadCarvelRelease(c.outLogger, kilnfile, kilnfileLock, tmpDir, b.GetBoshReleaseName())
 	if err != nil {
 		return fmt.Errorf("failed to download release from Artifactory: %w", err)
 	}
 
-	b := carvel.NewBaker()
-	if c.Options.Verbose {
-		b.SetWriter(os.Stdout)
-	}
-
-	err = b.BakeFromLockfile(sourcePath, releaseLock, localTarball)
+	err = b.BakeFromLockfile(sourcePath, kilnfile, kilnfileLock, releaseLock, localTarball, carvel.BakeOptions{
+		SkipFetch:         c.Options.SkipFetch,
+		ReleasesDirectory: c.Options.ReleasesDirectory,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to prepare Carvel tile from lockfile: %w", err)
 	}

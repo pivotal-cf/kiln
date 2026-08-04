@@ -9,6 +9,7 @@ import (
 	"github.com/pivotal-cf/jhanda"
 	"github.com/pivotal-cf/kiln/internal/carvel"
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
 type CarvelBake struct {
@@ -19,9 +20,12 @@ type CarvelBake struct {
 
 type CarvelBakeOptions struct {
 	flags.Standard
-	SourceDirectory string `short:"s" long:"source-directory" description:"path to the Carvel tile source directory (defaults to current directory)"`
-	OutputFile      string `short:"o" long:"output-file"      description:"path to where the tile will be output" required:"true"`
-	Verbose         bool   `short:"v" long:"verbose"           description:"enable verbose output"`
+	SourceDirectory   string `short:"s"   long:"source-directory"   description:"path to the Carvel tile source directory (defaults to current directory)"`
+	OutputFile        string `short:"o"   long:"output-file"        description:"path to where the tile will be output" required:"true"`
+	Verbose           bool   `short:"v"   long:"verbose"            description:"enable verbose output"`
+	ReleasesDirectory string `short:"rd"  long:"releases-directory" default:"releases" description:"path to a directory containing/receiving additional_releases tarballs"`
+	SkipFetchReleases bool   `short:"sfr" long:"skip-fetch"         description:"skip fetching additional_releases; expect them already present in --releases-directory"`
+	FromLockfile      bool   `long:"from-lockfile" description:"use a cached copy of the tile's OWN release from Kilnfile.lock instead of regenerating it from source (narrow, explicit opt-in — see docs)"`
 }
 
 func NewCarvelBake(outLogger, errLogger *log.Logger) CarvelBake {
@@ -54,18 +58,58 @@ func (c CarvelBake) Execute(args []string) error {
 	}
 
 	kilnfilePath := resolveKilnfilePath(c.Options.Kilnfile, sourcePath)
-	lockfilePath := kilnfilePath + ".lock"
-	if _, statErr := os.Stat(lockfilePath); statErr == nil {
-		c.Options.Kilnfile = kilnfilePath
-		kilnfile, kilnfileLock, loadErr := c.Options.LoadKilnfiles(nil, nil)
-		if loadErr != nil {
-			return fmt.Errorf("failed to load Kilnfiles: %w", loadErr)
-		}
+	c.Options.Kilnfile = kilnfilePath
 
+	var kilnfile cargo.Kilnfile
+	var kilnfileLock cargo.KilnfileLock
+
+	_, lockfileStatErr := os.Stat(c.Options.KilnfileLockPath())
+	lockfilePresent := lockfileStatErr == nil
+
+	kf, kl, loadErr := c.Options.LoadKilnfiles(nil, nil)
+	if loadErr == nil {
+		kilnfile = kf
+		kilnfileLock = kl
+	} else {
+		kfOnly, kfErr := loadKilnfileOnly(c.Options.Standard)
+		if kfErr != nil {
+			return fmt.Errorf("failed to load Kilnfile: %w", kfErr)
+		}
+		kilnfile = kfOnly
+
+		if lockfilePresent {
+			return fmt.Errorf("failed to load Kilnfile.lock: %w", loadErr)
+		} else if c.Options.FromLockfile {
+			return fmt.Errorf("failed to load Kilnfiles (required for --from-lockfile): %w", loadErr)
+		} else {
+			c.outLogger.Printf("No Kilnfile.lock found — proceeding without additional_releases support")
+		}
+	}
+
+	var useLockfile bool
+	if c.Options.FromLockfile {
+		useLockfile = true
+	} else if lockfilePresent && loadErr == nil {
+		if err := baker.ParseMetadata(sourcePath); err == nil {
+			if _, err := kilnfileLock.FindBOSHReleaseWithName(baker.GetBoshReleaseName()); err == nil {
+				useLockfile = true
+			}
+		}
+	}
+
+	if useLockfile {
 		if len(kilnfileLock.Releases) == 0 {
 			return fmt.Errorf("no releases found in Kilnfile.lock")
 		}
-		releaseLock := kilnfileLock.Releases[0]
+		
+		if err := baker.ParseMetadata(sourcePath); err != nil {
+			return fmt.Errorf("failed to parse metadata: %w", err)
+		}
+		
+		releaseLock, err := kilnfileLock.FindBOSHReleaseWithName(baker.GetBoshReleaseName())
+		if err != nil {
+			return fmt.Errorf("release %q not found in Kilnfile.lock", baker.GetBoshReleaseName())
+		}
 
 		tmpDir, tmpErr := os.MkdirTemp("", "carvel-bake-*")
 		if tmpErr != nil {
@@ -73,17 +117,24 @@ func (c CarvelBake) Execute(args []string) error {
 		}
 		defer func() { _ = os.RemoveAll(tmpDir) }()
 
-		localTarball, dlErr := downloadCarvelRelease(c.outLogger, kilnfile, kilnfileLock, tmpDir)
+		localTarball, dlErr := downloadCarvelRelease(c.outLogger, kilnfile, kilnfileLock, tmpDir, baker.GetBoshReleaseName())
 		if dlErr != nil {
 			return fmt.Errorf("failed to download release from Artifactory: %w", dlErr)
 		}
 
-		err = baker.BakeFromLockfile(sourcePath, releaseLock, localTarball)
+		err = baker.BakeFromLockfile(sourcePath, kilnfile, kilnfileLock, releaseLock, localTarball, carvel.BakeOptions{
+			SkipFetch:         c.Options.SkipFetchReleases,
+			ReleasesDirectory: c.Options.ReleasesDirectory,
+		})
 		if err != nil {
 			return fmt.Errorf("failed to prepare Carvel tile from lockfile: %w", err)
 		}
 	} else {
-		err = baker.Bake(sourcePath)
+		opts := carvel.BakeOptions{
+			SkipFetch:         c.Options.SkipFetchReleases,
+			ReleasesDirectory: c.Options.ReleasesDirectory,
+		}
+		err = baker.Bake(sourcePath, kilnfile, kilnfileLock, opts)
 		if err != nil {
 			return fmt.Errorf("failed to prepare Carvel tile: %w", err)
 		}
