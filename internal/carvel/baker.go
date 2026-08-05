@@ -791,6 +791,7 @@ func (b *baker) generateBaseYaml() error {
 	meta.CompatibleKubernetesDistributions = b.metadata.CompatibleKubernetesDistributions
 	meta.SupportsParallelDeploys = b.metadata.SupportsParallelDeploys
 	meta.RequiresProductVersions = b.metadata.RequiresProductVersions
+	meta.UsesKubernetesFeatures = b.metadata.UsesKubernetesFeatures
 	meta.FormTypes = b.metadata.FormTypes
 	meta.PropertyBlueprints = b.metadata.PropertyBlueprints
 	meta.Variables = b.metadata.Variables
