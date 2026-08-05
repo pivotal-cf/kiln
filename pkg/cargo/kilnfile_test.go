@@ -41,7 +41,30 @@ func TestKilnfileLock_UpdateBOSHReleaseTarballLockWithName(t *testing.T) {
 		args                         args
 		wantErr                      bool
 	}{
-		{name: "empty inputs", wantErr: true},
+		{
+			name:           "empty inputs",
+			KilnfileResult: KilnfileLock{},
+			wantErr:        true,
+		},
+
+		{
+			name: "lock with name not found",
+			KilnfileLock: KilnfileLock{
+				Releases: []BOSHReleaseTarballLock{
+					{Name: "banana"},
+				},
+			},
+			KilnfileResult: KilnfileLock{
+				Releases: []BOSHReleaseTarballLock{
+					{Name: "banana"},
+					{Name: "orange", Version: "some-version"},
+				},
+			},
+			args: args{
+				name: "orange", lock: BOSHReleaseTarballLock{Name: "orange", Version: "some-version"},
+			},
+			wantErr: false,
+		},
 
 		{
 			name: "lock with name found",
@@ -52,7 +75,25 @@ func TestKilnfileLock_UpdateBOSHReleaseTarballLockWithName(t *testing.T) {
 			},
 			KilnfileResult: KilnfileLock{
 				Releases: []BOSHReleaseTarballLock{
-					{Name: "orange", Version: "some-version"},
+					{Name: "banana", Version: "some-version"},
+				},
+			},
+			args: args{
+				name: "banana", lock: BOSHReleaseTarballLock{Name: "banana", Version: "some-version"},
+			},
+			wantErr: false,
+		},
+
+		{
+			name: "lock argument has a different name than the name argument",
+			KilnfileLock: KilnfileLock{
+				Releases: []BOSHReleaseTarballLock{
+					{Name: "banana"},
+				},
+			},
+			KilnfileResult: KilnfileLock{
+				Releases: []BOSHReleaseTarballLock{
+					{Name: "banana", Version: "some-version"},
 				},
 			},
 			args: args{

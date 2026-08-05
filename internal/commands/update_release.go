@@ -48,14 +48,14 @@ func (u UpdateRelease) Execute(args []string) error {
 
 	releaseLock, err := kilnfileLock.FindBOSHReleaseWithName(u.Options.Name)
 	if err != nil {
-		return fmt.Errorf(
-			"no release named %q exists in your Kilnfile.lock - try removing the -release, -boshrelease, or -bosh-release suffix if present",
-			u.Options.Name,
-		)
+		releaseLock = cargo.BOSHReleaseTarballLock{Name: u.Options.Name}
 	}
 	releaseSpec, err := kilnfile.BOSHReleaseTarballSpecification(u.Options.Name)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"%w - try removing the -release, -boshrelease, or -bosh-release suffix if present",
+			err,
+		)
 	}
 
 	releaseVersionConstraint := releaseSpec.Version
@@ -118,7 +118,7 @@ func (u UpdateRelease) Execute(args []string) error {
 	releaseLock.RemoteSource = newSourceID
 	releaseLock.RemotePath = newRemotePath
 
-	_ = kilnfileLock.UpdateBOSHReleaseTarballLockWithName(u.Options.Name, releaseLock)
+	_ = (&kilnfileLock).UpdateBOSHReleaseTarballLockWithName(u.Options.Name, releaseLock)
 
 	err = u.Options.SaveKilnfileLock(u.filesystem, kilnfileLock)
 	if err != nil {

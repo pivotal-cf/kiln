@@ -281,7 +281,7 @@ var _ = Describe("UpdateRelease", func() {
 					"--version", newReleaseVersion,
 					"--releases-directory", releasesDir,
 				})
-				Expect(err).To(MatchError(ContainSubstring("no release named \"no-such-release\"")))
+				Expect(err).To(MatchError(ContainSubstring("no-such-release")))
 				Expect(err).To(MatchError(ContainSubstring("try removing the -release")))
 			})
 

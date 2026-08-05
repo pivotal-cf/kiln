@@ -102,5 +102,62 @@ var _ = Describe("CarvelBake", func() {
 				Expect(outputPath).To(BeAnExistingFile())
 			})
 		})
+
+		When("a Kilnfile.lock is present but --from-lockfile is not set", func() {
+			It("successfully bakes a tile from source (ignoring the lockfile for the tile's own release)", func() {
+				if !boshInstalled() {
+					Skip("bosh CLI not installed - skipping integration test")
+				}
+				if !kilnInstalled() {
+					Skip("kiln CLI not installed - skipping integration test")
+				}
+
+				err := os.WriteFile(filepath.Join(inputPath, "Kilnfile"), []byte(`---
+release_sources: []
+`), 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = os.WriteFile(filepath.Join(inputPath, "Kilnfile.lock"), []byte(`---
+releases:
+- name: some-other-release
+  version: 1.2.3
+`), 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = command.Execute([]string{
+					"--source-directory", inputPath,
+					"--output-file", outputPath,
+					"--verbose",
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(outputPath).To(BeAnExistingFile())
+			})
+		})
+
+		When("a Kilnfile.lock is present but fails to parse", func() {
+			It("fails loudly instead of silently baking without additional_releases support", func() {
+				err := os.WriteFile(filepath.Join(inputPath, "Kilnfile"), []byte(`---
+release_sources: []
+`), 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = os.WriteFile(filepath.Join(inputPath, "Kilnfile.lock"), []byte(`---
+releases:
+- name: cf-cli
+  version: "1.0.0"
+ - name: smoke-tests
+   version: "2.0.0"
+`), 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = command.Execute([]string{
+					"--source-directory", inputPath,
+					"--output-file", outputPath,
+					"--verbose",
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(outputPath).NotTo(BeAnExistingFile())
+			})
+		})
 	})
 })
