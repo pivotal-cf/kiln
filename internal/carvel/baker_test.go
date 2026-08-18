@@ -44,6 +44,17 @@ func fileChecksum(path string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// templateDocument returns the YAML document within a multi-document
+// template whose "kind:" line matches the given kind exactly.
+func templateDocument(template, kind string) string {
+	for doc := range strings.SplitSeq(template, "---\n") {
+		if strings.Contains(doc, "kind: "+kind+"\n") {
+			return doc
+		}
+	}
+	return ""
+}
+
 func boshInstalled() bool {
 	_, err := exec.LookPath("bosh")
 	return err == nil
@@ -91,6 +102,40 @@ var _ = Describe("Carvel Baker", func() {
 			Expect(template).To(ContainSubstring("apiVersion: packaging.carvel.dev/v1alpha1"))
 			Expect(template).To(ContainSubstring(`name: <%= p("test-install.name") %>`))
 			Expect(template).To(ContainSubstring(`serviceAccountName: <%= p("test-install.name") %>-sa`))
+		})
+
+		It("annotates the ServiceAccount for kapp ordering relative to the PackageInstall", func() {
+			doc := templateDocument(template, "ServiceAccount")
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall"`))
+		})
+
+		It("annotates the ClusterRole for kapp ordering relative to the PackageInstall", func() {
+			doc := templateDocument(template, "ClusterRole")
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall"`))
+		})
+
+		It("annotates the ClusterRoleBinding for kapp ordering relative to the PackageInstall", func() {
+			doc := templateDocument(template, "ClusterRoleBinding")
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall"`))
+		})
+
+		It("annotates the Secret for kapp ordering relative to the PackageInstall", func() {
+			doc := templateDocument(template, "Secret")
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/secrets"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall"`))
+		})
+
+		It("annotates the PackageInstall with its own kapp change-group and no change-rules", func() {
+			doc := templateDocument(template, "PackageInstall")
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/packageinstall"`))
+			Expect(doc).NotTo(ContainSubstring("kapp.k14s.io/change-rule"))
 		})
 
 		It("uses BOSH link for content-namespace with fallback to default", func() {
