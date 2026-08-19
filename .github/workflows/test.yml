@@ -21,8 +21,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # Tagged test files are invisible to the default build, so lint them too.
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
+        with:
+          args: --build-tags integration,acceptance
 
       - name: Ensure Generate Succeeds and Does Not Make Changes
         run: |
@@ -48,6 +51,27 @@ jobs:
           name: Unit Test Code Coverage Output
           path: kiln-${{github.sha}}-unit-test-code-coverage.out
 
+      # bosh and kiln must be on PATH for the integration and acceptance
+      # suites. bosh is pinned because its version changes the bytes of
+      # a generated Carvel BOSH release.
+      - name: Install BOSH CLI and kiln
+        env:
+          BOSH_CLI_VERSION: "7.10.10"
+          BOSH_CLI_SHA256: ff092e567f6b6b41cbcaf8b4065eb2bae29a7463f537bd99ae6424c0d93291c9
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/bosh \
+            "https://github.com/cloudfoundry/bosh-cli/releases/download/v${BOSH_CLI_VERSION}/bosh-cli-${BOSH_CLI_VERSION}-linux-amd64"
+          echo "${BOSH_CLI_SHA256}  /tmp/bosh" | sha256sum -c -
+          sudo install -m 0755 /tmp/bosh /usr/local/bin/bosh
+          bosh --version
+          go build -o /tmp/kiln .
+          sudo install -m 0755 /tmp/kiln /usr/local/bin/kiln
+
+      - name: Integration Tests
+        run: |
+          go test --timeout 15m -tags integration -skip 'TestDockerIntegration|TestAcceptance' ./...
+
       - name: Acceptance Tests
         env:
           CGO_ENABLED: '0'
@@ -55,4 +79,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          go test -v --timeout 15m --tags acceptance github.com/pivotal-cf/kiln/internal/acceptance/workflows
+          go test -v --timeout 15m --tags acceptance \
+            github.com/pivotal-cf/kiln/internal/acceptance/workflows \
+            github.com/pivotal-cf/kiln/internal/acceptance/carvel \
+            github.com/pivotal-cf/kiln/internal/acceptance/bake

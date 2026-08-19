@@ -1,3 +1,5 @@
+//go:build acceptance
+
 package acceptance_test
 
 import (
@@ -23,9 +25,6 @@ func TestCarvelAcceptance(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	if _, err := exec.LookPath("bosh"); err != nil {
-		Skip("bosh CLI not installed - skipping carvel acceptance tests")
-	}
 
 	var err error
 	pathToMain, err = gexec.Build("github.com/pivotal-cf/kiln")
