@@ -166,6 +166,34 @@ package_installs:
   - $( package "my-package" )
 ```
 
+#### Reproducible builds and `.gitignore`
+
+`kiln carvel bake`/`upload`/`publish` regenerate `.boshrelease/` and `.carvel-tile/` on every run, and also write into `./releases` (default `--releases-directory`, used both for the tile's own additional_releases dependencies and for any plain BOSH releases the tile also carries) — then read the tile source repo's git commit/dirty status to stamp `commit_hash`/`uncommitted_changes` into the BOSH release manifest. **Your tile repo's `.gitignore` must exclude `.boshrelease`, `.carvel-tile`, and `releases`** — otherwise `git status` sees these regenerated paths as untracked changes, and every bake reports `uncommitted_changes: true` even when your actual tracked source is clean at that commit. This matters even more for teams mixing a carvel tile's own BOSH release with other plain `additional_releases` — both land in the same `./releases` directory. See [.gitignore](#gitignore) below.
+
+`Kilnfile.lock` is the one file you must *not* ignore — `kiln carvel upload` writes it after
+baking, so it is the command's own output as well as your committed input. Commit it before you
+run `upload` again: on a clean tree the release records `uncommitted_changes: false`, but a
+second back-to-back run sees the freshly written (still untracked) `Kilnfile.lock`, records
+`uncommitted_changes: true`, and PUTs a different tarball over the same Artifactory path. CI is
+unaffected — a fresh checkout is always clean — but local iteration will silently replace the
+artifact from your previous run.
+
+To make the generated BOSH release tarball byte-identical across build hosts, kiln re-packs it and every nested `jobs/`, `packages/`, `compiled_packages/`, and `license.tgz` blob with fixed timestamps, ownership, and permission bits. The re-pack streams through `.carvel-tile/releases/` on your build workspace's filesystem — **budget roughly 3-4x the release tarball's size in free disk space there**, not in `$TMPDIR`. For a tile carrying a multi-gigabyte `bundle.tar` that is a real CI-runner sizing requirement.
+
+Reproducibility still depends on inputs kiln cannot normalize, so a rebuild must match the original on all of: the same kiln version, the same `bosh` CLI version, a byte-identical `bundle.tar`, the same git commit *and* dirty state (built from a real git working copy, not an exported source archive), the same tile source content including file executable bits, the same BOSH release name, and the same product version. Timestamps, umask, uid/gid, timezone, tar member ordering, temp-directory paths, and PAX/xattr metadata no longer matter.
+
+The release version is derived from the release's *content*, not from the git commit, so a
+commit that changes nothing kiln feeds into the release still produces the same version while
+`commit_hash` in `release.MF` changes — different bytes under the same version, with no error.
+For example, two builds of identical tile source at different commits both produce
+`0.1.1+3999e3ca9b16` with release tarballs differing only in `commit_hash`. `kiln carvel upload`
+PUTs to a version-derived Artifactory path, so the second build silently overwrites the first,
+and anything holding the old checksum (a bake record, a `Kilnfile.lock`) will no longer verify.
+Treat a published release version as immutable: if you need to rebuild at a new commit, bump the
+product version too.
+
+The `bosh` CLI version matters more than it looks: `release.MF` has gained fields across releases (`no_compression` arrived after 7.5), so two hosts running different `bosh` versions produce **different release bytes under the same release version**, with no error. Pin `bosh` alongside kiln in your build image, and check the `BOSH CLI:` line kiln prints during the bake if two builds ever disagree. On macOS specifically, use `bosh` 7.5 or newer — older CLIs embed AppleDouble (`._*`) sidecar files in the release tarball that Linux builds never produce.
+
 ## <a id="bosh-release-tarballs"></a> Managing BOSH Release Tarballs
 
 `kiln fetch` downloads BOSH Release Tarballs from any of the following "sources"
@@ -628,3 +656,15 @@ The following are some useful .gitignore contents.
 releases/*.tgz
 *.pivotal
 ```
+
+For Carvel/Kubernetes tiles, also ignore the directories `kiln carvel bake`/`upload`/`publish` regenerate on every run — otherwise `git status` reports them as uncommitted changes and `bosh create-release` bakes that (incorrect) dirty state into every release manifest:
+
+```.gitignore
+.boshrelease/
+.carvel-tile/
+releases/
+```
+
+Do **not** add `Kilnfile.lock` to this list — it must stay tracked and committed, even though `kiln carvel upload` rewrites it. See [Reproducible builds and `.gitignore`](#reproducible-builds-and-gitignore) for why that matters between consecutive uploads.
+
+`releases/` here is intentionally broader than the plain `releases/*.tgz` above — a carvel tile's own generated BOSH release and any other plain `additional_releases` BOSH releases both get downloaded/cached into this same directory, so ignore the whole thing rather than just `*.tgz`.

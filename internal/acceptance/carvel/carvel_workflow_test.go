@@ -1,3 +1,5 @@
+//go:build acceptance
+
 package acceptance_test
 
 import (
@@ -93,7 +95,7 @@ func (m *mockArtifactory) storedKeys() []string {
 	return keys
 }
 
-func (m *mockArtifactory) Close() { m.server.Close() }
+func (m *mockArtifactory) Close()      { m.server.Close() }
 func (m *mockArtifactory) URL() string { return m.server.URL }
 
 func (m *mockArtifactory) PutCount() int {
@@ -111,9 +113,9 @@ func (m *mockArtifactory) GetCount() int {
 var _ = Describe("carvel full workflow", Ordered, func() {
 	const (
 		sampleTileFixture = "fixtures/sample-tile"
-		artUsername        = "test-user"
-		artPassword        = "test-pass"
-		artRepo            = "test-repo"
+		artUsername       = "test-user"
+		artPassword       = "test-pass"
+		artRepo           = "test-repo"
 	)
 
 	var (
@@ -181,9 +183,6 @@ var _ = Describe("carvel full workflow", Ordered, func() {
 	}
 
 	BeforeAll(func() {
-		if _, err := exec.LookPath("bosh"); err != nil {
-			Skip("bosh CLI not installed — skipping carvel workflow acceptance tests")
-		}
 
 		var err error
 		tmpDir, err = os.MkdirTemp("", "kiln-carvel-workflow-*")

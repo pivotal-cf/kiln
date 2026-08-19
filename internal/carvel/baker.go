@@ -1130,6 +1130,11 @@ func (b *baker) createBoshRelease() error {
 	b.releaseVersion = releaseVersion
 
 	finalTarball := path.Join(b.destination, "releases", b.GetBoshReleaseName()+"-"+releaseVersion+".tgz")
+
+	if v, verr := exec.Command("bosh", "--version").Output(); verr == nil {
+		b.progress("  BOSH CLI: " + strings.TrimPrefix(strings.TrimSpace(string(v)), "version "))
+	}
+
 	cmd := exec.Command("bosh",
 		"create-release",
 		"--dir="+dirName,
@@ -1142,6 +1147,10 @@ func (b *baker) createBoshRelease() error {
 	b.log("output: " + string(out))
 	if err != nil {
 		return err
+	}
+
+	if err := canonicalizeBoshRelease(finalTarball); err != nil {
+		return fmt.Errorf("failed to canonicalize bosh release tarball: %w", err)
 	}
 
 	b.progress(fmt.Sprintf("  BOSH release version: %s", releaseVersion))

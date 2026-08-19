@@ -11,16 +11,6 @@ import (
 	"github.com/pivotal-cf/kiln/internal/commands"
 )
 
-func boshInstalled() bool {
-	_, err := exec.LookPath("bosh")
-	return err == nil
-}
-
-func kilnInstalled() bool {
-	_, err := exec.LookPath("kiln")
-	return err == nil
-}
-
 var _ = Describe("CarvelBake", func() {
 	var (
 		outLogger *log.Logger
@@ -82,55 +72,6 @@ var _ = Describe("CarvelBake", func() {
 				err := command.Execute([]string{})
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("output-file"))
-			})
-		})
-
-		When("valid arguments are provided", func() {
-			It("successfully bakes a tile", func() {
-				if !boshInstalled() {
-					Skip("bosh CLI not installed - skipping integration test")
-				}
-				if !kilnInstalled() {
-					Skip("kiln CLI not installed - skipping integration test")
-				}
-				err := command.Execute([]string{
-					"--source-directory", inputPath,
-					"--output-file", outputPath,
-					"--verbose",
-				})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(outputPath).To(BeAnExistingFile())
-			})
-		})
-
-		When("a Kilnfile.lock is present but --from-lockfile is not set", func() {
-			It("successfully bakes a tile from source (ignoring the lockfile for the tile's own release)", func() {
-				if !boshInstalled() {
-					Skip("bosh CLI not installed - skipping integration test")
-				}
-				if !kilnInstalled() {
-					Skip("kiln CLI not installed - skipping integration test")
-				}
-
-				err := os.WriteFile(filepath.Join(inputPath, "Kilnfile"), []byte(`---
-release_sources: []
-`), 0644)
-				Expect(err).NotTo(HaveOccurred())
-
-				err = os.WriteFile(filepath.Join(inputPath, "Kilnfile.lock"), []byte(`---
-releases:
-- name: some-other-release
-  version: 1.2.3
-`), 0644)
-				Expect(err).NotTo(HaveOccurred())
-
-				err = command.Execute([]string{
-					"--source-directory", inputPath,
-					"--output-file", outputPath,
-					"--verbose",
-				})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(outputPath).To(BeAnExistingFile())
 			})
 		})
 
