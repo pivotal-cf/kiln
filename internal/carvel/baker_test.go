@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -1232,6 +1233,58 @@ releases:
 
 			Expect(rebakeChecksum).To(Equal(publishChecksum),
 				"publish and rebake should produce identical tiles when using the same cached BOSH release tarball")
+		})
+	})
+
+	Context("cold bake reproducibility", func() {
+		It("produces byte-identical bosh release tarballs from two independent bakes of the same commit", func() {
+			if !boshInstalled() {
+				Skip("bosh CLI not installed")
+			}
+
+			tmpRoot, err := os.MkdirTemp("", "cold-bake-repro-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = os.RemoveAll(tmpRoot) }()
+
+			committedPath := filepath.Join(tmpRoot, "committed")
+			err = os.CopyFS(committedPath, os.DirFS("testdata/sample-tile"))
+			Expect(err).NotTo(HaveOccurred())
+
+			for _, cmd := range []*exec.Cmd{
+				exec.Command("git", "init"),
+				exec.Command("git", "add", "."),
+				exec.Command("git", "commit", "-m", "initial commit"),
+			} {
+				cmd.Dir = committedPath
+				out, err := cmd.CombinedOutput()
+				Expect(err).NotTo(HaveOccurred(), "git setup: "+string(out))
+			}
+
+			// Two independent checkouts of the exact same commit, baked
+			// a few seconds apart, so any wall-clock-derived nondeterminism
+			// in `bosh create-release` would show up as a checksum mismatch.
+			pathA := filepath.Join(tmpRoot, "checkout-a")
+			pathB := filepath.Join(tmpRoot, "checkout-b")
+			Expect(os.CopyFS(pathA, os.DirFS(committedPath))).To(Succeed())
+			time.Sleep(2 * time.Second)
+			Expect(os.CopyFS(pathB, os.DirFS(committedPath))).To(Succeed())
+
+			bakerA := NewBaker()
+			bakerA.SetWriter(GinkgoWriter)
+			Expect(bakerA.Bake(pathA, cargo.Kilnfile{}, cargo.KilnfileLock{}, BakeOptions{})).To(Succeed())
+			tarballA, err := bakerA.GetReleaseTarball()
+			Expect(err).NotTo(HaveOccurred())
+
+			bakerB := NewBaker()
+			bakerB.SetWriter(GinkgoWriter)
+			Expect(bakerB.Bake(pathB, cargo.Kilnfile{}, cargo.KilnfileLock{}, BakeOptions{})).To(Succeed())
+			tarballB, err := bakerB.GetReleaseTarball()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(filepath.Base(tarballA)).To(Equal(filepath.Base(tarballB)),
+				"same source commit should produce the same bosh release name+version")
+			Expect(fileChecksum(tarballB)).To(Equal(fileChecksum(tarballA)),
+				"same source commit should produce a byte-identical bosh release tarball across independent bakes")
 		})
 	})
 

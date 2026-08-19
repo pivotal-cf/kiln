@@ -1126,6 +1126,10 @@ func (b *baker) createBoshRelease() error {
 		return err
 	}
 
+	if err := canonicalizeBoshRelease(finalTarball); err != nil {
+		return fmt.Errorf("failed to canonicalize bosh release tarball: %w", err)
+	}
+
 	b.progress(fmt.Sprintf("  BOSH release version: %s", releaseVersion))
 	return nil
 }
