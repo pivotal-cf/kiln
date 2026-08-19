@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -98,9 +99,12 @@ func (c CarvelReBake) Execute(args []string) error {
 	} else {
 		kfOnly, kfErr := loadKilnfileOnly(c.Options.Standard)
 		if kfErr != nil {
-			return fmt.Errorf("failed to load Kilnfile: %w", kfErr)
+			if !errors.Is(kfErr, os.ErrNotExist) {
+				return fmt.Errorf("failed to load Kilnfile: %w", kfErr)
+			}
+		} else {
+			kilnfile = kfOnly
 		}
-		kilnfile = kfOnly
 	}
 
 	lockfilePath := kilnfilePath + ".lock"

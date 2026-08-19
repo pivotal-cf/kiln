@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -73,16 +74,24 @@ func (c CarvelBake) Execute(args []string) error {
 	} else {
 		kfOnly, kfErr := loadKilnfileOnly(c.Options.Standard)
 		if kfErr != nil {
-			return fmt.Errorf("failed to load Kilnfile: %w", kfErr)
-		}
-		kilnfile = kfOnly
-
-		if lockfilePresent {
-			return fmt.Errorf("failed to load Kilnfile.lock: %w", loadErr)
-		} else if c.Options.FromLockfile {
-			return fmt.Errorf("failed to load Kilnfiles (required for --from-lockfile): %w", loadErr)
+			if errors.Is(kfErr, os.ErrNotExist) {
+				if c.Options.FromLockfile {
+					return fmt.Errorf("failed to load Kilnfile (required for --from-lockfile): %w", kfErr)
+				}
+				c.outLogger.Printf("No Kilnfile found — proceeding without additional_releases support")
+			} else {
+				return fmt.Errorf("failed to load Kilnfile: %w", kfErr)
+			}
 		} else {
-			c.outLogger.Printf("No Kilnfile.lock found — proceeding without additional_releases support")
+			kilnfile = kfOnly
+
+			if lockfilePresent {
+				return fmt.Errorf("failed to load Kilnfile.lock: %w", loadErr)
+			} else if c.Options.FromLockfile {
+				return fmt.Errorf("failed to load Kilnfile.lock (required for --from-lockfile): %w", loadErr)
+			} else {
+				c.outLogger.Printf("No Kilnfile.lock found — proceeding without additional_releases support")
+			}
 		}
 	}
 
