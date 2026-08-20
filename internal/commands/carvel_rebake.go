@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -92,20 +91,29 @@ func (c CarvelReBake) Execute(args []string) error {
 	var kilnfile cargo.Kilnfile
 	var kilnfileLock cargo.KilnfileLock
 
+	// Decide whether the Kilnfile itself is missing with a direct stat rather
+	// than inferring it from errors.Is(err, os.ErrNotExist) on the loader's
+	// aggregate error -- the loader also opens --variables-file paths, so an
+	// ErrNotExist there would otherwise be misdiagnosed as "no Kilnfile" and
+	// silently swallow the real problem. Mirrors carvel_bake.go / carvel_upload.go.
+	_, kilnfileStatErr := os.Stat(kilnfilePath)
+	kilnfilePresent := kilnfileStatErr == nil
+
 	kf, kl, loadErr := c.Options.LoadKilnfiles(nil, nil)
 	if loadErr == nil {
 		kilnfile = kf
 		kilnfileLock = kl
-	} else {
+	} else if kilnfilePresent {
+		// The Kilnfile exists but loading failed (parse error, bad
+		// --variables-file, unreadable lock). Surface the real error.
 		kfOnly, kfErr := loadKilnfileOnly(c.Options.Standard)
 		if kfErr != nil {
-			if !errors.Is(kfErr, os.ErrNotExist) {
-				return fmt.Errorf("failed to load Kilnfile: %w", kfErr)
-			}
-		} else {
-			kilnfile = kfOnly
+			return fmt.Errorf("failed to load Kilnfile: %w", kfErr)
 		}
+		kilnfile = kfOnly
 	}
+	// If the Kilnfile is genuinely absent, kilnfile stays zero-value; the
+	// lock block below hard-fails when a Kilnfile.lock is present.
 
 	lockfilePath := kilnfilePath + ".lock"
 	if _, statErr := os.Stat(lockfilePath); statErr == nil {

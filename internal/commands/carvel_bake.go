@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -47,6 +46,10 @@ func (c CarvelBake) Execute(args []string) error {
 		return err
 	}
 
+	if _, err := os.Stat(sourcePath); err != nil {
+		return fmt.Errorf("source directory not found: %s", sourcePath)
+	}
+
 	targetPath, err := filepath.Abs(c.Options.OutputFile)
 	if err != nil {
 		return fmt.Errorf("failed to resolve output file path: %w", err)
@@ -67,32 +70,45 @@ func (c CarvelBake) Execute(args []string) error {
 	_, lockfileStatErr := os.Stat(c.Options.KilnfileLockPath())
 	lockfilePresent := lockfileStatErr == nil
 
+	// Decide whether the Kilnfile itself is missing with a direct stat rather
+	// than inferring it from errors.Is(err, os.ErrNotExist) on the loader's
+	// aggregate error -- the loader also opens --variables-file paths, so an
+	// ErrNotExist there (a typo'd/moved variables file) would otherwise be
+	// misdiagnosed as "no Kilnfile" and silently swallow the real problem.
+	// Mirrors the os.Stat check in carvel_upload.go.
+	_, kilnfileStatErr := os.Stat(kilnfilePath)
+	kilnfilePresent := kilnfileStatErr == nil
+
 	kf, kl, loadErr := c.Options.LoadKilnfiles(nil, nil)
 	if loadErr == nil {
 		kilnfile = kf
 		kilnfileLock = kl
-	} else {
+	} else if kilnfilePresent {
+		// The Kilnfile exists but loading failed: a parse error, a bad
+		// --variables-file, or an unreadable Kilnfile.lock. Surface the real
+		// error instead of silently baking without additional_releases.
 		kfOnly, kfErr := loadKilnfileOnly(c.Options.Standard)
 		if kfErr != nil {
-			if errors.Is(kfErr, os.ErrNotExist) {
-				if c.Options.FromLockfile {
-					return fmt.Errorf("failed to load Kilnfile (required for --from-lockfile): %w", kfErr)
-				}
-				c.outLogger.Printf("No Kilnfile found — proceeding without additional_releases support")
-			} else {
-				return fmt.Errorf("failed to load Kilnfile: %w", kfErr)
-			}
-		} else {
-			kilnfile = kfOnly
-
-			if lockfilePresent {
-				return fmt.Errorf("failed to load Kilnfile.lock: %w", loadErr)
-			} else if c.Options.FromLockfile {
-				return fmt.Errorf("failed to load Kilnfile.lock (required for --from-lockfile): %w", loadErr)
-			} else {
-				c.outLogger.Printf("No Kilnfile.lock found — proceeding without additional_releases support")
-			}
+			return fmt.Errorf("failed to load Kilnfile: %w", kfErr)
 		}
+		kilnfile = kfOnly
+
+		if lockfilePresent {
+			return fmt.Errorf("failed to load Kilnfile.lock: %w", loadErr)
+		} else if c.Options.FromLockfile {
+			return fmt.Errorf("failed to load Kilnfile.lock (required for --from-lockfile): %w", loadErr)
+		} else {
+			c.outLogger.Printf("No Kilnfile.lock found — proceeding without additional_releases support")
+		}
+	} else {
+		// The Kilnfile is genuinely absent.
+		if c.Options.FromLockfile {
+			return fmt.Errorf("Kilnfile not found at %s (required for --from-lockfile)", kilnfilePath)
+		}
+		if lockfilePresent {
+			return fmt.Errorf("Kilnfile not found at %s but Kilnfile.lock is present; refusing to bake from source and silently ignore the pinned lock", kilnfilePath)
+		}
+		c.outLogger.Printf("No Kilnfile found — proceeding without additional_releases support")
 	}
 
 	var useLockfile bool
