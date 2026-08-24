@@ -5,20 +5,20 @@
 class Kiln < Formula
   desc ""
   homepage ""
-  version "0.117.0"
+  version "0.118.0"
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/pivotal-cf/kiln/releases/download/v0.117.0/kiln-darwin-amd64-0.117.0.tar.gz"
-      sha256 "f04adb2dc4cd9e0ba04b5c7ac2b697aaf378f0a8db90f985b46fc7a9653d9468"
+      url "https://github.com/pivotal-cf/kiln/releases/download/v0.118.0/kiln-darwin-amd64-0.118.0.tar.gz"
+      sha256 "874eb490e7cfa754ccc6db653a1e3fd8594c13af087bc78f30d7102b0d4df252"
 
       define_method(:install) do
         bin.install "kiln"
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/pivotal-cf/kiln/releases/download/v0.117.0/kiln-darwin-arm64-0.117.0.tar.gz"
-      sha256 "2e671466ff82ca66fc5b37578a417e65415e348aad5331158ccc923cadb1d5ec"
+      url "https://github.com/pivotal-cf/kiln/releases/download/v0.118.0/kiln-darwin-arm64-0.118.0.tar.gz"
+      sha256 "385975de15920dc59041dc382f69b9d44348499dd7c92cbf2bcf5f1f7ad742b0"
 
       define_method(:install) do
         bin.install "kiln"
@@ -28,8 +28,8 @@ class Kiln < Formula
 
   on_linux do
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/pivotal-cf/kiln/releases/download/v0.117.0/kiln-linux-amd64-0.117.0.tar.gz"
-      sha256 "e2e4f08b07155819e4577d2ff552c126a9190243891a9d496c80f6187ac5f7c6"
+      url "https://github.com/pivotal-cf/kiln/releases/download/v0.118.0/kiln-linux-amd64-0.118.0.tar.gz"
+      sha256 "5b1864049b76d287a2348bf145e932198fb585905c60032202992dc0e4d798e9"
       define_method(:install) do
         bin.install "kiln"
       end
