@@ -46,6 +46,10 @@ func (c CarvelBake) Execute(args []string) error {
 		return err
 	}
 
+	if _, err := os.Stat(sourcePath); err != nil {
+		return fmt.Errorf("source directory not found: %s", sourcePath)
+	}
+
 	targetPath, err := filepath.Abs(c.Options.OutputFile)
 	if err != nil {
 		return fmt.Errorf("failed to resolve output file path: %w", err)
@@ -66,11 +70,14 @@ func (c CarvelBake) Execute(args []string) error {
 	_, lockfileStatErr := os.Stat(c.Options.KilnfileLockPath())
 	lockfilePresent := lockfileStatErr == nil
 
+	_, kilnfileStatErr := os.Stat(kilnfilePath)
+	kilnfilePresent := kilnfileStatErr == nil
+
 	kf, kl, loadErr := c.Options.LoadKilnfiles(nil, nil)
 	if loadErr == nil {
 		kilnfile = kf
 		kilnfileLock = kl
-	} else {
+	} else if kilnfilePresent {
 		kfOnly, kfErr := loadKilnfileOnly(c.Options.Standard)
 		if kfErr != nil {
 			return fmt.Errorf("failed to load Kilnfile: %w", kfErr)
@@ -80,11 +87,19 @@ func (c CarvelBake) Execute(args []string) error {
 		if lockfilePresent {
 			return fmt.Errorf("failed to load Kilnfile.lock: %w", loadErr)
 		} else if c.Options.FromLockfile {
-			return fmt.Errorf("failed to load Kilnfiles (required for --from-lockfile): %w", loadErr)
+			return fmt.Errorf("failed to load Kilnfile.lock (required for --from-lockfile): %w", loadErr)
 		} else {
 			c.outLogger.Printf("No Kilnfile.lock found — proceeding without additional_releases support")
 		}
-	}
+		} else {
+			if c.Options.FromLockfile {
+				return fmt.Errorf("kilnfile not found at %s (required for --from-lockfile)", kilnfilePath)
+			}
+			if lockfilePresent {
+				return fmt.Errorf("kilnfile not found at %s but Kilnfile.lock is present; refusing to bake from source and silently ignore the pinned lock", kilnfilePath)
+			}
+			c.outLogger.Printf("No Kilnfile found — proceeding without additional_releases support")
+		}
 
 	var useLockfile bool
 	if c.Options.FromLockfile {

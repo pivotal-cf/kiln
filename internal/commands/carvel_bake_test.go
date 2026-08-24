@@ -159,5 +159,59 @@ releases:
 				Expect(outputPath).NotTo(BeAnExistingFile())
 			})
 		})
+
+		When("a --variables-file points at a missing path", func() {
+			It("fails loudly instead of misdiagnosing it as a missing Kilnfile", func() {
+				err := os.WriteFile(filepath.Join(inputPath, "Kilnfile"), []byte(`---
+release_sources: []
+`), 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = command.Execute([]string{
+					"--source-directory", inputPath,
+					"--output-file", outputPath,
+					"--variables-file", filepath.Join(inputPath, "does-not-exist.yml"),
+					"--verbose",
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Kilnfile"))
+				Expect(outputPath).NotTo(BeAnExistingFile())
+			})
+		})
+
+		When("the Kilnfile is absent but a Kilnfile.lock is present", func() {
+			It("hard-fails instead of silently baking from source and ignoring the pinned lock", func() {
+				Expect(os.Remove(filepath.Join(inputPath, "Kilnfile"))).To(Succeed())
+
+				err := os.WriteFile(filepath.Join(inputPath, "Kilnfile.lock"), []byte(`---
+releases:
+- name: some-release
+  version: 1.2.3
+`), 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = command.Execute([]string{
+					"--source-directory", inputPath,
+					"--output-file", outputPath,
+					"--verbose",
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Kilnfile.lock"))
+				Expect(outputPath).NotTo(BeAnExistingFile())
+			})
+		})
+
+		When("the --source-directory does not exist", func() {
+			It("fails fast with a clear error instead of misdiagnosing it as a missing Kilnfile", func() {
+				err := command.Execute([]string{
+					"--source-directory", filepath.Join(inputPath, "no", "such", "dir"),
+					"--output-file", outputPath,
+					"--verbose",
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("source directory"))
+				Expect(outputPath).NotTo(BeAnExistingFile())
+			})
+		})
 	})
 })

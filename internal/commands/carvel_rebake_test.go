@@ -124,6 +124,69 @@ var _ = Describe("CarvelReBake", func() {
 			})
 		})
 
+		When("a --variables-file points at a missing path", func() {
+			var (
+				inputPath  string
+				recordPath string
+			)
+
+			BeforeEach(func() {
+				var err error
+				inputPath, err = os.MkdirTemp("", "rebake-vars-*")
+				Expect(err).NotTo(HaveOccurred())
+				inputPath += "/tile"
+				err = os.CopyFS(inputPath, os.DirFS("../carvel/testdata/sample-tile"))
+				Expect(err).NotTo(HaveOccurred())
+
+				cmds := []*exec.Cmd{
+					exec.Command("git", "init"),
+					exec.Command("git", "add", "."),
+					exec.Command("git", "-c", "user.name=test", "-c", "user.email=test@test.com", "commit", "-m", "initial commit"),
+				}
+				for _, cmd := range cmds {
+					cmd.Dir = inputPath
+					out, err := cmd.CombinedOutput()
+					Expect(err).NotTo(HaveOccurred(), "error invoking git: "+string(out))
+				}
+
+				headCmd := exec.Command("git", "rev-parse", "HEAD")
+				headCmd.Dir = inputPath
+				headOut, err := headCmd.CombinedOutput()
+				Expect(err).NotTo(HaveOccurred(), "error invoking git rev-parse: "+string(headOut))
+				headSHA := strings.TrimSpace(string(headOut))
+
+				record := bake.Record{
+					SourceRevision: headSHA,
+					Version:        "0.1.1",
+					TileDirectory:  inputPath,
+				}
+				buf, err := json.Marshal(record)
+				Expect(err).NotTo(HaveOccurred())
+
+				recordPath = filepath.Join(filepath.Dir(inputPath), "record.json")
+				err = os.WriteFile(recordPath, buf, 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				if inputPath != "" {
+					_ = os.RemoveAll(filepath.Dir(inputPath))
+				}
+			})
+
+			It("fails loudly instead of misdiagnosing it as a missing Kilnfile", func() {
+				outputPath := filepath.Join(filepath.Dir(inputPath), "out.pivotal")
+				err := command.Execute([]string{
+					"--output-file", outputPath,
+					"--variables-file", filepath.Join(inputPath, "does-not-exist.yml"),
+					recordPath,
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Kilnfile"))
+				Expect(outputPath).NotTo(BeAnExistingFile())
+			})
+		})
+
 		When("a valid bake record and mock Artifactory are provided", func() {
 			var (
 				inputPath  string

@@ -91,11 +91,14 @@ func (c CarvelReBake) Execute(args []string) error {
 	var kilnfile cargo.Kilnfile
 	var kilnfileLock cargo.KilnfileLock
 
+	_, kilnfileStatErr := os.Stat(kilnfilePath)
+	kilnfilePresent := kilnfileStatErr == nil
+
 	kf, kl, loadErr := c.Options.LoadKilnfiles(nil, nil)
 	if loadErr == nil {
 		kilnfile = kf
 		kilnfileLock = kl
-	} else {
+	} else if kilnfilePresent {
 		kfOnly, kfErr := loadKilnfileOnly(c.Options.Standard)
 		if kfErr != nil {
 			return fmt.Errorf("failed to load Kilnfile: %w", kfErr)
