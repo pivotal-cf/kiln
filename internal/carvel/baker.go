@@ -2,18 +2,15 @@ package carvel
 
 import (
 	"crypto/sha1"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/pivotal-cf/kiln/internal/carvel/models"
@@ -1103,15 +1100,15 @@ func (b *baker) createBoshRelease() error {
 
 	dirName := path.Join(b.source, ".boshrelease")
 
-	fingerprint, err := hashBoshReleaseInputs(dirName)
-	if err != nil {
-		return err
-	}
-
-	releaseVersion := buildReleaseVersion(productVersion, fingerprint)
-	b.releaseVersion = releaseVersion
-
-	finalTarball := path.Join(b.destination, "releases", b.GetBoshReleaseName()+"-"+releaseVersion+".tgz")
+	// bosh create-release requires a version upfront, but the real version
+	// is a fingerprint of what bosh produces -- unknowable until after it
+	// runs. Build under a placeholder, then canonicalizeBoshRelease derives
+	// the real content-based version and rewrites it into the manifest.
+	placeholderVersion := buildReleaseVersion(productVersion, strings.Repeat("0", 12))
+	buildTarball := path.Join(b.destination, "releases", b.GetBoshReleaseName()+"-build.tgz")
+	// Renamed to its final versioned path on success; removed here on any
+	// early return so a failed bake doesn't leave the placeholder behind.
+	defer func() { _ = os.Remove(buildTarball) }()
 
 	if v, verr := exec.Command("bosh", "--version").Output(); verr == nil {
 		b.progress("  BOSH CLI: " + strings.TrimPrefix(strings.TrimSpace(string(v)), "version "))
@@ -1122,8 +1119,8 @@ func (b *baker) createBoshRelease() error {
 		"--dir="+dirName,
 		"--force",
 		"--name", b.GetBoshReleaseName(),
-		"--version", releaseVersion,
-		"--tarball", finalTarball)
+		"--version", placeholderVersion,
+		"--tarball", buildTarball)
 	b.log("executing " + cmd.String())
 	out, err := cmd.CombinedOutput()
 	b.log("output: " + string(out))
@@ -1131,56 +1128,19 @@ func (b *baker) createBoshRelease() error {
 		return err
 	}
 
-	if err := canonicalizeBoshRelease(finalTarball); err != nil {
+	releaseVersion, err := canonicalizeBoshRelease(buildTarball, productVersion)
+	if err != nil {
 		return fmt.Errorf("failed to canonicalize bosh release tarball: %w", err)
+	}
+	b.releaseVersion = releaseVersion
+
+	finalTarball := path.Join(b.destination, "releases", b.GetBoshReleaseName()+"-"+releaseVersion+".tgz")
+	if err := os.Rename(buildTarball, finalTarball); err != nil {
+		return fmt.Errorf("failed to rename bosh release tarball to its final version: %w", err)
 	}
 
 	b.progress(fmt.Sprintf("  BOSH release version: %s", releaseVersion))
 	return nil
-}
-
-func hashBoshReleaseInputs(boshReleaseDir string) (string, error) {
-	h := sha256.New()
-
-	var paths []string
-	err := filepath.WalkDir(boshReleaseDir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			if d.Name() == ".git" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		rel, err := filepath.Rel(boshReleaseDir, p)
-		if err != nil {
-			return err
-		}
-		paths = append(paths, rel)
-		return nil
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to walk .boshrelease directory: %w", err)
-	}
-
-	sort.Strings(paths)
-
-	for _, rel := range paths {
-		_, _ = fmt.Fprintf(h, "path:%s\n", rel)
-
-		f, err := os.Open(filepath.Join(boshReleaseDir, rel))
-		if err != nil {
-			return "", err
-		}
-		if _, err := io.Copy(h, f); err != nil {
-			_ = f.Close()
-			return "", err
-		}
-		_ = f.Close()
-	}
-
-	return hex.EncodeToString(h.Sum(nil))[:12], nil
 }
 
 func buildReleaseVersion(productVersion, fingerprint string) string {

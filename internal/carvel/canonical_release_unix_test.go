@@ -25,7 +25,7 @@ func TestCanonicalizeBoshReleasePreservesFileModeUnderRestrictiveUmask(t *testin
 	oldUmask := syscall.Umask(0o022)
 	defer syscall.Umask(oldUmask)
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease: %v", err)
 	}
 

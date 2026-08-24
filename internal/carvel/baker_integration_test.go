@@ -5,11 +5,13 @@ package carvel
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -20,6 +22,41 @@ import (
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
 )
+
+// readReleaseManifest extracts and parses release.MF from a bosh release
+// tarball, for assertions on fields (like commit_hash) that canonicalization
+// deliberately leaves untouched.
+func readReleaseManifest(tarballPath string) (manifestDoc, error) {
+	f, err := os.Open(tarballPath)
+	if err != nil {
+		return manifestDoc{}, err
+	}
+	defer func() { _ = f.Close() }()
+
+	spoolDir, err := os.MkdirTemp("", "read-manifest-*")
+	if err != nil {
+		return manifestDoc{}, err
+	}
+	defer func() { _ = os.RemoveAll(spoolDir) }()
+
+	entries, _, err := readTarGz(f, spoolDir)
+	if err != nil {
+		return manifestDoc{}, err
+	}
+	entry, ok := entries[manifestFileName]
+	if !ok {
+		return manifestDoc{}, fmt.Errorf("release.MF not found in %s", tarballPath)
+	}
+	data, err := os.ReadFile(entry.path)
+	if err != nil {
+		return manifestDoc{}, err
+	}
+	var doc manifestDoc
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return manifestDoc{}, err
+	}
+	return doc, nil
+}
 
 func copyTestFile(src, dst string) error {
 	in, err := os.Open(src)
@@ -899,6 +936,111 @@ releases:
 				"same source commit should produce the same bosh release name+version")
 			Expect(fileChecksum(tarballB)).To(Equal(fileChecksum(tarballA)),
 				"same source commit should produce a byte-identical bosh release tarball across independent bakes")
+		})
+	})
+
+	Context("release version across commits", func() {
+		It("keeps the same version across an empty commit, but keeps real commit provenance", func() {
+			// End-to-end sanity check of the intended design against the
+			// real bosh CLI: the release version must be insensitive to
+			// which commit a byte-identical tile was built from, while
+			// release.MF still carries the true commit_hash for each build.
+			// The version side of this held even before finalizeReleaseVersion
+			// existed (the old pre-build hash never saw git-derived fields
+			// either) -- the actual bug it fixes is that the version could
+			// silently diverge from what bosh's own job/package fingerprints
+			// produced; see TestFinalizeReleaseVersionChangesWhenBlobChecksumChanges
+			// for the test that exercises that mechanism directly.
+			tmpRoot, err := os.MkdirTemp("", "version-across-commits-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = os.RemoveAll(tmpRoot) }()
+
+			inputPath := filepath.Join(tmpRoot, "tile")
+			Expect(os.CopyFS(inputPath, os.DirFS("testdata/sample-tile"))).To(Succeed())
+
+			gitEnv := append(os.Environ(), "GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@test.com", "GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@test.com")
+			runGit := func(args ...string) {
+				cmd := exec.Command("git", args...)
+				cmd.Dir = inputPath
+				cmd.Env = gitEnv
+				out, err := cmd.CombinedOutput()
+				Expect(err).NotTo(HaveOccurred(), "git "+strings.Join(args, " ")+": "+string(out))
+			}
+			runGit("init")
+			runGit("add", ".")
+			runGit("commit", "-m", "initial commit")
+
+			bakerA := NewBaker()
+			bakerA.SetWriter(GinkgoWriter)
+			Expect(bakerA.Bake(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, BakeOptions{})).To(Succeed())
+			tarballA, err := bakerA.GetReleaseTarball()
+			Expect(err).NotTo(HaveOccurred())
+			manifestA, err := readReleaseManifest(tarballA)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Same tree, new commit -- zero content change, but bosh will
+			// stamp a different commit_hash.
+			runGit("commit", "--allow-empty", "-m", "second commit, no content change")
+
+			bakerB := NewBaker()
+			bakerB.SetWriter(GinkgoWriter)
+			Expect(bakerB.Bake(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, BakeOptions{})).To(Succeed())
+			tarballB, err := bakerB.GetReleaseTarball()
+			Expect(err).NotTo(HaveOccurred())
+			manifestB, err := readReleaseManifest(tarballB)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(bakerB.GetReleaseVersion()).To(Equal(bakerA.GetReleaseVersion()),
+				"identical tile content must keep the same release version across an unrelated commit")
+
+			Expect(manifestA.CommitHash).NotTo(BeEmpty())
+			Expect(manifestB.CommitHash).NotTo(BeEmpty())
+			Expect(manifestB.CommitHash).NotTo(Equal(manifestA.CommitHash),
+				"commit_hash is real provenance and must still reflect the actual commit each release was built from")
+		})
+
+		It("changes the release version when the tile content actually changes", func() {
+			tmpRoot, err := os.MkdirTemp("", "version-tracks-content-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = os.RemoveAll(tmpRoot) }()
+
+			inputPath := filepath.Join(tmpRoot, "tile")
+			Expect(os.CopyFS(inputPath, os.DirFS("testdata/sample-tile"))).To(Succeed())
+
+			gitEnv := append(os.Environ(), "GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@test.com", "GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@test.com")
+			runGit := func(args ...string) {
+				cmd := exec.Command("git", args...)
+				cmd.Dir = inputPath
+				cmd.Env = gitEnv
+				out, err := cmd.CombinedOutput()
+				Expect(err).NotTo(HaveOccurred(), "git "+strings.Join(args, " ")+": "+string(out))
+			}
+			runGit("init")
+			runGit("add", ".")
+			runGit("commit", "-m", "initial commit")
+
+			bakerA := NewBaker()
+			bakerA.SetWriter(GinkgoWriter)
+			Expect(bakerA.Bake(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, BakeOptions{})).To(Succeed())
+			versionA := bakerA.GetReleaseVersion()
+
+			// bundle.tar is what bosh add-blob packages into .boshrelease, so
+			// changing it (unlike tile-only metadata such as icon.png) must
+			// change the release fingerprint.
+			bundlePath := filepath.Join(inputPath, "bundle.tar")
+			existing, err := os.ReadFile(bundlePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.WriteFile(bundlePath, append(existing, 0x00), 0o644)).To(Succeed())
+			runGit("add", ".")
+			runGit("commit", "-m", "change packaged content")
+
+			bakerB := NewBaker()
+			bakerB.SetWriter(GinkgoWriter)
+			Expect(bakerB.Bake(inputPath, cargo.Kilnfile{}, cargo.KilnfileLock{}, BakeOptions{})).To(Succeed())
+			versionB := bakerB.GetReleaseVersion()
+
+			Expect(versionB).NotTo(Equal(versionA),
+				"changing packaged tile content must change the release version")
 		})
 	})
 })

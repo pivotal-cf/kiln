@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -774,6 +775,121 @@ func TestPatchReleaseManifestChecksumsLicense(t *testing.T) {
 	}
 }
 
+// --- finalizeReleaseVersion ---
+
+func withCommitHash(manifest, commitHash string) string {
+	return strings.Replace(manifest, "commit_hash: deadbeef", "commit_hash: "+commitHash, 1)
+}
+
+func withUncommittedChanges(manifest string, dirty bool) string {
+	value := "false"
+	if dirty {
+		value = "true"
+	}
+	return strings.Replace(manifest, "uncommitted_changes: false", "uncommitted_changes: "+value, 1)
+}
+
+func TestFinalizeReleaseVersionSameContentSameCommitHashProducesSameVersion(t *testing.T) {
+	_, v1, err := finalizeReleaseVersion([]byte(withCommitHash(testManifest, "aaa111")), "0.1.1")
+	if err != nil {
+		t.Fatalf("finalizeReleaseVersion: %v", err)
+	}
+	_, v2, err := finalizeReleaseVersion([]byte(withCommitHash(testManifest, "bbb222")), "0.1.1")
+	if err != nil {
+		t.Fatalf("finalizeReleaseVersion: %v", err)
+	}
+
+	if v1 != v2 {
+		t.Errorf("versions differ across commit_hash alone: %q vs %q, want equal", v1, v2)
+	}
+}
+
+func TestFinalizeReleaseVersionIgnoresUncommittedChangesFlag(t *testing.T) {
+	_, v1, err := finalizeReleaseVersion([]byte(withUncommittedChanges(testManifest, false)), "0.1.1")
+	if err != nil {
+		t.Fatalf("finalizeReleaseVersion: %v", err)
+	}
+	_, v2, err := finalizeReleaseVersion([]byte(withUncommittedChanges(testManifest, true)), "0.1.1")
+	if err != nil {
+		t.Fatalf("finalizeReleaseVersion: %v", err)
+	}
+
+	if v1 != v2 {
+		t.Errorf("versions differ across uncommitted_changes alone: %q vs %q, want equal", v1, v2)
+	}
+}
+
+func TestFinalizeReleaseVersionChangesWhenBlobChecksumChanges(t *testing.T) {
+	changed := strings.Replace(testManifest, "sha256:stale-job-sha", "sha256:different-job-sha", 1)
+
+	_, v1, err := finalizeReleaseVersion([]byte(testManifest), "0.1.1")
+	if err != nil {
+		t.Fatalf("finalizeReleaseVersion: %v", err)
+	}
+	_, v2, err := finalizeReleaseVersion([]byte(changed), "0.1.1")
+	if err != nil {
+		t.Fatalf("finalizeReleaseVersion: %v", err)
+	}
+
+	if v1 == v2 {
+		t.Errorf("expected version to change when a blob checksum changes, both were %q", v1)
+	}
+}
+
+func TestFinalizeReleaseVersionIsDeterministic(t *testing.T) {
+	_, v1, err := finalizeReleaseVersion([]byte(testManifest), "0.1.1")
+	if err != nil {
+		t.Fatalf("finalizeReleaseVersion: %v", err)
+	}
+	_, v2, err := finalizeReleaseVersion([]byte(testManifest), "0.1.1")
+	if err != nil {
+		t.Fatalf("finalizeReleaseVersion: %v", err)
+	}
+
+	if v1 != v2 {
+		t.Errorf("finalizeReleaseVersion is not deterministic: %q vs %q", v1, v2)
+	}
+}
+
+func TestFinalizeReleaseVersionFormat(t *testing.T) {
+	_, version, err := finalizeReleaseVersion([]byte(testManifest), "0.1.1")
+	if err != nil {
+		t.Fatalf("finalizeReleaseVersion: %v", err)
+	}
+
+	matched, err := regexp.MatchString(`^0\.1\.1\+[0-9a-f]{12}$`, version)
+	if err != nil {
+		t.Fatalf("regexp: %v", err)
+	}
+	if !matched {
+		t.Errorf("version = %q, want format 0.1.1+<12 hex chars>", version)
+	}
+}
+
+func TestFinalizeReleaseVersionWritesVersionAndPreservesCommitProvenance(t *testing.T) {
+	out, version, err := finalizeReleaseVersion([]byte(testManifest), "0.1.1")
+	if err != nil {
+		t.Fatalf("finalizeReleaseVersion: %v", err)
+	}
+
+	var doc manifestDoc
+	if err := yaml.Unmarshal(out, &doc); err != nil {
+		t.Fatalf("unmarshal finalized manifest: %v", err)
+	}
+
+	if doc.Version != version {
+		t.Errorf("manifest version = %q, want %q", doc.Version, version)
+	}
+	// commit_hash/uncommitted_changes are provenance, not content: excluded from
+	// the fingerprint but must still survive in the written-out manifest.
+	if doc.CommitHash != "deadbeef" {
+		t.Errorf("commit_hash = %q, want preserved as %q", doc.CommitHash, "deadbeef")
+	}
+	if doc.UncommittedChanges != false {
+		t.Errorf("uncommitted_changes = %v, want preserved as false", doc.UncommittedChanges)
+	}
+}
+
 // --- mappingValue ---
 
 func TestMappingValue(t *testing.T) {
@@ -867,10 +983,10 @@ func TestCanonicalizeBoshReleaseDeterministicAcrossDirtyTimestamps(t *testing.T)
 	buildSyntheticBoshRelease(t, pathA, 0)
 	buildSyntheticBoshRelease(t, pathB, 5) // simulates a run 5s later
 
-	if err := canonicalizeBoshRelease(pathA); err != nil {
+	if _, err := canonicalizeBoshRelease(pathA, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease A: %v", err)
 	}
-	if err := canonicalizeBoshRelease(pathB); err != nil {
+	if _, err := canonicalizeBoshRelease(pathB, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease B: %v", err)
 	}
 
@@ -893,7 +1009,7 @@ func TestCanonicalizeBoshReleasePatchesChecksumsToMatchRepackedBlobs(t *testing.
 	path := filepath.Join(dir, "release.tgz")
 	buildSyntheticBoshRelease(t, path, 0)
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease: %v", err)
 	}
 
@@ -939,7 +1055,7 @@ func TestCanonicalizeBoshReleaseCanonicalizesLicenseBlobAndPatchesChecksum(t *te
 		t.Fatalf("write synthetic release: %v", err)
 	}
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease: %v", err)
 	}
 
@@ -980,7 +1096,7 @@ func TestCanonicalizeBoshReleaseLeavesUnrecognizedBlobsByteIdentical(t *testing.
 		t.Fatalf("write synthetic release: %v", err)
 	}
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease: %v", err)
 	}
 
@@ -1011,7 +1127,7 @@ func TestCanonicalizeBoshReleaseIgnoresAppleDoubleSidecars(t *testing.T) {
 		t.Fatalf("write synthetic release: %v", err)
 	}
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("expected AppleDouble sidecars to be ignored, got: %v", err)
 	}
 
@@ -1029,7 +1145,7 @@ func TestCanonicalizeBoshReleaseIsIdempotent(t *testing.T) {
 	path := filepath.Join(dir, "release.tgz")
 	buildSyntheticBoshRelease(t, path, 0)
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("first pass: %v", err)
 	}
 	first, err := os.ReadFile(path)
@@ -1037,7 +1153,7 @@ func TestCanonicalizeBoshReleaseIsIdempotent(t *testing.T) {
 		t.Fatalf("read after first pass: %v", err)
 	}
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("second pass: %v", err)
 	}
 	second, err := os.ReadFile(path)
@@ -1067,7 +1183,7 @@ func TestCanonicalizeBoshReleasePatchesCompiledPackages(t *testing.T) {
 		t.Fatalf("write synthetic release: %v", err)
 	}
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease: %v", err)
 	}
 
@@ -1102,7 +1218,7 @@ func TestCanonicalizeBoshReleaseErrorsWhenRepackedBlobHasNoManifestChecksum(t *t
 		t.Fatalf("write synthetic release: %v", err)
 	}
 
-	err := canonicalizeBoshRelease(path)
+	_, err := canonicalizeBoshRelease(path, "0.1.1")
 	if err == nil {
 		t.Fatal("expected an error when a repacked blob has no sha1 to patch, got nil")
 	}
@@ -1118,7 +1234,7 @@ func TestCanonicalizeBoshReleaseEmitsManifestFirst(t *testing.T) {
 	path := filepath.Join(dir, "release.tgz")
 	buildSyntheticBoshRelease(t, path, 0)
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease: %v", err)
 	}
 
@@ -1158,7 +1274,7 @@ func TestCanonicalizeBoshReleaseSkipsNonRegularTgzEntries(t *testing.T) {
 		t.Fatalf("write synthetic release: %v", err)
 	}
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease: %v", err)
 	}
 
@@ -1217,7 +1333,7 @@ func TestCanonicalizeBoshReleasePreservesFileMode(t *testing.T) {
 		t.Fatalf("chmod: %v", err)
 	}
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease: %v", err)
 	}
 
@@ -1235,7 +1351,7 @@ func TestCanonicalizeBoshReleasePreservesDirectoryEntries(t *testing.T) {
 	path := filepath.Join(dir, "release.tgz")
 	buildSyntheticBoshRelease(t, path, 0)
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease: %v", err)
 	}
 
@@ -1255,7 +1371,7 @@ func TestCanonicalizeBoshReleaseNoLeftoverTempFile(t *testing.T) {
 	path := filepath.Join(dir, "release.tgz")
 	buildSyntheticBoshRelease(t, path, 0)
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease: %v", err)
 	}
 
@@ -1276,7 +1392,7 @@ func TestCanonicalizeBoshReleaseNoLeftoverSpoolFiles(t *testing.T) {
 	path := filepath.Join(dir, "release.tgz")
 	buildSyntheticBoshRelease(t, path, 0)
 
-	if err := canonicalizeBoshRelease(path); err != nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err != nil {
 		t.Fatalf("canonicalizeBoshRelease: %v", err)
 	}
 
@@ -1293,7 +1409,11 @@ func TestCanonicalizeBoshReleaseNoLeftoverSpoolFiles(t *testing.T) {
 	}
 }
 
-func TestCanonicalizeBoshReleaseMissingManifestDoesNotError(t *testing.T) {
+func TestCanonicalizeBoshReleaseErrorsWhenManifestMissing(t *testing.T) {
+	// Without release.MF there is no content to derive a version from. Real
+	// bosh create-release output always has one; this can only happen to a
+	// hand-built or corrupt tarball, so fail loudly rather than ship an
+	// un-versioned release.
 	dir := t.TempDir()
 	path := filepath.Join(dir, "release.tgz")
 
@@ -1305,20 +1425,14 @@ func TestCanonicalizeBoshReleaseMissingManifestDoesNotError(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 
-	if err := canonicalizeBoshRelease(path); err != nil {
-		t.Fatalf("expected no error when release.MF is absent, got: %v", err)
-	}
-
-	// With no manifest there is no checksum to patch and none to
-	// invalidate, so blobs are passed through rather than repacked.
-	if got := entryBytes(t, extractEntry(t, path, "jobs/x.tgz")); !bytes.Equal(got, jobBlob) {
-		t.Error("expected the blob to be passed through byte-for-byte when release.MF is absent")
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err == nil {
+		t.Fatal("expected an error when release.MF is absent, got nil")
 	}
 }
 
-func TestCanonicalizeBoshReleaseNonRegularManifestDoesNotError(t *testing.T) {
-	// A non-regular release.MF (path == "") has nothing to read or patch, so
-	// it passes through rather than erroring on os.ReadFile("").
+func TestCanonicalizeBoshReleaseErrorsWhenManifestNonRegular(t *testing.T) {
+	// A non-regular release.MF (path == "") has nothing to read, so it can't
+	// be fingerprinted either -- same as the missing-manifest case.
 	dir := t.TempDir()
 	path := filepath.Join(dir, "release.tgz")
 
@@ -1331,25 +1445,20 @@ func TestCanonicalizeBoshReleaseNonRegularManifestDoesNotError(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 
-	if err := canonicalizeBoshRelease(path); err != nil {
-		t.Fatalf("expected no error when release.MF is not a regular file, got: %v", err)
-	}
-
-	e := extractEntry(t, path, "release.MF")
-	if e.header.Typeflag != tar.TypeSymlink {
-		t.Errorf("release.MF typeflag = %v, want unchanged TypeSymlink", e.header.Typeflag)
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err == nil {
+		t.Fatal("expected an error when release.MF is not a regular file, got nil")
 	}
 }
 
 func TestCanonicalizeBoshReleaseErrorsOnUnreadableFile(t *testing.T) {
 	dir := t.TempDir() // a directory, not a file — os.Open must fail on it
-	if err := canonicalizeBoshRelease(dir); err == nil {
+	if _, err := canonicalizeBoshRelease(dir, "0.1.1"); err == nil {
 		t.Fatal("expected error when tarball path is a directory, got nil")
 	}
 }
 
 func TestCanonicalizeBoshReleaseErrorsOnMissingFile(t *testing.T) {
-	if err := canonicalizeBoshRelease(filepath.Join(t.TempDir(), "does-not-exist.tgz")); err == nil {
+	if _, err := canonicalizeBoshRelease(filepath.Join(t.TempDir(), "does-not-exist.tgz"), "0.1.1"); err == nil {
 		t.Fatal("expected error for nonexistent tarball path, got nil")
 	}
 }
@@ -1366,7 +1475,7 @@ func TestCanonicalizeBoshReleaseErrorsOnCorruptNestedBlob(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 
-	if err := canonicalizeBoshRelease(path); err == nil {
+	if _, err := canonicalizeBoshRelease(path, "0.1.1"); err == nil {
 		t.Fatal("expected error when a nested job/package blob is corrupt, got nil")
 	}
 }

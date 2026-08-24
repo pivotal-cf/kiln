@@ -32,10 +32,10 @@ type tarEntry struct {
 	size   int64
 }
 
-func canonicalizeBoshRelease(tarballPath string) error {
+func canonicalizeBoshRelease(tarballPath, productVersion string) (string, error) {
 	info, err := os.Stat(tarballPath)
 	if err != nil {
-		return fmt.Errorf("failed to stat bosh release tarball: %w", err)
+		return "", fmt.Errorf("failed to stat bosh release tarball: %w", err)
 	}
 	origMode := info.Mode()
 
@@ -57,29 +57,28 @@ func canonicalizeBoshRelease(tarballPath string) error {
 
 	f, err := os.Open(tarballPath)
 	if err != nil {
-		return fmt.Errorf("failed to read bosh release tarball: %w", err)
+		return "", fmt.Errorf("failed to read bosh release tarball: %w", err)
 	}
 	entries, spooled, err := readTarGz(f, spoolDir)
 	track(spooled...)
 	_ = f.Close()
 	if err != nil {
-		return fmt.Errorf("failed to parse bosh release tarball: %w", err)
+		return "", fmt.Errorf("failed to parse bosh release tarball: %w", err)
 	}
 
 	manifestEntry, hasManifest := entries[manifestFileName]
 	hasManifest = hasManifest && manifestEntry.header.Typeflag == tar.TypeReg
+	if !hasManifest {
+		return "", fmt.Errorf("release.MF not found or not a regular file; cannot derive a content-based release version")
+	}
 
-	var manifestData []byte
-	var blobs map[string]string
-	if hasManifest {
-		manifestData, err = os.ReadFile(manifestEntry.path)
-		if err != nil {
-			return fmt.Errorf("failed to read release.MF: %w", err)
-		}
-		blobs, err = manifestBlobs(manifestData)
-		if err != nil {
-			return fmt.Errorf("failed to parse release.MF: %w", err)
-		}
+	manifestData, err := os.ReadFile(manifestEntry.path)
+	if err != nil {
+		return "", fmt.Errorf("failed to read release.MF: %w", err)
+	}
+	blobs, err := manifestBlobs(manifestData)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse release.MF: %w", err)
 	}
 
 	newSHA := map[string]string{} // release.MF checksum key -> new sha256 hex
@@ -98,7 +97,7 @@ func canonicalizeBoshRelease(tarballPath string) error {
 
 		dstPath, size, hexSum, err := canonicalizeNestedTarGz(entry.path, spoolDir)
 		if err != nil {
-			return fmt.Errorf("failed to canonicalize %s: %w", name, err)
+			return "", fmt.Errorf("failed to canonicalize %s: %w", name, err)
 		}
 		track(dstPath)
 		// Remove now, not at the final defer, so disk stays bounded to blobs in flight.
@@ -109,58 +108,131 @@ func canonicalizeBoshRelease(tarballPath string) error {
 		newSHA[blobs[name]] = hexSum
 	}
 
-	if hasManifest {
-		patched, unpatched, err := patchReleaseManifestChecksums(manifestData, newSHA)
-		if err != nil {
-			return fmt.Errorf("failed to patch release.MF: %w", err)
-		}
-
-		if len(unpatched) > 0 {
-			return fmt.Errorf("repacked blob(s) %s have no sha1 field in release.MF to patch; "+
-				"canonicalizing them would leave the release checksums inconsistent",
-				strings.Join(unpatched, ", "))
-		}
-
-		mf, err := os.CreateTemp(spoolDir, "canonical-manifest-*")
-		if err != nil {
-			return fmt.Errorf("failed to patch release.MF: %w", err)
-		}
-		track(mf.Name())
-		if _, err := mf.Write(patched); err != nil {
-			_ = mf.Close()
-			return fmt.Errorf("failed to patch release.MF: %w", err)
-		}
-		if err := mf.Close(); err != nil {
-			return fmt.Errorf("failed to patch release.MF: %w", err)
-		}
-		_ = os.Remove(manifestEntry.path)
-		untrack(manifestEntry.path)
-		entries[manifestFileName] = tarEntry{header: manifestEntry.header, path: mf.Name(), size: int64(len(patched))}
+	patched, unpatched, err := patchReleaseManifestChecksums(manifestData, newSHA)
+	if err != nil {
+		return "", fmt.Errorf("failed to patch release.MF: %w", err)
 	}
+
+	if len(unpatched) > 0 {
+		return "", fmt.Errorf("repacked blob(s) %s have no sha1 field in release.MF to patch; "+
+			"canonicalizing them would leave the release checksums inconsistent",
+			strings.Join(unpatched, ", "))
+	}
+
+	finalManifest, releaseVersion, err := finalizeReleaseVersion(patched, productVersion)
+	if err != nil {
+		return "", fmt.Errorf("failed to derive content-based release version: %w", err)
+	}
+
+	mf, err := os.CreateTemp(spoolDir, "canonical-manifest-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to write release.MF: %w", err)
+	}
+	track(mf.Name())
+	if _, err := mf.Write(finalManifest); err != nil {
+		_ = mf.Close()
+		return "", fmt.Errorf("failed to write release.MF: %w", err)
+	}
+	if err := mf.Close(); err != nil {
+		return "", fmt.Errorf("failed to write release.MF: %w", err)
+	}
+	_ = os.Remove(manifestEntry.path)
+	untrack(manifestEntry.path)
+	entries[manifestFileName] = tarEntry{header: manifestEntry.header, path: mf.Name(), size: int64(len(finalManifest))}
 
 	out, err := os.CreateTemp(spoolDir, filepath.Base(tarballPath)+".canonical-*.tmp")
 	if err != nil {
-		return fmt.Errorf("failed to write canonical bosh release tarball: %w", err)
+		return "", fmt.Errorf("failed to write canonical bosh release tarball: %w", err)
 	}
 	tmp := out.Name()
 	if err := writeTarGz(entries, out); err != nil {
 		_ = out.Close()
 		_ = os.Remove(tmp)
-		return fmt.Errorf("failed to write canonical bosh release tarball: %w", err)
+		return "", fmt.Errorf("failed to write canonical bosh release tarball: %w", err)
 	}
 	if err := out.Close(); err != nil {
 		_ = os.Remove(tmp)
-		return fmt.Errorf("failed to write canonical bosh release tarball: %w", err)
+		return "", fmt.Errorf("failed to write canonical bosh release tarball: %w", err)
 	}
 	if err := os.Chmod(tmp, origMode); err != nil {
 		_ = os.Remove(tmp)
-		return fmt.Errorf("failed to set canonical bosh release tarball permissions: %w", err)
+		return "", fmt.Errorf("failed to set canonical bosh release tarball permissions: %w", err)
 	}
 	if err := os.Rename(tmp, tarballPath); err != nil {
 		_ = os.Remove(tmp)
-		return fmt.Errorf("failed to replace bosh release tarball with canonical version: %w", err)
+		return "", fmt.Errorf("failed to replace bosh release tarball with canonical version: %w", err)
 	}
-	return nil
+	return releaseVersion, nil
+}
+
+// finalizeReleaseVersion derives a content-addressed release version and
+// writes it into the manifest's version field. commit_hash and
+// uncommitted_changes vary with git state even when release content is
+// identical, so they are excluded from the fingerprint (but left in the
+// output manifest for provenance) -- otherwise two byte-identical releases
+// built from different commits would get different versions, and two
+// releases with different bytes could end up sharing a version.
+func finalizeReleaseVersion(manifest []byte, productVersion string) ([]byte, string, error) {
+	var root yaml.Node
+	if err := yaml.Unmarshal(manifest, &root); err != nil {
+		return nil, "", err
+	}
+	if len(root.Content) == 0 {
+		return nil, "", fmt.Errorf("release.MF is empty; cannot derive a content-based version")
+	}
+	doc := root.Content[0]
+
+	versionNode := mappingValue(doc, "version")
+	commitHashNode := mappingValue(doc, "commit_hash")
+	uncommittedNode := mappingValue(doc, "uncommitted_changes")
+
+	// Mask to a fixed scalar representation (tag+style+value), not just
+	// value, so e.g. a `null` vs an empty string for the same field can't
+	// produce different masked bytes and thus different fingerprints.
+	mask := func(n *yaml.Node) (restore func()) {
+		if n == nil {
+			return func() {}
+		}
+		origTag, origStyle, origValue := n.Tag, n.Style, n.Value
+		n.Tag, n.Style, n.Value = "!!str", 0, ""
+		return func() { n.Tag, n.Style, n.Value = origTag, origStyle, origValue }
+	}
+	restoreCommitHash := mask(commitHashNode)
+	restoreUncommitted := mask(uncommittedNode)
+	mask(versionNode)
+
+	masked, err := encodeYAML(&root)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to render manifest for fingerprinting: %w", err)
+	}
+	sum := sha256.Sum256(masked)
+	fingerprint := hex.EncodeToString(sum[:])[:12]
+	version := buildReleaseVersion(productVersion, fingerprint)
+
+	restoreCommitHash()
+	restoreUncommitted()
+	if versionNode != nil {
+		versionNode.Tag, versionNode.Style, versionNode.Value = "!!str", 0, version
+	}
+
+	final, err := encodeYAML(&root)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to render finalized manifest: %w", err)
+	}
+	return final, version, nil
+}
+
+func encodeYAML(root *yaml.Node) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(root); err != nil {
+		return nil, err
+	}
+	if err := enc.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func manifestBlobs(manifest []byte) (map[string]string, error) {
