@@ -154,6 +154,22 @@ var _ = Describe("carvel bake command", func() {
 		Eventually(verifySession.Out).Should(gbytes.Say("No errors detected"))
 	})
 
+	Context("when no Kilnfile is present", func() {
+		It("bakes successfully without additional_releases support", func() {
+			err := os.Remove(filepath.Join(inputPath, "Kilnfile"))
+			Expect(err).NotTo(HaveOccurred())
+
+			command := exec.Command(pathToMain, commandWithArgs...)
+
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(session, "60s").Should(gexec.Exit(0))
+			Eventually(session.Out).Should(gbytes.Say("No Kilnfile found — proceeding without additional_releases support"))
+			Eventually(session.Out).Should(gbytes.Say("Done! Baked"))
+		})
+	})
+
 	Context("failure cases", func() {
 		Context("when the output-file flag is not provided", func() {
 			It("prints an error and exits 1", func() {
@@ -197,7 +213,7 @@ var _ = Describe("carvel bake command", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(session).Should(gexec.Exit(1))
-				Eventually(session.Err).Should(gbytes.Say("Kilnfile"))
+				Eventually(session.Err).Should(gbytes.Say("base.yml"))
 			})
 		})
 	})
