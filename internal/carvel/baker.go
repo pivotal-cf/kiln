@@ -664,18 +664,18 @@ metadata:
   name: <%= p("` + entry + `.name") %>-sa
   namespace: <%= link("cluster").p("content-namespace") rescue "default" %>
   annotations:
-    kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac"
-    kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall"
-    kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall"
+    kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac-` + entry + `"
+    kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall-` + entry + `"
+    kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall-` + entry + `"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: <%= p("` + entry + `.name") %>-sa-cluster-role
   annotations:
-    kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac"
-    kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall"
-    kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall"
+    kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac-` + entry + `"
+    kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall-` + entry + `"
+    kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall-` + entry + `"
 rules:
 - apiGroups: ["*"]
   resources: ["*"]
@@ -686,9 +686,9 @@ kind: ClusterRoleBinding
 metadata:
   name: <%= p("` + entry + `.name") %>-sa-cluster-role-binding
   annotations:
-    kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac"
-    kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall"
-    kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall"
+    kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac-` + entry + `"
+    kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall-` + entry + `"
+    kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall-` + entry + `"
 subjects:
 - kind: ServiceAccount
   name: <%= p("` + entry + `.name") %>-sa
@@ -704,9 +704,9 @@ metadata:
   name: <%= p("` + entry + `.name") %>-values
   namespace: <%= link("cluster").p("content-namespace") rescue "default" %>
   annotations:
-    kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/secrets"
-    kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall"
-    kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall"
+    kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/secrets-` + entry + `"
+    kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall-` + entry + `"
+    kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall-` + entry + `"
 type: Opaque
 stringData:
   values.yaml: |
@@ -728,7 +728,7 @@ metadata:
   name: <%= p("` + entry + `.name") %>
   namespace: <%= link("cluster").p("content-namespace") rescue "default" %>
   annotations:
-    kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/packageinstall"
+    kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/packageinstall-` + entry + `"
 spec:
   serviceAccountName: <%= p("` + entry + `.name") %>-sa
   packageRef:

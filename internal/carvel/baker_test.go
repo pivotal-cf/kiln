@@ -106,35 +106,35 @@ var _ = Describe("Carvel Baker", func() {
 
 		It("annotates the ServiceAccount for kapp ordering relative to the PackageInstall", func() {
 			doc := templateDocument(template, "ServiceAccount")
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac"`))
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall"`))
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac-test-install"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall-test-install"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall-test-install"`))
 		})
 
 		It("annotates the ClusterRole for kapp ordering relative to the PackageInstall", func() {
 			doc := templateDocument(template, "ClusterRole")
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac"`))
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall"`))
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac-test-install"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall-test-install"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall-test-install"`))
 		})
 
 		It("annotates the ClusterRoleBinding for kapp ordering relative to the PackageInstall", func() {
 			doc := templateDocument(template, "ClusterRoleBinding")
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac"`))
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall"`))
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/rbac-test-install"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall-test-install"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall-test-install"`))
 		})
 
 		It("annotates the Secret for kapp ordering relative to the PackageInstall", func() {
 			doc := templateDocument(template, "Secret")
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/secrets"`))
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall"`))
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/secrets-test-install"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall-test-install"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall-test-install"`))
 		})
 
 		It("annotates the PackageInstall with its own kapp change-group and no change-rules", func() {
 			doc := templateDocument(template, "PackageInstall")
-			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/packageinstall"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/packageinstall-test-install"`))
 			Expect(doc).NotTo(ContainSubstring("kapp.k14s.io/change-rule"))
 		})
 
