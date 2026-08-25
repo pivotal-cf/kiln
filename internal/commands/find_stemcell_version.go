@@ -8,10 +8,10 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/commands/flags"
+	"github.com/pivotal-cf/kiln/internal/helper"
 	"github.com/pivotal-cf/kiln/internal/pivnet"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -42,7 +42,7 @@ func NewFindStemcellVersion(outLogger *log.Logger, pivnetService *pivnet.Service
 	return FindStemcellVersion{
 		outLogger:     outLogger,
 		pivnetService: pivnetService,
-		FS:            osfs.New(""),
+		FS:            helper.NewBillyOS(),
 	}
 }
 

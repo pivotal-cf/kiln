@@ -11,13 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/go-git/go-billy/v5/osfs"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 
 	"github.com/pivotal-cf/kiln/internal/component"
 	fetcherFakes "github.com/pivotal-cf/kiln/internal/component/fakes"
+	"github.com/pivotal-cf/kiln/internal/helper"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
 
@@ -135,7 +135,7 @@ var _ = Describe("S3ReleaseSource", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(releaseContents).To(Equal([]byte("some-bucket/" + remoteRelease.RemotePath)))
 
-			sha1, err := component.CalculateSum(releasePath, osfs.New(""))
+			sha1, err := component.CalculateSum(releasePath, helper.NewBillyOS())
 			Expect(err).NotTo(HaveOccurred())
 
 			_, _, opts := fakeS3Downloader.DownloadObjectArgsForCall(0)

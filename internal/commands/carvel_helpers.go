@@ -23,7 +23,9 @@ func loadKilnfileOnly(options flags.Standard) (cargo.Kilnfile, error) {
 		return cargo.Kilnfile{}, fmt.Errorf("failed to parse template variables: %w", err)
 	}
 
-	kilnfileFP, err := fs.Open(options.Kilnfile)
+	// os.Open (not fs.Open): options.Kilnfile may be an absolute path outside any
+	// meaningful chroot, and go-billy osfs.New("") no longer permits that (billy.ErrCrossedBoundary).
+	kilnfileFP, err := os.Open(options.Kilnfile)
 	if err != nil {
 		return cargo.Kilnfile{}, fmt.Errorf("failed to open Kilnfile: %w", err)
 	}

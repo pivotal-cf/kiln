@@ -4,13 +4,13 @@ import (
 	"log"
 	"os"
 
-	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pivotal-cf/jhanda"
 
 	"github.com/pivotal-cf/kiln/internal/baking"
 	"github.com/pivotal-cf/kiln/internal/builder"
 	"github.com/pivotal-cf/kiln/internal/commands"
 	"github.com/pivotal-cf/kiln/internal/component"
+	"github.com/pivotal-cf/kiln/internal/helper"
 	"github.com/pivotal-cf/kiln/internal/pivnet"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 )
@@ -57,7 +57,7 @@ func main() {
 		command = "help"
 	}
 
-	fs := osfs.New("")
+	fs := helper.NewBillyOS()
 
 	releaseManifestReader := builder.NewReleaseManifestReader()
 	releasesService := baking.NewReleasesService(errLogger, releaseManifestReader)
@@ -91,7 +91,7 @@ func main() {
 	commandSet["update-stemcell"] = commands.UpdateStemcell{
 		Logger:                     outLogger,
 		MultiReleaseSourceProvider: mrsProvider,
-		FS:                         osfs.New(""),
+		FS:                         helper.NewBillyOS(),
 	}
 
 	// commandSet["fetch"] = commands.NewFetch(outLogger, mrsProvider, localReleaseDirectory)
@@ -100,7 +100,7 @@ func main() {
 
 	commandSet["find-stemcell-version"] = commands.NewFindStemcellVersion(outLogger, pivnetService)
 
-	commandSet["validate"] = commands.NewValidate(osfs.New(""))
+	commandSet["validate"] = commands.NewValidate(helper.NewBillyOS())
 	commandSet["release-notes"], err = commands.NewReleaseNotesCommand()
 	if err != nil {
 		log.Fatal(err)

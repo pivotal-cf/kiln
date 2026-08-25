@@ -66,7 +66,7 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to parse template variables: %w", err)
 	}
 
-	kilnfileFP, err := fs.Open(options.Kilnfile)
+	kilnfileFP, err := openFileReader(fsOverride, fs, options.Kilnfile)
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to open Kilnfile: %w", err)
 	}
@@ -77,7 +77,7 @@ func (options *Standard) LoadKilnfiles(fsOverride billy.Basic, variablesServiceO
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, err
 	}
 
-	lockFP, err := fs.Open(options.KilnfileLockPath())
+	lockFP, err := openFileReader(fsOverride, fs, options.KilnfileLockPath())
 	if err != nil {
 		return cargo.Kilnfile{}, cargo.KilnfileLock{}, fmt.Errorf("failed to open Kilnfile.lock: %w", err)
 	}
@@ -107,7 +107,7 @@ func (options Standard) SaveKilnfileLock(fsOverride billy.Basic, kilnfileLock ca
 		return fmt.Errorf("error marshaling the Kilnfile.lock: %w", err) // untestable
 	}
 
-	lockFile, err := fs.Create(options.KilnfileLockPath()) // overwrites the file
+	lockFile, err := openFileWriter(fsOverride, fs, options.KilnfileLockPath()) // overwrites the file
 	if err != nil {
 		return fmt.Errorf("error reopening the Kilnfile.lock for writing: %w", err)
 	}
@@ -313,3 +313,21 @@ func encodeFlags(v reflect.Value) []string {
 }
 
 func closeAndIgnoreError(c io.Closer) { _ = c.Close() }
+
+// openFileReader and openFileWriter use os.Open/os.Create (not fs.Open/fs.Create) when no
+// fsOverride is set: the given path may be absolute and outside any meaningful chroot, which
+// go-billy osfs.New("") no longer permits (billy.ErrCrossedBoundary). Test-injected fake
+// filesystems (fsOverride != nil, e.g. memfs) still go through fs so unit tests are unaffected.
+func openFileReader(fsOverride billy.Basic, fs billy.Basic, path string) (io.ReadCloser, error) {
+	if fsOverride == nil {
+		return os.Open(path)
+	}
+	return fs.Open(path)
+}
+
+func openFileWriter(fsOverride billy.Basic, fs billy.Basic, path string) (io.WriteCloser, error) {
+	if fsOverride == nil {
+		return os.Create(path)
+	}
+	return fs.Create(path)
+}
