@@ -33,8 +33,25 @@ participate more equitably:
 ## Testing your changes
 
 1. Where applicable, write unit tests for your change
-2. Manually test your changes with the appropriate services (s3, Artifactory, Ops Manager, GitHub repo, bosh.io...)
-3. [Run (and maybe add additional) the acceptance tests locally](internal/acceptance/README.md).
+2. Run the unit suite the way CI does. It needs no external tools:
+
+   ```
+   go test -skip 'TestDockerIntegration|TestAcceptance' ./...
+   ```
+
+   (`-skip` excludes two suites that need Docker/Artifactory credentials.)
+   Specs that drive the real `bosh` CLI (the carvel commands) are behind a build tag and are
+   not compiled by either command. Once the [bosh CLI](https://bosh.io/docs/cli-v2-install/)
+   is on your PATH, run them with the same command CI uses:
+
+   ```
+   go test --timeout 15m -tags integration -skip 'TestDockerIntegration|TestAcceptance' ./...
+   ```
+
+   To iterate on just the carvel packages, narrow it:
+   `go test -tags integration ./internal/carvel ./internal/commands`
+3. Manually test your changes with the appropriate services (s3, Artifactory, Ops Manager, GitHub repo, bosh.io...)
+4. [Run (and maybe add additional) the acceptance tests locally](internal/acceptance/README.md).
    For Non-VMware employees, let us know and we may run the acceptance tests for you.
    *Note, the caching-compiled-releases step does not run in CI because it needs access to a deployed Ops Manager.*
 
