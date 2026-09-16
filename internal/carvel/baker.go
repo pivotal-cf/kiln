@@ -506,6 +506,7 @@ files:
 			return err
 		}
 
+		var downwardAPIItems []models.DownwardAPIItem
 		for _, match := range matches {
 			yamlData, err := os.ReadFile(match)
 			if err != nil {
@@ -521,6 +522,7 @@ files:
 				continue
 			}
 
+			downwardAPIItems = pi.DownwardAPIItems
 			b.log("found " + pi.Name + " at " + match)
 		}
 
@@ -550,7 +552,7 @@ files:
 			overlayContent = string(overlayData)
 		}
 
-		manifestTemplate := generateManifestTemplate(entry, overlayContent)
+		manifestTemplate := generateManifestTemplate(entry, overlayContent, downwardAPIItems)
 
 		err = os.WriteFile(
 			path.Join(dirName, "jobs", "registry-data", "templates", "packageinstalls", entry+".yml.erb"),
@@ -656,7 +658,18 @@ consumes:
 // generateManifestTemplate produces the ERB template for the registry-data BOSH job.
 // overlayContent is optional ERB code injected into the values manipulation block
 // before YAML.dump(values) is called, enabling BOSH link-based value overrides.
-func generateManifestTemplate(entry, overlayContent string) string {
+func generateManifestTemplate(entry, overlayContent string, downwardAPIItems []models.DownwardAPIItem) string {
+	downwardAPIBlock := ""
+	if len(downwardAPIItems) > 0 {
+		downwardAPIBlock = "  - downwardAPI:\n    items:\n"
+		for _, item := range downwardAPIItems {
+			downwardAPIBlock += "      - name: " + item.Name + "\n"
+			if item.KubernetesAPIs != nil {
+				downwardAPIBlock += "        kubernetesAPIs: {}\n"
+			}
+		}
+	}
+
 	return `---
 apiVersion: v1
 kind: ServiceAccount
@@ -738,7 +751,7 @@ spec:
   values:
   - secretRef:
       name: <%= p("` + entry + `.name") %>-values
-`
+` + downwardAPIBlock
 }
 
 func (b *baker) generateOutputTile(kilnfile cargo.Kilnfile, kilnfileLock cargo.KilnfileLock, opts BakeOptions) error {

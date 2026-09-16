@@ -8,6 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-cf/kiln/internal/carvel/models"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"gopkg.in/yaml.v3"
@@ -30,7 +31,7 @@ var _ = Describe("Carvel Baker", func() {
 		var template string
 
 		BeforeEach(func() {
-			template = generateManifestTemplate("test-install", "")
+			template = generateManifestTemplate("test-install", "", nil)
 		})
 
 		It("generates a ServiceAccount", func() {
@@ -62,6 +63,23 @@ var _ = Describe("Carvel Baker", func() {
 			Expect(template).To(ContainSubstring("apiVersion: packaging.carvel.dev/v1alpha1"))
 			Expect(template).To(ContainSubstring(`name: <%= p("test-install.name") %>`))
 			Expect(template).To(ContainSubstring(`serviceAccountName: <%= p("test-install.name") %>-sa`))
+		})
+
+		It("emits only secretRef in values when no downwardAPIItems are declared", func() {
+			tmpl := generateManifestTemplate("my-pkg", "", nil)
+			Expect(tmpl).To(ContainSubstring("- secretRef:"))
+			Expect(tmpl).NotTo(ContainSubstring("downwardAPI"))
+		})
+
+		It("appends a downwardAPI block when kubernetesAPIs item is declared", func() {
+			items := []models.DownwardAPIItem{
+				{Name: "group_versions", KubernetesAPIs: &struct{}{}},
+			}
+			tmpl := generateManifestTemplate("my-pkg", "", items)
+			Expect(tmpl).To(ContainSubstring("- secretRef:"))
+			Expect(tmpl).To(ContainSubstring("- downwardAPI:"))
+			Expect(tmpl).To(ContainSubstring("    items:\n      - name: group_versions"))
+			Expect(tmpl).To(ContainSubstring("kubernetesAPIs: {}"))
 		})
 
 		It("annotates the ServiceAccount for kapp ordering relative to the PackageInstall", func() {
@@ -113,7 +131,7 @@ var _ = Describe("Carvel Baker", func() {
 		Context("with overlay content", func() {
 			It("includes overlay content before YAML.dump", func() {
 				overlay := `<% values["syslog_agent"]["cache"]["url"] = "https://1.2.3.4:9000" %>`
-				tmpl := generateManifestTemplate("test-install", overlay)
+				tmpl := generateManifestTemplate("test-install", overlay, nil)
 				Expect(tmpl).To(ContainSubstring(overlay))
 				overlayIdx := strings.Index(tmpl, overlay)
 				dumpIdx := strings.Index(tmpl, "YAML.dump(values)")
@@ -121,7 +139,7 @@ var _ = Describe("Carvel Baker", func() {
 			})
 
 			It("produces valid output with empty overlay", func() {
-				tmpl := generateManifestTemplate("test-install", "")
+				tmpl := generateManifestTemplate("test-install", "", nil)
 				Expect(tmpl).To(ContainSubstring("YAML.dump(values)"))
 				Expect(tmpl).NotTo(BeEmpty())
 			})
@@ -516,7 +534,7 @@ product_version: "0.1.0"
 
 	Context("generateManifestTemplate with different entry names", func() {
 		It("parameterizes the entry name throughout the template", func() {
-			template := generateManifestTemplate("my-custom-pkg", "")
+			template := generateManifestTemplate("my-custom-pkg", "", nil)
 
 			Expect(template).To(ContainSubstring(`p("my-custom-pkg.name")`))
 			Expect(template).To(ContainSubstring(`p("my-custom-pkg.version")`))
@@ -525,7 +543,7 @@ product_version: "0.1.0"
 		})
 
 		It("contains exactly 6 K8s resource documents", func() {
-			template := generateManifestTemplate("pkg", "")
+			template := generateManifestTemplate("pkg", "", nil)
 			docs := strings.Split(template, "---")
 			nonEmpty := 0
 			for _, doc := range docs {
