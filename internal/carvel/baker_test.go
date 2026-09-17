@@ -576,6 +576,26 @@ product_version: "0.1.0"
 		})
 	})
 
+	Context("ParseMetadata", func() {
+		It("unmarshals replicable: true from base.yml into Metadata", func() {
+			srcDir, err := os.MkdirTemp("", "parse-metadata-replicable-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = os.RemoveAll(srcDir) }()
+
+			baseYML := `---
+name: my-tile
+metadata_version: "3.2.0"
+product_version: "1.0.0"
+replicable: true
+`
+			Expect(os.WriteFile(filepath.Join(srcDir, "base.yml"), []byte(baseYML), 0644)).To(Succeed())
+
+			b := &baker{progressWriter: &strings.Builder{}, writer: &strings.Builder{}}
+			Expect(b.ParseMetadata(srcDir)).To(Succeed())
+			Expect(b.metadata.Replicable).To(BeTrue())
+		})
+	})
+
 	Context("generateBaseYaml", func() {
 		It("passes replicable: true from input metadata to output base.yml", func() {
 			destDir, err := os.MkdirTemp("", "generate-base-yaml-replicable-*")
