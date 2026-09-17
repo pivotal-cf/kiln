@@ -806,6 +806,7 @@ func (b *baker) generateBaseYaml() error {
 	meta.MetadataVersion = b.metadata.MetadataVersion
 	meta.Rank = b.metadata.Rank
 	meta.Serial = b.metadata.Serial
+	meta.Replicable = b.metadata.Replicable
 	meta.CompatibleKubernetesDistributions = b.metadata.CompatibleKubernetesDistributions
 	meta.SupportsParallelDeploys = b.metadata.SupportsParallelDeploys
 	meta.RequiresProductVersions = b.metadata.RequiresProductVersions

@@ -8,6 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-cf/kiln/internal/carvel/models"
 	"github.com/pivotal-cf/kiln/pkg/cargo"
 	"github.com/pivotal-cf/kiln/pkg/proofing"
 	"gopkg.in/yaml.v3"
@@ -572,6 +573,78 @@ product_version: "0.1.0"
 			})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("missing required field 'type'"))
+		})
+	})
+
+	Context("ParseMetadata", func() {
+		It("unmarshals replicable: true from base.yml into Metadata", func() {
+			srcDir, err := os.MkdirTemp("", "parse-metadata-replicable-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = os.RemoveAll(srcDir) }()
+
+			baseYML := `---
+name: my-tile
+metadata_version: "3.2.0"
+product_version: "1.0.0"
+replicable: true
+`
+			Expect(os.WriteFile(filepath.Join(srcDir, "base.yml"), []byte(baseYML), 0644)).To(Succeed())
+
+			b := &baker{progressWriter: &strings.Builder{}, writer: &strings.Builder{}}
+			Expect(b.ParseMetadata(srcDir)).To(Succeed())
+			Expect(b.metadata.Replicable).To(BeTrue())
+		})
+	})
+
+	Context("generateBaseYaml", func() {
+		It("passes replicable: true from input metadata to output base.yml", func() {
+			destDir, err := os.MkdirTemp("", "generate-base-yaml-replicable-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = os.RemoveAll(destDir) }()
+
+			b := &baker{
+				progressWriter: &strings.Builder{},
+				writer:         &strings.Builder{},
+				destination:    destDir,
+				metadata: models.Metadata{
+					Name:            "my-tile",
+					Replicable:      true,
+					MetadataVersion: "3.2.0",
+					ProductVersion:  "1.0.0",
+				},
+			}
+
+			Expect(b.generateBaseYaml()).To(Succeed())
+
+			outData, readErr := os.ReadFile(filepath.Join(destDir, "base.yml"))
+			Expect(readErr).NotTo(HaveOccurred())
+
+			var out models.MetadataOut
+			Expect(yaml.Unmarshal(outData, &out)).To(Succeed())
+			Expect(out.Replicable).To(BeTrue())
+		})
+
+		It("omits replicable from output base.yml when not set in input metadata", func() {
+			destDir, err := os.MkdirTemp("", "generate-base-yaml-no-replicable-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = os.RemoveAll(destDir) }()
+
+			b := &baker{
+				progressWriter: &strings.Builder{},
+				writer:         &strings.Builder{},
+				destination:    destDir,
+				metadata: models.Metadata{
+					Name:            "my-tile",
+					MetadataVersion: "3.2.0",
+					ProductVersion:  "1.0.0",
+				},
+			}
+
+			Expect(b.generateBaseYaml()).To(Succeed())
+
+			outData, readErr := os.ReadFile(filepath.Join(destDir, "base.yml"))
+			Expect(readErr).NotTo(HaveOccurred())
+			Expect(string(outData)).NotTo(ContainSubstring("replicable"))
 		})
 	})
 })

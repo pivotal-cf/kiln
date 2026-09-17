@@ -19,6 +19,7 @@ type MetadataOut struct {
 	Releases                          []string                 `yaml:"releases"`
 	RuntimeConfigs                    []string                 `yaml:"runtime_configs"`
 	RequiresKubernetes                bool                     `yaml:"requires_kubernetes"`
+	Replicable                        bool                     `yaml:"replicable,omitempty"`
 	CompatibleKubernetesDistributions []ProductVersion         `yaml:"compatible_kubernetes_distributions"`
 	SupportsParallelDeploys           bool                     `yaml:"supports_parallel_deploys,omitempty"`
 	RequiresProductVersions           []RequiredProductVersion `yaml:"requires_product_versions,omitempty"`

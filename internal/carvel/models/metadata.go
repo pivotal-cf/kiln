@@ -15,6 +15,7 @@ type Metadata struct {
 	FormTypes                         []string                 `yaml:"form_types"`
 	Variables                         []proofing.Variable      `yaml:"variables"`
 	PackageInstalls                   []string                 `yaml:"package_installs"`
+	Replicable                        bool                     `yaml:"replicable,omitempty"`
 	CompatibleKubernetesDistributions []ProductVersion         `yaml:"compatible_kubernetes_distributions,omitempty"`
 	SupportsParallelDeploys           bool                     `yaml:"supports_parallel_deploys,omitempty"`
 	RequiresProductVersions           []RequiredProductVersion `yaml:"requires_product_versions,omitempty"`
