@@ -10,6 +10,36 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func TestResolveReleasesDirectory_DefaultAnchorsToSourcePath(t *testing.T) {
+	sourcePath := filepath.Join(string(os.PathSeparator), "tile", "source")
+
+	require.Equal(t, filepath.Join(sourcePath, "releases"), resolveReleasesDirectory("", sourcePath),
+		"an empty value (flag unset, or carvel rebake which has no --releases-directory flag) must anchor to sourcePath, not be left CWD-relative")
+}
+
+func TestResolveReleasesDirectory_ExplicitOverridePassesThrough(t *testing.T) {
+	sourcePath := filepath.Join(string(os.PathSeparator), "tile", "source")
+
+	relOverride := filepath.Join("custom", "releases")
+	wantRel, err := filepath.Abs(relOverride)
+	require.NoError(t, err)
+	require.Equal(t, wantRel, resolveReleasesDirectory(relOverride, sourcePath),
+		"an explicit override must not be anchored to sourcePath, matching current behavior for any caller that sets --releases-directory")
+
+	absOverride := filepath.Join(string(os.PathSeparator), "absolute", "releases")
+	require.Equal(t, absOverride, resolveReleasesDirectory(absOverride, sourcePath),
+		"an explicit absolute override must be returned unchanged")
+
+	require.Equal(t, mustAbs(t, "releases"), resolveReleasesDirectory("releases", sourcePath),
+		"an explicit --releases-directory releases is no longer conflated with the unset default; it resolves like any other relative override")
+}
+
+func mustAbs(t *testing.T, p string) string {
+	abs, err := filepath.Abs(p)
+	require.NoError(t, err)
+	return abs
+}
+
 func TestWriteStandardKilnfileLock_PreservesExisting(t *testing.T) {
 	tmpDir := t.TempDir()
 	lockfilePath := filepath.Join(tmpDir, "Kilnfile.lock")

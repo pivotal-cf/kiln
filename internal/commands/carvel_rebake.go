@@ -138,13 +138,13 @@ func (c CarvelReBake) Execute(args []string) error {
 
 		err = b.BakeFromLockfile(sourcePath, kilnfile, kilnfileLock, releaseLock, localTarball, carvel.BakeOptions{
 			SkipFetch:         false,
-			ReleasesDirectory: "releases",
+			ReleasesDirectory: resolveReleasesDirectory("", sourcePath),
 		})
 	} else {
 		c.outLogger.Printf("Re-baking Carvel tile from %s", sourcePath)
 		err = b.Bake(sourcePath, kilnfile, kilnfileLock, carvel.BakeOptions{
 			SkipFetch:         false,
-			ReleasesDirectory: "releases",
+			ReleasesDirectory: resolveReleasesDirectory("", sourcePath),
 		})
 	}
 	if err != nil {

@@ -32,7 +32,7 @@ type CarvelUploadOptions struct {
 	PathTemplate      string `          long:"path-template"     description:"remote path template override" default:"bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz"`
 	Verbose           bool   `short:"v" long:"verbose"           description:"enable verbose output"`
 	SkipFetch         bool   `short:"sfr" long:"skip-fetch"        description:"skip fetching additional releases (assumes they are already in the releases directory)"`
-	ReleasesDirectory string `short:"rd"  long:"releases-directory" description:"path to the releases directory" default:"releases"`
+	ReleasesDirectory string `short:"rd"  long:"releases-directory" description:"path to the releases directory (default: <source-directory>/releases)"`
 }
 
 func NewCarvelUpload(outLogger, errLogger *log.Logger) CarvelUpload {
@@ -86,7 +86,7 @@ func (c CarvelUpload) Execute(args []string) error {
 	c.outLogger.Printf("Baking Carvel tile from %s", sourcePath)
 	err = baker.Bake(sourcePath, kilnfile, kilnfileLock, carvel.BakeOptions{
 		SkipFetch:         c.Options.SkipFetch,
-		ReleasesDirectory: c.Options.ReleasesDirectory,
+		ReleasesDirectory: resolveReleasesDirectory(c.Options.ReleasesDirectory, sourcePath),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to prepare Carvel tile: %w", err)
