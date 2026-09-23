@@ -6,6 +6,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path"
@@ -346,6 +348,88 @@ var _ = Describe("Carvel Baker (integration)", func() {
 						Expect(extraJob.Name).To(Equal(extraJobName))
 						Expect(extraJob.Release).To(Equal(extraReleaseName))
 						Expect(extraJob.Properties).To(BeEmpty())
+					})
+				})
+
+				When("the additional-releases cache directory does not exist yet", func() {
+					// Regression test: fetchAdditionalReleases never created
+					// ReleasesDirectory before downloading into it. Other specs
+					// mask this by pre-creating the dir in BeforeEach.
+					const (
+						extraReleaseName    = "smoke-test-scripts"
+						extraReleaseVersion = "dev"
+						extraJobName        = "smoke-test-scripts"
+					)
+					remotePath := "bosh-releases/" + extraReleaseName + "/" + extraReleaseName + "-" + extraReleaseVersion + ".tgz"
+
+					var server *httptest.Server
+
+					BeforeEach(func() {
+						baseYMLPath := filepath.Join(inputPath, "base.yml")
+						raw, err := os.ReadFile(baseYMLPath)
+						Expect(err).NotTo(HaveOccurred())
+						var m models.Metadata
+						Expect(yaml.Unmarshal(raw, &m)).To(Succeed())
+						m.AdditionalReleases = []models.AdditionalRelease{
+							{
+								Name: extraReleaseName,
+								Jobs: []models.AdditionalJob{{Name: extraJobName}},
+							},
+						}
+						updated, err := yaml.Marshal(&m)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(os.WriteFile(baseYMLPath, updated, 0644)).To(Succeed())
+
+						server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							if r.URL.Path != "/artifactory/test-repo/"+remotePath {
+								http.Error(w, "not found", http.StatusNotFound)
+								return
+							}
+							_, _ = w.Write([]byte("real bosh release tarball"))
+						}))
+
+						kilnfile = cargo.Kilnfile{
+							ReleaseSources: []cargo.ReleaseSourceConfig{
+								{
+									Type:            "artifactory",
+									ArtifactoryHost: server.URL,
+									Repo:            "test-repo",
+									PathTemplate:    "bosh-releases/{{.Name}}/{{.Name}}-{{.Version}}.tgz",
+								},
+							},
+						}
+						kilnfileLock = cargo.KilnfileLock{
+							Releases: []cargo.BOSHReleaseTarballLock{
+								{
+									Name:         extraReleaseName,
+									Version:      extraReleaseVersion,
+									RemoteSource: "artifactory",
+									RemotePath:   remotePath,
+								},
+							},
+						}
+
+						// Deliberately do NOT pre-create this path — that's the
+						// bug the other specs' BeforeEach masks.
+						opts = BakeOptions{
+							SkipFetch:         false,
+							ReleasesDirectory: filepath.Join(inputPath, "not-yet-created-releases-cache"),
+						}
+					})
+
+					AfterEach(func() {
+						if server != nil {
+							server.Close()
+						}
+					})
+
+					It("downloads the additional release even though the cache directory doesn't exist yet", func() {
+						Expect(err).NotTo(HaveOccurred())
+						dst := filepath.Join(outputPath, "releases", extraReleaseName+"-"+extraReleaseVersion+".tgz")
+						Expect(dst).To(BeAnExistingFile())
+						data, readErr := os.ReadFile(dst)
+						Expect(readErr).NotTo(HaveOccurred())
+						Expect(string(data)).To(Equal("real bosh release tarball"))
 					})
 				})
 

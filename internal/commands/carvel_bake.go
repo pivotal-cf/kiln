@@ -23,7 +23,7 @@ type CarvelBakeOptions struct {
 	SourceDirectory   string `short:"s"   long:"source-directory"   description:"path to the Carvel tile source directory (defaults to current directory)"`
 	OutputFile        string `short:"o"   long:"output-file"        description:"path to where the tile will be output" required:"true"`
 	Verbose           bool   `short:"v"   long:"verbose"            description:"enable verbose output"`
-	ReleasesDirectory string `short:"rd"  long:"releases-directory" default:"releases" description:"path to a directory containing/receiving additional_releases tarballs"`
+	ReleasesDirectory string `short:"rd"  long:"releases-directory" description:"path to a directory containing/receiving additional_releases tarballs (default: <source-directory>/releases)"`
 	SkipFetchReleases bool   `short:"sfr" long:"skip-fetch"         description:"skip fetching additional_releases; expect them already present in --releases-directory"`
 	FromLockfile      bool   `long:"from-lockfile" description:"use a cached copy of the tile's OWN release from Kilnfile.lock instead of regenerating it from source (narrow, explicit opt-in — see docs)"`
 }
@@ -139,7 +139,7 @@ func (c CarvelBake) Execute(args []string) error {
 
 		err = baker.BakeFromLockfile(sourcePath, kilnfile, kilnfileLock, releaseLock, localTarball, carvel.BakeOptions{
 			SkipFetch:         c.Options.SkipFetchReleases,
-			ReleasesDirectory: c.Options.ReleasesDirectory,
+			ReleasesDirectory: resolveReleasesDirectory(c.Options.ReleasesDirectory, sourcePath),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to prepare Carvel tile from lockfile: %w", err)
@@ -147,7 +147,7 @@ func (c CarvelBake) Execute(args []string) error {
 	} else {
 		opts := carvel.BakeOptions{
 			SkipFetch:         c.Options.SkipFetchReleases,
-			ReleasesDirectory: c.Options.ReleasesDirectory,
+			ReleasesDirectory: resolveReleasesDirectory(c.Options.ReleasesDirectory, sourcePath),
 		}
 		err = baker.Bake(sourcePath, kilnfile, kilnfileLock, opts)
 		if err != nil {

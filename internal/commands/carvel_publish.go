@@ -31,7 +31,7 @@ type CarvelPublishOptions struct {
 	IsFinal           bool   `          long:"final"             description:"create a bake record for this build"`
 	Verbose           bool   `short:"v" long:"verbose"           description:"enable verbose output"`
 	SkipFetch         bool   `short:"sfr" long:"skip-fetch"        description:"skip fetching additional releases (assumes they are already in the releases directory)"`
-	ReleasesDirectory string `short:"rd"  long:"releases-directory" description:"path to the releases directory" default:"releases"`
+	ReleasesDirectory string `short:"rd"  long:"releases-directory" description:"path to the releases directory (default: <source-directory>/releases)"`
 }
 
 func NewCarvelPublish(outLogger, errLogger *log.Logger) CarvelPublish {
@@ -104,7 +104,7 @@ func (c CarvelPublish) Execute(args []string) error {
 
 	err = b.BakeFromLockfile(sourcePath, kilnfile, kilnfileLock, releaseLock, localTarball, carvel.BakeOptions{
 		SkipFetch:         c.Options.SkipFetch,
-		ReleasesDirectory: c.Options.ReleasesDirectory,
+		ReleasesDirectory: resolveReleasesDirectory(c.Options.ReleasesDirectory, sourcePath),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to prepare Carvel tile from lockfile: %w", err)

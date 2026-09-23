@@ -122,6 +122,20 @@ func resolveKilnfilePath(kilnfilePath, sourcePath string) string {
 	return abs
 }
 
+// resolveReleasesDirectory anchors the unset releases directory to
+// sourcePath instead of the process's CWD. An explicit override (including
+// one that happens to spell out "releases") is only made absolute.
+func resolveReleasesDirectory(releasesDirectory, sourcePath string) string {
+	if releasesDirectory == "" {
+		return filepath.Join(sourcePath, "releases")
+	}
+	abs, err := filepath.Abs(releasesDirectory)
+	if err != nil {
+		return releasesDirectory
+	}
+	return abs
+}
+
 func resolveSourcePath(sourcePath string) (string, error) {
 	if sourcePath == "" {
 		var err error

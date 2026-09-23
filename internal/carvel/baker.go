@@ -1031,6 +1031,11 @@ func (b *baker) fetchAdditionalReleases(kilnfile cargo.Kilnfile, kilnfileLock ca
 	if err := os.MkdirAll(releasesDir, 0755); err != nil {
 		return err
 	}
+	if opts.ReleasesDirectory != "" {
+		if err := os.MkdirAll(opts.ReleasesDirectory, 0755); err != nil {
+			return err
+		}
+	}
 	sources := component.NewReleaseSourceRepo(kilnfile)
 
 	for _, ar := range b.metadata.AdditionalReleases {
