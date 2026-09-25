@@ -228,6 +228,9 @@ var _ = Describe("Carvel Baker (integration)", func() {
 					Expect(inner.Addons).To(HaveLen(1))
 					addon := inner.Addons[0]
 
+					By("targeting the non-replicable tile's deployment by product name")
+					Expect(addon.Include.Deployments).To(Equal([]string{"(( ..k8s-tile-test.deployment_name ))"}))
+
 					By("referencing tanzu-content release instead of registry")
 					Expect(addon.Include.Jobs).To(HaveLen(2))
 					Expect(addon.Include.Jobs[0].Name).To(Equal("install-package-repository"))

@@ -967,15 +967,19 @@ func (b *baker) generateRuntimeConfigs() error {
 		}
 	}
 
+	// $self.deployment_name requires Ops Manager 11.0+; only replicable tiles need it.
+	deploymentFilter := `(( ..` + b.metadata.Name + `.deployment_name ))`
+	if b.metadata.Replicable {
+		deploymentFilter = `(( $self.deployment_name ))`
+	}
+
 	inner := models.RuntimeConfigInner{
 		Releases: releases,
 		Addons: []models.Addon{
 			{
 				Name: b.metadata.Name + "-pkgr",
 				Include: models.Inclusion{
-					Deployments: []string{
-						`(( ..` + b.metadata.Name + `.deployment_name ))`,
-					},
+					Deployments: []string{deploymentFilter},
 					Jobs: []models.Job{
 						{Name: "install-package-repository", Release: "tanzu-content"},
 						{Name: "install-packages", Release: "tanzu-content"},

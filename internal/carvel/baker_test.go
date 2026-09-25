@@ -647,6 +647,75 @@ replicable: true
 			Expect(string(outData)).NotTo(ContainSubstring("replicable"))
 		})
 	})
+
+	Context("generateRuntimeConfigs", func() {
+		var (
+			replicable bool
+			rcData     []byte
+		)
+
+		deploymentFilter := func() []string {
+			var rc models.RuntimeConfigOuter
+			Expect(yaml.Unmarshal(rcData, &rc)).To(Succeed())
+			var inner models.RuntimeConfigInner
+			Expect(yaml.Unmarshal([]byte(rc.RuntimeConfig), &inner)).To(Succeed())
+			Expect(inner.Addons).To(HaveLen(1))
+			return inner.Addons[0].Include.Deployments
+		}
+
+		JustBeforeEach(func() {
+			destDir, err := os.MkdirTemp("", "generate-runtime-configs-*")
+			Expect(err).NotTo(HaveOccurred())
+			srcDir, err := os.MkdirTemp("", "generate-runtime-configs-src-*")
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				_ = os.RemoveAll(destDir)
+				_ = os.RemoveAll(srcDir)
+			})
+
+			b := &baker{
+				progressWriter: &strings.Builder{},
+				writer:         &strings.Builder{},
+				source:         srcDir,
+				destination:    destDir,
+				metadata: models.Metadata{
+					Name:            "my-tile",
+					Replicable:      replicable,
+					MetadataVersion: "3.2.0",
+					ProductVersion:  "1.0.0",
+				},
+			}
+
+			Expect(b.generateRuntimeConfigs()).To(Succeed())
+
+			rcData, err = os.ReadFile(filepath.Join(destDir, "runtime_configs", "my-tile-pkgr.yml"))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		When("the tile is replicable", func() {
+			BeforeEach(func() {
+				replicable = true
+			})
+
+			It("targets the owning product's deployment via $self", func() {
+				Expect(deploymentFilter()).To(Equal([]string{"(( $self.deployment_name ))"}))
+			})
+
+			It("does not reference the tile by name in a product-context accessor", func() {
+				Expect(string(rcData)).NotTo(ContainSubstring("..my-tile."))
+			})
+		})
+
+		When("the tile is not replicable", func() {
+			BeforeEach(func() {
+				replicable = false
+			})
+
+			It("targets the tile's deployment by product name, which Ops Manager before 11.0 supports", func() {
+				Expect(deploymentFilter()).To(Equal([]string{"(( ..my-tile.deployment_name ))"}))
+			})
+		})
+	})
 })
 
 func TestShellQuoteCommand(t *testing.T) {
