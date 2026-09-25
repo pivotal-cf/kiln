@@ -89,8 +89,8 @@ github.com/cloudfoundry/go-socks5 v0.0.0-20250423223041-4ad5fea42851 h1:oy59UYcs
 github.com/cloudfoundry/go-socks5 v0.0.0-20250423223041-4ad5fea42851/go.mod h1:72EEm1oq5oXqGfu9XGtaRPWEcAFYd/P10cMNln0QhA8=
 github.com/cloudfoundry/socks5-proxy v0.2.173 h1:vEAKc//jHXN9AWrSjoZJMPZWVORusRfq6lkwKyUuOQs=
 github.com/cloudfoundry/socks5-proxy v0.2.173/go.mod h1:i4pmYUQel0SFjAdHGZ65hWVuQMV5fkZNE4m1QXmPH/0=
-github.com/containerd/containerd/v2 v2.2.8 h1:8nnNE5FqBmofd3lccku8GbWi6d1TO4rrcB2E/0o+HU0=
-github.com/containerd/containerd/v2 v2.2.8/go.mod h1:lTw+wrjREio28N9+3umHS73C6Cs1mxrhczBcAliInuI=
+github.com/containerd/containerd/v2 v2.2.9 h1:ddw9THGOXhcKnHORjkKoXtazPjwtcPwmqk8AVyRpfZw=
+github.com/containerd/containerd/v2 v2.2.9/go.mod h1:lTw+wrjREio28N9+3umHS73C6Cs1mxrhczBcAliInuI=
 github.com/containerd/errdefs v1.0.0 h1:tg5yIfIlQIrxYtu9ajqY42W3lpS19XqdxRQeEwYG8PI=
 github.com/containerd/errdefs v1.0.0/go.mod h1:+YBYIdtsnF4Iw6nWZhJcqGSg/dwvV7tyJ/kCkyJ2k+M=
 github.com/containerd/errdefs/pkg v0.3.0 h1:9IKJ06FvyNlexW690DXuQNx2KA2cUJXx151Xdx3ZPPE=
