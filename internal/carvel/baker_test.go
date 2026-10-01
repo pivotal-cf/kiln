@@ -86,17 +86,33 @@ var _ = Describe("Carvel Baker", func() {
 			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall-test-install"`))
 		})
 
-		It("annotates the Secret for kapp ordering relative to the PackageInstall", func() {
+		It("annotates the Secret for kapp ordering relative to the PackageInstall and versioning", func() {
 			doc := templateDocument(template, "Secret")
 			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/secrets-test-install"`))
 			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall-test-install"`))
 			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall-test-install"`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/versioned: ""`))
+			Expect(doc).To(ContainSubstring(`kapp.k14s.io/versioned-keep-original: ""`))
 		})
 
 		It("annotates the PackageInstall with its own kapp change-group and no change-rules", func() {
 			doc := templateDocument(template, "PackageInstall")
 			Expect(doc).To(ContainSubstring(`kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/packageinstall-test-install"`))
 			Expect(doc).NotTo(ContainSubstring("kapp.k14s.io/change-rule"))
+		})
+
+		It("references unversioned values secret in PackageInstall", func() {
+			doc := templateDocument(template, "PackageInstall")
+			Expect(doc).To(ContainSubstring(`name: <%= p("test-install.name") %>-values`))
+			Expect(doc).NotTo(ContainSubstring("-ver-"))
+		})
+
+		It("does not version any document other than Secret", func() {
+			for _, kind := range []string{"ServiceAccount", "ClusterRole", "ClusterRoleBinding", "PackageInstall"} {
+				doc := templateDocument(template, kind)
+				Expect(doc).NotTo(BeEmpty(), "expected document of kind %s to exist", kind)
+				Expect(doc).NotTo(ContainSubstring("kapp.k14s.io/versioned"))
+			}
 		})
 
 		It("uses BOSH link for content-namespace with fallback to default", func() {
