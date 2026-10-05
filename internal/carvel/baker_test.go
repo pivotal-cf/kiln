@@ -102,9 +102,42 @@ var _ = Describe("Carvel Baker", func() {
 		})
 
 		It("references unversioned values secret in PackageInstall", func() {
-			doc := templateDocument(template, "PackageInstall")
-			Expect(doc).To(ContainSubstring(`name: <%= p("test-install.name") %>-values`))
-			Expect(doc).NotTo(ContainSubstring("-ver-"))
+			secretDoc := templateDocument(template, "Secret")
+			Expect(secretDoc).NotTo(BeEmpty())
+
+			// Truncate stringData before parsing as YAML because the embedded
+			// ERB script block inside values.yaml is not valid YAML until evaluated by BOSH.
+			if idx := strings.Index(secretDoc, "stringData:"); idx != -1 {
+				secretDoc = secretDoc[:idx]
+			}
+
+			var secret struct {
+				Metadata struct {
+					Name        string            `yaml:"name"`
+					Annotations map[string]string `yaml:"annotations"`
+				} `yaml:"metadata"`
+			}
+			Expect(yaml.Unmarshal([]byte(secretDoc), &secret)).To(Succeed())
+
+			piDoc := templateDocument(template, "PackageInstall")
+			Expect(piDoc).NotTo(BeEmpty())
+
+			var pi struct {
+				Spec struct {
+					Values []struct {
+						SecretRef struct {
+							Name string `yaml:"name"`
+						} `yaml:"secretRef"`
+					} `yaml:"values"`
+				} `yaml:"spec"`
+			}
+			Expect(yaml.Unmarshal([]byte(piDoc), &pi)).To(Succeed())
+
+			Expect(secret.Metadata.Name).To(Equal(`<%= p("test-install.name") %>-values`))
+			Expect(pi.Spec.Values).NotTo(BeEmpty())
+			Expect(pi.Spec.Values[0].SecretRef.Name).To(Equal(secret.Metadata.Name))
+			Expect(secret.Metadata.Annotations).To(HaveKeyWithValue("kapp.k14s.io/versioned", ""))
+			Expect(secret.Metadata.Annotations).To(HaveKeyWithValue("kapp.k14s.io/versioned-keep-original", ""))
 		})
 
 		It("does not version any document other than Secret", func() {
