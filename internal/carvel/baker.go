@@ -707,6 +707,8 @@ metadata:
     kapp.k14s.io/change-group: "kiln.tanzu.vmware.com/secrets-` + entry + `"
     kapp.k14s.io/change-rule.installation: "upsert before upserting kiln.tanzu.vmware.com/packageinstall-` + entry + `"
     kapp.k14s.io/change-rule.cleanup: "delete after deleting kiln.tanzu.vmware.com/packageinstall-` + entry + `"
+    kapp.k14s.io/versioned: ""
+    kapp.k14s.io/versioned-keep-original: ""
 type: Opaque
 stringData:
   values.yaml: |
