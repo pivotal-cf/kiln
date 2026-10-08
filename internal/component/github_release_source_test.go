@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/google/go-github/v50/github"
@@ -441,6 +442,18 @@ func TestGithubReleaseSource_GetGithubReleaseWithTag(t *testing.T) {
 func TestGetLatestMatchingRelease(t *testing.T) {
 	strPtr := func(s string) *string { return &s }
 
+	releaseWithAssets := func(tag string, assetNames ...string) *github.RepositoryRelease {
+		r := &github.RepositoryRelease{TagName: strPtr(tag)}
+		for _, name := range assetNames {
+			r.Assets = append(r.Assets, &github.ReleaseAsset{Name: strPtr(name)})
+		}
+		return r
+	}
+
+	releaseWithDefaultAsset := func(tag string) *github.RepositoryRelease {
+		return releaseWithAssets(tag, "test-"+strings.TrimPrefix(tag, "v")+".tgz")
+	}
+
 	t.Run("when get release with tag api request fails", func(t *testing.T) {
 		damnIt := NewWithT(t)
 
@@ -448,35 +461,35 @@ func TestGetLatestMatchingRelease(t *testing.T) {
 
 		releaseGetter.ListReleasesReturnsOnCall(0,
 			[]*github.RepositoryRelease{
-				{TagName: strPtr("3.0.0")},
-				{TagName: strPtr("2.2.1")},
-				{TagName: strPtr("2.2.0")},
-				{TagName: strPtr("2.1.0")},
-				{TagName: strPtr("2.0.4")},
-				{TagName: strPtr("2.0.3")},
+				releaseWithDefaultAsset("3.0.0"),
+				releaseWithDefaultAsset("2.2.1"),
+				releaseWithDefaultAsset("2.2.0"),
+				releaseWithDefaultAsset("2.1.0"),
+				releaseWithDefaultAsset("2.0.4"),
+				releaseWithDefaultAsset("2.0.3"),
 			},
 			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
 			nil,
 		)
 		releaseGetter.ListReleasesReturnsOnCall(1,
 			[]*github.RepositoryRelease{
-				{TagName: strPtr("2.0.0-beta.1")},
-				{TagName: strPtr("1.9.42")},
-				{TagName: strPtr("1.8.0")},
+				releaseWithDefaultAsset("2.0.0-beta.1"),
+				releaseWithDefaultAsset("1.9.42"),
+				releaseWithDefaultAsset("1.8.0"),
 			},
 			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
 			nil,
 		)
 		releaseGetter.ListReleasesReturnsOnCall(2,
 			[]*github.RepositoryRelease{
-				{TagName: strPtr("2.0.0-alpha.0")},
+				releaseWithDefaultAsset("2.0.0-alpha.0"),
 			},
 			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
 			nil,
 		)
 		releaseGetter.ListReleasesReturnsOnCall(3,
 			[]*github.RepositoryRelease{
-				{TagName: strPtr("1.7.5")},
+				releaseWithDefaultAsset("1.7.5"),
 			},
 			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
 			nil,
@@ -509,23 +522,23 @@ func TestGetLatestMatchingRelease(t *testing.T) {
 
 		releaseGetter.ListReleasesReturnsOnCall(0,
 			[]*github.RepositoryRelease{
-				{TagName: strPtr("v2.1.0")},
-				{TagName: strPtr("v2.0.4")},
-				{TagName: strPtr("2.0.3")},
+				releaseWithDefaultAsset("v2.1.0"),
+				releaseWithDefaultAsset("v2.0.4"),
+				releaseWithDefaultAsset("2.0.3"),
 			},
 			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
 			nil,
 		)
 		releaseGetter.ListReleasesReturnsOnCall(1,
 			[]*github.RepositoryRelease{
-				{TagName: strPtr("1.8.0")},
+				releaseWithDefaultAsset("1.8.0"),
 			},
 			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
 			nil,
 		)
 		releaseGetter.ListReleasesReturnsOnCall(2,
 			[]*github.RepositoryRelease{
-				{TagName: strPtr("1.7.5")},
+				releaseWithDefaultAsset("1.7.5"),
 			},
 			&github.Response{Response: &http.Response{StatusCode: http.StatusOK}},
 			nil,
@@ -549,6 +562,67 @@ func TestGetLatestMatchingRelease(t *testing.T) {
 		damnIt.Expect(err).NotTo(HaveOccurred())
 		damnIt.Expect(rel.GetTagName()).To(Equal("v2.0.4"))
 		damnIt.Expect(releaseGetter.ListReleasesCallCount()).To(Equal(3))
+	})
+
+	singlePageSource := func(releases ...*github.RepositoryRelease) *component.GithubReleaseSource {
+		lister := new(fakes.ReleasesLister)
+		ok := &github.Response{Response: &http.Response{StatusCode: http.StatusOK}}
+		lister.ListReleasesStub = func(_ context.Context, _, _ string, opts *github.ListOptions) ([]*github.RepositoryRelease, *github.Response, error) {
+			if opts.Page != 0 {
+				return nil, ok, nil
+			}
+			return releases, ok, nil
+		}
+		return &component.GithubReleaseSource{
+			Logger:         log.New(GinkgoWriter, "[test] ", log.Default().Flags()),
+			ReleasesLister: lister,
+			ReleaseSourceConfig: cargo.ReleaseSourceConfig{
+				Org: "test-org",
+			},
+		}
+	}
+
+	spec := cargo.BOSHReleaseTarballSpecification{
+		Name:             "test",
+		GitHubRepository: "git@github.com:test-org/test.git",
+	}
+
+	t.Run("when a v-prefixed and a bare tag release share a version but only the v-prefixed one has the asset", func(t *testing.T) {
+		please := NewWithT(t)
+
+		grs := singlePageSource(
+			releaseWithAssets("v0.4.0", "test-0.4.0.tgz"),
+			releaseWithAssets("0.4.0"),
+		)
+
+		rel, err := grs.GetLatestMatchingRelease(context.TODO(), spec)
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(rel.GetTagName()).To(Equal("v0.4.0"))
+	})
+
+	t.Run("when the highest version release has no matching asset", func(t *testing.T) {
+		please := NewWithT(t)
+
+		grs := singlePageSource(
+			releaseWithAssets("0.5.0"),
+			releaseWithAssets("0.4.0", "test-0.4.0.tgz"),
+		)
+
+		rel, err := grs.GetLatestMatchingRelease(context.TODO(), spec)
+		please.Expect(err).NotTo(HaveOccurred())
+		please.Expect(rel.GetTagName()).To(Equal("0.4.0"))
+	})
+
+	t.Run("when no matching release has a matching asset", func(t *testing.T) {
+		please := NewWithT(t)
+
+		grs := singlePageSource(
+			releaseWithAssets("0.5.0"),
+			releaseWithAssets("0.4.0", "unrelated-0.4.0.tgz"),
+		)
+
+		_, err := grs.GetLatestMatchingRelease(context.TODO(), spec)
+		please.Expect(component.IsErrNotFound(err)).To(BeTrue())
 	})
 
 	t.Run("component repo does not match release source org", func(t *testing.T) {

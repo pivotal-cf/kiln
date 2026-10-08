@@ -171,6 +171,9 @@ func (grs *GithubReleaseSource) GetLatestMatchingRelease(ctx context.Context, s 
 			if !c.Check(v) {
 				continue
 			}
+			if _, hasAsset := findReleaseAsset(release.Assets, s.Name, release.GetTagName()); !hasAsset {
+				continue
+			}
 			if highestMatchingVersion != nil && v.LessThan(highestMatchingVersion) {
 				continue
 			}
@@ -208,35 +211,29 @@ func (grs *GithubReleaseSource) FindReleaseVersion(s cargo.BOSHReleaseTarballSpe
 
 func (grs *GithubReleaseSource) getLockFromRelease(ctx context.Context, r *github.RepositoryRelease, s cargo.BOSHReleaseTarballSpecification, noDownload bool) (cargo.BOSHReleaseTarballLock, error) {
 	lockVersion := strings.TrimPrefix(r.GetTagName(), "v")
-	expectedAssetName := fmt.Sprintf("%s-%s.tgz", s.Name, lockVersion)
-	malformedAssetName := fmt.Sprintf("%s-v%s.tgz", s.Name, lockVersion)
 
-	for _, asset := range r.Assets {
-		switch asset.GetName() {
-		case expectedAssetName, malformedAssetName:
-		default:
-			continue
-		}
-
-		sum := "not-calculated"
-		if !noDownload {
-			var err error
-			sum, err = grs.getReleaseSHA1(ctx, s, *asset.ID)
-			if err != nil {
-				return cargo.BOSHReleaseTarballLock{}, err
-			}
-		}
-
-		return cargo.BOSHReleaseTarballLock{
-			Name:         s.Name,
-			Version:      lockVersion,
-			RemoteSource: grs.Org,
-			RemotePath:   asset.GetBrowserDownloadURL(),
-			SHA1:         sum,
-		}, nil
+	asset, found := findReleaseAsset(r.Assets, s.Name, lockVersion)
+	if !found {
+		expectedAssetName, _ := releaseAssetNames(s.Name, lockVersion)
+		return cargo.BOSHReleaseTarballLock{}, errors.Join(ErrNotFound, fmt.Errorf("no matching GitHub release asset file name equal to %q", expectedAssetName))
 	}
 
-	return cargo.BOSHReleaseTarballLock{}, errors.Join(ErrNotFound, fmt.Errorf("no matching GitHub release asset file name equal to %q", expectedAssetName))
+	sum := "not-calculated"
+	if !noDownload {
+		var err error
+		sum, err = grs.getReleaseSHA1(ctx, s, *asset.ID)
+		if err != nil {
+			return cargo.BOSHReleaseTarballLock{}, err
+		}
+	}
+
+	return cargo.BOSHReleaseTarballLock{
+		Name:         s.Name,
+		Version:      lockVersion,
+		RemoteSource: grs.Org,
+		RemotePath:   asset.GetBrowserDownloadURL(),
+		SHA1:         sum,
+	}, nil
 }
 
 func (grs *GithubReleaseSource) getReleaseSHA1(ctx context.Context, s cargo.BOSHReleaseTarballSpecification, id int64) (string, error) {
@@ -330,9 +327,20 @@ type ReleaseAssetDownloader interface {
 }
 
 func findAssetFile(list []*github.ReleaseAsset, lock cargo.BOSHReleaseTarballLock) (*github.ReleaseAsset, bool) {
-	lockVersion := strings.TrimPrefix(lock.Version, "v")
-	expectedAssetName := fmt.Sprintf("%s-%s.tgz", lock.Name, lockVersion)
-	malformedAssetName := fmt.Sprintf("%s-v%s.tgz", lock.Name, lockVersion)
+	return findReleaseAsset(list, lock.Name, lock.Version)
+}
+
+// releaseAssetNames returns the accepted asset file names for a release: the
+// expected name and the malformed name that has a "v" before the version.
+func releaseAssetNames(name, version string) (expected, malformed string) {
+	version = strings.TrimPrefix(version, "v")
+	return fmt.Sprintf("%s-%s.tgz", name, version), fmt.Sprintf("%s-v%s.tgz", name, version)
+}
+
+// findReleaseAsset returns the asset in list that matches the release name and
+// version. A leading "v" on version is ignored.
+func findReleaseAsset(list []*github.ReleaseAsset, name, version string) (*github.ReleaseAsset, bool) {
+	expectedAssetName, malformedAssetName := releaseAssetNames(name, version)
 	for _, val := range list {
 		switch val.GetName() {
 		case expectedAssetName, malformedAssetName:
