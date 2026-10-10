@@ -156,6 +156,8 @@ network-properties:
 	  name: some-network
 `
 
+				cmdRunner.RunReturnsOnCall(0, `[]`, "", nil)
+
 				err := omRunnerWithFileIO.ResetAndConfigure("cf", "1.2.3", configYML)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -166,13 +168,13 @@ network-properties:
 				Expect(name).To(Equal(configFile.Name()))
 
 				Expect(cmdRunner.RunCallCount()).To(Equal(3))
+
 				command, args := cmdRunner.RunArgsForCall(0)
 				Expect(command).To(Equal("om"))
 				Expect(args).To(Equal([]string{
 					"--skip-ssl-validation",
 					"curl",
-					"-x", "DELETE",
-					"--path", "/api/v0/staged",
+					"--path", "/api/v0/staged/products",
 				}))
 
 				command, args = cmdRunner.RunArgsForCall(1)
@@ -194,10 +196,38 @@ network-properties:
 			})
 		})
 
+		When("the product is already staged at the requested version", func() {
+			It("skips revert/unstage/stage and only configures", func() {
+				cmdRunner.RunReturnsOnCall(0, `[{"type": "cf", "guid": "some-guid", "product_version": "1.2.3"}]`, "", nil)
+
+				err := omRunnerWithFileIO.ResetAndConfigure("cf", "1.2.3", "{}")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(cmdRunner.RunCallCount()).To(Equal(2))
+
+				command, args := cmdRunner.RunArgsForCall(0)
+				Expect(command).To(Equal("om"))
+				Expect(args).To(Equal([]string{
+					"--skip-ssl-validation",
+					"curl",
+					"--path", "/api/v0/staged/products",
+				}))
+
+				command, args = cmdRunner.RunArgsForCall(1)
+				Expect(command).To(Equal("om"))
+				Expect(args).To(Equal([]string{
+					"--skip-ssl-validation",
+					"configure-product",
+					"--config", configFile.Name(),
+				}))
+			})
+		})
+
 		Describe("failure cases", func() {
 			When("the request to revert staged changes fails", func() {
 				It("errors", func() {
-					cmdRunner.RunReturnsOnCall(0, "", "stderr output", errors.New("some error"))
+					cmdRunner.RunReturnsOnCall(0, `[{"type": "cf", "guid": "some-guid", "product_version": "0.0.1"}]`, "", nil)
+					cmdRunner.RunReturnsOnCall(1, "", "stderr output", errors.New("some error"))
 
 					err := omRunnerWithFileIO.ResetAndConfigure("cf", "1.2.3", "{}")
 					Expect(err).To(MatchError(`unable to revert staged changes: some error: stderr output`))
@@ -206,6 +236,7 @@ network-properties:
 
 			When("the request to stage the product fails", func() {
 				It("errors", func() {
+					cmdRunner.RunReturnsOnCall(0, `[]`, "", nil)
 					cmdRunner.RunReturnsOnCall(1, "", "stderr output", errors.New("some error"))
 
 					err := omRunnerWithFileIO.ResetAndConfigure("cf", "1.2.3", "{}")
@@ -215,6 +246,7 @@ network-properties:
 
 			When("the request to configure the product fails", func() {
 				It("errors", func() {
+					cmdRunner.RunReturnsOnCall(0, `[]`, "", nil)
 					cmdRunner.RunReturnsOnCall(2, "", "stderr output", errors.New("some error"))
 
 					err := omRunnerWithFileIO.ResetAndConfigure("cf", "1.2.3", "{}")

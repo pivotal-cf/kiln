@@ -55,7 +55,10 @@ func (o OMRunner) StagedProducts() ([]StagedProduct, error) {
 }
 
 func (o OMRunner) FindStagedProduct(productName string) (StagedProduct, error) {
-	stagedProducts, _ := o.StagedProducts()
+	stagedProducts, err := o.StagedProducts()
+	if err != nil {
+		return StagedProduct{}, err
+	}
 
 	var stagedTypes []string
 	for _, sp := range stagedProducts {
@@ -71,27 +74,45 @@ func (o OMRunner) FindStagedProduct(productName string) (StagedProduct, error) {
 }
 
 func (o OMRunner) ResetAndConfigure(productName string, productVersion string, configJSON string) error {
-	_, errOutput, err := o.cmdRunner.Run(
-		"om",
-		"--skip-ssl-validation",
-		"curl",
-		"-x", "DELETE",
-		"--path", "/api/v0/staged",
-	)
-	if err != nil {
-		return fmt.Errorf("unable to revert staged changes: %w: %s", err, errOutput)
-	}
+	// Re-staging churns Ops Manager's generated properties (certs, keys) for every
+	// product staged alongside productName, which can dirty unrelated dependency
+	// products. If productName is already staged at the requested version, skip
+	// straight to configure-product instead of unstaging and re-staging it.
+	stagedProduct, err := o.FindStagedProduct(productName)
+	alreadyStagedAtVersion := err == nil && stagedProduct.ProductVersion == productVersion
 
-	_, errOutput, err = o.cmdRunner.Run(
-		"om",
-		"--skip-ssl-validation",
-		"stage-product",
-		"--product-name", productName,
-		"--product-version", productVersion,
-	)
-	if err != nil {
-		return fmt.Errorf("unable to stage product %q, version %q: %w: %s",
-			productName, productVersion, err, errOutput)
+	if !alreadyStagedAtVersion {
+		if err == nil {
+			// It is staged at a different version. We should revert and unstage.
+			_, errOutput, err := o.cmdRunner.Run(
+				"om",
+				"--skip-ssl-validation",
+				"revert-staged-changes",
+			)
+			if err != nil {
+				return fmt.Errorf("unable to revert staged changes: %w: %s", err, errOutput)
+			}
+
+			// Unstage the product if it's already staged. Ignore errors if it's not staged.
+			_, _, _ = o.cmdRunner.Run(
+				"om",
+				"--skip-ssl-validation",
+				"unstage-product",
+				"--product-name", productName,
+			)
+		}
+
+		_, errOutput, err := o.cmdRunner.Run(
+			"om",
+			"--skip-ssl-validation",
+			"stage-product",
+			"--product-name", productName,
+			"--product-version", productVersion,
+		)
+		if err != nil {
+			return fmt.Errorf("unable to stage product %q, version %q: %w: %s",
+				productName, productVersion, err, errOutput)
+		}
 	}
 
 	configFile, err := o.FileIO.TempFile("", "")
@@ -107,7 +128,7 @@ func (o OMRunner) ResetAndConfigure(productName string, productVersion string, c
 		return err // un-tested
 	}
 
-	_, errOutput, err = o.cmdRunner.Run(
+	_, errOutput, err := o.cmdRunner.Run(
 		"om",
 		"--skip-ssl-validation",
 		"configure-product",
